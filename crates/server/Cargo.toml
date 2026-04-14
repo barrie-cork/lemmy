@@ -48,3 +48,8 @@ clap = { workspace = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 mimalloc = "0.1.48"
+
+[dev-dependencies]
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+tokio = { workspace = true }
