@@ -52,6 +52,12 @@ use reqwest_middleware::ClientBuilder;
 use reqwest_tracing::TracingMiddleware;
 use serde_json::json;
 use std::{ops::Deref, time::Duration};
+// Brehon carry-patch: gate Unix-only signal handling so `lemmy_server` builds on Windows.
+// Upstream Lemmy assumes a Unix host; `tokio::signal::unix` does not exist on windows-msvc.
+// On non-Unix targets (Windows, WASI, ...) we rely on `tokio::signal::ctrl_c()` alone for
+// graceful shutdown, which is the idiomatic tokio recommendation for Windows.
+// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+#[cfg(not(windows))]
 use tokio::signal::unix::SignalKind;
 use tracing_actix_web::{DefaultRootSpanBuilder, TracingLogger};
 
@@ -278,9 +284,14 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
       SETTINGS.federation.clone(),
     )
   });
+  // Brehon carry-patch: Unix has SIGINT/SIGTERM in addition to ctrl-c, Windows does not.
+  // TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+  #[cfg(not(windows))]
   let mut interrupt = tokio::signal::unix::signal(SignalKind::interrupt())?;
+  #[cfg(not(windows))]
   let mut terminate = tokio::signal::unix::signal(SignalKind::terminate())?;
 
+  #[cfg(not(windows))]
   tokio::select! {
     _ = tokio::signal::ctrl_c() => {
       tracing::warn!("Received ctrl-c, shutting down gracefully...");
@@ -291,6 +302,14 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
     _ = terminate.recv() => {
       tracing::warn!("Received terminate, shutting down gracefully...");
     }
+  }
+
+  #[cfg(windows)]
+  {
+    // ctrl_c() is the canonical shutdown hook on Windows; Windows has no POSIX
+    // signals so there is no equivalent to SIGINT/SIGTERM here.
+    let _ = tokio::signal::ctrl_c().await;
+    tracing::warn!("Received ctrl-c, shutting down gracefully...");
   }
   if let Some(server) = server {
     server.stop(true).await;
