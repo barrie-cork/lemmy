@@ -16,9 +16,9 @@ A governance-enabled fork of Lemmy 1.0-beta. The v0 goal is 11 new API endpoints
 
 ---
 
-## Authoritative design docs (sibling repo)
+## Authoritative design docs
 
-The design docs live in a sibling repo on this same machine, not inside this fork. Always reference them with absolute Windows paths:
+The design docs are vendored into this fork under `docs/brehon-law-inspired-network/` (the canonical source per commit `e960a128c`). Always reference them with the fork-local relative paths below:
 
 | Priority | Path | Purpose |
 |---|---|---|
@@ -31,7 +31,7 @@ The design docs live in a sibling repo on this same machine, not inside this for
 | P1 | `06-security-and-threat-model.md` | §2.2.1 emergency-remove, §6.1 GDPR, §7 threat table |
 | P1 | `07-operations-and-federation.md` | Docker Compose on one host for v0 |
 
-**Do NOT read** `chat1.md`, `chat2.md`, `.docx` files, or `old-prp-commands/`. They are archival.
+**Do NOT read** `chat1.md`, `chat2.md`, or `.docx` files. They are archival.
 
 ---
 
