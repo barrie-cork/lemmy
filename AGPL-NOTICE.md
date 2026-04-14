@@ -10,7 +10,7 @@ This project is a **fork of [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy)*
 - **Fork repository:** [barrie-cork/lemmy](https://github.com/barrie-cork/lemmy)
 - **Working branch:** `governance-v0` (branched from `upstream/main` at the pinned SHA above)
 - **Fork purpose:** adds governance, jury, reputation, and tamper-evident log primitives per the Brehon v0 design docs.
-- **License:** inherited AGPL-3.0 per [ADR-011](../homeserver/docs/research/brehon-law-inspired-network/99-decisions-and-open-questions.md). See the full license text in [`LICENSE`](./LICENSE).
+- **License:** inherited AGPL-3.0 per [ADR-011](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md). See the full license text in [`LICENSE`](./LICENSE).
 
 ## What AGPLv3 requires
 
@@ -27,7 +27,7 @@ Operators running an unmodified release of this fork can satisfy (1) by pointing
 
 ## Weekly upstream rebase log
 
-Per [IMPLEMENTATION-PLAN-v0.md §7.1](../homeserver/docs/research/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) top-risk mitigations, we rebase `governance-v0` onto `upstream/main` weekly to pick up Lemmy 1.0-beta fixes. Each rebase records the new upstream SHA here so we can diff governance-touching changes across syncs.
+Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) top-risk mitigations, we rebase `governance-v0` onto `upstream/main` weekly to pick up Lemmy 1.0-beta fixes. Each rebase records the new upstream SHA here so we can diff governance-touching changes across syncs.
 
 | Date (YYYY-MM-DD) | Upstream SHA | `git describe` | Notes |
 |---|---|---|---|

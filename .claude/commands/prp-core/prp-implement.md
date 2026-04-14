@@ -17,15 +17,15 @@ Execute the plan end-to-end with rigorous self-validation. You are autonomous.
 
 **Golden Rule**: If a validation fails, fix it before moving on. Never accumulate broken state.
 
-**ADR-Hardness**: If anything in the plan contradicts an ADR in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md), **STOP** and surface to the user. Do not silently fix in the code.
+**ADR-Hardness**: If anything in the plan contradicts an ADR in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md), **STOP** and surface to the user. Do not silently fix in the code.
 
 ---
 
 ## Brehon Context (read every invocation)
 
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements, test strategy, risk register
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md` — table/enum/struct/route/handler authority
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md` — hard constraints
+- `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements, test strategy, risk register
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — table/enum/struct/route/handler authority
+- `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — hard constraints
 - Fork-local `CLAUDE.md` — pinned upstream SHA, branch, command list
 
 ---
@@ -88,7 +88,7 @@ cat $ARGUMENTS
 ### 1.2 Extract Key Sections
 
 - **Summary** — scope
-- **Source** — which [IMPLEMENTATION-PLAN-v0.md §3 Phase](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md), which ADRs apply
+- **Source** — which [IMPLEMENTATION-PLAN-v0.md §3 Phase](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md), which ADRs apply
 - **Patterns to Mirror** — Rust snippets to copy
 - **Files to Change** — CREATE/UPDATE list with exact paths
 - **Step-by-Step Tasks** — implementation order (each one is a commit)
@@ -164,8 +164,8 @@ For each numbered task in the plan's **Step-by-Step Tasks** section:
 
 1. Read the **MIRROR** file reference — understand the Rust pattern
 2. Read any **IMPORTS** specified
-3. Re-read the relevant [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) section for the authoritative field list
-4. If the task touches governance log / pseudonyms / `EmergencyRemove` / redaction, re-read [IMPLEMENTATION-PLAN-v0.md §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md)
+3. Re-read the relevant [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) section for the authoritative field list
+4. If the task touches governance log / pseudonyms / `EmergencyRemove` / redaction, re-read [IMPLEMENTATION-PLAN-v0.md §4](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)
 
 ### 3.2 Implement
 
@@ -174,7 +174,7 @@ For each numbered task in the plan's **Step-by-Step Tasks** section:
 3. Respect every GOTCHA in the task
 4. **Never inline `Uuid::new_v4()` for pseudonyms** — always call `actor_pseudonym::get_or_create(person_id)`
 5. **Never write a raw string to `public_case_log` or `governance_log.payload`** — always go through `redaction::scrub(...)` + `governance_log::append(...)`
-6. **Never use `_ =>` on a `match case.status` arm** — `CaseStatus::EmergencyRemove` must be handled explicitly ([ADR-013](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md))
+6. **Never use `_ =>` on a `match case.status` arm** — `CaseStatus::EmergencyRemove` must be handled explicitly ([ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
 
 ### 3.3 Validate Immediately
 
@@ -238,7 +238,7 @@ If clippy complains:
 
 ### 4.2 Integration Tests
 
-**You MUST write or update tests for new code.** Per [IMPLEMENTATION-PLAN-v0.md §5](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md): integration-only, all in `tests/e2e.rs`.
+**You MUST write or update tests for new code.** Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md): integration-only, all in `tests/e2e.rs`.
 
 Write tests, then run:
 
@@ -271,7 +271,7 @@ diesel migration redo
 psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table_name}'
 ```
 
-**Verify the table shape matches [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)** — columns, types, indexes, constraints.
+**Verify the table shape matches [04](docs/brehon-law-inspired-network/04-data-model-and-api.md)** — columns, types, indexes, constraints.
 
 ### 4.5 Cross-Cutting Verification (if applicable)
 
@@ -391,7 +391,7 @@ mkdir -p .claude/PRPs/reports
 
 - [ ] Review implementation
 - [ ] Create PR: `/prp-pr` (if ready)
-- [ ] Mark the relevant phase in [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) as done (in a separate commit in the homeserver repo — do NOT edit from inside brehon-fork)
+- [ ] Mark the relevant phase in [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) as done (in a separate commit in the homeserver repo — do NOT edit from inside brehon-fork)
 ```
 
 ### 5.3 Archive Plan
@@ -448,7 +448,7 @@ mv $ARGUMENTS .claude/PRPs/plans/completed/
 
 1. Review the report (especially deviations)
 2. Create PR: `/prp-pr` or `gh pr create --base governance-v0`
-3. Update [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) phase status in the `homeserver` repo (separate commit)
+3. Update [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) phase status in the `homeserver` repo (separate commit)
 ```
 
 ---
@@ -502,7 +502,7 @@ mv $ARGUMENTS .claude/PRPs/plans/completed/
 - **CLIPPY_PASS**: `cargo clippy --workspace -- -D warnings` exits 0
 - **TESTS_PASS**: Integration tests all green
 - **BUILD_PASS**: `cargo build --workspace` succeeds
-- **ADR_INTACT**: Zero contradictions with [99 ADRs](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)
+- **ADR_INTACT**: Zero contradictions with [99 ADRs](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
 - **CROSS_CUTTING_INTACT**: Hash chain / pseudonyms / redaction / `EmergencyRemove` respected
 - **REPORT_CREATED**: Implementation report exists
 - **PLAN_ARCHIVED**: Original plan moved to completed

@@ -21,16 +21,16 @@ Perform a senior-engineer-level code review on a Brehon PR:
 
 **Golden Rule**: Be constructive and actionable. Every issue gets a clear recommendation. Acknowledge good work too.
 
-**Hardness**: a PR that contradicts any of the 15 ADRs in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) must be BLOCKED. No exceptions. The correct path is a superseding ADR, not a silent code change.
+**Hardness**: a PR that contradicts any of the 15 ADRs in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) must be BLOCKED. No exceptions. The correct path is a superseding ADR, not a silent code change.
 
 ---
 
 ## Brehon Context (read every invocation)
 
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md` — the 15 ADRs (hard) and 12 OQs
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements (§4), risk register (§7)
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md` — authoritative table/struct/enum/DTO definitions
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\06-security-and-threat-model.md` — threat table to cross-check security-relevant changes
+- `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — the 15 ADRs (hard) and 12 OQs
+- `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements (§4), risk register (§7)
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — authoritative table/struct/enum/DTO definitions
+- `docs/brehon-law-inspired-network/06-security-and-threat-model.md` — threat table to cross-check security-relevant changes
 - Fork-local `CLAUDE.md` — pinned upstream SHA
 
 ---
@@ -118,7 +118,7 @@ ls .claude/PRPs/issues/completed/ 2>/dev/null
 1. Read the report — note the predicted complexity vs actual
 2. Read the referenced plan
 3. **Documented deviations are INTENTIONAL** — not issues
-4. Note which [IMPLEMENTATION-PLAN-v0.md §3 Phase](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) this advances
+4. Note which [IMPLEMENTATION-PLAN-v0.md §3 Phase](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) this advances
 
 **If no implementation report:**
 - PR may have been ad-hoc — review without plan context
@@ -152,7 +152,7 @@ For each file in the diff:
 | `crates/server/src/governance.rs` | Composition root only — NO business logic |
 | `tests/e2e.rs` | Integration test; must spin up real Postgres |
 
-**Red flag**: business logic inside `crates/server/src/*.rs` ([03 §11](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md) — `server` is composition root only). Flag as HIGH.
+**Red flag**: business logic inside `crates/server/src/*.rs` ([03 §11](docs/brehon-law-inspired-network/03-architecture.md) — `server` is composition root only). Flag as HIGH.
 
 **PHASE_2_CHECKPOINT:**
 - [ ] Project rules read
@@ -172,14 +172,14 @@ For each file, read the full file (not just the diff) so you understand surround
 
 #### ADR Compliance (BLOCKING if violated)
 
-- [ ] **[ADR-010](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: no v1/v2/v3 scope leaked into the v0 PR (Keycloak, OPA, Vault, external signer, blockchain anchoring, etc.)
-- [ ] **[ADR-007](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: jury params are 5 jurors / quorum 3 / simple majority. Not 7-juror or severity-thresholded
-- [ ] **[ADR-008](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: every new write path emits a `governance_log::append` entry **before** returning to the user
-- [ ] **[ADR-013](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: `CaseStatus::EmergencyRemove` is explicitly handled in every match. Zero `_ =>` fallthrough arms on `CaseStatus`
-- [ ] **[ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: no direct `person_id`, username, email, or display name reaches `governance_log.payload`, `public_case_log.summary`, or `public_case_log.rationale_redacted`. All such writes go through `actor_pseudonym::get_or_create` + `redaction::scrub`
-- [ ] **[ADR-006](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: inbound federation signals stored as advisory — `remote_sanction_notice` rows with `local_case_id = NULL` are never auto-applied
-- [ ] **[ADR-011](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: no relicensing, no removal of AGPL notice or `LICENSE` file
-- [ ] **[ADR-012](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**: Lemmy 1.0-beta conventions respected (`ap_id`, not `actor_id`)
+- [ ] **[ADR-010](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: no v1/v2/v3 scope leaked into the v0 PR (Keycloak, OPA, Vault, external signer, blockchain anchoring, etc.)
+- [ ] **[ADR-007](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: jury params are 5 jurors / quorum 3 / simple majority. Not 7-juror or severity-thresholded
+- [ ] **[ADR-008](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: every new write path emits a `governance_log::append` entry **before** returning to the user
+- [ ] **[ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: `CaseStatus::EmergencyRemove` is explicitly handled in every match. Zero `_ =>` fallthrough arms on `CaseStatus`
+- [ ] **[ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: no direct `person_id`, username, email, or display name reaches `governance_log.payload`, `public_case_log.summary`, or `public_case_log.rationale_redacted`. All such writes go through `actor_pseudonym::get_or_create` + `redaction::scrub`
+- [ ] **[ADR-006](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: inbound federation signals stored as advisory — `remote_sanction_notice` rows with `local_case_id = NULL` are never auto-applied
+- [ ] **[ADR-011](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: no relicensing, no removal of AGPL notice or `LICENSE` file
+- [ ] **[ADR-012](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**: Lemmy 1.0-beta conventions respected (`ap_id`, not `actor_id`)
 
 #### Correctness
 
@@ -210,13 +210,13 @@ For each file, read the full file (not just the diff) so you understand surround
 - [ ] `up.sql` and `down.sql` both exist
 - [ ] `down.sql` cleanly reverses `up.sql` (drop in reverse dependency order)
 - [ ] Enum types created before tables that reference them (migration ordering)
-- [ ] Indexes match [04 §1.5](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)
+- [ ] Indexes match [04 §1.5](docs/brehon-law-inspired-network/04-data-model-and-api.md)
 - [ ] Postgres triggers, if added, have tests
 - [ ] DB grants on `governance_log` still deny UPDATE/DELETE to the app role
 
 #### Pattern Compliance
 
-- [ ] File locations match [03 §7](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md) crate layout
+- [ ] File locations match [03 §7](docs/brehon-law-inspired-network/03-architecture.md) crate layout
 - [ ] Naming follows Lemmy conventions (`snake_case`, `lemmy_` crate prefix)
 - [ ] Module exports via `pub mod` + `pub use` in parent `mod.rs`
 - [ ] Governance code lives under `governance/` subdirectories, not mixed into existing Lemmy modules
@@ -256,7 +256,7 @@ For each file, read the full file (not just the diff) so you understand surround
 
 **PHASE_3_CHECKPOINT:**
 - [ ] All changed files reviewed
-- [ ] ADR compliance checked against [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)
+- [ ] ADR compliance checked against [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
 - [ ] Cross-cutting invariants checked
 - [ ] Issues categorised by severity
 - [ ] Implementation-report deviations accounted for
@@ -342,7 +342,7 @@ cargo test --test e2e
 - ANY ADR contradiction (critical)
 - Security issue (hash-chain bypass, GDPR leak, auth bypass)
 - Data loss potential (non-reversible migration)
-- Business logic in `crates/server/` ([03 §11](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md))
+- Business logic in `crates/server/` ([03 §11](docs/brehon-law-inspired-network/03-architecture.md))
 - Breaking change without migration / without acknowledgement
 
 ### 5.2 Special Cases
@@ -387,7 +387,7 @@ recommendation: {approve|request-changes|block}
 **Author**: @{author}
 **Branch**: {head} → {base}
 **Files Changed**: {count} (+{additions}/-{deletions})
-**Advances**: [IMPLEMENTATION-PLAN-v0.md §3 Phase {N}](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) (or "Ad-hoc")
+**Advances**: [IMPLEMENTATION-PLAN-v0.md §3 Phase {N}](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) (or "Ad-hoc")
 
 ---
 
@@ -413,12 +413,12 @@ recommendation: {approve|request-changes|block}
 
 | ADR | Check | Status |
 |---|---|---|
-| [ADR-006](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | Inbound federation advisory-only | PASS / **FAIL** |
-| [ADR-007](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | Jury params 5/3/majority | PASS / **FAIL** |
-| [ADR-008](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | Log append before response | PASS / **FAIL** |
-| [ADR-010](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | No v1/v2/v3 scope leak | PASS / **FAIL** |
-| [ADR-013](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | `EmergencyRemove` exhaustive | PASS / **FAIL** |
-| [ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | Pseudonym + redaction | PASS / **FAIL** |
+| [ADR-006](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | Inbound federation advisory-only | PASS / **FAIL** |
+| [ADR-007](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | Jury params 5/3/majority | PASS / **FAIL** |
+| [ADR-008](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | Log append before response | PASS / **FAIL** |
+| [ADR-010](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | No v1/v2/v3 scope leak | PASS / **FAIL** |
+| [ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | `EmergencyRemove` exhaustive | PASS / **FAIL** |
+| [ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | Pseudonym + redaction | PASS / **FAIL** |
 
 ---
 

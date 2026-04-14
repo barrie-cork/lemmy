@@ -17,11 +17,11 @@ Find the **actual root cause** — the specific Rust code, SQL, config, or logic
 
 **Brehon-specific first suspects** (check these BEFORE opening the 5 Whys if the symptom matches):
 
-- **Hash-chain integrity error** → check Postgres trigger on `governance_log`, check the signature-update path ([IMPLEMENTATION-PLAN-v0.md §4.1](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md))
+- **Hash-chain integrity error** → check Postgres trigger on `governance_log`, check the signature-update path ([IMPLEMENTATION-PLAN-v0.md §4.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md))
 - **`actor_pseudonym` missing / reused** → check `actor_pseudonym::get_or_create` — ADR-015 requires regeneration after GDPR delete
 - **`non-exhaustive patterns: CaseStatus::EmergencyRemove`** → someone used `_ =>` on a `CaseStatus` match; forbidden by ADR-013
-- **Redaction bypass** (username visible in public log) → someone wrote to `public_case_log` without passing through `redaction::scrub` ([ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md))
-- **Remote sanction auto-applied** → someone bypassed the advisory-only rule ([ADR-006](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md))
+- **Redaction bypass** (username visible in public log) → someone wrote to `public_case_log` without passing through `redaction::scrub` ([ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
+- **Remote sanction auto-applied** → someone bypassed the advisory-only rule ([ADR-006](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
 - **Upstream Lemmy rebase broke things** → check `git log upstream/main..HEAD` — a recent rebase can break Diesel schema assumptions
 
 Brehon env vars worth setting when reproducing:

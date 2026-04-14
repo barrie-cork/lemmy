@@ -23,7 +23,7 @@ Execute the implementation plan from `/prp-issue-investigate`:
 
 **Golden Rule**: Follow the artifact. If something seems wrong, validate it first — don't silently deviate.
 
-**Brehon hardness**: bug fixes that touch `governance_log`, `actor_pseudonym`, `redaction`, or `CaseStatus::EmergencyRemove` need extra care. Every invariant from [IMPLEMENTATION-PLAN-v0.md §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) must still hold after the fix. [ADR-008](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) and [ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) are the usual suspects.
+**Brehon hardness**: bug fixes that touch `governance_log`, `actor_pseudonym`, `redaction`, or `CaseStatus::EmergencyRemove` need extra care. Every invariant from [IMPLEMENTATION-PLAN-v0.md §4](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) must still hold after the fix. [ADR-008](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) and [ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) are the usual suspects.
 
 ---
 
@@ -474,7 +474,7 @@ Focus on:
 3. Test coverage — is there a new integration test in tests/e2e.rs?
 4. Edge cases — especially any CaseStatus match arms (EmergencyRemove must be handled)
 5. ADR compliance — does any change contradict one of the 15 ADRs in
-   C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md?
+   docs/brehon-law-inspired-network/99-decisions-and-open-questions.md?
 6. Cross-cutting invariants — is every governance_log write paired with redaction::scrub
    and actor_pseudonym::get_or_create?
 7. Security — any hash-chain bypass, GDPR leak, or auth bypass?

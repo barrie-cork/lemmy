@@ -17,10 +17,10 @@ Transform "$ARGUMENTS" into a battle-tested Rust implementation plan for the Bre
 **These docs are the authoritative source for this project. Read them before producing any plan. They live in a sibling repo on the same machine, so use the absolute Windows paths:**
 
 P0 (read every time):
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md` — the phase-by-phase blueprint, cross-cutting requirements, test strategy, Monday-morning checklist
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md` — primary backend reference: tables, enums, Diesel structs, view structs, DTOs, route table, handler responsibilities
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md` — the 11-endpoint MVP scope, v0 simplifications, 6-step order, done-definition
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md` — 15 committed ADRs (hard constraints) and 12 open questions
+- `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — the phase-by-phase blueprint, cross-cutting requirements, test strategy, Monday-morning checklist
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — primary backend reference: tables, enums, Diesel structs, view structs, DTOs, route table, handler responsibilities
+- `docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md` — the 11-endpoint MVP scope, v0 simplifications, 6-step order, done-definition
+- `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — 15 committed ADRs (hard constraints) and 12 open questions
 
 P1 (read as needed):
 - `00-README.md`, `01-vision-and-principles.md`, `02-domain-model.md` — vision, glossary, lifecycles
@@ -34,11 +34,11 @@ P2 (fork-local):
 
 **Do NOT read** `chat1.md`, `chat2.md`, `.docx` files, or the `old-prp-commands/` directory.
 
-**Hard constraints (from [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md), do NOT re-litigate):**
+**Hard constraints (from [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md), do NOT re-litigate):**
 - Fork of Lemmy 1.0-beta; use Extism plugin system where it simplifies governance hooks (ADR-012)
 - AGPLv3 inherited (ADR-011)
-- v0 scope = exactly the 11 endpoints in [05 §2](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md); nothing else
-- v0 simplifications in [05 §3](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md) are mandatory: 5-juror panels, quorum 3, simple majority, outbound-only federation, local hash chain, reputation-decay stub
+- v0 scope = exactly the 11 endpoints in [05 §2](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md); nothing else
+- v0 simplifications in [05 §3](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md) are mandatory: 5-juror panels, quorum 3, simple majority, outbound-only federation, local hash chain, reputation-decay stub
 - Solo-dev stack: NO Keycloak, NO OpenFGA, NO Vault, NO Kubernetes, NO external log signer, NO blockchain anchoring. Those are v2/v3
 - Auth: Lemmy's existing JWT; optional passkey MFA via `webauthn-rs`
 - Authz: hardcoded capability checks in Rust reading `reputation_snapshot` flags
@@ -62,9 +62,9 @@ P2 (fork-local):
 - `crates/server/` — composition root: wiring, startup, background jobs (NO business logic)
 - `migrations/{timestamp}_name/{up,down}.sql` — Diesel CLI conventions
 - `api_tests/` — existing Lemmy integration tests
-- `tests/` (to be added for governance e2e) — `tests/e2e.rs` per [IMPLEMENTATION-PLAN-v0.md §5.1](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md)
+- `tests/` (to be added for governance e2e) — `tests/e2e.rs` per [IMPLEMENTATION-PLAN-v0.md §5.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)
 
-**Expected governance paths** (from [03 §7](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md)):
+**Expected governance paths** (from [03 §7](docs/brehon-law-inspired-network/03-architecture.md)):
 - `crates/db_schema/src/source/governance/*.rs`
 - `crates/db_views/governance_case/`, `crates/db_views/jury_queue/`, `crates/db_views/governance_modlog/`, `crates/db_views/reputation/`
 - `crates/api/api_common/src/governance.rs`
@@ -91,7 +91,7 @@ Determine input type:
 
 | Input Pattern | Type | Action |
 |---|---|---|
-| `Phase N`, `phase 1`, `Step N`, `step 1` | Phase reference to [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) | Read the plan, locate §3 Phase N, extract tasks |
+| `Phase N`, `phase 1`, `Step N`, `step 1` | Phase reference to [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) | Read the plan, locate §3 Phase N, extract tasks |
 | Ends with `.prd.md` | PRD file | Parse PRD Implementation Phases table, select next pending phase |
 | File path that exists | Document | Read and extract feature description |
 | Free-form text | Description | Use directly as feature input |
@@ -99,8 +99,8 @@ Determine input type:
 
 ### If phase reference:
 
-1. **Read [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) fully.**
-2. **Locate §3 Phase N** — extract all numbered tasks for that phase, their definition-of-done, their references back to [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md).
+1. **Read [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) fully.**
+2. **Locate §3 Phase N** — extract all numbered tasks for that phase, their definition-of-done, their references back to [04](docs/brehon-law-inspired-network/04-data-model-and-api.md).
 3. **Report selection:**
    ```
    SOURCE: IMPLEMENTATION-PLAN-v0.md §3 Phase N
@@ -122,17 +122,17 @@ Determine input type:
 
 EXTRACT from input:
 - Core problem / scope
-- Which v0 step ([05 §4 Steps 1–6](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md)) this belongs to
+- Which v0 step ([05 §4 Steps 1–6](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md)) this belongs to
 - Feature type: `SCHEMA` | `READ_MODEL` | `DTO` | `HANDLER` | `FEDERATION` | `CROSS_CUTTING` | `BUG_FIX`
 - Complexity: LOW | MEDIUM | HIGH
 - Affected crates (list them)
-- Which ADRs in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) govern this area
+- Which ADRs in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) govern this area
 
 **PHASE_1_CHECKPOINT:**
 - [ ] Scope is specific and bounded to v0
 - [ ] Affected crates identified
 - [ ] Relevant ADRs listed (none can be contradicted)
-- [ ] Any blocking OQs identified (see [IMPLEMENTATION-PLAN-v0.md §8](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) for the blocking set)
+- [ ] Any blocking OQs identified (see [IMPLEMENTATION-PLAN-v0.md §8](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) for the blocking set)
 
 **GATE**: If requirements are AMBIGUOUS or touch an unresolved blocking OQ → STOP and ASK the user before proceeding.
 
@@ -274,13 +274,13 @@ Example (adjust to the phase):
 For complex phases, launch one more `Explore` agent focused on how existing Lemmy architecture behaves at the integration points identified in Phase 2.
 
 **Then analyse:**
-- ARCHITECTURE_FIT: does this respect the plane separation in [03 §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md)? Is governance code in the governance crate paths, not in `crates/server/`?
+- ARCHITECTURE_FIT: does this respect the plane separation in [03 §4](docs/brehon-law-inspired-network/03-architecture.md)? Is governance code in the governance crate paths, not in `crates/server/`?
 - EXECUTION_ORDER: dependency order of tasks (schema → model → view → DTO → handler → route)
 - FAILURE_MODES: transaction boundaries, orphaned log entries, redaction bypasses, enum match holes
 - PERFORMANCE: n+1 queries, unindexed reads, unbounded joins
 - SECURITY: hash-chain integrity, pseudonym leakage, authz bypass via missing capability checks
 - GDPR: any new write to `governance_log` must use `actor_pseudonym` and be redacted
-- CROSS-CUTTING: does this touch the hash chain, redaction service, or `EmergencyRemove` variant? (If yes, wire through [IMPLEMENTATION-PLAN-v0.md §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) cross-cutting helpers.)
+- CROSS-CUTTING: does this touch the hash chain, redaction service, or `EmergencyRemove` variant? (If yes, wire through [IMPLEMENTATION-PLAN-v0.md §4](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) cross-cutting helpers.)
 
 **DECIDE and document:**
 
@@ -320,9 +320,9 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 {One paragraph: what this phase/feature delivers and the high-level approach}
 
 ## Source
-- [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) §3 Phase N (or PRD path)
-- Relevant [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) sections: §N, §M
-- Relevant ADRs from [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md): ADR-XXX, ADR-YYY
+- [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) §3 Phase N (or PRD path)
+- Relevant [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) sections: §N, §M
+- Relevant ADRs from [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md): ADR-XXX, ADR-YYY
 
 ## Problem Statement
 {Specific, testable problem this phase solves}
@@ -337,7 +337,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 | Type | SCHEMA / READ_MODEL / DTO / HANDLER / FEDERATION / CROSS_CUTTING / BUG_FIX |
 | Complexity | LOW / MEDIUM / HIGH |
 | Crates Affected | `db_schema`, `db_views/xx`, ... |
-| v0 Step | Step N from [05 §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md) |
+| v0 Step | Step N from [05 §4](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md) |
 | Dependencies | {prior phases that must be complete} |
 | Estimated Tasks | {count} |
 
@@ -364,7 +364,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 | Priority | File | Lines | Why |
 |---|---|---|---|
 | P0 | `crates/db_schema/src/source/xx.rs` | NN-MM | Diesel model pattern to MIRROR |
-| P0 | `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md` | §N | Authoritative field definitions |
+| P0 | `docs/brehon-law-inspired-network/04-data-model-and-api.md` | §N | Authoritative field definitions |
 | P1 | `api_tests/src/xx.ts` | all | Lemmy's existing integration-test style |
 
 **External Documentation:**
@@ -424,7 +424,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 
 | File | Action | Justification |
 |---|---|---|
-| `migrations/{ts}_add_xx/up.sql` | CREATE | New table(s) per [04 §1](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) |
+| `migrations/{ts}_add_xx/up.sql` | CREATE | New table(s) per [04 §1](docs/brehon-law-inspired-network/04-data-model-and-api.md) |
 | `migrations/{ts}_add_xx/down.sql` | CREATE | Clean rollback |
 | `crates/db_schema/src/schema.rs` | UPDATE | Regen by `diesel print-schema` |
 | `crates/db_schema/src/source/governance/xx.rs` | CREATE | Diesel model + InsertForm |
@@ -438,7 +438,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 
 ## NOT Building (v0 scope limits)
 
-- {Item 1 — deferred to v1/v2/v3 per [99 ADR-010](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)}
+- {Item 1 — deferred to v1/v2/v3 per [99 ADR-010](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)}
 - {Item 2}
 
 ---
@@ -449,7 +449,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 
 ### Task 1: CREATE `migrations/{ts}_add_xx/up.sql` + `down.sql`
 - **ACTION**: Generate migration via `diesel migration generate add_xx`, then write the SQL
-- **IMPLEMENT**: Table + indexes per [04 §1](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md). Enum types defined in the earlier enums migration
+- **IMPLEMENT**: Table + indexes per [04 §1](docs/brehon-law-inspired-network/04-data-model-and-api.md). Enum types defined in the earlier enums migration
 - **MIRROR**: `migrations/{existing_example}/up.sql` — follow naming and index style
 - **GOTCHA**: Enum types must exist before the tables that reference them (order the migration timestamps)
 - **GOTCHA**: `down.sql` must drop in reverse dependency order
@@ -457,11 +457,11 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 
 ### Task 2: CREATE Diesel model in `crates/db_schema/src/source/governance/xx.rs`
 - **ACTION**: Write the `#[derive(Queryable, Selectable, Identifiable)]` struct and the `Insertable` form
-- **IMPLEMENT**: Exact fields from [04 §3](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)
+- **IMPLEMENT**: Exact fields from [04 §3](docs/brehon-law-inspired-network/04-data-model-and-api.md)
 - **MIRROR**: `crates/db_schema/src/source/{similar_lemmy_struct}.rs`
 - **IMPORTS**: `use crate::schema::xx;`, `use diesel::prelude::*;`, `use chrono::{DateTime, Utc};`, relevant enum imports
 - **GOTCHA**: `#[diesel(table_name = xx)]` must match `schema.rs` exactly; use `i32` for ids unless the table uses `serial8`/`BigInt`
-- **GOTCHA**: **Every match on `CaseStatus` must cover `EmergencyRemove`** per [ADR-013](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) — use exhaustive match, no `_ =>` fallthrough
+- **GOTCHA**: **Every match on `CaseStatus` must cover `EmergencyRemove`** per [ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) — use exhaustive match, no `_ =>` fallthrough
 - **VALIDATE**: `cargo check -p lemmy_db_schema`
 
 ### Task 3: EXPORT from `crates/db_schema/src/source/governance/mod.rs`
@@ -469,17 +469,17 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **VALIDATE**: `cargo check -p lemmy_db_schema`
 
 ### Task 4: ADD DTOs to `crates/api/api_common/src/governance.rs`
-- **ACTION**: Add request/response structs per [04 §5](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)
+- **ACTION**: Add request/response structs per [04 §5](docs/brehon-law-inspired-network/04-data-model-and-api.md)
 - **IMPLEMENT**: `#[derive(Debug, Clone, Serialize, Deserialize)]` + `ts_rs` derive if the workspace uses it
 - **MIRROR**: `crates/api/api_common/src/{similar_module}.rs`
 - **VALIDATE**: `cargo check -p lemmy_api_common`
 
 ### Task 5: CREATE handler `crates/api/api/src/governance/xx.rs` (or `api_crud/src/governance/xx.rs`)
-- **ACTION**: Implement the async handler per [04 §6](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)
+- **ACTION**: Implement the async handler per [04 §6](docs/brehon-law-inspired-network/04-data-model-and-api.md)
 - **IMPLEMENT**: Validate input, call into the db layer, return the DTO
 - **MIRROR**: `crates/api/api/src/{similar_handler}.rs`
-- **GOTCHA**: **Every governance write must call the cross-cutting `governance_log::append(...)` helper before the user response returns** (cross-cutting §4.1 of [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md))
-- **GOTCHA**: **Any string written to `public_case_log.summary`, `public_case_log.rationale_redacted`, or `governance_log.payload` must pass through `redaction::scrub(...)`** — this is a hard GDPR requirement ([ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md))
+- **GOTCHA**: **Every governance write must call the cross-cutting `governance_log::append(...)` helper before the user response returns** (cross-cutting §4.1 of [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md))
+- **GOTCHA**: **Any string written to `public_case_log.summary`, `public_case_log.rationale_redacted`, or `governance_log.payload` must pass through `redaction::scrub(...)`** — this is a hard GDPR requirement ([ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
 - **GOTCHA**: Use `actor_pseudonym::get_or_create(person_id)` — never write `person_id`, usernames, or emails into the governance log
 - **VALIDATE**: `cargo check -p lemmy_api` (or `lemmy_api_crud`)
 
@@ -498,7 +498,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 
 ## Testing Strategy
 
-Per [IMPLEMENTATION-PLAN-v0.md §5](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md): **integration-only** for v0, no unit tests until something breaks twice. All tests live in `tests/e2e.rs`.
+Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md): **integration-only** for v0, no unit tests until something breaks twice. All tests live in `tests/e2e.rs`.
 
 ### Tests to Add
 
@@ -555,7 +555,7 @@ diesel migration redo   # verifies up+down round-trip
 psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 ```
 
-**EXPECT**: Round-trip works; new table shape matches [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md)
+**EXPECT**: Round-trip works; new table shape matches [04](docs/brehon-law-inspired-network/04-data-model-and-api.md)
 
 ### Level 5: CROSS_CUTTING_VERIFICATION (if touching log or pseudonyms)
 
@@ -577,8 +577,8 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 - [ ] Integration tests cover the happy path and the Phase-relevant edge cases
 - [ ] Code mirrors existing Lemmy patterns (naming, file layout, error propagation)
 - [ ] No new `cargo clippy` warnings introduced
-- [ ] No contradictions with the 15 ADRs in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)
-- [ ] Cross-cutting requirements ([IMPLEMENTATION-PLAN-v0.md §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md)) respected
+- [ ] No contradictions with the 15 ADRs in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
+- [ ] Cross-cutting requirements ([IMPLEMENTATION-PLAN-v0.md §4](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)) respected
 
 ---
 
@@ -601,7 +601,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 |---|---|---|---|
 | Upstream Lemmy 1.0-beta rebase breaks patterns | MED | MED | Pin to `upstream/main` SHA in `CLAUDE.md`; rebase weekly |
 | Redaction bypass via direct log write | LOW | HIGH | Single `governance_log::append` wrapper; reject PRs that insert into log table directly |
-| Hash-chain trigger + signature update brittleness | LOW | HIGH | Fallback = side-table for signatures (documented in [IMPLEMENTATION-PLAN-v0.md §7.1](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md)) |
+| Hash-chain trigger + signature update brittleness | LOW | HIGH | Fallback = side-table for signatures (documented in [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)) |
 | {phase-specific risk} | {L/M/H} | {L/M/H} | {mitigation} |
 
 ---
@@ -616,7 +616,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 <output>
 **OUTPUT_FILE**: `.claude/PRPs/plans/{kebab-case-phase-or-feature-name}.plan.md`
 
-**If input was a phase reference**, also update [IMPLEMENTATION-PLAN-v0.md](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) with a pointer to the new plan? **NO.** That file lives in a sibling repo and is authoritative — do not edit it from this fork. Link to it instead.
+**If input was a phase reference**, also update [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) with a pointer to the new plan? **NO.** That file lives in a sibling repo and is authoritative — do not edit it from this fork. Link to it instead.
 
 **REPORT_TO_USER**:
 
@@ -626,7 +626,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 **File**: `.claude/PRPs/plans/{name}.plan.md`
 
 **Source**: {IMPLEMENTATION-PLAN-v0.md §3 Phase N | PRD | free-form}
-**v0 Step**: {from [05 §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md)}
+**v0 Step**: {from [05 §4](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md)}
 **Complexity**: {LOW/MEDIUM/HIGH}
 
 ### Scope
@@ -642,7 +642,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 
 ### ADRs Governing This Phase
 
-- {ADR-NNN from [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)}
+- {ADR-NNN from [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)}
 
 ### Cross-Cutting Touches
 
@@ -650,7 +650,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 
 ### Blocking OQs
 
-{List any OQ from [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) that blocks execution, or "None"}
+{List any OQ from [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) that blocks execution, or "None"}
 
 ### Top Risk
 
@@ -670,7 +670,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 **FINAL_VALIDATION before saving plan:**
 
 **DESIGN_DOC_COMPLIANCE:**
-- [ ] Every reference to [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md), [05](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md), and [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) uses the correct path
+- [ ] Every reference to [04](docs/brehon-law-inspired-network/04-data-model-and-api.md), [05](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md), and [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) uses the correct path
 - [ ] No contradictions with the 15 ADRs
 - [ ] No v1/v2/v3 scope has leaked in
 - [ ] Solo-dev stack respected (no Keycloak, OPA, Vault, K8s, external signer, blockchain)
@@ -706,7 +706,7 @@ psql -h localhost -U lemmy -d lemmy_test -c '\d {new_table}'
 
 <success_criteria>
 **CONTEXT_COMPLETE**: All patterns, gotchas, integration points documented from actual Lemmy code and the Brehon design docs
-**ADR_COMPLIANT**: No contradictions with the 15 ADRs in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)
+**ADR_COMPLIANT**: No contradictions with the 15 ADRs in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
 **IMPLEMENTATION_READY**: Tasks executable top-to-bottom without re-research
 **PATTERN_FAITHFUL**: Every new file mirrors existing Lemmy crate style
 **VALIDATION_DEFINED**: Every task has an executable `cargo` or `diesel` command

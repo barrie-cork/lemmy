@@ -11,7 +11,7 @@ argument-hint: [feature/problem description] (blank = start with questions)
 
 ## When to Use This
 
-**The Brehon project already has a frozen design suite** under `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\`:
+**The Brehon project already has a frozen design suite** under `docs/brehon-law-inspired-network/`:
 
 - `00-README.md` through `07-operations-and-federation.md` — stable
 - `99-decisions-and-open-questions.md` — 15 ADRs + 12 open questions
@@ -22,7 +22,7 @@ argument-hint: [feature/problem description] (blank = start with questions)
 **Use this command only when:**
 
 1. A new capability is being added that isn't covered by any of the numbered docs (rare for v0 — most v0 work is already specified)
-2. A blocking open question ([99 OQ-xxx](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)) needs to be resolved with a small design document before coding can proceed
+2. A blocking open question ([99 OQ-xxx](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)) needs to be resolved with a small design document before coding can proceed
 3. A deviation from the plan is large enough to need its own hypothesis + success metric before committing to a `/prp-plan`
 4. The user explicitly asks for a PRD
 
@@ -46,10 +46,10 @@ You are a sharp product-minded engineer who:
 
 ## Brehon Context (read every invocation)
 
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\01-vision-and-principles.md` — the 9 principles and non-goals (hard)
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md` — v0 scope and v1/v2/v3 staging
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md` — 15 committed ADRs, 12 open questions
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md` — what's already been decomposed to tasks
+- `docs/brehon-law-inspired-network/01-vision-and-principles.md` — the 9 principles and non-goals (hard)
+- `docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md` — v0 scope and v1/v2/v3 staging
+- `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — 15 committed ADRs, 12 open questions
+- `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — what's already been decomposed to tasks
 
 **Hard constraints**: if this sub-PRD appears to contradict any ADR, STOP. Surface the contradiction, do not silently fix.
 
@@ -78,8 +78,8 @@ SCOPE CHECK → FOUNDATION QUESTIONS → ADR/OQ CHECK → TECHNICAL GROUNDING �
 Then run this **triage test** before going further:
 
 1. **Is this already in one of the numbered design docs?** If yes, point the user there and stop.
-2. **Is this already a task in [IMPLEMENTATION-PLAN-v0.md §3](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md)?** If yes, suggest `/prp-plan` instead and stop.
-3. **Does this belong to v1/v2/v3 per [ADR-010](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)?** If yes, explicitly note "deferred to v{N}" and ask whether the user still wants a sub-PRD now (usually no).
+2. **Is this already a task in [IMPLEMENTATION-PLAN-v0.md §3](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)?** If yes, suggest `/prp-plan` instead and stop.
+3. **Does this belong to v1/v2/v3 per [ADR-010](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)?** If yes, explicitly note "deferred to v{N}" and ask whether the user still wants a sub-PRD now (usually no).
 4. **Does this contradict a committed ADR?** If yes, stop and surface the contradiction — it's an ADR-supersession question, not a PRD question.
 5. **Is this genuinely v0-scope and undocumented?** Proceed.
 
@@ -93,7 +93,7 @@ Ask these questions (present all at once, user can answer together):
 
 > **Foundation Questions:**
 >
-> 1. **Who** feels this problem first — which actor in [02 §2](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\02-domain-model.md) (Visitor / Provisional / Member / Trusted / Juror Eligible / instance admin)?
+> 1. **Who** feels this problem first — which actor in [02 §2](docs/brehon-law-inspired-network/02-domain-model.md) (Visitor / Provisional / Member / Trusted / Juror Eligible / instance admin)?
 >
 > 2. **What** is the observable pain? Describe behaviour, not assumed need.
 >
@@ -111,7 +111,7 @@ Ask these questions (present all at once, user can answer together):
 
 Based on the foundation answers:
 
-### 3.1 List every ADR in [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) that governs this area
+### 3.1 List every ADR in [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) that governs this area
 
 Example: a sub-PRD touching jury selection is governed by ADR-005 (reputation), ADR-007 (simplified jury parameters), and possibly OQ-001 (per-community scope), OQ-004 (concurrent assignments).
 
@@ -121,18 +121,18 @@ If any OQ must be resolved before this sub-PRD can be executed, STOP and tell th
 
 > **This sub-PRD depends on an unresolved open question:**
 >
-> - [99 OQ-xxx](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md): {question}
+> - [99 OQ-xxx](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md): {question}
 > - Current lean: {from the OQ}
 >
 > We need a decision on this before the PRD can be finalised. Either:
-> 1. Resolve the OQ now (and update [99](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) in the homeserver repo as a separate change)
+> 1. Resolve the OQ now (and update [99](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) in the homeserver repo as a separate change)
 > 2. Accept the OQ's current lean as a working assumption, and document it as a risk
 
 ### 3.3 Contradiction check
 
 If the foundation answers imply contradicting a committed ADR, STOP:
 
-> **Contradiction detected with [99 ADR-xxx](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md):**
+> **Contradiction detected with [99 ADR-xxx](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md):**
 >
 > - ADR says: {summary}
 > - Your framing implies: {summary}
@@ -165,9 +165,9 @@ Return ACTUAL snippets. No invented examples.
 ```
 Read these Brehon design docs and report how {area} fits:
 
-- C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md
-- C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md (§7 crate layout, §4 plane separation)
-- C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\06-security-and-threat-model.md (if security-relevant)
+- docs/brehon-law-inspired-network/04-data-model-and-api.md
+- docs/brehon-law-inspired-network/03-architecture.md (§7 crate layout, §4 plane separation)
+- docs/brehon-law-inspired-network/06-security-and-threat-model.md (if security-relevant)
 
 For each relevant section, quote the exact paragraph and cite the doc + section.
 Flag any place where the new capability would need new tables, new enum variants,
@@ -179,7 +179,7 @@ or new DTOs not currently in [04].
 > **Technical Context:**
 > - Feasibility: {HIGH/MEDIUM/LOW} because {reason tied to an existing Lemmy pattern or a missing one}
 > - Existing patterns to leverage: {list with file:line}
-> - New [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) extensions needed: {list, or "none"}
+> - New [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) extensions needed: {list, or "none"}
 > - Crate(s) affected: {list}
 > - Key technical risk: {main concern}
 
@@ -197,11 +197,11 @@ Ask:
 >
 > 2. **In scope vs deferred**: What 1–2 capabilities MUST land now? What defers to v1?
 >
-> 3. **Key Hypothesis**: "We believe {capability} will {achieve outcome} for {actor}. We'll know we're right when {integration test passes / [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) contract is satisfied / measurable signal}."
+> 3. **Key Hypothesis**: "We believe {capability} will {achieve outcome} for {actor}. We'll know we're right when {integration test passes / [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) contract is satisfied / measurable signal}."
 >
 > 4. **Out of Scope**: What we are explicitly NOT building (even if tempting)?
 >
-> 5. **Blocking dependencies**: What must land first ([IMPLEMENTATION-PLAN-v0.md §3](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) phases, [99 OQs](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md))?
+> 5. **Blocking dependencies**: What must land first ([IMPLEMENTATION-PLAN-v0.md §3](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) phases, [99 OQs](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))?
 
 **GATE**: Wait for responses.
 
@@ -230,7 +230,7 @@ mkdir -p .claude/PRPs/prds
 
 {2–3 sentences. Who, what pain, why now. Reference the design docs rather than re-explaining the world.}
 
-**Actor(s) affected** ([02 §2](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\02-domain-model.md)): {Visitor / Provisional / Member / Trusted / Juror Eligible / instance admin}
+**Actor(s) affected** ([02 §2](docs/brehon-law-inspired-network/02-domain-model.md)): {Visitor / Provisional / Member / Trusted / Juror Eligible / instance admin}
 
 ---
 
@@ -244,7 +244,7 @@ mkdir -p .claude/PRPs/prds
 
 | ADR | Summary | How it constrains us |
 |---|---|---|
-| [ADR-NNN](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | {short} | {what it forces us to do or avoid} |
+| [ADR-NNN](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | {short} | {what it forces us to do or avoid} |
 
 **Contradiction check**: {"None found" or "See §Risks"}
 
@@ -254,20 +254,20 @@ mkdir -p .claude/PRPs/prds
 
 | OQ | Status | Impact on this sub-PRD |
 |---|---|---|
-| [OQ-NNN](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) | {blocking/non-blocking/resolved} | {what we assume or need} |
+| [OQ-NNN](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) | {blocking/non-blocking/resolved} | {what we assume or need} |
 
 ---
 
 ## Proposed Solution
 
-{One paragraph. Which Lemmy patterns we mirror; which crate(s) we touch; which [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) section this extends.}
+{One paragraph. Which Lemmy patterns we mirror; which crate(s) we touch; which [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) section this extends.}
 
 ---
 
 ## Key Hypothesis
 
 > We believe {capability} will {achieve outcome} for {actor}.
-> We'll know we're right when {integration test assertion or [04](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md) contract}.
+> We'll know we're right when {integration test assertion or [04](docs/brehon-law-inspired-network/04-data-model-and-api.md) contract}.
 
 ---
 
@@ -275,7 +275,7 @@ mkdir -p .claude/PRPs/prds
 
 - {Out of scope 1 — why}
 - {Out of scope 2 — why}
-- **Anything deferred to v1/v2/v3 per [ADR-010](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)**
+- **Anything deferred to v1/v2/v3 per [ADR-010](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)**
 
 ---
 
@@ -289,7 +289,7 @@ mkdir -p .claude/PRPs/prds
 
 ---
 
-## Cross-Cutting Impact ([IMPLEMENTATION-PLAN-v0.md §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md))
+## Cross-Cutting Impact ([IMPLEMENTATION-PLAN-v0.md §4](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md))
 
 - [ ] Hash-chain governance log touched? {yes/no — details}
 - [ ] `actor_pseudonym` table or redaction service touched? {yes/no}
@@ -300,7 +300,7 @@ mkdir -p .claude/PRPs/prds
 
 ## Users & Context
 
-**Primary actor**: {from [02 §2](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\02-domain-model.md) — be specific}
+**Primary actor**: {from [02 §2](docs/brehon-law-inspired-network/02-domain-model.md) — be specific}
 - **Current behaviour**: {what happens today}
 - **Trigger**: {what moment makes the need appear}
 - **Success state**: {what "done" looks like}
@@ -318,7 +318,7 @@ mkdir -p .claude/PRPs/prds
 - `crates/api/...`
 - `crates/apub/...` (if federation-relevant)
 
-**Architecture fit** ([03 §4](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\03-architecture.md)): {how this respects plane separation}
+**Architecture fit** ([03 §4](docs/brehon-law-inspired-network/03-architecture.md)): {how this respects plane separation}
 
 **New dependencies** (if any):
 - {crate} = "{version}" — {why}
@@ -387,7 +387,7 @@ mkdir -p .claude/PRPs/prds
 ### Summary
 
 **Problem**: {one line}
-**Actor**: {from [02 §2](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\02-domain-model.md)}
+**Actor**: {from [02 §2](docs/brehon-law-inspired-network/02-domain-model.md)}
 **Hypothesis**: {one line}
 
 ### ADRs Governing This

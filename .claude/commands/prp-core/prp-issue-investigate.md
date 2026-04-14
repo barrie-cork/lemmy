@@ -23,10 +23,10 @@ Investigate the issue/problem and produce a comprehensive Rust implementation pl
 **Investigation scope**: focus on `crates/` (Rust workspace) and `migrations/` (Diesel SQL). Do NOT look for `src/`, `package.json`, `pyproject.toml` — this is a Rust-only fork.
 
 **Brehon red flags** to look for immediately when reading an issue:
-- Symptom mentions "governance log" / "hash chain" / "verification" → [ADR-008](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) territory, high-stakes
-- Symptom mentions "username leaked" / "GDPR" / "can't delete user" → [ADR-015](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) territory, GDPR-critical
-- Symptom mentions "EmergencyRemove" / "admin removal" → [ADR-013](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md)
-- Symptom mentions "remote sanction" / "federation applied" → [ADR-006](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md) — inbound must stay advisory
+- Symptom mentions "governance log" / "hash chain" / "verification" → [ADR-008](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) territory, high-stakes
+- Symptom mentions "username leaked" / "GDPR" / "can't delete user" → [ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) territory, GDPR-critical
+- Symptom mentions "EmergencyRemove" / "admin removal" → [ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
+- Symptom mentions "remote sanction" / "federation applied" → [ADR-006](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) — inbound must stay advisory
 - Symptom mentions "Diesel error" / "migration failed" → schema drift is likely; check `diesel migration redo`
 - Symptom mentions "upstream" / "Lemmy 1.0 changed" → likely an upstream rebase broke patterns
 
@@ -178,7 +178,7 @@ Document with precise file:line references. No suggestions, no improvements.
 
 **PHASE_2_CHECKPOINT:**
 
-- [ ] Both agents (`prp-core:codebase-explorer` and `prp-core:codebase-analyst`) launched in parallel and completed
+- [ ] Both `Explore` agents (one for code location, one for code-path analysis) launched in parallel and completed
 - [ ] Core files identified with line numbers
 - [ ] Integration points mapped with data flow traces
 - [ ] Similar patterns found to mirror
@@ -374,7 +374,7 @@ Evidence: `crates/api/api/src/governance/case.rs:789` - `{problematic code}`
 **File**: `tests/e2e.rs`
 **Action**: {CREATE|UPDATE}
 
-**Test cases to add** (Brehon uses integration-only tests per [IMPLEMENTATION-PLAN-v0.md §5](C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md) — no unit tests until something breaks twice):
+**Test cases to add** (Brehon uses integration-only tests per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) — no unit tests until something breaks twice):
 
 ```rust
 #[tokio::test]

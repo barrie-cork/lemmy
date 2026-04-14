@@ -23,10 +23,10 @@ Answer codebase questions about the Brehon fork (Lemmy 1.0-beta + governance ext
 
 **The fork lives at `C:\Users\barri\Developer\brehon-fork\` (Lemmy 1.0-beta, working branch `governance-v0`).** The authoritative design docs live in a sibling repo on the same machine, so reference them via absolute Windows paths when research touches governance primitives:
 
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\04-data-model-and-api.md` — tables, enums, Diesel structs, DTOs, routes
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\05-mvp-and-delivery-plan.md` — 11-endpoint v0 scope
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md` — 15 ADRs
-- `C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\IMPLEMENTATION-PLAN-v0.md` — phase blueprint
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — tables, enums, Diesel structs, DTOs, routes
+- `docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md` — 11-endpoint v0 scope
+- `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — 15 ADRs
+- `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — phase blueprint
 - Fork-local `CLAUDE.md` and `AGPL-NOTICE.md` at the repo root
 
 Research mode is **description, not design** — if the question happens to touch a committed ADR, quote the ADR verbatim rather than paraphrasing or suggesting alternatives.
@@ -312,7 +312,7 @@ summarise its constraint.}
 
 ## ADR Touchpoints
 
-{List any ADRs from C:\Users\barri\Developer\homeserver\docs\research\brehon-law-inspired-network\99-decisions-and-open-questions.md that the researched code depends on or enforces, e.g. ADR-008 (hash chain), ADR-013 (EmergencyRemove), ADR-015 (pseudonyms + GDPR)}
+{List any ADRs from docs/brehon-law-inspired-network/99-decisions-and-open-questions.md that the researched code depends on or enforces, e.g. ADR-008 (hash chain), ADR-013 (EmergencyRemove), ADR-015 (pseudonyms + GDPR)}
 
 ## Open Questions
 
