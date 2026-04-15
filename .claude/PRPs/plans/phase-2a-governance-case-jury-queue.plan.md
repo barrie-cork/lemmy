@@ -521,7 +521,7 @@ captured to .claude/build-task-14.log; exit=0.
 
 - **Files updated:** `crates/db_views/governance_case/src/lib.rs`
 - **Implement:** two struct definitions per §6 template, with all fields from [04 §4.1], derive macros per §6 template (`#[cfg_attr(feature = "full", derive(Queryable, Selectable))]`, etc.), imports at top from `lemmy_db_schema::source::governance::*` and `lemmy_db_schema_file::enums::*`. The `sanctions: Vec<Sanction>` field on `GovernanceCaseDetailView` is flagged with `#[diesel(skip_insertion)]` or similar — the implementer picks the exact attribute when Diesel complains, guided by the §6 fallback note.
-- **DoD:** `scripts/brehon/cargo-check.bat -p lemmy_db_views_governance_case` exits 0; `cargo clippy -p lemmy_db_views_governance_case -- -D warnings` exits 0.
+- **DoD:** `scripts/brehon/cargo-check.bat -p lemmy_db_views_governance_case` exits 0; `cargo clippy -p lemmy_db_views_governance_case --no-deps --features full -- -D warnings` exits 0. The `--features full` flag is mandatory because `lemmy_db_schema::source::governance` is gated behind `feature = "full"` in the upstream source crate (`crates/db_schema/src/source/mod.rs:21-22`); without it, bare `-p <target>` fails at compile before linting begins. The `--no-deps` flag filters pre-existing lint debt in upstream `crates/diesel_utils/src/pagination.rs` (unused imports at lines 5-6, dead-code at line 161, unfulfilled `#[expect]` at line 220) that is out of Phase 2a scope and tracked separately. See also the 94eba51a0 precedent for reframing a plan command that was unexecutable on the current tree.
 - **Validation:** same as task 14, log `.claude/build-task-15.log`
 - **Commit subject:** `feat(db_views): task 15 — GovernanceCaseSummaryView + GovernanceCaseDetailView structs`
 - **Expected iterations:** 2 (struct definition + fixup for Diesel Queryable field-order or embed-attribute warnings)
@@ -532,7 +532,7 @@ captured to .claude/build-task-14.log; exit=0.
 - **Files updated:** `crates/db_views/governance_case/src/lib.rs` (add `#[cfg(feature = "full")] pub mod impls;`)
 - **Implement:** `pub async fn list_open_cases_for_community(pool: &mut DbPool<'_>, community_id: CommunityId) -> LemmyResult<Vec<GovernanceCaseSummaryView>>` per §6 query pattern. Filters by `community_id` equals + `status IN (Open, ThresholdMet, JurySelection, InReview)`. Computes `reporter_count = 0` (drift stub), `jury_needed = 5` (constant per [05 §3]), `jury_submitted` via correlated subquery on `jury_assignment` WHERE `case_id = moderation_case.id AND status = 'submitted'`.
 - **Gotcha — `EmergencyRemove` and `AdminReview` excluded:** the filter `status IN (Open, ThresholdMet, JurySelection, InReview)` intentionally excludes both `EmergencyRemove` and `AdminReview`. This matches the task body "cases still needing action" semantics. **Do NOT add them** — they belong to Phase 4 admin views.
-- **DoD:** `scripts/brehon/cargo-check.bat -p lemmy_db_views_governance_case` + clippy both clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p lemmy_db_views_governance_case` + `cargo clippy -p lemmy_db_views_governance_case --no-deps --features full -- -D warnings` both clean (see task 15 DoD for rationale on the flags).
 - **Validation:** log `.claude/build-task-16.log`
 - **Commit subject:** `feat(db_views): task 16 — list_open_cases_for_community query`
 - **Expected iterations:** 2 (first pass + a probable fixup for the correlated-subquery `sql::<Integer>` typing)
@@ -542,7 +542,7 @@ captured to .claude/build-task-14.log; exit=0.
 - **Files updated:** `crates/db_views/governance_case/src/impls.rs`
 - **Implement:** `pub async fn read_case_detail(pool: &mut DbPool<'_>, case_id: ModerationCaseId) -> LemmyResult<GovernanceCaseDetailView>` per §6 two-query pattern. First query hydrates case row + evidence count + appeal status + target_creator_id (COALESCE over post.creator_id / comment.creator_id / target_person_id). Second query loads `Vec<Sanction>` via `sanction::table.filter(sanction::case_id.eq(case_id))`. **Redaction and permission checks are the Phase 4 handler's job, not this function's.** The view returns the fully-hydrated shape; the handler decides what to strip.
 - **Gotcha — `EmergencyRemove` exhaustive match:** `read_case_detail` returns a `case_row: ModerationCase` which carries `CaseStatus`. This function itself doesn't match on status, but any caller that does must handle `EmergencyRemove` and `AdminReview` exhaustively per ADR-013. The doc comment on the function should remind the Phase 4 caller of this invariant.
-- **DoD:** crate + clippy both clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p lemmy_db_views_governance_case` + `cargo clippy -p lemmy_db_views_governance_case --no-deps --features full -- -D warnings` both clean (see task 15 DoD).
 - **Validation:** log `.claude/build-task-17.log`
 - **Commit subject:** `feat(db_views): task 17 — read_case_detail query`
 - **Expected iterations:** 2 (likely 1 if task 16 already ironed out `sql::` typing pain)
@@ -551,7 +551,7 @@ captured to .claude/build-task-14.log; exit=0.
 
 - **Files updated:** `crates/db_views/governance_case/src/impls.rs`
 - **Implement:** `pub async fn list_cases_for_person(pool: &mut DbPool<'_>, target_person_id: PersonId) -> LemmyResult<Vec<GovernanceCaseSummaryView>>`. Reuses the summary-view join shape from task 16; filter changes to `moderation_case::target_person_id.eq(target_person_id)` (no community filter, no status filter — a target sees all cases they're named in, active or closed).
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-18.log`
 - **Commit subject:** `feat(db_views): task 18 — list_cases_for_person query`
 - **Expected iterations:** 1 (mechanical variation of task 16)
@@ -560,7 +560,7 @@ captured to .claude/build-task-14.log; exit=0.
 
 - **Files updated:** `crates/db_views/governance_case/src/impls.rs`
 - **Implement:** `pub async fn list_cases_needing_jury_selection(pool: &mut DbPool<'_>) -> LemmyResult<Vec<GovernanceCaseSummaryView>>`. Filter: `moderation_case::status.eq(CaseStatus::ThresholdMet)`. No community scope (this feeds the Phase 4 background job which scans instance-wide).
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-19.log`
 - **Commit subject:** `feat(db_views): task 19 — list_cases_needing_jury_selection query`
 - **Expected iterations:** 1
@@ -580,7 +580,7 @@ captured to .claude/build-task-14.log; exit=0.
 
 - **Files updated:** `crates/db_views/jury_queue/src/lib.rs`
 - **Implement:** one struct per [04 §4.2]. All seven fields: `case_id: i32`, `severity: CaseSeverity`, `reason_code: String`, `opened_at: DateTime<Utc>`, `deadline_at: Option<DateTime<Utc>>`, `community_id: Option<i32>`, `community_name: Option<String>`. `deadline_at` is always `None` for Phase 2a (drift stub per §2). Derive macros follow §6 template.
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-21.log`
 - **Commit subject:** `feat(db_views): task 21 — JuryQueueView struct`
 - **Expected iterations:** 1
@@ -590,7 +590,7 @@ captured to .claude/build-task-14.log; exit=0.
 - **Files created:** `crates/db_views/jury_queue/src/impls.rs`
 - **Files updated:** `crates/db_views/jury_queue/src/lib.rs` (add `#[cfg(feature = "full")] pub mod impls;`)
 - **Implement:** `pub async fn list_jury_assignments_for_person(pool: &mut DbPool<'_>, person_id: PersonId) -> LemmyResult<Vec<JuryQueueView>>`. Joins `jury_assignment.table.inner_join(moderation_case::table.on(...)).left_join(community::table.on(...))`. Filter: `jury_assignment::person_id.eq(person_id)`. **Sort by `jury_assignment::selected_at.desc()`** (not `accepted_at` — divergence §1 item 1). Select tuple: `(case_id, severity, reason_code, opened_at, None::<DateTime<Utc>>, community_id, community.name.nullable())`. The `None` for `deadline_at` is expressed as `sql::<diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>>("NULL")` or — simpler — select the other six columns and build the view via `.map(...)` post-load.
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-22.log`
 - **Commit subject:** `feat(db_views): task 22 — list_jury_assignments_for_person query`
 - **Expected iterations:** 2 (join ergonomics + the `None` selection pattern)
@@ -600,7 +600,7 @@ captured to .claude/build-task-14.log; exit=0.
 - **Files updated:** `crates/db_views/jury_queue/src/impls.rs`
 - **Implement:** `pub async fn list_available_jury_cases_for_person(pool: &mut DbPool<'_>, person_id: PersonId) -> LemmyResult<Vec<JuryQueueView>>`. Per [IMPLEMENTATION-PLAN-v0.md §Phase 2] task 23: "v0 stays simple; Phase 5 adds reputation gating." Filter: `moderation_case::status.eq(CaseStatus::ThresholdMet)` AND `moderation_case::target_person_id.ne(Some(person_id))` AND `moderation_case::creator_id.ne(Some(person_id))` AND NOT EXISTS any `jury_assignment` row already linking this person to the case. No reputation check (reputation is a Phase 5 concern). Sort by `moderation_case::opened_at.asc()`.
 - **Gotcha — `NOT EXISTS` subquery:** Diesel supports this via `diesel::dsl::not(diesel::dsl::exists(jury_assignment::table.filter(...)))` — verify against modlog idioms if fragile.
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-23.log`
 - **Commit subject:** `feat(db_views): task 23 — list_available_jury_cases_for_person query`
 - **Expected iterations:** 2
@@ -609,7 +609,7 @@ captured to .claude/build-task-14.log; exit=0.
 
 - **Files updated:** `crates/db_views/jury_queue/src/impls.rs`
 - **Implement:** `pub async fn count_unsubmitted_jury_assignments(pool: &mut DbPool<'_>) -> LemmyResult<i64>`. Single-table query on `jury_assignment`: `.filter(jury_assignment::status.eq_any([JuryAssignmentStatus::Selected, JuryAssignmentStatus::Accepted]))` then `.count().get_result::<i64>(conn).await?`. **No deadline filter** — per drift §2 item 3, Phase 2a ships the unfiltered count, and Phase 4's background job will add the `selected_at + offset` filter when the homeserver-side decision on deadline source is made.
-- **DoD:** check + clippy clean.
+- **DoD:** `scripts/brehon/cargo-check.bat -p <crate>` + `cargo clippy -p <crate> --no-deps --features full -- -D warnings` both clean (see task 15 DoD for flag rationale; `<crate>` = `lemmy_db_views_governance_case` for tasks 17–19, `lemmy_db_views_jury_queue` for tasks 21–24).
 - **Validation:** log `.claude/build-task-24.log`
 - **Commit subject:** `feat(db_views): task 24 — count_unsubmitted_jury_assignments query`
 - **Expected iterations:** 1
@@ -640,7 +640,7 @@ Execute on the `feature/phase-2a-governance-case-jury-queue` branch. Not a commi
 3. All seven queries named in [IMPLEMENTATION-PLAN-v0.md §Phase 2 tasks 16–19, 22–24] are implemented as `pub async fn` with the signatures declared in §9.
 4. `scripts/brehon/cargo-check.bat --workspace` exits 0 with zero warnings at HEAD of `feature/phase-2a-governance-case-jury-queue`.
 5. `scripts/brehon/cargo-test.bat --test e2e -p lemmy_server` exits 0 with 4 passed, 0 failed (unchanged from Phase 1 final count).
-6. `cargo clippy --workspace -- -D warnings` exits 0 — no new lints in either Phase 2a crate, no `#[allow]` attributes added.
+6. `cargo clippy --no-deps -p lemmy_db_views_governance_case -p lemmy_db_views_jury_queue --features full -- -D warnings` exits 0 — no new lints in either Phase 2a crate, no `#[allow]` attributes added. **Reframe rationale** (precedent: [94eba51a0](../../../docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) `docs(plan): reframe Phase 1 Level 3 acceptance criterion for forbid_diesel_cli`): the original `cargo clippy --workspace -- -D warnings` command is unexecutable against this tree because (a) `lemmy_db_schema::source::governance` is gated behind `feature = "full"` in the upstream source crate, so bare workspace clippy without feature unification fails at compile, and (b) pre-existing lint debt in upstream `crates/diesel_utils/src/pagination.rs` (unused imports at lines 5–6, dead-code at line 161, unfulfilled `#[expect]` at line 220 tied to a rust-lang unfulfilled-lint-expectations behavioural change) is out of Phase 2a scope. The reframed command targets exactly the two Phase 2a crates, activates their `full` feature, and skips dependency linting — which proves the criterion's intent ("no new lints in either Phase 2a crate") without blocking on upstream debt. The upstream `pagination.rs` cleanup will be filed as a carry-patch TODO(brehon-fork) and landed on `governance-v0` between phases per `feedback_carry_patch_todos.md`.
 7. No `.unwrap()`, no `.expect()`, no `#[allow(clippy::...)]` anywhere in the new code (workspace lints deny these).
 8. Every task commit carries a subject line of the form `<type>(<scope>): task N — <summary>` where N ∈ {14..24}, in order.
 9. Every task commit body names its validation command and its `.claude/build-task-NN.log` path with exit code.
