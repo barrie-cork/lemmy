@@ -745,3 +745,103 @@ CREATE TRIGGER multi_community_remove_subscribers
     FOR EACH ROW
     WHEN (OLD.follow_state = 'Accepted')
     EXECUTE FUNCTION r.multicommunity_subscribers_decrement ();
+
+-- === Governance log hash chain (Phase 1) ==================================
+-- The governance_log table is append-only and hash-chained. Three triggers
+-- enforce it:
+--   1. BEFORE INSERT  : compute prev_hash from the most recent row and
+--                       entry_hash = sha256(prev_hash || entry_kind || payload_bytes || created_at_bytes).
+--   2. BEFORE UPDATE  : allow exactly one transition — NULL signature → non-null
+--                       signature. Any other update raises an exception.
+--   3. BEFORE DELETE  : always raise.
+--
+-- The FUNCTIONS live in schema `r` (so they are dropped when `r` is dropped
+-- on schema rebuild). The TRIGGERS attach to `public.governance_log`
+-- (because triggers are table-scoped); they are dropped transitively when
+-- the functions they EXECUTE are dropped, per the rule at the top of this
+-- file: "dropping the function drops the trigger."
+-- ========================================================================
+
+CREATE FUNCTION r.governance_log_hash_chain_before_insert ()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    last_hash bytea;
+BEGIN
+    -- Read the most recent entry_hash. If the table is empty, use 32 zero bytes.
+    SELECT entry_hash INTO last_hash
+      FROM public.governance_log
+      ORDER BY id DESC
+      LIMIT 1;
+    IF last_hash IS NULL THEN
+        last_hash := decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
+    END IF;
+    NEW.prev_hash := last_hash;
+    -- entry_hash = sha256(prev_hash || entry_kind || payload::text || created_at::text)
+    NEW.entry_hash := digest(
+        NEW.prev_hash
+        || convert_to(NEW.entry_kind, 'UTF8')
+        || convert_to(NEW.payload::text, 'UTF8')
+        || convert_to(to_char(NEW.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), 'UTF8'),
+        'sha256'
+    );
+    -- signature is always NULL at insert time; Phase 4 fills it via UPDATE
+    NEW.signature := NULL;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER governance_log_hash_chain
+    BEFORE INSERT ON public.governance_log
+    FOR EACH ROW
+    EXECUTE FUNCTION r.governance_log_hash_chain_before_insert ();
+
+CREATE FUNCTION r.governance_log_signature_gate_before_update ()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Only the signature column may change, and only the NULL->non-NULL transition.
+    IF OLD.id IS DISTINCT FROM NEW.id
+       OR OLD.prev_hash IS DISTINCT FROM NEW.prev_hash
+       OR OLD.entry_hash IS DISTINCT FROM NEW.entry_hash
+       OR OLD.entry_kind IS DISTINCT FROM NEW.entry_kind
+       OR OLD.payload IS DISTINCT FROM NEW.payload
+       OR OLD.actor_pseudonym IS DISTINCT FROM NEW.actor_pseudonym
+       OR OLD.created_at IS DISTINCT FROM NEW.created_at
+    THEN
+        RAISE EXCEPTION 'governance_log is append-only: only signature may be updated'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF OLD.signature IS NOT NULL THEN
+        RAISE EXCEPTION 'governance_log.signature is write-once and already set'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NEW.signature IS NULL THEN
+        RAISE EXCEPTION 'governance_log.signature must be set, not cleared'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER governance_log_signature_gate
+    BEFORE UPDATE ON public.governance_log
+    FOR EACH ROW
+    EXECUTE FUNCTION r.governance_log_signature_gate_before_update ();
+
+CREATE FUNCTION r.governance_log_append_only_before_delete ()
+    RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'governance_log is append-only: rows may not be deleted'
+        USING ERRCODE = 'integrity_constraint_violation';
+END;
+$$;
+
+CREATE TRIGGER governance_log_no_delete
+    BEFORE DELETE ON public.governance_log
+    FOR EACH ROW
+    EXECUTE FUNCTION r.governance_log_append_only_before_delete ();
