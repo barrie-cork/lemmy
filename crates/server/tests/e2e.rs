@@ -442,3 +442,276 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+// ============================================================================
+// Phase 2 — view-crate smoke tests
+// ============================================================================
+//
+// Three gates, one per Phase 2 view crate:
+//
+//   * `list_open_cases_returns_seeded_rows`  → governance_case
+//   * `jury_queue_view_returns_assignments`  → jury_queue
+//   * `modlog_view_returns_published_entries`→ governance_modlog
+//
+// Seeding uses the same sync `PgConnection` pattern as the Phase 1 tests
+// so we reuse the `governance_fixtures::apply_all_schema` helper. The
+// view-crate queries take `&mut DbPool<'_>`, which is diesel-async; we
+// build a single `AsyncPgConnection` against the same container and
+// convert it via the blanket `From<&mut AsyncPgConnection> for DbPool<'_>`
+// impl at `lemmy_diesel_utils::connection.rs:104`. No pool needed — the
+// `DbPool::Conn` variant threads one borrowed connection.
+
+#[tokio::test]
+async fn list_open_cases_returns_seeded_rows() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, RunQueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
+  use lemmy_db_schema_file::enums::{CaseSeverity, CaseStatus, CaseTargetType};
+  use lemmy_db_schema_file::schema::moderation_case;
+  use lemmy_db_views_governance_case::impls::list_cases_needing_jury_selection;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some("https://example.invalid/post/seed".to_string()),
+      reason_code: "spam".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::ThresholdMet,
+      threshold_score: 1,
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .execute(&mut sync_conn)?;
+  }
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+
+  let rows = list_cases_needing_jury_selection(&mut pool)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("list_cases_needing_jury_selection: {e}").into() })?;
+  assert_eq!(rows.len(), 1, "expected exactly one ThresholdMet case");
+  let row = rows
+    .first()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one row".into() })?;
+  assert_eq!(
+    row.jury_needed, 5,
+    "jury_needed should be the [05 §3] constant 5"
+  );
+  assert_eq!(
+    row.reporter_count, 0,
+    "reporter_count is a Phase 2a drift stub and should always be 0"
+  );
+  assert!(
+    matches!(row.status, CaseStatus::ThresholdMet),
+    "seeded status must round-trip unchanged"
+  );
+
+  Ok(())
+}
+
+#[tokio::test]
+async fn jury_queue_view_returns_assignments() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_schema::newtypes::ModerationCaseId;
+  use lemmy_db_schema::source::governance::{
+    jury_assignment::JuryAssignmentInsertForm,
+    moderation_case::ModerationCaseInsertForm,
+  };
+  use lemmy_db_schema_file::PersonId;
+  use lemmy_db_schema_file::enums::{CaseSeverity, CaseStatus, CaseTargetType};
+  use lemmy_db_schema_file::schema::{jury_assignment, moderation_case};
+  use lemmy_db_views_jury_queue::impls::list_jury_assignments_for_person;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  // Seed an instance + person pair via raw SQL — the only way to satisfy
+  // `jury_assignment.person_id -> person (id)` without pulling the whole
+  // Lemmy Person::create stack into this test binary. Person has many
+  // NOT NULL columns but most have DEFAULTs; we set the minimum required
+  // (name, ap_id, inbox_url, public_key, instance_id) and let the rest
+  // default.
+  let (case_id, person_id) = {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+
+    sync_conn.batch_execute(
+      r#"
+      INSERT INTO instance (domain) VALUES ('test.invalid');
+      INSERT INTO person (name, ap_id, inbox_url, public_key, instance_id)
+        VALUES (
+          'seed-juror',
+          'https://test.invalid/u/seed-juror',
+          'https://test.invalid/u/seed-juror/inbox',
+          'seed-pubkey',
+          (SELECT id FROM instance WHERE domain = 'test.invalid')
+        );
+      "#,
+    )?;
+
+    let person_id: i32 = diesel::sql_query(
+      "SELECT id FROM person WHERE name = 'seed-juror'",
+    )
+    .get_result::<SingleI32>(&mut sync_conn)?
+    .id;
+
+    let case_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some("https://example.invalid/post/jury-seed".to_string()),
+      reason_code: "harassment".to_string(),
+      severity: CaseSeverity::Medium,
+      status: CaseStatus::InReview,
+      threshold_score: 1,
+    };
+    let case_id: i32 = diesel::insert_into(moderation_case::table)
+      .values(&case_form)
+      .returning(moderation_case::id)
+      .get_result(&mut sync_conn)?;
+
+    let assignment_form = JuryAssignmentInsertForm {
+      case_id: ModerationCaseId(case_id),
+      person_id: PersonId(person_id),
+      status: lemmy_db_schema_file::enums::JuryAssignmentStatus::Selected,
+    };
+    diesel::insert_into(jury_assignment::table)
+      .values(&assignment_form)
+      .execute(&mut sync_conn)?;
+
+    (case_id, person_id)
+  };
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+
+  let rows = list_jury_assignments_for_person(&mut pool, PersonId(person_id))
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("list_jury_assignments_for_person: {e}").into() })?;
+  assert_eq!(
+    rows.len(),
+    1,
+    "expected exactly one jury assignment for the seeded juror"
+  );
+  let row = rows
+    .first()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one row".into() })?;
+  assert_eq!(row.case_id, case_id, "case_id should round-trip unchanged");
+  assert!(
+    row.deadline_at.is_none(),
+    "deadline_at is a Phase 2a drift stub and should always be None"
+  );
+
+  Ok(())
+}
+
+#[tokio::test]
+async fn modlog_view_returns_published_entries() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, RunQueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_schema::newtypes::ModerationCaseId;
+  use lemmy_db_schema::source::governance::{
+    moderation_case::ModerationCaseInsertForm,
+    public_case_log::PublicCaseLogInsertForm,
+  };
+  use lemmy_db_schema_file::enums::{CaseSeverity, CaseStatus, CaseTargetType};
+  use lemmy_db_schema_file::schema::{moderation_case, public_case_log};
+  use lemmy_db_views_governance_modlog::impls::list_public_case_log;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  let case_id = {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+
+    let case_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some("https://example.invalid/post/modlog-seed".to_string()),
+      reason_code: "disinformation".to_string(),
+      severity: CaseSeverity::High,
+      status: CaseStatus::InReview,
+      threshold_score: 1,
+    };
+    let case_id: i32 = diesel::insert_into(moderation_case::table)
+      .values(&case_form)
+      .returning(moderation_case::id)
+      .get_result(&mut sync_conn)?;
+
+    let log_form = PublicCaseLogInsertForm {
+      case_id: ModerationCaseId(case_id),
+      community_id: None,
+      summary: "Case summary — no identifiers".to_string(),
+      rationale_redacted: None,
+    };
+    diesel::insert_into(public_case_log::table)
+      .values(&log_form)
+      .execute(&mut sync_conn)?;
+
+    case_id
+  };
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+
+  let rows = list_public_case_log(&mut pool)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("list_public_case_log: {e}").into() })?;
+  assert_eq!(rows.len(), 1, "expected exactly one public_case_log entry");
+  let row = rows
+    .first()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one row".into() })?;
+  assert_eq!(row.case_id, case_id, "case_id should round-trip unchanged");
+  assert_eq!(
+    row.summary, "Case summary — no identifiers",
+    "summary should be read back verbatim (no re-redaction)"
+  );
+  assert!(
+    row.decision.is_none(),
+    "decision is a Phase 2b drift stub and should always be None"
+  );
+  assert!(
+    row.sanction_action.is_none(),
+    "sanction_action is a Phase 2b drift stub and should always be None"
+  );
+  assert!(
+    !row.appealed,
+    "appealed should be false when no appeal row was seeded"
+  );
+
+  Ok(())
+}
+
+/// Tiny row shape for `sql_query` probes that return a single `id` column.
+#[derive(diesel::QueryableByName)]
+struct SingleI32 {
+  #[diesel(sql_type = diesel::sql_types::Int4)]
+  id: i32,
+}
