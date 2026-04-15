@@ -13,7 +13,8 @@ use lemmy_db_schema_file::enums::CaseSeverity;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-// `pub mod impls;` lands in task 22 alongside the first query function.
+#[cfg(feature = "full")]
+pub mod impls;
 
 #[skip_serializing_none]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
