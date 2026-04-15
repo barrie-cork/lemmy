@@ -154,3 +154,138 @@ async fn can_insert_moderation_case() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+#[tokio::test]
+async fn governance_log_hash_chain_holds() -> Result<(), Box<dyn Error>> {
+  use diesel::sql_types::{Bytea, Int8, Text};
+  use diesel::{
+    Connection as _, ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, sql_query,
+  };
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLogInsertForm;
+  use lemmy_db_schema_file::schema::governance_log;
+  use serde_json::json;
+  use sha2::{Digest, Sha256};
+
+  // Raw row shape. We deliberately bypass the `GovernanceLog` model here
+  // because we need Postgres's own `payload::text` rendering (which uses
+  // `{"n": 1}` with a space after the colon) and its own `to_char` timestamp
+  // formatting — if we re-serialised from the deserialised `serde_json::Value`
+  // or re-formatted from `chrono::DateTime`, the byte sequence would diverge
+  // from what the trigger hashed and the chain check would fail.
+  #[derive(diesel::QueryableByName, Debug)]
+  struct RawRow {
+    #[diesel(sql_type = Int8)]
+    id: i64,
+    #[diesel(sql_type = Bytea)]
+    prev_hash: Vec<u8>,
+    #[diesel(sql_type = Bytea)]
+    entry_hash: Vec<u8>,
+    #[diesel(sql_type = Text)]
+    entry_kind: String,
+    #[diesel(sql_type = Text)]
+    payload_text: String,
+    #[diesel(sql_type = Text)]
+    created_at_text: String,
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let mut conn = PgConnection::establish(&db_url)?;
+  governance_fixtures::apply_all_schema(&mut conn)?;
+
+  // Three inserts. Payloads vary in shape: scalar, nested object, and
+  // array-valued field — the last one stress-tests canonicalisation of
+  // non-trivial JSONB.
+  let forms = [
+    GovernanceLogInsertForm {
+      entry_kind: "phase1.smoke.first".to_string(),
+      payload: json!({ "n": 1 }),
+      actor_pseudonym: Some("pseudo-alpha".to_string()),
+    },
+    GovernanceLogInsertForm {
+      entry_kind: "phase1.smoke.second".to_string(),
+      payload: json!({ "n": 2 }),
+      actor_pseudonym: None,
+    },
+    GovernanceLogInsertForm {
+      entry_kind: "phase1.smoke.third".to_string(),
+      payload: json!({ "n": 3, "nested": [1, 2] }),
+      actor_pseudonym: Some("pseudo-bravo".to_string()),
+    },
+  ];
+  for form in &forms {
+    diesel::insert_into(governance_log::table)
+      .values(form)
+      .execute(&mut conn)?;
+  }
+
+  // Read back with the exact byte sequences the trigger hashed: Postgres's
+  // `payload::text` and `to_char(... 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.
+  let rows: Vec<RawRow> = sql_query(
+    r#"
+    SELECT
+      id,
+      prev_hash,
+      entry_hash,
+      entry_kind,
+      payload::text AS payload_text,
+      to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at_text
+    FROM governance_log
+    ORDER BY id ASC
+    "#,
+  )
+  .load(&mut conn)?;
+  assert_eq!(rows.len(), 3, "should have exactly 3 rows");
+
+  // Recompute the chain in Rust with the exact bytes Postgres used and assert
+  // the stored hashes match bit-for-bit.
+  let mut prev: Vec<u8> = vec![0u8; 32];
+  for row in &rows {
+    assert_eq!(
+      row.prev_hash, prev,
+      "row {} prev_hash should match the previous row's entry_hash",
+      row.id
+    );
+    let mut hasher = Sha256::new();
+    hasher.update(&prev);
+    hasher.update(row.entry_kind.as_bytes());
+    hasher.update(row.payload_text.as_bytes());
+    hasher.update(row.created_at_text.as_bytes());
+    let expected = hasher.finalize().to_vec();
+    assert_eq!(
+      row.entry_hash, expected,
+      "row {} entry_hash should match sha256(prev||kind||payload_text||ts_text)",
+      row.id
+    );
+    prev = row.entry_hash.clone();
+  }
+
+  let first_id = rows[0].id;
+
+  // Append-only DELETE must be rejected by the before-delete trigger. Wrap in
+  // a transaction so the aborted-transaction state rolls back and later
+  // statements on `conn` don't inherit it.
+  let delete_result = conn.transaction::<_, diesel::result::Error, _>(|c| {
+    diesel::delete(governance_log::table.find(first_id)).execute(c)?;
+    Ok(())
+  });
+  assert!(
+    delete_result.is_err(),
+    "delete from governance_log must be rejected by the append-only trigger"
+  );
+
+  // Updating a non-signature column must be rejected by the signature-gate
+  // trigger. Same transaction wrapper for the same reason.
+  let bad_update = conn.transaction::<_, diesel::result::Error, _>(|c| {
+    diesel::update(governance_log::table.find(first_id))
+      .set(governance_log::entry_kind.eq("tampered"))
+      .execute(c)?;
+    Ok(())
+  });
+  assert!(
+    bad_update.is_err(),
+    "updating entry_kind must be rejected by the append-only trigger"
+  );
+
+  Ok(())
+}
