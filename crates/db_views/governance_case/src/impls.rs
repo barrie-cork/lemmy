@@ -89,6 +89,44 @@ pub async fn list_open_cases_for_community(
   )
 }
 
+/// All cases where `target_person_id` matches — a target sees every case
+/// they're named in, active or closed. No community filter, no status
+/// filter. Same two-round-trip pattern as `list_open_cases_for_community`.
+pub async fn list_cases_for_person(
+  pool: &mut DbPool<'_>,
+  target_person_id: PersonId,
+) -> LemmyResult<Vec<GovernanceCaseSummaryView>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let rows: Vec<SummaryRow> = moderation_case::table
+    .left_join(
+      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
+    )
+    .filter(moderation_case::target_person_id.eq(target_person_id))
+    .select((
+      moderation_case::id,
+      moderation_case::status,
+      moderation_case::severity,
+      moderation_case::reason_code,
+      moderation_case::opened_at,
+      moderation_case::community_id,
+      community::name.nullable(),
+      moderation_case::target_type,
+    ))
+    .load::<SummaryRow>(conn)
+    .await?;
+
+  let case_ids: Vec<ModerationCaseId> = rows.iter().map(|r| r.0).collect();
+  let submitted_counts = submitted_counts_by_case(conn, &case_ids).await?;
+
+  Ok(
+    rows
+      .into_iter()
+      .map(|r| build_summary(r, &submitted_counts))
+      .collect(),
+  )
+}
+
 /// Aggregate helper: count `jury_assignment` rows with
 /// `status = 'submitted'` grouped by `case_id`, restricted to the given
 /// list of cases. Returns an empty map when `case_ids` is empty.
