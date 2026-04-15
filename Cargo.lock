@@ -4071,6 +4071,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmy_db_views_governance_case"
+version = "1.0.0-test-arm-qemu.0"
+dependencies = [
+ "chrono",
+ "diesel",
+ "diesel-async",
+ "i-love-jesus",
+ "lemmy_db_schema 1.0.0-test-arm-qemu.0",
+ "lemmy_db_schema_file",
+ "lemmy_diesel_utils",
+ "lemmy_utils 1.0.0-test-arm-qemu.0",
+ "serde",
+ "serde_with",
+ "ts-rs",
+]
+
+[[package]]
 name = "lemmy_db_views_local_image"
 version = "1.0.0-test-arm-qemu.0"
 dependencies = [
