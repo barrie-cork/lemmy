@@ -8,7 +8,7 @@ use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId};
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseSeverity, CaseStatus},
+  enums::{CaseSeverity, CaseStatus, JuryAssignmentStatus},
   schema::{community, jury_assignment, moderation_case},
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -69,6 +69,27 @@ pub async fn list_jury_assignments_for_person(
     .await?;
 
   Ok(rows.into_iter().map(build_view).collect())
+}
+
+/// Count jury assignments whose status is `Selected` or `Accepted` — the
+/// "unsubmitted" set for the Phase 4 background timeout job.
+///
+/// Phase 2a ships the unfiltered count. Per plan §2 Drift 3 the deadline
+/// source is undecided, so this function returns the total count of
+/// not-yet-submitted assignments across the whole instance; Phase 4 will
+/// layer the `selected_at + <config_offset>` time filter on top when the
+/// homeserver-side decision lands.
+pub async fn count_unsubmitted_jury_assignments(pool: &mut DbPool<'_>) -> LemmyResult<i64> {
+  let conn = &mut get_conn(pool).await?;
+  let count: i64 = jury_assignment::table
+    .filter(jury_assignment::status.eq_any([
+      JuryAssignmentStatus::Selected,
+      JuryAssignmentStatus::Accepted,
+    ]))
+    .count()
+    .get_result(conn)
+    .await?;
+  Ok(count)
 }
 
 /// Cases the given person is eligible to opt into as a juror but is not
