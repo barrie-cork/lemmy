@@ -53,3 +53,10 @@ mimalloc = "0.1.48"
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
+lemmy_db_schema = { workspace = true, features = ["full"] }
+lemmy_db_schema_file = { workspace = true, features = ["full"] }
+diesel = { workspace = true }
+diesel_migrations = { workspace = true }
+sha2 = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
