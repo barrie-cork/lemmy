@@ -4088,6 +4088,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemmy_db_views_governance_modlog"
+version = "1.0.0-test-arm-qemu.0"
+dependencies = [
+ "chrono",
+ "diesel",
+ "diesel-async",
+ "i-love-jesus",
+ "lemmy_db_schema 1.0.0-test-arm-qemu.0",
+ "lemmy_db_schema_file",
+ "lemmy_diesel_utils",
+ "lemmy_utils 1.0.0-test-arm-qemu.0",
+ "serde",
+ "serde_with",
+ "ts-rs",
+]
+
+[[package]]
 name = "lemmy_db_views_jury_queue"
 version = "1.0.0-test-arm-qemu.0"
 dependencies = [
@@ -4550,6 +4567,7 @@ dependencies = [
  "chrono",
  "clap",
  "diesel",
+ "diesel-async",
  "diesel_migrations",
  "lemmy_api",
  "lemmy_api_routes",
@@ -4561,6 +4579,9 @@ dependencies = [
  "lemmy_apub_send",
  "lemmy_db_schema 1.0.0-test-arm-qemu.0",
  "lemmy_db_schema_file",
+ "lemmy_db_views_governance_case",
+ "lemmy_db_views_governance_modlog",
+ "lemmy_db_views_jury_queue",
  "lemmy_db_views_site",
  "lemmy_diesel_utils",
  "lemmy_routes",

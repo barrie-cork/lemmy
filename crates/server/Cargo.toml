@@ -55,7 +55,12 @@ testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
 lemmy_db_schema = { workspace = true, features = ["full"] }
 lemmy_db_schema_file = { workspace = true, features = ["full"] }
+lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
+lemmy_db_views_governance_modlog = { workspace = true, features = ["full"] }
+lemmy_db_views_jury_queue = { workspace = true, features = ["full"] }
+lemmy_diesel_utils = { workspace = true, features = ["full"] }
 diesel = { workspace = true }
+diesel-async = { workspace = true }
 diesel_migrations = { workspace = true }
 sha2 = { workspace = true }
 serde_json = { workspace = true }
