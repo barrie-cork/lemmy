@@ -89,6 +89,44 @@ pub async fn list_open_cases_for_community(
   )
 }
 
+/// All cases with `status = ThresholdMet` across the whole instance. Feeds
+/// the Phase 4 background job that selects juries — no community scope on
+/// purpose, and the `ThresholdMet` filter matches the task body "cases
+/// whose reporter count has crossed the threshold and now need a jury."
+pub async fn list_cases_needing_jury_selection(
+  pool: &mut DbPool<'_>,
+) -> LemmyResult<Vec<GovernanceCaseSummaryView>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let rows: Vec<SummaryRow> = moderation_case::table
+    .left_join(
+      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
+    )
+    .filter(moderation_case::status.eq(CaseStatus::ThresholdMet))
+    .select((
+      moderation_case::id,
+      moderation_case::status,
+      moderation_case::severity,
+      moderation_case::reason_code,
+      moderation_case::opened_at,
+      moderation_case::community_id,
+      community::name.nullable(),
+      moderation_case::target_type,
+    ))
+    .load::<SummaryRow>(conn)
+    .await?;
+
+  let case_ids: Vec<ModerationCaseId> = rows.iter().map(|r| r.0).collect();
+  let submitted_counts = submitted_counts_by_case(conn, &case_ids).await?;
+
+  Ok(
+    rows
+      .into_iter()
+      .map(|r| build_summary(r, &submitted_counts))
+      .collect(),
+  )
+}
+
 /// All cases where `target_person_id` matches — a target sees every case
 /// they're named in, active or closed. No community filter, no status
 /// filter. Same two-round-trip pattern as `list_open_cases_for_community`.
