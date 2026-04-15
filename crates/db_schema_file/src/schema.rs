@@ -6,6 +6,22 @@ pub mod sql_types {
   pub struct ActorTypeEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "appeal_status"))]
+  pub struct AppealStatus;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "case_severity"))]
+  pub struct CaseSeverity;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "case_status"))]
+  pub struct CaseStatus;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "case_target_type"))]
+  pub struct CaseTargetType;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "comment_sort_type_enum"))]
   pub struct CommentSortTypeEnum;
 
@@ -22,12 +38,24 @@ pub mod sql_types {
   pub struct CommunityVisibility;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "evidence_visibility"))]
+  pub struct EvidenceVisibility;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "federation_mode_enum"))]
   pub struct FederationModeEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "image_mode_enum"))]
   pub struct ImageModeEnum;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "jury_assignment_status"))]
+  pub struct JuryAssignmentStatus;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "jury_decision"))]
+  pub struct JuryDecision;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "listing_type_enum"))]
@@ -62,12 +90,64 @@ pub mod sql_types {
   pub struct RegistrationModeEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "reputation_dimension"))]
+  pub struct ReputationDimension;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "sanction_action"))]
+  pub struct SanctionAction;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "sanction_scope"))]
+  pub struct SanctionScope;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "tag_color_enum"))]
   pub struct TagColorEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "vote_show_enum"))]
   pub struct VoteShowEnum;
+}
+
+diesel::table! {
+    actor_pseudonym (id) {
+        id -> Int4,
+        person_id -> Int4,
+        pseudonym -> Text,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::AppealStatus;
+
+    appeal (id) {
+        id -> Int4,
+        case_id -> Int4,
+        requester_id -> Int4,
+        reason -> Text,
+        status -> AppealStatus,
+        created_at -> Timestamptz,
+        decided_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::EvidenceVisibility;
+
+    case_evidence (id) {
+        id -> Int4,
+        case_id -> Int4,
+        uploader_id -> Int4,
+        storage_key -> Text,
+        sha256 -> Text,
+        mime_type -> Text,
+        visibility -> EvidenceVisibility,
+        created_at -> Timestamptz,
+    }
 }
 
 diesel::table! {
@@ -287,6 +367,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    endorsement (id) {
+        id -> Int4,
+        from_person_id -> Int4,
+        to_person_id -> Int4,
+        community_id -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     federation_allowlist (instance_id) {
         instance_id -> Int4,
         published_at -> Timestamptz,
@@ -310,6 +401,19 @@ diesel::table! {
         fail_count -> Int4,
         last_retry_at -> Nullable<Timestamptz>,
         last_successful_published_time_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    governance_log (id) {
+        id -> Int8,
+        prev_hash -> Bytea,
+        entry_hash -> Bytea,
+        entry_kind -> Text,
+        payload -> Jsonb,
+        actor_pseudonym -> Nullable<Text>,
+        created_at -> Timestamptz,
+        signature -> Nullable<Bytea>,
     }
 }
 
@@ -346,6 +450,45 @@ diesel::table! {
         received_ban_at -> Nullable<Timestamptz>,
         ban_expires_at -> Nullable<Timestamptz>,
         blocked_persons_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::JuryAssignmentStatus;
+
+    jury_assignment (id) {
+        id -> Int4,
+        case_id -> Int4,
+        person_id -> Int4,
+        status -> JuryAssignmentStatus,
+        selected_at -> Timestamptz,
+        responded_at -> Nullable<Timestamptz>,
+        submitted_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    jury_pool (id) {
+        id -> Int4,
+        community_id -> Nullable<Int4>,
+        person_id -> Int4,
+        eligible_from -> Timestamptz,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::JuryDecision;
+
+    jury_vote (id) {
+        id -> Int4,
+        case_id -> Int4,
+        juror_id -> Int4,
+        decision -> JuryDecision,
+        rationale -> Nullable<Text>,
+        submitted_at -> Timestamptz,
     }
 }
 
@@ -532,6 +675,32 @@ diesel::table! {
         published_at -> Timestamptz,
         ip -> Nullable<Text>,
         user_agent -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::CaseTargetType;
+    use super::sql_types::CaseSeverity;
+    use super::sql_types::CaseStatus;
+
+    moderation_case (id) {
+        id -> Int4,
+        community_id -> Nullable<Int4>,
+        creator_id -> Nullable<Int4>,
+        target_type -> CaseTargetType,
+        target_post_id -> Nullable<Int4>,
+        target_comment_id -> Nullable<Int4>,
+        target_person_id -> Nullable<Int4>,
+        target_community_id -> Nullable<Int4>,
+        target_remote_url -> Nullable<Text>,
+        reason_code -> Text,
+        severity -> CaseSeverity,
+        status -> CaseStatus,
+        threshold_score -> Int8,
+        opened_at -> Timestamptz,
+        decided_at -> Nullable<Timestamptz>,
+        closed_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -862,6 +1031,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    public_case_log (id) {
+        id -> Int4,
+        case_id -> Int4,
+        community_id -> Nullable<Int4>,
+        summary -> Text,
+        rationale_redacted -> Nullable<Text>,
+        published_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     received_activity (ap_id) {
         ap_id -> Text,
         published_at -> Timestamptz,
@@ -896,6 +1076,59 @@ diesel::table! {
         private_message_report_id -> Nullable<Int4>,
         community_report_id -> Nullable<Int4>,
         resolved -> Bool,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ReputationDimension;
+
+    reputation_event (id) {
+        id -> Int4,
+        person_id -> Int4,
+        community_id -> Nullable<Int4>,
+        dimension -> ReputationDimension,
+        delta -> Int4,
+        source_case_id -> Nullable<Int4>,
+        source_report_id -> Nullable<Int4>,
+        reason -> Text,
+        created_at -> Timestamptz,
+        expires_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    reputation_snapshot (id) {
+        id -> Int4,
+        person_id -> Int4,
+        community_id -> Nullable<Int4>,
+        reporting_accuracy -> Int4,
+        jury_reliability -> Int4,
+        participation_consistency -> Int4,
+        endorsement_strength -> Int4,
+        jury_eligible -> Bool,
+        trusted_reporter -> Bool,
+        calculated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::SanctionScope;
+    use super::sql_types::SanctionAction;
+
+    sanction (id) {
+        id -> Int4,
+        case_id -> Int4,
+        scope -> SanctionScope,
+        action -> SanctionAction,
+        target_person_id -> Nullable<Int4>,
+        target_post_id -> Nullable<Int4>,
+        target_comment_id -> Nullable<Int4>,
+        target_community_id -> Nullable<Int4>,
+        starts_at -> Timestamptz,
+        ends_at -> Nullable<Timestamptz>,
+        active -> Bool,
     }
 }
 
@@ -956,6 +1189,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    surety (id) {
+        id -> Int4,
+        sponsor_id -> Int4,
+        sponsored_id -> Int4,
+        community_id -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     tagline (id) {
         id -> Int4,
         content -> Text,
@@ -964,6 +1208,11 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(actor_pseudonym -> person (person_id));
+diesel::joinable!(appeal -> moderation_case (case_id));
+diesel::joinable!(appeal -> person (requester_id));
+diesel::joinable!(case_evidence -> moderation_case (case_id));
+diesel::joinable!(case_evidence -> person (uploader_id));
 diesel::joinable!(comment -> language (language_id));
 diesel::joinable!(comment -> person (creator_id));
 diesel::joinable!(comment -> post (post_id));
@@ -978,11 +1227,18 @@ diesel::joinable!(community_report -> community (community_id));
 diesel::joinable!(community_tag -> community (community_id));
 diesel::joinable!(custom_emoji_keyword -> custom_emoji (custom_emoji_id));
 diesel::joinable!(email_verification -> local_user (local_user_id));
+diesel::joinable!(endorsement -> community (community_id));
 diesel::joinable!(federation_allowlist -> instance (instance_id));
 diesel::joinable!(federation_blocklist -> instance (instance_id));
 diesel::joinable!(federation_queue_state -> instance (instance_id));
 diesel::joinable!(instance_actions -> instance (instance_id));
 diesel::joinable!(instance_actions -> person (person_id));
+diesel::joinable!(jury_assignment -> moderation_case (case_id));
+diesel::joinable!(jury_assignment -> person (person_id));
+diesel::joinable!(jury_pool -> community (community_id));
+diesel::joinable!(jury_pool -> person (person_id));
+diesel::joinable!(jury_vote -> moderation_case (case_id));
+diesel::joinable!(jury_vote -> person (juror_id));
 diesel::joinable!(local_image -> person (person_id));
 diesel::joinable!(local_image -> post (thumbnail_for_post_id));
 diesel::joinable!(local_site -> multi_community (suggested_multi_community_id));
@@ -994,6 +1250,8 @@ diesel::joinable!(local_user_keyword_block -> local_user (local_user_id));
 diesel::joinable!(local_user_language -> language (language_id));
 diesel::joinable!(local_user_language -> local_user (local_user_id));
 diesel::joinable!(login_token -> local_user (user_id));
+diesel::joinable!(moderation_case -> comment (target_comment_id));
+diesel::joinable!(moderation_case -> post (target_post_id));
 diesel::joinable!(modlog -> comment (target_comment_id));
 diesel::joinable!(modlog -> community (target_community_id));
 diesel::joinable!(modlog -> instance (target_instance_id));
@@ -1028,17 +1286,33 @@ diesel::joinable!(post_community_tag -> community_tag (community_tag_id));
 diesel::joinable!(post_community_tag -> post (post_id));
 diesel::joinable!(post_report -> post (post_id));
 diesel::joinable!(private_message_report -> private_message (private_message_id));
+diesel::joinable!(public_case_log -> community (community_id));
+diesel::joinable!(public_case_log -> moderation_case (case_id));
 diesel::joinable!(registration_application -> local_user (local_user_id));
 diesel::joinable!(registration_application -> person (admin_id));
 diesel::joinable!(report_combined -> comment_report (comment_report_id));
 diesel::joinable!(report_combined -> community_report (community_report_id));
 diesel::joinable!(report_combined -> post_report (post_report_id));
 diesel::joinable!(report_combined -> private_message_report (private_message_report_id));
+diesel::joinable!(reputation_event -> community (community_id));
+diesel::joinable!(reputation_event -> moderation_case (source_case_id));
+diesel::joinable!(reputation_event -> person (person_id));
+diesel::joinable!(reputation_snapshot -> community (community_id));
+diesel::joinable!(reputation_snapshot -> person (person_id));
+diesel::joinable!(sanction -> comment (target_comment_id));
+diesel::joinable!(sanction -> community (target_community_id));
+diesel::joinable!(sanction -> moderation_case (case_id));
+diesel::joinable!(sanction -> person (target_person_id));
+diesel::joinable!(sanction -> post (target_post_id));
 diesel::joinable!(site -> instance (instance_id));
 diesel::joinable!(site_language -> language (language_id));
 diesel::joinable!(site_language -> site (site_id));
+diesel::joinable!(surety -> community (community_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+  actor_pseudonym,
+  appeal,
+  case_evidence,
   comment,
   comment_actions,
   comment_report,
@@ -1048,11 +1322,15 @@ diesel::allow_tables_to_appear_in_same_query!(
   community_report,
   community_tag,
   email_verification,
+  endorsement,
   federation_allowlist,
   federation_blocklist,
   federation_queue_state,
   instance,
   instance_actions,
+  jury_assignment,
+  jury_pool,
+  jury_vote,
   language,
   local_image,
   local_site,
@@ -1061,6 +1339,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   local_user_keyword_block,
   local_user_language,
   login_token,
+  moderation_case,
   modlog,
   multi_community,
   multi_community_entry,
@@ -1079,10 +1358,15 @@ diesel::allow_tables_to_appear_in_same_query!(
   post_report,
   private_message,
   private_message_report,
+  public_case_log,
   registration_application,
   report_combined,
+  reputation_event,
+  reputation_snapshot,
+  sanction,
   site,
   site_language,
+  surety,
   person_actions,
   image_details,
 );

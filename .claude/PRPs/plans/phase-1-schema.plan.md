@@ -551,6 +551,8 @@ DROP TYPE case_status;
 
 **GOTCHA**: `attestation_type` enum is defined even though [Migration 4 (federation_attestation)](../../../docs/brehon-law-inspired-network/04-data-model-and-api.md) is Phase 6. This is deliberate — enum creation is cheap and keeps the enum file alphabetically complete. The Phase 6 migration references the enum.
 
+**CORRECTION (task 10 surfaced this, 2026-04-15)**: The *Postgres* `attestation_type` enum IS created in Phase 1 (this migration). The *Rust* `AttestationType` enum is **NOT** added in Phase 1 task 9. Reason: `diesel print-schema` only emits `sql_types::*` entries for enums that are referenced by at least one table column. Until Phase 6 creates `federation_attestation(... type attestation_type ...)`, the generated schema.rs has no `sql_types::AttestationType`, so a task-9 `DbEnum` derive with `ExistingTypePath = "crate::schema::sql_types::AttestationType"` fails `cargo check --workspace` with `cannot find type/value AttestationType in module crate::schema::sql_types`. Phase 6 adds both the table AND the Rust enum together. The Postgres type sits unused in `pg_type` until then — harmless. This is only a Rust-side deferral, not an ADR-013/OQ-008-style correctness mandate.
+
 **VALIDATE**:
 ```bash
 ./scripts/brehon/cargo-check.bat --workspace > .claude/build-task-02.log 2>&1
@@ -1145,7 +1147,7 @@ The `--force` ensures the old binary is replaced. Re-run `diesel --version` afte
 - New `diesel::table! { ... }` blocks for each governance table
 - `allow_tables_to_appear_in_same_query!` macro expanded to include the new tables (driven by `diesel.toml`'s `allow_tables_to_appear_in_same_query_config = "fk_related_tables"` — it generates pairs based on FK edges, so governance tables joined by FKs will be enabled automatically)
 
-Because this regeneration must run against a live DB, do it from the testcontainers harness OR from a throwaway docker run:
+Because this regeneration must run against a live DB, do it from the testcontainers harness OR from a throwaway docker run. **Do NOT use `diesel migration run`** — migration `2025-08-01-000017_forbid_diesel_cli` installs a trigger on `__diesel_schema_migrations` that rejects any insert not protected by `pg_advisory_lock(0)`, which raw `diesel migration run` does not take. The Lemmy-native runner (`crates/diesel_utils/src/main.rs`) wraps `lemmy_diesel_utils::schema_setup::run(Options::default().run(), ...)` which calls `SELECT pg_advisory_lock(0);` before running migrations and also runs `replaceable_schema()` (installing the governance triggers from task 8). Use that binary instead.
 
 ```bash
 # Start a throwaway Postgres matching Lemmy's prod image
@@ -1156,14 +1158,17 @@ docker run --rm -d --user $(id -u):$(id -g) \
   -e POSTGRES_DB=lemmy \
   -p 5433:5432 \
   pgautoupgrade/pgautoupgrade:18-alpine
-# Wait for ready, then run migrations
+# Wait for ready, then run migrations via the native runner (NOT `diesel migration run`)
+export LEMMY_DATABASE_URL=postgres://lemmy:password@localhost:5433/lemmy
+cargo run -p lemmy_diesel_utils --features full
+# Regenerate schema (print-schema is read-only, no forbid-trigger interaction)
 export DATABASE_URL=postgres://lemmy:password@localhost:5433/lemmy
-diesel migration run --config-file diesel.toml
-# Regenerate schema
 diesel print-schema --patch-file crates/db_schema_file/diesel_ltree.patch > crates/db_schema_file/src/schema.rs
 # Clean up
 docker stop pg-schema-gen
 ```
+
+**Why `lemmy_diesel_utils` instead of `diesel migration run`**: migration `2025-08-01-000017_forbid_diesel_cli` installs a trigger that raises `'migrations must be managed using lemmy_server instead of diesel CLI'` on any insert to `__diesel_schema_migrations` unless `pg_advisory_lock(0)` is held. The `lemmy_diesel_utils` binary (wrapping `schema_setup::run`) takes that lock at `schema_setup/mod.rs:214` and also runs `replaceable_schema()` afterward — both required for Phase 1 because the governance hash-chain triggers live in `replaceable_schema/triggers.sql` and must be installed before `diesel print-schema` or the task-14 test runs. Raw `diesel migration run` does neither.
 
 **`--user $(id -u):$(id -g)`** is per [IMPLEMENTATION-PLAN-v0.md §5.1](../../../docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) test-strategy note — avoids root-owned volumes blocking worktree cleanup on Linux/macOS. On Windows (where we run) the `$(id -u)` expansion is bash-only and the Docker Desktop backend doesn't enforce file ownership the same way, but the flag is harmless and preserves cross-platform behaviour.
 
