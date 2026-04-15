@@ -289,3 +289,156 @@ async fn governance_log_hash_chain_holds() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+/// Level 3 acceptance gate: exercise every Phase 1 migration's `down.sql`
+/// against a scratch DB by reverting and re-applying the 6 most recent
+/// migrations (tasks 2–7: enums, core, jury_system, reputation_and_surety,
+/// actor_pseudonym, governance_log).
+///
+/// Uses the Lemmy-native `lemmy_diesel_utils::schema_setup::run` runner
+/// because raw `diesel migration revert` is blocked by the
+/// `forbid_diesel_cli` trigger landed in migration `2025-08-01-000017`.
+/// The runner acquires `pg_advisory_lock(0)` at `schema_setup/mod.rs:214`,
+/// which is what the forbid trigger checks for.
+#[tokio::test]
+async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
+  use lemmy_diesel_utils::schema_setup::{self, Options};
+
+  /// Count of Phase 1 migrations that this branch adds. Tasks 2–7 each
+  /// create one migration. If Phase 1 ever adds or drops a migration this
+  /// constant has to move with it.
+  const PHASE_1_MIGRATION_COUNT: u64 = 6;
+
+  /// Query shape for `COUNT(*)` probes via `sql_query`.
+  #[derive(diesel::QueryableByName)]
+  struct Count {
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    n: i64,
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  // Step 1: full forward apply. The runner takes pg_advisory_lock(0),
+  // bypasses the forbid trigger, runs every pending migration, and rebuilds
+  // the `r` schema. Anything in the branch state that wasn't already in
+  // upstream Lemmy lands here.
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  // Post-condition probes: each Phase 1 table exists and is queryable. If
+  // any of these fails, the forward migrations themselves are broken and
+  // the rest of the test is meaningless.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    for table in [
+      "moderation_case",
+      "case_evidence",
+      "sanction",
+      "appeal",
+      "public_case_log",
+      "jury_pool",
+      "jury_assignment",
+      "jury_vote",
+      "surety",
+      "endorsement",
+      "reputation_event",
+      "reputation_snapshot",
+      "actor_pseudonym",
+      "governance_log",
+    ] {
+      let result: Count = sql_query(format!("SELECT count(*) AS n FROM {table}")).get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "{table} should exist and be empty after forward migration"
+      );
+    }
+  }
+
+  // Step 2: revert the last N migrations via the native runner. This
+  // exercises each Phase 1 `down.sql` in LIFO order. Task 7 (governance_log)
+  // reverts first, task 2 (enums) reverts last. Any broken down.sql fails
+  // here — the runner propagates the SQL error up through anyhow.
+  schema_setup::run(
+    Options::default().revert().limit(PHASE_1_MIGRATION_COUNT),
+    &db_url,
+  )?;
+
+  // Post-condition probes: every Phase 1 table must be GONE. A leftover
+  // table means its down.sql didn't drop it cleanly.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    for table in [
+      "moderation_case",
+      "case_evidence",
+      "sanction",
+      "appeal",
+      "public_case_log",
+      "jury_pool",
+      "jury_assignment",
+      "jury_vote",
+      "surety",
+      "endorsement",
+      "reputation_event",
+      "reputation_snapshot",
+      "actor_pseudonym",
+      "governance_log",
+    ] {
+      let probe: Result<Count, diesel::result::Error> =
+        sql_query(format!("SELECT count(*) AS n FROM {table}")).get_result(&mut conn);
+      assert!(
+        probe.is_err(),
+        "{table} should not exist after reverting Phase 1 migrations"
+      );
+    }
+  }
+
+  // Also check that the Phase 1 enum types were dropped — if `DROP TYPE`
+  // was missed in enums/down.sql, these pg_type lookups would still return
+  // rows.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    for type_name in [
+      "case_status",
+      "case_target_type",
+      "case_severity",
+      "evidence_visibility",
+      "jury_assignment_status",
+      "jury_decision",
+      "sanction_scope",
+      "sanction_action",
+      "appeal_status",
+      "reputation_dimension",
+      "attestation_type",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_type WHERE typname = '{type_name}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "pg_type entry for {type_name} should be dropped after reverting Phase 1 migrations"
+      );
+    }
+  }
+
+  // Step 3: re-apply. If down.sql didn't leave the DB in a clean state,
+  // the forward re-apply will fail with an error like "type case_status
+  // already exists" or "relation moderation_case already exists".
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  // Final post-condition: governance_log is queryable again. If this
+  // passes, every Phase 1 migration round-tripped cleanly and the replace-
+  // able schema (including the hash-chain triggers) was rebuilt.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let result: Count =
+      sql_query("SELECT count(*) AS n FROM governance_log").get_result(&mut conn)?;
+    assert_eq!(
+      result.n, 0,
+      "governance_log should exist and be empty after revert + re-apply"
+    );
+  }
+
+  Ok(())
+}
