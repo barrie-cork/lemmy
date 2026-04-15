@@ -1,11 +1,18 @@
-use crate::GovernanceCaseSummaryView;
+use crate::{GovernanceCaseDetailRow, GovernanceCaseDetailView, GovernanceCaseSummaryView};
 use chrono::{DateTime, Utc};
-use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, dsl::count_star};
+use diesel::{
+  ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl,
+  SelectableHelper, dsl::count_star,
+};
 use diesel_async::RunQueryDsl;
-use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId};
+use lemmy_db_schema::{
+  newtypes::{CommunityId, ModerationCaseId},
+  source::governance::{moderation_case::ModerationCase, sanction::Sanction},
+};
 use lemmy_db_schema_file::{
-  enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus},
-  schema::{community, jury_assignment, moderation_case},
+  PersonId,
+  enums::{AppealStatus, CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus},
+  schema::{appeal, case_evidence, comment, community, jury_assignment, moderation_case, post, sanction},
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
@@ -128,4 +135,104 @@ fn build_summary(
     jury_needed: 5,
     jury_submitted: i32::try_from(submitted).unwrap_or(i32::MAX),
   }
+}
+
+/// Hydrated single-case detail view. Used by Phase 4 case-detail handler;
+/// redaction and permission checks are the handler's job, not this
+/// function's. Callers that match on `view.row.case_row.status` MUST
+/// handle `CaseStatus::EmergencyRemove` and `CaseStatus::AdminReview`
+/// exhaustively per ADR-013.
+///
+/// Four round-trips to keep each query mechanically simple:
+/// 1. `moderation_case` row (Queryable on `ModerationCase`).
+/// 2. `case_evidence` count grouped by nothing — a single scalar `i64`.
+/// 3. Optional `appeal.status` for the most recent appeal on the case.
+/// 4. `target_creator_id` resolved via COALESCE over post/comment/target_person_id.
+/// 5. `sanctions` belonging to the case (fan-out, cannot share round-trip with 1-4).
+///
+/// The round-trip count isn't load-bearing — `read_case_detail` is called
+/// per-request, not in bulk, so the latency cost is negligible compared to
+/// the clarity gain from avoiding a giant hand-rolled tuple select.
+pub async fn read_case_detail(
+  pool: &mut DbPool<'_>,
+  case_id: ModerationCaseId,
+) -> LemmyResult<GovernanceCaseDetailView> {
+  let conn = &mut get_conn(pool).await?;
+
+  let case_row: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+
+  let evidence_count: i64 = case_evidence::table
+    .filter(case_evidence::case_id.eq(case_id))
+    .count()
+    .get_result(conn)
+    .await?;
+
+  // Most recent appeal for the case. `AppealStatus` is a `DbEnum`; the
+  // column is `appeal::status` and we wrap it in `Option` since there may
+  // be zero rows (the `.first().optional()` combinator handles the
+  // no-row case without treating it as an error).
+  let appeal_status: Option<AppealStatus> = appeal::table
+    .filter(appeal::case_id.eq(case_id))
+    .order_by(appeal::created_at.desc())
+    .select(appeal::status)
+    .first::<AppealStatus>(conn)
+    .await
+    .optional()?;
+
+  let target_creator_id: Option<i32> = resolve_target_creator_id(conn, &case_row).await?;
+
+  let sanctions: Vec<Sanction> = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .select(Sanction::as_select())
+    .load(conn)
+    .await?;
+
+  Ok(GovernanceCaseDetailView {
+    row: GovernanceCaseDetailRow {
+      case_row,
+      evidence_count,
+      appeal_status,
+      target_creator_id,
+    },
+    sanctions,
+  })
+}
+
+/// COALESCE target_post.creator_id, target_comment.creator_id,
+/// moderation_case.target_person_id — expressed as three sequential
+/// lookups in priority order, avoiding a raw SQL COALESCE that would
+/// require an extra `sql::<...>` bridge. Returns the first non-None
+/// value; `None` if the case has no post/comment/person target (e.g.
+/// community or remote-instance target).
+async fn resolve_target_creator_id(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case_row: &ModerationCase,
+) -> LemmyResult<Option<i32>> {
+  if let Some(target_post_id) = case_row.target_post_id {
+    let creator_id: Option<PersonId> = post::table
+      .filter(post::id.eq(target_post_id))
+      .select(post::creator_id)
+      .first::<PersonId>(conn)
+      .await
+      .optional()?;
+    if let Some(id) = creator_id {
+      return Ok(Some(id.0));
+    }
+  }
+  if let Some(target_comment_id) = case_row.target_comment_id {
+    let creator_id: Option<PersonId> = comment::table
+      .filter(comment::id.eq(target_comment_id))
+      .select(comment::creator_id)
+      .first::<PersonId>(conn)
+      .await
+      .optional()?;
+    if let Some(id) = creator_id {
+      return Ok(Some(id.0));
+    }
+  }
+  Ok(case_row.target_person_id.map(|p| p.0))
 }
