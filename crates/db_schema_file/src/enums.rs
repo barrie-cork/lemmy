@@ -370,3 +370,237 @@ pub enum ModlogKind {
   ModWarnComment,
   ModWarnPost,
 }
+
+// ========================================================================
+// Governance enums (Phase 1)
+// Each mirrors the DbEnum / ExistingTypePath / DbValueStyle="verbatim" pattern
+// used by the existing enums above (see e.g. RegistrationMode).
+// The Postgres enum types are created in migrations/{ts}_add_governance_enums.
+// Variant names are PascalCase to match DbValueStyle="verbatim".
+// ========================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::CaseStatus"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Lifecycle of a governance moderation case.
+pub enum CaseStatus {
+  #[default]
+  Open,
+  ThresholdMet,
+  JurySelection,
+  InReview,
+  Decided,
+  Appealed,
+  Closed,
+  /// Admin invoked the emergency-remove override. A jury reviews post-facto;
+  /// the removal stands regardless of the jury's finding. Per ADR-013.
+  EmergencyRemove,
+  /// A direct moderator action (Lemmy compat layer) paused the case. Admin must
+  /// explicitly resume. Per OQ-008 resolution.
+  AdminReview,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::CaseTargetType"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// The kind of entity a moderation case targets.
+pub enum CaseTargetType {
+  #[default]
+  Post,
+  Comment,
+  Person,
+  Community,
+  RemoteInstance,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::CaseSeverity"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Severity classification assigned to a moderation case.
+pub enum CaseSeverity {
+  Low,
+  #[default]
+  Medium,
+  High,
+  Critical,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::EvidenceVisibility"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Who can view a piece of evidence attached to a case.
+pub enum EvidenceVisibility {
+  #[default]
+  JuryOnly,
+  PrivateAdmin,
+  PublicRedacted,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::JuryAssignmentStatus"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Juror's response state for a case assignment.
+pub enum JuryAssignmentStatus {
+  #[default]
+  Selected,
+  Accepted,
+  Declined,
+  Conflicted,
+  Submitted,
+  Expired,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::JuryDecision"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// A juror's vote on the outcome of a case.
+pub enum JuryDecision {
+  #[default]
+  NoAction,
+  AdvisoryLabel,
+  Warning,
+  Cooldown,
+  RemoveContent,
+  SuspendLocalUser,
+  SuspendCommunityMember,
+  RecommendFederationAction,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::SanctionScope"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Jurisdictional scope of a sanction.
+pub enum SanctionScope {
+  #[default]
+  Community,
+  Instance,
+  FederatedRecommendation,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::SanctionAction"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// The concrete action applied by a sanction.
+pub enum SanctionAction {
+  #[default]
+  Label,
+  VisibilityReduction,
+  TemporaryRestriction,
+  ContentRemoval,
+  CommunityExclusion,
+  InstanceSuspension,
+  FederationQuarantineRecommendation,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::AppealStatus"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Lifecycle of an appeal on a decided case.
+pub enum AppealStatus {
+  #[default]
+  Requested,
+  Accepted,
+  Rejected,
+  Decided,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::ReputationDimension"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Dimensions along which reputation is tracked per-actor.
+pub enum ReputationDimension {
+  #[default]
+  ReportingAccuracy,
+  JuryReliability,
+  ParticipationConsistency,
+  EndorsementStrength,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::AttestationType"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Federated attestation kinds used by governance AP messages.
+pub enum AttestationType {
+  #[default]
+  TrustedReporter,
+  JuryEligible,
+  SanctionNotice,
+  QuarantineRecommendation,
+}
