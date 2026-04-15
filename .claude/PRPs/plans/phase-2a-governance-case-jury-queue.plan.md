@@ -95,7 +95,7 @@ Phase 2a is backend-only. The "flow" is the dependency chain from Phase 4 handle
 
 ```
 ╔════════════════════════════════════════════════════════════════════════════╗
-║                       PHASE 1 HEAD (c51147754)                              ║
+║                    PHASE 2A BASELINE (6b7095daf)                            ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║                                                                            ║
 ║   lemmy_db_schema::source::governance::{moderation_case, jury_assignment,  ║
@@ -494,12 +494,12 @@ captured to .claude/build-task-14.log; exit=0.
 ### Task 0 (branch setup — not a task commit)
 
 - **ACTION:** `git switch governance-v0 && git switch -c feature/phase-2a-governance-case-jury-queue`
-- **Verify baseline:** local `governance-v0` matches `c51147754` exactly (Phase 1 HEAD + `no-cargo-output-paste` rule commit). `origin/governance-v0` should match `c51147754` or be an ancestor of it. Ancestry check: `git merge-base --is-ancestor 94eba51a0 c51147754` exits 0 (proves the Phase 1 merge HEAD is still in the chain).
-- **If local `governance-v0` is past `c51147754`,** something has advanced the baseline since the plan was written. Surface to advisor before cutting the feature branch — the advisor needs to know whether the new commits belong in Phase 2a's history or should be left behind.
-- **If `origin/governance-v0` has advanced past `c51147754`,** that's fine — someone or some later session pushed more. Fast-forward local to match (`git pull --ff-only`) so the feature branch is cut from the freshest baseline, then re-verify ancestry from `94eba51a0`.
+- **Verify baseline:** local `governance-v0` matches `6b7095daf` exactly (Phase 1 HEAD + no-cargo-output-paste rule + Phase 2a plan commit). `origin/governance-v0` should match `6b7095daf` or be an ancestor of it. Ancestry check: `git merge-base --is-ancestor 94eba51a0 6b7095daf` exits 0 (proves the Phase 1 merge HEAD is still in the chain).
+- **If local `governance-v0` is past `6b7095daf`,** something has advanced the baseline since the plan was written. Surface to advisor before cutting the feature branch — the advisor needs to know whether the new commits belong in Phase 2a's history or should be left behind.
+- **If `origin/governance-v0` has advanced past `6b7095daf`,** that's fine — someone or some later session pushed more. Fast-forward local to match (`git pull --ff-only`) so the feature branch is cut from the freshest baseline, then re-verify ancestry from `94eba51a0`.
 - **Verification steps (run all three; all must pass before task 14 begins):**
-    1. `git rev-parse governance-v0` → must equal `c51147754fd9eedc8f646099ec14c362b4a3d9c6` (or any later commit that descends from it — after applying the fast-forward rule above).
-    2. `git merge-base --is-ancestor 94eba51a0 c51147754` → must exit 0, confirming the Phase 1 merge HEAD is still an ancestor.
+    1. `git rev-parse governance-v0` → must equal `6b7095daf34be3b7d3c791dddd3894b9dd810d4a` (or any later commit that descends from it — after applying the fast-forward rule above).
+    2. `git merge-base --is-ancestor 94eba51a0 6b7095daf` → must exit 0, confirming the Phase 1 merge HEAD is still an ancestor.
     3. `git rev-parse feature/phase-2a-governance-case-jury-queue` → must equal local `governance-v0` HEAD immediately after the branch cut (proving the cut happened at the expected commit).
 - **No commit created for task 0** — branch creation is a git operation, not a source change.
 - **Expected iterations:** 1 (one git operation + three verification commands, no validation beyond `git status` clean).
@@ -662,7 +662,7 @@ Execute on the `feature/phase-2a-governance-case-jury-queue` branch. Not a commi
 | R7 | `/prp-ralph` burning iterations past the 5-per-task soft cap because a later task's design was dependent on an earlier task's undiscovered fragility | LOW | LOW | §9 sequences the tasks so that the two risky ones (16 and 22) come first in their respective crates — if they're broken, the break surfaces before the mechanical variants (18, 19, 23, 24). |
 | R8 | Advisor disagrees with §2 drift-stub strategy and wants schema follow-ups instead | LOW | MED | The advisor review gate between plan and `/prp-ralph` handoff is the moment to surface this. §2 explicitly calls out "advisor to decide" on each drift item. |
 | R9 | Context budget blowout past ~200k despite the Phase 2a split | LOW | LOW | Phase 2a has 11 tasks, no migrations, no cross-cutting writes, no new tests, and reuses a crate pattern known from Phase 1's reading work. The `no-cargo-output-paste.md` rule loads automatically. Both factors together should keep each task <15k tokens. |
-| R10 | `governance-v0` advances beyond `c51147754` between the plan landing and `/prp-ralph` running, putting the branch cut point ahead of the pre-flight check | LOW | LOW | Task 0 verifies the cut-point commit; if it has moved, the ralph loop halts and asks the advisor before proceeding. |
+| R10 | `governance-v0` advances beyond `6b7095daf` between the plan landing and `/prp-ralph` running, putting the branch cut point ahead of the pre-flight check | LOW | LOW | Task 0 verifies the cut-point commit; if it has moved, the ralph loop halts and asks the advisor before proceeding. |
 
 ---
 
