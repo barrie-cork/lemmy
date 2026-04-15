@@ -1852,7 +1852,7 @@ tail -80 .claude/build-final-test.log
 - [ ] Branch is `feature/phase-1-schema` off `governance-v0`
 - [ ] Level 1: `cargo check --workspace` passes with exit 0 after each task
 - [ ] Level 2: `cargo test --test e2e -p lemmy_server` green, 3 tests
-- [ ] Level 3: every migration has been `diesel migration redo`'d at least once against a scratch DB
+- [ ] Level 3: every Phase 1 migration round-trips (forward → revert → re-apply) against a scratch DB. **Note**: uses `lemmy_diesel_utils::schema_setup::run(Options::default().revert().limit(N))` via a new e2e test `phase1_migrations_round_trip`, NOT raw `diesel migration redo` — the latter is blocked by the `forbid_diesel_cli` trigger landed in upstream migration `2025-08-01-000017`, which raises unless `pg_advisory_lock(0)` is held. The runner takes the lock at `schema_setup/mod.rs:214` and exposes the revert path via `Options::default().revert().limit(N)`. The e2e test exercises every Phase 1 `down.sql` by reverting the 6 most recent migrations and asserting every Phase 1 table + enum type is gone, then re-applying and asserting the schema is clean.
 - [ ] Level 4: cross-cutting invariants hold (`EmergencyRemove` + `AdminReview` in enum; `actor_pseudonym` table exists; hash-chain trigger exists in `r.*`)
 - [ ] No `.unwrap()`, `.expect()`, or `#[allow(clippy::...)]` in any new code
 - [ ] No contradictions with ADR-009, ADR-011, ADR-012, ADR-013, ADR-014, ADR-015
