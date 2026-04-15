@@ -1,0 +1,6 @@
+CREATE TABLE actor_pseudonym (
+    id SERIAL PRIMARY KEY,
+    person_id INTEGER NOT NULL UNIQUE REFERENCES person (id) ON DELETE CASCADE,
+    pseudonym TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
