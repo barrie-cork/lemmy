@@ -1,8 +1,13 @@
 # IMPLEMENTATION-PLAN-v0.md — Brehon-Law-Inspired Network MVP
 
-**Status:** Draft v1 (2026-04-14)
-**Audience:** Solo developer (you), starting Monday
+**Status:** Draft v1 — Pre-flight complete, Phase 1 not started (2026-04-14)
+**Audience:** Solo developer (you)
 **Scope:** v0 only. v1/v2/v3 work referenced from [99 ADR-010](99-decisions-and-open-questions.md) and [05 §7](05-mvp-and-delivery-plan.md) is **out of scope**.
+
+> **Progress snapshot (2026-04-14)** — see §1.1 for the full breakdown.
+> - ✅ Pre-flight §2.1 (repo), §2.3 (dev env), §2.4 (fork setup tasks 1–6), AGPL notice, design-doc vendoring, PRP command suite, ralph loop, Windows cargo-check fix.
+> - ❌ Pre-flight §2.4 task 7 (`tests/e2e.rs` placeholder), task 9 (CI workflow), §2.5 (Extism hook verification).
+> - ❌ Phases 1–6: zero governance code. No `governance/` directories under `crates/db_schema/src/source/`, `crates/api/api_common/src/`, `crates/api/api/src/`, `crates/apub/**`, `crates/server/src/`. No new migrations. No governance tests.
 
 This plan is the executable blueprint for v0. It is keyed to the 11-endpoint MVP scope in [05 §2](05-mvp-and-delivery-plan.md), the 6-step implementation order in [05 §4](05-mvp-and-delivery-plan.md), and the canonical agent prompt at [AGENT-PROMPT-mvp-implementation-plan.md](AGENT-PROMPT-mvp-implementation-plan.md).
 
@@ -18,22 +23,61 @@ Effort order-of-magnitude for a solo developer: **8–12 weeks** end-to-end, see
 
 ---
 
+## 1.1 Progress snapshot (2026-04-14)
+
+Status ledger for this plan. Update when phases complete.
+
+### Pre-flight (§2)
+
+| Item | Status | Notes |
+|---|---|---|
+| §2.1 Repo decision | ✅ Option A chosen | Fork lives at `barrie-cork/lemmy`, working branch `governance-v0`. Local checkout at `C:\Users\barri\Developer\brehon-fork`. |
+| §2.2 Project name | ⏸️ Deferred | Working title "brehon-fork" — [99 OQ-012](99-decisions-and-open-questions.md). Rename before first public push. |
+| §2.3 Dev environment | ✅ Done | Rust 1.94 pinned (`rust-toolchain.toml`), workspace builds clean post-fork. Windows signal-handler fix landed in `ca3af443a`. |
+| §2.4 task 1–3 Fork + branch + upstream build | ✅ Done | `main` tracks upstream, `governance-v0` is the working branch. |
+| §2.4 task 4 `LICENSE` | ✅ Inherited | AGPLv3 from upstream. |
+| §2.4 task 5 `AGPL-NOTICE.md` | ✅ Done | At repo root. |
+| §2.4 task 6 Empty governance directory skeleton | ❌ Not started | **Blocks Phase 1.** No `governance/` subdirs exist yet. |
+| §2.4 task 7 `tests/e2e.rs` placeholder | ❌ Not started | **Blocks Phase 1 task 12.** No `tests/` directory at workspace root. |
+| §2.4 task 8 `migrations/` directory convention | ✅ Confirmed | Upstream Lemmy uses `migrations/{timestamp}_name/{up,down}.sql`. |
+| §2.4 task 9 CI workflow | ❌ Not started | **Plan says "don't defer CI."** Upstream `.woodpecker.yml` exists but has no governance-specific step. No GitHub Actions workflow. |
+| §2.5 Extism hook verification | ❌ Not started | Half-day human task. Not blocking Phase 1 (v0 uses direct Rust, not plugins). |
+
+### Tooling and process (not in original plan but complete)
+
+| Item | Status | Notes |
+|---|---|---|
+| Design docs vendored into fork | ✅ Done | `docs/brehon-law-inspired-network/` — canonical source per commit `e960a128c`. |
+| PRP command suite | ✅ Installed | 13 commands in `.claude/commands/prp-core/`; 4 Tier 1 commands (`prp-plan`, `prp-implement`, `prp-prd`, `prp-review`) Brehon-customised with `<brehon-context>` preludes. |
+| Ralph loop + stop hook | ✅ Wired | `.claude/prp-ralph.state.md` protocol + `.claude/hooks/prp-ralph-stop.sh` wired via `Stop` hook in `settings.json`. |
+| Fork-local `CLAUDE.md` | ✅ Done | Pinned upstream SHA `811d0d09c`, branch model, command list. |
+
+### Phases 1–6
+
+| Phase | Step | Tasks | Status | Blocker |
+|---|---|---|---|---|
+| 1 | Schema + Diesel foundation | 13 (#1–13) | ❌ Not started | §2.4 task 6 (dir skeleton) + task 7 (`tests/e2e.rs`) |
+| 2 | Read models | 17 (#14–30) | ❌ Not started | Phase 1 |
+| 3 | API common DTOs | 7 (#31–37) | ❌ Not started | Phase 1 |
+| 4 | First 5 endpoints + golden path | 12 (#38–49) | ❌ Not started | Phases 1–3 |
+| 5 | Reputation + sponsorship + 11 endpoints | 14 (#50–63) | ❌ Not started | Phases 1–4 |
+| 6 | Federation outbound + advisory inbound | 9 (#64–72) | ❌ Not started | Phases 1–5 |
+
+### Next action
+
+Per §6 (Monday-morning checklist): create `tests/e2e.rs` placeholder + empty governance-directory skeleton (§2.4 tasks 6–7), wire CI (§2.4 task 9), then run `/prp-plan "Phase 1 — Schema + Diesel foundation"` to produce the first plan file.
+
+---
+
 ## 2. Pre-flight
 
 These are one-time decisions and setup tasks that must happen before Step 1 of [05 §4](05-mvp-and-delivery-plan.md). Several need a human call.
 
-### 2.1 Repo decision — DECISION REQUIRED FROM USER
+### 2.1 Repo decision — ✅ RESOLVED (Option A)
 
-The Brehon fork does not yet exist. Two options:
+The Brehon fork lives as a separate GitHub repo forked from `LemmyNet/lemmy`. Remote: `barrie-cork/lemmy`. Local checkout: `C:\Users\barri\Developer\brehon-fork`. `main` tracks upstream (weekly rebase); `governance-v0` is the working branch for all v0 feature work.
 
-| Option | Pros | Cons |
-|---|---|---|
-| **A. Separate repo** (e.g. `barrie-cork/brehon-fork`) — fork Lemmy 1.0-beta on GitHub, clone locally, develop independently | Clean separation from `homeserver` infra repo. Easy AGPLv3 source-disclosure compliance ([99 ADR-011](99-decisions-and-open-questions.md)) — the fork is its own thing. Upstream rebases are isolated. CI lives in the fork. | Two repos to context-switch between. Cross-repo refs in docs. |
-| **B. Subtree under `homeserver`** (e.g. `homeserver/services/brehon/`) | Single working directory. No context switching. | Mixes AGPLv3 fork with non-AGPLv3 infra-as-code repo — license boundary becomes confusing. Upstream rebases are awkward inside a subtree. Loses GitHub fork lineage (no "Fork from LemmyNet" badge, no easy upstream PR path). |
-
-**Recommendation: Option A — separate repo.** AGPLv3 plus the upstream-rebase burden ([99 ADR-012](99-decisions-and-open-questions.md)) make subtree more pain than gain. The `homeserver` repo can keep design docs (this directory) and a thin `services/brehon-staging/` Docker Compose entry that points at the fork's container image once one exists.
-
-**Action:** confirm Option A or B with the user before fork creation. **This is the only blocking decision for Step 1.**
+Rationale preserved for history: AGPLv3 plus the upstream-rebase burden ([99 ADR-012](99-decisions-and-open-questions.md)) made subtree more pain than gain. Design docs are **vendored into this fork** under `docs/brehon-law-inspired-network/` (commit `e960a128c`) so the fork is self-contained — a thin link-back from `homeserver` to this repo is the cross-repo seam, not the other way around.
 
 ### 2.2 Project name — DEFER
 
@@ -53,12 +97,12 @@ Before writing code, make sure these are installed and working on the dev machin
 
 ### 2.4 Initial repo setup tasks (one-shot, before Step 1 starts)
 
-1. Fork Lemmy 1.0-beta on GitHub (Option A above)
-2. Clone, create branch `governance-v0`
-3. Verify upstream `cargo check --workspace` passes
-4. Add `LICENSE` if not already present (AGPLv3 — should be inherited from upstream; just verify and don't overwrite)
-5. Add an `AGPL-NOTICE.md` at repo root explaining the fork relationship and source-disclosure obligation per [99 ADR-011](99-decisions-and-open-questions.md)
-6. Create the empty governance directory skeleton (no `.rs` files yet, just `mod.rs` placeholders) so the structure is in version control before any code lands:
+1. ✅ Fork Lemmy 1.0-beta on GitHub (Option A above) — `barrie-cork/lemmy`
+2. ✅ Clone, create branch `governance-v0`
+3. ✅ Verify upstream `cargo check --workspace` passes — baseline clean (Windows signal-handler gate added in `ca3af443a`)
+4. ✅ Add `LICENSE` if not already present (AGPLv3 — inherited from upstream)
+5. ✅ Add an `AGPL-NOTICE.md` at repo root explaining the fork relationship and source-disclosure obligation per [99 ADR-011](99-decisions-and-open-questions.md)
+6. ❌ Create the empty governance directory skeleton (no `.rs` files yet, just `mod.rs` placeholders) so the structure is in version control before any code lands:
    - `crates/db_schema/src/source/governance/`
    - `crates/db_views/governance_case/`
    - `crates/db_views/jury_queue/`
@@ -73,15 +117,15 @@ Before writing code, make sure these are installed and working on the dev machin
    - `crates/server/src/governance.rs`
 
    Crate paths come from [03 §7](03-architecture.md) and [04 §3, §4, §6, §9–§12](04-data-model-and-api.md).
-7. Create `tests/e2e.rs` placeholder file (just the test harness boilerplate; tests come in Step 4)
-8. Create `migrations/` directory under `crates/db_schema/` if Lemmy doesn't already use it (it does — verify the convention before assuming)
-9. Wire CI early: GitHub Actions workflow that runs `cargo check --workspace` + `cargo clippy --workspace -- -D warnings` + `cargo test -p server --test e2e` on every push. **Don't defer CI — solo devs without CI ship rot.**
+7. ❌ Create `tests/e2e.rs` placeholder file (just the test harness boilerplate; tests come in Step 4)
+8. ✅ `migrations/` directory exists at repo root — upstream Lemmy convention confirmed (`migrations/{timestamp}_name/{up,down}.sql`)
+9. ❌ Wire CI early: GitHub Actions workflow that runs `cargo check --workspace` + `cargo clippy --workspace -- -D warnings` + `cargo test -p server --test e2e` on every push. **Don't defer CI — solo devs without CI ship rot.** (Upstream `.woodpecker.yml` exists but has no governance-specific step.)
 
-### 2.5 Extism plugin system — confirm it exists
+### 2.5 Extism plugin system — confirm it exists — ❌ NOT STARTED
 
 [99 ADR-012](99-decisions-and-open-questions.md) commits us to using Lemmy 1.0-beta's Extism-based plugin system "where it simplifies governance hooks." For v0, we will **not** ship governance hooks as Extism plugins — they are direct Rust code in the new crates. But before Step 1 starts, **read the Lemmy 1.0-beta Extism plugin docs and source** to confirm the `before_*` / `after_*` hook surface ([99 ADR-012](99-decisions-and-open-questions.md)) actually exists and is documented. If it does not, file an open question and decide in v1 whether to wire governance through plugins or stay with direct Rust.
 
-This is a Step-0 verification, not a Step-1 task. Time-box to half a day.
+This is a Step-0 verification, not a Step-1 task. Time-box to half a day. **Note:** Extism 1.20.0 + extism-convert 1.20.0 are confirmed in `Cargo.toml` (per fork-local `CLAUDE.md`), so the dependency exists — still need to verify the governance-hook surface area.
 
 ---
 
