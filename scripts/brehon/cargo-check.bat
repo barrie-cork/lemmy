@@ -17,4 +17,4 @@ echo VCVARS_OK
 where link
 echo ---
 cd /d "%~dp0..\.."
-"%USERPROFILE%\.cargo\bin\cargo.exe" check --workspace
+"%USERPROFILE%\.cargo\bin\cargo.exe" check %*
