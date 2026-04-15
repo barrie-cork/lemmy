@@ -15,12 +15,18 @@ REM      You must install it separately, typically via vcpkg.
 REM
 REM vcpkg install (one-time per machine):
 REM
-REM     git clone https://github.com/microsoft/vcpkg %USERPROFILE%\vcpkg
-REM     %USERPROFILE%\vcpkg\bootstrap-vcpkg.bat
-REM     %USERPROFILE%\vcpkg\vcpkg.exe install libpq:x64-windows-static-md
+REM     cd C:\Users\barri\Developer
+REM     git clone https://github.com/microsoft/vcpkg
+REM     cd vcpkg
+REM     .\bootstrap-vcpkg.bat
+REM     .\vcpkg install libpq:x64-windows
 REM
-REM Then update PQ_LIB_DIR below to point at the installed lib dir, e.g.
-REM     set PQ_LIB_DIR=%USERPROFILE%\vcpkg\installed\x64-windows-static-md\lib
+REM This installs the DYNAMIC triplet (x64-windows), which means libpq.dll
+REM must be on PATH at test runtime as well as libpq.lib being discoverable
+REM at link time. This script handles both.
+REM
+REM If you choose the static triplet instead (x64-windows-static-md), drop
+REM the PATH-prepend below and change the triplet name in PQ_LIB_DIR.
 REM
 REM Usage (from any cmd.exe or from bash via `./scripts/brehon/cargo-test.bat`):
 REM    scripts\brehon\cargo-test.bat --test e2e --no-run -p lemmy_server
@@ -28,17 +34,17 @@ REM    scripts\brehon\cargo-test.bat --test e2e -p lemmy_server
 REM
 REM All arguments after the script name are forwarded verbatim to `cargo test`.
 REM
-REM If the VS Build Tools path below is wrong on another machine, update it
-REM before running.
+REM If the VS Build Tools path or vcpkg path below is wrong on another
+REM machine, update them before running.
 
-REM ---- libpq.lib discovery (vcpkg-based) --------------------------------
-REM Set PQ_LIB_DIR to the directory containing libpq.lib. The placeholder
-REM below preserves any value already exported in the parent shell; override
-REM it here (uncomment and edit the `set` line) once you have vcpkg +
-REM libpq:x64-windows-static-md installed.
-REM
-REM     set PQ_LIB_DIR=%USERPROFILE%\vcpkg\installed\x64-windows-static-md\lib
-set PQ_LIB_DIR=%PQ_LIB_DIR%
+REM ---- libpq discovery (vcpkg-based, x64-windows dynamic triplet) --------
+REM PQ_LIB_DIR    — directory containing libpq.lib (link time)
+REM PQ_INCLUDE_DIR — directory containing libpq-fe.h (build.rs time)
+REM PATH prepend  — directory containing libpq.dll (test runtime)
+set VCPKG_ROOT=C:\Users\barri\Developer\vcpkg
+set PQ_LIB_DIR=%VCPKG_ROOT%\installed\x64-windows\lib
+set PQ_INCLUDE_DIR=%VCPKG_ROOT%\installed\x64-windows\include
+set PATH=%VCPKG_ROOT%\installed\x64-windows\bin;%PATH%
 REM -----------------------------------------------------------------------
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul
