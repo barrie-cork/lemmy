@@ -1,3 +1,24 @@
 * @Nutomic @dessalines @phiresky @dullbananas
 crates/apub/ @Nutomic
 migrations/ @dessalines @phiresky @dullbananas
+
+# Brehon governance-v0 ownership (appended below upstream entries).
+# Later-phase paths that do not yet exist on disk (api/governance,
+# api_crud/governance, apub/*/governance, server/src/governance.rs) are
+# listed prospectively — they become active the moment those directories
+# land in a future phase PR.
+docs/brehon-law-inspired-network/ @barrie-cork
+crates/db_schema/src/source/governance/ @barrie-cork
+crates/db_views/governance_case/ @barrie-cork
+crates/db_views/jury_queue/ @barrie-cork
+crates/db_views/governance_modlog/ @barrie-cork
+crates/db_views/reputation/ @barrie-cork
+crates/api/api_common/src/governance.rs @barrie-cork
+crates/api/api/src/governance/ @barrie-cork
+crates/api/api_crud/src/governance/ @barrie-cork
+crates/apub/objects/src/governance/ @barrie-cork
+crates/apub/activities/src/governance/ @barrie-cork
+crates/apub/apub/src/governance/ @barrie-cork
+crates/server/src/governance.rs @barrie-cork
+.github/ @barrie-cork
+.woodpecker.yml @barrie-cork

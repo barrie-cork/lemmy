@@ -1,0 +1,96 @@
+# === RENAME TO ENABLE ===
+#
+# This workflow is intentionally inert. GitHub Actions only picks up files
+# under .github/workflows/ that end in .yml or .yaml, so the .disabled suffix
+# keeps this file dormant until you're ready to activate it.
+#
+# Activation steps:
+#   1. Obtain an Anthropic API key (direct API) OR authenticate via the
+#      Claude Max/Pro OAuth flow described at
+#      https://github.com/anthropics/claude-code-action.
+#   2. Add ANTHROPIC_API_KEY under Settings -> Secrets and variables -> Actions
+#      (or rewire the auth step to use the OAuth flow).
+#   3. Verify the `model` field below matches a current Claude model ID from
+#      https://code.claude.com/docs/en/github-actions — model names rotate.
+#   4. `git mv .github/workflows/claude-code-action.yml.disabled .github/workflows/claude-code-action.yml`
+#   5. Commit to governance-v0, push, and check that the workflow appears
+#      under the Actions tab.
+#
+# Trigger model: on-demand via comment. Post a comment containing
+# `@claude review this phase` on any PR to fire one Claude review. Cheaper
+# than auto-on-every-push and keeps your Anthropic bill predictable.
+
+name: claude-code-review
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude-review:
+    if: >
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@claude review this phase')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Detect phase and load rubric
+        id: rubric
+        run: |
+          git fetch origin governance-v0 --depth=50
+          BASE=$(git merge-base origin/governance-v0 HEAD)
+          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+
+          phase="unknown"
+          if grep -qE '^crates/apub/(objects|activities|apub)/src/governance/' /tmp/changed.txt; then
+            phase="6"
+          elif grep -qE '^crates/api/(api|api_crud)/src/governance/|^crates/server/src/governance\.rs' /tmp/changed.txt; then
+            phase="4"
+          elif grep -qE '^crates/api/api_common/src/governance\.rs' /tmp/changed.txt; then
+            phase="3"
+          elif grep -qE '^crates/db_views/(governance_case|jury_queue|governance_modlog|reputation)/' /tmp/changed.txt; then
+            phase="2"
+          elif grep -qE '^crates/db_schema/src/source/governance/|^migrations/' /tmp/changed.txt; then
+            phase="1"
+          fi
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+
+          {
+            cat .github/ai-review-prompts/adr-rubric.md
+            echo ""
+            echo "---"
+            echo ""
+            if [ -f ".github/ai-review-prompts/phase-${phase}-rubric.md" ]; then
+              cat ".github/ai-review-prompts/phase-${phase}-rubric.md"
+            else
+              echo "_No phase-specific rubric for phase $phase; applying ADR rubric only._"
+            fi
+          } > /tmp/rubric.md
+
+      - name: Claude Code Action review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # VERIFY BEFORE ENABLING: model IDs rotate. Check
+          # https://code.claude.com/docs/en/github-actions for the current
+          # canonical Claude Opus / Sonnet ID.
+          model: claude-opus-4-5
+          direct_prompt: |
+            You are the Brehon governance ADR reviewer. Review this PR
+            against the rubric below. Cite ADR IDs exactly (ADR-001 through
+            ADR-015). Cite file:line when quoting code. Silence is fine if
+            nothing is wrong.
+
+            $(cat /tmp/rubric.md)

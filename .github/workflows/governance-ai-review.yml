@@ -1,0 +1,160 @@
+name: governance-ai-review
+
+on:
+  pull_request:
+    branches:
+      - governance-v0
+    paths:
+      - 'crates/db_schema/src/source/governance/**'
+      - 'crates/db_views/governance_case/**'
+      - 'crates/db_views/jury_queue/**'
+      - 'crates/db_views/governance_modlog/**'
+      - 'crates/db_views/reputation/**'
+      - 'crates/api/api_common/src/governance.rs'
+      - 'crates/api/api/src/governance/**'
+      - 'crates/api/api_crud/src/governance/**'
+      - 'crates/apub/objects/src/governance/**'
+      - 'crates/apub/activities/src/governance/**'
+      - 'crates/apub/apub/src/governance/**'
+      - 'crates/server/src/governance.rs'
+      - 'migrations/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read
+
+concurrency:
+  group: gov-ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ai-review:
+    name: AI review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head with base history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Detect phase from changed paths
+        id: phase
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=50
+          BASE=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
+          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+          cat /tmp/changed.txt
+
+          phase="unknown"
+          # Detection order matters — first match wins. Phase 4 (api handlers)
+          # beats Phase 3 (api_common DTOs) beats Phase 2 (db_views) beats
+          # Phase 1 (schema/migrations). Phase 6 (apub) is independent.
+          if grep -qE '^crates/apub/(objects|activities|apub)/src/governance/' /tmp/changed.txt; then
+            phase="6"
+          elif grep -qE '^crates/api/(api|api_crud)/src/governance/|^crates/server/src/governance\.rs' /tmp/changed.txt; then
+            phase="4"
+          elif grep -qE '^crates/api/api_common/src/governance\.rs' /tmp/changed.txt; then
+            phase="3"
+          elif grep -qE '^crates/db_views/(governance_case|jury_queue|governance_modlog|reputation)/' /tmp/changed.txt; then
+            phase="2"
+          elif grep -qE '^crates/db_schema/src/source/governance/|^migrations/' /tmp/changed.txt; then
+            phase="1"
+          fi
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+          echo "Detected phase: $phase"
+
+      - name: Assemble diff (capped at 28KB)
+        id: diff
+        run: |
+          BASE=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
+          git diff --unified=3 "$BASE"...HEAD > /tmp/full.diff
+          # ~7K tokens worth of diff — leaves headroom inside the 8K input window.
+          head -c 28000 /tmp/full.diff > /tmp/pr.diff
+          wc -c /tmp/pr.diff
+
+      - name: Load ADR rubric and phase rubric
+        id: rubric
+        run: |
+          cat .github/ai-review-prompts/adr-rubric.md > /tmp/rubric.md
+          phase="${{ steps.phase.outputs.phase }}"
+          if [ -f ".github/ai-review-prompts/phase-${phase}-rubric.md" ]; then
+            printf '\n\n---\n\n' >> /tmp/rubric.md
+            cat ".github/ai-review-prompts/phase-${phase}-rubric.md" >> /tmp/rubric.md
+          else
+            printf '\n\n_No phase-specific rubric for phase %s; applying ADR rubric only._\n' "$phase" >> /tmp/rubric.md
+          fi
+          wc -c /tmp/rubric.md
+
+      - name: Assemble prompt
+        id: prompt
+        run: |
+          {
+            echo "You are an ADR-compliance reviewer for a Rust governance fork of Lemmy."
+            echo "Produce a short, actionable review comment, under 400 words, valid Markdown."
+            echo ""
+            echo "## Rules"
+            echo "- Cite ADR IDs exactly (ADR-001 through ADR-015 only) when flagging."
+            echo "- Cite file:line when quoting code."
+            echo "- Silence is fine: if nothing is wrong, say \"No ADR violations detected in this diff.\" and stop."
+            echo "- Do NOT critique upstream Lemmy conventions outside governance namespaces."
+            echo "- Do NOT duplicate Woodpecker CI checks (cargo build, clippy, rustfmt, tests)."
+            echo ""
+            echo "## Detected phase"
+            echo "Phase ${{ steps.phase.outputs.phase }}"
+            echo ""
+            echo "## ADR rubric + phase rubric"
+            cat /tmp/rubric.md
+            echo ""
+            echo "## Diff (truncated to 28KB)"
+            echo '```diff'
+            cat /tmp/pr.diff
+            echo '```'
+          } > /tmp/prompt.txt
+          wc -c /tmp/prompt.txt
+
+      - name: Run AI inference
+        id: infer
+        uses: actions/ai-inference@v2
+        with:
+          model: openai/gpt-4o
+          prompt-file: /tmp/prompt.txt
+          max-tokens: 4000
+          system-prompt: |
+            You are a precise, laconic code reviewer. Output valid Markdown.
+            Never hallucinate ADR IDs. Only reference ADR-001 through ADR-015
+            as listed in the rubric. If the diff is empty or unreviewable,
+            say so plainly and stop.
+
+      - name: Post AI review as PR comment
+        uses: actions/github-script@v7
+        env:
+          # Passing the model output through env avoids GitHub Actions
+          # expression interpolation injecting backticks or dollar signs
+          # into the JavaScript template literal below.
+          AI_REVIEW: ${{ steps.infer.outputs.response }}
+          PHASE: ${{ steps.phase.outputs.phase }}
+        with:
+          script: |
+            const review = process.env.AI_REVIEW || '_AI inference returned empty output. Check the workflow run for details._';
+            const phase = process.env.PHASE || 'unknown';
+            const runId = context.runId;
+            const body = [
+              `## AI governance review — phase ${phase}`,
+              '',
+              review,
+              '',
+              '<details><summary>About this review</summary>',
+              '',
+              'Generated by [`actions/ai-inference@v2`](https://github.com/actions/ai-inference) using `openai/gpt-4o` on the free GitHub Models tier. Advisory only — a maintainer must act on or dismiss each finding before merge. Rate limit: ~15 RPM / 150 requests/day across the repo.',
+              '',
+              `Re-run: \`gh run rerun ${runId} --failed\``,
+              '</details>'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: body
+            });

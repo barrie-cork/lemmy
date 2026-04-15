@@ -1,0 +1,178 @@
+# Brehon-fork governance-v0 CodeRabbit configuration.
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+#
+# Scope: AI review for PRs targeting governance-v0 only. `main` is reserved
+# for weekly upstream rebases — reviewing those would waste the free-tier
+# rate limit on upstream commits.
+#
+# Escape hatch for rebase-burst days: if CodeRabbit's ~4 PRs/hour limit kicks
+# in during a burst of small PRs, flip `reviews.auto_review.enabled` to false
+# in a one-line PR, merge the burst, then flip it back on.
+
+language: en-GB
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - governance-v0
+    ignore_title_keywords:
+      - WIP
+      - upstream-rebase
+      - "chore(rebase)"
+
+  # Do not review archived design history, vendored files, or upstream subtrees.
+  path_filters:
+    - "!docs/brehon-law-inspired-network/chat1.md"
+    - "!docs/brehon-law-inspired-network/chat2.md"
+    - "!docs/brehon-law-inspired-network/*.docx"
+    - "!docs/brehon-law-inspired-network/*.pdf"
+    - "!api_tests/pnpm-lock.yaml"
+    - "!Cargo.lock"
+    - "!**/translations/**"
+    - "!target/**"
+    - "!**/volumes/**"
+    - "!**/dist/**"
+    - "!scripts/brehon/*.bat"
+    - "!.woodpecker.yml"
+
+  # Tighter review on governance-owned code. Each block cites the ADR(s) it
+  # is enforcing so the CodeRabbit summary traces back to the same source of
+  # truth as `.github/ai-review-prompts/adr-rubric.md`.
+  path_instructions:
+    - path: "crates/db_schema/src/source/governance/**"
+      instructions: |
+        Phase 1 / ADR-008 territory. Enforce:
+        - Append-only governance_log: any migration or model change that
+          touches governance_log must preserve the BEFORE INSERT hash-chain
+          trigger and the GRANT that denies UPDATE/DELETE to the app role.
+        - CaseStatus MUST include EmergencyRemove (ADR-013). Flag any diff
+          that removes it or introduces non-exhaustive matches elsewhere.
+        - No direct PII in governance_log payloads (ADR-015): usernames,
+          emails, display names. Only actor_pseudonym.
+
+    - path: "crates/db_views/governance_case/**"
+      instructions: |
+        Phase 2a view-crate Selectable rule: bare-scalar fields (i32, String,
+        stub placeholders) force tuple-load + map. Do NOT allow
+        #[derive(Selectable)] on these views. Flag any PR that adds it.
+        Reference pattern: crates/db_views/governance_case/src/impls.rs.
+
+    - path: "crates/db_views/jury_queue/**"
+      instructions: |
+        Phase 2a view-crate Selectable rule applies. Additionally: per ADR-009,
+        direct moderator action on a case under jury review must move the
+        case to admin-review state, not continue the jury flow. Flag any
+        view or query that assumes only one of the two paths.
+
+    - path: "crates/db_views/governance_modlog/**"
+      instructions: |
+        Phase 2b. Modlog views must return redacted text only per ADR-015.
+        Every user-visible string must be scrubbed via the redaction service
+        before leaving the database. Flag any SELECT that pulls raw
+        person.name, person.email, local_user.email, or display_name into a
+        public log row.
+
+    - path: "crates/db_views/reputation/**"
+      instructions: |
+        Phase 5. Reputation is four-dimensional and event-sourced per ADR-005.
+        Flag views that collapse the four dimensions into a single score or
+        expose raw reputation numbers to the public API (users see
+        capabilities like `jury_eligible` and `trusted_reporter`, not
+        numbers).
+
+    - path: "crates/api/api_common/src/governance.rs"
+      instructions: |
+        Phase 3 DTO scope check. v0 is EXACTLY 11 endpoints per ADR-010 and
+        05-mvp-and-delivery-plan.md §2. Flag new DTOs that do not map to one
+        of those 11. RevokeEndorsement DTO is allowed even though the
+        endpoint is deferred to v1 (explicit Phase 3 task 35 exception).
+        Flag business logic inside DTO impls — DTOs are shape-only.
+
+    - path: "crates/api/api/src/governance/**"
+      instructions: |
+        Phase 4 handler code. Enforce:
+        - Every match on CaseStatus is exhaustive and handles EmergencyRemove
+          explicitly (ADR-013). No wildcard `_ =>` arms on CaseStatus.
+        - Every governance write emits an append-only log entry BEFORE
+          returning the response (ADR-008). Flag handlers that insert/update
+          governance tables without a matching governance_log::append().
+        - Every user-visible string in a response or log payload is passed
+          through scrub()/redaction before leaving the handler (ADR-015).
+        - No Keycloak, OpenFGA, Vault, HSM, KMS, or external signer imports
+          (ADR-010 — v2 scope).
+        - Integration tests hit a real Postgres. Flag any test that mocks
+          the DB.
+
+    - path: "crates/api/api_crud/src/governance/**"
+      instructions: |
+        Phase 4 create_report handler lives here. Same rules as
+        crates/api/api/src/governance/** plus: the report threshold
+        calculation is tunable config, not hard-coded. See OQ-006 in
+        99-decisions-and-open-questions.md for the draft formula.
+
+    - path: "migrations/**"
+      instructions: |
+        Flag any migration that ALTERs, DROPs, or TRUNCATEs governance_log,
+        moderation_case, jury_assignment, jury_vote, sanction, appeal,
+        public_case_log, or actor_pseudonym. ADR-008 and ADR-015 forbid
+        destructive changes to these without a superseding ADR. Also flag
+        any migration that removes the governance_log hash-chain trigger
+        or the UPDATE/DELETE deny-grant.
+
+    - path: "crates/apub/objects/src/governance/**"
+      instructions: |
+        Phase 6 AP object types. Per ADR-014, governance AP types only
+        propagate between Brehon-forks; vanilla Lemmy peers silently
+        discard them. Flag code that assumes a vanilla peer can interpret
+        ModerationLabelObject, TrustAttestationObject, or SanctionNoticeObject.
+
+    - path: "crates/apub/activities/src/governance/**"
+      instructions: |
+        Phase 6 activities. Same ADR-014 rule as apub/objects/src/governance.
+        Additionally, per ADR-006, inbound governance signals are ADVISORY
+        ONLY — never auto-apply. Flag any inbound handler that mutates local
+        case state, local reputation, or local sanctions on receipt of a
+        federated activity.
+
+    - path: "crates/apub/apub/src/governance/**"
+      instructions: |
+        Phase 6 inbox/outbox wiring. Same ADR-006 and ADR-014 rules.
+
+    - path: "tests/e2e.rs"
+      instructions: |
+        Integration tests must hit a real Postgres. Never mock the DB. Flag
+        mock_db, MockDb, InMemoryPgPool, or equivalent. Phase 1's
+        governance_log_hash_chain_holds is the reference pattern.
+
+    - path: "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md"
+      instructions: |
+        ADRs are append-only. Supersedes are fine (a new ADR referencing the
+        old one), but do NOT edit the body of an existing ADR. Flag any
+        in-place modification of ADR-001 through ADR-015.
+
+  tools:
+    markdownlint:
+      enabled: true
+    languagetool:
+      enabled: false
+    shellcheck:
+      enabled: true
+    ruff:
+      enabled: false
+    hadolint:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+chat:
+  auto_reply: true

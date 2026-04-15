@@ -1,0 +1,79 @@
+name: adr-compliance
+
+on:
+  pull_request:
+    branches:
+      - governance-v0
+    paths:
+      - 'crates/**'
+      - 'migrations/**'
+      - 'docs/brehon-law-inspired-network/99-decisions-and-open-questions.md'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: adr-compliance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  red-flag-scan:
+    name: Red-flag diff scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head with base history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Compute diff against base
+        id: diff
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=50
+          BASE_SHA=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          git diff --unified=0 "$BASE_SHA"...HEAD > /tmp/pr.diff
+          wc -l /tmp/pr.diff
+
+      - name: Run ADR red-flag scanner
+        id: scan
+        run: |
+          set +e
+          bash .github/scripts/adr-compliance.sh /tmp/pr.diff > /tmp/findings.md
+          scan_status=$?
+          set -e
+          if [ -s /tmp/findings.md ]; then
+            echo "violations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "violations=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "scan_status=$scan_status" >> "$GITHUB_OUTPUT"
+
+      - name: Comment findings on PR
+        if: steps.scan.outputs.violations == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const findings = fs.readFileSync('/tmp/findings.md', 'utf8');
+            const body = [
+              '## ADR compliance: red flags detected',
+              '',
+              findings,
+              '',
+              '_Advisory. Admin bypass is enabled on `governance-v0` — a maintainer must acknowledge each finding in a review comment before merging past it._'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: body
+            });
+
+      - name: Fail the job if red flags present
+        if: steps.scan.outputs.violations == 'true'
+        run: |
+          echo "::error::ADR red flags detected. See PR comment for details."
+          exit 1
