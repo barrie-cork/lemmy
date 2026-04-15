@@ -29,6 +29,9 @@ use {
   lemmy_db_schema_file::enums::AppealStatus,
 };
 
+#[cfg(feature = "full")]
+pub mod impls;
+
 #[skip_serializing_none]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
