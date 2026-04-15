@@ -93,3 +93,35 @@ pub async fn list_public_case_log(
 
   Ok(rows.into_iter().map(|r| build_view(r, &appealed)).collect())
 }
+
+/// Public case log entries filtered by community, newest-first. Powers
+/// the community-scoped `GET /api/v4/governance/modlog?community_id=X`
+/// variant (task 43 in Phase 4 — handler layer adds pagination).
+///
+/// Two round-trips: main join + appealed-case-id set.
+pub async fn list_public_case_log_for_community(
+  pool: &mut DbPool<'_>,
+  community_id: CommunityId,
+) -> LemmyResult<Vec<GovernanceModlogView>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let rows: Vec<ModlogRow> = public_case_log::table
+    .left_join(community::table)
+    .filter(public_case_log::community_id.eq(community_id))
+    .order_by(public_case_log::published_at.desc())
+    .select((
+      public_case_log::id,
+      public_case_log::case_id,
+      public_case_log::community_id,
+      community::name.nullable(),
+      public_case_log::summary,
+      public_case_log::published_at,
+    ))
+    .load::<ModlogRow>(conn)
+    .await?;
+
+  let case_ids: Vec<ModerationCaseId> = rows.iter().map(|r| r.1).collect();
+  let appealed = appealed_case_ids(conn, &case_ids).await?;
+
+  Ok(rows.into_iter().map(|r| build_view(r, &appealed)).collect())
+}
