@@ -159,6 +159,7 @@ diesel_migrations = "2.3.1"
 diesel-async = "0.8.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_with = "3.18.0"
+sha2 = "0.10"
 actix-web = { version = "4.13.0", default-features = false, features = [
   "compress-brotli",
   "compress-gzip",
