@@ -29,18 +29,18 @@
 | 8. NOT Building (v0 scope limits) | 593 |
 | 9. Step-by-Step Tasks (25–30) | 610 |
 | 9.1 Task 25 — CREATE `crates/db_views/governance_modlog` skeleton + workspace registration | 614 |
-| 9.2 Task 26 — CREATE `GovernanceModlogView` struct | 685 |
-| 9.3 Task 27 — IMPLEMENT `list_public_case_log` | 722 |
-| 9.4 Task 28 — IMPLEMENT `list_public_case_log_for_community` | 753 |
-| 9.5 Task 29 — IMPLEMENT `read_public_case_log_entry` | 806 |
-| 9.6 Task 30 — ADD Phase 2 smoke-test trio to `tests/e2e.rs` | 864 |
-| 10. Testing Strategy | 966 |
-| 11. Validation Commands | 996 |
-| 12. Risks and Mitigations | 1068 |
-| 13. Acceptance Criteria | 1084 |
-| 14. Completion Checklist | 1102 |
-| 15. Confidence rationale | 1119 |
-| 16. Commit message convention | 1141 |
+| 9.2 Task 26 — CREATE `GovernanceModlogView` struct | 688 |
+| 9.3 Task 27 — IMPLEMENT `list_public_case_log` | 725 |
+| 9.4 Task 28 — IMPLEMENT `list_public_case_log_for_community` | 756 |
+| 9.5 Task 29 — IMPLEMENT `read_public_case_log_entry` | 809 |
+| 9.6 Task 30 — ADD Phase 2 smoke-test trio to `tests/e2e.rs` | 867 |
+| 10. Testing Strategy | 969 |
+| 11. Validation Commands | 999 |
+| 12. Risks and Mitigations | 1074 |
+| 13. Acceptance Criteria | 1090 |
+| 14. Completion Checklist | 1108 |
+| 15. Confidence rationale | 1125 |
+| 16. Commit message convention | 1147 |
 
 ---
 
@@ -617,10 +617,13 @@ Execute in order. One commit per task. Each task has a MIRROR reference, exact f
 
 ```bash
 # Baseline ancestry — do NOT pin a specific hash per feedback_plan_baseline_self_reference.md
-git branch -f feature/phase-2b-governance-modlog governance-v0
-git checkout feature/phase-2b-governance-modlog
+# Assumes impl session is already on feature/phase-2b-governance-modlog (plan commit sits on
+# the branch tip). governance-v0 has advanced to e3f335a78 (CI commit) and the feature branch
+# has been rebased onto that tip — see "load-bearing prerequisite" advisor note.
+git branch --show-current  # Must print feature/phase-2b-governance-modlog
 git merge-base --is-ancestor 94eba51a0 HEAD || { echo "Phase 1 tip 94eba51a0 is not an ancestor — STOP"; exit 1; }
-git status --short  # Must show only the untracked .github/* items from the brief; no other dirt
+git status --short  # Must show a clean tree (no untracked, no modified). The earlier .github/*
+                    # untracked state was committed upstream as e3f335a78 before Phase 2b started.
 ```
 
 **Step 1 (pre-phase audit per `pre-phase-harness-audit.md`):** Run three wrapper probes before any file edit. Skipping is not permitted.
@@ -1016,6 +1019,9 @@ tail -20 .claude/build-levelN-clippy.log
 ### Level 2: WORKSPACE CHECK (end of phase)
 
 ```bash
+# Smoke test — default features. Feature-gated correctness is Level 1's job
+# (per-crate clippy with --features full catches the governance-specific bugs).
+# Level 2 is a "does the workspace still compile at all" gate.
 cmd //c "scripts\\brehon\\cargo-check.bat --workspace > .claude/build-ws.log 2>&1"
 tail -20 .claude/build-ws.log
 # Expect: exit 0
