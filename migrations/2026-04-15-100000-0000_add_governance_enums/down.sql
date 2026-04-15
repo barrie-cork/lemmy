@@ -1,0 +1,11 @@
+DROP TYPE attestation_type;
+DROP TYPE reputation_dimension;
+DROP TYPE appeal_status;
+DROP TYPE sanction_action;
+DROP TYPE sanction_scope;
+DROP TYPE jury_decision;
+DROP TYPE jury_assignment_status;
+DROP TYPE evidence_visibility;
+DROP TYPE case_severity;
+DROP TYPE case_target_type;
+DROP TYPE case_status;
