@@ -18,6 +18,8 @@ pub mod email_verification;
 pub mod federation_allowlist;
 pub mod federation_blocklist;
 pub mod federation_queue_state;
+#[cfg(feature = "full")]
+pub mod governance;
 pub mod images;
 pub mod instance;
 pub mod keyword_block;
