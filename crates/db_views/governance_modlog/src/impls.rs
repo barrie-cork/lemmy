@@ -1,6 +1,6 @@
 use crate::GovernanceModlogView;
 use chrono::{DateTime, Utc};
-use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId, PublicCaseLogId};
 use lemmy_db_schema_file::schema::{appeal, community, public_case_log};
@@ -124,4 +124,41 @@ pub async fn list_public_case_log_for_community(
   let appealed = appealed_case_ids(conn, &case_ids).await?;
 
   Ok(rows.into_iter().map(|r| build_view(r, &appealed)).collect())
+}
+
+/// Read a single `public_case_log` entry by its primary key. Returns
+/// `None` if no row with that id exists (via `.first(...).await.optional()?`
+/// — the missing-row case is NOT an error). Powers Phase 4 handlers that
+/// need to deep-link a single modlog entry.
+///
+/// Two round-trips when the row exists: main join + appealed-case-id
+/// lookup. Short-circuits to one round-trip when the row is missing.
+pub async fn read_public_case_log_entry(
+  pool: &mut DbPool<'_>,
+  entry_id: PublicCaseLogId,
+) -> LemmyResult<Option<GovernanceModlogView>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let row: Option<ModlogRow> = public_case_log::table
+    .left_join(community::table)
+    .filter(public_case_log::id.eq(entry_id))
+    .select((
+      public_case_log::id,
+      public_case_log::case_id,
+      public_case_log::community_id,
+      community::name.nullable(),
+      public_case_log::summary,
+      public_case_log::published_at,
+    ))
+    .first::<ModlogRow>(conn)
+    .await
+    .optional()?;
+
+  match row {
+    None => Ok(None),
+    Some(r) => {
+      let appealed = appealed_case_ids(conn, &[r.1]).await?;
+      Ok(Some(build_view(r, &appealed)))
+    }
+  }
 }
