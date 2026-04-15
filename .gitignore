@@ -35,3 +35,9 @@ bindings
 
 # diesel
 migrations/.diesel_lock
+
+# Claude Code per-machine working state (Brehon fork)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/build-*.log
+.claude/prp-ralph.state.md
