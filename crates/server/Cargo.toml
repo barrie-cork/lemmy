@@ -53,15 +53,24 @@ mimalloc = "0.1.48"
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 tokio = { workspace = true }
+lemmy_api = { workspace = true, features = ["full"] }
+lemmy_api_crud = { workspace = true, features = ["full"] }
+lemmy_api_common = { workspace = true, features = ["full"] }
+lemmy_api_routes = { workspace = true }
+lemmy_api_utils = { workspace = true, features = ["full"] }
 lemmy_db_schema = { workspace = true, features = ["full"] }
 lemmy_db_schema_file = { workspace = true, features = ["full"] }
 lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
 lemmy_db_views_governance_modlog = { workspace = true, features = ["full"] }
 lemmy_db_views_jury_queue = { workspace = true, features = ["full"] }
 lemmy_diesel_utils = { workspace = true, features = ["full"] }
+actix-web = { workspace = true }
 diesel = { workspace = true }
 diesel-async = { workspace = true }
 diesel_migrations = { workspace = true }
 sha2 = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
+ed25519-dalek = { workspace = true }
+hex = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
