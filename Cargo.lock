@@ -3608,6 +3608,8 @@ dependencies = [
  "lemmy_db_views_vote",
  "lemmy_diesel_utils",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
+ "serde",
+ "serde_with",
 ]
 
 [[package]]
