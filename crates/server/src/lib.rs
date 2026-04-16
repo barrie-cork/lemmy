@@ -1,3 +1,5 @@
+pub mod governance;
+
 use activitypub_federation::config::{FederationConfig, FederationMiddleware};
 use actix_web::{
   App,
@@ -352,6 +354,9 @@ fn create_http_server(
   // These must come before HttpServer creation so they can collect data across threads.
   let prom_api_metrics = new_prometheus_metrics()?;
   let idempotency_set = IdempotencySet::default();
+
+  // Brehon governance composition root — Phase 4b stub, logs at startup.
+  governance::schedule_governance_jobs(federation_config.deref());
 
   // Create Http server
   let bind = (settings.bind, settings.port);
