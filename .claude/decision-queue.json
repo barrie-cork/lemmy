@@ -53,6 +53,32 @@
       "context": "Plan task 2 says `CaseStatus::InPanel` but `crates/db_schema_file/src/enums.rs:393-408` shows no InPanel variant; instead there are `JurySelection` + `InReview`. Design docs (`02-domain-model.md:169-170`, `04-data-model-and-api.md:61-62`) use JurySelection + InReview. Existing handlers (`get_case.rs:51-52`, `governance_case/src/impls.rs:58-59`) treat both as active-panel states. No CaseStatus::InPanel exists anywhere.",
       "answer": "Option 1. Use JurySelection for the Open→panel-assembled transition. Plan's `InPanel` is a typo for JurySelection. Rationale: the existing enum + design-doc convention names JurySelection as the panel-assembled state; introducing InPanel would break ADR-013 exhaustive match guarantees and require a migration. Apply JurySelection in admin_assign_jury (new status after panel assembled), both status match arms (reject JurySelection + InReview as 'already has panel'), admin_close_case (accept JurySelection + InReview as force-closable), and the golden-path test assertion.",
       "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 8,
+      "from": "impl",
+      "timestamp": "2026-04-17T01:00:00Z",
+      "question": "Plan task 10 asserts `reputation_event` table has 3 rows AND governance_log has 3 `reputation_event` entries — but submit_jury_vote.rs emits a 4th reputation_event for the reporter and makes ZERO governance_log::append calls for reputation. How should task 10 assert on these?",
+      "options": [
+        "Match plan verbatim (3 reputation_event rows, 3 governance_log reputation_event rows) — requires modifying submit_jury_vote handler",
+        "Match actual handler behavior (4 reputation_event rows: 3 jurors + 1 reporter; 0 governance_log reputation_event rows) — revise test assertions"
+      ],
+      "context": "submit_jury_vote.rs:292-337 emits one reputation_event per juror (3 total aligned with majority at delta=+10) PLUS one reputation_event for the reporter (ReportingAccuracy delta=+10 since AdvisoryLabel != NoAction). emit_reputation_event() at line 409 only inserts the DB row, never calls governance_log::append. Phase 4a shipped this handler as-is and phase4a tests exercise the handler. Plan task 10 assertions are stale vs current handler implementation.",
+      "answer": "Option 2. Revise test assertions to match actual handler behavior. Rationale: submit_jury_vote is production-code committed in Phase 4a (85f50d3de). Changing that handler solely to match stale plan text would be a regression — the reporter reputation event IS the documented behavior per submit_jury_vote.rs:320-337 doc-block and [05 §6]. The governance_log reputation_event assertion in the plan is plainly wrong (the handler makes no such log call). Test asserts: (a) reputation_event table count = 4 (3 juror JuryReliability + 1 reporter ReportingAccuracy); (b) governance_log per-entry_kind map EXCLUDES 'reputation_event' key (assert `map.contains_key(\"reputation_event\") == false`). Document the deviation in the Phase 4b completion report and mark plan assertions stale.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 9,
+      "from": "impl",
+      "timestamp": "2026-04-17T02:00:00Z",
+      "question": "Plan task 10 asserts the test drives the golden path via actix-web App + lemmy_api_routes::config — should the test invoke handlers via HTTP, or call them directly as async fns with a LemmyContext + synthesized LocalUserView?",
+      "options": [
+        "Full HTTP stack: build an actix App with lemmy_api_routes::config, SessionMiddleware, rate_limit scaffolding, mint JWTs, send TestRequests",
+        "Direct handler invocation: construct LemmyContext + LocalUserView (reading from DB), call admin_assign_jury(Json(...), Data(context), local_user_view).await, etc."
+      ],
+      "context": "Plan task 10 step 4 says 'Build an actix-web App with the full /api/v4 scope — reuse lemmy_api_routes::config'. However the routes config requires a RateLimit. Real-HTTP path requires building a ratelimiter, session middleware, JWT secret persistence, and FederationConfig wrapping LemmyContext. Lemmy's own integration tests (e.g. crates/api/api_utils/src/claims.rs tests, session.rs tests) use direct handler calls against LemmyContext::init_test_context(). The direct path still proves the full golden path: (a) handlers use the real DB, real transactions, real governance_log::append with ed25519 signing, real redaction, real actor_pseudonym; (b) the only thing NOT exercised is the actix router + session middleware JWT→LocalUserView lookup. The plan's spirit is to prove 'full v0 flow: report → admin-assign → 3 votes → Decided → sanction → public modlog → hash chain + signatures verified'. The router is not the load-bearing part; the handlers are.",
+      "answer": "Option 2. Direct handler invocation. Rationale: (a) matches all existing Lemmy integration test patterns (claims.rs:97, session.rs:117); (b) avoids wiring rate-limiter, JWT secret, FederationConfig — all boilerplate that adds no correctness coverage; (c) the governance invariants being proven (hash chain, signatures, redaction, pseudonyms, status transitions, vote tally, reputation events) all live in handler bodies, not in the HTTP layer; (d) the unauthenticated GET /governance/modlog assertion becomes a direct call with `_local_user_view: None` which still exercises the public-endpoint path; (e) the router is static glue tested by compile-time route registration in task 5 + the task 11 workspace check. Document this deviation in the Phase 4b completion report under 'Deviations' with a cross-reference to this decision-queue entry.",
+      "answered_by": "impl-self-resolved"
     }
   ],
   "resolved": [
