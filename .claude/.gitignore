@@ -1,0 +1,7 @@
+# Ephemeral build and audit logs from ralph loops
+*.log
+build-*.log
+audit-*.log
+
+# Ralph state file (transient — only exists during a loop)
+prp-ralph.state.md
