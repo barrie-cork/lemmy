@@ -90,3 +90,27 @@ pub struct DeclineJuryAssignment {
   pub case_id: ModerationCaseId,
   pub reason: Option<String>,
 }
+
+// ── Group C: Appeals ──────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request an appeal on a decided case.
+pub struct RequestAppeal {
+  pub case_id: ModerationCaseId,
+  pub reason: String,
+}
+
+// ── Group E: Public Log ───────────────────────────────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// List the public governance modlog. Public endpoint, no auth required.
+pub struct ListGovernanceModlog {
+  pub community_id: Option<CommunityId>,
+  pub page: Option<i64>,
+  pub limit: Option<i64>,
+}
