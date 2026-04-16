@@ -29,6 +29,7 @@ lemmy_db_views_private_message = { workspace = true, features = ["full"] }
 lemmy_db_views_registration_applications = { workspace = true, features = [
   "full",
 ] }
+lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
 lemmy_db_views_site = { workspace = true, features = ["full"] }
 lemmy_utils = { workspace = true, features = ["full"] }
 lemmy_db_schema = { workspace = true, features = ["full"] }

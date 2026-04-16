@@ -48,6 +48,9 @@ lemmy_db_views_site = { workspace = true, features = ["full"] }
 lemmy_db_views_registration_applications = { workspace = true, features = [
   "full",
 ] }
+lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
+lemmy_db_views_governance_modlog = { workspace = true, features = ["full"] }
+lemmy_db_views_jury_queue = { workspace = true, features = ["full"] }
 lemmy_utils = { workspace = true }
 lemmy_db_schema = { workspace = true, features = ["full"] }
 lemmy_api_utils = { workspace = true }
@@ -71,6 +74,7 @@ itertools = { workspace = true }
 serde_json = { workspace = true }
 diesel = { workspace = true }
 lemmy_diesel_utils = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
