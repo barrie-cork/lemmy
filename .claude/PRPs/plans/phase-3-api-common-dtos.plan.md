@@ -384,7 +384,7 @@ Per [04 §5] "Jury", corrected with newtypes.
 
 ```rust
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 /// Submit a jury vote on a case. Caller must have an `Accepted`
@@ -396,14 +396,10 @@ pub struct SubmitJuryVote {
 }
 ```
 
-No `Default` derive: `JuryDecision` does implement Default (NoAction),
-but the struct has no meaningful default state — a vote without a
-`case_id` is nonsensical. Drop `Default` to prevent accidental
-construction. Upstream precedent: `CreateComment` includes Default
-because it has `String::default()` for `content`, but `SubmitJuryVote`
-with `ModerationCaseId(0)` is never valid. This is a judgment call —
-include Default if the implementer finds it needed for deserialization,
-but the advisor recommendation is to omit it.
+`Default` included per upstream convention — every request DTO derives
+Default uniformly (`CreateComment`, `CreateCommentLike`, etc.).
+`ModerationCaseId(0)` + `JuryDecision::NoAction` is nonsensical but
+harmless; the handler validates.
 
 **Struct 6: `AcceptJuryAssignment`**
 
@@ -629,14 +625,15 @@ use lemmy_db_schema_file::PersonId;
 
 | # | File | Action | Task | Justification |
 |---|---|---|---|---|
-| 1 | `crates/api/api_common/src/governance.rs` | CREATE | 31 | New module — all 12 DTO structs |
-| 2 | `crates/api/api_common/src/lib.rs` | UPDATE | 31 | Add `pub mod governance;` |
-| 3 | `crates/api/api_common/src/governance.rs` | UPDATE | 32 | Add Group A structs (4) |
-| 4 | `crates/api/api_common/src/governance.rs` | UPDATE | 33 | Add Group B structs (3) |
-| 5 | `crates/api/api_common/src/governance.rs` | UPDATE | 34 | Add Group C + E structs (2) |
-| 6 | `crates/api/api_common/src/governance.rs` | UPDATE | 35 | Add Group D structs (3) |
-| 7 | `crates/api/api_common/Cargo.toml` | UPDATE | 36 | Verify deps are sufficient (no new deps needed since DTOs only reference db_schema + db_schema_file types) |
-| 8 | No file changes | VERIFY | 37 | Compile check + ts-rs feature check |
+| 1 | `crates/api/api_common/Cargo.toml` | UPDATE | 31 | Add `serde` + `serde_with` direct deps (first api_common module to define structs) |
+| 2 | `crates/api/api_common/src/governance.rs` | CREATE | 31 | New module — all 12 DTO structs |
+| 3 | `crates/api/api_common/src/lib.rs` | UPDATE | 31 | Add `pub mod governance;` |
+| 4 | `crates/api/api_common/src/governance.rs` | UPDATE | 32 | Add Group A structs (4) |
+| 5 | `crates/api/api_common/src/governance.rs` | UPDATE | 33 | Add Group B structs (3) |
+| 6 | `crates/api/api_common/src/governance.rs` | UPDATE | 34 | Add Group C + E structs (2) |
+| 7 | `crates/api/api_common/src/governance.rs` | UPDATE | 35 | Add Group D structs (3) |
+| 8 | No file changes | VERIFY | 36 | Cargo.toml verification (no-op — deps added in task 31) |
+| 9 | No file changes | VERIFY | 37 | Compile check + ts-rs feature check |
 
 **Files NOT changed:**
 - NO changes to Phase 1 or Phase 2 source files
@@ -648,15 +645,14 @@ use lemmy_db_schema_file::PersonId;
 - NO handler code
 - NO route code
 
-**Cargo.toml note:** Since DTOs only reference types from
-`lemmy_db_schema` (newtypes) and `lemmy_db_schema_file` (enums +
-PersonId), and both are already dependencies of `lemmy_api_common`,
-no new dependency lines are needed in `Cargo.toml`. The `ts-rs`
-feature in api_common's `Cargo.toml` already activates
-`lemmy_db_schema/ts-rs` and `lemmy_db_schema_file/ts-rs`, which
-covers the ts-rs derives on the newtype and enum types. The governance
-view crate deps (`lemmy_db_views_governance_case`, etc.) are NOT needed
-yet — they'll be added in Phase 4 when handlers import view structs.
+**Cargo.toml note:** Task 31 adds `serde` and `serde_with` as direct
+dependencies — needed because governance.rs is the first api_common
+module to define structs (every other module is a pure re-export hub).
+`lemmy_db_schema` and `lemmy_db_schema_file` are already present. The
+`ts-rs` feature already activates `lemmy_db_schema/ts-rs` and
+`lemmy_db_schema_file/ts-rs`. The governance view crate deps
+(`lemmy_db_views_governance_case`, etc.) are NOT needed yet — they'll
+be added in Phase 4 when handlers import view structs.
 
 ---
 
@@ -669,7 +665,19 @@ api_common crate.
 
 **IMPLEMENT:**
 
-1. Create `crates/api/api_common/src/governance.rs` with the module
+1. Add `serde` and `serde_with` as direct dependencies to
+   `crates/api/api_common/Cargo.toml` under `[dependencies]`:
+   ```toml
+   serde.workspace = true
+   serde_with.workspace = true
+   ```
+   Both are already declared in the workspace root `Cargo.toml`.
+   Needed because governance.rs is the first api_common module to
+   define structs directly (Option B) — every other module is a pure
+   re-export hub that never imports serde. Rust 2021 edition does not
+   allow importing transitive dependencies.
+
+2. Create `crates/api/api_common/src/governance.rs` with the module
    header and imports:
 
 ```rust
@@ -682,7 +690,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 ```
 
-2. Add `pub mod governance;` to `crates/api/api_common/src/lib.rs`
+3. Add `pub mod governance;` to `crates/api/api_common/src/lib.rs`
    after line 18 (after `pub mod tagline;`).
 
 **MIRROR:** `crates/api/api_common/src/modlog.rs` for module wiring;
@@ -848,48 +856,34 @@ Expected: exit 0.
 
 ---
 
-### Task 36 — Cargo.toml wiring (deps + ts-rs feature)
+### Task 36 — Cargo.toml verification (no-op)
 
 **ACTION:** Verify that `crates/api/api_common/Cargo.toml` has all
-necessary dependencies and feature flags for the governance DTOs.
+necessary dependencies and feature flags after tasks 31–35.
 
-**IMPLEMENT:**
+**IMPLEMENT:** This task is a verification checkpoint — no file changes
+expected. Task 31 already added `serde` and `serde_with`. Confirm:
 
-1. **Dependencies check:** The governance DTOs only import from:
-   - `lemmy_db_schema` (newtypes: ModerationCaseId, etc.)
-   - `lemmy_db_schema_file` (PersonId, enums)
-   - `serde` (Serialize, Deserialize)
-   - `serde_with` (skip_serializing_none)
+1. **Dependencies:** `lemmy_db_schema`, `lemmy_db_schema_file`, `serde`,
+   `serde_with` all present in `[dependencies]`.
+2. **ts-rs feature:** `lemmy_db_schema/ts-rs` and
+   `lemmy_db_schema_file/ts-rs` present in `[features] ts-rs`.
+3. **No governance view crate deps yet:** `lemmy_db_views_governance_case`,
+   `lemmy_db_views_jury_queue`, `lemmy_db_views_governance_modlog` are
+   NOT referenced — those are Phase 4 work.
 
-   All four are already in Cargo.toml (lines 50–52, 73). **No new
-   dependency lines needed.**
+**If all checks pass, skip the commit** — an empty commit is pointless.
+Merge the verification into task 35's commit or proceed directly to
+task 37.
 
-2. **ts-rs feature check:** The `ts-rs` feature at Cargo.toml:23–47
-   already includes `lemmy_db_schema/ts-rs` and
-   `lemmy_db_schema_file/ts-rs`. The governance DTO structs' ts-rs
-   derives are gated on `feature = "ts-rs"`, which matches. **No new
-   feature lines needed.**
-
-3. **Confirm no governance view crate deps needed yet:** The governance
-   DTOs do NOT reference types from `lemmy_db_views_governance_case`,
-   `lemmy_db_views_jury_queue`, or `lemmy_db_views_governance_modlog`.
-   Those dependencies are Phase 4 work.
-
-**If all checks pass, this task is a no-op.** The commit should
-document the verification.
+**If a missing dep is discovered**, fix it here and commit as:
+`fix(api_common): task 36 — add missing dep for governance DTOs`
 
 **VALIDATE:**
 ```
 cmd //c "scripts\brehon\cargo-check.bat -p lemmy_api_common"
 ```
-Expected: exit 0 (same as task 35 — this is a confirmation check).
-
-**COMMIT:** `chore(api_common): task 36 — verify Cargo.toml wiring for governance DTOs`
-
-**Note:** If the implementer discovers that any import doesn't resolve
-(e.g., a newtype or enum not re-exported as expected), this task
-becomes the place to fix the Cargo.toml. The plan expects zero changes
-based on the exploration, but the task exists as a safety net.
+Expected: exit 0 (same as task 35).
 
 ---
 
@@ -903,8 +897,8 @@ governance.rs module. This is the phase-close verification.
 1. Run `cargo check -p lemmy_api_common` — basic compile.
 2. Run `cargo check -p lemmy_api_common --features ts-rs` — ts-rs
    derives compile under the feature flag.
-3. Run `cargo clippy -p lemmy_api_common --no-deps -- -D warnings` —
-   no lint warnings introduced.
+3. Run `cargo clippy -p lemmy_api_common --no-deps -- -D warnings`
+   via `cargo-clippy.bat` — no lint warnings introduced.
 4. Run `cargo check --workspace` — workspace-wide check to confirm
    no breakage.
 
@@ -918,7 +912,7 @@ cmd //c "scripts\brehon\cargo-check.bat -p lemmy_api_common --features ts-rs > .
 echo "exit: $?"
 tail -20 .claude/build-task37b.log
 
-cmd //c "scripts\brehon\cargo-check.bat -p lemmy_api_common -- clippy --no-deps -- -D warnings > .claude/build-task37c.log 2>&1"
+cmd //c "scripts\brehon\cargo-clippy.bat -p lemmy_api_common --no-deps -- -D warnings > .claude/build-task37c.log 2>&1"
 echo "exit: $?"
 tail -20 .claude/build-task37c.log
 
@@ -928,16 +922,6 @@ tail -20 .claude/build-task37d.log
 ```
 
 Expected: all exit 0.
-
-**GOTCHA:** The clippy command may need adjustment. api_common does
-NOT use the `full` feature — it uses `ts-rs`. Check whether the wrapper
-script supports `-- clippy` syntax or whether a separate
-`cargo-clippy.bat` wrapper is needed. If the wrapper doesn't support
-clippy, use:
-```
-cmd //c "scripts\brehon\cargo-check.bat -p lemmy_api_common"
-```
-and document the clippy gap for Phase 4.
 
 **COMMIT:** `docs(report): task 37 — Phase 3 compile verification`
 
@@ -988,10 +972,9 @@ Cargo.toml:23.
 ### Level 3: CLIPPY (run at task 37)
 
 ```
-cmd //c "scripts\brehon\cargo-check.bat -p lemmy_api_common --no-deps -- -D warnings"
+cmd //c "scripts\brehon\cargo-clippy.bat -p lemmy_api_common --no-deps -- -D warnings"
 ```
-**EXPECT:** exit 0, zero warnings. If the wrapper doesn't support
-`-- -D warnings`, fall back to the per-crate check only.
+**EXPECT:** exit 0, zero warnings.
 
 ### Level 4: WORKSPACE CHECK (run at task 37)
 
