@@ -17,6 +17,8 @@ pub mod report;
 pub mod site;
 pub mod tagline;
 
+pub mod governance;
+
 pub use lemmy_db_schema_file::enums::VoteShow;
 pub use lemmy_db_views_site::api::SuccessResponse;
 pub use lemmy_db_views_vote::VoteView;
