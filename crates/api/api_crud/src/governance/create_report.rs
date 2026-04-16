@@ -49,14 +49,25 @@ use serde_json::json;
 
 use lemmy_api_common::governance::{CreateGovernanceReport, CreateGovernanceReportResponse};
 
-/// Threshold at which an `Open` case flips to `ThresholdMet` per
-/// [99 OQ-006] interim v0 constant. Phase 5 replaces this with a
-/// reputation-weighted formula.
+// =============================================================================
+// Threshold formula — v0 placeholder (OQ-006)
+//
+// Phase 5 replaces this with a reputation-weighted formula per [99 OQ-006].
+// The formula shape is intentionally undefined in v0 — the scaffolding here
+// exists so the replacement site is grep-discoverable and the commit that
+// lands the real formula is trivially reviewable.
+//
+// TODO(brehon-fork, phase-5): replace V0_THRESHOLD + V0_REPORTER_WEIGHT with
+// a reputation-weighted contribution function. See [99 OQ-006] and
+// docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md §3 Phase 5.
+// =============================================================================
+
+/// Threshold at which an `Open` case flips to `ThresholdMet`. v0 interim
+/// constant per [99 OQ-006].
 const V0_THRESHOLD: i64 = 3;
 
-/// Reporter weight for the threshold score. Stubbed at `1_i64` per
-/// reporter in v0 — [99 OQ-006] interim. TODO(brehon-fork): tune by
-/// reporter reputation in Phase 5.
+/// Reporter weight for the threshold score. Stubbed at 1 per report in v0.
+/// Phase 5 tunes this by reporter reputation per [99 OQ-006].
 const V0_REPORTER_WEIGHT: i64 = 1;
 
 pub async fn create_report(
