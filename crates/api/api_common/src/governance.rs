@@ -104,6 +104,53 @@ pub struct DeclineJuryAssignment {
   pub reason: Option<String>,
 }
 
+// ── Group F: Admin Backstops ──────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request payload for `POST /api/v4/governance/admin/assign-jury`.
+/// Admin-only in v0 per [99 ADR-007]; flips a case from `Open`/`ThresholdMet`
+/// to a five-juror panel with assignments auto-promoted to `Accepted` for
+/// testability (Phase 5 introduces a proper Selected → Accepted flow).
+pub struct AdminAssignJury {
+  pub case_id: ModerationCaseId,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from the admin-assign-jury backstop. `assigned_person_ids`
+/// is the list of the five jurors selected.
+pub struct AdminAssignJuryResponse {
+  pub case_id: ModerationCaseId,
+  pub assigned_person_ids: Vec<PersonId>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request payload for `POST /api/v4/governance/admin/close-case`.
+/// Single-admin v0 simplification per [99 ADR-010] — quorum + delay
+/// on admin close-case is a v2 item. `reason` is required and is
+/// included in the governance log audit entry (scrubbed by the
+/// redaction layer inside `governance_log::append`).
+pub struct AdminCloseCase {
+  pub case_id: ModerationCaseId,
+  pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from the admin-close-case backstop.
+pub struct AdminCloseCaseResponse {
+  pub case_id: ModerationCaseId,
+  pub closed: bool,
+}
+
 // ── Group C: Appeals ──────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
