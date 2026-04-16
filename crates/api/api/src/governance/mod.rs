@@ -11,4 +11,5 @@
 pub mod actor_pseudonym_helper;
 pub mod get_case;
 pub mod governance_log;
+pub mod list_my_jury_queue;
 pub mod redaction;
