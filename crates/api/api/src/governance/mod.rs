@@ -10,6 +10,7 @@
 
 pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;
+pub mod admin_close_case;
 pub mod get_case;
 pub mod governance_log;
 pub mod list_modlog;
