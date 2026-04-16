@@ -33,6 +33,8 @@ use lemmy_api::{
     user_settings_backup::{export_user_settings, import_user_settings},
   },
   governance::{
+    admin_assign_jury::admin_assign_jury,
+    admin_close_case::admin_close_case,
     get_case::get_case,
     list_modlog::list_modlog,
     list_my_jury_queue::list_my_jury_queue,
@@ -502,6 +504,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
             scope("/jury")
               .route("/me", get().to(list_my_jury_queue))
               .route("/vote", post().to(submit_jury_vote)),
+          )
+          .service(
+            scope("/admin")
+              .route("/assign-jury", post().to(admin_assign_jury))
+              .route("/close-case", post().to(admin_close_case)),
           ),
       ),
   );
