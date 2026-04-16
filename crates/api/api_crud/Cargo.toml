@@ -30,6 +30,7 @@ lemmy_db_views_registration_applications = { workspace = true, features = [
   "full",
 ] }
 lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
+lemmy_api_common = { workspace = true }
 lemmy_db_views_site = { workspace = true, features = ["full"] }
 lemmy_utils = { workspace = true, features = ["full"] }
 lemmy_db_schema = { workspace = true, features = ["full"] }
@@ -51,7 +52,9 @@ regex = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
+diesel = { workspace = true }
 diesel-async = { workspace = true }
+lemmy_api = { workspace = true }
 lemmy_diesel_utils = { workspace = true }
 
 [package.metadata.cargo-shear]

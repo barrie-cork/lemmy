@@ -51,6 +51,7 @@ lemmy_db_views_registration_applications = { workspace = true, features = [
 lemmy_db_views_governance_case = { workspace = true, features = ["full"] }
 lemmy_db_views_governance_modlog = { workspace = true, features = ["full"] }
 lemmy_db_views_jury_queue = { workspace = true, features = ["full"] }
+lemmy_api_common = { workspace = true }
 lemmy_utils = { workspace = true }
 lemmy_db_schema = { workspace = true, features = ["full"] }
 lemmy_api_utils = { workspace = true }
