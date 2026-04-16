@@ -1,6 +1,37 @@
 {
-  "phase": "3",
+  "phase": "4a",
   "schema_version": 1,
   "pending": [],
-  "resolved": []
+  "resolved": [
+    {
+      "id": 1,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "ModerationCase insert form — which fields are required for create_report?",
+      "options": ["Check crates/db_schema/src/source/governance/moderation_case.rs", "Assume fields from plan"],
+      "context": "Pre-seeded by advisor for Phase 4a. The plan agent cited approximate fields but the impl agent needs exact types.",
+      "answer": "The exact fields are in ModerationCaseInsertForm at crates/db_schema/src/source/governance/moderation_case.rs:42-55. All fields are required (no Option except the target/community fields which ARE Option). Key: community_id: Option<CommunityId>, creator_id: Option<PersonId>, target_type: CaseTargetType, target_post_id: Option<PostId>, target_comment_id: Option<CommentId>, target_person_id: Option<PersonId>, target_community_id: Option<CommunityId>, target_remote_url: Option<String>, reason_code: String, severity: CaseSeverity, status: CaseStatus, threshold_score: i64.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 2,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "How to import get_conn for run_transaction in submit_jury_vote?",
+      "options": ["use lemmy_diesel_utils::connection::get_conn", "use lemmy_db_schema::utils::get_conn"],
+      "context": "Pre-seeded by advisor for Phase 4a. The transaction pattern requires get_conn which has a specific import path in this workspace.",
+      "answer": "use lemmy_diesel_utils::connection::get_conn; — verified at crates/api/api/src/community/ban.rs:25. Also need use diesel_async::RunQueryDsl and use diesel_async::scoped_futures::ScopedFutureExt (for .scope_boxed()) in the handler imports. (Corrected 2026-04-16 during Task 0 audit — the `futures::FutureExt::boxed` claim was wrong; ban.rs:106 actually calls `.scope_boxed()` and the trait is in `diesel_async::scoped_futures::ScopedFutureExt`.)",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 3,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "SubmitJuryVoteResponse derive stack — what derives to use?",
+      "options": ["Minimal Debug+Serialize+Deserialize", "Full Phase 3 convention with ts-rs"],
+      "context": "Pre-seeded by advisor for Phase 4a. The new DTO must match the existing Phase 3 convention in governance.rs.",
+      "answer": "Full Phase 3 convention: #[skip_serializing_none] #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)] #[cfg_attr(feature = \"ts-rs\", derive(ts_rs::TS))] #[cfg_attr(feature = \"ts-rs\", ts(optional_fields, export))]. This matches all other DTOs in crates/api/api_common/src/governance.rs.",
+      "answered_by": "advisor"
+    }
+  ]
 }
