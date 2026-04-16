@@ -155,7 +155,9 @@ async fn process_assignment(
 /// Select up to `PANEL_SIZE` eligible jurors for the case. v0 eligibility
 /// is "not target AND not reporter AND not deleted AND accepted_application";
 /// reputation gating is Phase 5 per [IMPLEMENTATION-PLAN-v0.md §3 Phase 5].
-async fn select_eligible_jurors(
+/// `pub(crate)` so `admin_emergency_remove` can reuse the same logic for
+/// the post-facto jury review without duplicating the eligibility query.
+pub(crate) async fn select_eligible_jurors(
   conn: &mut diesel_async::AsyncPgConnection,
   case: &ModerationCase,
 ) -> LemmyResult<Vec<PersonId>> {
