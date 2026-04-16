@@ -12,3 +12,5 @@ with one detected-phase rubric, so the combined prompt plus the diff must fit.
 
 Humans reviewing PRs should reference the same files — the goal is one source
 of truth, not two copies drifting apart.
+
+Phase 5 and 6 rubrics will be added when those phases begin.
