@@ -1,4 +1,4 @@
-//! Hash-chained governance log writer.
+//! Hash-chained, ed25519-signed governance log writer.
 //!
 //! The only sanctioned way to append a row to `governance_log`. Every
 //! payload is passed through [`crate::governance::redaction::scrub_json`]
@@ -10,26 +10,37 @@
 //! migrations). Callers must NEVER populate those columns — the
 //! [`GovernanceLogInsertForm`] shape structurally prevents it.
 //!
-//! ## v0 signing deferred
+//! ## Signing (Phase 4b)
 //!
-//! Phase 4a does NOT sign rows. The `signature` column is left NULL.
-//! ed25519 signing + key management is deferred to Phase 4b per the
-//! plan's §Design Decision: Signing Deferred to Phase 4b, to avoid
-//! introducing `ed25519-dalek` before the full golden-path test exists
-//! to exercise the write + sign + verify loop end-to-end. The hash
-//! chain (trigger-side) is the critical integrity property and ships now.
+//! After the INSERT produces an `entry_hash`, this writer signs that
+//! hash with the ed25519 key loaded from `GOVERNANCE_LOG_SIGNING_KEY`
+//! (32-byte hex-encoded seed) and UPDATEs the row's `signature` column.
+//! The UPDATE transitions `signature` from NULL to a 64-byte signature
+//! exactly once per row — the `governance_log_signature_gate` trigger
+//! (triggers.sql:800-827) forbids any other `signature` transition and
+//! forbids any other column from changing on the UPDATE, so we set ONLY
+//! `signature`. Per [99 ADR-008] the env-var key is the v0 shape; an
+//! external signer + key rotation lands in v2.
+//!
+//! If `GOVERNANCE_LOG_SIGNING_KEY` is absent or malformed, `append`
+//! returns a hard error — silent fallback to unsigned rows defeats the
+//! point of the signature.
 
 use crate::governance::redaction::scrub_json;
-use diesel::SelectableHelper;
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
+use ed25519_dalek::{Signer, SigningKey};
 use lemmy_db_schema::source::governance::governance_log::{
   GovernanceLog,
   GovernanceLogInsertForm,
 };
 use lemmy_db_schema_file::schema::governance_log;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
-use lemmy_utils::error::LemmyResult;
+use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::Value;
+use std::env;
+
+const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
 /// Append a single row to `governance_log`.
 ///
@@ -43,12 +54,17 @@ use serde_json::Value;
 /// - `actor_pseudonym` — the stable pseudonym from
 ///   [`crate::governance::actor_pseudonym_helper::get_or_create`], or
 ///   `None` for system-generated events (e.g. a scheduled job).
+///
+/// Returns the inserted row with `entry_hash` populated by the
+/// hash-chain trigger and `signature` populated by the signing step.
 pub async fn append(
   pool: &mut DbPool<'_>,
   entry_kind: &str,
   payload: Value,
   actor_pseudonym: Option<String>,
 ) -> LemmyResult<GovernanceLog> {
+  let signing_key = load_signing_key()?;
+
   let conn = &mut get_conn(pool).await?;
 
   let form = GovernanceLogInsertForm {
@@ -63,9 +79,40 @@ pub async fn append(
     .get_result::<GovernanceLog>(conn)
     .await?;
 
-  // TODO(brehon-fork): Phase 4b — sign `row.entry_hash` with ed25519
-  // and UPDATE the `signature` column. See plan §Design Decision:
-  // Signing Deferred to Phase 4b.
+  // Sign the trigger-computed entry_hash. The 32-byte SHA-256 digest is
+  // what goes on the wire; the resulting 64-byte signature rides in the
+  // `signature` column.
+  let signature = signing_key.sign(&row.entry_hash).to_bytes().to_vec();
 
-  Ok(row)
+  // The signature-gate trigger allows exactly one NULL→non-NULL
+  // transition on `signature` and rejects any other column change, so
+  // the .set(...) clause must contain only `signature`.
+  diesel::update(governance_log::table.filter(governance_log::id.eq(row.id)))
+    .set(governance_log::signature.eq(&signature))
+    .execute(conn)
+    .await?;
+
+  Ok(GovernanceLog {
+    signature: Some(signature),
+    ..row
+  })
+}
+
+/// Load the ed25519 signing key from `GOVERNANCE_LOG_SIGNING_KEY`.
+/// Missing / malformed key is a hard error — no silent fallback to
+/// unsigned rows per [99 ADR-008].
+fn load_signing_key() -> LemmyResult<SigningKey> {
+  let hex_str = env::var(SIGNING_KEY_ENV).map_err(|_| {
+    LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} not set (required for governance log)"))
+  })?;
+  let bytes = hex::decode(hex_str.trim()).map_err(|_| {
+    LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} is not valid hex"))
+  })?;
+  let seed: [u8; 32] = bytes.as_slice().try_into().map_err(|_| {
+    LemmyErrorType::Unknown(format!(
+      "{SIGNING_KEY_ENV} must decode to exactly 32 bytes (got {})",
+      bytes.len()
+    ))
+  })?;
+  Ok(SigningKey::from_bytes(&seed))
 }
