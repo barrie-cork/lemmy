@@ -18,8 +18,16 @@ use std::sync::OnceLock;
 
 fn mention_regex() -> &'static Regex {
   static RE: OnceLock<Regex> = OnceLock::new();
+  // The leading group anchors the mention to a non-identifier boundary
+  // (start of string or a non-alphanumeric-ish character). Without it,
+  // the `@` in an email like `foo.bar@example.com` would match as a
+  // fediverse mention. `regex` has no lookbehind, so we capture the
+  // boundary char and re-emit it in the replacement.
   #[expect(clippy::expect_used, reason = "static regex — infallible at startup")]
-  RE.get_or_init(|| Regex::new(r"@[A-Za-z0-9_\-]+(?:@[A-Za-z0-9._\-]+)?").expect("valid regex"))
+  RE.get_or_init(|| {
+    Regex::new(r"(^|[^A-Za-z0-9._%+\-])@[A-Za-z0-9_\-]+(?:@[A-Za-z0-9._\-]+)?")
+      .expect("valid regex")
+  })
 }
 
 fn email_regex() -> &'static Regex {
@@ -44,13 +52,17 @@ fn profile_url_regex() -> &'static Regex {
 /// and profile URLs (`https://example.com/u/<handle>`,
 /// `/user/<handle>`, `/profile/<handle>`) with the placeholder `[redacted]`.
 ///
-/// Order matters: the profile-URL pattern runs first so that the `@` in
-/// `user@host` inside a URL is not swallowed by the mention pattern
-/// before the URL as a whole can be matched.
+/// Order matters: profile URLs first (they contain `/u/<handle>` which
+/// must be replaced as a whole unit), then fediverse mentions (they have
+/// the leading `@` guard that distinguishes them from the email
+/// pattern's trailing `@host`), and finally plain email addresses. If
+/// mentions were processed after email, a `@bob@remote.example` mention
+/// would first have its `bob@remote.example` tail eaten by the email
+/// regex, leaving an orphan `@[redacted]`.
 pub fn scrub(text: &str) -> String {
   let no_urls = profile_url_regex().replace_all(text, "[redacted]");
-  let no_emails = email_regex().replace_all(&no_urls, "[redacted]");
-  mention_regex().replace_all(&no_emails, "[redacted]").into_owned()
+  let no_mentions = mention_regex().replace_all(&no_urls, "$1[redacted]");
+  email_regex().replace_all(&no_mentions, "[redacted]").into_owned()
 }
 
 /// Recursively scrub every string value in a JSON tree.
