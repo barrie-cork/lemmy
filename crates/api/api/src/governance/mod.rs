@@ -9,6 +9,7 @@
 //! on them — see [IMPLEMENTATION-PLAN-v0.md §4.1, §4.2].
 
 pub mod actor_pseudonym_helper;
+pub mod admin_assign_jury;
 pub mod get_case;
 pub mod governance_log;
 pub mod list_modlog;

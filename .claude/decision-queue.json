@@ -40,6 +40,19 @@
       "context": "Pre-seeded by advisor for Phase 4b. Plan task 4 already documents this in GOTCHAs but the impl agent needs an authoritative answer if Post::update_removed (or equivalent) turns out to be pub(crate) in crates/db_schema or has a non-obvious signature.",
       "answer": "Option 1. Stub the remove step with `diesel::update(post::table.find(post_id)).set(post::removed.eq(true)).execute(conn).await?` (or the comment/community equivalent based on target_type) and add `// TODO(brehon-fork): wire to canonical Lemmy remove helper in Phase 5` per feedback_carry_patch_todos.md. Document the deviation in the Phase 4b completion report. Rationale: task 4's helper is library-only in v0 (no HTTP route invokes it in production), so stubbing the remove step is acceptable. Phase 5 will route the helper and at that point the canonical remove pathway must be wired.",
       "answered_by": "advisor"
+    },
+    {
+      "id": 7,
+      "from": "impl",
+      "timestamp": "2026-04-17T00:00:00Z",
+      "question": "Plan references `CaseStatus::InPanel` but the enum has `JurySelection` + `InReview` — which to use in admin_assign_jury / admin_close_case match arms + the task-10 status assertion?",
+      "options": [
+        "Use CaseStatus::JurySelection for the post-assign-jury state (panel assembled, awaiting votes)",
+        "Add a new CaseStatus::InPanel variant (requires migration + changes to enum + all match sites)"
+      ],
+      "context": "Plan task 2 says `CaseStatus::InPanel` but `crates/db_schema_file/src/enums.rs:393-408` shows no InPanel variant; instead there are `JurySelection` + `InReview`. Design docs (`02-domain-model.md:169-170`, `04-data-model-and-api.md:61-62`) use JurySelection + InReview. Existing handlers (`get_case.rs:51-52`, `governance_case/src/impls.rs:58-59`) treat both as active-panel states. No CaseStatus::InPanel exists anywhere.",
+      "answer": "Option 1. Use JurySelection for the Open→panel-assembled transition. Plan's `InPanel` is a typo for JurySelection. Rationale: the existing enum + design-doc convention names JurySelection as the panel-assembled state; introducing InPanel would break ADR-013 exhaustive match guarantees and require a migration. Apply JurySelection in admin_assign_jury (new status after panel assembled), both status match arms (reject JurySelection + InReview as 'already has panel'), admin_close_case (accept JurySelection + InReview as force-closable), and the golden-path test assertion.",
+      "answered_by": "impl-self-resolved"
     }
   ],
   "resolved": [
