@@ -1,7 +1,47 @@
 {
-  "phase": "4a",
+  "phase": "4b",
   "schema_version": 1,
-  "pending": [],
+  "pending": [
+    {
+      "id": 4,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "ed25519-dalek workspace dep version — which version + features for Phase 4b task 8?",
+      "options": [
+        "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] }",
+        "ed25519-dalek = { version = \"2\" } (no features)"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. Neither ed25519-dalek nor hex is currently in the root Cargo.toml [workspace.dependencies] — confirmed at plan-review via `grep -nE '^(ed25519-dalek|hex) ' Cargo.toml` (empty). Task 8 must add both before the crate-level Cargo.toml edits.",
+      "answer": "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] } — the rand_core feature is required for key generation paths even if v0 uses a fixed env-var key. Matches the v2 API the plan cites. Check if `rand` or `rand_core` is already a workspace dep (likely yes via Lemmy's existing deps); if not, `rand_core` ships as a transitive of ed25519-dalek and does NOT need a separate workspace entry.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 5,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "hex workspace dep version — which version for Phase 4b task 8?",
+      "options": [
+        "hex = \"0.4\"",
+        "hex = { version = \"0.4\", features = [\"serde\"] }"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. hex is used only to decode the GOVERNANCE_LOG_SIGNING_KEY env var (hex → 32 bytes) inside governance_log::append. No serde integration needed; plain default-feature hex suffices.",
+      "answer": "hex = \"0.4\" — standard hex encoding crate, no features required. The task 8 code path is `hex::decode(&key_hex)?.try_into()` which uses only the default feature surface.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 6,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "emergency_remove_open_case — what if Lemmy's canonical remove helper is private or not callable from lemmy_api?",
+      "options": [
+        "Stub with direct diesel::update(post::table).set(post::removed.eq(true)) and TODO-flag",
+        "Block the task and escalate to v0 scope owner"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. Plan task 4 already documents this in GOTCHAs but the impl agent needs an authoritative answer if Post::update_removed (or equivalent) turns out to be pub(crate) in crates/db_schema or has a non-obvious signature.",
+      "answer": "Option 1. Stub the remove step with `diesel::update(post::table.find(post_id)).set(post::removed.eq(true)).execute(conn).await?` (or the comment/community equivalent based on target_type) and add `// TODO(brehon-fork): wire to canonical Lemmy remove helper in Phase 5` per feedback_carry_patch_todos.md. Document the deviation in the Phase 4b completion report. Rationale: task 4's helper is library-only in v0 (no HTTP route invokes it in production), so stubbing the remove step is acceptable. Phase 5 will route the helper and at that point the canonical remove pathway must be wired.",
+      "answered_by": "advisor"
+    }
+  ],
   "resolved": [
     {
       "id": 1,
