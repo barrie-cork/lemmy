@@ -14,3 +14,4 @@ pub mod governance_log;
 pub mod list_modlog;
 pub mod list_my_jury_queue;
 pub mod redaction;
+pub mod submit_jury_vote;

@@ -73,6 +73,19 @@ pub struct SubmitJuryVote {
   pub rationale: Option<String>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from submitting a jury vote. When `case_decided` is true,
+/// `decision` holds the majority outcome; otherwise it is `None` and
+/// the case remains open for further votes.
+pub struct SubmitJuryVoteResponse {
+  pub vote_recorded: bool,
+  pub case_decided: bool,
+  pub decision: Option<JuryDecision>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
