@@ -32,6 +32,12 @@ use lemmy_api::{
     search::search,
     user_settings_backup::{export_user_settings, import_user_settings},
   },
+  governance::{
+    get_case::get_case,
+    list_modlog::list_modlog,
+    list_my_jury_queue::list_my_jury_queue,
+    submit_jury_vote::submit_jury_vote,
+  },
   local_user::{
     add_admin::add_admin,
     ban_person::ban_from_site,
@@ -127,6 +133,7 @@ use lemmy_api_crud::{
     list::list_custom_emojis,
     update::edit_custom_emoji,
   },
+  governance::create_report::create_report,
   multi_community::{
     create::create_multi_community,
     create_entry::create_multi_community_entry,
@@ -480,6 +487,22 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .route("/health", get().to(pictrs_health))
           .route("/list", get().to(list_all_media))
           .route("/{filename}", get().to(get_image)),
+      )
+      // Brehon governance (fork-only) — see
+      // docs/brehon-law-inspired-network/04-data-model-and-api.md §7.
+      // Phase 4a: report/case/modlog + jury/me/vote. Phase 4b wires
+      // admin backstops (assign-jury, close-case); Phase 5 adds the
+      // remaining six MVP endpoints.
+      .service(
+        scope("/governance")
+          .route("/report", post().to(create_report))
+          .route("/case", get().to(get_case))
+          .route("/modlog", get().to(list_modlog))
+          .service(
+            scope("/jury")
+              .route("/me", get().to(list_my_jury_queue))
+              .route("/vote", post().to(submit_jury_vote)),
+          ),
       ),
   );
 }
