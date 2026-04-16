@@ -59,3 +59,34 @@ pub struct ListGovernanceCases {
   pub page: Option<i64>,
   pub limit: Option<i64>,
 }
+
+// ── Group B: Jury ─────────────────────────────────────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Submit a jury vote on a case.
+pub struct SubmitJuryVote {
+  pub case_id: ModerationCaseId,
+  pub decision: JuryDecision,
+  pub rationale: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Accept a jury assignment.
+pub struct AcceptJuryAssignment {
+  pub case_id: ModerationCaseId,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Decline a jury assignment. Triggers replacement juror selection.
+pub struct DeclineJuryAssignment {
+  pub case_id: ModerationCaseId,
+  pub reason: Option<String>,
+}
