@@ -114,3 +114,32 @@ pub struct ListGovernanceModlog {
   pub page: Option<i64>,
   pub limit: Option<i64>,
 }
+
+// ── Group D: Reputation / Trust ───────────────────────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Get the calling user's own reputation summary.
+pub struct GetMyReputation {
+  pub community_id: Option<CommunityId>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Create an endorsement of another user.
+pub struct CreateEndorsement {
+  pub person_id: PersonId,
+  pub community_id: Option<CommunityId>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Revoke an existing endorsement.
+pub struct RevokeEndorsement {
+  pub endorsement_id: EndorsementId,
+}
