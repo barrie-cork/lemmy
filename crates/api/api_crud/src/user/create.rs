@@ -138,6 +138,24 @@ pub async fn register(
 
   let language_tags = get_language_tags(&req);
 
+  // Brehon Phase 5a task 51: read the config-driven default membership_state
+  // BEFORE opening the transaction (GOTCHA-51b — reading inside the tx would
+  // block tx throughput for the read's duration). `parse_membership_state`
+  // exhaustively matches the v0 variants; unknown text warns and falls back
+  // to Member. [99 OQ-016] — no v0 handler READS this column; the register
+  // handler is the sole v0 writer.
+  let default_membership_state = {
+    let mut cfg_cache = lemmy_api::governance::config::ConfigCache::new();
+    let raw = lemmy_api::governance::config::get_text(
+      &mut cfg_cache,
+      pool,
+      lemmy_api::governance::config::Scope::Instance,
+      "onboarding.default_membership_state",
+    )
+    .await?;
+    lemmy_api::governance::config::parse_membership_state(&raw)
+  };
+
   // Wrap the insert person, insert local user, and create registration,
   // in a transaction, so that if any fail, the rows aren't created.
   let conn = &mut get_conn(pool).await?;
@@ -147,7 +165,14 @@ pub async fn register(
     .run_transaction(|conn| {
       async move {
         // We have to create both a person, and local_user
-        let person = create_person(tx_data.username.clone(), &site_view, &tx_context, conn).await?;
+        let person = create_person(
+          tx_data.username.clone(),
+          &site_view,
+          &tx_context,
+          conn,
+          default_membership_state,
+        )
+        .await?;
 
         // Create the local user
         let local_user_form = LocalUserInsertForm {
@@ -369,6 +394,20 @@ pub async fn authenticate_with_oauth(
 
       let slur_regex = slur_regex(&context).await?;
 
+      // Brehon Phase 5a task 51: see the matching block above for rationale —
+      // read the config-driven membership_state before opening the tx.
+      let default_membership_state = {
+        let mut cfg_cache = lemmy_api::governance::config::ConfigCache::new();
+        let raw = lemmy_api::governance::config::get_text(
+          &mut cfg_cache,
+          pool,
+          lemmy_api::governance::config::Scope::Instance,
+          "onboarding.default_membership_state",
+        )
+        .await?;
+        lemmy_api::governance::config::parse_membership_state(&raw)
+      };
+
       // Wrap the insert person, insert local user, and create registration,
       // in a transaction, so that if any fail, the rows aren't created.
       let conn = &mut get_conn(pool).await?;
@@ -389,7 +428,14 @@ pub async fn authenticate_with_oauth(
             Person::check_username_taken(&mut conn.into(), username).await?;
 
             // We have to create a person, a local_user, and an oauth_account
-            let person = create_person(username.clone(), &site_view, &tx_context, conn).await?;
+            let person = create_person(
+              username.clone(),
+              &site_view,
+              &tx_context,
+              conn,
+              default_membership_state,
+            )
+            .await?;
 
             // Create the local user
             let local_user_form = LocalUserInsertForm {
@@ -467,6 +513,11 @@ async fn create_person(
   site_view: &SiteView,
   context: &LemmyContext,
   conn: &mut AsyncPgConnection,
+  // Brehon Phase 5a task 51: config-driven initial state ([99 OQ-016]).
+  // Parsed upstream of the tx per GOTCHA-51b; threaded in by value so the
+  // config read does not ride inside the transaction.
+  // TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+  membership_state: lemmy_db_schema_file::enums::MembershipState,
 ) -> Result<Person, LemmyError> {
   let actor_keypair = generate_actor_keypair()?;
   is_valid_actor_name(&username)?;
@@ -477,6 +528,7 @@ async fn create_person(
     ap_id: Some(ap_id.clone()),
     inbox_url: Some(generate_inbox_url()?),
     private_key: Some(actor_keypair.private_key),
+    membership_state: Some(membership_state),
     ..PersonInsertForm::new(
       username.clone(),
       actor_keypair.public_key,

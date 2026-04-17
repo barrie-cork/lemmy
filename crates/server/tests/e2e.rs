@@ -305,10 +305,17 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
   use lemmy_diesel_utils::schema_setup::{self, Options};
 
-  /// Count of Phase 1 migrations that this branch adds. Tasks 2–7 each
-  /// create one migration. If Phase 1 ever adds or drops a migration this
-  /// constant has to move with it.
-  const PHASE_1_MIGRATION_COUNT: u64 = 6;
+  /// Count of branch-added migrations that must revert cleanly for the
+  /// Phase 1 enum and table assertions below to hold. Started at 6 in Phase
+  /// 1 (tasks 2–7). Each subsequent phase that adds a migration bumps this
+  /// by its migration count. Current composition:
+  ///   - 6 Phase 1 migrations (enums, core, jury, rep+surety, pseudonym,
+  ///     governance_log — the last one was actually added in Phase 4b task 8
+  ///     but is still part of the contiguous governance-bootstrap block that
+  ///     this test reverts LIFO)
+  ///   - 2 Phase 5a migrations (add_governance_config + add_person_membership_state
+  ///     — total 8)
+  const PHASE_1_MIGRATION_COUNT: u64 = 8;
 
   /// Query shape for `COUNT(*)` probes via `sql_query`.
   #[derive(diesel::QueryableByName)]
@@ -1250,6 +1257,82 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .map_err(|e| anyhow::anyhow!("row {} signature verify failed: {e}", row.id))?;
 
     prev = row.entry_hash.clone();
+  }
+
+  Ok(())
+}
+
+// ============================================================================
+// Phase 5a — governance_config seed/const parity round-trip (GOTCHA-50h)
+// ============================================================================
+//
+// Structural parity (`seeded_keys_count_matches_const_count`,
+// `every_seeded_key_has_const_fallback`) lives in
+// `crates/api/api/src/governance/config.rs::parity` — no DB needed, runs
+// at `cargo test -p lemmy_api --lib`.
+//
+// This test is the runtime pair: walk every entry in
+// `SEEDED_KEYS_WITH_CONSTS`, call the typed accessor matching the declared
+// `value_type`, and assert the read succeeds. Catches the class of bug where
+// the SQL seed stores a `value_text` row but the Rust const declares `i64`
+// (or any shape disagreement the DB-level CHECK cannot catch on the
+// Rust-declaration side — per Perplexity-review 2026-04-17 item 5).
+
+#[tokio::test]
+async fn config_parity_round_trip() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::config::{
+    ConfigCache, SEEDED_KEYS_WITH_CONSTS, Scope, get_bool, get_float, get_int, get_text,
+  };
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+  let mut cache = ConfigCache::new();
+
+  for (key, _const_name, vtype) in SEEDED_KEYS_WITH_CONSTS {
+    match *vtype {
+      "int" => {
+        get_int(&mut cache, &mut pool, Scope::Instance, key)
+          .await
+          .map_err(|e| -> Box<dyn Error> {
+            format!("get_int round-trip failed for `{key}`: {e}").into()
+          })?;
+      }
+      "float" => {
+        get_float(&mut cache, &mut pool, Scope::Instance, key)
+          .await
+          .map_err(|e| -> Box<dyn Error> {
+            format!("get_float round-trip failed for `{key}`: {e}").into()
+          })?;
+      }
+      "bool" => {
+        get_bool(&mut cache, &mut pool, Scope::Instance, key)
+          .await
+          .map_err(|e| -> Box<dyn Error> {
+            format!("get_bool round-trip failed for `{key}`: {e}").into()
+          })?;
+      }
+      "text" => {
+        get_text(&mut cache, &mut pool, Scope::Instance, key)
+          .await
+          .map_err(|e| -> Box<dyn Error> {
+            format!("get_text round-trip failed for `{key}`: {e}").into()
+          })?;
+      }
+      other => {
+        return Err(format!("unknown value_type `{other}` for seed key `{key}`").into());
+      }
+    }
   }
 
   Ok(())

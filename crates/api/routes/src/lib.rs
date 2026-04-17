@@ -135,7 +135,7 @@ use lemmy_api_crud::{
     list::list_custom_emojis,
     update::edit_custom_emoji,
   },
-  governance::create_report::create_report,
+  governance::{create_endorsement::create_endorsement, create_report::create_report},
   multi_community::{
     create::create_multi_community,
     create_entry::create_multi_community_entry,
@@ -495,9 +495,18 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
       // Phase 4a: report/case/modlog + jury/me/vote. Phase 4b wires
       // admin backstops (assign-jury, close-case); Phase 5 adds the
       // remaining six MVP endpoints.
+      //
+      // Governance writes are transactionally expensive (report +
+      // endorsement both span multiple DB writes, redaction, and
+      // reputation-side-effects that feed the snapshot job), so the
+      // scope wraps the same `rate_limit.post()` middleware as other
+      // write-heavy scopes. The outer `/api/v4` scope's
+      // `rate_limit.message()` still applies as a ceiling.
       .service(
         scope("/governance")
+          .wrap(rate_limit.post())
           .route("/report", post().to(create_report))
+          .route("/endorsement", post().to(create_endorsement))
           .route("/case", get().to(get_case))
           .route("/modlog", get().to(list_modlog))
           .service(

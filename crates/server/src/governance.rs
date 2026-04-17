@@ -13,15 +13,16 @@
 use lemmy_api_utils::context::LemmyContext;
 use tracing::info;
 
-/// Register governance-relevant background jobs.
-///
-/// In Phase 4b these are all no-ops that log a message at startup so we
-/// can confirm the composition root is reached. Phase 5 replaces them
-/// with real schedulers. The actual route registration lives in
-/// `lemmy_api_routes::config` where the `/governance` scope is already
-/// wired (Phase 4a + task 5 of this phase).
+/// Declarative stub — actual registration happens in
+/// `lemmy_api_routes::utils::scheduled_tasks::setup`. This function only
+/// logs at startup so we can confirm the composition root is reached and
+/// keep a single place to add future governance-job logging without
+/// touching `scheduled_tasks::setup`. Phase 6's real cleanup jobs (sanction
+/// expiry, jury timeout reaping) will register additional closures there.
 pub fn schedule_governance_jobs(_context: &LemmyContext) {
   info!(
-    "governance: background jobs not yet scheduled (Phase 4b stub — see Phase 5/6)",
+    "governance: snapshot recalculation job registered via \
+     lemmy_api::governance::reputation_snapshot::run_snapshot_batch \
+     (15-minute tick in scheduled_tasks::setup; BREHON_DISABLE_SNAPSHOT_JOB=1 disables for e2e)",
   );
 }

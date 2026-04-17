@@ -66,6 +66,10 @@ pub mod sql_types {
   pub struct Ltree;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "membership_state"))]
+  pub struct MembershipState;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "modlog_kind"))]
   pub struct ModlogKind;
 
@@ -401,6 +405,39 @@ diesel::table! {
         fail_count -> Int4,
         last_retry_at -> Nullable<Timestamptz>,
         last_successful_published_time_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    governance_config (id) {
+        id -> Int4,
+        scope -> Text,
+        key -> Text,
+        value_type -> Text,
+        value_int -> Nullable<Int8>,
+        value_float -> Nullable<Float8>,
+        value_bool -> Nullable<Bool>,
+        value_text -> Nullable<Text>,
+        valid_from -> Timestamptz,
+        updated_by -> Nullable<Int4>,
+    }
+}
+
+// View over governance_config — most-recent row per (scope, key). Diesel does
+// not auto-detect views, so this `table!` block is hand-written. `id` is the
+// primary key of the underlying row surfaced through the view.
+diesel::table! {
+    governance_config_current (id) {
+        id -> Int4,
+        scope -> Text,
+        key -> Text,
+        value_type -> Text,
+        value_int -> Nullable<Int8>,
+        value_float -> Nullable<Float8>,
+        value_bool -> Nullable<Bool>,
+        value_text -> Nullable<Text>,
+        valid_from -> Timestamptz,
+        updated_by -> Nullable<Int4>,
     }
 }
 
@@ -830,6 +867,9 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::MembershipState;
+
     person (id) {
         id -> Int4,
         #[max_length = 255]
@@ -857,6 +897,7 @@ diesel::table! {
         post_score -> Int4,
         comment_count -> Int4,
         comment_score -> Int4,
+        membership_state -> MembershipState,
     }
 }
 
@@ -1109,6 +1150,7 @@ diesel::table! {
         jury_eligible -> Bool,
         trusted_reporter -> Bool,
         calculated_at -> Timestamptz,
+        can_sponsor -> Bool,
     }
 }
 

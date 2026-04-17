@@ -25,6 +25,10 @@ pub struct ReputationSnapshot {
   pub jury_eligible: bool,
   pub trusted_reporter: bool,
   pub calculated_at: DateTime<Utc>,
+  /// Populated by Phase 5a task 53 but NOT read by any v0 handler ([99 OQ-014]).
+  /// v1 flips config.sponsorship.require_reputation_gate to activate the gate.
+  /// The `scripts/brehon/lint-no-can-sponsor-read.sh` guard enforces this.
+  pub can_sponsor: bool,
 }
 
 #[derive(Clone, Default)]
@@ -39,4 +43,5 @@ pub struct ReputationSnapshotInsertForm {
   pub endorsement_strength: i32,
   pub jury_eligible: bool,
   pub trusted_reporter: bool,
+  pub can_sponsor: bool,
 }

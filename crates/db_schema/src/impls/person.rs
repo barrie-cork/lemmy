@@ -84,12 +84,21 @@ impl Person {
   /// This is necessary for federation, because Activitypub doesn't distinguish between these
   /// actions.
   pub async fn upsert(pool: &mut DbPool<'_>, form: &PersonInsertForm) -> LemmyResult<Self> {
+    // Brehon carry-patch: preserve locally-assigned `membership_state` across
+    // federation refreshes. A tuple-valued changeset is applied left-to-right,
+    // so the second element (`col.eq(col)`) reassigns the existing row's value
+    // and overrides the `None` in `form`. Without this override, every remote
+    // refresh would reset `membership_state` to the SQL column default
+    // (`'member'`), silently wiping any locally-assigned `Provisional` /
+    // `Suspended` state. Per [99 OQ-016] governance state of a local actor
+    // MUST survive federation refresh.
+    // TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
     let conn = &mut get_conn(pool).await?;
     insert_into(person::table)
       .values(form)
       .on_conflict(person::ap_id)
       .do_update()
-      .set(form)
+      .set((form, person::membership_state.eq(person::membership_state)))
       .get_result::<Self>(conn)
       .await
       .with_lemmy_type(LemmyErrorType::CouldntUpdate)
@@ -459,6 +468,13 @@ mod tests {
       post_score: 0,
       comment_count: 0,
       comment_score: 0,
+      // Brehon Phase 5a task 51 — [99 OQ-016] default. Test-fixture
+      // carry-patch: Lemmy's upstream Person struct lacks this field,
+      // so every local fixture that constructs `Person { ... }` needs
+      // the explicit default. Drop when upstream Lemmy adds Default to
+      // Person (unlikely per Lemmy's "no Default on domain types" pattern).
+      // TODO(brehon-fork): Person::membership_state field added in Phase 5a task 51 — upstream this to LemmyNet/lemmy — PR #___
+      membership_state: lemmy_db_schema_file::enums::MembershipState::Member,
     };
 
     let read_person = Person::read(pool, data.person.id).await?;

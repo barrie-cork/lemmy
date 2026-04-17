@@ -49,6 +49,7 @@ members = [
   "crates/db_views/governance_case",
   "crates/db_views/governance_modlog",
   "crates/db_views/jury_queue",
+  "crates/db_views/reputation",
   "crates/db_views/person_content_combined",
   "crates/db_views/person_saved_combined",
   "crates/db_views/person_liked_combined",
@@ -140,6 +141,7 @@ lemmy_db_views_modlog = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/d
 lemmy_db_views_governance_case = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/governance_case" }
 lemmy_db_views_governance_modlog = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/governance_modlog" }
 lemmy_db_views_jury_queue = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/jury_queue" }
+lemmy_db_views_reputation = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/reputation" }
 lemmy_db_views_person = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/person" }
 lemmy_db_views_person_content_combined = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/person_content_combined" }
 lemmy_db_views_person_liked_combined = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_views/person_liked_combined" }

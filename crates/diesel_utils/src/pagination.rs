@@ -217,7 +217,15 @@ impl<#[cfg(feature = "ts-rs")] T: ts_rs::TS, #[cfg(not(feature = "ts-rs"))] T> I
 /// Add prev/next cursors to query result.
 #[cfg(feature = "full")]
 // https://github.com/rust-lang/rust/issues/115590
-#[expect(clippy::multiple_bound_locations)]
+// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+// On the cargo/clippy version pinned by rust-toolchain.toml the
+// `clippy::multiple_bound_locations` lint no longer fires on this
+// signature, so the previous `#[expect(...)]` form failed
+// `unfulfilled-lint-expectations` under `-D warnings`. The workspace
+// also bans `#[allow]` via `-D clippy::allow-attributes`. Resolution:
+// remove the attribute entirely — if the bound pattern ever resurfaces
+// on a future clippy upgrade, swap back to `#[expect(...)]` at that
+// point.
 pub fn paginate_response<#[cfg(feature = "ts-rs")] T: ts_rs::TS, #[cfg(not(feature = "ts-rs"))] T>(
   data: Vec<T>,
   limit: i64,
