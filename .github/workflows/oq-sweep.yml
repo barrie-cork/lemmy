@@ -1,0 +1,380 @@
+name: oq-sweep
+
+on:
+  schedule:
+    - cron: '0 4 1-31/2 * *'
+  workflow_dispatch:
+    inputs:
+      only_oq:
+        description: "Run against a single OQ id (e.g. OQ-004) for debugging. Empty = all."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  models: read
+
+concurrency:
+  group: oq-sweep
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Discover OQs
+    runs-on: ubuntu-latest
+    outputs:
+      oq_ids: ${{ steps.list.outputs.oq_ids }}
+      quota_available: ${{ steps.quota.outputs.available }}
+    steps:
+      - name: Checkout governance-v0
+        uses: actions/checkout@v4
+        with:
+          ref: governance-v0
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Check API quota (needs ≥12 req headroom)
+        id: quota
+        run: |
+          set +e
+          python .github/scripts/rate_limit_tracker.py check low
+          rc=$?
+          set -e
+          stats=$(python .github/scripts/rate_limit_tracker.py stats 2>/dev/null || echo '{}')
+          # Tracker emits low_tier/high_tier keys (see rate_limit_tracker.py:114-121)
+          remaining=$(echo "$stats" | jq -r '.low_tier.remaining // 0' 2>/dev/null || echo 0)
+          echo "Low-tier remaining today: $remaining"
+          if [ "$rc" -eq 0 ] && [ "$remaining" -ge 12 ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Need ≥12 requests for full OQ sweep; have $remaining. Skipping."
+          fi
+
+      - name: Enumerate OQ ids
+        id: list
+        env:
+          ONLY_OQ: ${{ inputs.only_oq }}
+        run: |
+          all=$(grep -oE '^### OQ-[0-9]{3}' docs/brehon-law-inspired-network/99-decisions-and-open-questions.md \
+            | awk '{print $2}' | sort -u | jq -R . | jq -sc .)
+          if [ -n "$ONLY_OQ" ]; then
+            filtered=$(echo "$all" | jq -c --arg id "$ONLY_OQ" '[.[] | select(. == $id)]')
+            echo "oq_ids=$filtered" >> "$GITHUB_OUTPUT"
+            echo "Matrix scope: $filtered"
+          else
+            echo "oq_ids=$all" >> "$GITHUB_OUTPUT"
+            echo "Matrix scope: $all"
+          fi
+
+  sweep:
+    name: Sweep ${{ matrix.oq }}
+    needs: discover
+    if: needs.discover.outputs.quota_available == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        oq: ${{ fromJSON(needs.discover.outputs.oq_ids) }}
+    outputs:
+      oq: ${{ matrix.oq }}
+    steps:
+      - name: Checkout governance-v0
+        uses: actions/checkout@v4
+        with:
+          ref: governance-v0
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Extract OQ block
+        id: extract
+        env:
+          OQ: ${{ matrix.oq }}
+        run: |
+          awk -v oq="$OQ" '
+            $0 ~ "^### " oq " " {capture=1; print; next}
+            capture && /^### OQ-/ {capture=0}
+            capture && /^## / {capture=0}
+            capture {print}
+          ' docs/brehon-law-inspired-network/99-decisions-and-open-questions.md > /tmp/oq-block.md
+          wc -l /tmp/oq-block.md
+
+      - name: Derive search terms and grep code
+        id: grep
+        env:
+          OQ: ${{ matrix.oq }}
+        run: |
+          # Grab a handful of lowercased nouns >=5 chars from the OQ block (crude but works)
+          terms=$(tr '[:upper:]' '[:lower:]' < /tmp/oq-block.md \
+            | grep -oE '[a-z_]{5,}' \
+            | grep -vE '^(the|and|for|with|this|that|from|have|been|which|would|could|should|case|first|about|vault|lemmy|brehon|community|instance|governance|reputation|sponsorship|endorsement|sanction|question|open|option|status|notes|current|proposed|reason|context|decision|consequences)$' \
+            | sort -u | head -n 20)
+          echo "Terms:"
+          printf '%s\n' "$terms"
+          {
+            echo "## Code evidence for $OQ"
+            echo ""
+            if [ -z "$terms" ]; then
+              echo "_No search terms derived._"
+            else
+              pattern=$(printf '%s|' $terms | sed 's/|$//')
+              grep -rniE "($pattern)" crates/db_schema/src/source/governance/ crates/api/api/src/governance/ crates/api/api_crud/src/governance/ crates/server/src/governance.rs 2>/dev/null \
+                | head -n 60 \
+                | awk '{print "- `" $0 "`"}'
+            fi
+          } > /tmp/evidence.md
+          wc -l /tmp/evidence.md
+
+      - name: Assemble prompt
+        env:
+          OQ: ${{ matrix.oq }}
+        run: |
+          {
+            echo "You are an ADR supersede auditor for a Rust governance fork of Lemmy."
+            echo ""
+            echo "## Output contract (STRICT)"
+            echo "Line 1 MUST be exactly one of these tokens:"
+            echo "  STILL-OPEN              — code does not answer this OQ"
+            echo "  IMPLICITLY-RESOLVED     — code has committed to one of the listed options"
+            echo "  CONTRADICTED-BY-CODE    — code has committed to something NOT listed in the OQ's options"
+            echo ""
+            echo "If IMPLICITLY-RESOLVED or CONTRADICTED-BY-CODE, emit a supersede-ADR block exactly:"
+            echo ""
+            echo '```markdown'
+            echo "### ADR-supersede — ${OQ} resolution"
+            echo "Date: <YYYY-MM-DD>"
+            echo "Supersedes: ${OQ}"
+            echo "Decision: <one sentence>"
+            echo "Context: <≤3 sentences on what code says>"
+            echo "Evidence: <file:line references from the grep output>"
+            echo "Consequences: <≤3 bullets>"
+            echo '```'
+            echo ""
+            echo "If STILL-OPEN, no supersede block. Just line 1 and a one-line reason."
+            echo ""
+            echo "## Rules"
+            echo "- Only propose IMPLICITLY-RESOLVED if concrete file:line evidence supports it."
+            echo "- Do NOT invent Rust symbols — cite only what the grep output contains."
+            echo ""
+            echo "## Open Question"
+            cat /tmp/oq-block.md
+            echo ""
+            cat /tmp/evidence.md
+          } > /tmp/prompt.txt
+          wc -c /tmp/prompt.txt
+
+      - name: Run AI inference
+        id: infer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODEL_LOW: ${{ vars.BREHON_MODELS_TIER_LOW }}
+          OQ: ${{ matrix.oq }}
+        run: |
+          MODEL="${MODEL_LOW:-mistral-ai/ministral-3b}"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+
+          jq -Rs --arg model "$MODEL" '{
+            model: $model,
+            messages: [
+              {role: "system", content: "You are a precise auditor. Output starts with exactly one verdict token: STILL-OPEN, IMPLICITLY-RESOLVED, or CONTRADICTED-BY-CODE. Cite only file:line from the provided grep output."},
+              {role: "user", content: .}
+            ],
+            temperature: 0.1,
+            max_tokens: 1200
+          }' < /tmp/prompt.txt > /tmp/payload.json
+
+          http_code=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/payload.json)
+
+          echo "HTTP $http_code"
+          if [ "$http_code" != "200" ]; then
+            echo "::error::OQ sweep for ${OQ} failed (HTTP $http_code)"
+            cat /tmp/response.json
+            exit 1
+          fi
+
+          jq -r '.choices[0].message.content // ""' /tmp/response.json > /tmp/oq-result.md
+          tokens_in=$(jq -r '.usage.prompt_tokens // 0' /tmp/response.json)
+          echo "tokens_in=$tokens_in" >> "$GITHUB_OUTPUT"
+
+          verdict=$(head -n 1 /tmp/oq-result.md | tr -d '\r' | awk '{print $1}')
+          case "$verdict" in
+            STILL-OPEN|IMPLICITLY-RESOLVED|CONTRADICTED-BY-CODE) ;;
+            *)
+              echo "::warning::${OQ}: no valid verdict on line 1 — got: '$verdict'. Defaulting to STILL-OPEN."
+              verdict=STILL-OPEN
+              ;;
+          esac
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "${OQ}: $verdict"
+
+      - name: Record API usage
+        if: always() && steps.infer.outcome == 'success'
+        env:
+          TOKENS: ${{ steps.infer.outputs.tokens_in }}
+          MODEL: ${{ steps.infer.outputs.model }}
+        run: |
+          python .github/scripts/rate_limit_tracker.py record low "${MODEL:-mistral-ai/ministral-3b}" "${TOKENS:-0}" || true
+
+      - name: Upload per-OQ artefact
+        if: always() && steps.infer.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oq-${{ matrix.oq }}
+          path: |
+            /tmp/oq-result.md
+            /tmp/oq-block.md
+            /tmp/evidence.md
+          retention-days: 7
+
+      - name: Open PR on IMPLICITLY-RESOLVED
+        if: steps.infer.outputs.verdict == 'IMPLICITLY-RESOLVED'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OQ: ${{ matrix.oq }}
+        run: |
+          date_utc=$(date -u +%Y-%m-%d)
+          branch="ops/oq-resolve/${OQ}-${date_utc}"
+
+          # Extract the supersede block (everything from ```markdown to ```)
+          awk '/^```markdown/{flag=1; next} /^```/{flag=0} flag' /tmp/oq-result.md > /tmp/adr-block.md
+          if [ ! -s /tmp/adr-block.md ]; then
+            echo "::warning::${OQ} verdict was IMPLICITLY-RESOLVED but no ADR block extracted. Skipping PR."
+            exit 0
+          fi
+
+          git config user.name "brehon-ops[bot]"
+          git config user.email "brehon-ops@users.noreply.github.com"
+          git checkout -b "$branch"
+
+          doc=docs/brehon-law-inspired-network/99-decisions-and-open-questions.md
+          {
+            echo ""
+            echo "---"
+            echo ""
+            cat /tmp/adr-block.md
+          } >> "$doc"
+
+          git add "$doc"
+          git commit -m "docs(governance): draft supersede-ADR for ${OQ} (ops/oq-sweep ${date_utc})"
+          git push origin "$branch"
+
+          gh pr create \
+            --repo "${{ github.repository }}" \
+            --base governance-v0 \
+            --head "$branch" \
+            --title "${OQ}: draft resolution (ops/oq-sweep ${date_utc})" \
+            --label "governance/oq-resolved" \
+            --body "$(printf 'Automated draft resolution proposed by `oq-sweep.yml`.\n\n## Proposed supersede-ADR\n\n%s\n\n## Evidence\n\n%s\n\n## Original Open Question\n\n%s\n\nRun: %s/%s/actions/runs/%s\n' \
+              "$(cat /tmp/adr-block.md)" \
+              "$(cat /tmp/evidence.md)" \
+              "$(cat /tmp/oq-block.md)" \
+              "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")"
+
+  aggregate:
+    name: Aggregate report
+    needs: [discover, sweep]
+    if: always() && needs.discover.outputs.quota_available == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout governance-v0
+        uses: actions/checkout@v4
+        with:
+          ref: governance-v0
+          fetch-depth: 1
+
+      - name: Download all per-OQ artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/oq-artifacts
+          pattern: oq-OQ-*
+          merge-multiple: false
+
+      - name: Build aggregate report
+        id: report
+        run: |
+          date_utc=$(date -u +%Y-%m-%d)
+          head_sha=$(git rev-parse HEAD)
+          report_path="docs/reports/oq-sweep/${date_utc}.md"
+          mkdir -p docs/reports/oq-sweep
+
+          still_open=0; resolved=0; contradicted=0; unknown=0
+          table="| OQ | Verdict | First line |\n|---|---|---|\n"
+
+          # Iterate artefact dirs in OQ-sorted order
+          for dir in $(ls -1d /tmp/oq-artifacts/oq-OQ-* 2>/dev/null | sort); do
+            oq=$(basename "$dir" | sed 's/^oq-//')
+            result_file="${dir}/oq-result.md"
+            if [ ! -f "$result_file" ]; then continue; fi
+            verdict=$(head -n 1 "$result_file" | tr -d '\r' | awk '{print $1}')
+            first_line=$(sed -n '2p' "$result_file" | tr -d '\r' | head -c 160)
+            case "$verdict" in
+              STILL-OPEN) still_open=$((still_open+1)) ;;
+              IMPLICITLY-RESOLVED) resolved=$((resolved+1)) ;;
+              CONTRADICTED-BY-CODE) contradicted=$((contradicted+1)) ;;
+              *) unknown=$((unknown+1)) ;;
+            esac
+            table+="| ${oq} | ${verdict:-UNKNOWN} | ${first_line} |\n"
+          done
+
+          {
+            echo "---"
+            echo "run_date: ${date_utc}"
+            echo "head_sha: ${head_sha}"
+            echo "still_open: ${still_open}"
+            echo "implicitly_resolved: ${resolved}"
+            echo "contradicted_by_code: ${contradicted}"
+            echo "unknown: ${unknown}"
+            echo "workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "---"
+            echo ""
+            echo "# OQ sweep — ${date_utc}"
+            echo ""
+            printf '%b' "$table"
+            echo ""
+            echo "## Per-OQ detail"
+            for dir in $(ls -1d /tmp/oq-artifacts/oq-OQ-* 2>/dev/null | sort); do
+              oq=$(basename "$dir" | sed 's/^oq-//')
+              result_file="${dir}/oq-result.md"
+              [ -f "$result_file" ] || continue
+              echo ""
+              echo "### ${oq}"
+              echo ""
+              echo '```'
+              cat "$result_file"
+              echo '```'
+            done
+          } > "$report_path"
+
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "date_utc=$date_utc" >> "$GITHUB_OUTPUT"
+
+      - name: Commit aggregate report
+        env:
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          DATE_UTC: ${{ steps.report.outputs.date_utc }}
+        run: |
+          git config user.name "brehon-ops[bot]"
+          git config user.email "brehon-ops@users.noreply.github.com"
+          git pull --rebase origin governance-v0
+          git add "$REPORT_PATH"
+          if git diff --cached --quiet; then
+            echo "No aggregate report change to commit."
+            exit 0
+          fi
+          git commit -m "chore(ops): oq-sweep aggregate ${DATE_UTC}"
+          git push origin governance-v0

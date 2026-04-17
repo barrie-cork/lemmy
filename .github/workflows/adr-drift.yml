@@ -1,0 +1,301 @@
+name: adr-drift
+
+on:
+  schedule:
+    - cron: '0 3 1-31/2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  models: read
+
+concurrency:
+  group: adr-drift
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: ADR drift audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout governance-v0
+        uses: actions/checkout@v4
+        with:
+          ref: governance-v0
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Check API quota
+        id: quota
+        run: |
+          set +e
+          python .github/scripts/rate_limit_tracker.py check low
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Low-tier quota exhausted; skipping ADR drift audit."
+          fi
+
+      - name: Build governance inventory
+        if: steps.quota.outputs.available == 'true'
+        id: inventory
+        run: |
+          {
+            echo "## Governance file inventory"
+            echo ""
+            git ls-files \
+              'crates/db_schema/src/source/governance/**' \
+              'crates/db_views/governance_case/**' \
+              'crates/db_views/jury_queue/**' \
+              'crates/db_views/governance_modlog/**' \
+              'crates/db_views/reputation/**' \
+              'crates/api/api_common/src/governance.rs' \
+              'crates/api/api/src/governance/**' \
+              'crates/api/api_crud/src/governance/**' \
+              'crates/apub/**/governance/**' \
+              'crates/server/src/governance.rs' \
+              'migrations/**' 2>/dev/null \
+              | while read -r f; do
+                lines=$(wc -l < "$f" 2>/dev/null || echo 0)
+                printf -- '- `%s` — %s lines\n' "$f" "$lines"
+              done
+            echo ""
+            echo "## Public handler signatures"
+            echo ""
+            echo '```'
+            grep -rn -E '^pub (async )?fn ' \
+              crates/api/api/src/governance/ \
+              crates/api/api_crud/src/governance/ \
+              crates/server/src/governance.rs 2>/dev/null \
+              | head -120
+            echo '```'
+          } > /tmp/inventory.md
+          wc -c /tmp/inventory.md
+
+      - name: Deterministic pre-pass (ADR-008/013/015 hotspots)
+        if: steps.quota.outputs.available == 'true'
+        id: hotspots
+        run: |
+          escalate=false
+          hits=$(grep -rnE 'governance_log|CaseStatus|sanction_action' \
+            crates/db_schema/src/source/governance/ \
+            crates/api/api/src/governance/ \
+            crates/api/api_crud/src/governance/ \
+            crates/server/src/governance.rs 2>/dev/null | wc -l)
+          if [ "$hits" -gt 0 ]; then
+            escalate=true
+          fi
+          echo "escalate=$escalate" >> "$GITHUB_OUTPUT"
+          echo "hotspot_hits=$hits" >> "$GITHUB_OUTPUT"
+          echo "Hotspot hits: $hits — escalate=$escalate"
+
+      - name: Select headline files
+        if: steps.quota.outputs.available == 'true'
+        run: |
+          {
+            echo "## Headline files (full source)"
+            echo ""
+            for f in \
+              crates/server/src/governance.rs \
+              crates/api/api_common/src/governance.rs \
+              crates/db_schema/src/source/governance/case.rs \
+              crates/db_schema/src/source/governance/governance_log.rs; do
+              if [ -f "$f" ]; then
+                printf '\n### %s\n\n```rust\n' "$f"
+                cat "$f"
+                printf '\n```\n'
+              fi
+            done
+          } > /tmp/headlines.md
+          # Cap at 24KB to leave room for rubric + inventory within 28KB budget
+          head -c 24000 /tmp/headlines.md > /tmp/headlines.capped.md
+          mv /tmp/headlines.capped.md /tmp/headlines.md
+          wc -c /tmp/headlines.md
+
+      - name: Assemble prompt
+        if: steps.quota.outputs.available == 'true'
+        run: |
+          {
+            echo "You are an ADR-compliance auditor for a Rust governance fork of Lemmy."
+            echo "You are running a WHOLE-CODEBASE audit, not a PR diff review."
+            echo ""
+            echo "## Output contract (STRICT)"
+            echo "Line 1 MUST be one of these tokens, exactly, nothing else:"
+            echo "  CLEAN    — no drift detected"
+            echo "  WARN     — minor drift or notes only"
+            echo "  REGRESS  — clear regression against one or more ADRs"
+            echo ""
+            echo "After line 1, emit a Markdown body. For each ADR-001..ADR-015:"
+            echo "  ### ADR-0NN — <short title from rubric>"
+            echo "  Status: none | note | warn | regress"
+            echo "  Evidence: <file:line_start-line_end> — <≤200 char summary>"
+            echo "If status is 'none' for an ADR, just write 'No drift detected.' on the Evidence line."
+            echo ""
+            echo "## Rules"
+            echo "- Cite ADR IDs exactly (ADR-001..ADR-015)."
+            echo "- Cite file:line when quoting code. Never hallucinate line numbers."
+            echo "- Do NOT critique upstream Lemmy conventions outside governance namespaces."
+            echo "- Do NOT flag upstream Clippy/rustfmt style issues."
+            echo ""
+            echo "## ADR rubric"
+            cat .github/ai-review-prompts/adr-rubric.md
+            printf '\n\n---\n\n'
+            echo "## Phase 4 rubric (current phase)"
+            cat .github/ai-review-prompts/phase-4-rubric.md
+            printf '\n\n---\n\n'
+            cat /tmp/inventory.md
+            printf '\n\n---\n\n'
+            cat /tmp/headlines.md
+          } > /tmp/prompt.txt
+          head -c 28000 /tmp/prompt.txt > /tmp/prompt.capped.txt
+          mv /tmp/prompt.capped.txt /tmp/prompt.txt
+          wc -c /tmp/prompt.txt
+
+      - name: Run AI inference
+        if: steps.quota.outputs.available == 'true'
+        id: infer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ESCALATE: ${{ steps.hotspots.outputs.escalate }}
+          MODEL_LOW: ${{ vars.BREHON_MODELS_TIER_LOW }}
+          MODEL_HIGH: ${{ vars.BREHON_MODELS_TIER_HIGH }}
+        run: |
+          MODEL="${MODEL_LOW:-mistral-ai/ministral-3b}"
+          if [ "$ESCALATE" = "true" ]; then
+            MODEL="${MODEL_HIGH:-openai/gpt-4o-mini}"
+          fi
+          echo "Using model: $MODEL"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+
+          jq -Rs --arg model "$MODEL" '{
+            model: $model,
+            messages: [
+              {role: "system", content: "You are a precise, laconic ADR-compliance auditor. Output starts with exactly one verdict token: CLEAN, WARN, or REGRESS. Never hallucinate ADR IDs. Only reference ADR-001..ADR-015 from the rubric."},
+              {role: "user", content: .}
+            ],
+            temperature: 0.1,
+            max_tokens: 3000
+          }' < /tmp/prompt.txt > /tmp/payload.json
+
+          http_code=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/payload.json)
+
+          echo "HTTP $http_code"
+          if [ "$http_code" != "200" ]; then
+            echo "::error::ADR-drift inference failed (HTTP $http_code)"
+            cat /tmp/response.json
+            exit 1
+          fi
+
+          jq -r '.choices[0].message.content // ""' /tmp/response.json > /tmp/review.md
+          tokens_in=$(jq -r '.usage.prompt_tokens // 0' /tmp/response.json)
+          tokens_out=$(jq -r '.usage.completion_tokens // 0' /tmp/response.json)
+          echo "tokens_in=$tokens_in" >> "$GITHUB_OUTPUT"
+          echo "tokens_out=$tokens_out" >> "$GITHUB_OUTPUT"
+
+          verdict=$(head -n 1 /tmp/review.md | tr -d '\r' | awk '{print $1}')
+          case "$verdict" in
+            CLEAN|WARN|REGRESS) ;;
+            *)
+              echo "::warning::No valid verdict token on line 1 — got: '$verdict'. Defaulting to WARN."
+              verdict=WARN
+              ;;
+          esac
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "Verdict: $verdict (tokens in=$tokens_in out=$tokens_out)"
+
+      - name: Record API usage
+        if: always() && steps.infer.outcome == 'success'
+        env:
+          TOKENS: ${{ steps.infer.outputs.tokens_in }}
+          MODEL: ${{ steps.infer.outputs.model }}
+        run: |
+          tier=low
+          case "$MODEL" in
+            openai/gpt-4o*|openai/gpt-4.1*) tier=high ;;
+          esac
+          python .github/scripts/rate_limit_tracker.py record "$tier" "$MODEL" "${TOKENS:-0}" || true
+
+      - name: Write committed report
+        if: steps.quota.outputs.available == 'true'
+        id: report
+        env:
+          VERDICT: ${{ steps.infer.outputs.verdict }}
+          MODEL: ${{ steps.infer.outputs.model }}
+          TOKENS_IN: ${{ steps.infer.outputs.tokens_in }}
+          TOKENS_OUT: ${{ steps.infer.outputs.tokens_out }}
+          HOTSPOT_HITS: ${{ steps.hotspots.outputs.hotspot_hits }}
+          ESCALATE: ${{ steps.hotspots.outputs.escalate }}
+        run: |
+          date_utc=$(date -u +%Y-%m-%d)
+          head_sha=$(git rev-parse HEAD)
+          report_path="docs/reports/adr-drift/${date_utc}.md"
+          mkdir -p docs/reports/adr-drift
+          {
+            echo "---"
+            echo "run_date: ${date_utc}"
+            echo "head_sha: ${head_sha}"
+            echo "verdict: ${VERDICT}"
+            echo "model: ${MODEL}"
+            echo "tokens_in: ${TOKENS_IN}"
+            echo "tokens_out: ${TOKENS_OUT}"
+            echo "hotspot_hits: ${HOTSPOT_HITS}"
+            echo "escalated: ${ESCALATE}"
+            echo "workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "---"
+            echo ""
+            echo "# ADR-drift audit — ${date_utc}"
+            echo ""
+            cat /tmp/review.md
+          } > "$report_path"
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "date_utc=$date_utc" >> "$GITHUB_OUTPUT"
+
+      - name: Commit report
+        if: steps.quota.outputs.available == 'true'
+        env:
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          DATE_UTC: ${{ steps.report.outputs.date_utc }}
+          VERDICT: ${{ steps.infer.outputs.verdict }}
+        run: |
+          git config user.name "brehon-ops[bot]"
+          git config user.email "brehon-ops@users.noreply.github.com"
+          git add "$REPORT_PATH"
+          if git diff --cached --quiet; then
+            echo "No report change to commit."
+            exit 0
+          fi
+          git commit -m "chore(ops): adr-drift audit ${DATE_UTC} — ${VERDICT}"
+          git push origin governance-v0
+
+      - name: Open Issue on WARN/REGRESS
+        if: steps.quota.outputs.available == 'true' && (steps.infer.outputs.verdict == 'WARN' || steps.infer.outputs.verdict == 'REGRESS')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERDICT: ${{ steps.infer.outputs.verdict }}
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          DATE_UTC: ${{ steps.report.outputs.date_utc }}
+        run: |
+          severity=medium
+          if [ "$VERDICT" = "REGRESS" ]; then severity=high; fi
+          report_url="${{ github.server_url }}/${{ github.repository }}/blob/governance-v0/${REPORT_PATH}"
+          body=$(printf '## ADR-drift audit — %s\n\nVerdict: **%s**\n\nReport: %s\n\nSummary:\n\n```\n%s\n```\n\nRun: %s/%s/actions/runs/%s\n' \
+            "$DATE_UTC" "$VERDICT" "$report_url" \
+            "$(head -n 30 /tmp/review.md)" \
+            "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "ADR-drift ${VERDICT} — ${DATE_UTC}" \
+            --label "governance/drift,risk:${severity}" \
+            --body "$body"
