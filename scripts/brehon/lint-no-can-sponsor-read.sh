@@ -24,6 +24,7 @@ FORBIDDEN=$(grep -rn --include='*.rs' 'can_sponsor' crates/ \
   | grep -v '^crates/db_schema_file/' \
   | grep -v '^crates/db_schema/src/source/governance/reputation_snapshot.rs' \
   | grep -v '^crates/api/api/src/governance/reputation_snapshot.rs' \
+  | grep -v '^crates/db_views/reputation/src/' \
   || true)
 
 if [ -n "$FORBIDDEN" ]; then

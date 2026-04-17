@@ -290,6 +290,10 @@ mod tests {
         post_score: 0,
         comment_count: 0,
         comment_score: 0,
+        // Brehon Phase 5a task 51 — [99 OQ-016] default. Test-fixture
+        // carry-patch: see crates/db_schema/src/impls/person.rs for rationale.
+        // TODO(brehon-fork): Person::membership_state field added in Phase 5a task 51 — upstream this to LemmyNet/lemmy — PR #___
+        membership_state: lemmy_db_schema_file::enums::MembershipState::Member,
       },
       admin: None,
     };
@@ -364,6 +368,10 @@ mod tests {
       post_score: 0,
       comment_count: 0,
       comment_score: 0,
+      // Brehon Phase 5a task 51 — [99 OQ-016] default. Test-fixture
+      // carry-patch: see crates/db_schema/src/impls/person.rs for rationale.
+      // TODO(brehon-fork): Person::membership_state field added in Phase 5a task 51 — upstream this to LemmyNet/lemmy — PR #___
+      membership_state: lemmy_db_schema_file::enums::MembershipState::Member,
     });
     assert_eq!(read_sara_app_view_after_approve, expected_sara_app_view);
 

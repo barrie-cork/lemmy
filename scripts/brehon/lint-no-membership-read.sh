@@ -23,9 +23,12 @@ FORBIDDEN=$(grep -rn --include='*.rs' 'membership_state' crates/ \
   | grep -v '^crates/db_schema_file/' \
   | grep -v '^crates/db_schema/src/source/person.rs' \
   | grep -v '^crates/db_schema/src/lib.rs' \
+  | grep -v '^crates/db_schema/src/impls/person.rs' \
   | grep -v '^crates/api/api/src/governance/config.rs' \
   | grep -v '^crates/api/api_crud/src/user/create.rs' \
   | grep -v '^crates/apub/objects/src/objects/person.rs' \
+  | grep -v '^crates/db_views/registration_applications/src/impls.rs' \
+  | grep -v '^crates/server/tests/e2e.rs' \
   || true)
 
 if [ -n "$FORBIDDEN" ]; then

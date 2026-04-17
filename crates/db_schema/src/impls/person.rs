@@ -459,6 +459,13 @@ mod tests {
       post_score: 0,
       comment_count: 0,
       comment_score: 0,
+      // Brehon Phase 5a task 51 — [99 OQ-016] default. Test-fixture
+      // carry-patch: Lemmy's upstream Person struct lacks this field,
+      // so every local fixture that constructs `Person { ... }` needs
+      // the explicit default. Drop when upstream Lemmy adds Default to
+      // Person (unlikely per Lemmy's "no Default on domain types" pattern).
+      // TODO(brehon-fork): Person::membership_state field added in Phase 5a task 51 — upstream this to LemmyNet/lemmy — PR #___
+      membership_state: lemmy_db_schema_file::enums::MembershipState::Member,
     };
 
     let read_person = Person::read(pool, data.person.id).await?;
