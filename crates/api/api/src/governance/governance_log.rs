@@ -40,6 +40,29 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::Value;
 use std::env;
 
+// -- Canonical v0 entry_kind strings ---------------------------------------
+//
+// Using a const at every call site turns typos into compile-time errors.
+// Existing Phase 4 call sites still use string literals; new Phase 5a/5b/5c
+// call sites MUST use the consts. Migrating the older literals is a
+// Phase 5c cosmetic task.
+
+pub const ENTRY_KIND_REPORT_CREATED: &str = "report_created";
+pub const ENTRY_KIND_THRESHOLD_MET: &str = "threshold_met";
+pub const ENTRY_KIND_JURY_ASSIGNED: &str = "jury_assigned";
+pub const ENTRY_KIND_PANEL_ASSEMBLED: &str = "panel_assembled";
+pub const ENTRY_KIND_JURY_VOTED: &str = "jury_voted";
+pub const ENTRY_KIND_SANCTION_CREATED: &str = "sanction_created";
+pub const ENTRY_KIND_PUBLIC_LOG_PUBLISHED: &str = "public_log_published";
+pub const ENTRY_KIND_REPUTATION_DELTA: &str = "reputation_delta";
+pub const ENTRY_KIND_CASE_DECIDED: &str = "case_decided";
+pub const ENTRY_KIND_CAPABILITY_CHANGED: &str = "capability_changed";
+pub const ENTRY_KIND_SPONSOR_LIABILITY_APPLIED: &str = "sponsor_liability_applied";
+pub const ENTRY_KIND_SPONSOR_LIABILITY_CLAMPED: &str = "sponsor_liability_clamped";
+pub const ENTRY_KIND_FOUNDER_SEEDED: &str = "founder_seeded";
+pub const ENTRY_KIND_ENDORSEMENT_CREATED: &str = "endorsement_created";
+pub const ENTRY_KIND_EMERGENCY_REMOVED: &str = "emergency_removed";
+
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
 /// Append a single row to `governance_log`.
