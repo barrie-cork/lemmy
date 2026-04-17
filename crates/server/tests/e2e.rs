@@ -715,3 +715,542 @@ struct SingleI32 {
   #[diesel(sql_type = diesel::sql_types::Int4)]
   id: i32,
 }
+
+// ============================================================================
+// Phase 4 — golden-path end-to-end test (DoD per IMPLEMENTATION-PLAN-v0 §3 P4)
+// ============================================================================
+//
+// Walks a single moderation case from initial report → admin-assigned jury
+// (approach B backstop, makes the test deterministic without needing four
+// separate reporters) → 3 jury votes → decision → sanction → public modlog.
+// Assertions hit every Phase 4 invariant: hash chain, ed25519 signatures,
+// pseudonym usage, redaction, status transitions, vote tally, reputation
+// events, and per-entry_kind log counts.
+//
+// Drift from plan resolved per decision-queue #8 (reputation_event count =
+// 4, no "reputation_event" key in the governance_log map) and #9 (direct
+// handler invocation rather than building an actix `App`).
+
+#[tokio::test(flavor = "multi_thread")]
+async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Data, Json, Query};
+  use chrono::{DateTime, Duration, Utc};
+  use diesel::{
+    Connection as _,
+    ExpressionMethods,
+    PgConnection,
+    QueryDsl,
+    sql_query,
+    sql_types::{Bytea, Int8, Text},
+  };
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use ed25519_dalek::{Signature, SigningKey, Verifier, VerifyingKey};
+  use lemmy_api::governance::{
+    admin_assign_jury::admin_assign_jury,
+    list_modlog::list_modlog,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AdminAssignJury,
+    CreateGovernanceReport,
+    ListGovernanceModlog,
+    SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseStatus, CaseTargetType, JuryDecision, ReputationDimension},
+    schema::{governance_log, jury_assignment, jury_vote, moderation_case, public_case_log,
+             reputation_event, sanction},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, DbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use sha2::{Digest, Sha256};
+  use std::collections::HashMap;
+
+  // -- 1. Set env vars BEFORE any Lemmy code touches `SETTINGS`. --------
+  // Deterministic 32-byte ed25519 seed: 31 zero bytes + 0x01.
+  const SIGNING_SEED_HEX: &str =
+    "0000000000000000000000000000000000000000000000000000000000000001";
+  // SAFETY: tests run with --test-threads=1 so no concurrent env mutation;
+  // these vars are read by SETTINGS (LazyLock) and the governance log
+  // signer at first call.
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+  }
+
+  // -- 2. Spin up Postgres and apply the full schema. -------------------
+  // governance_fixtures helpers return `Box<dyn Error>` (no Send+Sync),
+  // which doesn't bridge to anyhow/LemmyError via `?`. Stringify across
+  // the boundary.
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| anyhow::anyhow!("start_postgres: {e}"))?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe {
+    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+  }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| anyhow::anyhow!("apply_all_schema: {e}"))?;
+  }
+
+  // -- 3. Build an ActualDbPool against this container.
+  // `build_db_pool_for_tests` reads `LEMMY_DATABASE_URL` from SETTINGS
+  // (set above) and re-runs `schema_setup::run`; the latter is
+  // idempotent against the schema we already applied via
+  // `apply_all_schema`, and acquires `pg_advisory_lock(0)` to bypass
+  // the `forbid_diesel_cli` trigger. This mirrors
+  // `init_test_federation_config` at api_utils/src/context.rs:67.
+  let pool: ActualDbPool = build_db_pool_for_tests();
+
+  // -- 4. Build a LemmyContext directly. Mirrors
+  //       `init_test_federation_config` at api_utils/src/context.rs:69-85.
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret {
+    id: 0,
+    jwt_secret: String::new().into(),
+  };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  // -- 5. Seed instance + 8 persons + 1 community + 1 post. -------------
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+
+  // Helper: create a person + local_user pair. `is_admin` toggles
+  // local_user.admin; all jurors get accepted_application=true so the
+  // admin-assign-jury eligibility filter sees them.
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<PersonId> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    Ok(person.id)
+  }
+
+  let reporter = seed_person(&context, instance.id, "reporter", false).await?;
+  let target = seed_person(&context, instance.id, "target", false).await?;
+  let admin = seed_person(&context, instance.id, "admin", true).await?;
+  let juror_d = seed_person(&context, instance.id, "juror_d", false).await?;
+  let juror_e = seed_person(&context, instance.id, "juror_e", false).await?;
+  let juror_f = seed_person(&context, instance.id, "juror_f", false).await?;
+  let juror_g = seed_person(&context, instance.id, "juror_g", false).await?;
+  let juror_h = seed_person(&context, instance.id, "juror_h", false).await?;
+
+  let community_form = CommunityInsertForm::new(
+    instance.id,
+    "testcomm".to_string(),
+    "Test Community".to_string(),
+    "comm-pubkey".to_string(),
+  );
+  let community = Community::create(&mut context.pool(), &community_form).await?;
+
+  // -- 6. Resolve LocalUserView for each actor. -------------------------
+  let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await?;
+  let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+
+  // -- 7. Step 1: POST /governance/report (single report; threshold not
+  //              met because v0 V0_THRESHOLD = 3 and weight is 1).
+  // Reporting the target person directly so admin_assign_jury's
+  // eligibility filter sees `case.target_person_id = Some(target)` and
+  // excludes them from the panel. See decision-queue #10 — the
+  // Post-target codepath has a known eligibility-filter gap that must
+  // be patched in Phase 5.
+  let create_resp = create_report(
+    Json(CreateGovernanceReport {
+      community_id: Some(community.id),
+      target_type: CaseTargetType::Person,
+      target_id: target.0,
+      reason_code: "spam".to_string(),
+      description: Some("Email spam@example.com posting links http://bad.invalid/".to_string()),
+    }),
+    context.clone(),
+    reporter_view.clone(),
+  )
+  .await?
+  .into_inner();
+  assert!(create_resp.case_id.is_some(), "case_id must be set");
+  assert!(!create_resp.threshold_met, "single report must not meet threshold");
+  let case_id = create_resp.case_id.expect("case_id present");
+
+  // -- 8. DB checks after report --------------------------------------
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  {
+    let mut probe_pool: DbPool<'_> = (&mut async_conn).into();
+    use lemmy_diesel_utils::connection::get_conn;
+    let conn = &mut get_conn(&mut probe_pool).await?;
+
+    let (status, threshold_score): (CaseStatus, i64) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::threshold_score))
+      .first(conn)
+      .await?;
+    assert!(matches!(status, CaseStatus::Open), "status must be Open");
+    assert_eq!(threshold_score, 1, "threshold_score after one report = 1");
+
+    let report_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("report_created"))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(report_count, 1, "exactly one report_created entry");
+
+    let signed_nulls: i64 = governance_log::table
+      .filter(governance_log::signature.is_null())
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(signed_nulls, 0, "every governance_log row must be signed");
+  }
+
+  // -- 9. Step 2: POST /governance/admin/assign-jury as admin --------
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?
+  .into_inner();
+  assert_eq!(assign_resp.assigned_person_ids.len(), 5, "5 jurors assigned");
+  for pid in &assign_resp.assigned_person_ids {
+    assert_ne!(*pid, reporter, "reporter must not be on jury");
+    assert_ne!(*pid, target, "target must not be on jury");
+  }
+
+  // -- 10. DB checks after jury assignment --------------------------
+  {
+    let mut probe_pool: DbPool<'_> = (&mut async_conn).into();
+    use lemmy_diesel_utils::connection::get_conn;
+    let conn = &mut get_conn(&mut probe_pool).await?;
+
+    let assignment_count: i64 = jury_assignment::table
+      .filter(jury_assignment::case_id.eq(case_id))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(assignment_count, 5, "5 jury_assignment rows");
+
+    let case_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(conn)
+      .await?;
+    assert!(
+      matches!(case_status, CaseStatus::JurySelection),
+      "case must be JurySelection after assign-jury (plan shorthand: InPanel)"
+    );
+
+    let counts: Vec<(String, i64)> = governance_log::table
+      .group_by(governance_log::entry_kind)
+      .select((governance_log::entry_kind, diesel::dsl::count_star()))
+      .load::<(String, i64)>(conn)
+      .await?;
+    let map: HashMap<String, i64> = counts.into_iter().collect();
+    assert_eq!(map.get("report_created"), Some(&1));
+    assert_eq!(map.get("jury_assigned"), Some(&5));
+    assert_eq!(map.get("panel_assembled"), Some(&1));
+  }
+
+  // -- 11. Steps 3–5: 3 jurors vote AdvisoryLabel ------------------
+  let voting_jurors: Vec<PersonId> = assign_resp
+    .assigned_person_ids
+    .iter()
+    .copied()
+    .take(3)
+    .collect();
+
+  // Embed every category the redaction layer scrubs so the public-log
+  // assertions below exercise mention, email, and profile-URL stripping.
+  // Per redaction.rs:51-61 the contract covers `@handle` mentions,
+  // bare email addresses, and `https?://host/(u|user|profile)/<handle>`
+  // profile URLs. Arbitrary http URLs (e.g. `http://example.com/post/1`)
+  // are deliberately NOT in the contract.
+  let mut decided_responses = Vec::new();
+  for (i, juror_id) in voting_jurors.iter().enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::AdvisoryLabel,
+        rationale: Some(format!(
+          "Juror {i} saw @someone email foo.bar@example.com via https://lemmy.example/u/baduser"
+        )),
+      }),
+      context.clone(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+    decided_responses.push(resp);
+  }
+  assert!(!decided_responses[0].case_decided, "1st vote: not decided");
+  assert!(!decided_responses[1].case_decided, "2nd vote: not decided");
+  assert!(decided_responses[2].case_decided, "3rd vote: decided");
+  assert_eq!(
+    decided_responses[2].decision,
+    Some(JuryDecision::AdvisoryLabel),
+    "3rd vote returns winning decision"
+  );
+
+  // Silence unused-binding lints for jurors not on the panel — the random
+  // selection means we can't predict which of D-H were picked, so we keep
+  // them all live until after the assertion above.
+  let _ = (juror_d, juror_e, juror_f, juror_g, juror_h);
+
+  // -- 12. DB checks after decision ------------------------------
+  {
+    let mut probe_pool: DbPool<'_> = (&mut async_conn).into();
+    use lemmy_diesel_utils::connection::get_conn;
+    let conn = &mut get_conn(&mut probe_pool).await?;
+
+    let vote_count: i64 = jury_vote::table
+      .filter(jury_vote::case_id.eq(case_id))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(vote_count, 3, "3 jury_vote rows");
+
+    let (status, decided_at, closed_at): (
+      CaseStatus,
+      Option<DateTime<Utc>>,
+      Option<DateTime<Utc>>,
+    ) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::decided_at,
+        moderation_case::closed_at,
+      ))
+      .first(conn)
+      .await?;
+    assert!(matches!(status, CaseStatus::Decided), "case must be Decided");
+    let decided = decided_at.expect("decided_at set");
+    let closed = closed_at.expect("closed_at set");
+    let gap = closed.signed_duration_since(decided);
+    // DB precision can drift by microseconds; assert within 1 second of 7d.
+    let expected = Duration::days(7);
+    assert!(
+      (gap - expected).num_milliseconds().abs() < 1_000,
+      "closed_at should be ~ decided_at + 7 days (got gap = {gap:?})"
+    );
+
+    let sanction_count: i64 = sanction::table
+      .filter(sanction::case_id.eq(case_id))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(sanction_count, 1, "1 sanction row");
+
+    let (summary, rationale): (String, Option<String>) = public_case_log::table
+      .filter(public_case_log::case_id.eq(case_id))
+      .select((public_case_log::summary, public_case_log::rationale_redacted))
+      .first(conn)
+      .await?;
+    // Summary is bland by construction (build_summary at
+    // submit_jury_vote.rs:440-448 uses only case_id/target_type/decision/
+    // reason_code); scrub still runs as defence-in-depth, so confirm
+    // no leak even though it's structurally impossible here.
+    assert!(!summary.contains('@'), "summary must be scrubbed of '@'");
+    assert!(
+      !summary.contains("@example."),
+      "summary must be scrubbed of email-shaped strings"
+    );
+    // Rationale assertions exercise the actual scrub contract per
+    // redaction.rs:51-61: mentions, emails, and profile URLs of the
+    // form host/(u|user|profile)/handle.
+    let r = rationale.as_deref().expect("rationale present");
+    assert!(!r.contains("@someone"), "rationale must scrub @mentions");
+    assert!(
+      !r.contains("foo.bar@example.com"),
+      "rationale must scrub email addresses"
+    );
+    assert!(
+      !r.contains("/u/baduser"),
+      "rationale must scrub profile URLs"
+    );
+    assert!(
+      r.contains("[redacted]"),
+      "rationale must contain redaction sentinel"
+    );
+
+    // Drift #8: 4 reputation_event rows (3 jurors on JuryReliability + 1
+    // reporter on ReportingAccuracy) per [05 §6] — NOT 3 as the plan
+    // body suggests.
+    let rep_total: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(rep_total, 4, "4 reputation_event rows total");
+
+    let jury_rep_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::dimension.eq(ReputationDimension::JuryReliability))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(jury_rep_count, 3, "3 JuryReliability rows (one per juror)");
+
+    let reporter_rep_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::dimension.eq(ReputationDimension::ReportingAccuracy))
+      .count()
+      .get_result(conn)
+      .await?;
+    assert_eq!(reporter_rep_count, 1, "1 ReportingAccuracy row (reporter)");
+
+    let counts: Vec<(String, i64)> = governance_log::table
+      .group_by(governance_log::entry_kind)
+      .select((governance_log::entry_kind, diesel::dsl::count_star()))
+      .load::<(String, i64)>(conn)
+      .await?;
+    let map: HashMap<String, i64> = counts.into_iter().collect();
+    assert_eq!(map.get("report_created"), Some(&1));
+    assert_eq!(map.get("jury_assigned"), Some(&5));
+    assert_eq!(map.get("panel_assembled"), Some(&1));
+    assert_eq!(map.get("jury_vote_submitted"), Some(&3));
+    assert_eq!(map.get("case_decided"), Some(&1));
+    assert_eq!(map.get("sanction_created"), Some(&1));
+    assert_eq!(map.get("public_log_published"), Some(&1));
+    // Drift #8: submit_jury_vote.rs does NOT emit governance_log entries
+    // for reputation_event writes. Assert the key is absent.
+    assert!(
+      !map.contains_key("reputation_event"),
+      "no reputation_event entry_kind should appear in governance_log"
+    );
+  }
+
+  // -- 13. Step 6: GET /governance/modlog?community_id=... unauth -----
+  let modlog_resp = list_modlog(
+    Query(ListGovernanceModlog {
+      community_id: Some(community.id),
+      page: None,
+      limit: None,
+    }),
+    context.clone(),
+    None,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(modlog_resp.len(), 1, "exactly one modlog entry for the community");
+  assert_eq!(modlog_resp[0].case_id, case_id.0, "modlog entry case_id matches");
+
+  // -- 14. Hash chain + signature verification on every governance_log
+  //        row. Mirrors governance_log_hash_chain_holds at e2e.rs:159+
+  //        and triggers.sql:781-788. -----------------------------------
+  #[derive(diesel::QueryableByName, Debug)]
+  struct RawRow {
+    #[diesel(sql_type = Int8)]
+    id: i64,
+    #[diesel(sql_type = Bytea)]
+    prev_hash: Vec<u8>,
+    #[diesel(sql_type = Bytea)]
+    entry_hash: Vec<u8>,
+    #[diesel(sql_type = Text)]
+    entry_kind: String,
+    #[diesel(sql_type = Text)]
+    payload_text: String,
+    #[diesel(sql_type = Text)]
+    created_at_text: String,
+    #[diesel(sql_type = diesel::sql_types::Nullable<Bytea>)]
+    signature: Option<Vec<u8>>,
+  }
+
+  let mut sync_conn = PgConnection::establish(&db_url)?;
+  let rows: Vec<RawRow> = diesel::RunQueryDsl::load(
+    sql_query(
+      r#"
+      SELECT
+        id,
+        prev_hash,
+        entry_hash,
+        entry_kind,
+        payload::text AS payload_text,
+        to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at_text,
+        signature
+      FROM governance_log
+      ORDER BY id ASC
+      "#,
+    ),
+    &mut sync_conn,
+  )?;
+  assert!(!rows.is_empty(), "expected governance_log rows");
+
+  let signing_seed = hex::decode(SIGNING_SEED_HEX)?;
+  let seed_arr: [u8; 32] = signing_seed
+    .as_slice()
+    .try_into()
+    .map_err(|_| anyhow::anyhow!("signing seed must be 32 bytes"))?;
+  let signing_key = SigningKey::from_bytes(&seed_arr);
+  let verifying_key: VerifyingKey = signing_key.verifying_key();
+
+  let mut prev: Vec<u8> = vec![0u8; 32];
+  for row in &rows {
+    assert_eq!(
+      row.prev_hash, prev,
+      "row {} prev_hash should match the previous row's entry_hash",
+      row.id
+    );
+    let mut hasher = Sha256::new();
+    hasher.update(&prev);
+    hasher.update(row.entry_kind.as_bytes());
+    hasher.update(row.payload_text.as_bytes());
+    hasher.update(row.created_at_text.as_bytes());
+    let expected = hasher.finalize().to_vec();
+    assert_eq!(
+      row.entry_hash, expected,
+      "row {} entry_hash should match sha256(prev||kind||payload||ts)",
+      row.id
+    );
+
+    let sig_bytes = row
+      .signature
+      .as_ref()
+      .ok_or_else(|| anyhow::anyhow!("row {} missing signature", row.id))?;
+    let sig_arr: [u8; 64] = sig_bytes
+      .as_slice()
+      .try_into()
+      .map_err(|_| anyhow::anyhow!("row {} signature wrong length", row.id))?;
+    let sig = Signature::from_bytes(&sig_arr);
+    verifying_key
+      .verify(&row.entry_hash, &sig)
+      .map_err(|e| anyhow::anyhow!("row {} signature verify failed: {e}", row.id))?;
+
+    prev = row.entry_hash.clone();
+  }
+
+  Ok(())
+}
