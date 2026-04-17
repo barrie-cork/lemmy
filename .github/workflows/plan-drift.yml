@@ -114,8 +114,17 @@ jobs:
             done < /tmp/union.txt
           } > /tmp/drift-table.md
 
-          # Count disagreement rows (rows where one side has ✅ and the other doesn't)
-          disagreements=$(awk -F'|' 'NR>2 && ($3 ~ /—/ || $4 ~ /—/) {n++} END {print n+0}' /tmp/drift-table.md)
+          # Count disagreement rows (rows where exactly one side has ✅)
+          # Robust against future placeholder changes (blank, "N/A", etc.) — we assert
+          # positive membership via ✅ rather than absence via a specific em-dash glyph.
+          disagreements=$(awk -F'|' '
+            NR>2 {
+              in_plan = ($3 ~ /✅/) ? 1 : 0
+              in_code = ($4 ~ /✅/) ? 1 : 0
+              if (in_plan + in_code == 1) n++
+            }
+            END { print n+0 }
+          ' /tmp/drift-table.md)
           echo "disagreements=$disagreements" >> "$GITHUB_OUTPUT"
           echo "Disagreement rows: $disagreements"
           cat /tmp/drift-table.md

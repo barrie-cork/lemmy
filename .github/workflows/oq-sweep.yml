@@ -103,7 +103,7 @@ jobs:
           OQ: ${{ matrix.oq }}
         run: |
           awk -v oq="$OQ" '
-            $0 ~ "^### " oq " " {capture=1; print; next}
+            $0 ~ ("^### " oq "([[:space:]]|$)") {capture=1; print; next}
             capture && /^### OQ-/ {capture=0}
             capture && /^## / {capture=0}
             capture {print}
@@ -248,7 +248,7 @@ jobs:
           OQ: ${{ matrix.oq }}
         run: |
           date_utc=$(date -u +%Y-%m-%d)
-          branch="ops/oq-resolve/${OQ}-${date_utc}"
+          branch="ops/oq-resolve/${OQ}-${date_utc}-${GITHUB_RUN_ID}"
 
           # Extract the supersede block (everything from ```markdown to ```)
           awk '/^```markdown/{flag=1; next} /^```/{flag=0} flag' /tmp/oq-result.md > /tmp/adr-block.md
@@ -273,17 +273,31 @@ jobs:
           git commit -m "docs(governance): draft supersede-ADR for ${OQ} (ops/oq-sweep ${date_utc})"
           git push origin "$branch"
 
+          {
+            echo 'Automated draft resolution proposed by `oq-sweep.yml`.'
+            echo ''
+            echo '## Proposed supersede-ADR'
+            echo ''
+            cat /tmp/adr-block.md
+            echo ''
+            echo '## Evidence'
+            echo ''
+            cat /tmp/evidence.md
+            echo ''
+            echo '## Original Open Question'
+            echo ''
+            cat /tmp/oq-block.md
+            echo ''
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/pr-body.md
+
           gh pr create \
             --repo "${{ github.repository }}" \
             --base governance-v0 \
             --head "$branch" \
             --title "${OQ}: draft resolution (ops/oq-sweep ${date_utc})" \
             --label "governance/oq-resolved" \
-            --body "$(printf 'Automated draft resolution proposed by `oq-sweep.yml`.\n\n## Proposed supersede-ADR\n\n%s\n\n## Evidence\n\n%s\n\n## Original Open Question\n\n%s\n\nRun: %s/%s/actions/runs/%s\n' \
-              "$(cat /tmp/adr-block.md)" \
-              "$(cat /tmp/evidence.md)" \
-              "$(cat /tmp/oq-block.md)" \
-              "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")"
+            --body-file /tmp/pr-body.md
 
   aggregate:
     name: Aggregate report
@@ -306,29 +320,38 @@ jobs:
 
       - name: Build aggregate report
         id: report
+        env:
+          OQ_IDS_JSON: ${{ needs.discover.outputs.oq_ids }}
         run: |
           date_utc=$(date -u +%Y-%m-%d)
           head_sha=$(git rev-parse HEAD)
           report_path="docs/reports/oq-sweep/${date_utc}.md"
           mkdir -p docs/reports/oq-sweep
 
-          still_open=0; resolved=0; contradicted=0; unknown=0
+          still_open=0; resolved=0; contradicted=0; unknown=0; missing=0
           table="| OQ | Verdict | First line |\n|---|---|---|\n"
 
-          # Iterate artefact dirs in OQ-sorted order
-          for dir in $(ls -1d /tmp/oq-artifacts/oq-OQ-* 2>/dev/null | sort); do
-            oq=$(basename "$dir" | sed 's/^oq-//')
-            result_file="${dir}/oq-result.md"
-            if [ ! -f "$result_file" ]; then continue; fi
-            verdict=$(head -n 1 "$result_file" | tr -d '\r' | awk '{print $1}')
-            first_line=$(sed -n '2p' "$result_file" | tr -d '\r' | head -c 160)
-            case "$verdict" in
-              STILL-OPEN) still_open=$((still_open+1)) ;;
-              IMPLICITLY-RESOLVED) resolved=$((resolved+1)) ;;
-              CONTRADICTED-BY-CODE) contradicted=$((contradicted+1)) ;;
-              *) unknown=$((unknown+1)) ;;
-            esac
-            table+="| ${oq} | ${verdict:-UNKNOWN} | ${first_line} |\n"
+          # Iterate the canonical OQ list (not artefact glob): failed OQs
+          # without artefacts must still appear as MISSING rows.
+          expected_oqs=$(jq -r '.[]' <<< "$OQ_IDS_JSON" | sort)
+
+          for oq in $expected_oqs; do
+            result_file="/tmp/oq-artifacts/oq-${oq}/oq-result.md"
+            if [ -f "$result_file" ]; then
+              verdict=$(head -n 1 "$result_file" | tr -d '\r' | awk '{print $1}')
+              first_line=$(sed -n '2p' "$result_file" | tr -d '\r' | head -c 160)
+              first_line=${first_line//|/\\|}
+              case "$verdict" in
+                STILL-OPEN) still_open=$((still_open+1)) ;;
+                IMPLICITLY-RESOLVED) resolved=$((resolved+1)) ;;
+                CONTRADICTED-BY-CODE) contradicted=$((contradicted+1)) ;;
+                *) unknown=$((unknown+1)) ;;
+              esac
+              table+="| ${oq} | ${verdict:-UNKNOWN} | ${first_line} |\n"
+            else
+              missing=$((missing+1))
+              table+="| ${oq} | MISSING | (artefact not uploaded — inference likely failed) |\n"
+            fi
           done
 
           {
@@ -339,6 +362,7 @@ jobs:
             echo "implicitly_resolved: ${resolved}"
             echo "contradicted_by_code: ${contradicted}"
             echo "unknown: ${unknown}"
+            echo "missing: ${missing}"
             echo "workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "---"
             echo ""
@@ -347,16 +371,18 @@ jobs:
             printf '%b' "$table"
             echo ""
             echo "## Per-OQ detail"
-            for dir in $(ls -1d /tmp/oq-artifacts/oq-OQ-* 2>/dev/null | sort); do
-              oq=$(basename "$dir" | sed 's/^oq-//')
-              result_file="${dir}/oq-result.md"
-              [ -f "$result_file" ] || continue
+            for oq in $expected_oqs; do
+              result_file="/tmp/oq-artifacts/oq-${oq}/oq-result.md"
               echo ""
               echo "### ${oq}"
               echo ""
-              echo '```'
-              cat "$result_file"
-              echo '```'
+              if [ -f "$result_file" ]; then
+                echo '````'
+                cat "$result_file"
+                echo '````'
+              else
+                echo "_No artefact uploaded for ${oq} — inference step likely failed. See workflow run logs._"
+              fi
             done
           } > "$report_path"
 

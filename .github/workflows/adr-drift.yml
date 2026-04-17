@@ -85,17 +85,32 @@ jobs:
         id: hotspots
         run: |
           escalate=false
+          # Raw hit count across all hotspot files (preserved for report front-matter).
           hits=$(grep -rnE 'governance_log|CaseStatus|sanction_action' \
             crates/db_schema/src/source/governance/ \
             crates/api/api/src/governance/ \
             crates/api/api_crud/src/governance/ \
             crates/server/src/governance.rs 2>/dev/null | wc -l)
-          if [ "$hits" -gt 0 ]; then
+          # Distinct-file threshold: `governance_log` is a table name that appears
+          # in the governance namespace as a matter of course, so raw `hits > 0`
+          # makes High tier the default and burns the 50/day quota. Require at
+          # least 2 files with ≥3 hits apiece to indicate meaningful density.
+          dense_files=$(grep -rlE 'governance_log|CaseStatus|sanction_action' \
+            crates/db_schema/src/source/governance/ \
+            crates/api/api/src/governance/ \
+            crates/api/api_crud/src/governance/ \
+            crates/server/src/governance.rs 2>/dev/null \
+            | while read -r f; do
+                c=$(grep -cE 'governance_log|CaseStatus|sanction_action' "$f" 2>/dev/null || echo 0)
+                [ "$c" -ge 3 ] && echo "$f"
+              done | wc -l)
+          if [ "$dense_files" -ge 2 ]; then
             escalate=true
           fi
           echo "escalate=$escalate" >> "$GITHUB_OUTPUT"
           echo "hotspot_hits=$hits" >> "$GITHUB_OUTPUT"
-          echo "Hotspot hits: $hits — escalate=$escalate"
+          echo "dense_files=$dense_files" >> "$GITHUB_OUTPUT"
+          echo "Hotspot hits: $hits — dense files (≥3 hits): $dense_files — escalate=$escalate"
 
       - name: Select headline files
         if: steps.quota.outputs.available == 'true'
@@ -236,6 +251,7 @@ jobs:
           TOKENS_IN: ${{ steps.infer.outputs.tokens_in }}
           TOKENS_OUT: ${{ steps.infer.outputs.tokens_out }}
           HOTSPOT_HITS: ${{ steps.hotspots.outputs.hotspot_hits }}
+          DENSE_FILES: ${{ steps.hotspots.outputs.dense_files }}
           ESCALATE: ${{ steps.hotspots.outputs.escalate }}
         run: |
           date_utc=$(date -u +%Y-%m-%d)
@@ -251,6 +267,7 @@ jobs:
             echo "tokens_in: ${TOKENS_IN}"
             echo "tokens_out: ${TOKENS_OUT}"
             echo "hotspot_hits: ${HOTSPOT_HITS}"
+            echo "dense_files: ${DENSE_FILES}"
             echo "escalated: ${ESCALATE}"
             echo "workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "---"
@@ -271,6 +288,10 @@ jobs:
         run: |
           git config user.name "brehon-ops[bot]"
           git config user.email "brehon-ops@users.noreply.github.com"
+          # Rebase before staging to avoid non-fast-forward on the push. Sibling
+          # workflows (plan-drift, oq-sweep aggregate) do the same. Conflict on
+          # today's report (same-day same-path) will fail the step loudly.
+          git pull --rebase origin governance-v0
           git add "$REPORT_PATH"
           if git diff --cached --quiet; then
             echo "No report change to commit."
