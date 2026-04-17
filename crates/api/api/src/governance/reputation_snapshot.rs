@@ -442,6 +442,44 @@ async fn process_chunk(
   Ok(expired_count)
 }
 
+/// Load the existing snapshot for `(person_id, community_id)`, or compute
+/// one on the fly if no row is present. Thin wrapper over a non-locking
+/// SELECT followed by [`recompute_snapshot`] — does NOT open a nested
+/// transaction, so the caller's own transaction scope (if any) governs
+/// the atomicity boundary.
+///
+/// Task 58 uses this from `create_report` to resolve the reporter's
+/// `reporting_accuracy` without bolting a snapshot pre-warm into every
+/// report codepath. Safe to call outside any transaction.
+pub async fn load_or_compute_snapshot(
+  conn: &mut AsyncPgConnection,
+  person_id: PersonId,
+  community_id: Option<CommunityId>,
+  cache: &mut ConfigCache,
+) -> LemmyResult<ReputationSnapshot> {
+  use diesel::SelectableHelper;
+  let existing: Option<ReputationSnapshot> = match community_id {
+    Some(cid) => reputation_snapshot::table
+      .filter(reputation_snapshot::person_id.eq(person_id))
+      .filter(reputation_snapshot::community_id.eq(cid))
+      .select(ReputationSnapshot::as_select())
+      .first::<ReputationSnapshot>(conn)
+      .await
+      .optional()?,
+    None => reputation_snapshot::table
+      .filter(reputation_snapshot::person_id.eq(person_id))
+      .filter(reputation_snapshot::community_id.is_null())
+      .select(ReputationSnapshot::as_select())
+      .first::<ReputationSnapshot>(conn)
+      .await
+      .optional()?,
+  };
+  match existing {
+    Some(row) => Ok(row),
+    None => recompute_snapshot(conn, person_id, community_id, cache).await,
+  }
+}
+
 // -- Private helpers --------------------------------------------------------
 
 async fn read_existing_snapshot_for_update(

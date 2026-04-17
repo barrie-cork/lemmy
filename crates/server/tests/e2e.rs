@@ -926,7 +926,14 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .first(conn)
       .await?;
     assert!(matches!(status, CaseStatus::Open), "status must be Open");
-    assert_eq!(threshold_score, 1, "threshold_score after one report = 1");
+    // Phase 5b task 58: OQ-006 formula. Reporter has no reputation_event
+    // rows, so the on-the-fly snapshot has reporting_accuracy = 0, which
+    // clamps to `report.clamp_min = 0.1`. weight = 1.0 * 0.1 * 1.0 *
+    // 1_000_000 = 100_000 (one report; micros scale).
+    assert_eq!(
+      threshold_score, 100_000,
+      "threshold_score after one report = base_weight × clamp_min × recency × 1_000_000 = 100_000"
+    );
 
     let report_count: i64 = governance_log::table
       .filter(governance_log::entry_kind.eq("report_created"))

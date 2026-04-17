@@ -3661,6 +3661,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tracing",
+ "tracing-test",
  "url",
 ]
 
