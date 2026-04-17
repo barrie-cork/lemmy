@@ -217,8 +217,13 @@ pub async fn recompute_snapshot(
   let events = load_live_events(conn, person_id, community_id).await?;
 
   // 3. Load person.published_at for age-gated capability checks and the
-  //    active-sanction count for the eligibility guard.
-  let (published_at, active_sanctions) = load_person_context(conn, person_id).await?;
+  //    active-sanction count for the eligibility guard. Pass the snapshot's
+  //    `community_id` so a community-scoped snapshot only considers
+  //    sanctions that apply to that community (plus instance-wide
+  //    sanctions); an instance-scoped snapshot (`community_id = None`)
+  //    considers every active sanction.
+  let (published_at, active_sanctions) =
+    load_person_context(conn, person_id, community_id).await?;
 
   // 4. Read the config thresholds and decay half-life via the cache.
   //    NOTE: all reads flow through a single ConfigCache so repeated
@@ -500,21 +505,51 @@ async fn load_live_events(
   Ok(rows)
 }
 
+/// Load the person's `published_at` and the count of active sanctions that
+/// apply to the snapshot currently being recomputed.
+///
+/// Sanction filtering rule: an instance-wide sanction (`scope = Instance`)
+/// always counts. A community-scoped sanction (`target_community_id` set)
+/// only counts when:
+///
+/// * `community_filter = None` (instance-scoped snapshot — every sanction
+///   against the person reduces their instance-wide eligibility), OR
+/// * `community_filter = Some(cid)` AND `sanction.target_community_id = cid`
+///   (community-scoped snapshot — only sanctions against the same community
+///   reduce eligibility in that community).
+///
+/// Without this filter, a community-scoped snapshot would be silently
+/// disqualified by any unrelated sanction from another community, which
+/// contradicts the per-(person, community) semantics of the snapshot table.
 async fn load_person_context(
   conn: &mut AsyncPgConnection,
   person_id: PersonId,
+  community_filter: Option<CommunityId>,
 ) -> LemmyResult<(DateTime<Utc>, i64)> {
   let published_at: DateTime<Utc> = person::table
     .filter(person::id.eq(person_id))
     .select(person::published_at)
     .first::<DateTime<Utc>>(conn)
     .await?;
-  let active_sanctions: i64 = sanction::table
+  let base = sanction::table
     .filter(sanction::target_person_id.eq(person_id))
     .filter(sanction::active.eq(true))
-    .count()
-    .get_result(conn)
-    .await?;
+    .into_boxed();
+  let active_sanctions: i64 = match community_filter {
+    // Community-scoped snapshot: count instance-wide sanctions (null
+    // target_community_id) OR sanctions scoped to this same community.
+    Some(cid) => base
+      .filter(
+        sanction::target_community_id
+          .is_null()
+          .or(sanction::target_community_id.eq(cid)),
+      )
+      .count()
+      .get_result(conn)
+      .await?,
+    // Instance-scoped snapshot: count every active sanction.
+    None => base.count().get_result(conn).await?,
+  };
   Ok((published_at, active_sanctions))
 }
 
