@@ -3544,6 +3544,7 @@ dependencies = [
  "lemmy_db_views_post_comment_combined",
  "lemmy_db_views_registration_applications",
  "lemmy_db_views_report_combined",
+ "lemmy_db_views_reputation",
  "lemmy_db_views_site",
  "lemmy_db_views_vote",
  "lemmy_diesel_utils",
@@ -4423,6 +4424,23 @@ version = "1.0.0-test-arm-qemu.0"
 dependencies = [
  "diesel",
  "lemmy_db_schema_file",
+]
+
+[[package]]
+name = "lemmy_db_views_reputation"
+version = "1.0.0-test-arm-qemu.0"
+dependencies = [
+ "chrono",
+ "diesel",
+ "diesel-async",
+ "i-love-jesus",
+ "lemmy_db_schema 1.0.0-test-arm-qemu.0",
+ "lemmy_db_schema_file",
+ "lemmy_diesel_utils",
+ "lemmy_utils 1.0.0-test-arm-qemu.0",
+ "serde",
+ "serde_with",
+ "ts-rs",
 ]
 
 [[package]]
