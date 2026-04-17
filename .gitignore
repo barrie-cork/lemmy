@@ -41,3 +41,6 @@ migrations/.diesel_lock
 .claude/scheduled_tasks.lock
 .claude/build-*.log
 .claude/prp-ralph.state.md
+
+# Rate-limit tracker state cache
+.github/cache/

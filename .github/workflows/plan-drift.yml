@@ -1,0 +1,306 @@
+name: plan-drift
+
+on:
+  schedule:
+    - cron: '30 3 1-31/2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  models: read
+
+concurrency:
+  group: plan-drift
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Plan drift audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout governance-v0
+        uses: actions/checkout@v4
+        with:
+          ref: governance-v0
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Check API quota
+        id: quota
+        run: |
+          set +e
+          python .github/scripts/rate_limit_tracker.py check low
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Low-tier quota exhausted; committing deterministic diff without AI summary."
+          fi
+
+      - name: Extract endpoints from 05 §2
+        id: plan_endpoints
+        run: |
+          awk '
+            /^## 2\. MVP API surface/ {capture=1; next}
+            /^## 3\./ {capture=0}
+            capture && /^[0-9]+\. `(GET|POST|PUT|DELETE|PATCH) / {
+              # Extract "METHOD /path" from the backtick literal
+              match($0, /`([A-Z]+) +([^ `]+)`/, m)
+              if (m[1] != "" && m[2] != "") print m[1] " " m[2]
+            }
+          ' docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md \
+            | sed -E 's/  +/ /g' | sort -u > /tmp/plan.txt
+          echo "Plan endpoints:"
+          cat /tmp/plan.txt
+          echo "count=$(wc -l < /tmp/plan.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Extract routes wired in code
+        id: code_routes
+        run: |
+          # Collect .route("/path", ...) and Axum-style definitions across the governance crate surface
+          {
+            grep -rnE '\.route\s*\(\s*"[^"]+"' \
+              crates/api/api/src/governance/ \
+              crates/api/api_crud/src/governance/ \
+              crates/server/src/governance.rs 2>/dev/null || true
+            grep -rnE 'Router::new\(|routes!|route_layer' \
+              crates/server/src/governance.rs 2>/dev/null || true
+          } > /tmp/routes.raw
+          # Extract method + path pairs; accept common Axum idioms (get(...), post(...))
+          awk '
+            {
+              method=""
+              if (match($0, /(get|post|put|delete|patch)\s*\(/, mm)) method=toupper(mm[1])
+              if (match($0, /"([^"]+)"/, pp)) path=pp[1]
+              if (method != "" && path != "" && path ~ /^\//) print method " " path
+            }
+          ' /tmp/routes.raw | sort -u > /tmp/code.txt
+          echo "Code routes:"
+          cat /tmp/code.txt
+          echo "count=$(wc -l < /tmp/code.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Extract ledger status from IMPLEMENTATION-PLAN §1.1
+        run: |
+          awk '
+            /^## 1\.1/ {capture=1}
+            /^## 2\./ {capture=0}
+            capture && /^\| (Phase|§)/ {print}
+            capture && /^\| [0-9]/ {print}
+          ' docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md > /tmp/ledger.txt
+          echo "Ledger rows: $(wc -l < /tmp/ledger.txt)"
+
+      - name: Build three-way diff table
+        id: diff
+        run: |
+          {
+            echo "| Endpoint | In plan (05 §2) | In code (router) |"
+            echo "|---|:-:|:-:|"
+            # Union of both sets
+            sort -u /tmp/plan.txt /tmp/code.txt > /tmp/union.txt
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              in_plan="—"
+              in_code="—"
+              grep -qxF "$line" /tmp/plan.txt && in_plan="✅"
+              grep -qxF "$line" /tmp/code.txt && in_code="✅"
+              printf '| `%s` | %s | %s |\n' "$line" "$in_plan" "$in_code"
+            done < /tmp/union.txt
+          } > /tmp/drift-table.md
+
+          # Count disagreement rows (rows where one side has ✅ and the other doesn't)
+          disagreements=$(awk -F'|' 'NR>2 && ($3 ~ /—/ || $4 ~ /—/) {n++} END {print n+0}' /tmp/drift-table.md)
+          echo "disagreements=$disagreements" >> "$GITHUB_OUTPUT"
+          echo "Disagreement rows: $disagreements"
+          cat /tmp/drift-table.md
+
+      - name: Assemble AI prompt
+        if: steps.quota.outputs.available == 'true'
+        run: |
+          {
+            echo "You are a documentation-drift auditor for a Rust governance fork of Lemmy."
+            echo ""
+            echo "## Output contract (STRICT)"
+            echo "Line 1 MUST be exactly one of: CLEAN  or  DRIFT"
+            echo ""
+            echo "After line 1, produce a short Markdown report (<300 words) covering:"
+            echo "  1. One-line summary of drift (or 'No drift.' if CLEAN)"
+            echo "  2. For each disagreement row, which side needs to change (doc or code) and why"
+            echo "  3. If code needs to update docs, produce a ready-to-commit Markdown diff snippet for 05-mvp-and-delivery-plan.md §2 or IMPLEMENTATION-PLAN-v0.md §1.1."
+            echo ""
+            echo "## Rules"
+            echo "- Do not invent endpoints not present in either table."
+            echo "- Do not duplicate the diff table — assume the reader has it."
+            echo "- Treat '—' in a column as 'missing from that source'."
+            echo ""
+            echo "## Drift table"
+            cat /tmp/drift-table.md
+            echo ""
+            echo "## Ledger (§1.1 phase status)"
+            echo '```'
+            cat /tmp/ledger.txt
+            echo '```'
+          } > /tmp/prompt.txt
+          wc -c /tmp/prompt.txt
+
+      - name: Run AI inference
+        if: steps.quota.outputs.available == 'true'
+        id: infer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODEL_LOW: ${{ vars.BREHON_MODELS_TIER_LOW }}
+        run: |
+          MODEL="${MODEL_LOW:-mistral-ai/ministral-3b}"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+
+          jq -Rs --arg model "$MODEL" '{
+            model: $model,
+            messages: [
+              {role: "system", content: "You are a precise drift auditor. Output starts with exactly one verdict token: CLEAN or DRIFT. Do not invent endpoints."},
+              {role: "user", content: .}
+            ],
+            temperature: 0.1,
+            max_tokens: 1500
+          }' < /tmp/prompt.txt > /tmp/payload.json
+
+          http_code=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/payload.json)
+
+          echo "HTTP $http_code"
+          if [ "$http_code" != "200" ]; then
+            echo "::error::plan-drift inference failed (HTTP $http_code)"
+            cat /tmp/response.json
+            echo "AI summary unavailable — report will rely on the deterministic diff table." > /tmp/ai-summary.md
+            echo "verdict=UNKNOWN" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          jq -r '.choices[0].message.content // ""' /tmp/response.json > /tmp/ai-summary.md
+          tokens_in=$(jq -r '.usage.prompt_tokens // 0' /tmp/response.json)
+          tokens_out=$(jq -r '.usage.completion_tokens // 0' /tmp/response.json)
+          echo "tokens_in=$tokens_in" >> "$GITHUB_OUTPUT"
+          echo "tokens_out=$tokens_out" >> "$GITHUB_OUTPUT"
+
+          verdict=$(head -n 1 /tmp/ai-summary.md | tr -d '\r' | awk '{print $1}')
+          case "$verdict" in
+            CLEAN|DRIFT) ;;
+            *)
+              echo "::warning::No valid verdict token on line 1 — got: '$verdict'. Defaulting to DRIFT."
+              verdict=DRIFT
+              ;;
+          esac
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+
+      - name: Record API usage
+        if: always() && steps.quota.outputs.available == 'true'
+        env:
+          TOKENS: ${{ steps.infer.outputs.tokens_in }}
+          MODEL: ${{ steps.infer.outputs.model }}
+        run: |
+          python .github/scripts/rate_limit_tracker.py record low "${MODEL:-mistral-ai/ministral-3b}" "${TOKENS:-0}" || true
+
+      - name: Write committed report
+        id: report
+        env:
+          DISAGREEMENTS: ${{ steps.diff.outputs.disagreements }}
+          PLAN_COUNT: ${{ steps.plan_endpoints.outputs.count }}
+          CODE_COUNT: ${{ steps.code_routes.outputs.count }}
+          VERDICT: ${{ steps.infer.outputs.verdict || 'DETERMINISTIC-ONLY' }}
+          MODEL: ${{ steps.infer.outputs.model || 'none' }}
+          TOKENS_IN: ${{ steps.infer.outputs.tokens_in || 0 }}
+          TOKENS_OUT: ${{ steps.infer.outputs.tokens_out || 0 }}
+        run: |
+          date_utc=$(date -u +%Y-%m-%d)
+          head_sha=$(git rev-parse HEAD)
+          report_path="docs/reports/plan-drift/${date_utc}.md"
+          mkdir -p docs/reports/plan-drift
+          {
+            echo "---"
+            echo "run_date: ${date_utc}"
+            echo "head_sha: ${head_sha}"
+            echo "verdict: ${VERDICT}"
+            echo "model: ${MODEL}"
+            echo "tokens_in: ${TOKENS_IN}"
+            echo "tokens_out: ${TOKENS_OUT}"
+            echo "plan_endpoint_count: ${PLAN_COUNT}"
+            echo "code_route_count: ${CODE_COUNT}"
+            echo "disagreements: ${DISAGREEMENTS}"
+            echo "workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "---"
+            echo ""
+            echo "# Plan drift audit — ${date_utc}"
+            echo ""
+            echo "## Endpoint drift table"
+            echo ""
+            cat /tmp/drift-table.md
+            echo ""
+            echo "## AI summary"
+            echo ""
+            if [ -f /tmp/ai-summary.md ]; then
+              cat /tmp/ai-summary.md
+            else
+              echo "_Not run — quota exhausted or inference failed._"
+            fi
+          } > "$report_path"
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "date_utc=$date_utc" >> "$GITHUB_OUTPUT"
+
+      - name: Commit report
+        env:
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          DATE_UTC: ${{ steps.report.outputs.date_utc }}
+          VERDICT: ${{ steps.infer.outputs.verdict || 'deterministic-only' }}
+        run: |
+          git config user.name "brehon-ops[bot]"
+          git config user.email "brehon-ops@users.noreply.github.com"
+          git pull --rebase origin governance-v0
+          git add "$REPORT_PATH"
+          if git diff --cached --quiet; then
+            echo "No report change to commit."
+            exit 0
+          fi
+          git commit -m "chore(ops): plan-drift audit ${DATE_UTC} — ${VERDICT}"
+          git push origin governance-v0
+
+      - name: Open Issue on new disagreements
+        if: steps.diff.outputs.disagreements != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISAGREEMENTS: ${{ steps.diff.outputs.disagreements }}
+          REPORT_PATH: ${{ steps.report.outputs.report_path }}
+          DATE_UTC: ${{ steps.report.outputs.date_utc }}
+        run: |
+          # Compare to the most recent previous report (if any) to gate on NEW drift
+          prev=$(ls -1t docs/reports/plan-drift/*.md 2>/dev/null | grep -v "${DATE_UTC}\.md" | head -n 1)
+          new_only=true
+          if [ -n "$prev" ]; then
+            prev_count=$(grep -E '^disagreements:' "$prev" | awk '{print $2}')
+            prev_count="${prev_count:-0}"
+            if [ "$DISAGREEMENTS" -le "$prev_count" ]; then
+              new_only=false
+              echo "No new drift vs previous report ($DISAGREEMENTS <= $prev_count) — not filing issue."
+            fi
+          fi
+          if [ "$new_only" != "true" ]; then exit 0; fi
+
+          severity=medium
+          [ "$DISAGREEMENTS" -gt 3 ] && severity=high
+
+          report_url="${{ github.server_url }}/${{ github.repository }}/blob/governance-v0/${REPORT_PATH}"
+          body=$(printf '## Plan drift — %s\n\n%s disagreement row(s) between docs §2 and the router.\n\nReport: %s\n\n%s\n' \
+            "$DATE_UTC" "$DISAGREEMENTS" "$report_url" \
+            "$(cat /tmp/drift-table.md)")
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Plan drift — ${DATE_UTC} (${DISAGREEMENTS} row(s))" \
+            --label "governance/plan-drift,risk:${severity}" \
+            --body "$body"
