@@ -102,13 +102,13 @@ pub async fn append(
 /// Missing / malformed key is a hard error — no silent fallback to
 /// unsigned rows per [99 ADR-008].
 fn load_signing_key() -> LemmyResult<SigningKey> {
-  let hex_str = env::var(SIGNING_KEY_ENV).map_err(|_| {
+  let hex_str = env::var(SIGNING_KEY_ENV).map_err(|_e| {
     LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} not set (required for governance log)"))
   })?;
-  let bytes = hex::decode(hex_str.trim()).map_err(|_| {
+  let bytes = hex::decode(hex_str.trim()).map_err(|_e| {
     LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} is not valid hex"))
   })?;
-  let seed: [u8; 32] = bytes.as_slice().try_into().map_err(|_| {
+  let seed: [u8; 32] = bytes.as_slice().try_into().map_err(|_e| {
     LemmyErrorType::Unknown(format!(
       "{SIGNING_KEY_ENV} must decode to exactly 32 bytes (got {})",
       bytes.len()

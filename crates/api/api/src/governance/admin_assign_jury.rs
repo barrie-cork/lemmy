@@ -92,7 +92,9 @@ async fn process_assignment(
 
   // 3. Select 5 eligible jurors (not target, not reporter).
   let eligible = select_eligible_jurors(conn, &case).await?;
-  if (eligible.len() as i64) < PANEL_SIZE {
+  let eligible_count =
+    i64::try_from(eligible.len()).map_err(|_e| LemmyErrorType::Unknown("eligible count overflow".to_string()))?;
+  if eligible_count < PANEL_SIZE {
     return Err(LemmyErrorType::NotFound.into());
   }
 
