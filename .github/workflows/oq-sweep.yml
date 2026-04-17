@@ -47,7 +47,8 @@ jobs:
           rc=$?
           set -e
           stats=$(python .github/scripts/rate_limit_tracker.py stats 2>/dev/null || echo '{}')
-          remaining=$(echo "$stats" | jq -r '.low.remaining // 0' 2>/dev/null || echo 0)
+          # Tracker emits low_tier/high_tier keys (see rate_limit_tracker.py:114-121)
+          remaining=$(echo "$stats" | jq -r '.low_tier.remaining // 0' 2>/dev/null || echo 0)
           echo "Low-tier remaining today: $remaining"
           if [ "$rc" -eq 0 ] && [ "$remaining" -ge 12 ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
