@@ -135,7 +135,7 @@ use lemmy_api_crud::{
     list::list_custom_emojis,
     update::edit_custom_emoji,
   },
-  governance::create_report::create_report,
+  governance::{create_endorsement::create_endorsement, create_report::create_report},
   multi_community::{
     create::create_multi_community,
     create_entry::create_multi_community_entry,
@@ -498,6 +498,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
       .service(
         scope("/governance")
           .route("/report", post().to(create_report))
+          .route("/endorsement", post().to(create_endorsement))
           .route("/case", get().to(get_case))
           .route("/modlog", get().to(list_modlog))
           .service(
