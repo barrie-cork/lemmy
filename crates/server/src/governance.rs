@@ -22,6 +22,8 @@ use tracing::info;
 /// wired (Phase 4a + task 5 of this phase).
 pub fn schedule_governance_jobs(_context: &LemmyContext) {
   info!(
-    "governance: background jobs not yet scheduled (Phase 4b stub — see Phase 5/6)",
+    "governance: snapshot recalculation job registered via \
+     lemmy_api::governance::reputation_snapshot::run_snapshot_batch \
+     (15-minute tick in scheduled_tasks::setup; BREHON_DISABLE_BACKGROUND_JOBS=1 disables for e2e)",
   );
 }

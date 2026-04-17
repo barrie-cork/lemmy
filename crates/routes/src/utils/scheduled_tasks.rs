@@ -144,6 +144,28 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
     }
   });
 
+  // Brehon governance: reputation snapshot recalculation. Every 15
+  // minutes, find users with new events since the last tick (or with
+  // founder seeds that just expired) and recompute their snapshot row.
+  // Controlled by `job.snapshot_interval_seconds` config at v1; the
+  // clokwerk schedule-at-registration time means a config change needs
+  // a server restart in v0 (acceptable limitation).
+  let context_gov_snapshot = context.reset_request_count();
+  scheduler.every(CTimeUnits::minutes(15)).run(move || {
+    let context = context_gov_snapshot.reset_request_count();
+    async move {
+      // Test override: e2e tests set this env var to call run_snapshot_batch
+      // directly without the scheduler racing them. S4 from design review.
+      if std::env::var("BREHON_DISABLE_BACKGROUND_JOBS").as_deref() == Ok("1") {
+        return;
+      }
+      lemmy_api::governance::reputation_snapshot::run_snapshot_batch(&context)
+        .await
+        .inspect_err(|e| warn!("Failed to run snapshot batch: {e}"))
+        .ok();
+    }
+  });
+
   // Manually run the scheduler in an event loop
   loop {
     scheduler.run_pending().await;
