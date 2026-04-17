@@ -405,6 +405,39 @@ diesel::table! {
 }
 
 diesel::table! {
+    governance_config (id) {
+        id -> Int4,
+        scope -> Text,
+        key -> Text,
+        value_type -> Text,
+        value_int -> Nullable<Int8>,
+        value_float -> Nullable<Float8>,
+        value_bool -> Nullable<Bool>,
+        value_text -> Nullable<Text>,
+        valid_from -> Timestamptz,
+        updated_by -> Nullable<Int4>,
+    }
+}
+
+// View over governance_config — most-recent row per (scope, key). Diesel does
+// not auto-detect views, so this `table!` block is hand-written. `id` is the
+// primary key of the underlying row surfaced through the view.
+diesel::table! {
+    governance_config_current (id) {
+        id -> Int4,
+        scope -> Text,
+        key -> Text,
+        value_type -> Text,
+        value_int -> Nullable<Int8>,
+        value_float -> Nullable<Float8>,
+        value_bool -> Nullable<Bool>,
+        value_text -> Nullable<Text>,
+        valid_from -> Timestamptz,
+        updated_by -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     governance_log (id) {
         id -> Int8,
         prev_hash -> Bytea,
@@ -1109,6 +1142,7 @@ diesel::table! {
         jury_eligible -> Bool,
         trusted_reporter -> Bool,
         calculated_at -> Timestamptz,
+        can_sponsor -> Bool,
     }
 }
 

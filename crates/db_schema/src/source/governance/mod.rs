@@ -2,6 +2,7 @@ pub mod actor_pseudonym;
 pub mod appeal;
 pub mod case_evidence;
 pub mod endorsement;
+pub mod governance_config;
 pub mod governance_log;
 pub mod jury_assignment;
 pub mod jury_pool;
