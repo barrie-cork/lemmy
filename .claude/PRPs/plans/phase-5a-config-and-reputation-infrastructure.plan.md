@@ -600,9 +600,14 @@ One commit per task. Validate after each. Commit messages follow Phase 4 convent
    # Re-run the clippy dry-run afterwards; must now exit 0. If it still fails on a different
    # lint, surface via decision-queue to the advisor.
 
-   cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --features full --no-run -p lemmy_server > .claude/audit-5a-dod-e2e-compile.log 2>&1"
+   cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server > .claude/audit-5a-dod-e2e-compile.log 2>&1"
    status=$?; tail -15 .claude/audit-5a-dod-e2e-compile.log; echo "exit: $status"
    # Expected: exit 0 — e2e target compiles on pre-5a HEAD.
+   # PLAN-DRIFT NOTE (decision-queue #14, 2026-04-17): the original plan text
+   # passed `--features full` with `-p lemmy_server`, which cargo rejects because
+   # `lemmy_server/Cargo.toml` does not declare a `full` feature. Feature unification
+   # propagates `full` to downstream deps automatically. Matches the Phase 4b
+   # working invocation pattern.
    ```
 
 4. **Land the pre-5a carry-patch commit — MANDATORY before task 50.** Confirmed by user direction 2026-04-17 (Option B). Edit `crates/diesel_utils/src/pagination.rs:220`:
@@ -893,7 +898,7 @@ One commit per task. Validate after each. Commit messages follow Phase 4 convent
 - **GOTCHA-50b.** The `threshold_score` micros rescale runs **unconditionally** in up.sql. If a developer runs `diesel migration redo`, the down + up sequence multiplies back: down divides, up multiplies — idempotent. Test this round-trip in §14 Level 4.
 - **GOTCHA-50c.** The `can_sponsor` column addition is an intentional override of [04 §13.2]'s "two booleans" shortcut. This is logged as a design decision in the completion report. The `lint-no-can-sponsor-read.sh` guard (task 51) enforces that no v0 handler reads the column.
 - **GOTCHA-50d.** The Postgres `CHECK` discriminator is non-trivial to evolve in v1 (e.g. adding `'json'` value_type). Document the evolution path in the migration's `up.sql` header comment: add a new value_type + a new column + a new CHECK in a fresh migration, not by modifying this one.
-- **GOTCHA-50e.** The compile-time parity test is a `#[cfg(test)]` module — it runs under `cargo test` but not `cargo check`. The 5a DoD therefore includes `cargo test --test e2e --features full` (which exercises the module transitively if it reaches config reader in any path) AND a dedicated `cargo test -p lemmy_api governance::config::parity --features full`. Add the latter to §14 Level 2.
+- **GOTCHA-50e.** The compile-time parity test is a `#[cfg(test)]` module — it runs under `cargo test` but not `cargo check`. The 5a DoD therefore includes `cargo test --test e2e -p lemmy_server` (which exercises the module transitively if it reaches config reader in any path) AND a dedicated `cargo test -p lemmy_api governance::config::parity --features full`. Add the latter to §14 Level 2. (The e2e invocation drops `--features full` because `lemmy_server` does not declare that feature; feature unification propagates `full` to deps — see decision-queue #14.)
 - **GOTCHA-50f.** The seeded row count is **34**, not 32 as the plan narrative said — recount: 3 threshold + 5 jury + 9 deltas + 3 liability + 5 report + 1 decay + 3 onboarding + 3 founder + 2 job = 34. The advisor-context-phase-5.md §1 "32" was off by one (at +33 after the pre-Perplexity walkthrough); Perplexity review 2026-04-17 added a 34th key `job.snapshot_batch_chunk_size = 500` so task 54's chunked batch size is tuneable at pilot time without a code change. `IMPLEMENTATION-PLAN-v0.md §Phase 5a task 50` pre-dates the chunk-size addition — advisor will update that doc alongside any future narrative edits. Document the 34-vs-32 delta in the completion report.
 - **GOTCHA-50g.** Every `governance_config` key name in `config.rs` MUST match the seed SQL exactly character-for-character; typos would produce silent fallback to the const (and no parity-test failure because the structural parity test is structure-only). Run a sanity grep: `grep -oE "'(thresholds|jury|deltas|liability|report|decay|onboarding|founder|job)\.[a-z_]+'" migrations/2026-04-18-000000-0000_add_governance_config/up.sql | sort -u` and compare against the `SEEDED_KEYS_WITH_CONSTS` list — line counts must match. The round-trip parity test (GOTCHA-50h) catches this class too via the `get_<type>()` call failing, but the sanity grep is faster feedback at implementation time.
 - **GOTCHA-50h. Round-trip parity test requires a DB (Perplexity-review 2026-04-17 item 5).** The new `seeded_keys_round_trip_via_config_cache` test is `#[tokio::test]`, not `#[test]`, and starts a pgautoupgrade:18-alpine container per run. It cannot live in a pure `#[cfg(test)] mod parity` inside `lemmy_api` without reusable fixtures — the existing `lemmy_api` crate has no testcontainers dependency. Two acceptable landing spots:
@@ -919,12 +924,12 @@ status=$?; tail -15 .claude/build-task50-parity.log; echo "exit: $status"; [ $st
 
 # Run the round-trip parity test (DB-backed; lives in crates/server/tests/e2e.rs
 # per GOTCHA-50h landing spot A).
-cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e --features full -- config_parity_round_trip > .claude/build-task50-roundtrip.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e -- config_parity_round_trip > .claude/build-task50-roundtrip.log 2>&1"
 status=$?; tail -15 .claude/build-task50-roundtrip.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 
 # Migration round-trip (DB layer only — tests/e2e.rs doesn't need to run yet).
 # Runs via lemmy_diesel_utils::schema_setup, not raw diesel CLI (forbid_diesel_cli trigger).
-cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e --features full -- can_insert_moderation_case > .claude/build-task50-migration-smoke.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e -- can_insert_moderation_case > .claude/build-task50-migration-smoke.log 2>&1"
 status=$?; tail -15 .claude/build-task50-migration-smoke.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 # The existing can_insert_moderation_case test runs every migration in migrations/ via embed_migrations!.
 # It's the canonical migration round-trip test for this project.
@@ -1004,7 +1009,7 @@ bash scripts/brehon/lint-no-membership-read.sh; echo "membership guard exit: $?"
 bash scripts/brehon/lint-no-can-sponsor-read.sh; echo "can_sponsor guard exit: $?"
 
 # Existing e2e tests still compile + pass (embedded migrations include the new one).
-cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e --features full > .claude/build-task51-e2e.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e > .claude/build-task51-e2e.log 2>&1"
 status=$?; tail -15 .claude/build-task51-e2e.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 ```
 
@@ -1303,7 +1308,7 @@ status=$?; tail -15 .claude/build-task53-ws.log; echo "exit: $status"; [ $status
 cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_routes --features full > .claude/build-task54-routes.log 2>&1"
 status=$?; tail -15 .claude/build-task54-routes.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 
-cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server --features full > .claude/build-task54-server.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server > .claude/build-task54-server.log 2>&1"
 status=$?; tail -15 .claude/build-task54-server.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 
 cmd //c "scripts\\brehon\\cargo-check.bat --features full --workspace > .claude/build-task54-ws.log 2>&1"
@@ -1521,7 +1526,7 @@ status=$?; tail -15 .claude/build-task55-routes.log; echo "exit: $status"; [ $st
 
 2. **Run `report_to_modlog_golden_path`.** The single most load-bearing regression guard.
    ```bash
-   cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e --features full -- report_to_modlog_golden_path > .claude/build-task56-golden.log 2>&1"
+   cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e -- report_to_modlog_golden_path > .claude/build-task56-golden.log 2>&1"
    status=$?; tail -30 .claude/build-task56-golden.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
    ```
 
@@ -1654,7 +1659,7 @@ status=$?; tail -15 .claude/l2-parity.log; echo "exit: $status"; [ $status -eq 0
 # Full e2e regression suite — includes `config_parity_round_trip` per
 # GOTCHA-50h (round-trip via ConfigCache::get_<type>(), Perplexity-review
 # 2026-04-17 item 5).
-cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e --features full > .claude/l2-e2e.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_server --test e2e > .claude/l2-e2e.log 2>&1"
 status=$?; tail -40 .claude/l2-e2e.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 ```
 
@@ -1663,7 +1668,7 @@ status=$?; tail -40 .claude/l2-e2e.log; echo "exit: $status"; [ $status -eq 0 ] 
 ### Level 3 — FULL_BUILD
 
 ```bash
-cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features full > .claude/l3-e2e-compile.log 2>&1"
+cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server > .claude/l3-e2e-compile.log 2>&1"
 status=$?; tail -15 .claude/l3-e2e-compile.log; echo "exit: $status"; [ $status -eq 0 ] || exit 1
 ```
 

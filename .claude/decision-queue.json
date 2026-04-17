@@ -148,6 +148,19 @@
   ],
   "resolved": [
     {
+      "id": 14,
+      "from": "impl",
+      "timestamp": "2026-04-17T14:30:00Z",
+      "question": "Plan-drift: every e2e invocation in phase-5a plan uses `-p lemmy_server --features full`, but `lemmy_server/Cargo.toml` does not declare a `full` feature (cargo errors: 'the package lemmy_server does not contain this feature: full'). 9 invocation sites affected. How to resolve?",
+      "options": [
+        "Drop `--features full` from every `-p lemmy_server` invocation (match Phase 4b's working pattern) — mechanical plan-drift fix, land as a `docs(plan):` commit before carry-patch",
+        "Add a `full` feature to `lemmy_server/Cargo.toml` that forwards to its deps — scope creep, touches Cargo.toml unnecessarily"
+      ],
+      "context": "Task 0 step 3's third DoD probe `cargo-test.bat --test e2e --features full --no-run -p lemmy_server` exits 101 with 'error: the package lemmy_server does not contain this feature: full'. Verified same error for check subcommand (exit 101). Phase 4b's ralph log used `cargo-test.bat --test e2e --no-run -p lemmy_server` without `--features full` (plan-4b.md lines 422, 856, 944). Re-ran probe 3 without `--features full`: exit 0, e2e target compiles. Cargo's feature unification propagates `full` to deps that declare it via workspace dep settings — the `--features full` flag on lemmy_server itself is redundant and rejected. This is a plan-write-time DoD-dry-run gap (sibling to the `cargo check --no-deps` drift already documented in plan §14 Level 1). Impl-self-resolved to Option 1 with evidence; flagged here for advisor visibility and for the 5b/5c plan-write sessions to inherit the corrected pattern.",
+      "answer": "Option 1 (mechanical plan-drift fix). Land `docs(plan): drop --features full from lemmy_server -p invocations (plan-drift fix)` on phase-5a before the carry-patch commit. 9 sites: task 0 step 3 probe, §12.1 task 50 validation (lines 922, 927), §12.2 task 51 validation (line 1007), §12.4 task 54 validation (line 1306 — cargo-check, same error class), §12.7 task 56 golden-path run (line 1524), §14 Level 2 e2e (line 1657), §14 Level 3 e2e compile (line 1666). Leave other `-p` invocations (lemmy_api, lemmy_db_schema, lemmy_routes, etc.) that DO declare `full` untouched.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
       "id": 13,
       "from": "planner",
       "timestamp": "2026-04-17T14:00:00Z",
