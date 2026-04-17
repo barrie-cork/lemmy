@@ -13,6 +13,8 @@
 #   - crates/db_schema_file/                             (column type)
 #   - crates/db_schema/src/source/governance/reputation_snapshot.rs  (struct + InsertForm)
 #   - crates/api/api/src/governance/reputation_snapshot.rs            (task 53 writer)
+#   - crates/db_views/reputation/src/                                 (doc-comments in view crate)
+#   - crates/api/api_crud/src/governance/create_endorsement.rs        (task 55 — doc-comment asserts `can_sponsor` is NOT read per OQ-014 / GOTCHA-55b)
 #   - migrations/                                                     (up.sql)
 #
 # Fails with a non-zero exit if any other file in crates/ references
@@ -25,6 +27,7 @@ FORBIDDEN=$(grep -rn --include='*.rs' 'can_sponsor' crates/ \
   | grep -v '^crates/db_schema/src/source/governance/reputation_snapshot.rs' \
   | grep -v '^crates/api/api/src/governance/reputation_snapshot.rs' \
   | grep -v '^crates/db_views/reputation/src/' \
+  | grep -v '^crates/api/api_crud/src/governance/create_endorsement.rs' \
   || true)
 
 if [ -n "$FORBIDDEN" ]; then
