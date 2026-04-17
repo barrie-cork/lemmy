@@ -438,6 +438,12 @@ Queries:
 - `list_cases_for_person`
 - `list_cases_needing_jury_selection`
 
+**Note on `GovernanceCaseSummaryView` derived fields (Phase 2a drift resolutions):**
+
+- `reporter_count: i64` has **no source in the Phase 1 schema** — ADR-013 collapses reports into `moderation_case` itself with no `reporter_count` column and no `case_report` table. Phase 2a ships this as a `0_i64` stub. Resolution is a Phase 4 planning decision: either add a `case_report` table via a new ADR, or derive from `governance_log` entries tagged as report events. Do not denormalize onto `moderation_case`.
+- `jury_needed: i32` is a **constant `5`** per [05 §3](05-mvp-and-delivery-plan.md) v0 simplification (5-juror panel, quorum 3). Phase 2a hardcodes it at the view layer. v1 will promote this to a configurable `jury_size_target` column on `moderation_case` with a one-migration fix; until then, the view layer is authoritative.
+- `jury_submitted: i32` is **derived at query time** from a correlated `COUNT(*) FILTER (WHERE status = 'submitted')` subquery on `jury_assignment` joined by `case_id`. Keep as derived; do not add a denormalized counter column on `moderation_case`.
+
 ### 4.2 `crates/db_views/jury_queue`
 
 ```rust
@@ -456,6 +462,10 @@ Queries:
 - `list_jury_assignments_for_person`
 - `list_available_jury_cases_for_person`
 - `count_unsubmitted_jury_assignments`
+
+**Note on `JuryQueueView.deadline_at` (Phase 2a drift resolution):**
+
+`deadline_at: Option<DateTime<Utc>>` has **no source in the Phase 1 schema** — `jury_assignment` has `selected_at`, `responded_at`, `submitted_at` but no `deadline_at`, and `moderation_case` has `decided_at`/`closed_at` (neither being "jury deadline"). Phase 2a ships this as a `None` stub. Resolution is a Phase 4 planning decision: either (a) add a `deadline_at` column to `jury_assignment` via a new migration, (b) compute at query time as `selected_at + config_duration` with a hardcoded offset, or (c) defer out of v0 entirely. Task 24's `count_unsubmitted_jury_assignments` currently counts all `status IN (Selected, Accepted)` with no time filter — the time filter becomes implementable when Phase 4's jury-timeout background job chooses option (a), (b), or (c).
 
 ### 4.3 `crates/db_views/reputation`
 
@@ -504,6 +514,12 @@ Queries:
 - `list_public_case_log`
 - `list_public_case_log_for_community`
 - `read_public_case_log_entry`
+
+**Note on `GovernanceModlogView` derived fields (Phase 2b drift resolutions):**
+
+- `decision: Option<JuryDecision>` has **no source column on `public_case_log`** — the winning decision lives on `jury_vote.decision` rows and must be tallied per [05 §6] simple-majority rules. Phase 2b ships this as a `None` stub. Resolution is a Phase 4 planning decision: either (a) add a denormalized `decision` column to `public_case_log` via a new migration at `submit_jury_vote` handler time, or (b) compute via a second-query aggregation of `jury_vote` rows keyed by `case_id` in the view crate. Duplicating the tally in the view and the handler is rejected — Phase 4's `submit_jury_vote` (task 42) is the single source of truth.
+- `sanction_action: Option<SanctionAction>` has **no source column on `public_case_log`** — the `sanction` table has the `action` column, connected transitively through `moderation_case` (both `sanction.case_id` and `public_case_log.case_id` FK to `moderation_case.id`). Per [05 §3] v0 creates one sanction row per decided case. Phase 2b ships this as a `None` stub. Resolution is a Phase 4 planning decision: either (a) add a LEFT JOIN through `moderation_case → sanction` when Phase 4's `submit_jury_vote` first writes sanction rows (verifying whether `sanction.case_id` has a DB-level uniqueness constraint, or adding an `active=true` filter as tiebreaker), or (b) denormalize `sanction_action` onto `public_case_log` via a new migration. Phase 2b did not ship the LEFT JOIN because its smoke tests seed no `sanction` rows, making the join return `None` regardless.
+- `appealed: bool` is **fully derivable** from Phase 1 schema via a second-query aggregation: `appeal::table.filter(appeal::case_id.eq_any(&case_ids)).select(appeal::case_id).load()` collected into a `HashSet<ModerationCaseId>`, with `appealed = set.contains(&case_id)` in the `build_view` mapper. Phase 2b ships this as a real computation, matching the Phase 2a `submitted_counts_by_case` two-round-trip pattern. No prose correction needed — the implementation matches the spec.
 
 ## 5. API request/response types (`crates/api/api_common/src/governance.rs`)
 
