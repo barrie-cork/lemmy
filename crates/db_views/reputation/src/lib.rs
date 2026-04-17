@@ -31,12 +31,28 @@ pub mod impls;
 /// Per-(person, community) reputation snapshot plus a derived
 /// `active_sanctions` count. Built by the impls module via tuple-load on
 /// `reputation_snapshot` + a second round-trip for the count.
+///
+/// **Wire-silent raw dimension scores.** Per ADR-005 the public API surfaces
+/// capabilities (`jury_eligible`, `trusted_reporter`), not numbers. The four
+/// raw score fields (`reporting_accuracy`, `jury_reliability`,
+/// `participation_consistency`, `endorsement_strength`) retain their types
+/// for in-process consumers (tests, admin-only paths) but are `#[serde(skip)]`
+/// + `#[ts(skip)]` so any accidental serialisation of this view through a
+/// public handler will not leak them.
 pub struct ReputationSummaryView {
   pub person_id: i32,
   pub community_id: Option<i32>,
+  #[serde(skip)]
+  #[cfg_attr(feature = "ts-rs", ts(skip))]
   pub reporting_accuracy: i32,
+  #[serde(skip)]
+  #[cfg_attr(feature = "ts-rs", ts(skip))]
   pub jury_reliability: i32,
+  #[serde(skip)]
+  #[cfg_attr(feature = "ts-rs", ts(skip))]
   pub participation_consistency: i32,
+  #[serde(skip)]
+  #[cfg_attr(feature = "ts-rs", ts(skip))]
   pub endorsement_strength: i32,
   pub jury_eligible: bool,
   pub trusted_reporter: bool,
@@ -52,12 +68,28 @@ pub struct ReputationSummaryView {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(export, optional_fields))]
-/// Per-person endorsement / surety aggregate. All three counts are derived
+/// Per-person endorsement / surety aggregate. All four counts are derived
 /// via separate `SELECT COUNT(*)` round-trips — no source columns exist on
 /// any single table.
+///
+/// **Split surety direction.** `list_endorsements_for_person` populates
+/// `active_sureties_inbound` (rows where the subject is the sponsee);
+/// `list_sureties_for_person` populates `active_sureties_outbound` (rows
+/// where the subject is the sponsor). The two directions are opposite sides
+/// of the same `surety` table, so a single `active_sureties` field would be
+/// overloaded with different semantics depending on which function produced
+/// the view — disambiguating at the shape level keeps consumers from
+/// misinterpreting the count.
 pub struct EndorsementSummaryView {
   pub person_id: i32,
   pub inbound_endorsements: i64,
   pub outbound_endorsements: i64,
-  pub active_sureties: i64,
+  /// Sureties where this person is the **sponsee** (`surety.sponsored_id`).
+  /// Populated by `list_endorsements_for_person`; `0` from
+  /// `list_sureties_for_person`.
+  pub active_sureties_inbound: i64,
+  /// Sureties where this person is the **sponsor** (`surety.sponsor_id`).
+  /// Populated by `list_sureties_for_person`; `0` from
+  /// `list_endorsements_for_person`.
+  pub active_sureties_outbound: i64,
 }

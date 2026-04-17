@@ -9,9 +9,12 @@
 #   - crates/db_schema_file/       (schema.rs + enums.rs own the column type)
 #   - crates/db_schema/src/source/person.rs (struct + InsertForm)
 #   - crates/db_schema/src/lib.rs  (Person1/Person2AliasAllColumnsTuple — schema-layer tuple aliases that MUST list the column to match person::all_columns arity)
+#   - crates/db_schema/src/impls/person.rs (Person-literal test fixture + upsert carry-patch that preserves membership_state on federation refresh)
 #   - crates/api/api/src/governance/config.rs (parse_membership_state helper, consumed only by the authorised writer below)
 #   - crates/api/api_crud/src/user/create.rs (register handler writes the value)
 #   - crates/apub/objects/src/objects/person.rs (federated-person upsert writes `None` so the SQL DEFAULT takes effect)
+#   - crates/db_views/registration_applications/src/impls.rs (view-layer Person-literal test fixture)
+#   - crates/server/tests/e2e.rs   (e2e test fixture)
 #   - migrations/                  (up.sql + down.sql for the column)
 #   - .claude/                     (plan, rules, memory, decision queue all discuss it)
 #

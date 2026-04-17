@@ -26,7 +26,7 @@ CREATE TABLE governance_config (
     value_bool  BOOLEAN,
     value_text  TEXT,
     valid_from  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by  INTEGER REFERENCES person (id) ON DELETE SET NULL,
+    updated_by  INTEGER REFERENCES person (id) ON DELETE RESTRICT,
     CONSTRAINT governance_config_typed CHECK (
         (value_type = 'int'   AND value_int   IS NOT NULL AND value_float IS NULL     AND value_bool IS NULL     AND value_text IS NULL) OR
         (value_type = 'float' AND value_float IS NOT NULL AND value_int   IS NULL     AND value_bool IS NULL     AND value_text IS NULL) OR
@@ -65,11 +65,10 @@ COMMENT ON COLUMN reputation_snapshot.can_sponsor IS
 CREATE UNIQUE INDEX reputation_snapshot_person_null_community
     ON reputation_snapshot (person_id) WHERE community_id IS NULL;
 
--- Phase 4 stored threshold_score in integer units; Phase 5b task 58 expects
--- micros (x1_000_000). Rescale existing rows so the Phase 4 golden-path test's
--- admin-forced ThresholdMet pattern remains consistent. On down.sql, divide
--- back — idempotent under `diesel migration redo` per GOTCHA-50b.
-UPDATE moderation_case SET threshold_score = threshold_score * 1000000;
+-- Note: the micros rescale (integer-unit → micros) was moved to Phase 5b task 58,
+-- which owns the config-driven threshold formula. Phase 5a leaves the handler
+-- (`create_report.rs` with `V0_THRESHOLD=3`, `V0_REPORTER_WEIGHT=1`) in integer
+-- units so `report_to_modlog_golden_path` semantics are preserved.
 
 -- Seed 34 instance-scoped config rows. ON CONFLICT DO NOTHING on
 -- (scope, key, valid_from) makes this idempotent — reruns after manual

@@ -16,12 +16,12 @@ close). **Phase-5a HEAD (at PR-open time).** See §2 below.
 | Task | Deliverable | Plan §ref |
 |------|-------------|-----------|
 | 0 | Pre-phase audit (3 wrapper probes + 3 DoD dry-runs); plan-drift fixes; pagination lint carry-patch | §12.0 |
-| 50 | `governance_config` table + Rust reader (`config.rs`) + 34 seed rows + structural parity test + DB round-trip (`config_parity_round_trip`) + `reputation_snapshot.can_sponsor` column + `threshold_score` micros rescale | §12.1 |
+| 50 | `governance_config` table + Rust reader (`config.rs`) + 34 seed rows + structural parity test + DB round-trip (`config_parity_round_trip`) + `reputation_snapshot.can_sponsor` column | §12.1 |
 | 51 | `person.membership_state` column + `MembershipState` enum (`DbValueStyle = "snake_case"`) + `parse_membership_state` helper + `register()` handler patch + federated-upsert default + two grep-guard scripts | §12.2 |
 | 52 | `crates/db_views/reputation` view crate with `ReputationSummaryView` + `EndorsementSummaryView` + three tuple-load queries, no `Selectable` derive | §12.3 |
 | 53 | `reputation_snapshot.rs` (~700 lines incl. 4 unit tests) with `recompute_snapshot`, `run_snapshot_batch` (chunked per config), `detect_capability_changes`; `ENTRY_KIND_*` const block (15 entries) in `governance_log.rs`; `mod.rs` wiring | §12.4 |
-| 54 | `run_snapshot_batch` registered via clokwerk in `scheduled_tasks.rs` (15-min tick) + `BREHON_DISABLE_BACKGROUND_JOBS=1` override + `lemmy_api` dep added to `routes/Cargo.toml` + `governance.rs` stub-message update | §12.5 |
-| 55 | `POST /api/v4/governance/endorsement`: `create_endorsement.rs` handler with config-driven `SponsorGateStrategy` dispatch (`age|open|closed` + `Unknown → age` fallback) + `CreateEndorsementResponse` DTO + `mod.rs` export + route wiring | §12.6 |
+| 54 | `run_snapshot_batch` registered via clokwerk in `scheduled_tasks.rs` (15-min tick) + `BREHON_DISABLE_SNAPSHOT_JOB=1` override + `lemmy_api` dep added to `routes/Cargo.toml` + `governance.rs` stub-message update | §12.5 |
+| 55 | `POST /api/v4/governance/endorsement`: `create_endorsement.rs` handler with config-driven `SponsorGateStrategy` dispatch (`age\|open\|closed` + `Unknown → age` fallback) + `CreateEndorsementResponse` DTO + `mod.rs` export + route wiring | §12.6 |
 | 56 | Level 0–5 validation + `report_to_modlog_golden_path` + lint guards + this report + PR | §12.7 |
 
 ### Out of scope / carry-forward (5b / 5c)
@@ -46,14 +46,14 @@ Commits on `phase-5a` (8 task commits + 1 handover + task 56 close):
 The authoritative list:
 
 - `chore(lint): clear unfulfilled lint expectation in pagination.rs pre-5a (carry-patch)` — pre-task-50 carry-patch, task 0
-- `feat(governance): task 50 — governance_config table + reader + 34 seeds + reputation_snapshot.can_sponsor column + threshold_score micros rescale`
+- `feat(governance): task 50 — governance_config table + reader + 34 seeds + reputation_snapshot.can_sponsor column`
 - `feat(governance): task 51 — add person.membership_state column + enum + grep-guards (deferred enforcement per OQ-016)`
 - `feat(views): task 52 — add crates/db_views/reputation view crate with summary + endorsement views`
 - `chore(carry-patches): task 51 Person-literal fan-out + lint-guard exclusions`
 - `feat(governance): task 53 — reputation snapshot calculator with expires_at filter, decay half-life guard, capability_changed log emit, FOR UPDATE concurrency guard`
 - `docs(handover): Phase 5a task 54 onward — compact handover for fresh impl session`
-- `feat(governance): task 54 — register snapshot recalc job via scheduled_tasks (15-minute clokwerk tick, BREHON_DISABLE_BACKGROUND_JOBS=1 override)`
-- `feat(governance): task 55 — create_endorsement handler with config-driven gate-strategy dispatch (age|open|closed) per OQ-014`
+- `feat(governance): task 54 — register snapshot recalc job via scheduled_tasks (15-minute clokwerk tick, BREHON_DISABLE_SNAPSHOT_JOB=1 override)`
+- `feat(governance): task 55 — create_endorsement handler with config-driven gate-strategy dispatch (age\|open\|closed) per OQ-014`
 - `docs(report): Phase 5a complete — governance_config + reputation infra + create_endorsement` (this commit)
 
 ---

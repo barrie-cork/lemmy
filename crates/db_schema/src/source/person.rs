@@ -63,8 +63,13 @@ pub struct Person {
   /// Deferred-enforcement membership-state flag per [99 OQ-016]. Populated
   /// at registration time from `config.onboarding.default_membership_state`.
   /// NO v0 handler reads this — grep-guarded by
-  /// `scripts/brehon/lint-no-membership-read.sh` (Watch 7).
+  /// `scripts/brehon/lint-no-membership-read.sh` (Watch 7). Wire-silent in
+  /// v0 (skipped by serde and ts-rs) so the deferred-enforcement column does
+  /// not leak over the public API; v1 removes these skips when the gate
+  /// activates.
   /// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+  #[serde(skip)]
+  #[cfg_attr(feature = "ts-rs", ts(skip))]
   pub membership_state: MembershipState,
 }
 

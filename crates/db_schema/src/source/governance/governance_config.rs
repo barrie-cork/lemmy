@@ -31,8 +31,15 @@ pub struct GovernanceConfig {
   pub updated_by: Option<PersonId>,
 }
 
+/// Insert form for `governance_config`. The table is append-only by design —
+/// admin edits INSERT a new `(scope, key, valid_from)` row and the
+/// `governance_config_current` DISTINCT-ON view surfaces the latest — so this
+/// form deliberately does NOT derive `AsChangeset`. Mutating historical rows
+/// in place would break the audit trail and the parity between `valid_from`
+/// and action time. If a narrow update path is ever needed (e.g. fixing
+/// `updated_by` on the most-recent row), define a dedicated changeset struct.
 #[derive(Clone, Default)]
-#[cfg_attr(feature = "full", derive(Insertable, AsChangeset))]
+#[cfg_attr(feature = "full", derive(Insertable))]
 #[cfg_attr(feature = "full", diesel(table_name = governance_config))]
 pub struct GovernanceConfigInsertForm {
   pub scope: String,

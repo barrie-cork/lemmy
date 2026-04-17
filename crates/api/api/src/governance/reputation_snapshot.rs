@@ -325,7 +325,16 @@ fn compute_applied_delta(event: &ReputationEvent, now: DateTime<Utc>, half_life:
     }
     // Organic positive event: halve once if older than the half-life.
     // v0 uses a single half-life window; more aggressive schedules
-    // (chained halving per half-life elapsed) are v1.
+    // (chained halving per half-life elapsed) are v1 — combined with
+    // the dirty-pair detection gap for stale-by-age pairs (carry-forward
+    // to 5b/5c alongside DQ#13's admin-config-write wrapper), this
+    // means a positive organic event from 400 days ago will pin
+    // `endorsement_strength` at `delta/2` essentially forever. Since
+    // `can_sponsor` is NOT read by any v0 handler ([99 OQ-014]), this
+    // staleness cannot affect behaviour in v0; v1 flips the config
+    // gate AND lands chained halving in the same release.
+    // TODO(brehon-fork): v1 — switch to chained halving per half-life
+    // elapsed and add a regression test for age > 2× half-life.
     let age = now - event.created_at;
     if age > half_life { original / 2 } else { original }
   } else {
@@ -648,9 +657,16 @@ async fn acquire_advisory_xact_lock(
   }
 
   // 64-bit lock key: upper 32 bits = person_id, lower 32 = community_id
-  // (or 0 for None). Deterministic + unique across the (person, community)
-  // space.
-  let key: i64 = (i64::from(person_id.0) << 32) | i64::from(community_id.map(|c| c.0).unwrap_or(0));
+  // encoded so `None` maps to `0` and `Some(CommunityId(c))` maps to
+  // `c + 1`. The `+1` shift keeps `None` and `Some(CommunityId(0))`
+  // distinct in the unlikely event that a live community row ever
+  // lands at id 0 (Postgres SERIAL starts at 1 today, so this is
+  // defensive rather than load-bearing). The encoding is deterministic
+  // + unique across the `(person, community)` space.
+  let community_component: i64 = community_id
+    .map(|c| i64::from(c.0).saturating_add(1))
+    .unwrap_or(0);
+  let key: i64 = (i64::from(person_id.0) << 32) | community_component;
   let _ignored: Vec<IgnoredRow> = sql_query("SELECT pg_advisory_xact_lock($1) AS _lock_key")
     .bind::<BigInt, _>(key)
     .load::<IgnoredRow>(conn)

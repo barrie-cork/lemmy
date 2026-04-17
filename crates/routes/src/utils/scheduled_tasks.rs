@@ -56,8 +56,27 @@ use lemmy_utils::{
   error::{LemmyErrorType, LemmyResult},
 };
 use reqwest_middleware::ClientWithMiddleware;
-use std::time::Duration;
+use std::{
+  sync::atomic::{AtomicBool, Ordering},
+  time::Duration,
+};
 use tracing::{info, warn};
+
+// Concurrency guard for the 15-minute Brehon reputation-snapshot tick.
+// clokwerk's AsyncScheduler does not dedupe per-job, so a long
+// `run_snapshot_batch` could pile up if it exceeds the tick interval.
+// `REPUTATION_SNAPSHOT_RUNNING` plus `RunningGuard`'s RAII drop clear the
+// flag on both normal return and panic. Declared at module scope so the
+// items-after-statements clippy lint does not fire inside `setup()`.
+static REPUTATION_SNAPSHOT_RUNNING: AtomicBool = AtomicBool::new(false);
+
+struct RunningGuard;
+
+impl Drop for RunningGuard {
+  fn drop(&mut self) {
+    REPUTATION_SNAPSHOT_RUNNING.store(false, Ordering::Release);
+  }
+}
 
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
@@ -150,15 +169,30 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // Controlled by `job.snapshot_interval_seconds` config at v1; the
   // clokwerk schedule-at-registration time means a config change needs
   // a server restart in v0 (acceptable limitation).
+  //
+  // Concurrency guard (REPUTATION_SNAPSHOT_RUNNING + RunningGuard, both
+  // module-scope above) prevents overlapping invocations if a batch
+  // exceeds the 15-minute tick.
   let context_gov_snapshot = context.reset_request_count();
   scheduler.every(CTimeUnits::minutes(15)).run(move || {
     let context = context_gov_snapshot.reset_request_count();
     async move {
       // Test override: e2e tests set this env var to call run_snapshot_batch
       // directly without the scheduler racing them. S4 from design review.
-      if std::env::var("BREHON_DISABLE_BACKGROUND_JOBS").as_deref() == Ok("1") {
+      // Renamed from `BREHON_DISABLE_BACKGROUND_JOBS` — the previous name
+      // falsely implied it disabled every background tick, but only this
+      // snapshot tick ever honoured it.
+      if std::env::var("BREHON_DISABLE_SNAPSHOT_JOB").as_deref() == Ok("1") {
         return;
       }
+      if REPUTATION_SNAPSHOT_RUNNING
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+      {
+        warn!("reputation_snapshot: previous batch still running, skipping this tick");
+        return;
+      }
+      let _guard = RunningGuard;
       lemmy_api::governance::reputation_snapshot::run_snapshot_batch(&context)
         .await
         .inspect_err(|e| warn!("Failed to run snapshot batch: {e}"))

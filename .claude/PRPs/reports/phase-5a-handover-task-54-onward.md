@@ -288,7 +288,7 @@ The `--repo barrie-cork/lemmy` flag is mandatory per `.claude/rules/gh-pr-fork-t
    - §12.7 (task 56) — already reproduced in §7 above
    - §14 Levels 0–5 (DoD validation commands) — `Read(offset=1604, limit=120)`
    - §15 Acceptance Criteria — `Read(offset=1730, limit=35)`
-3. **`C:\Users\barri\Developer\homeserver\.claude\advisor-context-phase-5.md` §4 + §5 only** — watchpoints and operational rules; skip §1–§3 + §6–§8 (history, not forward-looking).
+3. **`<advisor-local>/.claude/advisor-context-phase-5.md` §4 + §5 only** (advisor-managed; not in this repo) — watchpoints and operational rules; skip §1–§3 + §6–§8 (history, not forward-looking).
 4. **`.claude/decision-queue.json`** — verify #11/#12 still pending, #13/#14 resolved; check for any new entries.
 5. **`git log --oneline origin/governance-v0..HEAD`** — confirm 9 commits (8 feat/chore + this handover).
 6. **Existing handler pattern for task 55 outer wrapper:** `crates/api/api/src/governance/admin_assign_jury.rs:42-66` (§8.4 reference).
@@ -297,7 +297,7 @@ The `--repo barrie-cork/lemmy` flag is mandatory per `.claude/rules/gh-pr-fork-t
 
 ### Must NOT read
 - The full plan file end-to-end (tasks 0–53 are done; task bodies are reproduced above).
-- `C:\Users\barri\Developer\homeserver\.claude\memory\` (advisor-managed; out of scope for impl).
+- `<advisor-local>/.claude/memory/` (advisor-managed; out of scope for impl).
 - `PHASE-5-DESIGN-REVIEW.md` / `PHASE-5-HISTORICAL-FIDELITY.md` (findings baked into plan already).
 - Tasks 0–53 commit diffs beyond the one-line `git log` summary.
 - Full `reputation_snapshot.rs` (task 53 done; trust tests + clippy). Only grep it if task 55 needs a specific `recompute_snapshot` signature detail.

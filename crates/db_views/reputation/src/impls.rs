@@ -180,7 +180,7 @@ pub async fn list_endorsements_for_person(
     filtered.count().get_result(conn).await?
   };
 
-  let active_sureties: i64 = {
+  let active_sureties_inbound: i64 = {
     let base = surety::table
       .filter(surety::sponsored_id.eq(person_id))
       .into_boxed();
@@ -196,7 +196,7 @@ pub async fn list_endorsements_for_person(
   // return empty vec per GOTCHA-52b doc-comment contract. For
   // `active_only = false` the caller may still want the zero-row
   // acknowledgement, so only collapse when strictly active_only.
-  if active_only && inbound == 0 && outbound == 0 && active_sureties == 0 {
+  if active_only && inbound == 0 && outbound == 0 && active_sureties_inbound == 0 {
     return Ok(Vec::new());
   }
 
@@ -204,7 +204,8 @@ pub async fn list_endorsements_for_person(
     person_id: person_id.0,
     inbound_endorsements: inbound,
     outbound_endorsements: outbound,
-    active_sureties,
+    active_sureties_inbound,
+    active_sureties_outbound: 0,
   }])
 }
 
@@ -248,7 +249,7 @@ pub async fn list_sureties_for_person(
   // not the sponsored. GOTCHA-52c — confusingly, `list_sureties_for_person`
   // in the [04 §4.3] signature is the OUTBOUND-vouch query, mirror of the
   // caller's own sponsoring role.
-  let outbound_sureties: i64 = {
+  let active_sureties_outbound: i64 = {
     let base = surety::table
       .filter(surety::sponsor_id.eq(person_id))
       .into_boxed();
@@ -260,7 +261,7 @@ pub async fn list_sureties_for_person(
     filtered.count().get_result(conn).await?
   };
 
-  if active_only && inbound == 0 && outbound == 0 && outbound_sureties == 0 {
+  if active_only && inbound == 0 && outbound == 0 && active_sureties_outbound == 0 {
     return Ok(Vec::new());
   }
 
@@ -268,6 +269,7 @@ pub async fn list_sureties_for_person(
     person_id: person_id.0,
     inbound_endorsements: inbound,
     outbound_endorsements: outbound,
-    active_sureties: outbound_sureties,
+    active_sureties_inbound: 0,
+    active_sureties_outbound,
   }])
 }
