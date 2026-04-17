@@ -1,7 +1,59 @@
 {
-  "phase": "4b",
+  "phase": "5",
   "schema_version": 1,
   "pending": [
+    {
+      "id": 11,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm OQ-004 juror cap at 3 concurrent assignments for Phase 5 task 8 (select_eligible_jurors)?",
+      "options": [
+        "3 (matches [99 OQ-004] 'Current lean'; hardcode MAX_CONCURRENT_JURY_ASSIGNMENTS = 3)",
+        "Different integer — specify and justify"
+      ],
+      "context": "Pre-seeded by planner for Phase 5. [99 OQ-004] says 'cap at 3 concurrent assignments, instance-wide, target before Step 4'. Step 4 shipped without the cap. Phase 5 task 8 hardcodes it in admin_assign_jury::select_eligible_jurors alongside the new jury_eligible + derive-target filters.",
+      "answer": null,
+      "answered_by": null
+    },
+    {
+      "id": 12,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm sponsor-liability severity units for Phase 5 task 7 (submit_jury_vote extension): minor=-10, moderate=-50, severe=-200?",
+      "options": [
+        "minor=-10, moderate=-50, severe=-200 (matches [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 55])",
+        "Different units — specify"
+      ],
+      "context": "Pre-seeded by planner. The plan text at IMPLEMENTATION-PLAN-v0.md:332 says 'for v0 hardcode minor = -10, moderate = -50, severe = -200 as integer deltas; v1 tunes the units'. Mapping to JuryDecision: NoAction+AdvisoryLabel → no liability; Warning+Cooldown → minor; RemoveContent → moderate; SuspendLocalUser+SuspendCommunityMember+RecommendFederationAction → severe.",
+      "answer": null,
+      "answered_by": null
+    },
+    {
+      "id": 13,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm that RecommendFederationAction maps to severe (-200) in the sponsor-liability severity unit table for task 7?",
+      "options": [
+        "Severe (-200) — treat federation-recommendation as the harshest available v0 sanction",
+        "Moderate (-50) — federation recs are advisory until Phase 6 lands"
+      ],
+      "context": "Pre-seeded by planner. The plan text bundles RecommendFederationAction with the suspension variants under severe, but federation is outbound-only advisory in v0 ([05 §3]). This asymmetry (local suspension treated the same as federation recommendation for sponsor liability) may under- or over-penalize sponsors. Default assumption: severe.",
+      "answer": null,
+      "answered_by": null
+    },
+    {
+      "id": 14,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm reputation-snapshot capability thresholds for Phase 5 task 2 (reputation_snapshot_calculator): jury_eligible = (jury_reliability >= 50) AND no_active_sanctions AND (person_age >= 60d); trusted_reporter = (reporting_accuracy >= 50)?",
+      "options": [
+        "50 and 60d (matches plan task 51 'v0 thresholds')",
+        "Different numbers — specify"
+      ],
+      "context": "Pre-seeded by planner. [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 51] says 'v0 thresholds' but does not name the numeric threshold. 50 is a placeholder matching the juror +10/-5 and reporter +10/-5 deltas from Phase 4b (so a user needs ~5 aligned juror votes or 5 upheld reports to clear the gate). person_age >= 60d matches [01 §5.4] 'member ≥ 60 days'. endorsement_strength capability threshold for can_sponsor (used in task 4) defaults to 50 by the same logic.",
+      "answer": null,
+      "answered_by": null
+    },
     {
       "id": 4,
       "from": "advisor",
@@ -95,6 +147,19 @@
     }
   ],
   "resolved": [
+    {
+      "id": 13,
+      "from": "planner",
+      "timestamp": "2026-04-17T14:00:00Z",
+      "question": "Should the admin-config-write.sh wrapper ship in 5c (as an interim mitigation for Watch 11) or defer to v1 along with OQ-018's HTTP endpoint?",
+      "options": [
+        "Ship wrapper in 5c as a sibling docs/scripts artefact (not a 5c impl-plan task) — operator tooling, not handler code",
+        "Defer entirely to v1 when the OQ-018 HTTP endpoint arrives"
+      ],
+      "context": "Phase 5a's capability_changed emitter (task 53) provides attribution for downstream cascades IF a prior admin_config_changed entry exists at the admin's action time. Without a wrapper, admins editing governance_config via raw psql leave no action-time attribution — an auditor reading the modlog six months later sees N capability_changed entries with no single attributable cause. Brehon self-enforcement principle (Higgins 2010 p.6) requires admin governance-weight actions be attributable at action time, not inferable from downstream effects.",
+      "answer": "Option 1 (with scoping clarification). Ship the admin-config-write.sh wrapper as a 5c sibling docs/scripts artefact, NOT as a 5c impl-plan task. Rationale: it's operator tooling, not handler code; doesn't need to live in the impl plan — doesn't earn a commit in the 5c ralph loop; lands alongside the 5c completion report or as a standalone docs commit on phase-5c. The wrapper's contents (psql `INSERT` into governance_config + `governance_log` in one tx) are mechanical; the plan-level concern is ensuring the 5c plan author knows not to allocate a task slot to it. 5a completion report §17.3 notes this as a carry-forward, so the 5c plan-write session inherits the answer without re-litigation.",
+      "answered_by": "advisor"
+    },
     {
       "id": 1,
       "from": "advisor",
