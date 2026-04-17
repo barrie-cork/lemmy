@@ -223,7 +223,11 @@ macro_rules! assert_length {
 }
 
 #[cfg(feature = "full")]
-/// A helper tuple for person 1 alias columns
+/// A helper tuple for person 1 alias columns.
+/// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+/// The trailing `membership_state` entry was appended for Phase 5a task 51;
+/// kept in column order to match `person::all_columns` (Diesel asserts
+/// tuple-length equality between this alias and `all_columns`).
 pub type Person1AliasAllColumnsTuple = (
   AliasedField<aliases::Person1, person::id>,
   AliasedField<aliases::Person1, person::name>,
@@ -247,10 +251,12 @@ pub type Person1AliasAllColumnsTuple = (
   AliasedField<aliases::Person1, person::post_score>,
   AliasedField<aliases::Person1, person::comment_count>,
   AliasedField<aliases::Person1, person::comment_score>,
+  AliasedField<aliases::Person1, person::membership_state>,
 );
 
 #[cfg(feature = "full")]
-/// A helper tuple for person 2 alias columns
+/// A helper tuple for person 2 alias columns.
+/// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
 pub type Person2AliasAllColumnsTuple = (
   AliasedField<aliases::Person2, person::id>,
   AliasedField<aliases::Person2, person::name>,
@@ -274,6 +280,7 @@ pub type Person2AliasAllColumnsTuple = (
   AliasedField<aliases::Person2, person::post_score>,
   AliasedField<aliases::Person2, person::comment_count>,
   AliasedField<aliases::Person2, person::comment_score>,
+  AliasedField<aliases::Person2, person::membership_state>,
 );
 
 #[cfg(feature = "full")]

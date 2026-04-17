@@ -42,10 +42,12 @@
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::CommunityId;
+use lemmy_db_schema_file::enums::MembershipState;
 use lemmy_db_schema_file::schema::governance_config_current;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use std::collections::HashMap;
+use tracing::warn;
 
 // -- Public API -------------------------------------------------------------
 
@@ -212,6 +214,25 @@ pub async fn get_text(
     .entries
     .insert((scope_repr, key.to_string()), CachedValue::Text(v.clone()));
   Ok(v)
+}
+
+// -- Membership state parser (task 51) --------------------------------------
+
+/// Parse the `onboarding.default_membership_state` config value into a
+/// `MembershipState` enum. Exhaustive match on the three v0 variants;
+/// unknown text warns and falls back to `Member`. Placed here, not in task
+/// 51's register handler, so config parsers stay colocated with the config
+/// reader itself (GOTCHA-51c).
+pub fn parse_membership_state(s: &str) -> MembershipState {
+  match s {
+    "member" => MembershipState::Member,
+    "provisional" => MembershipState::Provisional,
+    "suspended" => MembershipState::Suspended,
+    other => {
+      warn!("unknown membership_state config value '{other}' — falling back to 'member'");
+      MembershipState::Member
+    }
+  }
 }
 
 // -- Private helpers --------------------------------------------------------

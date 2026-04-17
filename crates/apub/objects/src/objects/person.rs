@@ -174,6 +174,11 @@ impl Object for ApubPerson {
       ),
       matrix_user_id: person.matrix_user_id,
       instance_id,
+      // Brehon Phase 5a task 51: federated persons default to `member` via
+      // the SQL column default ([99 OQ-016]; governance state of a remote
+      // actor is the remote instance's concern). TODO(brehon-fork): upstream
+      // this to LemmyNet/lemmy — PR #___.
+      membership_state: None,
     };
     let person = DbPerson::upsert(&mut context.pool(), &person_form).await?;
 

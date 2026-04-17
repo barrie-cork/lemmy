@@ -66,6 +66,10 @@ pub mod sql_types {
   pub struct Ltree;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "membership_state"))]
+  pub struct MembershipState;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "modlog_kind"))]
   pub struct ModlogKind;
 
@@ -863,6 +867,9 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::MembershipState;
+
     person (id) {
         id -> Int4,
         #[max_length = 255]
@@ -890,6 +897,7 @@ diesel::table! {
         post_score -> Int4,
         comment_count -> Int4,
         comment_score -> Int4,
+        membership_state -> MembershipState,
     }
 }
 

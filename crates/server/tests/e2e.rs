@@ -313,8 +313,9 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   ///     governance_log — the last one was actually added in Phase 4b task 8
   ///     but is still part of the contiguous governance-bootstrap block that
   ///     this test reverts LIFO)
-  ///   - 1 Phase 5a migration (add_governance_config — brings the total to 7)
-  const PHASE_1_MIGRATION_COUNT: u64 = 7;
+  ///   - 2 Phase 5a migrations (add_governance_config + add_person_membership_state
+  ///     — total 8)
+  const PHASE_1_MIGRATION_COUNT: u64 = 8;
 
   /// Query shape for `COUNT(*)` probes via `sql_query`.
   #[derive(diesel::QueryableByName)]

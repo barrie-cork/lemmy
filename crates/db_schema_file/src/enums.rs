@@ -596,3 +596,33 @@ pub enum ReputationDimension {
 // exist in the generated schema.rs — and writing a `DbEnum` that points at
 // a nonexistent `sql_types` entry fails to compile. The Rust enum will land
 // in Phase 6 alongside the table and the regenerated schema.rs entry.
+
+// ========================================================================
+// Governance enums (Phase 5a)
+// ========================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::MembershipState"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "snake_case")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Deferred-enforcement membership-state flag per [99 OQ-016]. Ships in v0
+/// so v1 can flip `config.onboarding.enforce_membership_state = true` without
+/// a schema migration on `person` (expensive at scale). v0 handlers MUST NOT
+/// read this column — `scripts/brehon/lint-no-membership-read.sh` enforces
+/// the silence. DB tokens are lowercase (`member`/`provisional`/`suspended`)
+/// per `DbValueStyle = "snake_case"`; this deliberately differs from the
+/// PascalCase verbatim convention of other governance enums because
+/// `onboarding.default_membership_state` is a config-text value that must
+/// round-trip as a plain lowercase string (see plan §12.1 seed row).
+pub enum MembershipState {
+  #[default]
+  Member,
+  Provisional,
+  Suspended,
+}

@@ -2,6 +2,7 @@ use crate::source::placeholder_apub_url;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "full")]
 use i_love_jesus::CursorKeysModule;
+use lemmy_db_schema_file::enums::MembershipState;
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::{person, person_actions};
 use lemmy_db_schema_file::{InstanceId, PersonId};
@@ -59,6 +60,12 @@ pub struct Person {
   pub comment_count: i32,
   #[serde(skip)]
   pub comment_score: i32,
+  /// Deferred-enforcement membership-state flag per [99 OQ-016]. Populated
+  /// at registration time from `config.onboarding.default_membership_state`.
+  /// NO v0 handler reads this — grep-guarded by
+  /// `scripts/brehon/lint-no-membership-read.sh` (Watch 7).
+  /// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+  pub membership_state: MembershipState,
 }
 
 #[derive(Clone, derive_new::new)]
@@ -96,6 +103,12 @@ pub struct PersonInsertForm {
   pub matrix_user_id: Option<String>,
   #[new(default)]
   pub bot_account: Option<bool>,
+  /// `None` -> SQL DEFAULT 'member' per the column default. The register
+  /// handler overrides with the config-driven value
+  /// ([99 OQ-016]; Phase 5a task 51).
+  /// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+  #[new(default)]
+  pub membership_state: Option<MembershipState>,
 }
 
 #[derive(Clone, Default)]
