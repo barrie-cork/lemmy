@@ -69,6 +69,7 @@ members = [
   "crates/apub/send",
   "crates/routes",
   "crates/server",
+  "crates/tools/seed_founders",
 ]
 resolver = "3"
 
