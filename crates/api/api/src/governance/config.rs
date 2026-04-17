@@ -46,6 +46,7 @@ use lemmy_db_schema_file::enums::MembershipState;
 use lemmy_db_schema_file::schema::governance_config_current;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use tracing::warn;
 
@@ -61,10 +62,10 @@ pub enum Scope {
 }
 
 impl Scope {
-  fn as_str(self) -> String {
+  fn as_str(self) -> Cow<'static, str> {
     match self {
-      Scope::Instance => "instance".to_string(),
-      Scope::Community(CommunityId(id)) => format!("community:{id}"),
+      Scope::Instance => Cow::Borrowed("instance"),
+      Scope::Community(CommunityId(id)) => Cow::Owned(format!("community:{id}")),
     }
   }
 }
@@ -103,7 +104,10 @@ pub async fn get_int(
   key: &str,
 ) -> LemmyResult<i64> {
   let scope_repr = scope.as_str();
-  if let Some(CachedValue::Int(v)) = cache.entries.get(&(scope_repr.clone(), key.to_string())) {
+  if let Some(CachedValue::Int(v)) = cache
+    .entries
+    .get(&(scope_repr.as_ref().to_string(), key.to_string()))
+  {
     return Ok(*v);
   }
   let v = match fetch_value(pool, scope, key).await? {
@@ -122,7 +126,7 @@ pub async fn get_int(
   };
   cache
     .entries
-    .insert((scope_repr, key.to_string()), CachedValue::Int(v));
+    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Int(v));
   Ok(v)
 }
 
@@ -133,7 +137,10 @@ pub async fn get_float(
   key: &str,
 ) -> LemmyResult<f64> {
   let scope_repr = scope.as_str();
-  if let Some(CachedValue::Float(v)) = cache.entries.get(&(scope_repr.clone(), key.to_string())) {
+  if let Some(CachedValue::Float(v)) = cache
+    .entries
+    .get(&(scope_repr.as_ref().to_string(), key.to_string()))
+  {
     return Ok(*v);
   }
   let v = match fetch_value(pool, scope, key).await? {
@@ -152,7 +159,7 @@ pub async fn get_float(
   };
   cache
     .entries
-    .insert((scope_repr, key.to_string()), CachedValue::Float(v));
+    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Float(v));
   Ok(v)
 }
 
@@ -163,7 +170,10 @@ pub async fn get_bool(
   key: &str,
 ) -> LemmyResult<bool> {
   let scope_repr = scope.as_str();
-  if let Some(CachedValue::Bool(v)) = cache.entries.get(&(scope_repr.clone(), key.to_string())) {
+  if let Some(CachedValue::Bool(v)) = cache
+    .entries
+    .get(&(scope_repr.as_ref().to_string(), key.to_string()))
+  {
     return Ok(*v);
   }
   let v = match fetch_value(pool, scope, key).await? {
@@ -182,7 +192,7 @@ pub async fn get_bool(
   };
   cache
     .entries
-    .insert((scope_repr, key.to_string()), CachedValue::Bool(v));
+    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Bool(v));
   Ok(v)
 }
 
@@ -193,7 +203,10 @@ pub async fn get_text(
   key: &str,
 ) -> LemmyResult<String> {
   let scope_repr = scope.as_str();
-  if let Some(CachedValue::Text(v)) = cache.entries.get(&(scope_repr.clone(), key.to_string())) {
+  if let Some(CachedValue::Text(v)) = cache
+    .entries
+    .get(&(scope_repr.as_ref().to_string(), key.to_string()))
+  {
     return Ok(v.clone());
   }
   let v = match fetch_value(pool, scope, key).await? {
@@ -212,7 +225,7 @@ pub async fn get_text(
   };
   cache
     .entries
-    .insert((scope_repr, key.to_string()), CachedValue::Text(v.clone()));
+    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Text(v.clone()));
   Ok(v)
 }
 
@@ -269,13 +282,13 @@ async fn fetch_value(
 
 async fn fetch_value_at_scope(
   pool: &mut DbPool<'_>,
-  scope_str: String,
+  scope_str: Cow<'static, str>,
   key: &str,
 ) -> LemmyResult<Option<CachedValue>> {
   let conn = &mut get_conn(pool).await?;
 
   let row: Option<ConfigRow> = governance_config_current::table
-    .filter(governance_config_current::scope.eq(scope_str))
+    .filter(governance_config_current::scope.eq(scope_str.into_owned()))
     .filter(governance_config_current::key.eq(key))
     .select((
       governance_config_current::value_type,

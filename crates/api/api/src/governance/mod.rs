@@ -19,4 +19,5 @@ pub mod list_modlog;
 pub mod list_my_jury_queue;
 pub mod redaction;
 pub mod reputation_snapshot;
+pub mod sponsor_liability;
 pub mod submit_jury_vote;

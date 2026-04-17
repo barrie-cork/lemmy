@@ -546,6 +546,14 @@ pub enum SanctionAction {
   CommunityExclusion,
   InstanceSuspension,
   FederationQuarantineRecommendation,
+  /// v0 reserved slot for `folog n-othrusa`-style restorative sanctions per
+  /// [99 OQ-003 (amended 2026-04-17)]. Not selected by any v0 handler — reserved
+  /// for v1 `admin_restorative_action` and for enum-exhaustiveness in downstream
+  /// matches. Severity bucket: minor (same as `Label`) per §11.1 GOTCHA-56a.
+  /// Unit variant (per GOTCHA-56b fallback) because `SanctionAction: Copy`; the
+  /// description column lands in a sibling migration if v1 needs payloaded
+  /// restoration.
+  Restoration,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]

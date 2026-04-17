@@ -33,7 +33,13 @@
 //! the entire transaction rolls back — no partial writes, no half-decided
 //! cases per the plan §Task 7 CRITICAL-TRANSACTION-BOUNDARY directive.
 
-use crate::governance::{actor_pseudonym_helper, governance_log, redaction};
+use crate::governance::{
+  actor_pseudonym_helper,
+  config::{self, ConfigCache, Scope},
+  governance_log,
+  redaction,
+  sponsor_liability,
+};
 use actix_web::web::{Data, Json};
 use chrono::{Duration, Utc};
 use diesel::{
@@ -79,15 +85,9 @@ use std::collections::HashMap;
 const QUORUM: i64 = 3;
 /// Appeal window length per [05 §6]. Hardcoded in v0.
 const APPEAL_WINDOW_DAYS: i64 = 7;
-/// Reputation delta for jurors in the majority. v0 placeholder per
-/// plan §Task 7 GOTCHA — tune per [99 OQ-006] in Phase 5.
-const JUROR_ALIGNED_DELTA: i32 = 10;
-/// Reputation delta for jurors in the minority. v0 placeholder.
-const JUROR_OUTLIER_DELTA: i32 = -5;
-/// Reputation delta for reporters whose case resulted in a sanction.
-const REPORTER_ACCURATE_DELTA: i32 = 10;
-/// Reputation delta for reporters whose case was dismissed as NoAction.
-const REPORTER_INACCURATE_DELTA: i32 = -5;
+// Per-juror / per-reporter reputation deltas now flow through `ConfigCache`
+// via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
+// keys (Phase 5a seeded). See `process_vote` for the cached reads.
 
 pub async fn submit_jury_vote(
   Json(data): Json<SubmitJuryVote>,
@@ -127,6 +127,9 @@ async fn process_vote(
   juror_pseudonym: String,
   data: SubmitJuryVote,
 ) -> LemmyResult<SubmitJuryVoteResponse> {
+  // ConfigCache lives for the whole vote-tally transaction. All typed reads
+  // go through `(&mut *conn).into()` — same pattern as `reputation_snapshot`.
+  let mut cache = ConfigCache::new();
   // 1. Verify assignment is Accepted (not Submitted — double-vote guard).
   let assignment_exists: bool = jury_assignment::table
     .filter(jury_assignment::case_id.eq(data.case_id))
@@ -248,6 +251,21 @@ async fn process_vote(
       None,
     )
     .await?;
+
+    // 8.5. Sponsor-liability deltas (OQ-022 multiplier, OQ-024 floor clamp).
+    // Only Person-target cases reach here with sponsors; Post/Comment-target
+    // cases have `target_person_id = None` per GOTCHA-56h and skip silently.
+    if let Some(target_id) = case_row.target_person_id {
+      sponsor_liability::apply_sponsor_liability(
+        conn,
+        target_id,
+        data.case_id,
+        case_row.community_id,
+        action,
+        &mut cache,
+      )
+      .await?;
+    }
   }
 
   // 9. Flip case → Decided.
@@ -289,7 +307,32 @@ async fn process_vote(
   )
   .await?;
 
-  // 11. Juror reputation events: +10 aligned / -5 outlier.
+  // 11. Juror reputation events: aligned / outlier deltas via config.
+  let juror_aligned_delta_i64 = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "deltas.juror_aligned",
+  )
+  .await?;
+  let juror_outlier_delta_i64 = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "deltas.juror_outlier",
+  )
+  .await?;
+  let juror_aligned_delta = i32::try_from(juror_aligned_delta_i64).map_err(|_e| {
+    LemmyErrorType::Unknown(format!(
+      "deltas.juror_aligned ({juror_aligned_delta_i64}) overflows i32"
+    ))
+  })?;
+  let juror_outlier_delta = i32::try_from(juror_outlier_delta_i64).map_err(|_e| {
+    LemmyErrorType::Unknown(format!(
+      "deltas.juror_outlier ({juror_outlier_delta_i64}) overflows i32"
+    ))
+  })?;
+
   let juror_decisions: Vec<(PersonId, JuryDecision)> = jury_vote::table
     .filter(jury_vote::case_id.eq(data.case_id))
     .select((jury_vote::juror_id, jury_vote::decision))
@@ -297,9 +340,9 @@ async fn process_vote(
     .await?;
   for (other_juror_id, juror_decision) in juror_decisions {
     let delta = if juror_decision == winning_decision {
-      JUROR_ALIGNED_DELTA
+      juror_aligned_delta
     } else {
-      JUROR_OUTLIER_DELTA
+      juror_outlier_delta
     };
     emit_reputation_event(
       conn,
@@ -319,10 +362,25 @@ async fn process_vote(
 
   // 12. Reporter reputation event — only when the case has a creator.
   if let Some(reporter_id) = case_row.creator_id {
-    let (delta, reason) = if matches!(winning_decision, JuryDecision::NoAction) {
-      (REPORTER_INACCURATE_DELTA, "report_dismissed")
+    let key = if matches!(winning_decision, JuryDecision::NoAction) {
+      "deltas.reporter_dismissed"
     } else {
-      (REPORTER_ACCURATE_DELTA, "report_upheld")
+      "deltas.reporter_upheld"
+    };
+    let delta_i64 = config::get_int(
+      &mut cache,
+      &mut (&mut *conn).into(),
+      Scope::Instance,
+      key,
+    )
+    .await?;
+    let delta = i32::try_from(delta_i64).map_err(|_e| {
+      LemmyErrorType::Unknown(format!("{key} ({delta_i64}) overflows i32"))
+    })?;
+    let reason = if matches!(winning_decision, JuryDecision::NoAction) {
+      "report_dismissed"
+    } else {
+      "report_upheld"
     };
     emit_reputation_event(
       conn,
