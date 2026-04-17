@@ -132,7 +132,12 @@ impl VoteView {
 }
 
 // https://github.com/rust-lang/rust/issues/115590
-#[expect(clippy::multiple_bound_locations)]
+// TODO(brehon-fork): upstream this to LemmyNet/lemmy — PR #___
+// Same unfulfilled-lint-expectation as pagination.rs paginate_response:
+// on the pinned cargo/clippy version `clippy::multiple_bound_locations`
+// no longer fires, so `#[expect(...)]` fails `-D warnings`. Workspace
+// bans `#[allow(...)]` via `-D clippy::allow-attributes`. Removing the
+// attribute is the only viable resolution.
 fn paginate_vote_response<
   #[cfg(feature = "ts-rs")] T: ts_rs::TS,
   #[cfg(not(feature = "ts-rs"))] T,
