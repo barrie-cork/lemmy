@@ -1,10 +1,10 @@
 # CLAUDE.md — Brehon Fork
 
 **Working title:** Brehon Fork (final name deferred per [99 OQ-012](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
-**Upstream:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ **`811d0d09c`** (Lemmy 1.0-beta line, `git describe` → `1.0.0-alpha.12-167-g811d0d09c`)
+**Upstream:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ **`d1975776a`** (Lemmy 1.0-beta line, `git describe` → `1.0.0-alpha.12-175-gd1975776a`; last rebase 2026-04-18)
 **Fork GitHub repo:** [barrie-cork/lemmy](https://github.com/barrie-cork/lemmy)
 **Working branch:** `governance-v0` (all v0 feature work lands here; `main` is reserved for weekly upstream-sync rebases)
-**Rust toolchain:** `1.94` (pinned in `rust-toolchain.toml`)
+**Rust toolchain:** `1.95` (pinned in `rust-toolchain.toml`)
 **Plugin host:** Extism `1.20.0` + `extism-convert` `1.20.0` confirmed in `Cargo.toml` — [ADR-012](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) assumption holds.
 **License:** AGPL-3.0 (inherited from Lemmy — see `LICENSE` in repo root and `AGPL-NOTICE.md`)
 

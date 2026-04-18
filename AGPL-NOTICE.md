@@ -32,6 +32,7 @@ Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENT
 | Date (YYYY-MM-DD) | Upstream SHA | `git describe` | Notes |
 |---|---|---|---|
 | 2026-04-14 | `811d0d09c66599a46b60e52c0a77d40728392c26` | `1.0.0-alpha.12-167-g811d0d09c` | Initial fork point — pre-implementation baseline |
+| 2026-04-18 | `d1975776a491bc2f4085139bb50cbf89fe6d5e54` | `1.0.0-alpha.12-175-gd1975776a` | First weekly rebase (Phase 5b → 5c gap). 8 upstream commits absorbed: Rust toolchain 1.94 → 1.95, activitypub_federation 0.7.0-beta.9 → beta.10, DB pool timeout increase (#6448), federated post-removal fix (#6442), webfinger IP check (#6445), ARM build fixes. Zero governance-path overlap. All three validation gates (check / clippy / e2e compile) green. Conflict: upstream removed `cfg-if = "1"` from workspace deps (`cfg_if!` macro replaced by stdlib `cfg_select!` in Rust 1.95); fork drop accepted since no first-party code calls `cfg_if!`. |
 
 ## Questions
 
