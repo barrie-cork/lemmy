@@ -4137,6 +4137,7 @@ dependencies = [
  "lemmy_diesel_utils",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
  "serde",
+ "serde_json",
  "serde_with",
  "ts-rs",
 ]
@@ -4643,6 +4644,7 @@ dependencies = [
  "lemmy_db_views_governance_modlog",
  "lemmy_db_views_jury_queue",
  "lemmy_db_views_local_user",
+ "lemmy_db_views_reputation",
  "lemmy_db_views_site",
  "lemmy_diesel_utils",
  "lemmy_routes",
@@ -4660,6 +4662,7 @@ dependencies = [
  "tracing",
  "tracing-actix-web",
  "tracing-subscriber",
+ "tracing-test",
  "uuid",
 ]
 

@@ -1,11 +1,12 @@
-use crate::GovernanceModlogView;
+use crate::{CapabilityChangeLogEntry, GovernanceModlogView};
 use chrono::{DateTime, Utc};
 use diesel::{ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId, PublicCaseLogId};
-use lemmy_db_schema_file::schema::{appeal, community, public_case_log};
+use lemmy_db_schema_file::schema::{appeal, community, governance_log, public_case_log};
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
+use serde_json::Value;
 use std::collections::HashSet;
 
 /// Main-query row shape for the modlog queries. Captures every scalar
@@ -161,4 +162,73 @@ pub async fn read_public_case_log_entry(
       Ok(Some(build_view(r, &appealed)))
     }
   }
+}
+
+/// Tuple-row shape for the capability-change query.
+type CapabilityChangeRow = (
+  i64,
+  String,
+  Value,
+  Option<String>,
+  DateTime<Utc>,
+  Option<Vec<u8>>,
+);
+
+/// List `governance_log` entries with `entry_kind = 'capability_changed'`
+/// strictly newer than `since_id`, ordered by id ascending, capped at
+/// `limit` rows.
+///
+/// Reads directly from `governance_log` (NOT from `public_case_log`):
+/// `capability_changed` entries are governance-log signals — they never
+/// land on the public modlog and have no corresponding `public_case_log`
+/// row. Plan §11.3 GOTCHA + Explore agent #3 §7.
+///
+/// **In-flight jury assignments are NOT recalled by threshold edits**
+/// per IMPLEMENTATION-PLAN-v0.md line 375 — a `capability_changed` entry
+/// where the user lost `jury_eligible` does NOT imply that user's
+/// existing `Selected`/`Accepted` `jury_assignment` rows were revoked.
+/// Snapshot recompute affects future selections only. v1 may add a
+/// downstream consumer that revokes on flip; v0 does not.
+///
+/// **No new HTTP endpoint** in v0 — task 62
+/// (`admin_reputation_stats`) MAY call this if useful; otherwise the
+/// surface is reserved for v1's admin dashboard. Plan §11.3.
+pub async fn list_capability_changed_entries_since(
+  pool: &mut DbPool<'_>,
+  since_id: i64,
+  limit: i64,
+) -> LemmyResult<Vec<CapabilityChangeLogEntry>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let rows: Vec<CapabilityChangeRow> = governance_log::table
+    .filter(governance_log::entry_kind.eq("capability_changed"))
+    .filter(governance_log::id.gt(since_id))
+    .order_by(governance_log::id.asc())
+    .limit(limit)
+    .select((
+      governance_log::id,
+      governance_log::entry_kind,
+      governance_log::payload,
+      governance_log::actor_pseudonym,
+      governance_log::created_at,
+      governance_log::signature,
+    ))
+    .load::<CapabilityChangeRow>(conn)
+    .await?;
+
+  Ok(
+    rows
+      .into_iter()
+      .map(|(id, entry_kind, payload, actor_pseudonym, created_at, signature)| {
+        CapabilityChangeLogEntry {
+          id,
+          entry_kind,
+          payload,
+          actor_pseudonym,
+          created_at,
+          signature,
+        }
+      })
+      .collect(),
+  )
 }

@@ -1969,3 +1969,202 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   Ok(())
 }
+
+/// Phase 5c task 63c — `list_capability_changed_entries_since` reads
+/// `capability_changed` rows from `governance_log` directly, paginated by
+/// `since_id`. This test seeds three rows via raw SQL (the trigger layer
+/// fills `prev_hash` + `entry_hash`; signature is left NULL because no
+/// signing pass runs in this test), then asserts the helper returns
+/// exactly those three with stable id-ascending order. Mirror of
+/// `modlog_view_returns_published_entries` style — direct DB seed +
+/// view-crate fn assert.
+#[tokio::test]
+async fn capability_change_entries_reachable_via_modlog_crate(
+) -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_views_governance_modlog::impls::list_capability_changed_entries_since;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  // No GOVERNANCE_LOG_SIGNING_KEY needed — this test reads
+  // governance_log directly via the view-crate helper; no
+  // `governance_log::append` (which would require the signing key) is
+  // called. Inserts go through the hash-chain trigger but leave the
+  // signature column NULL — that's the trigger contract too (signing is
+  // a separate UPDATE pass in Phase 4 production code).
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+    // Three capability_changed rows + one unrelated row to confirm
+    // the entry_kind filter is honoured. Each insert lets the
+    // hash-chain trigger compute prev_hash/entry_hash.
+    sync_conn.batch_execute(
+      r#"
+      INSERT INTO governance_log (entry_kind, payload, actor_pseudonym)
+        VALUES
+          ('capability_changed',
+           '{"dimension_flipped":"jury_eligible","direction":"gained","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-a'),
+          ('capability_changed',
+           '{"dimension_flipped":"jury_eligible","direction":"gained","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-b'),
+          ('capability_changed',
+           '{"dimension_flipped":"trusted_reporter","direction":"lost","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-c'),
+          ('report_created',
+           '{"reason_code":"spam"}'::jsonb,
+           'pseudo-reporter');
+      "#,
+    )?;
+  }
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+
+  let entries = list_capability_changed_entries_since(&mut pool, 0, 10)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("list_capability_changed_entries_since: {e}").into()
+    })?;
+  assert_eq!(
+    entries.len(),
+    3,
+    "expected the three capability_changed rows (the report_created row must be filtered out)"
+  );
+  for e in &entries {
+    assert_eq!(e.entry_kind, "capability_changed", "entry_kind filter held");
+  }
+  // id ascending — first row should be the lowest id.
+  let first_id = entries
+    .first()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one entry".into() })?
+    .id;
+  let last_id = entries
+    .last()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one entry".into() })?
+    .id;
+  assert!(first_id < last_id, "entries must be id-ascending");
+
+  // since_id paging — calling with the first row's id excludes it,
+  // returns the remaining 2.
+  let after_first = list_capability_changed_entries_since(&mut pool, first_id, 10)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("list_capability_changed_entries_since (paging): {e}").into()
+    })?;
+  assert_eq!(after_first.len(), 2, "since_id excludes rows with id == since_id");
+
+  Ok(())
+}
+
+/// Phase 5c task 63d — `check_snapshot_staleness` emits a structured
+/// `tracing::error!` event under `target: "governance::integrity"` when
+/// the most-recent `reputation_snapshot.calculated_at` is older than
+/// `now - 2 * interval_s`. Pure observability; no DB writes. Per
+/// GOTCHA-63d-c, time is injected so the test can drive the threshold
+/// deterministically. Uses `tracing-test` `traced_test` macro to
+/// capture emitted events.
+#[tokio::test]
+#[tracing_test::traced_test]
+async fn snapshot_staleness_alert_fires_when_max_calculated_at_is_old(
+) -> Result<(), Box<dyn Error>> {
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::reputation_snapshot::check_snapshot_staleness;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  // Path 1 — empty table emits the "table empty" variant.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  check_snapshot_staleness(&mut async_conn, 60, Utc::now())
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness empty-table: {e}").into()
+    })?;
+  assert!(
+    logs_contain("snapshot batch has never run"),
+    "expected the empty-table staleness signal in tracing output"
+  );
+
+  // Path 2 — seed one stale row (calculated_at = now - 1h), interval = 60s.
+  // Threshold becomes now - 120s; 1h ago is well past that, so the
+  // staleness signal fires.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    sync_conn.batch_execute(
+      r#"
+      INSERT INTO instance (domain) VALUES ('staleness.invalid');
+      INSERT INTO person (name, ap_id, inbox_url, public_key, instance_id)
+        VALUES (
+          'staleness-seed',
+          'https://staleness.invalid/u/seed',
+          'https://staleness.invalid/u/seed/inbox',
+          'staleness-pubkey',
+          (SELECT id FROM instance WHERE domain = 'staleness.invalid')
+        );
+      INSERT INTO reputation_snapshot
+        (person_id, community_id, reporting_accuracy, jury_reliability,
+         participation_consistency, endorsement_strength,
+         jury_eligible, trusted_reporter, can_sponsor, calculated_at)
+        VALUES (
+          (SELECT id FROM person WHERE name = 'staleness-seed'),
+          NULL, 0, 0, 0, 0, false, false, false,
+          NOW() - INTERVAL '1 hour'
+        );
+      "#,
+    )?;
+  }
+  // Use a fresh async connection — the previous one is borrowed by the
+  // earlier check; reusing is ambiguous in scope.
+  let mut async_conn2 = AsyncPgConnection::establish(&db_url).await?;
+  check_snapshot_staleness(&mut async_conn2, 60, Utc::now())
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness stale-row: {e}").into()
+    })?;
+  assert!(
+    logs_contain("staleness detected"),
+    "expected the stale-max-row staleness signal in tracing output"
+  );
+
+  // Path 3 — seed one fresh row (calculated_at = now), interval = 60s.
+  // Threshold = now - 120s; row's calculated_at > threshold, so the
+  // signal does NOT fire on this call. The earlier emissions are still
+  // in the captured log though, so this assertion only checks the
+  // counter incremented by less than 1 — we use a marker emission
+  // pattern by passing a fresh future-now to ensure the comparison falls
+  // on the safe side without churning the log.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    sync_conn.batch_execute(
+      r#"
+      UPDATE reputation_snapshot
+      SET calculated_at = NOW()
+      WHERE community_id IS NULL;
+      "#,
+    )?;
+  }
+  let mut async_conn3 = AsyncPgConnection::establish(&db_url).await?;
+  // Use frozen time slightly in the past to make the threshold even more
+  // forgiving — guarantees no new staleness signal in path 3.
+  let frozen = Utc::now() - Duration::seconds(1);
+  check_snapshot_staleness(&mut async_conn3, 60, frozen)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness fresh-row: {e}").into()
+    })?;
+  // No new assertion — `logs_contain` is monotonic and would still
+  // return true for prior emissions. The contract being tested is "no
+  // panic + Ok(()) return when the table is fresh".
+
+  Ok(())
+}

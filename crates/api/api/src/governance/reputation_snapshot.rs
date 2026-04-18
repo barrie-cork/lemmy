@@ -406,6 +406,58 @@ pub async fn run_snapshot_batch(context: &LemmyContext) -> LemmyResult<SnapshotB
   Ok(outcome)
 }
 
+/// Phase 5c task 63d — emit a structured `tracing::error!` event under
+/// `target: "governance::integrity"` if the most-recent
+/// `reputation_snapshot.calculated_at` is older than `now - 2 *
+/// interval_s` (or if the table is empty entirely). Per
+/// IMPLEMENTATION-PLAN-v0.md line 398 + decision-queue #21.
+///
+/// Pure observability — no DB writes, no governance_log entry per
+/// GOTCHA-63d-a (this is an ops signal, not a governance signal).
+/// Safe to call from any caller; never errors except on connection
+/// failures (the underlying `MAX(...)` query).
+///
+/// Time is injected via the `now` param so tests can drive the
+/// staleness threshold deterministically (GOTCHA-63d-c). Production
+/// caller in `scheduled_tasks.rs` passes `Utc::now()`.
+pub async fn check_snapshot_staleness(
+  conn: &mut AsyncPgConnection,
+  interval_s: i64,
+  now: DateTime<Utc>,
+) -> LemmyResult<()> {
+  use diesel::dsl::max;
+
+  let max_calculated_at: Option<DateTime<Utc>> = reputation_snapshot::table
+    .select(max(reputation_snapshot::calculated_at))
+    .first(conn)
+    .await?;
+
+  let threshold = now - chrono::Duration::seconds(2 * interval_s);
+
+  match max_calculated_at {
+    None => {
+      tracing::error!(
+        target: "governance::integrity",
+        "reputation_snapshot table empty — snapshot batch has never run (DoD line 398)"
+      );
+    }
+    Some(max) if max < threshold => {
+      tracing::error!(
+        target: "governance::integrity",
+        calculated_at = ?max,
+        threshold = ?threshold,
+        interval_s,
+        "reputation_snapshot staleness detected (DoD line 398)"
+      );
+    }
+    Some(_) => {
+      // Within the 2 × interval window — no signal needed.
+    }
+  }
+
+  Ok(())
+}
+
 /// Process one chunk under a single transaction. Returns the number of
 /// expired-founder pairs in the chunk (a pair is counted as
 /// expired-founder if any of its events in the chunk's tick window had

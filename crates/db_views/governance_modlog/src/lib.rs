@@ -26,6 +26,7 @@
 use chrono::{DateTime, Utc};
 use lemmy_db_schema_file::enums::{JuryDecision, SanctionAction};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 
 #[cfg(feature = "full")]
@@ -59,4 +60,35 @@ pub struct GovernanceModlogView {
   /// `appeal` row exists with `appeal.case_id = public_case_log.case_id`.
   /// See plan §2.3.
   pub appealed: bool,
+}
+
+/// One row of the `governance_log` table surfaced as a capability-change
+/// observability entry. Phase 5c task 63 ships this view alongside the
+/// existing `GovernanceModlogView` so admin tooling (and v1's admin
+/// dashboard) can list capability gains/losses without re-deriving the
+/// payload-shape parsing across consumers.
+///
+/// Read directly from `governance_log` (NOT from `public_case_log`) per
+/// plan §11.3 GOTCHA — `capability_changed` entries are governance-log
+/// signals, not public-case-log surfaces.
+///
+/// **No revocation of in-flight jury assignments.** Per
+/// IMPLEMENTATION-PLAN-v0.md line 375, `Selected`/`Accepted`
+/// jury_assignment rows are NOT recalled when a threshold edit drops
+/// the assignee below `jury_eligible`. Snapshot recompute affects
+/// **future** selections only. Consumers reading these entries should
+/// not assume one entry corresponds to a panel-membership change.
+#[skip_serializing_none]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export, optional_fields))]
+pub struct CapabilityChangeLogEntry {
+  /// `governance_log.id` (Int8). Carry as i64 so `since_id` paging shape
+  /// matches the underlying column.
+  pub id: i64,
+  pub entry_kind: String,
+  pub payload: Value,
+  pub actor_pseudonym: Option<String>,
+  pub created_at: DateTime<Utc>,
+  pub signature: Option<Vec<u8>>,
 }
