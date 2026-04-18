@@ -92,6 +92,47 @@
       "context": "Test fail at e2e.rs:953 — assertion `target person must not be on jury` failed because PersonId(3) (target B) was selected. Confirmed via grep at admin_assign_jury.rs:172-174: filter only applies if target_person_id is Some(_). For Post target, that's None. Per ADR [05 §3] and the jury impartiality invariant in ADR-013, the target user must never be on their own jury — so the handler IS buggy for Post/Comment target_types. Choosing self-resolution Option 1 (test-side) for now to keep task 10 unblocked: the golden-path test exercises the same end-to-end flow regardless of whether target_type is Post or Person, and the bug is documented as a Phase 5 follow-up. Marking under 'Deviations' in the Phase 4b completion report.",
       "answer": "Option 1 (test-side). Rationale: (a) task 10 is the golden-path DoD test, not a handler bugfix — its purpose is to prove the end-to-end flow (report → admin-assign → 3 votes → Decided → sanction → modlog → hash chain + signatures) runs cleanly, and that flow is proven equally well via Person-target as via Post-target; (b) the handler patch (Option 2) is a real fix but materially out of scope for the 11-task Phase 4b plan and could mask other issues if rushed in at this stage; (c) the bug needs visibility — captured here so Phase 5 picks it up. The test edit is a 2-line change (target_type = Person, target_id = target.0) and removes the post-creation block. Plan completion report must list this as Deviation #4 alongside drift #8 (reputation_event) and #9 (handler invocation pattern).",
       "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 19,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "Actix route config fn name — what is the exported function in crates/api/routes/src/lib.rs that task 68c's all_mvp_endpoints_return_non_404 test wires into App::new().configure(|cfg| _ )?",
+      "options": [
+        "config (takes cfg: &mut ServiceConfig, rate_limit: &RateLimit)",
+        "api_config",
+        "setup or some other name"
+      ],
+      "context": "Task 68c depends on calling actix_web::App::new().configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)). If the exported fn has a different name, the test does not compile and phase-close validation blocks. Was originally plan §17 Q5; promoted to standalone entry id=19 per Move 1 of the risk-reduction strategy as a task-0 blocker. Verified by reading crates/api/routes/src/lib.rs.",
+      "answer": "Option 1 — pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) verified at crates/api/routes/src/lib.rs:201. Plan §11.8 68c snippet is correct — use lemmy_api_routes::config as the import. Task 68 is safe to proceed on the actix-web wiring front; remaining 68c risks are unrelated (e.g. the status-code assertion window and per-endpoint expected-404 override, both already covered by plan GOTCHAs).",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 20,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "tokio-postgres 0.7.16 notifications API — does Client expose a notifications() async stream, or must the consumer poll the Connection future directly via poll_message?",
+      "options": [
+        "Stream-based: client.notifications().next().await returns Notification directly (plan §11.10 69a.3 assumes this)",
+        "Poll-based: Connection::poll_message() yields AsyncMessage::Notification(_); consumer drives the connection as a background task and polls for messages"
+      ],
+      "context": "Task 69a.3 e2e test depends on knowing the notification-receipt pattern at 0.7.16. Plan §11.10 69a.3 snippet uses client.notifications().next().await — if that method does not exist at this version, the NOTIFY integration test is unshippable until the pattern is rewritten. Was originally plan §17 Q6; promoted to standalone entry id=20 per Move 1 as a task-69a blocker. Verified via https://docs.rs/tokio-postgres/0.7.16/tokio_postgres/struct.Connection.html and AsyncMessage enum page.",
+      "answer": "Option 2 — poll-based via Connection::poll_message(). The Client struct does NOT expose a notifications() method at 0.7.16 (verified against docs.rs). The plan's §11.10 69a.3 snippet (client.notifications().next().await) is wrong for this version. Correct pattern for task 69a.3: spawn a task that polls connection.as_mut().poll_message(cx) and forwards AsyncMessage::Notification(_) variants onto a tokio::sync::mpsc::UnboundedSender<Notification>. The test then awaits from the receiver end with a timeout. Alternative: write a 30-line channel-bridge helper inside the test module. Plan §11.10 needs a GOTCHA-update to point at this entry — flagged under Moves 2-6.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 21,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "DoD line 398 staleness alert — IMPLEMENTATION-PLAN-v0.md §3 Phase 5c DoD requires 'governance_log integrity-check job emits error! log if MAX(reputation_snapshot.calculated_at) < now() - 2*snapshot_interval_seconds'. Phase 5c plan §11 has no task slot allocated. Where does this land?",
+      "options": [
+        "Fold into task 63 scope (~20 lines of tracing::error! in scheduled_tasks job, alongside the threshold-crossing wire-up)",
+        "Defer to Phase 6 and mark DoD line 398 as out-of-scope for 5c",
+        "New compact task 63d inside task 63's commit (single commit, integrity_check_snapshot_staleness helper + scheduled_tasks.rs register)"
+      ],
+      "context": "Move 2 of the risk-reduction strategy identified this gap. The authoritative plan's DoD cannot be satisfied by the current §11 task list — no task emits the staleness alert. Task 63 is the natural home (it's already the observability wire-up task). Adding ~20 lines to task 63 bumps its LOC cap from 120 to ~140 but keeps the phase closable against the authoritative DoD.",
+      "answer": "Option 1 — fold into task 63 scope as step 63d. Rationale: task 63's existing ACTION already splits into 63a (verify capability_changed emission — no code), 63b (list_capability_changed_entries_since helper ~30 lines), 63c (e2e test ~25 lines). Adding 63d (~20 lines) keeps the single-commit shape and maps cleanly to the DoD line. Implementation sketch: in the existing snapshot-recompute scheduled task (crates/server/src/scheduled_tasks.rs per Phase 5a task 54 deviation #9), after the batch completes run SELECT MAX(calculated_at) FROM reputation_snapshot and compare to now() - 2 * config.scheduler.snapshot_interval_seconds. If the max is older, emit tracing::error!(target: 'governance::integrity', 'reputation_snapshot staleness detected: most recent calculated_at = {:?}, threshold = {:?}', max, threshold). No new governance_log entry (ops signal, not governance signal). Update plan §11.3 + §5 LOC cap table.",
+      "answered_by": "impl-self-resolved"
     }
   ],
   "resolved": [
