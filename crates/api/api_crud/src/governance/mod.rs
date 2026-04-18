@@ -8,3 +8,4 @@
 
 pub mod create_endorsement;
 pub mod create_report;
+pub mod request_appeal;
