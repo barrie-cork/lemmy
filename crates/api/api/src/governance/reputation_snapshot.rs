@@ -775,12 +775,6 @@ async fn acquire_advisory_xact_lock(
   person_id: PersonId,
   community_id: Option<CommunityId>,
 ) -> LemmyResult<()> {
-  #[derive(diesel::QueryableByName)]
-  struct IgnoredRow {
-    #[diesel(sql_type = BigInt)]
-    _lock_key: i64,
-  }
-
   // 64-bit lock key: upper 32 bits = person_id, lower 32 = community_id
   // encoded so `None` maps to `0` and `Some(CommunityId(c))` maps to
   // `c + 1`. The `+1` shift keeps `None` and `Some(CommunityId(0))`
@@ -792,9 +786,12 @@ async fn acquire_advisory_xact_lock(
     .map(|c| i64::from(c.0).saturating_add(1))
     .unwrap_or(0);
   let key: i64 = (i64::from(person_id.0) << 32) | community_component;
-  let _ignored: Vec<IgnoredRow> = sql_query("SELECT pg_advisory_xact_lock($1) AS _lock_key")
+  // pg_advisory_xact_lock returns void. Use .execute (statement) rather than
+  // .load (result-set decode) — the latter would fail with "Received less than
+  // 8 bytes while decoding an i64" since void isn't BigInt.
+  sql_query("SELECT pg_advisory_xact_lock($1)")
     .bind::<BigInt, _>(key)
-    .load::<IgnoredRow>(conn)
+    .execute(conn)
     .await?;
   Ok(())
 }
