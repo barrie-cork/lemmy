@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use lemmy_db_schema::newtypes::{CommunityId, EndorsementId, ModerationCaseId};
+use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId};
 use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
@@ -62,6 +62,16 @@ pub struct ListGovernanceCases {
   pub limit: Option<i64>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from `list_cases`. Returns a list of summary views filtered
+/// by the request parameters.
+pub struct ListGovernanceCasesResponse {
+  pub cases: Vec<lemmy_db_views_governance_case::GovernanceCaseSummaryView>,
+}
+
 // ── Group B: Jury ─────────────────────────────────────────────────────
 
 #[skip_serializing_none]
@@ -96,6 +106,15 @@ pub struct AcceptJuryAssignment {
   pub case_id: ModerationCaseId,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from accepting a jury assignment.
+pub struct AcceptJuryAssignmentResponse {
+  pub case_id: ModerationCaseId,
+  pub accepted: bool,
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
@@ -104,6 +123,19 @@ pub struct AcceptJuryAssignment {
 pub struct DeclineJuryAssignment {
   pub case_id: ModerationCaseId,
   pub reason: Option<String>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from declining a jury assignment. `replacement_person_id` is
+/// `Some` if a replacement juror was selected; `None` if the eligible pool
+/// was exhausted (v0 behaviour; admin can re-run assign-jury manually).
+pub struct DeclineJuryAssignmentResponse {
+  pub case_id: ModerationCaseId,
+  pub declined: bool,
+  pub replacement_person_id: Option<PersonId>,
 }
 
 // ── Group F: Admin Backstops ──────────────────────────────────────────
@@ -162,6 +194,17 @@ pub struct AdminCloseCaseResponse {
 pub struct RequestAppeal {
   pub case_id: ModerationCaseId,
   pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from requesting an appeal. `appeal_id` is the newly-inserted
+/// appeal row id. Case status flips from `Decided` → `Appealed`; no new
+/// jury is assembled automatically in v0 (per ADR-010).
+pub struct RequestAppealResponse {
+  pub appeal_id: AppealId,
+  pub case_id: ModerationCaseId,
 }
 
 // ── Group E: Public Log ───────────────────────────────────────────────

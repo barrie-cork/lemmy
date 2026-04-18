@@ -130,13 +130,19 @@ async fn process_assignment(
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 5. Insert JuryAssignment rows with status=Accepted (v0 testability).
+  // 5. Insert JuryAssignment rows with status=Selected (task 64 activation).
+  //    Phase 4 used Accepted directly for v0 testability. Task 64 adds the
+  //    accept/decline handshake so jurors transition Selected → Accepted via
+  //    `accept_jury_assignment` (or → Declined via `decline_jury_assignment`).
+  //    submit_jury_vote still filters on status=Accepted, so a decline that
+  //    is not replaced in time will fail voting — exactly the intended v0
+  //    behaviour.
   let forms: Vec<JuryAssignmentInsertForm> = eligible
     .iter()
     .map(|person_id| JuryAssignmentInsertForm {
       case_id: data.case_id,
       person_id: *person_id,
-      status: JuryAssignmentStatus::Accepted,
+      status: JuryAssignmentStatus::Selected,
     })
     .collect();
   insert_into(jury_assignment::table)

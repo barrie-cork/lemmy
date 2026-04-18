@@ -3620,6 +3620,7 @@ dependencies = [
  "lemmy_db_views_community_follower_approval",
  "lemmy_db_views_community_moderator",
  "lemmy_db_views_custom_emoji",
+ "lemmy_db_views_governance_case",
  "lemmy_db_views_local_image",
  "lemmy_db_views_local_user",
  "lemmy_db_views_modlog",

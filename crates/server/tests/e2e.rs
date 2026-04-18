@@ -754,11 +754,13 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use ed25519_dalek::{Signature, SigningKey, Verifier, VerifyingKey};
   use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
     list_modlog::list_modlog,
     submit_jury_vote::submit_jury_vote,
   };
   use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
     AdminAssignJury,
     CreateGovernanceReport,
     ListGovernanceModlog,
@@ -999,6 +1001,22 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     assert_eq!(map.get("panel_assembled"), Some(&1));
   }
 
+  // -- 10a. Every assigned juror calls accept_jury_assignment (task 64) --
+  //        Must run BEFORE jurors vote: submit_jury_vote filters on
+  //        status=Accepted. With the task 64a flip, admin_assign_jury now
+  //        writes status=Selected, so the accept handshake moves each
+  //        assignment to status=Accepted before the vote loop below.
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let _resp = accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+  }
+
   // -- 11. Steps 3–5: 3 jurors vote AdvisoryLabel ------------------
   let voting_jurors: Vec<PersonId> = assign_resp
     .assigned_person_ids
@@ -1156,6 +1174,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     assert_eq!(map.get("report_created"), Some(&1));
     assert_eq!(map.get("jury_assigned"), Some(&5));
     assert_eq!(map.get("panel_assembled"), Some(&1));
+    assert_eq!(map.get("jury_accepted"), Some(&5));
     assert_eq!(map.get("jury_vote_submitted"), Some(&3));
     assert_eq!(map.get("case_decided"), Some(&1));
     assert_eq!(map.get("sanction_created"), Some(&1));
