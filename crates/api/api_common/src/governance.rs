@@ -3,6 +3,7 @@ use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
 };
+use lemmy_db_views_reputation::ReputationSummaryView;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -184,6 +185,19 @@ pub struct ListGovernanceModlog {
 /// Get the calling user's own reputation summary.
 pub struct GetMyReputation {
   pub community_id: Option<CommunityId>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from `get_my_reputation`. Wraps a `ReputationSummaryView` —
+/// the four raw dimension scores (`reporting_accuracy`, `jury_reliability`,
+/// `participation_consistency`, `endorsement_strength`) are `#[serde(skip)]`
+/// per ADR-005, so the wire shape exposes capabilities (`jury_eligible`,
+/// `trusted_reporter`) and counts (`active_sanctions`) only.
+pub struct GetMyReputationResponse {
+  pub view: ReputationSummaryView,
 }
 
 #[skip_serializing_none]
