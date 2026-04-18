@@ -62,4 +62,38 @@ if not defined PQ_LIB_DIR (
 echo PQ_LIB_DIR=%PQ_LIB_DIR%
 echo ---
 cd /d "%~dp0..\.."
+
+REM ---- --test-threads=1 enforcement for e2e runs --------------------------
+REM Phase 5b carry-forward #3: the e2e suite races under parallelism because
+REM SETTINGS is a LazyLock singleton that caches the first test's
+REM LEMMY_DATABASE_URL. The full e2e suite must run with --test-threads=1 or
+REM tests after the first probe the wrong testcontainer. This guard appends
+REM the flag automatically when invoking `--test e2e` without `--no-run` and
+REM without an explicit --test-threads override. Build-only invocations and
+REM non-e2e tests are untouched.
+set "BREHON_ARGS=%*"
+
+echo %BREHON_ARGS% | findstr /C:"--test e2e" >nul
+if errorlevel 1 goto :run_plain
+
+echo %BREHON_ARGS% | findstr /C:"--no-run" >nul
+if not errorlevel 1 goto :run_plain
+
+echo %BREHON_ARGS% | findstr /C:"--test-threads" >nul
+if not errorlevel 1 goto :run_plain
+
+echo %BREHON_ARGS% | findstr /C:" -- " >nul
+if errorlevel 1 goto :append_with_sep
+
+echo BREHON_TEST_THREADS_GUARD: appending --test-threads=1 after existing `--`
+"%USERPROFILE%\.cargo\bin\cargo.exe" test %* --test-threads=1
+goto :eof
+
+:append_with_sep
+echo BREHON_TEST_THREADS_GUARD: appending `-- --test-threads=1` for e2e race safety
+"%USERPROFILE%\.cargo\bin\cargo.exe" test %* -- --test-threads=1
+goto :eof
+
+:run_plain
 "%USERPROFILE%\.cargo\bin\cargo.exe" test %*
+goto :eof
