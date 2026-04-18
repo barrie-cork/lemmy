@@ -51,7 +51,7 @@ For plans other than Phase 5b, the slice map must be authored in the plan file i
 
 From `$ARGUMENTS`:
 - **Plan path**: must end in `.plan.md`
-- **Slice letter**: must be one of `A`, `B`, `C` (Phase 5b) or a letter defined in the plan's `##§Slices` section
+- **Slice letter**: must be one of `A`, `B`, `C` (Phase 5b) or a letter defined in the plan's `## §Slices` section
 - **Max iterations**: `--max-iterations N` (default from slice map above; never exceeds 10 per advisor-context-phase-5.md rule 6)
 
 ### 1.2 Validate
@@ -61,7 +61,8 @@ test -f "{plan_path}" && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
 If NOT_FOUND → stop with error:
-```
+
+```text
 Plan not found at {plan_path}.
 Create one with /prp-plan, or pass the correct path.
 ```
@@ -70,7 +71,7 @@ If slice letter not valid for plan → stop with error.
 
 ### 1.3 Identify slice scope
 
-Read the slice map above (or the plan's `##§Slices` section for non-Phase-5b plans). Extract:
+Read the slice map above (or the plan's `## §Slices` section for non-Phase-5b plans). Extract:
 - `{tasks_in_slice}` — ordered list of task numbers
 - `{max_iterations}` — clamped to ≤10
 
@@ -83,7 +84,8 @@ test -f .claude/prp-ralph.state.md && echo "LOOP_ACTIVE" || echo "NO_LOOP"
 ```
 
 If `LOOP_ACTIVE`:
-```
+
+```text
 An active ralph loop is already running.
 Cancel it first: /prp-ralph-cancel
 Or let it complete.
@@ -229,7 +231,8 @@ The iterating agent reads the state file's "Slice scope" + "Completion criteria"
 ## Handoff between slices
 
 When slice A completes, the user runs:
-```
+
+```text
 /prp-ralph-slice .claude/PRPs/plans/phase-5b-sponsor-liability-and-founder-bootstrap.plan.md B
 ```
 
@@ -242,5 +245,5 @@ to continue with slice B in a fresh session. The slice command does NOT auto-cha
 ## Notes
 
 - This command intentionally reuses `.claude/hooks/prp-ralph-stop.sh` unchanged. The stop hook does not know about slices — it only knows about `iteration`, `max_iterations`, and the `<promise>COMPLETE</promise>` sentinel. Slice enforcement lives entirely in the state file's body and the iterating agent's discipline.
-- For non-Phase-5b plans: authors must add a `##§Slices` section to their plan listing slice letters + tasks. Until such a plan exists, this command is Phase 5b-only.
+- For non-Phase-5b plans: authors must add a `## §Slices` section to their plan listing slice letters + tasks. Until such a plan exists, this command is Phase 5b-only.
 - The advisor-context-phase-5.md rule 6 caps ralph budgets at `--max-iterations 10`. This command respects that ceiling; default per-slice budgets are lower (4–6) because slices are deliberately small.

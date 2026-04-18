@@ -101,13 +101,21 @@ Two changes to `.github/workflows/plan-drift.yml`:
     routes_file = "crates/api/routes/src/lib.rs"
     scope_re   = re.compile(r'scope\(\s*"([^"]+)"\s*\)')
     route_re   = re.compile(r'\.route\(\s*"([^"]+)"\s*,\s*(get|post|put|delete|patch)\(')
-    stack: list[tuple[str, int]] = []  # (path_segment, brace_depth_when_opened)
+
+    def strip_strings_and_comments(line: str) -> str:
+        # Remove `// ...` line comments and "..." string contents so
+        # paren counting only sees structural parens.
+        ...
+
+    stack: list[tuple[str, int]] = []  # (path_segment, paren_depth_when_opened)
     depth = 0
     with open(routes_file, encoding="utf-8") as fh:
         for line in fh:
-            for ch in line:
-                if ch == '{': depth += 1
-                elif ch == '}':
+            sanitised = strip_strings_and_comments(line)
+            for ch in sanitised:
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
                     depth -= 1
                     while stack and stack[-1][1] > depth:
                         stack.pop()
@@ -243,7 +251,7 @@ This protects the aggregate even if a future change to the `infer` step regresse
 1. Fire `workflow_dispatch` with `only_oq: OQ-006` to re-run the sweep against the same OQ that exposed the bug.
 2. Inspect the next aggregate report:
    - Cell should read `| OQ-006 | STILL-OPEN | (verdict auto-normalised…) |` if the model again skips the verdict, OR `| OQ-006 | IMPLICITLY-RESOLVED | <real second line> |` if the model now complies.
-   - `unknown` counter should be `0` if the model complies; otherwise still `1` (Change A preserves the unknown classification because line 1 is now `STILL-OPEN` per the normalisation rule).
+   - `unknown` counter should be `0`; if the model skips the verdict, Change A rewrites line 1 to `STILL-OPEN` so the aggregate increments `still_open` (not `unknown`). The diagnostic text surfaces on line 2 via the sanitised artefact.
 3. Confirm no `Open PR on IMPLICITLY-RESOLVED` PR is created when the model produces garbled output (already correctly gated; this just confirms no regression).
 
 ### Files to modify

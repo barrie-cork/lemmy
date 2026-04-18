@@ -15,7 +15,7 @@ started_at: "2026-04-17T00:00:00Z"
 This loop implements these tasks:
 
 - **Task 0** — Pre-phase harness audit + `phase-5b` branch cut + decision-queue #11/#12 close-out. ALREADY COMMITTED at `54fc8e99f` (task-0 produces zero commits per plan; the committed commit is the `docs(plan): phase-5b plan + narrow Level 2 parity DoD (decision-queue #15)` preflight mitigation for the L2 parity DoD breakage discovered during the audit).
-- **Task 56** — Sponsor-liability helper + `SanctionAction::Restoration` variant + migration + `submit_jury_vote.rs` config reads + `Scope::as_str` → `Cow<'static, str>` refactor. ALL IN ONE COMMIT. **Not yet done — this is the resume target.**
+- **Task 56** — Sponsor-liability helper + `SanctionAction::Restoration` variant + migration + `submit_jury_vote.rs` config reads + `Scope::as_str` → `Cow<'static, str>` refactor. ALL IN ONE COMMIT. **Done — landed at `5aee34738` (Slice A complete 2026-04-17).**
 
 **Out of scope for this slice (slice B/C will handle):**
 

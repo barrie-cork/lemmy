@@ -150,4 +150,4 @@ Per advisor rule 12 (long retro when a checkpoint fires), the split-plane bug (�
 - [x] Watch 4 `report_to_modlog_golden_path` passes at phase HEAD.
 - [x] Decision-queue #11, #12 closed; #16 opened + closed within the phase.
 - [x] Completion report written (this file).
-- [ ] PR `phase-5b → governance-v0` opened (next step after this commit).
+- [x] PR `phase-5b → governance-v0` opened (PR #7).

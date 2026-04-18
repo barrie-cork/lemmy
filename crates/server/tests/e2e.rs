@@ -1931,6 +1931,10 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   // raw=-50, 1 sponsor → -50; ×1.0 = -50; current=5; 5+(-50)=-45<0 →
   // clamp: final_delta = 0 - 5 = -5.
+  // Branch 3 is insensitive to branch 1's `founder_multiplier` flip because
+  // sponsor_e was seeded as a non-founder (seed_person(..., false)) — the
+  // non-founder path uses multiplier 1.0 regardless of the founder config
+  // row. No rollback needed.
   let d_e = liability_delta_for(&mut async_conn, sponsor_e, case3).await?;
   assert_eq!(d_e, -5, "branch3: E (baseline 5) floor-clamped to -5");
   let applied_3 = count_log_for_case(&mut async_conn, "sponsor_liability_applied", case3).await?;

@@ -1,4 +1,4 @@
-## Response to CodeRabbit re-review (3 findings → down from 40)
+# Response to CodeRabbit re-review (3 findings → down from 40)
 
 Pushed as `9dbbbe14a` on `phase-5a`.
 
@@ -8,7 +8,7 @@ Pushed as `9dbbbe14a` on `phase-5a`.
 
 **Not patched (rebuttals):**
 
-- **`user/create.rs:141-157 / 397-409`** (CodeRabbit re-posted M10 as a duplicate) — plan-intended per **GOTCHA-51b** ([previous rebuttal](#issuecomment-4269497456)). The federated and non-federated register paths diverge in what they do *around* the config read, so extracting to a shared helper would entangle two intentionally-separate flows. The bot doesn't read rebuttals across re-reviews, so this is the same answer as before. No code change.
+- **`user/create.rs:141-157 / 397-409`** (CodeRabbit re-posted M10 as a duplicate) — plan-intended per **GOTCHA-51b** ([previous rebuttal](https://github.com/barrie-cork/lemmy/pull/4#issuecomment-4269497456)). The federated and non-federated register paths diverge in what they do *around* the config read, so extracting to a shared helper would entangle two intentionally-separate flows. The bot doesn't read rebuttals across re-reviews, so this is the same answer as before. No code change.
 
 - **`config.rs:291-298`** — NULL-with-matching-value_type is DB-constraint-impossible. The CHECK constraint `governance_config_typed` (migration `up.sql:31-34`) enforces that `value_type = 'int'` requires `value_int IS NOT NULL AND value_float IS NULL AND value_bool IS NULL AND value_text IS NULL` (and so on for each type). The row-to-`CachedValue` mapping can therefore only hit its NULL arm if the DB has been corrupted outside the CHECK — at which point the `const_default_*` fallback is a desirable degradation rather than a silent-success bug. Escalating to a hard error adds complexity for a case the schema already prevents.
 

@@ -1,4 +1,4 @@
-## Response to CodeRabbit review (40 comments)
+# Response to CodeRabbit review (40 comments)
 
 Pushed as `5910c3a04` on `phase-5a`. Four categories:
 
