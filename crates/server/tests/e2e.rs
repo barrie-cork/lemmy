@@ -2249,6 +2249,22 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
   let middleware_client = ClientBuilder::new(client).build();
   let secret = Secret { id: 0, jwt_secret: String::new().into() };
   let rate_limit = RateLimit::with_debug_config();
+  // Bump rate-limit buckets so the 14-endpoint sweep + 4 Phase B probes
+  // don't trip the 6/300s Post bucket from `with_debug_config()`. These
+  // tests exercise routing and handler shape, not rate-limit behaviour.
+  {
+    use enum_map::enum_map;
+    use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+    rate_limit.set_config(enum_map! {
+      ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+    });
+  }
   let context = LemmyContext::create(
     pool,
     middleware_client.clone(),
@@ -2513,9 +2529,12 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
     Ok(person.id)
   }
 
-  // Seed 5 eligible + 2 ineligible users.
+  // Seed 6 eligible + 2 ineligible users. Branch 1 needs only 5 to fill the
+  // panel; branch 2 needs a 6th because capping eligibles[0] with 3 active
+  // assignments drops the strict pool by 1, and branch 2 asserts the pool
+  // can still hit panel_size=5 without eligibles[0].
   let mut eligibles = Vec::new();
-  for i in 0..5 {
+  for i in 0..6 {
     eligibles.push(seed_person(&context, instance.id, &format!("eligible_{i}"), false).await?);
   }
   let mut ineligibles = Vec::new();
@@ -2545,9 +2564,30 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
     }
   }
 
+  // Override jury.age_requirement_days=0 so freshly-created test users
+  // can be jury_eligible (default is 60 days). Fallback on small pool is
+  // also disabled so failure surfaces cleanly instead of defaulting to
+  // random unfiltered picks that would mask an eligibility bug.
+  {
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'jury.age_requirement_days', 'int', 0, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_bool, valid_from) \
+       VALUES ('instance', 'jury.fallback_on_small_pool', 'bool', false, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+  }
+
   // Run snapshot batch so jury_eligible flags are up-to-date.
   run_snapshot_batch(&context).await
     .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
 
   // Seed fixture users outside both groups.
   let target_person = seed_person(&context, instance.id, "cap_target", false).await?;
@@ -2568,14 +2608,19 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
   async fn seed_case(
     ctx: &LemmyContext,
     target: PersonId,
-    community_id: lemmy_db_schema::newtypes::CommunityId,
+    _community_id: lemmy_db_schema::newtypes::CommunityId,
   ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error>> {
     use lemmy_db_schema_file::schema::moderation_case;
     let mut pool = ctx.pool();
     let conn = &mut lemmy_diesel_utils::connection::get_conn(&mut pool).await
       .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    // Instance-scoped case so the strict eligibility query matches the
+    // instance-scoped snapshots produced by `run_snapshot_batch` on our
+    // instance-scoped reputation_event rows. (Strict query uses
+    // `rs.community_id IS NOT DISTINCT FROM case.community_id`; community-
+    // scoped would require seeding snapshots per community too.)
     let form = ModerationCaseInsertForm {
-      community_id: Some(community_id),
+      community_id: None,
       creator_id: None,
       target_type: CaseTargetType::Person,
       target_post_id: None,
