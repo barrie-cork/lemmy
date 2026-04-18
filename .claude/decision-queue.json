@@ -3,32 +3,6 @@
   "schema_version": 1,
   "pending": [
     {
-      "id": 11,
-      "from": "planner",
-      "timestamp": "2026-04-17T12:00:00Z",
-      "question": "Confirm OQ-004 juror cap at 3 concurrent assignments for Phase 5 task 8 (select_eligible_jurors)?",
-      "options": [
-        "3 (matches [99 OQ-004] 'Current lean'; hardcode MAX_CONCURRENT_JURY_ASSIGNMENTS = 3)",
-        "Different integer — specify and justify"
-      ],
-      "context": "Pre-seeded by planner for Phase 5. [99 OQ-004] says 'cap at 3 concurrent assignments, instance-wide, target before Step 4'. Step 4 shipped without the cap. Phase 5 task 8 hardcodes it in admin_assign_jury::select_eligible_jurors alongside the new jury_eligible + derive-target filters.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
-      "id": 12,
-      "from": "planner",
-      "timestamp": "2026-04-17T12:00:00Z",
-      "question": "Confirm sponsor-liability severity units for Phase 5 task 7 (submit_jury_vote extension): minor=-10, moderate=-50, severe=-200?",
-      "options": [
-        "minor=-10, moderate=-50, severe=-200 (matches [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 55])",
-        "Different units — specify"
-      ],
-      "context": "Pre-seeded by planner. The plan text at IMPLEMENTATION-PLAN-v0.md:332 says 'for v0 hardcode minor = -10, moderate = -50, severe = -200 as integer deltas; v1 tunes the units'. Mapping to JuryDecision: NoAction+AdvisoryLabel → no liability; Warning+Cooldown → minor; RemoveContent → moderate; SuspendLocalUser+SuspendCommunityMember+RecommendFederationAction → severe.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
       "id": 4,
       "from": "advisor",
       "timestamp": "2026-04-16T20:00:00Z",
@@ -121,6 +95,58 @@
     }
   ],
   "resolved": [
+    {
+      "id": 16,
+      "from": "impl",
+      "timestamp": "2026-04-18T00:00:00Z",
+      "question": "Split-plane bug in apply_sponsor_liability: it READS current_endorsement_strength from the union plane (community_id IS NULL OR = cid, first by calculated_at DESC) but WRITES the reputation_event with community_id = case.community_id ONLY. Should Phase 5b Slice C land a fix(governance): commit on sponsor_liability.rs (or reputation_snapshot.rs), or defer to Phase 5c / file as a carry-forward?",
+      "options": [
+        "Defer: task 60 asserts only the write-plane math (reputation_event deltas + _applied/_clamped log counts), document the split-plane finding as Phase 5b carry-forward #4 in the completion report, and open a Phase 5c task to fix the reader (unify read plane to community-scoped when case is community-scoped, OR unify write plane to both planes, OR route can_sponsor through the union). Slice C stays scoped; task 61 PR ships with the finding flagged.",
+        "Fix in Slice C: add fix(governance): apply_sponsor_liability reads community-scoped snapshot only when case is community-scoped commit on phase-5b before task 60's commit. Task 60 assertions then match plan §11.5 line 1032 exactly (post-event community endorsement_strength = 0). This edits task-56-shipped code, which the slice-C rules say not to do without advisor approval."
+      ],
+      "context": "Branch 2 of task 60 was expected to produce post-sanction endorsement_strength=0 per plan §11.5 line 1032. Observed: the community-scoped recompute lands at -100 (sum of the single community-scoped event); the instance recompute stays at 100 (founder seed untouched). Diagnosis confirms sponsor_liability.rs:238-262 reads from union plane for the clamp (sees 100, clamps to -100) and writes to community plane only (insert at line 278 uses `community_id` param = case.community_id). load_live_events at reputation_snapshot.rs:519-530 filters strictly by community (the two planes don't compose on read). Capability bit `can_sponsor` is computed per-snapshot; which row wins depends on which call site reads which plane. Plan §11.5 math implicitly assumes the two planes compose. They don't. This is the 'task 56 code bug vs test fix' distinction — advisor flagged that 'plan assertions passing while the println shows 100' meant the println was the load-bearing integration invariant. Case (ii) per the advisor's diagnostic framework applies.",
+      "answer": "Option B (fix in Slice C). Advisor rationale: (a) Option A ships a known-broken production code path — founders would absorb arbitrarily many sanctions per-community because the read plane keeps pulling the seed from instance; (b) Phase 5c has no reserved slot for a sponsor-liability fix (plan §3 Phase 5c is endpoint-handlers + observability + capability tests); inserting a 5c task is plan-drift; (c) slice discipline protects against scope creep, not against shipping known bugs. The fix is one line at sponsor_liability.rs:278-287 — write reputation_event with community_id = None so the write plane matches the instance plane the founder seed lives on and the read's union-by-recency .first() can coherently evaluate. source_case_id still preserves audit linkage. Landed as fix(governance): 61ddae110 before task 60 commit. Residual concern (separate, unrelated): snapshot recompute does not re-apply the honour-price floor — double-sanction-within-15min edge case can drive snapshot below floor. Log as OQ-025 candidate, not a 5b blocker.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 15,
+      "from": "impl",
+      "timestamp": "2026-04-17T15:00:00Z",
+      "question": "Level 2 parity DoD command `cargo-test.bat -p lemmy_api --features full -- governance::config::parity` fails at phase-5b HEAD (baseline, pre-task-56). Narrow or block?",
+      "options": [
+        "Narrow the DoD: rely on Level 1 --workspace --features full + Level 2 e2e config_parity_round_trip for parity coverage; drop the -p lemmy_api parity invocation from §9 and §12",
+        "Block phase on the original invocation until the feature-flag interaction is fixed"
+      ],
+      "context": "Command is pre-existing-broken at 5a4a0f0a5 baseline; not caused by any 5b mutation. Root cause: `lemmy_api_crud` is a dev-dependency of `lemmy_api` (Cargo.toml:88), so `cargo test -p lemmy_api` compiles it. `lemmy_api_crud/src/user/create.rs:638` calls `.form()` on `reqwest_middleware::client::RequestBuilder`, which is a feature-unification artefact — works under `--workspace --features full` (full unification) but fails under `-p lemmy_api --features full` (partial unification). Three baseline errors: one E0599 (no method `form`) + two E0282 (cannot infer type) on upstream OAuth code unchanged since 2024. Fix would require patching upstream OAuth code (scope creep into Phase 4/5a territory) or adding reqwest feature-forwarding boilerplate (adds no 5b coverage). Level 1 `cargo-check.bat --features full --workspace` exits 0 and exercises `seeded_keys_count_matches_const_count` at compile time; Level 2 `config_parity_round_trip` in `crates/server/tests/e2e.rs` exits 0 (verified at task-0 baseline) and exercises the DB round-trip for every seeded key. Pre-phase-harness-audit rule fired correctly.",
+      "answer": "Option 1 — narrow. Rationale: (a) Level 1 cargo-check --features full --workspace exercises the compile-time seeded-keys-vs-const count test via feature unification; (b) e2e config_parity_round_trip exercises the DB round-trip for every seeded key; (c) the -p lemmy_api variant adds zero additional coverage and fails on a toolchain interaction unrelated to Phase 5b scope. Apply as a plan-edit: docs(plan): narrow Level 2 parity DoD to e2e coverage + remove -p lemmy_api parity invocation. Advisor concurrence received 2026-04-17.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 11,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm OQ-004 juror cap at 3 concurrent assignments for Phase 5 task 8 (select_eligible_jurors)?",
+      "options": [
+        "3 (matches [99 OQ-004] 'Current lean'; hardcode MAX_CONCURRENT_JURY_ASSIGNMENTS = 3)",
+        "Different integer — specify and justify"
+      ],
+      "context": "Pre-seeded by planner for Phase 5. [99 OQ-004] says 'cap at 3 concurrent assignments, instance-wide, target before Step 4'. Step 4 shipped without the cap. Phase 5 task 8 hardcodes it in admin_assign_jury::select_eligible_jurors alongside the new jury_eligible + derive-target filters.",
+      "answer": "Hardcode semantically via `config.jury.max_concurrent_assignments` — task 57's concurrent-cap subquery reads this key. Seeded value at 5a is 3; config-change without code change (OQ-004 resolution). Task 57 does NOT `const` the cap — it reads from ConfigCache so the cap is tuneable per §6 rule 10.",
+      "answered_by": "planner"
+    },
+    {
+      "id": 12,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm sponsor-liability severity units for Phase 5 task 7 (submit_jury_vote extension): minor=-10, moderate=-50, severe=-200?",
+      "options": [
+        "minor=-10, moderate=-50, severe=-200 (matches [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 55])",
+        "Different units — specify"
+      ],
+      "context": "Pre-seeded by planner. The plan text at IMPLEMENTATION-PLAN-v0.md:332 says 'for v0 hardcode minor = -10, moderate = -50, severe = -200 as integer deltas; v1 tunes the units'. Mapping to JuryDecision: NoAction+AdvisoryLabel → no liability; Warning+Cooldown → minor; RemoveContent → moderate; SuspendLocalUser+SuspendCommunityMember+RecommendFederationAction → severe.",
+      "answer": "Confirmed per IMPLEMENTATION-PLAN-v0.md §3 Phase 5b task 55 and §17.2 carry-forwards. Mapping per §11.1 GOTCHA-56a: `Label` + `VisibilityReduction` + `Restoration` → minor; `TemporaryRestriction` + `ContentRemoval` → moderate; `CommunityExclusion` + `InstanceSuspension` + `FederationQuarantineRecommendation` → severe. All three units are `deltas.sponsor_liability_{minor,moderate,severe}` config keys from 5a's seed list.",
+      "answered_by": "planner"
+    },
     {
       "id": 14,
       "from": "impl",

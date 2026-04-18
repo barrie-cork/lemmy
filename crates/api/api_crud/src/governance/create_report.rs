@@ -1,18 +1,28 @@
 //! `POST /api/v4/governance/report` — open or append to a moderation case.
 //!
-//! v0 behaviour per [04 §6.1] and [05 §6]:
-//! - No separate `report` table; reports collapse directly into
-//!   `moderation_case`. Subsequent reports on the same (`target_type`,
-//!   target id, community) increment the case's `threshold_score`.
-//! - Reporter reputation weighting is stubbed at `1_i64` per report
-//!   ([99 OQ-006] is deferred to v1).
-//! - Threshold trigger: once `threshold_score > 3`, flip status from
-//!   `Open` to `ThresholdMet` and emit a second `threshold_met` log
-//!   entry on the same handler invocation.
+//! Phase 5b task 58 replaces the Phase 4 `V0_THRESHOLD` + `V0_REPORTER_WEIGHT`
+//! stubs with the OQ-006 config-driven formula. The reporter's
+//! `reporting_accuracy` is loaded from `reputation_snapshot` (or computed
+//! on the fly via `load_or_compute_snapshot` when no snapshot row exists
+//! yet) and fed into:
 //!
-//! Both the case write and the log write are GDPR-compliant: the log
-//! entry's `actor_pseudonym` is fetched via
-//! `actor_pseudonym_helper::get_or_create`, never the raw PersonId.
+//! ```text
+//! weight_micros = base_weight
+//!               * clamp(reporting_accuracy / 100, clamp_min, clamp_max)
+//!               * exp(-hours_old / recency_half_life_hours)
+//!               * 1_000_000
+//! ```
+//!
+//! Case-flip threshold is `report.case_threshold_micros` (micros-scaled by
+//! the Phase 5a task 50 migration). A hostile or nonsensical admin config
+//! (`recency_half_life_hours = 0`, negative bases, etc.) can produce
+//! `Inf`/`NaN`; the `is_finite()` guard logs a structured `error!` and
+//! falls back to `base_weight × 1_000_000` so a request never fails on
+//! config-induced non-finite math. [99 §17.2 carry-forward (3)]
+//!
+//! GDPR invariant: the `governance_log` entry's `actor_pseudonym` is
+//! fetched via `actor_pseudonym_helper::get_or_create`, never the raw
+//! PersonId.
 
 use actix_web::web::{Data, Json};
 use diesel::{
@@ -25,7 +35,12 @@ use diesel::{
   update,
 };
 use diesel_async::RunQueryDsl;
-use lemmy_api::governance::{actor_pseudonym_helper, governance_log};
+use lemmy_api::governance::{
+  actor_pseudonym_helper,
+  config::{self, ConfigCache, Scope},
+  governance_log,
+  reputation_snapshot,
+};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::{
   newtypes::{CommentId, CommunityId, ModerationCaseId, PostId},
@@ -48,27 +63,6 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
 
 use lemmy_api_common::governance::{CreateGovernanceReport, CreateGovernanceReportResponse};
-
-// =============================================================================
-// Threshold formula — v0 placeholder (OQ-006)
-//
-// Phase 5 replaces this with a reputation-weighted formula per [99 OQ-006].
-// The formula shape is intentionally undefined in v0 — the scaffolding here
-// exists so the replacement site is grep-discoverable and the commit that
-// lands the real formula is trivially reviewable.
-//
-// TODO(brehon-fork, phase-5): replace V0_THRESHOLD + V0_REPORTER_WEIGHT with
-// a reputation-weighted contribution function. See [99 OQ-006] and
-// docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md §3 Phase 5.
-// =============================================================================
-
-/// Threshold at which an `Open` case flips to `ThresholdMet`. v0 interim
-/// constant per [99 OQ-006].
-const V0_THRESHOLD: i64 = 3;
-
-/// Reporter weight for the threshold score. Stubbed at 1 per report in v0.
-/// Phase 5 tunes this by reporter reputation per [99 OQ-006].
-const V0_REPORTER_WEIGHT: i64 = 1;
 
 pub async fn create_report(
   Json(data): Json<CreateGovernanceReport>,
@@ -97,6 +91,41 @@ pub async fn create_report(
   let pool_ref = &mut context.pool();
   let conn = &mut get_conn(pool_ref).await?;
 
+  // Phase 5b task 58: compute the OQ-006 weight from config + reporter
+  // snapshot. ConfigCache lives for the whole handler invocation.
+  let mut cache = ConfigCache::new();
+
+  let reporter_snapshot =
+    reputation_snapshot::load_or_compute_snapshot(conn, reporter_id, data.community_id, &mut cache)
+      .await?;
+  let base_weight =
+    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.base_weight").await?;
+  let clamp_min =
+    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.clamp_min").await?;
+  let clamp_max =
+    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.clamp_max").await?;
+  let half_life_hours = config::get_float(
+    &mut cache,
+    &mut conn.into(),
+    Scope::Instance,
+    "report.recency_half_life_hours",
+  )
+  .await?;
+  let threshold_micros = config::get_int(
+    &mut cache,
+    &mut conn.into(),
+    Scope::Instance,
+    "report.case_threshold_micros",
+  )
+  .await?;
+
+  let reporter_reputation =
+    (f64::from(reporter_snapshot.reporting_accuracy) / 100.0).clamp(clamp_min, clamp_max);
+  // Fresh report at write time; stale-report recomputation is v1.
+  let hours_old = 0.0_f64;
+  let recency_factor = (-hours_old / half_life_hours).exp();
+  let weight_micros = compute_weight_micros(base_weight, reporter_reputation, recency_factor);
+
   let existing: Option<(ModerationCaseId, i64, CaseStatus)> = moderation_case::table
     .filter(moderation_case::target_type.eq(data.target_type))
     .filter(
@@ -123,8 +152,8 @@ pub async fn create_report(
 
   let (case_id, new_score, just_met_threshold) = match existing {
     Some((case_id, prior_score, prior_status)) => {
-      let new_score = prior_score.saturating_add(V0_REPORTER_WEIGHT);
-      let should_flip = matches!(prior_status, CaseStatus::Open) && new_score > V0_THRESHOLD;
+      let new_score = prior_score.saturating_add(weight_micros);
+      let should_flip = matches!(prior_status, CaseStatus::Open) && new_score > threshold_micros;
       let target_status = if should_flip {
         CaseStatus::ThresholdMet
       } else {
@@ -140,8 +169,8 @@ pub async fn create_report(
       (case_id, new_score, should_flip)
     }
     None => {
-      let initial_score = V0_REPORTER_WEIGHT;
-      let initial_status = if initial_score > V0_THRESHOLD {
+      let initial_score = weight_micros;
+      let initial_status = if initial_score > threshold_micros {
         CaseStatus::ThresholdMet
       } else {
         CaseStatus::Open
@@ -183,6 +212,7 @@ pub async fn create_report(
       "target_type": data.target_type,
       "threshold_score": new_score,
       "threshold_met": just_met_threshold,
+      "reporter_reputation_multiplier": reporter_reputation,
     }),
     Some(pseudonym.clone()),
   )
@@ -205,6 +235,42 @@ pub async fn create_report(
     case_id: Some(case_id),
     threshold_met: just_met_threshold,
   }))
+}
+
+/// Pure OQ-006 weight computation in micros.
+///
+/// Returns `(base_weight * reporter_reputation * recency_factor * 1_000_000)`
+/// truncated to `i64`. When any input (or the product) is non-finite —
+/// `NaN` or `±Inf` — logs a structured `error!` and falls back to
+/// `(base_weight * 1_000_000)` also truncated to `i64`. A hostile or
+/// typo'd admin config (`recency_half_life_hours = 0`, negative bases)
+/// cannot propagate as a 500 to the caller. [99 §17.2 carry-forward (3)]
+#[expect(
+  clippy::as_conversions,
+  reason = "f64 → i64 after explicit is_finite() guard; saturation semantics match the OQ-006 \
+            spec (micros overflowing i64::MAX clamp at i64::MAX, mirroring Rust's `as` behaviour \
+            for finite out-of-range floats)."
+)]
+fn compute_weight_micros(base_weight: f64, reporter_reputation: f64, recency_factor: f64) -> i64 {
+  let weight_f64 = base_weight * reporter_reputation * recency_factor * 1_000_000.0;
+  if weight_f64.is_finite() {
+    weight_f64 as i64
+  } else {
+    tracing::error!(
+      base_weight,
+      reporter_reputation,
+      recency_factor,
+      "report-weight calculation produced non-finite value; falling back to base_weight × 1_000_000. \
+       Likely cause: an admin-edited config key producing Inf/NaN (e.g. recency_half_life_hours = 0, \
+       or a negative base_weight combined with an odd-exponent pow)."
+    );
+    let fallback = base_weight * 1_000_000.0;
+    if fallback.is_finite() {
+      fallback as i64
+    } else {
+      0
+    }
+  }
 }
 
 struct TargetRefs {
@@ -301,5 +367,46 @@ fn match_target_filter(
     CaseTargetType::RemoteInstance => Box::new(
       moderation_case::target_remote_url.eq(target_remote_url.map(str::to_string)),
     ),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use tracing_test::traced_test;
+
+  #[test]
+  #[traced_test]
+  fn is_finite_fallback_nan() {
+    // recency_half_life_hours = 0 ⇒ (-0/0).exp() = NaN, which propagates
+    // into the weight multiplication. The guard should log and fall back
+    // to base_weight × 1_000_000.
+    let base = 2.0_f64;
+    let reputation = 1.0_f64;
+    let recency = f64::NAN;
+    let weight = compute_weight_micros(base, reputation, recency);
+    assert_eq!(weight, 2_000_000, "NaN input must fall back to base × 1_000_000");
+    assert!(logs_contain("non-finite"), "error! log must fire on non-finite input");
+  }
+
+  #[test]
+  #[traced_test]
+  fn is_finite_fallback_infinity() {
+    let weight = compute_weight_micros(1.0, 1.0, f64::INFINITY);
+    assert_eq!(weight, 1_000_000, "+Inf must fall back to base × 1_000_000");
+    assert!(logs_contain("non-finite"));
+  }
+
+  #[test]
+  fn finite_path_returns_product() {
+    // 1.5 × 1.2 × 1.0 × 1_000_000 = 1_800_000 in real arithmetic; the IEEE-754
+    // product is 1_799_999.999… so the `as i64` truncates to 1_799_999.
+    // The test tolerates one-ULP truncation rather than asserting the
+    // mathematical answer — documenting that the formula rounds toward zero.
+    let weight = compute_weight_micros(1.5, 1.2, 1.0);
+    assert!(
+      (1_799_999..=1_800_000).contains(&weight),
+      "weight {weight} not within ±1 of expected 1_800_000"
+    );
   }
 }

@@ -40,7 +40,13 @@ migrations/.diesel_lock
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/build-*.log
+.claude/audit-*.log
 .claude/prp-ralph.state.md
+.claude/worktrees/
+
+# Local environment — never commit secrets
+.env
+.env.local
 
 # Rate-limit tracker state cache
 .github/cache/

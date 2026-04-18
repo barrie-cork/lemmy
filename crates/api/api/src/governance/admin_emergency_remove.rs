@@ -14,7 +14,12 @@
 //! log entry is tagged `entry_kind = "emergency_removed"` and is
 //! extra-visible per [06 §2.2.1].
 
-use crate::governance::{actor_pseudonym_helper, admin_assign_jury, governance_log};
+use crate::governance::{
+  actor_pseudonym_helper,
+  admin_assign_jury,
+  config::ConfigCache,
+  governance_log,
+};
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_db_schema::{
@@ -157,7 +162,12 @@ async fn process_emergency_remove(
   let case_id = case_row.id;
 
   // 3. Post-facto jury — reuse the eligibility logic from admin_assign_jury.
-  let eligible = admin_assign_jury::select_eligible_jurors(conn, &case_row).await?;
+  //    Per Phase 5b task 57, the filter is reputation-gated + concurrent-
+  //    capped; the small-pool fallback keeps behaviour defined on
+  //    bootstrapping instances.
+  let mut cache = ConfigCache::new();
+  let eligible =
+    admin_assign_jury::select_eligible_jurors(conn, &case_row, None, &mut cache).await?;
   if !eligible.is_empty() {
     let forms: Vec<JuryAssignmentInsertForm> = eligible
       .iter()

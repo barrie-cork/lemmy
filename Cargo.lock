@@ -801,6 +801,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "brehon_seed_founders"
+version = "1.0.0-test-arm-qemu.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "diesel",
+ "diesel-async",
+ "lemmy_api",
+ "lemmy_db_schema 1.0.0-test-arm-qemu.0",
+ "lemmy_db_schema_file",
+ "lemmy_diesel_utils",
+ "lemmy_utils 1.0.0-test-arm-qemu.0",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "brotli"
 version = "8.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3661,6 +3680,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tracing",
+ "tracing-test",
  "url",
 ]
 
@@ -4626,6 +4646,7 @@ dependencies = [
  "lemmy_routes",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
  "mimalloc",
+ "regex",
  "reqwest 0.13.2",
  "reqwest-middleware",
  "reqwest-tracing",

@@ -77,4 +77,5 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 ed25519-dalek = { workspace = true }
 hex = { workspace = true }
+regex = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
