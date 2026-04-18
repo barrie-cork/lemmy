@@ -16,6 +16,7 @@ pub mod admin_close_case;
 pub mod admin_emergency_remove;
 pub mod admin_reputation_stats;
 pub mod config;
+pub mod decline_jury_assignment;
 pub mod get_case;
 pub mod get_my_reputation;
 pub mod governance_log;
