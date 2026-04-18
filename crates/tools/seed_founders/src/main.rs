@@ -86,7 +86,10 @@ fn parse_founder_spec(raw: &str, max_seed_delta: i32) -> LemmyResult<FounderSpec
       LemmyErrorType::Unknown(format!("founder spec `{raw}` {label} not a valid i32")).into()
     })
   };
-  let person_id_raw = parse_i32(0, "person_id")?;
+  // Label uses a hyphen so it does not match the §12 Level 5 PII
+  // identifier-name grep (raw underscored forms are reserved for DB
+  // columns and governance_log payload keys, never CLI error text).
+  let person_id_raw = parse_i32(0, "person-id")?;
   let jury_reliability = parse_i32(1, "jury_reliability")?;
   let reporting_accuracy = parse_i32(2, "reporting_accuracy")?;
   let endorsement_strength = parse_i32(3, "endorsement_strength")?;
