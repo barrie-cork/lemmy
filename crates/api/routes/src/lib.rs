@@ -33,9 +33,14 @@ use lemmy_api::{
     user_settings_backup::{export_user_settings, import_user_settings},
   },
   governance::{
+    accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
     admin_close_case::admin_close_case,
+    admin_reputation_stats::admin_reputation_stats,
+    decline_jury_assignment::decline_jury_assignment,
     get_case::get_case,
+    get_my_reputation::get_my_reputation,
+    list_cases::list_cases,
     list_modlog::list_modlog,
     list_my_jury_queue::list_my_jury_queue,
     submit_jury_vote::submit_jury_vote,
@@ -135,7 +140,11 @@ use lemmy_api_crud::{
     list::list_custom_emojis,
     update::edit_custom_emoji,
   },
-  governance::{create_endorsement::create_endorsement, create_report::create_report},
+  governance::{
+    create_endorsement::create_endorsement,
+    create_report::create_report,
+    request_appeal::request_appeal,
+  },
   multi_community::{
     create::create_multi_community,
     create_entry::create_multi_community_entry,
@@ -507,17 +516,23 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .wrap(rate_limit.post())
           .route("/report", post().to(create_report))
           .route("/endorsement", post().to(create_endorsement))
+          .route("/appeal", post().to(request_appeal))
           .route("/case", get().to(get_case))
+          .route("/cases", get().to(list_cases))
           .route("/modlog", get().to(list_modlog))
+          .route("/reputation/me", get().to(get_my_reputation))
           .service(
             scope("/jury")
               .route("/me", get().to(list_my_jury_queue))
+              .route("/accept", post().to(accept_jury_assignment))
+              .route("/decline", post().to(decline_jury_assignment))
               .route("/vote", post().to(submit_jury_vote)),
           )
           .service(
             scope("/admin")
               .route("/assign-jury", post().to(admin_assign_jury))
-              .route("/close-case", post().to(admin_close_case)),
+              .route("/close-case", post().to(admin_close_case))
+              .route("/reputation-stats", post().to(admin_reputation_stats)),
           ),
       ),
   );

@@ -2187,3 +2187,236 @@ async fn snapshot_staleness_alert_fires_when_max_calculated_at_is_old(
 
   Ok(())
 }
+
+// ============================================================================
+// Phase 5c — task 68: route registration + per-handler happy-path assertions
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
+  use actix_web::{App, test, web::Data};
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection};
+  use lemmy_api_common::governance::{
+    AdminReputationStatsResponse, GetMyReputationResponse, ListGovernanceCasesResponse,
+    RequestAppealResponse,
+  };
+  use lemmy_api_utils::{
+    claims::Claims, context::LemmyContext, request::client_builder,
+  };
+  use lemmy_db_schema::{
+    newtypes::LocalUserId,
+    source::{
+      instance::Instance,
+      local_user::{LocalUser, LocalUserInsertForm},
+      person::{Person, PersonInsertForm},
+      secret::Secret,
+    },
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit.clone(),
+  );
+
+  let app = test::init_service(
+    App::new()
+      .app_data(Data::new(context.clone()))
+      .wrap(SessionMiddleware::new(context.clone()))
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit))
+  ).await;
+
+  // ========== Phase A: non-404 sweep (14 routes) ==========
+  let endpoints: &[(&str, &str, &str, &[u16])] = &[
+    ("POST", "/api/v4/governance/report",                        "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/endorsement",                   "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/appeal",                        "{}", &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401, 404]),
+    ("GET",  "/api/v4/governance/cases",                         "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/modlog",                        "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/reputation/me",                 "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/jury/me",                       "",   &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/accept",                   "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/decline",                  "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/vote",                     "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/admin/assign-jury",             "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/admin/close-case",              "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/admin/reputation-stats",        "{}", &[200, 400, 401]),
+  ];
+
+  for (method, path, body, allowed) in endpoints {
+    let req = match *method {
+      "GET" => test::TestRequest::get().uri(path).to_request(),
+      "POST" => test::TestRequest::post()
+        .uri(path)
+        .insert_header(("content-type", "application/json"))
+        .set_payload(body.to_string())
+        .to_request(),
+      _ => unreachable!(),
+    };
+    let resp = test::call_service(&app, req).await;
+    let status = resp.status().as_u16();
+    assert!(
+      allowed.contains(&status),
+      "{method} {path} returned {status} (expected one of {allowed:?}, NOT 404)"
+    );
+  }
+
+  // ========== Phase B: per-handler happy-path assertions (Move 4) ==========
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn make_user(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> Result<(LocalUserId, PersonId), Box<dyn Error>>
+  {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    let lu = LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok((lu.id, person.id))
+  }
+
+  async fn mint_jwt(
+    ctx: &LemmyContext,
+    local_user_id: LocalUserId,
+  ) -> Result<String, Box<dyn Error>> {
+    let req = test::TestRequest::default().to_http_request();
+    let token = Claims::generate(local_user_id, None, req, ctx).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(token.into_inner())
+  }
+
+  let (admin_lu_id, _admin_pid) = make_user(&context, instance.id, "probe_admin", true).await?;
+  let admin_jwt = mint_jwt(&context, admin_lu_id).await?;
+  let (user_lu_id, _user_pid) = make_user(&context, instance.id, "probe_user", false).await?;
+  let user_jwt = mint_jwt(&context, user_lu_id).await?;
+  let (target_lu_id, target_pid) = make_user(&context, instance.id, "probe_target", false).await?;
+  let target_jwt = mint_jwt(&context, target_lu_id).await?;
+
+  // Seed a Decided case for the appeal test + an Open case for list_cases.
+  {
+    use diesel_async::RunQueryDsl;
+    use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
+
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let decided_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target_pid),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "probe".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Decided,
+      threshold_score: 1,
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&decided_form)
+      .execute(&mut async_conn)
+      .await?;
+
+    let open_form = ModerationCaseInsertForm {
+      status: CaseStatus::Open,
+      target_person_id: None,
+      ..decided_form
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&open_form)
+      .execute(&mut async_conn)
+      .await?;
+  }
+
+  // B.1 — GET /reputation/me (task 61)
+  let resp = test::TestRequest::get()
+    .uri("/api/v4/governance/reputation/me")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "reputation/me expected 200");
+  let body: GetMyReputationResponse = test::read_body_json(resp).await;
+  assert_eq!(body.view.active_sanctions, 0, "fresh user should have zero active sanctions");
+
+  // B.2 — POST /admin/reputation-stats (task 62)
+  let resp = test::TestRequest::post()
+    .uri("/api/v4/governance/admin/reputation-stats")
+    .insert_header(("authorization", format!("Bearer {admin_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload("{}")
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "admin/reputation-stats expected 200 for admin");
+  let body: AdminReputationStatsResponse = test::read_body_json(resp).await;
+  assert_eq!(body.buckets.jury_reliability.len(), 5, "jury_reliability bucket shape");
+
+  // B.3 — POST /appeal (task 66) — target appeals a Decided case
+  let resp = test::TestRequest::post()
+    .uri("/api/v4/governance/appeal")
+    .insert_header(("authorization", format!("Bearer {target_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload(r#"{"case_id":1,"reason":"probe appeal"}"#)
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "appeal expected 200 for target on Decided case");
+  let body: RequestAppealResponse = test::read_body_json(resp).await;
+  assert!(body.appeal_id.0 > 0, "appeal_id must be positive");
+
+  // B.4 — GET /cases (task 67) — authed caller sees the seeded cases
+  let resp = test::TestRequest::get()
+    .uri("/api/v4/governance/cases")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "cases expected 200 for authed caller");
+  let body: ListGovernanceCasesResponse = test::read_body_json(resp).await;
+  assert!(!body.cases.is_empty(), "seeded cases must appear in list");
+
+  Ok(())
+}
