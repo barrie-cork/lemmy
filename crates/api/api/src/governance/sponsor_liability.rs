@@ -277,7 +277,15 @@ pub(crate) async fn apply_sponsor_liability(
 
     let form = ReputationEventInsertForm {
       person_id: sponsor_id,
-      community_id,
+      // Split-plane fix (decision-queue #16): write instance-scoped.
+      // The clamp read above unions `community_id IS NULL OR = cid`
+      // so it always sees instance-scoped rows (including founder seeds,
+      // which are instance-scoped). Writing community-scoped here left
+      // the liability on a plane load_live_events filters out of the
+      // instance recompute, so founder +seed / −liability never composed.
+      // `source_case_id` preserves the per-case audit linkage regardless
+      // of plane.
+      community_id: None,
       dimension: ReputationDimension::EndorsementStrength,
       delta: final_delta_i32,
       source_case_id: Some(case_id),
