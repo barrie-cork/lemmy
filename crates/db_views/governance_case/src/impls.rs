@@ -165,6 +165,82 @@ pub async fn list_cases_for_person(
   )
 }
 
+/// Filter bundle for the Phase 5c `list_cases_filtered` query. v0 surfaces
+/// `community_id`, `status`, and pagination; `target_person_id` is wired
+/// through but not yet reachable from the HTTP DTO — it's reserved for
+/// the v1 assignee-filter per plan §11.7 GOTCHA.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CasesFilter {
+  pub community_id: Option<CommunityId>,
+  pub status: Option<CaseStatus>,
+  pub target_person_id: Option<PersonId>,
+  pub page: Option<i64>,
+  pub limit: Option<i64>,
+}
+
+const DEFAULT_PAGE: i64 = 1;
+const DEFAULT_LIMIT: i64 = 20;
+const MAX_LIMIT: i64 = 50;
+
+/// Filtered case listing backing `GET /api/v4/governance/cases` (task 67).
+///
+/// Path-A per plan §11.7: sibling of `list_open_cases_for_community` rather
+/// than a signature extension. Applies filters via a boxed query and
+/// paginates at the SQL level (offset/limit) because the result set can be
+/// large on a mature instance. Pagination bounds mirror `list_modlog`:
+/// default page 1, default limit 20, max limit 50.
+pub async fn list_cases_filtered(
+  pool: &mut DbPool<'_>,
+  filter: CasesFilter,
+) -> LemmyResult<Vec<GovernanceCaseSummaryView>> {
+  let conn = &mut get_conn(pool).await?;
+
+  let page = filter.page.unwrap_or(DEFAULT_PAGE).max(1);
+  let limit = filter.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
+  let offset = (page - 1) * limit;
+
+  let mut query = moderation_case::table
+    .left_join(
+      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
+    )
+    .select((
+      moderation_case::id,
+      moderation_case::status,
+      moderation_case::severity,
+      moderation_case::reason_code,
+      moderation_case::opened_at,
+      moderation_case::community_id,
+      community::name.nullable(),
+      moderation_case::target_type,
+    ))
+    .order_by(moderation_case::opened_at.desc())
+    .limit(limit)
+    .offset(offset)
+    .into_boxed();
+
+  if let Some(cid) = filter.community_id {
+    query = query.filter(moderation_case::community_id.eq(cid));
+  }
+  if let Some(st) = filter.status {
+    query = query.filter(moderation_case::status.eq(st));
+  }
+  if let Some(pid) = filter.target_person_id {
+    query = query.filter(moderation_case::target_person_id.eq(pid));
+  }
+
+  let rows: Vec<SummaryRow> = query.load::<SummaryRow>(conn).await?;
+
+  let case_ids: Vec<ModerationCaseId> = rows.iter().map(|r| r.0).collect();
+  let submitted_counts = submitted_counts_by_case(conn, &case_ids).await?;
+
+  Ok(
+    rows
+      .into_iter()
+      .map(|r| build_summary(r, &submitted_counts))
+      .collect(),
+  )
+}
+
 /// Aggregate helper: count `jury_assignment` rows with
 /// `status = 'submitted'` grouped by `case_id`, restricted to the given
 /// list of cases. Returns an empty map when `case_ids` is empty.
