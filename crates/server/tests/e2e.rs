@@ -1791,15 +1791,21 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
   assert_eq!(applied_1, 2, "branch1: 2 sponsor_liability_applied entries");
   assert_eq!(clamped_1, 1, "branch1: 1 sponsor_liability_clamped entry (for B)");
 
-  // Flip liability.founder_multiplier: 2.0 → 3.0.
+  // Flip liability.founder_multiplier: 2.0 → 3.0 with retroactive
+  // valid_from so governance_config_current picks up the new row
+  // deterministically. Prior code used `now() + 1s` + `sleep 1.2s` which
+  // left ~200ms of CI slack — flaky under container scheduling / GC
+  // pauses / clock drift between the test process and the PG container.
+  // `now() - interval '1 second'` pre-dates both the seeded row and any
+  // other `valid_from <= now()` window the view filter considers, so the
+  // DESC sort on `valid_from` always returns 3.0 without waiting.
   diesel::sql_query(
     "INSERT INTO governance_config (scope, key, value_type, value_float, valid_from) \
      VALUES ('instance', 'liability.founder_multiplier', 'float', 3.0, \
-             now() + interval '1 second')",
+             now() - interval '1 second')",
   )
   .execute(&mut async_conn)
   .await?;
-  tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
 
   let target1b = seed_person(&context, instance.id, "b1b_target", false)
     .await
