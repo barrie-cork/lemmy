@@ -151,3 +151,77 @@ Per advisor rule 12 (long retro when a checkpoint fires), the split-plane bug (�
 - [x] Decision-queue #11, #12 closed; #16 opened + closed within the phase.
 - [x] Completion report written (this file).
 - [x] PR `phase-5b → governance-v0` opened (PR #7).
+
+---
+
+## 10. Post-merge append — Bucket 1-3 SHAs + full-form retro + 5c carry-forwards
+
+Appended 2026-04-18 after PR #7 merged and CodeRabbit re-review surfaced 5 major defects + 3 latent/hygiene findings. Squash-merge at `6566dce43` on `governance-v0` did NOT capture the four post-merge commits below; they were cherry-picked onto `governance-v0` directly (decision-queue #17 Option 2, advisor-approved 2026-04-18) to make the canonical tree accurate. SHAs below are the cherry-picked SHAs on `governance-v0`, not the original `phase-5b` SHAs.
+
+### 10.1 Deviations additions
+
+- **Bucket 1 — five major defects (CodeRabbit PR #7).** Cherry-picked to `governance-v0` at **`a6e6265f9`** (originally `d8c544ebe` on `phase-5b`). Five fixes in one commit: (a) fallback-branch exclusion thread — `select_eligible_jurors` filtered at-cap persons but `legacy_select_eligible_jurors` (Phase 4 shape) did not; (b) founder-reason filter — `is_founder` check narrowed to `reason = "founder_seed"` so a future TTL'd `EndorsementStrength` event (non-founder) can't false-positive; (c) scope-precedence clamp read — `current_endorsement_strength` looks up community-scoped snapshot first, instance-scoped fallback (previous union-with-DESC let a newer instance row override the community row, same class as decision-queue #16); (d) `expires_at` lower bound — founder-seed CLI now clamps `expires_at > now()` to avoid inserting already-expired seeds; (e) duplicate-founder dedup — CLI deduplicates `person_id` inputs before inserting.
+
+- **Bucket 2 — flaky founder_multiplier timing window (CodeRabbit PR #7).** Cherry-picked at **`0e86dcb4e`** (originally `6e74e5eaf`). Test `sponsor_liability_with_founder_multiplier` branch 2 had a 1-second jitter window between `seed_founders` insert `expires_at = now() + 30d` and `apply_sponsor_liability`'s `now()` read — under CI scheduling latency the `> now()` filter could miss the seed. Test now inserts with `expires_at = now() + 365d` and asserts explicitly against the inserted `expires_at`, not `now()`.
+
+- **Bucket 3 — rule hardening + messaging.md renumber (CodeRabbit PR #7).** Cherry-picked at **`9102abba2`** (originally `cbab85bb8`). Two fixes: (a) `.claude/rules/pm-plugin-hooks-stable.md` detection heuristic replaced — the prior `grep -c` one-liner silently returns 0 on modern GNU grep when passed a directory without `-r`; replaced with a per-hook fail-closed loop; (b) `docs/brehon-law-inspired-network/V2/messaging.md` §8.1-§8.4 renumbered after an editorial insertion upstream renumbered §7.
+
+- **Doc-hygiene follow-up (CodeRabbit PR #7).** Cherry-picked at **`72fd4be1f`** (originally `f5c771638`). Typos + comment clarifications across `.claude/PRPs/reports/phase-5a-pr4-rebuttal.md`, `.claude/PRPs/reports/phase-5a-pr4-rereview-response.md`, `.claude/commands/prp-core/prp-ralph-slice.md`, `crates/api/api/src/governance/mod.rs` (one-line reorder), `crates/server/tests/e2e.rs` (4-line doc comment).
+
+- **5b PR squash-merged (not `--merge`); history compressed vs linear-per-task intent.** `phase-branch.md` §"Do not" rule calls for non-squash merges to preserve per-task commit visibility. The PR #7 merge used GitHub UI default, which squashed 13+ commits into `6566dce43`. Carry-forward: **5c task-70 PR-open playbook must pass `--merge` flag explicitly** (`gh pr merge --repo barrie-cork/lemmy <PR> --merge`), not rely on UI defaults. Also, the squash-merge didn't include the four Bucket commits above, which were only discovered when the advisor asked me to verify squash content byte-level — see feedback memory `feedback_verify_squash_merge_content_byte_level.md`.
+
+- **Decision-queue #16 staleness (landed pending in `a56fe3ccb`, resolved in `461efad29`).** Audit trail note: the `a56fe3ccb` commit shipped with `answer: null` in the JSON because the advisor's Option B resolution arrived after the commit landed. Pattern: the `chore(decision-queue):` follow-up is the right amend-free resolution path; the audit trail shows both states.
+
+### 10.2 Full-form retro (rule 12)
+
+Decision-queue #16 fired on shipped code (not caught by any regression gate), which is the "checkpoint" trigger for the long-form retro format.
+
+**Surprised:**
+
+- **Task 56 shipped green against all Phase 5b regression guards but carried a split-plane correctness bug.** Caught only by task 60 `FOUNDER_CHAIN_SURVIVAL` diagnostic — the plan-specified pipeline-integration observability did its job. "Gates green ≠ bug-free" pattern.
+- **CodeRabbit caught 3 additional latent/near-latent bugs** (founder-reason filter, scope-precedence read, duplicate-founder dedup) in adjacent logic that no existing test condition triggered. Static-adjacent analysis on a merged PR surfaces a distinct bug class from pre-merge test gates.
+- **Advisor-impl timing mismatch produced out-of-order commits** (task 60 committed before staging guidance landed; decision-queue #16 in `pending` state at commit time). Remediated forward with chore commits; no blast radius.
+- **5b PR squash-merge (GitHub UI default) rather than linear-per-task `--merge`.** Flag for 5c. The squash also dropped 4 post-merge fix commits from `governance-v0` — only discovered when byte-level verification caught the mismatch. Flag for 5c.
+
+**Change for 5c:**
+
+- **Adversarial test branches for scope-sensitive logic.** Any `community_id`-parameterised helper with BOTH reads and writes needs explicit test branches for: (a) both-scope-present reads, (b) newer-instance-overriding-community reads, (c) CLI duplicate inputs, (d) CLI past-`expires_at` inputs. Each becomes an explicit test branch, not implicit in existing flows. 5c task 62 observability handler + task 64 accept-flow handler both have scope-sensitive reads; apply this rule there.
+- **Tighter advisor-impl sync.** Advisor plan-review should include pre-commit staging-diff checks, not post-commit. 5c task 0 audit checklist should surface any pending-decision-queue items before the first code commit.
+- **Plan review "scope contract" section.** Any plan section for a module with scope-sensitive reads/writes gets an explicit "scope contract" paragraph: which plane(s) are read, which are written, what the composition rule is under snapshot recompute. Paired docstring on the function body mirroring the contract.
+- **5c task-70 PR-open playbook: `gh pr merge --repo barrie-cork/lemmy <PR> --merge` (explicit flag, not UI default).** The squash-merge of PR #7 is the precedent not to repeat.
+
+**Carry forward:**
+
+- **`FOUNDER_CHAIN_SURVIVAL` pipeline-integration diagnostic pattern — preserve for future phases.** Named prints inside integration tests surface semantic bugs that assertion-only tests miss. Keep the pattern.
+- **CodeRabbit PR-per-phase workflow catches a distinct bug class** (latent/near-latent in scope-sensitive logic) that pre-impl reviews and regression gates miss. Keep.
+- **Decision-queue escalation path validated** (#16): impl produces N-reads diagnosis → advisor makes call → one-line fix ships. Pattern scales; use for 5c.
+- **Branchful SELECT + FOR UPDATE + INSERT-or-UPDATE upsert pattern** (5a deviation 7) and **two-query scope-precedence lookup pattern** (5b Bucket 1 Fix 3) are both fork-established patterns. Worth a dedicated feedback memory if they recur in 5c/6.
+
+### 10.3 Carry-forward items to 5c (expanded)
+
+In addition to §5 items 1-5 above:
+
+- **6. `count_active_founders` signature change to return active IDs** (CodeRabbit Bucket 1 Fix 5 deferral). Currently returns `i64` count; downstream callers could be more precise with `Vec<PersonId>`. Decide in 5c if a caller needs IDs; otherwise defer to v1.
+- **7. `load_or_compute_snapshot` staleness check** (CodeRabbit deferral; Phase 6 scheduler work per existing plan). No 5c action required.
+- **8. `config.rs` `Cow<'_, str>` → `HashMap<Scope,_>` refactor** (CodeRabbit deferral; requires profiler trace first to confirm the allocation pressure hypothesis). 5c chore if task 62 observability reveals config read pressure; otherwise v1.
+- **9. Post-target case sponsor-liability path** (Phase 4b decision-queue #10; 5b didn't fix). 5c task 57-era target-inference is the right hook, or defer to v1. Plan task 64 target-inference already touches this area.
+- **10. `admin-config-write.sh` wrapper** (Watch 11 / decision-queue #13, 5a deferral; 5c sibling docs artifact — NOT a task-plan slot).
+- **11. Snapshot-staleness alert** (design-review B1; 5c task 62 observability may surface this as a natural side-effect of the `admin_reputation_stats` response DTO).
+- **12. Merge-method discipline.** 5c task 70 PR-open playbook must pass `--merge` flag explicitly — never rely on GitHub UI defaults. Failed once in 5b and dropped 4 fix commits until cherry-picked.
+
+### 10.4 Final post-merge HEAD
+
+`governance-v0` post-cherry-picks is at **`72fd4be1f`** (docs hygiene), 4 commits ahead of the PR merge commit `6566dce43`. Phase 5c branches from this tip.
+
+Validation sweep at `72fd4be1f` (pre-push):
+
+| Level | Command | Result |
+|---|---|---|
+| L1 | `cargo-check.bat --features full --workspace` | exit 0 (1m 52s) |
+| L1 | `cargo-clippy.bat --features full --workspace --no-deps -- -D warnings` | exit 0 |
+| L2 | `cargo-test.bat -p lemmy_server --test e2e -- report_to_modlog_golden_path` | 1 passed (37.96s) |
+| L2 | `cargo-test.bat -p lemmy_server --test e2e -- sponsor_liability_with_founder_multiplier` | 1 passed (58.79s) |
+| L5 | `lint-no-membership-read.sh` | pass |
+| L5 | `lint-no-can-sponsor-read.sh` | pass |
+
+All six gates green. Phase 5b close-out complete.
