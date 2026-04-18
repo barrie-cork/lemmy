@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM Brehon dev utility: run `cargo test` with the Visual Studio 2022 Build
 REM Tools linker AND the PostgreSQL client library (libpq.lib) on PATH.
 REM This is the `cargo test` sibling of `cargo-check.bat`.
@@ -87,13 +88,13 @@ if errorlevel 1 goto :append_with_sep
 
 echo BREHON_TEST_THREADS_GUARD: appending --test-threads=1 after existing `--`
 "%USERPROFILE%\.cargo\bin\cargo.exe" test %* --test-threads=1
-goto :eof
+exit /b !errorlevel!
 
 :append_with_sep
 echo BREHON_TEST_THREADS_GUARD: appending `-- --test-threads=1` for e2e race safety
 "%USERPROFILE%\.cargo\bin\cargo.exe" test %* -- --test-threads=1
-goto :eof
+exit /b !errorlevel!
 
 :run_plain
 "%USERPROFILE%\.cargo\bin\cargo.exe" test %*
-goto :eof
+exit /b !errorlevel!
