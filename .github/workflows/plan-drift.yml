@@ -64,24 +64,87 @@ jobs:
       - name: Extract routes wired in code
         id: code_routes
         run: |
-          # Collect .route("/path", ...) and Axum-style definitions across the governance crate surface
-          {
-            grep -rnE '\.route\s*\(\s*"[^"]+"' \
-              crates/api/api/src/governance/ \
-              crates/api/api_crud/src/governance/ \
-              crates/server/src/governance.rs 2>/dev/null || true
-            grep -rnE 'Router::new\(|routes!|route_layer' \
-              crates/server/src/governance.rs 2>/dev/null || true
-          } > /tmp/routes.raw
-          # Extract method + path pairs; accept common Axum idioms (get(...), post(...))
-          awk '
-            {
-              method=""
-              if (match($0, /(get|post|put|delete|patch)\s*\(/, mm)) method=toupper(mm[1])
-              if (match($0, /"([^"]+)"/, pp)) path=pp[1]
-              if (method != "" && path != "" && path ~ /^\//) print method " " path
-            }
-          ' /tmp/routes.raw | sort -u > /tmp/code.txt
+          # Lemmy 1.0-beta concentrates route wiring in a single file:
+          # crates/api/routes/src/lib.rs, as a tree of nested actix-web
+          # scope("...") frames. The nesting is expressed via .service(...)
+          # parentheses, NOT braces — every scope("X") sits inside an
+          # enclosing parens pair (either the outer `cfg.service(` or a
+          # nested `.service(`). To produce fully-qualified paths matching
+          # `05 §2` (e.g. `POST /api/v4/governance/report`), walk the file
+          # tracking paren depth and pop a scope's segment when its
+          # enclosing parens close. String/comment-aware so '(' or ')'
+          # inside string literals and `// ...` comments don't shift depth.
+          python3 - <<'PY' > /tmp/code.txt
+          import re
+          routes_file = "crates/api/routes/src/lib.rs"
+          scope_re = re.compile(r'scope\(\s*"([^"]+)"\s*\)')
+          route_re = re.compile(
+              r'\.route\(\s*"([^"]+)"\s*,\s*(get|post|put|delete|patch)\('
+          )
+
+          def strip_strings_and_comments(line: str) -> str:
+              # Remove `// ...` line comments and "..." string contents so
+              # paren counting only sees structural parens. Block comments
+              # (/* ... */) are not used in this file; ignored here.
+              out = []
+              i, n = 0, len(line)
+              in_str = False
+              while i < n:
+                  ch = line[i]
+                  if in_str:
+                      if ch == "\\" and i + 1 < n:
+                          i += 2
+                          continue
+                      if ch == '"':
+                          in_str = False
+                      i += 1
+                      continue
+                  if ch == "/" and i + 1 < n and line[i + 1] == "/":
+                      break
+                  if ch == '"':
+                      in_str = True
+                      i += 1
+                      continue
+                  out.append(ch)
+                  i += 1
+              return "".join(out)
+
+          stack = []  # list[tuple[segment: str, paren_depth_when_opened: int]]
+          depth = 0
+          with open(routes_file, encoding="utf-8") as fh:
+              for line in fh:
+                  # Match scope(...) and .route(...) on the raw line so the
+                  # quoted path arguments are visible to the regex.
+                  scope_hits = [m.group(1) for m in scope_re.finditer(line)]
+                  route_hits = [
+                      (m.group(2).upper(), m.group(1))
+                      for m in route_re.finditer(line)
+                  ]
+                  # Track paren depth on a sanitised copy.
+                  sanitised = strip_strings_and_comments(line)
+                  for ch in sanitised:
+                      if ch == "(":
+                          depth += 1
+                      elif ch == ")":
+                          # Pop scopes whose enclosing `.service(` just closed.
+                          # A scope opened at depth D was registered as a child
+                          # of the `.service(` that brought depth to D, so the
+                          # matching `)` is the one we see while depth still
+                          # equals D (before decrement).
+                          while stack and stack[-1][1] == depth:
+                              stack.pop()
+                          depth -= 1
+                  # `scope("X")` itself opens & closes parens on the same line
+                  # (net depth change zero), so the post-line depth equals the
+                  # depth at which the scope's children will be registered.
+                  for seg in scope_hits:
+                      stack.append((seg, depth))
+                  for method, path in route_hits:
+                      full = "".join(seg for seg, _ in stack) + path
+                      if full.startswith("/api/v4/governance"):
+                          print(f"{method} {full}")
+          PY
+          sort -u -o /tmp/code.txt /tmp/code.txt
           echo "Code routes:"
           cat /tmp/code.txt
           echo "count=$(wc -l < /tmp/code.txt)" >> "$GITHUB_OUTPUT"

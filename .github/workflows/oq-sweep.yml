@@ -217,6 +217,19 @@ jobs:
             *)
               echo "::warning::${OQ}: no valid verdict on line 1 — got: '$verdict'. Defaulting to STILL-OPEN."
               verdict=STILL-OPEN
+              # Persist the normalised verdict to the artefact so the
+              # aggregate job (which re-parses line 1 from disk, not from
+              # this step's GitHub output) sees the same token. Without this
+              # rewrite, aggregate would read the model's raw line 1 (e.g.
+              # '### ADR-supersede ...') and render it as the verdict cell.
+              # Original model output is preserved below the fence for diag.
+              {
+                echo "$verdict"
+                echo "(verdict auto-normalised by infer step on $(date -u +%Y-%m-%dT%H:%M:%SZ); model produced no valid line-1 token; original output below)"
+                echo
+                cat /tmp/oq-result.md
+              } > /tmp/oq-result.normalised.md
+              mv /tmp/oq-result.normalised.md /tmp/oq-result.md
               ;;
           esac
           echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
@@ -342,12 +355,18 @@ jobs:
               first_line=$(sed -n '2p' "$result_file" | tr -d '\r' | head -c 160)
               first_line=${first_line//|/\\|}
               case "$verdict" in
-                STILL-OPEN) still_open=$((still_open+1)) ;;
-                IMPLICITLY-RESOLVED) resolved=$((resolved+1)) ;;
-                CONTRADICTED-BY-CODE) contradicted=$((contradicted+1)) ;;
-                *) unknown=$((unknown+1)) ;;
+                STILL-OPEN) still_open=$((still_open+1)); display="STILL-OPEN" ;;
+                IMPLICITLY-RESOLVED) resolved=$((resolved+1)); display="IMPLICITLY-RESOLVED" ;;
+                CONTRADICTED-BY-CODE) contradicted=$((contradicted+1)); display="CONTRADICTED-BY-CODE" ;;
+                # Belt-and-braces: only render verdict if it is a known token;
+                # otherwise show UNKNOWN to avoid leaking raw markdown headings
+                # like '###' into the cell (the `${verdict:-UNKNOWN}` default
+                # only fires on empty/unset, not on non-empty garbage). The
+                # infer step now also rewrites the artefact (Change A), but
+                # this guard protects future regressions.
+                *) unknown=$((unknown+1)); display="UNKNOWN" ;;
               esac
-              table+="| ${oq} | ${verdict:-UNKNOWN} | ${first_line} |\n"
+              table+="| ${oq} | ${display} | ${first_line} |\n"
             else
               missing=$((missing+1))
               table+="| ${oq} | MISSING | (artefact not uploaded — inference likely failed) |\n"
