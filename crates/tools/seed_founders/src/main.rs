@@ -227,7 +227,19 @@ async fn run(args: Args) -> LemmyResult<()> {
     ))
   })?;
 
-  let horizon = Utc::now()
+  let now = Utc::now();
+  // Reject past or present --expires-at: such rows insert as immediately
+  // inactive, bypass count_active_founders (which filters expires_at > now),
+  // yet still emit founder_seeded log lines. Checked before horizon so the
+  // error message reflects the real problem.
+  if args.expires_at <= now {
+    return Err(LemmyErrorType::Unknown(format!(
+      "expires_at={} must be strictly in the future (now={now})",
+      args.expires_at
+    ))
+    .into());
+  }
+  let horizon = now
     .checked_add_signed(Duration::days(max_expires_days))
     .ok_or_else(|| {
       LemmyErrorType::Unknown("expires_at horizon overflowed DateTime range".to_string())
@@ -247,6 +259,20 @@ async fn run(args: Args) -> LemmyResult<()> {
     .collect::<LemmyResult<Vec<_>>>()?;
   if specs.is_empty() {
     return Err(LemmyErrorType::Unknown("at least one --founder spec is required".to_string()).into());
+  }
+  // Dedup --founder entries so max_founders_active enforcement cannot be
+  // evaded by duplicate CLI specs and seed_one_founder does not double-apply
+  // deltas for the same person_id. PersonId derives Hash+Eq at
+  // db_schema_file/src/lib.rs:29-34.
+  let mut requested: std::collections::HashSet<PersonId> = std::collections::HashSet::new();
+  for spec in &specs {
+    if !requested.insert(spec.person_id) {
+      return Err(LemmyErrorType::Unknown(format!(
+        "duplicate --founder entry for person_id={}",
+        spec.person_id.0
+      ))
+      .into());
+    }
   }
 
   let admin_id = {

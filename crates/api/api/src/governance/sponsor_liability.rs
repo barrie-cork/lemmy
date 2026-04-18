@@ -47,8 +47,8 @@ use crate::governance::{
   governance_log,
 };
 use diesel::{
-  BoolExpressionMethods,
   ExpressionMethods,
+  OptionalExtension,
   QueryDsl,
   dsl::{exists, now, select},
   insert_into,
@@ -212,10 +212,15 @@ pub(crate) async fn apply_sponsor_liability(
     let pre_multiplier_delta: i64 = per_sponsor_base + remainder_bump;
 
     // Founder check (OQ-022 — now() == transaction_timestamp() == case-close ± ms).
+    // Restrict to reason="founder_seed" so non-founder expiring EndorsementStrength
+    // writes (none today, but defence-in-depth against future drift) cannot grant
+    // the founder multiplier. Mirrors count_active_founders at
+    // crates/tools/seed_founders/src/main.rs:142.
     let is_founder: bool = select(exists(
       reputation_event::table
         .filter(reputation_event::person_id.eq(sponsor_id))
         .filter(reputation_event::dimension.eq(ReputationDimension::EndorsementStrength))
+        .filter(reputation_event::reason.eq("founder_seed"))
         .filter(reputation_event::expires_at.is_not_null())
         .filter(reputation_event::expires_at.gt(now)),
     ))
@@ -230,34 +235,47 @@ pub(crate) async fn apply_sponsor_liability(
 
     let post_multiplier_delta = multiply_and_round(pre_multiplier_delta, multiplier);
 
-    // Current endorsement_strength — most recent snapshot row for the sponsor.
-    // Cross-community sponsor-liability uses the (sponsor, community_id) snapshot
-    // when the case is community-scoped; `None` (instance-scoped snapshot)
-    // otherwise. If no snapshot exists, the sponsor has never been computed —
-    // baseline 0.
+    // Clamp-math snapshot lookup: prefer community-scoped row if present
+    // (captures community-local endorsement context from Phase 5a
+    // create_endorsement writes), fall back to instance-scoped (founder
+    // seeds + prior sponsor-liabilities, both instance-scoped post
+    // decision-queue #16). Returning 0 on full miss preserves the
+    // "no baseline capital" semantic. Canonical pattern mirrors
+    // read_reputation_summary at db_views/reputation/src/impls.rs:86-128
+    // — two independent scope queries, no union, no cross-scope ordering
+    // (the previous union-with-DESC let a newer instance row override the
+    // community row; that is exactly the split-plane bug class we cleaned
+    // up in decision-queue #16).
     let current_endorsement_strength: i64 = match community_id {
-      Some(cid) => reputation_snapshot::table
-        .filter(reputation_snapshot::person_id.eq(sponsor_id))
-        .filter(
-          reputation_snapshot::community_id
-            .is_null()
-            .or(reputation_snapshot::community_id.eq(cid)),
-        )
-        .select(reputation_snapshot::endorsement_strength)
-        .order_by(reputation_snapshot::calculated_at.desc())
-        .first::<i32>(conn)
-        .await
-        .ok()
-        .map(i64::from)
-        .unwrap_or(0),
+      Some(cid) => {
+        let community_value = reputation_snapshot::table
+          .filter(reputation_snapshot::person_id.eq(sponsor_id))
+          .filter(reputation_snapshot::community_id.eq(cid))
+          .select(reputation_snapshot::endorsement_strength)
+          .first::<i32>(conn)
+          .await
+          .optional()?
+          .map(i64::from);
+        match community_value {
+          Some(v) => v,
+          None => reputation_snapshot::table
+            .filter(reputation_snapshot::person_id.eq(sponsor_id))
+            .filter(reputation_snapshot::community_id.is_null())
+            .select(reputation_snapshot::endorsement_strength)
+            .first::<i32>(conn)
+            .await
+            .optional()?
+            .map(i64::from)
+            .unwrap_or(0),
+        }
+      }
       None => reputation_snapshot::table
         .filter(reputation_snapshot::person_id.eq(sponsor_id))
         .filter(reputation_snapshot::community_id.is_null())
         .select(reputation_snapshot::endorsement_strength)
-        .order_by(reputation_snapshot::calculated_at.desc())
         .first::<i32>(conn)
         .await
-        .ok()
+        .optional()?
         .map(i64::from)
         .unwrap_or(0),
     };

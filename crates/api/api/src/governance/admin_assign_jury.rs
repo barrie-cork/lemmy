@@ -262,7 +262,7 @@ pub(crate) async fn select_eligible_jurors(
       panel_size,
       "jury pool below panel_size — falling back to unfiltered Phase 4 pool per config.jury.fallback_on_small_pool=true",
     );
-    return legacy_select_eligible_jurors(conn, case, panel_size).await;
+    return legacy_select_eligible_jurors(conn, &excluded, panel_size).await;
   }
   Ok(eligible)
 }
@@ -331,35 +331,34 @@ async fn run_strict_eligibility_query(
   Ok(rows.into_iter().map(|r| PersonId(r.id)).collect())
 }
 
-/// Phase 4 eligibility filter — "not target AND not reporter AND not
-/// deleted AND accepted_application". Preserved verbatim so the small-pool
-/// fallback path has a well-defined relaxed set. Does NOT consult
-/// `reputation_snapshot`; does NOT apply the concurrent-cap.
+/// Phase 4 eligibility filter — "not deleted AND accepted_application AND
+/// not in `excluded`". Preserved verbatim so the small-pool fallback path
+/// has a well-defined relaxed set. Does NOT consult `reputation_snapshot`;
+/// does NOT apply the concurrent-cap.
+///
+/// The `excluded` slice carries the full exclusion set built in
+/// [`select_eligible_jurors`] (case.target + case.creator + caller-provided
+/// ids from `admin_emergency_remove` / decline-replacement paths); dropping
+/// it would let fallback re-seat already-removed or already-picked jurors.
 async fn legacy_select_eligible_jurors(
   conn: &mut diesel_async::AsyncPgConnection,
-  case: &ModerationCase,
+  excluded: &[PersonId],
   panel_size: i64,
 ) -> LemmyResult<Vec<PersonId>> {
-  let target = case.target_person_id;
-  let reporter = case.creator_id;
-
   let mut query = person::table
     .inner_join(local_user::table)
     .filter(person::deleted.eq(false))
     .filter(local_user::accepted_application.eq(true))
     .into_boxed();
-  if let Some(target_id) = target {
-    query = query.filter(person::id.ne(target_id));
-  }
-  if let Some(reporter_id) = reporter {
-    query = query.filter(person::id.ne(reporter_id));
+  for person_id in excluded {
+    query = query.filter(person::id.ne(*person_id));
   }
 
-  let eligible: Vec<PersonId> = query
+  query
     .order(random())
     .limit(panel_size)
     .select(person::id)
     .load::<PersonId>(conn)
-    .await?;
-  Ok(eligible)
+    .await
+    .map_err(Into::into)
 }
