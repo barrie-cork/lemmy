@@ -2721,3 +2721,215 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
 
   Ok(())
 }
+
+// ============================================================================
+// Phase 5c — task 69a: V2 messaging hooks (NOTIFY + username regression)
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn governance_events_notify_fires() -> Result<(), Box<dyn Error>> {
+  use std::{pin::Pin, time::Duration as StdDuration};
+  use actix_web::web::{Data, Json};
+  use diesel::{Connection as _, PgConnection};
+  use lemmy_api_common::governance::CreateGovernanceReport;
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{PersonId, enums::CaseTargetType};
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use tokio::sync::mpsc;
+  use tokio_postgres::{AsyncMessage, NoTls, Notification};
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = LocalUserInsertForm::test_form(person.id);
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  let reporter = seed_person(&context, instance.id, "notify_reporter").await?;
+  let target = seed_person(&context, instance.id, "notify_target").await?;
+
+  // 1. Connect via tokio-postgres (NOT diesel) — do NOT tokio::spawn(connection)
+  //    directly; the bridge below takes ownership.
+  let (pg_client, pg_conn) = tokio_postgres::connect(&db_url, NoTls).await?;
+
+  // 2. Bridge — spawn a task that drives the connection and forwards NOTIFY
+  //    messages onto the returned channel. Per DQ #20 (advisor directive):
+  //    tokio-postgres 0.7.16 Connection implements Future, not Stream, so we
+  //    use poll_fn + Pin::new(&mut conn).poll_message(cx).
+  let mut rx: mpsc::UnboundedReceiver<Notification> = {
+    let (tx, rx) = mpsc::unbounded_channel();
+    tokio::spawn(async move {
+      let mut connection = pg_conn;
+      std::future::poll_fn(move |cx| loop {
+        match Pin::new(&mut connection).poll_message(cx) {
+          std::task::Poll::Ready(Some(Ok(AsyncMessage::Notification(n)))) => {
+            let _ = tx.send(n);
+          }
+          std::task::Poll::Ready(Some(Ok(_))) => {}
+          std::task::Poll::Ready(Some(Err(_))) | std::task::Poll::Ready(None) => {
+            return std::task::Poll::Ready(());
+          }
+          std::task::Poll::Pending => return std::task::Poll::Pending,
+        }
+      })
+      .await;
+    });
+    rx
+  };
+
+  // 3. LISTEN — must happen BEFORE the INSERT or the test races.
+  pg_client.batch_execute("LISTEN governance_events").await?;
+
+  // 4. Trigger an INSERT on governance_log via create_report.
+  let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+  let _resp = create_report(
+    Json(CreateGovernanceReport {
+      community_id: None,
+      target_type: CaseTargetType::Person,
+      target_id: target.0,
+      reason_code: "notify_test".to_string(),
+      description: None,
+    }),
+    context.clone(),
+    reporter_view,
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // 5. Await notification with timeout.
+  let notif = tokio::time::timeout(StdDuration::from_secs(2), rx.recv())
+    .await
+    .map_err(|_| -> Box<dyn Error> { "notification timed out after 2s".into() })?
+    .ok_or_else(|| -> Box<dyn Error> { "notification channel closed".into() })?;
+
+  // 6. Assert channel + payload shape.
+  assert_eq!(notif.channel(), "governance_events");
+  let payload: serde_json::Value = serde_json::from_str(notif.payload())?;
+  assert_eq!(payload["kind"], "report_created");
+  assert!(payload["entry_id"].as_i64().unwrap_or_default() > 0);
+  assert!(payload["created_at"].as_str().is_some());
+
+  Ok(())
+}
+
+#[tokio::test]
+async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  );
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // V2/messaging.md §8.2: MXID-looking usernames must remain registerable.
+  // `_lemmy_test_user` is 16 chars; passes is_valid_actor_name regex
+  // `^(?:[a-zA-Z0-9_]+|[0-9_\p{Arabic}]+|[0-9_\p{Cyrillic}]+)$`.
+  let username = "_lemmy_test_user";
+  let person_form = PersonInsertForm::test_form(instance.id, username);
+  let person = Person::create(&mut context.pool(), &person_form).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+  let mut lu_form = LocalUserInsertForm::test_form(person.id);
+  lu_form.accepted_application = Some(true);
+  LocalUser::create(&mut context.pool(), &lu_form, vec![]).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  assert_eq!(person.name, username);
+  Ok(())
+}
+

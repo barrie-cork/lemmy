@@ -4660,6 +4660,7 @@ dependencies = [
  "testcontainers",
  "testcontainers-modules",
  "tokio",
+ "tokio-postgres",
  "tracing",
  "tracing-actix-web",
  "tracing-subscriber",

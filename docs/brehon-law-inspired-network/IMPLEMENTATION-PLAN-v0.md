@@ -575,6 +575,12 @@ If those five tasks land in week 1, the schema foundation is solid and Phase 1 i
 
 ---
 
+## 6.1. Real-time transport (if proposed post-v0)
+
+If a future phase proposes adding a real-time push channel for governance notifications (jury invitations, case status changes, etc.), default to **Server-Sent Events (SSE) over WebSocket**. SSE composes with HTTP caching, has simpler backpressure semantics, and works through the same middleware stack as the existing API. The V2 messaging bridge does not require Brehon's own RT transport — it polls `governance_log` or subscribes via Postgres NOTIFY per [`SUBSCRIPTIONS.md`](SUBSCRIPTIONS.md). See [`V2/messaging.md §8.3`](V2/messaging.md) for the full reasoning.
+
+---
+
 ## 7. Risks and unknowns
 
 What could go wrong, what needs verification before v1.
