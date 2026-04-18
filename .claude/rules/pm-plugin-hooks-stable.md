@@ -93,7 +93,21 @@ rewrite later.
 
 ## Detection
 
-A simple pre-merge check: `grep -c 'local_private_message_before_create\|local_private_message_after_create\|local_private_message_before_update\|local_private_message_after_update\|federated_private_message_before_receive\|federated_private_message_after_receive' crates/` must return **≥6**. If the count drops below 6, a hook was deleted or renamed and this rule was violated. Consider adding this to CI as a one-line bash check in the existing lint workflow.
+A simple pre-merge check: each of the six hook-name string literals must appear at least once under `crates/`. Non-recursive `grep -c crates/` (without `-r`) either errors with `Is a directory` or silently returns 0 on modern GNU grep, so use a per-hook loop that fails closed:
+
+```bash
+for h in \
+  local_private_message_before_create \
+  local_private_message_after_create \
+  local_private_message_before_update \
+  local_private_message_after_update \
+  federated_private_message_before_receive \
+  federated_private_message_after_receive; do
+  rg -q "\"$h\"" crates/ || { echo "missing hook literal: $h"; exit 1; }
+done
+```
+
+Each hook appears exactly once as a string literal at its call site (see the inventory above), so the check is "every hook present", not a count threshold. A count-based threshold is misleading because the six literals live in only three files (`private_message/create.rs`, `private_message/update.rs`, `apub/objects/src/objects/private_message.rs`) — aggregate counts don't distinguish "all six present" from "three present twice". Consider wiring this loop into the existing lint workflow.
 
 ## References
 

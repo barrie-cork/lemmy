@@ -74,24 +74,39 @@ Two orthogonal policies are exposed via an admin config panel. Both are chosen a
 | `hard_delete_after_days(n)` | Room stays writable until close + N days, then content is deleted. Hash-chain entries referencing the room remain but resolve to `Tombstoned` (see §3.6). |
 | `keep_writable` | Room stays open post-close for after-action discussion. Close event is logged; subsequent messages are not mirrored into the governance chain. |
 
-**Identity policy** — indexed by `room_type`:
+**Identity policy** — indexed by `room_type`. Two tiers: **ADR-015-gated** (admin panel cannot override) and **admin-configurable**.
+
+ADR-015-gated room types — pseudonymity is mandatory because juror identity is a group property (see §3.8):
+
+| Room type | Pinned policy | Rationale |
+|---|---|---|
+| `jury` | `always_pseudonym` (pinned) | Per ADR-015; any opt-out breaks group pseudonymity for every juror on the panel. |
+| `appeals` | `always_pseudonym` (pinned) | Same reasoning — appeals panels are jury-equivalent. |
+
+Admin-configurable room types — the admin panel chooses one of four enum values:
 
 | Enum value | Behaviour |
 |---|---|
-| `always_pseudonym` | Users appear as `actor_pseudonym` (e.g. `Juror-7B2F`). Real display name is not exposed. Admin-only reveal endpoint exists for legal compliance per ADR-015. |
-| `always_real_name` | Users appear as their Lemmy display name. Pseudonym not used. Suitable for public town halls. |
+| `always_pseudonym` | Users appear as a pseudonym rendering (e.g. `Speaker-7B2F`) derived from `actor_pseudonym`. Real display name not exposed. |
+| `always_real_name` | Users appear as their Lemmy display name. Pseudonym table is not consulted. Suitable for public town halls. |
 | `pseudonym_opt_in` | Default real name; user can self-flag as pseudonymous per room. |
 | `pseudonym_opt_out` | Default pseudonym; user can self-flag as real-name per room. |
 
-The combination (`room_type` × identity policy) × (`(community_id, room_type)` × lifecycle policy) is the configuration matrix. Default values (not yet set) should be:
+Admin panel applies to: `town_hall`, `emergency`, `spin_out`, `event`. Attempting to set `jury` or `appeals` via the panel returns a validation error referencing ADR-015.
 
-- Jury rooms → `always_pseudonym` + `archive_readonly`
-- Appeals → `always_pseudonym` + `archive_readonly`
-- Emergency coordination → `always_real_name` (admins are identified) + `archive_readonly`
-- Town halls → `always_real_name` + `keep_writable` OR `hard_delete_after_days(90)` per community preference
-- Spin-outs → inherit parent-room policy
+The combination (`room_type` × identity policy) × (`(community_id, room_type)` × lifecycle policy) is the configuration matrix. Shipped defaults (decided 2026-04-17):
 
-These defaults are **proposals**; the admin config panel lets operators change them before any room is created.
+- Jury rooms → `always_pseudonym` (pinned) + `archive_readonly` (community-configurable)
+- Appeals → `always_pseudonym` (pinned) + `archive_readonly` (community-configurable)
+- Emergency coordination → `pseudonym_opt_in` + `archive_readonly`
+- Town halls → `pseudonym_opt_in` + `keep_writable`
+- Spin-outs (non-jury/appeals parents) → `pseudonym_opt_in` + inherit parent lifecycle
+- Spin-outs (jury/appeals parents) → `always_pseudonym` (pinned by parent room type) + inherit parent lifecycle
+- Community events → `pseudonym_opt_in` + `archive_readonly`
+
+Admin config panel can change the non-pinned rows before any room is created. Jury and appeals defaults are hard-coded.
+
+**Configuration scope (OQ-V2-02 decision, 2026-04-17):** policy tables are **per-community** with an instance-wide default layer. Schema sketch: `governance_messaging_config(community_id NULL, room_type, lifecycle_policy, identity_policy)`. A `community_id IS NULL` row is the instance default; a row with `community_id` set overrides for that community. Resolution picks the most-specific row. Cross-instance cases with conflicting per-community policies are handled per §3.6 and OQ-V2-03's Matrix-federated-room resolution.
 
 ### 3.4 User stories — by feature cluster
 
@@ -122,10 +137,11 @@ Delivers: room-provisioning service that watches governance state transitions, a
 
 **C2.1 — Case discussion room.**
 When case #N enters `CaseStatus::JuryDeliberation`, the room-provisioning service:
-1. Creates a Matrix room with the identity policy configured for `room_type = jury`.
-2. Adds the 5 assigned jurors as members (as puppets; names resolved per identity policy).
-3. Writes a `Room::Created { case_id: N, room_id, room_type: jury, identity_policy, lifecycle_policy }` entry to the hash chain.
+1. Creates a Matrix room with identity policy **pinned to `always_pseudonym`** per ADR-015 (§3.8). The admin panel cannot override for this room type.
+2. Adds the 5 assigned jurors as members (as puppets; rendered as `Juror-<pseudonym-suffix>`, never as Lemmy usernames).
+3. Writes a `Room::Created { case_id: N, room_id, room_type: jury, identity_policy: always_pseudonym, lifecycle_policy }` entry to the hash chain.
 4. Does NOT add the reporter, the reported party, or any admin.
+5. If the case spans multiple instances (jurors on instances A and B), the room is **Matrix-federated** per OQ-V2-03 — each participating instance's homeserver hosts the room via standard Matrix federation. Hash-chain reconciliation follows §3.6.
 When the case transitions to `CaseStatus::Closed` (any closure reason), the service applies the configured lifecycle policy: archive, schedule deletion, or leave writable. A `Room::LifecycleApplied` hash-chain entry records the action.
 
 **C2.2 — Community event room.**
@@ -151,7 +167,7 @@ Individual chat messages are NOT written to the governance hash chain. Only room
 Delivers: stage-mode RTC, chair controls, raised-hand queue, recording-as-governance-artefact. Built on MatrixRTC + LiveKit + chair-control UI.
 
 **C3.1 — Scheduled town hall opens in stage mode.**
-At event start time, the event's Matrix room enters stage mode. LiveKit room is provisioned via JWT service. One presenter slot is reserved (initially held by the event creator / configured chair). All other attendees join as watchers — camera off, mic muted.
+At event start time, the event's Matrix room enters stage mode. LiveKit room is provisioned via JWT service. One presenter slot is reserved, held by the **initial chair** assigned by the governance plane (event creator, or jury foreperson for jury-adjacent events). The chair role is dual-sourced per OQ-V2-05: governance plane sets the initial holder; the holder can delegate mid-session via a Matrix-native "transfer chair" action that the bridge mirrors into the hash chain as `Room::ChairTransferred { from_pseudonym, to_pseudonym, at }`. All other attendees join as watchers — camera off, mic muted.
 
 **C3.2 — Raise hand.**
 A watcher clicks "raise hand." A signalling event is emitted as a Matrix state event in the room. The chair's UI shows an ordered FIFO queue of raised hands with timestamps.
@@ -169,7 +185,7 @@ Text chat in the town hall room is not suspended during RTC. Watchers can type; 
 If the community's config sets `record_town_halls = true`, LiveKit Egress records the session to MP4. On event end, the MP4 is uploaded to pict-rs (or a dedicated media store, TBD in V2c sub-PRD). A `Room::RecordingUploaded { media_url, duration_s, speakers: [...], attendance_count }` entry is hashed. The recording itself is NOT hashed (too large); its URL + content hash is.
 
 **C3.7 — Emergency mute.**
-Chair clicks "mute all." All non-chair LiveKit publishers are muted atomically. Logged as `Room::MuteAll { chair_id }`. Unmute is by re-granting publish permissions individually (no "unmute all" — deliberate friction).
+Chair clicks "mute all." All non-chair LiveKit publishers are muted atomically, **including participants from federated instances** (OQ-V2-06 decision, 2026-04-17): chair authority is room-global, not instance-scoped, matching Matrix power-level semantics. Logged as `Room::MuteAll { chair_pseudonym, federated: true|false }`. Unmute is by re-granting publish permissions individually (no "unmute all" — deliberate friction).
 
 **C3.8 — Anonymous town halls.**
 If the room's identity policy is `always_pseudonym`, the presenter slot shows the pseudonym as the name overlay on the LiveKit stream. The bridge maps LiveKit participant identities to pseudonyms at JWT issue time — real identities are never transmitted to the LiveKit server. (Important: LiveKit operators can still correlate presence via IP; this isn't anonymity, it's pseudonymity. Documented in the admin panel.)
@@ -200,20 +216,49 @@ The configurable lifecycle creates a tension with the hash chain's append-only n
 - The hash chain entries themselves are **never deleted or rewritten**. `Room::Created { room_id: R }` at position K in the chain stays at position K forever.
 - Room content (Matrix events, recordings, media) **is subject to the lifecycle policy**. Under `hard_delete_after_days`, content is erased from Matrix at T+N days.
 - A "tombstone" entry is added to the chain: `Room::Tombstoned { room_id: R, reason: 'retention_expiry' | 'gdpr_erasure' | 'operator_action' }`. Resolution attempts for R after the tombstone return the tombstone, not 404.
-- GDPR right-to-erasure is honoured by (a) redacting the user's messages within Matrix per standard Matrix redaction; (b) removing the user's `actor_pseudonym` mapping so subsequent lookups of who-was-Juror-7B2F return `Erased`. The hash chain retains the entry `Room::MembershipChanged { added: [pseudonym-7B2F] }` because the pseudonym itself is not PII once the mapping is erased. This is consistent with ADR-015.
+- GDPR right-to-erasure is honoured by (a) redacting the user's messages within Matrix per standard Matrix redaction; (b) removing the user's `actor_pseudonym` mapping per [04 §3 ActorPseudonym](../04-data-model-and-api.md). After the mapping is deleted, lookups of "who was `Juror-7B2F`" return `Erased` — permanently and irreversibly, per ADR-015. The hash chain retains `Room::MembershipChanged { added: [pseudonym-7B2F] }` because the pseudonym alone, without its mapping row, is not PII.
 - Matrix-side immutability and the chain work together: the chain records that a message-redaction event was observed, but not the redacted content.
 
-### 3.7 Open questions flagged for the V2 sub-PRD
+**Cross-instance federated rooms (OQ-V2-03 decision):** when a room is Matrix-federated across two instances A and B, each instance writes its own hash-chain entries for events it observed. `Room::Created` entries on A's chain and B's chain have different positions, different prev-hashes, and different instance signatures. Neither is "canonical" — they are independent observations of the same underlying Matrix state. Verifiers must query the chain of the instance making a claim, not a single "true" chain. This parallels how ActivityPub federation already handles state: each instance has its own log, federation is reconciliation by observation not by shared ledger. Cross-instance lifecycle policy conflicts (e.g. A says `archive_readonly`, B says `hard_delete_after_days(30)`) are resolved **room-locally**: each instance applies its own policy to the content on its own homeserver. A juror on instance A may see the room archived read-only while a juror on instance B sees it deleted. The hash chains record this honestly — `Room::LifecycleApplied` on each instance reflects what *that* instance did.
 
-These were deferred during the 2026-04-17 discussion; they need answers before V2a starts.
+### 3.7 Open questions — status
 
-- **OQ-V2-01** — Default values for the identity-policy matrix. §3.3 proposes defaults; sub-PRD must confirm or override.
-- **OQ-V2-02** — Concrete schema for `governance_config.messaging_*` columns. Is the config table per-instance or per-community? If per-community, how do cross-instance cases resolve conflicting policies?
-- **OQ-V2-03** — Cross-instance jury rooms. If a juror on instance A and a juror on instance B are assigned to the same case, where does the room live? Candidates: (a) on the instance that owns the case; (b) Matrix-federated across both. Affects the bridge's room-creation authority.
-- **OQ-V2-04** — Recording storage. pict-rs was designed for images; 30-min MP4s are outside its design. Separate media store (MinIO/S3) vs. pict-rs extension vs. external object store — deferred to V2c sub-PRD.
-- **OQ-V2-05** — Presence of the "chair" role. Is chair a room-level role or a governance-level role that projects into the room? Affects whether chair can be changed mid-session and whether chair identity is hashed separately.
-- **OQ-V2-06** — Mute-all semantics for federated rooms. If a town hall spans instances A and B, does A's chair have mute-all authority over B's participants? (Matrix power levels say yes if room state syncs; bridge semantics may say no.)
-- **OQ-V2-07** — Billing / ops burden for RTC. Who pays for LiveKit SFU bandwidth when a town hall has 200 attendees? Instance-local or community-local or user-local? Not a requirements question but a delivery-plan question.
+Questions deferred during the 2026-04-17 discussion. **Resolved** items are noted with their decision; **Open** items still need answers before V2a starts.
+
+- **OQ-V2-01 — Resolved (P1, 2026-04-17).** Identity-policy defaults. Resolution: two-tier model. Jury and appeals are pinned to `always_pseudonym` (ADR-015 group-property requirement, see §3.8). All other room types default to `pseudonym_opt_in` with admin-configurable override. See §3.3.
+- **OQ-V2-02 — Resolved (2026-04-17).** Config scope = **per-community** with an instance-wide default layer. Schema sketch in §3.3. Sub-PRD confirms column shape.
+- **OQ-V2-03 — Resolved (2026-04-17).** Cross-instance cases = **Matrix-federated room**. Each instance's homeserver hosts the room; hash chains are independent observations per §3.6.
+- **OQ-V2-04 — Parked for V2c sub-PRD (2026-04-17).** Recording storage. Deliberately deferred; actual recording volumes and operational constraints aren't known until V2c is on the roadmap. Candidates when decided: separate MinIO/S3 store, pict-rs extension, or Matrix media repo with hash-chained URL.
+- **OQ-V2-05 — Resolved (2026-04-17).** Chair role = **dual-sourced**. Governance plane assigns initial chair at room creation; chair can delegate mid-session via a Matrix-native transfer action that the bridge mirrors into the hash chain as `Room::ChairTransferred`. See §3.4.3 C3.1.
+- **OQ-V2-06 — Resolved (2026-04-17).** Mute-all scope = **room-global, federation-wide**. Chair authority follows Matrix power-level semantics; a chair with room-admin power-level can mute any publisher regardless of home instance. Consistent with Matrix UX; simplifies incident response mid-event. See §3.4.3 C3.7.
+- **OQ-V2-07 — Resolved (2026-04-17).** RTC cost model = **instance-local**. Each instance hosting a LiveKit SFU pays for its own bandwidth. Matches how Matrix federation costs work today. Delivery-plan row must size the expected cost before V2c rollout, but the responsibility model is settled.
+
+### 3.8 ADR-015 reconciliation (OQ-V2-01 resolution note)
+
+This is an audit trail of a deliberate design decision taken on 2026-04-17 after a conflict surfaced between the "customisable defaults" preference and ADR-015's mandatory pseudonymisation.
+
+**The conflict:** the initial draft of §3.3 proposed `pseudonym_opt_in` as the default for every room type, per user preference for experimentation. ADR-015 ([99-decisions-and-open-questions.md](../99-decisions-and-open-questions.md)) and [04 §3 ActorPseudonym](../04-data-model-and-api.md) mandate that the governance log reference `pseudonym`, never `person_id` or username — and that this rule is a **GDPR compliance requirement**, not a user preference.
+
+**Why jury rooms in particular:** pseudonymity is a *group property*, not an individual one. If Juror-7B2F can opt out and reveal as `alice_from_dublin`, the other four jurors on her panel become correlatable — by timing, attendance, speech patterns, presence at recess, anything else Alice exposes. One juror's opt-out degrades pseudonymity for every juror. ADR-015 works precisely because it's blanket, not opt-in.
+
+**The resolution (P1):** narrow the opt-in to room types where pseudonymity is not a group property.
+
+- **Jury** and **appeals** room types are pinned to `always_pseudonym`. The admin config panel cannot override this; the validator rejects any attempt. A sub-PRD wishing to change this would need a new ADR amending ADR-015.
+- **Town hall**, **emergency coordination**, **spin-outs** (for non-jury/appeals parents), and **community events** default to `pseudonym_opt_in` with admin-configurable override. Pseudonymity in these rooms is an individual preference, not a group-protection requirement.
+- Spin-outs from a jury or appeals parent room inherit the parent's pinned `always_pseudonym` (group property propagates).
+
+**What this preserves:**
+
+- Juror identity protection per ADR-015.
+- GDPR right-to-erasure soundness (jury/appeals rooms never expose real identities, so erasure only needs to sever the `actor_pseudonym` mapping).
+- User preference for experimentation on room types where it's safe.
+
+**What this gives up:**
+
+- Jurors cannot voluntarily reveal their identity to their fellow jurors in-room. This is a deliberate non-feature — if a juror wants to be known, they can communicate that out-of-band, but the room itself never renders their real name.
+- The admin panel has a pinned row that can confuse first-time operators. The panel surfaces a tooltip referencing ADR-015 to explain.
+
+**Appeals path:** if future operational experience suggests jury-room pseudonymity is too strict (e.g. small communities where everyone already knows everyone), the correct path is a new ADR amending ADR-015, not a quiet override in the admin panel. The admin panel's hard-coded pin enforces this.
 
 ---
 
@@ -221,7 +266,7 @@ These were deferred during the 2026-04-17 discussion; they need answers before V
 
 All citations are against the fork tree at `C:\Users\barri\Developer\brehon-fork\` (Lemmy 1.0-beta @ `811d0d09c`).
 
-### 3.1 Private messages — strictly 1:1
+### 4.1 Private messages — strictly 1:1
 
 - **Schema** `crates/db_schema_file/src/schema.rs:1044-1058` — `private_message { id, creator_id, recipient_id, content, deleted, published_at, updated_at, ap_id, local, removed, deleted_by_recipient }`. Single recipient FK. No `thread_id`, `subject`, `parent_id`, `attachment_url`, or `read` column.
 - **API** `crates/api/routes/src/lib.rs:334-341` — `POST /private_message`, `PUT /private_message`, `DELETE /private_message`, plus two report endpoints. `MarkPrivateMessageAsRead` and `GetPrivateMessages` have been **removed**; unread state lives in the unified `/notification` endpoints (`lib.rs:378-381`).
@@ -239,7 +284,7 @@ All citations are against the fork tree at `C:\Users\barri\Developer\brehon-fork
 
 **Conclusion:** Group PMs are not supported at any layer — schema, API, DTO, or AP wire. Adding them would require a new message table, a new AP type, and an outbound fan-out.
 
-### 3.2 No real-time transport
+### 4.2 No real-time transport
 
 - **No WebSocket.** Lemmy removed WS in 0.18; there is no `actix-ws` / `tokio-tungstenite` in `Cargo.toml`.
 - **No SSE.** No `EventStream` / `text/event-stream` / `sse::Sse` in crates.
@@ -248,7 +293,7 @@ All citations are against the fork tree at `C:\Users\barri\Developer\brehon-fork
 
 **Conclusion:** Lemmy has no substrate for real-time bidirectional messaging. Any V2 chat feature must bring its own transport.
 
-### 3.3 Media plane cannot carry calls
+### 4.3 Media plane cannot carry calls
 
 - `crates/routes/src/images/upload.rs:184-271` proxies uploads to pict-rs (`POST {pictrs_url}/image`). `allow_video` is a boolean flag gated by `local_site.image_allow_video_uploads` — codec support is whatever pict-rs decides.
 - No signed URLs, no presigned URLs, no HLS/DASH, no Range/seek handling in `crates/routes/src/images/download.rs:96-124`.
@@ -256,7 +301,7 @@ All citations are against the fork tree at `C:\Users\barri\Developer\brehon-fork
 
 **Conclusion:** pict-rs can (at a stretch) store voice notes as short clips but cannot be stretched into audio/video calls. RTC needs a dedicated stack.
 
-### 3.4 Plugin hooks relevant to messaging
+### 4.4 Plugin hooks relevant to messaging
 
 Per ADR-012 the Extism host is wired. Existing PM hook points (`crates/api/api_utils/src/plugins.rs:40-68`, called from `private_message/create.rs:75-80`, `update.rs:57,60`, `objects/private_message.rs:170,173`, `notify.rs:301-305`):
 
@@ -274,7 +319,7 @@ Per ADR-012 the Extism host is wired. Existing PM hook points (`crates/api/api_u
 
 Matrix is the only mature federated-chat protocol that already solves group rooms, E2EE, presence, typing indicators, read receipts, federated roaming, mobile push, and A/V calls as a coherent stack. The integration shape we want is a **bridge**, not a replacement.
 
-### 4.1 Application-service (AS) bridge — the mautrix pattern
+### 5.1 Application-service (AS) bridge — the mautrix pattern
 
 Matrix has a well-trodden bridge ecosystem: mautrix-{whatsapp, discord, slack, signal, telegram, …} plus matrix-appservice-{irc, discord, kakaotalk, …}. All follow the same shape:
 
@@ -294,7 +339,7 @@ The PM plugin hooks in §4.4 are enough to mirror Lemmy PMs outbound into Matrix
 
 **Recommendation: Option A.** Extism plugins are the right seam for *governance* hooks, not for standing up a chat protocol gateway.
 
-### 4.2 Lemmy community → Matrix room mapping
+### 5.2 Lemmy community → Matrix room mapping
 
 Natural mapping for "event happening, broadcast to the community":
 
@@ -306,7 +351,7 @@ Natural mapping for "event happening, broadcast to the community":
 
 **Cross-instance story:** If another Brehon instance `B` federates with ours `A`, each runs its own Matrix homeserver and its own bridge. Instance-B users join `#_lemmy_foo_A:matrix.A.example` through normal Matrix federation. This is already how Matrix federation works — nothing Brehon-specific to design.
 
-### 4.3 1:1 PMs via the bridge
+### 5.3 1:1 PMs via the bridge
 
 For WhatsApp-style 1:1 DMs the bridge creates a private Matrix room between the two puppets/users. Inbound Lemmy PMs arrive via the `federated_private_message_after_receive` plugin hook (or via polling the Lemmy API) and are forwarded as Matrix messages. Outbound Matrix messages become Lemmy `CreatePrivateMessage` calls. The single-recipient AP wire constraint (§4.1) is **not a blocker for 1:1** — only for group PMs. Group chat lives in the room mapping (§5.2), not in AP private messages.
 
@@ -316,7 +361,7 @@ For WhatsApp-style 1:1 DMs the bridge creates a private Matrix room between the 
 
 The Matrix ecosystem's standardised answer for WhatsApp-style 1:1 and group A/V is **MatrixRTC** per MSC4143, with the LiveKit back-end per MSC4195. This is the path Element (the reference client) uses in production.
 
-### 5.1 Component topology
+### 6.1 Component topology
 
 Per `configuring-playbook-element-call.md:8-60` and `configuring-playbook-matrix-rtc.md`:
 
@@ -325,7 +370,7 @@ Per `configuring-playbook-element-call.md:8-60` and `configuring-playbook-matrix
 - **Element Call frontend** (AGPL-3.0) — the UI. In practice Element Web and Element X embed it; a standalone install is "largely unnecessary" per the playbook unless you want guest access.
 - **Matrix clients** drive the whole thing via MatrixRTC state events in the room. Signalling is in Matrix; media is in LiveKit.
 
-### 5.2 Licence fit
+### 6.2 Licence fit
 
 - LiveKit Server: **Apache-2.0** → compatible with our AGPL-3.0 server (no viral concern either way since it runs as a separate process).
 - Element Call: **AGPL-3.0** → same licence as us; if we ship it, we're already AGPL so no licence drift. Source disclosure obligation is identical to what we already carry from Lemmy (see `AGPL-NOTICE.md`).
@@ -333,11 +378,11 @@ Per `configuring-playbook-element-call.md:8-60` and `configuring-playbook-matrix
 
 No licence blockers. No hidden CLA traps. No dual-licence re-negotiation risk.
 
-### 5.3 Alternative: Jitsi
+### 6.3 Alternative: Jitsi
 
 Jitsi (Apache-2.0, Java SFU `jitsi-videobridge` + Prosody + Jicofo + web UI) is the other mature AGPL-friendly option. It's a proven federation-free videoconf stack, deployable via the same playbook (`container-images.md:155-158`). Weakness for our case: no Matrix-native integration path — Jitsi predates MatrixRTC and doesn't speak MatrixRTC state events. We'd be bolting signalling on top of Matrix ourselves. The MatrixRTC ecosystem standardised on LiveKit in 2024–2025 exactly to avoid this. Recommend Jitsi only if LiveKit is blocked (e.g. ops constraint).
 
-### 5.4 What does NOT work
+### 6.4 What does NOT work
 
 - **Peer-to-peer WebRTC without an SFU** — fine for 1:1, fails at 5+ participants because upload bandwidth becomes O(n²). Rule it out for group events.
 - **MCU (transcoding mixer)** — historically what Jitsi did before Jicofo+JVB decoupled; never what we want for >10 participants.
