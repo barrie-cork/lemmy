@@ -15,6 +15,9 @@
 #   - crates/api/api/src/governance/reputation_snapshot.rs            (task 53 writer)
 #   - crates/db_views/reputation/src/                                 (doc-comments in view crate)
 #   - crates/api/api_crud/src/governance/create_endorsement.rs        (task 55 — doc-comment asserts `can_sponsor` is NOT read per OQ-014 / GOTCHA-55b)
+#   - crates/api/api/src/governance/admin_reputation_stats.rs        (task 62 — COUNT(*) FILTER observability, NOT gate read)
+#   - crates/api/api_common/src/governance.rs                        (task 62 — `can_sponsor_count: i64` DTO field)
+#   - crates/server/tests/e2e.rs                                     (task 63d — INSERT test fixture for staleness-alert path)
 #   - migrations/                                                     (up.sql)
 #
 # Fails with a non-zero exit if any other file in crates/ references
@@ -28,6 +31,9 @@ FORBIDDEN=$(grep -rn --include='*.rs' 'can_sponsor' crates/ \
   | grep -v '^crates/api/api/src/governance/reputation_snapshot.rs' \
   | grep -v '^crates/db_views/reputation/src/' \
   | grep -v '^crates/api/api_crud/src/governance/create_endorsement.rs' \
+  | grep -v '^crates/api/api/src/governance/admin_reputation_stats.rs' \
+  | grep -v '^crates/api/api_common/src/governance.rs' \
+  | grep -v '^crates/server/tests/e2e.rs' \
   || true)
 
 if [ -n "$FORBIDDEN" ]; then
