@@ -2420,3 +2420,304 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+// ============================================================================
+// Phase 5c — task 69: capability-gating e2e (3 branches)
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    admin_assign_jury::admin_assign_jury, reputation_snapshot::run_snapshot_batch,
+  };
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::moderation_case::ModerationCaseInsertForm,
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{
+      CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus, ReputationDimension,
+    },
+    schema::{jury_assignment, reputation_event},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  // Seed 5 eligible + 2 ineligible users.
+  let mut eligibles = Vec::new();
+  for i in 0..5 {
+    eligibles.push(seed_person(&context, instance.id, &format!("eligible_{i}"), false).await?);
+  }
+  let mut ineligibles = Vec::new();
+  for i in 0..2 {
+    ineligibles.push(seed_person(&context, instance.id, &format!("ineligible_{i}"), false).await?);
+  }
+
+  // Seed reputation_event rows for eligible users (delta=60, JuryReliability).
+  {
+    use lemmy_db_schema::source::governance::reputation_event::ReputationEventInsertForm;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    for &pid in &eligibles {
+      let form = ReputationEventInsertForm {
+        person_id: pid,
+        community_id: None,
+        dimension: ReputationDimension::JuryReliability,
+        delta: 60,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "founder_seed".to_string(),
+        expires_at: Some(Utc::now() + Duration::days(30)),
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(&mut async_conn)
+        .await?;
+    }
+  }
+
+  // Run snapshot batch so jury_eligible flags are up-to-date.
+  run_snapshot_batch(&context).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // Seed fixture users outside both groups.
+  let target_person = seed_person(&context, instance.id, "cap_target", false).await?;
+  let _reporter = seed_person(&context, instance.id, "cap_reporter", false).await?;
+  let admin = seed_person(&context, instance.id, "cap_admin", true).await?;
+  let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  let community_form = CommunityInsertForm::new(
+    instance.id,
+    "capcomm".to_string(),
+    "Cap Community".to_string(),
+    "cap-pubkey".to_string(),
+  );
+  let community = Community::create(&mut context.pool(), &community_form).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_case(
+    ctx: &LemmyContext,
+    target: PersonId,
+    community_id: lemmy_db_schema::newtypes::CommunityId,
+  ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error>> {
+    use lemmy_db_schema_file::schema::moderation_case;
+    let mut pool = ctx.pool();
+    let conn = &mut lemmy_diesel_utils::connection::get_conn(&mut pool).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let form = ModerationCaseInsertForm {
+      community_id: Some(community_id),
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "captest".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Open,
+      threshold_score: 1,
+    };
+    let case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+      diesel::insert_into(moderation_case::table)
+        .values(&form)
+        .get_result(conn)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(case.id)
+  }
+
+  // ============ BRANCH 1: basic capability gate ============
+  let case_id = seed_case(&context, target_person, community.id).await?;
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert_eq!(resp.assigned_person_ids.len(), 5, "branch 1: 5 jurors assigned");
+  for pid in &resp.assigned_person_ids {
+    assert!(eligibles.contains(pid), "branch 1: picked person {pid:?} is not in eligible set");
+    assert!(!ineligibles.contains(pid), "branch 1: picked ineligible person {pid:?}");
+  }
+
+  // ============ BRANCH 2: concurrent-cap ============
+  // Pre-seed 3 active (Accepted) jury_assignment rows for eligibles[0].
+  {
+    use lemmy_db_schema::source::governance::jury_assignment::JuryAssignmentInsertForm;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    for _ in 0..3 {
+      let dummy_case = seed_case(&context, target_person, community.id).await?;
+      let form = JuryAssignmentInsertForm {
+        case_id: dummy_case,
+        person_id: eligibles[0],
+        status: JuryAssignmentStatus::Accepted,
+      };
+      diesel::insert_into(jury_assignment::table)
+        .values(&form)
+        .execute(&mut async_conn)
+        .await?;
+    }
+  }
+  let case_id_2 = seed_case(&context, target_person, community.id).await?;
+  let resp_2 = admin_assign_jury(
+    Json(AdminAssignJury { case_id: case_id_2 }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert!(
+    !resp_2.assigned_person_ids.contains(&eligibles[0]),
+    "branch 2: eligibles[0] at concurrent-cap of 3 should be excluded"
+  );
+
+  // ============ BRANCH 3: config flip 3 → 5 ============
+  {
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'jury.max_concurrent_assignments', 'int', 5, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+  }
+  let case_id_3 = seed_case(&context, target_person, community.id).await?;
+  let resp_3 = admin_assign_jury(
+    Json(AdminAssignJury { case_id: case_id_3 }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert!(
+    resp_3.assigned_person_ids.contains(&eligibles[0]),
+    "branch 3: after config flip to 5, eligibles[0] (has 3 active) should be pickable"
+  );
+
+  // ============ Watch 10: PII grep over all governance_log payloads ============
+  // ADR-015: every person_id that reaches a governance_log payload must be
+  // pseudonymised (goes to the actor_pseudonym column, not the payload JSON).
+  // Pseudonyms look like UUIDs (strings with hyphens); raw ids are integers.
+  // Ten banned regex patterns cover every known identifier-leak surface:
+  // (1-5) raw integer ids in the five canonical id-field names,
+  // (6-7) dual-capability variants for admin/creator writes,
+  // (8-10) common name/email/handle text leaks.
+  {
+    use diesel::{QueryDsl, SelectableHelper};
+    use diesel_async::RunQueryDsl;
+    use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+    use lemmy_db_schema_file::schema::governance_log;
+    use regex::Regex;
+
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let rows: Vec<GovernanceLog> = governance_log::table
+      .select(GovernanceLog::as_select())
+      .load(&mut async_conn)
+      .await?;
+
+    let banned_patterns: [(&str, &str); 10] = [
+      ("raw person_id",          r#""person_id"\s*:\s*\d+"#),
+      ("raw target_person_id",   r#""target_person_id"\s*:\s*\d+"#),
+      ("raw sponsor_id",         r#""sponsor_id"\s*:\s*\d+"#),
+      ("raw sponsored_id",       r#""sponsored_id"\s*:\s*\d+"#),
+      ("raw creator_id",         r#""creator_id"\s*:\s*\d+"#),
+      ("raw admin_id",           r#""admin_id"\s*:\s*\d+"#),
+      ("raw user_id",            r#""user_id"\s*:\s*\d+"#),
+      ("raw username field",     r#""username"\s*:\s*""#),
+      ("raw name field",         r#""name"\s*:\s*""#),
+      ("email-looking string",   r#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#),
+    ];
+    let compiled: Vec<(&str, Regex)> = banned_patterns
+      .iter()
+      .map(|(label, pat)| (*label, Regex::new(pat).expect("valid regex")))
+      .collect();
+
+    for row in &rows {
+      let payload_str = serde_json::to_string(&row.payload)?;
+      for (label, re) in &compiled {
+        assert!(
+          !re.is_match(&payload_str),
+          "Watch 10 PII: banned pattern [{label}] matched in governance_log row {}: {payload_str}",
+          row.id.0
+        );
+      }
+    }
+  }
+
+  Ok(())
+}
