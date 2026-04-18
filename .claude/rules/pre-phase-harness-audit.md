@@ -17,10 +17,21 @@ first iteration.
 
 The scripts under `scripts/brehon/` are the only supported way to run
 cargo on this project on Windows (libpq + vcvars requirements). They must
-behave as documented. **Silent flag discard is the most dangerous failure
-mode** because it false-greens validation without emitting any error.
+behave as documented. Two failure modes are equally dangerous because
+both false-green validation:
 
-Run these three probes and confirm the captured logs match intent:
+- **Silent flag discard** — wrapper runs cargo against the wrong scope or
+  without the requested feature, but still reports what cargo did. Caught
+  by the positive probes (1, 2, 3) below.
+- **Exit-code masking** — wrapper runs cargo correctly but loses cargo's
+  exit code before returning to the caller (e.g. `goto :eof` in a batch
+  script clobbers errorlevel, swallowing real failures). Caught by the
+  negative probe (4) below. This bug class shipped once already on
+  2026-04-18 in `e7cad24fd` — see
+  `.claude/PRPs/debug/rca-issue-8-cargo-test-exit-code-masking.md`.
+
+Run all four probes and confirm the captured logs and exit codes match
+intent:
 
 ```bash
 # Probe 1 — per-crate check honors -p
@@ -42,13 +53,34 @@ cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server > .
 tail -20 .claude/audit-cargo-test.log
 # Expected: only e2e test target compiles. If the wrapper builds
 # additional test binaries or the whole workspace, it's discarding flags.
+
+# Probe 4 — wrappers fail loud on cargo errors (exit-code propagation)
+#
+# The previous three probes only confirm the wrapper ran cargo correctly.
+# They do NOT confirm the wrapper will surface cargo's failure to the
+# caller — a broken wrapper that always returns 0 passes probes 1-3 and
+# still poisons every downstream DoD gate. Probe 4 feeds cargo a known-
+# bad flag and asserts the wrapper propagates the non-zero exit code.
+cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features nonexistent_xyz > .claude/audit-cargo-test-negative.log 2>&1"
+echo "cargo-test.bat exit on bogus feature: $?"
+cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server --features nonexistent_xyz > .claude/audit-cargo-check-negative.log 2>&1"
+echo "cargo-check.bat exit on bogus feature: $?"
+# Expected: BOTH lines print a non-zero exit code (typically 101, cargo's
+# error exit). If either prints 0, the wrapper is masking cargo's exit
+# code. STOP and fix the wrapper before starting the phase. Tail of each
+# log should contain: "error: the package 'lemmy_server' does not contain
+# this feature: nonexistent_xyz". If the tail shows the error but the exit
+# is still 0, you're looking at the exit-code-masking bug class directly.
 ```
 
 If any probe fails, **stop the phase** and fix the wrapper in a pre-phase
 commit on the current branch. Do not start task 1 with a broken wrapper.
-The checkpoint-2 audit in Phase 2a found this bug under task 14 — it
-would have cost one audit instead of a four-layer unwind had the probe
-run before task 1.
+The checkpoint-2 audit in Phase 2a found the flag-discard bug under task
+14 — it would have cost one audit instead of a four-layer unwind had the
+probe run before task 1. The exit-code-masking bug shipped under Move 7
+in Phase 5c risk-reduction and went undetected until the first Slice A
+regression false-succeeded — it would have cost one audit had probe 4
+existed then.
 
 ### 2. DoD smoke test — every validation command in the plan
 
