@@ -64,6 +64,16 @@ jobs:
       - name: Extract routes wired in code
         id: code_routes
         run: |
+          # Fail loud on any error in this step. Without this, a silent
+          # Python failure (e.g. FileNotFoundError from a relative-path
+          # resolution in a changed working directory) would still produce
+          # /tmp/code.txt = "" and wc -l = 0, poisoning the drift report
+          # with a false "no routes in code" verdict. Issue #6 filed on
+          # 2026-04-17 is the canonical incident this guard prevents.
+          set -euo pipefail
+          # Guarantee the relative path below resolves against the repo
+          # root, not whatever pwd the runner defaults to.
+          cd "$GITHUB_WORKSPACE"
           # Lemmy 1.0-beta concentrates route wiring in a single file:
           # crates/api/routes/src/lib.rs, as a tree of nested actix-web
           # scope("...") frames. The nesting is expressed via .service(...)
@@ -145,6 +155,14 @@ jobs:
                           print(f"{method} {full}")
           PY
           sort -u -o /tmp/code.txt /tmp/code.txt
+          # Sanity guard: the fork ships with the governance scope wired
+          # in crates/api/routes/src/lib.rs since Phase 4a. An empty
+          # extractor output means the extractor itself is broken — fail
+          # loud rather than publishing a "no routes" drift report.
+          if [ ! -s /tmp/code.txt ]; then
+            echo "::error::route extractor produced no output — governance routes absent or extractor broken"
+            exit 1
+          fi
           echo "Code routes:"
           cat /tmp/code.txt
           echo "count=$(wc -l < /tmp/code.txt)" >> "$GITHUB_OUTPUT"
