@@ -152,6 +152,21 @@ Closing these gaps ends Phase 5. Phase 6 (federation) is the only remaining work
 
 ---
 
+## §Slices
+
+Phase 5c splits at the natural "all handlers exist → wire them up" boundary per Move 8 of the risk-reduction strategy (`C:\Users\barri\.claude\plans\what-would-be-a-proud-balloon.md`). Slices are consumed via `/prp-core:prp-ralph-slice` in letter order; each slice is a deliberate human checkpoint.
+
+| Slice | Tasks                              | Rationale                                                                                                                              | Max iter |
+|-------|------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|----------|
+| A     | 0, 61, 62, 63, 64, 65, 66, 67      | Foundation: pre-phase audit + decision-queue intake + 7 substantive handlers (~800 LOC). All new handler files land; no route wiring yet. | 8        |
+| B     | 68, 69, 69a, 70                    | Wire-up + compound tests + V2 hooks + phase close (~600 LOC). Task 68 route regression, task 69 3-branch e2e, task 69a LISTEN/NOTIFY trigger + subscriptions doc, task 70 PR.  | 6        |
+
+Slice A **must run first** — Slice B's task 68 route wiring imports the handler modules that Slice A creates. Slice B's task 69 3-branch e2e depends on Slice A's task 67 `list_cases` + task 64/65 jury handlers. Slice B produces the `docs(report)` commit and opens the PR (task 70).
+
+If Slice A completes in ≤5 ralph iterations with clean reasoning, running Slice B immediately in the same session is acceptable. If Slice A takes ≥6 iterations, rest the context window and start Slice B in a fresh session per the Phase 5b precedent.
+
+---
+
 ## §6. Critical conventions (fork-local)
 
 These conventions are in-tree and auto-enforced. Phase 5c handlers MUST respect them.
