@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use lemmy_db_schema::newtypes::{CommunityId, EndorsementId, ModerationCaseId};
 use lemmy_db_schema_file::{
   PersonId,
@@ -226,4 +227,76 @@ pub struct CreateEndorsementResponse {
 /// Revoke an existing endorsement.
 pub struct RevokeEndorsement {
   pub endorsement_id: EndorsementId,
+}
+
+// ── Group G: Admin Observability ──────────────────────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Admin-only request for cross-population reputation observability stats.
+/// `community_id` filters the bucket queries to a specific community
+/// (rows where `reputation_snapshot.community_id = community_id`); when
+/// `None`, the queries run instance-wide on `community_id IS NULL` rows.
+pub struct AdminReputationStats {
+  pub community_id: Option<CommunityId>,
+}
+
+/// Per-dimension snapshot histograms. Five fixed buckets per dimension:
+/// `[0, 1-30, 31-80, 81-200, 200+]` — matches probe-62 verified shape on
+/// pg18 (see `scratch/phase-5c-probes/bucket_query.sql`).
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct ReputationBuckets {
+  pub reporting_accuracy: [i64; 5],
+  pub jury_reliability: [i64; 5],
+  pub participation_consistency: [i64; 5],
+  pub endorsement_strength: [i64; 5],
+}
+
+/// Current threshold values from the governance config (instance scope).
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct ThresholdsSnapshot {
+  pub jury_reliability: i64,
+  pub reporting_accuracy: i64,
+  pub endorsement_strength: i64,
+}
+
+/// `COUNT(*)` aggregates over `reputation_snapshot` for the three v0
+/// capability bits.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct CapabilityCounts {
+  pub jury_eligible_count: i64,
+  pub trusted_reporter_count: i64,
+  pub can_sponsor_count: i64,
+}
+
+/// Founder-event tally per `expires_at` window (active = future-expiry,
+/// expired = past-expiry).
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct FounderEventStats {
+  pub active_count: i64,
+  pub expired_count: i64,
+}
+
+/// Response shape for `admin_reputation_stats` per IMPLEMENTATION-PLAN-v0.md
+/// line 373. Single round-trip per dimension via `CASE WHEN` bucketing —
+/// see plan §11.2 GOTCHA + probe 62-sql.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminReputationStatsResponse {
+  pub buckets: ReputationBuckets,
+  pub thresholds_current: ThresholdsSnapshot,
+  pub capability_counts: CapabilityCounts,
+  pub founder_event_stats: FounderEventStats,
+  pub calculated_at: DateTime<Utc>,
 }
