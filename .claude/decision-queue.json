@@ -1,7 +1,153 @@
 {
   "phase": "5",
   "schema_version": 1,
-  "pending": [
+  "pending": [],
+  "resolved": [
+    {
+      "id": 17,
+      "from": "impl",
+      "timestamp": "2026-04-18T18:00:00Z",
+      "question": "Phase 5c branch cut base — branch phase-5c from origin/governance-v0 (6566dce43) and lose post-squash commits, or from phase-5b tip (f5c771638), or cherry-pick?",
+      "options": [
+        "A. Branch phase-5c from origin/governance-v0 (6566dce43). Strict phase-branch.md reading.",
+        "B. Branch phase-5c from phase-5b tip (f5c771638). Orphan commits land in 5c PR diff.",
+        "C. Branch from governance-v0 + cherry-pick orphans onto phase-5c before task 1."
+      ],
+      "context": "Phase 5b PR #7 squash-merged at 6566dce43. Initial framing said 2 doc-only commits orphaned; byte-level verification (prompted by advisor) revealed 4 commits orphaned including 2 substantive code fixes (d8c544ebe Bucket 1 scope-precedence + founder-reason fixes; 6e74e5eaf flaky-timing test). Leaving them off governance-v0 would mean shipped bug fixes stay missing from the canonical tree.",
+      "answer": "Option 2 (cherry-pick onto governance-v0, then branch phase-5c from the cherry-picked tip). Neither A, B, nor C as originally framed: the 4 orphan commits are CodeRabbit-reviewed, green-on-phase-5b, semantically needed fixes. They belong on governance-v0 (canonical tree) not on phase-5c (would mix phase scope) or orphaned on phase-5b (would leave known bugs in canonical tree). Execution: git checkout -- . to reset working-tree partial restore; git cherry-pick d8c544ebe 6e74e5eaf cbab85bb8 f5c771638 onto governance-v0; run full 6-gate validation sweep (cargo check + clippy + 2 e2e + 2 lint guards, all exit 0); commit docs(report): Phase 5b retro append with cherry-pick SHAs; push; branch phase-5c from the new governance-v0 tip. Cherry-pick SHAs on governance-v0: a6e6265f9 (was d8c544ebe), 0e86dcb4e (was 6e74e5eaf), 9102abba2 (was cbab85bb8), 72fd4be1f (was f5c771638). Report retro at eaa413cd8. phase-5c branched from eaa413cd8. Resolution pattern: when the question framing itself is stale (new facts discovered mid-deliberation), answer with the updated framing, not one of the originally-offered options. See feedback memory feedback_verify_squash_merge_content_byte_level.md.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 18,
+      "from": "impl",
+      "timestamp": "2026-04-18T19:00:00Z",
+      "question": "Three Phase 5c prep artifacts are untracked on governance-v0; where should they land — task-0 commit on the still-uncut phase-5c branch (gated on #17), a plan-landing commit on governance-v0 (Phase 5a precedent c2a59b8db), or hold in working tree until #17 is answered?",
+      "options": [
+        "Wait on #17: hold untracked, let advisor answer #17, cut phase-5c per their choice, then land as task-0 plan commit on phase-5c (mirrors Phase 5a pattern c2a59b8db 'chore(plan): land Phase 5a plan + phase-branch rule + advisor decision-queue pre-seed')",
+        "Land now on governance-v0 as docs(plan): Phase 5c prep + slice-C archive. Phase 5a precedent treats plan-landing as exempt from phase-branch.md 'no direct governance-v0 commits' — plans are prep-for, not body-of, a phase. Advisor still cuts phase-5c later from governance-v0 tip per #17.",
+        "Cut phase-5c myself from governance-v0 tip (6566dce43) and land the three files there. Explicitly violates phase-branch.md rule that branch creation is the advisor's responsibility."
+      ],
+      "context": "Untracked files: (a) .claude/PRPs/plans/phase-5c-remaining-endpoints-and-observability.plan.md (Phase 5c plan, 12 tasks), (b) .claude/PRPs/plans/phase-5c-task-69a-v2-hooks.fragment.md (V2 hooks task fragment), (c) .claude/PRPs/ralph-archives/2026-04-17-phase-5b-slice-c/state.md (Phase 5b Slice C ralph archive — a completed slice, belongs with shipped 5b work). The archive was orphaned because PR #7 was squash-merged after these files were written. User asked to 'ensure all untracked files are pushed'. No stashes present. phase-5b branch already deleted locally. Option 1 is cleanest if #17 resolves quickly; Option 2 unblocks user intent immediately with documented precedent; Option 3 is out-of-bounds. Preferred: Option 1 (wait) unless advisor signals Option 2.",
+      "answer": "Option 2 (user-authorised 2026-04-18). Land the three Phase 5c prep files on governance-v0 as a single landing commit, per the Phase 5a precedent c2a59b8db. Phase 5c branch cut remains advisor scope (still gated on #17).",
+      "answered_by": "user"
+    },
+    {
+      "id": 16,
+      "from": "impl",
+      "timestamp": "2026-04-18T00:00:00Z",
+      "question": "Split-plane bug in apply_sponsor_liability: it READS current_endorsement_strength from the union plane (community_id IS NULL OR = cid, first by calculated_at DESC) but WRITES the reputation_event with community_id = case.community_id ONLY. Should Phase 5b Slice C land a fix(governance): commit on sponsor_liability.rs (or reputation_snapshot.rs), or defer to Phase 5c / file as a carry-forward?",
+      "options": [
+        "Defer: task 60 asserts only the write-plane math (reputation_event deltas + _applied/_clamped log counts), document the split-plane finding as Phase 5b carry-forward #4 in the completion report, and open a Phase 5c task to fix the reader (unify read plane to community-scoped when case is community-scoped, OR unify write plane to both planes, OR route can_sponsor through the union). Slice C stays scoped; task 61 PR ships with the finding flagged.",
+        "Fix in Slice C: add fix(governance): apply_sponsor_liability reads community-scoped snapshot only when case is community-scoped commit on phase-5b before task 60's commit. Task 60 assertions then match plan §11.5 line 1032 exactly (post-event community endorsement_strength = 0). This edits task-56-shipped code, which the slice-C rules say not to do without advisor approval."
+      ],
+      "context": "Branch 2 of task 60 was expected to produce post-sanction endorsement_strength=0 per plan §11.5 line 1032. Observed: the community-scoped recompute lands at -100 (sum of the single community-scoped event); the instance recompute stays at 100 (founder seed untouched). Diagnosis confirms sponsor_liability.rs:238-262 reads from union plane for the clamp (sees 100, clamps to -100) and writes to community plane only (insert at line 278 uses `community_id` param = case.community_id). load_live_events at reputation_snapshot.rs:519-530 filters strictly by community (the two planes don't compose on read). Capability bit `can_sponsor` is computed per-snapshot; which row wins depends on which call site reads which plane. Plan §11.5 math implicitly assumes the two planes compose. They don't. This is the 'task 56 code bug vs test fix' distinction — advisor flagged that 'plan assertions passing while the println shows 100' meant the println was the load-bearing integration invariant. Case (ii) per the advisor's diagnostic framework applies.",
+      "answer": "Option B (fix in Slice C). Advisor rationale: (a) Option A ships a known-broken production code path — founders would absorb arbitrarily many sanctions per-community because the read plane keeps pulling the seed from instance; (b) Phase 5c has no reserved slot for a sponsor-liability fix (plan §3 Phase 5c is endpoint-handlers + observability + capability tests); inserting a 5c task is plan-drift; (c) slice discipline protects against scope creep, not against shipping known bugs. The fix is one line at sponsor_liability.rs:278-287 — write reputation_event with community_id = None so the write plane matches the instance plane the founder seed lives on and the read's union-by-recency .first() can coherently evaluate. source_case_id still preserves audit linkage. Landed as fix(governance): 61ddae110 before task 60 commit. Residual concern (separate, unrelated): snapshot recompute does not re-apply the honour-price floor — double-sanction-within-15min edge case can drive snapshot below floor. Log as OQ-025 candidate, not a 5b blocker.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 15,
+      "from": "impl",
+      "timestamp": "2026-04-17T15:00:00Z",
+      "question": "Level 2 parity DoD command `cargo-test.bat -p lemmy_api --features full -- governance::config::parity` fails at phase-5b HEAD (baseline, pre-task-56). Narrow or block?",
+      "options": [
+        "Narrow the DoD: rely on Level 1 --workspace --features full + Level 2 e2e config_parity_round_trip for parity coverage; drop the -p lemmy_api parity invocation from §9 and §12",
+        "Block phase on the original invocation until the feature-flag interaction is fixed"
+      ],
+      "context": "Command is pre-existing-broken at 5a4a0f0a5 baseline; not caused by any 5b mutation. Root cause: `lemmy_api_crud` is a dev-dependency of `lemmy_api` (Cargo.toml:88), so `cargo test -p lemmy_api` compiles it. `lemmy_api_crud/src/user/create.rs:638` calls `.form()` on `reqwest_middleware::client::RequestBuilder`, which is a feature-unification artefact — works under `--workspace --features full` (full unification) but fails under `-p lemmy_api --features full` (partial unification). Three baseline errors: one E0599 (no method `form`) + two E0282 (cannot infer type) on upstream OAuth code unchanged since 2024. Fix would require patching upstream OAuth code (scope creep into Phase 4/5a territory) or adding reqwest feature-forwarding boilerplate (adds no 5b coverage). Level 1 `cargo-check.bat --features full --workspace` exits 0 and exercises `seeded_keys_count_matches_const_count` at compile time; Level 2 `config_parity_round_trip` in `crates/server/tests/e2e.rs` exits 0 (verified at task-0 baseline) and exercises the DB round-trip for every seeded key. Pre-phase-harness-audit rule fired correctly.",
+      "answer": "Option 1 — narrow. Rationale: (a) Level 1 cargo-check --features full --workspace exercises the compile-time seeded-keys-vs-const count test via feature unification; (b) e2e config_parity_round_trip exercises the DB round-trip for every seeded key; (c) the -p lemmy_api variant adds zero additional coverage and fails on a toolchain interaction unrelated to Phase 5b scope. Apply as a plan-edit: docs(plan): narrow Level 2 parity DoD to e2e coverage + remove -p lemmy_api parity invocation. Advisor concurrence received 2026-04-17.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 11,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm OQ-004 juror cap at 3 concurrent assignments for Phase 5 task 8 (select_eligible_jurors)?",
+      "options": [
+        "3 (matches [99 OQ-004] 'Current lean'; hardcode MAX_CONCURRENT_JURY_ASSIGNMENTS = 3)",
+        "Different integer — specify and justify"
+      ],
+      "context": "Pre-seeded by planner for Phase 5. [99 OQ-004] says 'cap at 3 concurrent assignments, instance-wide, target before Step 4'. Step 4 shipped without the cap. Phase 5 task 8 hardcodes it in admin_assign_jury::select_eligible_jurors alongside the new jury_eligible + derive-target filters.",
+      "answer": "Hardcode semantically via `config.jury.max_concurrent_assignments` — task 57's concurrent-cap subquery reads this key. Seeded value at 5a is 3; config-change without code change (OQ-004 resolution). Task 57 does NOT `const` the cap — it reads from ConfigCache so the cap is tuneable per §6 rule 10.",
+      "answered_by": "planner"
+    },
+    {
+      "id": 12,
+      "from": "planner",
+      "timestamp": "2026-04-17T12:00:00Z",
+      "question": "Confirm sponsor-liability severity units for Phase 5 task 7 (submit_jury_vote extension): minor=-10, moderate=-50, severe=-200?",
+      "options": [
+        "minor=-10, moderate=-50, severe=-200 (matches [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 55])",
+        "Different units — specify"
+      ],
+      "context": "Pre-seeded by planner. The plan text at IMPLEMENTATION-PLAN-v0.md:332 says 'for v0 hardcode minor = -10, moderate = -50, severe = -200 as integer deltas; v1 tunes the units'. Mapping to JuryDecision: NoAction+AdvisoryLabel → no liability; Warning+Cooldown → minor; RemoveContent → moderate; SuspendLocalUser+SuspendCommunityMember+RecommendFederationAction → severe.",
+      "answer": "Confirmed per IMPLEMENTATION-PLAN-v0.md §3 Phase 5b task 55 and §17.2 carry-forwards. Mapping per §11.1 GOTCHA-56a: `Label` + `VisibilityReduction` + `Restoration` → minor; `TemporaryRestriction` + `ContentRemoval` → moderate; `CommunityExclusion` + `InstanceSuspension` + `FederationQuarantineRecommendation` → severe. All three units are `deltas.sponsor_liability_{minor,moderate,severe}` config keys from 5a's seed list.",
+      "answered_by": "planner"
+    },
+    {
+      "id": 14,
+      "from": "impl",
+      "timestamp": "2026-04-17T14:30:00Z",
+      "question": "Plan-drift: every e2e invocation in phase-5a plan uses `-p lemmy_server --features full`, but `lemmy_server/Cargo.toml` does not declare a `full` feature (cargo errors: 'the package lemmy_server does not contain this feature: full'). 9 invocation sites affected. How to resolve?",
+      "options": [
+        "Drop `--features full` from every `-p lemmy_server` invocation (match Phase 4b's working pattern) — mechanical plan-drift fix, land as a `docs(plan):` commit before carry-patch",
+        "Add a `full` feature to `lemmy_server/Cargo.toml` that forwards to its deps — scope creep, touches Cargo.toml unnecessarily"
+      ],
+      "context": "Task 0 step 3's third DoD probe `cargo-test.bat --test e2e --features full --no-run -p lemmy_server` exits 101 with 'error: the package lemmy_server does not contain this feature: full'. Verified same error for check subcommand (exit 101). Phase 4b's ralph log used `cargo-test.bat --test e2e --no-run -p lemmy_server` without `--features full` (plan-4b.md lines 422, 856, 944). Re-ran probe 3 without `--features full`: exit 0, e2e target compiles. Cargo's feature unification propagates `full` to deps that declare it via workspace dep settings — the `--features full` flag on lemmy_server itself is redundant and rejected. This is a plan-write-time DoD-dry-run gap (sibling to the `cargo check --no-deps` drift already documented in plan §14 Level 1). Impl-self-resolved to Option 1 with evidence; flagged here for advisor visibility and for the 5b/5c plan-write sessions to inherit the corrected pattern.",
+      "answer": "Option 1 (mechanical plan-drift fix). Land `docs(plan): drop --features full from lemmy_server -p invocations (plan-drift fix)` on phase-5a before the carry-patch commit. 9 sites: task 0 step 3 probe, §12.1 task 50 validation (lines 922, 927), §12.2 task 51 validation (line 1007), §12.4 task 54 validation (line 1306 — cargo-check, same error class), §12.7 task 56 golden-path run (line 1524), §14 Level 2 e2e (line 1657), §14 Level 3 e2e compile (line 1666). Leave other `-p` invocations (lemmy_api, lemmy_db_schema, lemmy_routes, etc.) that DO declare `full` untouched.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 13,
+      "from": "planner",
+      "timestamp": "2026-04-17T14:00:00Z",
+      "question": "Should the admin-config-write.sh wrapper ship in 5c (as an interim mitigation for Watch 11) or defer to v1 along with OQ-018's HTTP endpoint?",
+      "options": [
+        "Ship wrapper in 5c as a sibling docs/scripts artefact (not a 5c impl-plan task) — operator tooling, not handler code",
+        "Defer entirely to v1 when the OQ-018 HTTP endpoint arrives"
+      ],
+      "context": "Phase 5a's capability_changed emitter (task 53) provides attribution for downstream cascades IF a prior admin_config_changed entry exists at the admin's action time. Without a wrapper, admins editing governance_config via raw psql leave no action-time attribution — an auditor reading the modlog six months later sees N capability_changed entries with no single attributable cause. Brehon self-enforcement principle (Higgins 2010 p.6) requires admin governance-weight actions be attributable at action time, not inferable from downstream effects.",
+      "answer": "Option 1 (with scoping clarification). Ship the admin-config-write.sh wrapper as a 5c sibling docs/scripts artefact, NOT as a 5c impl-plan task. Rationale: it's operator tooling, not handler code; doesn't need to live in the impl plan — doesn't earn a commit in the 5c ralph loop; lands alongside the 5c completion report or as a standalone docs commit on phase-5c. The wrapper's contents (psql `INSERT` into governance_config + `governance_log` in one tx) are mechanical; the plan-level concern is ensuring the 5c plan author knows not to allocate a task slot to it. 5a completion report §17.3 notes this as a carry-forward, so the 5c plan-write session inherits the answer without re-litigation.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 1,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "ModerationCase insert form — which fields are required for create_report?",
+      "options": [
+        "Check crates/db_schema/src/source/governance/moderation_case.rs",
+        "Assume fields from plan"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4a. The plan agent cited approximate fields but the impl agent needs exact types.",
+      "answer": "The exact fields are in ModerationCaseInsertForm at crates/db_schema/src/source/governance/moderation_case.rs:42-55. All fields are required (no Option except the target/community fields which ARE Option). Key: community_id: Option<CommunityId>, creator_id: Option<PersonId>, target_type: CaseTargetType, target_post_id: Option<PostId>, target_comment_id: Option<CommentId>, target_person_id: Option<PersonId>, target_community_id: Option<CommunityId>, target_remote_url: Option<String>, reason_code: String, severity: CaseSeverity, status: CaseStatus, threshold_score: i64.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 2,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "How to import get_conn for run_transaction in submit_jury_vote?",
+      "options": [
+        "use lemmy_diesel_utils::connection::get_conn",
+        "use lemmy_db_schema::utils::get_conn"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4a. The transaction pattern requires get_conn which has a specific import path in this workspace.",
+      "answer": "use lemmy_diesel_utils::connection::get_conn; — verified at crates/api/api/src/community/ban.rs:25. Also need use diesel_async::RunQueryDsl and use diesel_async::scoped_futures::ScopedFutureExt (for .scope_boxed()) in the handler imports. (Corrected 2026-04-16 during Task 0 audit — the `futures::FutureExt::boxed` claim was wrong; ban.rs:106 actually calls `.scope_boxed()` and the trait is in `diesel_async::scoped_futures::ScopedFutureExt`.)",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 3,
+      "from": "advisor",
+      "timestamp": "2026-04-16T17:00:00Z",
+      "question": "SubmitJuryVoteResponse derive stack — what derives to use?",
+      "options": [
+        "Minimal Debug+Serialize+Deserialize",
+        "Full Phase 3 convention with ts-rs"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4a. The new DTO must match the existing Phase 3 convention in governance.rs.",
+      "answer": "Full Phase 3 convention: #[skip_serializing_none] #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)] #[cfg_attr(feature = \"ts-rs\", derive(ts_rs::TS))] #[cfg_attr(feature = \"ts-rs\", ts(optional_fields, export))]. This matches all other DTOs in crates/api/api_common/src/governance.rs.",
+      "answered_by": "advisor"
+    },
     {
       "id": 4,
       "from": "advisor",
@@ -133,143 +279,74 @@
       "context": "Move 2 of the risk-reduction strategy identified this gap. The authoritative plan's DoD cannot be satisfied by the current §11 task list — no task emits the staleness alert. Task 63 is the natural home (it's already the observability wire-up task). Adding ~20 lines to task 63 bumps its LOC cap from 120 to ~140 but keeps the phase closable against the authoritative DoD.",
       "answer": "Option 1 — fold into task 63 scope as step 63d. Rationale: task 63's existing ACTION already splits into 63a (verify capability_changed emission — no code), 63b (list_capability_changed_entries_since helper ~30 lines), 63c (e2e test ~25 lines). Adding 63d (~20 lines) keeps the single-commit shape and maps cleanly to the DoD line. Implementation sketch: in the existing snapshot-recompute scheduled task (crates/server/src/scheduled_tasks.rs per Phase 5a task 54 deviation #9), after the batch completes run SELECT MAX(calculated_at) FROM reputation_snapshot and compare to now() - 2 * config.scheduler.snapshot_interval_seconds. If the max is older, emit tracing::error!(target: 'governance::integrity', 'reputation_snapshot staleness detected: most recent calculated_at = {:?}, threshold = {:?}', max, threshold). No new governance_log entry (ops signal, not governance signal). Update plan §11.3 + §5 LOC cap table.",
       "answered_by": "impl-self-resolved"
-    }
-  ],
-  "resolved": [
-    {
-      "id": 17,
-      "from": "impl",
-      "timestamp": "2026-04-18T18:00:00Z",
-      "question": "Phase 5c branch cut base — branch phase-5c from origin/governance-v0 (6566dce43) and lose post-squash commits, or from phase-5b tip (f5c771638), or cherry-pick?",
-      "options": [
-        "A. Branch phase-5c from origin/governance-v0 (6566dce43). Strict phase-branch.md reading.",
-        "B. Branch phase-5c from phase-5b tip (f5c771638). Orphan commits land in 5c PR diff.",
-        "C. Branch from governance-v0 + cherry-pick orphans onto phase-5c before task 1."
-      ],
-      "context": "Phase 5b PR #7 squash-merged at 6566dce43. Initial framing said 2 doc-only commits orphaned; byte-level verification (prompted by advisor) revealed 4 commits orphaned including 2 substantive code fixes (d8c544ebe Bucket 1 scope-precedence + founder-reason fixes; 6e74e5eaf flaky-timing test). Leaving them off governance-v0 would mean shipped bug fixes stay missing from the canonical tree.",
-      "answer": "Option 2 (cherry-pick onto governance-v0, then branch phase-5c from the cherry-picked tip). Neither A, B, nor C as originally framed: the 4 orphan commits are CodeRabbit-reviewed, green-on-phase-5b, semantically needed fixes. They belong on governance-v0 (canonical tree) not on phase-5c (would mix phase scope) or orphaned on phase-5b (would leave known bugs in canonical tree). Execution: git checkout -- . to reset working-tree partial restore; git cherry-pick d8c544ebe 6e74e5eaf cbab85bb8 f5c771638 onto governance-v0; run full 6-gate validation sweep (cargo check + clippy + 2 e2e + 2 lint guards, all exit 0); commit docs(report): Phase 5b retro append with cherry-pick SHAs; push; branch phase-5c from the new governance-v0 tip. Cherry-pick SHAs on governance-v0: a6e6265f9 (was d8c544ebe), 0e86dcb4e (was 6e74e5eaf), 9102abba2 (was cbab85bb8), 72fd4be1f (was f5c771638). Report retro at eaa413cd8. phase-5c branched from eaa413cd8. Resolution pattern: when the question framing itself is stale (new facts discovered mid-deliberation), answer with the updated framing, not one of the originally-offered options. See feedback memory feedback_verify_squash_merge_content_byte_level.md.",
-      "answered_by": "advisor"
     },
     {
-      "id": 18,
-      "from": "impl",
-      "timestamp": "2026-04-18T19:00:00Z",
-      "question": "Three Phase 5c prep artifacts are untracked on governance-v0; where should they land — task-0 commit on the still-uncut phase-5c branch (gated on #17), a plan-landing commit on governance-v0 (Phase 5a precedent c2a59b8db), or hold in working tree until #17 is answered?",
-      "options": [
-        "Wait on #17: hold untracked, let advisor answer #17, cut phase-5c per their choice, then land as task-0 plan commit on phase-5c (mirrors Phase 5a pattern c2a59b8db 'chore(plan): land Phase 5a plan + phase-branch rule + advisor decision-queue pre-seed')",
-        "Land now on governance-v0 as docs(plan): Phase 5c prep + slice-C archive. Phase 5a precedent treats plan-landing as exempt from phase-branch.md 'no direct governance-v0 commits' — plans are prep-for, not body-of, a phase. Advisor still cuts phase-5c later from governance-v0 tip per #17.",
-        "Cut phase-5c myself from governance-v0 tip (6566dce43) and land the three files there. Explicitly violates phase-branch.md rule that branch creation is the advisor's responsibility."
-      ],
-      "context": "Untracked files: (a) .claude/PRPs/plans/phase-5c-remaining-endpoints-and-observability.plan.md (Phase 5c plan, 12 tasks), (b) .claude/PRPs/plans/phase-5c-task-69a-v2-hooks.fragment.md (V2 hooks task fragment), (c) .claude/PRPs/ralph-archives/2026-04-17-phase-5b-slice-c/state.md (Phase 5b Slice C ralph archive — a completed slice, belongs with shipped 5b work). The archive was orphaned because PR #7 was squash-merged after these files were written. User asked to 'ensure all untracked files are pushed'. No stashes present. phase-5b branch already deleted locally. Option 1 is cleanest if #17 resolves quickly; Option 2 unblocks user intent immediately with documented precedent; Option 3 is out-of-bounds. Preferred: Option 1 (wait) unless advisor signals Option 2.",
-      "answer": "Option 2 (user-authorised 2026-04-18). Land the three Phase 5c prep files on governance-v0 as a single landing commit, per the Phase 5a precedent c2a59b8db. Phase 5c branch cut remains advisor scope (still gated on #17).",
-      "answered_by": "user"
-    },
-    {
-      "id": 16,
-      "from": "impl",
-      "timestamp": "2026-04-18T00:00:00Z",
-      "question": "Split-plane bug in apply_sponsor_liability: it READS current_endorsement_strength from the union plane (community_id IS NULL OR = cid, first by calculated_at DESC) but WRITES the reputation_event with community_id = case.community_id ONLY. Should Phase 5b Slice C land a fix(governance): commit on sponsor_liability.rs (or reputation_snapshot.rs), or defer to Phase 5c / file as a carry-forward?",
-      "options": [
-        "Defer: task 60 asserts only the write-plane math (reputation_event deltas + _applied/_clamped log counts), document the split-plane finding as Phase 5b carry-forward #4 in the completion report, and open a Phase 5c task to fix the reader (unify read plane to community-scoped when case is community-scoped, OR unify write plane to both planes, OR route can_sponsor through the union). Slice C stays scoped; task 61 PR ships with the finding flagged.",
-        "Fix in Slice C: add fix(governance): apply_sponsor_liability reads community-scoped snapshot only when case is community-scoped commit on phase-5b before task 60's commit. Task 60 assertions then match plan §11.5 line 1032 exactly (post-event community endorsement_strength = 0). This edits task-56-shipped code, which the slice-C rules say not to do without advisor approval."
-      ],
-      "context": "Branch 2 of task 60 was expected to produce post-sanction endorsement_strength=0 per plan §11.5 line 1032. Observed: the community-scoped recompute lands at -100 (sum of the single community-scoped event); the instance recompute stays at 100 (founder seed untouched). Diagnosis confirms sponsor_liability.rs:238-262 reads from union plane for the clamp (sees 100, clamps to -100) and writes to community plane only (insert at line 278 uses `community_id` param = case.community_id). load_live_events at reputation_snapshot.rs:519-530 filters strictly by community (the two planes don't compose on read). Capability bit `can_sponsor` is computed per-snapshot; which row wins depends on which call site reads which plane. Plan §11.5 math implicitly assumes the two planes compose. They don't. This is the 'task 56 code bug vs test fix' distinction — advisor flagged that 'plan assertions passing while the println shows 100' meant the println was the load-bearing integration invariant. Case (ii) per the advisor's diagnostic framework applies.",
-      "answer": "Option B (fix in Slice C). Advisor rationale: (a) Option A ships a known-broken production code path — founders would absorb arbitrarily many sanctions per-community because the read plane keeps pulling the seed from instance; (b) Phase 5c has no reserved slot for a sponsor-liability fix (plan §3 Phase 5c is endpoint-handlers + observability + capability tests); inserting a 5c task is plan-drift; (c) slice discipline protects against scope creep, not against shipping known bugs. The fix is one line at sponsor_liability.rs:278-287 — write reputation_event with community_id = None so the write plane matches the instance plane the founder seed lives on and the read's union-by-recency .first() can coherently evaluate. source_case_id still preserves audit linkage. Landed as fix(governance): 61ddae110 before task 60 commit. Residual concern (separate, unrelated): snapshot recompute does not re-apply the honour-price floor — double-sanction-within-15min edge case can drive snapshot below floor. Log as OQ-025 candidate, not a 5b blocker.",
-      "answered_by": "advisor"
-    },
-    {
-      "id": 15,
-      "from": "impl",
-      "timestamp": "2026-04-17T15:00:00Z",
-      "question": "Level 2 parity DoD command `cargo-test.bat -p lemmy_api --features full -- governance::config::parity` fails at phase-5b HEAD (baseline, pre-task-56). Narrow or block?",
-      "options": [
-        "Narrow the DoD: rely on Level 1 --workspace --features full + Level 2 e2e config_parity_round_trip for parity coverage; drop the -p lemmy_api parity invocation from §9 and §12",
-        "Block phase on the original invocation until the feature-flag interaction is fixed"
-      ],
-      "context": "Command is pre-existing-broken at 5a4a0f0a5 baseline; not caused by any 5b mutation. Root cause: `lemmy_api_crud` is a dev-dependency of `lemmy_api` (Cargo.toml:88), so `cargo test -p lemmy_api` compiles it. `lemmy_api_crud/src/user/create.rs:638` calls `.form()` on `reqwest_middleware::client::RequestBuilder`, which is a feature-unification artefact — works under `--workspace --features full` (full unification) but fails under `-p lemmy_api --features full` (partial unification). Three baseline errors: one E0599 (no method `form`) + two E0282 (cannot infer type) on upstream OAuth code unchanged since 2024. Fix would require patching upstream OAuth code (scope creep into Phase 4/5a territory) or adding reqwest feature-forwarding boilerplate (adds no 5b coverage). Level 1 `cargo-check.bat --features full --workspace` exits 0 and exercises `seeded_keys_count_matches_const_count` at compile time; Level 2 `config_parity_round_trip` in `crates/server/tests/e2e.rs` exits 0 (verified at task-0 baseline) and exercises the DB round-trip for every seeded key. Pre-phase-harness-audit rule fired correctly.",
-      "answer": "Option 1 — narrow. Rationale: (a) Level 1 cargo-check --features full --workspace exercises the compile-time seeded-keys-vs-const count test via feature unification; (b) e2e config_parity_round_trip exercises the DB round-trip for every seeded key; (c) the -p lemmy_api variant adds zero additional coverage and fails on a toolchain interaction unrelated to Phase 5b scope. Apply as a plan-edit: docs(plan): narrow Level 2 parity DoD to e2e coverage + remove -p lemmy_api parity invocation. Advisor concurrence received 2026-04-17.",
-      "answered_by": "advisor"
-    },
-    {
-      "id": 11,
-      "from": "planner",
-      "timestamp": "2026-04-17T12:00:00Z",
-      "question": "Confirm OQ-004 juror cap at 3 concurrent assignments for Phase 5 task 8 (select_eligible_jurors)?",
-      "options": [
-        "3 (matches [99 OQ-004] 'Current lean'; hardcode MAX_CONCURRENT_JURY_ASSIGNMENTS = 3)",
-        "Different integer — specify and justify"
-      ],
-      "context": "Pre-seeded by planner for Phase 5. [99 OQ-004] says 'cap at 3 concurrent assignments, instance-wide, target before Step 4'. Step 4 shipped without the cap. Phase 5 task 8 hardcodes it in admin_assign_jury::select_eligible_jurors alongside the new jury_eligible + derive-target filters.",
-      "answer": "Hardcode semantically via `config.jury.max_concurrent_assignments` — task 57's concurrent-cap subquery reads this key. Seeded value at 5a is 3; config-change without code change (OQ-004 resolution). Task 57 does NOT `const` the cap — it reads from ConfigCache so the cap is tuneable per §6 rule 10.",
-      "answered_by": "planner"
-    },
-    {
-      "id": 12,
-      "from": "planner",
-      "timestamp": "2026-04-17T12:00:00Z",
-      "question": "Confirm sponsor-liability severity units for Phase 5 task 7 (submit_jury_vote extension): minor=-10, moderate=-50, severe=-200?",
-      "options": [
-        "minor=-10, moderate=-50, severe=-200 (matches [IMPLEMENTATION-PLAN-v0.md §3 Phase 5 task 55])",
-        "Different units — specify"
-      ],
-      "context": "Pre-seeded by planner. The plan text at IMPLEMENTATION-PLAN-v0.md:332 says 'for v0 hardcode minor = -10, moderate = -50, severe = -200 as integer deltas; v1 tunes the units'. Mapping to JuryDecision: NoAction+AdvisoryLabel → no liability; Warning+Cooldown → minor; RemoveContent → moderate; SuspendLocalUser+SuspendCommunityMember+RecommendFederationAction → severe.",
-      "answer": "Confirmed per IMPLEMENTATION-PLAN-v0.md §3 Phase 5b task 55 and §17.2 carry-forwards. Mapping per §11.1 GOTCHA-56a: `Label` + `VisibilityReduction` + `Restoration` → minor; `TemporaryRestriction` + `ContentRemoval` → moderate; `CommunityExclusion` + `InstanceSuspension` + `FederationQuarantineRecommendation` → severe. All three units are `deltas.sponsor_liability_{minor,moderate,severe}` config keys from 5a's seed list.",
-      "answered_by": "planner"
-    },
-    {
-      "id": 14,
-      "from": "impl",
-      "timestamp": "2026-04-17T14:30:00Z",
-      "question": "Plan-drift: every e2e invocation in phase-5a plan uses `-p lemmy_server --features full`, but `lemmy_server/Cargo.toml` does not declare a `full` feature (cargo errors: 'the package lemmy_server does not contain this feature: full'). 9 invocation sites affected. How to resolve?",
-      "options": [
-        "Drop `--features full` from every `-p lemmy_server` invocation (match Phase 4b's working pattern) — mechanical plan-drift fix, land as a `docs(plan):` commit before carry-patch",
-        "Add a `full` feature to `lemmy_server/Cargo.toml` that forwards to its deps — scope creep, touches Cargo.toml unnecessarily"
-      ],
-      "context": "Task 0 step 3's third DoD probe `cargo-test.bat --test e2e --features full --no-run -p lemmy_server` exits 101 with 'error: the package lemmy_server does not contain this feature: full'. Verified same error for check subcommand (exit 101). Phase 4b's ralph log used `cargo-test.bat --test e2e --no-run -p lemmy_server` without `--features full` (plan-4b.md lines 422, 856, 944). Re-ran probe 3 without `--features full`: exit 0, e2e target compiles. Cargo's feature unification propagates `full` to deps that declare it via workspace dep settings — the `--features full` flag on lemmy_server itself is redundant and rejected. This is a plan-write-time DoD-dry-run gap (sibling to the `cargo check --no-deps` drift already documented in plan §14 Level 1). Impl-self-resolved to Option 1 with evidence; flagged here for advisor visibility and for the 5b/5c plan-write sessions to inherit the corrected pattern.",
-      "answer": "Option 1 (mechanical plan-drift fix). Land `docs(plan): drop --features full from lemmy_server -p invocations (plan-drift fix)` on phase-5a before the carry-patch commit. 9 sites: task 0 step 3 probe, §12.1 task 50 validation (lines 922, 927), §12.2 task 51 validation (line 1007), §12.4 task 54 validation (line 1306 — cargo-check, same error class), §12.7 task 56 golden-path run (line 1524), §14 Level 2 e2e (line 1657), §14 Level 3 e2e compile (line 1666). Leave other `-p` invocations (lemmy_api, lemmy_db_schema, lemmy_routes, etc.) that DO declare `full` untouched.",
-      "answered_by": "impl-self-resolved"
-    },
-    {
-      "id": 13,
-      "from": "planner",
-      "timestamp": "2026-04-17T14:00:00Z",
-      "question": "Should the admin-config-write.sh wrapper ship in 5c (as an interim mitigation for Watch 11) or defer to v1 along with OQ-018's HTTP endpoint?",
-      "options": [
-        "Ship wrapper in 5c as a sibling docs/scripts artefact (not a 5c impl-plan task) — operator tooling, not handler code",
-        "Defer entirely to v1 when the OQ-018 HTTP endpoint arrives"
-      ],
-      "context": "Phase 5a's capability_changed emitter (task 53) provides attribution for downstream cascades IF a prior admin_config_changed entry exists at the admin's action time. Without a wrapper, admins editing governance_config via raw psql leave no action-time attribution — an auditor reading the modlog six months later sees N capability_changed entries with no single attributable cause. Brehon self-enforcement principle (Higgins 2010 p.6) requires admin governance-weight actions be attributable at action time, not inferable from downstream effects.",
-      "answer": "Option 1 (with scoping clarification). Ship the admin-config-write.sh wrapper as a 5c sibling docs/scripts artefact, NOT as a 5c impl-plan task. Rationale: it's operator tooling, not handler code; doesn't need to live in the impl plan — doesn't earn a commit in the 5c ralph loop; lands alongside the 5c completion report or as a standalone docs commit on phase-5c. The wrapper's contents (psql `INSERT` into governance_config + `governance_log` in one tx) are mechanical; the plan-level concern is ensuring the 5c plan author knows not to allocate a task slot to it. 5a completion report §17.3 notes this as a carry-forward, so the 5c plan-write session inherits the answer without re-litigation.",
-      "answered_by": "advisor"
-    },
-    {
-      "id": 1,
+      "id": 22,
       "from": "advisor",
-      "timestamp": "2026-04-16T17:00:00Z",
-      "question": "ModerationCase insert form — which fields are required for create_report?",
-      "options": ["Check crates/db_schema/src/source/governance/moderation_case.rs", "Assume fields from plan"],
-      "context": "Pre-seeded by advisor for Phase 4a. The plan agent cited approximate fields but the impl agent needs exact types.",
-      "answer": "The exact fields are in ModerationCaseInsertForm at crates/db_schema/src/source/governance/moderation_case.rs:42-55. All fields are required (no Option except the target/community fields which ARE Option). Key: community_id: Option<CommunityId>, creator_id: Option<PersonId>, target_type: CaseTargetType, target_post_id: Option<PostId>, target_comment_id: Option<CommentId>, target_person_id: Option<PersonId>, target_community_id: Option<CommunityId>, target_remote_url: Option<String>, reason_code: String, severity: CaseSeverity, status: CaseStatus, threshold_score: i64.",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Task 61 handler sketch imports `count_active_sanctions` from `lemmy_db_views_reputation::impls` — but the fn is private (no `pub` at impls.rs:38). How should task 61 obtain the active-sanction count?",
+      "options": [
+        "(a) Add `pub(crate)` to count_active_sanctions + `pub use impls::count_active_sanctions` re-export in crates/db_views/reputation/src/lib.rs. Cleanest; matches Phase 2b view-crate pattern + precedent from count_active_founders (5b Bucket 1 Fix 5).",
+        "(b) Inline the sanction count SQL in the get_my_reputation handler (~6 lines, duplicates impls.rs:38-49 logic).",
+        "(c) Extend load_or_compute_snapshot to return (snapshot, active_sanction_count) — largest blast radius, ripples into every existing caller."
+      ],
+      "context": "Advisor plan-review 2026-04-18: plan §11.1 task 61 HANDLER SHAPE calls `count_active_sanctions(&mut context.pool(), local_user_view.person.id)` from within the handler. The fn is declared `async fn count_active_sanctions(...)` at crates/db_views/reputation/src/impls.rs:38 with no `pub` keyword — private to the impls module, not callable from `lemmy_api::governance::get_my_reputation` in a different crate. `build_summary_view` at impls.rs:52 is similarly private. Plan's GOTCHA at §11.1 acknowledges `ReputationSummaryView` has no `From<&ReputationSnapshot>` impl and task 61 adds one — but that From impl still needs the active-sanction count from somewhere. `load_or_compute_snapshot` at reputation_snapshot.rs:454-481 returns `ReputationSnapshot`, NOT `ReputationSummaryView`, so the active count is not carried along. Discovered by grep at Session start.",
+      "answer": "Option (a). Add `pub(crate)` to count_active_sanctions at crates/db_views/reputation/src/impls.rs:38 + `pub use impls::count_active_sanctions;` in crates/db_views/reputation/src/lib.rs near the existing `pub use` block. Rationale: (1) matches Phase 2b view-crate convention — helpers used across crates get re-exported from lib.rs (see existing `pub use impls::load_or_compute_snapshot` pattern if present; check first); (2) matches the Phase 5b precedent where `count_active_founders` ended up exposed for Bucket 1 Fix 5; (3) view crates own 'count X' primitives for consumers — this is exactly the abstraction being asserted. Task 61 should add a step '61.0 — add pub re-export for count_active_sanctions' BEFORE the handler creation step. One-line additions across two files; no logic change.",
       "answered_by": "advisor"
     },
     {
-      "id": 2,
+      "id": 23,
       "from": "advisor",
-      "timestamp": "2026-04-16T17:00:00Z",
-      "question": "How to import get_conn for run_transaction in submit_jury_vote?",
-      "options": ["use lemmy_diesel_utils::connection::get_conn", "use lemmy_db_schema::utils::get_conn"],
-      "context": "Pre-seeded by advisor for Phase 4a. The transaction pattern requires get_conn which has a specific import path in this workspace.",
-      "answer": "use lemmy_diesel_utils::connection::get_conn; — verified at crates/api/api/src/community/ban.rs:25. Also need use diesel_async::RunQueryDsl and use diesel_async::scoped_futures::ScopedFutureExt (for .scope_boxed()) in the handler imports. (Corrected 2026-04-16 during Task 0 audit — the `futures::FutureExt::boxed` claim was wrong; ban.rs:106 actually calls `.scope_boxed()` and the trait is in `diesel_async::scoped_futures::ScopedFutureExt`.)",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Task 64e golden-path test edit — extend ONE jury_assigned assertion block (plan §11.4 wording) or BOTH blocks (advisor finding)?",
+      "options": [
+        "(a) Extend ONE block per plan §11.4 wording: add `jury_accepted == Some(&5)` to the post-assign-jury assertion block at e2e.rs:997-999 only.",
+        "(b) Extend BOTH blocks: add `jury_accepted == Some(&5)` to the post-assign-jury block (e2e.rs:998) AND the post-vote block (e2e.rs:1157) for assertion consistency."
+      ],
+      "context": "Advisor plan-review 2026-04-18: the golden-path test has TWO separate assertion blocks checking `jury_assigned == Some(&5)` + `panel_assembled == Some(&1)` — at line 998 (immediately after admin_assign_jury) AND at line 1157 (after the jury vote phase). Plan §11.4 task 64e's wording 'extend the governance_log count assertion at e2e.rs:997' only addresses the first block. The count of `jury_accepted` entries is stable across the vote phase (accepts happen once between assign and vote), so both blocks would read `Some(&5)` post-task-64. Asymmetric extension (a) creates a latent coupling between the two blocks — if a future edit changes the post-vote block's semantic coverage, `jury_accepted` tracking silently regresses.",
+      "answer": "Option (b). Extend BOTH assertion blocks. Rationale: (1) assertion consistency is the whole point of having two snapshots of the governance_log count map — asymmetric coverage defeats the pattern; (2) the line 1157 block already re-asserts `report_created Some(&1)`, `jury_assigned Some(&5)`, `panel_assembled Some(&1)` which are all write-once-early events, so adding `jury_accepted Some(&5)` to both matches that rhythm; (3) zero runtime cost — both blocks will read `Some(&5)` post-task-64 because the accept loop runs before both snapshots. Task 64e sub-step should read: 'Extend BOTH governance_log count assertion blocks (e2e.rs:998 post-assign AND e2e.rs:1157 post-vote) with `assert_eq!(map.get(\"jury_accepted\"), Some(&5));`.'",
       "answered_by": "advisor"
     },
     {
-      "id": 3,
+      "id": 24,
       "from": "advisor",
-      "timestamp": "2026-04-16T17:00:00Z",
-      "question": "SubmitJuryVoteResponse derive stack — what derives to use?",
-      "options": ["Minimal Debug+Serialize+Deserialize", "Full Phase 3 convention with ts-rs"],
-      "context": "Pre-seeded by advisor for Phase 4a. The new DTO must match the existing Phase 3 convention in governance.rs.",
-      "answer": "Full Phase 3 convention: #[skip_serializing_none] #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)] #[cfg_attr(feature = \"ts-rs\", derive(ts_rs::TS))] #[cfg_attr(feature = \"ts-rs\", ts(optional_fields, export))]. This matches all other DTOs in crates/api/api_common/src/governance.rs.",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q3: task 66 `request_appeal` appeal-window policy. Plan §11.6 uses `case.closed_at.is_none()` but IMPLEMENTATION-PLAN-v0.md line 381 says 'Verify now() < case.closed_at' (opposite semantics). Which is correct for v0?",
+      "options": [
+        "(a) Accept plan §11.6 as-is: `case.closed_at.is_none()` — window is open while admin hasn't run admin_close_case yet. v0 simplification; no automatic close timer exists.",
+        "(b) Add a computed window: case.decided_at + config.appeal.window_days (new config key). Adds a config seed + runtime check.",
+        "(c) Defer to admin-flip-based window (status-only check, ignore closed_at entirely)."
+      ],
+      "context": "Advisor plan-review 2026-04-18: IMPLEMENTATION-PLAN-v0.md line 381 literal reading 'Verify now() < case.closed_at' requires closed_at to be future-dated — but v0's case closure is admin-driven (no automatic close timer), so `closed_at` is either None (case still Decided) or set-to-now() the moment admin runs admin_close_case. The plain reading doesn't fit v0 semantics. Plan §11.6 inverted to `case.closed_at.is_none()` which matches v0 semantics (window is 'case not yet closed by admin'). IMPLEMENTATION-PLAN-v0.md line 381 is likely a fragment of v1 thinking (admin_close_case with a future-dated closed_at as a grace window marker) that v0 doesn't implement.",
+      "answer": "Option (a). Accept plan §11.6 as the v0 window definition: `case.closed_at.is_none()` means 'appeal window open'. Rationale: (1) v0 has no automatic close timer — admin_close_case (Phase 4 task 46) sets closed_at to now() at the moment of admin intervention, so 'now() < closed_at' is never true; (2) the plain-reading of the design-doc sentence doesn't fit v0 temporal semantics; (3) v1's larger-panel appeal flow (ADR-010) can redefine the window without v0 schema changes. Document in task 66 handler doc comment: `// v0 appeal window: open while case.closed_at IS NULL. v1 may add a // config.appeal.window_days computed grace period — see ADR-010 + [99 OQ-025].` Also file OQ-025 (post-decision grace window, athgabál analogue) as a v1 open question — deferred-to-v1 per 2026-04-17 historical-fidelity review. Advisor concurs with Q3 recommendation (a) in plan §17.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 25,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q4: should `admin_reputation_stats` (task 62) emit a governance_log entry when called?",
+      "options": [
+        "(a) No log entry. Task 62 is read-only observability; other admin backstops (admin_assign_jury, admin_close_case) only log WRITES, not queries.",
+        "(b) Log entry `admin_reputation_stats_queried` per call. Admin-query audit trail.",
+        "(c) Log entry only when query includes `community_id` filter (admin drilling into a specific community)."
+      ],
+      "context": "Advisor plan-review 2026-04-18: plan §11.2 step 6 marks the log entry as optional pending this decision. Watch 11 (admin governance-weight actions need modlog at action time) does NOT apply to task 62 because the handler is read-only — it doesn't mutate governance weight (reputation_event, governance_config, case state). Consistency argument: admin_assign_jury logs the assign WRITE + panel_assembled, admin_close_case logs the case-close WRITE. Neither logs pre-write admin READS (e.g. get_case called by admin). Applying log-on-query to task 62 alone would be asymmetric.",
+      "answer": "Option (a). No log entry for task 62. Rationale: (1) Watch 11 scope is governance-weight WRITES, not READS — task 62 is pure observability; (2) consistency with existing admin backstops — admin_assign_jury, admin_close_case, get_case (admin caller path) do not log query-only operations; (3) the audit trail for 'admin queried reputation stats' is legitimate v1 scope (audit-log admin reads) but not a v0 invariant. Task 62 handler adds: `// TODO(brehon-fork): audit-log admin queries in v1 per OQ-026-candidate; // read-only endpoint, no governance_log::append here.`. Plan §11.2 step 6 'Optional: one governance_log::append(...)' — resolve to DROP step 6.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 26,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q7: Phase 4 string-literal entry-kind emit sites (`\"report_created\"` etc.) in governance_log.rs currently flagged for migration to the ENTRY_KIND_* consts (comment at lines 46-48). Migrate in 5c task 70 phase-close, separate 5c cosmetic commit, or defer to v1?",
+      "options": [
+        "(a) Defer to v1. Cosmetic; literals and consts are functionally identical. Not 5c scope. Carry-forward note in phase-close report.",
+        "(b) Bundle with task 70 phase-close commit. One sweep at phase-close, low risk because every literal usage is already known from the governance_log.rs comment.",
+        "(c) Separate `cosmetic(governance-log): migrate Phase 4 literals to ENTRY_KIND_* consts` commit in 5c between task 69a and task 70."
+      ],
+      "context": "Advisor plan-review 2026-04-18: governance_log.rs:46-48 flags the literal-to-const migration as 'optional cosmetic task'. Phase 5c new code (tasks 64/65/66) correctly uses consts per §6 C6. The Phase 4 literals are `\"report_created\"`, `\"jury_assigned\"`, `\"panel_assembled\"`, `\"case_decided\"`, `\"sanction_applied\"`, `\"public_case_log_appended\"` (6 sites, all in api-crate handlers shipped in Phase 4). Grep verification: the golden-path test assertion keys (e2e.rs:995-999 + 1155-1158) use the string literals too — any const migration must keep the assertions matching (consts are declared as `pub const ENTRY_KIND_X: &str = \"x\";` so Debug-format stays identical; no assertion churn).",
+      "answer": "Option (a). Defer to v1 cosmetic cleanup. Rationale: (1) scope creep protection — 5c is already at 12 task slots; unrelated cosmetic changes dilute the phase-close retro and risk CodeRabbit latent-bug findings in unrelated surfaces; (2) the literals are functionally identical to the consts — any tooling that can const-replace can do so in v1 without risk; (3) the governance_log.rs comment at 46-48 is itself the tracking artefact; no additional memo needed. Action: add to `.claude/PRPs/reports/phase-5c-complete-report.md §Carry-forward` at task 70 time — 'Phase 4 literal→const migration in governance_log.rs emit sites. 6 sites known; cosmetic only; defer to v1 cleanup commit alongside OQ-023 reason-enum migration.'. Plan §17 Q7 recommendation (c) matches this answer.",
       "answered_by": "advisor"
     }
   ]
