@@ -81,19 +81,6 @@
       "answered_by": "impl-self-resolved"
     },
     {
-      "id": 16,
-      "from": "impl",
-      "timestamp": "2026-04-18T00:00:00Z",
-      "question": "Split-plane bug in apply_sponsor_liability: it READS current_endorsement_strength from the union plane (community_id IS NULL OR = cid, first by calculated_at DESC) but WRITES the reputation_event with community_id = case.community_id ONLY. Should Phase 5b Slice C land a fix(governance): commit on sponsor_liability.rs (or reputation_snapshot.rs), or defer to Phase 5c / file as a carry-forward?",
-      "options": [
-        "Defer: task 60 asserts only the write-plane math (reputation_event deltas + _applied/_clamped log counts), document the split-plane finding as Phase 5b carry-forward #4 in the completion report, and open a Phase 5c task to fix the reader (unify read plane to community-scoped when case is community-scoped, OR unify write plane to both planes, OR route can_sponsor through the union). Slice C stays scoped; task 61 PR ships with the finding flagged.",
-        "Fix in Slice C: add fix(governance): apply_sponsor_liability reads community-scoped snapshot only when case is community-scoped commit on phase-5b before task 60's commit. Task 60 assertions then match plan §11.5 line 1032 exactly (post-event community endorsement_strength = 0). This edits task-56-shipped code, which the slice-C rules say not to do without advisor approval."
-      ],
-      "context": "Branch 2 of task 60 was expected to produce post-sanction endorsement_strength=0 per plan §11.5 line 1032. Observed: the community-scoped recompute lands at -100 (sum of the single community-scoped event); the instance recompute stays at 100 (founder seed untouched). Diagnosis confirms sponsor_liability.rs:238-262 reads from union plane for the clamp (sees 100, clamps to -100) and writes to community plane only (insert at line 278 uses `community_id` param = case.community_id). load_live_events at reputation_snapshot.rs:519-530 filters strictly by community (the two planes don't compose on read). Capability bit `can_sponsor` is computed per-snapshot; which row wins depends on which call site reads which plane. Plan §11.5 math implicitly assumes the two planes compose. They don't. This is the 'task 56 code bug vs test fix' distinction — advisor flagged that 'plan assertions passing while the println shows 100' meant the println was the load-bearing integration invariant. Case (ii) per the advisor's diagnostic framework applies.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
       "id": 10,
       "from": "impl",
       "timestamp": "2026-04-17T03:00:00Z",
@@ -108,6 +95,19 @@
     }
   ],
   "resolved": [
+    {
+      "id": 16,
+      "from": "impl",
+      "timestamp": "2026-04-18T00:00:00Z",
+      "question": "Split-plane bug in apply_sponsor_liability: it READS current_endorsement_strength from the union plane (community_id IS NULL OR = cid, first by calculated_at DESC) but WRITES the reputation_event with community_id = case.community_id ONLY. Should Phase 5b Slice C land a fix(governance): commit on sponsor_liability.rs (or reputation_snapshot.rs), or defer to Phase 5c / file as a carry-forward?",
+      "options": [
+        "Defer: task 60 asserts only the write-plane math (reputation_event deltas + _applied/_clamped log counts), document the split-plane finding as Phase 5b carry-forward #4 in the completion report, and open a Phase 5c task to fix the reader (unify read plane to community-scoped when case is community-scoped, OR unify write plane to both planes, OR route can_sponsor through the union). Slice C stays scoped; task 61 PR ships with the finding flagged.",
+        "Fix in Slice C: add fix(governance): apply_sponsor_liability reads community-scoped snapshot only when case is community-scoped commit on phase-5b before task 60's commit. Task 60 assertions then match plan §11.5 line 1032 exactly (post-event community endorsement_strength = 0). This edits task-56-shipped code, which the slice-C rules say not to do without advisor approval."
+      ],
+      "context": "Branch 2 of task 60 was expected to produce post-sanction endorsement_strength=0 per plan §11.5 line 1032. Observed: the community-scoped recompute lands at -100 (sum of the single community-scoped event); the instance recompute stays at 100 (founder seed untouched). Diagnosis confirms sponsor_liability.rs:238-262 reads from union plane for the clamp (sees 100, clamps to -100) and writes to community plane only (insert at line 278 uses `community_id` param = case.community_id). load_live_events at reputation_snapshot.rs:519-530 filters strictly by community (the two planes don't compose on read). Capability bit `can_sponsor` is computed per-snapshot; which row wins depends on which call site reads which plane. Plan §11.5 math implicitly assumes the two planes compose. They don't. This is the 'task 56 code bug vs test fix' distinction — advisor flagged that 'plan assertions passing while the println shows 100' meant the println was the load-bearing integration invariant. Case (ii) per the advisor's diagnostic framework applies.",
+      "answer": "Option B (fix in Slice C). Advisor rationale: (a) Option A ships a known-broken production code path — founders would absorb arbitrarily many sanctions per-community because the read plane keeps pulling the seed from instance; (b) Phase 5c has no reserved slot for a sponsor-liability fix (plan §3 Phase 5c is endpoint-handlers + observability + capability tests); inserting a 5c task is plan-drift; (c) slice discipline protects against scope creep, not against shipping known bugs. The fix is one line at sponsor_liability.rs:278-287 — write reputation_event with community_id = None so the write plane matches the instance plane the founder seed lives on and the read's union-by-recency .first() can coherently evaluate. source_case_id still preserves audit linkage. Landed as fix(governance): 61ddae110 before task 60 commit. Residual concern (separate, unrelated): snapshot recompute does not re-apply the honour-price floor — double-sanction-within-15min edge case can drive snapshot below floor. Log as OQ-025 candidate, not a 5b blocker.",
+      "answered_by": "advisor"
+    },
     {
       "id": 15,
       "from": "impl",
