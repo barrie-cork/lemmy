@@ -4646,6 +4646,7 @@ dependencies = [
  "lemmy_routes",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
  "mimalloc",
+ "regex",
  "reqwest 0.13.2",
  "reqwest-middleware",
  "reqwest-tracing",

@@ -1344,3 +1344,617 @@ async fn config_parity_round_trip() -> Result<(), Box<dyn Error>> {
 
   Ok(())
 }
+
+// ============================================================================
+// Phase 5b task 60 — sponsor_liability_with_founder_multiplier (3 branches)
+// ============================================================================
+//
+// Drives the full report → admin-assign → 3 votes → Decided pipeline through
+// `submit_jury_vote`. `apply_sponsor_liability` runs inside that handler's
+// transaction (see submit_jury_vote.rs:259) and writes `reputation_event` +
+// `governance_log` rows the test asserts on.
+//
+// Three branches share one testcontainer + DB (distinct persons + cases per
+// branch so assertions filter by `source_case_id`):
+//
+//   1. `default_multiplier`      — 2 sponsors (1 regular B, 1 founder C),
+//                                  ContentRemoval sanction (moderate, -50).
+//                                  B has baseline=0 (floor-clamp fires → 0);
+//                                  C is a founder with snapshot=100 → -50.
+//                                  Flip `liability.founder_multiplier` from
+//                                  2.0 → 3.0 via a second governance_config
+//                                  row; repeat with fresh case and assert
+//                                  the new multiplier takes effect.
+//   2. `founder_chain_survival`  — 2 founder sponsors (C1, C2 seeded at 100),
+//                                  CommunityExclusion (severe, -200). Under
+//                                  default floor=0 + multiplier=2.0, both
+//                                  clamp to final_delta=-100 (100+(-100)=0).
+//                                  Logs a retro note per plan line 1035:
+//                                  default config does NOT preserve the
+//                                  sponsorship capability under a severe
+//                                  sanction.
+//   3. `honour_price_floor_clamp` — 1 regular sponsor E (baseline=5),
+//                                  ContentRemoval (-50). Clamp: 5+(-50)=-45<0
+//                                  → final_delta = 0 − 5 = −5. Emits one
+//                                  `_applied` + one `_clamped` log entry.
+//
+// After all three branches, walks every `governance_log.payload` and asserts
+// no raw integer identifiers under banned keys (Watch 10 PII grep).
+
+#[tokio::test]
+#[expect(clippy::too_many_lines, reason = "3-branch e2e per plan §11.5")]
+async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration as ChronoDuration, Utc};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    admin_assign_jury::admin_assign_jury,
+    reputation_snapshot::recompute_snapshot,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{AdminAssignJury, CreateGovernanceReport, SubmitJuryVote};
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::{
+      reputation_event::ReputationEventInsertForm,
+      reputation_snapshot::ReputationSnapshotInsertForm,
+      surety::SuretyInsertForm,
+    },
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    InstanceId,
+    PersonId,
+    enums::{CaseTargetType, JuryDecision, ReputationDimension},
+    schema::{governance_log, reputation_event, reputation_snapshot, surety},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests, get_conn},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  const SIGNING_SEED_HEX: &str =
+    "0000000000000000000000000000000000000000000000000000000000000001";
+  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe {
+    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+  }
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS)
+    .build()
+    .map_err(|e| -> Box<dyn Error> { format!("client: {e}").into() })?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret {
+    id: 0,
+    jwt_secret: String::new().into(),
+  };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid")
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("instance: {e}").into() })?;
+
+  let community_form = CommunityInsertForm::new(
+    instance.id,
+    "testcomm".to_string(),
+    "Test Community".to_string(),
+    "comm-pubkey".to_string(),
+  );
+  let community = Community::create(&mut context.pool(), &community_form)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("community: {e}").into() })?;
+
+  // Shared admin + reporter across branches (persons may be reused; jurors
+  // cannot be the target of any case they hear on).
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<PersonId> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    Ok(person.id)
+  }
+
+  let admin = seed_person(&context, instance.id, "t60_admin", true)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("admin: {e}").into() })?;
+  let reporter = seed_person(&context, instance.id, "t60_reporter", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("reporter: {e}").into() })?;
+
+  // Seed 6 spare jurors (we need 5 per case; the random pool must exclude
+  // target + sponsors, and we run 4 cases total across branches).
+  let mut jurors: Vec<PersonId> = Vec::new();
+  for i in 0..6 {
+    let id = seed_person(&context, instance.id, &format!("t60_juror_{i}"), false)
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("juror: {e}").into() })?;
+    jurors.push(id);
+  }
+
+  let admin_view = LocalUserView::read_person(&mut context.pool(), admin)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("admin_view: {e}").into() })?;
+  let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("reporter_view: {e}").into() })?;
+
+  // Direct async conn for seeding state that doesn't go through handlers.
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+  async fn seed_surety(
+    conn: &mut AsyncPgConnection,
+    sponsor: PersonId,
+    sponsored: PersonId,
+  ) -> Result<(), Box<dyn Error>> {
+    let form = SuretyInsertForm {
+      sponsor_id: sponsor,
+      sponsored_id: sponsored,
+      community_id: None,
+    };
+    diesel::insert_into(surety::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(())
+  }
+
+  async fn seed_founder_events(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+    endorsement_strength: i32,
+  ) -> Result<(), Box<dyn Error>> {
+    let expiry = Utc::now() + ChronoDuration::days(90);
+    for (dim, delta) in [
+      (ReputationDimension::JuryReliability, 100),
+      (ReputationDimension::ReportingAccuracy, 100),
+      (ReputationDimension::EndorsementStrength, endorsement_strength),
+    ] {
+      let form = ReputationEventInsertForm {
+        person_id: person,
+        community_id: None,
+        dimension: dim,
+        delta,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "founder_seed".to_string(),
+        expires_at: Some(expiry),
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+    }
+    Ok(())
+  }
+
+  async fn seed_organic_endorsement(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+    delta: i32,
+  ) -> Result<(), Box<dyn Error>> {
+    let form = ReputationEventInsertForm {
+      person_id: person,
+      community_id: None,
+      dimension: ReputationDimension::EndorsementStrength,
+      delta,
+      source_case_id: None,
+      source_report_id: None,
+      reason: "test_seed".to_string(),
+      expires_at: None,
+    };
+    diesel::insert_into(reputation_event::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(())
+  }
+
+  async fn seed_snapshot(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+    endorsement_strength: i32,
+  ) -> Result<(), Box<dyn Error>> {
+    let form = ReputationSnapshotInsertForm {
+      person_id: person,
+      community_id: None,
+      reporting_accuracy: 0,
+      jury_reliability: 0,
+      participation_consistency: 0,
+      endorsement_strength,
+      jury_eligible: false,
+      trusted_reporter: false,
+      // Other bool fields (including the sponsorship capability column)
+      // fall through to `Default` so this seeding helper does not
+      // reference the v0-silenced column by name — keeps the
+      // lint-no-can-sponsor-read guard green.
+      ..Default::default()
+    };
+    diesel::insert_into(reputation_snapshot::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(())
+  }
+
+  // Drive one full sanction round through the real handler pipeline.
+  // Returns the `case_id` so callers can filter reputation_event rows.
+  async fn run_sanction_scenario(
+    context: &Data<LemmyContext>,
+    admin_view: &LocalUserView,
+    reporter_view: &LocalUserView,
+    jurors: &[PersonId],
+    target: PersonId,
+    community_id: lemmy_db_schema::newtypes::CommunityId,
+    reason_code: &str,
+    decision: JuryDecision,
+  ) -> Result<i32, Box<dyn Error>> {
+    // Step 1: reporter files a report against target.
+    let create_resp = create_report(
+      Json(CreateGovernanceReport {
+        community_id: Some(community_id),
+        target_type: CaseTargetType::Person,
+        target_id: target.0,
+        reason_code: reason_code.to_string(),
+        description: Some(format!("Test report for {reason_code}")),
+      }),
+      context.clone(),
+      reporter_view.clone(),
+    )
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("create_report: {e}").into() })?
+    .into_inner();
+    let case_id = create_resp
+      .case_id
+      .ok_or_else(|| -> Box<dyn Error> { "case_id missing".into() })?;
+
+    // Step 2: admin fast-forwards the case to ThresholdMet so
+    // admin_assign_jury will accept it (v0 threshold is 3 reports; we
+    // bypass via direct DB update).
+    use lemmy_db_schema_file::{enums::CaseStatus, schema::moderation_case};
+    {
+      let mut pool = context.pool();
+      let mut conn = get_conn(&mut pool)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("get_conn: {e}").into() })?;
+      diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id.0)))
+        .set(moderation_case::status.eq(CaseStatus::ThresholdMet))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("fast-forward case: {e}").into() })?;
+    }
+
+    // Step 3: admin assigns jury.
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("admin_assign_jury: {e}").into() })?
+    .into_inner();
+    assert_eq!(
+      assign_resp.assigned_person_ids.len(),
+      5,
+      "5 jurors assigned"
+    );
+
+    // Step 4: first 3 selected jurors vote the target decision.
+    let voting: Vec<PersonId> = assign_resp
+      .assigned_person_ids
+      .iter()
+      .copied()
+      .take(3)
+      .collect();
+    for juror in &voting {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("juror_view: {e}").into() })?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision,
+          rationale: Some("test".to_string()),
+        }),
+        context.clone(),
+        juror_view,
+      )
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("submit_jury_vote: {e}").into() })?;
+    }
+
+    // Touch `jurors` to silence unused warnings if a branch doesn't reference
+    // the outer slice directly.
+    let _ = jurors;
+    Ok(case_id.0)
+  }
+
+  async fn liability_delta_for(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+    case_id: i32,
+  ) -> Result<i32, Box<dyn Error>> {
+    let delta: i32 = reputation_event::table
+      .filter(reputation_event::person_id.eq(person))
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::reason.eq("sponsor_liability_applied"))
+      .select(reputation_event::delta)
+      .order_by(reputation_event::id.desc())
+      .first(conn)
+      .await?;
+    Ok(delta)
+  }
+
+  async fn count_log_for_case(
+    conn: &mut AsyncPgConnection,
+    entry_kind: &str,
+    case_id: i32,
+  ) -> Result<i64, Box<dyn Error>> {
+    #[derive(diesel::QueryableByName)]
+    struct CountRow {
+      #[diesel(sql_type = diesel::sql_types::BigInt)]
+      c: i64,
+    }
+    let rows: Vec<CountRow> = diesel::sql_query(
+      "SELECT COUNT(*)::bigint AS c FROM governance_log \
+       WHERE entry_kind = $1 AND (payload->>'case_id')::int = $2",
+    )
+    .bind::<diesel::sql_types::Text, _>(entry_kind)
+    .bind::<diesel::sql_types::Int4, _>(case_id)
+    .load(conn)
+    .await?;
+    Ok(rows.into_iter().next().map(|r| r.c).unwrap_or(0))
+  }
+
+  // ---------- Branch 1 — default_multiplier ------------------------------
+  let target1 = seed_person(&context, instance.id, "b1_target", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b1 target: {e}").into() })?;
+  let sponsor_b = seed_person(&context, instance.id, "b1_sponsor_regular", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b1 reg: {e}").into() })?;
+  let sponsor_c = seed_person(&context, instance.id, "b1_sponsor_founder", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b1 founder: {e}").into() })?;
+
+  seed_surety(&mut async_conn, sponsor_b, target1).await?;
+  seed_surety(&mut async_conn, sponsor_c, target1).await?;
+  seed_founder_events(&mut async_conn, sponsor_c, 100).await?;
+  seed_snapshot(&mut async_conn, sponsor_b, 0).await?;
+  seed_snapshot(&mut async_conn, sponsor_c, 100).await?;
+
+  let case1 = run_sanction_scenario(
+    &context,
+    &admin_view,
+    &reporter_view,
+    &jurors,
+    target1,
+    community.id,
+    "b1_spam",
+    JuryDecision::RemoveContent,
+  )
+  .await?;
+
+  // Math: raw=-50, 2 sponsors → per_sponsor=-25, remainder=0.
+  // B regular ×1.0 = -25; current=0; 0+(-25)=-25<0 → clamp: final_delta=0.
+  // C founder ×2.0 = -50; current=100; 100+(-50)=50≥0 → final_delta=-50.
+  let delta_b = liability_delta_for(&mut async_conn, sponsor_b, case1).await?;
+  let delta_c = liability_delta_for(&mut async_conn, sponsor_c, case1).await?;
+  assert_eq!(delta_b, 0, "branch1: B (regular, baseline 0) floor-clamped to 0");
+  assert_eq!(
+    delta_c, -50,
+    "branch1: C (founder, baseline 100) × 2.0 → -50"
+  );
+  let applied_1 = count_log_for_case(&mut async_conn, "sponsor_liability_applied", case1).await?;
+  let clamped_1 = count_log_for_case(&mut async_conn, "sponsor_liability_clamped", case1).await?;
+  assert_eq!(applied_1, 2, "branch1: 2 sponsor_liability_applied entries");
+  assert_eq!(clamped_1, 1, "branch1: 1 sponsor_liability_clamped entry (for B)");
+
+  // Flip liability.founder_multiplier: 2.0 → 3.0.
+  diesel::sql_query(
+    "INSERT INTO governance_config (scope, key, value_type, value_float, valid_from) \
+     VALUES ('instance', 'liability.founder_multiplier', 'float', 3.0, \
+             now() + interval '1 second')",
+  )
+  .execute(&mut async_conn)
+  .await?;
+  tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+
+  let target1b = seed_person(&context, instance.id, "b1b_target", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b1b target: {e}").into() })?;
+  seed_surety(&mut async_conn, sponsor_b, target1b).await?;
+  seed_surety(&mut async_conn, sponsor_c, target1b).await?;
+
+  let case1b = run_sanction_scenario(
+    &context,
+    &admin_view,
+    &reporter_view,
+    &jurors,
+    target1b,
+    community.id,
+    "b1b_spam",
+    JuryDecision::RemoveContent,
+  )
+  .await?;
+  // C snapshot still reads 100 (no intervening recompute); -25 × 3.0 = -75;
+  // 100 + (-75) = 25 ≥ 0 → no clamp.
+  let delta_c_flipped = liability_delta_for(&mut async_conn, sponsor_c, case1b).await?;
+  assert_eq!(
+    delta_c_flipped, -75,
+    "branch1b: C with flipped founder_multiplier=3.0 → -75"
+  );
+
+  // ---------- Branch 2 — founder_chain_survival --------------------------
+  let target2 = seed_person(&context, instance.id, "b2_target", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b2 target: {e}").into() })?;
+  let sponsor_c1 = seed_person(&context, instance.id, "b2_founder_c1", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b2 c1: {e}").into() })?;
+  let sponsor_c2 = seed_person(&context, instance.id, "b2_founder_c2", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b2 c2: {e}").into() })?;
+
+  seed_surety(&mut async_conn, sponsor_c1, target2).await?;
+  seed_surety(&mut async_conn, sponsor_c2, target2).await?;
+  seed_founder_events(&mut async_conn, sponsor_c1, 100).await?;
+  seed_founder_events(&mut async_conn, sponsor_c2, 100).await?;
+  seed_snapshot(&mut async_conn, sponsor_c1, 100).await?;
+  seed_snapshot(&mut async_conn, sponsor_c2, 100).await?;
+
+  let case2 = run_sanction_scenario(
+    &context,
+    &admin_view,
+    &reporter_view,
+    &jurors,
+    target2,
+    community.id,
+    "b2_severe",
+    // Maps to SanctionAction::CommunityExclusion (severe bucket per
+    // sponsor_liability::severity_for_action — task 56).
+    JuryDecision::SuspendCommunityMember,
+  )
+  .await?;
+
+  // Note: reverted flipped config still applies if our flipped row has
+  // later valid_from than the seed — but founder_multiplier=3.0 would push
+  // per_sponsor=-100 × 3.0 = -300; current=100 → -300 clamp → final_delta=
+  // 0 - 100 = -100. Same clamp outcome as under 2.0, so assertions are
+  // insensitive to whether branch 1's flip is still in effect.
+  let d_c1 = liability_delta_for(&mut async_conn, sponsor_c1, case2).await?;
+  let d_c2 = liability_delta_for(&mut async_conn, sponsor_c2, case2).await?;
+  assert_eq!(d_c1, -100, "branch2: C1 founder clamped to -100 (severe)");
+  assert_eq!(d_c2, -100, "branch2: C2 founder clamped to -100 (severe)");
+  let clamped_2 = count_log_for_case(&mut async_conn, "sponsor_liability_clamped", case2).await?;
+  assert_eq!(clamped_2, 2, "branch2: both founders clamped");
+
+  // Per plan §11.5 branch 2: founder seed (+100, instance-scoped) composes
+  // with the sponsor_liability_applied event (-100, instance-scoped after
+  // the task 56 split-plane fix at 61ddae110). The instance recompute sums
+  // both and lands at endorsement_strength = 0 — below the sponsorship
+  // threshold (25). Default config does NOT preserve the sponsorship
+  // capability for founders under a severe sanction; v1 tuning is required.
+  {
+    let mut cache = lemmy_api::governance::config::ConfigCache::new();
+    let snap1 = recompute_snapshot(&mut async_conn, sponsor_c1, None, &mut cache)
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("recompute c1: {e}").into() })?;
+    let snap2 = recompute_snapshot(&mut async_conn, sponsor_c2, None, &mut cache)
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("recompute c2: {e}").into() })?;
+    assert_eq!(
+      snap1.endorsement_strength, 0,
+      "branch2: C1 instance endorsement_strength = 0 (100 seed + -100 liability)"
+    );
+    assert_eq!(
+      snap2.endorsement_strength, 0,
+      "branch2: C2 instance endorsement_strength = 0 (100 seed + -100 liability)"
+    );
+    println!(
+      "FOUNDER_CHAIN_SURVIVAL: post-sanction endorsement_strength for C1={}, C2={}; \
+       default config does NOT preserve the sponsorship capability — retro follow-up \
+       for v1 tuning",
+      snap1.endorsement_strength, snap2.endorsement_strength
+    );
+  }
+
+  // ---------- Branch 3 — honour_price_floor_clamp ------------------------
+  let target3 = seed_person(&context, instance.id, "b3_target", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b3 target: {e}").into() })?;
+  let sponsor_e = seed_person(&context, instance.id, "b3_sponsor_e", false)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("b3 e: {e}").into() })?;
+  seed_surety(&mut async_conn, sponsor_e, target3).await?;
+  seed_organic_endorsement(&mut async_conn, sponsor_e, 5).await?;
+  seed_snapshot(&mut async_conn, sponsor_e, 5).await?;
+
+  let case3 = run_sanction_scenario(
+    &context,
+    &admin_view,
+    &reporter_view,
+    &jurors,
+    target3,
+    community.id,
+    "b3_moderate",
+    JuryDecision::RemoveContent,
+  )
+  .await?;
+
+  // raw=-50, 1 sponsor → -50; ×1.0 = -50; current=5; 5+(-50)=-45<0 →
+  // clamp: final_delta = 0 - 5 = -5.
+  let d_e = liability_delta_for(&mut async_conn, sponsor_e, case3).await?;
+  assert_eq!(d_e, -5, "branch3: E (baseline 5) floor-clamped to -5");
+  let applied_3 = count_log_for_case(&mut async_conn, "sponsor_liability_applied", case3).await?;
+  let clamped_3 = count_log_for_case(&mut async_conn, "sponsor_liability_clamped", case3).await?;
+  assert_eq!(applied_3, 1, "branch3: 1 sponsor_liability_applied");
+  assert_eq!(clamped_3, 1, "branch3: 1 sponsor_liability_clamped (floor fires)");
+
+  // ---------- Watch 10 — PII grep across ALL governance_log payloads -----
+  let payloads: Vec<serde_json::Value> = governance_log::table
+    .select(governance_log::payload)
+    .load(&mut async_conn)
+    .await?;
+  let banned = regex::Regex::new(
+    r#""(person_id|target_person_id|sponsored_id|sponsor_id)"\s*:\s*\d+"#,
+  )?;
+  for payload in &payloads {
+    let s = serde_json::to_string(payload)?;
+    assert!(
+      !banned.is_match(&s),
+      "governance_log payload leaked a raw integer identifier: {s}"
+    );
+  }
+  // Positive assertion: at least one payload mentions sponsor_pseudonym so
+  // the grep isn't vacuously passing on an empty log.
+  let saw_pseudonym = payloads
+    .iter()
+    .any(|p| serde_json::to_string(p).map(|s| s.contains("\"sponsor_pseudonym\"")).unwrap_or(false));
+  assert!(
+    saw_pseudonym,
+    "expected at least one governance_log payload with sponsor_pseudonym"
+  );
+
+  Ok(())
+}
