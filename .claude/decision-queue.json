@@ -3,6 +3,20 @@
   "schema_version": 1,
   "pending": [
     {
+      "id": 17,
+      "from": "impl",
+      "timestamp": "2026-04-18T18:00:00Z",
+      "question": "Phase 5c branch cut base — branch phase-5c from origin/governance-v0 (6566dce43) and lose 2 post-squash commits, or from phase-5b tip (f5c771638) and inherit them into the 5c PR diff?",
+      "options": [
+        "Branch phase-5c from origin/governance-v0 (6566dce43). Per phase-branch.md strict reading. The 2 post-squash doc/rule commits (cbab85bb8, f5c771638) remain on phase-5b as orphaned state — resolved later by a separate follow-up PR or lost at phase-5b branch cleanup.",
+        "Branch phase-5c from phase-5b tip (f5c771638). The 2 extra doc/rule commits land as part of the 5c PR diff vs governance-v0. Minor 5c PR bloat; zero code risk (docs + rules only); preserves commit history.",
+        "Branch phase-5c from origin/governance-v0, then cherry-pick cbab85bb8 and f5c771638 onto phase-5c before task 1. Keeps 5c PR diff clean of mixed-phase history while preserving the fixes."
+      ],
+      "context": "PR #7 was squash-merged (violates phase-branch.md 'Do NOT squash'). Squash-merge commit 6566dce43 on governance-v0 DOES include the sponsor_liability split-plane fix + founder-seed filter (d8c544ebe/6e74e5eaf tree contents were rolled into the squash). Only 2 net commits are orphaned on phase-5b vs governance-v0: cbab85bb8 (rule hardening in pm-plugin-hooks-stable.md + V2/messaging.md section renumber, 96 lines, docs/rules only) + f5c771638 (doc hygiene in PRP reports + ralph-slice command + governance/mod.rs one-line reorder + 4 lines in e2e.rs doc comment, 36 lines). Both are pure hygiene, no code logic. Plan §2 line 4 says cut phase-5c from governance-v0 after 5b PR merges; silent on post-squash hygiene delta. Working tree at session start was clean (untracked plan files only). I am NOT guessing — I need the advisor to pick A, B, or C.",
+      "answer": null,
+      "answered_by": null
+    },
+    {
       "id": 4,
       "from": "advisor",
       "timestamp": "2026-04-16T20:00:00Z",
@@ -95,6 +109,20 @@
     }
   ],
   "resolved": [
+    {
+      "id": 18,
+      "from": "impl",
+      "timestamp": "2026-04-18T19:00:00Z",
+      "question": "Three Phase 5c prep artifacts are untracked on governance-v0; where should they land — task-0 commit on the still-uncut phase-5c branch (gated on #17), a plan-landing commit on governance-v0 (Phase 5a precedent c2a59b8db), or hold in working tree until #17 is answered?",
+      "options": [
+        "Wait on #17: hold untracked, let advisor answer #17, cut phase-5c per their choice, then land as task-0 plan commit on phase-5c (mirrors Phase 5a pattern c2a59b8db 'chore(plan): land Phase 5a plan + phase-branch rule + advisor decision-queue pre-seed')",
+        "Land now on governance-v0 as docs(plan): Phase 5c prep + slice-C archive. Phase 5a precedent treats plan-landing as exempt from phase-branch.md 'no direct governance-v0 commits' — plans are prep-for, not body-of, a phase. Advisor still cuts phase-5c later from governance-v0 tip per #17.",
+        "Cut phase-5c myself from governance-v0 tip (6566dce43) and land the three files there. Explicitly violates phase-branch.md rule that branch creation is the advisor's responsibility."
+      ],
+      "context": "Untracked files: (a) .claude/PRPs/plans/phase-5c-remaining-endpoints-and-observability.plan.md (Phase 5c plan, 12 tasks), (b) .claude/PRPs/plans/phase-5c-task-69a-v2-hooks.fragment.md (V2 hooks task fragment), (c) .claude/PRPs/ralph-archives/2026-04-17-phase-5b-slice-c/state.md (Phase 5b Slice C ralph archive — a completed slice, belongs with shipped 5b work). The archive was orphaned because PR #7 was squash-merged after these files were written. User asked to 'ensure all untracked files are pushed'. No stashes present. phase-5b branch already deleted locally. Option 1 is cleanest if #17 resolves quickly; Option 2 unblocks user intent immediately with documented precedent; Option 3 is out-of-bounds. Preferred: Option 1 (wait) unless advisor signals Option 2.",
+      "answer": "Option 2 (user-authorised 2026-04-18). Land the three Phase 5c prep files on governance-v0 as a single landing commit, per the Phase 5a precedent c2a59b8db. Phase 5c branch cut remains advisor scope (still gated on #17).",
+      "answered_by": "user"
+    },
     {
       "id": 16,
       "from": "impl",
