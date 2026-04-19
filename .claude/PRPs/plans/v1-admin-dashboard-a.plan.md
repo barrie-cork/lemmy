@@ -441,11 +441,12 @@ flag it. Verify the existing shim preserves alphabetical order before appending
 | `crates/db_schema/src/source/governance/mod.rs` | UPDATE | Export new modules |
 | `crates/db_schema/src/newtypes.rs` | UPDATE | Add `RuleSetVersionId`, `SponsorAllowlistId` newtypes |
 | `crates/api/api/src/governance/config.rs` | UPDATE | Add `ConfigKeyMetadata` struct + `ValueType`/`ConfigScope`/`ApplyAt` enums + 27 new `DEFAULT_*` consts + 27 new `const_default_*` match arms + extend `SEEDED_KEYS_WITH_CONSTS` to 61 tuples + `CONFIG_KEY_METADATA: &'static [ConfigKeyMetadata]` (61 entries) + `EXPECTED_SEED_COUNT_V1_AD: usize = 27` + new `every_seeded_key_has_metadata` parity test. Counts are parametric — task 7 reconciliation gate authoritative. |
-| `crates/api/api/src/governance/governance_log.rs` | UPDATE | Add `ENTRY_KIND_ADMIN_CONFIG_CHANGED` + `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED` consts at line 68+ |
+| `crates/db_schema/src/source/governance/governance_log.rs` | UPDATE | **Define** `ENTRY_KIND_ADMIN_CONFIG_CHANGED` + `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED` consts here — this is where the 23 existing consts live post-Phase-6 per DQ-6.6. See §10.8 File 1. |
+| `crates/api/api/src/governance/governance_log.rs` | UPDATE | **Re-export** the two new consts from the api shim's `pub use` list (alphabetical insertion between `ENTRY_KIND_CAPABILITY_CHANGED` and `ENTRY_KIND_APPEAL_REQUESTED`). See §10.8 File 2. |
 | `.claude/rules/governance-log-entry-kind-registry.md` | CREATE | Initialise registry per advisor directive #2; close GH #41 |
 | `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` | UPDATE | Open OQ-V1-AD-01/02/03 (leans only; no resolution) |
 
-**Total: 17 files changed (4 NEW migration dirs × 2 files = 8 migration files; 2 NEW Rust files — `rule_set_version.rs`, `sponsor_allowlist.rs`; 5 UPDATED Rust files — `schema.rs`, `mod.rs`, `newtypes.rs`, `config.rs`, `governance_log.rs`; 1 NEW rules file; 1 UPDATED design doc). 8 + 2 + 5 + 1 + 1 = 17.**
+**Total: 18 files changed (4 NEW migration dirs × 2 files = 8 migration files; 2 NEW Rust files — `rule_set_version.rs`, `sponsor_allowlist.rs`; 6 UPDATED Rust files — `schema.rs`, `mod.rs`, `newtypes.rs`, `config.rs`, `db_schema/.../governance_log.rs` (const DEFINITION), `api/api/.../governance_log.rs` (re-export shim); 1 NEW rules file; 1 UPDATED design doc). 8 + 2 + 6 + 1 + 1 = 18.**
 
 ---
 
@@ -696,9 +697,9 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
   - `onboarding.sponsor_allowlist_table_name` (text)
   - `onboarding.provisional_membership_cooldown_days` (int)
   - `founder.founder_seal_visible_in_profile` (bool)
-  - `participation.weekly_active_delta` (int)
-  - `participation.dormant_threshold_days` (int)
-  - `participation.dormant_delta` (int)
+  - `deltas.participation_weekly_active` (int) — delta value per B3 namespace split (2026-04-19)
+  - `participation.dormancy_window_days` (int) — context window per B3
+  - `deltas.participation_dormant` (int) — delta value per B3
   - `participation.attestation_enabled` (bool)
   - `federation.inbound_advisory_only` (bool)
   - `federation.peer_attestation_ttl_days` (int)
@@ -727,7 +728,7 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
   ```
   Do NOT use `-p lemmy_api --features full` per advisor memory `feedback_features_full_workspace_only.md`.
 
-### Task 7: CREATE `migrations/2026-04-21-000300-0000_seed_v1_config_keys/up.sql` + down.sql; UPDATE `crates/api/api/src/governance/governance_log.rs` with 2 new ENTRY_KIND consts
+### Task 7: CREATE `migrations/2026-04-21-000300-0000_seed_v1_config_keys/up.sql` + down.sql; UPDATE both `crates/db_schema/src/source/governance/governance_log.rs` (const DEFINITION) **and** `crates/api/api/src/governance/governance_log.rs` (shim RE-EXPORT) with 2 new ENTRY_KIND consts
 
 - **ACTION**: Seed the 27 new rows idempotently. The INSERT rows MUST match task 6's `SEEDED_KEYS_WITH_CONSTS` entries byte-for-byte. Also land the two new ENTRY_KIND consts (combined task because both are small, non-conflicting, and the parity test + migration test share a validation step).
 - **IMPLEMENT** (migration):
@@ -773,9 +774,9 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
     ('instance', 'onboarding.sponsor_allowlist_table_name',     'text',  NULL,  NULL, NULL,  'sponsor_allowlist'),
     ('instance', 'onboarding.provisional_membership_cooldown_days','int',14,    NULL, NULL,  NULL),
     ('instance', 'founder.founder_seal_visible_in_profile',     'bool',  NULL,  NULL, true,  NULL),
-    ('instance', 'participation.weekly_active_delta',           'int',   1,     NULL, NULL,  NULL),
-    ('instance', 'participation.dormant_threshold_days',        'int',   30,    NULL, NULL,  NULL),
-    ('instance', 'participation.dormant_delta',                 'int',   -2,    NULL, NULL,  NULL),
+    ('instance', 'deltas.participation_weekly_active',          'int',   1,     NULL, NULL,  NULL),
+    ('instance', 'participation.dormancy_window_days',          'int',   30,    NULL, NULL,  NULL),
+    ('instance', 'deltas.participation_dormant',                'int',   -2,    NULL, NULL,  NULL),
     ('instance', 'participation.attestation_enabled',           'bool',  NULL,  NULL, false, NULL),
     ('instance', 'federation.inbound_advisory_only',            'bool',  NULL,  NULL, true,  NULL),
     ('instance', 'federation.peer_attestation_ttl_days',        'int',   30,    NULL, NULL,  NULL),
@@ -834,13 +835,29 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
     'rule_set.version_propagation_delay_hours'
   );
   ```
-- **IMPLEMENT** (governance_log.rs):
+- **IMPLEMENT** (governance_log.rs — **dual-file edit per §10.8**, post-Phase-6 relocation DQ-6.6):
   ```rust
-  // Appended after line 68 (after ENTRY_KIND_APPEAL_REQUESTED):
+  // FILE 1 (DEFINITION): crates/db_schema/src/source/governance/governance_log.rs
+  // APPEND after the existing ENTRY_KIND_* consts (the 23-const list ending
+  // with ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED post-Phase-6):
   pub const ENTRY_KIND_ADMIN_CONFIG_CHANGED: &str = "admin_config_changed";
   pub const ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED: &str = "admin_config_change_denied";
   ```
-- **MIRROR**: `migrations/2026-04-18-000000-0000_add_governance_config/up.sql:78-113` for INSERT shape + `ON CONFLICT (scope, key, valid_from)` target. `governance_log.rs:50-68` for ENTRY_KIND const style.
+
+  ```rust
+  // FILE 2 (RE-EXPORT SHIM): crates/api/api/src/governance/governance_log.rs
+  // EXTEND the alphabetical `pub use` list; insert between
+  // ENTRY_KIND_CAPABILITY_CHANGED and ENTRY_KIND_APPEAL_REQUESTED:
+  pub use lemmy_db_schema::source::governance::governance_log::{
+    // … existing re-exports …
+    ENTRY_KIND_ADMIN_CONFIG_CHANGED,
+    ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
+    // … existing re-exports continue …
+  };
+  ```
+
+  Both edits land in the **same commit** — Task 7 is atomic across the two files. A `db_schema` definition without the shim re-export breaks callers that import from the api path; a shim re-export without the `db_schema` definition fails to compile.
+- **MIRROR**: `migrations/2026-04-18-000000-0000_add_governance_config/up.sql:78-113` for INSERT shape + `ON CONFLICT (scope, key, valid_from)` target. For ENTRY_KIND const style: refer to the 23 existing consts in `crates/db_schema/src/source/governance/governance_log.rs` (post-Phase-6 location) and the 23 matching `pub use` re-export lines in `crates/api/api/src/governance/governance_log.rs` (shim).
 - **GOTCHA**: `ON CONFLICT (scope, key, valid_from) DO NOTHING` — `valid_from` defaults to `now()`, so two runs of `schema_setup::run()` at different times would each insert a fresh row with a different `valid_from` — the conflict key means they DON'T duplicate only when `valid_from` matches exactly. The v0 migration handles this by running inside the same single-transaction schema application, where `now()` returns the same timestamp for all rows in the same statement. Same applies here; no change needed.
 - **GOTCHA**: `admin_config_changed` const must equal the existing shell-script string literal byte-for-byte (`scripts/brehon/admin-config-write.sh:148`). v1-AD-b's NOT5 deprecation gate 3 asserts byte-identical governance_log rows from both paths.
 - **VALIDATE**:
@@ -967,9 +984,10 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
 
   ## Acceptance invariants (checked at every plan-review)
 
-  - [ ] `rg "^pub const ENTRY_KIND_" crates/api/api/src/governance/governance_log.rs | wc -l` returns total count of all populated sections
-  - [ ] `rg -n '"[a-z_]+"' crates/api/api/src/governance/governance_log.rs | sort | uniq -d` returns no duplicates
-  - [ ] Every populated row in this file has a Rust const AND a call site (except Phase 6 pending rows, which only require a plan file)
+  - [ ] `rg "^pub const ENTRY_KIND_" crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns total count of all populated sections (consts are **defined** in `db_schema` post-Phase-6 per DQ-6.6; the `api` shim at `crates/api/api/src/governance/governance_log.rs` only `pub use`-re-exports them)
+  - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values
+  - [ ] `rg "^pub use lemmy_db_schema::source::governance::governance_log::\{" -A 40 crates/api/api/src/governance/governance_log.rs` lists every populated const — shim re-export parity with `db_schema` definition is load-bearing for callers that import from the api path
+  - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site (except Phase 6 pending rows, which only require a plan file)
   - [ ] Registry file matches the "Proposed deliverable" enumeration of GH issue #41 at land-time
   ```
 - **MIRROR**: GH issue #41 body "Proposed deliverable" section verbatim (column count, section structure, acceptance invariants).
@@ -981,21 +999,31 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
   # Phase 6 merge-state check (advisor note 2) — determines whether to drop "(expected)" labels
   git log governance-v0 --grep="Phase 6\|phase-6\|phase 6" --oneline -1
   # If non-empty: Phase 6 has merged; task 8 must refresh the Phase 6 section
-  # with actual ENTRY_KIND names from governance_log.rs and drop "(expected)".
-  # If empty: Phase 6 still in-flight; labels stay.
+  # with actual ENTRY_KIND names from db_schema's governance_log.rs and drop
+  # "(expected)". If empty: Phase 6 still in-flight; labels stay.
+  # (As of 2026-04-19 18:48 UTC Phase 6 PR #46 has merged at 08065e1a1 —
+  # governance-v0 is at 5ce5358fc; the labels must drop at impl time.)
   
-  rg "^pub const ENTRY_KIND_" crates/api/api/src/governance/governance_log.rs | wc -l
-  # Expected pre-Phase-6-merge: 21  (19 v0 + 2 v1-AD-a)
-  # Expected post-Phase-6-merge: 21 + (Phase 6 kind count, likely 4) = 25
-  # Acceptance invariant is parametric: registry file populated-section rows
-  # must equal this grep's output exactly.
+  # Count DEFINED consts (source of truth — db_schema):
+  rg "^pub const ENTRY_KIND_" crates/db_schema/src/source/governance/governance_log.rs | wc -l
+  # Expected at governance-v0 @ 5ce5358fc (post-Phase-6-merge): 23 (19 v0 + 4 Phase 6)
+  # Expected at v1-AD-a end: 25 (23 + 2 v1-AD admin-config consts)
   
-  rg -n '"[a-z_]+"' crates/api/api/src/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d
-  # Expected: empty output (no duplicates)
+  # Count RE-EXPORTED consts (shim parity):
+  rg "ENTRY_KIND_" crates/api/api/src/governance/governance_log.rs | rg -c "^\s+ENTRY_KIND_"
+  # Must equal the define count above exactly. Shim parity is load-bearing.
   
-  # Registry file structure match
+  # No duplicate string literal values (collision check):
+  rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d
+  # Expected: empty output
+  
+  # Registry file populated-row total must equal the define count:
+  rg "^\| \`[a-z_]+\`" .claude/rules/governance-log-entry-kind-registry.md | wc -l
+  # Must equal the `rg "^pub const ENTRY_KIND_"` db_schema count above (25 at v1-AD-a end).
+  
+  # Registry file section structure match
   grep -c "^## " .claude/rules/governance-log-entry-kind-registry.md
-  # Expected: >= 7  (v0, Phase 6 pending, v1-AD-a, 4 reserved sections, acceptance)
+  # Expected: >= 7  (v0, Phase 6, v1-AD-a, 3 reserved for future v1 PRDs, acceptance)
   ```
 
 ### Task 9: OPEN OQ-V1-AD-01/02/03 in `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md`

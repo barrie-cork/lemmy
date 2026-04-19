@@ -87,6 +87,7 @@ Final 15-namespace registry (this section authoritative; individual-PRD matrices
 | `appeal.*` | 0 | 5 (owned by jury-mechanics-v1 §10: `window_days`, `panel_size_multiplier`, `panel_size_floor_increment`, `threshold_tier_bump`, `auto_select_on_appeal_acceptance`. `original_jurors_excluded` is hard code rule, not a config key — per B1) | jury-mechanics | Appeal mechanics |
 | `federation.*` | 0 | 5 (`inbound_advisory_only`, `peer_attestation_ttl_days`, `signature_required`, `quarantine_recommendation_severity_floor`, `outbound_publish_enabled`; federation-inbound-v1 may add further peer-trust knobs per its §8.0/§10) | admin-dashboard, federation-inbound | Federation policy. Peer-trust knobs live here; see `v1-federation-inbound.prd.md` §10. |
 | `rule_set.*` | 0 | 4 (`active_version_id`, `auto_carry_in_flight_cases`, `text_max_bytes`, `version_propagation_delay_hours`) | admin-dashboard | Rule-set version pointer |
+| `governance.dashboard.*` | 0 | 2 (`html_pages_enabled` bool — §6.1 gates askama HTML pages; `step_up_enforced` bool — §7.2 advisory-vs-blocking toggle for v2 step-up reserved slot) | admin-dashboard | Dashboard-infrastructure toggles. Both are instance-scope; default-false for `step_up_enforced` (log-only in v1), default-true for `html_pages_enabled` (API+HTML by default; operators can go API-only). |
 
 **Namespace-collapse rationale (B3):** v0 establishes `liability.*` and `job.*` as flat namespaces. A dual `cron.*` + `job.*` pair for the same concept (background scheduler cadence) would be a permanent operator tax. Participation-event tuning keys aren't cron knobs semantically — they are reputation deltas conditioned on cron-batch context, so they belong under `deltas.*` (policy) or `participation.*` (context). `bounds.*` is genuinely new (post-clamp snapshot ceilings — distinct from `thresholds.*` capability cutoffs). `feature.*` is prophylactic for growth (every future deferred-enforcement toggle will need one; starting the namespace now avoids later retrofits).
 
@@ -378,9 +379,9 @@ The v0 seed values from `migrations/2026-04-18-000000-0000_add_governance_config
 | `onboarding.sponsor_allowlist_table_name` | "sponsor_allowlist" | (a) | OQ-020 explicit; v1 adds the table additively |
 | `onboarding.provisional_membership_cooldown_days` | 14 | (b) | OQ-016 v1 enforcement; pilot |
 | `founder.founder_seal_visible_in_profile` | true | (a) | OQ-017 lean; admin can flip false |
-| `participation.weekly_active_delta` | 1 | (b) | OQ-019 option (a) |
-| `participation.dormant_threshold_days` | 30 | (a) | OQ-019 |
-| `participation.dormant_delta` | -2 | (b) | OQ-019 |
+| `deltas.participation_weekly_active` | 1 | (b) | OQ-019 option (a); renamed from `participation.weekly_active_delta` per B3 namespace collapse 2026-04-19 — `deltas.*` owns reputation-delta policy knobs (delta values), `participation.*` owns context knobs (thresholds, windows) |
+| `participation.dormancy_window_days` | 30 | (a) | OQ-019; renamed from `participation.dormant_threshold_days` per B3 for consistency with reputation-tuning-v1 PRD §8 |
+| `deltas.participation_dormant` | -2 | (b) | OQ-019; renamed from `participation.dormant_delta` per B3 |
 | `participation.attestation_enabled` | false | (c) | OQ-019 option (c) deferred to v2 unless pilot asks |
 | *(appeal.* namespace owned by jury-mechanics-v1 §10 per B1 resolution 2026-04-19)* | — | — | See v1-jury-mechanics.prd.md §10 for `appeal.window_days`, `appeal.panel_size_multiplier`, `appeal.panel_size_floor_increment`, `appeal.threshold_tier_bump`, `appeal.auto_select_on_appeal_acceptance`. Note: `appeal.original_jurors_excluded` is a hard code rule per [01 §5.7], not a config key. |
 | `federation.inbound_advisory_only` | true | (a) | ADR-006 — locked; admin can flip in v2 only |
@@ -392,6 +393,8 @@ The v0 seed values from `migrations/2026-04-18-000000-0000_add_governance_config
 | `rule_set.auto_carry_in_flight_cases` | true | (a) | Existing cases keep their snapshotted version; new cases use new |
 | `rule_set.text_max_bytes` | 65536 | (a) | 64 KiB Markdown ceiling |
 | `rule_set.version_propagation_delay_hours` | 24 | (b) | OQ-018 lean ("only instance-admin + 24h delay" — generalised to rule-set activation) |
+| `governance.dashboard.html_pages_enabled` | true | (a) | §6.1 — opt-in HTML pages; flipping to false runs dashboard API-only (useful when OQ-V1-AD-01 defers askama). Scope: instance. Type: bool. |
+| `governance.dashboard.step_up_enforced` | false | (a) | §7.2 — v2-reserved step-up enforcement toggle. v1 default is advisory (attempt logged via `admin_config_change_denied` entry kind); v2 flips to blocking once step-up auth ships. Scope: instance. Type: bool. |
 
 **Counts:** 34 v0 keys (32 (a)/(b), 2 (c) — none in v0), ~35 v1-new keys enumerated in this PRD (admin-dashboard-owned + sponsor-liability-owned rows), of which **1 is decide-later (c)**: `participation.attestation_enabled`. Federation peer-trust-state knobs live in `v1-federation-inbound.prd.md` §10 and are not enumerated here. The authoritative v1 cross-PRD total of ~138 keys across 15 namespaces is documented in §3.1; §5.2 lists only the admin-dashboard + sponsor-liability rows, with jury-mechanics-v1, reputation-tuning-v1 and federation-inbound-v1 rows in their own PRDs.
 
@@ -535,7 +538,7 @@ Single `INSERT … ON CONFLICT (scope, key, valid_from) DO NOTHING` per the v0 p
   2. Pilot operator confirms the HTTP API covers every key class the script writes (strings, ints, floats, bools, enums, text blobs).
   3. `governance_log` entries written by both paths are byte-identical (verified via round-trip test: write via HTTP, write via script, diff the two log rows — signatures will differ but payload + `entry_kind` must match).
 - **v1.1 is the target but contingent.** If OQ-018's endpoint ships in v1.0 and conditions 2+3 are met by v1.0 pilot review, v1.1 removes the script. If OQ-018 slips to v1.1 or v1.2, script removal slips with it. The script is harmless to keep shipping; the ops cost is one deprecation warning banner on startup, not runtime load.
-- **governance_log audit-trail continuity.** Both code paths emit `governance_config_changed` entries via the same `governance_log::append` function, so there is no audit-trail discontinuity whether operators use the script or the HTTP API during the side-by-side window.
+- **governance_log audit-trail continuity.** Both code paths emit `admin_config_changed` entries (canonical `entry_kind` per §4.5, §7.4, and v1-AD-a plan task 7; byte-identical to the shell-script emission at `scripts/brehon/admin-config-write.sh:148`) via the same `governance_log::append` function, so there is no audit-trail discontinuity whether operators use the script or the HTTP API during the side-by-side window. Earlier drafts used `governance_config_changed` here — that was drift from the canonical name and has been corrected.
 
 ### 8.5 Backwards compatibility
 

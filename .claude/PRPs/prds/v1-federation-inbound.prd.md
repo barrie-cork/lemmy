@@ -455,8 +455,19 @@ CREATE TABLE remote_sanction_notice (
 
 ```sql
 -- Preamble: verify Phase 6 preconditions present before ALTER.
+-- This DO block enforces preconditions #2, #3, #4, #6 from §8.0.
+-- Preconditions #1 (Phase 6 merge) and #7 (migration timestamp ordering) are
+-- NOT SQL-enforceable — #1 is a `git log` check run at `/prp-plan` time and #7
+-- is verified by the implementer naming the migration directory with a
+-- timestamp prefix that sorts after `add_federation_attestations`. Migration
+-- ordering inside a single `diesel migration run` is by directory-name sort,
+-- so a correct timestamp prefix guarantees Phase 6's tables exist when this
+-- DO block runs. Precondition #5 (`governance_log::append` const strings) is
+-- Rust-only and is enforced at compile time by `use` statements in the v1
+-- handler source — there is nothing to check in SQL.
 DO $$
 BEGIN
+  -- Precondition #2: Phase 6 base tables
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
     WHERE table_name = 'federation_attestation'
@@ -469,11 +480,39 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'federation-inbound-v1 requires Phase 6 remote_sanction_notice table (not present)';
   END IF;
+  -- Precondition #3: DQ-6.1 received_at column on remote_sanction_notice
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'remote_sanction_notice' AND column_name = 'received_at'
   ) THEN
     RAISE EXCEPTION 'federation-inbound-v1 assumes Phase 6 DQ-6.1 resolved with remote_sanction_notice.received_at column (not present)';
+  END IF;
+  -- Precondition #4: Phase 6 enum types registered
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type WHERE typname = 'attestation_type_enum'
+  ) THEN
+    RAISE EXCEPTION 'federation-inbound-v1 requires Phase 6 attestation_type_enum (not registered)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type WHERE typname = 'sanction_action_enum'
+  ) THEN
+    RAISE EXCEPTION 'federation-inbound-v1 requires Phase 6 sanction_action_enum (not registered)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type WHERE typname = 'sanction_scope_enum'
+  ) THEN
+    RAISE EXCEPTION 'federation-inbound-v1 requires Phase 6 sanction_scope_enum (not registered)';
+  END IF;
+  -- Precondition #6: remote_sanction_notice.source_instance is TEXT (not FK).
+  -- v1's federation_peer JOIN requires this — if Phase 6 ships it as an INT
+  -- FK to instance(id), v1 §4.1 + §8.2 need re-planning.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'remote_sanction_notice'
+      AND column_name = 'source_instance'
+      AND data_type = 'text'
+  ) THEN
+    RAISE EXCEPTION 'federation-inbound-v1 assumes remote_sanction_notice.source_instance is TEXT (peer domain); found different type. See §8.0 precondition #6 and §15.3.';
   END IF;
 END
 $$;

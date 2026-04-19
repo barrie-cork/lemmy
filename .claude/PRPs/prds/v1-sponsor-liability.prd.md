@@ -267,12 +267,27 @@ Add to `crates/routes/src/utils/scheduled_tasks.rs::setup` (sibling of the 15-mi
 
 ```rust
 // Brehon governance v1: sponsor-liability grace-check tick.
-// Every 5 minutes, find SponsorLiabilityPending cases past their
+// Interval is read from `job.grace_check_interval_minutes` at scheduler
+// setup (default 5). Find SponsorLiabilityPending cases past their
 // grace_expires_at and transition them to Fired or Escaped.
 // Disabled in tests via BREHON_DISABLE_GRACE_CHECK_JOB=1 (mirrors the
 // snapshot-job override pattern from S4 design review).
+//
+// Interval-tunability semantics: clokwerk schedules are pinned at
+// `setup()` invocation time — they do NOT hot-reload when the config
+// key changes. Flipping `job.grace_check_interval_minutes` via the
+// admin-config write path (v1-AD-b) takes effect at the next server
+// restart. This matches v0 reputation-snapshot precedent (15-minute
+// interval hardcoded at scheduler setup; config-driven tunability
+// was deliberately deferred). Documented here and in §6.4 so
+// operators know flipping the key requires a restart.
 let context_grace = context.reset_request_count();
-scheduler.every(CTimeUnits::minutes(5)).run(move || {
+let grace_interval_minutes = lemmy_api::governance::config::get_int(
+    &mut context.pool(),
+    "job.grace_check_interval_minutes",
+    ConfigScope::Instance,
+).await.unwrap_or(5) as u32;
+scheduler.every(CTimeUnits::minutes(grace_interval_minutes)).run(move || {
   let context = context_grace.reset_request_count();
   async move {
     if std::env::var("BREHON_DISABLE_GRACE_CHECK_JOB").as_deref() == Ok("1") {
@@ -330,11 +345,11 @@ For each row, inside its **own** `run_transaction` (per-case isolation; one bad 
 
 ### 6.4 Configuration
 
-| Key | Type | Default | Scope |
-|---|---|---|---|
-| `job.grace_check_interval_minutes` | int | 5 | instance |
-| `job.grace_check_batch_size` | int | 100 | instance |
-| `job.grace_check_staleness_alert_multiplier` | float | 2.0 | instance |
+| Key | Type | Default | Scope | Hot-reload? |
+|---|---|---|---|---|
+| `job.grace_check_interval_minutes` | int | 5 | instance | **No — restart required.** Read once at scheduler `setup()`; changes via `POST /admin/config` are persisted but the running scheduler keeps its pinned interval until next restart. Matches v0 reputation-snapshot precedent. |
+| `job.grace_check_batch_size` | int | 100 | instance | Yes — read per-tick by `run_grace_check_batch` |
+| `job.grace_check_staleness_alert_multiplier` | float | 2.0 | instance | Yes — read per-staleness-check |
 
 ---
 
