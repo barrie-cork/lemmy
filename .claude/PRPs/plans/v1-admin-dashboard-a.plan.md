@@ -82,7 +82,7 @@ Per-sub-phase merge discipline: v1-AD-a ships as its own PR `phase-v1-AD-a` → 
 | Complexity | MEDIUM |
 | Crates affected | `db_schema_file` (schema.rs hand-edit), `db_schema` (model/InsertForm), `api` (config.rs + governance_log.rs), `migrations/` (4 new) |
 | v0 step | v1 post-MVP per [ADR-010](../../../docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) — keystone sub-phase |
-| Dependencies | governance-v0 HEAD `3bbf419da`; no Phase 6 dependency (verified in PRD §8.2 migration list) |
+| Dependencies | governance-v0 HEAD `5ce5358fc` (post-Phase-6 merge `08065e1a1`); no further Phase 6 dependency — Phase 6 preconditions already met on trunk (verified in PRD §8.2 migration list). Pre-Phase-6 baseline was `3bbf419da` — see §8 before-state. |
 | Estimated tasks | **9 implementation tasks + pre-flight Task 0** (10 total; Tasks 0–9 enumerated in §13) |
 | Sub-phase target branch | `phase-v1-AD-a` branched from `governance-v0` |
 | PR target | `governance-v0` (per `.claude/rules/phase-branch.md`) |
@@ -474,19 +474,26 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
 
 ### Task 0: PRE-FLIGHT — verify branch + wrapper sanity + v0 baseline
 
-- **ACTION**: Confirm `phase-v1-AD-a` branched from `governance-v0` at `3bbf419da` per `.claude/rules/phase-branch.md`. Run the pre-phase harness audit per `.claude/rules/pre-phase-harness-audit.md` — all four probes against `governance-v0` HEAD, capturing logs under `.claude/PRPs/debug/phase-v1-AD-a-audit-*.log`.
+- **ACTION**: Confirm `phase-v1-AD-a` is branched from current `governance-v0` HEAD (which at plan-write time 2026-04-19 is `5ce5358fc`, post-Phase-6-merge — may have advanced since if `governance-v0` has taken further merges; verify the branch-point matches current HEAD parametrically, not against a hardcoded SHA) per `.claude/rules/phase-branch.md`. Run the pre-phase harness audit per `.claude/rules/pre-phase-harness-audit.md` — all four probes against `governance-v0` HEAD, capturing logs under `.claude/PRPs/debug/phase-v1-AD-a-audit-*.log`.
 - **GOTCHA**: If the current branch is `governance-v0`, STOP and write a `.claude/decision-queue.json` entry — advisor cuts the phase branch, not the impl agent.
 - **GOTCHA**: All four probes must pass AND the negative probes must return non-zero exit codes. Failure = wrapper bug that will invalidate every downstream cargo signal. Fix wrapper in a pre-task commit before Task 1.
 - **VALIDATE**:
   ```bash
   git branch --show-current            # → phase-v1-AD-a
-  git log -1 --format=%H governance-v0 # → 3bbf419da
+  # Verify the branch-point parametrically — phase-v1-AD-a's merge-base with
+  # governance-v0 must equal current governance-v0 HEAD (branch was just cut
+  # and has no commits yet, OR advisor has cut it fresh from current HEAD).
+  git merge-base phase-v1-AD-a governance-v0   # record output
+  git log -1 --format=%H governance-v0         # record output
+  # The two SHAs above must be equal. If they differ, phase-v1-AD-a was cut
+  # from a stale governance-v0; stop and re-cut from current HEAD.
+  # (At plan-write time 2026-04-19 this value is 5ce5358fc, post-Phase-6.)
   cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api > .claude/PRPs/debug/phase-v1-AD-a-audit-probe1.log 2>&1"
   echo "probe1 exit: $?"  # expect 0
   cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features nonexistent_xyz > .claude/PRPs/debug/phase-v1-AD-a-audit-probe4.log 2>&1"
   echo "probe4 exit: $?"  # expect non-zero
   ```
-- **EXPECT**: branch correct; exit codes as commented; no commits from this task.
+- **EXPECT**: `git merge-base` output equals `git log -1 --format=%H governance-v0` output (SHAs match, parametric); exit codes as commented; no commits from this task.
 
 ### Task 1: CREATE `migrations/2026-04-21-000000-0000_add_rule_set_versions/up.sql` + down.sql
 
@@ -1134,7 +1141,7 @@ v1-AD-a adds **no new test files**. It extends the two existing tests:
 
 ## 15. Validation commands (DoD)
 
-**Every command below was dry-run-tested against governance-v0 HEAD 3bbf419da on 2026-04-19 per `.claude/rules/pre-phase-harness-audit.md` + advisor directive.** Expected exit codes annotated inline.
+**Every command below was dry-run-tested against governance-v0 HEAD `3bbf419da` on 2026-04-19 (pre-Phase-6-merge) per `.claude/rules/pre-phase-harness-audit.md` + advisor directive. Post-Phase-6 HEAD is `5ce5358fc` (merged 2026-04-19 17:15 UTC); the commands remain valid — `config.rs` and the schema additions are unchanged between `3bbf419da` and `5ce5358fc`, and the ENTRY_KIND definition-path move to `db_schema` is handled by the §10.8 dual-file edit and Task 8 parametric greps (not by these validation commands).** Expected exit codes annotated inline.
 
 ### Level 1: per-task `cargo check` (run after every task)
 
