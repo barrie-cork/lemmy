@@ -11,6 +11,7 @@ pub mod community;
 pub mod create_or_update;
 pub mod deletion;
 pub mod following;
+pub mod governance;
 pub mod voting;
 
 #[derive(Clone, Debug, Display, Deserialize, Serialize, PartialEq, Eq)]

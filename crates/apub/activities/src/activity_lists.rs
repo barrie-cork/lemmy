@@ -17,6 +17,11 @@ use crate::protocol::{
     reject::RejectFollow,
     undo_follow::UndoFollow,
   },
+  governance::{
+    publish_label::PublishLabel,
+    publish_sanction_notice::PublishSanctionNotice,
+    publish_trust_attestation::PublishTrustAttestation,
+  },
   voting::{undo_vote::UndoVote, vote::Vote},
 };
 use activitypub_federation::{config::Data, traits::Activity};
@@ -46,6 +51,12 @@ pub enum SharedInboxActivities {
   Report(Report),
   ResolveReport(ResolveReport),
   AnnounceActivity(AnnounceActivity),
+  // Brehon governance Create wrappers (ADR-014). MUST stay before
+  // RawAnnouncableActivities — `#[serde(untagged)]` matches in
+  // declaration order and the catch-all variant must remain last.
+  PublishSanctionNotice(PublishSanctionNotice),
+  PublishTrustAttestation(PublishTrustAttestation),
+  PublishLabel(PublishLabel),
   /// This is a catch-all and needs to be last
   RawAnnouncableActivities(RawAnnouncableActivities),
 }
