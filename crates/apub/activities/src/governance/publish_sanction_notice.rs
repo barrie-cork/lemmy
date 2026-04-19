@@ -30,7 +30,7 @@ use lemmy_db_schema::{
   },
 };
 use lemmy_db_schema_file::{
-  enums::{ActorType, CaseTargetType},
+  enums::{ActorType, CaseTargetType, SanctionScope},
   schema::{moderation_case, sanction},
 };
 use lemmy_diesel_utils::{
@@ -229,6 +229,14 @@ pub async fn build_local_sanction_notice_plan(
   conn: &mut AsyncPgConnection,
   context: &Data<LemmyContext>,
 ) -> LemmyResult<SanctionNoticeSendPlan> {
+  // Defensive guard 1 — actor must be local. ADR-014 federation is
+  // outbound-only and ADR-010 makes the local admin the sole signer of
+  // governance activities. No current caller violates (orchestrator
+  // looks up via PersonView::list_admins which is local-by-construction)
+  // but the guard hardens against future call sites that hand-pick an
+  // actor from a federated lookup. CodeRabbit PR #46 #2p-2.
+  assert_actor_is_local(actor)?;
+
   // Step 1 — load ModerationCase (target_type + per-target id columns).
   let case: ModerationCase = moderation_case::table
     .filter(moderation_case::id.eq(case_id))
@@ -247,6 +255,15 @@ pub async fn build_local_sanction_notice_plan(
     .select(Sanction::as_select())
     .first(conn)
     .await?;
+
+  // Defensive guard 2 — scope must be FederatedRecommendation. Only that
+  // scope produces a federation-visible signal per ADR-014 / [05 §3];
+  // Community/Instance scopes stay local and must not generate an
+  // outbound activity. submit_jury_vote currently only calls the send
+  // path when scope == FederatedRecommendation (see plan §757), but
+  // hardening the builder prevents a future caller from publishing a
+  // Community/Instance sanction by accident. CodeRabbit PR #46 #2p-3.
+  assert_scope_is_federated(winning_sanction.scope)?;
 
   // Step 3 — resolve target AP id by target type. Each variant uses the
   // matching id column on the case row; remote targets carry the URL
@@ -382,6 +399,41 @@ pub async fn enqueue_sanction_notice_activity(
 // ---------------------------------------------------------------------------
 // Internals
 // ---------------------------------------------------------------------------
+
+/// Reject a non-local actor at the builder boundary. ADR-010 single-admin
+/// + ADR-014 outbound-only federation make a remote actor publishing a
+/// sanction-notice from this instance an invariant violation, not a
+/// recoverable error. Returns `LemmyErrorType::Unknown` (no dedicated
+/// variant exists; precedent in this file at lines 83/86/92 for verify()
+/// guards uses the same shape).
+fn assert_actor_is_local(actor: &ApubPerson) -> LemmyResult<()> {
+  if !actor.local {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "publish_sanction_notice builder refused remote actor: ap_id={}",
+        actor.ap_id,
+      ))
+      .into(),
+    );
+  }
+  Ok(())
+}
+
+/// Reject a non-federated sanction at the builder boundary. Only
+/// `SanctionScope::FederatedRecommendation` produces a federation-visible
+/// signal per ADR-014; Community/Instance scopes stay local. Returns
+/// `LemmyErrorType::Unknown` matching the actor-guard precedent above.
+fn assert_scope_is_federated(scope: SanctionScope) -> LemmyResult<()> {
+  if scope != SanctionScope::FederatedRecommendation {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "publish_sanction_notice builder refused non-federated scope: {scope:?}",
+      ))
+      .into(),
+    );
+  }
+  Ok(())
+}
 
 /// Resolve the AP id of the case's target. Works the same way for
 /// finalised local sanctions whose targets live on the home instance
