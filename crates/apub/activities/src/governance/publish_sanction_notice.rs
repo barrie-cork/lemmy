@@ -30,7 +30,7 @@ use lemmy_db_schema::{
   },
 };
 use lemmy_db_schema_file::{
-  enums::{ActorType, CaseTargetType},
+  enums::{ActorType, CaseTargetType, SanctionScope},
   schema::{moderation_case, sanction},
 };
 use lemmy_diesel_utils::{
@@ -229,6 +229,14 @@ pub async fn build_local_sanction_notice_plan(
   conn: &mut AsyncPgConnection,
   context: &Data<LemmyContext>,
 ) -> LemmyResult<SanctionNoticeSendPlan> {
+  // Defensive guard 1 — actor must be local. ADR-014 federation is
+  // outbound-only and ADR-010 makes the local admin the sole signer of
+  // governance activities. No current caller violates (orchestrator
+  // looks up via PersonView::list_admins which is local-by-construction)
+  // but the guard hardens against future call sites that hand-pick an
+  // actor from a federated lookup. CodeRabbit PR #46 #2p-2.
+  assert_actor_is_local(actor)?;
+
   // Step 1 — load ModerationCase (target_type + per-target id columns).
   let case: ModerationCase = moderation_case::table
     .filter(moderation_case::id.eq(case_id))
@@ -247,6 +255,15 @@ pub async fn build_local_sanction_notice_plan(
     .select(Sanction::as_select())
     .first(conn)
     .await?;
+
+  // Defensive guard 2 — scope must be FederatedRecommendation. Only that
+  // scope produces a federation-visible signal per ADR-014 / [05 §3];
+  // Community/Instance scopes stay local and must not generate an
+  // outbound activity. submit_jury_vote currently only calls the send
+  // path when scope == FederatedRecommendation (see plan §757), but
+  // hardening the builder prevents a future caller from publishing a
+  // Community/Instance sanction by accident. CodeRabbit PR #46 #2p-3.
+  assert_scope_is_federated(winning_sanction.scope)?;
 
   // Step 3 — resolve target AP id by target type. Each variant uses the
   // matching id column on the case row; remote targets carry the URL
@@ -382,6 +399,41 @@ pub async fn enqueue_sanction_notice_activity(
 // ---------------------------------------------------------------------------
 // Internals
 // ---------------------------------------------------------------------------
+
+/// Reject a non-local actor at the builder boundary. ADR-010
+/// (single-admin) and ADR-014 (outbound-only federation) make a remote
+/// actor publishing a sanction-notice from this instance an invariant
+/// violation, not a recoverable error. Returns `LemmyErrorType::Unknown`
+/// — no dedicated variant exists; the verify() actor-binding guards
+/// earlier in this file (around lines 83/86/92) use the same shape.
+fn assert_actor_is_local(actor: &ApubPerson) -> LemmyResult<()> {
+  if !actor.local {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "publish_sanction_notice builder refused remote actor: ap_id={}",
+        actor.ap_id,
+      ))
+      .into(),
+    );
+  }
+  Ok(())
+}
+
+/// Reject a non-federated sanction at the builder boundary. Only
+/// `SanctionScope::FederatedRecommendation` produces a federation-visible
+/// signal per ADR-014; Community/Instance scopes stay local. Returns
+/// `LemmyErrorType::Unknown` matching the actor-guard precedent above.
+fn assert_scope_is_federated(scope: SanctionScope) -> LemmyResult<()> {
+  if scope != SanctionScope::FederatedRecommendation {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "publish_sanction_notice builder refused non-federated scope: {scope:?}",
+      ))
+      .into(),
+    );
+  }
+  Ok(())
+}
 
 /// Resolve the AP id of the case's target. Works the same way for
 /// finalised local sanctions whose targets live on the home instance
@@ -538,5 +590,116 @@ impl PublishSanctionNoticeFromBuilder {
       kind: self.kind,
       id: self.id,
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  //! Pure-function tests for the two builder-time invariant guards added
+  //! per CodeRabbit PR #46 #2p-2 (reject remote actor) and #2p-3 (enforce
+  //! federated scope). The full `build_local_sanction_notice_plan` needs
+  //! a live AsyncPgConnection and real moderation_case / sanction /
+  //! public_case_log rows, so end-to-end coverage of the builder lives
+  //! in `crates/server/tests/e2e.rs`. These tests cover the guards in
+  //! isolation so the invariant holds even if the surrounding builder
+  //! shape changes.
+  //!
+  //! No unwrap/expect per workspace lints — tests return LemmyResult.
+  use super::{ApubPerson, SanctionScope, assert_actor_is_local, assert_scope_is_federated};
+  use chrono::Utc;
+  use lemmy_db_schema::source::person::Person;
+  use lemmy_db_schema_file::{
+    PersonId, InstanceId,
+    enums::MembershipState,
+  };
+  use lemmy_utils::error::LemmyResult;
+  use url::Url;
+
+  /// Construct a stub Person with the given `local` flag. All other fields
+  /// take placeholder values; the guard does not read them.
+  fn fixture_person(local: bool) -> LemmyResult<ApubPerson> {
+    let ap_id_url = Url::parse("https://example.test/u/picard")?;
+    let inbox_url = Url::parse("https://example.test/u/picard/inbox")?;
+    Ok(ApubPerson(Person {
+      id: PersonId(1),
+      name: "picard".into(),
+      display_name: None,
+      avatar: None,
+      banner: None,
+      published_at: Utc::now(),
+      updated_at: None,
+      ap_id: ap_id_url.into(),
+      bio: None,
+      local,
+      private_key: None,
+      public_key: "pk".into(),
+      last_refreshed_at: Utc::now(),
+      inbox_url: inbox_url.into(),
+      matrix_user_id: None,
+      bot_account: false,
+      instance_id: InstanceId(1),
+      deleted: false,
+      post_count: 0,
+      post_score: 0,
+      comment_count: 0,
+      comment_score: 0,
+      // See person.rs:471 — Brehon Phase 5a task 51 carry-patch field;
+      // placeholder identical to upstream test fixture pattern.
+      membership_state: MembershipState::Member,
+    }))
+  }
+
+  #[test]
+  fn assert_actor_is_local_accepts_local() -> LemmyResult<()> {
+    let actor = fixture_person(true)?;
+    assert_actor_is_local(&actor)?;
+    Ok(())
+  }
+
+  #[test]
+  fn assert_actor_is_local_rejects_remote() -> LemmyResult<()> {
+    let actor = fixture_person(false)?;
+    let err = assert_actor_is_local(&actor).err();
+    assert!(
+      err.is_some(),
+      "remote actor must be rejected by the builder guard",
+    );
+    let msg = format!("{:?}", err);
+    assert!(
+      msg.contains("remote actor"),
+      "error message should mention remote actor, got: {msg}",
+    );
+    Ok(())
+  }
+
+  #[test]
+  fn assert_scope_is_federated_accepts_federated() -> LemmyResult<()> {
+    assert_scope_is_federated(SanctionScope::FederatedRecommendation)?;
+    Ok(())
+  }
+
+  #[test]
+  fn assert_scope_is_federated_rejects_community() -> LemmyResult<()> {
+    let err = assert_scope_is_federated(SanctionScope::Community).err();
+    assert!(
+      err.is_some(),
+      "Community-scope sanction must not produce a federation activity",
+    );
+    let msg = format!("{:?}", err);
+    assert!(
+      msg.contains("non-federated scope"),
+      "error message should mention non-federated scope, got: {msg}",
+    );
+    Ok(())
+  }
+
+  #[test]
+  fn assert_scope_is_federated_rejects_instance() -> LemmyResult<()> {
+    let err = assert_scope_is_federated(SanctionScope::Instance).err();
+    assert!(
+      err.is_some(),
+      "Instance-scope sanction must not produce a federation activity",
+    );
+    Ok(())
   }
 }

@@ -182,17 +182,36 @@ PY
 }
 
 release_lock() {
-  # Compare-and-release. If another process reclaimed our lock as stale
-  # and took it for themselves, the owner file will either be missing
-  # (they cleared it during stale-reclaim) or hold their token, not ours.
-  # In both cases we must leave the lock dir alone so we don't release a
-  # lock that no longer belongs to us (CodeRabbit PR #46 critical).
-  if [ -f "$lock_owner_file" ]; then
+  # Atomic-rename release. Take the lock dir out of the active name-space
+  # via `mv`, then verify ownership against $lock_token. If we don't own
+  # it any more (another process reclaimed our lock as stale and rebuilt
+  # it under the same name), put it back; if a new acquirer claimed the
+  # name in the window between our mv-out and mv-back, drop our staging
+  # copy rather than clobber their lock.
+  #
+  # The earlier compare-and-release shape (cat owner → compare → rmdir)
+  # narrowed but did not eliminate the race: between the token compare
+  # and the rmdir, a concurrent process could take the lock and we would
+  # destroy theirs. Atomic mv closes that window — once mv succeeds the
+  # name `$lock_dir` is no longer the owner-visible lock, so a concurrent
+  # acquirer's mkdir will succeed against an empty name and own its own
+  # fresh dir we can never touch (CodeRabbit PR #46 #2p-7).
+  #
+  # Owner-file pattern stays sibling-to-lock-dir per the brief's
+  # "smaller diff" decision. The fallback `cat "$lock_owner_file"`
+  # below covers the case where this process never wrote the owner
+  # file but inherited the lock (currently impossible, kept for safety).
+  local staging="$lock_dir.releasing.$$"
+  if mv "$lock_dir" "$staging" 2>/dev/null; then
     local current
-    current="$(cat "$lock_owner_file" 2>/dev/null || true)"
+    current="$(cat "$staging/owner" 2>/dev/null || cat "$lock_owner_file" 2>/dev/null || true)"
     if [ "$current" = "$lock_token" ]; then
       rm -f "$lock_owner_file"
-      rmdir "$lock_dir" 2>/dev/null || true
+      rmdir "$staging" 2>/dev/null || rm -rf "$staging"
+    else
+      if ! mv "$staging" "$lock_dir" 2>/dev/null; then
+        rm -rf "$staging"
+      fi
     fi
   fi
   rm -f "$tmp_file"

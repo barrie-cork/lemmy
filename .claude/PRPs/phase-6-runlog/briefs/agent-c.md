@@ -14,7 +14,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope
 
 ```bash
-scripts/brehon/task-hopper.sh start 73 \
+scripts/brehon/task-hopper.sh start task-73 \
   --agent agent-c --kind cargo_check --layer 2 \
   --label "AP activities for governance" \
   --worktree "$(pwd)"

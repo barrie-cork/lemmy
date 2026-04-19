@@ -20,7 +20,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope
 
 ```
-scripts/brehon/task-hopper.sh start 72 \
+scripts/brehon/task-hopper.sh start task-72 \
   --agent agent-b --kind cargo_check --layer 2 \
   --label "AP object types for governance" \
   --worktree "$(pwd)"

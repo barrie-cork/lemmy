@@ -17,7 +17,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 
 Before each file edit:
 ```
-scripts/brehon/task-hopper.sh start 70 \
+scripts/brehon/task-hopper.sh start task-70 \
   --agent agent-a --kind migration --layer 1 \
   --label "add_federation_attestations migration" \
   --worktree "$(pwd)"
@@ -25,12 +25,12 @@ scripts/brehon/task-hopper.sh start 70 \
 
 After task 70 commit lands (same worktree):
 ```
-scripts/brehon/task-hopper.sh complete 70 --commit-sha "$(git rev-parse --short HEAD)"
+scripts/brehon/task-hopper.sh complete task-70 --commit-sha "$(git rev-parse --short HEAD)"
 ```
 
 Then:
 ```
-scripts/brehon/task-hopper.sh start 71 \
+scripts/brehon/task-hopper.sh start task-71 \
   --agent agent-a --kind cargo_check --layer 1 \
   --label "Diesel models for federation tables" \
   --worktree "$(pwd)"

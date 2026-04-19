@@ -14,19 +14,19 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope (two tasks, serial)
 
 ```
-scripts/brehon/task-hopper.sh start 75 \
+scripts/brehon/task-hopper.sh start task-75 \
   --agent agent-e --kind cargo_check --layer 3 \
   --label "inbound receiver receive_remote_sanction_notice" \
   --worktree "$(pwd)"
 # implement task 75, commit
-scripts/brehon/task-hopper.sh complete 75 --commit-sha "$(git rev-parse --short HEAD)"
+scripts/brehon/task-hopper.sh complete task-75 --commit-sha "$(git rev-parse --short HEAD)"
 
-scripts/brehon/task-hopper.sh start 78 \
+scripts/brehon/task-hopper.sh start task-78 \
   --agent agent-e --kind cargo_check --layer 3 \
   --label "verify.rs signature helper" \
   --worktree "$(pwd)"
 # implement task 78, commit
-scripts/brehon/task-hopper.sh complete 78 --commit-sha "$(git rev-parse --short HEAD)"
+scripts/brehon/task-hopper.sh complete task-78 --commit-sha "$(git rev-parse --short HEAD)"
 ```
 
 ## Task 75 — Inbound receiver

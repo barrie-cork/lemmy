@@ -14,7 +14,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope
 
 ```bash
-scripts/brehon/task-hopper.sh start 77 \
+scripts/brehon/task-hopper.sh start task-77 \
   --agent agent-g --kind cargo_test --layer 5 \
   --label "sanction_notice_round_trip two-DB e2e" \
   --worktree "$(pwd)"

@@ -14,7 +14,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope
 
 ```
-scripts/brehon/task-hopper.sh start 76 \
+scripts/brehon/task-hopper.sh start task-76 \
   --agent agent-f --kind cargo_check --layer 4 \
   --label "wire submit_jury_vote to federation publish" \
   --worktree "$(pwd)"
