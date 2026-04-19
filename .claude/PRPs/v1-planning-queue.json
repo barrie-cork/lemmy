@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "purpose": "V1-planning design queue. Scope: cross-PRD coherence findings + deferred OQs from the five v1 sub-PRDs. NOT the Phase 6 advisor/impl decision channel (that lives at .claude/decision-queue.json and is off-limits to this session per 2026-04-19 guardrails).",
+  "attribution_rule": "Only the advisor session may use resolved_by='advisor'. This planning session uses resolved_by='v1-planning-session' for its own resolutions; resolved_by='user' for user-authorised decisions; resolved_by=null when pending.",
+  "affected_prds_legend": "admin-dashboard | jury-mechanics | reputation-tuning | sponsor-liability | federation-inbound",
+  "severity_legend": "blocking = must-resolve-before-prp-plan | non-blocking = should-fix-before-prp-plan | noted = deferred-to-impl-phase",
+
+  "resolved": [
+    {
+      "id": "B1",
+      "severity": "blocking",
+      "affected_prds": ["admin-dashboard", "jury-mechanics", "sponsor-liability"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:30:00Z",
+      "subject": "appeal.* namespace ownership across admin-dashboard / jury-mechanics / sponsor-liability",
+      "context": "Three PRDs touched appeal.* with different subsets and defaults: admin-dashboard §5.2 had appeal.window_days + appeal.panel_size_increase + appeal.original_jurors_excluded; jury-mechanics §10 had appeal.window_days + appeal.panel_size_multiplier (1.5) + appeal.panel_size_floor_increment + appeal.threshold_tier_bump + appeal.auto_select_on_appeal_acceptance; sponsor-liability referenced appeal.window_days in §6.5 for grace-window composition. Two real contradictions: (i) admin-dashboard's panel_size_increase=2 vs jury-mechanics' multiplier=1.5+floor=2 compute different panel sizes (5→7 vs 5→8); (ii) admin-dashboard declared appeal.original_jurors_excluded as configurable bool while jury-mechanics §6.2 cited [01 §5.7] as a hard code-level rule, not a config key.",
+      "proposed_resolutions": [
+        "A. jury-mechanics owns appeal.* fully; admin-dashboard cross-references. original_jurors_excluded stays as hard code rule, not config.",
+        "B. admin-dashboard owns appeal.*; drop jury-mechanics' multiplier shape. Simpler math but loses [01 §5.7] 1.5x scaling.",
+        "C. Split: admin-dashboard owns appeal.window_days only; jury-mechanics owns panel/threshold knobs."
+      ],
+      "resolution": "A",
+      "resolution_rationale": "appeal.* is procedural-legitimacy territory (ADR-007 -> ADR-010 upgrade path) which is jury-mechanics' charter. Multiplier preserves [01 §5.7] 'larger jury' principle. admin-dashboard keeps its write-surface role via cross-reference pattern (same idiom as jury.* via OQ-026). original_jurors_excluded as hard code rule is correct - Brehon invariant, not community taste knob.",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T14:35:00Z",
+      "edit_scope": {
+        "admin-dashboard": "§5.2: delete rows for appeal.window_days, appeal.panel_size_increase, appeal.original_jurors_excluded. Add one cross-ref line to jury-mechanics-v1 §10. §10.2 note issue #15 resolution lands in jury-mechanics.",
+        "jury-mechanics": "No changes needed - already owns the shape.",
+        "sponsor-liability": "No changes needed - §6.5 reference to appeal.window_days remains valid."
+      }
+    },
+    {
+      "id": "B2",
+      "severity": "blocking",
+      "affected_prds": ["admin-dashboard", "jury-mechanics"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:35:00Z",
+      "subject": "jury.panel_size shape: single key vs 9-cell matrix",
+      "context": "admin-dashboard §5.1 had single jury.panel_size=5 v0 -> 7 v1; jury-mechanics §3.4 replaced with 9-key matrix jury.panel_size.<status>.<severity> across (Regular|Founder|Probation) x (Minor|Moderate|Severe) with no bare jury.panel_size key. v0 code at admin_assign_jury.rs:120 reads bare jury.panel_size via config::get_int.",
+      "proposed_resolutions": [
+        "A. 9-key matrix replaces single key entirely. Breaks v0 read site; forces explicit status+severity selection.",
+        "B. Dotted matrix WITH single-key fallback per OQ-026 cascade (jury.panel_size.<status>.<severity> -> jury.panel_size.<severity> -> jury.panel_size -> const). v0-compatible.",
+        "C. Keep single key; defer matrix to v1.5. Loses status-aware sizing from [01 §5.2 honour-price]."
+      ],
+      "resolution": "B",
+      "resolution_rationale": "OQ-026 option (a) IS the cascade pattern. admin-dashboard §3.5 already commits to option (a); Option B operationalises it end-to-end. v0 compatibility preserved (admin_assign_jury.rs:120 read site unchanged during v1 rollout). Communities get both ergonomics: single-int tuning OR per-cell tuning.",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T14:40:00Z",
+      "edit_scope": {
+        "admin-dashboard": "§5.1: jury.panel_size row kept, value bumped to 7 as v1 root default, tag (a). §3.5 adds cascade sentence. §3.1 jury.* count stays at 5 v0 + 4 v1 = 9 (matrix keys documented in jury-mechanics, not re-enumerated).",
+        "jury-mechanics": "§3.4 adds 'Cascade fallback' subsection noting bare jury.panel_size key exists as final fallback before const. §9.2 admin_assign_jury read site must use new cascade helper, not get_int(dotted_key) directly."
+      }
+    },
+    {
+      "id": "B3",
+      "severity": "blocking",
+      "affected_prds": ["admin-dashboard", "reputation-tuning"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:40:00Z",
+      "subject": "Reputation-tuning's new namespaces vs admin-dashboard's 13-namespace inventory",
+      "context": "admin-dashboard §3.1 enumerates 13 namespaces. reputation-tuning adds 28 keys across 4 namespaces not in admin-dashboard's list: cron.* (7 keys, same concept as existing job.*), bounds.* (8 keys, genuinely new - per-dimension floor/ceiling), rollup.* (1 key, single-key namespace bloat), reputation.* (1 key, feature flag). admin-dashboard's prose claim '62 keys across 7 namespaces' is incorrect once reputation-tuning lands - real v1 total is ~138 keys across 15 namespaces.",
+      "proposed_resolutions": [
+        "A. Collapse into admin-dashboard namespaces: cron.* -> job.*; bounds.* stays new; rollup.* -> job.*; reputation.* -> feature.*. Consistent with v0 job.snapshot_interval_seconds idiom.",
+        "A-modified (user adjustment). Same as A but: cron.participation.* split into (i) deltas.* for reputation-policy knobs (weekly_increment, dormancy_decrement) and (ii) participation.* for context knobs (activity_threshold_comments, lookback_days, dormancy_window_days); cron.{participation,rollup}_interval_days -> job.*; rollup.equal_weights -> job.rollup_equal_weights; reputation.v1.decay_enabled -> feature.reputation_v1_decay_enabled; bounds.* and feature.* kept as first-class new namespaces.",
+        "B. Accept all 4 reputation-tuning namespaces; admin-dashboard expands to 17 namespaces. Two names for same concept (job/cron) = permanent operator confusion.",
+        "C. Narrow cron.* to interval-only (participation_interval_days, rollup_interval_days), move event-tuning to deltas.*. Cron/job split subtle enough ops may still confuse."
+      ],
+      "resolution": "A-modified",
+      "resolution_rationale": "Load-bearing: v0 establishes liability.* + job.* as flat namespaces. Dual cron.*+job.* namespaces for same concept is a permanent tax. participation-event tuning keys aren't cron knobs semantically - they're reputation deltas conditioned on cron-batch context, so they belong with deltas.* (policy) or participation.* (context). bounds.* genuinely new (post-clamp snapshot ceilings - different from thresholds.* capability cutoffs). feature.* prophylactic for growth (every deferred-enforcement toggle will need one).",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T14:45:00Z",
+      "edit_scope": {
+        "admin-dashboard": "§3.1 namespace table: correct '62 keys across 7 namespaces' -> '138 keys across 15 namespaces (v1 inventory crossing all 5 sub-PRDs)' with per-PRD contribution sub-table. Add rows for bounds.* (8 keys, reputation-tuning domain) and feature.* (1 key, reputation-tuning domain, future-expandable). Add rows noting participation.* (+2), deltas.* (+3), job.* (+3) extensions. Add B3 entry to Resolutions log.",
+        "reputation-tuning": "§8 defaults matrix: rename 10 keys per table. §5.2 + §5.3: adjust namespace references. §13 cross-references: update consumers. Add §14 'Resolutions applied (2026-04-19)' noting B3 namespace collapse."
+      },
+      "key_renames": {
+        "cron.participation.weekly_increment": "deltas.participation_weekly_active",
+        "cron.participation.activity_threshold_comments": "participation.activity_threshold_comments",
+        "cron.participation.lookback_days": "participation.lookback_days",
+        "cron.participation.weekly_dormancy_decrement": "deltas.participation_dormant",
+        "cron.participation.dormancy_window_days": "participation.dormancy_window_days",
+        "cron.participation_interval_days": "job.participation_interval_days",
+        "cron.rollup_interval_days": "job.rollup_interval_days",
+        "rollup.equal_weights": "job.rollup_equal_weights",
+        "reputation.v1.decay_enabled": "feature.reputation_v1_decay_enabled"
+      }
+    },
+    {
+      "id": "B4",
+      "severity": "blocking",
+      "affected_prds": ["admin-dashboard", "sponsor-liability"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:45:00Z",
+      "subject": "sponsor-liability's sponsor.liability.* prefix vs v0/admin-dashboard's flat liability.*",
+      "context": "v0 code establishes flat liability.* (liability.founder_multiplier, liability.regular_multiplier, liability.sponsor_liability_floor). admin-dashboard §5.2 extends flat (liability.grace_window_minor_hours). sponsor-liability §4.2/§10 invented three-level sponsor.liability.grace_window.minor_hours despite v0 precedent. Resulting namespace would be LESS structured: liability.founder_multiplier (v0 flat) and sponsor.liability.grace_window.minor_hours (v1 three-deep) in different trees for no semantic reason.",
+      "proposed_resolutions": [
+        "A. Flat liability.* matches v0 + admin-dashboard. Rename 10 sponsor-liability keys.",
+        "B. Dotted liability.* (liability.grace_window.minor_hours). Forces v0 key renaming too; partial v0 rename blast radius.",
+        "C. Accept sponsor.* top-level namespace. Splits conceptually-related knobs across trees; namespace sprawl (16)."
+      ],
+      "resolution": "A",
+      "resolution_rationale": "v0 precedent is authoritative. Extending liability.* is free; introducing sponsor.* creates parallel namespace for same concern. Consistency with existing flat v0 keys > structural elegance. Partial N1 collateral: admin-dashboard §5.2 only listed 2 of 3 grace-window keys (missing minor_hours) - B4 resolution fixes by enumerating all 10 sponsor-liability-owned liability.* keys.",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T14:50:00Z",
+      "edit_scope": {
+        "admin-dashboard": "§3.1 liability.* row: update 'v1 additions' count 2 -> 10. §5.2: add 7 new rows for sponsor-liability non-grace keys (restoration x2, multi-sponsor x1, revoke-rate-limit x1, grace_window minimum/maximum/alert_threshold x3). §11 Resolutions: note B4 + partial N1 collateral.",
+        "sponsor-liability": "§4.2 table: rename 6 rows. §5.1 body: remove sponsor.liability.* prefix references throughout. §7.3 table: rename 2 rows. §10 defaults matrix: rename 10 entries. §12.1: rename rate-limit key. §13 OQ-V1-SL-01: rename multi_sponsor_escape_rule key. Add §18 Resolutions applied entry."
+      },
+      "key_renames": {
+        "sponsor.liability.grace_window.minor_hours": "liability.grace_window_minor_hours",
+        "sponsor.liability.grace_window.moderate_hours": "liability.grace_window_moderate_hours",
+        "sponsor.liability.grace_window.severe_hours": "liability.grace_window_severe_hours",
+        "sponsor.liability.grace_window.minimum_hours": "liability.grace_window_minimum_hours",
+        "sponsor.liability.grace_window.maximum_hours": "liability.grace_window_maximum_hours",
+        "sponsor.liability.grace_window.alert_threshold_hours": "liability.grace_window_alert_threshold_hours",
+        "sponsor.liability.restoration_escapes_liability": "liability.restoration_escapes_liability",
+        "sponsor.liability.restoration_severity_reduction_steps": "liability.restoration_severity_reduction_steps",
+        "sponsor.liability.multi_sponsor_escape_rule": "liability.multi_sponsor_escape_rule",
+        "sponsor.liability.revoke_rate_limit_per_day": "liability.revoke_rate_limit_per_day"
+      }
+    },
+    {
+      "id": "B5",
+      "severity": "blocking",
+      "affected_prds": ["federation-inbound", "admin-dashboard"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:50:00Z",
+      "subject": "federation-inbound's schema additions attach to Phase 6 tables still in-flight",
+      "context": "federation-inbound §8.2 ALTER TABLE federation_attestation ADD COLUMN source_instance TEXT, received_at TIMESTAMPTZ, peer_trust_level_at_receipt, ... + ALTER TABLE remote_sanction_notice. Both tables created by Phase 6 tasks 70/71 in worktree advisor-phase6 (off-limits this session). Phase 6 hasn't opened PR yet. PRD framed Phase 6 dependency as descriptive §15.1 alignment notes rather than prescriptive hard gate. Additional ordering constraint: migration timestamp must sort after Phase 6's add_federation_attestations (2026-04-20).",
+      "proposed_resolutions": [
+        "A. Formalise Phase 6 as hard gate + add verify-before-migrate preamble SQL DO block. User-modified: drop specific 2026-04-22 reservation, use 'must sort after Phase 6' invariant only.",
+        "B. Split federation-inbound into schema-addendum + handler/UX PRDs. Splits one coherent design; PRD bureaucracy.",
+        "C. Defer federation-inbound entirely until Phase 6 merges. Discards Phase-6-independent design work (AP types, trust states, wrapper, rate limits)."
+      ],
+      "resolution": "A-modified",
+      "resolution_rationale": "federation-inbound's non-schema design work is Phase-6-independent and coherent. Deferring whole PRD discards audit value. Option A's verification preamble + explicit gate makes ordering fail-loud. Timestamp invariant: 'must sort after add_federation_attestations' - exact slot assigned at impl time (2026-04-22 reservation would be premature). Partial N5 collateral: §8.0 enumeration of Phase 6 schema assumptions graduates N5 (FK vs domain-string mismatch) from 'noted' to 'resolved at v1-impl time via explicit precondition'.",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T14:55:00Z",
+      "edit_scope": {
+        "federation-inbound": "Insert new §8.0 'Dependencies' subsection before §8.1: Phase 6 merge as hard gate, explicit preconditions list (tables exist, enum types exist, specific columns assumed per §15.2 carry-forwards, Phase 6 entry_kind consts present, source_instance is TEXT not FK). §8.2 SQL: prepend DO block checking federation_attestation table exists and remote_sanction_notice.received_at column exists; RAISE EXCEPTION otherwise. §15.2 DQ-6.1/DQ-6.2 paragraphs: rewrite to reference §8.0 as canonical preconditions list; prescriptive tone. Rename §8 heading to 'Dependencies, database & migration changes'. §1 frontmatter scheduling line: 'Hard-gated on Phase 6 PR merge; no implementation before gate satisfied. Plan-level review can proceed in parallel.' Add §16 Resolutions applied entry.",
+        "admin-dashboard": "§10.1 cross-references: add one-line note under federation-inbound consumer row: 'depends on Phase 6 merge - see v1-federation-inbound-v1.prd.md §8.0 for hard-gate conditions.'"
+      }
+    },
+    {
+      "id": "B6",
+      "severity": "blocking",
+      "affected_prds": ["jury-mechanics", "sponsor-liability"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:55:00Z",
+      "subject": "sponsor-liability §9.3 + jury-mechanics §9.1 both rewrite submit_jury_vote with no unified shape",
+      "context": "Both PRDs rewrite crates/api/api/src/governance/submit_jury_vote.rs. jury-mechanics §9.1 pre-decision threshold/quorum snapshot reads + deadlock -> AdminReview. sponsor-liability §9.3 post-decision lifecycle branch: compute_sponsor_liability (split from apply_sponsor_liability), grace_expires_at, flip to SponsorLiabilityPending, defer public_log + juror rep events to scheduler fire/escape. Five questions unanswered: (1) threshold-failure short-circuits sponsor-liability? (2) AdminReview bypasses? (3) SponsorLiabilityPending replaces Decided or rewrites? (4) public_case_log timing? (5) juror reputation_events timing?",
+      "proposed_resolutions": [
+        "A. jury-mechanics §9.1 owns combined post-v1 handler shape via new §9.1a subsection with 9-step pseudocode; sponsor-liability §9.3 reduces to pointer.",
+        "B. sponsor-liability §9.3 owns combined shape. Backwards - jury-mechanics is the bigger change.",
+        "C. Extract appendix PRD v1-handler-integration.prd.md. PRD bureaucracy for one handler.",
+        "D. Keep separate with cross-ref sub-bullets. Fragments pseudocode across PRDs."
+      ],
+      "resolution": "A",
+      "resolution_rationale": "submit_jury_vote is primarily jury-mechanics' handler - v1 changes it owns (quorum/threshold/deadlock) define the decision point. sponsor-liability's post-decision lifecycle branch is coherent continuation. Option C appendix = scaffolding PRD nobody owns. Option D fragmentation is exactly what caused this audit finding. User-provided 9-step pseudocode resolves all 5 questions: threshold-failure short-circuits before sanction insert; AdminReview bypasses entirely; SponsorLiabilityPending replaces Decided (single write); public_log + juror rep events fire at scheduler fire/escape time on liability path, at vote-tally on no-sponsor path. Appeal-window-bound step 9 fires on both paths per sponsor-liability §6.5 min(...) composition. Golden-path test impact minimal (existing test likely uses unsponsored target -> step 8 no-sponsor path).",
+      "resolved_by": "user",
+      "resolved_at": "2026-04-19T15:00:00Z",
+      "edit_scope": {
+        "jury-mechanics": "§9.1 expand from ~5 bullets to full 9-step combined-handler pseudocode (threshold check, winning_decision, sponsor-liability branch, no-sponsor/NoAction path, appeal window bound). Add sub-note on golden-path test impact (unsponsored target -> step 8, assertions preserved; new sponsored-target test is v1-impl follow-up). Add cross-reference: 'SponsorLiabilityPending branch specified by sponsor-liability-v1 §9.3; this section owns the integrated lifecycle shape.' §15 Resolutions applied entry.",
+        "sponsor-liability": "§9.3 reduce from ~50 lines Rust pseudocode to ~10-line pointer to jury-mechanics-v1 §9.1. Keep §9.1 compute/fire split and §9.4 scheduler module sections. §18 Resolutions applied entry."
+      },
+      "handler_pseudocode_reference": "See conversation 2026-04-19 for 9-step pseudocode; to be inlined into jury-mechanics §9.1 during edit pass."
+    }
+  ],
+
+  "non_blocking": [
+    {
+      "id": "N1",
+      "severity": "non-blocking",
+      "affected_prds": ["admin-dashboard"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:00:00Z",
+      "subject": "admin-dashboard §5.2 decide-later count mismatch: claims 5 (c) tags, table has 1",
+      "context": "§5.2 prose claims '5 are decide-later (c)': participation.attestation_enabled (tagged explicitly) + '4 reserved-for-v1.5 keys for federation peer-trust-state knobs that this PRD does not enumerate'. The 4 phantom entries inflate the count without being rows in the table.",
+      "proposed_resolutions": [
+        "A. Drop the '4 reserved' phrasing; count reflects only tagged rows (1). Move federation-peer-trust-state reservation to federation-inbound PRD §10 where peer-trust knobs live.",
+        "B. Enumerate the 4 reserved keys explicitly. Probably belong in federation-inbound, not admin-dashboard.",
+        "C. Keep prose, delete the count discrepancy noise via a note."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "Partially collateraled by B4 resolution (§5.2 grows to enumerate all 10 sponsor-liability keys; count inflation pressure diminishes). Cleanest is to drop the phantom 4 from the count in the B4 edit pass and note federation-peer-trust-state knobs live in federation-inbound §10.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "N2",
+      "severity": "non-blocking",
+      "affected_prds": ["reputation-tuning"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:05:00Z",
+      "subject": "reputation-tuning §5.3 evidence-cited heuristic under-specified",
+      "context": "§5.3 source 4 says 'heuristic detection: case has case_evidence rows uploaded by the reporter AND the rationale length >= minimum threshold'. No threshold value. No verification that jury rationale is stored as free-text in v0 schema. Needs code verification before implementation.",
+      "proposed_resolutions": [
+        "A. Add placeholder default (e.g. 256 chars) + flag as v1-impl verification task: verify jury.rationale column exists and is free-text in submit_jury_vote DTO.",
+        "B. Remove evidence-cited source entirely from v1; keep only admin-flagged bad-faith. Simpler; 1 fewer source.",
+        "C. Promote to blocking; resolve now by reading submit_jury_vote.rs."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "Adding a placeholder threshold + v1-impl verification task is cheap. Removing entirely loses positive reputation feedback for high-quality reporters. Promoting to blocking over-scopes this session.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "N3",
+      "severity": "non-blocking",
+      "affected_prds": ["jury-mechanics"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:10:00Z",
+      "subject": "jury-mechanics §5.3 constraint-relaxation ordering has a subtle algorithm bug",
+      "context": "§5.3 says relax priority: (1) cooldown, (2) geographic, (3) sponsor-cluster. §9.3 says constraint application happens after eligible pool built. But cooldown BUILDS the pool (excludes recent jurors). Removing cooldown EXPANDS pool, which may resolve pool-too-small without dropping sponsor-cluster. 're-roll up to N_RETRIES before relaxing' is ambiguous about which constraint is being re-rolled against.",
+      "proposed_resolutions": [
+        "A. Rewrite §5.3 algorithm flowchart: cooldown applied at pool-build (filter), sponsor-cluster checked at panel-sample (re-roll up to N), geographic checked at panel-sample (soft scoring). Relaxation cascade: if pool < panel_size post-cooldown, drop cooldown FIRST and retry pool-build; if post-expansion sample still violates sponsor-cluster after N re-rolls, drop geographic scoring; last-resort drop sponsor-cluster (log warning).",
+        "B. Simpler: always try cooldown=ON first, if pool too small try cooldown=OFF, then try sponsor-cluster relaxation. Geographic scoring soft, never relaxed formally. Less nuanced but clearer.",
+        "C. Keep existing §5.3 text; add explicit algorithm sketch as Appendix."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "The algorithm confusion is load-bearing for §9.3 impl agent. Rewrite in place during edit pass. Option A matches the intent implied by 'Brehon-essential' prioritisation while making the phase structure (build-time filter vs sample-time check vs soft score) explicit.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "N4",
+      "severity": "non-blocking",
+      "affected_prds": ["sponsor-liability"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:15:00Z",
+      "subject": "sponsor-liability §11.4 v0-modlog-reader regression not explicitly handled",
+      "context": "§11.4 says 'v0 modlog readers see case absent from modlog until grace expires'. Framed as 'correct semantic' but v0 clients relying on GET /modlog returning decided cases immediately will observe a behavioural regression on sponsor-liability cases. No API versioning, no migration note, no client warning mechanism described.",
+      "proposed_resolutions": [
+        "A. Add §11.4 paragraph: explicit note that public_case_log emits at scheduler fire/escape time (not vote-tally time) for sponsor-liability cases; v0 clients that poll modlog will see delayed appearance (minutes-to-days delay, bounded by grace window). Recommend v1 client-side: poll both case endpoint (status SponsorLiabilityPending visible immediately) AND modlog (appears after liability resolves). Add as documented behavioural change in §11 heading.",
+        "B. Add API versioning: v4/modlog returns eager entries (v0 behaviour); v5/modlog returns fire/escape-gated entries (v1 behaviour). Heavy; requires two code paths.",
+        "C. Defer to v1-impl; add as carry-forward issue on GH post-v1."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "Option B overkill for a boundary that pre-v0 operators tolerate already (Lemmy's own modlog has similar eventual-consistency). Option A documents the change-in-behaviour honestly without requiring client churn.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "N5",
+      "severity": "non-blocking",
+      "affected_prds": ["federation-inbound"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:20:00Z",
+      "subject": "federation-inbound §4.1 FK-shape vs §8.1 TEXT domain mismatch surfaced but not elevated",
+      "context": "§4.1 declares federation_peer.instance_id INT PRIMARY KEY REFERENCES instance(id). §8.1 notes Phase 6's remote_sanction_notice.source_instance is TEXT (peer domain), not FK to instance(id). Join path: JOIN instance ON instance.domain = remote_sanction_notice.source_instance. §15.3 point 1 mentions case-sensitivity concern as a parenthetical. Should be a first-order implementation warning.",
+      "proposed_resolutions": [
+        "A. Already collateraled by B5 resolution. §8.0 preconditions list includes 'assumes remote_sanction_notice.source_instance is TEXT (peer domain), not FK' - reviewer who disagrees must push back before v1 migration. Graduates N5 from 'noted' to 'resolved-at-v1-impl-time'.",
+        "B. Rewrite §4.1 schema to match Phase 6's TEXT convention: federation_peer.peer_domain TEXT PRIMARY KEY (no FK). Simpler join path but loses ON DELETE CASCADE from instance.id.",
+        "C. Promote to blocking; resolve schema choice now."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "B5 resolution absorbs this already via explicit §8.0 precondition enumeration. Impl-time verification is correct scope; schema choice depends on what Phase 6 actually ships.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    }
+  ],
+
+  "noted": [
+    {
+      "id": "NOT1",
+      "severity": "noted",
+      "affected_prds": ["admin-dashboard", "jury-mechanics", "reputation-tuning", "sponsor-liability", "federation-inbound"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:25:00Z",
+      "subject": "OQ numbering collision: admin-dashboard and jury-mechanics both claim OQ-027",
+      "context": "Handover claimed '~15 new OQs' - actual ~26. More importantly: admin-dashboard opens OQ-027 (bulk config import/export format). jury-mechanics ALSO opens OQ-027 (severity tier inference). These can't coexist in a unified 99-decisions-and-open-questions.md register. Other prefixed PRDs (reputation-tuning OQ-V1-01..05, sponsor-liability OQ-V1-SL-01..05, federation-inbound OQ-FED-IN-1..5) are collision-free.",
+      "proposed_resolutions": [
+        "A. Adopt prefixed namespace convention consistently. admin-dashboard OQ-027..031 becomes OQ-V1-AD-01..05; jury-mechanics OQ-027..032 becomes OQ-V1-JM-01..06. Collision resolved; pattern matches other 3 PRDs.",
+        "B. Renumber sequentially: admin-dashboard keeps 27-31, jury-mechanics bumps to 32-37. Breaks cross-references in jury-mechanics §Open Questions table and adds ordering fragility.",
+        "C. Defer OQ-renumbering to post-impl; stale cross-refs accepted."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "Prefixed convention already established by 3 of 5 PRDs. Applying consistently removes the only real collision and sets forward-compat pattern. Breaks admin-dashboard §5.3 (c)-key escalation table OQ-027/028 references and jury-mechanics §Open Questions OQ-027 through OQ-032 references - mechanical find-replace.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done",
+      "renames": {
+        "admin-dashboard": {
+          "OQ-027": "OQ-V1-AD-01 (bulk config import/export format)",
+          "OQ-028": "OQ-V1-AD-02 (multi-tenant on one instance)",
+          "OQ-029": "OQ-V1-AD-03 (federation peer trust dashboard scope)",
+          "OQ-030": "OQ-V1-AD-04 (participation attestation UX)",
+          "OQ-031": "OQ-V1-AD-05 (dry-run preview logging)"
+        },
+        "jury-mechanics": {
+          "OQ-027": "OQ-V1-JM-01 (severity tier inference)",
+          "OQ-028": "OQ-V1-JM-02 (geographic diversity heuristic)",
+          "OQ-029": "OQ-V1-JM-03 (founder-status threshold)",
+          "OQ-030": "OQ-V1-JM-04 (cross-instance juror eligibility)",
+          "OQ-031": "OQ-V1-JM-05 (re-jury auto vs admin trigger)",
+          "OQ-032": "OQ-V1-JM-06 (original-reporter appeal scope)"
+        }
+      }
+    },
+    {
+      "id": "NOT2",
+      "severity": "noted",
+      "affected_prds": ["admin-dashboard", "jury-mechanics", "reputation-tuning", "sponsor-liability", "federation-inbound"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:30:00Z",
+      "subject": "~28 new governance_log entry_kind constants across 5 PRDs, no shared registry",
+      "context": "Each PRD enumerates its new ENTRY_KIND_* strings. admin-dashboard: 2. jury-mechanics: 6. reputation-tuning: 5 + 2 for allowlist. sponsor-liability: 5. federation-inbound: 8+. Total ~28 new constants. No PRD verifies non-collision with v0 constants or each other. String uniqueness is critical (governance_log dispatches by entry_kind).",
+      "proposed_resolutions": [
+        "A. Single shared section in admin-dashboard §3 enumerating ALL new v1 entry_kind constants across PRDs with collision check. admin-dashboard becomes authoritative registry.",
+        "B. Each PRD lists own; v1-impl phase does collision-check pre-merge via lint rule.",
+        "C. Create .claude/rules/governance-log-entry-kind-registry.md with canonical list. Impl pass must append + check."
+      ],
+      "proposed_resolution": "C",
+      "rationale": "A adds cross-PRD edit burden to admin-dashboard beyond its charter. B defers entirely to impl (risky - two PRDs could ship with same string). C is the lightest-touch correct solution: registry rule auto-loads in -p mode, every impl session reads it before appending entry_kind consts. Defer to post-PRD-edit; create rule file in the v1-impl phase prep.",
+      "resolution": "C",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:15:00Z",
+      "status": "tracked-via-gh-issue",
+      "gh_issue": "https://github.com/barrie-cork/lemmy/issues/41",
+      "gh_issue_title": "v1/v2 governance_log entry_kind registry — cross-PRD hygiene",
+      "landing_window": "v1-impl-prep, AFTER Phase 6 merge to governance-v0, BEFORE first v1 PRD /prp-plan run",
+      "verified_baseline": "2026-04-19 @ governance-v0 3bbf419da — 19 v0 ENTRY_KIND_* constants at governance_log.rs:50-68 (verified by user grep during issue-drafting session)"
+    },
+    {
+      "id": "NOT3",
+      "severity": "noted",
+      "affected_prds": ["reputation-tuning"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:35:00Z",
+      "subject": "reputation-tuning ADR-010 compliance via feature flag vs snapshot columns",
+      "context": "Handover claim: 'all 5 PRDs honour ADR-010 no-retroactive-invalidation via snapshot columns'. Verification: jury-mechanics/sponsor-liability/admin-dashboard all have explicit snapshot columns. reputation-tuning uses feature flag (feature.reputation_v1_decay_enabled) instead. Feature-flag compliance is WEAKER than snapshot: a pre-flip snapshot recompute under v0 decay, post-flip under v1 decay - the same reputation_event row's effective delta changes retroactively between recomputes.",
+      "proposed_resolutions": [
+        "A. Accept feature-flag posture as v1-acceptable (document delta explicitly in reputation-tuning §9 backwards-compat). Per-event-source snapshotting would require storing applied_delta per snapshot, which is v2-scope.",
+        "B. Add snapshot versioning column to reputation_snapshot: calculator_version INT. v0 rows tagged 1; v1 rows tagged 2. Recompute MUST use same calculator version as original write. Extra complexity; probably too much for v1.",
+        "C. Promote to blocking; resolve snapshot strategy now."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "ADR-010 is no-retroactive-invalidation-of-in-flight-JURIES. Reputation snapshots aren't 'in-flight' in the same procedural-legitimacy sense - they're a derived rolling view. Feature flag is sufficient IF PRD documents the weaker compliance explicitly. Strongly resolved-in-edit-pass: add paragraph to reputation-tuning §9 framing feature-flag posture relative to jury-mechanics' snapshot-column posture.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "NOT4",
+      "severity": "noted",
+      "affected_prds": ["admin-dashboard"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:40:00Z",
+      "subject": "admin-dashboard §3.2 ConfigKeyMetadata: compile-time struct vs runtime registry ambiguous",
+      "context": "§3.2 describes 'compile-time metadata' via Rust struct with &'static str fields. §6.1 references 'CONFIG_KEY_METADATA' as if a runtime queryable table. Implementation unclear: every new key PR-against-rust-array (compile-time) OR DB migration adds metadata row (runtime)?",
+      "proposed_resolutions": [
+        "A. Commit explicitly to compile-time: CONFIG_KEY_METADATA as &'static [ConfigKeyMetadata] array alongside SEEDED_KEYS_WITH_CONSTS. Parity test every_seeded_key_has_metadata enforces. Clearer; matches Watch-1 parity invariant.",
+        "B. Runtime table config_key_metadata alongside governance_config. Migration per new key.",
+        "C. Hybrid: Rust array is source-of-truth; rendered to a DB view for UI convenience. Adds sync step."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "Compile-time matches existing Watch-1 parity contract (SEEDED_KEYS_WITH_CONSTS is compile-time). Consistency > flexibility. Clarifying text added to §3.2 during edit pass. §6.1 reference updated to 'compile-time CONFIG_KEY_METADATA array'.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    },
+    {
+      "id": "NOT5",
+      "severity": "noted",
+      "affected_prds": ["admin-dashboard", "sponsor-liability"],
+      "raised_by": "v1-planning-session",
+      "raised_at": "2026-04-19T14:45:00Z",
+      "subject": "No PRD defines deprecation/migration path for admin-config-write.sh relative to OQ-018 endpoint timing",
+      "context": "admin-dashboard §8.4 says 'v1.1 removes the script'. sponsor-liability §10 introduces 12 new keys that currently must be set via admin-config-write.sh until OQ-018 HTTP endpoint lands. If script deprecated before OQ-018 ships, ops teams stranded.",
+      "proposed_resolutions": [
+        "A. admin-dashboard §8.4 rewrite: script deprecation is GATED on OQ-018 HTTP endpoint shipping, not on v1.1 milestone alone. Explicit condition: 'admin-config-write.sh deprecated in release that ships OQ-018 endpoint; v1.1 is target but contingent.'",
+        "B. sponsor-liability adds own ops section referencing script. Distributes the ops burden.",
+        "C. Leave as-is; v1-impl resolves."
+      ],
+      "proposed_resolution": "A",
+      "rationale": "One-line fix in admin-dashboard §8.4. Makes the gating explicit. Partially removed by OQ-018 being tightly-coupled to admin-dashboard's charter anyway.",
+      "resolution": "A",
+      "resolved_by": "v1-planning-session",
+      "resolved_at": "2026-04-19T19:00:00Z",
+      "status": "done"
+    }
+  ],
+
+  "session_summary_2026_04_19_pm": {
+    "edit_pass_completed": "2026-04-19T19:00:00Z",
+    "edits_applied": {
+      "blocking": ["B1 done in morning session", "B2 done in morning session", "B3", "B4", "B5", "B6"],
+      "non_blocking": ["N1", "N2", "N3", "N4", "N5"],
+      "noted_done": ["NOT1", "NOT3", "NOT4", "NOT5"],
+      "noted_deferred": ["NOT2 — filed as GH issue #41 (https://github.com/barrie-cork/lemmy/issues/41) 2026-04-19 PM per user decision; graduated from 'noted' to 'tracked deliverable'"]
+    },
+    "prds_touched": [
+      "v1-admin-dashboard.prd.md — §3.1 registry overhauled; §3.2 compile-time commit; §5.2 +7 rows; §5.3 phantom row dropped; §8.4 OQ-018 gate; §10.1 cross-ref; §11 resolutions; OQ renames",
+      "v1-jury-mechanics.prd.md — §5.3 three-phase flowchart + R1/R2/R3 cascade; §9.1 9-step combined pseudocode; §15 resolutions; OQ renames",
+      "v1-reputation-tuning.prd.md — 9 key renames; §5.3 evidence threshold + v1-impl verification note; §9.1 feature-flag-vs-snapshot compliance paragraph; §14 resolutions",
+      "v1-sponsor-liability.prd.md — 10 key renames (flat liability.*); §9.3 reduced to pointer; §11 heading + §11.4 rewritten; §18 resolutions",
+      "v1-federation-inbound.prd.md — §1 frontmatter hard-gate line; §8 heading renamed; §8.0 new (7 preconditions); §8.2 SQL DO preamble; §15.2 prescriptive rewrite; §16 resolutions"
+    ],
+    "completion_signal_met": true,
+    "completion_note": "Each of the 5 PRDs contains a 'Resolutions applied (2026-04-19)' section enumerating the B/N/NOT items that touched it. Verifiable via: grep -E '^## (§)?[0-9]+.* Resolutions applied' .claude/PRPs/prds/v1-*.prd.md",
+    "no_commit_or_push_per_handover": "Edit pass complete; PRDs remain DRAFT-status on governance-v0; no commits made this session; 4 unpushed wave1-* branches untouched"
+  }
+}
