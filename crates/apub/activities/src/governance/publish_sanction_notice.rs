@@ -400,12 +400,12 @@ pub async fn enqueue_sanction_notice_activity(
 // Internals
 // ---------------------------------------------------------------------------
 
-/// Reject a non-local actor at the builder boundary. ADR-010 single-admin
-/// + ADR-014 outbound-only federation make a remote actor publishing a
-/// sanction-notice from this instance an invariant violation, not a
-/// recoverable error. Returns `LemmyErrorType::Unknown` (no dedicated
-/// variant exists; precedent in this file at lines 83/86/92 for verify()
-/// guards uses the same shape).
+/// Reject a non-local actor at the builder boundary. ADR-010
+/// (single-admin) and ADR-014 (outbound-only federation) make a remote
+/// actor publishing a sanction-notice from this instance an invariant
+/// violation, not a recoverable error. Returns `LemmyErrorType::Unknown`
+/// — no dedicated variant exists; the verify() actor-binding guards
+/// earlier in this file (around lines 83/86/92) use the same shape.
 fn assert_actor_is_local(actor: &ApubPerson) -> LemmyResult<()> {
   if !actor.local {
     return Err(
