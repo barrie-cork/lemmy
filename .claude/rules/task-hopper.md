@@ -174,11 +174,11 @@ escalations with links.
 | Failure | Behaviour |
 |---|---|
 | Helper can't acquire lock within timeout | Exits 3; agent must investigate (probably stale lock with writes in-flight) |
-| Agent crashes mid-attempt, re-invokes `start` | Helper refuses; agent must manually `escalate` with `--reason "crashed mid-attempt"` or edit JSON |
+| Agent crashes mid-attempt, re-invokes `start` | Helper refuses; agent must manually `escalate` with `--reason "crashed mid-attempt"`. (Hand-editing the JSON to clear the in-progress entry is reserved for the advisor — see "Hopper state file corrupted" below.) |
 | `gh issue create` fails (API outage, rate limit) | Helper sets `status=escalated`, leaves `issue_url=null`, logs the `gh` error. Advisor reruns `gh issue create` manually and patches `issue_url` |
 | Two agents race on the same task id | Helper enforces single-writer via mkdir-lock; second agent blocks until first releases. If both attempt `complete` / `retry`, the second sees an already-finalised attempt and exits 2 |
 | Python interpreter missing | Helper exits 1 immediately with a clear message. Install Python 3.8+ |
-| Hopper state file corrupted | Helper exits 5. Advisor restores from git history or hand-edits |
+| Hopper state file corrupted | Helper exits 5. **Agents: stop and hand off to the advisor — do not attempt repair.** The helper itself has exited, so escalation must go via runlog or out-of-band. **Advisor-only repair**: restore the file from git history, or hand-edit the JSON. |
 
 ## Retro integration
 

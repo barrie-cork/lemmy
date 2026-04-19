@@ -94,7 +94,7 @@ If any of the three prereqs above are unmet, the plan **flags but does not proce
 
 ### After State
 
-```
+```text
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                              AFTER                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
@@ -196,7 +196,7 @@ If any of the three prereqs above are unmet, the plan **flags but does not proce
 ## Patterns to Mirror
 
 ### MIGRATION_FILE_NAMING
-```
+```text
 migrations/2026-MM-DD-HHMMSS-NNNN_add_federation_attestations/up.sql
 migrations/2026-MM-DD-HHMMSS-NNNN_add_federation_attestations/down.sql
 ```
@@ -477,7 +477,7 @@ Nine tasks, five execution waves. Each task is one commit. Validation commands l
     id            SERIAL PRIMARY KEY,
     actor_url     TEXT NOT NULL,
     subject_url   TEXT NOT NULL,
-    attestation_type attestation_type_enum NOT NULL,  -- reuse existing enum from add_governance_enums
+    attestation_type attestation_type NOT NULL,  -- reuse existing enum from add_governance_enums
     valid_until   TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     signature     TEXT NOT NULL
@@ -489,8 +489,8 @@ Nine tasks, five execution waves. Each task is one commit. Validation commands l
     id              SERIAL PRIMARY KEY,
     source_instance TEXT NOT NULL,
     target_url      TEXT NOT NULL,
-    action          sanction_action_enum NOT NULL,
-    scope           sanction_scope_enum  NOT NULL,
+    action          sanction_action NOT NULL,
+    scope           sanction_scope  NOT NULL,
     summary         TEXT NOT NULL,
     published_at    TIMESTAMPTZ NOT NULL,
     signature       TEXT NOT NULL,
@@ -845,7 +845,7 @@ Both must exit 0 before Layer 4.
 
 ## Layer Structure (execution waves)
 
-```
+```text
 LAYER 1 (sequential, 1 agent):
   Agent A                    [tasks 70 + 71 — schema + models]
          │
@@ -888,7 +888,7 @@ LAYER 5 (sequential, 1 agent):
 
 Every agent receives a brief. Below is the template; the full briefs (one per agent, A through G) live in `.claude/PRPs/plans/phase-6-federation.agents.md` — generated as a sibling to this file before Layer 1 spawns.
 
-```markdown
+````markdown
 ### Agent X: Layer N — [task list]
 
 **Scope:** [1-2 sentence description of what this agent owns]
@@ -907,7 +907,7 @@ Every agent receives a brief. Below is the template; the full briefs (one per ag
 - [any test commands]
 
 **Commit message template:**
-```
+```text
 feat(governance): task NN — [short description]
 
 [<=60 words body explaining the change + why]
@@ -925,7 +925,7 @@ feat(governance): task NN — [short description]
 - Agent X owns `../brehon-fork-agentX-phase6` via `git worktree add ../brehon-fork-agentX-phase6 -b agentX-phase6 phase-6`
 - At task end: `git push origin agentX-phase6`; advisor merges into phase-6 at the merge point
 - At agent end: `git worktree remove ../brehon-fork-agentX-phase6`
-```
+````
 
 ---
 

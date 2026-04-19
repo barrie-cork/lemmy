@@ -168,7 +168,8 @@ pub async fn list_cases_for_person(
 /// Filter bundle for the Phase 5c `list_cases_filtered` query. v0 surfaces
 /// `community_id`, `status`, and pagination; `target_person_id` is wired
 /// through but not yet reachable from the HTTP DTO — it's reserved for
-/// the v1 assignee-filter per plan §11.7 GOTCHA.
+/// the v1 assignee-filter per `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md`
+/// Phase 5c task 67 GOTCHA.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CasesFilter {
   pub community_id: Option<CommunityId>,
@@ -184,7 +185,8 @@ const MAX_LIMIT: i64 = 50;
 
 /// Filtered case listing backing `GET /api/v4/governance/cases` (task 67).
 ///
-/// Path-A per plan §11.7: sibling of `list_open_cases_for_community` rather
+/// Path-A per `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md`
+/// Phase 5c task 67: sibling of `list_open_cases_for_community` rather
 /// than a signature extension. Applies filters via a boxed query and
 /// paginates at the SQL level (offset/limit) because the result set can be
 /// large on a mature instance. Pagination bounds mirror `list_modlog`:
