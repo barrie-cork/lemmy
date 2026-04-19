@@ -2986,7 +2986,8 @@ async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Erro
   // `_lemmy_test_user` is 16 chars; passes is_valid_actor_name regex
   // `^(?:[a-zA-Z0-9_]+|[0-9_\p{Arabic}]+|[0-9_\p{Cyrillic}]+)$`.
   let username = "_lemmy_test_user";
-  is_valid_actor_name(username)?;
+  is_valid_actor_name(username)
+    .map_err(|e| -> Box<dyn Error> { format!("is_valid_actor_name: {e}").into() })?;
   let person_form = PersonInsertForm::test_form(instance.id, username);
   let person = Person::create(&mut context.pool(), &person_form).await
     .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
