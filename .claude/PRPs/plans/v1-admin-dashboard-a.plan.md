@@ -127,7 +127,15 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 
 ## 8. Flow design
 
-### Before state (governance-v0 HEAD 3bbf419da)
+### Before state (governance-v0 HEAD 5ce5358fc; post-Phase-6 merge at 08065e1a1)
+
+Baseline-SHA bumped from `3bbf419da` → `5ce5358fc` after Phase 6 (PR #46) merged.
+Phase 6 added 4 federation `ENTRY_KIND_*` constants AND relocated the writer +
+all constants from `crates/api/api/src/governance/governance_log.rs` DOWN to
+`crates/db_schema/src/source/governance/governance_log.rs` per DQ-6.6
+(the api-path file is now a thin `pub use` re-export shim, ~66 lines).
+`config.rs` is unchanged between `3bbf419da` and `5ce5358fc` — all `config.rs`
+references in this plan remain accurate.
 
 ```text
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -140,7 +148,9 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 ║   moderation_case: 16 columns — no applied_config_snapshot                    ║
 ║   rule_set_version: does NOT exist                                            ║
 ║   sponsor_allowlist: does NOT exist                                           ║
-║   ENTRY_KIND_* consts: 19 (governance_log.rs:50-68)                           ║
+║   ENTRY_KIND_* consts: 23 at                                                  ║
+║     crates/db_schema/src/source/governance/governance_log.rs                  ║
+║     (19 v0 + 4 Phase 6 federation kinds; re-exported via api shim).           ║
 ║   'admin_config_changed' entry_kind: used as a string literal by              ║
 ║     scripts/brehon/admin-config-write.sh:148 (no Rust const)                  ║
 ║   CONFIG_KEY_METADATA registry: does NOT exist                                ║
@@ -167,8 +177,9 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 ║                    18 columns (+rule_set_version_id INT4 nullable FK)         ║
 ║   rule_set_version: new table, 7 columns, append-only                         ║
 ║   sponsor_allowlist: new table, 4 columns (reserved; read-path lands in v1-AD-b)║
-║   ENTRY_KIND_* consts: 21 (19 v0 + ENTRY_KIND_ADMIN_CONFIG_CHANGED,           ║
+║   ENTRY_KIND_* consts: 25 (23 pre-v1-AD + ENTRY_KIND_ADMIN_CONFIG_CHANGED,    ║
 ║                            ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED)             ║
+║     Consts defined in db_schema path; re-exported via api shim.               ║
 ║   CONFIG_KEY_METADATA: &'static [ConfigKeyMetadata] len=61 compile-time       ║
 ║   parity::every_seeded_key_has_metadata test passes                           ║
 ║   .claude/rules/governance-log-entry-kind-registry.md initialised             ║
@@ -363,11 +374,25 @@ mod parity {
 }
 ```
 
-### 10.8 ENTRY_KIND const addition
+### 10.8 ENTRY_KIND const addition (dual-file edit post-Phase-6)
+
+**Phase 6 relocation note:** the `ENTRY_KIND_*` consts + `append` writer live in
+`crates/db_schema/src/source/governance/governance_log.rs` (moved from the
+`api` path per DQ-6.6). The `api` path at
+`crates/api/api/src/governance/governance_log.rs` is a ~66-line re-export shim
+holding a `pub use` list. Adding new kinds requires editing BOTH files:
+
+1. **Define** in `crates/db_schema/src/source/governance/governance_log.rs` —
+   append after the existing `ENTRY_KIND_*` consts (currently through
+   `ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED` on the 23-const list).
+2. **Re-export** in `crates/api/api/src/governance/governance_log.rs` — extend
+   the alphabetical `pub use lemmy_db_schema::source::governance::governance_log::{…}`
+   list (currently 23 names + `GovernanceLog` + `GovernanceLogInsertForm` + `append`).
 
 ```rust
-// SOURCE: crates/api/api/src/governance/governance_log.rs:50-68
-// APPEND after ENTRY_KIND_APPEAL_REQUESTED:
+// File 1: crates/db_schema/src/source/governance/governance_log.rs
+// APPEND after existing ENTRY_KIND_* consts (append-only, alphabetical is
+// NOT enforced; keep grouping with other v1-AD entries if/when added):
 
 // v1-AD-a additions (v1 admin dashboard sub-phase A):
 pub const ENTRY_KIND_ADMIN_CONFIG_CHANGED: &str = "admin_config_changed";
@@ -376,6 +401,25 @@ pub const ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED: &str = "admin_config_change_den
 // at scripts/brehon/admin-config-write.sh:148 — DO NOT rename. v1-AD-b's HTTP
 // path must write byte-identical payloads per NOT5 deprecation gate 3.
 ```
+
+```rust
+// File 2: crates/api/api/src/governance/governance_log.rs
+// EXTEND the existing `pub use` list; alphabetical order is enforced by the
+// shim (the 23 existing names are alphabetical). Insert ADMIN_* alphabetically
+// between CAPABILITY_CHANGED and APPEAL_REQUESTED.
+
+pub use lemmy_db_schema::source::governance::governance_log::{
+  ENTRY_KIND_ADMIN_CONFIG_CHANGED,         // new — v1-AD-a
+  ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,   // new — v1-AD-a
+  ENTRY_KIND_APPEAL_REQUESTED,
+  // … existing names …
+};
+```
+
+**GOTCHA:** clippy workspace runs with `-D warnings`; if the shim's `pub use`
+list falls out of alphabetical order, some workspace lint configurations will
+flag it. Verify the existing shim preserves alphabetical order before appending
+(it does as of `5ce5358fc`).
 
 ---
 
