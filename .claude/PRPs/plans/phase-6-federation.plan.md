@@ -888,7 +888,7 @@ LAYER 5 (sequential, 1 agent):
 
 Every agent receives a brief. Below is the template; the full briefs (one per agent, A through G) live in `.claude/PRPs/plans/phase-6-federation.agents.md` — generated as a sibling to this file before Layer 1 spawns.
 
-```markdown
+````markdown
 ### Agent X: Layer N — [task list]
 
 **Scope:** [1-2 sentence description of what this agent owns]
@@ -907,11 +907,11 @@ Every agent receives a brief. Below is the template; the full briefs (one per ag
 - [any test commands]
 
 **Commit message template:**
-```
+```text
 feat(governance): task NN — [short description]
 
 [<=60 words body explaining the change + why]
-```text
+```
 
 **Decision-queue pre-seeds:** [DQ-6.X entries this agent may hit; see §Decision Queue Pre-Seeds]
 
@@ -925,7 +925,7 @@ feat(governance): task NN — [short description]
 - Agent X owns `../brehon-fork-agentX-phase6` via `git worktree add ../brehon-fork-agentX-phase6 -b agentX-phase6 phase-6`
 - At task end: `git push origin agentX-phase6`; advisor merges into phase-6 at the merge point
 - At agent end: `git worktree remove ../brehon-fork-agentX-phase6`
-```
+````
 
 ---
 

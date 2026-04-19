@@ -178,7 +178,7 @@ escalations with links.
 | `gh issue create` fails (API outage, rate limit) | Helper sets `status=escalated`, leaves `issue_url=null`, logs the `gh` error. Advisor reruns `gh issue create` manually and patches `issue_url` |
 | Two agents race on the same task id | Helper enforces single-writer via mkdir-lock; second agent blocks until first releases. If both attempt `complete` / `retry`, the second sees an already-finalised attempt and exits 2 |
 | Python interpreter missing | Helper exits 1 immediately with a clear message. Install Python 3.8+ |
-| Hopper state file corrupted | Helper exits 5. **Advisor-only**: restore from git history, or hand-edit the JSON to repair. Agents must not attempt this — escalate via the helper instead. |
+| Hopper state file corrupted | Helper exits 5. **Agents: stop and hand off to the advisor — do not attempt repair.** The helper itself has exited, so escalation must go via runlog or out-of-band. **Advisor-only repair**: restore the file from git history, or hand-edit the JSON. |
 
 ## Retro integration
 
