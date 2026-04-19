@@ -3091,7 +3091,7 @@ async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Erro
 async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
   use actix_web::web::{Data, Json};
   use diesel::{
-    Connection as _, ExpressionMethods, PgConnection, QueryDsl, SelectableHelper,
+    Connection as _, ExpressionMethods, OptionalExtension, PgConnection, QueryDsl, SelectableHelper,
   };
   use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::submit_jury_vote::submit_jury_vote;
@@ -3127,7 +3127,15 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
       SanctionAction,
       SanctionScope,
     },
-    schema::{governance_log, jury_assignment, remote_sanction_notice, sent_activity},
+    schema::{
+      governance_log,
+      jury_assignment,
+      moderation_case,
+      person,
+      remote_sanction_notice,
+      sanction,
+      sent_activity,
+    },
   };
   use lemmy_db_views_local_user::LocalUserView;
   use lemmy_diesel_utils::{
@@ -3603,6 +3611,48 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     received_count, 1,
     "exactly one federation_sanction_received governance_log entry on B",
   );
+
+  // -- 11b. Negative assertions: advisory MUST NOT auto-apply on B. -------
+  // ADR-006 + v0 simplification in [05 §3] require inbound sanction
+  // notices to land as advisory rows only — never materialising into a
+  // local `sanction`, a new `moderation_case`, or a Person.removed flip.
+  // The positive assertions in -- 10/-- 11 prove the advisory row + log
+  // exist; the negative assertions below prove B stays otherwise
+  // untouched. Without these, a regression could silently auto-apply and
+  // the test would still pass on the positive-path alone.
+  // CodeRabbit PR #46 finding #22.
+  let sanction_count_b: i64 = sanction::table
+    .count()
+    .get_result(&mut async_conn_b)
+    .await?;
+  assert_eq!(
+    sanction_count_b, 0,
+    "B must have zero sanction rows — advisory notices do not auto-apply (ADR-006)",
+  );
+  let case_count_b: i64 = moderation_case::table
+    .count()
+    .get_result(&mut async_conn_b)
+    .await?;
+  assert_eq!(
+    case_count_b, 0,
+    "B must have zero moderation_case rows — inbound notice does not create a local case",
+  );
+  let target_removed_on_b: Option<bool> = person::table
+    .filter(person::ap_id.eq(&target_ap_id_string))
+    .select(person::deleted)
+    .first(&mut async_conn_b)
+    .await
+    .optional()?;
+  if let Some(flag) = target_removed_on_b {
+    assert!(
+      !flag,
+      "target Person on B must NOT have deleted=true set by inbound notice",
+    );
+  }
+  // NB: B has never heard of the target Person, so the row may not exist
+  // at all (optional()? returns None). That is the stronger no-apply
+  // signal — if auto-apply had fired, a Person row would have been
+  // materialised to hang the removal flag off.
 
   // -- 12. Cross-check on A: federation_sanction_sent log entry exists. -
   // Ensures the orchestrator's transactional pair-write actually committed
