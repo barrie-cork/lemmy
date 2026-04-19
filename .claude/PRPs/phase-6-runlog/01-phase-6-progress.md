@@ -161,3 +161,31 @@ paths, Impl2 appends a note here and Impl1 rebases or drops. The stash
 - *(pending)* Retro amendment to `phase-6-complete-report.md` with all SHAs.
 - *(pending)* Final push.
 
+### Impl2 in-flight status (append-only)
+
+- `2026-04-19 15:20Z` — session start; fresh impl picking up PR #46 remaining
+  per handover brief. Pushed `41f1d0379` (#15) to origin. Merge6 ran on #19
+  WIP (equivalent to Impl1's `d70610980`) — 14 passed + 3 ignored.
+- `2026-04-19 15:30Z` — Block 1 commits shipped:
+  - `addc0c9ab` chore(privacy): task-hopper.json worktree path scrub (#13)
+  - `728659a24` chore(rules): decision-queue attribution pattern-match (#11)
+- `2026-04-19 15:40Z` — Attempted #22 test additions; discovered Impl1 had
+  already shipped as `455a7dbe4` while I was drafting. Working-tree diff
+  auto-reset to clean on fetch; no duplicate commit. Confirmed Impl1 runlog
+  scope claims at line 116-128.
+- `2026-04-19 15:42Z` — Scope intake per Impl1's "Impl2 can pick up" list:
+  - **Block 2 cosmetic sweep (claimed):** #17 publish_trust_attestation.rs:10
+    ADR typo, #4 agent-c.md MD040, #6 agent-g.md MD040, #9 plan-phase-6
+    federation.plan.md MD040, #12 task-hopper.md MD040.
+  - **Block 3 rebuttals (claimed):** #1, #2, #3, #5, #8, #16, #18, #23, #20
+    (close-and-rebut). #7 already in Impl1's `e64254261`.
+  - **Block 4 GH issues (claimed):** #14 schema lifecycle invariants.
+  - **Block 5 retro amendment (NOT claimed — Impl1 owns):** phase-6-complete-report.md
+    amendment.
+- `2026-04-19 15:43Z` — DQ #39 false-start reverted pre-commit; user redirected
+  coordination to this runlog (correct channel). Encoding pattern confirmed:
+  Python ops on `decision-queue.json` must pass `encoding='utf-8'` on both
+  read and write (Windows cp1252 trap per Impl1's 15:16Z note).
+- *(pending)* Cosmetic sweep commit — one commit covering the 5 findings
+  above. Then Block 3 rebuttals (no commits). Then Block 4 issue. Then
+  merge6 gate + push.
