@@ -40,7 +40,8 @@ use crate::governance::{
   redaction,
   sponsor_liability,
 };
-use actix_web::web::{Data, Json};
+use activitypub_federation::config::Data;
+use actix_web::web::Json;
 use chrono::{Duration, Utc};
 use diesel::{
   ExpressionMethods,
@@ -105,11 +106,17 @@ pub async fn submit_jury_vote(
 
   let vote_data = data.clone();
   let pseudonym_for_tx = juror_pseudonym.clone();
+  // Clone the Data<LemmyContext> handle (cheap Arc clone) so the
+  // run_transaction closure can move it into the async future without
+  // borrowing from the outer context. Phase 6 task 76 needs context
+  // inside process_vote to invoke the federation outbound publisher
+  // (see federation_outbox::send_local_sanction_notice).
+  let context_for_tx = context.clone();
 
   let outcome = conn
     .run_transaction(|conn| {
       async move {
-        process_vote(conn, juror_id, pseudonym_for_tx, vote_data).await
+        process_vote(conn, juror_id, pseudonym_for_tx, vote_data, &context_for_tx).await
       }
       .scope_boxed()
     })
@@ -121,11 +128,19 @@ pub async fn submit_jury_vote(
 /// The body of the `run_transaction` closure. All writes live here so
 /// the outer handler can remain readable and so the closure signature
 /// stays under the workspace's `large_futures` lint threshold.
+///
+/// `context` is threaded in as of Phase 6 task 76 because the federation
+/// outbound publisher
+/// ([`crate::governance::federation_outbox::send_local_sanction_notice`])
+/// needs `&Data<LemmyContext>` for activity-id hostname generation and
+/// for `Person::read`/`Post::read` resolution inside the
+/// `resolve_target_url` helper.
 async fn process_vote(
   conn: &mut diesel_async::AsyncPgConnection,
   juror_id: PersonId,
   juror_pseudonym: String,
   data: SubmitJuryVote,
+  context: &Data<LemmyContext>,
 ) -> LemmyResult<SubmitJuryVoteResponse> {
   // ConfigCache lives for the whole vote-tally transaction. All typed reads
   // go through `(&mut *conn).into()` — same pattern as `reputation_snapshot`.
@@ -390,6 +405,32 @@ async fn process_vote(
       delta,
       data.case_id,
       reason,
+    )
+    .await?;
+  }
+
+  // 12.5. Phase 6 task 76 — federated recommendation outbound publish.
+  // When the winning sanction has scope = FederatedRecommendation, send
+  // the AP `Create(SanctionNotice)` and append the
+  // `federation_sanction_sent` log entry on the in-flight conn so the
+  // federation publish is atomic with the rest of the post-decision
+  // block per plan §757. Branch on SCOPE (not action) per DQ-6.5
+  // resolved id 35; re-derive scope from winning_decision via
+  // map_decision_to_sanction since the local (scope, action) tuple
+  // closes its lexical block at line 269.
+  //
+  // The wrapper computes the federation actor pseudonym internally
+  // (admin Person, not the juror — ADR-015 attribution) so we pass
+  // only the conn + context here. See federation_outbox.rs head-of-
+  // module DQ-6.7 note for the parameter rationale.
+  if matches!(
+    map_decision_to_sanction(winning_decision),
+    Some((SanctionScope::FederatedRecommendation, _)),
+  ) {
+    crate::governance::federation_outbox::send_local_sanction_notice(
+      data.case_id,
+      conn,
+      context,
     )
     .await?;
   }

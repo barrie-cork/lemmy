@@ -87,6 +87,31 @@
       "issue_url": null,
       "created_at": "2026-04-19T06:45:44Z",
       "updated_at": "2026-04-19T08:00:00Z"
+    },
+    {
+      "id": "task-76",
+      "label": "wire submit_jury_vote to federation publish + orchestrator wrapper",
+      "layer": 4,
+      "agent": "agent-f",
+      "kind": "cargo_check",
+      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-f-phase6",
+      "status": "in_progress",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T08:07:21Z",
+          "ended_at": null,
+          "result": "in_progress",
+          "commit_sha": null,
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T08:07:21Z",
+      "updated_at": "2026-04-19T08:07:21Z"
     }
   ]
 }

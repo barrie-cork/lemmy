@@ -34,7 +34,7 @@ use lemmy_db_schema_file::{
   schema::{moderation_case, sanction},
 };
 use lemmy_diesel_utils::{
-  connection::{DbPool, get_conn},
+  connection::DbPool,
   dburl::DbUrl,
   traits::Crud,
 };
@@ -165,29 +165,36 @@ pub struct SanctionNoticeSendPlan {
 /// orchestrator needs to log the send inside its transaction.
 ///
 /// This function performs DB **reads only** — no INSERTs, no UPDATEs.
-/// All loads come from a fresh pool conn (no transaction required at
-/// build time). The orchestrator opens its tx after this returns and
-/// passes the resulting plan to [`enqueue_sanction_notice_activity`] +
-/// `governance_log::append`.
+/// The caller supplies a `&mut AsyncPgConnection`; if the caller is in
+/// an outer transaction (e.g. Agent F's `submit_jury_vote` orchestrator
+/// per plan §757), the build sees the in-flight tx's writes (including
+/// the just-inserted `sanction` row at `submit_jury_vote.rs:226-242`).
+/// If a future caller is not in a transaction (e.g. a scheduled
+/// republish job), they can adapt by checking out a fresh conn from
+/// the pool with `lemmy_diesel_utils::connection::get_conn` and
+/// passing the deref'd `&mut AsyncPgConnection` here.
 ///
 /// `actor` MUST be the local admin Person (per ADR-010 single-admin
 /// convention) wrapped as [`ApubPerson`]. The orchestrator looks it up
-/// via `lemmy_api::governance::actor_pseudonym_helper::get_or_create`'s
-/// admin lookup and `.into()`s the `Person` into `ApubPerson`.
+/// via `PersonView::list_admins` (filter `local_user::admin = true`)
+/// and `.into()`s the `Person` into `ApubPerson`.
+///
+/// `context` is required for activity-id hostname lookup and for
+/// `read_from_id` resolution inside `resolve_target_url`'s `Person::read`
+/// /`Post::read`/etc. — those calls take `&mut DbPool<'_>`, which we
+/// derive from the conn via `(&mut *conn).into()`.
 ///
 /// # Errors
 ///
 /// - `NotFound` if the case has no row, no winning sanction, or no
 ///   resolvable target.
-/// - DB errors from the pool/conn.
+/// - DB errors from the conn.
 pub async fn build_local_sanction_notice_plan(
   case_id: ModerationCaseId,
   actor: &ApubPerson,
+  conn: &mut AsyncPgConnection,
   context: &Data<LemmyContext>,
 ) -> LemmyResult<SanctionNoticeSendPlan> {
-  let pool = &mut context.pool();
-  let conn = &mut get_conn(pool).await?;
-
   // Step 1 — load ModerationCase (target_type + per-target id columns).
   let case: ModerationCase = moderation_case::table
     .filter(moderation_case::id.eq(case_id))
@@ -278,15 +285,19 @@ pub async fn build_local_sanction_notice_plan(
 /// Top-level orchestrator-facing alias.
 ///
 /// The brief's signature for Agent F's `crate::governance::federation_outbox`
-/// wrapper is `send_local_sanction_notice(case_id, context) -> LemmyResult<()>`.
-/// That wrapper lives in `lemmy_api` (DQ-6.6 option (b)) and calls
-/// [`build_local_sanction_notice_plan`] + [`enqueue_sanction_notice_activity`]
-/// + `governance_log::append` inside its own tx.
+/// wrapper is `send_local_sanction_notice(case_id, conn, context, actor_pseudonym)
+/// -> LemmyResult<()>` (the in-flight-conn signature mandated by plan §757
+/// — see DQ-6.7 resolved id 38). That wrapper lives in `lemmy_api` and
+/// calls [`build_local_sanction_notice_plan`] +
+/// [`enqueue_sanction_notice_activity`] + `governance_log::append` on the
+/// caller's in-flight conn so the federation publish is atomic with
+/// `submit_jury_vote`'s outer transaction.
 ///
 /// We expose this *name* as a re-export point in
 /// `crates/apub/apub/src/governance/outbox.rs`, but the actual *function*
 /// with that signature lives in `lemmy_api` because only that crate can
-/// reach `governance_log::append`.
+/// own the call site (and reach `governance_log::append` directly even
+/// after Agent E2's relocation).
 pub use build_local_sanction_notice_plan as send_local_sanction_notice_plan;
 
 /// Insert the prepared activity into `sent_activity` on the caller's

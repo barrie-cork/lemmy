@@ -847,6 +847,24 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     rate_limit,
   ));
 
+  // Phase 6 task 76: `submit_jury_vote` now takes
+  // `activitypub_federation::config::Data<LemmyContext>` (not the actix
+  // Data) so its `process_vote` body can hand `&context` to
+  // `federation_outbox::send_local_sanction_notice`, which needs it for
+  // activity-id hostname generation and `Person::read` resolution. Build
+  // a federation Data here that wraps the same `LemmyContext` (the
+  // underlying pool is `Arc`-shared via `ActualDbPool`, so both Data
+  // handles see the same DB rows). Used only at the `submit_jury_vote`
+  // call sites below; every other handler still takes the actix Data.
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
   // -- 5. Seed instance + 8 persons + 1 community + 1 post. -------------
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
 
@@ -1042,7 +1060,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
           "Juror {i} saw @someone email foo.bar@example.com via https://lemmy.example/u/baduser"
         )),
       }),
-      context.clone(),
+      federation_context.reset_request_count(),
       juror_view,
     )
     .await?
@@ -1487,6 +1505,20 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
     rate_limit,
   ));
 
+  // Phase 6 task 76: see report_to_modlog_golden_path for the rationale.
+  // `submit_jury_vote` is called from `run_sanction_scenario` below; it
+  // requires the federation flavour of `Data<LemmyContext>` because the
+  // handler hands it to `federation_outbox::send_local_sanction_notice`.
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("federation_config: {e}").into() })?;
+  let federation_context = federation_config.to_request_data();
+
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid")
     .await
     .map_err(|e| -> Box<dyn Error> { format!("instance: {e}").into() })?;
@@ -1645,8 +1677,14 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   // Drive one full sanction round through the real handler pipeline.
   // Returns the `case_id` so callers can filter reputation_event rows.
+  //
+  // Phase 6 task 76: takes both flavours of `Data<LemmyContext>` because
+  // `submit_jury_vote` switched to the federation Data (it hands it to
+  // `federation_outbox::send_local_sanction_notice`) while every other
+  // governance handler still uses the actix Data.
   async fn run_sanction_scenario(
     context: &Data<LemmyContext>,
+    federation_context: &activitypub_federation::config::Data<LemmyContext>,
     admin_view: &LocalUserView,
     reporter_view: &LocalUserView,
     jurors: &[PersonId],
@@ -1736,7 +1774,7 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
           decision,
           rationale: Some("test".to_string()),
         }),
-        context.clone(),
+        federation_context.reset_request_count(),
         juror_view,
       )
       .await
@@ -1805,6 +1843,7 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   let case1 = run_sanction_scenario(
     &context,
+    &federation_context,
     &admin_view,
     &reporter_view,
     &jurors,
@@ -1854,6 +1893,7 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   let case1b = run_sanction_scenario(
     &context,
+    &federation_context,
     &admin_view,
     &reporter_view,
     &jurors,
@@ -1891,6 +1931,7 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   let case2 = run_sanction_scenario(
     &context,
+    &federation_context,
     &admin_view,
     &reporter_view,
     &jurors,
@@ -1958,6 +1999,7 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   let case3 = run_sanction_scenario(
     &context,
+    &federation_context,
     &admin_view,
     &reporter_view,
     &jurors,

@@ -3538,6 +3538,7 @@ dependencies = [
  "lemmy_api_common 1.0.0-test-arm-qemu.0",
  "lemmy_api_crud",
  "lemmy_api_utils",
+ "lemmy_apub",
  "lemmy_apub_objects",
  "lemmy_db_schema 1.0.0-test-arm-qemu.0",
  "lemmy_db_schema_file",
