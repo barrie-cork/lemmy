@@ -463,18 +463,12 @@ async fn process_vote(
   // (admin Person, not the juror — ADR-015 attribution) so we pass
   // only the conn + context here. See federation_outbox.rs head-of-
   // module DQ-6.7 note for the parameter rationale.
-  if matches!(
-    map_decision_to_sanction(winning_decision),
-    Some((SanctionScope::FederatedRecommendation, _)),
-  ) {
-    crate::governance::federation_outbox::send_local_sanction_notice(
-      data.case_id,
-      conn,
-      context,
-    )
-    .await?;
-  }
-
+  // Log the case decision FIRST so the hash chain records the local
+  // determination before any federation broadcast that results from it
+  // (ADR-008 causality). Previously `federation_sanction_sent` appeared
+  // ahead of its triggering `case_decided` entry because the send block
+  // ran before this append. Both writes share the outer `run_transaction`,
+  // so moving one above the other doesn't change atomicity.
   governance_log::append(
     &mut conn.into(),
     "case_decided",
@@ -486,6 +480,18 @@ async fn process_vote(
     None,
   )
   .await?;
+
+  if matches!(
+    map_decision_to_sanction(winning_decision),
+    Some((SanctionScope::FederatedRecommendation, _)),
+  ) {
+    crate::governance::federation_outbox::send_local_sanction_notice(
+      data.case_id,
+      conn,
+      context,
+    )
+    .await?;
+  }
 
   Ok(SubmitJuryVoteResponse {
     vote_recorded: true,
