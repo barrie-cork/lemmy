@@ -213,6 +213,77 @@ Impl1 will rebase the retro accordingly.
   coordination to this runlog (correct channel). Encoding pattern confirmed:
   Python ops on `decision-queue.json` must pass `encoding='utf-8'` on both
   read and write (Windows cp1252 trap per Impl1's 15:16Z note).
-- *(pending)* Cosmetic sweep commit — one commit covering the 5 findings
-  above. Then Block 3 rebuttals (no commits). Then Block 4 issue. Then
-  merge6 gate + push.
+- `2026-04-19 15:55Z` — Block 3 rebuttals posted to PR #46 thread (9
+  replies, PR-visible, user-approved):
+  - #1 prp-ralph-stop.sh — defer to v0-polish
+  - #2/#3/#5/#8 runlog-archived-artifact class — decline MD-lint rewrites
+    that would erase execution record
+  - #16/#18 (×2) helper-extraction — defer to v0-polish refactor sweep
+  - #20 redaction.rs — close as non-issue (ADR-015 schema contract primary
+    barrier; scrub_json is defence-in-depth; carry to v0-polish)
+  - #23 task-hopper.sh exit-code refactor — defer as script-polish
+- `2026-04-19 16:00Z` — Block 4 issue filed: #47
+  https://github.com/barrie-cork/lemmy/issues/47 for #14 schema lifecycle
+  invariants. Posted rebuttal to CR thread citing issue link.
+- `2026-04-19 16:02Z` — #17 trait-import edit REVERTED (worktree auto-
+  reset). `Object` trait import stays. Block 2 cosmetic scope drops to
+  4 MD040 fences only (#4 agent-c.md, #6 agent-g.md, #9 plan §77, #12
+  task-hopper.md §33). Ready to commit when Impl1 confirms merge6 green.
+- **Impl2 scope closed** pending merge6 green-signal from Impl1.
+  Remaining action: one cosmetic-sweep commit covering 4 MD040 fixes,
+  then release to Impl1 for retro amendment + final push.
+
+**Impl2 commit SHAs (for Impl1 retro harvest):**
+- `addc0c9ab` #13 task-hopper.json path scrub
+- `728659a24` #11 decision-queue attribution pattern
+- `a7c0a6053` runlog scope claim
+- *(pending)* cosmetic sweep (held on merge6 green)
+
+**Impl2 PR-thread actions:**
+- 9 rebuttals (#1/#2/#3/#5/#8/#16/#18a/#18b/#20/#23) + #14 issue-link rebuttal
+- GH issue #47 filed
+
+---
+
+## 2026-04-19 16:22Z — Impl1: OK TO PUSH COSMETIC SWEEP
+
+**Merge6 green on `phase-6 @ ad2459b65`:**
+- `cargo check --workspace --features full`: ✅ exit 0 (1m 47s, warm) → re-run
+  cold: fresh logs absent but clippy+e2e compile below prove full rebuild paths.
+- `cargo clippy --workspace --no-deps --features full -- -D warnings`:
+  ✅ exit 0 (2m 48s cold rebuild, 0 errors, 0 warnings). Log:
+  `.claude/merge6-clippy.log`.
+- `cargo test --test e2e --no-run -p lemmy_server`: ✅ exit 0 (4m 49s cold),
+  0 compile errors. Log: `.claude/merge6-e2e-compile.log`.
+- `cargo test --test e2e -p lemmy_server`: ✅ **14 passed / 0 failed / 3
+  ignored**, finished in 308.39s. Log: `.claude/merge6-e2e-run.log`.
+
+**Transient clippy failure earlier resolved.** First clippy + e2e-compile
+runs at 16:06/16:08 both flagged `publish_trust_attestation.rs:146-147`
+`Object` trait not in scope. But `git show HEAD:<file>` already had
+`traits::{Activity, Object}` at line 10 (from `d70610980` or earlier —
+actually since `8057b9f65` task 74). Cold re-run at 16:19 came back clean.
+Hypothesis: warm incremental cache in `target/` got into a partial state
+between test-compile and lib-compile feature-resolution. Moot — fresh
+cold builds are green.
+
+**Impl2: you may push the cosmetic sweep commit now.** Once you push,
+fetch + notify here so Impl1 can harvest the SHA. Impl1 will then draft
+the retro amendment (Block 5) as the FINAL commit on `phase-6` and push,
+triggering CodeRabbit re-review.
+
+**Impl1 pending actions after Impl2 pushes:**
+1. `git fetch origin phase-6`
+2. Harvest Impl2 cosmetic-sweep SHA(s)
+3. Draft `phase-6-complete-report.md` retro amendment (Block 5) with:
+   - All review-cycle SHAs (Impl1 + Impl2)
+   - #20 redaction.rs close rationale (ADR-015 schema contract primary barrier)
+   - Carry-forward lessons: (a) CodeRabbit Critical = block-merge (already
+     in CLAUDE.md `fa78dd8b5`); (b) cold-build gate for rapid-commit
+     layered-agents phases (new — warm cache masked a missing import).
+   - Minimal — one ~50-line amendment block appended to the completion
+     report; do not rewrite the whole retro.
+4. Commit as `docs(retro): phase-6 amendment — PR #46 CodeRabbit review cycle`
+5. Push phase-6
+6. PR #46 auto-triggers CodeRabbit re-review on push.
+
