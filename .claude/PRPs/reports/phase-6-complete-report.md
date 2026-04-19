@@ -217,3 +217,52 @@ Full list (oldest → newest): `8b92d14be`, `729c4b768`, `41f1d0379`,
 `250dd9066`, `e64254261`, `8297c5066`, `a7c0a6053`, `ad2459b65`,
 `3a42f43c2`, `297341c8b`, `6c5494382`, plus this amendment commit.
 
+
+---
+
+## Amendment — Bucket C (2026-04-19, CodeRabbit re-review on `8ee45a3ca`)
+
+CodeRabbit re-reviewed `8ee45a3ca` (the initial amendment) and flagged
+**10 inline + 2 outside-diff + 2 duplicate** findings (severity spread:
+1 Critical, 4 Major, 3 Minor, 2 Trivial, plus duplicates). Per user
+directive for critical-only focus, we landed the Critical + one ADR-adjacent
+Major in this PR, deferring the rest to GH issue #54.
+
+### Fixed in PR #46 Bucket C
+
+| # | Severity | Commit | Fix |
+|---|---|---|---|
+| 1 | 🔴 Critical | `0ff06abc9` | Lock-race compare-and-release in `task-hopper.sh` — only release the lock when this process actually owns it |
+| 4 | 🟠 Major | `99dce6be2` | ADR-006 atomicity — wrap `insert_remote_sanction_notice` + `governance_log::append` (and trust-attestation analogue) in one `conn.run_transaction()` so the "exactly two rows per notice" invariant holds under failure |
+| 5 | 🟠 Major | `9aa1a778a` | `TH_ISSUE_URL` env export — move var into subprocess prefix so Python actually sees it (Impl2) |
+
+### Deferred to follow-up (GH issue #54)
+
+- **#2** hidden `actor_pseudonym` write in send path (ADR-015 edge — log creation event)
+- **#3** hash-chain causality — swap `case_decided` / `federation_sanction_sent` order
+- **#6** DQ-6.7 wording stale
+- **#7** SQL enum typenames in plan:493
+- **#8** task-hopper.md rule contradiction
+- outside-diff #1 workflow label
+- #9/#10 Trivials (v0-polish)
+
+### Merge6b validation on Bucket C tip `19cb13aea`
+
+- `cargo check --workspace --features full`: ✅ exit 0 (log 6203B, 2m)
+- `cargo clippy --workspace --no-deps --features full -- -D warnings`: ✅ 0 errors, 0 warnings (2m 58s)
+- `cargo test --test e2e --no-run -p lemmy_server`: ✅ cold compile clean (4m 41s)
+- `cargo test --test e2e -p lemmy_server`: ✅ 14 passed / 0 failed / 3 ignored (329s)
+  — including `sanction_notice_round_trip` which exercises the #4 atomicity refactor
+
+### Bucket C commit list
+
+Local commits since `8ee45a3ca`:
+
+- `0ff06abc9` fix(hopper): compare-and-release lock token — #1 Critical
+- `ce9bdd08c` docs(handover): PR #46 Bucket C merge — session-continuity prompt
+- `d08056608` chore(runlog): Impl1 Bucket C intake
+- `4c0128c93` chore(runlog): Impl1 file-level claim on inbox.rs
+- `9aa1a778a` fix(hopper): export TH_ISSUE_URL into py_edit subprocess — #5 (Impl2)
+- `99dce6be2` fix(governance): atomic insert + log append in inbound receivers — #4
+- `19cb13aea` chore(runlog): Impl1 status — #4 shipped, merge6b 3/4 green
+- `693453fab` chore(runlog): merge6b GREEN — 14/0/3 on phase-6 tip
