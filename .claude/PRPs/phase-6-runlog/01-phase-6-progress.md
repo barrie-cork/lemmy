@@ -367,3 +367,39 @@ Session outcome: 4 commits shipped on phase-6 + 10 PR-thread rebuttals +
 Impl2 session closed. No open blockers. phase-6 @ `8ee45a3ca` ready for
 CodeRabbit re-review.
 
+
+---
+
+### Impl1 Bucket C intake (2026-04-19T16:20Z)
+
+Resumed from handover `.claude/PRPs/handovers/pr46-bucket-c-merge.md`.
+Local HEAD was `ce9bdd08c` (handover doc) + `0ff06abc9` (#1 Critical lock-race fix)
+— **2 commits unpushed.**
+
+User directive: **focus on Critical, defer Major/Minor to follow-up PR if needed.**
+Impl2 will co-work this bucket.
+
+**Claimed by Impl1 (in progress):**
+- merge6b validation on `0ff06abc9` — clippy running (`b7ctqq9c0`),
+  e2e-compile + e2e-run queued sequentially per handover rule.
+- CodeRabbit #4 inbox atomicity — **ADR-006 invariant break.** Will
+  fix now: wrap `insert_remote_sanction_notice` + `governance_log::append`
+  in one `conn.run_transaction()` closure; mirror for `federation_attestation`.
+  Pattern: `create_endorsement.rs:135-142`.
+
+**Open for Impl2 (if active):**
+- CodeRabbit #3 hash-chain causality — swap order in
+  `submit_jury_vote.rs:466-488` so `case_decided` appends BEFORE
+  `send_local_sanction_notice`. ADR-008 cosmetic-ish but easy.
+- CodeRabbit #2 hidden pseudonym write — Option B simpler
+  (log pseudonym creation event).
+- #5 `TH_ISSUE_URL` env export — one-line fix `task-hopper.sh:486`.
+- Minors #6/#7/#8 docs sweep — DQ wording, enum names, rule contradiction.
+
+**Coordination:** whoever picks a task edits this runlog with a
+"Claimed by Impl2: #N" line before staging. No DQ entries — this is scope,
+not blocking questions.
+
+**Push gate:** Impl1 holds the push pointer until merge6b is green on
+`0ff06abc9`. Impl2's commits should stack on top locally; coordinate
+final push via a signal commit (`merge6c green` pattern) or handoff.
