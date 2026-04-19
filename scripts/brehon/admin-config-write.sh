@@ -20,8 +20,8 @@
 # Arguments:
 #   scope             Config scope, one of: instance, community
 #   key               Config key (e.g. jury.max_concurrent_assignments)
-#   value_type        Value type, one of: int, bool, string
-#   value             The value to set (integer, boolean lowercase, or quoted string)
+#   value_type        Value type, one of: int, bool, text, float
+#   value             The value to set (integer, float, boolean lowercase, or quoted string)
 #   admin_pseudonym   The acting admin's actor_pseudonym UUID (lookup via
 #                     `SELECT pseudonym FROM actor_pseudonym WHERE person_id = <admin_id>`)
 #   reason            Optional. Free-text note; recorded in payload.reason.
@@ -54,47 +54,106 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 2
 fi
 
+# ---------------------------------------------------------------------------
+# Validate value per type and build the SQL column assignment.
+# VALUE_COL  — the governance_config column name to set (e.g. value_int)
+# VALUE_SQL  — the SQL expression for the INSERT VALUES clause.
+#              For numeric/bool types this is the validated literal; for text
+#              it uses a psql variable reference :'value' so psql handles
+#              quoting and escaping.
+# VALUE_PAYLOAD_SQL — the jsonb_build_object value expression for governance_log.
+# ---------------------------------------------------------------------------
 case "$VTYPE" in
   int)
-    VALUE_CLAUSE="value_int = $VALUE"
-    VALUE_PAYLOAD="$VALUE"
+    if ! [[ "$VALUE" =~ ^-?[0-9]+$ ]]; then
+      echo "error: value_type 'int' requires an integer value (got: $VALUE)" >&2
+      exit 2
+    fi
+    VALUE_COL="value_int"
+    VALUE_SQL="$VALUE"
+    VALUE_PAYLOAD_SQL="$VALUE"
+    ;;
+  float)
+    if ! [[ "$VALUE" =~ ^-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$ ]]; then
+      echo "error: value_type 'float' requires a numeric value (got: $VALUE)" >&2
+      exit 2
+    fi
+    VALUE_COL="value_float"
+    VALUE_SQL="$VALUE"
+    VALUE_PAYLOAD_SQL="$VALUE"
     ;;
   bool)
-    VALUE_CLAUSE="value_bool = $VALUE"
-    VALUE_PAYLOAD="$VALUE"
+    if ! [[ "$VALUE" =~ ^(true|false)$ ]]; then
+      echo "error: value_type 'bool' requires 'true' or 'false' (got: $VALUE)" >&2
+      exit 2
+    fi
+    VALUE_COL="value_bool"
+    VALUE_SQL="$VALUE"
+    VALUE_PAYLOAD_SQL="$VALUE"
     ;;
-  string)
-    VALUE_CLAUSE="value_string = \$\$${VALUE}\$\$"
-    VALUE_PAYLOAD="\"$VALUE\""
+  text)
+    VALUE_COL="value_text"
+    VALUE_SQL=":'value'"
+    VALUE_PAYLOAD_SQL=":'value'"
     ;;
   *)
-    echo "error: value_type must be one of: int, bool, string (got: $VTYPE)" >&2
+    echo "error: value_type must be one of: int, bool, text, float (got: $VTYPE)" >&2
     exit 2
     ;;
 esac
 
-# scrub single-quote characters out of reason before embedding in the literal
-# (payload value is JSON-encoded by jsonb_build_object below; scope/key pass
-# through scrub_json via governance_log's own trigger chain on insert).
-REASON_ESCAPED=$(printf '%s' "$REASON" | sed "s/'/''/g")
+# ---------------------------------------------------------------------------
+# Look up the person_id for the acting admin.
+# Uses psql -t (tuples-only) -c to return a single integer, trimming whitespace.
+# Fails fast if the pseudonym is not found so we never write a NULL updated_by.
+# ---------------------------------------------------------------------------
+UPDATED_BY=$(psql -t "$DATABASE_URL" \
+  -v admin_pseudonym="$ADMIN_PSEUDONYM" \
+  -c "SELECT person_id FROM actor_pseudonym WHERE pseudonym = :'admin_pseudonym'" \
+  | tr -d '[:space:]')
 
-psql "$DATABASE_URL" <<SQL
+if [ -z "$UPDATED_BY" ]; then
+  echo "error: admin_pseudonym '$ADMIN_PSEUDONYM' not found in actor_pseudonym table" >&2
+  exit 1
+fi
+
+if ! [[ "$UPDATED_BY" =~ ^[0-9]+$ ]]; then
+  echo "error: unexpected person_id value '$UPDATED_BY' returned from actor_pseudonym lookup" >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Execute the transactional INSERT pair.
+# All user-supplied string values (scope, key, admin_pseudonym, reason, value
+# for text type) are passed via psql -v variables and referenced as :'varname'
+# in SQL — psql applies single-quote escaping so no injection is possible.
+# Numeric/bool values were validated by regex above and are safe to interpolate
+# as literals.
+# ---------------------------------------------------------------------------
+psql "$DATABASE_URL" \
+  -v scope="$SCOPE" \
+  -v key="$KEY" \
+  -v vtype="$VTYPE" \
+  -v value="$VALUE" \
+  -v admin_pseudonym="$ADMIN_PSEUDONYM" \
+  -v reason="$REASON" \
+  <<SQL
 BEGIN;
 
-INSERT INTO governance_config (scope, key, value_type, ${VALUE_CLAUSE%% = *}, valid_from)
-VALUES ('${SCOPE}', '${KEY}', '${VTYPE}', ${VALUE_CLAUSE#* = }, now());
+INSERT INTO governance_config (scope, key, value_type, ${VALUE_COL}, valid_from, updated_by)
+VALUES (:'scope', :'key', :'vtype', ${VALUE_SQL}, now(), ${UPDATED_BY});
 
 INSERT INTO governance_log (entry_kind, payload, actor_pseudonym)
 VALUES (
   'admin_config_changed',
   jsonb_build_object(
-    'scope', '${SCOPE}',
-    'key', '${KEY}',
-    'value_type', '${VTYPE}',
-    'value', ${VALUE_PAYLOAD},
-    'reason', '${REASON_ESCAPED}'
+    'scope',      :'scope',
+    'key',        :'key',
+    'value_type', :'vtype',
+    'value',      ${VALUE_PAYLOAD_SQL},
+    'reason',     :'reason'
   ),
-  '${ADMIN_PSEUDONYM}'
+  :'admin_pseudonym'
 );
 
 COMMIT;
