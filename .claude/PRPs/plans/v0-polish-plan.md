@@ -93,6 +93,11 @@ GitHub issues under `barrie-cork/lemmy` carry current state per item. This file 
 22. **GH #53** — micro-optimisations in `submit_jury_vote` + `governance_log::append` (enhancement / v1-tagged)
     - Dedup `map_decision_to_sanction` call; cache signing key via `OnceLock`. Non-blocking.
 
+22a. **`cargo-test.bat` wrapper exit-code masking** — surfaced 2026-04-19 during polish-1 /prp-debug validation (see `.claude/PRPs/polish-runlog/00-polish-intake.md § External validation report`). Wrapper returned exit 0 to bash status capture despite cargo failing with 3 compile errors in `crates/server/tests/e2e.rs`. Internal logic looks correct (`setlocal enabledelayedexpansion` + `exit /b !errorlevel!`) — masking happens between cmd and bash, likely in the `cmd //c` invocation layer.
+    - **Severity:** real but not urgent. All v0 validation has used this wrapper — exit codes have been unreliable. Mitigation in practice: `feedback_pipes_mask_exit_codes.md` already mandates capture-to-file + log-tail + grep for `^error` on cargo output.
+    - **Scope when investigated:** compare `cmd //c scripts\brehon\cargo-test.bat ... ; echo $?` against a bash variant (if one exists) and identify which layer drops the exit code. Fix shape: either (a) replace the `.bat` wrapper with a `.sh` wrapper that uses `exec` semantics directly, or (b) find a git-bash-idiomatic way to invoke `.bat` that doesn't drop the exit code. Option (a) is cleaner if nothing else depends on the Windows-cmd form. Same class applies to `cargo-check.bat` and `cargo-clippy.bat`.
+    - **Priority:** lowest — ships as polish-N once all higher items are landed. File a GH issue at v0-polish-kickoff if picking this up so the investigation has a home.
+
 ### 🟢 Tag step
 
 23. **Tag `v0.0.0`** — after items 1–22 ship cleanly to `governance-v0`.
