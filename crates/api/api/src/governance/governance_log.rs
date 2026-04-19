@@ -67,6 +67,18 @@ pub const ENTRY_KIND_JURY_DECLINED: &str = "jury_declined";
 pub const ENTRY_KIND_JURY_REPLACEMENT_SELECTED: &str = "jury_replacement_selected";
 pub const ENTRY_KIND_APPEAL_REQUESTED: &str = "appeal_requested";
 
+// Phase 6 — federation entry kinds. Outbound emitted by task 74's
+// publisher (DQ-6.6 still pending at the time of writing — see entry id
+// 36 in `.claude/decision-queue.json`); inbound emitted by task 75's
+// receiver. The four constants are added here regardless of how the
+// publisher's home crate resolves so callers in any of `lemmy_api`,
+// `lemmy_apub_activities`, or a future `lemmy_api_utils::governance`
+// shim can reference the same canonical strings.
+pub const ENTRY_KIND_FEDERATION_SANCTION_SENT: &str = "federation_sanction_sent";
+pub const ENTRY_KIND_FEDERATION_SANCTION_RECEIVED: &str = "federation_sanction_received";
+pub const ENTRY_KIND_FEDERATION_ATTESTATION_SENT: &str = "federation_attestation_sent";
+pub const ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED: &str = "federation_attestation_received";
+
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
 /// Append a single row to `governance_log`.
