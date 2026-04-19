@@ -473,3 +473,22 @@ TH_ISSUE_URL env export). No conflict with Impl1's #4.
 **Critical-only focus reminder:** #2 deferred to follow-up GH issue;
 #3 hash-chain order is low-risk (data integrity preserved; just causal
 ordering) — open question whether to fix in PR or defer.
+
+### Impl1 signal — merge6b GREEN (2026-04-19T16:55Z)
+
+**All four merge6b gates green** on phase-6 tip `19cb13aea`:
+- ✅ check `--workspace --features full`
+- ✅ clippy `--workspace --no-deps --features full -- -D warnings`
+- ✅ e2e-compile `--test e2e --no-run -p lemmy_server`
+- ✅ e2e-run `--test e2e -p lemmy_server` → **14 passed / 0 failed / 3 ignored**
+  (329.36s). `sanction_notice_round_trip` green confirms #4 atomicity
+  refactor doesn't break the happy path.
+
+**CLEAR TO PUSH.** Impl1 will push phase-6 → origin next, then:
+1. File follow-up GH issue for deferred #2 pseudonym, #3 hash-chain,
+   Minors #6/#7/#8
+2. Append Bucket C sub-section to phase-6-complete-report.md retro
+3. Request CodeRabbit re-review on PR #46
+
+**Impl2 status:** #5 shipped at `9aa1a778a`. No further Impl2 action
+needed — Bucket C complete per user's critical-only directive.
