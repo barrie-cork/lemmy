@@ -43,6 +43,7 @@ migrations/.diesel_lock
 .claude/audit-*.log
 .claude/prp-ralph.state.md
 .claude/worktrees/
+.claude/tmp/
 
 # Local environment — never commit secrets
 .env
