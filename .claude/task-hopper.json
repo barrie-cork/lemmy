@@ -37,6 +37,31 @@
       "issue_url": null,
       "created_at": "2026-04-19T05:17:13Z",
       "updated_at": "2026-04-19T06:28:03Z"
+    },
+    {
+      "id": "task-78",
+      "label": "verify.rs signature helper",
+      "layer": 3,
+      "agent": "agent-e",
+      "kind": "cargo_check",
+      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-e-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T05:16:32Z",
+          "ended_at": "2026-04-19T05:37:23Z",
+          "result": "completed",
+          "commit_sha": "8eb803ce9",
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T05:16:32Z",
+      "updated_at": "2026-04-19T05:37:23Z"
     }
   ]
 }

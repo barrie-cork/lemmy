@@ -18,6 +18,20 @@
       "answered_by": "impl-self-resolved"
     },
     {
+      "id": 37,
+      "from": "advisor",
+      "timestamp": "2026-04-19T07:30:00Z",
+      "question": "DQ-6.6-inbound — Agent E (task 75) cannot place inbox.rs in lemmy_apub because Activity::receive runs in lemmy_apub_activities (lower crate). Three options surfaced: (a) move governance_log::append down to lemmy_db_schema; (b) drop inbox.rs and inline in receive, skipping the log call; (c) reimplement governance_log::append locally in lemmy_apub_activities. Which?",
+      "options": [
+        "(a) Move governance_log::append (and its scrub_json + load_signing_key + entry-kind constants) to lemmy_db_schema::source::governance::governance_log. Re-export from lemmy_api for backwards compat with the 14 existing call sites. Move inbox.rs to crates/apub/activities/src/governance/inbox.rs. inbox.rs calls governance_log::append from lemmy_db_schema. Adds ed25519_dalek + regex + serde_json deps to lemmy_db_schema (modest weight; lemmy_db_schema already has serde_json + many crypto-adjacent deps via diesel/jsonwebtoken).",
+        "(b) Drop ADR-008 audit-trail invariant for INBOUND notices only — admin-review path queries remote_sanction_notice directly. Skip governance_log::append in inbox.rs. Carry-forward to v1.",
+        "(c) Reimplement governance_log::append in lemmy_apub_activities — two writers to keep in sync."
+      ],
+      "context": "Inbound side of DQ-6.6 (resolved entry id 36 covers outbound side via Agent D's option-b builder/orchestrator split). The two halves are NOT symmetric: outbound has an orchestrator caller (Agent F's lemmy_api handler), inbound does NOT — Activity::receive is invoked by the AP framework directly at the lemmy_apub_activities layer with no opportunity for an upstream orchestrator. Therefore Agent D's split-pattern (option b for outbound) does not transfer to inbound; inbound needs its own resolution. Agent E correctly stopped on this and queued. Advisor decides without spawning further agents per overnight-run autonomy mandate (auto mode active). Decision factors: (1) ADR-008 says EVERY governance write hits the hash-chain log — option (b) violates this; reject. (2) Option (c) creates two implementations of the same writer — high maintenance risk as Phase 4b hardening continues; reject. (3) Option (a) is the same fix pattern Lemmy uses for PostReport/CommentReport (writers live in db_schema with model definitions). The lemmy_db_schema deps additions (ed25519_dalek, regex) are modest; serde_json is already there. Re-export from lemmy_api preserves backwards-compat for the 14 existing call sites with zero changes.",
+      "answer": "Option (a). Move governance_log::append (and entry_kind constants + scrub_json + load_signing_key + redaction::scrub) from lemmy_api to lemmy_db_schema::source::governance::governance_log. Re-export the same names from lemmy_api so existing call sites in submit_jury_vote.rs, ban.rs, etc. compile unchanged. Place inbox.rs at crates/apub/activities/src/governance/inbox.rs (lower crate, callable from Activity::receive). inbox.rs imports from lemmy_db_schema::source::governance::governance_log directly. This ALSO simplifies Agent D's split if Agent F prefers — the orchestrator wrapper becomes optional rather than mandatory. Phase-6 carry-forward: future cleanup may collapse Agent D's builder/orchestrator split if the orchestrator wrapper offers no additional value beyond the tx (governance_log::append + SentActivity::create can both run on a caller-provided conn directly from the activities crate). Recorded by advisor session at 2026-04-19T07:30Z; no further DQ entry required for inbound; Agent E re-spawns with this decision baked into a fresh brief.",
+      "answered_by": "advisor"
+    },
+    {
       "id": 31,
       "from": "planner",
       "timestamp": "2026-04-19T04:00:00Z",
