@@ -38,10 +38,10 @@
 | `report_to_modlog_golden_path` regression (post-rebase) | ✅ passed | `.claude/build-rebase-regression.log` |
 | `governance_events_notify_fires` | ✅ passed | `.claude/build-task69a-run-notify2.log` |
 | `underscore_prefix_usernames_still_register` | ✅ passed | `.claude/build-task69a-run-username.log` |
-| `all_mvp_endpoints_return_non_404` | ⏳ executing at report write | `.claude/build-task70-run-68.log` |
-| `ineligible_user_cannot_be_picked_for_jury` | ⏳ to be run in CI | |
+| `all_mvp_endpoints_return_non_404` | ⏳ pending CI | `.claude/build-task70-run-68.log` |
+| `ineligible_user_cannot_be_picked_for_jury` | ⏳ pending CI | |
 
-The full Level 3 e2e run is deferred to CI per usual cadence — local DoD smoke covers the four NEW tests shipped in 68/69/69a and the golden-path regression.
+The full Level 3 e2e run is deferred to CI per usual cadence — local DoD smoke covers the four NEW tests shipped in 68/69/69a and the golden-path regression. The two ⏳ gates above cover the Phase 5c test additions (tasks 68 + 69) and must turn green in CI before PR #10 merges — neither blocks local DoD, but both are pre-merge required.
 
 ---
 
