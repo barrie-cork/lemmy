@@ -66,6 +66,10 @@ set is (pseudonymised where noted in the payload JSON):
 - `founder_seeded`
 - `endorsement_created`
 - `emergency_removed`
+- `federation_sanction_sent` — local instance published an outbound `PublishSanctionNotice` activity for a finalised case with `FederatedRecommendation` scope
+- `federation_sanction_received` — local instance recorded an inbound `PublishSanctionNotice` from a remote instance into `remote_sanction_notice` (advisory only, not auto-applied per ADR-006)
+- `federation_attestation_sent` — local instance published an outbound `PublishTrustAttestation` activity (plumbed in v0; no v0 endpoint emits this yet)
+- `federation_attestation_received` — local instance recorded an inbound `PublishTrustAttestation` from a remote instance into `federation_attestation` (no inbound enforcement in v0)
 
 New kinds will be added in future phases; subscribers should treat
 unknown kinds as forward-compatible (ignore, don't crash).

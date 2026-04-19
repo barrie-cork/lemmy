@@ -3045,3 +3045,533 @@ async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Erro
   Ok(())
 }
 
+// ============================================================================
+// Phase 6 task 77 — federation round-trip e2e (sanction_notice_round_trip)
+// ============================================================================
+//
+// Two-Postgres test proving that a `FederatedRecommendation`-scope decision
+// on instance A produces a `PublishSanctionNotice` activity that, when fed
+// directly into instance B's `Activity::receive`, lands as an advisory
+// `remote_sanction_notice` row with `local_case_id IS NULL` (ADR-006) and a
+// matching `federation_sanction_received` governance-log entry. No HTTP
+// transport — per IMPLEMENTATION-PLAN-v0.md §3 Phase 6 task 77, the test
+// calls the inbox function directly.
+
+#[tokio::test(flavor = "multi_thread")]
+async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use diesel::{
+    Connection as _, ExpressionMethods, PgConnection, QueryDsl, SelectableHelper,
+  };
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::submit_jury_vote::submit_jury_vote;
+  use lemmy_api_common::governance::SubmitJuryVote;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_apub_activities::protocol::governance::publish_sanction_notice::PublishSanctionNotice;
+  use lemmy_db_schema::{
+    newtypes::{ModerationCaseId, RemoteSanctionNoticeId},
+    source::{
+      activity::SentActivity,
+      governance::{
+        jury_assignment::JuryAssignmentInsertForm,
+        moderation_case::{ModerationCase, ModerationCaseInsertForm},
+        remote_sanction_notice::RemoteSanctionNotice,
+      },
+      instance::Instance,
+      local_site::{LocalSite, LocalSiteInsertForm},
+      local_site_rate_limit::{LocalSiteRateLimit, LocalSiteRateLimitInsertForm},
+      local_user::{LocalUser, LocalUserInsertForm},
+      person::{Person, PersonInsertForm},
+      secret::Secret,
+      site::{Site, SiteInsertForm},
+    },
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{
+      CaseSeverity,
+      CaseStatus,
+      CaseTargetType,
+      JuryAssignmentStatus,
+      JuryDecision,
+      SanctionAction,
+      SanctionScope,
+    },
+    schema::{governance_log, jury_assignment, remote_sanction_notice, sent_activity},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    dburl::DbUrl,
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use serde_json::Value;
+  use traits::ActivityTrait;
+  use url::Url;
+
+  // Bring trait into scope under a local alias so `PublishSanctionNotice::receive`
+  // is callable. The `activitypub_federation::traits::Activity` trait provides
+  // both the `receive` method and the `verify`/`actor`/`id` accessors.
+  mod traits {
+    pub use activitypub_federation::traits::Activity as ActivityTrait;
+  }
+
+  // -- 0. Set env vars BEFORE any Lemmy code touches `SETTINGS`. --------
+  // GOVERNANCE_LOG_SIGNING_KEY is read by the governance log signer at first
+  // call; LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS makes SETTINGS bypass the
+  // config-file load. Both DBs share the same signing key — fine for v0
+  // since the test only reads each chain locally.
+  const SIGNING_SEED_HEX: &str =
+    "0000000000000000000000000000000000000000000000000000000000000001";
+  // SAFETY: tests run with --test-threads=1 so no concurrent env mutation.
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+  }
+
+  // -- 1. Boot container A + apply schema. ------------------------------
+  let (_container_a, port_a) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres A: {e}").into() })?;
+  let url_a = governance_fixtures::db_url(port_a);
+  {
+    let mut sync_conn = PgConnection::establish(&url_a)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema A: {e}").into() })?;
+  }
+
+  // Build A's pool+context fully before swapping env to B — the pool reads
+  // env at construction and a multi-thread runtime could interleave
+  // otherwise. See plan §TWO_DB_TEST_PATTERN + §12 R1.
+  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &url_a); }
+  let pool_a: ActualDbPool = build_db_pool_for_tests();
+  let client_a = client_builder(&SETTINGS).build()?;
+  let middleware_client_a = ClientBuilder::new(client_a).build();
+  let secret_a = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit_a = RateLimit::with_debug_config();
+  let context_a = Data::new(LemmyContext::create(
+    pool_a,
+    middleware_client_a.clone(),
+    middleware_client_a,
+    secret_a,
+    rate_limit_a,
+  ));
+
+  // submit_jury_vote takes the federation flavour of `Data<LemmyContext>`
+  // (Phase 6 task 76) so its post-decision block can hand `&context` to
+  // `federation_outbox::send_local_sanction_notice`. Mirror the construction
+  // pattern from `report_to_modlog_golden_path` (e2e.rs:859-866). Both
+  // Data handles share the same underlying `Arc<ActualDbPool>` so they see
+  // the same DB rows.
+  let federation_config_a = activitypub_federation::config::FederationConfig::builder()
+    .domain(context_a.settings().hostname.clone())
+    .app_data((**context_a).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context_a = federation_config_a.to_request_data();
+
+  // -- 2. Boot container B + apply schema. ------------------------------
+  let (_container_b, port_b) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres B: {e}").into() })?;
+  let url_b = governance_fixtures::db_url(port_b);
+  {
+    let mut sync_conn = PgConnection::establish(&url_b)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema B: {e}").into() })?;
+  }
+
+  // Strict sequencing: pool A construction is fully complete (lines above)
+  // before we swap env to B. Multi-thread runtime cannot interleave because
+  // Data construction is `await`-free.
+  // NOTE: LEMMY_DATABASE_URL is left set to url_b at test exit — mirrors
+  // e2e.rs:2195+ pattern; test-infra cleanup is a v1 item per DQ-6.4
+  // resolved id 34 (see phase-6 completion report carry-forwards).
+  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &url_b); }
+  let pool_b: ActualDbPool = build_db_pool_for_tests();
+  let client_b = client_builder(&SETTINGS).build()?;
+  let middleware_client_b = ClientBuilder::new(client_b).build();
+  let secret_b = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit_b = RateLimit::with_debug_config();
+  let context_b = Data::new(LemmyContext::create(
+    pool_b,
+    middleware_client_b.clone(),
+    middleware_client_b,
+    secret_b,
+    rate_limit_b,
+  ));
+  let federation_config_b = activitypub_federation::config::FederationConfig::builder()
+    .domain(context_b.settings().hostname.clone())
+    .app_data((**context_b).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context_b = federation_config_b.to_request_data();
+
+  // -- 3. Seed instance A. ---------------------------------------------
+  // Instance hostname matches the admin/target ap_id host below so
+  // `activity.actor.inner().domain()` resolves to "instance-a.test" on
+  // the receiving side (asserted later as `source_instance`).
+  let instance_a = Instance::read_or_create(&mut context_a.pool(), "instance-a.test")
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("instance A: {e}").into() })?;
+
+  // Seed Site + LocalSite + LocalSiteRateLimit on instance A so
+  // `SiteView::read_local` (called by `federation_outbox::send_local_sanction_notice`
+  // → `load_local_admin`) returns a row. Without this scaffold, the
+  // federation publish hits `LocalSiteNotSetup`. Mirrors
+  // `lemmy_db_schema::test_data::TestData::create`.
+  {
+    let pool = &mut context_a.pool();
+    let site_form_a = SiteInsertForm::new("instance A test site".to_string(), instance_a.id);
+    let site_a = Site::create(pool, &site_form_a).await
+      .map_err(|e| -> Box<dyn Error> { format!("site A: {e}").into() })?;
+    // System account: throwaway Person — LocalSite needs a non-null FK.
+    let sysacct_form = PersonInsertForm::test_form(instance_a.id, "instance_a_sysacct");
+    let sysacct = Person::create(pool, &sysacct_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("sysacct: {e}").into() })?;
+    let local_site_form_a = LocalSiteInsertForm {
+      system_account: Some(sysacct.id),
+      ..LocalSiteInsertForm::new(site_a.id)
+    };
+    let local_site_a = LocalSite::create(pool, &local_site_form_a).await
+      .map_err(|e| -> Box<dyn Error> { format!("local_site A: {e}").into() })?;
+    LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site_a.id))
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("local_site_rate_limit A: {e}").into() })?;
+  }
+
+  // Seed admin + target with explicit ap_id URLs so `actor.inner().domain()`
+  // resolves to `instance-a.test` on the receive side. The default
+  // `generate_unique_changeme()` value is not a valid URL.
+  async fn seed_person_with_apub(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+    ap_url: Url,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let mut person_form = PersonInsertForm::test_form(instance_id, name);
+    let ap_dburl: DbUrl = ap_url.clone().into();
+    person_form.ap_id = Some(ap_dburl.clone());
+    person_form.inbox_url = Some(ap_dburl);
+    person_form.local = Some(true);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("person {name}: {e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("local_user {name}: {e}").into() })?;
+    Ok(person.id)
+  }
+
+  let admin_pid = seed_person_with_apub(
+    &context_a, instance_a.id, "admin",
+    true,
+    Url::parse("http://instance-a.test/u/admin")?,
+  ).await?;
+  let target_pid = seed_person_with_apub(
+    &context_a, instance_a.id, "target",
+    false,
+    Url::parse("http://instance-a.test/u/target")?,
+  ).await?;
+
+  // Re-load target Person to capture the generated ap_id (which we just set
+  // above — but we re-load through the model so the test asserts against
+  // the round-tripped DB value, not the in-memory one).
+  let target_person = Person::read(&mut context_a.pool(), target_pid).await
+    .map_err(|e| -> Box<dyn Error> { format!("read target: {e}").into() })?;
+  let target_ap_id_string = target_person.ap_id.to_string();
+
+  // Seed 5 jurors (no special ap_ids needed — they're not the actor on the
+  // outbound activity).
+  let mut jurors: Vec<PersonId> = Vec::new();
+  for i in 0..5 {
+    let pid = seed_person_with_apub(
+      &context_a, instance_a.id, &format!("juror_{i}"),
+      false,
+      Url::parse(&format!("http://instance-a.test/u/juror_{i}"))?,
+    ).await?;
+    jurors.push(pid);
+  }
+
+  // -- 4. Direct seed: ModerationCase + 5 JuryAssignment(Accepted). ----
+  // Bypass the create_report → threshold → admin_assign_jury → 5×accept
+  // chain (slow; covered by Phase 5c golden-path test). Task 77's job
+  // is to verify the federation publish step, not the handler chain.
+  // See plan §GOTCHA "Seeding shortcut".
+  let case_id: ModerationCaseId = {
+    let pool = &mut context_a.pool();
+    let conn = &mut lemmy_diesel_utils::connection::get_conn(pool).await
+      .map_err(|e| -> Box<dyn Error> { format!("get_conn A: {e}").into() })?;
+    let case_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target_pid),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "fed_test".to_string(),
+      severity: CaseSeverity::Medium,
+      // JurySelection so submit_jury_vote's status filter sees the case.
+      // (admin_assign_jury normally flips Open→JurySelection.)
+      status: CaseStatus::JurySelection,
+      threshold_score: 1,
+    };
+    let case: ModerationCase = diesel::insert_into(
+      lemmy_db_schema_file::schema::moderation_case::table,
+    )
+    .values(&case_form)
+    .get_result(&mut **conn)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("insert case: {e}").into() })?;
+    case.id
+  };
+
+  // 5 JuryAssignment rows with status=Accepted so `submit_jury_vote`'s
+  // first-step check passes for each juror (it requires status=Accepted).
+  {
+    let pool = &mut context_a.pool();
+    let conn = &mut lemmy_diesel_utils::connection::get_conn(pool).await
+      .map_err(|e| -> Box<dyn Error> { format!("get_conn A jury: {e}").into() })?;
+    for &juror_id in &jurors {
+      let form = JuryAssignmentInsertForm {
+        case_id,
+        person_id: juror_id,
+        status: JuryAssignmentStatus::Accepted,
+      };
+      diesel::insert_into(jury_assignment::table)
+        .values(&form)
+        .execute(&mut **conn)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("insert jury_assignment: {e}").into() })?;
+    }
+  }
+
+  // -- 5. Submit 3 RecommendFederationAction votes to trip quorum. ------
+  // Quorum = 3 per submit_jury_vote.rs:85. The 3rd vote runs the
+  // post-decision block which (because winning_decision maps to
+  // FederatedRecommendation scope) calls
+  // federation_outbox::send_local_sanction_notice → sent_activity INSERT.
+  for (i, juror_id) in jurors.iter().take(3).enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context_a.pool(), *juror_id)
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("juror_view {i}: {e}").into() })?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RecommendFederationAction,
+        rationale: Some(format!(
+          "Juror {i}: cross-instance harassment by @baduser email evil@example.org \
+           per profile https://instance-a.test/u/baduser",
+        )),
+      }),
+      federation_context_a.reset_request_count(),
+      juror_view,
+    )
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("submit_jury_vote {i}: {e}").into() })?
+    .into_inner();
+    if i < 2 {
+      assert!(!resp.case_decided, "vote {i}: must not be decided pre-quorum");
+    } else {
+      assert!(resp.case_decided, "vote {i}: must be decided at quorum");
+      assert_eq!(
+        resp.decision,
+        Some(JuryDecision::RecommendFederationAction),
+        "winning decision must be RecommendFederationAction",
+      );
+    }
+  }
+
+  // -- 6. Assert sent_activity on A: exactly one PublishSanctionNotice. -
+  // The wire `type` discriminator on the wrapper is "Create" (per
+  // `kinds::activity::CreateType`), and the inner `object.type` is
+  // "SanctionNotice" (per `SanctionNoticeKind`/`SanctionNoticeType`). So
+  // we filter on `data->'object'->>'type' = 'SanctionNotice'` to identify
+  // governance Create wrappers vs vanilla Lemmy Create activities (none
+  // are produced in this test, but defence in depth matches plan §6).
+  let mut async_conn_a = AsyncPgConnection::establish(&url_a).await?;
+  let activity_rows: Vec<SentActivity> = sent_activity::table
+    .filter(
+      diesel::dsl::sql::<diesel::sql_types::Text>("data->'object'->>'type'")
+        .eq("SanctionNotice"),
+    )
+    .select(SentActivity::as_select())
+    .load(&mut async_conn_a)
+    .await?;
+  assert_eq!(
+    activity_rows.len(),
+    1,
+    "exactly one PublishSanctionNotice sent_activity row",
+  );
+  let activity_row = &activity_rows[0];
+  // Sanity: the wrapper's `type` is Create.
+  let wrapper_type = activity_row
+    .data
+    .get("type")
+    .and_then(Value::as_str)
+    .ok_or_else(|| -> Box<dyn Error> { "wrapper type missing".into() })?;
+  assert_eq!(wrapper_type, "Create", "wrapper activity type must be Create");
+  // The actor URL on the activity is the local admin's ap_id.
+  let actor_url = activity_row
+    .data
+    .get("actor")
+    .and_then(Value::as_str)
+    .ok_or_else(|| -> Box<dyn Error> { "actor missing".into() })?;
+  assert_eq!(
+    actor_url, "http://instance-a.test/u/admin",
+    "outbound actor must be admin ap_id",
+  );
+
+  // -- 7. Deserialise sent_activity.data into PublishSanctionNotice. ----
+  let activity: PublishSanctionNotice = serde_json::from_value(activity_row.data.clone())
+    .map_err(|e| -> Box<dyn Error> { format!("deserialise PublishSanctionNotice: {e}").into() })?;
+
+  // -- 8. Seed instance B (Site/LocalSite scaffolding + Instance row). --
+  // The receive function does NOT call SiteView::read_local, so strictly
+  // speaking only the Instance row is required for inbox bookkeeping.
+  // We seed Site/LocalSite anyway to mirror real-world deployment shape
+  // and to leave room for v1 receive-side enhancements that may need it.
+  let _instance_b = Instance::read_or_create(&mut context_b.pool(), "instance-b.test")
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("instance B: {e}").into() })?;
+  {
+    let pool = &mut context_b.pool();
+    let site_form_b = SiteInsertForm::new("instance B test site".to_string(), _instance_b.id);
+    let site_b = Site::create(pool, &site_form_b).await
+      .map_err(|e| -> Box<dyn Error> { format!("site B: {e}").into() })?;
+    let sysacct_form = PersonInsertForm::test_form(_instance_b.id, "instance_b_sysacct");
+    let sysacct = Person::create(pool, &sysacct_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("sysacct B: {e}").into() })?;
+    let local_site_form_b = LocalSiteInsertForm {
+      system_account: Some(sysacct.id),
+      ..LocalSiteInsertForm::new(site_b.id)
+    };
+    let local_site_b = LocalSite::create(pool, &local_site_form_b).await
+      .map_err(|e| -> Box<dyn Error> { format!("local_site B: {e}").into() })?;
+    LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site_b.id))
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("local_site_rate_limit B: {e}").into() })?;
+  }
+
+  // -- 9. Deliver the activity directly to instance B's receive function.
+  // No HTTP transport (per IMPLEMENTATION-PLAN-v0.md §3 Phase 6 task 77).
+  // PublishSanctionNotice::receive consumes self, so we need the owned
+  // value from step 7. Activity::verify (which `verify_is_public`-checks
+  // the `to`/`cc` fields) is a separate trait method; we call it
+  // explicitly to mirror the framework's normal receive pipeline.
+  ActivityTrait::verify(&activity, &federation_context_b)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("verify on B: {e}").into() })?;
+  ActivityTrait::receive(activity, &federation_context_b)
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("receive on B: {e}").into() })?;
+
+  // -- 10. Assert remote_sanction_notice on B has exactly one row. ------
+  let mut async_conn_b = AsyncPgConnection::establish(&url_b).await?;
+  let advisory_rows: Vec<RemoteSanctionNotice> = remote_sanction_notice::table
+    .select(RemoteSanctionNotice::as_select())
+    .load(&mut async_conn_b)
+    .await?;
+  assert_eq!(advisory_rows.len(), 1, "exactly one remote_sanction_notice row");
+  let advisory = &advisory_rows[0];
+
+  // ADR-006 invariant: NEVER auto-applied. local_case_id MUST be NULL.
+  assert!(
+    advisory.local_case_id.is_none(),
+    "local_case_id must be NULL on advisory row (ADR-006)",
+  );
+  assert_eq!(
+    advisory.action,
+    SanctionAction::FederationQuarantineRecommendation,
+    "action must be FederationQuarantineRecommendation",
+  );
+  assert_eq!(
+    advisory.scope,
+    SanctionScope::FederatedRecommendation,
+    "scope must be FederatedRecommendation",
+  );
+  assert_eq!(
+    advisory.target_url, target_ap_id_string,
+    "target_url must match target person's ap_id from A",
+  );
+  assert_eq!(
+    advisory.source_instance, "instance-a.test",
+    "source_instance must match A's hostname (from actor.domain())",
+  );
+
+  // Redaction assertion: summary must NOT leak admin/target usernames,
+  // emails, or profile URLs from the juror rationales. The summary is
+  // built by submit_jury_vote.rs:440-448 (plain reason_code/case_id/
+  // target_type/decision); the redaction layer also runs as
+  // defence-in-depth. Concretely verify nothing identifying remains.
+  // Note: "admin" appears in juror_view names and we deliberately seed
+  // "admin" as the local admin Person's ap_id host path. The summary
+  // builder only uses reason_code+case_id+target_type+decision, so
+  // "admin" should not surface; assert that fact directly.
+  assert!(!advisory.summary.is_empty(), "summary must be non-empty");
+  assert!(
+    !advisory.summary.contains("@baduser"),
+    "summary must not contain @mention from juror rationale",
+  );
+  assert!(
+    !advisory.summary.contains("evil@example.org"),
+    "summary must not contain email from juror rationale",
+  );
+  assert!(
+    !advisory.summary.contains("/u/baduser"),
+    "summary must not contain profile URL from juror rationale",
+  );
+  assert!(
+    !advisory.summary.contains("admin"),
+    "summary must not contain admin username (build_summary contract)",
+  );
+  assert!(
+    !advisory.summary.contains("target"),
+    "summary must not contain target username (build_summary contract)",
+  );
+
+  // -- 11. Assert governance_log on B: exactly one federation_sanction_received.
+  let received_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("federation_sanction_received"))
+    .count()
+    .get_result(&mut async_conn_b)
+    .await?;
+  assert_eq!(
+    received_count, 1,
+    "exactly one federation_sanction_received governance_log entry on B",
+  );
+
+  // -- 12. Cross-check on A: federation_sanction_sent log entry exists. -
+  // Ensures the orchestrator's transactional pair-write actually committed
+  // (not asserted on by step 6 which targets sent_activity, not the log).
+  let sent_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("federation_sanction_sent"))
+    .count()
+    .get_result(&mut async_conn_a)
+    .await?;
+  assert_eq!(
+    sent_count, 1,
+    "exactly one federation_sanction_sent governance_log entry on A",
+  );
+
+  // -- 13. Touch the unused juror locals to keep `_ = jurors` lints happy.
+  let _ = (jurors, admin_pid, RemoteSanctionNoticeId(advisory.id.0));
+
+  Ok(())
+}
+
