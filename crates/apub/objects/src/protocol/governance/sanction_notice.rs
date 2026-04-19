@@ -49,3 +49,40 @@ pub struct SanctionNoticeProtocol {
   pub summary: String,
   pub published: DateTime<Utc>,
 }
+
+impl SanctionNoticeProtocol {
+  /// Cross-crate constructor for Phase 6 task 74's outbound publisher.
+  ///
+  /// `kind` is `pub(crate)` (it is a serde discriminator, not a payload
+  /// field) so callers in the `lemmy_apub_activities` crate cannot use
+  /// struct-literal initialisation. This constructor stamps the
+  /// discriminator with [`SanctionNoticeType::default`] (the only
+  /// variant) so the serialised wire form always carries
+  /// `"type": "SanctionNotice"`.
+  ///
+  /// `summary` is REQUIRED to already be redacted by the caller per
+  /// [docs/brehon-law-inspired-network/06-security-and-threat-model.md §4.2].
+  /// In v0 the publisher reads `public_case_log.summary`, which is
+  /// scrubbed at write time by `submit_jury_vote.rs:283`, so no
+  /// additional `redaction::scrub` call is required at federation send.
+  pub fn new(
+    id: Url,
+    actor: ObjectId<ApubPerson>,
+    target: Url,
+    action: SanctionAction,
+    scope: SanctionScope,
+    summary: String,
+    published: DateTime<Utc>,
+  ) -> Self {
+    Self {
+      kind: SanctionNoticeType::default(),
+      id,
+      actor,
+      target,
+      action,
+      scope,
+      summary,
+      published,
+    }
+  }
+}

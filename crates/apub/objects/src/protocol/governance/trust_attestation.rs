@@ -41,3 +41,31 @@ pub struct TrustAttestationProtocol {
   pub valid_until: Option<DateTime<Utc>>,
   pub published: DateTime<Utc>,
 }
+
+impl TrustAttestationProtocol {
+  /// Cross-crate constructor for Phase 6 task 74's outbound publisher.
+  ///
+  /// Mirrors [`super::sanction_notice::SanctionNoticeProtocol::new`]:
+  /// `kind` is `pub(crate)` so the activities crate cannot struct-literal
+  /// it. Plumbed for v0 outbound but no v0 endpoint emits a trust
+  /// attestation; v1 wires this from endorsement creation per plan
+  /// task 74's `send_local_trust_attestation` shape.
+  pub fn new(
+    id: Url,
+    actor: ObjectId<ApubPerson>,
+    subject: Url,
+    attestation_type: AttestationType,
+    valid_until: Option<DateTime<Utc>>,
+    published: DateTime<Utc>,
+  ) -> Self {
+    Self {
+      kind: TrustAttestationType::default(),
+      id,
+      actor,
+      subject,
+      attestation_type,
+      valid_until,
+      published,
+    }
+  }
+}

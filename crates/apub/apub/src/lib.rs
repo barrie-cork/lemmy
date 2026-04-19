@@ -9,6 +9,7 @@ use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult, UntranslatedEr
 use url::Url;
 
 pub mod collections;
+pub mod governance;
 pub mod http;
 pub mod protocol;
 
