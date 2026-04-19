@@ -20,7 +20,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 state_file="$repo_root/.claude/task-hopper.json"
 lock_dir="$state_file.lock"
+lock_owner_file="$state_file.lock.owner"
 tmp_file="$state_file.tmp.$$"
+
+# Per-process lock ownership token. PID + high-resolution timestamp gives
+# uniqueness across retries in the same shell. Sibling owner file (not
+# inside lock_dir) keeps rmdir semantics intact on the lock directory.
+lock_token="$$-$(date +%s%N 2>/dev/null || date +%s)"
 
 # Issue-creation target (mirrors .claude/rules/gh-pr-fork-target.md).
 gh_repo="barrie-cork/lemmy"
@@ -156,6 +162,9 @@ PY
       if [ "$rc" = "0" ]; then
         warn "removing stale lock at $lock_dir (older than ${stale_age_sec}s)"
         rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir"
+        # Clear the orphaned owner file from the dead process so our
+        # own token (written after mkdir below) is the sole authority.
+        rm -f "$lock_owner_file"
         continue
       fi
     fi
@@ -166,10 +175,26 @@ PY
       return 3
     fi
   done
+  # Record our ownership token AFTER mkdir succeeds. mkdir is the atomic
+  # acquire; the owner file is a compare-and-release marker so we never
+  # remove a lock that was reclaimed out from under us.
+  printf '%s\n' "$lock_token" > "$lock_owner_file"
 }
 
 release_lock() {
-  rmdir "$lock_dir" 2>/dev/null || true
+  # Compare-and-release. If another process reclaimed our lock as stale
+  # and took it for themselves, the owner file will either be missing
+  # (they cleared it during stale-reclaim) or hold their token, not ours.
+  # In both cases we must leave the lock dir alone so we don't release a
+  # lock that no longer belongs to us (CodeRabbit PR #46 critical).
+  if [ -f "$lock_owner_file" ]; then
+    local current
+    current="$(cat "$lock_owner_file" 2>/dev/null || true)"
+    if [ "$current" = "$lock_token" ]; then
+      rm -f "$lock_owner_file"
+      rmdir "$lock_dir" 2>/dev/null || true
+    fi
+  fi
   rm -f "$tmp_file"
 }
 
