@@ -1,7 +1,22 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [],
+  "pending": [
+    {
+      "id": 36,
+      "from": "impl",
+      "timestamp": "2026-04-19T05:30:00Z",
+      "question": "DQ-6.6 — Plan tasks 74 + 75 both call governance_log::append from inside crates/apub/. That writer lives in lemmy_api (top of crate chain) and is unreachable from lemmy_apub_activities or lemmy_apub. Additionally, the plan places receive_remote_sanction_notice in lemmy_apub but the Activity::receive trait body lives in lemmy_apub_activities (lower crate) — so the receiver function must move to (or below) lemmy_apub_activities to be callable. How should we resolve?",
+      "options": [
+        "(a) Move-down — relocate governance_log::append (+ entry_kind constants + scrub_json + load_signing_key) from lemmy_api to lemmy_db_schema::source::governance::governance_log, re-export from lemmy_api for backwards-compat with existing call sites. Move inbox.rs from crates/apub/apub/src/governance/inbox.rs to crates/apub/activities/src/governance/inbox.rs. Adds ed25519_dalek + regex deps to lemmy_db_schema. Cleanest architectural fix; mirrors how Lemmy's other model writers (PostReport::report, CommentReport::report) live in db_schema.",
+        "(b) Inline-in-receive — drop inbox.rs and verify.rs entirely. Implement the full receive logic inline in lemmy_apub_activities/src/governance/publish_sanction_notice.rs::receive (and trust attestation). Skip the governance_log::append call (note as carry-forward; logging delegated to admin-review path that reads remote_sanction_notice). Smallest change; loses ADR-008 audit-trail invariant for inbound notices.",
+        "(c) Reimplement-locally — keep inbox.rs in lemmy_apub_activities, copy the 35-line append writer (+ ed25519 + regex + signing-key env) into lemmy_apub_activities. Adds ed25519_dalek + regex + ed25519 signing-key env coupling to apub_activities. Two writers to keep in sync as Phase 4 invariants evolve."
+      ],
+      "context": "Brief tripwire 1 + plan task 75 step 5 mandate calling governance_log::append on inbound notice. Inspecting Cargo.toml: lemmy_apub deps lemmy_apub_activities (so receivers in lemmy_apub_activities cannot call up to lemmy_apub). lemmy_api deps lemmy_apub (so writers in lemmy_api cannot be imported from lemmy_apub or lemmy_apub_activities — circular). lemmy_db_schema is the lowest common ancestor; it already houses the GovernanceLog model + GovernanceLogInsertForm; adding the writer there is the natural place. Agent D (task 74) hits the exact same blocker on the outbound side; this DQ blocks both. Agent E proceeding with task 78 (verify.rs in lemmy_apub) since it's independent of the architectural decision.",
+      "answer": null,
+      "answered_by": null
+    }
+  ],
   "resolved": [
     {
       "id": 31,
