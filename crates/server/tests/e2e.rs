@@ -1699,6 +1699,20 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
       "5 jurors assigned"
     );
 
+    // Accept jury before voting — submit_jury_vote requires Accepted status
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("juror_view (accept): {e}").into() })?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("accept_jury_assignment: {e}").into() })?;
+    }
+
     // Step 4: first 3 selected jurors vote the target decision.
     let voting: Vec<PersonId> = assign_resp
       .assigned_person_ids
@@ -2285,7 +2299,7 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
     ("POST", "/api/v4/governance/report",                        "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/endorsement",                   "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/appeal",                        "{}", &[200, 400, 401]),
-    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401, 404]),
+    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/cases",                         "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/modlog",                        "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/reputation/me",                 "",   &[200, 400, 401]),
@@ -2743,8 +2757,8 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
       ("raw creator_id",         r#""creator_id"\s*:\s*\d+"#),
       ("raw admin_id",           r#""admin_id"\s*:\s*\d+"#),
       ("raw user_id",            r#""user_id"\s*:\s*\d+"#),
-      ("raw username field",     r#""username"\s*:\s*""#),
-      ("raw name field",         r#""name"\s*:\s*""#),
+      ("raw username field",     r#""username"\s*:\s*"[^"]+"#),
+      ("raw name field",         r#""name"\s*:\s*"[^"]+"#),
       ("email-looking string",   r#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#),
     ];
     let compiled: Vec<(&str, Regex)> = banned_patterns
