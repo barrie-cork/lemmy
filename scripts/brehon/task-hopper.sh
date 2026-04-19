@@ -214,6 +214,7 @@ py_edit() {
   TH_REASON="$reason" \
   TH_LOG="$log_path" \
   TH_COMMIT="$commit_sha" \
+  TH_ISSUE_URL="${TH_ISSUE_URL:-}" \
   TH_SESSION="${CLAUDE_SESSION_ID:-}" \
   TH_TRANSCRIPT="${CLAUDE_TRANSCRIPT_PATH:-}" \
   "$PY" - <<'PY'
@@ -505,8 +506,11 @@ PY
     url="$(printf '%s\n' "$url" | grep -E '^https?://' | head -n1)"
     if [ -n "$url" ]; then
       # Write issue_url back into state (re-enter the python editor in set_issue_url mode).
+      # Scope TH_ISSUE_URL inside the subshell so py_edit's prefix chain
+      # forwards it into the Python process; the caller-side `VAR=val
+      # assignment` pattern does not export into $(...) subshells.
       local out
-      TH_ISSUE_URL="$url" out="$(py_edit set_issue_url)"
+      out="$(TH_ISSUE_URL="$url" py_edit set_issue_url)"
       split_py_output "$out" >/dev/null
       publish_state
       err "filed issue: $url"

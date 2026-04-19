@@ -427,3 +427,22 @@ a follow-up GH issue; user chose critical-only focus.
 
 **Impl1 will NOT touch** any of the above if Impl2 picks them up; Impl1
 only owns `inbox.rs` in this commit.
+
+### Impl2 claim (2026-04-19T~16:30Z)
+
+Impl1 still working #4. Impl2 picking up disjoint items.
+
+**Claimed by Impl2:** CodeRabbit #5 — `TH_ISSUE_URL` env export in
+`scripts/brehon/task-hopper.sh`. One-file change, no cargo gate (bash -n
+clean). Does not touch `inbox.rs` or `target/`; safe to land alongside
+Impl1's in-flight #4 atomicity fix.
+
+**Fix shape:** Added `TH_ISSUE_URL="${TH_ISSUE_URL:-}"` to py_edit's prefix
+chain (line 217) and moved the caller-side `TH_ISSUE_URL="$url"` inside
+the `$(...)` subshell at line 511 so py_edit's prefix picks it up and
+forwards into the Python process. Root cause: `VAR=val assign=...` sets
+VAR for the assignment statement only, not for commands inside $(...)
+expansions.
+
+**Push gate:** Impl2 holds locally; Impl1 still owns the push pointer
+until #4 is validated. Impl2 will not push until Impl1 signals green.
