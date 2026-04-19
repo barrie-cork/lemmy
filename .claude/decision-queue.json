@@ -1,8 +1,58 @@
 {
-  "phase": "5",
+  "phase": "6",
   "schema_version": 1,
   "pending": [],
   "resolved": [
+    {
+      "id": 31,
+      "from": "planner",
+      "timestamp": "2026-04-19T04:00:00Z",
+      "question": "DQ-6.1 — Add `received_at` column to `remote_sanction_notice`? [04 §3] lists `published_at` only. Admin-review queries (\"notices received in last 24h\") would need it.",
+      "options": ["add-received-at", "mirror-design-doc-exactly"],
+      "context": "Pre-seeded by planner for Phase 6. Plan §Decision Queue Pre-Seeds DQ-6.1. Admin-review queries (\"show notices received in last 24h\") need received_at; adding it is a non-breaking extension to the design doc.",
+      "answer": "add-received-at. Small cost, obvious future need, pre-approved deviation from design doc. Agent A (task 70) includes `received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` in the `remote_sanction_notice` up.sql + a matching field in the Diesel model (task 71). Note the deviation in the migration up.sql comment header.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 32,
+      "from": "planner",
+      "timestamp": "2026-04-19T04:00:00Z",
+      "question": "DQ-6.2 — Where do we store the HTTP signature value on inbound notices? activitypub_federation consumes the HTTP Signature header before Activity::receive is called.",
+      "options": ["empty-string-with-v1-todo", "extract-via-hook", "store-activity-id"],
+      "context": "Pre-seeded by planner for Phase 6. Plan §Decision Queue Pre-Seeds DQ-6.2. The signature is verified (so we know the row is authentic), but we don't get the raw header value. v0 doesn't need to re-verify; we just need something non-null per the NOT NULL constraint.",
+      "answer": "store-activity-id. Populate `remote_sanction_notice.signature = activity.id.to_string()` (the outer Create activity id, not the inner object id — that's unique per send and preserves traceability). Satisfies the NOT NULL constraint, preserves a per-notice identifier, defers real HTTP signature storage to v1. Agent E (task 75) adds a // TODO(v1): plumb actual HTTP signature through activitypub_federation hook comment.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 33,
+      "from": "planner",
+      "timestamp": "2026-04-19T04:00:00Z",
+      "question": "DQ-6.3 — Idempotency of inbound activity receipt. If the same PublishSanctionNotice is received twice (sender retry), should we dedupe in the governance layer or rely on Lemmy's existing ReceivedActivity table?",
+      "options": ["rely-on-received-activity-dedup", "add-unique-index", "do-both"],
+      "context": "Pre-seeded by planner for Phase 6. Plan §Decision Queue Pre-Seeds DQ-6.3. Dummy::hook at crates/apub/apub/src/http/mod.rs:99-114 writes to received_activity via ReceivedActivity::create, which dedupes by activity.id(). This should prevent Activity::receive from running twice for the same activity at the HTTP layer.",
+      "answer": "rely-on-received-activity-dedup. Lemmy's existing `ReceivedActivity::create` at the HTTP layer is the right place to dedupe; adding a second safeguard on `remote_sanction_notice` is defensive coding we don't need in v0. Agent E (task 75) does NOT add a unique index or on_conflict().do_nothing() to the insert. If the test at task 77 proves a double-insert path exists (it shouldn't — the test calls receive directly, not via HTTP), reopen as a v1 hardening task.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 34,
+      "from": "planner",
+      "timestamp": "2026-04-19T04:00:00Z",
+      "question": "DQ-6.4 — Env-var cleanup after sanction_notice_round_trip. The test sets LEMMY_DATABASE_URL globally. Should it restore / remove the env var in a teardown block?",
+      "options": ["leave-as-is-existing-pattern", "add-teardown", "move-to-once_cell-override"],
+      "context": "Pre-seeded by planner for Phase 6. Plan §Decision Queue Pre-Seeds DQ-6.4. Existing tests at e2e.rs:2195+ don't clean up, which is a latent bug. In practice tests run serially and each overwrites, so no observed failure yet.",
+      "answer": "leave-as-is-existing-pattern. Agent G (task 77) mirrors the Phase 5c e2e test pattern — no teardown block. Document the known limitation inline: `// NOTE: LEMMY_DATABASE_URL is left set at test exit — mirrors e2e.rs:2195+ pattern; test-infra cleanup is a v1 item (see phase-6 completion report carry-forwards).`. A dedicated test-infra cleanup phase is the right place to fix this comprehensively across the suite, not a Phase 6 per-test patch.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 35,
+      "from": "planner",
+      "timestamp": "2026-04-19T04:00:00Z",
+      "question": "DQ-6.5 — Plan-vs-spec naming drift for FederationQuarantineRecommendation. Invocation prompt uses FederationQuarantineRecommendation scope; codebase uses SanctionScope::FederatedRecommendation + SanctionAction::FederationQuarantineRecommendation. Confirm task 76 branches on scope == SanctionScope::FederatedRecommendation.",
+      "options": ["branch-on-scope-confirmed", "rename-in-plan", "flag-to-user"],
+      "context": "Pre-seeded by planner for Phase 6. Plan §Decision Queue Pre-Seeds DQ-6.5. Audit confirmed SanctionScope::FederatedRecommendation is the exact variant. The action name (FederationQuarantineRecommendation) is distinct and pairs with the scope. Plan docs just express the combined pair loosely.",
+      "answer": "branch-on-scope-confirmed. Agent F (task 76) inserts `if winning_sanction.scope == SanctionScope::FederatedRecommendation { crate::governance::federation_outbox::send_local_sanction_notice(case_id, &context).await?; }` between line 395 (reporter reputation complete) and line 397 (case_decided log append) of submit_jury_vote.rs. Do NOT branch on SanctionAction — scope is the routing signal per [04 §3 Sanction]. Verify via `grep -n \"FederatedRecommendation\\|FederationQuarantineRecommendation\" crates/db_schema_file/src/enums.rs` before committing.",
+      "answered_by": "advisor"
+    },
     {
       "id": 27,
       "from": "advisor",
