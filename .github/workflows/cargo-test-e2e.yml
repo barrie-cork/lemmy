@@ -1,0 +1,71 @@
+name: cargo-test-e2e
+
+# Runs the governance e2e test suite on PRs to governance-v0. Each test
+# spins up its own Postgres via testcontainers (see
+# crates/server/tests/e2e.rs:83), so the runner only needs Docker — no
+# services: block required.
+#
+# This workflow complements the upstream Woodpecker CI (.woodpecker.yml)
+# which runs Lemmy's native cargo checks. Here we surface e2e pass/fail
+# in GitHub's status-check UI so PRs can block on it.
+
+on:
+  pull_request:
+    branches:
+      - governance-v0
+    paths:
+      - 'crates/**'
+      - 'migrations/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/cargo-test-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cargo-test-e2e-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: governance e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Pinned in rust-toolchain.toml; the action reads that file.
+          toolchain: stable
+
+      - name: Install libpq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev pkg-config
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-e2e-${{ runner.os }}-
+
+      - name: Compile e2e test target
+        run: cargo test --test e2e -p lemmy_server --no-run
+
+      - name: Run e2e (single-threaded; testcontainers per test)
+        env:
+          RUST_BACKTRACE: 1
+        run: cargo test --test e2e -p lemmy_server -- --test-threads=1
