@@ -61,6 +61,68 @@ pub enum Scope {
   Community(CommunityId),
 }
 
+/// Storage/wire type of a config value. Mirrors the `value_type` text column
+/// on `governance_config`; the variants are the four primitive accessors plus
+/// `Enum` for text-backed enumerations whose valid variants are pinned in
+/// `ConfigKeyMetadata::valid_enum`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValueType {
+  Int,
+  Float,
+  Bool,
+  Text,
+  Enum,
+}
+
+/// Allowed scope layer for a key. `Both` means a write at `community:<id>`
+/// overrides `instance`; `Instance` means the key is never community-scoped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConfigScope {
+  Instance,
+  Community,
+  Both,
+}
+
+/// When a config change takes effect. `Immediate` is a cache invalidation;
+/// `NextJuryCycle` means in-flight juries keep the old value via
+/// `moderation_case.applied_config_snapshot`; `NextSnapshotJob` defers to the
+/// next reputation snapshot tick.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApplyAt {
+  Immediate,
+  NextJuryCycle,
+  NextSnapshotJob,
+}
+
+/// Static inclusive numeric range. Used for `valid_range` bounds on `Int` and
+/// `Float` keys. Kept as two `f64` fields + `Copy` so the whole metadata
+/// array stays `&'static` and compile-time-verifiable.
+#[derive(Debug, Clone, Copy)]
+pub struct NumericRange {
+  pub min: f64,
+  pub max: f64,
+}
+
+/// Compile-time metadata for one `governance_config` key. The array
+/// `CONFIG_KEY_METADATA` holds one entry per seeded key; parity test
+/// `every_seeded_key_has_metadata` rejects drift between
+/// `SEEDED_KEYS_WITH_CONSTS` and this array. Editing a key's metadata is a
+/// Rust-code change — there is no runtime override path, by NOT4 decision
+/// 2026-04-19.
+#[derive(Debug, Clone, Copy)]
+pub struct ConfigKeyMetadata {
+  pub key: &'static str,
+  pub value_type: ValueType,
+  pub valid_range: Option<NumericRange>,
+  pub valid_enum: Option<&'static [&'static str]>,
+  pub scope: ConfigScope,
+  pub requires_re_jury: bool,
+  pub requires_step_up: bool,
+  pub apply_at_default: ApplyAt,
+  pub description: &'static str,
+  pub doc_anchor: &'static str,
+}
+
 impl Scope {
   fn as_str(self) -> Cow<'static, str> {
     match self {
@@ -351,6 +413,43 @@ pub const DEFAULT_FOUNDER_MAX_SEED_DELTA: i64 = 200;
 pub const DEFAULT_JOB_SNAPSHOT_INTERVAL_SECONDS: i64 = 900;
 pub const DEFAULT_JOB_SNAPSHOT_BATCH_CHUNK_SIZE: i64 = 500;
 
+// -- v1-AD-a additions (admin dashboard foundation sub-phase) ---------------
+//
+// 27 new keys seeded by migration `2026-04-22-000300-0000_seed_v1_config_keys`.
+// Authoritative list = PRD §5.2 minus 10 sponsor-liability-owned rows (land in
+// sponsor-liability-v1) minus 1 `rule_set.active_version_id` (deliberately
+// un-seeded per plan §4.1 — absence-of-row IS the "no active version" signal).
+// 2 governance.dashboard.* keys are included per PRD §5.2; the plan §13 task 6
+// sample list omitted them — advisor edit #1 reconciliation point.
+
+pub const DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR: &str = "majority";
+pub const DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE: &str = "60%";
+pub const DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE: &str = "75%";
+pub const DEFAULT_JURY_DIVERSITY_CONSTRAINTS_ENABLED: bool = true;
+pub const DEFAULT_JURY_APPEAL_PANEL_SIZE_INCREASE: i64 = 2;
+pub const DEFAULT_JURY_DEADLINE_WINDOW_HOURS: i64 = 72;
+pub const DEFAULT_DECAY_NEGATIVE_HALF_LIFE_DAYS: i64 = 180;
+pub const DEFAULT_DECAY_ENDORSEMENT_STRENGTH_HALF_LIFE_DAYS: i64 = 90;
+pub const DEFAULT_DECAY_JURY_RELIABILITY_HALF_LIFE_DAYS: i64 = 90;
+pub const DEFAULT_ONBOARDING_SPONSOR_MIN_ENDORSEMENT_STRENGTH: i64 = 25;
+pub const DEFAULT_ONBOARDING_SPONSOR_ALLOWLIST_TABLE_NAME: &str = "sponsor_allowlist";
+pub const DEFAULT_ONBOARDING_PROVISIONAL_MEMBERSHIP_COOLDOWN_DAYS: i64 = 14;
+pub const DEFAULT_FOUNDER_FOUNDER_SEAL_VISIBLE_IN_PROFILE: bool = true;
+pub const DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE: i64 = 1;
+pub const DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS: i64 = 30;
+pub const DEFAULT_DELTAS_PARTICIPATION_DORMANT: i64 = -2;
+pub const DEFAULT_PARTICIPATION_ATTESTATION_ENABLED: bool = false;
+pub const DEFAULT_FEDERATION_INBOUND_ADVISORY_ONLY: bool = true;
+pub const DEFAULT_FEDERATION_PEER_ATTESTATION_TTL_DAYS: i64 = 30;
+pub const DEFAULT_FEDERATION_SIGNATURE_REQUIRED: bool = true;
+pub const DEFAULT_FEDERATION_QUARANTINE_RECOMMENDATION_SEVERITY_FLOOR: &str = "moderate";
+pub const DEFAULT_FEDERATION_OUTBOUND_PUBLISH_ENABLED: bool = true;
+pub const DEFAULT_RULE_SET_AUTO_CARRY_IN_FLIGHT_CASES: bool = true;
+pub const DEFAULT_RULE_SET_TEXT_MAX_BYTES: i64 = 65_536;
+pub const DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS: i64 = 24;
+pub const DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED: bool = true;
+pub const DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED: bool = false;
+
 fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
@@ -378,6 +477,28 @@ fn const_default_int(key: &str) -> Option<i64> {
     "founder.max_seed_delta" => Some(DEFAULT_FOUNDER_MAX_SEED_DELTA),
     "job.snapshot_interval_seconds" => Some(DEFAULT_JOB_SNAPSHOT_INTERVAL_SECONDS),
     "job.snapshot_batch_chunk_size" => Some(DEFAULT_JOB_SNAPSHOT_BATCH_CHUNK_SIZE),
+    // v1-AD-a additions
+    "jury.appeal_panel_size_increase" => Some(DEFAULT_JURY_APPEAL_PANEL_SIZE_INCREASE),
+    "jury.deadline_window_hours" => Some(DEFAULT_JURY_DEADLINE_WINDOW_HOURS),
+    "decay.negative_half_life_days" => Some(DEFAULT_DECAY_NEGATIVE_HALF_LIFE_DAYS),
+    "decay.endorsement_strength_half_life_days" => {
+      Some(DEFAULT_DECAY_ENDORSEMENT_STRENGTH_HALF_LIFE_DAYS)
+    }
+    "decay.jury_reliability_half_life_days" => Some(DEFAULT_DECAY_JURY_RELIABILITY_HALF_LIFE_DAYS),
+    "onboarding.sponsor_min_endorsement_strength" => {
+      Some(DEFAULT_ONBOARDING_SPONSOR_MIN_ENDORSEMENT_STRENGTH)
+    }
+    "onboarding.provisional_membership_cooldown_days" => {
+      Some(DEFAULT_ONBOARDING_PROVISIONAL_MEMBERSHIP_COOLDOWN_DAYS)
+    }
+    "deltas.participation_weekly_active" => Some(DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE),
+    "participation.dormancy_window_days" => Some(DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS),
+    "deltas.participation_dormant" => Some(DEFAULT_DELTAS_PARTICIPATION_DORMANT),
+    "federation.peer_attestation_ttl_days" => Some(DEFAULT_FEDERATION_PEER_ATTESTATION_TTL_DAYS),
+    "rule_set.text_max_bytes" => Some(DEFAULT_RULE_SET_TEXT_MAX_BYTES),
+    "rule_set.version_propagation_delay_hours" => {
+      Some(DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS)
+    }
     _ => None,
   }
 }
@@ -397,6 +518,22 @@ fn const_default_float(key: &str) -> Option<f64> {
 fn const_default_bool(key: &str) -> Option<bool> {
   match key {
     "jury.fallback_on_small_pool" => Some(DEFAULT_JURY_FALLBACK_ON_SMALL_POOL),
+    // v1-AD-a additions
+    "jury.diversity_constraints_enabled" => Some(DEFAULT_JURY_DIVERSITY_CONSTRAINTS_ENABLED),
+    "founder.founder_seal_visible_in_profile" => {
+      Some(DEFAULT_FOUNDER_FOUNDER_SEAL_VISIBLE_IN_PROFILE)
+    }
+    "participation.attestation_enabled" => Some(DEFAULT_PARTICIPATION_ATTESTATION_ENABLED),
+    "federation.inbound_advisory_only" => Some(DEFAULT_FEDERATION_INBOUND_ADVISORY_ONLY),
+    "federation.signature_required" => Some(DEFAULT_FEDERATION_SIGNATURE_REQUIRED),
+    "federation.outbound_publish_enabled" => Some(DEFAULT_FEDERATION_OUTBOUND_PUBLISH_ENABLED),
+    "rule_set.auto_carry_in_flight_cases" => Some(DEFAULT_RULE_SET_AUTO_CARRY_IN_FLIGHT_CASES),
+    "governance.dashboard.html_pages_enabled" => {
+      Some(DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED)
+    }
+    "governance.dashboard.step_up_enforced" => {
+      Some(DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED)
+    }
     _ => None,
   }
 }
@@ -408,6 +545,22 @@ fn const_default_text(key: &str) -> Option<String> {
     }
     "onboarding.sponsor_gate_strategy" => {
       Some(DEFAULT_ONBOARDING_SPONSOR_GATE_STRATEGY.to_string())
+    }
+    // v1-AD-a additions
+    "jury.severity_thresholds.minor" => {
+      Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR.to_string())
+    }
+    "jury.severity_thresholds.moderate" => {
+      Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE.to_string())
+    }
+    "jury.severity_thresholds.severe" => {
+      Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE.to_string())
+    }
+    "onboarding.sponsor_allowlist_table_name" => {
+      Some(DEFAULT_ONBOARDING_SPONSOR_ALLOWLIST_TABLE_NAME.to_string())
+    }
+    "federation.quarantine_recommendation_severity_floor" => {
+      Some(DEFAULT_FEDERATION_QUARANTINE_RECOMMENDATION_SEVERITY_FLOOR.to_string())
     }
     _ => None,
   }
@@ -455,6 +608,75 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
   ("founder.max_seed_delta", "DEFAULT_FOUNDER_MAX_SEED_DELTA", "int"),
   ("job.snapshot_interval_seconds", "DEFAULT_JOB_SNAPSHOT_INTERVAL_SECONDS", "int"),
   ("job.snapshot_batch_chunk_size", "DEFAULT_JOB_SNAPSHOT_BATCH_CHUNK_SIZE", "int"),
+  // v1-AD-a additions (admin-dashboard-owned subset per PRD §5.2 minus
+  // 10 sponsor-liability rows minus 1 rule_set.active_version_id)
+  ("jury.severity_thresholds.minor", "DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR", "text"),
+  ("jury.severity_thresholds.moderate", "DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE", "text"),
+  ("jury.severity_thresholds.severe", "DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE", "text"),
+  ("jury.diversity_constraints_enabled", "DEFAULT_JURY_DIVERSITY_CONSTRAINTS_ENABLED", "bool"),
+  ("jury.appeal_panel_size_increase", "DEFAULT_JURY_APPEAL_PANEL_SIZE_INCREASE", "int"),
+  ("jury.deadline_window_hours", "DEFAULT_JURY_DEADLINE_WINDOW_HOURS", "int"),
+  ("decay.negative_half_life_days", "DEFAULT_DECAY_NEGATIVE_HALF_LIFE_DAYS", "int"),
+  (
+    "decay.endorsement_strength_half_life_days",
+    "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.jury_reliability_half_life_days",
+    "DEFAULT_DECAY_JURY_RELIABILITY_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "onboarding.sponsor_min_endorsement_strength",
+    "DEFAULT_ONBOARDING_SPONSOR_MIN_ENDORSEMENT_STRENGTH",
+    "int",
+  ),
+  (
+    "onboarding.sponsor_allowlist_table_name",
+    "DEFAULT_ONBOARDING_SPONSOR_ALLOWLIST_TABLE_NAME",
+    "text",
+  ),
+  (
+    "onboarding.provisional_membership_cooldown_days",
+    "DEFAULT_ONBOARDING_PROVISIONAL_MEMBERSHIP_COOLDOWN_DAYS",
+    "int",
+  ),
+  (
+    "founder.founder_seal_visible_in_profile",
+    "DEFAULT_FOUNDER_FOUNDER_SEAL_VISIBLE_IN_PROFILE",
+    "bool",
+  ),
+  ("deltas.participation_weekly_active", "DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE", "int"),
+  ("participation.dormancy_window_days", "DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS", "int"),
+  ("deltas.participation_dormant", "DEFAULT_DELTAS_PARTICIPATION_DORMANT", "int"),
+  ("participation.attestation_enabled", "DEFAULT_PARTICIPATION_ATTESTATION_ENABLED", "bool"),
+  ("federation.inbound_advisory_only", "DEFAULT_FEDERATION_INBOUND_ADVISORY_ONLY", "bool"),
+  ("federation.peer_attestation_ttl_days", "DEFAULT_FEDERATION_PEER_ATTESTATION_TTL_DAYS", "int"),
+  ("federation.signature_required", "DEFAULT_FEDERATION_SIGNATURE_REQUIRED", "bool"),
+  (
+    "federation.quarantine_recommendation_severity_floor",
+    "DEFAULT_FEDERATION_QUARANTINE_RECOMMENDATION_SEVERITY_FLOOR",
+    "text",
+  ),
+  ("federation.outbound_publish_enabled", "DEFAULT_FEDERATION_OUTBOUND_PUBLISH_ENABLED", "bool"),
+  ("rule_set.auto_carry_in_flight_cases", "DEFAULT_RULE_SET_AUTO_CARRY_IN_FLIGHT_CASES", "bool"),
+  ("rule_set.text_max_bytes", "DEFAULT_RULE_SET_TEXT_MAX_BYTES", "int"),
+  (
+    "rule_set.version_propagation_delay_hours",
+    "DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS",
+    "int",
+  ),
+  (
+    "governance.dashboard.html_pages_enabled",
+    "DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED",
+    "bool",
+  ),
+  (
+    "governance.dashboard.step_up_enforced",
+    "DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED",
+    "bool",
+  ),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -462,20 +684,824 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
 /// matches this count.
 pub const EXPECTED_SEED_COUNT: usize = 34;
 
+/// v1-AD-a adds 27 admin-dashboard-owned keys to `SEEDED_KEYS_WITH_CONSTS`.
+/// Parametric per advisor directive 2026-04-19 #4 — each subsequent v1
+/// sub-PRD adds its own `EXPECTED_SEED_COUNT_V1_*` beside this one without
+/// churning the v0 invariant. `rule_set.active_version_id` is deliberately
+/// NOT counted here (absence-of-row is the "no active version" signal per
+/// plan §4.1). Sponsor-liability v1's 10 `liability.*` keys ship in
+/// sponsor-liability-v1 under their own parametric count.
+pub const EXPECTED_SEED_COUNT_V1_AD: usize = 27;
+
+/// Enum variants for `federation.quarantine_recommendation_severity_floor`.
+const ENUM_SEVERITY_FLOOR: &[&str] = &["minor", "moderate", "severe"];
+
+/// Enum variants for `jury.severity_thresholds.*` — expressed as "majority"
+/// or a "<percentage>%" literal. v1 kept as free text because there's no
+/// closed set yet (`majority` is a synonym for `>50%`).
+const ENUM_SEVERITY_THRESHOLD: &[&str] = &["majority", "55%", "60%", "66%", "75%", "unanimous"];
+
+/// Enum variants for `onboarding.default_membership_state` (v0 key). Listed
+/// here so the metadata entry stays self-contained.
+const ENUM_MEMBERSHIP_STATE: &[&str] = &["member", "provisional", "suspended"];
+
+/// Enum variants for `onboarding.sponsor_gate_strategy` (v0 key widened in
+/// v1-AD per OQ-020: `age` | `reputation` | `allowlist`). Listed here so
+/// v1-AD-b's POST /admin/config handler has one canonical reference.
+const ENUM_SPONSOR_GATE_STRATEGY: &[&str] = &["age", "reputation", "allowlist"];
+
+/// Compile-time metadata for every seeded `governance_config` key. Length
+/// must equal `SEEDED_KEYS_WITH_CONSTS.len()` (enforced by
+/// `parity::every_seeded_key_has_metadata`). Order is not significant —
+/// the parity test matches by `key` name, not index.
+pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
+  // ---- v0 keys (34) ------------------------------------------------------
+  ConfigKeyMetadata {
+    key: "thresholds.jury_reliability",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Jury-eligibility capability cutoff (reputation_snapshot jury_reliability).",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "thresholds.reporting_accuracy",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reporter capability cutoff.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "thresholds.endorsement_strength",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Sponsor capability cutoff.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 21.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Default panel size at jury seating.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.quorum",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 21.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Minimum votes required for a quorum.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.age_requirement_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Minimum account age (days) for jury eligibility.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.max_concurrent_assignments",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 20.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Max open jury assignments a single juror can hold.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.fallback_on_small_pool",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "If true, allow reduced panel when pool too small.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.juror_aligned",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta for majority-aligned juror.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.juror_outlier",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta for outlier juror.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.reporter_upheld",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta when a report is upheld.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.reporter_dismissed",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta when a report is dismissed.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.endorsement_created_sponsor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta granted to sponsor on endorsement.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.endorsement_created_sponsee",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta granted to sponsee on endorsement.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.sponsor_liability_minor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta applied to sponsors on minor sanction.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.sponsor_liability_moderate",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta applied to sponsors on moderate sanction.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.sponsor_liability_severe",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Reputation delta applied to sponsors on severe sanction.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "liability.founder_multiplier",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Liability multiplier applied to founders.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "liability.regular_multiplier",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Liability multiplier applied to non-founders.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "liability.sponsor_liability_floor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -100000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Floor for sponsor liability clamping (OQ-024).",
+    doc_anchor: "99#OQ-024",
+  },
+  ConfigKeyMetadata {
+    key: "report.base_weight",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Base weight for a fresh report before modifiers.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "report.clamp_min",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Minimum weight clamp for a report.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "report.clamp_max",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum weight clamp for a report.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "report.recency_half_life_hours",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 1.0, max: 8760.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Half-life (hours) used in report recency weighting.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "report.case_threshold_micros",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 100_000_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Accumulated report score (micros) required to open a case.",
+    doc_anchor: "01#5.2",
+  },
+  ConfigKeyMetadata {
+    key: "decay.positive_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Positive-delta decay half-life (days) in reputation snapshots.",
+    doc_anchor: "01#5.3",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.default_membership_state",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_MEMBERSHIP_STATE),
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Default membership state at user registration.",
+    doc_anchor: "01#5.4",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.sponsor_gate_strategy",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_SPONSOR_GATE_STRATEGY),
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Strategy used to gate sponsor endorsement (age/reputation/allowlist).",
+    doc_anchor: "99#OQ-020",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.sponsor_min_account_age_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Min account age (days) for sponsor endorsement under 'age' gate.",
+    doc_anchor: "99#OQ-020",
+  },
+  ConfigKeyMetadata {
+    key: "founder.max_founders_active",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum simultaneously-active founders per instance.",
+    doc_anchor: "01#5.5",
+  },
+  ConfigKeyMetadata {
+    key: "founder.max_expires_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Max lifetime (days) of a founder seed.",
+    doc_anchor: "01#5.5",
+  },
+  ConfigKeyMetadata {
+    key: "founder.max_seed_delta",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Max reputation delta applied to a founder at seeding.",
+    doc_anchor: "01#5.5",
+  },
+  ConfigKeyMetadata {
+    key: "job.snapshot_interval_seconds",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 60.0, max: 86_400.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Cadence (seconds) of the reputation-snapshot job.",
+    doc_anchor: "01#5.3",
+  },
+  ConfigKeyMetadata {
+    key: "job.snapshot_batch_chunk_size",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 10_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Chunk size for snapshot-job batching.",
+    doc_anchor: "01#5.3",
+  },
+  // ---- v1-AD-a additions (27) -------------------------------------------
+  ConfigKeyMetadata {
+    key: "jury.severity_thresholds.minor",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_SEVERITY_THRESHOLD),
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Quorum threshold for minor-severity cases.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.severity_thresholds.moderate",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_SEVERITY_THRESHOLD),
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Quorum threshold for moderate-severity cases.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.severity_thresholds.severe",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_SEVERITY_THRESHOLD),
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Quorum threshold for severe-severity cases.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.diversity_constraints_enabled",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Whether diversity constraints apply to jury seating.",
+    doc_anchor: "01#5.6",
+  },
+  ConfigKeyMetadata {
+    key: "jury.appeal_panel_size_increase",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 20.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Extra jurors added to appeal panels beyond the base panel size.",
+    doc_anchor: "01#5.7",
+  },
+  ConfigKeyMetadata {
+    key: "jury.deadline_window_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Deadline window (hours) for jurors to vote.",
+    doc_anchor: "04#4.2",
+  },
+  ConfigKeyMetadata {
+    key: "decay.negative_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Negative-delta decay half-life (days).",
+    doc_anchor: "01#5.3",
+  },
+  ConfigKeyMetadata {
+    key: "decay.endorsement_strength_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Endorsement-strength decay half-life (days).",
+    doc_anchor: "01#5.3",
+  },
+  ConfigKeyMetadata {
+    key: "decay.jury_reliability_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Jury-reliability decay half-life (days).",
+    doc_anchor: "01#5.3",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.sponsor_min_endorsement_strength",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Min endorsement_strength to sponsor under the 'reputation' gate.",
+    doc_anchor: "99#OQ-020",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.sponsor_allowlist_table_name",
+    value_type: ValueType::Text,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Table name the 'allowlist' sponsor gate reads from.",
+    doc_anchor: "99#OQ-020",
+  },
+  ConfigKeyMetadata {
+    key: "onboarding.provisional_membership_cooldown_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Cooldown (days) before a provisional member promotes to full member.",
+    doc_anchor: "99#OQ-016",
+  },
+  ConfigKeyMetadata {
+    key: "founder.founder_seal_visible_in_profile",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether the founder seal is visible in public profiles.",
+    doc_anchor: "99#OQ-017",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.participation_weekly_active",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Reputation delta for weekly-active participation.",
+    doc_anchor: "99#OQ-019",
+  },
+  ConfigKeyMetadata {
+    key: "participation.dormancy_window_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Days of inactivity before an account is classified dormant.",
+    doc_anchor: "99#OQ-019",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.participation_dormant",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Reputation delta applied when an account turns dormant.",
+    doc_anchor: "99#OQ-019",
+  },
+  ConfigKeyMetadata {
+    key: "participation.attestation_enabled",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether admin attestation of participation is enabled (decide-later).",
+    doc_anchor: "99#OQ-V1-AD-04",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound_advisory_only",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "When true, inbound federation signals are advisory (no enforcement).",
+    doc_anchor: "99#ADR-006",
+  },
+  ConfigKeyMetadata {
+    key: "federation.peer_attestation_ttl_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "TTL (days) for peer-attestation freshness.",
+    doc_anchor: "07",
+  },
+  ConfigKeyMetadata {
+    key: "federation.signature_required",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "When true, reject inbound governance activities missing a valid signature.",
+    doc_anchor: "06",
+  },
+  ConfigKeyMetadata {
+    key: "federation.quarantine_recommendation_severity_floor",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_SEVERITY_FLOOR),
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Minimum severity for inbound quarantine recommendations to be surfaced.",
+    doc_anchor: "07",
+  },
+  ConfigKeyMetadata {
+    key: "federation.outbound_publish_enabled",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether to publish outbound governance activities.",
+    doc_anchor: "07",
+  },
+  ConfigKeyMetadata {
+    key: "rule_set.auto_carry_in_flight_cases",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "When true, in-flight cases keep their snapshotted rule-set version.",
+    doc_anchor: "99#OQ-002",
+  },
+  ConfigKeyMetadata {
+    key: "rule_set.text_max_bytes",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1_024.0, max: 1_048_576.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Upper bound (bytes) on rule-set Markdown text size.",
+    doc_anchor: "99#OQ-002",
+  },
+  ConfigKeyMetadata {
+    key: "rule_set.version_propagation_delay_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Hours between rule-set activation and when new cases use it.",
+    doc_anchor: "99#OQ-018",
+  },
+  ConfigKeyMetadata {
+    key: "governance.dashboard.html_pages_enabled",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether the admin dashboard serves server-rendered HTML pages.",
+    doc_anchor: "§6.1",
+  },
+  ConfigKeyMetadata {
+    key: "governance.dashboard.step_up_enforced",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether step-up auth is enforced (v2); v1 default is advisory.",
+    doc_anchor: "§7.2",
+  },
+];
+
+
 #[cfg(test)]
 mod parity {
   use super::*;
 
   #[test]
   fn seeded_keys_count_matches_const_count() {
+    let expected = EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD;
     assert_eq!(
       SEEDED_KEYS_WITH_CONSTS.len(),
-      EXPECTED_SEED_COUNT,
-      "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) — add/remove keys \
-       in both places when changing the seed list",
+      expected,
+      "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) + \
+       EXPECTED_SEED_COUNT_V1_AD ({}) = {} — add/remove keys in both places when changing the \
+       seed list",
       SEEDED_KEYS_WITH_CONSTS.len(),
       EXPECTED_SEED_COUNT,
+      EXPECTED_SEED_COUNT_V1_AD,
+      expected,
     );
+  }
+
+  /// Every seeded key must appear in `CONFIG_KEY_METADATA` exactly once, and
+  /// vice versa. v1-AD-a invariant (NOT4 2026-04-19): no DB-only key (reject
+  /// additions to seed SQL without matching Rust metadata) and no metadata-
+  /// only key (reject `CONFIG_KEY_METADATA` entries without matching seed).
+  #[test]
+  fn every_seeded_key_has_metadata() {
+    assert_eq!(
+      CONFIG_KEY_METADATA.len(),
+      SEEDED_KEYS_WITH_CONSTS.len(),
+      "CONFIG_KEY_METADATA length ({}) must equal SEEDED_KEYS_WITH_CONSTS length ({})",
+      CONFIG_KEY_METADATA.len(),
+      SEEDED_KEYS_WITH_CONSTS.len(),
+    );
+    for (key, _const_name, vtype) in SEEDED_KEYS_WITH_CONSTS {
+      let md = CONFIG_KEY_METADATA.iter().find(|m| m.key == *key).unwrap_or_else(|| {
+        panic!("seeded key `{key}` has no matching CONFIG_KEY_METADATA entry")
+      });
+      let vt_matches = match *vtype {
+        "int" => matches!(md.value_type, ValueType::Int),
+        "float" => matches!(md.value_type, ValueType::Float),
+        "bool" => matches!(md.value_type, ValueType::Bool),
+        "text" => matches!(md.value_type, ValueType::Text | ValueType::Enum),
+        other => panic!("unknown value_type '{other}' for key '{key}'"),
+      };
+      assert!(
+        vt_matches,
+        "seeded key `{key}` has type `{vtype}` but CONFIG_KEY_METADATA declares {:?}",
+        md.value_type
+      );
+    }
   }
 
   /// Ensure every seeded key has a matching `const_default_*` fallback that
