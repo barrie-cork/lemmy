@@ -222,3 +222,41 @@ Impl2 is working `polish/docs-sweep` branch separately (GH #38/#39/#50/#51/#52).
 
 - **#48(a) behavioural change.** Wrapping `governance_log::append` INSERT+UPDATE in `conn.run_transaction` is load-bearing on the "nested run_transaction becomes SAVEPOINT" semantic. Diesel-async docs confirm this, but the e2e suite is the authoritative check. If `governance_log_hash_chain_holds` or `sanction_notice_round_trip` fails, the tx wrap may be interacting badly with caller-owned tx reborrows.
 - **#34 semantic shift.** The old guard rejected every Decided case. Switching to `closed_at > now()` means existing Decided cases in test fixtures that have `closed_at` stamped by a fixture helper (not `submit_jury_vote`) may now accept where they previously rejected. Any test that relied on "appeal must fail" post-decide is now broken. Audit `tests/e2e.rs` for `request_appeal` and expected-failure assertions.
+
+---
+
+## External validation report from /prp-debug session (2026-04-19T19:13Z)
+
+A `/prp-debug` session was running issue #48 RCA in parallel and reached this worktree to apply the same fix. Independent convergence: the debug session's edits matched `2ced0761d` (#48 finding 2) verbatim — both shapes were identical. **Coordination breakdown noted:** the session-save above marked `#48(c)` as "defer to polish-N" but the actual commit landed on this branch the same evening; the debug session entered the worktree without a runlog pre-flight check. Mitigation rule: `.claude/rules/multi-session-worktree-safety.md` (added on `plan/v1-admin-dashboard` worktree this session).
+
+**Validation result that matters.** Debug session ran `cargo-test.bat --test e2e --no-run -p lemmy_server` against polish worktree tip @ `2ced0761d` (with the unstaged #34/#33 regression tests applied on top). **Three compile errors in `crates/server/tests/e2e.rs`:**
+
+1. **Line 3357 — `2ced0761d`'s pseudonym-seed bug.** The fixture-seed block uses bare `?` on `LemmyResult` inside a `Result<_, Box<dyn Error>>` test fn:
+
+   ```rust
+   lemmy_api::governance::actor_pseudonym_helper::get_or_create(
+     &mut context_a.pool(),
+     admin_pid,
+   ).await?;
+   ```
+
+   `LemmyError` does not implement `std::error::Error`, so `?` cannot bridge to `Box<dyn Error>`. Fix by mirroring the `seed_person_with_apub` pattern at line ~3304:
+
+   ```rust
+   lemmy_api::governance::actor_pseudonym_helper::get_or_create(
+     &mut context_a.pool(),
+     admin_pid,
+   )
+   .await
+   .map_err(|e| -> Box<dyn Error> { format!("seed admin pseudonym: {e}").into() })?;
+   ```
+
+2. **Line 3877 — missing `use diesel::QueryDsl;`** in `appeal_inside_window_succeeds_expired_rejects` test (#34 regression). The `moderation_case::table.filter(...)` call fails with `not an iterator` because `.filter` needs `QueryDsl` in scope. Add it to the test's `use diesel::{...}` block alongside `Connection`, `ExpressionMethods`, `PgConnection`.
+
+3. **Line 3883 — same missing import**, same test, second `diesel::update(...)` call. Same fix as #2 (one import covers both call sites).
+
+Wrapper exit-code masking: `cargo-test.bat` returned 0 to the bash status capture despite cargo failing with the three errors above. Wrapper itself looks correct (`setlocal enabledelayedexpansion` + `exit /b !errorlevel!` are present), so the masking happens between cmd and bash — likely the `cmd //c` invocation. Worth investigating separately; **assume the wrapper exit code is unreliable until confirmed.** For now: always tail the captured log and grep for `^error` even when the wrapper says exit 0.
+
+**Tail of validation log:** `.claude/test-fix2.log` in this worktree has the full output.
+
+**Recommendation for next polish-1 work.** Apply the three fixes above before opening the v0-polish PR. They are 4 line edits total — should land as one commit titled `fix(tests): wire LemmyError mapping + missing QueryDsl import on v0-polish e2e regressions`.
