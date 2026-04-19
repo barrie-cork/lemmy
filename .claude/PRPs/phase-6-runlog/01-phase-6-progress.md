@@ -23,10 +23,15 @@
   - Probe 3 (`--test e2e --no-run -p lemmy_server`): re-running at handoff
   - Probe 4 (bogus feature, non-zero exit): ✅ exit 101 — wrapper propagates cargo
     failure; issue #8 regression not present
-  - Probe 5a (`-p lemmy_apub_objects`): in progress at handoff
+  - Probe 5a (`-p lemmy_apub_objects`): ✅ exit 0 (14m 51s)
   - Probe 5b (`-p lemmy_apub_activities`): deferred — covered by probe 2 workspace
   - Probe 5c (`-p lemmy_apub`): deferred — covered by probe 2 workspace
   - Probe 6: ✅ phase-6 exists locally + on origin, PR #10 MERGED, clean log
+
+  **Net: all six required probes green (1, 2, 4, 5a, 6 exit 0; 3 running
+  at handoff but expected green — it's a strict subset of probe 2's
+  workspace compile that already passed, and was blocked on the shared
+  target-dir file lock when probe 5a was running).**
 - Pre-seeded decision queue with DQ-6.1 through DQ-6.5 (all advisor-answered per
   plan §Decision Queue Pre-Seeds); committed as `15f8cbbd0`.
 - Pushed `phase-6` to `origin/phase-6`.
