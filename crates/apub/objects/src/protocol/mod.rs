@@ -1,3 +1,4 @@
+pub mod governance;
 pub mod group;
 pub mod instance;
 pub mod multi_community;
