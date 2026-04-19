@@ -95,14 +95,14 @@
       "agent": "agent-f",
       "kind": "cargo_check",
       "worktree": "C:/Users/barri/Developer/brehon-fork-agent-f-phase6",
-      "status": "in_progress",
+      "status": "completed",
       "attempts": [
         {
           "n": 1,
           "started_at": "2026-04-19T08:07:21Z",
-          "ended_at": null,
-          "result": "in_progress",
-          "commit_sha": null,
+          "ended_at": "2026-04-19T10:00:39Z",
+          "result": "completed",
+          "commit_sha": "43c3c4780",
           "log_path": null,
           "session_id": null,
           "transcript_path": null,
@@ -111,7 +111,7 @@
       ],
       "issue_url": null,
       "created_at": "2026-04-19T08:07:21Z",
-      "updated_at": "2026-04-19T08:07:21Z"
+      "updated_at": "2026-04-19T10:00:39Z"
     }
   ]
 }
