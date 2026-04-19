@@ -2378,10 +2378,11 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
     ("POST", "/api/v4/governance/report",                        "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/endorsement",                   "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/appeal",                        "{}", &[200, 400, 401]),
-    // 404 allowed here: empty test DB has no case_id=1; the route is wired
-    // (responds with handler's NotFound mapping) but resource doesn't exist.
-    // Other routes use validation errors (400/401) for unseeded state, not 404.
-    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401, 404]),
+    // Use a malformed `case_id` so the wired route returns 400 (Query
+    // deserialisation fails on non-numeric input). 404 is excluded from
+    // the allowlist so a dropped route registration fails this probe
+    // instead of silently looking like "empty DB". GH #36.
+    ("GET",  "/api/v4/governance/case?case_id=not_a_number",     "",   &[400, 401]),
     ("GET",  "/api/v4/governance/cases",                         "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/modlog",                        "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/reputation/me",                 "",   &[200, 400, 401]),
