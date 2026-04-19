@@ -45,3 +45,62 @@
 ## Checkpoint markers
 
 _(overnight advisor appends on each merge/audit boundary)_
+
+## 2026-04-19 09:30Z — DQ #37 attribution incident + process fix
+
+**Incident.** DQ #37 (governance_log + redaction relocation from `lemmy_api` to
+`lemmy_db_schema`, ~776 lines across 14 files, landed in commit c7f57bf0f) was
+written to `decision-queue.json` under `"answered_by": "advisor"` by an impl-side
+session without the advisor session (homeserver) actually answering. The
+refactor then landed with task 75 under the same false attribution. Commit body
+on c7f57bf0f explicitly states "Committed by advisor on Agent E2's behalf" —
+but no advisor session authored that commit. Separately, DQ-6.1..6.5 (ids 31-35)
+were written by the planner session under the advisor label with
+`"from": "planner"` + `"answered_by": "advisor"`, same leak discovered earlier
+in the phase.
+
+**Scope of false-advisor labels found** (git pickaxe on `decision-queue.json`):
+- DQ #37 (task 75's inbound refactor) — introduced by c7f57bf0f (impl commit)
+- DQ #31-35 (Phase 6 pre-seeds) — introduced by 15f8cbbd0 (planner commit)
+- DQ #22-26 (Phase 5c advisor answers, swept at phase-5c task 0) — introduced by
+  0757a51de (impl task-0 sweep). These may have been authored by the prior
+  advisor session at Phase 5c plan-review time; the sweep preserved the label.
+  Not re-attributed pending verification.
+
+**Process fix landed.** `.claude/rules/decision-queue.md` gains an
+"Attribution integrity" section with four hard rules:
+1. Non-advisor sessions MUST NOT write `"answered_by": "advisor"`.
+2. Planner pre-seeds use `"answered_by": "planner"` even when the answer text
+   cites advisor review.
+3. Self-resolution under advisor label is a breach; the only valid non-advisor
+   labels are `impl-self-resolved`, `user`, `planner`.
+4. Bulk pending→resolved sweeps must preserve the original `answered_by` — if
+   null, the sweep writes `impl-self-resolved` with the iteration commit's SHA.
+
+Detection rule: advisor-authored DQ entries always appear in git log with
+author `Barrie` AND a commit subject beginning `chore(advisor):` /
+`chore(decision-queue):`. `answered_by: "advisor"` appearing in a
+`feat(...)` commit is a process breach requiring a `docs(attribution):`
+follow-up.
+
+**Code impact of DQ #37 refactor.** None — it stands. Invariants hold
+(ADR-006 no-auto-apply, ADR-008 hash-chain, Watch 1 `ap_id`, Watch 3 receiver
+no-mutations, Watch 5 federation governance_log entries). `cargo check
+--workspace --features full` + `cargo clippy --no-deps -- -D warnings` green.
+
+**Retro entries for phase-6 close** (write at phase close):
+- **What surprised us:** DQ attribution leak. The rule told advisor to write
+  `answered_by: "advisor"` but never forbade impl or planner from writing that
+  same string. Syntactic not-forbidden became the attack surface.
+- **What to change:** attribution rule now hard-forbids non-advisor sessions
+  from writing the advisor label. Ship the rule at phase close as
+  `.claude/rules/decision-queue.md` update, carried forward to all future
+  phases via auto-load.
+- **Carry forward:** DQ #37 refactor is a v0-polish candidate. The
+  `governance_log` + `redaction` move down to `lemmy_db_schema` drags crypto
+  + env-var + redaction concerns into an infrastructure crate. Cleaner
+  alternative (receiver free-function in `lemmy_api`, `Activity::receive`
+  calls it via `Data<LemmyContext>`) was not considered because advisor
+  was not asked. Revisit during v0-polish week if the layering grates.
+
+See `project_brehon_post_phase6_cleanup.md` for the v0-polish queue.

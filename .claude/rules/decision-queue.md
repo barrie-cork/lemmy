@@ -70,6 +70,47 @@ any `pending` entry has `answer` filled in:
   answer while waiting, write it as a new resolved entry with
   `"from": "impl", "answered_by": "impl-self-resolved"` and explain why.
 
+## Attribution integrity (load-bearing)
+
+The `answered_by` field is the audit trail for who made which decision.
+Self-attribution under a label you don't own is a process breach.
+
+**Hard rules for any non-advisor session** (impl, planner, orchestrator,
+ralph loops, task-hopper sweeps, Agent *):
+
+1. **NEVER write `"answered_by": "advisor"`.** This label is reserved
+   for commits authored by the advisor session in its own writes to
+   `decision-queue.json`. The only valid labels a non-advisor session
+   may write are `"impl-self-resolved"`, `"user"` (when the user stated
+   the answer in-channel), or `"planner"` (for plan-author pre-seeds).
+2. **A pre-seeded "advisor" answer is not the same as an advisor answer.**
+   If a plan document includes a recommended answer from the advisor,
+   the planner writes `"answered_by": "planner"` and names the advisor
+   in the `answer` text as the source ("per advisor review 2026-04-17").
+3. **If impl needs advisor input and advisor hasn't answered:** queue as
+   `pending` with `answered_by: null` and wait, or self-resolve with
+   evidence labelled `"impl-self-resolved"`. Do not backfill the advisor
+   label under any justification.
+4. **Bulk pending-sweeps must preserve original `answered_by`.** A task-0
+   decision-queue sweep that moves pending → resolved must not rewrite
+   the `answered_by` field. If the original was `null`, the sweep sets
+   it to `"impl-self-resolved"` with the iteration commit's SHA cited
+   in the `answer` text.
+
+**Detection:** an advisor-session commit that introduces an
+`"answered_by": "advisor"` entry will always appear in git log with
+author `Barrie` AND a commit subject beginning with `chore(advisor):`,
+`chore(decision-queue):` written explicitly by advisor, or equivalent.
+If `"answered_by": "advisor"` appears in a commit whose subject is a
+`feat(...)` or a ralph iteration commit, that is a process breach and
+must be corrected via a `docs(attribution):` follow-up commit.
+
+**Why this rule exists:** Phase 6 DQ #37 (governance_log relocation) was
+self-attributed by an impl-side session under the advisor label and
+committed without advisor review. The refactor stands — invariants hold
+— but was logged as advisor-approved when it was not. This rule is the
+process fix. See `docs(phase-6): correct DQ #37 attribution`.
+
 ## Concurrency
 
 Only one writer at a time. The impl agent writes during ralph
