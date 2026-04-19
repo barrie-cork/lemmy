@@ -132,3 +132,44 @@ Once triage agents return, the advisor writes a concrete PR sequence
 - **Any splits:** **none.** #51 is genuinely docs-only — it edits `question`/`answer` string fields on an already-resolved DQ entry, not schema or active state. Keep with the sweep.
 - **Ordering constraint:** **none between the 5 issues.** One constraint vs. other polish PRs: #52 should pick **Option B** (prose-only carve-out, per issue body's "faster to land and matches how the rule was actually used in Phase 6") — Option A would extend `scripts/brehon/task-hopper.sh`, pulling the sweep out of docs-only scope. If a later polish wave decides on Option A, reopen as a separate code PR.
 - **Parallel-safety vs polish-1:** docs-sweep touches zero files that polish-1 (`#48 #35 #34 #33`) touches. `governance_log::append`, `submit_jury_vote`, `federation_outbox`, `request_appeal`, `admin_assign_jury` are all `.rs` handler sources. Docs-sweep is safe to run in parallel with polish-1 in a separate worktree.
+
+---
+
+## Session save (2026-04-19T17:50Z)
+
+**Status:** 4 of 5 polish-1 commits shipped; validation + e2e tests still TODO.
+
+**Branch:** `polish/critical-bugs` — pushed, tip at `5cb868827`.
+
+### Commits on branch (chronological)
+
+| SHA | Subject | Scope |
+|---|---|---|
+| `a25e6bbe0` | chore(runlog): v0-polish kickoff — Impl1+Impl2 assignments | runlog |
+| `4a406cd74` | chore(runlog): T1 triage findings | runlog |
+| `1bb622e8a` | fix(governance-log): wrap append INSERT+UPDATE in run_transaction | #48(a)+#35 |
+| `93c8922eb` | fix(governance): log case_decided before federation_sanction_sent | #48(b) |
+| `034409128` | fix(governance): appeal window compares closed_at to now | #34 |
+| `5cb868827` | fix(governance): exclude declining juror from replacement pool | #33 |
+
+### NOT yet done (for next session)
+
+- **Validation sweep.** Need to run:
+  1. `cargo check --workspace --features full`
+  2. `cargo clippy --workspace --no-deps --features full -- -D warnings`
+  3. `cargo test --test e2e --no-run -p lemmy_server`
+  4. `cargo test --test e2e -p lemmy_server` (expect 14 passed / 0 failed / 3 ignored)
+- **e2e regression tests.** #34 and #33 fixes need dedicated tests per plan §"PR structure" commit 5:
+  - `appeal_golden_path_after_decide` — decide a case, immediately call `request_appeal`, expect 200
+  - `decline_replacement_does_not_pick_decliner` — assign juror A, A declines, trigger replacement, assert A not in new panel
+- **PR creation.** After validation green, `gh pr create --repo barrie-cork/lemmy --base governance-v0 --head polish/critical-bugs` with body referencing GH #48, #35, #34, #33.
+- **#48(c) deferral note.** The hidden `actor_pseudonym` write in `federation_outbox.rs:159-160` is NOT fixed here — defer to polish-N per plan. Add a comment at the call site clarifying the idempotency invariant.
+
+### Impl2 progress (external)
+
+Impl2 is working `polish/docs-sweep` branch separately (GH #38/#39/#50/#51/#52). No file overlap with Impl1's scope. Check `origin/polish/docs-sweep` when resuming to confirm landing status.
+
+### Open concerns
+
+- **#48(a) behavioural change.** Wrapping `governance_log::append` INSERT+UPDATE in `conn.run_transaction` is load-bearing on the "nested run_transaction becomes SAVEPOINT" semantic. Diesel-async docs confirm this, but the e2e suite is the authoritative check. If `governance_log_hash_chain_holds` or `sanction_notice_round_trip` fails, the tx wrap may be interacting badly with caller-owned tx reborrows.
+- **#34 semantic shift.** The old guard rejected every Decided case. Switching to `closed_at > now()` means existing Decided cases in test fixtures that have `closed_at` stamped by a fixture helper (not `submit_jury_vote`) may now accept where they previously rejected. Any test that relied on "appeal must fail" post-decide is now broken. Audit `tests/e2e.rs` for `request_appeal` and expected-failure assertions.
