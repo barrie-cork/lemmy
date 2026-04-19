@@ -3325,6 +3325,19 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     Url::parse("http://instance-a.test/u/target")?,
   ).await?;
 
+  // Seed the admin's actor_pseudonym row up front. In production this row
+  // is created the first time the admin appears in a governance write
+  // (e.g. by `admin_assign_jury`); this test bypasses the assign-jury path
+  // (lines below seed `JuryAssignment` rows directly), so the row would
+  // not yet exist when `submit_jury_vote` reaches the federation publish.
+  // GH #48 finding 2 turned `federation_outbox::send_local_sanction_notice`
+  // into a strict `get` — missing-row is now a hard error rather than a
+  // silent INSERT — so the fixture must materialise the row here.
+  lemmy_api::governance::actor_pseudonym_helper::get_or_create(
+    &mut context_a.pool(),
+    admin_pid,
+  ).await?;
+
   // Re-load target Person to capture the generated ap_id (which we just set
   // above — but we re-load through the model so the test asserts against
   // the round-tripped DB value, not the in-memory one).

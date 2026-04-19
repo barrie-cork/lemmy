@@ -5,6 +5,11 @@
 //! payload. Every governance write that needs to attribute an action to
 //! an actor MUST call [`get_or_create`] to materialise a stable, opaque
 //! pseudonym and use that instead.
+//!
+//! Call sites that must not allocate (because the row creation would be
+//! an unlogged side effect on a hot governance path) should call [`get`]
+//! and treat `None` as a hard error — see `federation_outbox.rs` for the
+//! canonical example.
 
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, insert_into};
 use diesel_async::RunQueryDsl;
@@ -13,6 +18,24 @@ use lemmy_db_schema_file::{PersonId, schema::actor_pseudonym};
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
 use uuid::Uuid;
+
+/// Return the caller's pseudonym if one already exists for `person_id`,
+/// or `None` if not. Performs no INSERT — use this on governance hot
+/// paths where allocating a pseudonym would be a hidden side effect
+/// without a paired `governance_log` entry (GH #48 finding 2).
+pub async fn get(
+  pool: &mut DbPool<'_>,
+  person_id: PersonId,
+) -> LemmyResult<Option<String>> {
+  let conn = &mut get_conn(pool).await?;
+  let existing = actor_pseudonym::table
+    .filter(actor_pseudonym::person_id.eq(person_id))
+    .select(actor_pseudonym::pseudonym)
+    .first::<String>(conn)
+    .await
+    .optional()?;
+  Ok(existing)
+}
 
 /// Return the caller's pseudonym, inserting a fresh UUIDv4 row on first
 /// use. Idempotent under concurrent insertion: if a racing writer wins
