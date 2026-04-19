@@ -123,6 +123,12 @@ Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENT
 
 ---
 
+## PR review discipline
+
+CodeRabbit Critical (🔴) findings on Brehon PRs are **block-merge, not advisory**. Fix in the same PR, with a regression test in the same commit. Major (🟠) findings are negotiable carry-forward — file a GH issue and link from the retro. Pattern established 3× (PR #4 sanction-scoping, PR #46 #15 dup-federation, PR #46 #19 actor-binding); local advisor + e2e have demonstrated they cannot catch this class of bug. See `feedback_coderabbit_block_merge_critical.md`.
+
+---
+
 ## What NOT to build in v0
 
 Explicitly out of scope (deferred to v1/v2/v3):
