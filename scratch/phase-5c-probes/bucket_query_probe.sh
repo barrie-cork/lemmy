@@ -27,7 +27,6 @@ docker exec -i pg-schema-gen psql -U lemmy -d lemmy <<'SQL'
     (4, 50),    -- bucket "31-80"
     (5, 150),   -- bucket "81-200"
     (6, 500);   -- bucket "200+"
-  SET search_path = probe_62;
 SQL
 
 # Now run the bucket query and assert 5 rows with expected counts.

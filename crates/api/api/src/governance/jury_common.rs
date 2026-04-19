@@ -18,7 +18,8 @@ struct BoolRow {
 
 /// Returns `true` when `a` and `b` share at least one active sponsor
 /// (`surety.revoked_at IS NULL` on both ends). v0 definition is one-hop
-/// per plan §11.4 GOTCHA — two-hop and endorsement-cluster are v1 items.
+/// per `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` §11.4 GOTCHA
+/// — two-hop and endorsement-cluster are v1 items.
 pub(crate) async fn shares_active_sponsor(
   conn: &mut AsyncPgConnection,
   a: PersonId,

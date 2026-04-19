@@ -20,6 +20,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS governance_log_notify_trigger ON governance_log;
+
 CREATE TRIGGER governance_log_notify_trigger
   AFTER INSERT ON governance_log
   FOR EACH ROW

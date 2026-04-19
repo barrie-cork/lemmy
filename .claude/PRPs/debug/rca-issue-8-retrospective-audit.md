@@ -10,7 +10,7 @@
 
 ## Inventory — logs written in the vulnerable window
 
-```
+```bash
 find .claude/ -name "*.log" \
   -newermt "2026-04-18 19:28:03" ! -newermt "2026-04-18 19:58:53"
 ```

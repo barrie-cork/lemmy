@@ -69,7 +69,8 @@ pub struct ReputationSummaryView {
 /// `active_sanctions` is set to `0` here — the caller overwrites it with the
 /// `count_active_sanctions` round-trip per the standard read pattern. This
 /// impl deliberately does NOT carry `can_sponsor` over from the snapshot
-/// per [99 OQ-014] / `scripts/brehon/lint-no-can-sponsor-read.sh`.
+/// per `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` OQ-014
+/// / `scripts/brehon/lint-no-can-sponsor-read.sh`.
 impl From<&ReputationSnapshot> for ReputationSummaryView {
   fn from(snapshot: &ReputationSnapshot) -> Self {
     Self {
