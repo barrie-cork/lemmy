@@ -114,7 +114,7 @@ Task 77 added four entry kinds (`federation_sanction_sent`, `federation_sanction
 
 ## Decision queue (Phase 6)
 
-Eight DQ entries resolved during Phase 6:
+Nine DQ entries resolved during Phase 6:
 
 | ID | From | Answered by | Decision |
 |---|---|---|---|

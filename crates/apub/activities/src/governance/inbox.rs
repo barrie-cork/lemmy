@@ -13,7 +13,8 @@
 //!
 //! ## ADR-006 invariant — advisory-only
 //!
-//! Inbound sanction notices are **never** auto-applied. Per [99 ADR-006],
+//! Inbound sanction notices are **never** auto-applied. Per
+//! [99 ADR-006](../../../../../docs/brehon-law-inspired-network/99-decisions-and-open-questions.md),
 //! a remote instance announcing a sanction does not automatically remove
 //! content or ban actors on the receiving instance — those are local
 //! decisions that must go through the local jury workflow. The receivers

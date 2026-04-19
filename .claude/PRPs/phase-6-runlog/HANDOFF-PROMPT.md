@@ -145,7 +145,7 @@ Use the `Agent` tool with:
 
 Example pseudocode:
 
-```
+```python
 prompt = "Run at maximum effort — deepest reasoning, most thorough exploration. You are continuing a Brehon governance-fork Phase 6 layered-execution plan.\n\n" + read(".claude/PRPs/phase-6-runlog/briefs/agent-a.md")
 Agent(subagent_type="general-purpose", model="opus", description="Agent A — tasks 70+71", prompt=prompt)
 ```
@@ -316,7 +316,7 @@ remembering.
 
 ### Agent A
 
-```
+```python
 Agent(
   subagent_type="general-purpose",
   model="opus",
@@ -327,7 +327,7 @@ Agent(
 
 ### Agent B (after Agent A merged)
 
-```
+```python
 Agent(
   subagent_type="general-purpose",
   model="opus",

@@ -14,7 +14,9 @@ use serde_with::skip_serializing_none;
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 /// An advisory record of an inbound sanction notice received from a remote
-/// instance. Per [99 ADR-006] these are NEVER auto-applied — `local_case_id`
+/// instance. Per
+/// [99 ADR-006](../../../../../docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)
+/// these are NEVER auto-applied — `local_case_id`
 /// stays NULL until an admin opens a corresponding local case. The
 /// `received_at` column is a fork-local extension (DQ-6.1) used by
 /// admin-review queries; the design doc lists `published_at` only.
