@@ -532,7 +532,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
             scope("/admin")
               .route("/assign-jury", post().to(admin_assign_jury))
               .route("/close-case", post().to(admin_close_case))
-              .route("/reputation-stats", post().to(admin_reputation_stats)),
+              .route("/reputation-stats", get().to(admin_reputation_stats)),
           ),
       ),
   );

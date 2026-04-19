@@ -1,4 +1,4 @@
-//! `POST /api/v4/governance/admin/reputation-stats` — admin-only
+//! `GET /api/v4/governance/admin/reputation-stats` — admin-only
 //! cross-population reputation observability.
 //!
 //! Per plan §11.2 + IMPLEMENTATION-PLAN-v0.md line 373. Six round-trips
@@ -22,7 +22,7 @@
 //! 31-80, 81-200, 200+]`.
 
 use crate::governance::config::{ConfigCache, Scope, get_int};
-use actix_web::web::{Data, Json};
+use actix_web::web::{Data, Json, Query};
 use chrono::Utc;
 use diesel::{
   QueryableByName,
@@ -74,7 +74,7 @@ struct FounderRow {
 }
 
 pub async fn admin_reputation_stats(
-  Json(data): Json<AdminReputationStats>,
+  Query(data): Query<AdminReputationStats>,
   context: Data<LemmyContext>,
   local_user_view: LocalUserView,
 ) -> LemmyResult<Json<AdminReputationStatsResponse>> {
@@ -124,7 +124,7 @@ pub async fn admin_reputation_stats(
   let capability_counts = capability_query(conn, community_bind).await?;
 
   // Step 4 — founder-event stats (one round-trip).
-  let founder_event_stats = founder_query(conn).await?;
+  let founder_event_stats = founder_query(conn, community_bind).await?;
 
   Ok(Json(AdminReputationStatsResponse {
     buckets,
@@ -219,16 +219,24 @@ async fn capability_query(
 
 /// Founder-event stats: count of `reputation_event` rows with non-null
 /// `expires_at`, split on whether the expiry is future or past relative
-/// to `now()`.
-async fn founder_query(conn: &mut AsyncPgConnection) -> LemmyResult<FounderEventStats> {
+/// to `now()`. Scoped by `community_id` using `IS NOT DISTINCT FROM` to
+/// match the convention used by `bucket_query` and `capability_query`.
+async fn founder_query(
+  conn: &mut AsyncPgConnection,
+  community_bind: Option<i32>,
+) -> LemmyResult<FounderEventStats> {
   let sql = "\
      SELECT \
        COUNT(*) FILTER (WHERE expires_at > now())::bigint AS active_count, \
        COUNT(*) FILTER (WHERE expires_at <= now())::bigint AS expired_count \
      FROM reputation_event \
-     WHERE expires_at IS NOT NULL";
+     WHERE expires_at IS NOT NULL \
+       AND community_id IS NOT DISTINCT FROM $1";
 
-  let row: FounderRow = sql_query(sql).get_result(conn).await?;
+  let row: FounderRow = sql_query(sql)
+    .bind::<Nullable<diesel::sql_types::Integer>, _>(community_bind)
+    .get_result(conn)
+    .await?;
 
   Ok(FounderEventStats {
     active_count: row.active_count,

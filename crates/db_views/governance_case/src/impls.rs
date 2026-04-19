@@ -213,7 +213,10 @@ pub async fn list_cases_filtered(
       community::name.nullable(),
       moderation_case::target_type,
     ))
-    .order_by(moderation_case::opened_at.desc())
+    .order_by((
+      moderation_case::opened_at.desc(),
+      moderation_case::id.desc(),
+    ))
     .limit(limit)
     .offset(offset)
     .into_boxed();

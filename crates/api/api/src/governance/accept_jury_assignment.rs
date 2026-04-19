@@ -2,6 +2,8 @@
 //! their assignment, transitioning `jury_assignment.status`
 //! Selected → Accepted.
 //!
+//! `CaseStatus` is matched exhaustively per ADR-013 (no `_ =>`).
+//!
 //! v0 conflict checks (per plan §11.4 / IMPLEMENTATION-PLAN-v0.md line 377):
 //!
 //! 1. Caller must have a `jury_assignment` row with `status = Selected`
@@ -31,7 +33,7 @@ use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
 use lemmy_db_schema_file::{
   PersonId,
-  enums::JuryAssignmentStatus,
+  enums::{CaseStatus, JuryAssignmentStatus},
   schema::{jury_assignment, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
@@ -53,15 +55,9 @@ pub async fn accept_jury_assignment(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
-  let data_for_tx = data;
-  let pseudonym_for_tx = caller_pseudonym.clone();
-
   let outcome = conn
     .run_transaction(|conn| {
-      async move {
-        process_accept(conn, caller_id, pseudonym_for_tx, data_for_tx).await
-      }
-      .scope_boxed()
+      async move { process_accept(conn, caller_id, caller_pseudonym, data).await }.scope_boxed()
     })
     .await?;
 
@@ -94,14 +90,30 @@ async fn process_accept(
     .first(conn)
     .await?;
 
-  // 3. Conflict 1: caller is not the case creator (v0 "first reporter"
+  // 3. Guard: accept is only valid while the case is in JurySelection or
+  //    InReview. All other statuses — including EmergencyRemove per ADR-013 —
+  //    return NotFound so callers cannot infer internal state.
+  match case.status {
+    CaseStatus::JurySelection | CaseStatus::InReview => {}
+    CaseStatus::Open
+    | CaseStatus::ThresholdMet
+    | CaseStatus::Decided
+    | CaseStatus::Appealed
+    | CaseStatus::Closed
+    | CaseStatus::EmergencyRemove
+    | CaseStatus::AdminReview => {
+      return Err(LemmyErrorType::NotFound.into());
+    }
+  }
+
+  // 4. Conflict 1: caller is not the case creator (v0 "first reporter"
   //    proxy; mask as 404 per the pseudo-403 convention used across
   //    governance handlers).
   if case.creator_id == Some(caller_id) {
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 4. Conflict 2: caller NOT in target's active-sponsor cluster.
+  // 5. Conflict 2: caller NOT in target's active-sponsor cluster.
   //    Skipped when the case has no person target (Post/Comment-targeted
   //    cases have target_person_id = None).
   if let Some(target_id) = case.target_person_id
@@ -110,7 +122,7 @@ async fn process_accept(
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 5. Flip status → Accepted; stamp responded_at.
+  // 6. Flip status → Accepted; stamp responded_at.
   let now = Utc::now();
   update(
     jury_assignment::table
@@ -124,15 +136,15 @@ async fn process_accept(
   .execute(conn)
   .await?;
 
-  // 6. Audit log.
+  // 7. Audit log.
   governance_log::append(
     &mut (&mut *conn).into(),
     ENTRY_KIND_JURY_ACCEPTED,
     json!({
       "case_id": data.case_id.0,
-      "juror_pseudonym": caller_pseudonym,
+      "juror_pseudonym": &caller_pseudonym,
     }),
-    Some(caller_pseudonym.clone()),
+    Some(caller_pseudonym),
   )
   .await?;
 
