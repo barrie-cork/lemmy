@@ -52,7 +52,7 @@ use crate::protocol::governance::{
 };
 use activitypub_federation::config::Data;
 use diesel::insert_into;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::protocol::governance::{
   sanction_notice::SanctionNoticeProtocol,
@@ -130,11 +130,11 @@ pub async fn receive_remote_sanction_notice(
   let action = object.action;
   let scope = object.scope;
 
-  // Step 2 — write the advisory row. local_case_id stays NULL per ADR-006.
-  // signature carries the outer activity id per DQ-6.2 — the actual HTTP
-  // signature value is consumed by activitypub_federation before
-  // Activity::receive runs and is not exposed to handlers in v0.
-  // TODO(v1): plumb actual HTTP signature through activitypub_federation hook.
+  // Steps 2+3 — write the advisory row and append the hash-chain entry
+  // in one transaction so ADR-006's "exactly two rows per inbound notice"
+  // invariant holds under failure. If the log append errors after the
+  // insert, the whole transaction rolls back and we drop both writes
+  // (caller retries via AP redelivery).
   let form = RemoteSanctionNoticeInsertForm {
     source_instance: source_instance.clone(),
     target_url: target_url.clone(),
@@ -145,10 +145,6 @@ pub async fn receive_remote_sanction_notice(
     signature: activity.id.to_string(),
     local_case_id: None,
   };
-  insert_remote_sanction_notice(&form, context).await?;
-
-  // Step 3 — audit the receipt in the hash-chained governance log. No
-  // local pseudonym for a remote actor; pass None per ADR-015.
   let payload = json!({
     "source_instance": source_instance,
     "target_url": target_url,
@@ -156,13 +152,27 @@ pub async fn receive_remote_sanction_notice(
     "scope": scope,
     "activity_id": activity.id.to_string(),
   });
-  governance_log::append(
-    &mut context.pool(),
-    ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
-    payload,
-    None,
-  )
-  .await?;
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+  conn
+    .run_transaction(|conn| {
+      async move {
+        insert_remote_sanction_notice(&form, conn).await?;
+        // Audit the receipt in the hash-chained governance log. No local
+        // pseudonym for a remote actor; pass None per ADR-015.
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
+          payload,
+          None,
+        )
+        .await?;
+        Ok(())
+      }
+      .scope_boxed()
+    })
+    .await?;
 
   Ok(())
 }
@@ -196,9 +206,10 @@ pub async fn receive_remote_trust_attestation(
   let actor_url = object.actor.inner().to_string();
   let subject_url = object.subject.to_string();
 
-  // Step 2 — write the federation_attestation row. signature carries the
-  // outer activity id per the same DQ-6.2 reasoning as sanction notices.
-  // TODO(v1): plumb actual HTTP signature through activitypub_federation hook.
+  // Steps 2+3 — write the attestation row and append the hash-chain entry
+  // in one transaction so the ADR-006 "exactly two rows" invariant holds
+  // under failure (see `receive_remote_sanction_notice` for the same
+  // rationale).
   let form = FederationAttestationInsertForm {
     actor_url: actor_url.clone(),
     subject_url: subject_url.clone(),
@@ -206,9 +217,6 @@ pub async fn receive_remote_trust_attestation(
     valid_until: object.valid_until,
     signature: activity.id.to_string(),
   };
-  insert_federation_attestation(&form, context).await?;
-
-  // Step 3 — audit the receipt.
   let payload = json!({
     "actor_url": actor_url,
     "subject_url": subject_url,
@@ -216,13 +224,25 @@ pub async fn receive_remote_trust_attestation(
     "valid_until": object.valid_until,
     "activity_id": activity.id.to_string(),
   });
-  governance_log::append(
-    &mut context.pool(),
-    ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED,
-    payload,
-    None,
-  )
-  .await?;
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+  conn
+    .run_transaction(|conn| {
+      async move {
+        insert_federation_attestation(&form, conn).await?;
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED,
+          payload,
+          None,
+        )
+        .await?;
+        Ok(())
+      }
+      .scope_boxed()
+    })
+    .await?;
 
   Ok(())
 }
@@ -274,12 +294,12 @@ fn decode_trust_attestation_object(
 
 /// INSERT one row into `remote_sanction_notice`. Direct diesel insert
 /// (no `Crud` impl exists for this table — see Phase 6 task 71 model).
+/// Takes a caller-provided conn so it can run inside the same transaction
+/// as the subsequent `governance_log::append` call (ADR-006 atomicity).
 async fn insert_remote_sanction_notice(
   form: &RemoteSanctionNoticeInsertForm,
-  context: &Data<LemmyContext>,
+  conn: &mut AsyncPgConnection,
 ) -> LemmyResult<()> {
-  let pool = &mut context.pool();
-  let conn = &mut get_conn(pool).await?;
   insert_into(remote_sanction_notice::table)
     .values(form)
     .execute(conn)
@@ -288,12 +308,12 @@ async fn insert_remote_sanction_notice(
 }
 
 /// INSERT one row into `federation_attestation`. Direct diesel insert.
+/// Takes a caller-provided conn for ADR-006 atomicity (see
+/// [`insert_remote_sanction_notice`]).
 async fn insert_federation_attestation(
   form: &FederationAttestationInsertForm,
-  context: &Data<LemmyContext>,
+  conn: &mut AsyncPgConnection,
 ) -> LemmyResult<()> {
-  let pool = &mut context.pool();
-  let conn = &mut get_conn(pool).await?;
   insert_into(federation_attestation::table)
     .values(form)
     .execute(conn)
