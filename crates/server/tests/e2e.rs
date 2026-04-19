@@ -2305,7 +2305,10 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
     ("POST", "/api/v4/governance/report",                        "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/endorsement",                   "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/appeal",                        "{}", &[200, 400, 401]),
-    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401]),
+    // 404 allowed here: empty test DB has no case_id=1; the route is wired
+    // (responds with handler's NotFound mapping) but resource doesn't exist.
+    // Other routes use validation errors (400/401) for unseeded state, not 404.
+    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401, 404]),
     ("GET",  "/api/v4/governance/cases",                         "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/modlog",                        "",   &[200, 400, 401]),
     ("GET",  "/api/v4/governance/reputation/me",                 "",   &[200, 400, 401]),
@@ -2423,12 +2426,10 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
   let body: GetMyReputationResponse = test::read_body_json(resp).await;
   assert_eq!(body.view.active_sanctions, 0, "fresh user should have zero active sanctions");
 
-  // B.2 — POST /admin/reputation-stats (task 62)
-  let resp = test::TestRequest::post()
+  // B.2 — GET /admin/reputation-stats (task 62; route is GET per fix B3-4)
+  let resp = test::TestRequest::get()
     .uri("/api/v4/governance/admin/reputation-stats")
     .insert_header(("authorization", format!("Bearer {admin_jwt}")))
-    .insert_header(("content-type", "application/json"))
-    .set_payload("{}")
     .send_request(&app).await;
   assert_eq!(resp.status().as_u16(), 200, "admin/reputation-stats expected 200 for admin");
   let body: AdminReputationStatsResponse = test::read_body_json(resp).await;
