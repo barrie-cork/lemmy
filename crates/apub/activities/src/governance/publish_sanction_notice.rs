@@ -63,6 +63,40 @@ impl Activity for PublishSanctionNotice {
     // the `serde::Deserialize` step before `verify` runs, so unrecognised
     // enum variants are rejected before we get here.
     verify_is_public(&self.to, &self.cc)?;
+
+    // Actor binding: the activity signer (whose HTTP key was verified by
+    // activitypub_federation::actix_web::inbox before we got here) MUST
+    // match the actor named in the inner SanctionNotice object. Without
+    // this check, a same-instance attacker can spoof object.actor while
+    // signing the activity as a different principal, impersonating the
+    // named actor as the sanction issuer. Sanction-notice inbox uses
+    // activity.actor for source_instance derivation in v0, but the inner
+    // object.actor is still stored downstream — and v1 enforcement paths
+    // will read object.actor when applying remote sanctions, so the
+    // binding must hold from v0 forward. CodeRabbit PR #46 finding #19.
+    let object_actor = self
+      .object
+      .rest
+      .get("actor")
+      .and_then(serde_json::Value::as_str)
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown("SanctionNotice object missing actor field".into())
+      })?;
+    let object_actor_url = Url::parse(object_actor).map_err(|e| {
+      LemmyErrorType::Unknown(format!(
+        "SanctionNotice object.actor not a valid URL: {e}"
+      ))
+    })?;
+    if self.actor.inner() != &object_actor_url {
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "SanctionNotice actor binding mismatch: activity.actor={} object.actor={}",
+          self.actor.inner(),
+          object_actor_url,
+        ))
+        .into(),
+      );
+    }
     Ok(())
   }
 

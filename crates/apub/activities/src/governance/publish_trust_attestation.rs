@@ -45,6 +45,41 @@ impl Activity for PublishTrustAttestation {
   async fn verify(&self, _context: &Data<Self::DataType>) -> LemmyResult<()> {
     // Trust attestations are instance-wide broadcasts (ADR-014).
     verify_is_public(&self.to, &self.cc)?;
+
+    // Actor binding — see PublishSanctionNotice::verify for the threat
+    // model. Trust attestations are MORE exposed than sanction notices in
+    // v0 because the inbox at
+    // crates/apub/activities/src/governance/inbox.rs:195 stores
+    // object.actor.inner() into federation_attestation.actor_url, which
+    // means a forged object.actor would land in the DB attributing the
+    // attestation to a victim's admin. Without this binding check, an
+    // attacker can sign a Create(TrustAttestation) with their own key
+    // while naming a different actor in object.actor, and the receiving
+    // instance would store the spoofed attribution. CodeRabbit PR #46
+    // finding #19.
+    let object_actor = self
+      .object
+      .rest
+      .get("actor")
+      .and_then(serde_json::Value::as_str)
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown("TrustAttestation object missing actor field".into())
+      })?;
+    let object_actor_url = Url::parse(object_actor).map_err(|e| {
+      LemmyErrorType::Unknown(format!(
+        "TrustAttestation object.actor not a valid URL: {e}"
+      ))
+    })?;
+    if self.actor.inner() != &object_actor_url {
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "TrustAttestation actor binding mismatch: activity.actor={} object.actor={}",
+          self.actor.inner(),
+          object_actor_url,
+        ))
+        .into(),
+      );
+    }
     Ok(())
   }
 

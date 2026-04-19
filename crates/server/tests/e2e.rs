@@ -3617,7 +3617,40 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     "exactly one federation_sanction_sent governance_log entry on A",
   );
 
-  // -- 13. Touch the unused juror locals to keep `_ = jurors` lints happy.
+  // -- 13. Negative path: actor-binding spoofing (CodeRabbit PR #46 #19).
+  // Take the legitimate activity we already verified+received above, mutate
+  // its inner object.actor to point at a *different* actor than the
+  // wrapper's signed actor, and confirm verify rejects it. Also assert
+  // remote_sanction_notice still has exactly 1 row (the original positive
+  // path), proving the rejected activity did NOT land in B's DB.
+  //
+  // This is the regression guard for the impersonation class: without the
+  // actor-binding check in PublishSanctionNotice::verify, an attacker
+  // could sign an activity as actor X while naming actor Y in the inner
+  // object, causing inbox code that reads object.actor downstream
+  // (federation_attestation.actor_url is the documented v0 example, see
+  // inbox.rs:195) to attribute the activity to the spoofed actor.
+  let mut spoofed_data: Value = serde_json::from_value(activity_row.data.clone())?;
+  let spoofed_actor_url = "https://attacker.example/u/eve";
+  spoofed_data["object"]["actor"] = Value::String(spoofed_actor_url.to_string());
+  let spoofed_activity: PublishSanctionNotice = serde_json::from_value(spoofed_data)?;
+  let verify_err = ActivityTrait::verify(&spoofed_activity, &federation_context_b).await;
+  assert!(
+    verify_err.is_err(),
+    "spoofed object.actor must fail verify (CodeRabbit PR #46 #19)",
+  );
+  // Belt-and-braces: confirm DB on B is unchanged. If verify had let the
+  // spoof through, receive would write a second row.
+  let advisory_count_after_spoof: i64 = remote_sanction_notice::table
+    .count()
+    .get_result(&mut async_conn_b)
+    .await?;
+  assert_eq!(
+    advisory_count_after_spoof, 1,
+    "rejected spoofed activity must NOT add a remote_sanction_notice row",
+  );
+
+  // -- 14. Touch the unused juror locals to keep `_ = jurors` lints happy.
   let _ = (jurors, admin_pid, RemoteSanctionNoticeId(advisory.id.0));
 
   Ok(())
