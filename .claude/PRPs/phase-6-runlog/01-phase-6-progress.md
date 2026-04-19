@@ -287,3 +287,23 @@ triggering CodeRabbit re-review.
 5. Push phase-6
 6. PR #46 auto-triggers CodeRabbit re-review on push.
 
+### Impl2 final push (step 3 of merge protocol)
+
+- `2026-04-19 16:12Z` — Cosmetic sweep pushed as `297341c8b` on top of
+  Impl1's `3a42f43c2` marker. Scope: 4 MD040 language hints (agent-c.md:16
+  bash, agent-g.md:16 bash, task-hopper.md:33 bash, plan §77 text). #17
+  `publish_trust_attestation.rs:10` `Object` import declined — worktree
+  was externally reverted, treating as intentional retention.
+- **Impl2 releases phase-6.** Ready for Impl1 steps 4-6 (retro amendment
+  + final push triggers CodeRabbit re-review).
+
+**Final Impl2 SHAs for retro harvest:**
+- `addc0c9ab` chore(privacy): task-hopper.json worktree path scrub (#13)
+- `728659a24` chore(rules): decision-queue attribution pattern (#11)
+- `a7c0a6053` chore(runlog): Impl2 status — intake + scope claim
+- `297341c8b` chore(docs): MD040 fence language hints (#4/#6/#9/#12)
+
+**Impl2 PR-thread actions:**
+- 9 CodeRabbit rebuttals posted (#1/#2/#3/#5/#8/#16/#18×2/#20/#23)
+- GH issue #47 filed for #14 schema invariants — linked rebuttal posted
+
