@@ -19,7 +19,7 @@
       "layer": 3,
       "agent": "agent-d",
       "kind": "cargo_check",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-d-phase6",
+      "worktree": "../brehon-fork-agent-d-phase6",
       "status": "completed",
       "attempts": [
         {
@@ -44,7 +44,7 @@
       "layer": 3,
       "agent": "agent-e",
       "kind": "cargo_check",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-e-phase6",
+      "worktree": "../brehon-fork-agent-e-phase6",
       "status": "completed",
       "attempts": [
         {
@@ -69,7 +69,7 @@
       "layer": 3,
       "agent": "agent-e2",
       "kind": "cargo_check",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-e2-phase6",
+      "worktree": "../brehon-fork-agent-e2-phase6",
       "status": "completed",
       "attempts": [
         {
@@ -94,7 +94,7 @@
       "layer": 4,
       "agent": "agent-f",
       "kind": "cargo_check",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-f-phase6",
+      "worktree": "../brehon-fork-agent-f-phase6",
       "status": "completed",
       "attempts": [
         {
@@ -119,7 +119,7 @@
       "layer": 5,
       "agent": "agent-g",
       "kind": "cargo_test",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-g-phase6",
+      "worktree": "../brehon-fork-agent-g-phase6",
       "status": "completed",
       "attempts": [
         {
