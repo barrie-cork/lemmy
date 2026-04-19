@@ -56,8 +56,9 @@ GitHub issues under `barrie-cork/lemmy` carry current state per item. This file 
 10. **GH #37** — `cargo-test-e2e` workflow silently overrides `rust-toolchain.toml` (ops / risk:low)
     - CI uses stable instead of 1.95. Known workflow bug.
 
-11. **GH #49** — `task-hopper.sh` `TH_ISSUE_URL` env propagation (risk:low)
-    - Already fixed in PR #46 at `9aa1a778a`. **Verify and close without reopening the file.**
+11. ~~**GH #49** — `task-hopper.sh` `TH_ISSUE_URL` env propagation (risk:low)~~
+    - ~~Already fixed in PR #46 at `9aa1a778a`. **Verify and close without reopening the file.**~~
+    - **STRUCK 2026-04-19.** GH #49 was closed `2026-04-19T17:47:00Z` (32 min post PR #46 merge). No action required. Plan count 23 → 22 items.
 
 12. **GH #38 / #39 / #50 / #51 / #52** — minor docs fixes
     - #38 fork-local design-doc citations + broken relative link in Phase 5c docs
@@ -114,9 +115,9 @@ Five PR groupings, chosen to balance CodeRabbit review load against integration 
 | **polish-N topic** | 13–21 | `polish/<topic>` per item | One PR per topic: ts-rs regen, redaction harden, OQ-006 tuning, README, clippy sweep, udeps, elevated-CodeRabbit, renames, DQ #37 layering revisit. Topics are unrelated; don't bundle. |
 | **polish-tag** | 23 | `polish/v0-tag` | After all above ship, cut release commit + tag `v0.0.0`. |
 
-**Items 8, 9, 10, 11 not yet grouped.** Decide at kickoff:
+**Items 8, 9, 10 not yet grouped.** Decide at kickoff:
 - Options: one `polish/ops-misc` PR, or absorb into polish-3 docs if they stay docs-only.
-- Item 11 (#49) is already fixed in PR #46 — just verify and close without code changes.
+- Item 11 (#49) struck above — already closed 2026-04-19.
 
 ## Rules for all polish PRs
 

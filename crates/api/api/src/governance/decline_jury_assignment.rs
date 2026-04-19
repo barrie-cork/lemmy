@@ -126,21 +126,25 @@ async fn process_decline(
   )
   .await?;
 
-  // 5. Build the exclude list: all active assignees on this case. The
-  //    declining juror's row is now Declined so they are naturally
-  //    excluded by the `ne(Declined)` filter; no special-case.
-  let current_assignees: Vec<PersonId> = jury_assignment::table
+  // 5. Build the exclude list: all active assignees on this case PLUS
+  //    the declining juror. Filtering `jury_assignment` by
+  //    `ne(Declined)` excludes the declining juror's row from the
+  //    active-assignee query, so without the explicit push below they
+  //    would remain eligible and `select_eligible_jurors` could pick
+  //    them as their own replacement (GH #33).
+  let mut exclude_person_ids: Vec<PersonId> = jury_assignment::table
     .filter(jury_assignment::case_id.eq(data.case_id))
     .filter(jury_assignment::status.ne(JuryAssignmentStatus::Declined))
     .filter(jury_assignment::status.ne(JuryAssignmentStatus::Expired))
     .select(jury_assignment::person_id)
     .load(conn)
     .await?;
+  exclude_person_ids.push(caller_id);
 
   // 6. Try to pick ONE replacement. `select_eligible_jurors` returns up
   //    to panel_size; we take the head only.
   let replacements =
-    select_eligible_jurors(conn, &case, Some(&current_assignees), &mut cache).await?;
+    select_eligible_jurors(conn, &case, Some(&exclude_person_ids), &mut cache).await?;
   let replacement_id = replacements.into_iter().next();
 
   // 7. If a replacement exists, insert a Selected row + emit a

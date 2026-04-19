@@ -132,10 +132,13 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 ///
 /// Returns `NotFound` if no local admin exists (ADR-010 violation in
 /// production; in tests it means `seed_person` was not called with
-/// `admin = true`). Propagates DB errors and AP-construction errors
-/// from the builder. Any error here triggers `?` propagation up
-/// through `submit_jury_vote::process_vote`, which rolls back the
-/// entire post-decision tx.
+/// `admin = true`), or if the admin's `actor_pseudonym` row has not
+/// yet been allocated (GH #48 finding 2 — test fixtures that exercise
+/// this path on a fresh DB must seed the admin pseudonym up front).
+/// Propagates DB errors and AP-construction errors from the builder.
+/// Any error here triggers `?` propagation up through
+/// `submit_jury_vote::process_vote`, which rolls back the entire
+/// post-decision tx.
 pub async fn send_local_sanction_notice(
   case_id: ModerationCaseId,
   conn: &mut AsyncPgConnection,
@@ -148,16 +151,21 @@ pub async fn send_local_sanction_notice(
   let admin_id = admin_person.id;
   let apub_actor: ApubPerson = admin_person.into();
 
-  // Step 1.5 — derive the admin's pseudonym for the federation_sanction_sent
-  // log entry on the in-flight conn. ADR-015 requires the actor_pseudonym
-  // column to identify the actor that performed the action; the federation
-  // send is performed by the local admin, not by the deciding juror. The
-  // helper insert is idempotent under the `(person_id)` unique constraint
-  // (see actor_pseudonym_helper docs), so executing it inside the outer
-  // tx is safe even if the admin pseudonym row already exists from prior
-  // governance writes.
-  let admin_pseudonym =
-    actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), admin_id).await?;
+  // Step 1.5 — read the admin's pseudonym for the federation_sanction_sent
+  // log entry. ADR-015 requires the actor_pseudonym column to identify
+  // the actor that performed the action; the federation send is performed
+  // by the local admin (ADR-010), not by the deciding juror. We use the
+  // strict `get` (not `get_or_create`) here per GH #48 finding 2: a
+  // hidden INSERT into `actor_pseudonym` would create a governance-
+  // relevant row without a paired `governance_log` entry, breaking the
+  // ADR-008 audit-trail invariant. The admin's pseudonym is established
+  // by the bootstrap path (or by any prior governance write the admin
+  // was attributed to), so by the time this hot path runs, the row must
+  // already exist; missing it is an ADR-010/ADR-015 invariant violation
+  // that should fail loudly rather than silently allocate.
+  let admin_pseudonym = actor_pseudonym_helper::get(&mut context.pool(), admin_id)
+    .await?
+    .ok_or(LemmyErrorType::NotFound)?;
 
   // Step 2 — build the plan on the IN-FLIGHT conn so the build sees
   // the just-inserted `sanction` row from

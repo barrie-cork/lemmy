@@ -2455,7 +2455,14 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
   let target_jwt = mint_jwt(&context, target_lu_id).await?;
 
   // Seed a Decided case for the appeal test + an Open case for list_cases.
+  //
+  // The Decided case needs `closed_at` in the future so that the #34 appeal
+  // window guard (`closed_at > now()`) allows the target to appeal. The
+  // production path (`submit_jury_vote` decided-flip) stamps
+  // `closed_at = decided_at + 7d`; we mirror that here with a direct
+  // UPDATE since `ModerationCaseInsertForm` doesn't carry `closed_at`.
   {
+    use diesel::ExpressionMethods;
     use diesel_async::RunQueryDsl;
     use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
 
@@ -2486,6 +2493,17 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
     };
     diesel::insert_into(moderation_case::table)
       .values(&open_form)
+      .execute(&mut async_conn)
+      .await?;
+
+    // Stamp closed_at in the future on every Decided seeded case so the
+    // #34 appeal window guard admits the appeal. Scope the UPDATE to
+    // status=Decided so it only touches the decided_form row even if
+    // other tests extend this seed later.
+    let future = chrono::Utc::now() + chrono::Duration::days(7);
+    diesel::update(moderation_case::table)
+      .filter(moderation_case::status.eq(CaseStatus::Decided))
+      .set(moderation_case::closed_at.eq(Some(future)))
       .execute(&mut async_conn)
       .await?;
   }
@@ -3325,6 +3343,20 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     Url::parse("http://instance-a.test/u/target")?,
   ).await?;
 
+  // Seed the admin's actor_pseudonym row up front. In production this row
+  // is created the first time the admin appears in a governance write
+  // (e.g. by `admin_assign_jury`); this test bypasses the assign-jury path
+  // (lines below seed `JuryAssignment` rows directly), so the row would
+  // not yet exist when `submit_jury_vote` reaches the federation publish.
+  // GH #48 finding 2 turned `federation_outbox::send_local_sanction_notice`
+  // into a strict `get` — missing-row is now a hard error rather than a
+  // silent INSERT — so the fixture must materialise the row here.
+  lemmy_api::governance::actor_pseudonym_helper::get_or_create(
+    &mut context_a.pool(),
+    admin_pid,
+  ).await
+    .map_err(|e| -> Box<dyn Error> { format!("seed admin pseudonym: {e}").into() })?;
+
   // Re-load target Person to capture the generated ap_id (which we just set
   // above — but we re-load through the model so the test asserts against
   // the round-tripped DB value, not the in-memory one).
@@ -3702,6 +3734,450 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
 
   // -- 14. Touch the unused juror locals to keep `_ = jurors` lints happy.
   let _ = (jurors, admin_pid, RemoteSanctionNoticeId(advisory.id.0));
+
+  Ok(())
+}
+
+// ============================================================================
+// v0-polish — GH #34 regression: appeal allowed inside closed_at window
+// ============================================================================
+//
+// Before the #34 fix, `request_appeal`'s window guard was
+// `if case.closed_at.is_some() { NotFound }` — which rejected every
+// Decided case because `submit_jury_vote` always stamps
+// `closed_at = decided_at + 7d` on Decided-flip. The fix inverts the
+// guard to `within_window = closed_at > now()`, admitting appeals only
+// while the window is actually open. This test seeds a Decided case
+// with `closed_at = now() + 1d`, calls `request_appeal` as the target,
+// and asserts a `RequestAppealResponse` is returned with a fresh
+// `appeal_id`. A parallel assertion covers the expired-window branch by
+// seeding a second case with `closed_at = now() - 1d` and expecting a
+// `NotFound` error.
+
+#[tokio::test(flavor = "multi_thread")]
+async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_common::governance::RequestAppeal;
+  use lemmy_api_crud::governance::request_appeal::request_appeal;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    governance::moderation_case::ModerationCaseInsertForm, instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm}, person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_target(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = LocalUserInsertForm::test_form(person.id);
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  let target_a = seed_target(&context, instance.id, "appeal_target_open").await?;
+  let target_b = seed_target(&context, instance.id, "appeal_target_expired").await?;
+  let target_a_view = LocalUserView::read_person(&mut context.pool(), target_a).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+  let target_b_view = LocalUserView::read_person(&mut context.pool(), target_b).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // Seed two Decided cases: case_a has closed_at in the future (+1d), case_b
+  // has closed_at in the past (-1d). `ModerationCaseInsertForm` doesn't carry
+  // `closed_at`, so we UPDATE after insert — same trick as the seed block in
+  // `all_mvp_endpoints_return_non_404`.
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+  let case_a_form = ModerationCaseInsertForm {
+    community_id: None,
+    creator_id: None,
+    target_type: CaseTargetType::Person,
+    target_post_id: None,
+    target_comment_id: None,
+    target_person_id: Some(target_a),
+    target_community_id: None,
+    target_remote_url: None,
+    reason_code: "probe_open".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Decided,
+    threshold_score: 1,
+  };
+  let case_a: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&case_a_form)
+      .get_result(&mut async_conn)
+      .await?;
+
+  let case_b_form = ModerationCaseInsertForm {
+    target_person_id: Some(target_b),
+    reason_code: "probe_expired".to_string(),
+    ..case_a_form
+  };
+  let case_b: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&case_b_form)
+      .get_result(&mut async_conn)
+      .await?;
+
+  let future = Utc::now() + Duration::days(1);
+  diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_a.id)))
+    .set(moderation_case::closed_at.eq(Some(future)))
+    .execute(&mut async_conn)
+    .await?;
+
+  let past = Utc::now() - Duration::days(1);
+  diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_b.id)))
+    .set(moderation_case::closed_at.eq(Some(past)))
+    .execute(&mut async_conn)
+    .await?;
+
+  // Case A: closed_at in the future → appeal succeeds.
+  let resp_a = request_appeal(
+    Json(RequestAppeal { case_id: case_a.id, reason: "try me".to_string() }),
+    context.clone(),
+    target_a_view,
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("request_appeal (open window): {e}").into() })?
+  .into_inner();
+  assert!(
+    resp_a.appeal_id.0 > 0,
+    "GH #34: appeal with closed_at in future must succeed (appeal_id positive)",
+  );
+  assert_eq!(resp_a.case_id, case_a.id, "response case_id round-trips");
+
+  // Case B: closed_at in the past → appeal fails with NotFound.
+  let resp_b = request_appeal(
+    Json(RequestAppeal { case_id: case_b.id, reason: "expired".to_string() }),
+    context.clone(),
+    target_b_view,
+  )
+  .await;
+  assert!(
+    resp_b.is_err(),
+    "GH #34: appeal with closed_at in past must fail (window expired)",
+  );
+
+  Ok(())
+}
+
+// ============================================================================
+// v0-polish — GH #33 regression: declining juror not picked as own replacement
+// ============================================================================
+//
+// Before the #33 fix, `decline_jury_assignment` flipped the caller's
+// assignment to Declined, then built `exclude_person_ids` from all
+// `jury_assignment` rows where status != Declined && status != Expired.
+// That filter removed the declining juror's own (just-flipped) row from
+// the query, so the caller was eligible to be picked as their own
+// replacement — a quorum-threatening self-selection bug.
+//
+// The fix pushes `caller_id` onto the exclude vec after the query. This
+// test seeds a small pool (5 jurors on the panel + 1 extra eligible),
+// has one juror on the panel decline, and asserts the replacement is
+// the sixth eligible — never the decliner. The JuryAssignment rows on
+// the case after the decline are inspected directly at the DB level
+// (status=Selected ∩ person_id=decliner must be zero).
+
+#[tokio::test(flavor = "multi_thread")]
+async fn declining_juror_not_picked_as_own_replacement() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration, Utc};
+  use diesel::{
+    Connection as _, ExpressionMethods, PgConnection, QueryDsl,
+  };
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    admin_assign_jury::admin_assign_jury,
+    decline_jury_assignment::decline_jury_assignment,
+    reputation_snapshot::run_snapshot_batch,
+  };
+  use lemmy_api_common::governance::{AdminAssignJury, DeclineJuryAssignment};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::moderation_case::ModerationCaseInsertForm,
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{
+      CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus, ReputationDimension,
+    },
+    schema::{jury_assignment, moderation_case, reputation_event},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  // Six eligibles — panel is 5; the 6th is the only viable replacement so
+  // self-exclusion is the load-bearing assertion. If the fix is absent, the
+  // decliner would be one of two candidates in the pool
+  // (decliner + sixth-eligible) and randomness could mask the bug; with 6
+  // eligibles and panel_size=5, the sixth is the unique replacement.
+  let mut eligibles = Vec::new();
+  for i in 0..6 {
+    eligibles.push(seed_person(&context, instance.id, &format!("juror_{i}"), false).await?);
+  }
+  let admin = seed_person(&context, instance.id, "decline_admin", true).await?;
+  let target = seed_person(&context, instance.id, "decline_target", false).await?;
+  let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // Seed reputation so jury_eligible resolves true for everyone.
+  {
+    use lemmy_db_schema::source::governance::reputation_event::ReputationEventInsertForm;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    for &pid in &eligibles {
+      let form = ReputationEventInsertForm {
+        person_id: pid,
+        community_id: None,
+        dimension: ReputationDimension::JuryReliability,
+        delta: 60,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "founder_seed".to_string(),
+        expires_at: Some(Utc::now() + Duration::days(30)),
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(&mut async_conn)
+        .await?;
+    }
+  }
+
+  // Override jury config: zero age requirement; disable fallback so any
+  // failure surfaces loudly.
+  {
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'jury.age_requirement_days', 'int', 0, now())"
+    ).execute(&mut async_conn).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_bool, valid_from) \
+       VALUES ('instance', 'jury.fallback_on_small_pool', 'bool', false, now())"
+    ).execute(&mut async_conn).await?;
+  }
+
+  run_snapshot_batch(&context).await
+    .map_err(|e| -> Box<dyn Error> { format!("run_snapshot_batch: {e}").into() })?;
+
+  // Community for the case (target_person_id case so eligibility filter
+  // excludes the target from the panel).
+  let community_form = CommunityInsertForm::new(
+    instance.id,
+    "declinecomm".to_string(),
+    "Decline Community".to_string(),
+    "decline-pubkey".to_string(),
+  );
+  let _community = Community::create(&mut context.pool(), &community_form).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // Seed a JurySelection case ready for admin_assign_jury.
+  let case_id = {
+    let mut pool = context.pool();
+    let conn = &mut lemmy_diesel_utils::connection::get_conn(&mut pool).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "decline_probe".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Open,
+      threshold_score: 1,
+    };
+    let case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+      diesel::insert_into(moderation_case::table)
+        .values(&form)
+        .get_result(conn)
+        .await?;
+    case.id
+  };
+
+  // Assign jury. 5 eligibles selected; one eligible remains as the unique
+  // replacement candidate.
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("admin_assign_jury: {e}").into() })?
+  .into_inner();
+  assert_eq!(assign_resp.assigned_person_ids.len(), 5, "5 jurors assigned");
+
+  let decliner_id = assign_resp.assigned_person_ids[0];
+  let decliner_view = LocalUserView::read_person(&mut context.pool(), decliner_id).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // Decline.
+  let decline_resp = decline_jury_assignment(
+    Json(DeclineJuryAssignment { case_id, reason: Some("cannot serve".to_string()) }),
+    context.clone(),
+    decliner_view,
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("decline_jury_assignment: {e}").into() })?
+  .into_inner();
+  assert!(decline_resp.declined, "declined=true in response");
+  let replacement_id = decline_resp.replacement_person_id
+    .expect("GH #33: replacement must be selected (6th eligible is available)");
+  assert_ne!(
+    replacement_id, decliner_id,
+    "GH #33: decliner must NOT be picked as own replacement",
+  );
+
+  // DB-level assertions: decliner has exactly one Declined row; the
+  // replacement has a Selected row; no Selected row exists for the
+  // decliner on this case.
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+  let decliner_selected_count: i64 = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case_id))
+    .filter(jury_assignment::person_id.eq(decliner_id))
+    .filter(jury_assignment::status.eq(JuryAssignmentStatus::Selected))
+    .count()
+    .get_result(&mut async_conn)
+    .await?;
+  assert_eq!(
+    decliner_selected_count, 0,
+    "GH #33: no Selected row should exist for the decliner on this case",
+  );
+
+  let replacement_selected_count: i64 = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case_id))
+    .filter(jury_assignment::person_id.eq(replacement_id))
+    .filter(jury_assignment::status.eq(JuryAssignmentStatus::Selected))
+    .count()
+    .get_result(&mut async_conn)
+    .await?;
+  assert_eq!(
+    replacement_selected_count, 1,
+    "replacement must have a Selected row",
+  );
 
   Ok(())
 }
