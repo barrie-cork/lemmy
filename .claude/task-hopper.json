@@ -62,6 +62,31 @@
       "issue_url": null,
       "created_at": "2026-04-19T05:16:32Z",
       "updated_at": "2026-04-19T05:37:23Z"
+    },
+    {
+      "id": "task-75",
+      "label": "inbox.rs + governance_log relocation per DQ-6.6 (a)",
+      "layer": 3,
+      "agent": "agent-e2",
+      "kind": "cargo_check",
+      "worktree": "C:/Users/barri/Developer/brehon-fork-agent-e2-phase6",
+      "status": "in_progress",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T06:45:44Z",
+          "ended_at": null,
+          "result": "in_progress",
+          "commit_sha": null,
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T06:45:44Z",
+      "updated_at": "2026-04-19T06:45:44Z"
     }
   ]
 }

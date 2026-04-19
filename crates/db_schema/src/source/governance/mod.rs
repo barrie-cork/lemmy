@@ -10,6 +10,8 @@ pub mod jury_pool;
 pub mod jury_vote;
 pub mod moderation_case;
 pub mod public_case_log;
+#[cfg(feature = "full")]
+pub mod redaction;
 pub mod remote_sanction_notice;
 pub mod reputation_event;
 pub mod reputation_snapshot;

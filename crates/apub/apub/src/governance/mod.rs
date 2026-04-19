@@ -11,11 +11,17 @@
 //!   both the activity enqueue + governance_log append. Resolves DQ-6.6.
 //! - [`verify`] — shared verification helpers (Agent E, plan task 78).
 //!   Thin wrapper over `activitypub_federation::protocol::verification`.
-//!
-//! `inbox` (plan task 75) is pending DQ-6.6 inbound resolution — see the
-//! plan and `.claude/decision-queue.json` id 36 for the architectural
-//! constraint that pushes the inbound receive body down to
-//! `lemmy_apub_activities` or `lemmy_db_schema`.
+//! - [`inbox`] — re-export of the inbound receivers that live in
+//!   `lemmy_apub_activities::governance::inbox` (Agent E, plan task 75).
+//!   Per advisor decision DQ-6.6-inbound (resolved id 37 in
+//!   `.claude/decision-queue.json`) the inbox bodies live in the
+//!   activities crate so `Activity::receive` can call them; this
+//!   `pub use` provides the consistent
+//!   `lemmy_apub::governance::inbox::receive_remote_*` import path that
+//!   external callers (admin tooling, future v1 apply paths) can use
+//!   without taking a direct dep on `lemmy_apub_activities`.
 
 pub mod outbox;
 pub mod verify;
+
+pub use lemmy_apub_activities::governance::inbox;

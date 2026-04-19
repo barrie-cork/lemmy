@@ -48,12 +48,13 @@ impl Activity for PublishTrustAttestation {
     Ok(())
   }
 
-  async fn receive(self, _context: &Data<Self::DataType>) -> LemmyResult<()> {
-    // STUB ONLY — Agent E (plan task 75) wires this to
-    // `crates/apub/apub/src/governance/inbox.rs::receive_remote_trust_attestation`.
-    //
-    // TODO(task75): wire receive_remote_trust_attestation
-    Ok(())
+  async fn receive(self, context: &Data<Self::DataType>) -> LemmyResult<()> {
+    // Wired by Agent E (plan task 75) to
+    // `crate::governance::inbox::receive_remote_trust_attestation`. See
+    // `crate::governance::inbox` module doc for the dep-graph rationale
+    // that puts the inbox here in `lemmy_apub_activities` rather than
+    // `lemmy_apub` (DQ-6.6-inbound).
+    crate::governance::inbox::receive_remote_trust_attestation(self, context).await
   }
 }
 

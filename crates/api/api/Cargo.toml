@@ -77,8 +77,6 @@ serde_json = { workspace = true }
 diesel = { workspace = true }
 lemmy_diesel_utils = { workspace = true }
 uuid = { workspace = true }
-ed25519-dalek = { workspace = true }
-hex = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }

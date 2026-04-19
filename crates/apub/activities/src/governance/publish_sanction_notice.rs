@@ -66,14 +66,13 @@ impl Activity for PublishSanctionNotice {
     Ok(())
   }
 
-  async fn receive(self, _context: &Data<Self::DataType>) -> LemmyResult<()> {
-    // STUB ONLY — Agent E (plan task 75) wires this to
-    // `crates/apub/apub/src/governance/inbox.rs::receive_remote_sanction_notice`.
-    // The split is intentional: it lets Layer 3 Agents D and E proceed
-    // in parallel without a file conflict on this method body.
-    //
-    // TODO(task75): wire receive_remote_sanction_notice
-    Ok(())
+  async fn receive(self, context: &Data<Self::DataType>) -> LemmyResult<()> {
+    // Wired by Agent E (plan task 75) to
+    // `crate::governance::inbox::receive_remote_sanction_notice`. Inbox
+    // lives in `lemmy_apub_activities` (not `lemmy_apub`) per advisor
+    // decision DQ-6.6-inbound — see `crate::governance::inbox` module
+    // doc for the dep-graph rationale.
+    crate::governance::inbox::receive_remote_sanction_notice(self, context).await
   }
 }
 

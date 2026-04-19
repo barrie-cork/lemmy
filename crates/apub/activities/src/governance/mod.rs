@@ -12,7 +12,14 @@
 //!
 //! See plan §task 73 for the layered execution rationale and ADR-014 for
 //! the fork-only AP type policy.
+//!
+//! The [`inbox`] module hosts the inbound receiver bodies that the
+//! `Activity::receive` impls in `publish_sanction_notice` and
+//! `publish_trust_attestation` delegate to. It lives in this crate (not
+//! in `lemmy_apub`) per advisor decision DQ-6.6-inbound — see the module
+//! doc on `inbox.rs` for the dep-graph rationale.
 
+pub mod inbox;
 pub mod publish_label;
 pub mod publish_sanction_notice;
 pub mod publish_trust_attestation;
