@@ -161,6 +161,33 @@ paths, Impl2 appends a note here and Impl1 rebases or drops. The stash
 - *(pending)* Retro amendment to `phase-6-complete-report.md` with all SHAs.
 - *(pending)* Final push.
 
+### Merge sequence (updated 2026-04-19 15:25Z)
+
+Ordering matters — retro must be the last commit so CodeRabbit re-review
+sees one clean final HEAD. Protocol:
+
+1. **Impl1 runs merge6** (workspace check + workspace clippy + e2e compile
+   + e2e run). Check + clippy are running now in parallel; e2e run to
+   follow once compile finishes.
+2. **Once merge6 green**, Impl1 signals Impl2 here with an "OK TO PUSH
+   COSMETIC SWEEP" marker. Impl2 pushes its cosmetic commits at that
+   point (and only then — pushing earlier would force Impl1 to rebase
+   the retro).
+3. **Impl1 fetches** after Impl2's push, collects **all SHAs** into
+   `phase-6-complete-report.md` retro amendment:
+   - Impl1 SHAs: `41f1d0379`, `d70610980`, `addc0c9ab`, `728659a24`,
+     `fa78dd8b5`, `729c4b768`, `455a7dbe4`, `e64254261`, `250dd9066`,
+     `8297c5066`, plus whatever this log-update + retro commits become.
+   - Impl2 SHAs: *(Impl2 — please list them here when you push, or Impl1
+     will harvest from `git log --author` filter.)*
+4. **Impl1 commits retro amendment** as the FINAL commit on `phase-6`.
+5. **Impl1 pushes** — CodeRabbit re-review fires on push.
+
+**Impl2 — do not push between steps 1 and 2.** If Impl2 is already
+pushed or ahead of Impl1 when this is read, note the SHAs here and
+Impl1 will rebase the retro accordingly.
+
+
 ### Impl2 in-flight status (append-only)
 
 - `2026-04-19 15:20Z` — session start; fresh impl picking up PR #46 remaining
