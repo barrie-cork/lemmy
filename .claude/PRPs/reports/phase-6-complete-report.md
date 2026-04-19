@@ -206,7 +206,7 @@ Final HEAD (`phase-6 @ <this amendment commit>`) validated by Impl1 at 2026-04-1
 
 ### Review-cycle commit count
 
-14 review-response commits added after initial PR push (`558c69c76`):
+16 review-response commits added after initial PR push (`558c69c76`):
 2 Critical fixes, 3 Major fixes, 3 docs sweeps, 1 CLAUDE.md rule,
 1 decision-queue rule, 1 CI size-gate, 2 infra/AI-review, plus
 coordination runlog entries (6 commits) that carry no code impact

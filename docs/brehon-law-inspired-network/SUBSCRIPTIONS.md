@@ -51,6 +51,7 @@ set is (pseudonymised where noted in the payload JSON):
 - `report_created`
 - `threshold_met`
 - `jury_assigned`
+- `panel_assembled`
 - `jury_replacement_selected`
 - `jury_accepted`
 - `jury_declined`
