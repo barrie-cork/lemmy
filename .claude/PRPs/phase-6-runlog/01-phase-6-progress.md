@@ -104,3 +104,42 @@ no-mutations, Watch 5 federation governance_log entries). `cargo check
   was not asked. Revisit during v0-polish week if the layering grates.
 
 See `project_brehon_post_phase6_cleanup.md` for the v0-polish queue.
+
+---
+
+## 2026-04-19 14:58Z — Impl1 CodeRabbit Bucket B coordination
+
+**Two impl sessions active on PR #46 CodeRabbit findings.** Impl1 and Impl2
+need to avoid collisions. Impl1 claims the following findings; Impl2 should
+claim everything else (or note here before starting).
+
+**Impl1 scope (claimed):**
+- #22 — e2e no-auto-apply DB-state asserts on B in `sanction_notice_round_trip`
+- #10 — retro typo "Eight DQ" → "Nine DQ"
+- #21 — `[99 ADR-006]` bare-citation → linked form in `inbox.rs` + `remote_sanction_notice.rs`
+- #7 — HANDOFF-PROMPT.md unlabeled fence blocks
+- Retro amendment (phase-6-complete-report.md) + final push
+
+**Impl1 out-of-scope (Impl2 or carry-forward):**
+- #1 `prp-ralph-stop.sh:51` (defer to v0-polish unless flagged again)
+- #14 `task-hopper.schema.json:147` (v0-polish)
+- #20 `redaction.rs:99` (investigated non-issue, close in retro)
+- All remaining Minor/Trivial markdown-lint findings in `agent-a.md`,
+  `publish_trust_attestation.rs` import, etc. — Impl2 can pick up.
+
+**Impl1 commits this session (most recent first):**
+- `455a7dbe4` fix(tests): no-auto-apply DB-state asserts on B after federation receive (#22)
+- *(pending)* `chore(docs): CodeRabbit docs sweep` — #10 + #21 + #7 as one docs commit
+
+**Impl1 prior commits (previous session, already pushed):**
+- `41f1d0379` #15 idempotency guard (Critical)
+- `d70610980` #19 AP actor-binding (Critical)
+- `addc0c9ab` #13 task-hopper worktree path scrub (user-committed)
+- `728659a24` #11 attribution rule pattern-match generalisation
+- `fa78dd8b5` CLAUDE.md PR-review discipline rule
+- `729c4b768` CI AI-review size gate
+
+**Coordination rule:** if Impl2 has already touched any of Impl1's claimed
+paths, Impl2 appends a note here and Impl1 rebases or drops. The stash
+`bucket-b-wip` has been **dropped** (obsolete — #11 superseded, #13 shipped).
+
