@@ -14,7 +14,7 @@ You are continuing a Brehon governance-fork Phase 6 layered-execution plan. Read
 ## Task-hopper envelope
 
 ```
-scripts/brehon/task-hopper.sh start 74 \
+scripts/brehon/task-hopper.sh start task-74 \
   --agent agent-d --kind cargo_check --layer 3 \
   --label "outbound publisher send_local_sanction_notice" \
   --worktree "$(pwd)"
