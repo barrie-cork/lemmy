@@ -594,16 +594,28 @@ pub enum ReputationDimension {
   EndorsementStrength,
 }
 
-// NOTE: The Rust `AttestationType` enum is intentionally NOT defined in Phase 1.
-// The matching Postgres enum type `attestation_type` IS created in
-// migrations/{ts}_add_governance_enums for forward-compatibility with Phase 6
-// (federation_attestation table), but `diesel print-schema` only emits
-// `sql_types::*` entries for enums that are actually referenced by a table
-// column. Until Phase 6 adds `federation_attestation`, no table references
-// `attestation_type`, so `crate::schema::sql_types::AttestationType` does not
-// exist in the generated schema.rs — and writing a `DbEnum` that points at
-// a nonexistent `sql_types` entry fails to compile. The Rust enum will land
-// in Phase 6 alongside the table and the regenerated schema.rs entry.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::AttestationType"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Kinds of trust/governance attestations the local instance signs and
+/// federates outbound (Phase 6). The Postgres enum `attestation_type` was
+/// added in Phase 1's `add_governance_enums` migration; the matching
+/// `sql_types::AttestationType` and this Rust enum land alongside the
+/// `federation_attestation` table per Phase 6 task 71.
+pub enum AttestationType {
+  #[default]
+  TrustedReporter,
+  JuryEligible,
+  SanctionNotice,
+  QuarantineRecommendation,
+}
 
 // ========================================================================
 // Governance enums (Phase 5a)

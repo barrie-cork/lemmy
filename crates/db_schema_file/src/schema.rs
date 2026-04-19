@@ -10,6 +10,10 @@ pub mod sql_types {
   pub struct AppealStatus;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "attestation_type"))]
+  pub struct AttestationType;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "case_severity"))]
   pub struct CaseSeverity;
 
@@ -386,6 +390,21 @@ diesel::table! {
         instance_id -> Int4,
         published_at -> Timestamptz,
         updated_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::AttestationType;
+
+    federation_attestation (id) {
+        id -> Int4,
+        actor_url -> Text,
+        subject_url -> Text,
+        attestation_type -> AttestationType,
+        valid_until -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        signature -> Text,
     }
 }
 
@@ -1109,6 +1128,25 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::SanctionAction;
+    use super::sql_types::SanctionScope;
+
+    remote_sanction_notice (id) {
+        id -> Int4,
+        source_instance -> Text,
+        target_url -> Text,
+        action -> SanctionAction,
+        scope -> SanctionScope,
+        summary -> Text,
+        published_at -> Timestamptz,
+        signature -> Text,
+        local_case_id -> Nullable<Int4>,
+        received_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     report_combined (id) {
         id -> Int4,
         published_at -> Timestamptz,
@@ -1332,6 +1370,7 @@ diesel::joinable!(public_case_log -> community (community_id));
 diesel::joinable!(public_case_log -> moderation_case (case_id));
 diesel::joinable!(registration_application -> local_user (local_user_id));
 diesel::joinable!(registration_application -> person (admin_id));
+diesel::joinable!(remote_sanction_notice -> moderation_case (local_case_id));
 diesel::joinable!(report_combined -> comment_report (comment_report_id));
 diesel::joinable!(report_combined -> community_report (community_report_id));
 diesel::joinable!(report_combined -> post_report (post_report_id));
@@ -1366,6 +1405,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   email_verification,
   endorsement,
   federation_allowlist,
+  federation_attestation,
   federation_blocklist,
   federation_queue_state,
   instance,
@@ -1402,6 +1442,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   private_message_report,
   public_case_log,
   registration_application,
+  remote_sanction_notice,
   report_combined,
   reputation_event,
   reputation_snapshot,

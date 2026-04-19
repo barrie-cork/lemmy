@@ -44,6 +44,9 @@ migrations/.diesel_lock
 .claude/prp-ralph.state.md
 .claude/worktrees/
 .claude/tmp/
+# Task-hopper lock directory (the JSON itself IS committed — it's the ledger)
+.claude/task-hopper.json.lock/
+.claude/task-hopper.json.tmp.*
 
 # Local environment — never commit secrets
 .env

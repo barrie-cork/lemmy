@@ -48,7 +48,7 @@ if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
 fi
 
 # Get transcript path from hook input
-TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path')
+TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))")
 
 if [[ ! -f "$TRANSCRIPT_PATH" ]]; then
   echo "⚠️  PRP Ralph: Transcript not found" >&2
@@ -58,12 +58,14 @@ fi
 
 # Check for completion promise in last assistant message
 if grep -q '"role":"assistant"' "$TRANSCRIPT_PATH"; then
-  LAST_OUTPUT=$(grep '"role":"assistant"' "$TRANSCRIPT_PATH" | tail -1 | jq -r '
-    .message.content |
-    map(select(.type == "text")) |
-    map(.text) |
-    join("\n")
-  ' 2>/dev/null || echo "")
+  LAST_OUTPUT=$(grep '"role":"assistant"' "$TRANSCRIPT_PATH" | tail -1 | python3 -c "
+import sys, json
+try:
+    msg = json.load(sys.stdin)
+    parts = msg.get('message',{}).get('content',[])
+    print('\n'.join(p.get('text','') for p in parts if p.get('type')=='text'))
+except: pass
+" 2>/dev/null || echo "")
 
   # Check for completion promise
   if echo "$LAST_OUTPUT" | grep -q '<promise>COMPLETE</promise>'; then
@@ -128,13 +130,13 @@ If validations are still failing:
 SYSTEM_MSG="🔄 PRP Ralph iteration $NEXT_ITERATION of $MAX_ITERATIONS | Plan: $PLAN_PATH"
 
 # Output JSON to block exit and feed prompt back
-jq -n \
-  --arg prompt "$PROMPT" \
-  --arg msg "$SYSTEM_MSG" \
-  '{
-    "decision": "block",
-    "reason": $prompt,
-    "systemMessage": $msg
-  }'
+python3 -c "
+import json, sys
+print(json.dumps({
+    'decision': 'block',
+    'reason': sys.argv[1],
+    'systemMessage': sys.argv[2]
+}))
+" "$PROMPT" "$SYSTEM_MSG"
 
 exit 0

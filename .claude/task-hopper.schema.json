@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Brehon task-hopper state",
+  "description": "Per-task execution ledger for parallel-agent phases (e.g. Phase 6). One file, append-only attempts[], mkdir-lock concurrency. See .claude/rules/task-hopper.md for the protocol.",
+  "type": "object",
+  "required": ["schema_version", "phase", "retry_caps", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Bumps if the shape breaks. Always 1 for v0."
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^[0-9]+[a-z]?$",
+      "description": "Phase label (e.g. \"6\", \"5c\")."
+    },
+    "retry_caps": {
+      "type": "object",
+      "required": ["default", "by_kind"],
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Cap used when kind has no specific entry in by_kind."
+        },
+        "by_kind": {
+          "type": "object",
+          "description": "Per-kind overrides. Keys are task kinds (cargo_check, cargo_clippy, cargo_test, migration, agent_brief, other).",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "One entry per task tracked by the hopper. Order is creation order; no rows are ever removed by the helper.",
+      "items": { "$ref": "#/definitions/task" }
+    }
+  },
+  "definitions": {
+    "task": {
+      "type": "object",
+      "required": [
+        "id", "label", "layer", "agent", "kind", "worktree",
+        "status", "attempts", "issue_url", "created_at", "updated_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^task-[a-z0-9-]+$",
+          "description": "Stable id (e.g. \"task-70\"). Matches commit-message convention."
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable; mirrors plan §Step-by-Step Tasks."
+        },
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9,
+          "description": "Plan layer/wave. 0 reserved for smoke tests."
+        },
+        "agent": {
+          "type": "string",
+          "description": "agent-a through agent-g per plan."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["cargo_check", "cargo_clippy", "cargo_test", "migration", "agent_brief", "other"]
+        },
+        "worktree": {
+          "type": "string",
+          "description": "Path of the agent's git worktree (relative or absolute)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "escalated"]
+        },
+        "attempts": {
+          "type": "array",
+          "description": "Append-only. One object per try.",
+          "items": { "$ref": "#/definitions/attempt" }
+        },
+        "issue_url": {
+          "type": ["string", "null"],
+          "description": "Set by escalate after gh issue create. Null while status != escalated."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "required": ["n", "started_at", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-indexed attempt number."
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "ended_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Null while attempt is in-progress; set at retry/complete/escalate time."
+        },
+        "result": {
+          "type": "string",
+          "enum": ["in_progress", "completed", "failed", "abandoned"],
+          "description": "in_progress while running; completed/failed/abandoned when a verb finalises it."
+        },
+        "commit_sha": {
+          "type": ["string", "null"],
+          "description": "Short SHA on success; null otherwise."
+        },
+        "log_path": {
+          "type": ["string", "null"],
+          "description": "Path to captured cargo/validation log."
+        },
+        "session_id": {
+          "type": ["string", "null"],
+          "description": "Claude Code session id. Optional."
+        },
+        "transcript_path": {
+          "type": ["string", "null"],
+          "description": "Transcript path (same convention as prp-ralph-stop.sh). Links escalation issues back to agent context."
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "description": "One-line failure summary on retry/escalate; null on complete."
+        }
+      }
+    }
+  }
+}

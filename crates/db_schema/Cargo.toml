@@ -32,6 +32,9 @@ full = [
   "i-love-jesus",
   "lemmy_db_schema_file/full",
   "lemmy_diesel_utils/full",
+  "ed25519-dalek",
+  "hex",
+  "regex",
 ]
 ts-rs = ["dep:ts-rs"]
 
@@ -55,6 +58,9 @@ ts-rs = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 i-love-jesus = { workspace = true, optional = true }
 derive-new.workspace = true
+ed25519-dalek = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }

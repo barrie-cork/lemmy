@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "phase": "6",
+  "retry_caps": {
+    "default": 3,
+    "by_kind": {
+      "cargo_check": 3,
+      "cargo_clippy": 3,
+      "cargo_test": 2,
+      "migration": 2,
+      "agent_brief": 3,
+      "other": 3
+    }
+  },
+  "tasks": [
+    {
+      "id": "task-74",
+      "label": "outbound publisher send_local_sanction_notice",
+      "layer": 3,
+      "agent": "agent-d",
+      "kind": "cargo_check",
+      "worktree": "../brehon-fork-agent-d-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T05:17:13Z",
+          "ended_at": "2026-04-19T06:28:03Z",
+          "result": "completed",
+          "commit_sha": "8057b9f65",
+          "log_path": ".claude/build-task74-act.log",
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T05:17:13Z",
+      "updated_at": "2026-04-19T06:28:03Z"
+    },
+    {
+      "id": "task-78",
+      "label": "verify.rs signature helper",
+      "layer": 3,
+      "agent": "agent-e",
+      "kind": "cargo_check",
+      "worktree": "../brehon-fork-agent-e-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T05:16:32Z",
+          "ended_at": "2026-04-19T05:37:23Z",
+          "result": "completed",
+          "commit_sha": "8eb803ce9",
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T05:16:32Z",
+      "updated_at": "2026-04-19T05:37:23Z"
+    },
+    {
+      "id": "task-75",
+      "label": "inbox.rs + governance_log relocation per DQ-6.6 (a)",
+      "layer": 3,
+      "agent": "agent-e2",
+      "kind": "cargo_check",
+      "worktree": "../brehon-fork-agent-e2-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T06:45:44Z",
+          "ended_at": "2026-04-19T08:00:00Z",
+          "result": "completed",
+          "commit_sha": "c7f57bf0f",
+          "log_path": ".claude/build-task75-workspace-final.log",
+          "session_id": null,
+          "transcript_path": null,
+          "reason": "advisor-finalised after agent stopped before commit step (workspace check + clippy both green)"
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T06:45:44Z",
+      "updated_at": "2026-04-19T08:00:00Z"
+    },
+    {
+      "id": "task-76",
+      "label": "wire submit_jury_vote to federation publish + orchestrator wrapper",
+      "layer": 4,
+      "agent": "agent-f",
+      "kind": "cargo_check",
+      "worktree": "../brehon-fork-agent-f-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T08:07:21Z",
+          "ended_at": "2026-04-19T10:00:39Z",
+          "result": "completed",
+          "commit_sha": "43c3c4780",
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T08:07:21Z",
+      "updated_at": "2026-04-19T10:00:39Z"
+    },
+    {
+      "id": "task-77",
+      "label": "sanction_notice_round_trip two-DB e2e",
+      "layer": 5,
+      "agent": "agent-g",
+      "kind": "cargo_test",
+      "worktree": "../brehon-fork-agent-g-phase6",
+      "status": "completed",
+      "attempts": [
+        {
+          "n": 1,
+          "started_at": "2026-04-19T10:10:40Z",
+          "ended_at": "2026-04-19T12:21:42Z",
+          "result": "completed",
+          "commit_sha": "3db4668ac",
+          "log_path": null,
+          "session_id": null,
+          "transcript_path": null,
+          "reason": null
+        }
+      ],
+      "issue_url": null,
+      "created_at": "2026-04-19T10:10:40Z",
+      "updated_at": "2026-04-19T12:21:42Z"
+    }
+  ]
+}
