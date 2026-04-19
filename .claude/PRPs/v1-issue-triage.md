@@ -26,7 +26,7 @@ Note: #19 appears in two rows because it is a single-file isolated CodeRabbit fi
 
 **Recommended first batch the user can hand off this week (highest confidence Bucket A):**
 
-1. **Batch CR-MECH** — issues #20, #21, #22, #23, #25, #27, #28 (7 issues) — all single-file mechanical CodeRabbit follow-ups, zero Phase 6 file overlap, total expected effort ~half day. PR title: `chore(v1-cleanup): mechanical CR follow-ups from PR #10`.
+1. **Batch CR-MECH** — issues #20, #21, #22, #23, #25, #27 (6 issues) — all single-file mechanical CodeRabbit follow-ups, zero Phase 6 file overlap, total expected effort ~half day. PR title: `chore(v1-cleanup): mechanical CR follow-ups from PR #10`. (Note: #28 is a smoke-probe shell-script fix and lives in Batch CR-PROBES below, not here — earlier drafts double-assigned it; sole owner is CR-PROBES.)
 2. **Batch CR-PROBES** — issues #26, #28 (the two `actix_smoke_probe.sh` cross-platform/AWK-state-machine fixes plus the `notify_smoke_probe.sh` zero-notify guard). All under `scratch/phase-5c-probes/`, zero crate overlap. PR title: `chore(probes): cross-platform + AWK-robustness for phase-5c smoke probes`.
 3. **Batch CR-DB-INDEX** — issue #24 alone (new migration adding partial index on `surety(sponsored_id) WHERE revoked_at IS NULL`). Migration timestamp must be `> 2026-04-20-000100-0000` (latest existing) but **also strictly different from any timestamp Phase 6 task 70 will pick** — Phase 6 uses `> 2026-04-20-000000-0000` per its plan §11 task 70. Coordinate timestamp choice with advisor (use `2026-04-21-...` or later to give Phase 6 priority on `2026-04-20-...`).
 

@@ -517,11 +517,11 @@ Per OQ-018 lean ("only instance-admin + 24h delay" for rule-set version changes)
 | `add_rule_set_versions` | `rule_set_version` table; `moderation_case.rule_set_version_id` column | First v1 milestone |
 | `add_sponsor_allowlist` | `sponsor_allowlist` table (per OQ-020 `'allowlist'` strategy) | v1.x once strategy is needed |
 | `add_case_applied_config_snapshot` | `moderation_case.applied_config_snapshot` JSONB column | First v1 milestone (supports `requires_re_jury` grandfathering) |
-| `seed_v1_config_keys` | INSERT 28 new v1 keys into `governance_config` | First v1 milestone |
+| `seed_v1_config_keys` | INSERT 27 new v1 keys into `governance_config` (excludes `rule_set.active_version_id` per v1-AD-a §4.1 absence-of-row decision) | First v1 milestone |
 
 All four migrations are idempotent; each `up.sql` uses `ON CONFLICT DO NOTHING` for INSERTs and `IF NOT EXISTS` for CREATE statements (matching the v0 patterns).
 
-### 8.3 Initial seed (28 new keys)
+### 8.3 Initial seed (27 new keys; `rule_set.active_version_id` deliberately un-seeded)
 
 Single `INSERT … ON CONFLICT (scope, key, valid_from) DO NOTHING` per the v0 pattern (`migrations/2026-04-18-000000-0000_add_governance_config/up.sql:78`). Defaults from §5.2.
 
@@ -540,7 +540,7 @@ Single `INSERT … ON CONFLICT (scope, key, valid_from) DO NOTHING` per the v0 p
 ### 8.5 Backwards compatibility
 
 - Hardcoded `DEFAULT_*` consts in `crates/api/api/src/governance/config.rs` remain as the **third-tier fallback** if a `governance_config` row is missing — already documented and tested (`every_seeded_key_has_const_fallback`)
-- v1 adds new `DEFAULT_*` consts for the 28 new keys; the parity test is updated to expect 62 not 34
+- v1 adds new `DEFAULT_*` consts for the 27 new keys; the parity test becomes parametric — `SEEDED_KEYS_WITH_CONSTS.len() == EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD` (34 + 27 = 61 post-v1-AD-a merge; further sub-PRDs contribute their own `EXPECTED_SEED_COUNT_V1_*` consts per v1-AD-a §19)
 - v0 callers reading config via `get_int`/`get_float`/`get_bool`/`get_text` keep working unchanged
 - v0's `admin_assign_jury` already reads `jury.panel_size` and `jury.fallback_on_small_pool` from config — no code change for the panel-size bump from 5 to 7 beyond the seed value
 

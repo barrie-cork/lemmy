@@ -138,7 +138,7 @@
       "resolved_at": "2026-04-19T14:55:00Z",
       "edit_scope": {
         "federation-inbound": "Insert new §8.0 'Dependencies' subsection before §8.1: Phase 6 merge as hard gate, explicit preconditions list (tables exist, enum types exist, specific columns assumed per §15.2 carry-forwards, Phase 6 entry_kind consts present, source_instance is TEXT not FK). §8.2 SQL: prepend DO block checking federation_attestation table exists and remote_sanction_notice.received_at column exists; RAISE EXCEPTION otherwise. §15.2 DQ-6.1/DQ-6.2 paragraphs: rewrite to reference §8.0 as canonical preconditions list; prescriptive tone. Rename §8 heading to 'Dependencies, database & migration changes'. §1 frontmatter scheduling line: 'Hard-gated on Phase 6 PR merge; no implementation before gate satisfied. Plan-level review can proceed in parallel.' Add §16 Resolutions applied entry.",
-        "admin-dashboard": "§10.1 cross-references: add one-line note under federation-inbound consumer row: 'depends on Phase 6 merge - see v1-federation-inbound-v1.prd.md §8.0 for hard-gate conditions.'"
+        "admin-dashboard": "§10.1 cross-references: add one-line note under federation-inbound consumer row: 'depends on Phase 6 merge - see v1-federation-inbound.prd.md §8.0 for hard-gate conditions.'"
       }
     },
     {

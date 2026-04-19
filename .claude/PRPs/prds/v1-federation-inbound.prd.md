@@ -206,7 +206,7 @@ pub enum SharedInboxActivities {
 
 A thin **inbound wrapper** invoked from each governance `Activity::receive` impl, layered as:
 
-```
+```text
 shared_inbox HTTP entry
     │
     ├─ activitypub_federation: HTTP signature verify (Lemmy code; v1 unchanged)
@@ -259,7 +259,7 @@ Three new REST endpoints under `/api/v4/governance/admin/federation/*`. Authz: i
 Paginated list of advisory inbound rows across all three types.
 
 Request:
-```
+```http
 GET /api/v4/governance/admin/federation/inbox?type=sanction_notice&peer=peer.example&trust_level=untrusted_receive&age_days=7&page=1&limit=50
 ```
 
@@ -592,7 +592,7 @@ Newtypes in `crates/db_schema/src/newtypes.rs`: `FederationPeerId(pub i32)` (jus
 
 ### 9.1 Module layout (extending Phase 6's `crates/apub/apub/src/governance/`)
 
-```
+```text
 crates/apub/apub/src/governance/
 ├── mod.rs                  (Phase 6; re-export wiring)
 ├── inbox.rs                (Phase 6: receive_remote_*; v1 ADDS: wrap_governance_inbound, peer-trust + rate-limit + replay helpers)
@@ -603,7 +603,7 @@ crates/apub/apub/src/governance/
 
 The 3 admin endpoints are NOT in `crates/apub/`; they're standard governance handlers in `crates/api/api/src/governance/federation_inbox/`:
 
-```
+```text
 crates/api/api/src/governance/federation_inbox/
 ├── mod.rs
 ├── list_inbox.rs
@@ -820,7 +820,7 @@ v1 should append the following rows when this PRD lands:
 
 Recommended fork-local lint patterns (in `.claude/rules/` or similar) to prevent future drift:
 
-```
+```bash
 # No-auto-apply guard
 rg -A 5 "RemoteSanctionNotice::|RemoteModerationLabel::|FederationAttestation::" crates/api/api/ crates/api/api_crud/
 # Look for any insert with local_case_id = Some(_) NOT in the cross_link.rs handler
@@ -901,7 +901,7 @@ rg "receive_remote_(sanction_notice|trust_attestation|moderation_label)" crates/
 |---|---|
 | `SharedInboxActivities` enum with three governance variants (task 73) | v1 wraps the `Activity::receive` impls; does not re-route |
 | `receive_remote_sanction_notice`, `receive_remote_trust_attestation` (task 75) | v1 calls these from the wrapper unchanged |
-| `governance_log::append` const strings `federation_sanction_received`, `federation_attestation_received` (task 75) | v1 keeps these; adds `federation_label_received`, `federation_inbound_blocked`, `federation_inbound_dropped_*`, `federation_inbox_cross_linked`, `federation_inbox_dismissed`, `federation_peer_trust_changed`, `federation_inbound_storage_cap_evicted` |
+| `governance_log::append` const strings `federation_sanction_received`, `federation_attestation_received` (task 75) | v1 keeps these; adds `federation_label_received`, `federation_inbound_blocked`, `federation_inbound_dropped_*`, `federation_inbound_cross_linked`, `federation_inbound_dismissed`, `federation_peer_trust_changed`, `federation_inbound_storage_cap_evicted`. **Canonical prefix for all new governance-log `entry_kind` strings is `federation_inbound_*`** — matches §6.1 (cross-link) and §6.2 (dismiss). The `federation_inbox_*` prefix in this PRD is reserved for code identifiers (functions `federation_inbox_check_*`, tables `federation_inbox_dropped_log` / `federation_inbox_nonce`, enum `federation_inbox_admin_action_enum`) and must NOT be used as an `entry_kind` string literal. |
 | `RemoteSanctionNotice`, `FederationAttestation` Diesel models with insert forms (task 71) | v1 extends with new columns + UpdateForm |
 | `ApubModerationLabel` AP object + protocol struct (task 72) | v1 implements the receive function (Phase 6 left it stubbed) |
 | HTTP signature verification via `activitypub_federation` (Lemmy code, trusted as-is per ADR-012) | v1 unchanged |

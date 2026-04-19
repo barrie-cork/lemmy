@@ -243,7 +243,7 @@ All five fixes ship in the same v1 release window so the v1 reputation API stabi
 
 ## 7. Cross-Cutting Impact
 
-- [x] **Hash-chain governance log touched?** YES — five new `ENTRY_KIND_*` constants added to `crates/api/api/src/governance/governance_log.rs`: `ENTRY_KIND_PARTICIPATION_CRON_TICK`, `ENTRY_KIND_VOTE_OUTCOME_RECORDED`, `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED`, `ENTRY_KIND_ROLLUP_RECOMPUTED`, `ENTRY_KIND_DECAY_KNOB_CHANGED`. Zero migration per `governance_log.entry_kind` being TEXT.
+- [x] **Hash-chain governance log touched?** YES — **seven** new `ENTRY_KIND_*` constants added to `crates/api/api/src/governance/governance_log.rs` (defined in `crates/db_schema/src/source/governance/governance_log.rs` post-Phase-6 per DQ-6.6, re-exported via the api shim): `ENTRY_KIND_PARTICIPATION_CRON_TICK`, `ENTRY_KIND_VOTE_OUTCOME_RECORDED`, `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED`, `ENTRY_KIND_ROLLUP_RECOMPUTED`, `ENTRY_KIND_DECAY_KNOB_CHANGED`, `ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED` (§10 allowlist add), `ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED` (§10 allowlist remove). Zero migration per `governance_log.entry_kind` being TEXT. The allowlist pair covers the admin-owned `sponsor_allowlist` table introduced in §7 schema additions (this PRD owns them because the table is declared here; v1-AD-b consumes them via the admin-config write path).
 - [x] **`actor_pseudonym` table or redaction service touched?** YES (additive) — every cron emit logs via `actor_pseudonym`. Cron-batch entries use a synthetic `system` pseudonym (new addition; reserved value, never collides with a real person's pseudonym). Rollup writes log under the rolled-up person's pseudonym.
 - [x] **`CaseStatus::EmergencyRemove` affected?** YES — evidence-quality bad-faith path requires admin to flag an `EmergencyRemove` original report. New endpoint `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith` (instance-admin only) writes a single `reputation_event` row + governance_log entry. ADR-013 admin-driven posture preserved.
 - [x] **AGPLv3 notice / source disclosure affected?** None. No new external dependencies.
@@ -396,7 +396,7 @@ Design-doc anchors:
 
 ---
 
-## 14. Resolutions applied (2026-04-19)
+## 15. Resolutions applied (2026-04-19)
 
 Cross-PRD coherence-audit edits applied during v1-PRD edit pass (see `.claude/PRPs/v1-planning-queue.json`):
 

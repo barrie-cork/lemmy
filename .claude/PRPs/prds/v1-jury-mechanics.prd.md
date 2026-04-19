@@ -114,7 +114,7 @@ Translated to v1 jury mechanics:
   - `geographic_diversity_preferred` (ON-effort by default; soft constraint).
   - `no_recent_juror_repeat` (ON by default; default cooldown 7 days, configurable).
 - Appeal jury — different + larger + original-jurors-excluded + higher-threshold-tier.
-- Original-reporter appeal-rights for `NoAction` / `Label` decisions (issue #11, scoped per OQ-V1-JM-06).
+- Original-reporter appeal-rights for `JuryDecision::NoAction` / `JuryDecision::AdvisoryLabel` decisions (issue #11, scoped per OQ-V1-JM-06). **Terminology note:** `AdvisoryLabel` is the `JuryDecision` enum variant (see `crates/db_schema_file/src/enums.rs:502`); `Label` is the `SanctionAction` it maps to (see `crates/api/api/src/governance/submit_jury_vote.rs:441`). Throughout this PRD, `AdvisoryLabel` refers to the decision; `Label` refers to the downstream sanction action.
 - Bounded appeal window (issue #15) with explicit `appeal_window_expires_at` column.
 - Re-jury path for `Appealed` cases (issue #14) — admin-triggered with default auto-select-on-appeal-acceptance.
 - Per-community concurrent-cap override + optional per-juror cap.
@@ -188,7 +188,7 @@ These defaults map directly onto [01 §5.6](../../docs/brehon-law-inspired-netwo
 
 Every tier × parameter combination is a config key in `governance_config`. The dotted namespace per OQ-026 / Phase 5a precedent:
 
-```
+```text
 jury.panel_size.regular.minor       (int, default 5)
 jury.panel_size.regular.moderate    (int, default 5)
 jury.panel_size.regular.severe      (int, default 7)
@@ -289,7 +289,7 @@ Each constraint is a per-community boolean toggle in `governance_config`. Select
 
 Extends `select_eligible_jurors` in `crates/api/api/src/governance/admin_assign_jury.rs:215-274`. The current strict-eligibility query at `:300-338` gets a two-phase wrapper. **Each constraint applies at a specific phase** (pool-build filter vs. panel-sample check vs. soft score) — the phase determines the relaxation semantics, so the distinction is load-bearing.
 
-```
+```text
 PHASE 1 — pool build (filter)
   build base eligible pool (existing v0 reputation gate + concurrent cap)
     ↓
@@ -525,7 +525,7 @@ These are TEXT additions only — no schema migration needed because `governance
 
 **9-step pseudocode** (user-provided 2026-04-19, B6 resolution):
 
-```
+```text
 submit_jury_vote(vote, context):
   1. Load case row (FOR UPDATE per v0 concurrency guard).
   2. Validate juror is assigned + hasn't already voted + case is in InReview.

@@ -92,7 +92,7 @@ pub enum CaseStatus {
 
 ### 3.2 New lifecycle
 
-```
+```text
 ... existing Phase 4 lifecycle through Decided ...
     │
     ▼
@@ -296,6 +296,8 @@ scheduler.every(CTimeUnits::minutes(5)).run(move || {
 
 `SPONSOR_LIABILITY_GRACE_RUNNING: AtomicBool` + `GraceCheckRunningGuard: Drop` follow the `REPUTATION_SNAPSHOT_RUNNING` / `RunningGuard` pattern from `scheduled_tasks.rs:65-79`.
 
+**Scheduler latency bound.** The 5-minute tick interval means a case whose `grace_expires_at` falls at 00:00:01 may not transition to `SponsorLiabilityFired`/`SponsorLiabilityEscaped` until as late as 00:05:00 — worst-case **~4m 59s** delay. This is well inside the grace-window scale (24h minor / 72h moderate / 168h severe), so it does not affect procedural fairness, but user-facing surfaces that display `grace_expires_at` must document "expires at X" as "will be processed within ≤5 min after X" rather than "fires at exactly X". The `BREHON_DISABLE_GRACE_CHECK_JOB` env toggle (per §6.4) disables the scheduler entirely for test environments.
+
 ### 6.2 `run_grace_check_batch` semantics
 
 In `crates/api/api/src/governance/sponsor_liability_grace.rs` (new module):
@@ -444,6 +446,8 @@ WHERE status = 'Decided'
 
 The 24-hour minor-default grace gives sponsors of mid-flight cases a chance to escape liability — most lenient possible interpretation of the v0→v1 transition.
 
+**Performance note.** The backfill UPDATE uses three nested `EXISTS` subqueries (`surety`, `sanction`, `reputation_event`). The `decided_at > now() - INTERVAL '24 hours'` filter bounds the driving set tightly — in any realistic deployment this is at most a few hundred rows — but implementers should still run `EXPLAIN (ANALYZE, BUFFERS)` against a production-sized staging copy before deploy. If the staging EXPLAIN shows a sequential scan on `moderation_case` or >1s of runtime, rewrite as a `JOIN` form (`LEFT JOIN reputation_event re ON re.source_case_id = mc.id AND re.reason = 'sponsor_liability_applied'` + `WHERE re.id IS NULL`) and add a batch-size `LIMIT` with a repeat-until-empty wrapper. The logic is correct as-written — the three EXISTS guards are load-bearing (surety presence, sanction presence, no-prior-fire) — but the shape can be optimised without semantic drift.
+
 ### 8.5 Migration ordering
 
 Single migration file: `migrations/{ts}_add_sponsor_liability_grace_window/`. Combines:
@@ -553,7 +557,7 @@ Per §6.1 — additions to `crates/routes/src/utils/scheduled_tasks.rs`.
 | Grace-check batch size | `job.grace_check_batch_size` | 100 | 1–10000 | No (instance) | §6.4 |
 | Staleness alert multiplier | `job.grace_check_staleness_alert_multiplier` | 2.0 | 1.0–10.0 | No (instance) | §6.4 |
 
-**Total new config keys:** 12. All seeded in the v1 migration via the same `ON CONFLICT DO NOTHING` idempotent-seed pattern from Phase 5a.
+**Total new config keys:** 13 (10 `liability.*` + 3 `job.grace_check_*`). All seeded in the v1 migration via the same `ON CONFLICT DO NOTHING` idempotent-seed pattern from Phase 5a.
 
 ---
 
@@ -771,7 +775,7 @@ Cross-PRD coherence-audit edits applied during v1-PRD edit pass (see `.claude/PR
 - **§15 implementation-phase feature-flag illustration** updated to use `feature.*` namespace (from B3).
 - **admin-dashboard-v1 §3.1 + §5.2** updated separately to reflect these 10 owned keys (see admin-dashboard-v1 §11 Resolutions B4 row).
 
-Total new config keys in this PRD: **12** (10 sponsor-liability + 2 scheduler-job; unchanged; namespace flattened).
+Total new config keys in this PRD: **13** (10 `liability.*` + 3 `job.grace_check_*`; namespace flattened from the pre-B4 draft's `sponsor.liability.*` / `cron.*` / `job.*` split).
 
 ---
 

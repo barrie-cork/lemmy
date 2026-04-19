@@ -83,7 +83,7 @@ Per-sub-phase merge discipline: v1-AD-a ships as its own PR `phase-v1-AD-a` → 
 | Crates affected | `db_schema_file` (schema.rs hand-edit), `db_schema` (model/InsertForm), `api` (config.rs + governance_log.rs), `migrations/` (4 new) |
 | v0 step | v1 post-MVP per [ADR-010](../../../docs/brehon-law-inspired-network/99-decisions-and-open-questions.md) — keystone sub-phase |
 | Dependencies | governance-v0 HEAD `3bbf419da`; no Phase 6 dependency (verified in PRD §8.2 migration list) |
-| Estimated tasks | **7** |
+| Estimated tasks | **9 implementation tasks + pre-flight Task 0** (10 total; Tasks 0–9 enumerated in §13) |
 | Sub-phase target branch | `phase-v1-AD-a` branched from `governance-v0` |
 | PR target | `governance-v0` (per `.claude/rules/phase-branch.md`) |
 | Closes | GH issue #41 (entry-kind registry) as a side-effect |
@@ -97,7 +97,7 @@ The parent PRD's 8 HTTP routes + dashboard aggregate + SSE + askama pages exceed
 
 | Sub-phase | Scope | Task count | Blocks |
 |---|---|---|---|
-| **v1-AD-a** (this plan) | 4 migrations + `ConfigKeyMetadata` registry + 2 new ENTRY_KIND consts + entry-kind registry doc | 7 | v1-AD-b, c, d |
+| **v1-AD-a** (this plan) | 4 migrations + `ConfigKeyMetadata` registry + 2 new ENTRY_KIND consts + entry-kind registry doc | 9 (+ Task 0 pre-flight gate) | v1-AD-b, c, d |
 | v1-AD-b (future) | `POST/GET /admin/config` + `GET /admin/config/audit` + capability checks + dry-run impact computation + per-key type validation | 8-9 | v1-AD-e |
 | v1-AD-c (future) | `rule_set_version` routes + `moderation_case.rule_set_version_id` wire-up in `submit_jury_vote` | 4-5 | — |
 | v1-AD-d (future) | `GET /admin/dashboard` aggregate + `GET /admin/audit/stream` SSE | 3-4 | depends on OQ-V1-AD-02 |
@@ -445,7 +445,7 @@ flag it. Verify the existing shim preserves alphabetical order before appending
 | `.claude/rules/governance-log-entry-kind-registry.md` | CREATE | Initialise registry per advisor directive #2; close GH #41 |
 | `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` | UPDATE | Open OQ-V1-AD-01/02/03 (leans only; no resolution) |
 
-**Total: 17 files changed (4 NEW migration dirs × 2 files = 8 migration files, 4 NEW Rust files, 5 UPDATED Rust files, 1 NEW rules file, 1 UPDATED design doc).**
+**Total: 17 files changed (4 NEW migration dirs × 2 files = 8 migration files; 2 NEW Rust files — `rule_set_version.rs`, `sponsor_allowlist.rs`; 5 UPDATED Rust files — `schema.rs`, `mod.rs`, `newtypes.rs`, `config.rs`, `governance_log.rs`; 1 NEW rules file; 1 UPDATED design doc). 8 + 2 + 5 + 1 + 1 = 17.**
 
 ---
 
@@ -1180,7 +1180,7 @@ echo "all PM hooks present"
 - [ ] `rule_set.active_version_id` is NOT seeded, NOT in `SEEDED_KEYS_WITH_CONSTS`, NOT in `CONFIG_KEY_METADATA`, NOT in `const_default_int` (per advisor edit #2 — absence-of-row IS the "no active version" signal)
 - [ ] `ENTRY_KIND_ADMIN_CONFIG_CHANGED == "admin_config_changed"` — byte-identical to shell-script emission at `scripts/brehon/admin-config-write.sh:148`
 - [ ] `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED == "admin_config_change_denied"`
-- [ ] `.claude/rules/governance-log-entry-kind-registry.md` exists and lists 21 populated kinds (19 v0 + 2 v1-AD) + Phase 6 pending section + 4 reserved sections for future v1 PRDs (7 sections + acceptance = ≥8 `## ` headings)
+- [ ] `.claude/rules/governance-log-entry-kind-registry.md` exists and its populated-kind total equals the current `ENTRY_KIND_*` literal count in `crates/db_schema/src/source/governance/governance_log.rs` (parametric by merge state — at `governance-v0` @ `5ce5358fc` this is **25** = 19 v0 + 4 Phase 6 + 2 v1-AD). Registry includes a Phase 6 section (4 kinds, merged) + 4 reserved sections for future v1 PRDs (7 sections + acceptance = ≥8 `## ` headings). Exact total is parametric, not pinned to a literal.
 - [ ] Registry file section structure matches GH #41 "Proposed deliverable" enumeration byte-for-byte (advisor edit #3)
 - [ ] GH #41 closeable with "landed at `.claude/rules/governance-log-entry-kind-registry.md` in v1-AD-a at `<commit>`" comment
 - [ ] OQ-V1-AD-01/02/03 opened in 99-decisions-and-open-questions.md (leans documented, no resolution)
@@ -1267,7 +1267,7 @@ These are planning scaffolds only. Each requires its own `/prp-plan` run against
 - `POST /api/v4/governance/admin/rule-sets` create handler (appends version)
 - `submit_jury_vote` edit: pin `moderation_case.rule_set_version_id = current_active_version` at decision time
 - `admin_assign_jury` edit: populate `moderation_case.applied_config_snapshot` at panel-assembly time
-- `rule_set.active_version_id = -1 → None` reader conversion
+- `rule_set.active_version_id` absence-of-row read path via `config::get_int_opt` (no sentinel values; `None` means "no active version" per locked decision in §4.1 and §16)
 
 **Blocked by:** v1-AD-a merged.
 
