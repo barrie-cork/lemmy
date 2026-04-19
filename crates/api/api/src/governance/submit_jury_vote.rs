@@ -231,11 +231,51 @@ async fn process_vote(
     .collect();
 
   // 7. Read the case row for context (community_id, targets, creator_id).
+  // SELECT FOR UPDATE serialises late-arriving votes against the
+  // post-decision block: vote N (the quorum-tripper) holds the row lock
+  // through `status -> Decided` at step 9; subsequent votes block here,
+  // then observe the Decided status below and short-circuit. Without
+  // FOR UPDATE, two votes racing on different connections could both
+  // see status=Open and both run the post-decision block.
   let case_row: ModerationCase = moderation_case::table
     .filter(moderation_case::id.eq(data.case_id))
     .select(ModerationCase::as_select())
+    .for_update()
     .first(conn)
     .await?;
+
+  // 7.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
+  // returns early when *under* quorum — votes 4 and 5 in a 5-juror panel
+  // arrive after vote 3 has flipped the case to Decided, fall through
+  // the count check, and would otherwise re-run the entire post-decision
+  // block (sanction insert, sponsor liability, public_case_log,
+  // reputation events, federation publish, governance_log
+  // case_decided / sanction_created / public_log_published). The vote
+  // INSERT at step 2 sits *above* this guard intentionally so audit
+  // integrity is preserved (every vote is recorded), but no downstream
+  // effects re-fire. Regression test: report_to_modlog_golden_path votes
+  // all 5 jurors and asserts exactly-once on every post-decision write;
+  // sanction_notice_round_trip does the same for the federation publish.
+  // CodeRabbit PR #46 finding #15.
+  //
+  // Tracks terminal states explicitly (rather than `!= Open`) so live-flow
+  // states like ThresholdMet / JurySelection / InReview don't trip the
+  // guard, and so v1 additions land in the correct default-behaviour
+  // category unless explicitly added to the terminal list.
+  if matches!(
+    case_row.status,
+    CaseStatus::Decided
+      | CaseStatus::Closed
+      | CaseStatus::Appealed
+      | CaseStatus::EmergencyRemove
+      | CaseStatus::AdminReview
+  ) {
+    return Ok(SubmitJuryVoteResponse {
+      vote_recorded: true,
+      case_decided: true,
+      decision: None,
+    });
+  }
 
   // 8. Emit sanction (for everything except NoAction).
   if let Some((scope, action)) = map_decision_to_sanction(winning_decision) {

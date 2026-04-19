@@ -1036,12 +1036,18 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     .into_inner();
   }
 
-  // -- 11. Steps 3–5: 3 jurors vote AdvisoryLabel ------------------
+  // -- 11. Steps 3–5: ALL 5 jurors vote AdvisoryLabel ------------------
+  // All 5 jurors vote. Votes 4 and 5 arrive AFTER quorum trips at vote 3.
+  // This exercises the idempotency guard in submit_jury_vote: late-arriving
+  // votes must persist the vote row and emit jury_vote_submitted for audit
+  // integrity, but MUST NOT re-run the post-decision block (sanction insert,
+  // sponsor liability, public_case_log append, federation publish, nor
+  // governance_log case_decided/sanction_created/public_log_published).
+  // See CodeRabbit PR #46 finding #15.
   let voting_jurors: Vec<PersonId> = assign_resp
     .assigned_person_ids
     .iter()
     .copied()
-    .take(3)
     .collect();
 
   // Embed every category the redaction layer scrubs so the public-log
@@ -1070,7 +1076,13 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   }
   assert!(!decided_responses[0].case_decided, "1st vote: not decided");
   assert!(!decided_responses[1].case_decided, "2nd vote: not decided");
-  assert!(decided_responses[2].case_decided, "3rd vote: decided");
+  assert!(decided_responses[2].case_decided, "3rd vote: decided (quorum tripped)");
+  // Votes 4+5 arrive post-quorum. Case is already Decided — handler must
+  // return case_decided: true (case IS decided) but must NOT re-run the
+  // post-decision block. Downstream exactly-once DB assertions are the
+  // load-bearing invariant; these response assertions only verify shape.
+  assert!(decided_responses[3].case_decided, "4th vote: case already decided (idempotent)");
+  assert!(decided_responses[4].case_decided, "5th vote: case already decided (idempotent)");
   assert_eq!(
     decided_responses[2].decision,
     Some(JuryDecision::AdvisoryLabel),
@@ -1093,7 +1105,11 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .count()
       .get_result(conn)
       .await?;
-    assert_eq!(vote_count, 3, "3 jury_vote rows");
+    // All 5 jurors voted. Every vote row persists for audit integrity even
+    // though votes 4+5 arrived post-quorum — vote INSERT sits ABOVE the
+    // idempotency gate in submit_jury_vote. Only the post-decision block
+    // is guarded.
+    assert_eq!(vote_count, 5, "5 jury_vote rows (all jurors recorded)");
 
     let (status, decided_at, closed_at): (
       CaseStatus,
@@ -1161,12 +1177,20 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     // Drift #8: 4 reputation_event rows (3 jurors on JuryReliability + 1
     // reporter on ReportingAccuracy) per [05 §6] — NOT 3 as the plan
     // body suggests.
+    //
+    // Exactly-once under post-quorum votes: reputation_event writes occur
+    // only in the post-decision block. Votes 4+5 MUST NOT produce additional
+    // rows. Without the idempotency guard, this count would be 14
+    // (3+4+5 jurors over three post-decision-block runs at votes 3/4/5,
+    // plus 1 reporter) — double-penalising sponsors on sponsor_liability
+    // recompute and polluting reputation history. Regression test for
+    // CodeRabbit PR #46 #15.
     let rep_total: i64 = reputation_event::table
       .filter(reputation_event::source_case_id.eq(case_id))
       .count()
       .get_result(conn)
       .await?;
-    assert_eq!(rep_total, 4, "4 reputation_event rows total");
+    assert_eq!(rep_total, 4, "4 reputation_event rows (exactly-once under late votes)");
 
     let jury_rep_count: i64 = reputation_event::table
       .filter(reputation_event::source_case_id.eq(case_id))
@@ -1194,7 +1218,12 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     assert_eq!(map.get("jury_assigned"), Some(&5));
     assert_eq!(map.get("panel_assembled"), Some(&1));
     assert_eq!(map.get("jury_accepted"), Some(&5));
-    assert_eq!(map.get("jury_vote_submitted"), Some(&3));
+    // All 5 vote rows emit jury_vote_submitted (above the idempotency gate).
+    assert_eq!(map.get("jury_vote_submitted"), Some(&5));
+    // Exactly-once invariants: each post-decision entry kind emitted once
+    // despite votes 4+5 arriving after quorum. Without the submit_jury_vote
+    // idempotency guard these would be 3 each. Regression test for
+    // CodeRabbit PR #46 finding #15.
     assert_eq!(map.get("case_decided"), Some(&1));
     assert_eq!(map.get("sanction_created"), Some(&1));
     assert_eq!(map.get("public_log_published"), Some(&1));
@@ -3362,12 +3391,20 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     }
   }
 
-  // -- 5. Submit 3 RecommendFederationAction votes to trip quorum. ------
+  // -- 5. Submit ALL 5 RecommendFederationAction votes -----------------
   // Quorum = 3 per submit_jury_vote.rs:85. The 3rd vote runs the
   // post-decision block which (because winning_decision maps to
   // FederatedRecommendation scope) calls
   // federation_outbox::send_local_sanction_notice → sent_activity INSERT.
-  for (i, juror_id) in jurors.iter().take(3).enumerate() {
+  //
+  // All 5 jurors vote. Votes 4+5 arrive post-quorum — the federation
+  // publish (PublishSanctionNotice → sent_activity INSERT) must fire
+  // exactly once despite late-arriving votes. Without the idempotency
+  // guard at submit_jury_vote post-decision block, sent_activity would
+  // gain a row per vote past quorum (3 total), exfiltrating duplicate
+  // sanction notices to remote instances. Regression test for CodeRabbit
+  // PR #46 finding #15.
+  for (i, juror_id) in jurors.iter().enumerate() {
     let juror_view = LocalUserView::read_person(&mut context_a.pool(), *juror_id)
       .await
       .map_err(|e| -> Box<dyn Error> { format!("juror_view {i}: {e}").into() })?;
@@ -3388,13 +3425,18 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     .into_inner();
     if i < 2 {
       assert!(!resp.case_decided, "vote {i}: must not be decided pre-quorum");
-    } else {
+    } else if i == 2 {
       assert!(resp.case_decided, "vote {i}: must be decided at quorum");
       assert_eq!(
         resp.decision,
         Some(JuryDecision::RecommendFederationAction),
         "winning decision must be RecommendFederationAction",
       );
+    } else {
+      // Votes 4 and 5: case already Decided, handler returns case_decided
+      // true but MUST NOT re-run federation publish. Exactly-once on
+      // sent_activity is asserted below at -- 6.
+      assert!(resp.case_decided, "vote {i}: case already decided (idempotent)");
     }
   }
 
@@ -3414,6 +3456,11 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     .select(SentActivity::as_select())
     .load(&mut async_conn_a)
     .await?;
+  // Exactly-once invariant under post-quorum votes: if submit_jury_vote's
+  // idempotency guard regresses, this count would be 3 (one publish per
+  // vote past quorum), exfiltrating duplicate governance activities to
+  // federated instances. This assertion IS the load-bearing regression
+  // test for CodeRabbit PR #46 #15 on the federation path.
   assert_eq!(
     activity_rows.len(),
     1,
