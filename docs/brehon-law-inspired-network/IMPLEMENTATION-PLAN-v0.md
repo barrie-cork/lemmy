@@ -652,9 +652,9 @@ Solo-dev order-of-magnitude. **Days are working days, not calendar days. A week 
 | Phase 2 | Step 2 — Read models | 14–30 | **~1 week** |
 | Phase 3 | Step 3 — API common DTOs | 31–37 | **~3 days** (mostly mechanical) |
 | Phase 4 | Step 4 — First five endpoints + golden test | 38–49 | **~2.5 weeks** (`submit_jury_vote` is the hardest single function in v0) |
-| Phase 5a | Step 5 — Config + reputation infrastructure + endorsement | 50–55 | **~1 week** |
-| Phase 5b | Step 5 — Sponsor-liability + jury gating + founder bootstrap | 56–60 | **~1 week** |
-| Phase 5c | Step 5 — Remaining endpoints + observability + capability tests | 61–69 | **~1 week** |
+| Phase 5a | Step 5 — Config + reputation infrastructure + endorsement | 50–55 | **~1 week** est. → **~1 day actual** (2026-04-17; 10 commits; two sessions bridged by handover file; split forced by context budget, not scope) |
+| Phase 5b | Step 5 — Sponsor-liability + jury gating + founder bootstrap | 56–60 | **~1 week** est. → **~2 days actual** (2026-04-17–18; 13 branch commits + 4 cherry-picked post-merge Bucket fixes; split-plane bug in `apply_sponsor_liability` caught only at task 60 integration test) |
+| Phase 5c | Step 5 — Remaining endpoints + observability + capability tests | 61–70 | **~1 week** est. → **~2 days actual** (2026-04-18–19; ~19 commits; included upstream rebase + 8-move risk-reduction pre-phase; task 70 = admin-config-write.sh + completion report) |
 | Phase 6 | Step 6 — Federation outbound + advisory inbound | 70–78 | **~1.5 weeks** |
 | Cross-cutting + v0 ship checklist polish | — | [05 §9](05-mvp-and-delivery-plan.md) checklist | **~1 week** |
 
