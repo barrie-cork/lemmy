@@ -41,6 +41,24 @@ ORDER BY id ASC;
 Subscribers are expected to persist `last_seen_id` across restarts
 (e.g. in their own local state). `governance_log.id` is monotonic.
 
+### Id gaps under rollback are benign
+
+`governance_log.id` is monotonic but **not contiguous**. Postgres does not
+roll back a sequence advance when its parent transaction aborts, so a
+committed row may be preceded by gaps where rolled-back inserts consumed
+ids that never reached commit. Subscribers must distinguish three cases:
+
+- **Id gap with no corresponding NOTIFY** — benign. The missing ids
+  belong to rolled-back transactions (or sequence-cache loss across
+  Postgres restart). Do not retry; do not rescan.
+- **NOTIFY received whose `entry_id` is not yet visible in
+  `governance_log`** — retry. Trigger-vs-commit timing means the row
+  may not be visible to the subscriber's snapshot for a few
+  milliseconds. Re-issue the row fetch; do not treat as missing.
+- **NOTIFY-less catch-up on subscriber start / reconnect** — required.
+  Use the `last_seen_id` cursor query above, not gap detection. NOTIFY
+  is at-most-once and dropped on disconnect.
+
 ## Entry kinds
 
 The `kind` field takes values enumerated as `pub const` strings in

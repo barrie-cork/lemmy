@@ -24,7 +24,7 @@
 | 69a | `cde8f47c1` | V2 hooks: NOTIFY trigger + SUBSCRIPTIONS.md + 2 e2e tests + plan §6.1 SSE-over-WS annotation |
 | 70 | (this commit) | Completion report + admin-config-write.sh + PR |
 
-**Endpoint count:** 11 MVP endpoints live (§6.1 of [05](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md) satisfied) plus 3 admin backstops.
+**Endpoint count:** 11 MVP endpoints live (§6.1 of [05](../../../docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md) satisfied) plus 3 admin backstops.
 
 ---
 

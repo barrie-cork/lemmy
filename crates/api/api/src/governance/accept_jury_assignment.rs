@@ -4,13 +4,14 @@
 //!
 //! `CaseStatus` is matched exhaustively per ADR-013 (no `_ =>`).
 //!
-//! v0 conflict checks (per plan §11.4 / IMPLEMENTATION-PLAN-v0.md line 377):
+//! v0 conflict checks (per `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md`
+//! Phase 5c task 64):
 //!
 //! 1. Caller must have a `jury_assignment` row with `status = Selected`
 //!    for the case.
 //! 2. Caller must NOT be the case creator (v0 "first reporter" proxy —
-//!    see plan §11.4 GOTCHA; there is no separate `case_report` table
-//!    in v0 per ADR-013).
+//!    see Phase 5c task 64 GOTCHA; there is no separate `case_report`
+//!    table in v0 per ADR-013).
 //! 3. Caller must NOT share an active sponsor with the case's
 //!    `target_person_id` (one-hop sponsor-cluster rule; v1 may extend
 //!    to two-hop / endorsement clusters per OQ-008).
