@@ -92,6 +92,55 @@ Once triage agents return, the advisor writes a concrete PR sequence
 4. **Memory-index refresh (low priority, post-polish-week)** — update `MEMORY.md` lines 40 + 49; reflect PR #10 + PR #46 merged state in their summary fields.
 5. **No other drift** — plan item → issue mapping is otherwise clean. GH #54 umbrella-subitem convention (`#2p-N`) is valid.
 
+### T2 — polish-1 scope
+
+**Verified against worktree HEAD `65bfdb683` on `polish/critical-bugs`, 2026-04-19.** All four issue fixes have already landed as commits on this branch (`1bb622e8a`, `93c8922eb`, `034409128`, `5cb868827`); the analysis below maps the fix surfaces that **were** needed and confirms landed state, so the PR-grouping recommendation reflects what actually shipped.
+
+#### #48 — governance_log atomicity / causal / hidden-write
+- **Code surface:**
+  - (a) atomicity — `crates/db_schema/src/source/governance/governance_log.rs:165-226` (INSERT + UPDATE in `append`)
+  - (b) causal order — `crates/api/api/src/governance/submit_jury_vote.rs:452-494` (`case_decided` append vs. `send_local_sanction_notice` call)
+  - (c) hidden pseudonym write — `crates/api/api/src/governance/federation_outbox.rs:159-160` (`actor_pseudonym_helper::get_or_create` with no matching log entry)
+- **Fix shape:** (a) wrap INSERT+UPDATE in `conn.run_transaction(|conn| { ... }.scope_boxed())` with the reborrow pattern so nested callers collapse to a SAVEPOINT; (b) append `case_decided` **before** the `if FederatedRecommendation { send_local_sanction_notice }` block so the hash chain records the local determination ahead of any derived federation signal; (c) **deferred** — current `get_or_create` is idempotent under the unique constraint and introducing a read-only variant or bespoke ADR-015 entry_kind is larger than the polish-1 scope can carry without an ADR touch.
+- **Blast:** (a) `governance_log.rs` +~40 LoC (transaction wrap + doc update); (b) `submit_jury_vote.rs` ~30 LoC move with causality comment; (c) one-line comment at call site. No migration. Tests that exercise `governance_log::append` transitively cover (a); `sanction_notice_round_trip` is the causal-order regression for (b).
+
+#### #35 — NOTIFY trigger fires on INSERT before signature UPDATE
+- **Code surface:** `migrations/2026-04-20-000100-0000_fix_governance_log_notify_trigger_after_sign/up.sql` — already replaces the original `AFTER INSERT` trigger with `AFTER UPDATE OF signature` gated by `OLD.signature IS NULL AND NEW.signature IS NOT NULL`. The trigger fix migration **pre-existed on `governance-v0`** (landed via PR #46 re-review Bucket C); the polish-1 branch adds no new migration.
+- **Fix shape:** trigger already fires only at the NULL→NOT NULL signature transition (option A from the issue body). Combined with #48(a) atomicity wrap, the NOTIFY-before-signed-row window closes completely: subscribers can only observe the post-UPDATE state, and the INSERT+UPDATE now commit together.
+- **Overlap with #48:** **high** — resolution requires both the trigger change (already shipped) **and** the atomicity wrap (#48(a)). Without the atomicity wrap, a crash between INSERT and UPDATE still leaves an unsigned row that the trigger never fires for (subscribers silently miss the event). The #48(a) tx wrap closes that gap; the commit message `1bb622e8a` cites both `#48 #35` for this reason. **One shared test** (`governance_log_hash_chain_holds` + a NOTIFY LISTEN probe added in commit 5) covers both.
+
+#### #34 — request_appeal unreachable for Decided cases
+- **Code surface:** `crates/api/api_crud/src/governance/request_appeal.rs:107-115` — the `within_window` guard.
+- **Fix shape:** replace `if case.closed_at.is_some() { NotFound }` with `let within_window = case.closed_at.map(|c| c > Utc::now()).unwrap_or(false); if !within_window { NotFound }`. Semantic: appeal allowed iff `closed_at` is set and in the future; NULL `closed_at` on a Decided case is a data error and rejects.
+- **Blast:** ~6 LoC plus e2e regression. No migration. Touches no `governance_log` code and no federation code; isolated to the appeal handler.
+- **Overlap with #48/#35:** **none in code** — different crate (`api_crud` vs `api`) and different module. Overlap is purely **thematic** (both are PR #10 CR unresolved threads blocking v0 tag).
+
+#### #33 — declining juror self-replacement
+- **Code surface:** `crates/api/api/src/governance/decline_jury_assignment.rs:135-142` — `exclude_person_ids` build-up before the `select_eligible_jurors` call at line 147.
+- **Fix shape:** after the `jury_assignment::table.filter(...).select(person_id).load(conn)` that produces `current_assignees`, unconditionally push `caller_id` onto the mutable vec before passing it as the exclude list. The `ne(Declined)` filter removed the declining juror's row from the query results, so the caller's id has to be re-injected explicitly.
+- **Blast:** 2 LoC (rename to `mut` binding + `push(caller_id)`) plus e2e regression. No migration. Touches only the decline handler.
+- **Overlap:** **none in code** — touches neither `governance_log::append`, the `submit_jury_vote` decision block, nor the `request_appeal` handler. Same crate (`api`) as #48(b) but a different module entirely.
+
+#### Recommendation
+
+**Bundle: Option A (all four in one PR: `polish/critical-bugs`).**
+
+Justification, in order of weight:
+
+1. **#48(a) and #35 are inseparable.** The NOTIFY trigger fix already shipped on `governance-v0` via PR #46, but it only becomes correct once the INSERT+UPDATE are atomic. Splitting them reintroduces the observable gap (unsigned row) until the second PR merges. A single PR with the shared test is the minimum safe shape.
+2. **#48(b) shares the outer transaction with #48(a).** Both writes live inside `submit_jury_vote.rs`'s post-decision `run_transaction`; re-ordering the `case_decided` append is a 1-commit change that a reviewer naturally reads alongside the atomicity wrap.
+3. **#34 and #33 are tiny and mechanical.** #34 is a 6-line guard inversion; #33 is a 2-line push. Bundling them into a governance-invariants PR adds ~10 LoC of production code plus ~60 LoC of e2e fixtures. Reviewer cost is lower than a second round-trip (CodeRabbit run + human re-review) on two separate PRs.
+4. **All four share the thematic umbrella** ("governance invariants that survived Phase 5c / PR #10 CR review and must be green before v0 tag") — the PR body can cite all four issues with one validation matrix. CodeRabbit is configured for governance-v0-targeted reviews (`.coderabbit.yaml`); a single focused PR gives CR one review pass.
+5. **Task-per-commit history is preserved.** The polish-1 branch's 4 fix commits (one per issue) are merge-able without squash, keeping the retro link between each CR finding and its fix, which matches `phase-branch.md` rule intent.
+
+**Split justification if any:** none recommended. #33 is the weakest candidate for bundling (different module, no shared surface with the other three); the only reason to split it would be if its regression test turns out to be expensive or reveals a deeper jury-selection bug that drags scope. If that happens mid-validation, **cut a new `polish/jury-self-exclude` branch from `polish/critical-bugs@93c8922eb`** (cherry-pick the #33 commit off) and ship the remaining three first.
+
+**Open questions to surface via DQ:** none from code analysis alone. The session-save at lines 172-175 already flags two real concerns that belong in the DQ or the PR body, not here:
+- Whether the `run_transaction`-inside-`run_transaction` SAVEPOINT semantic holds across **all** `governance_log::append` call sites under e2e load (`governance_log_hash_chain_holds` is the authoritative check).
+- Whether any existing e2e test asserts "request_appeal must fail after decide" and now false-reds under the #34 semantic shift (audit needed before merge).
+
+Both are validation-phase concerns, not scoping concerns.
+
 ### T3 — docs-sweep scope
 
 **Verified against worktree HEAD `a25e6bbe0` on `polish/critical-bugs` (tip of `governance-v0` + kickoff runlog commit), 2026-04-19.**
