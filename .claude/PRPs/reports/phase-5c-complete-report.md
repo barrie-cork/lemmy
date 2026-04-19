@@ -57,6 +57,18 @@ These are noted for Phase 6 / v1 or separate issue tickets:
 6. **OQ-018 admin HTTP endpoint** — `admin-config-write.sh` ships as sibling operator tooling per DQ #13; the proper HTTP endpoint lands in v1. Both DQ #13 context and OQ-018 tracking remain open.
 7. **Tokio-postgres poll-based notification bridge** — if upstream Lemmy ever needs a similar NOTIFY subscriber, extract the `poll_fn + Pin + poll_message + mpsc` bridge helper from `e2e.rs::governance_events_notify_fires` into a shared utility.
 
+### GitHub issue tracking
+
+| # | Title | Issue URL |
+|---|---|---|
+| 1 | v1: original-reporter appeals on request_appeal | https://github.com/barrie-cork/lemmy/issues/11 |
+| 2 | v1: add assignee filter to list_cases DTO | https://github.com/barrie-cork/lemmy/issues/12 |
+| 3 | v1: per-community permission filter on list_cases | https://github.com/barrie-cork/lemmy/issues/13 |
+| 4 | v1: re-jury path for Appealed cases | https://github.com/barrie-cork/lemmy/issues/14 |
+| 5 | v1: formalise appeal window with bounded duration | https://github.com/barrie-cork/lemmy/issues/15 |
+| 6 | v1: OQ-018 admin config-write HTTP endpoint | https://github.com/barrie-cork/lemmy/issues/16 |
+| 7 | v1: extract tokio-postgres NOTIFY bridge helper | https://github.com/barrie-cork/lemmy/issues/17 |
+
 ---
 
 ## 4. Deviations from plan
