@@ -87,3 +87,32 @@ PR body: list each issue + one-line scope + the file(s) touched. Close all 5 iss
 - Polish-3 touches: `docs/brehon-law-inspired-network/SUBSCRIPTIONS.md`, two Rust docstring files, plan file, decision-queue.json, task-hopper.md rule, phase-5c report
 - Polish-2 touches: `scripts/brehon/task-hopper.sh`, `publish_sanction_notice.rs`, agent-*.md briefs
 - **No file overlap.** Land in either order.
+
+## Proposed tack-on — GH #37 (CI toolchain pin)
+
+**Hand-off from polish-4 (route-gate) session, 2026-04-19 PM.** Polish-4 picked up GH #36 in its own worktree (`brehon-fork-polish-4-route-gate`, PR #66). GH #37 is the last remaining non-v1 unclaimed polish issue and is a 2-line YAML change — proposing polish-3 absorb it rather than cut a fifth worktree.
+
+**Scope:**
+
+One file: `.github/workflows/cargo-test-e2e.yml` around lines 43–47. The `dtolnay/rust-toolchain@master` step passes `toolchain: stable` which silently overrides `rust-toolchain.toml` (pinned to `1.95` per `CLAUDE.md`). Drift is invisible — CI runs a different compiler than local.
+
+**Fix — pick one:**
+
+- **Option A (less maintenance):** remove the `toolchain:` input entirely, let `rust-toolchain.toml` drive.
+- **Option B (explicit):** `toolchain: "1.95"`.
+
+CR left it to the implementer — either is acceptable. Suggest **Option A** (matches every other rust-toolchain.toml consumer in the repo; no sync burden when we bump to 1.96).
+
+**Why it fits polish-3:**
+
+- Zero code compile surface (CI-only).
+- Zero file overlap with polish-3 or polish-2.
+- Adds one bullet to the PR body: `Closes #37` + one-line scope note.
+- Commit shape matches polish-3 house style: `ops(ci): honour rust-toolchain.toml in cargo-test-e2e workflow (GH #37)`.
+
+**Why not its own PR:**
+
+- 2-line change doesn't warrant a fifth polish worktree + CR review cycle.
+- Polish-3 is already the docs/config sweep bucket — CI YAML config fits the theme.
+
+**If polish-3 declines:** file a micro-PR direct from a fresh worktree cut off `governance-v0`. GH #37 is labelled `risk:low` / `ops` and doesn't block the v0.0.0 tag, but it *should* close before tag so the release notes can cite a reproducible toolchain.
