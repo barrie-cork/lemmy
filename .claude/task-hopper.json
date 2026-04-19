@@ -20,15 +20,15 @@
       "agent": "agent-d",
       "kind": "cargo_check",
       "worktree": "C:/Users/barri/Developer/brehon-fork-agent-d-phase6",
-      "status": "in_progress",
+      "status": "completed",
       "attempts": [
         {
           "n": 1,
           "started_at": "2026-04-19T05:17:13Z",
-          "ended_at": null,
-          "result": "in_progress",
-          "commit_sha": null,
-          "log_path": null,
+          "ended_at": "2026-04-19T06:28:03Z",
+          "result": "completed",
+          "commit_sha": "8057b9f65",
+          "log_path": ".claude/build-task74-act.log",
           "session_id": null,
           "transcript_path": null,
           "reason": null
@@ -36,7 +36,7 @@
       ],
       "issue_url": null,
       "created_at": "2026-04-19T05:17:13Z",
-      "updated_at": "2026-04-19T05:17:13Z"
+      "updated_at": "2026-04-19T06:28:03Z"
     }
   ]
 }
