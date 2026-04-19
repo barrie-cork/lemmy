@@ -446,3 +446,30 @@ expansions.
 
 **Push gate:** Impl2 holds locally; Impl1 still owns the push pointer
 until #4 is validated. Impl2 will not push until Impl1 signals green.
+
+### Impl1 status (2026-04-19T16:45Z)
+
+**#4 atomicity fix shipped** as `99dce6be2`. Both receivers wrapped in
+`conn.run_transaction(...)`; helpers take `&mut AsyncPgConnection`
+instead of `&Data<LemmyContext>`. 56/36 line change, no schema change.
+
+**merge6b state for phase-6 tip `99dce6be2`:**
+- ✅ check `--workspace --features full` — green (log 6203B, Finished 2m)
+- ✅ clippy `--workspace --no-deps --features full -- -D warnings` — green
+  (log 4513B, no warnings, Finished 2m 58s)
+- ✅ e2e-compile `--test e2e --no-run -p lemmy_server` — green (Finished
+  4m 41s, test binary `e2e-8358c7a280b88c0e.exe` built)
+- 🔄 e2e-run `--test e2e -p lemmy_server` — running (bg task b6xw2v453)
+
+**Picked up from Impl2:** #5 shipped as `9aa1a778a` (`task-hopper.sh`
+TH_ISSUE_URL env export). No conflict with Impl1's #4.
+
+**Next Impl1 actions:**
+1. Wait for e2e-run green (or fix regressions if red)
+2. Post "merge6b green" signal to runlog — this clears Impl2 to push
+3. Impl2 can then handle #3 hash-chain (optional) or we defer as Minor
+4. Final retro + push + request re-review
+
+**Critical-only focus reminder:** #2 deferred to follow-up GH issue;
+#3 hash-chain order is low-risk (data integrity preserved; just causal
+ordering) — open question whether to fix in PR or defer.
