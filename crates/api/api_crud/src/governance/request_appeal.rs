@@ -8,13 +8,16 @@
 //! - No automatic re-jury. The case flips `Decided → Appealed` and sits
 //!   until `admin_close_case` runs. The larger-jury appeal flow is a v1
 //!   item per ADR-010.
-//! - Appeal window is implicit: while `case.closed_at IS NULL`. Once
-//!   `admin_close_case` stamps `closed_at`, further appeals on the case
-//!   are rejected.
+//! - Appeal window is explicit: while `case.closed_at > now()`. `submit_jury_vote`
+//!   stamps `closed_at = decided_at + 7 days` when flipping a case to
+//!   `Decided`, so every Decided case has an open window for 7 days.
+//!   `admin_close_case` may stamp `closed_at = now()` earlier to short-circuit
+//!   the window; appeals after `closed_at` are rejected.
 //!
 //! `CaseStatus` is matched exhaustively per ADR-013 (no `_ =>`).
 
 use actix_web::web::{Data, Json};
+use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
@@ -101,8 +104,13 @@ async fn process_appeal(
     }
   }
 
-  // 3. Appeal window: closed_at must still be null.
-  if case.closed_at.is_some() {
+  // 3. Appeal window: closed_at must be in the future. `submit_jury_vote`
+  // stamps closed_at = decided_at + 7d on Decided-flip, so every Decided
+  // case has a real 7-day window that `is_some()` alone would reject. Also
+  // reject NULL closed_at on a Decided case as a data error — the flip
+  // path must populate it (GH #34).
+  let within_window = case.closed_at.map(|c| c > Utc::now()).unwrap_or(false);
+  if !within_window {
     return Err(LemmyErrorType::NotFound.into());
   }
 
