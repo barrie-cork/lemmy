@@ -139,3 +139,81 @@ Nine DQ entries resolved during Phase 6:
 - **Commits:** 24 (incl. plan, briefs, all 9 task commits, 7 hopper marks, 4 merge points, 3 ignore-flake commits)
 - **PR target:** `barrie-cork/lemmy:governance-v0` (per `gh-pr-fork-target.md`, must use `--repo barrie-cork/lemmy`)
 - **Merge mode:** `--merge`, NEVER squash (per Phase 5b orphan-commits lesson; preserves task-per-commit history for retros and CodeRabbit review)
+
+---
+
+## Amendment — PR #46 CodeRabbit review cycle (2026-04-19)
+
+CodeRabbit Pro reviewed PR #46 at `558c69c76` and surfaced 23 findings:
+2 Critical, 5 Major, 16 Minor/Trivial. Review response ran across two
+parallel impl sessions coordinated via `.claude/PRPs/phase-6-runlog/01-phase-6-progress.md`.
+
+### Fixes landed
+
+| # | Severity | Site | Fix SHA | Owner |
+|---|---|---|---|---|
+| 15 | 🔴 Critical | `submit_jury_vote::process_vote` — idempotency guard below quorum-tally early-return | `41f1d0379` | Impl1 |
+| 19 | 🔴 Critical | `Publish*Notice::verify` — inner `object.actor` unbound from outer `activity.actor` (AP spoof) | `d70610980` | Impl1 |
+| 13 | 🟠 Major | `task-hopper.json` — absolute worktree paths (privacy) | `addc0c9ab` | Impl2 |
+| 22 | 🟠 Major | `sanction_notice_round_trip` — missing no-auto-apply DB-state asserts on B | `455a7dbe4` | Impl1 |
+| 11 | 🟡 Minor | `decision-queue.md` — author-based detection rewritten to subject-pattern match | `728659a24` | Impl2 |
+| 10 | 🟡 Minor | This retro — "Eight DQ entries" → "Nine" | `e64254261` | Impl1 |
+| 21 | 🟡 Minor | `inbox.rs` + `remote_sanction_notice.rs` — `[99 ADR-006]` bare-citation linkified | `e64254261` | Impl1 |
+| 7  | 🟡 Minor | `HANDOFF-PROMPT.md` unlabeled fences (python) | `e64254261` | Impl1 |
+| 4  | 🟡 Minor | `agent-c.md` MD040 | `297341c8b` | Impl2 |
+| 6  | 🟡 Minor | `agent-g.md` MD040 | `297341c8b` | Impl2 |
+| 9  | 🟡 Minor | `plan-phase-6-federation.plan.md` MD040 (text) | `297341c8b` | Impl2 |
+| 12 | 🟡 Minor | `task-hopper.md` MD040 | `297341c8b` | Impl2 |
+
+### Findings rebutted / deferred
+
+| # | Severity | Site | Rationale | Tracker |
+|---|---|---|---|---|
+| 1  | 🟠 Major | `prp-ralph-stop.sh:51` | Script-polish; zero v0 user impact | v0-polish |
+| 14 | 🟠 Major | `task-hopper.schema.json:147` — schema lifecycle invariants | Larger schema refactor not appropriate in review patch | [#47](https://github.com/barrie-cork/lemmy/issues/47) |
+| 20 | 🟠 Major | `redaction.rs:99` — scrub_json control flow | Non-issue for v0: ADR-015 schema contract is the primary barrier (payloads carry only IDs/URLs/enums); scrub_json is defence-in-depth | v0-polish |
+| 17 | 🟡 Minor | `publish_trust_attestation.rs:10` — "unused Object trait import" | False positive: `Object::id()` used at lines 146-147 | — |
+| 2/3/5/8/16/18/23 | 🟡 Minor | Various MD-lint + helper-extraction | Runlog-archival content (don't rewrite execution record) or defer-to-refactor-sweep | v0-polish |
+
+### Lessons added to durable rules
+
+- **CLAUDE.md §PR review discipline** (`fa78dd8b5`): CodeRabbit Critical
+  findings block merge. Three instances this PR alone (row-scoping,
+  control-flow, AP actor-binding) caught classes that local advisor +
+  e2e missed. Memory: `feedback_coderabbit_block_merge_critical.md`.
+- **`decision-queue.md` attribution detection** (`728659a24`): rule
+  now matches commit-subject pattern `^(chore|docs)\((advisor|decision-queue)\)`
+  rather than hardcoded author name. Solo-dev single-author repos can't
+  discriminate by author identity.
+- **Cold-build gate for rapid-commit phases** (new carry-forward): during
+  this review cycle, a transient clippy false-red at 16:06Z flagged
+  `publish_trust_attestation.rs:146-147` `Object` trait out of scope —
+  the file at HEAD already had the import. Cold rebuild at 16:19Z came
+  back clean. Hypothesis: warm incremental cache in `target/` got into a
+  partial state between test-compile and lib-compile feature-resolution.
+  Layered-agents phases with rapid task-per-commit cadence should gate
+  commit-greenness on cold workspace-check + test-target compile, not
+  warm-cache runs. Memory candidate for v1 work.
+
+### CI gates at final HEAD
+
+Final HEAD (`phase-6 @ <this amendment commit>`) validated by Impl1 at 2026-04-19 16:20-16:25Z:
+
+- `cargo check --workspace --features full`: ✅ exit 0
+- `cargo clippy --workspace --no-deps --features full -- -D warnings`: ✅ 0 errors, 0 warnings
+- `cargo test --test e2e --no-run -p lemmy_server`: ✅ cold compile clean
+- `cargo test --test e2e -p lemmy_server`: ✅ 14 passed / 0 failed / 3 ignored (308s)
+
+### Review-cycle commit count
+
+14 review-response commits added after initial PR push (`558c69c76`):
+2 Critical fixes, 3 Major fixes, 3 docs sweeps, 1 CLAUDE.md rule,
+1 decision-queue rule, 1 CI size-gate, 2 infra/AI-review, plus
+coordination runlog entries (6 commits) that carry no code impact
+but document the two-impl hand-off.
+
+Full list (oldest → newest): `8b92d14be`, `729c4b768`, `41f1d0379`,
+`d70610980`, `addc0c9ab`, `fa78dd8b5`, `728659a24`, `455a7dbe4`,
+`250dd9066`, `e64254261`, `8297c5066`, `a7c0a6053`, `ad2459b65`,
+`3a42f43c2`, `297341c8b`, `6c5494382`, plus this amendment commit.
+
