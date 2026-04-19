@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "phase": "6",
+  "retry_caps": {
+    "default": 3,
+    "by_kind": {
+      "cargo_check": 3,
+      "cargo_clippy": 3,
+      "cargo_test": 2,
+      "migration": 2,
+      "agent_brief": 3,
+      "other": 3
+    }
+  },
+  "tasks": []
+}

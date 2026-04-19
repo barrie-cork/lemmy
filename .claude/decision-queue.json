@@ -4,6 +4,20 @@
   "pending": [],
   "resolved": [
     {
+      "id": 27,
+      "from": "advisor",
+      "timestamp": "2026-04-18T22:15:00Z",
+      "question": "Upstream rebase landed on governance-v0 mid-5c (commits 15fe2f3d4 + 750e1fc4d pulled upstream main @ d1975776a including Rust 1.95 + cfg_select!). phase-5c trails governance-v0 by 12 commits. How should phase-5c sync before the task 70 PR?",
+      "options": [
+        "(a) Rebase phase-5c onto current governance-v0 tip pre-PR. Rewrites phase-5c history; safe because phase-5c isn't published yet as a shared branch; loses 'branched from eaa413cd8' audit trail but preserves linear-per-task visibility for CodeRabbit.",
+        "(b) Merge governance-v0 into phase-5c pre-PR. Creates a merge commit; preserves original commits but muddies the phase-5c linear-per-task intent from rule 19.",
+        "(c) PR phase-5c as-is; let GitHub's web UI handle the sync at merge time. Risk: Rust 1.95 bump + cfg_select! + upstream fed fixes may surface merge conflicts or new clippy failures AFTER PR is open, when resolution is less tidy."
+      ],
+      "context": "governance-v0 absorbed an upstream rebase mid-5c. Rebase-log commit 750e1fc4d lists the upstream delta: Rust 1.95/cfg_select! (#6455), nested comment fetch (#6456), federation of post removal (#6442), arm builds (#6452), test cleanups (#6453), db pool timeouts (#6448), webfinger IP check (#6445), ARM docker release gating (#6447). The Rust 1.95 bump is the most likely source of new clippy/compiler lints — phase-5c commits 094b3d351 / 4aebb01cd / 25df5e863 / 829900513 (tasks 61-64) were compiled against Rust 1.94 on the pre-rebase tree. Watch 12 added to advisor-context-phase-5.md §4.",
+      "answer": "Option (a) — rebase phase-5c onto current governance-v0 tip pre-PR. Execution plan: (1) advisor cuts the rebase after Slice A close (task 67 commit), BEFORE Slice B kicks off — rebasing mid-Slice-A risks desyncing the in-flight state file and the iteration counter; (2) impl runs `git rebase origin/governance-v0` on phase-5c; (3) resolve any Rust 1.95 / cfg_select! / upstream-fix collisions one commit at a time; (4) run Level 1 cargo-check + clippy on the rebased tip and commit any fix-up as a `fix(rebase): Rust 1.95 lint fallout` commit if needed — SEPARATE commit, not an amend; (5) re-run the regression guard `report_to_modlog_golden_path` after rebase to confirm no semantic drift. Task 70 phase-close DoD must EXPLICITLY include 'Level 1 clippy re-run on rebased tip' as a named step, not an implicit regression. Rationale: (a) phase-5c isn't shared yet, so history-rewrite is cheap and reversible via reflog; (b) preserves the linear-per-task history for CodeRabbit PR review (rule 19 intent); (c) surfaces any Rust 1.95 fallout locally, not in CI on the PR where resolution is less tidy and review-loop-costly; (d) matches Phase 5a/5b rebase discipline (pre-PR, not post-PR).",
+      "answered_by": "advisor"
+    },
+    {
       "id": 17,
       "from": "impl",
       "timestamp": "2026-04-18T18:00:00Z",
