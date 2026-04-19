@@ -757,6 +757,8 @@ diesel::table! {
         opened_at -> Timestamptz,
         decided_at -> Nullable<Timestamptz>,
         closed_at -> Nullable<Timestamptz>,
+        applied_config_snapshot -> Nullable<Jsonb>,
+        rule_set_version_id -> Nullable<Int4>,
     }
 }
 
@@ -1280,6 +1282,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    rule_set_version (id) {
+        id -> Int4,
+        community_id -> Int4,
+        version -> Int4,
+        parent_id -> Nullable<Int4>,
+        text_sha256 -> Bytea,
+        rule_text -> Text,
+        created_at -> Timestamptz,
+        created_by -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    sponsor_allowlist (id) {
+        id -> Int4,
+        community_id -> Int4,
+        person_id -> Int4,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     tagline (id) {
         id -> Int4,
         content -> Text,
@@ -1332,6 +1356,11 @@ diesel::joinable!(local_user_language -> local_user (local_user_id));
 diesel::joinable!(login_token -> local_user (user_id));
 diesel::joinable!(moderation_case -> comment (target_comment_id));
 diesel::joinable!(moderation_case -> post (target_post_id));
+diesel::joinable!(moderation_case -> rule_set_version (rule_set_version_id));
+diesel::joinable!(rule_set_version -> community (community_id));
+diesel::joinable!(rule_set_version -> person (created_by));
+diesel::joinable!(sponsor_allowlist -> community (community_id));
+diesel::joinable!(sponsor_allowlist -> person (person_id));
 diesel::joinable!(modlog -> comment (target_comment_id));
 diesel::joinable!(modlog -> community (target_community_id));
 diesel::joinable!(modlog -> instance (target_instance_id));
@@ -1450,6 +1479,8 @@ diesel::allow_tables_to_appear_in_same_query!(
   site,
   site_language,
   surety,
+  rule_set_version,
+  sponsor_allowlist,
   person_actions,
   image_details,
 );
