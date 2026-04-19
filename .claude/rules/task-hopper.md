@@ -30,7 +30,7 @@ four if a retry happens):
 
 ### 1. `start` — before any file edit
 
-```
+```bash
 scripts/brehon/task-hopper.sh start <task-id> \
   --agent <agent-name> --kind <kind> --layer <n> \
   --label "<human-readable>" --worktree "<path>"

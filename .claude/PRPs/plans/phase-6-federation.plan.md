@@ -74,7 +74,7 @@ If any of the three prereqs above are unmet, the plan **flags but does not proce
 
 ### Before State (post-Phase 5c)
 
-```
+```text
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                              BEFORE                                            ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
