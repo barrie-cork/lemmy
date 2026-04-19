@@ -79,3 +79,7 @@ ed25519-dalek = { workspace = true }
 hex = { workspace = true }
 regex = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
+lemmy_db_views_reputation = { workspace = true, features = ["full"] }
+tokio-postgres = { workspace = true }
+enum-map = { workspace = true }
+tracing-test = { version = "0.2.6", features = ["no-env-filter"] }

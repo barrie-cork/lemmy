@@ -575,6 +575,12 @@ If those five tasks land in week 1, the schema foundation is solid and Phase 1 i
 
 ---
 
+## 6.1. Real-time transport (if proposed post-v0)
+
+If a future phase proposes adding a real-time push channel for governance notifications (jury invitations, case status changes, etc.), default to **Server-Sent Events (SSE) over WebSocket**. SSE composes with HTTP caching, has simpler backpressure semantics, and works through the same middleware stack as the existing API. The V2 messaging bridge does not require Brehon's own RT transport — it polls `governance_log` or subscribes via Postgres NOTIFY per [`SUBSCRIPTIONS.md`](SUBSCRIPTIONS.md). See [`V2/messaging.md §8.3`](V2/messaging.md) for the full reasoning.
+
+---
+
 ## 7. Risks and unknowns
 
 What could go wrong, what needs verification before v1.
@@ -646,10 +652,10 @@ Solo-dev order-of-magnitude. **Days are working days, not calendar days. A week 
 | Phase 2 | Step 2 — Read models | 14–30 | **~1 week** |
 | Phase 3 | Step 3 — API common DTOs | 31–37 | **~3 days** (mostly mechanical) |
 | Phase 4 | Step 4 — First five endpoints + golden test | 38–49 | **~2.5 weeks** (`submit_jury_vote` is the hardest single function in v0) |
-| Phase 5a | Step 5 — Config + reputation infrastructure + endorsement | 50–55 | **~1 week** |
-| Phase 5b | Step 5 — Sponsor-liability + jury gating + founder bootstrap | 56–60 | **~1 week** |
-| Phase 5c | Step 5 — Remaining endpoints + observability + capability tests | 61–69 | **~1 week** |
-| Phase 6 | Step 6 — Federation outbound + advisory inbound | 70–78 | **~1.5 weeks** |
+| Phase 5a | Step 5 — Config + reputation infrastructure + endorsement | 50–55 | **~1 week** est. → **~1 day actual** (2026-04-17; 10 commits; two sessions bridged by handover file; split forced by context budget, not scope) |
+| Phase 5b | Step 5 — Sponsor-liability + jury gating + founder bootstrap | 56–60 | **~1 week** est. → **~2 days actual** (2026-04-17–18; 13 branch commits + 4 cherry-picked post-merge Bucket fixes; split-plane bug in `apply_sponsor_liability` caught only at task 60 integration test) |
+| Phase 5c | Step 5 — Remaining endpoints + observability + capability tests | 61–70 | **~1 week** est. → **~2 days actual** (2026-04-18–19; ~19 commits; included upstream rebase + 8-move risk-reduction pre-phase; task 70 = admin-config-write.sh + completion report) |
+| Phase 6 | Step 6 — Federation outbound + advisory inbound | 71–79 | **~1.5 weeks** |
 | Cross-cutting + v0 ship checklist polish | — | [05 §9](05-mvp-and-delivery-plan.md) checklist | **~1 week** |
 
 **Total: ~10 weeks of focused solo-dev work.** Range: 8 weeks (smooth) to 14 weeks (with Lemmy-rebase pain or one major OQ requiring a redesign).

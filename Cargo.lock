@@ -3611,6 +3611,7 @@ dependencies = [
 name = "lemmy_api_common"
 version = "1.0.0-test-arm-qemu.0"
 dependencies = [
+ "chrono",
  "lemmy_db_schema 1.0.0-test-arm-qemu.0",
  "lemmy_db_schema_file",
  "lemmy_db_views_comment",
@@ -3619,6 +3620,7 @@ dependencies = [
  "lemmy_db_views_community_follower_approval",
  "lemmy_db_views_community_moderator",
  "lemmy_db_views_custom_emoji",
+ "lemmy_db_views_governance_case",
  "lemmy_db_views_local_image",
  "lemmy_db_views_local_user",
  "lemmy_db_views_modlog",
@@ -3632,6 +3634,7 @@ dependencies = [
  "lemmy_db_views_private_message",
  "lemmy_db_views_registration_applications",
  "lemmy_db_views_report_combined",
+ "lemmy_db_views_reputation",
  "lemmy_db_views_site",
  "lemmy_db_views_vote",
  "lemmy_diesel_utils",
@@ -4135,6 +4138,7 @@ dependencies = [
  "lemmy_diesel_utils",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
  "serde",
+ "serde_json",
  "serde_with",
  "ts-rs",
 ]
@@ -4624,6 +4628,7 @@ dependencies = [
  "diesel-async",
  "diesel_migrations",
  "ed25519-dalek",
+ "enum-map",
  "hex",
  "lemmy_api",
  "lemmy_api_common 1.0.0-test-arm-qemu.0",
@@ -4641,6 +4646,7 @@ dependencies = [
  "lemmy_db_views_governance_modlog",
  "lemmy_db_views_jury_queue",
  "lemmy_db_views_local_user",
+ "lemmy_db_views_reputation",
  "lemmy_db_views_site",
  "lemmy_diesel_utils",
  "lemmy_routes",
@@ -4655,9 +4661,11 @@ dependencies = [
  "testcontainers",
  "testcontainers-modules",
  "tokio",
+ "tokio-postgres",
  "tracing",
  "tracing-actix-web",
  "tracing-subscriber",
+ "tracing-test",
  "uuid",
 ]
 

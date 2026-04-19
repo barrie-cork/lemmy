@@ -73,11 +73,12 @@ After 5c merges, Phase 5 is complete. Phase 6 (federation outbound + advisory in
 
 **Phase 5b outputs consumed (must exist before 5c starts):**
 
-- Tasks 56–58 **shipped** (phase-5b tips `5aee34738` → `11c1a2083` → `1682a544f`). Task 58 landed the OQ-006 threshold formula + `is_finite()` guard + `load_or_compute_snapshot` helper + `tracing-test` unit tests. Tasks 59 (founder CLI), 60 (3-branch e2e), 61 (5b phase-close PR) **not shipped** at plan-write time — "Slice C remaining" per memory.
-- **§2.1 Blocker.** Phase 5c Task 69's third branch seeds users via "founder-CLI short 30d expiry" events (IMPLEMENTATION-PLAN-v0.md line 387). That CLI is Phase 5b task 59, not yet on disk (no `crates/tools/seed_founders/`). If Phase 5b Slice C merges without task 59, Phase 5c task 69 must seed founder events directly in the test harness via `reputation_event` INSERT (see §11.9 mitigation). **Decision-queue intake:** §17 question A1.
-- **§2.2 Blocker.** Phase 5c DoD line 396 says `sponsor_liability_with_founder_multiplier` (Phase 5b task 60) "still passes (regression)". That test does not yet exist. If task 60 is still pending at 5c branch time, the DoD line cannot be evaluated. **Decision-queue intake:** §17 question A2.
+- All Phase 5b tasks 56–61 **shipped** as of 2026-04-18 via squash-merge 6566dce43 on governance-v0 (PR #7), plus 4 cherry-picked post-review fixes (a6e6265f9, 0e86dcb4e, 9102abba2, 72fd4be1f) + retro at eaa413cd8. Current governance-v0 tip is f20728323 or later. Decision-queue #17 (branch base) **resolved** — phase-5c cuts from current governance-v0 tip.
+- **§2.1 Resolved (was Blocker).** Phase 5b task 59 `seed_founders` CLI shipped at `crates/tools/seed_founders/`. Phase 5c task 69's third branch MAY reuse the CLI helper OR inline a direct `reputation_event` INSERT (both work; inline is cleaner for self-contained test). Verify at task-0 time.
+- **§2.2 Resolved (was Blocker).** Phase 5b task 60 `sponsor_liability_with_founder_multiplier` shipped in `crates/server/tests/e2e.rs`. DoD line 396 "still passes (regression)" is evaluable. Task 0 audit re-runs this test as part of the Phase-5b-baseline smoke to confirm current green before 5c mutations.
 - **§2.3 Drift.** Phase 5b task 56 landed `SanctionAction::Restoration` as a **unit variant** (per GOTCHA-56b, `enums.rs:553-557`), not `Restoration { description: String }` as IMPLEMENTATION-PLAN-v0.md line 360 originally specified. This is documented in the `enums.rs` comment itself — Phase 5c respects the shipped form. No plan-level action required; mentioned here so 5c handlers matching `SanctionAction` use the `Restoration` unit arm.
 - **§2.4 Usable now.** `load_or_compute_snapshot(conn, person_id, community_id, cache)` at `reputation_snapshot.rs:454-481` (Phase 5b task 58) is exactly the "row-existence first, only recompute if missing" helper task 61 needs. No handler signature change required — task 61 is a thin wrapper.
+- **§2.5 Risk-reduction strategy applied (2026-04-18).** Decision-queue entries #19 (actix `config` fn name → verified `pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit)` at `crates/api/routes/src/lib.rs:201`), #20 (tokio-postgres 0.7.16 notifications — poll-based not stream-based; task 69a.3 snippet needs rewrite to use `Connection::poll_message` + channel bridge), #21 (DoD line 398 staleness alert landed as task 63d) all answered **before task 0**. Plan sections §11.3, §11.10, §11.0 updated accordingly. See `C:\Users\barri\.claude\plans\what-would-be-a-proud-balloon.md` for the full strategy.
 
 **Advisor context / rules (auto-loaded in `-p` mode):**
 
@@ -139,15 +140,30 @@ Closing these gaps ends Phase 5. Phase 6 (federation) is the only remaining work
 | 0 | 0 | Audit only — no code |
 | 61 | 80 | Single handler, thin wrapper around `load_or_compute_snapshot` |
 | 62 | 180 | 1 SQL query, 1 Rust aggregator, 1 handler, 1 response DTO |
-| 63 | 120 | New helper in governance_modlog crate + existing site wiring |
-| 64 | 150 | Handler + `admin_assign_jury.rs:139` edit + test edit (~25 lines) |
-| 65 | 180 | Handler + replacement-pick logic + test |
+| 63 | 140 | New helper in governance_modlog crate + existing site wiring + 63d staleness alert (~20 lines, Move 2) |
+| 64 | 170 | Handler + `admin_assign_jury.rs:139` flip (Move 3 flip-verification sequence) + test edit + new `jury_common.rs` helper file (Move 5) |
+| 65 | 180 | Handler + replacement-pick logic + test (imports shares_active_sponsor from jury_common per Move 5) |
 | 66 | 120 | Handler in api_crud + case status flip |
 | 67 | 200 | View-crate filter extension + handler |
-| 68 | 250 | 6 route adds + `all_mvp_endpoints_return_non_404` smoke test |
+| 68 | 320 | 6 route adds + `all_mvp_endpoints_return_non_404` smoke test (Phase A non-404 sweep + Phase B per-handler happy-path assertions, Move 4) |
 | 69 | 220 | 3-branch compound test |
 | 69a | 200 | 1 migration + 1 doc + 2 tests + 1 plan-doc line |
 | 70 | 0 | Phase-close PR only |
+
+---
+
+## §Slices
+
+Phase 5c splits at the natural "all handlers exist → wire them up" boundary per Move 8 of the risk-reduction strategy (`C:\Users\barri\.claude\plans\what-would-be-a-proud-balloon.md`). Slices are consumed via `/prp-core:prp-ralph-slice` in letter order; each slice is a deliberate human checkpoint.
+
+| Slice | Tasks                              | Rationale                                                                                                                              | Max iter |
+|-------|------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|----------|
+| A     | 0, 61, 62, 63, 64, 65, 66, 67      | Foundation: pre-phase audit + decision-queue intake + 7 substantive handlers (~800 LOC). All new handler files land; no route wiring yet. | 8        |
+| B     | 68, 69, 69a, 70                    | Wire-up + compound tests + V2 hooks + phase close (~600 LOC). Task 68 route regression, task 69 3-branch e2e, task 69a LISTEN/NOTIFY trigger + subscriptions doc, task 70 PR.  | 6        |
+
+Slice A **must run first** — Slice B's task 68 route wiring imports the handler modules that Slice A creates. Slice B's task 69 3-branch e2e depends on Slice A's task 67 `list_cases` + task 64/65 jury handlers. Slice B produces the `docs(report)` commit and opens the PR (task 70).
+
+If Slice A completes in ≤5 ralph iterations with clean reasoning, running Slice B immediately in the same session is acceptable. If Slice A takes ≥6 iterations, rest the context window and start Slice B in a fresh session per the Phase 5b precedent.
 
 ---
 
@@ -286,22 +302,29 @@ Per IMPLEMENTATION-PLAN-v0.md §4. Phase 5c respects all four; spot-check:
 ### §11.0 Task 0 — pre-phase audit + branch cut + decision-queue intake
 
 **ACTION.**
-1. Verify Phase 5b fully merged into `governance-v0`. Expected `git log governance-v0 --oneline | head -15` shows tasks 56–60 commits. If tasks 58–60 missing → **surface via decision queue**, do NOT start Phase 5c.
+1. Verify Phase 5b fully merged into `governance-v0`. Expected `git log governance-v0 --oneline | head -15` shows the squash-merge 6566dce43 plus 4 cherry-picked review fixes (a6e6265f9, 0e86dcb4e, 9102abba2, 72fd4be1f), retro eaa413cd8, and the risk-reduction commits from Moves 1/7 (decision-queue entries 19-21 + cargo-test.bat guard). Tasks 56–61 are rolled into the squash commit — byte-level-verified at eaa413cd8. If any of the above commits are missing, surface via decision queue; do NOT start Phase 5c.
 2. `git checkout governance-v0 && git pull origin governance-v0 && git checkout -b phase-5c`. Per `.claude/rules/phase-branch.md` — **advisor creates the branch at transition handoff**, impl agent only verifies `git branch --show-current == phase-5c`. If the current branch is `governance-v0`, surface in decision queue.
 3. Run the 3 wrapper probes per `.claude/rules/pre-phase-harness-audit.md` §1:
    - Probe 1: `cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_utils > .claude/audit-cargo-check-p.log 2>&1"` — assert only `lemmy_utils` compiled.
    - Probe 2: `cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_db_schema --features full > .claude/audit-cargo-check-features.log 2>&1"` — assert features activated.
-   - Probe 3: `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server > .claude/audit-cargo-test.log 2>&1"` — assert only e2e built.
+   - Probe 3: `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server > .claude/audit-cargo-test.log 2>&1"` — assert only e2e built. The cargo-test.bat wrapper now auto-appends `-- --test-threads=1` for e2e runs without `--no-run` (per Move 7 of the risk-reduction strategy); this probe uses `--no-run` so the guard does NOT fire. Other task-level e2e invocations WILL see the guard.
 4. Clippy baseline per §9: expected clean at 5b tip.
-5. DoD smoke per `pre-phase-harness-audit.md` §2: run each DoD command in §9 once against current HEAD. Expected-red: every new-file DoD (tasks 61-69, 69a because handler/test doesn't exist yet). Expected-green: tasks 0, 70 (framework-level checks).
-6. Pre-seed decision queue with §17 questions A1, A2, B1, B2 (at least A1+A2 if 5b tasks 58-60 not merged).
-7. Commit plan file if not already: `chore(plan): phase-5c plan + DoD table`.
+5. DoD smoke per `pre-phase-harness-audit.md` §2: run each DoD command in §9 once against current HEAD. Expected-red: every new-file DoD (tasks 61-69, 69a because handler/test doesn't exist yet). Expected-green: tasks 0, 70 (framework-level checks). Additional: re-run Phase 5b regression `sponsor_liability_with_founder_multiplier` as a green check that the cherry-picked fixes are in place.
+6. Decision-queue check: `.claude/decision-queue.json` entries #17, #19, #20, #21 (from Moves 1-2 of the risk-reduction strategy) must be resolved with answers. If any are still `answer: null`, stop and surface. Impl may self-resolve Q1-Q4 + Q7 (the original plan §17 intake) at this point using the recommendations in §17; Q8 is now #21 and already resolved.
+7. **Step 7 deleted.** (Plan file was landed on governance-v0 @ 6c68f0d78 via decision-queue #18 on 2026-04-18. No self-commit needed. Leave this list item number for commit-history continuity; just document the delta.)
+8. **External-API probes** (Move 6 of the risk-reduction strategy). Run all three in parallel from `scratch/phase-5c-probes/` — each ≤ 30 lines of scratch Rust + SQL — and land as a single `chore(scratch): phase-5c external-API probes` commit on phase-5c before task 1:
+   - **Probe 62-sql** — `scratch/phase-5c-probes/bucket_query.sql`: one `CASE WHEN` bucketing query against `reputation_snapshot.jury_reliability`. Run with `psql -f bucket_query.sql` against the local e2e testcontainer (or manually via `docker exec`); assert the result shape is 5 rows with `count` column. If CASE-WHEN syntax varies on postgres 18 (the testcontainer image), surface as a decision-queue blocker before task 62.
+   - **Probe 68-actix** — `scratch/phase-5c-probes/actix_smoke.rs`: a 15-line test that constructs `App::new().configure(|cfg| lemmy_api_routes::config(cfg, &RateLimit::default()))`, sends a `TestRequest::post().uri("/api/v4/governance/report")` with empty body, asserts 400 (not 404). Verifies Q19's answer. If 404, the route wiring is broken OR the import path is wrong; surface.
+   - **Probe 69a-notify** — `scratch/phase-5c-probes/notify_smoke.rs`: a 25-line scratch that connects via tokio-postgres 0.7.16 (per Q20), spawns a connection-pump task that polls `poll_message` and forwards `AsyncMessage::Notification` onto an `mpsc::UnboundedSender`, does `LISTEN hello`, issues `NOTIFY hello, 'world'` from a second connection, awaits `{ "channel": "hello", "payload": "world" }` from the receiver with a 1-second timeout. Verifies Q20's answer.
+   - If any probe fails, the plan's assumption is broken — **stop task 0 and surface**; do not burn task 1+ iteration on a broken assumption.
 
 **DoD.**
 - On `phase-5c` branch.
 - `.claude/audit-*.log` files all exit-0-verified.
-- Decision queue has 2-4 intake questions logged.
-- No commits of new handler code yet.
+- Decision queue has entries #17, #19, #20, #21 **resolved** (from risk-reduction strategy) + any original §17 intake questions (Q1-Q4, Q7) that impl chose to pre-seed vs self-resolve.
+- `scratch/phase-5c-probes/` contains the three probes listed in step 8, each exit-0, committed as `chore(scratch): phase-5c external-API probes`.
+- Phase 5b regression `sponsor_liability_with_founder_multiplier` re-confirmed green.
+- No commits of new handler code yet (probes are scratch only, not handler code).
 
 ---
 
@@ -426,6 +449,40 @@ pub struct ThresholdsSnapshot {
 
 **63c.** Add e2e test `capability_change_entries_reachable_via_modlog_crate` to `e2e.rs`: seed 3 users with reputation events that cross the `jury_reliability` threshold of 50, call `run_snapshot_batch`, assert `list_capability_changed_entries_since(pool, 0, 10)` returns ≥3 entries with `direction: "gained"`.
 
+**63d — Snapshot-staleness alert (new per decision-queue #21, Move 2 of risk-reduction strategy).** In the existing snapshot-recompute scheduled task (Phase 5a task 54 wired the clokwerk registration in `crates/server/src/scheduled_tasks.rs`), after `run_snapshot_batch` completes, check snapshot freshness:
+
+```rust
+// Pseudo-sketch; actual integration point depends on scheduled_tasks.rs
+// layout from Phase 5a task 54.
+let max_calculated_at: Option<DateTime<Utc>> = reputation_snapshot::table
+    .select(diesel::dsl::max(reputation_snapshot::calculated_at))
+    .first(conn).await?;
+let interval_s = config.scheduler.snapshot_interval_seconds;
+let threshold = Utc::now() - Duration::seconds(2 * interval_s);
+if let Some(max) = max_calculated_at {
+    if max < threshold {
+        tracing::error!(
+            target: "governance::integrity",
+            calculated_at = ?max,
+            threshold = ?threshold,
+            interval_s,
+            "reputation_snapshot staleness detected (DoD line 398)"
+        );
+    }
+} else {
+    tracing::error!(
+        target: "governance::integrity",
+        "reputation_snapshot table empty — snapshot batch has never run"
+    );
+}
+```
+
+**GOTCHA-63d-a.** No governance_log entry (this is an ops signal, not a governance signal). Emits to `tracing` only — subscribers (e.g. `tracing_subscriber::fmt` in production, `tracing-test` in tests) route it appropriately.
+
+**GOTCHA-63d-b.** The config key `scheduler.snapshot_interval_seconds` must already exist from Phase 5a task 54 seed. Verify with `ripgrep "snapshot_interval_seconds" crates/` before writing the read; if missing, fall back to a local `const SNAPSHOT_INTERVAL_S: i64 = 60` and flag as a decision-queue entry (shouldn't happen but defensive).
+
+**GOTCHA-63d-c.** Test coverage: extend `63c` to add a second assertion — seed reputation_snapshot with an artificially stale `calculated_at` (now() - 10 minutes), call the integrity-check path (expose the logic as an extracted `check_snapshot_staleness` fn that takes `(conn, interval_s, now)` so the test can inject a frozen time), assert `tracing-test` captured an `ERROR`-level event at `target: "governance::integrity"`.
+
 **GOTCHA.** IMPLEMENTATION-PLAN-v0.md line 375 calls out two v1 reservations that Phase 5c must NOT implement:
 - Config threshold edits cascading into mass capability losses are **one log entry per affected user per tick** (no dedupe, no burst-collapse). v0 behaviour; do not optimise.
 - In-flight `jury_assignment` rows (`Selected` or `Accepted`) are NOT revoked when a threshold edit drops a juror below `jury_eligible`. Snapshot recompute affects **future** selections only. Add a doc comment to the 63b helper referencing this.
@@ -442,9 +499,17 @@ pub struct ThresholdsSnapshot {
 
 ### §11.4 Task 64 — `accept_jury_assignment` + `admin_assign_jury.rs:139` flip
 
-**ACTION.** Three concurrent changes in one commit:
+**ACTION.** Six sub-steps, final single commit. The ordering matters per Move 3 of the risk-reduction strategy: the test edit is written FIRST on a local throwaway commit to prove it has semantic teeth to catch a broken flip; then the flip + handler land; then the final squash produces one task 64 commit. This prevents a broken test edit from masking a broken flip.
+
+**64e-pre (NEW — Move 3 flip-verification).** Land the test edit FIRST on a throwaway LOCAL commit (not pushed, will be squashed):
+1. Edit `crates/server/tests/e2e.rs::report_to_modlog_golden_path` per the 64e skeleton below (5 accept calls + governance_log assertion extension).
+2. Run: `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e -p lemmy_server report_to_modlog_golden_path --features full > .claude/task64-preflip-test.log 2>&1"`
+3. **Assert the test fails** — either build error (handler doesn't exist) or runtime failure (assignments still have status=Accepted so the accept calls are no-ops OR filter mismatches). If the test PASSES here, the test edit does not have the semantic teeth to catch a broken flip — STOP and re-check the assertion delta.
+4. Keep the local commit; proceed to 64a.
 
 **64a.** Edit `crates/api/api/src/governance/admin_assign_jury.rs:139` from `status: JuryAssignmentStatus::Accepted,` to `status: JuryAssignmentStatus::Selected,`. Update the comment on line 133 (currently: "Insert JuryAssignment rows with status=Accepted (v0 testability)") to reference task 64's accept-flow activation.
+
+**After 64a.** Re-run the test from 64e-pre step 2. Expected: still fails (flip works — `Accepted → Selected` — but handler still missing, so the 5 accept calls don't find a matching assignment). This confirms the flip had observable effect.
 
 **64b.** Create `crates/api/api/src/governance/accept_jury_assignment.rs`. Handler body:
 
@@ -516,7 +581,55 @@ pub async fn accept_jury_assignment(
 }
 ```
 
-**64c.** Helper `shares_active_sponsor(conn, a, b) -> LemmyResult<bool>`. Returns true if any active `surety` row has `(sponsor_id=S, sponsored_id=a, revoked_at IS NULL)` AND another active `surety` row has `(sponsor_id=S, sponsored_id=b, revoked_at IS NULL)` for the same `S`. Implementation: one `sql_query` with `EXISTS (SELECT 1 FROM surety s1 JOIN surety s2 ON s1.sponsor_id = s2.sponsor_id WHERE s1.sponsored_id = $1 AND s2.sponsored_id = $2 AND s1.revoked_at IS NULL AND s2.revoked_at IS NULL LIMIT 1)`. Add to `accept_jury_assignment.rs` as a crate-private helper (NOT exported — `decline_jury_assignment.rs` task 65 may reuse; if so, promote to a shared helper file in task 65).
+**64c (REVISED per Move 5 of risk-reduction strategy).** Helper `shares_active_sponsor(conn, a, b) -> LemmyResult<bool>` returns true if any active `surety` row pair shares the same sponsor for both `a` and `b`. Implementation: one `sql_query` with `EXISTS (SELECT 1 FROM surety s1 JOIN surety s2 ON s1.sponsor_id = s2.sponsor_id WHERE s1.sponsored_id = $1 AND s2.sponsored_id = $2 AND s1.revoked_at IS NULL AND s2.revoked_at IS NULL LIMIT 1)`.
+
+**Location — place in NEW file `crates/api/api/src/governance/jury_common.rs`** (not inline in `accept_jury_assignment.rs`). Declaration: `pub(crate) async fn shares_active_sponsor(...)`. Rationale: task 65's decline handler reuses the same predicate for its own sponsor-cluster guard (see §11.5); extracting now prevents duplicated code between the two handlers and a CodeRabbit "duplicate logic" finding. Add `pub mod jury_common;` to `crates/api/api/src/governance/mod.rs`. File layout:
+
+```rust
+// crates/api/api/src/governance/jury_common.rs
+// Shared helpers for jury-flow handlers (accept, decline, replacement-pick).
+// Extracted at task 64 to preempt duplicated code between accept and decline
+// per the risk-reduction strategy Move 5.
+
+use diesel::sql_types::{BigInt, Bool};
+use diesel::{QueryableByName, sql_query};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use lemmy_db_schema::newtypes::PersonId;
+use lemmy_utils::error::{LemmyErrorType, LemmyResult};
+
+#[derive(QueryableByName)]
+struct BoolRow { #[diesel(sql_type = Bool)] present: bool }
+
+pub(crate) async fn shares_active_sponsor(
+    conn: &mut AsyncPgConnection,
+    a: PersonId,
+    b: PersonId,
+) -> LemmyResult<bool> {
+    let row: BoolRow = sql_query(
+        "SELECT EXISTS (
+             SELECT 1 FROM surety s1
+             JOIN surety s2 ON s1.sponsor_id = s2.sponsor_id
+             WHERE s1.sponsored_id = $1
+               AND s2.sponsored_id = $2
+               AND s1.revoked_at IS NULL
+               AND s2.revoked_at IS NULL
+             LIMIT 1
+         ) AS present",
+    )
+    .bind::<BigInt, _>(a.0)
+    .bind::<BigInt, _>(b.0)
+    .get_result(conn)
+    .await
+    .map_err(|_| LemmyErrorType::Unknown)?;
+    Ok(row.present)
+}
+```
+
+**Import in `accept_jury_assignment.rs` and (later) `decline_jury_assignment.rs`:** `use super::jury_common::shares_active_sponsor;`.
+
+**GOTCHA-64c-a.** The `surety` table name + `revoked_at` column — confirm these match the actual schema before writing the SQL. Phase 5a shipped the sponsorship model; grep `crates/db_schema/src/schema.rs` for `surety` and `revoked_at` to confirm. If columns differ (e.g. `revoked_ts` vs `revoked_at`), adjust the SQL at implementation time and update this GOTCHA with the actual name.
+
+**GOTCHA-64c-b.** Workspace clippy denies `.unwrap()` / `.expect()` / `as_conversions`. The `map_err` above propagates correctly; no `.unwrap()` anywhere. `a.0` and `b.0` are `i32` → `BigInt` bind works directly without cast.
 
 **64d.** Add `pub const ENTRY_KIND_JURY_ACCEPTED: &str = "jury_accepted";` to `governance_log.rs` lines 50-64 block.
 
@@ -536,6 +649,11 @@ for juror_id in &assign_resp.assigned_person_ids {
 
 Plus extend the governance_log count assertion at e2e.rs:997 to include `jury_accepted == Some(&5)` and keep `jury_assigned == Some(&5)`, `panel_assembled == Some(&1)`.
 
+**64f (NEW — Move 3 squash-and-verify).** After 64a–64e all land locally:
+1. Re-run the task 64 DoD per §9: `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e -p lemmy_server report_to_modlog_golden_path --features full > .claude/task64-postflip-test.log 2>&1"`. Assert exit 0. This is the triangulation point: the test now PASSES **because** the flip works AND the handler exists AND the test edit has the right assertions (the three were independently verified at 64e-pre → 64a → 64b–64d).
+2. Squash the local commits (64e-pre + 64a + 64b + 64c + 64d + 64e-post) into ONE commit: `feat(governance): task 64 — accept_jury_assignment + admin_assign_jury flip (Selected for accept handshake)`. Commit message body documents the 3-step flip-verification sequence (64e-pre fail, post-64a fail, post-64b–e green).
+3. Single commit pushed. PR contains the final state only; local throwaway history provides the verification audit trail in the commit message.
+
 **GOTCHA.** `submit_jury_vote.rs:137` filters on `status.eq(Accepted)`. Task 64 preserves this. Without task 64b's new accept calls, `submit_jury_vote` would find no Accepted assignment (because 64a made it Selected) and fail with NotFound — this is the regression test guard.
 
 **GOTCHA.** "Caller is not the case's reporter" — IMPLEMENTATION-PLAN-v0.md line 377. In v0 there is no separate `report` table (ADR-013 collapsed reports into `moderation_case`). The "first reporter" is `moderation_case.creator_id`. Task 64b uses that as the reporter proxy. If v1 adds a `case_report` table, task 64's conflict check gets revisited.
@@ -554,7 +672,7 @@ Plus extend the governance_log count assertion at e2e.rs:997 to include `jury_ac
 
 ### §11.5 Task 65 — `decline_jury_assignment` + replacement pick
 
-**ACTION.** Create `crates/api/api/src/governance/decline_jury_assignment.rs`. Add `ENTRY_KIND_JURY_DECLINED` + `ENTRY_KIND_JURY_REPLACEMENT_SELECTED` consts.
+**ACTION.** Create `crates/api/api/src/governance/decline_jury_assignment.rs`. Add `ENTRY_KIND_JURY_DECLINED` + `ENTRY_KIND_JURY_REPLACEMENT_SELECTED` consts. **Import `shares_active_sponsor` from `super::jury_common`** (already created in task 64 per Move 5 of risk-reduction strategy; do NOT replicate the helper).
 
 **HANDLER SHAPE.**
 
@@ -918,7 +1036,66 @@ Extend the scope block at lines 505-522 to:
 - **Admin backstops (not counted):** `POST /admin/assign-jury`, `POST /admin/close-case`, `POST /admin/reputation-stats`. ✓
 - **`endorsement/revoke` is NOT routed** per [05 §2]. If task 68 accidentally adds it, remove.
 
-**68c — e2e test `all_mvp_endpoints_return_non_404`.** Add to `e2e.rs`:
+**68c — e2e test `all_mvp_endpoints_return_non_404` + per-handler happy-path assertions (REVISED per Move 4 of risk-reduction strategy).** Per the original plan, the smoke test asserts every route returns `200 | 400 | 401` (not 404). Move 4 extends this by seeding minimal fixtures + authed requests for the 4 handlers whose only coverage would otherwise be route-level (61 `get_my_reputation`, 62 `admin_reputation_stats`, 66 `request_appeal`, 67 `list_cases`) — catching DTO shape bugs and SQL syntax errors that the non-404 smoke cannot. LOC cap bumped 250 → 320 for this task.
+
+The smoke test body now has two phases: (A) the raw-route non-404 sweep (original 14-endpoint loop), then (B) 4 authed happy-path assertions with response-body decoding. Pattern:
+
+```rust
+// -- Phase B (NEW — Move 4): per-handler happy-path assertions --
+// Seed fixtures ONCE, reuse across the 4 handlers.
+let admin_view = seed_admin_local_user_view(&context).await?;
+let admin_jwt = mint_test_jwt(&context, &admin_view).await?;
+let user_view = seed_plain_local_user_view(&context, "probe_user").await?;
+let user_jwt = mint_test_jwt(&context, &user_view).await?;
+let target_view = seed_plain_local_user_view(&context, "probe_target").await?;
+let case_decided = seed_case_at_status(&context, target_view.person.id, CaseStatus::Decided).await?;
+let case_open = seed_case_at_status(&context, target_view.person.id, CaseStatus::Open).await?;
+
+// B.1 — GET /reputation/me (task 61)
+let resp = TestRequest::get().uri("/api/v4/governance/reputation/me")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+assert_eq!(resp.status(), 200, "reputation/me expected 200");
+let body: GetMyReputationResponse = test::read_body_json(resp).await;
+assert_eq!(body.view.active_sanctions, 0, "fresh user should have zero active sanctions");
+
+// B.2 — POST /admin/reputation-stats (task 62)
+let resp = TestRequest::post().uri("/api/v4/governance/admin/reputation-stats")
+    .insert_header(("authorization", format!("Bearer {admin_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload("{}")
+    .send_request(&app).await;
+assert_eq!(resp.status(), 200, "admin/reputation-stats expected 200 for admin caller");
+let body: AdminReputationStatsResponse = test::read_body_json(resp).await;
+assert_eq!(body.buckets.jury_reliability.len(), 5, "jury_reliability bucket shape [i64; 5]");
+
+// B.3 — POST /appeal (task 66) — target appeals a Decided case
+let target_jwt = mint_test_jwt(&context, &target_view).await?;
+let resp = TestRequest::post().uri("/api/v4/governance/appeal")
+    .insert_header(("authorization", format!("Bearer {target_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload(format!(r#"{{"case_id":{},"reason":"probe"}}"#, case_decided.0))
+    .send_request(&app).await;
+assert_eq!(resp.status(), 200, "appeal expected 200 when target appeals a Decided case");
+let body: RequestAppealResponse = test::read_body_json(resp).await;
+assert!(body.appeal_id.0 > 0, "appeal_id must be a positive integer");
+
+// B.4 — GET /cases (task 67) — any authed caller sees the one open case
+let resp = TestRequest::get().uri("/api/v4/governance/cases")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+assert_eq!(resp.status(), 200, "cases expected 200 for any authed caller");
+let body: Vec<GovernanceCaseSummaryView> = test::read_body_json(resp).await;
+assert!(body.iter().any(|c| c.case.id == case_open), "seeded open case must appear in list");
+```
+
+**GOTCHA-68c-Move4-a.** `mint_test_jwt` helper: check whether a shipped helper already exists (grep `mint_jwt|test_jwt|issue_jwt` in `crates/api/api_utils/src/claims.rs` + `tests/e2e.rs`). If not, write a 10-line helper in the test module that calls `Claims::jwt(...)` with the test secret. Do NOT ship a public JWT helper — test-local only per §11.8 original "keep local" GOTCHA.
+
+**GOTCHA-68c-Move4-b.** `seed_case_at_status(pool, target_person_id, CaseStatus::Decided)` — if the existing Phase 2a helpers don't cover this, add a 20-line helper in the test module that inserts `ModerationCase` + runs the status through to `Decided` via direct UPDATE (skip the vote loop for test speed).
+
+**GOTCHA-68c-Move4-c.** Phase B runs AFTER Phase A's 404-sweep. Phase A uses unauthenticated requests and empty bodies (just checking routes exist). Phase B's assertions are additive, not replacement. If Phase A's sweep fails (any endpoint 404s), fail fast before Phase B runs.
+
+**68c — original e2e test body.** The Phase A non-404 sweep:
 
 ```rust
 #[tokio::test(flavor = "multi_thread")]
@@ -1292,6 +1469,12 @@ Per IMPLEMENTATION-PLAN-v0.md §5: **integration-only for v0, no unit tests unti
 | `create_report` auto-transitions case past `Decided` before task 66's window check runs | LOW | MED | Task 66 checks `case.status == Decided` explicitly; earlier-state cases → 404; concurrent transition is not a v0 concern |
 | CodeRabbit flags the three-branch task 69 as too-complex | MED | LOW | One test with three asserts is ~80 lines; manageable. If flagged, split into three `#[tokio::test]` functions post-review |
 | Task 69a migration timestamp collision with Phase 6 federation migration | LOW | LOW | Use timestamp `2026-04-20-000000-0000` (well before planned Phase 6); if Phase 6 needs earlier slot, rename 69a migration during rebase |
+| **e2e suite races under parallelism** (Phase 5b carry-forward #3 — `SETTINGS` singleton caches first test's `LEMMY_DATABASE_URL`) | **MED** | **MED** | **Move 7 of risk-reduction strategy landed the `--test-threads=1` guard into `scripts/brehon/cargo-test.bat` BEFORE phase-5c cuts. Wrapper auto-appends flag when `--test e2e` is present without `--no-run` and without caller-override. No in-test change needed.** |
+| **4 new handlers (61, 62, 66, 67) have no direct happy-path e2e** — only route-level non-404 smoke | **MED** | **MED** | **Move 4 of risk-reduction strategy extended task 68c with Phase B per-handler happy-path assertions: GET /reputation/me (user context), POST /admin/reputation-stats (admin context), POST /appeal (target appeals Decided case), GET /cases (authed caller sees seeded case). Catches DTO shape + SQL syntax bugs that a non-404 smoke cannot.** |
+| **Task 64's line-139 flip + test edit in same commit could mask a broken test** | **LOW** | **HIGH** | **Move 3 of risk-reduction strategy reordered task 64: write test edit on throwaway LOCAL commit FIRST (64e-pre), verify it fails before the flip lands; apply flip; verify still fails; add handler; verify now passes; squash into single task-64 commit. Three independent verifications prove test has semantic teeth AND flip works AND handler is correct.** |
+| **Task 64c `shares_active_sponsor` helper could be duplicated in task 65 if left inline** | **LOW** | **LOW** | **Move 5 of risk-reduction strategy extracts to new `crates/api/api/src/governance/jury_common.rs` at task-64 time. Task 65 imports from `jury_common`. Zero duplication; preempts CodeRabbit "duplicate logic" finding.** |
+| **Task 62 CASE-WHEN bucketing, task 68c actix `init_service`, task 69a.3 tokio-postgres notifications — all rely on APIs with no existing fork mirror** | **MED** | **MED** | **Move 6 of risk-reduction strategy adds step 8 to task 0: three scratch probes in `scratch/phase-5c-probes/`, run in parallel, each ≤ 30 lines. Verify CASE-WHEN returns 5-row shape on postgres 18; verify actix `config` wiring returns 400 for empty POST; verify `Connection::poll_message` + channel bridge receives `NOTIFY hello 'world'` within 1-second timeout. Fails fast before task 1 iteration burns context on a broken assumption.** |
+| **Authoritative DoD line 398 (snapshot staleness alert) has no task slot** | **LOW** | **MED** (would fail phase-close DoD evaluation) | **Move 2 of risk-reduction strategy allocated to task 63d (~20 lines in `scheduled_tasks.rs` per decision-queue #21). Emits `tracing::error!` when `MAX(reputation_snapshot.calculated_at) < now() - 2×snapshot_interval_seconds`. Test-coverage via extracted `check_snapshot_staleness` fn + `tracing-test` assertion.** |
 
 ---
 
@@ -1334,38 +1517,47 @@ If during execution the plan diverges from reality (e.g. an Explore-agent findin
 
 ## §17. Notes + decision-queue intake
 
-**Intake seed entries (write at task 0):**
+**Risk-reduction strategy pre-resolves (2026-04-18).** Three of the seven original plan intake questions have been lifted to standalone `.claude/decision-queue.json` entries and answered BEFORE task 0 per Moves 1-2 of the risk-reduction strategy:
 
-**Q1 (A1 per §2.1) — Phase 5b task 59 CLI status.** Has `crates/tools/seed_founders/` shipped? If no, task 69's third branch uses inline `reputation_event` INSERT instead of calling the CLI. Options: (a) inline seeding in test, (b) wait for task 59. Recommendation: (a) to avoid stalling 5c on 5b tail.
+- **Q5 → decision-queue #19** — actix `config` fn name. **Answered:** `pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit)` at `crates/api/routes/src/lib.rs:201`. Plan §11.8 68c wiring is correct.
+- **Q6 → decision-queue #20** — tokio-postgres 0.7.16 notifications API. **Answered:** poll-based via `Connection::poll_message()`. Plan §11.10 69a.3 snippet (using `client.notifications().next().await`) is **wrong for this version** and needs rewrite to use `poll_message` + mpsc channel bridge. Implementer adjusts at task 69a time using the pattern in #20's answer body.
+- **Q8 (new) → decision-queue #21** — DoD line 398 snapshot-staleness alert placement. **Answered:** fold into task 63 as step 63d (~20 lines). Plan §11.3 updated.
 
-**Q2 (A2 per §2.2) — Phase 5b task 60 regression guard.** Does `sponsor_liability_with_founder_multiplier` exist in `e2e.rs`? If no, 5c's DoD line 396 cannot be evaluated. Options: (a) drop that DoD row for 5c, (b) wait for task 60, (c) write a minimal placeholder test in 5c task 0. Recommendation: (a).
+**Remaining intake (keep as task-0 decision-queue pre-seed, or impl-self-resolve using recommendations):**
+
+**Q1 (A1 per §2.1) — Phase 5b task 59 CLI status.** Has `crates/tools/seed_founders/` shipped? If no, task 69's third branch uses inline `reputation_event` INSERT instead of calling the CLI. Options: (a) inline seeding in test, (b) wait for task 59. Recommendation: (a) to avoid stalling 5c on 5b tail. (Note: §2.1 now says Phase 5b all shipped; Q1 likely resolves to "yes CLI exists, but inline is still cleaner for self-contained test".)
+
+**Q2 (A2 per §2.2) — Phase 5b task 60 regression guard.** Does `sponsor_liability_with_founder_multiplier` exist in `e2e.rs`? If no, 5c's DoD line 396 cannot be evaluated. Options: (a) drop that DoD row for 5c, (b) wait for task 60, (c) write a minimal placeholder test in 5c task 0. Recommendation: (a) was original; now (b) moot because §2.2 confirms task 60 shipped. Re-run at task 0 baseline smoke to confirm still green.
 
 **Q3 — Appeal window policy.** §11.6 task 66 guards on `case.closed_at.is_none()`. Is that the correct appeal-window definition? IMPLEMENTATION-PLAN-v0.md line 381 says "Verify `now() < case.closed_at`" which is the OPPOSITE — requires closed_at to be future-dated. But case closure in v0 is admin-driven (no automatic close timer), so `closed_at` is either None (case still open-decided) or set-to-now() after admin close. The plain reading of "now() < closed_at" doesn't fit v0 semantics. Options: (a) `closed_at IS NULL` as the window (current §11.6 plan), (b) add a `decided_at + 7 days` computed window, (c) defer to admin-flip-based window. Recommendation: (a), document as a v0 simplification.
 
 **Q4 — Task 62 observability-query log entry.** Should `admin_reputation_stats` emit a log entry when called? Pro: audit trail of admin queries. Con: none of the other admin backstops log queries (only writes). Recommendation: no log, add `TODO(brehon-fork): audit-log admin queries in v1` comment.
 
-**Q5 — Actix route config fn name.** What is the exported fn in `crates/api/routes/src/lib.rs` that `actix_web::App::new().configure(|cfg| _ )` plugs into? Task 68c smoke test depends on this. Options: `config`, `api_config`, or inline the scope. Read at implementation-time from `lib.rs` top-level.
-
-**Q6 — `tokio-postgres::notifications()` API at 0.7.16.** Does the crate at that version expose an async stream of notifications, or a blocking poll? Task 69a.3 pattern depends on this. If stream-based, straightforward. If poll-based, test must spawn a blocking task.
-
 **Q7 — Cosmetic entry-kind literal migration.** The `governance_log.rs` comment (lines 46-48) flags that Phase 4 string-literal emit sites (`"report_created"` etc.) should migrate to the consts in a Phase 5c cosmetic task. Should task 70 (phase-close) include this cleanup? Options: (a) yes, bundle with phase-close, (b) separate cosmetic commit in 5c, (c) defer to v1. Recommendation: (c) — scope creep; the literals are functionally identical to the consts. Document as carry-forward.
 
-**Intake commits:** First task of the phase (task 0) writes Q1–Q7 to `.claude/decision-queue.json`. Advisor addresses before task 1 begins OR impl continues with recommendations listed above.
+**Intake commits:** Task 0 verifies decision-queue entries #19, #20, #21 are already resolved (from Moves 1-2). Q1-Q4 + Q7 may be impl-self-resolved at task 0 time using the recommendations above, OR pre-seeded for advisor pickup. No blocker if impl chooses self-resolve for Q1-Q4 + Q7 (they are informational / v0-simplification choices, not compile-time gates).
 
 ---
 
 ## End of plan
 
-**Prior HEAD at plan-write:** `phase-5b @ 1682a544f` (2026-04-17). **Expected 5c branch HEAD:** `governance-v0 @ <Phase 5b Slice C merge commit>`.
+**Prior HEAD at plan-write:** `phase-5b @ 1682a544f` (2026-04-17). **Expected 5c branch HEAD:** `governance-v0 @ f20728323` (2026-04-18) or later — after the risk-reduction strategy lands `chore(scripts): enforce --test-threads=1 for e2e` + the plan-file Move 2-6 edits on governance-v0.
 
-**Confidence score:** 8/10 for one-pass implementation success.
+**Confidence score (updated 2026-04-18 after risk-reduction strategy):** 9/10 for one-pass implementation success.
 
 **Confidence rationale:**
 - +2 — Every target file exists with verified line numbers from 3 Explore agents.
 - +2 — All 5 input DTOs are already shipped (no api_common churn risk).
 - +2 — `select_eligible_jurors` already has the `exclude_person_ids` parameter pre-wired by Phase 5b task 57.
 - +2 — `governance_log::append` auto-scrubs via `scrub_json`, so task 66's user-text `reason` is safe by default.
-- -1 — Phase 5b tasks 58-60 not merged at plan-write; §2 blockers may require runtime pivots (founder CLI inlined, regression test dropped or deferred).
-- -1 — Task 68c's actix-web test pattern is NEW for this fork (no existing mirror); exact `App::configure` wiring has one unknown (Q5).
+- +1 — Phase 5b fully merged + cherry-picked + retro'd at eaa413cd8; §2.1/§2.2 blockers resolved.
+- +1 — Decision-queue #19 (actix config fn), #20 (tokio-postgres poll-based), #21 (staleness alert) all resolved BEFORE task 0 per risk-reduction Moves 1-2.
+- +1 — Move 3 flip-verification sequence eliminates the "test edit masks broken flip" risk on task 64.
+- +1 — Move 4 per-handler happy-path assertions close the DTO shape + SQL syntax coverage gap for tasks 61, 62, 66, 67.
+- +1 — Move 5 extracts `shares_active_sponsor` to `jury_common.rs` at task-64 time, preempting CodeRabbit duplicate-logic finding.
+- +1 — Move 6 external-API probes catch broken assumptions at task-0 boundary, not mid-task.
+- +1 — Move 7 `--test-threads=1` wrapper guard eliminates the Phase 5b e2e race class before 5c starts.
+- -1 — Two compound tasks still (68 LOC cap 320, 69 3-branch test); if Slice A ralph iteration count exceeds 8, apply Move 8 and split Slice B off naturally at task 68 boundary.
+- -1 — tokio-postgres `Connection::poll_message` + channel bridge pattern is new to the fork; scratch probe at task 0 step 8 de-risks but does not eliminate unknowns.
 
-**Next step.** Advisor reviews plan, resolves Q1-Q7 decision-queue seed, approves `/prp-ralph-slice "phase-5c-remaining-endpoints-and-observability"` OR per-task `/prp-implement` runs.
+**Next step.** Advisor confirms governance-v0 tip includes the Move 7 wrapper edit + Move 2-6 plan edits, cuts phase-5c from the new tip, and kicks off `/prp-ralph-slice "phase-5c-remaining-endpoints-and-observability"` — OR per-task `/prp-implement` runs. Risk-reduction strategy reference: `C:\Users\barri\.claude\plans\what-would-be-a-proud-balloon.md`.

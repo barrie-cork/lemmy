@@ -754,11 +754,13 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use ed25519_dalek::{Signature, SigningKey, Verifier, VerifyingKey};
   use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
     list_modlog::list_modlog,
     submit_jury_vote::submit_jury_vote,
   };
   use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
     AdminAssignJury,
     CreateGovernanceReport,
     ListGovernanceModlog,
@@ -999,6 +1001,22 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     assert_eq!(map.get("panel_assembled"), Some(&1));
   }
 
+  // -- 10a. Every assigned juror calls accept_jury_assignment (task 64) --
+  //        Must run BEFORE jurors vote: submit_jury_vote filters on
+  //        status=Accepted. With the task 64a flip, admin_assign_jury now
+  //        writes status=Selected, so the accept handshake moves each
+  //        assignment to status=Accepted before the vote loop below.
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let _resp = accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+  }
+
   // -- 11. Steps 3–5: 3 jurors vote AdvisoryLabel ------------------
   let voting_jurors: Vec<PersonId> = assign_resp
     .assigned_person_ids
@@ -1156,6 +1174,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     assert_eq!(map.get("report_created"), Some(&1));
     assert_eq!(map.get("jury_assigned"), Some(&5));
     assert_eq!(map.get("panel_assembled"), Some(&1));
+    assert_eq!(map.get("jury_accepted"), Some(&5));
     assert_eq!(map.get("jury_vote_submitted"), Some(&3));
     assert_eq!(map.get("case_decided"), Some(&1));
     assert_eq!(map.get("sanction_created"), Some(&1));
@@ -1390,11 +1409,17 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
     reputation_snapshot::recompute_snapshot,
     submit_jury_vote::submit_jury_vote,
   };
-  use lemmy_api_common::governance::{AdminAssignJury, CreateGovernanceReport, SubmitJuryVote};
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
+    AdminAssignJury,
+    CreateGovernanceReport,
+    SubmitJuryVote,
+  };
   use lemmy_api_crud::governance::create_report::create_report;
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
   use lemmy_db_schema::source::{
@@ -1679,6 +1704,20 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
       5,
       "5 jurors assigned"
     );
+
+    // Accept jury before voting — submit_jury_vote requires Accepted status
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("juror_view (accept): {e}").into() })?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await
+      .map_err(|e| -> Box<dyn Error> { format!("accept_jury_assignment: {e}").into() })?;
+    }
 
     // Step 4: first 3 selected jurors vote the target decision.
     let voting: Vec<PersonId> = assign_resp
@@ -1969,3 +2008,995 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
 
   Ok(())
 }
+
+/// Phase 5c task 63c — `list_capability_changed_entries_since` reads
+/// `capability_changed` rows from `governance_log` directly, paginated by
+/// `since_id`. This test seeds three rows via raw SQL (the trigger layer
+/// fills `prev_hash` + `entry_hash`; signature is left NULL because no
+/// signing pass runs in this test), then asserts the helper returns
+/// exactly those three with stable id-ascending order. Mirror of
+/// `modlog_view_returns_published_entries` style — direct DB seed +
+/// view-crate fn assert.
+#[tokio::test]
+async fn capability_change_entries_reachable_via_modlog_crate(
+) -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_views_governance_modlog::impls::list_capability_changed_entries_since;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  // No GOVERNANCE_LOG_SIGNING_KEY needed — this test reads
+  // governance_log directly via the view-crate helper; no
+  // `governance_log::append` (which would require the signing key) is
+  // called. Inserts go through the hash-chain trigger but leave the
+  // signature column NULL — that's the trigger contract too (signing is
+  // a separate UPDATE pass in Phase 4 production code).
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+    // Three capability_changed rows + one unrelated row to confirm
+    // the entry_kind filter is honoured. Each insert lets the
+    // hash-chain trigger compute prev_hash/entry_hash.
+    sync_conn.batch_execute(
+      r#"
+      INSERT INTO governance_log (entry_kind, payload, actor_pseudonym)
+        VALUES
+          ('capability_changed',
+           '{"dimension_flipped":"jury_eligible","direction":"gained","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-a'),
+          ('capability_changed',
+           '{"dimension_flipped":"jury_eligible","direction":"gained","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-b'),
+          ('capability_changed',
+           '{"dimension_flipped":"trusted_reporter","direction":"lost","snapshot_community_id":null}'::jsonb,
+           'pseudo-user-c'),
+          ('report_created',
+           '{"reason_code":"spam"}'::jsonb,
+           'pseudo-reporter');
+      "#,
+    )?;
+  }
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+
+  let entries = list_capability_changed_entries_since(&mut pool, 0, 10)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("list_capability_changed_entries_since: {e}").into()
+    })?;
+  assert_eq!(
+    entries.len(),
+    3,
+    "expected the three capability_changed rows (the report_created row must be filtered out)"
+  );
+  for e in &entries {
+    assert_eq!(e.entry_kind, "capability_changed", "entry_kind filter held");
+  }
+  // id ascending — first row should be the lowest id.
+  let first_id = entries
+    .first()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one entry".into() })?
+    .id;
+  let last_id = entries
+    .last()
+    .ok_or_else(|| -> Box<dyn Error> { "expected at least one entry".into() })?
+    .id;
+  assert!(first_id < last_id, "entries must be id-ascending");
+
+  // since_id paging — calling with the first row's id excludes it,
+  // returns the remaining 2.
+  let after_first = list_capability_changed_entries_since(&mut pool, first_id, 10)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("list_capability_changed_entries_since (paging): {e}").into()
+    })?;
+  assert_eq!(after_first.len(), 2, "since_id excludes rows with id == since_id");
+
+  Ok(())
+}
+
+/// Phase 5c task 63d — `check_snapshot_staleness` emits a structured
+/// `tracing::error!` event under `target: "governance::integrity"` when
+/// the most-recent `reputation_snapshot.calculated_at` is older than
+/// `now - 2 * interval_s`. Pure observability; no DB writes. Per
+/// GOTCHA-63d-c, time is injected so the test can drive the threshold
+/// deterministically. Uses `tracing-test` `traced_test` macro to
+/// capture emitted events.
+#[tokio::test]
+#[tracing_test::traced_test]
+async fn snapshot_staleness_alert_fires_when_max_calculated_at_is_old(
+) -> Result<(), Box<dyn Error>> {
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::reputation_snapshot::check_snapshot_staleness;
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  // Path 1 — empty table emits the "table empty" variant.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  check_snapshot_staleness(&mut async_conn, 60, Utc::now())
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness empty-table: {e}").into()
+    })?;
+  assert!(
+    logs_contain("snapshot batch has never run"),
+    "expected the empty-table staleness signal in tracing output"
+  );
+
+  // Path 2 — seed one stale row (calculated_at = now - 1h), interval = 60s.
+  // Threshold becomes now - 120s; 1h ago is well past that, so the
+  // staleness signal fires.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    sync_conn.batch_execute(
+      r#"
+      INSERT INTO instance (domain) VALUES ('staleness.invalid');
+      INSERT INTO person (name, ap_id, inbox_url, public_key, instance_id)
+        VALUES (
+          'staleness-seed',
+          'https://staleness.invalid/u/seed',
+          'https://staleness.invalid/u/seed/inbox',
+          'staleness-pubkey',
+          (SELECT id FROM instance WHERE domain = 'staleness.invalid')
+        );
+      INSERT INTO reputation_snapshot
+        (person_id, community_id, reporting_accuracy, jury_reliability,
+         participation_consistency, endorsement_strength,
+         jury_eligible, trusted_reporter, can_sponsor, calculated_at)
+        VALUES (
+          (SELECT id FROM person WHERE name = 'staleness-seed'),
+          NULL, 0, 0, 0, 0, false, false, false,
+          NOW() - INTERVAL '1 hour'
+        );
+      "#,
+    )?;
+  }
+  // Use a fresh async connection — the previous one is borrowed by the
+  // earlier check; reusing is ambiguous in scope.
+  let mut async_conn2 = AsyncPgConnection::establish(&db_url).await?;
+  check_snapshot_staleness(&mut async_conn2, 60, Utc::now())
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness stale-row: {e}").into()
+    })?;
+  assert!(
+    logs_contain("staleness detected"),
+    "expected the stale-max-row staleness signal in tracing output"
+  );
+
+  // Path 3 — seed one fresh row (calculated_at = now), interval = 60s.
+  // Threshold = now - 120s; row's calculated_at > threshold, so the
+  // signal does NOT fire on this call. The earlier emissions are still
+  // in the captured log though, so this assertion only checks the
+  // counter incremented by less than 1 — we use a marker emission
+  // pattern by passing a fresh future-now to ensure the comparison falls
+  // on the safe side without churning the log.
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    sync_conn.batch_execute(
+      r#"
+      UPDATE reputation_snapshot
+      SET calculated_at = NOW()
+      WHERE community_id IS NULL;
+      "#,
+    )?;
+  }
+  let mut async_conn3 = AsyncPgConnection::establish(&db_url).await?;
+  // Use frozen time slightly in the past to make the threshold even more
+  // forgiving — guarantees no new staleness signal in path 3.
+  let frozen = Utc::now() - Duration::seconds(1);
+  check_snapshot_staleness(&mut async_conn3, 60, frozen)
+    .await
+    .map_err(|e| -> Box<dyn Error> {
+      format!("check_snapshot_staleness fresh-row: {e}").into()
+    })?;
+  // No new assertion — `logs_contain` is monotonic and would still
+  // return true for prior emissions. The contract being tested is "no
+  // panic + Ok(()) return when the table is fresh".
+
+  Ok(())
+}
+
+// ============================================================================
+// Phase 5c — task 68: route registration + per-handler happy-path assertions
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
+  use actix_web::{App, test, web::Data};
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection};
+  use lemmy_api_common::governance::{
+    AdminReputationStatsResponse, GetMyReputationResponse, ListGovernanceCasesResponse,
+    RequestAppealResponse,
+  };
+  use lemmy_api_utils::{
+    claims::Claims, context::LemmyContext, request::client_builder,
+  };
+  use lemmy_db_schema::{
+    newtypes::LocalUserId,
+    source::{
+      instance::Instance,
+      local_user::{LocalUser, LocalUserInsertForm},
+      person::{Person, PersonInsertForm},
+      secret::Secret,
+    },
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  // Bump rate-limit buckets so the 14-endpoint sweep + 4 Phase B probes
+  // don't trip the 6/300s Post bucket from `with_debug_config()`. These
+  // tests exercise routing and handler shape, not rate-limit behaviour.
+  {
+    use enum_map::enum_map;
+    use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+    rate_limit.set_config(enum_map! {
+      ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+    });
+  }
+  let context = LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit.clone(),
+  );
+
+  let app = test::init_service(
+    App::new()
+      .app_data(Data::new(context.clone()))
+      .wrap(SessionMiddleware::new(context.clone()))
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit))
+  ).await;
+
+  // ========== Phase A: non-404 sweep (14 routes) ==========
+  let endpoints: &[(&str, &str, &str, &[u16])] = &[
+    ("POST", "/api/v4/governance/report",                        "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/endorsement",                   "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/appeal",                        "{}", &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/case?case_id=1",                "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/cases",                         "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/modlog",                        "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/reputation/me",                 "",   &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/jury/me",                       "",   &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/accept",                   "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/decline",                  "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/jury/vote",                     "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/admin/assign-jury",             "{}", &[200, 400, 401]),
+    ("POST", "/api/v4/governance/admin/close-case",              "{}", &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/admin/reputation-stats",        "",   &[200, 400, 401]),
+  ];
+
+  for (method, path, body, allowed) in endpoints {
+    let req = match *method {
+      "GET" => test::TestRequest::get().uri(path).to_request(),
+      "POST" => test::TestRequest::post()
+        .uri(path)
+        .insert_header(("content-type", "application/json"))
+        .set_payload(body.to_string())
+        .to_request(),
+      _ => unreachable!(),
+    };
+    let resp = test::call_service(&app, req).await;
+    let status = resp.status().as_u16();
+    assert!(
+      allowed.contains(&status),
+      "{method} {path} returned {status} (expected one of {allowed:?}, NOT 404)"
+    );
+  }
+
+  // ========== Phase B: per-handler happy-path assertions (Move 4) ==========
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn make_user(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> Result<(LocalUserId, PersonId), Box<dyn Error>>
+  {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    let lu = LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok((lu.id, person.id))
+  }
+
+  async fn mint_jwt(
+    ctx: &LemmyContext,
+    local_user_id: LocalUserId,
+  ) -> Result<String, Box<dyn Error>> {
+    let req = test::TestRequest::default().to_http_request();
+    let token = Claims::generate(local_user_id, None, req, ctx).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(token.into_inner())
+  }
+
+  let (admin_lu_id, _admin_pid) = make_user(&context, instance.id, "probe_admin", true).await?;
+  let admin_jwt = mint_jwt(&context, admin_lu_id).await?;
+  let (user_lu_id, _user_pid) = make_user(&context, instance.id, "probe_user", false).await?;
+  let user_jwt = mint_jwt(&context, user_lu_id).await?;
+  let (target_lu_id, target_pid) = make_user(&context, instance.id, "probe_target", false).await?;
+  let target_jwt = mint_jwt(&context, target_lu_id).await?;
+
+  // Seed a Decided case for the appeal test + an Open case for list_cases.
+  {
+    use diesel_async::RunQueryDsl;
+    use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
+
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let decided_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target_pid),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "probe".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Decided,
+      threshold_score: 1,
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&decided_form)
+      .execute(&mut async_conn)
+      .await?;
+
+    let open_form = ModerationCaseInsertForm {
+      status: CaseStatus::Open,
+      target_person_id: None,
+      ..decided_form
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&open_form)
+      .execute(&mut async_conn)
+      .await?;
+  }
+
+  // B.1 — GET /reputation/me (task 61)
+  let resp = test::TestRequest::get()
+    .uri("/api/v4/governance/reputation/me")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "reputation/me expected 200");
+  let body: GetMyReputationResponse = test::read_body_json(resp).await;
+  assert_eq!(body.view.active_sanctions, 0, "fresh user should have zero active sanctions");
+
+  // B.2 — POST /admin/reputation-stats (task 62)
+  let resp = test::TestRequest::post()
+    .uri("/api/v4/governance/admin/reputation-stats")
+    .insert_header(("authorization", format!("Bearer {admin_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload("{}")
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "admin/reputation-stats expected 200 for admin");
+  let body: AdminReputationStatsResponse = test::read_body_json(resp).await;
+  assert_eq!(body.buckets.jury_reliability.len(), 5, "jury_reliability bucket shape");
+
+  // B.3 — POST /appeal (task 66) — target appeals a Decided case
+  let resp = test::TestRequest::post()
+    .uri("/api/v4/governance/appeal")
+    .insert_header(("authorization", format!("Bearer {target_jwt}")))
+    .insert_header(("content-type", "application/json"))
+    .set_payload(r#"{"case_id":1,"reason":"probe appeal"}"#)
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "appeal expected 200 for target on Decided case");
+  let body: RequestAppealResponse = test::read_body_json(resp).await;
+  assert!(body.appeal_id.0 > 0, "appeal_id must be positive");
+
+  // B.4 — GET /cases (task 67) — authed caller sees the seeded cases
+  let resp = test::TestRequest::get()
+    .uri("/api/v4/governance/cases")
+    .insert_header(("authorization", format!("Bearer {user_jwt}")))
+    .send_request(&app).await;
+  assert_eq!(resp.status().as_u16(), 200, "cases expected 200 for authed caller");
+  let body: ListGovernanceCasesResponse = test::read_body_json(resp).await;
+  assert!(!body.cases.is_empty(), "seeded cases must appear in list");
+
+  Ok(())
+}
+
+// ============================================================================
+// Phase 5c — task 69: capability-gating e2e (3 branches)
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error>> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    admin_assign_jury::admin_assign_jury, reputation_snapshot::run_snapshot_batch,
+  };
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::moderation_case::ModerationCaseInsertForm,
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{
+      CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus, ReputationDimension,
+    },
+    schema::{jury_assignment, reputation_event},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  // Seed 6 eligible + 2 ineligible users. Branch 1 needs only 5 to fill the
+  // panel; branch 2 needs a 6th because capping eligibles[0] with 3 active
+  // assignments drops the strict pool by 1, and branch 2 asserts the pool
+  // can still hit panel_size=5 without eligibles[0].
+  let mut eligibles = Vec::new();
+  for i in 0..6 {
+    eligibles.push(seed_person(&context, instance.id, &format!("eligible_{i}"), false).await?);
+  }
+  let mut ineligibles = Vec::new();
+  for i in 0..2 {
+    ineligibles.push(seed_person(&context, instance.id, &format!("ineligible_{i}"), false).await?);
+  }
+
+  // Seed reputation_event rows for eligible users (delta=60, JuryReliability).
+  {
+    use lemmy_db_schema::source::governance::reputation_event::ReputationEventInsertForm;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    for &pid in &eligibles {
+      let form = ReputationEventInsertForm {
+        person_id: pid,
+        community_id: None,
+        dimension: ReputationDimension::JuryReliability,
+        delta: 60,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "founder_seed".to_string(),
+        expires_at: Some(Utc::now() + Duration::days(30)),
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(&mut async_conn)
+        .await?;
+    }
+  }
+
+  // Override jury.age_requirement_days=0 so freshly-created test users
+  // can be jury_eligible (default is 60 days). Fallback on small pool is
+  // also disabled so failure surfaces cleanly instead of defaulting to
+  // random unfiltered picks that would mask an eligibility bug.
+  {
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'jury.age_requirement_days', 'int', 0, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_bool, valid_from) \
+       VALUES ('instance', 'jury.fallback_on_small_pool', 'bool', false, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+  }
+
+  // Run snapshot batch so jury_eligible flags are up-to-date.
+  run_snapshot_batch(&context).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+
+  // Seed fixture users outside both groups.
+  let target_person = seed_person(&context, instance.id, "cap_target", false).await?;
+  let _reporter = seed_person(&context, instance.id, "cap_reporter", false).await?;
+  let admin = seed_person(&context, instance.id, "cap_admin", true).await?;
+  let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  let community_form = CommunityInsertForm::new(
+    instance.id,
+    "capcomm".to_string(),
+    "Cap Community".to_string(),
+    "cap-pubkey".to_string(),
+  );
+  let community = Community::create(&mut context.pool(), &community_form).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_case(
+    ctx: &LemmyContext,
+    target: PersonId,
+    _community_id: lemmy_db_schema::newtypes::CommunityId,
+  ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error>> {
+    use lemmy_db_schema_file::schema::moderation_case;
+    let mut pool = ctx.pool();
+    let conn = &mut lemmy_diesel_utils::connection::get_conn(&mut pool).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    // Instance-scoped case so the strict eligibility query matches the
+    // instance-scoped snapshots produced by `run_snapshot_batch` on our
+    // instance-scoped reputation_event rows. (Strict query uses
+    // `rs.community_id IS NOT DISTINCT FROM case.community_id`; community-
+    // scoped would require seeding snapshots per community too.)
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "captest".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Open,
+      threshold_score: 1,
+    };
+    let case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+      diesel::insert_into(moderation_case::table)
+        .values(&form)
+        .get_result(conn)
+        .await
+        .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(case.id)
+  }
+
+  // ============ BRANCH 1: basic capability gate ============
+  let case_id = seed_case(&context, target_person, community.id).await?;
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert_eq!(resp.assigned_person_ids.len(), 5, "branch 1: 5 jurors assigned");
+  for pid in &resp.assigned_person_ids {
+    assert!(eligibles.contains(pid), "branch 1: picked person {pid:?} is not in eligible set");
+    assert!(!ineligibles.contains(pid), "branch 1: picked ineligible person {pid:?}");
+  }
+
+  // ============ BRANCH 2: concurrent-cap ============
+  // Pre-seed 3 active (Accepted) jury_assignment rows for eligibles[0].
+  {
+    use lemmy_db_schema::source::governance::jury_assignment::JuryAssignmentInsertForm;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    for _ in 0..3 {
+      let dummy_case = seed_case(&context, target_person, community.id).await?;
+      let form = JuryAssignmentInsertForm {
+        case_id: dummy_case,
+        person_id: eligibles[0],
+        status: JuryAssignmentStatus::Accepted,
+      };
+      diesel::insert_into(jury_assignment::table)
+        .values(&form)
+        .execute(&mut async_conn)
+        .await?;
+    }
+  }
+  let case_id_2 = seed_case(&context, target_person, community.id).await?;
+  let resp_2 = admin_assign_jury(
+    Json(AdminAssignJury { case_id: case_id_2 }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert!(
+    !resp_2.assigned_person_ids.contains(&eligibles[0]),
+    "branch 2: eligibles[0] at concurrent-cap of 3 should be excluded"
+  );
+
+  // ============ BRANCH 3: config flip 3 → 5 ============
+  {
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'jury.max_concurrent_assignments', 'int', 5, now())"
+    )
+    .execute(&mut async_conn)
+    .await?;
+  }
+  let case_id_3 = seed_case(&context, target_person, community.id).await?;
+  let resp_3 = admin_assign_jury(
+    Json(AdminAssignJury { case_id: case_id_3 }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?
+  .into_inner();
+  assert!(
+    resp_3.assigned_person_ids.contains(&eligibles[0]),
+    "branch 3: after config flip to 5, eligibles[0] (has 3 active) should be pickable"
+  );
+
+  // ============ Watch 10: PII grep over all governance_log payloads ============
+  // ADR-015: every person_id that reaches a governance_log payload must be
+  // pseudonymised (goes to the actor_pseudonym column, not the payload JSON).
+  // Pseudonyms look like UUIDs (strings with hyphens); raw ids are integers.
+  // Ten banned regex patterns cover every known identifier-leak surface:
+  // (1-5) raw integer ids in the five canonical id-field names,
+  // (6-7) dual-capability variants for admin/creator writes,
+  // (8-10) common name/email/handle text leaks.
+  {
+    use diesel::{QueryDsl, SelectableHelper};
+    use diesel_async::RunQueryDsl;
+    use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+    use lemmy_db_schema_file::schema::governance_log;
+    use regex::Regex;
+
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let rows: Vec<GovernanceLog> = governance_log::table
+      .select(GovernanceLog::as_select())
+      .load(&mut async_conn)
+      .await?;
+
+    let banned_patterns: [(&str, &str); 10] = [
+      ("raw person_id",          r#""person_id"\s*:\s*\d+"#),
+      ("raw target_person_id",   r#""target_person_id"\s*:\s*\d+"#),
+      ("raw sponsor_id",         r#""sponsor_id"\s*:\s*\d+"#),
+      ("raw sponsored_id",       r#""sponsored_id"\s*:\s*\d+"#),
+      ("raw creator_id",         r#""creator_id"\s*:\s*\d+"#),
+      ("raw admin_id",           r#""admin_id"\s*:\s*\d+"#),
+      ("raw user_id",            r#""user_id"\s*:\s*\d+"#),
+      ("raw username field",     r#""username"\s*:\s*"[^"]+"#),
+      ("raw name field",         r#""name"\s*:\s*"[^"]+"#),
+      ("email-looking string",   r#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#),
+    ];
+    let compiled: Vec<(&str, Regex)> = banned_patterns
+      .iter()
+      .map(|(label, pat)| (*label, Regex::new(pat).expect("valid regex")))
+      .collect();
+
+    for row in &rows {
+      let payload_str = serde_json::to_string(&row.payload)?;
+      for (label, re) in &compiled {
+        assert!(
+          !re.is_match(&payload_str),
+          "Watch 10 PII: banned pattern [{label}] matched in governance_log row {}: {payload_str}",
+          row.id.0
+        );
+      }
+    }
+  }
+
+  Ok(())
+}
+
+// ============================================================================
+// Phase 5c — task 69a: V2 messaging hooks (NOTIFY + username regression)
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn governance_events_notify_fires() -> Result<(), Box<dyn Error>> {
+  use std::{pin::Pin, time::Duration as StdDuration};
+  use actix_web::web::{Data, Json};
+  use diesel::{Connection as _, PgConnection};
+  use lemmy_api_common::governance::CreateGovernanceReport;
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{PersonId, enums::CaseTargetType};
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use tokio::sync::mpsc;
+  use tokio_postgres::{AsyncMessage, NoTls, Notification};
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY",
+      "0000000000000000000000000000000000000000000000000000000000000001");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: lemmy_db_schema_file::InstanceId,
+    name: &str,
+  ) -> Result<PersonId, Box<dyn Error>> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    let mut lu_form = LocalUserInsertForm::test_form(person.id);
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await
+      .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+    Ok(person.id)
+  }
+
+  let reporter = seed_person(&context, instance.id, "notify_reporter").await?;
+  let target = seed_person(&context, instance.id, "notify_target").await?;
+
+  // 1. Connect via tokio-postgres (NOT diesel) — do NOT tokio::spawn(connection)
+  //    directly; the bridge below takes ownership.
+  let (pg_client, pg_conn) = tokio_postgres::connect(&db_url, NoTls).await?;
+
+  // 2. Bridge — spawn a task that drives the connection and forwards NOTIFY
+  //    messages onto the returned channel. Per DQ #20 (advisor directive):
+  //    tokio-postgres 0.7.16 Connection implements Future, not Stream, so we
+  //    use poll_fn + Pin::new(&mut conn).poll_message(cx).
+  let mut rx: mpsc::UnboundedReceiver<Notification> = {
+    let (tx, rx) = mpsc::unbounded_channel();
+    tokio::spawn(async move {
+      let mut connection = pg_conn;
+      std::future::poll_fn(move |cx| loop {
+        match Pin::new(&mut connection).poll_message(cx) {
+          std::task::Poll::Ready(Some(Ok(AsyncMessage::Notification(n)))) => {
+            let _ = tx.send(n);
+          }
+          std::task::Poll::Ready(Some(Ok(_))) => {}
+          std::task::Poll::Ready(Some(Err(_))) | std::task::Poll::Ready(None) => {
+            return std::task::Poll::Ready(());
+          }
+          std::task::Poll::Pending => return std::task::Poll::Pending,
+        }
+      })
+      .await;
+    });
+    rx
+  };
+
+  // 3. LISTEN — must happen BEFORE the INSERT or the test races.
+  pg_client.batch_execute("LISTEN governance_events").await?;
+
+  // 4. Trigger an INSERT on governance_log via create_report.
+  let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+  let _resp = create_report(
+    Json(CreateGovernanceReport {
+      community_id: None,
+      target_type: CaseTargetType::Person,
+      target_id: target.0,
+      reason_code: "notify_test".to_string(),
+      description: None,
+    }),
+    context.clone(),
+    reporter_view,
+  )
+  .await
+  .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // 5. Await notification with timeout.
+  let notif = tokio::time::timeout(StdDuration::from_secs(2), rx.recv())
+    .await
+    .map_err(|_| -> Box<dyn Error> { "notification timed out after 2s".into() })?
+    .ok_or_else(|| -> Box<dyn Error> { "notification channel closed".into() })?;
+
+  // 6. Assert channel + payload shape.
+  assert_eq!(notif.channel(), "governance_events");
+  let payload: serde_json::Value = serde_json::from_str(notif.payload())?;
+  assert_eq!(payload["kind"], "report_created");
+  assert!(payload["entry_id"].as_i64().unwrap_or_default() > 0);
+  assert!(payload["created_at"].as_str().is_some());
+
+  Ok(())
+}
+
+#[tokio::test]
+async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Error>> {
+  use diesel::{Connection as _, PgConnection};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS, utils::validation::is_valid_actor_name};
+  use reqwest_middleware::ClientBuilder;
+
+  unsafe {
+    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres()
+    .await
+    .map_err(|e| -> Box<dyn Error> { format!("start_postgres: {e}").into() })?;
+  let db_url = governance_fixtures::db_url(host_port);
+  unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)
+      .map_err(|e| -> Box<dyn Error> { format!("apply_all_schema: {e}").into() })?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret { id: 0, jwt_secret: String::new().into() };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  );
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  // V2/messaging.md §8.2: MXID-looking usernames must remain registerable.
+  // `_lemmy_test_user` is 16 chars; passes is_valid_actor_name regex
+  // `^(?:[a-zA-Z0-9_]+|[0-9_\p{Arabic}]+|[0-9_\p{Cyrillic}]+)$`.
+  let username = "_lemmy_test_user";
+  is_valid_actor_name(username)
+    .map_err(|e| -> Box<dyn Error> { format!("is_valid_actor_name: {e}").into() })?;
+  let person_form = PersonInsertForm::test_form(instance.id, username);
+  let person = Person::create(&mut context.pool(), &person_form).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+  let mut lu_form = LocalUserInsertForm::test_form(person.id);
+  lu_form.accepted_application = Some(true);
+  LocalUser::create(&mut context.pool(), &lu_form, vec![]).await
+    .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;
+
+  assert_eq!(person.name, username);
+  Ok(())
+}
+

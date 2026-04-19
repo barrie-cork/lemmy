@@ -1,2 +1,13 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# Windows batch files MUST be CRLF. cmd.exe's `goto` label matching is
+# unreliable with LF-only files: the `:label` at the end of a line may
+# include a trailing \n byte as part of the label name, which fails to
+# match `goto :label`. This surfaced in Phase 5c task 0 audit where
+# `scripts/brehon/cargo-test.bat --test e2e --no-run -p lemmy_server`
+# exited with "The system cannot find the batch label specified - run_plain"
+# because the `:run_plain` label line (line 97) was LF-terminated.
+#
+# Force CRLF on every .bat checkout, regardless of core.autocrlf.
+*.bat text eol=crlf

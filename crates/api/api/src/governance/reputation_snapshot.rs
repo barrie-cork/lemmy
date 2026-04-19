@@ -406,6 +406,58 @@ pub async fn run_snapshot_batch(context: &LemmyContext) -> LemmyResult<SnapshotB
   Ok(outcome)
 }
 
+/// Phase 5c task 63d — emit a structured `tracing::error!` event under
+/// `target: "governance::integrity"` if the most-recent
+/// `reputation_snapshot.calculated_at` is older than `now - 2 *
+/// interval_s` (or if the table is empty entirely). Per
+/// IMPLEMENTATION-PLAN-v0.md line 398 + decision-queue #21.
+///
+/// Pure observability — no DB writes, no governance_log entry per
+/// GOTCHA-63d-a (this is an ops signal, not a governance signal).
+/// Safe to call from any caller; never errors except on connection
+/// failures (the underlying `MAX(...)` query).
+///
+/// Time is injected via the `now` param so tests can drive the
+/// staleness threshold deterministically (GOTCHA-63d-c). Production
+/// caller in `scheduled_tasks.rs` passes `Utc::now()`.
+pub async fn check_snapshot_staleness(
+  conn: &mut AsyncPgConnection,
+  interval_s: i64,
+  now: DateTime<Utc>,
+) -> LemmyResult<()> {
+  use diesel::dsl::max;
+
+  let max_calculated_at: Option<DateTime<Utc>> = reputation_snapshot::table
+    .select(max(reputation_snapshot::calculated_at))
+    .first(conn)
+    .await?;
+
+  let threshold = now - chrono::Duration::seconds(2 * interval_s);
+
+  match max_calculated_at {
+    None => {
+      tracing::error!(
+        target: "governance::integrity",
+        "reputation_snapshot table empty — snapshot batch has never run (DoD line 398)"
+      );
+    }
+    Some(max) if max < threshold => {
+      tracing::error!(
+        target: "governance::integrity",
+        calculated_at = ?max,
+        threshold = ?threshold,
+        interval_s,
+        "reputation_snapshot staleness detected (DoD line 398)"
+      );
+    }
+    Some(_) => {
+      // Within the 2 × interval window — no signal needed.
+    }
+  }
+
+  Ok(())
+}
+
 /// Process one chunk under a single transaction. Returns the number of
 /// expired-founder pairs in the chunk (a pair is counted as
 /// expired-founder if any of its events in the chunk's tick window had
@@ -723,12 +775,6 @@ async fn acquire_advisory_xact_lock(
   person_id: PersonId,
   community_id: Option<CommunityId>,
 ) -> LemmyResult<()> {
-  #[derive(diesel::QueryableByName)]
-  struct IgnoredRow {
-    #[diesel(sql_type = BigInt)]
-    _lock_key: i64,
-  }
-
   // 64-bit lock key: upper 32 bits = person_id, lower 32 = community_id
   // encoded so `None` maps to `0` and `Some(CommunityId(c))` maps to
   // `c + 1`. The `+1` shift keeps `None` and `Some(CommunityId(0))`
@@ -740,9 +786,12 @@ async fn acquire_advisory_xact_lock(
     .map(|c| i64::from(c.0).saturating_add(1))
     .unwrap_or(0);
   let key: i64 = (i64::from(person_id.0) << 32) | community_component;
-  let _ignored: Vec<IgnoredRow> = sql_query("SELECT pg_advisory_xact_lock($1) AS _lock_key")
+  // pg_advisory_xact_lock returns void. Use .execute (statement) rather than
+  // .load (result-set decode) — the latter would fail with "Received less than
+  // 8 bytes while decoding an i64" since void isn't BigInt.
+  sql_query("SELECT pg_advisory_xact_lock($1)")
     .bind::<BigInt, _>(key)
-    .load::<IgnoredRow>(conn)
+    .execute(conn)
     .await?;
   Ok(())
 }

@@ -62,6 +62,10 @@ pub const ENTRY_KIND_SPONSOR_LIABILITY_CLAMPED: &str = "sponsor_liability_clampe
 pub const ENTRY_KIND_FOUNDER_SEEDED: &str = "founder_seeded";
 pub const ENTRY_KIND_ENDORSEMENT_CREATED: &str = "endorsement_created";
 pub const ENTRY_KIND_EMERGENCY_REMOVED: &str = "emergency_removed";
+pub const ENTRY_KIND_JURY_ACCEPTED: &str = "jury_accepted";
+pub const ENTRY_KIND_JURY_DECLINED: &str = "jury_declined";
+pub const ENTRY_KIND_JURY_REPLACEMENT_SELECTED: &str = "jury_replacement_selected";
+pub const ENTRY_KIND_APPEAL_REQUESTED: &str = "appeal_requested";
 
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 

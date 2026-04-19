@@ -27,6 +27,7 @@ ts-rs = [
   "lemmy_db_views_comment/ts-rs",
   "lemmy_db_views_community/ts-rs",
   "lemmy_db_views_community_follower/ts-rs",
+  "lemmy_db_views_governance_case/ts-rs",
   "lemmy_db_views_community_follower_approval/ts-rs",
   "lemmy_db_views_community_moderator/ts-rs",
   "lemmy_db_views_custom_emoji/ts-rs",
@@ -41,17 +42,20 @@ ts-rs = [
   "lemmy_db_views_post/ts-rs",
   "lemmy_db_views_private_message/ts-rs",
   "lemmy_db_views_registration_applications/ts-rs",
+  "lemmy_db_views_reputation/ts-rs",
   "lemmy_db_views_report_combined/ts-rs",
   "lemmy_db_views_site/ts-rs",
   "lemmy_db_views_vote/ts-rs",
 ]
 
 [dependencies]
+chrono.workspace = true
 lemmy_utils.workspace = true
 lemmy_db_schema.workspace = true
 lemmy_db_schema_file.workspace = true
 lemmy_db_views_comment.workspace = true
 lemmy_db_views_community.workspace = true
+lemmy_db_views_governance_case.workspace = true
 lemmy_db_views_community_follower.workspace = true
 lemmy_db_views_community_follower_approval.workspace = true
 lemmy_db_views_community_moderator.workspace = true
@@ -68,6 +72,7 @@ lemmy_db_views_post_comment_combined.workspace = true
 lemmy_db_views_post.workspace = true
 lemmy_db_views_private_message.workspace = true
 lemmy_db_views_registration_applications.workspace = true
+lemmy_db_views_reputation.workspace = true
 lemmy_db_views_report_combined.workspace = true
 lemmy_db_views_site.workspace = true
 lemmy_db_views_vote.workspace = true

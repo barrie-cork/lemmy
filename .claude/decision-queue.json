@@ -1,114 +1,22 @@
 {
   "phase": "5",
   "schema_version": 1,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 17,
       "from": "impl",
       "timestamp": "2026-04-18T18:00:00Z",
-      "question": "Phase 5c branch cut base — branch phase-5c from origin/governance-v0 (6566dce43) and lose 2 post-squash commits, or from phase-5b tip (f5c771638) and inherit them into the 5c PR diff?",
+      "question": "Phase 5c branch cut base — branch phase-5c from origin/governance-v0 (6566dce43) and lose post-squash commits, or from phase-5b tip (f5c771638), or cherry-pick?",
       "options": [
-        "Branch phase-5c from origin/governance-v0 (6566dce43). Per phase-branch.md strict reading. The 2 post-squash doc/rule commits (cbab85bb8, f5c771638) remain on phase-5b as orphaned state — resolved later by a separate follow-up PR or lost at phase-5b branch cleanup.",
-        "Branch phase-5c from phase-5b tip (f5c771638). The 2 extra doc/rule commits land as part of the 5c PR diff vs governance-v0. Minor 5c PR bloat; zero code risk (docs + rules only); preserves commit history.",
-        "Branch phase-5c from origin/governance-v0, then cherry-pick cbab85bb8 and f5c771638 onto phase-5c before task 1. Keeps 5c PR diff clean of mixed-phase history while preserving the fixes."
+        "A. Branch phase-5c from origin/governance-v0 (6566dce43). Strict phase-branch.md reading.",
+        "B. Branch phase-5c from phase-5b tip (f5c771638). Orphan commits land in 5c PR diff.",
+        "C. Branch from governance-v0 + cherry-pick orphans onto phase-5c before task 1."
       ],
-      "context": "PR #7 was squash-merged (violates phase-branch.md 'Do NOT squash'). Squash-merge commit 6566dce43 on governance-v0 DOES include the sponsor_liability split-plane fix + founder-seed filter (d8c544ebe/6e74e5eaf tree contents were rolled into the squash). Only 2 net commits are orphaned on phase-5b vs governance-v0: cbab85bb8 (rule hardening in pm-plugin-hooks-stable.md + V2/messaging.md section renumber, 96 lines, docs/rules only) + f5c771638 (doc hygiene in PRP reports + ralph-slice command + governance/mod.rs one-line reorder + 4 lines in e2e.rs doc comment, 36 lines). Both are pure hygiene, no code logic. Plan §2 line 4 says cut phase-5c from governance-v0 after 5b PR merges; silent on post-squash hygiene delta. Working tree at session start was clean (untracked plan files only). I am NOT guessing — I need the advisor to pick A, B, or C.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
-      "id": 4,
-      "from": "advisor",
-      "timestamp": "2026-04-16T20:00:00Z",
-      "question": "ed25519-dalek workspace dep version — which version + features for Phase 4b task 8?",
-      "options": [
-        "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] }",
-        "ed25519-dalek = { version = \"2\" } (no features)"
-      ],
-      "context": "Pre-seeded by advisor for Phase 4b. Neither ed25519-dalek nor hex is currently in the root Cargo.toml [workspace.dependencies] — confirmed at plan-review via `grep -nE '^(ed25519-dalek|hex) ' Cargo.toml` (empty). Task 8 must add both before the crate-level Cargo.toml edits.",
-      "answer": "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] } — the rand_core feature is required for key generation paths even if v0 uses a fixed env-var key. Matches the v2 API the plan cites. Check if `rand` or `rand_core` is already a workspace dep (likely yes via Lemmy's existing deps); if not, `rand_core` ships as a transitive of ed25519-dalek and does NOT need a separate workspace entry.",
+      "context": "Phase 5b PR #7 squash-merged at 6566dce43. Initial framing said 2 doc-only commits orphaned; byte-level verification (prompted by advisor) revealed 4 commits orphaned including 2 substantive code fixes (d8c544ebe Bucket 1 scope-precedence + founder-reason fixes; 6e74e5eaf flaky-timing test). Leaving them off governance-v0 would mean shipped bug fixes stay missing from the canonical tree.",
+      "answer": "Option 2 (cherry-pick onto governance-v0, then branch phase-5c from the cherry-picked tip). Neither A, B, nor C as originally framed: the 4 orphan commits are CodeRabbit-reviewed, green-on-phase-5b, semantically needed fixes. They belong on governance-v0 (canonical tree) not on phase-5c (would mix phase scope) or orphaned on phase-5b (would leave known bugs in canonical tree). Execution: git checkout -- . to reset working-tree partial restore; git cherry-pick d8c544ebe 6e74e5eaf cbab85bb8 f5c771638 onto governance-v0; run full 6-gate validation sweep (cargo check + clippy + 2 e2e + 2 lint guards, all exit 0); commit docs(report): Phase 5b retro append with cherry-pick SHAs; push; branch phase-5c from the new governance-v0 tip. Cherry-pick SHAs on governance-v0: a6e6265f9 (was d8c544ebe), 0e86dcb4e (was 6e74e5eaf), 9102abba2 (was cbab85bb8), 72fd4be1f (was f5c771638). Report retro at eaa413cd8. phase-5c branched from eaa413cd8. Resolution pattern: when the question framing itself is stale (new facts discovered mid-deliberation), answer with the updated framing, not one of the originally-offered options. See feedback memory feedback_verify_squash_merge_content_byte_level.md.",
       "answered_by": "advisor"
     },
-    {
-      "id": 5,
-      "from": "advisor",
-      "timestamp": "2026-04-16T20:00:00Z",
-      "question": "hex workspace dep version — which version for Phase 4b task 8?",
-      "options": [
-        "hex = \"0.4\"",
-        "hex = { version = \"0.4\", features = [\"serde\"] }"
-      ],
-      "context": "Pre-seeded by advisor for Phase 4b. hex is used only to decode the GOVERNANCE_LOG_SIGNING_KEY env var (hex → 32 bytes) inside governance_log::append. No serde integration needed; plain default-feature hex suffices.",
-      "answer": "hex = \"0.4\" — standard hex encoding crate, no features required. The task 8 code path is `hex::decode(&key_hex)?.try_into()` which uses only the default feature surface.",
-      "answered_by": "advisor"
-    },
-    {
-      "id": 6,
-      "from": "advisor",
-      "timestamp": "2026-04-16T20:00:00Z",
-      "question": "emergency_remove_open_case — what if Lemmy's canonical remove helper is private or not callable from lemmy_api?",
-      "options": [
-        "Stub with direct diesel::update(post::table).set(post::removed.eq(true)) and TODO-flag",
-        "Block the task and escalate to v0 scope owner"
-      ],
-      "context": "Pre-seeded by advisor for Phase 4b. Plan task 4 already documents this in GOTCHAs but the impl agent needs an authoritative answer if Post::update_removed (or equivalent) turns out to be pub(crate) in crates/db_schema or has a non-obvious signature.",
-      "answer": "Option 1. Stub the remove step with `diesel::update(post::table.find(post_id)).set(post::removed.eq(true)).execute(conn).await?` (or the comment/community equivalent based on target_type) and add `// TODO(brehon-fork): wire to canonical Lemmy remove helper in Phase 5` per feedback_carry_patch_todos.md. Document the deviation in the Phase 4b completion report. Rationale: task 4's helper is library-only in v0 (no HTTP route invokes it in production), so stubbing the remove step is acceptable. Phase 5 will route the helper and at that point the canonical remove pathway must be wired.",
-      "answered_by": "advisor"
-    },
-    {
-      "id": 7,
-      "from": "impl",
-      "timestamp": "2026-04-17T00:00:00Z",
-      "question": "Plan references `CaseStatus::InPanel` but the enum has `JurySelection` + `InReview` — which to use in admin_assign_jury / admin_close_case match arms + the task-10 status assertion?",
-      "options": [
-        "Use CaseStatus::JurySelection for the post-assign-jury state (panel assembled, awaiting votes)",
-        "Add a new CaseStatus::InPanel variant (requires migration + changes to enum + all match sites)"
-      ],
-      "context": "Plan task 2 says `CaseStatus::InPanel` but `crates/db_schema_file/src/enums.rs:393-408` shows no InPanel variant; instead there are `JurySelection` + `InReview`. Design docs (`02-domain-model.md:169-170`, `04-data-model-and-api.md:61-62`) use JurySelection + InReview. Existing handlers (`get_case.rs:51-52`, `governance_case/src/impls.rs:58-59`) treat both as active-panel states. No CaseStatus::InPanel exists anywhere.",
-      "answer": "Option 1. Use JurySelection for the Open→panel-assembled transition. Plan's `InPanel` is a typo for JurySelection. Rationale: the existing enum + design-doc convention names JurySelection as the panel-assembled state; introducing InPanel would break ADR-013 exhaustive match guarantees and require a migration. Apply JurySelection in admin_assign_jury (new status after panel assembled), both status match arms (reject JurySelection + InReview as 'already has panel'), admin_close_case (accept JurySelection + InReview as force-closable), and the golden-path test assertion.",
-      "answered_by": "impl-self-resolved"
-    },
-    {
-      "id": 8,
-      "from": "impl",
-      "timestamp": "2026-04-17T01:00:00Z",
-      "question": "Plan task 10 asserts `reputation_event` table has 3 rows AND governance_log has 3 `reputation_event` entries — but submit_jury_vote.rs emits a 4th reputation_event for the reporter and makes ZERO governance_log::append calls for reputation. How should task 10 assert on these?",
-      "options": [
-        "Match plan verbatim (3 reputation_event rows, 3 governance_log reputation_event rows) — requires modifying submit_jury_vote handler",
-        "Match actual handler behavior (4 reputation_event rows: 3 jurors + 1 reporter; 0 governance_log reputation_event rows) — revise test assertions"
-      ],
-      "context": "submit_jury_vote.rs:292-337 emits one reputation_event per juror (3 total aligned with majority at delta=+10) PLUS one reputation_event for the reporter (ReportingAccuracy delta=+10 since AdvisoryLabel != NoAction). emit_reputation_event() at line 409 only inserts the DB row, never calls governance_log::append. Phase 4a shipped this handler as-is and phase4a tests exercise the handler. Plan task 10 assertions are stale vs current handler implementation.",
-      "answer": "Option 2. Revise test assertions to match actual handler behavior. Rationale: submit_jury_vote is production-code committed in Phase 4a (85f50d3de). Changing that handler solely to match stale plan text would be a regression — the reporter reputation event IS the documented behavior per submit_jury_vote.rs:320-337 doc-block and [05 §6]. The governance_log reputation_event assertion in the plan is plainly wrong (the handler makes no such log call). Test asserts: (a) reputation_event table count = 4 (3 juror JuryReliability + 1 reporter ReportingAccuracy); (b) governance_log per-entry_kind map EXCLUDES 'reputation_event' key (assert `map.contains_key(\"reputation_event\") == false`). Document the deviation in the Phase 4b completion report and mark plan assertions stale.",
-      "answered_by": "impl-self-resolved"
-    },
-    {
-      "id": 9,
-      "from": "impl",
-      "timestamp": "2026-04-17T02:00:00Z",
-      "question": "Plan task 10 asserts the test drives the golden path via actix-web App + lemmy_api_routes::config — should the test invoke handlers via HTTP, or call them directly as async fns with a LemmyContext + synthesized LocalUserView?",
-      "options": [
-        "Full HTTP stack: build an actix App with lemmy_api_routes::config, SessionMiddleware, rate_limit scaffolding, mint JWTs, send TestRequests",
-        "Direct handler invocation: construct LemmyContext + LocalUserView (reading from DB), call admin_assign_jury(Json(...), Data(context), local_user_view).await, etc."
-      ],
-      "context": "Plan task 10 step 4 says 'Build an actix-web App with the full /api/v4 scope — reuse lemmy_api_routes::config'. However the routes config requires a RateLimit. Real-HTTP path requires building a ratelimiter, session middleware, JWT secret persistence, and FederationConfig wrapping LemmyContext. Lemmy's own integration tests (e.g. crates/api/api_utils/src/claims.rs tests, session.rs tests) use direct handler calls against LemmyContext::init_test_context(). The direct path still proves the full golden path: (a) handlers use the real DB, real transactions, real governance_log::append with ed25519 signing, real redaction, real actor_pseudonym; (b) the only thing NOT exercised is the actix router + session middleware JWT→LocalUserView lookup. The plan's spirit is to prove 'full v0 flow: report → admin-assign → 3 votes → Decided → sanction → public modlog → hash chain + signatures verified'. The router is not the load-bearing part; the handlers are.",
-      "answer": "Option 2. Direct handler invocation. Rationale: (a) matches all existing Lemmy integration test patterns (claims.rs:97, session.rs:117); (b) avoids wiring rate-limiter, JWT secret, FederationConfig — all boilerplate that adds no correctness coverage; (c) the governance invariants being proven (hash chain, signatures, redaction, pseudonyms, status transitions, vote tally, reputation events) all live in handler bodies, not in the HTTP layer; (d) the unauthenticated GET /governance/modlog assertion becomes a direct call with `_local_user_view: None` which still exercises the public-endpoint path; (e) the router is static glue tested by compile-time route registration in task 5 + the task 11 workspace check. Document this deviation in the Phase 4b completion report under 'Deviations' with a cross-reference to this decision-queue entry.",
-      "answered_by": "impl-self-resolved"
-    },
-    {
-      "id": 10,
-      "from": "impl",
-      "timestamp": "2026-04-17T03:00:00Z",
-      "question": "admin_assign_jury's eligibility filter at admin_assign_jury.rs:160-186 only excludes case.target_person_id and case.creator_id. For a Post-target case, target_person_id is None (create_report.rs:230 sets it to None). So the post-creator can be assigned to their own case's jury. Should the test route around this (use Person-target instead) or should the handler be patched in this phase?",
-      "options": [
-        "Test-side: change the test to file a Person-target report (target_id = target person's id) — the existing handler then correctly excludes the target. Handler bug becomes a Phase 5 follow-up.",
-        "Handler-side: patch select_eligible_jurors to derive the target person from target_post_id/target_comment_id (look up post.creator_id / comment.creator_id) when target_person_id is None. Adds a join + a join-fork by target_type. Done in this phase as a task-10b commit."
-      ],
-      "context": "Test fail at e2e.rs:953 — assertion `target person must not be on jury` failed because PersonId(3) (target B) was selected. Confirmed via grep at admin_assign_jury.rs:172-174: filter only applies if target_person_id is Some(_). For Post target, that's None. Per ADR [05 §3] and the jury impartiality invariant in ADR-013, the target user must never be on their own jury — so the handler IS buggy for Post/Comment target_types. Choosing self-resolution Option 1 (test-side) for now to keep task 10 unblocked: the golden-path test exercises the same end-to-end flow regardless of whether target_type is Post or Person, and the bug is documented as a Phase 5 follow-up. Marking under 'Deviations' in the Phase 4b completion report.",
-      "answer": "Option 1 (test-side). Rationale: (a) task 10 is the golden-path DoD test, not a handler bugfix — its purpose is to prove the end-to-end flow (report → admin-assign → 3 votes → Decided → sanction → modlog → hash chain + signatures) runs cleanly, and that flow is proven equally well via Person-target as via Post-target; (b) the handler patch (Option 2) is a real fix but materially out of scope for the 11-task Phase 4b plan and could mask other issues if rushed in at this stage; (c) the bug needs visibility — captured here so Phase 5 picks it up. The test edit is a 2-line change (target_type = Person, target_id = target.0) and removes the post-creation block. Plan completion report must list this as Deviation #4 alongside drift #8 (reputation_event) and #9 (handler invocation pattern).",
-      "answered_by": "impl-self-resolved"
-    }
-  ],
-  "resolved": [
     {
       "id": 18,
       "from": "impl",
@@ -206,7 +114,10 @@
       "from": "advisor",
       "timestamp": "2026-04-16T17:00:00Z",
       "question": "ModerationCase insert form — which fields are required for create_report?",
-      "options": ["Check crates/db_schema/src/source/governance/moderation_case.rs", "Assume fields from plan"],
+      "options": [
+        "Check crates/db_schema/src/source/governance/moderation_case.rs",
+        "Assume fields from plan"
+      ],
       "context": "Pre-seeded by advisor for Phase 4a. The plan agent cited approximate fields but the impl agent needs exact types.",
       "answer": "The exact fields are in ModerationCaseInsertForm at crates/db_schema/src/source/governance/moderation_case.rs:42-55. All fields are required (no Option except the target/community fields which ARE Option). Key: community_id: Option<CommunityId>, creator_id: Option<PersonId>, target_type: CaseTargetType, target_post_id: Option<PostId>, target_comment_id: Option<CommentId>, target_person_id: Option<PersonId>, target_community_id: Option<CommunityId>, target_remote_url: Option<String>, reason_code: String, severity: CaseSeverity, status: CaseStatus, threshold_score: i64.",
       "answered_by": "advisor"
@@ -216,7 +127,10 @@
       "from": "advisor",
       "timestamp": "2026-04-16T17:00:00Z",
       "question": "How to import get_conn for run_transaction in submit_jury_vote?",
-      "options": ["use lemmy_diesel_utils::connection::get_conn", "use lemmy_db_schema::utils::get_conn"],
+      "options": [
+        "use lemmy_diesel_utils::connection::get_conn",
+        "use lemmy_db_schema::utils::get_conn"
+      ],
       "context": "Pre-seeded by advisor for Phase 4a. The transaction pattern requires get_conn which has a specific import path in this workspace.",
       "answer": "use lemmy_diesel_utils::connection::get_conn; — verified at crates/api/api/src/community/ban.rs:25. Also need use diesel_async::RunQueryDsl and use diesel_async::scoped_futures::ScopedFutureExt (for .scope_boxed()) in the handler imports. (Corrected 2026-04-16 during Task 0 audit — the `futures::FutureExt::boxed` claim was wrong; ban.rs:106 actually calls `.scope_boxed()` and the trait is in `diesel_async::scoped_futures::ScopedFutureExt`.)",
       "answered_by": "advisor"
@@ -226,9 +140,213 @@
       "from": "advisor",
       "timestamp": "2026-04-16T17:00:00Z",
       "question": "SubmitJuryVoteResponse derive stack — what derives to use?",
-      "options": ["Minimal Debug+Serialize+Deserialize", "Full Phase 3 convention with ts-rs"],
+      "options": [
+        "Minimal Debug+Serialize+Deserialize",
+        "Full Phase 3 convention with ts-rs"
+      ],
       "context": "Pre-seeded by advisor for Phase 4a. The new DTO must match the existing Phase 3 convention in governance.rs.",
       "answer": "Full Phase 3 convention: #[skip_serializing_none] #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)] #[cfg_attr(feature = \"ts-rs\", derive(ts_rs::TS))] #[cfg_attr(feature = \"ts-rs\", ts(optional_fields, export))]. This matches all other DTOs in crates/api/api_common/src/governance.rs.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 4,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "ed25519-dalek workspace dep version — which version + features for Phase 4b task 8?",
+      "options": [
+        "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] }",
+        "ed25519-dalek = { version = \"2\" } (no features)"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. Neither ed25519-dalek nor hex is currently in the root Cargo.toml [workspace.dependencies] — confirmed at plan-review via `grep -nE '^(ed25519-dalek|hex) ' Cargo.toml` (empty). Task 8 must add both before the crate-level Cargo.toml edits.",
+      "answer": "ed25519-dalek = { version = \"2\", features = [\"rand_core\"] } — the rand_core feature is required for key generation paths even if v0 uses a fixed env-var key. Matches the v2 API the plan cites. Check if `rand` or `rand_core` is already a workspace dep (likely yes via Lemmy's existing deps); if not, `rand_core` ships as a transitive of ed25519-dalek and does NOT need a separate workspace entry.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 5,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "hex workspace dep version — which version for Phase 4b task 8?",
+      "options": [
+        "hex = \"0.4\"",
+        "hex = { version = \"0.4\", features = [\"serde\"] }"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. hex is used only to decode the GOVERNANCE_LOG_SIGNING_KEY env var (hex → 32 bytes) inside governance_log::append. No serde integration needed; plain default-feature hex suffices.",
+      "answer": "hex = \"0.4\" — standard hex encoding crate, no features required. The task 8 code path is `hex::decode(&key_hex)?.try_into()` which uses only the default feature surface.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 6,
+      "from": "advisor",
+      "timestamp": "2026-04-16T20:00:00Z",
+      "question": "emergency_remove_open_case — what if Lemmy's canonical remove helper is private or not callable from lemmy_api?",
+      "options": [
+        "Stub with direct diesel::update(post::table).set(post::removed.eq(true)) and TODO-flag",
+        "Block the task and escalate to v0 scope owner"
+      ],
+      "context": "Pre-seeded by advisor for Phase 4b. Plan task 4 already documents this in GOTCHAs but the impl agent needs an authoritative answer if Post::update_removed (or equivalent) turns out to be pub(crate) in crates/db_schema or has a non-obvious signature.",
+      "answer": "Option 1. Stub the remove step with `diesel::update(post::table.find(post_id)).set(post::removed.eq(true)).execute(conn).await?` (or the comment/community equivalent based on target_type) and add `// TODO(brehon-fork): wire to canonical Lemmy remove helper in Phase 5` per feedback_carry_patch_todos.md. Document the deviation in the Phase 4b completion report. Rationale: task 4's helper is library-only in v0 (no HTTP route invokes it in production), so stubbing the remove step is acceptable. Phase 5 will route the helper and at that point the canonical remove pathway must be wired.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 7,
+      "from": "impl",
+      "timestamp": "2026-04-17T00:00:00Z",
+      "question": "Plan references `CaseStatus::InPanel` but the enum has `JurySelection` + `InReview` — which to use in admin_assign_jury / admin_close_case match arms + the task-10 status assertion?",
+      "options": [
+        "Use CaseStatus::JurySelection for the post-assign-jury state (panel assembled, awaiting votes)",
+        "Add a new CaseStatus::InPanel variant (requires migration + changes to enum + all match sites)"
+      ],
+      "context": "Plan task 2 says `CaseStatus::InPanel` but `crates/db_schema_file/src/enums.rs:393-408` shows no InPanel variant; instead there are `JurySelection` + `InReview`. Design docs (`02-domain-model.md:169-170`, `04-data-model-and-api.md:61-62`) use JurySelection + InReview. Existing handlers (`get_case.rs:51-52`, `governance_case/src/impls.rs:58-59`) treat both as active-panel states. No CaseStatus::InPanel exists anywhere.",
+      "answer": "Option 1. Use JurySelection for the Open→panel-assembled transition. Plan's `InPanel` is a typo for JurySelection. Rationale: the existing enum + design-doc convention names JurySelection as the panel-assembled state; introducing InPanel would break ADR-013 exhaustive match guarantees and require a migration. Apply JurySelection in admin_assign_jury (new status after panel assembled), both status match arms (reject JurySelection + InReview as 'already has panel'), admin_close_case (accept JurySelection + InReview as force-closable), and the golden-path test assertion.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 8,
+      "from": "impl",
+      "timestamp": "2026-04-17T01:00:00Z",
+      "question": "Plan task 10 asserts `reputation_event` table has 3 rows AND governance_log has 3 `reputation_event` entries — but submit_jury_vote.rs emits a 4th reputation_event for the reporter and makes ZERO governance_log::append calls for reputation. How should task 10 assert on these?",
+      "options": [
+        "Match plan verbatim (3 reputation_event rows, 3 governance_log reputation_event rows) — requires modifying submit_jury_vote handler",
+        "Match actual handler behavior (4 reputation_event rows: 3 jurors + 1 reporter; 0 governance_log reputation_event rows) — revise test assertions"
+      ],
+      "context": "submit_jury_vote.rs:292-337 emits one reputation_event per juror (3 total aligned with majority at delta=+10) PLUS one reputation_event for the reporter (ReportingAccuracy delta=+10 since AdvisoryLabel != NoAction). emit_reputation_event() at line 409 only inserts the DB row, never calls governance_log::append. Phase 4a shipped this handler as-is and phase4a tests exercise the handler. Plan task 10 assertions are stale vs current handler implementation.",
+      "answer": "Option 2. Revise test assertions to match actual handler behavior. Rationale: submit_jury_vote is production-code committed in Phase 4a (85f50d3de). Changing that handler solely to match stale plan text would be a regression — the reporter reputation event IS the documented behavior per submit_jury_vote.rs:320-337 doc-block and [05 §6]. The governance_log reputation_event assertion in the plan is plainly wrong (the handler makes no such log call). Test asserts: (a) reputation_event table count = 4 (3 juror JuryReliability + 1 reporter ReportingAccuracy); (b) governance_log per-entry_kind map EXCLUDES 'reputation_event' key (assert `map.contains_key(\"reputation_event\") == false`). Document the deviation in the Phase 4b completion report and mark plan assertions stale.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 9,
+      "from": "impl",
+      "timestamp": "2026-04-17T02:00:00Z",
+      "question": "Plan task 10 asserts the test drives the golden path via actix-web App + lemmy_api_routes::config — should the test invoke handlers via HTTP, or call them directly as async fns with a LemmyContext + synthesized LocalUserView?",
+      "options": [
+        "Full HTTP stack: build an actix App with lemmy_api_routes::config, SessionMiddleware, rate_limit scaffolding, mint JWTs, send TestRequests",
+        "Direct handler invocation: construct LemmyContext + LocalUserView (reading from DB), call admin_assign_jury(Json(...), Data(context), local_user_view).await, etc."
+      ],
+      "context": "Plan task 10 step 4 says 'Build an actix-web App with the full /api/v4 scope — reuse lemmy_api_routes::config'. However the routes config requires a RateLimit. Real-HTTP path requires building a ratelimiter, session middleware, JWT secret persistence, and FederationConfig wrapping LemmyContext. Lemmy's own integration tests (e.g. crates/api/api_utils/src/claims.rs tests, session.rs tests) use direct handler calls against LemmyContext::init_test_context(). The direct path still proves the full golden path: (a) handlers use the real DB, real transactions, real governance_log::append with ed25519 signing, real redaction, real actor_pseudonym; (b) the only thing NOT exercised is the actix router + session middleware JWT→LocalUserView lookup. The plan's spirit is to prove 'full v0 flow: report → admin-assign → 3 votes → Decided → sanction → public modlog → hash chain + signatures verified'. The router is not the load-bearing part; the handlers are.",
+      "answer": "Option 2. Direct handler invocation. Rationale: (a) matches all existing Lemmy integration test patterns (claims.rs:97, session.rs:117); (b) avoids wiring rate-limiter, JWT secret, FederationConfig — all boilerplate that adds no correctness coverage; (c) the governance invariants being proven (hash chain, signatures, redaction, pseudonyms, status transitions, vote tally, reputation events) all live in handler bodies, not in the HTTP layer; (d) the unauthenticated GET /governance/modlog assertion becomes a direct call with `_local_user_view: None` which still exercises the public-endpoint path; (e) the router is static glue tested by compile-time route registration in task 5 + the task 11 workspace check. Document this deviation in the Phase 4b completion report under 'Deviations' with a cross-reference to this decision-queue entry.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 10,
+      "from": "impl",
+      "timestamp": "2026-04-17T03:00:00Z",
+      "question": "admin_assign_jury's eligibility filter at admin_assign_jury.rs:160-186 only excludes case.target_person_id and case.creator_id. For a Post-target case, target_person_id is None (create_report.rs:230 sets it to None). So the post-creator can be assigned to their own case's jury. Should the test route around this (use Person-target instead) or should the handler be patched in this phase?",
+      "options": [
+        "Test-side: change the test to file a Person-target report (target_id = target person's id) — the existing handler then correctly excludes the target. Handler bug becomes a Phase 5 follow-up.",
+        "Handler-side: patch select_eligible_jurors to derive the target person from target_post_id/target_comment_id (look up post.creator_id / comment.creator_id) when target_person_id is None. Adds a join + a join-fork by target_type. Done in this phase as a task-10b commit."
+      ],
+      "context": "Test fail at e2e.rs:953 — assertion `target person must not be on jury` failed because PersonId(3) (target B) was selected. Confirmed via grep at admin_assign_jury.rs:172-174: filter only applies if target_person_id is Some(_). For Post target, that's None. Per ADR [05 §3] and the jury impartiality invariant in ADR-013, the target user must never be on their own jury — so the handler IS buggy for Post/Comment target_types. Choosing self-resolution Option 1 (test-side) for now to keep task 10 unblocked: the golden-path test exercises the same end-to-end flow regardless of whether target_type is Post or Person, and the bug is documented as a Phase 5 follow-up. Marking under 'Deviations' in the Phase 4b completion report.",
+      "answer": "Option 1 (test-side). Rationale: (a) task 10 is the golden-path DoD test, not a handler bugfix — its purpose is to prove the end-to-end flow (report → admin-assign → 3 votes → Decided → sanction → modlog → hash chain + signatures) runs cleanly, and that flow is proven equally well via Person-target as via Post-target; (b) the handler patch (Option 2) is a real fix but materially out of scope for the 11-task Phase 4b plan and could mask other issues if rushed in at this stage; (c) the bug needs visibility — captured here so Phase 5 picks it up. The test edit is a 2-line change (target_type = Person, target_id = target.0) and removes the post-creation block. Plan completion report must list this as Deviation #4 alongside drift #8 (reputation_event) and #9 (handler invocation pattern).",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 19,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "Actix route config fn name — what is the exported function in crates/api/routes/src/lib.rs that task 68c's all_mvp_endpoints_return_non_404 test wires into App::new().configure(|cfg| _ )?",
+      "options": [
+        "config (takes cfg: &mut ServiceConfig, rate_limit: &RateLimit)",
+        "api_config",
+        "setup or some other name"
+      ],
+      "context": "Task 68c depends on calling actix_web::App::new().configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)). If the exported fn has a different name, the test does not compile and phase-close validation blocks. Was originally plan §17 Q5; promoted to standalone entry id=19 per Move 1 of the risk-reduction strategy as a task-0 blocker. Verified by reading crates/api/routes/src/lib.rs.",
+      "answer": "Option 1 — pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) verified at crates/api/routes/src/lib.rs:201. Plan §11.8 68c snippet is correct — use lemmy_api_routes::config as the import. Task 68 is safe to proceed on the actix-web wiring front; remaining 68c risks are unrelated (e.g. the status-code assertion window and per-endpoint expected-404 override, both already covered by plan GOTCHAs).",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 20,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "tokio-postgres 0.7.16 notifications API — does Client expose a notifications() async stream, or must the consumer poll the Connection future directly via poll_message?",
+      "options": [
+        "Stream-based: client.notifications().next().await returns Notification directly (plan §11.10 69a.3 assumes this)",
+        "Poll-based: Connection::poll_message() yields AsyncMessage::Notification(_); consumer drives the connection as a background task and polls for messages"
+      ],
+      "context": "Task 69a.3 e2e test depends on knowing the notification-receipt pattern at 0.7.16. Plan §11.10 69a.3 snippet uses client.notifications().next().await — if that method does not exist at this version, the NOTIFY integration test is unshippable until the pattern is rewritten. Was originally plan §17 Q6; promoted to standalone entry id=20 per Move 1 as a task-69a blocker. Verified via https://docs.rs/tokio-postgres/0.7.16/tokio_postgres/struct.Connection.html and AsyncMessage enum page.",
+      "answer": "Option 2 — poll-based via Connection::poll_message(). The Client struct does NOT expose a notifications() method at 0.7.16 (verified against docs.rs). The plan's §11.10 69a.3 snippet (client.notifications().next().await) is wrong for this version. Correct pattern for task 69a.3: spawn a task that polls connection.as_mut().poll_message(cx) and forwards AsyncMessage::Notification(_) variants onto a tokio::sync::mpsc::UnboundedSender<Notification>. The test then awaits from the receiver end with a timeout. Alternative: write a 30-line channel-bridge helper inside the test module. Plan §11.10 needs a GOTCHA-update to point at this entry — flagged under Moves 2-6.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 21,
+      "from": "impl",
+      "timestamp": "2026-04-18T22:00:00Z",
+      "question": "DoD line 398 staleness alert — IMPLEMENTATION-PLAN-v0.md §3 Phase 5c DoD requires 'governance_log integrity-check job emits error! log if MAX(reputation_snapshot.calculated_at) < now() - 2*snapshot_interval_seconds'. Phase 5c plan §11 has no task slot allocated. Where does this land?",
+      "options": [
+        "Fold into task 63 scope (~20 lines of tracing::error! in scheduled_tasks job, alongside the threshold-crossing wire-up)",
+        "Defer to Phase 6 and mark DoD line 398 as out-of-scope for 5c",
+        "New compact task 63d inside task 63's commit (single commit, integrity_check_snapshot_staleness helper + scheduled_tasks.rs register)"
+      ],
+      "context": "Move 2 of the risk-reduction strategy identified this gap. The authoritative plan's DoD cannot be satisfied by the current §11 task list — no task emits the staleness alert. Task 63 is the natural home (it's already the observability wire-up task). Adding ~20 lines to task 63 bumps its LOC cap from 120 to ~140 but keeps the phase closable against the authoritative DoD.",
+      "answer": "Option 1 — fold into task 63 scope as step 63d. Rationale: task 63's existing ACTION already splits into 63a (verify capability_changed emission — no code), 63b (list_capability_changed_entries_since helper ~30 lines), 63c (e2e test ~25 lines). Adding 63d (~20 lines) keeps the single-commit shape and maps cleanly to the DoD line. Implementation sketch: in the existing snapshot-recompute scheduled task (crates/server/src/scheduled_tasks.rs per Phase 5a task 54 deviation #9), after the batch completes run SELECT MAX(calculated_at) FROM reputation_snapshot and compare to now() - 2 * config.scheduler.snapshot_interval_seconds. If the max is older, emit tracing::error!(target: 'governance::integrity', 'reputation_snapshot staleness detected: most recent calculated_at = {:?}, threshold = {:?}', max, threshold). No new governance_log entry (ops signal, not governance signal). Update plan §11.3 + §5 LOC cap table.",
+      "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 22,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Task 61 handler sketch imports `count_active_sanctions` from `lemmy_db_views_reputation::impls` — but the fn is private (no `pub` at impls.rs:38). How should task 61 obtain the active-sanction count?",
+      "options": [
+        "(a) Add `pub(crate)` to count_active_sanctions + `pub use impls::count_active_sanctions` re-export in crates/db_views/reputation/src/lib.rs. Cleanest; matches Phase 2b view-crate pattern + precedent from count_active_founders (5b Bucket 1 Fix 5).",
+        "(b) Inline the sanction count SQL in the get_my_reputation handler (~6 lines, duplicates impls.rs:38-49 logic).",
+        "(c) Extend load_or_compute_snapshot to return (snapshot, active_sanction_count) — largest blast radius, ripples into every existing caller."
+      ],
+      "context": "Advisor plan-review 2026-04-18: plan §11.1 task 61 HANDLER SHAPE calls `count_active_sanctions(&mut context.pool(), local_user_view.person.id)` from within the handler. The fn is declared `async fn count_active_sanctions(...)` at crates/db_views/reputation/src/impls.rs:38 with no `pub` keyword — private to the impls module, not callable from `lemmy_api::governance::get_my_reputation` in a different crate. `build_summary_view` at impls.rs:52 is similarly private. Plan's GOTCHA at §11.1 acknowledges `ReputationSummaryView` has no `From<&ReputationSnapshot>` impl and task 61 adds one — but that From impl still needs the active-sanction count from somewhere. `load_or_compute_snapshot` at reputation_snapshot.rs:454-481 returns `ReputationSnapshot`, NOT `ReputationSummaryView`, so the active count is not carried along. Discovered by grep at Session start.",
+      "answer": "Option (a). Add `pub(crate)` to count_active_sanctions at crates/db_views/reputation/src/impls.rs:38 + `pub use impls::count_active_sanctions;` in crates/db_views/reputation/src/lib.rs near the existing `pub use` block. Rationale: (1) matches Phase 2b view-crate convention — helpers used across crates get re-exported from lib.rs (see existing `pub use impls::load_or_compute_snapshot` pattern if present; check first); (2) matches the Phase 5b precedent where `count_active_founders` ended up exposed for Bucket 1 Fix 5; (3) view crates own 'count X' primitives for consumers — this is exactly the abstraction being asserted. Task 61 should add a step '61.0 — add pub re-export for count_active_sanctions' BEFORE the handler creation step. One-line additions across two files; no logic change.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 23,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Task 64e golden-path test edit — extend ONE jury_assigned assertion block (plan §11.4 wording) or BOTH blocks (advisor finding)?",
+      "options": [
+        "(a) Extend ONE block per plan §11.4 wording: add `jury_accepted == Some(&5)` to the post-assign-jury assertion block at e2e.rs:997-999 only.",
+        "(b) Extend BOTH blocks: add `jury_accepted == Some(&5)` to the post-assign-jury block (e2e.rs:998) AND the post-vote block (e2e.rs:1157) for assertion consistency."
+      ],
+      "context": "Advisor plan-review 2026-04-18: the golden-path test has TWO separate assertion blocks checking `jury_assigned == Some(&5)` + `panel_assembled == Some(&1)` — at line 998 (immediately after admin_assign_jury) AND at line 1157 (after the jury vote phase). Plan §11.4 task 64e's wording 'extend the governance_log count assertion at e2e.rs:997' only addresses the first block. The count of `jury_accepted` entries is stable across the vote phase (accepts happen once between assign and vote), so both blocks would read `Some(&5)` post-task-64. Asymmetric extension (a) creates a latent coupling between the two blocks — if a future edit changes the post-vote block's semantic coverage, `jury_accepted` tracking silently regresses.",
+      "answer": "Option (b). Extend BOTH assertion blocks. Rationale: (1) assertion consistency is the whole point of having two snapshots of the governance_log count map — asymmetric coverage defeats the pattern; (2) the line 1157 block already re-asserts `report_created Some(&1)`, `jury_assigned Some(&5)`, `panel_assembled Some(&1)` which are all write-once-early events, so adding `jury_accepted Some(&5)` to both matches that rhythm; (3) zero runtime cost — both blocks will read `Some(&5)` post-task-64 because the accept loop runs before both snapshots. Task 64e sub-step should read: 'Extend BOTH governance_log count assertion blocks (e2e.rs:998 post-assign AND e2e.rs:1157 post-vote) with `assert_eq!(map.get(\"jury_accepted\"), Some(&5));`.'",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 24,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q3: task 66 `request_appeal` appeal-window policy. Plan §11.6 uses `case.closed_at.is_none()` but IMPLEMENTATION-PLAN-v0.md line 381 says 'Verify now() < case.closed_at' (opposite semantics). Which is correct for v0?",
+      "options": [
+        "(a) Accept plan §11.6 as-is: `case.closed_at.is_none()` — window is open while admin hasn't run admin_close_case yet. v0 simplification; no automatic close timer exists.",
+        "(b) Add a computed window: case.decided_at + config.appeal.window_days (new config key). Adds a config seed + runtime check.",
+        "(c) Defer to admin-flip-based window (status-only check, ignore closed_at entirely)."
+      ],
+      "context": "Advisor plan-review 2026-04-18: IMPLEMENTATION-PLAN-v0.md line 381 literal reading 'Verify now() < case.closed_at' requires closed_at to be future-dated — but v0's case closure is admin-driven (no automatic close timer), so `closed_at` is either None (case still Decided) or set-to-now() the moment admin runs admin_close_case. The plain reading doesn't fit v0 semantics. Plan §11.6 inverted to `case.closed_at.is_none()` which matches v0 semantics (window is 'case not yet closed by admin'). IMPLEMENTATION-PLAN-v0.md line 381 is likely a fragment of v1 thinking (admin_close_case with a future-dated closed_at as a grace window marker) that v0 doesn't implement.",
+      "answer": "Option (a). Accept plan §11.6 as the v0 window definition: `case.closed_at.is_none()` means 'appeal window open'. Rationale: (1) v0 has no automatic close timer — admin_close_case (Phase 4 task 46) sets closed_at to now() at the moment of admin intervention, so 'now() < closed_at' is never true; (2) the plain-reading of the design-doc sentence doesn't fit v0 temporal semantics; (3) v1's larger-panel appeal flow (ADR-010) can redefine the window without v0 schema changes. Document in task 66 handler doc comment: `// v0 appeal window: open while case.closed_at IS NULL. v1 may add a // config.appeal.window_days computed grace period — see ADR-010 + [99 OQ-025].` Also file OQ-025 (post-decision grace window, athgabál analogue) as a v1 open question — deferred-to-v1 per 2026-04-17 historical-fidelity review. Advisor concurs with Q3 recommendation (a) in plan §17.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 25,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q4: should `admin_reputation_stats` (task 62) emit a governance_log entry when called?",
+      "options": [
+        "(a) No log entry. Task 62 is read-only observability; other admin backstops (admin_assign_jury, admin_close_case) only log WRITES, not queries.",
+        "(b) Log entry `admin_reputation_stats_queried` per call. Admin-query audit trail.",
+        "(c) Log entry only when query includes `community_id` filter (admin drilling into a specific community)."
+      ],
+      "context": "Advisor plan-review 2026-04-18: plan §11.2 step 6 marks the log entry as optional pending this decision. Watch 11 (admin governance-weight actions need modlog at action time) does NOT apply to task 62 because the handler is read-only — it doesn't mutate governance weight (reputation_event, governance_config, case state). Consistency argument: admin_assign_jury logs the assign WRITE + panel_assembled, admin_close_case logs the case-close WRITE. Neither logs pre-write admin READS (e.g. get_case called by admin). Applying log-on-query to task 62 alone would be asymmetric.",
+      "answer": "Option (a). No log entry for task 62. Rationale: (1) Watch 11 scope is governance-weight WRITES, not READS — task 62 is pure observability; (2) consistency with existing admin backstops — admin_assign_jury, admin_close_case, get_case (admin caller path) do not log query-only operations; (3) the audit trail for 'admin queried reputation stats' is legitimate v1 scope (audit-log admin reads) but not a v0 invariant. Task 62 handler adds: `// TODO(brehon-fork): audit-log admin queries in v1 per OQ-026-candidate; // read-only endpoint, no governance_log::append here.`. Plan §11.2 step 6 'Optional: one governance_log::append(...)' — resolve to DROP step 6.",
+      "answered_by": "advisor"
+    },
+    {
+      "id": 26,
+      "from": "advisor",
+      "timestamp": "2026-04-18T23:00:00Z",
+      "question": "Plan §17 Q7: Phase 4 string-literal entry-kind emit sites (`\"report_created\"` etc.) in governance_log.rs currently flagged for migration to the ENTRY_KIND_* consts (comment at lines 46-48). Migrate in 5c task 70 phase-close, separate 5c cosmetic commit, or defer to v1?",
+      "options": [
+        "(a) Defer to v1. Cosmetic; literals and consts are functionally identical. Not 5c scope. Carry-forward note in phase-close report.",
+        "(b) Bundle with task 70 phase-close commit. One sweep at phase-close, low risk because every literal usage is already known from the governance_log.rs comment.",
+        "(c) Separate `cosmetic(governance-log): migrate Phase 4 literals to ENTRY_KIND_* consts` commit in 5c between task 69a and task 70."
+      ],
+      "context": "Advisor plan-review 2026-04-18: governance_log.rs:46-48 flags the literal-to-const migration as 'optional cosmetic task'. Phase 5c new code (tasks 64/65/66) correctly uses consts per §6 C6. The Phase 4 literals are `\"report_created\"`, `\"jury_assigned\"`, `\"panel_assembled\"`, `\"case_decided\"`, `\"sanction_applied\"`, `\"public_case_log_appended\"` (6 sites, all in api-crate handlers shipped in Phase 4). Grep verification: the golden-path test assertion keys (e2e.rs:995-999 + 1155-1158) use the string literals too — any const migration must keep the assertions matching (consts are declared as `pub const ENTRY_KIND_X: &str = \"x\";` so Debug-format stays identical; no assertion churn).",
+      "answer": "Option (a). Defer to v1 cosmetic cleanup. Rationale: (1) scope creep protection — 5c is already at 12 task slots; unrelated cosmetic changes dilute the phase-close retro and risk CodeRabbit latent-bug findings in unrelated surfaces; (2) the literals are functionally identical to the consts — any tooling that can const-replace can do so in v1 without risk; (3) the governance_log.rs comment at 46-48 is itself the tracking artefact; no additional memo needed. Action: add to `.claude/PRPs/reports/phase-5c-complete-report.md §Carry-forward` at task 70 time — 'Phase 4 literal→const migration in governance_log.rs emit sites. 6 sites known; cosmetic only; defer to v1 cleanup commit alongside OQ-023 reason-enum migration.'. Plan §17 Q7 recommendation (c) matches this answer.",
       "answered_by": "advisor"
     }
   ]

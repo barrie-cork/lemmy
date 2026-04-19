@@ -35,7 +35,11 @@ type SnapshotRow = (
 /// `sanction.active = true` — the `ends_at` column is independent (future
 /// rows can be inactive; past rows can still be active until the modlog
 /// worker resolves them).
-async fn count_active_sanctions(
+///
+/// `pub` per decision-queue #22 — `lemmy_api::governance::get_my_reputation`
+/// (Phase 5c task 61) reuses this helper directly to avoid duplicating the
+/// 2-line query in the handler.
+pub async fn count_active_sanctions(
   conn: &mut diesel_async::AsyncPgConnection,
   person_id: PersonId,
 ) -> LemmyResult<i64> {

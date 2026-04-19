@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM Brehon dev utility: run `cargo check --workspace` with the Visual Studio
 REM 2022 Build Tools linker on PATH. Lemmy's build needs `link.exe`, which only
 REM appears on PATH after vcvars64.bat is sourced in the current shell.
@@ -18,3 +19,4 @@ where link
 echo ---
 cd /d "%~dp0..\.."
 "%USERPROFILE%\.cargo\bin\cargo.exe" check %*
+exit /b !errorlevel!

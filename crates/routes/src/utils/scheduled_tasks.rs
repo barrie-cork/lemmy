@@ -197,6 +197,38 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         .await
         .inspect_err(|e| warn!("Failed to run snapshot batch: {e}"))
         .ok();
+
+      // Phase 5c task 63d — DoD line 398. After the recompute pass,
+      // verify the snapshot table is fresh; emit a tracing::error! if
+      // the most-recent calculated_at is older than 2 × tick interval
+      // (or the table is empty entirely). Pure observability — no DB
+      // writes, no governance_log entry.
+      let staleness_pool = &mut context.pool();
+      let mut staleness_cache =
+        lemmy_api::governance::config::ConfigCache::new();
+      let interval_s = lemmy_api::governance::config::get_int(
+        &mut staleness_cache,
+        staleness_pool,
+        lemmy_api::governance::config::Scope::Instance,
+        "job.snapshot_interval_seconds",
+      )
+      .await
+      .unwrap_or(900);
+      match get_conn(staleness_pool).await {
+        Ok(mut conn) => {
+          if let Err(e) =
+            lemmy_api::governance::reputation_snapshot::check_snapshot_staleness(
+              &mut conn,
+              interval_s,
+              Utc::now(),
+            )
+            .await
+          {
+            warn!("snapshot staleness check failed: {e}");
+          }
+        }
+        Err(e) => warn!("snapshot staleness check: get_conn failed: {e}"),
+      }
     }
   });
 

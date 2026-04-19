@@ -18,6 +18,7 @@
 //! writer/schema sites.
 
 use chrono::{DateTime, Utc};
+use lemmy_db_schema::source::governance::reputation_snapshot::ReputationSnapshot;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -62,6 +63,29 @@ pub struct ReputationSummaryView {
   /// bare-scalar kind (c) shape is why this struct can't derive
   /// `Selectable`.
   pub active_sanctions: i64,
+}
+
+/// Map a freshly-loaded `ReputationSnapshot` row into the public view shape.
+/// `active_sanctions` is set to `0` here — the caller overwrites it with the
+/// `count_active_sanctions` round-trip per the standard read pattern. This
+/// impl deliberately does NOT carry `can_sponsor` over from the snapshot
+/// per `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` OQ-014
+/// / `scripts/brehon/lint-no-can-sponsor-read.sh`.
+impl From<&ReputationSnapshot> for ReputationSummaryView {
+  fn from(snapshot: &ReputationSnapshot) -> Self {
+    Self {
+      person_id: snapshot.person_id.0,
+      community_id: snapshot.community_id.map(|c| c.0),
+      reporting_accuracy: snapshot.reporting_accuracy,
+      jury_reliability: snapshot.jury_reliability,
+      participation_consistency: snapshot.participation_consistency,
+      endorsement_strength: snapshot.endorsement_strength,
+      jury_eligible: snapshot.jury_eligible,
+      trusted_reporter: snapshot.trusted_reporter,
+      calculated_at: snapshot.calculated_at,
+      active_sanctions: 0,
+    }
+  }
 }
 
 #[skip_serializing_none]
