@@ -39,6 +39,10 @@ jobs:
         with:
           fetch-depth: 1
           ref: ${{ github.event.pull_request.head.sha }}
+          # crates/email/translations/ is a submodule pointing to
+          # LemmyNet/lemmy-translations; lemmy_email/build.rs reads it
+          # at compile time, so we must initialise it.
+          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
