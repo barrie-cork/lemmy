@@ -123,11 +123,18 @@ async fn process_accept(
   }
 
   // 6. Flip status → Accepted; stamp responded_at.
+  //    The UPDATE predicate includes `status = Selected` to guard against a
+  //    concurrent `decline_jury_assignment` that could flip the same row to
+  //    `Declined` between our SELECT (step 1) and this UPDATE. Under READ
+  //    COMMITTED, the other tx's commit is visible here even inside our own
+  //    transaction. If rows_affected == 0, the row was concurrently flipped;
+  //    return NotFound so the caller sees a clean "assignment gone" response.
   let now = Utc::now();
-  update(
+  let rows_affected = update(
     jury_assignment::table
       .filter(jury_assignment::case_id.eq(data.case_id))
-      .filter(jury_assignment::person_id.eq(caller_id)),
+      .filter(jury_assignment::person_id.eq(caller_id))
+      .filter(jury_assignment::status.eq(JuryAssignmentStatus::Selected)),
   )
   .set((
     jury_assignment::status.eq(JuryAssignmentStatus::Accepted),
@@ -136,7 +143,15 @@ async fn process_accept(
   .execute(conn)
   .await?;
 
-  // 7. Audit log.
+  if rows_affected == 0 {
+    tracing::warn!(
+      case_id = %data.case_id.0,
+      "accept_jury_assignment: UPDATE matched 0 rows — assignment was concurrently modified (likely declined); returning NotFound"
+    );
+    return Err(LemmyErrorType::NotFound.into());
+  }
+
+  // 7. Audit log — only reached when the UPDATE succeeded (rows_affected == 1).
   governance_log::append(
     &mut (&mut *conn).into(),
     ENTRY_KIND_JURY_ACCEPTED,
