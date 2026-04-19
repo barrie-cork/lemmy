@@ -43,3 +43,92 @@ Agents will return triage notes; advisor will then pick a starting PR and sequen
 
 Once triage agents return, the advisor writes a concrete PR sequence
 (starting with polish-1) and spawns impl agents per PR.
+
+---
+
+## Research findings
+
+### T1 — issue triage
+
+**Verified against `gh issue list --repo barrie-cork/lemmy --state all` + auto-memory, 2026-04-19.**
+
+#### Plan items verified correct (OPEN, plan-to-issue mapping valid)
+
+- Item 1 → **#48** OPEN, labels `bug` + `risk:high`. Title matches plan's "atomicity + causal-ordering + hidden-write sweep".
+- Item 2 → **#35** OPEN, labels `bug` + `risk:high`. Title matches "NOTIFY trigger fires on INSERT before signature UPDATE".
+- Item 3 → **#34** OPEN, labels `bug` + `risk:high`. Title matches "request_appeal unreachable for Decided cases".
+- Item 4 → **#33** OPEN, labels `bug` + `risk:critical`. Title matches "declining juror can be picked as own replacement".
+- Items 5, 6, 7 → **#54** OPEN (single umbrella issue for PR #46 Bucket C follow-ups). Plan references sub-items `#2p-7`, `#2p-2`, `#2p-3`, `#2p-6` — these are thread anchors within #54's body, not separate issues. Valid.
+- Item 8 → **#36** OPEN, labels `bug` + `risk:medium`. Matches "404 allowed in e2e route-registration gate".
+- Item 9 → **#47** OPEN, labels `bug` + `risk:low`. Matches "task-hopper.schema.json lifecycle invariants".
+- Item 10 → **#37** OPEN, labels `ops` + `risk:low`. Matches "cargo-test-e2e workflow silently overrides rust-toolchain.toml". Note: this is a CodeRabbit follow-up on PR #32 (merged `3bbf419da`); PR #32 added the workflow but did NOT fix the toolchain pin — so #37 is correctly still open.
+- Item 12 → **#38, #39, #50, #51, #52** all OPEN, all labelled `documentation` + `risk:low`. Mapping valid.
+- Item 22 → **#53** OPEN, labels `enhancement` + `v1` + `risk:low`. Tagged v1-deferred but still bundled in polish plan as 🔵 trivial — intentional per plan line 93.
+
+#### Drift / stale references
+
+- **Item 11 (plan line 60):** cites **#49** and claims "Already fixed in PR #46 at `9aa1a778a`. Verify and close without reopening the file." Status: **#49 is already CLOSED** (`closedAt 2026-04-19T17:47:00Z`, stateReason `COMPLETED`) — closed 32 min after PR #46 merged. **Action: strike item 11 from the plan — no action needed.** The "verify and close" step is done.
+
+#### Memory reconciliation
+
+- **`project_pr46_phase_6_review_response.md` line 73** — claim "Awaiting CodeRabbit re-review on `8ee45a3ca`. On green … merge PR #46 into governance-v0" — STATUS: **superseded**. `gh pr view 46` confirms **MERGED** at `08065e1a1` (`mergedAt 2026-04-19T17:15:37Z`, base `governance-v0`). Merge commit hash matches plan line 3.
+- **`project_phase_6_handoff_ready.md`** — describes overnight Phase 6 run state at `15f8cbbd0`. Phase 6 has since shipped and merged. Historical; no action required.
+- **`feedback_coderabbit_block_merge_critical.md`** — process rule, still accurate. Pattern held on PR #46 execution (both Critical findings #15 and #19 fixed in-PR at `41f1d0379` + `d70610980`). No reconciliation needed.
+- **MEMORY.md index lines 40 + 49** — still reference "pending CI gates before merge" (PR #10) and "awaiting CodeRabbit re-review" (PR #46). Both PRs now merged. Stale but not load-bearing for polish intake.
+
+#### Additional OPEN issues NOT in plan (advisory)
+
+- **#45** OPEN (no labels) — `sponsor_liability_with_founder_multiplier accept_jury_assignment NotFound flake`. Test flake. Decide if it blocks v0 tag (test determinism) or defers to v1.
+- **#43** OPEN (no labels) — `phase1_migrations_round_trip needs revert-list extension for federation tables (task 70 carry-forward)`. Test infra carry-forward from Phase 6. Likely v1.
+- **#42** OPEN (no labels) — `ineligible_user_cannot_be_picked_for_jury cross-test contamination under --test-threads=1`. Test isolation. Likely v1 but could fold into item 17 clippy/test-harness sweep.
+- **#6** OPEN (labels `governance/plan-drift` + `risk:high`) — "Plan drift — 2026-04-17 (11 row(s))". **Stale.** Pre-dates Phase 5c completion (shipped all 11 MVP endpoints per `project_phase_5c_complete.md`). **Action: re-run plan-drift check on current `governance-v0` HEAD `08065e1a1`; if all 11 endpoints wired, close #6.** Docs-hygiene close — fold into polish-3 or pre-tag verify step.
+- **#40, #41, #30, #11–#29, #31, #53** — all `v1` labelled. Correctly excluded per plan line 146.
+
+#### Recommendations
+
+1. **Strike plan item 11 (#49)** — already closed; "verify and close" step is done. Reduces plan from 23 to 22 items.
+2. **Add "verify-and-close #6"** to polish-3 docs sweep or as a standalone pre-tag check — plan-drift report 2 days stale; likely no-ops post Phase 5c+6.
+3. **Triage #45, #43, #42 at polish-1 kickoff.** `#42` and `#43` feel v1; `#45` flake may warrant a cheap fix if reproducible.
+4. **Memory-index refresh (low priority, post-polish-week)** — update `MEMORY.md` lines 40 + 49; reflect PR #10 + PR #46 merged state in their summary fields.
+5. **No other drift** — plan item → issue mapping is otherwise clean. GH #54 umbrella-subitem convention (`#2p-N`) is valid.
+
+### T3 — docs-sweep scope
+
+**Verified against worktree HEAD `a25e6bbe0` on `polish/critical-bugs` (tip of `governance-v0` + kickoff runlog commit), 2026-04-19.**
+
+#### File inventory
+
+| Issue | File(s) | Type | Line-range estimate |
+|---|---|---|---|
+| #38 | `crates/api/api/src/governance/accept_jury_assignment.rs` (lines 7, 12 — `//!` docstring) | Rust doc-comment only | ~2 lines |
+| #38 | `crates/db_views/governance_case/src/impls.rs` (lines 171, 187 — `///` docstring) | Rust doc-comment only | ~2 lines |
+| #38 | `.claude/PRPs/reports/phase-5c-complete-report.md` (line 27 — relative link) | md | 1 line |
+| #39 | `docs/brehon-law-inspired-network/SUBSCRIPTIONS.md` (§43-area, gap semantics) | md | ~15–25 lines (split one paragraph into 3 bullets) |
+| #50 | `.claude/PRPs/plans/phase-6-federation.plan.md` (fences at 97 + 848; enum names at 480/492/493) | md (ASCII + SQL fences) | 5 lines (2 fences + 3 enum-name swaps) |
+| #51 | `.claude/decision-queue.json` (entry `id: 38`, DQ-6.7 `question`/`answer` text) | json (string fields only) | ~3–6 lines of string-value rewrites |
+| #52 | `.claude/rules/task-hopper.md` (lines 152, 177, 181 area) | md (auto-loads in -p mode) | ~15–25 lines (Option B carve-out or Option A rewrite) |
+
+#### Code-surface check
+
+- **All files markdown/json documentation:** mostly — #38 touches 2 `.rs` files but the edits are entirely inside `//!` / `///` doc-comment blocks (grep-verified: only `plan §11.4`, `plan §11.7`, `line 377` matches appear inside doc-comment lines). No code semantics, no `#[doc = ...]` attributes that would feed macros. **Cargo-clean: yes.**
+- **Rule files touched (auto-load in -p mode):** `.claude/rules/task-hopper.md` (#52). This file auto-loads when `claude -p` reads the rules dir. Edits are prose-only wording changes (no hook YAML, no slash-command invocation strings that scripts would grep). Low risk, but Option A (route recovery through `task-hopper.sh escalate`) would couple the doc edit to a script change — confirm the sweep uses **Option B** (prose-only "advisor-only repair" carve-out) to keep this in docs-only scope.
+- **Hidden-code risks:**
+  - **#50 SQL snippet (lines 475–499):** `CREATE TABLE federation_attestation (...)` is in a `sql` code fence inside the plan doc. Not executed; no tooling greps this plan for DDL. Safe.
+  - **#50 ASCII fences (97 + 848):** tagging `text` is a markdownlint-only concern. No ripgrep / MD040 CI wiring consumes these tags for logic. Safe.
+  - **#39 SUBSCRIPTIONS.md:** contains a SQL block (lines 33–38) as reference, but #39 edits the prose *following* it. No change to SQL. Safe.
+  - **#51 decision-queue.json:** schema-wise this is a free-form `answer` string plus `question` string on an already-resolved entry (`answered_by: impl-self-resolved`). No `task-hopper.schema.json`-adjacent field. Per memory `feedback_python_utf8_encoding_windows.md`, use the Edit tool directly (not Python) to preserve `§` and `—`.
+  - **#38 Rust doc edits:** `cargo doc` consumes these — a malformed link in a docstring would fail `cargo doc`, but the edits here are plain-text "plan §11.X" → "Phase 5c task N" substitutions. Safe. No `cargo check` exposure (docstrings are not compiled).
+
+#### Overlaps
+
+- **None.** Each issue touches disjoint files. Closest proximity:
+  - #51 (`.claude/decision-queue.json`) and #52 (`.claude/rules/task-hopper.md`) both live under `.claude/` but are separate files.
+  - #50 and #38 both touch the PRPs tree (`.claude/PRPs/plans/` vs `.claude/PRPs/reports/`) but distinct files.
+- No same-file collision → edit order is free.
+
+#### Recommendation
+
+- **Single PR shape:** **yes.** One branch `polish/docs-sweep` off `governance-v0`, one commit `chore(docs): v0-polish docs sweep — #38 #39 #50 #51 #52` (or per-issue commits if task-per-commit is preferred for CodeRabbit review; diff stays small either way — ~60–90 lines total across 7 files).
+- **Any splits:** **none.** #51 is genuinely docs-only — it edits `question`/`answer` string fields on an already-resolved DQ entry, not schema or active state. Keep with the sweep.
+- **Ordering constraint:** **none between the 5 issues.** One constraint vs. other polish PRs: #52 should pick **Option B** (prose-only carve-out, per issue body's "faster to land and matches how the rule was actually used in Phase 6") — Option A would extend `scripts/brehon/task-hopper.sh`, pulling the sweep out of docs-only scope. If a later polish wave decides on Option A, reopen as a separate code PR.
+- **Parallel-safety vs polish-1:** docs-sweep touches zero files that polish-1 (`#48 #35 #34 #33`) touches. `governance_log::append`, `submit_jury_vote`, `federation_outbox`, `request_appeal`, `admin_assign_jury` are all `.rs` handler sources. Docs-sweep is safe to run in parallel with polish-1 in a separate worktree.
