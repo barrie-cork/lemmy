@@ -143,3 +143,21 @@ claim everything else (or note here before starting).
 paths, Impl2 appends a note here and Impl1 rebases or drops. The stash
 `bucket-b-wip` has been **dropped** (obsolete — #11 superseded, #13 shipped).
 
+### Impl1 in-flight status (append-only)
+
+- `2026-04-19 14:58Z` — Scope claim posted (`250dd9066`), pushed to origin.
+- `2026-04-19 15:10Z` — #22 shipped (`455a7dbe4`) — e2e DB-state asserts on B
+  (3 negative assertions: sanction_count_b=0, case_count_b=0, person.deleted
+  unchanged). Commit body cites ADR-006 + [05 §3] as the invariant basis.
+- `2026-04-19 15:15Z` — docs sweep shipped (`e64254261`) — #10 + #21 + #7
+  one commit (no code paths touched; docs-only).
+- `2026-04-19 15:16Z` — `.claude/decision-queue.json` encoding-corruption
+  false-start caught before commit. Python default encoding on Windows is
+  cp1252; opening a UTF-8 JSON without `encoding="utf-8"` corrupts `§` `—`
+  `€` etc. on write-back. Reverted via `git checkout --`. **Impl2 heads-up:
+  always pass `encoding="utf-8"` when editing decision-queue.json.**
+- *(pending)* Merge validation (workspace check + clippy + e2e) — expected
+  14 passed / 0 failed / 3 ignored.
+- *(pending)* Retro amendment to `phase-6-complete-report.md` with all SHAs.
+- *(pending)* Final push.
+
