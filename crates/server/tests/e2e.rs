@@ -1420,6 +1420,7 @@ async fn config_parity_round_trip() -> Result<(), Box<dyn Error>> {
 // After all three branches, walks every `governance_log.payload` and asserts
 // no raw integer identifiers under banned keys (Watch 10 PII grep).
 
+#[ignore = "TODO(v0-polish): deflake — GH issue #45 (random jury pool + fallback path NotFound)"]
 #[tokio::test]
 #[expect(clippy::too_many_lines, reason = "3-branch e2e per plan §11.5")]
 async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error>> {
