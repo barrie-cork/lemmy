@@ -129,7 +129,7 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 
 ### Before state (governance-v0 HEAD 3bbf419da)
 
-```
+```text
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                              BEFORE STATE                                      ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
@@ -153,7 +153,7 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 
 ### After state (end of v1-AD-a)
 
-```
+```text
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                               AFTER STATE                                      ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
@@ -169,7 +169,7 @@ OQ-V1-AD-04 (`participation.attestation_enabled` UX shape, already listed in par
 ║   sponsor_allowlist: new table, 4 columns (reserved; read-path lands in v1-AD-b)║
 ║   ENTRY_KIND_* consts: 21 (19 v0 + ENTRY_KIND_ADMIN_CONFIG_CHANGED,           ║
 ║                            ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED)             ║
-║   CONFIG_KEY_METADATA: &'static [ConfigKeyMetadata; 62] compile-time          ║
+║   CONFIG_KEY_METADATA: &'static [ConfigKeyMetadata] len=61 compile-time       ║
 ║   parity::every_seeded_key_has_metadata test passes                           ║
 ║   .claude/rules/governance-log-entry-kind-registry.md initialised             ║
 ║                                                                               ║
@@ -687,8 +687,24 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
 
 - **ACTION**: Seed the 27 new rows idempotently. The INSERT rows MUST match task 6's `SEEDED_KEYS_WITH_CONSTS` entries byte-for-byte. Also land the two new ENTRY_KIND consts (combined task because both are small, non-conflicting, and the parity test + migration test share a validation step).
 - **IMPLEMENT** (migration):
+
+  **⚠ NON-AUTHORITATIVE SQL BLOCK — reconciliation at plan-review (see GOTCHA below).** The rows listed below are drawn from PRD §5.2's full v1 cross-PRD enumeration and include keys owned by sponsor-liability-v1 (10× `liability.*`), federation-inbound-v1 (5× `federation.*` partial), reputation-tuning-v1 (3× `decay.*` partial, 4× `participation.*` partial), and jury-mechanics-v1 (some `jury.*` cascade rows). v1-AD-a ships ONLY the admin-dashboard-owned subset (per PRD §3.1 contribution sub-table: ~24 keys minus `rule_set.active_version_id` = **expected 23-27 admin-dashboard rows** — reconciliation gate below narrows this).
+
+  The authoritative count (`EXPECTED_SEED_COUNT_V1_AD`, currently estimated 27) is reconciled at task-7-pre-commit time against PRD §3.1's per-sub-PRD ownership split, NOT against the rows listed below. The implementer:
+  1. Reads PRD §3.1 contribution sub-table to extract admin-dashboard-owned keys
+  2. Writes task 6's `SEEDED_KEYS_WITH_CONSTS` extension to match
+  3. Writes task 7's INSERT block to match task 6 byte-for-byte
+  4. Runs the reconciliation gate (below) before committing
+  5. Adjusts `EXPECTED_SEED_COUNT_V1_AD` to the actual count
+
+  If the implementer is unclear which keys belong to admin-dashboard vs sponsor-liability vs reputation-tuning etc., they MUST write a DQ entry pointing to PRD §3.1 "per-PRD contribution sub-table" and wait for advisor clarification — do NOT self-resolve by picking keys arbitrarily from the SQL block below.
+
   ```sql
-  -- up.sql
+  -- up.sql — NON-AUTHORITATIVE, see reconciliation gate above.
+  -- Full PRD §5.2 enumeration (35 rows); v1-AD-a ships admin-dashboard-
+  -- owned subset only (~27). Sponsor-liability, federation-inbound,
+  -- reputation-tuning, and jury-mechanics keys below land in their own
+  -- sub-PRD plans, NOT in v1-AD-a.
   INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text) VALUES
     ('instance', 'jury.severity_thresholds.minor',              'text',  NULL,  NULL, NULL,  'majority'),
     ('instance', 'jury.severity_thresholds.moderate',           'text',  NULL,  NULL, NULL,  '60%'),
@@ -791,7 +807,7 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
   cmd //c "scripts\\brehon\\cargo-test.bat --test e2e -p lemmy_server config_parity_round_trip > .claude/PRPs/debug/task7-e2e.log 2>&1"
   echo "e2e exit: $?"
   ```
-  Expect both to exit 0. The `config_parity_round_trip` test at `crates/server/tests/e2e.rs:1308-1366` will iterate all 62 `SEEDED_KEYS_WITH_CONSTS` entries and call the typed accessor — any missing seed row, missing const, or type mismatch fails here.
+  Expect both to exit 0. The `config_parity_round_trip` test at `crates/server/tests/e2e.rs:1308-1366` will iterate all `SEEDED_KEYS_WITH_CONSTS` entries (currently `EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD` = 34 + 27 = 61 post-reconciliation) and call the typed accessor — any missing seed row, missing const, or type mismatch fails here.
 
 ### Task 8: INITIALISE `.claude/rules/governance-log-entry-kind-registry.md` (closes #41)
 
@@ -813,9 +829,24 @@ Execute in order. One commit per task on branch `phase-v1-AD-a`. Each task has a
   3. Grep DoD in plan file: `rg "ENTRY_KIND_<NAME>" crates/api/api/src/governance/governance_log.rs`
      returns the const; `rg '"<snake_case>"' crates/` returns the const line
      + every call site.
-  4. Collision check at plan-review: `rg -n '"[a-z_]+"' crates/api/api/src/governance/governance_log.rs | sort -u | wc -l`
-     returns exactly `EXPECTED_SEED_COUNT + sum(EXPECTED_SEED_COUNT_V1_*)`
-     and every literal appears exactly once.
+  4. Collision check at plan-review: the count of lowercase string literals in
+     governance_log.rs (the entry_kind &str values) must equal the count of
+     `pub const ENTRY_KIND_*` declarations in the same file, and every literal
+     must appear exactly once. Two greps, same file, same domain:
+     ```bash
+     rg -c '^pub const ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs
+     # Count A: number of ENTRY_KIND_* consts
+
+     rg -oE '"[a-z_]+"' crates/api/api/src/governance/governance_log.rs | sort -u | wc -l
+     # Count B: number of unique lowercase string literals
+
+     # Invariant: A == B, AND no duplicate literals
+     rg -oE '"[a-z_]+"' crates/api/api/src/governance/governance_log.rs | sort | uniq -d
+     # Expected: empty (no duplicates)
+     ```
+     NOTE: this invariant is **governance-log-domain only** — it does NOT
+     reference `EXPECTED_SEED_COUNT` or `EXPECTED_SEED_COUNT_V1_*` (which are
+     config-key-seed parity counters, a different domain).
 
   This file is MANDATORY READING in `-p` mode. Every PRP plan that touches
   governance writes reads it at first iteration. Mirrors
@@ -1011,7 +1042,7 @@ v1-AD-a adds **no new test files**. It extends the two existing tests:
 |---|---|---|
 | `parity::every_seeded_key_has_metadata` (NEW) | `crates/api/api/src/governance/config.rs::parity` | Every `SEEDED_KEYS_WITH_CONSTS` entry has a matching `CONFIG_KEY_METADATA` row |
 | `parity::seeded_keys_count_matches_const_count` (EXTENDED) | same file | Now asserts `SEEDED_KEYS_WITH_CONSTS.len() == EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD` |
-| `config_parity_round_trip` (UNCHANGED BODY, BROADER COVERAGE) | `crates/server/tests/e2e.rs:1308-1366` | Runs all 62 typed reads against a real Postgres with all 62 seeded rows |
+| `config_parity_round_trip` (UNCHANGED BODY, BROADER COVERAGE) | `crates/server/tests/e2e.rs:1308-1366` | Runs one typed read per `SEEDED_KEYS_WITH_CONSTS` entry (currently 61 = EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD) against a real Postgres with the matching seeded rows |
 
 ### Edge cases covered by existing tests
 
@@ -1065,7 +1096,7 @@ echo "build exit: $?"
 cmd //c "scripts\\brehon\\cargo-test.bat --test e2e -p lemmy_server config_parity_round_trip > .claude/PRPs/debug/phase-v1-AD-a-e2e-run.log 2>&1"
 echo "run exit: $?"
 ```
-**EXPECT**: 0 on both. The `config_parity_round_trip` test applies all migrations (including the 4 new ones), then walks `SEEDED_KEYS_WITH_CONSTS` (62 entries) calling the typed accessors. Any missing seed row, missing const, or type mismatch fails here.
+**EXPECT**: 0 on both. The `config_parity_round_trip` test applies all migrations (including the 4 new ones), then walks `SEEDED_KEYS_WITH_CONSTS` (`EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD` = 34 + 27 = 61 entries post-reconciliation; exact count is parametric) calling the typed accessors. Any missing seed row, missing const, or type mismatch fails here.
 
 ### Level 5: clippy (per plan-drift CI)
 
