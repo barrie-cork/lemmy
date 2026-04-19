@@ -82,8 +82,10 @@ messaging (and any external observer that has LISTENed to the channel):
 
 ## Not a transport
 
-This is an at-least-once notification channel, not a transport. Do
-not use it for message content. Use it only to learn *that* a
+This is an at-most-once notification channel, not a transport. Messages
+may be dropped on subscriber disconnect or queue overflow. Subscribers
+must use the last_seen_id catch-up query to backfill missed events.
+Do not use it for message content. Use it only to learn *that* a
 governance event happened, then fetch details via a normal query
 against `governance_log`.
 

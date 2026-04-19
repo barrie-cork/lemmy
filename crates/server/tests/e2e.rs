@@ -1409,11 +1409,17 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
     reputation_snapshot::recompute_snapshot,
     submit_jury_vote::submit_jury_vote,
   };
-  use lemmy_api_common::governance::{AdminAssignJury, CreateGovernanceReport, SubmitJuryVote};
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
+    AdminAssignJury,
+    CreateGovernanceReport,
+    SubmitJuryVote,
+  };
   use lemmy_api_crud::governance::create_report::create_report;
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
   use lemmy_db_schema::source::{
@@ -2309,7 +2315,7 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
     ("POST", "/api/v4/governance/jury/vote",                     "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/admin/assign-jury",             "{}", &[200, 400, 401]),
     ("POST", "/api/v4/governance/admin/close-case",              "{}", &[200, 400, 401]),
-    ("POST", "/api/v4/governance/admin/reputation-stats",        "{}", &[200, 400, 401]),
+    ("GET",  "/api/v4/governance/admin/reputation-stats",        "",   &[200, 400, 401]),
   ];
 
   for (method, path, body, allowed) in endpoints {
@@ -2941,7 +2947,7 @@ async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Erro
     connection::{ActualDbPool, build_db_pool_for_tests},
     traits::Crud,
   };
-  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS, utils::validation::is_valid_actor_name};
   use reqwest_middleware::ClientBuilder;
 
   unsafe {
@@ -2980,6 +2986,7 @@ async fn underscore_prefix_usernames_still_register() -> Result<(), Box<dyn Erro
   // `_lemmy_test_user` is 16 chars; passes is_valid_actor_name regex
   // `^(?:[a-zA-Z0-9_]+|[0-9_\p{Arabic}]+|[0-9_\p{Cyrillic}]+)$`.
   let username = "_lemmy_test_user";
+  is_valid_actor_name(username)?;
   let person_form = PersonInsertForm::test_form(instance.id, username);
   let person = Person::create(&mut context.pool(), &person_form).await
     .map_err(|e| -> Box<dyn Error> { format!("{e}").into() })?;

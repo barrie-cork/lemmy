@@ -197,7 +197,7 @@ pub async fn list_cases_filtered(
 
   let page = filter.page.unwrap_or(DEFAULT_PAGE).max(1);
   let limit = filter.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
-  let offset = (page - 1) * limit;
+  let offset = page.saturating_sub(1).saturating_mul(limit);
 
   let mut query = moderation_case::table
     .left_join(
