@@ -58,7 +58,7 @@ use serde_with::skip_serializing_none;
 use {
   crate::source::governance::redaction::scrub_json,
   diesel::{ExpressionMethods, QueryDsl, SelectableHelper},
-  diesel_async::RunQueryDsl,
+  diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt},
   ed25519_dalek::{Signer, SigningKey},
   lemmy_diesel_utils::connection::{DbPool, get_conn},
   lemmy_utils::error::{LemmyErrorType, LemmyResult},
@@ -178,29 +178,51 @@ pub async fn append(
     actor_pseudonym,
   };
 
-  let row = diesel::insert_into(governance_log::table)
-    .values(&form)
-    .returning(GovernanceLog::as_returning())
-    .get_result::<GovernanceLog>(conn)
-    .await?;
+  // ADR-008 atomicity: INSERT + signature UPDATE must commit together
+  // so subscribers never observe a row with `signature = NULL`, and a
+  // crash between the two writes can't leave a permanent unsigned row.
+  // When `append` is called from inside a caller's outer tx (via
+  // `&mut (&mut *conn).into()` reborrow — see federation_outbox.rs:187
+  // or admin_assign_jury.rs:165), diesel-async promotes this inner
+  // `run_transaction` to a SAVEPOINT, so a signing failure here rolls
+  // back the two log writes while preserving the caller's other work
+  // up to their own retry/rollback decision.
+  //
+  // The NOTIFY trigger (`governance_log_notify_trigger`) already fires
+  // AFTER UPDATE OF signature per migration `2026-04-20-000100`, so
+  // atomic INSERT+UPDATE also resolves GH #35: subscribers observe the
+  // row only once the transaction commits with signature populated.
+  conn
+    .run_transaction(|conn| {
+      async move {
+        let row = diesel::insert_into(governance_log::table)
+          .values(&form)
+          .returning(GovernanceLog::as_returning())
+          .get_result::<GovernanceLog>(conn)
+          .await?;
 
-  // Sign the trigger-computed entry_hash. The 32-byte SHA-256 digest is
-  // what goes on the wire; the resulting 64-byte signature rides in the
-  // `signature` column.
-  let signature = signing_key.sign(&row.entry_hash).to_bytes().to_vec();
+        // Sign the trigger-computed entry_hash. The 32-byte SHA-256
+        // digest is what goes on the wire; the resulting 64-byte
+        // signature rides in the `signature` column.
+        let signature = signing_key.sign(&row.entry_hash).to_bytes().to_vec();
 
-  // The signature-gate trigger allows exactly one NULL→non-NULL
-  // transition on `signature` and rejects any other column change, so
-  // the .set(...) clause must contain only `signature`.
-  diesel::update(governance_log::table.filter(governance_log::id.eq(row.id)))
-    .set(governance_log::signature.eq(&signature))
-    .execute(conn)
-    .await?;
+        // The signature-gate trigger allows exactly one NULL→non-NULL
+        // transition on `signature` and rejects any other column
+        // change, so the .set(...) clause must contain only
+        // `signature`.
+        diesel::update(governance_log::table.filter(governance_log::id.eq(row.id)))
+          .set(governance_log::signature.eq(&signature))
+          .execute(conn)
+          .await?;
 
-  Ok(GovernanceLog {
-    signature: Some(signature),
-    ..row
-  })
+        Ok(GovernanceLog {
+          signature: Some(signature),
+          ..row
+        })
+      }
+      .scope_boxed()
+    })
+    .await
 }
 
 /// Load the ed25519 signing key from `GOVERNANCE_LOG_SIGNING_KEY`.
