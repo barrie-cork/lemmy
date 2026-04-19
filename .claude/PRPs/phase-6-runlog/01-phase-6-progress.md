@@ -403,3 +403,27 @@ not blocking questions.
 **Push gate:** Impl1 holds the push pointer until merge6b is green on
 `0ff06abc9`. Impl2's commits should stack on top locally; coordinate
 final push via a signal commit (`merge6c green` pattern) or handoff.
+
+### Impl1 Bucket C progress (2026-04-19T16:35Z)
+
+**Currently editing** (DO NOT TOUCH — Impl1 has uncommitted changes):
+- `crates/apub/activities/src/governance/inbox.rs` — #4 atomicity fix
+  in progress, wrapping both receivers in `conn.run_transaction(...)`.
+  Compile-check in progress. Will commit imminently.
+
+**Safe for Impl2 to work on NOW** (no file overlap with Impl1):
+- **#3 hash-chain order** — edit `crates/api/api/src/governance/submit_jury_vote.rs:466-488`
+  only. Swap so the `case_decided` governance_log::append block runs
+  BEFORE the `send_local_sanction_notice(...)` call. Keep both inside
+  the same outer `run_transaction` so atomicity is preserved.
+- **#5 TH_ISSUE_URL env export** — one-line fix in
+  `scripts/brehon/task-hopper.sh:486`.
+- **Minors #6/#7/#8** — `.claude/decision-queue.json` (DQ-6.7 wording),
+  `.claude/PRPs/plans/phase-6-federation.plan.md:493` (enum names),
+  `.claude/rules/task-hopper.md:149-153` (contradiction removal).
+
+**Deferred per user directive** — #2 hidden pseudonym write will become
+a follow-up GH issue; user chose critical-only focus.
+
+**Impl1 will NOT touch** any of the above if Impl2 picks them up; Impl1
+only owns `inbox.rs` in this commit.
