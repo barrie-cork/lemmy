@@ -307,3 +307,63 @@ triggering CodeRabbit re-review.
 - 9 CodeRabbit rebuttals posted (#1/#2/#3/#5/#8/#16/#18×2/#20/#23)
 - GH issue #47 filed for #14 schema invariants — linked rebuttal posted
 
+### Impl2 session retro (2026-04-19 16:40Z)
+
+Session outcome: 4 commits shipped on phase-6 + 10 PR-thread rebuttals +
+1 GH issue filed. Zero merge conflicts, zero re-work. Final release at
+`297341c8b`; Impl1 picked up and closed the phase at `8ee45a3ca`.
+
+**What surprised us**
+- **Parallel-agent collisions are invisible until fetch.** Impl1 shipped
+  #19 (`d70610980`) and #22 (`455a7dbe4`) while Impl2 was mid-draft on the
+  same files. Caught only by `gh pr view` showing a different `headRefOid`
+  than local. Without that check, Impl2 would have built a duplicate
+  commit, pushed, and created a 2-way rebase. **The fix that worked:**
+  read origin's commit body + diff stats before destroying local WIP
+  (matched line counts + rationale → safe discard).
+- **Wrong coordination channel picked on first try.** Impl2 posted a
+  claim to `decision-queue.json` as DQ #39 before reading the runlog.
+  User redirected within 30 seconds. DQ is for blocking questions, not
+  scope claims; runlog is append-only execution history, the right
+  place. Reverted pre-commit (diff clean). **Lesson:** when a user says
+  "another agent is active," first grep for existing coordination
+  artifacts (`phase-6-runlog/`, `01-phase-6-progress.md`) before picking
+  a channel.
+- **External edits to working tree are silent.** #17 `Object` trait-import
+  removal reverted between the draft and commit — no notification, only
+  visible via a delayed system-reminder. Treating external edits as
+  intentional-signal was the right call, but the invisible revert cost
+  5 min of confusion. **No action;** this is a harness characteristic.
+- **Push races still require a protocol.** Once merge6 was green on
+  Impl1's side, we needed an explicit marker ("OK TO PUSH COSMETIC
+  SWEEP") before Impl2 pushed — otherwise Impl2's cosmetic sweep could
+  have landed between Impl1's merge6 run and the retro commit, invalidating
+  the validation. **The fix:** `3a42f43c2` signal commit from Impl1 → I
+  push on top → Impl1 harvests SHAs + retro as final commit. Clean.
+
+**What to repeat**
+- **Surface early when state doesn't match briefed hashes.** The original
+  brief named a hash that was wrong (retro filed under `reports/` not
+  `retros/`) and another that was stale (`41f1d0379` vs `d706109808`).
+  Stopping and asking instead of acting saved a duplicate commit.
+- **Rebuttals in one pass.** 9 rebuttals + 1 issue-link reply went out
+  via parallel `gh api` calls in under a minute. Keeping the draft
+  locally and firing them together (after user approval) avoided per-
+  comment context-switch overhead.
+- **Non-code Block-3/Block-4 work while compile-gated tasks wait.**
+  Rebuttals + GH issue + runlog updates have zero conflict surface with
+  Block-2 cosmetic commits. Filling the wall-clock while the e2e build
+  ran kept the session productive during long waits.
+
+**Carry-forward for future multi-impl phases**
+- A dedicated claim format in the runlog header (not DQ) should be
+  documented in `.claude/rules/phase-branch.md` or a new
+  `multi-impl-coordination.md` rule. Current runlog coordination was
+  invented ad-hoc by Impl1; works, but not discoverable by a fresh Impl2
+  session.
+- "Step 2/3 push marker" (Impl1 "merge6 green" → Impl2 push → Impl1 retro)
+  is worth extracting as a reusable pattern rather than a one-off.
+
+Impl2 session closed. No open blockers. phase-6 @ `8ee45a3ca` ready for
+CodeRabbit re-review.
+
