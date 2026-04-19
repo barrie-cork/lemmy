@@ -98,12 +98,16 @@ ralph loops, task-hopper sweeps, Agent *):
    in the `answer` text.
 
 **Detection:** an advisor-session commit that introduces an
-`"answered_by": "advisor"` entry will always appear in git log with
-author `Barrie` AND a commit subject beginning with `chore(advisor):`,
-`chore(decision-queue):` written explicitly by advisor, or equivalent.
-If `"answered_by": "advisor"` appears in a commit whose subject is a
-`feat(...)` or a ralph iteration commit, that is a process breach and
-must be corrected via a `docs(attribution):` follow-up commit.
+`"answered_by": "advisor"` entry will always appear in git log with a
+commit subject matching `^(chore|docs)\((advisor|decision-queue)\)` —
+i.e. an explicit advisor/DQ-scoped commit, authored in a human-run
+advisor session. If `"answered_by": "advisor"` appears in a commit
+whose subject is `feat(...)`, a ralph iteration commit, or any other
+non-`chore(advisor|decision-queue):` / non-`docs(advisor|decision-queue):`
+subject, that is a process breach and must be corrected via a
+`docs(attribution):` follow-up commit. The match is on commit-subject
+pattern, not author identity — solo-dev single-author repos cannot rely
+on author as a discriminator.
 
 **Why this rule exists:** Phase 6 DQ #37 (governance_log relocation) was
 self-attributed by an impl-side session under the advisor label and
