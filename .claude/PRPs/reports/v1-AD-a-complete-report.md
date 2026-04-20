@@ -48,7 +48,7 @@
 - [x] `rule_set.active_version_id` NOT seeded, NOT in SEEDED/METADATA/const_default_int (advisor edit #2)
 - [x] `ENTRY_KIND_ADMIN_CONFIG_CHANGED == "admin_config_changed"` — byte-identical to `scripts/brehon/admin-config-write.sh:148`
 - [x] `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED == "admin_config_change_denied"`
-- [x] Registry file exists with 25 populated-kind rows (19 v0 + 4 Phase 6 + 2 v1-AD-a) + 4 reserved v1 PRD sections (6 `## ` headings — v0, Phase 6, v1-AD-a, jury-mechanics-v1-reserved, sponsor-liability-v1-reserved, reputation-tuning-v1-reserved, federation-inbound-v1-reserved, Acceptance invariants, Closes)
+- [x] Registry file exists with 25 populated-kind rows (19 v0 + 4 Phase 6 + 2 v1-AD-a) + 4 reserved v1 PRD sections (6 level-2 Markdown headings — v0, Phase 6, v1-AD-a, jury-mechanics-v1-reserved, sponsor-liability-v1-reserved, reputation-tuning-v1-reserved, federation-inbound-v1-reserved, Acceptance invariants, Closes)
 - [x] OQ-V1-AD-01/02/03 opened in `99-decisions-and-open-questions.md`
 - [x] Changelog entry dated 2026-04-21 appended
 

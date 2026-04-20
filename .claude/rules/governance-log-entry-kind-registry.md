@@ -22,6 +22,7 @@ Adding a new kind requires:
    canonical definition file (the `entry_kind` `&str` values) must equal
    the count of `pub const ENTRY_KIND_*` declarations there, and every
    literal must appear exactly once:
+
    ```bash
    rg -c '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs
    # Count A: number of ENTRY_KIND_* consts (canonical definitions)
@@ -37,6 +38,7 @@ Adding a new kind requires:
      | grep -oE '"[a-z_]+"' | sort | uniq -d
    # Expected: empty (no duplicate literals)
    ```
+
    NOTE: this invariant is **governance-log-domain only** — it does NOT
    reference `EXPECTED_SEED_COUNT` or `EXPECTED_SEED_COUNT_V1_*` (which
    are config-key-seed parity counters, a different domain).

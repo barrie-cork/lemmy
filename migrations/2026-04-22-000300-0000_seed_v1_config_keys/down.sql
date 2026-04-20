@@ -7,7 +7,8 @@
 -- empty table is a no-op; rerunning down after up+down leaves the table
 -- unchanged.
 
-DELETE FROM governance_config WHERE scope = 'instance' AND key IN (
+DELETE FROM governance_config
+WHERE scope = 'instance' AND key IN (
     'jury.severity_thresholds.minor',
     'jury.severity_thresholds.moderate',
     'jury.severity_thresholds.severe',
