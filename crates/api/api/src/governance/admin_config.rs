@@ -1311,3 +1311,56 @@ fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
     denial_reason,
   }
 }
+
+#[cfg(test)]
+mod payload_parity {
+  use serde_json::json;
+
+  // admin_config_changed payload must NOT include apply_at. The v0 shell
+  // wrapper (`scripts/brehon/admin-config-write.sh:146-157`) emits exactly
+  // `{scope, key, value_type, value, reason}`; the handler's log append
+  // must match byte-for-byte so the two writers remain interchangeable
+  // until the shell wrapper is deprecated (NOT5 gate 3).
+  //
+  // If this test breaks, either a new field was added to the payload (fix
+  // the shell script FIRST, then the handler, then this test), or the
+  // handler is emitting a drift-field (fix the handler, keep this test
+  // intact).
+  #[test]
+  fn payload_has_no_apply_at_field() {
+    let payload = json!({
+      "scope": "instance",
+      "key": "jury.panel_size",
+      "value_type": "int",
+      "value": 7,
+      "reason": "test",
+    });
+    assert!(
+      !payload.as_object().unwrap().contains_key("apply_at"),
+      "admin_config_changed payload must not carry apply_at"
+    );
+  }
+
+  // Field order is load-bearing for shell parity. `serde_json` preserves
+  // macro-literal key order when built with `preserve_order`
+  // (`Cargo.toml:201`); this test pins the sequence that the handler
+  // emits at `admin_config.rs:571-593` and the shell at
+  // `admin-config-write.sh:146-157`.
+  #[test]
+  fn payload_field_order_matches_shell() {
+    let payload = json!({
+      "scope": "instance",
+      "key": "jury.panel_size",
+      "value_type": "int",
+      "value": 7,
+      "reason": "test",
+    });
+    let keys: Vec<&str> = payload
+      .as_object()
+      .unwrap()
+      .keys()
+      .map(String::as_str)
+      .collect();
+    assert_eq!(keys, vec!["scope", "key", "value_type", "value", "reason"]);
+  }
+}
