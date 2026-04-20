@@ -250,7 +250,7 @@ Per OQ-018's lean ("the whole point of config is that admins iterate on values, 
 | `decay.*` | (no impact preview — decay is gradual; just acknowledged) |
 | All others | `estimated_first_effect_at` description string |
 
-Impact computation is **a single read-only Diesel query per category**, run inside the same `run_transaction` as the write (with a `SAVEPOINT` rollback when `dry_run = true`).
+Impact computation is **a single read-only Diesel query per category**, executed **BEFORE** `run_transaction` opens (against the currently persisted config snapshot + the proposed value). No SAVEPOINT, no nested transaction. When `dry_run = true` the handler returns early with the impact payload and NO write is performed. When `dry_run = false` the already-computed impact is carried into the 200 response alongside the post-write `config_id` / `governance_log_id`, but the impact itself is not re-queried after the tx commits (the pre-tx snapshot is the contract — post-commit drift is someone else's race condition to describe). Per OQ-V1-AD-03 resolution (2026-04-20): `crates/diesel_utils/src/connection.rs` does not expose a SAVEPOINT primitive, and adding one for this single use-case was rejected as architecturally heavier than a read-only pre-tx query.
 
 ### 4.4 `apply_at` semantics
 
