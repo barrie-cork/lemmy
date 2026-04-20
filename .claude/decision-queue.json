@@ -1,7 +1,8 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 41,
       "from": "impl",
@@ -13,11 +14,10 @@
         "(c) Commit Task 5 as-is (4 new errors) and defer ALL 11 errors to a single phase-close clippy-cleanup commit on phase-v1-AD-b before PR. Follows the impl session's read of 'clippy at phase-close, not per-task'. Risk: CLAUDE.md line 110 says CodeRabbit Critical findings block merge; workspace clippy-under-deny-warnings fails will almost certainly generate Critical findings on the PR. Also risks carrying ever-more-debt into tasks 6-9."
       ],
       "context": "Branch-manager (this session) triage at 2026-04-20T17:10Z. Evidence: `git blame` output attributes each of the 11 errors to a specific commit — 7 pre-existing (tasks 1/2/3/4 commits bc8cd9c02, 54b3d2491, 3f6f22166), 4 uncommitted (Task 5 edits, blame shows `0000000000 Not Committed Yet`). The absence of taskN-clippy.log files for tasks 1-4 in .claude/PRPs/debug/ means those clippy gates were either run and logs not committed, or skipped entirely. Either way the debt is now 11 errors deep. Brehon workspace clippy config at `crates/utils/.clippy.toml` + `Cargo.toml [workspace.lints]` makes these block-compile when -D warnings is set (as the plan's clippy command does). CodeRabbit on PR #72 (v1-AD-a) caught similar lint classes and required in-PR fixes — see CLAUDE.md line 110 and memory `feedback_coderabbit_block_merge_critical`. LEAN: option (a) — fix the 4 new ones in Task 5 to stop new debt accruing, handle the 7 pre-existing ones in a single follow-up commit on the same branch before PR. Branch-manager can run option (a)'s edits and commit, but won't without impl-session confirmation that the Task 5 commit is still pending.",
-      "answer": null,
-      "answered_by": null
-    }
-  ],
-  "resolved": [
+      "answer": "(a) — impl-self-resolved per user instruction '1' in-channel 2026-04-20T17:20Z. Applied the 4 Task-5 fixes inline before the Task-5 commit: admin_config.rs:1108 `if let Some(ref key)` → `if let Some(key) = &data.key`; admin_config.rs:1162 `if let Some(ref p)` → `if let Some(p) = &data.actor_pseudonym`; admin_config.rs:1114 `for metadata in CONFIG_KEY_METADATA.iter()` → `for metadata in CONFIG_KEY_METADATA`; admin_config.rs:1294 `.map(|s| s.to_string())` → `.map(str::to_owned)` (also cleaned an adjacent `e.iter().map(|s| (*s).to_string())` in `build_config_entry` → `e.iter().copied().map(str::to_owned)`). Post-fix clippy state: `cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api --features full --no-deps -- -D warnings\"` → exit 101, 7 errors remaining — ALL pre-existing, attributed via `git blame` to commits bc8cd9c025 (Task 2 config.rs:493), 54b3d24911 (Task 3 admin_config.rs:233), 3f6f221663 (Task 4 admin_config.rs:633, 677, 1007, 1027, 1047). Zero Task-5-attributable clippy errors. L1 `cargo-check --workspace --features full` → exit 0, clean. L4 `cargo-test --test e2e --no-run -p lemmy_server` → exit 0, e2e-8ff4c83f76a08eec.exe produced. Task 5's plan DoD (L1 + L4) is met. Follow-up action: branch-manager should land a `chore(lint): clear admin_config.rs clippy debt` commit on phase-v1-AD-b BEFORE opening the v1-AD-b→governance-v0 PR, resolving the 7 pre-existing errors in a single focused commit separate from Task 5's feature scope. Logs retained at .claude/PRPs/debug/phase-v1-AD-b-task5-clippy{,-v2,-v3}.log.",
+      "answered_by": "impl-self-resolved",
+      "answered_at": "2026-04-20T17:22:00Z"
+    },
     {
       "id": 40,
       "from": "impl",

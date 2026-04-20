@@ -44,6 +44,7 @@ use crate::governance::{
     ConfigCache,
     ConfigKeyMetadata,
     ConfigScope,
+    NumericRange,
     Scope,
     ValueType,
     const_default_bool,
@@ -55,12 +56,14 @@ use crate::governance::{
     self,
     ENTRY_KIND_ADMIN_CONFIG_CHANGED,
     ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
+    GovernanceLog,
   },
 };
-use actix_web::web::{Data, Json};
-use chrono::Utc;
+use actix_web::web::{Data, Json, Query};
 use diesel::{
+  ExpressionMethods,
   OptionalExtension,
+  QueryDsl,
   QueryableByName,
   SelectableHelper,
   insert_into,
@@ -69,6 +72,11 @@ use diesel::{
 };
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{
+  AdminConfigAuditEntry,
+  AdminConfigEntry,
+  AdminGetConfig,
+  AdminGetConfigAudit,
+  AdminGetConfigResponse,
   AdminSetConfig,
   AdminSetConfigResponse,
   ConfigChangePreview,
@@ -79,7 +87,10 @@ use lemmy_db_schema::source::governance::governance_config::{
   GovernanceConfig,
   GovernanceConfigInsertForm,
 };
-use lemmy_db_schema_file::schema::governance_config;
+use lemmy_db_schema_file::schema::{
+  governance_config,
+  governance_log as governance_log_schema,
+};
 use lemmy_db_views_community_moderator::CommunityModeratorView;
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -1056,8 +1067,247 @@ async fn probe_single_int(
   Ok(row.and_then(|r| r.c))
 }
 
-// Dead-code silencers — the `ApplyAt` enum import + `chrono::Utc` + some
-// per-category consts are reserved for task 5's read handler. Kept here
-// so task 5 can import without touching imports.
-#[allow(dead_code)]
-fn _reserved_task5_markers(_apply: ApplyAt, _now: chrono::DateTime<Utc>) {}
+// -- admin_get_config / admin_get_config_audit handlers (v1-AD-b task 5) ---
+//
+// GET /api/v4/governance/admin/config        — single-key or full-list read
+// GET /api/v4/governance/admin/config/audit  — paginated log of writes+denials
+//
+// Both are read-only; neither opens a transaction nor appends to the
+// governance_log. Per advisor decision-queue #25 (Watch 11 scope is
+// governance-weight WRITES, not READS) the GET handlers do not self-log.
+
+const AUDIT_DEFAULT_PAGE: i64 = 1;
+const AUDIT_DEFAULT_LIMIT: i64 = 20;
+const AUDIT_MAX_LIMIT: i64 = 100;
+
+/// `GET /api/v4/governance/admin/config`.
+///
+/// No `key`: one entry per `CONFIG_KEY_METADATA` row (61 entries at v1-AD-a).
+/// `key`: single-entry response for that key (unknown key → 400).
+/// `community_id`: when present, the cascade probes `community:<id>` first,
+/// then `instance`, then the const default. When absent the cascade starts
+/// at `Scope::Instance`. The response's `effective_from` reports which
+/// tier served the value for each entry.
+///
+/// The per-request [`ConfigCache`] memoises repeat reads across keys that
+/// happen to hit the same `(scope, key)` pair; in practice that is rare in
+/// the full-list path but the cache keeps the typed accessors honest.
+pub async fn admin_get_config(
+  Query(data): Query<AdminGetConfig>,
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<AdminGetConfigResponse>> {
+  is_admin(&local_user_view)?;
+
+  let pool = &mut context.pool();
+  let request_scope = match data.community_id {
+    Some(id) => Scope::Community(id),
+    None => Scope::Instance,
+  };
+
+  let entries: Vec<AdminConfigEntry> = if let Some(key) = &data.key {
+    let metadata = *metadata_for_key(key)?;
+    let entry = build_config_entry(pool, &metadata, request_scope).await?;
+    vec![entry]
+  } else {
+    let mut out = Vec::with_capacity(CONFIG_KEY_METADATA.len());
+    for metadata in CONFIG_KEY_METADATA {
+      out.push(build_config_entry(pool, metadata, request_scope).await?);
+    }
+    out
+  };
+
+  Ok(Json(AdminGetConfigResponse { entries }))
+}
+
+/// `GET /api/v4/governance/admin/config/audit`.
+///
+/// Filters (Diesel-pushdown): `entry_kind IN (…changed, …denied)`,
+/// optional `actor_pseudonym` (indexed), optional `since` / `until` on
+/// `created_at` (half-open: `ge(since)`, `lt(until)`).
+/// Filters (Rust post-filter — payload JSONB not pushed down per §10.6):
+/// `key`, `scope`. The audit list is expected low-volume (<1000 rows/day
+/// at v1), so post-filtering a page of up-to-100 rows is cheap and avoids
+/// adding a raw-SQL or `@>` variant. Pagination runs BEFORE post-filter —
+/// a pathological filter combination can return fewer than `limit`
+/// entries; that is deliberate per §10.6.
+///
+/// Ordering is `created_at DESC, id DESC` — id is the tiebreaker for
+/// same-timestamp rows (trigger-managed `prev_hash` guarantees id order
+/// respects insertion order for equal timestamps).
+pub async fn admin_get_config_audit(
+  Query(data): Query<AdminGetConfigAudit>,
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<Vec<AdminConfigAuditEntry>>> {
+  is_admin(&local_user_view)?;
+
+  let page = data.page.unwrap_or(AUDIT_DEFAULT_PAGE).max(1);
+  let limit = data
+    .limit
+    .unwrap_or(AUDIT_DEFAULT_LIMIT)
+    .clamp(1, AUDIT_MAX_LIMIT);
+  let offset = page.saturating_sub(1).saturating_mul(limit);
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+
+  let mut query = governance_log_schema::table
+    .filter(governance_log_schema::entry_kind.eq_any(vec![
+      ENTRY_KIND_ADMIN_CONFIG_CHANGED,
+      ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
+    ]))
+    .into_boxed();
+
+  if let Some(p) = &data.actor_pseudonym {
+    query = query.filter(governance_log_schema::actor_pseudonym.eq(p));
+  }
+  if let Some(since) = data.since {
+    query = query.filter(governance_log_schema::created_at.ge(since));
+  }
+  if let Some(until) = data.until {
+    query = query.filter(governance_log_schema::created_at.lt(until));
+  }
+
+  let rows: Vec<GovernanceLog> = query
+    .order_by((
+      governance_log_schema::created_at.desc(),
+      governance_log_schema::id.desc(),
+    ))
+    .limit(limit)
+    .offset(offset)
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(conn)
+    .await?;
+
+  let entries: Vec<AdminConfigAuditEntry> = rows
+    .into_iter()
+    .map(project_to_audit_entry)
+    .filter(|entry| {
+      data
+        .key
+        .as_deref()
+        .is_none_or(|k| entry.key == k)
+    })
+    .filter(|entry| {
+      data
+        .scope
+        .as_deref()
+        .is_none_or(|s| entry.scope == s)
+    })
+    .collect();
+
+  Ok(Json(entries))
+}
+
+/// Build one `AdminConfigEntry` from static metadata + a live cascade read.
+/// A fresh `ConfigCache` is used per call; the cache lifetime is the
+/// read-cascade only — the typed `*_opt` accessors re-query on
+/// `CachedValue::Absent`, so re-using the cache across metadata keys would
+/// not reduce the hot-path round-trip count anyway.
+async fn build_config_entry(
+  pool: &mut DbPool<'_>,
+  metadata: &ConfigKeyMetadata,
+  request_scope: Scope,
+) -> LemmyResult<AdminConfigEntry> {
+  let (value, effective_from) = read_effective(pool, metadata, request_scope).await?;
+  Ok(AdminConfigEntry {
+    key: metadata.key.to_string(),
+    value_type: value_type_label(metadata.value_type).to_string(),
+    value,
+    effective_from,
+    scope: config_scope_label(metadata.scope).to_string(),
+    requires_re_jury: metadata.requires_re_jury,
+    requires_step_up: metadata.requires_step_up,
+    apply_at_default: apply_at_label(metadata.apply_at_default).to_string(),
+    description: metadata.description.to_string(),
+    doc_anchor: metadata.doc_anchor.to_string(),
+    valid_range: metadata.valid_range.map(numeric_range_tuple),
+    valid_enum: metadata
+      .valid_enum
+      .map(|e| e.iter().copied().map(str::to_owned).collect()),
+  })
+}
+
+/// Wire label for `ConfigScope`. Matches the `AdminConfigEntry.scope`
+/// field that the dashboard UI renders.
+fn config_scope_label(cs: ConfigScope) -> &'static str {
+  match cs {
+    ConfigScope::Instance => "instance",
+    ConfigScope::Community => "community",
+    ConfigScope::Both => "both",
+  }
+}
+
+/// Wire label for `ApplyAt`. Matches `AdminSetConfig.apply_at` accepted
+/// values (`"immediate"`, `"next_jury_cycle"`, `"next_snapshot_job"`).
+fn apply_at_label(apply_at: ApplyAt) -> &'static str {
+  match apply_at {
+    ApplyAt::Immediate => "immediate",
+    ApplyAt::NextJuryCycle => "next_jury_cycle",
+    ApplyAt::NextSnapshotJob => "next_snapshot_job",
+  }
+}
+
+/// Flatten a `NumericRange` into the `(f64, f64)` tuple the DTO exposes.
+fn numeric_range_tuple(r: NumericRange) -> (f64, f64) {
+  (r.min, r.max)
+}
+
+/// Project a `governance_log` row whose `entry_kind` is
+/// `admin_config_changed` or `admin_config_change_denied` into the typed
+/// audit response entry. Unknown / missing payload fields degrade to
+/// empty strings / `Value::Null` — we never fail a whole audit page on a
+/// single malformed legacy row (shell-wrapper rows predating this handler
+/// always produce well-formed payloads, but future migrations may add
+/// fields and older rows should still list).
+///
+/// `previous_value` is always `None` for v1-AD-b; a future revision may
+/// join to the prior row in the same `(scope, key)` bucket to hydrate it.
+fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
+  let payload = &row.payload;
+  let scope = payload
+    .get("scope")
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .to_string();
+  let key = payload
+    .get("key")
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .to_string();
+  let value_type = payload
+    .get("value_type")
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .to_string();
+  let new_value = payload.get("value").cloned().unwrap_or(Value::Null);
+  let reason = payload
+    .get("reason")
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .to_string();
+  let denial_reason = if row.entry_kind == ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED {
+    payload
+      .get("denial_reason")
+      .and_then(|v| v.as_str())
+      .map(str::to_owned)
+  } else {
+    None
+  };
+
+  AdminConfigAuditEntry {
+    id: row.id.0,
+    entry_kind: row.entry_kind,
+    scope,
+    key,
+    value_type,
+    previous_value: None,
+    new_value,
+    reason,
+    actor_pseudonym: row.actor_pseudonym,
+    created_at: row.created_at,
+    signature: row.signature,
+    denial_reason,
+  }
+}
