@@ -4696,9 +4696,16 @@ async fn admin_set_config_scope_mismatch_rejected() -> lemmy_utils::error::Lemmy
   Ok(())
 }
 
-/// Task 8 test 8: `liability.regular_multiplier` has `ConfigScope::Both` so
-/// a community moderator (not an instance admin) can write it at
-/// `community:<id>` scope.
+/// Task 8 test 8: `jury.quorum` has `ConfigScope::Both` so a community
+/// moderator (not an instance admin) can write it at `community:<id>`
+/// scope.
+///
+/// NOTE: v1-AD-b plan §11 line 1101 originally named
+/// `liability.regular_multiplier` here, but that key is declared
+/// `ConfigScope::Instance` in `config.rs:1141-1152` — not `Both`. Swapped
+/// to `jury.quorum` (Int, range 1-21, `ConfigScope::Both`) which actually
+/// exercises the moderator-write path. The `Both`-scope key set has no
+/// float-typed member today, so picking an int is the minimal correction.
 #[tokio::test(flavor = "multi_thread")]
 async fn admin_set_config_community_scope_by_moderator()
 -> lemmy_utils::error::LemmyResult<()> {
@@ -4737,13 +4744,13 @@ async fn admin_set_config_community_scope_by_moderator()
 
   let resp = admin_set_config(
     Json(AdminSetConfig {
-      key: "liability.regular_multiplier".to_string(),
-      value_type: "float".to_string(),
-      value: serde_json::json!(1.5),
+      key: "jury.quorum".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(5),
       scope: format!("community:{}", community.id.0),
       apply_at: None,
       dry_run: None,
-      reason: "cmod sets regular multiplier for community".to_string(),
+      reason: "cmod sets jury quorum for community".to_string(),
     }),
     context.clone(),
     mod_view,
@@ -4756,7 +4763,7 @@ async fn admin_set_config_community_scope_by_moderator()
   use diesel::SelectableHelper;
   let rows: Vec<GovernanceConfig> = governance_config::table
     .filter(governance_config::scope.eq(format!("community:{}", community.id.0)))
-    .filter(governance_config::key.eq("liability.regular_multiplier"))
+    .filter(governance_config::key.eq("jury.quorum"))
     .select(GovernanceConfig::as_select())
     .load::<GovernanceConfig>(&mut conn)
     .await?;
