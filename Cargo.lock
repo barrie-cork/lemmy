@@ -3639,6 +3639,7 @@ dependencies = [
  "lemmy_diesel_utils",
  "lemmy_utils 1.0.0-test-arm-qemu.0",
  "serde",
+ "serde_json",
  "serde_with",
 ]
 
