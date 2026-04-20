@@ -1,7 +1,8 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 40,
       "from": "impl",
@@ -13,11 +14,10 @@
         "(c) Abandon plan/v1-AD-oq-resolve and move the OQ-resolve commits onto a new plan/v1-AD-b branch too (combine OQ-resolve + plan into one PR). Closes PR #74, opens a replacement. Most churn but produces a single review surface for v1-AD-b."
       ],
       "context": "Check at 2026-04-20T12:20Z from the OQ-resolve session: PR #74 is open with 2 commits (3f0dd6572 OQ resolutions + PRD §4.3 reshape, 756ee00fe chronology fix per CR #1). CodeRabbit approved the 2-commit scope at 11:58Z. The user confirmed a separate CC session is writing the v1-AD-b plan on this same branch. v1-AD-a precedent (see .claude/PRPs/plans/completed/v1-admin-dashboard-a.plan.md §6): each sub-phase plans on its own branch, ships its own PR, earns its own CodeRabbit review. That is option (a). Option (b) was picked at Phase 6 time — which is how that PR grew to 33 findings. Option (c) adds ~2 minutes of git work to save one PR but forces closing a review already approved. Files in flight on the branch: docs/brehon-law-inspired-network/99-decisions-and-open-questions.md, .claude/PRPs/prds/v1-admin-dashboard.prd.md. Not blocking for the OQ-resolve session (can merge PR #74 without the plan). Blocking for the planning session (its target branch determines whether it conflicts with a PR-#74 merge).",
-      "answer": null,
-      "answered_by": null
-    }
-  ],
-  "resolved": [
+      "answer": "(a) — user confirmed in-channel 2026-04-20. Cut plan/v1-AD-b from plan/v1-AD-oq-resolve, move the v1-AD-b plan file onto the new branch, commit+push, open separate PR into governance-v0 (base = governance-v0; rebases onto trunk once PR #74 lands). Mirrors the v1-AD-a precedent (PR #44 for planning, PR #72 for impl). Avoids PR-#74 scope creep and shared-branch write contention between the two CC sessions.",
+      "answered_by": "user",
+      "answered_at": "2026-04-20T12:21:32Z"
+    },
     {
       "id": 39,
       "from": "impl",
