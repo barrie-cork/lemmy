@@ -74,27 +74,9 @@ Expected governance paths per [03 §7](docs/brehon-law-inspired-network/03-archi
 
 ---
 
-## Slash commands (`.claude/commands/prp-core/`)
+## Slash commands
 
-13 Brehon-customised PRP commands — run `/` in Claude Code to see them. Descriptions in short form:
-
-| Command | Purpose |
-|---|---|
-| `/prp-plan` | Create a Brehon-aware, Rust-appropriate implementation plan keyed to the design docs and IMPLEMENTATION-PLAN-v0.md |
-| `/prp-prd` | Generate a sub-PRD for a v0 feature or deviation that needs its own design document |
-| `/prp-implement` | Execute a Brehon implementation plan with rigorous cargo-based validation loops |
-| `/prp-review` | Comprehensive PR review: cargo validation, ADR compliance, cross-cutting invariants |
-| `/prp-debug` | Deep root cause analysis for Brehon Rust bugs — finds the actual cause, not just symptoms |
-| `/prp-issue-investigate` | Investigate a GitHub issue; produce an artifact for `/prp-issue-fix` |
-| `/prp-issue-fix` | Implement a fix from an investigation artifact — Rust changes, cargo validation, PR |
-| `/prp-codebase-question` | Research codebase questions using parallel `Explore` agents; documents what exists |
-| `/prp-pr` | Create a PR targeting `governance-v0` by default |
-| `/prp-commit` | Stage + commit with a clean message (Rust-aware file globs) |
-| `/prp-review-agents` | Upstream-verbatim multi-agent review flow (not Brehon-customised; may drop later) |
-| `/prp-ralph` | Upstream Ralph loop (verbatim; may drop later) |
-| `/prp-ralph-cancel` | Cancel an active Ralph loop (verbatim) |
-
-All four Tier 1 commands (`prp-plan`, `prp-implement`, `prp-prd`, `prp-review`) begin with a `<brehon-context>` block that reads the design docs above before doing anything else, and they use the built-in `Explore` subagent rather than any custom `prp-core:*` agents. If a command is missing Brehon context, it's Tier 3 and intentionally verbatim from upstream.
+13 PRP commands in `.claude/commands/prp-core/` — run `/` to see them. Tier 1 (`prp-plan`, `prp-implement`, `prp-prd`, `prp-review`) include a `<brehon-context>` block; Tier 3 are verbatim upstream.
 
 ---
 
@@ -128,14 +110,3 @@ Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENT
 CodeRabbit Critical (🔴) findings on Brehon PRs are **block-merge, not advisory**. Fix in the same PR, with a regression test in the same commit. Major (🟠) findings are negotiable carry-forward — file a GH issue and link from the retro. Pattern established 3× (PR #4 sanction-scoping, PR #46 #15 dup-federation, PR #46 #19 actor-binding); local advisor + e2e have demonstrated they cannot catch this class of bug. See `feedback_coderabbit_block_merge_critical.md`.
 
 ---
-
-## What NOT to build in v0
-
-Explicitly out of scope (deferred to v1/v2/v3):
-
-- Keycloak / external IdP, OpenFGA, Vault, Kubernetes, external log signer, blockchain anchoring
-- Frontend UI — v0 is backend + API only (no Lemmy-UI changes)
-- Rust-free planning (no "we'll figure it out in TypeScript later")
-- Any endpoint not listed in [05 §2](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md)
-
-If a scope-creep idea appears, write it as an open question in a plan file — don't silently implement it.
