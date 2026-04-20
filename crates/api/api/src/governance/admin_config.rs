@@ -549,7 +549,7 @@ pub async fn admin_set_config(
 /// back both writes together — see `governance_log.rs:193-204`).
 async fn process_set_config(
   conn: &mut diesel_async::AsyncPgConnection,
-  _admin_id: lemmy_db_schema_file::PersonId,
+  admin_id: lemmy_db_schema_file::PersonId,
   admin_pseudonym: String,
   scope: Scope,
   metadata: ConfigKeyMetadata,
@@ -569,7 +569,7 @@ async fn process_set_config(
     value_float,
     value_bool,
     value_text,
-    updated_by: Some(_admin_id),
+    updated_by: Some(admin_id),
   };
 
   let row: GovernanceConfig = insert_into(governance_config::table)
