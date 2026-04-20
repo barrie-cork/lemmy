@@ -489,8 +489,8 @@ pub async fn get_text_opt(
     None => None,
   };
 
-  let cached = match result {
-    Some(ref v) => CachedValue::Text(v.clone()),
+  let cached = match &result {
+    Some(v) => CachedValue::Text(v.clone()),
     None => CachedValue::Absent,
   };
   cache.entries.insert(cache_key, cached);

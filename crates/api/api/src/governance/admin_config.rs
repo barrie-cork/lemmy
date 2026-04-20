@@ -230,7 +230,7 @@ fn i32_from_value(v: &Value, label: &str, key: &str) -> LemmyResult<i32> {
   let n = v.as_i64().ok_or_else(|| {
     LemmyErrorType::Unknown(format!("threshold impact: {label} for `{key}` is not an integer"))
   })?;
-  i32::try_from(n).map_err(|_| {
+  i32::try_from(n).map_err(|_err| {
     LemmyErrorType::Unknown(format!(
       "threshold impact: {label} for `{key}` (= {n}) does not fit in i32"
     ))
@@ -630,7 +630,19 @@ fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyRes
   // Range check — applies when metadata declares a NumericRange.
   if let Some(range) = metadata.valid_range {
     let n = match metadata.value_type {
-      ValueType::Int => value.as_i64().map(|i| i as f64),
+      // Range-check arithmetic: i64 → f64 loses precision beyond 2^53 but
+      // the metadata ranges (panel sizes, thresholds, timeouts) never approach
+      // that magnitude. `as f64` is infallible; `TryFrom` would fail-closed
+      // but at a range that's unreachable in practice.
+      ValueType::Int => value.as_i64().map(|i| {
+        #[expect(
+          clippy::as_conversions,
+          clippy::cast_precision_loss,
+          reason = "range-check values never exceed 2^53"
+        )]
+        let f = i as f64;
+        f
+      }),
       ValueType::Float => value.as_f64(),
       _ => None,
     };
@@ -669,12 +681,17 @@ fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyRes
   Ok(())
 }
 
+/// Tuple of typed column values — exactly one variant is `Some`, the other
+/// three are `None`. Returned by [`split_typed_value`]; used to build the
+/// `GovernanceConfigInsertForm`.
+type TypedColumns = (Option<i64>, Option<f64>, Option<bool>, Option<String>);
+
 /// Unpack the JSON value into the four Diesel columns. Exactly one is `Some`.
 fn split_typed_value(
   vt: ValueType,
   value: &Value,
   key: &str,
-) -> LemmyResult<(Option<i64>, Option<f64>, Option<bool>, Option<String>)> {
+) -> LemmyResult<TypedColumns> {
   match vt {
     ValueType::Int => {
       let v = value.as_i64().ok_or_else(|| {
@@ -1004,7 +1021,7 @@ async fn probe_community_float_only(
     .bind::<diesel::sql_types::Text, _>(key.to_string())
     .get_result(conn)
     .await?;
-  Ok(if row.c > 0 { Some(0.0) } else { None })
+  Ok((row.c > 0).then_some(0.0))
 }
 
 async fn probe_community_bool_only(
@@ -1024,7 +1041,7 @@ async fn probe_community_bool_only(
     .bind::<diesel::sql_types::Text, _>(key.to_string())
     .get_result(conn)
     .await?;
-  Ok(if row.c > 0 { Some(false) } else { None })
+  Ok((row.c > 0).then_some(false))
 }
 
 async fn probe_community_text_only(
@@ -1044,7 +1061,7 @@ async fn probe_community_text_only(
     .bind::<diesel::sql_types::Text, _>(key.to_string())
     .get_result(conn)
     .await?;
-  Ok(if row.c > 0 { Some(String::new()) } else { None })
+  Ok((row.c > 0).then(String::new))
 }
 
 async fn probe_single_int(
