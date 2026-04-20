@@ -124,11 +124,29 @@ pub struct ConfigKeyMetadata {
 }
 
 impl Scope {
-  fn as_str(self) -> Cow<'static, str> {
+  /// Canonical wire representation — `"instance"` or `"community:<id>"`.
+  /// Matches the `governance_config.scope` column literal and the shell
+  /// wrapper's payload (`scripts/brehon/admin-config-write.sh:146-157`).
+  /// `pub` since v1-AD-b's `admin_config` handler needs it for both
+  /// policy dispatch logging and log-payload construction.
+  pub fn as_str(self) -> Cow<'static, str> {
     match self {
       Scope::Instance => Cow::Borrowed("instance"),
       Scope::Community(CommunityId(id)) => Cow::Owned(format!("community:{id}")),
     }
+  }
+
+  /// Parse a wire-format scope string. Mirror of [`Scope::as_str`] —
+  /// accepts exactly `"instance"` or `"community:<i32>"` with no
+  /// whitespace. Returns `None` on any other shape so the caller can
+  /// emit a clean 400.
+  pub fn parse_wire(s: &str) -> Option<Self> {
+    if s == "instance" {
+      return Some(Scope::Instance);
+    }
+    let rest = s.strip_prefix("community:")?;
+    let id = rest.parse::<i32>().ok()?;
+    Some(Scope::Community(CommunityId(id)))
   }
 }
 
@@ -638,7 +656,7 @@ pub const DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS: i64 = 24;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED: bool = true;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED: bool = false;
 
-fn const_default_int(key: &str) -> Option<i64> {
+pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
     "thresholds.reporting_accuracy" => Some(DEFAULT_THRESHOLDS_REPORTING_ACCURACY),
@@ -691,7 +709,7 @@ fn const_default_int(key: &str) -> Option<i64> {
   }
 }
 
-fn const_default_float(key: &str) -> Option<f64> {
+pub(crate) fn const_default_float(key: &str) -> Option<f64> {
   match key {
     "liability.founder_multiplier" => Some(DEFAULT_LIABILITY_FOUNDER_MULTIPLIER),
     "liability.regular_multiplier" => Some(DEFAULT_LIABILITY_REGULAR_MULTIPLIER),
@@ -703,7 +721,7 @@ fn const_default_float(key: &str) -> Option<f64> {
   }
 }
 
-fn const_default_bool(key: &str) -> Option<bool> {
+pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
   match key {
     "jury.fallback_on_small_pool" => Some(DEFAULT_JURY_FALLBACK_ON_SMALL_POOL),
     // v1-AD-a additions
@@ -726,7 +744,7 @@ fn const_default_bool(key: &str) -> Option<bool> {
   }
 }
 
-fn const_default_text(key: &str) -> Option<String> {
+pub(crate) fn const_default_text(key: &str) -> Option<String> {
   match key {
     "onboarding.default_membership_state" => {
       Some(DEFAULT_ONBOARDING_DEFAULT_MEMBERSHIP_STATE.to_string())

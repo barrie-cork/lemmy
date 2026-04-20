@@ -35,13 +35,53 @@
 //! | `decay.*` | `impact_for_decay_key` | `{message: "gradual"}` |
 //! | other | `impact_for_other` | `{estimated_first_effect_at}` |
 
-use crate::governance::config::Scope;
+use crate::governance::{
+  actor_pseudonym_helper,
+  config::{
+    self,
+    ApplyAt,
+    CONFIG_KEY_METADATA,
+    ConfigCache,
+    ConfigKeyMetadata,
+    ConfigScope,
+    Scope,
+    ValueType,
+    const_default_bool,
+    const_default_float,
+    const_default_int,
+    const_default_text,
+  },
+  governance_log::{
+    self,
+    ENTRY_KIND_ADMIN_CONFIG_CHANGED,
+    ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
+  },
+};
+use actix_web::web::{Data, Json};
+use chrono::Utc;
 use diesel::{
+  OptionalExtension,
   QueryableByName,
+  SelectableHelper,
+  insert_into,
   sql_query,
   sql_types::{BigInt, Integer, Nullable},
 };
-use diesel_async::RunQueryDsl;
+use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use lemmy_api_common::governance::{
+  AdminSetConfig,
+  AdminSetConfigResponse,
+  ConfigChangePreview,
+  ConfigValueWithProvenance,
+};
+use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
+use lemmy_db_schema::source::governance::governance_config::{
+  GovernanceConfig,
+  GovernanceConfigInsertForm,
+};
+use lemmy_db_schema_file::schema::governance_config;
+use lemmy_db_views_community_moderator::CommunityModeratorView;
+use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::{Value, json};
@@ -337,3 +377,687 @@ fn impact_for_decay_key() -> Value {
 fn impact_for_other() -> Value {
   json!({ "estimated_first_effect_at": "next handler invocation" })
 }
+
+// -- admin_set_config handler (v1-AD-b task 4) ------------------------------
+//
+// POST /api/v4/governance/admin/config — type-safe, scoped, audit-emitting
+// replacement for the `scripts/brehon/admin-config-write.sh` psql wrapper.
+//
+// Shell payload target (`admin-config-write.sh:146-157`):
+//   jsonb_build_object('scope', ..., 'key', ..., 'value_type', ..., 'value', ..., 'reason', ...)
+//
+// v1-AD-b payload MUST be byte-identical to this shape for NOT5 gate 3.
+// `serde_json::json!` preserves macro-literal field order; with the
+// workspace-pinned `preserve_order` feature (`Cargo.toml:201`) the stored
+// `governance_log.payload` jsonb round-trips with this order intact.
+
+/// Handler entry. Capability + validation + dry-run impact + optional tx.
+/// The `run_transaction` call lives strictly inside the write branch so a
+/// dry-run costs exactly the impact-query round-trips + no BEGIN/COMMIT.
+pub async fn admin_set_config(
+  Json(data): Json<AdminSetConfig>,
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<AdminSetConfigResponse>> {
+  // 1. Lookup metadata. Unknown key → 400 with clear message.
+  let metadata = *metadata_for_key(&data.key)?;
+
+  // 2. Parse scope. Unrecognised → 400; no denial log for malformed input
+  //    per §10.3 precedent (federation_outbox denial is for policy
+  //    rejections, not parsing errors).
+  let scope = Scope::parse_wire(&data.scope).ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "scope `{}` is not recognised — expected `instance` or `community:<id>`",
+      data.scope
+    ))
+  })?;
+
+  // 3. Reason must be non-empty trimmed — mirror of admin_close_case.
+  if data.reason.trim().is_empty() {
+    return Err(LemmyErrorType::Unknown("admin_set_config reason required".to_string()).into());
+  }
+
+  // 4. Value type matches metadata. Mismatch → 400 (bad input, not denial).
+  if data.value_type != value_type_label(metadata.value_type) {
+    return Err(LemmyErrorType::Unknown(format!(
+      "value_type `{}` does not match metadata for key `{}` (expected `{}`)",
+      data.value_type,
+      data.key,
+      value_type_label(metadata.value_type),
+    ))
+    .into());
+  }
+
+  // 5. Value conforms to range/enum. Mismatch → 400.
+  validate_value_shape(&metadata, &data.value)?;
+
+  // 6. Policy dispatch. On denial, write the `admin_config_change_denied`
+  //    log entry BEFORE returning. Denial path is OUTSIDE `run_transaction`
+  //    — `governance_log::append` opens its own internal tx per
+  //    `governance_log.rs:205-235`.
+  let admin_id = local_user_view.person.id;
+  let pool = &mut context.pool();
+  if let Err(reason) = check_policy(&metadata, scope, &local_user_view, pool).await? {
+    emit_denial_log(pool, admin_id, &data, &scope, reason).await?;
+    return Err(LemmyErrorType::NotAnAdmin.into());
+  }
+
+  // 7. Step-up reserved slot. Only emits denial + 403 when the key has
+  //    `requires_step_up = true` AND the instance-level
+  //    `governance.dashboard.step_up_enforced` flag is `true`. Otherwise
+  //    advisory mode — the attempt still logs in the success path.
+  if metadata.requires_step_up {
+    let mut cache = ConfigCache::new();
+    let enforced = config::get_bool_opt(
+      &mut cache,
+      pool,
+      Scope::Instance,
+      "governance.dashboard.step_up_enforced",
+    )
+    .await?
+    .unwrap_or(false);
+    if enforced {
+      emit_denial_log(pool, admin_id, &data, &scope, DenialReason::StepUpRequired).await?;
+      return Err(LemmyErrorType::NotAnAdmin.into());
+    }
+  }
+
+  // 8. Read current effective value + provenance. PRE-tx.
+  let (current_value, current_from) = read_effective(pool, &metadata, scope).await?;
+
+  // 9. Compute dry-run impact. PRE-tx, pure read-only.
+  let impact =
+    compute_downstream_impact(pool, &data.key, scope, &current_value, &data.value).await?;
+
+  // 10. Build the shared `ConfigChangePreview` carried by both branches.
+  let preview = ConfigChangePreview {
+    previous: ConfigValueWithProvenance {
+      value: current_value.clone(),
+      effective_from: current_from,
+    },
+    new: ConfigValueWithProvenance {
+      value: data.value.clone(),
+      effective_from: scope.as_str().into_owned(),
+    },
+    downstream_impact: impact,
+  };
+
+  // 11. Dry-run branch — return preview, no write.
+  if data.dry_run.unwrap_or(false) {
+    return Ok(Json(AdminSetConfigResponse {
+      applied: false,
+      config_id: None,
+      governance_log_id: None,
+      preview,
+      applied_at: None,
+    }));
+  }
+
+  // 12. Write branch. Pseudonym is `get_or_create` because even an
+  //     admin who hasn't been tagged in governance-log yet needs a
+  //     pseudonym to emit the success entry under.
+  let admin_pseudonym = actor_pseudonym_helper::get_or_create(pool, admin_id).await?;
+
+  let conn = &mut get_conn(pool).await?;
+
+  let data_for_tx = data.clone();
+  let pseudonym_for_tx = admin_pseudonym.clone();
+  let scope_for_tx = scope;
+  let admin_id_for_tx = admin_id;
+  let metadata_for_tx = metadata;
+
+  let (cfg_id, log_id, applied_at) = conn
+    .run_transaction(|conn| {
+      async move {
+        process_set_config(
+          conn,
+          admin_id_for_tx,
+          pseudonym_for_tx,
+          scope_for_tx,
+          metadata_for_tx,
+          data_for_tx,
+        )
+        .await
+      }
+      .scope_boxed()
+    })
+    .await?;
+
+  Ok(Json(AdminSetConfigResponse {
+    applied: true,
+    config_id: Some(i64::from(cfg_id)),
+    governance_log_id: Some(log_id),
+    preview,
+    applied_at: Some(applied_at),
+  }))
+}
+
+/// Tx closure body. Insert the new `governance_config` row, then emit the
+/// `admin_config_changed` entry under the same transaction (the inner
+/// `append` call promotes to a SAVEPOINT so a signing failure rolls
+/// back both writes together — see `governance_log.rs:193-204`).
+async fn process_set_config(
+  conn: &mut diesel_async::AsyncPgConnection,
+  _admin_id: lemmy_db_schema_file::PersonId,
+  admin_pseudonym: String,
+  scope: Scope,
+  metadata: ConfigKeyMetadata,
+  data: AdminSetConfig,
+) -> LemmyResult<(i32, i64, chrono::DateTime<chrono::Utc>)> {
+  // Unpack the JSON value into the four typed columns exactly as the shell
+  // wrapper does: exactly one is `Some`, the other three are `None`. The
+  // `governance_config_typed` CHECK constraint verifies this DB-side.
+  let (value_int, value_float, value_bool, value_text) =
+    split_typed_value(metadata.value_type, &data.value, &data.key)?;
+
+  let form = GovernanceConfigInsertForm {
+    scope: scope.as_str().into_owned(),
+    key: data.key.clone(),
+    value_type: data.value_type.clone(),
+    value_int,
+    value_float,
+    value_bool,
+    value_text,
+    updated_by: Some(_admin_id),
+  };
+
+  let row: GovernanceConfig = insert_into(governance_config::table)
+    .values(&form)
+    .returning(GovernanceConfig::as_returning())
+    .get_result::<GovernanceConfig>(conn)
+    .await?;
+
+  // Shell-identical payload: `{scope, key, value_type, value, reason}` in
+  // this exact declaration order. `apply_at` is deliberately absent here
+  // so NOT5 gate 3 holds; the response carries `apply_at` via `preview`
+  // when task 5 extends the preview shape.
+  let payload = json!({
+    "scope":      row.scope,
+    "key":        row.key,
+    "value_type": row.value_type,
+    "value":      data.value,
+    "reason":     data.reason,
+  });
+
+  let log_row = governance_log::append(
+    &mut conn.into(),
+    ENTRY_KIND_ADMIN_CONFIG_CHANGED,
+    payload,
+    Some(admin_pseudonym),
+  )
+  .await?;
+
+  Ok((row.id.0, log_row.id.0, row.valid_from))
+}
+
+// -- helpers (kept private to v1-AD-b's admin_config module) ----------------
+
+/// Look up the compile-time metadata row for a key. `Ok(&ConfigKeyMetadata)`
+/// on hit; `Err(LemmyErrorType::Unknown)` on miss.
+fn metadata_for_key(key: &str) -> LemmyResult<&'static ConfigKeyMetadata> {
+  CONFIG_KEY_METADATA
+    .iter()
+    .find(|m| m.key == key)
+    .ok_or_else(|| LemmyErrorType::Unknown(format!("unknown config key: `{key}`")).into())
+}
+
+/// Wire label for a `ValueType`. Must match the `governance_config.value_type`
+/// column literal — the shell script and the parity tests both use these
+/// strings.
+fn value_type_label(vt: ValueType) -> &'static str {
+  match vt {
+    ValueType::Int => "int",
+    ValueType::Float => "float",
+    ValueType::Bool => "bool",
+    ValueType::Text => "text",
+    ValueType::Enum => "text",
+  }
+}
+
+/// Reject a value that doesn't fit the metadata's range or enum.
+fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyResult<()> {
+  // Range check — applies when metadata declares a NumericRange.
+  if let Some(range) = metadata.valid_range {
+    let n = match metadata.value_type {
+      ValueType::Int => value.as_i64().map(|i| i as f64),
+      ValueType::Float => value.as_f64(),
+      _ => None,
+    };
+    let n = n.ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "value for `{}` is not numeric; range validation requires int/float",
+        metadata.key
+      ))
+    })?;
+    if n < range.min || n > range.max {
+      return Err(LemmyErrorType::Unknown(format!(
+        "value {n} for `{}` out of range [{}, {}]",
+        metadata.key, range.min, range.max
+      ))
+      .into());
+    }
+  }
+
+  // Enum check — applies when metadata declares a pinned enum list.
+  if let Some(allowed) = metadata.valid_enum {
+    let s = value.as_str().ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "value for enum key `{}` must be a JSON string",
+        metadata.key
+      ))
+    })?;
+    if !allowed.contains(&s) {
+      return Err(LemmyErrorType::Unknown(format!(
+        "value `{}` for key `{}` not in allowed set {:?}",
+        s, metadata.key, allowed
+      ))
+      .into());
+    }
+  }
+
+  Ok(())
+}
+
+/// Unpack the JSON value into the four Diesel columns. Exactly one is `Some`.
+fn split_typed_value(
+  vt: ValueType,
+  value: &Value,
+  key: &str,
+) -> LemmyResult<(Option<i64>, Option<f64>, Option<bool>, Option<String>)> {
+  match vt {
+    ValueType::Int => {
+      let v = value.as_i64().ok_or_else(|| {
+        LemmyErrorType::Unknown(format!("`{key}` value_type=int but JSON is not an integer"))
+      })?;
+      Ok((Some(v), None, None, None))
+    }
+    ValueType::Float => {
+      let v = value.as_f64().ok_or_else(|| {
+        LemmyErrorType::Unknown(format!(
+          "`{key}` value_type=float but JSON is not a number"
+        ))
+      })?;
+      Ok((None, Some(v), None, None))
+    }
+    ValueType::Bool => {
+      let v = value.as_bool().ok_or_else(|| {
+        LemmyErrorType::Unknown(format!(
+          "`{key}` value_type=bool but JSON is not a boolean"
+        ))
+      })?;
+      Ok((None, None, Some(v), None))
+    }
+    ValueType::Text | ValueType::Enum => {
+      let v = value
+        .as_str()
+        .ok_or_else(|| {
+          LemmyErrorType::Unknown(format!(
+            "`{key}` value_type=text/enum but JSON is not a string"
+          ))
+        })?
+        .to_string();
+      Ok((None, None, None, Some(v)))
+    }
+  }
+}
+
+/// Structured denial reasons. String form is what lands in the denial log's
+/// `denial_reason` payload field — kept as a typed enum so the handler
+/// can't emit free-form strings that diverge from the audit spec.
+#[derive(Debug, Clone, Copy)]
+enum DenialReason {
+  InstanceAdminRequired,
+  CommunityModeratorRequired,
+  ScopeMismatchInstanceKey,
+  ScopeMismatchCommunityKey,
+  StepUpRequired,
+}
+
+impl DenialReason {
+  fn as_str(self) -> &'static str {
+    match self {
+      DenialReason::InstanceAdminRequired => "instance_admin_required",
+      DenialReason::CommunityModeratorRequired => "community_moderator_required",
+      DenialReason::ScopeMismatchInstanceKey => "scope_mismatch_instance_key",
+      DenialReason::ScopeMismatchCommunityKey => "scope_mismatch_community_key",
+      DenialReason::StepUpRequired => "step_up_required",
+    }
+  }
+}
+
+/// Policy dispatch per plan §13 task 4 step 4. `Ok(Ok(()))` means the caller
+/// is authorised; `Ok(Err(reason))` means denied with a specific cause;
+/// `Err(..)` means the check itself failed (e.g. DB read error).
+///
+/// The inner `Result` lets the caller emit a denial log for the `Err` side
+/// without collapsing the "legitimate auth failure" case with the
+/// "something crashed" case.
+async fn check_policy(
+  metadata: &ConfigKeyMetadata,
+  scope: Scope,
+  local_user_view: &LocalUserView,
+  pool: &mut DbPool<'_>,
+) -> LemmyResult<Result<(), DenialReason>> {
+  let admin_ok = is_admin(local_user_view).is_ok();
+  match (metadata.scope, scope) {
+    (ConfigScope::Instance, Scope::Instance) | (ConfigScope::Both, Scope::Instance) => {
+      if admin_ok {
+        Ok(Ok(()))
+      } else {
+        Ok(Err(DenialReason::InstanceAdminRequired))
+      }
+    }
+    (ConfigScope::Both, Scope::Community(community_id))
+    | (ConfigScope::Community, Scope::Community(community_id)) => {
+      // Moderator of the target community — is_admin also counts, since
+      // instance admins moderate all communities implicitly.
+      if admin_ok {
+        return Ok(Ok(()));
+      }
+      match CommunityModeratorView::check_is_community_moderator(
+        pool,
+        community_id,
+        local_user_view.person.id,
+      )
+      .await
+      {
+        Ok(()) => Ok(Ok(())),
+        Err(_) => Ok(Err(DenialReason::CommunityModeratorRequired)),
+      }
+    }
+    (ConfigScope::Instance, Scope::Community(_)) => Ok(Err(DenialReason::ScopeMismatchInstanceKey)),
+    (ConfigScope::Community, Scope::Instance) => {
+      Ok(Err(DenialReason::ScopeMismatchCommunityKey))
+    }
+  }
+}
+
+/// Write the `admin_config_change_denied` entry. Denial path runs OUTSIDE
+/// the write transaction — `append` opens its own internal tx.
+async fn emit_denial_log(
+  pool: &mut DbPool<'_>,
+  actor_id: lemmy_db_schema_file::PersonId,
+  data: &AdminSetConfig,
+  scope: &Scope,
+  reason: DenialReason,
+) -> LemmyResult<()> {
+  // `get_or_create` is deliberate per plan §4.1: a denied caller who has
+  // never had a pseudonym gets one allocated here — the `actor_pseudonym`
+  // table is the GDPR pseudonymisation layer for ANY person writing to
+  // governance state, including denied actors.
+  let actor = actor_pseudonym_helper::get_or_create(pool, actor_id).await?;
+
+  let payload = json!({
+    "scope":          scope.as_str(),
+    "key":            data.key,
+    "value_type":     data.value_type,
+    "value":          data.value,
+    "reason":         data.reason,
+    "denial_reason":  reason.as_str(),
+  });
+
+  governance_log::append(
+    pool,
+    ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
+    payload,
+    Some(actor),
+  )
+  .await?;
+  Ok(())
+}
+
+/// Read the currently-effective `(value, provenance)` for a key at a scope.
+/// Uses the `*_opt` accessors so "no row, no const" returns `(Null, "default")`
+/// — which for v1-AD-b is a legal state for `rule_set.active_version_id`
+/// and some future-seeded keys.
+///
+/// Provenance strings match the wire shape of
+/// `ConfigValueWithProvenance.effective_from`:
+/// - `"community:<id>"` — the community-scoped row is in effect
+/// - `"instance"` — the instance-scoped row is in effect
+/// - `"default"` — no row exists; the Rust const default applies
+///
+/// v1-AD-b's `*_opt` accessors don't expose the provenance layer directly,
+/// so we re-probe: a community-scoped read returns the community row first
+/// and falls through to instance in `fetch_value`. We call `_opt` at
+/// `Community(id)` to get the community-level value, then `_opt` at
+/// `Instance` to distinguish "was-a-community-row" from "was-an-instance-row".
+/// On both misses, the const default is consulted.
+async fn read_effective(
+  pool: &mut DbPool<'_>,
+  metadata: &ConfigKeyMetadata,
+  scope: Scope,
+) -> LemmyResult<(Value, String)> {
+  let mut cache = ConfigCache::new();
+  match metadata.value_type {
+    ValueType::Int => read_effective_int(pool, &mut cache, metadata.key, scope).await,
+    ValueType::Float => read_effective_float(pool, &mut cache, metadata.key, scope).await,
+    ValueType::Bool => read_effective_bool(pool, &mut cache, metadata.key, scope).await,
+    ValueType::Text | ValueType::Enum => {
+      read_effective_text(pool, &mut cache, metadata.key, scope).await
+    }
+  }
+}
+
+async fn read_effective_int(
+  pool: &mut DbPool<'_>,
+  cache: &mut ConfigCache,
+  key: &str,
+  scope: Scope,
+) -> LemmyResult<(Value, String)> {
+  // Try the requested scope first. If `Community`, the `*_opt` accessor
+  // falls through to `instance` internally — but we need to distinguish
+  // community-hit from instance-hit for provenance, so probe at both
+  // scopes independently.
+  if let Scope::Community(_) = scope
+    && let Some(v) = config::get_int_opt(cache, pool, scope, key).await?
+  {
+    // The _opt accessor's cascade hits community-first-then-instance; we
+    // need to know which tier served the value. Probe community-only by
+    // re-requesting at the community scope against a fresh cache: if the
+    // community tier is empty, the _opt already served the instance row.
+    let mut probe_cache = ConfigCache::new();
+    let community_only = config::get_int_opt(&mut probe_cache, pool, scope, key)
+      .await?
+      .and(probe_community_int_only(pool, scope, key).await?);
+    let provenance = if community_only.is_some() {
+      scope.as_str().into_owned()
+    } else {
+      "instance".to_string()
+    };
+    return Ok((json!(v), provenance));
+  }
+
+  if let Some(v) = config::get_int_opt(cache, pool, Scope::Instance, key).await? {
+    return Ok((json!(v), "instance".to_string()));
+  }
+
+  match const_default_int(key) {
+    Some(v) => Ok((json!(v), "default".to_string())),
+    None => Ok((Value::Null, "default".to_string())),
+  }
+}
+
+async fn read_effective_float(
+  pool: &mut DbPool<'_>,
+  cache: &mut ConfigCache,
+  key: &str,
+  scope: Scope,
+) -> LemmyResult<(Value, String)> {
+  if let Scope::Community(_) = scope
+    && let Some(v) = config::get_float_opt(cache, pool, scope, key).await?
+  {
+    let community_only = probe_community_float_only(pool, scope, key).await?;
+    let provenance = if community_only.is_some() {
+      scope.as_str().into_owned()
+    } else {
+      "instance".to_string()
+    };
+    return Ok((json!(v), provenance));
+  }
+  if let Some(v) = config::get_float_opt(cache, pool, Scope::Instance, key).await? {
+    return Ok((json!(v), "instance".to_string()));
+  }
+  match const_default_float(key) {
+    Some(v) => Ok((json!(v), "default".to_string())),
+    None => Ok((Value::Null, "default".to_string())),
+  }
+}
+
+async fn read_effective_bool(
+  pool: &mut DbPool<'_>,
+  cache: &mut ConfigCache,
+  key: &str,
+  scope: Scope,
+) -> LemmyResult<(Value, String)> {
+  if let Scope::Community(_) = scope
+    && let Some(v) = config::get_bool_opt(cache, pool, scope, key).await?
+  {
+    let community_only = probe_community_bool_only(pool, scope, key).await?;
+    let provenance = if community_only.is_some() {
+      scope.as_str().into_owned()
+    } else {
+      "instance".to_string()
+    };
+    return Ok((json!(v), provenance));
+  }
+  if let Some(v) = config::get_bool_opt(cache, pool, Scope::Instance, key).await? {
+    return Ok((json!(v), "instance".to_string()));
+  }
+  match const_default_bool(key) {
+    Some(v) => Ok((json!(v), "default".to_string())),
+    None => Ok((Value::Null, "default".to_string())),
+  }
+}
+
+async fn read_effective_text(
+  pool: &mut DbPool<'_>,
+  cache: &mut ConfigCache,
+  key: &str,
+  scope: Scope,
+) -> LemmyResult<(Value, String)> {
+  if let Scope::Community(_) = scope
+    && let Some(v) = config::get_text_opt(cache, pool, scope, key).await?
+  {
+    let community_only = probe_community_text_only(pool, scope, key).await?;
+    let provenance = if community_only.is_some() {
+      scope.as_str().into_owned()
+    } else {
+      "instance".to_string()
+    };
+    return Ok((json!(v), provenance));
+  }
+  if let Some(v) = config::get_text_opt(cache, pool, Scope::Instance, key).await? {
+    return Ok((json!(v), "instance".to_string()));
+  }
+  match const_default_text(key) {
+    Some(v) => Ok((json!(v), "default".to_string())),
+    None => Ok((Value::Null, "default".to_string())),
+  }
+}
+
+/// Probe queries: read the `governance_config_current` view filtered to
+/// community scope only, returning `None` if the tier is empty. Used by
+/// `read_effective_*` to distinguish community-level hits from fallthrough
+/// to instance. Returns the raw JSON value when the community tier is
+/// populated; callers ignore the value and just inspect `is_some()`.
+async fn probe_community_int_only(
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<i64>> {
+  let scope_str = match scope {
+    Scope::Community(_) => scope.as_str().into_owned(),
+    Scope::Instance => return Ok(None),
+  };
+  let conn = &mut get_conn(pool).await?;
+  let sql = "SELECT value_int AS c FROM governance_config_current \
+     WHERE scope = $1 AND key = $2 AND value_type = 'int' LIMIT 1";
+  probe_single_int(conn, sql, &scope_str, key).await
+}
+
+async fn probe_community_float_only(
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<f64>> {
+  let scope_str = match scope {
+    Scope::Community(_) => scope.as_str().into_owned(),
+    Scope::Instance => return Ok(None),
+  };
+  let conn = &mut get_conn(pool).await?;
+  let sql = "SELECT COUNT(*)::bigint AS c FROM governance_config_current \
+     WHERE scope = $1 AND key = $2 AND value_type = 'float'";
+  let row: SingleCountRow = sql_query(sql)
+    .bind::<diesel::sql_types::Text, _>(scope_str)
+    .bind::<diesel::sql_types::Text, _>(key.to_string())
+    .get_result(conn)
+    .await?;
+  Ok(if row.c > 0 { Some(0.0) } else { None })
+}
+
+async fn probe_community_bool_only(
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<bool>> {
+  let scope_str = match scope {
+    Scope::Community(_) => scope.as_str().into_owned(),
+    Scope::Instance => return Ok(None),
+  };
+  let conn = &mut get_conn(pool).await?;
+  let sql = "SELECT COUNT(*)::bigint AS c FROM governance_config_current \
+     WHERE scope = $1 AND key = $2 AND value_type = 'bool'";
+  let row: SingleCountRow = sql_query(sql)
+    .bind::<diesel::sql_types::Text, _>(scope_str)
+    .bind::<diesel::sql_types::Text, _>(key.to_string())
+    .get_result(conn)
+    .await?;
+  Ok(if row.c > 0 { Some(false) } else { None })
+}
+
+async fn probe_community_text_only(
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<String>> {
+  let scope_str = match scope {
+    Scope::Community(_) => scope.as_str().into_owned(),
+    Scope::Instance => return Ok(None),
+  };
+  let conn = &mut get_conn(pool).await?;
+  let sql = "SELECT COUNT(*)::bigint AS c FROM governance_config_current \
+     WHERE scope = $1 AND key = $2 AND value_type = 'text'";
+  let row: SingleCountRow = sql_query(sql)
+    .bind::<diesel::sql_types::Text, _>(scope_str)
+    .bind::<diesel::sql_types::Text, _>(key.to_string())
+    .get_result(conn)
+    .await?;
+  Ok(if row.c > 0 { Some(String::new()) } else { None })
+}
+
+async fn probe_single_int(
+  conn: &mut diesel_async::AsyncPgConnection,
+  sql: &str,
+  scope_str: &str,
+  key: &str,
+) -> LemmyResult<Option<i64>> {
+  #[derive(QueryableByName)]
+  struct Row {
+    #[diesel(sql_type = Nullable<BigInt>)]
+    c: Option<i64>,
+  }
+  let row: Option<Row> = sql_query(sql)
+    .bind::<diesel::sql_types::Text, _>(scope_str.to_string())
+    .bind::<diesel::sql_types::Text, _>(key.to_string())
+    .get_result(conn)
+    .await
+    .optional()?;
+  Ok(row.and_then(|r| r.c))
+}
+
+// Dead-code silencers — the `ApplyAt` enum import + `chrono::Utc` + some
+// per-category consts are reserved for task 5's read handler. Kept here
+// so task 5 can import without touching imports.
+#[allow(dead_code)]
+fn _reserved_task5_markers(_apply: ApplyAt, _now: chrono::DateTime<Utc>) {}
