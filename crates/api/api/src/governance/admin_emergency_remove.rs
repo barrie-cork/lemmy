@@ -153,6 +153,7 @@ async fn process_emergency_remove(
     severity: CaseSeverity::default(),
     status: CaseStatus::EmergencyRemove,
     threshold_score: 0,
+    ..Default::default()
   };
   let case_row: ModerationCase = insert_into(moderation_case::table)
     .values(&form)

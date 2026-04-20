@@ -188,6 +188,7 @@ pub async fn create_report(
         severity: CaseSeverity::default(),
         status: initial_status,
         threshold_score: initial_score,
+        ..Default::default()
       };
       let row = insert_into(moderation_case::table)
         .values(&form)
