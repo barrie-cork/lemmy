@@ -142,6 +142,16 @@ pub const ENTRY_KIND_FEDERATION_SANCTION_RECEIVED: &str = "federation_sanction_r
 pub const ENTRY_KIND_FEDERATION_ATTESTATION_SENT: &str = "federation_attestation_sent";
 pub const ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED: &str = "federation_attestation_received";
 
+// v1-AD-a additions (task 7): admin config-edit audit. The
+// `admin_config_changed` literal MUST equal the string written by the
+// v0 shell wrapper `scripts/brehon/admin-config-write.sh:148` so v1-AD-b's
+// NOT5 deprecation gate 3 ("byte-identical governance_log rows from both
+// paths") holds when the Rust handler lands alongside the CLI path. The
+// `_denied` variant has no v0 caller — it's reserved for v1-AD-b's
+// capability-check reject path.
+pub const ENTRY_KIND_ADMIN_CONFIG_CHANGED: &str = "admin_config_changed";
+pub const ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED: &str = "admin_config_change_denied";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
