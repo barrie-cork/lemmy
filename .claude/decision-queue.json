@@ -1,7 +1,22 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [],
+  "pending": [
+    {
+      "id": 40,
+      "from": "impl",
+      "timestamp": "2026-04-20T12:20:00Z",
+      "question": "v1-AD-b planning session is currently writing the v1-AD-b plan file on branch plan/v1-AD-oq-resolve. That branch is the head of PR #74 (OQ-V1-AD-01/02/03 resolutions + PRD §4.3 reshape) which is open for CodeRabbit review. Piling the plan onto the PR branch causes (1) shared-branch write contention between two active CC sessions, and (2) PR #74 scope creep — CodeRabbit has already reviewed the docs diff at 756ee00fe; adding a ~700-line plan file forces a re-review of mixed concerns. What should the planning session do?",
+      "options": [
+        "(a) Cut a fresh plan/v1-AD-b branch off plan/v1-AD-oq-resolve (so the plan can reference the resolved OQs) before writing any plan content. Open a separate PR into governance-v0 once plan/v1-AD-oq-resolve merges. This mirrors the v1-AD-a shape exactly (planning lived on plan/v1-admin-dashboard, PR #44; phase branch phase-v1-AD-a then cut from merged trunk).",
+        "(b) Keep writing to plan/v1-AD-oq-resolve and update PR #74's title/body to include the plan scope. CodeRabbit re-reviews the combined diff. Accepts the review-noise cost in exchange for fewer branches.",
+        "(c) Abandon plan/v1-AD-oq-resolve and move the OQ-resolve commits onto a new plan/v1-AD-b branch too (combine OQ-resolve + plan into one PR). Closes PR #74, opens a replacement. Most churn but produces a single review surface for v1-AD-b."
+      ],
+      "context": "Check at 2026-04-20T12:20Z from the OQ-resolve session: PR #74 is open with 2 commits (3f0dd6572 OQ resolutions + PRD §4.3 reshape, 756ee00fe chronology fix per CR #1). CodeRabbit approved the 2-commit scope at 11:58Z. The user confirmed a separate CC session is writing the v1-AD-b plan on this same branch. v1-AD-a precedent (see .claude/PRPs/plans/completed/v1-admin-dashboard-a.plan.md §6): each sub-phase plans on its own branch, ships its own PR, earns its own CodeRabbit review. That is option (a). Option (b) was picked at Phase 6 time — which is how that PR grew to 33 findings. Option (c) adds ~2 minutes of git work to save one PR but forces closing a review already approved. Files in flight on the branch: docs/brehon-law-inspired-network/99-decisions-and-open-questions.md, .claude/PRPs/prds/v1-admin-dashboard.prd.md. Not blocking for the OQ-resolve session (can merge PR #74 without the plan). Blocking for the planning session (its target branch determines whether it conflicts with a PR-#74 merge).",
+      "answer": null,
+      "answered_by": null
+    }
+  ],
   "resolved": [
     {
       "id": 39,
