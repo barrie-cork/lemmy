@@ -133,12 +133,19 @@ impl Scope {
 }
 
 /// One cached value. Matches the row shape — only one variant populated.
+///
+/// `Absent` records a completed fetch whose cascade found no row, distinguishing
+/// "checked, nothing there" from "not yet queried" for the `get_*_opt` family.
+/// Typed non-opt accessors keep the `if let Some(CachedValue::<T>(_))` early-return
+/// pattern, so they naturally miss on an `Absent` entry and re-fetch — which
+/// then re-caches `Absent` and proceeds to the `const_default_*` branch.
 #[derive(Debug, Clone)]
 enum CachedValue {
   Int(i64),
   Float(f64),
   Bool(bool),
   Text(String),
+  Absent,
 }
 
 /// Per-request memo cache. Keys are `(scope_repr, key)` tuples.
