@@ -4192,3 +4192,875 @@ async fn declining_juror_not_picked_as_own_replacement() -> Result<(), Box<dyn E
   Ok(())
 }
 
+// ============================================================================
+// Phase v1-AD-b — task 8: admin_config HTTP handler integration tests
+// ============================================================================
+//
+// Thirteen tests per plan §11 + §13 task 8. They share a small module of
+// local helpers that spin up Postgres, seed an instance + users, and mint
+// `LocalUserView`s so individual `admin_set_config` / `admin_get_config` /
+// `admin_get_config_audit` invocations stay readable. The helpers mirror
+// `report_to_modlog_golden_path` (e2e.rs:748) — same SETTINGS-priming,
+// same `build_db_pool_for_tests` bootstrap, same direct-handler-invoke
+// style.
+//
+// Each test owns a fresh `pgautoupgrade/pgautoupgrade:18-alpine` container;
+// that matches the existing e2e.rs pattern (1 test = 1 container) and
+// keeps state bleed between tests impossible. The `admin_get_config_full`
+// test is the slowest — it walks all 61 seed rows — but still finishes
+// well under 30s on a warm host.
+
+mod admin_config_fixtures {
+  use actix_web::web::Data;
+  use diesel::{Connection as _, PgConnection};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{InstanceId, PersonId};
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use std::error::Error;
+
+  /// Spin a fresh Postgres, apply the full Brehon schema, build a real
+  /// `LemmyContext` wrapped in `Data`, and return both the context handle
+  /// and the container guard (keep the container alive via `_container`).
+  pub async fn bootstrap() -> LemmyResult<(
+    testcontainers::ContainerAsync<testcontainers::GenericImage>,
+    Data<LemmyContext>,
+    String,
+  )> {
+    const SIGNING_SEED_HEX: &str =
+      "0000000000000000000000000000000000000000000000000000000000000001";
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    }
+
+    let (container, host_port) = super::governance_fixtures::start_postgres()
+      .await
+      .map_err(|e| anyhow::anyhow!("start_postgres: {e}"))?;
+    let db_url = super::governance_fixtures::db_url(host_port);
+    unsafe {
+      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+    }
+
+    {
+      let mut sync_conn = PgConnection::establish(&db_url)
+        .map_err(|e| -> Box<dyn Error + Send + Sync> {
+          format!("PgConnection::establish: {e}").into()
+        })
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+      super::governance_fixtures::apply_all_schema(&mut sync_conn)
+        .map_err(|e| anyhow::anyhow!("apply_all_schema: {e}"))?;
+    }
+
+    let pool: ActualDbPool = build_db_pool_for_tests();
+    let client = client_builder(&SETTINGS).build()?;
+    let middleware_client = ClientBuilder::new(client).build();
+    let secret = Secret { id: 0, jwt_secret: String::new().into() };
+    let rate_limit = RateLimit::with_debug_config();
+    // Bump rate-limit buckets — multi-write tests trip the 6/300s Post
+    // bucket from `with_debug_config()`. See
+    // `feedback_rate_limit_debug_config_post_bucket.md`.
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let context = Data::new(LemmyContext::create(
+      pool,
+      middleware_client.clone(),
+      middleware_client,
+      secret,
+      rate_limit,
+    ));
+
+    Ok((container, context, db_url))
+  }
+
+  /// Seed an instance + a single person/local_user pair, returning both the
+  /// PersonId and the `LocalUserView` callers need to invoke handlers.
+  pub async fn seed_user(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<(PersonId, LocalUserView)> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    let view = LocalUserView::read_person(&mut ctx.pool(), person.id).await?;
+    Ok((person.id, view))
+  }
+
+  /// Read the first instance (auto-created by migrations as
+  /// `local_site.site_id = 1`) or create a fresh `test.invalid` one.
+  pub async fn bootstrap_instance(ctx: &LemmyContext) -> LemmyResult<Instance> {
+    Ok(Instance::read_or_create(&mut ctx.pool(), "test.invalid").await?)
+  }
+}
+
+/// Task 8 test 1: instance-scope int write bumps `jury.panel_size` from 5
+/// to 7, returns `applied=true` + both IDs, persists a `governance_config`
+/// row, and emits exactly one `admin_config_changed` log entry.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_happy_path() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema_file::schema::{governance_config, governance_log};
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_hp", true).await?;
+
+  let resp = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "bump panel_size for test".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert!(resp.applied, "applied must be true on happy path");
+  assert!(resp.config_id.is_some(), "config_id set");
+  assert!(resp.governance_log_id.is_some(), "governance_log_id set");
+  assert!(resp.applied_at.is_some(), "applied_at set");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let row_count: i64 = governance_config::table
+    .filter(governance_config::key.eq("jury.panel_size"))
+    .filter(governance_config::scope.eq("instance"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(row_count, 2, "seed row + new row = 2");
+
+  let log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_changed"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(log_count, 1, "exactly one admin_config_changed entry");
+
+  Ok(())
+}
+
+/// Task 8 test 2: `dry_run = Some(true)` returns a populated preview but
+/// writes nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_dry_run() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema_file::schema::{governance_config, governance_log};
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_dry", true).await?;
+
+  let mut conn_before = AsyncPgConnection::establish(&db_url).await?;
+  let before_count: i64 = governance_config::table
+    .filter(governance_config::key.eq("jury.panel_size"))
+    .count()
+    .get_result(&mut conn_before)
+    .await?;
+
+  let resp = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(9),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: Some(true),
+      reason: "dry-run probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert!(!resp.applied, "dry_run must set applied=false");
+  assert!(resp.config_id.is_none(), "dry_run must NOT return config_id");
+  assert!(resp.governance_log_id.is_none(), "dry_run must NOT return log_id");
+  assert!(resp.applied_at.is_none(), "dry_run must NOT return applied_at");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let after_count: i64 = governance_config::table
+    .filter(governance_config::key.eq("jury.panel_size"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(before_count, after_count, "dry_run must not append a config row");
+
+  let log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_changed"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(log_count, 0, "dry_run must not emit admin_config_changed");
+
+  Ok(())
+}
+
+/// Task 8 test 3: `value_type="int"` against a float-metadata key → 400,
+/// no denial log (type mismatch is bad input, not a policy denial).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_type_mismatch_rejected() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_tm", true).await?;
+
+  // `liability.regular_multiplier` is declared float in metadata.
+  let result = admin_set_config(
+    Json(AdminSetConfig {
+      key: "liability.regular_multiplier".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(2),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "type-mismatch probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await;
+  assert!(result.is_err(), "type mismatch must be an error");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let denial_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(denial_count, 0, "type mismatch is not a policy denial → no denial log");
+
+  Ok(())
+}
+
+/// Task 8 test 4: panel_size=1000 is outside the declared 3-21 range →
+/// 400, no denial log (range violation is bad input, not policy denial).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_range_rejected() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema_file::schema::{governance_config, governance_log};
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_rg", true).await?;
+
+  let result = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(1000),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "range violation probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await;
+  assert!(result.is_err(), "out-of-range must be an error");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let cfg_count: i64 = governance_config::table
+    .filter(governance_config::key.eq("jury.panel_size"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(cfg_count, 1, "range violation must not insert a config row");
+
+  let denial_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(denial_count, 0, "range violation is not a policy denial");
+
+  Ok(())
+}
+
+/// Task 8 test 5: enum value not in `valid_enum` list → 400, no denial log.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_enum_rejected() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_en", true).await?;
+
+  let result = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.severity_thresholds.minor".to_string(),
+      value_type: "text".to_string(),
+      value: serde_json::json!("invalid"),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "enum violation probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await;
+  assert!(result.is_err(), "invalid enum value must be an error");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let denial_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(denial_count, 0, "enum violation is not a policy denial");
+
+  Ok(())
+}
+
+/// Task 8 test 6: non-admin caller → 403 + denial log with
+/// `denial_reason = "instance_admin_required"`.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_non_admin_rejected_with_denial_log()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) = admin_config_fixtures::seed_user(&context, instance.id, "non_admin", false).await?;
+
+  let result = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "non-admin probe".to_string(),
+    }),
+    context.clone(),
+    user_view,
+  )
+  .await;
+  assert!(result.is_err(), "non-admin must be rejected");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  use diesel::SelectableHelper;
+  let denial_rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(denial_rows.len(), 1, "exactly one denial entry");
+  let payload = &denial_rows[0].payload;
+  assert_eq!(
+    payload.get("denial_reason").and_then(|v| v.as_str()),
+    Some("instance_admin_required"),
+    "denial_reason must be instance_admin_required",
+  );
+  assert!(
+    denial_rows[0].actor_pseudonym.is_some(),
+    "denied caller still gets a pseudonym (GDPR layer per plan §4.1)",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 7: instance-only key (e.g. `federation.inbound_advisory_only`)
+/// with `scope: community:<id>` → 400 + denial log with
+/// `denial_reason = "scope_mismatch_instance_key"`.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_scope_mismatch_rejected() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::governance_log::GovernanceLog,
+  };
+  use lemmy_db_schema_file::schema::governance_log;
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) = admin_config_fixtures::seed_user(&context, instance.id, "admin_sm", true).await?;
+
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "scope_mm".to_string(),
+      "Scope Mismatch Community".to_string(),
+      "pk-scope".to_string(),
+    ),
+  )
+  .await?;
+
+  let result = admin_set_config(
+    Json(AdminSetConfig {
+      key: "federation.inbound_advisory_only".to_string(),
+      value_type: "bool".to_string(),
+      value: serde_json::json!(false),
+      scope: format!("community:{}", community.id.0),
+      apply_at: None,
+      dry_run: None,
+      reason: "scope-mismatch probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await;
+  assert!(result.is_err(), "scope mismatch must be rejected");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  use diesel::SelectableHelper;
+  let denial_rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(denial_rows.len(), 1, "exactly one denial entry");
+  assert_eq!(
+    denial_rows[0]
+      .payload
+      .get("denial_reason")
+      .and_then(|v| v.as_str()),
+    Some("scope_mismatch_instance_key"),
+    "denial_reason must be scope_mismatch_instance_key",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 8: `jury.quorum` has `ConfigScope::Both` so a community
+/// moderator (not an instance admin) can write it at `community:<id>`
+/// scope.
+///
+/// NOTE: v1-AD-b plan §11 line 1101 originally named
+/// `liability.regular_multiplier` here, but that key is declared
+/// `ConfigScope::Instance` in `config.rs:1141-1152` — not `Both`. Swapped
+/// to `jury.quorum` (Int, range 1-21, `ConfigScope::Both`) which actually
+/// exercises the moderator-write path. The `Both`-scope key set has no
+/// float-typed member today, so picking an int is the minimal correction.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_community_scope_by_moderator()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityActions, CommunityInsertForm, CommunityModeratorForm},
+    governance::governance_config::GovernanceConfig,
+  };
+  use lemmy_db_schema_file::schema::governance_config;
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (mod_id, mod_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "cmod", false).await?;
+
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "cmod_comm".to_string(),
+      "Community Mod".to_string(),
+      "pk-cmod".to_string(),
+    ),
+  )
+  .await?;
+  CommunityActions::join(
+    &mut context.pool(),
+    &CommunityModeratorForm::new(community.id, mod_id),
+  )
+  .await?;
+
+  let resp = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.quorum".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(5),
+      scope: format!("community:{}", community.id.0),
+      apply_at: None,
+      dry_run: None,
+      reason: "cmod sets jury quorum for community".to_string(),
+    }),
+    context.clone(),
+    mod_view,
+  )
+  .await?
+  .into_inner();
+  assert!(resp.applied, "moderator write on Both-scope key must succeed");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  use diesel::SelectableHelper;
+  let rows: Vec<GovernanceConfig> = governance_config::table
+    .filter(governance_config::scope.eq(format!("community:{}", community.id.0)))
+    .filter(governance_config::key.eq("jury.quorum"))
+    .select(GovernanceConfig::as_select())
+    .load::<GovernanceConfig>(&mut conn)
+    .await?;
+  assert_eq!(rows.len(), 1, "one community-scoped row appended");
+
+  Ok(())
+}
+
+/// Task 8 test 9: GET /admin/config without filters returns every
+/// CONFIG_KEY_METADATA row; each entry carries `effective_from` matching
+/// either "default" (const) or "instance" (seed row).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_full() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Query;
+  use lemmy_api::governance::{
+    admin_config::admin_get_config,
+    config::CONFIG_KEY_METADATA,
+  };
+  use lemmy_api_common::governance::AdminGetConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_gf", true).await?;
+
+  let resp = admin_get_config(
+    Query(AdminGetConfig { key: None, community_id: None }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.entries.len(),
+    CONFIG_KEY_METADATA.len(),
+    "GET without filters returns one entry per metadata row",
+  );
+  for entry in &resp.entries {
+    assert!(
+      !entry.effective_from.is_empty(),
+      "effective_from populated for key `{}`",
+      entry.key,
+    );
+    assert!(
+      matches!(entry.effective_from.as_str(), "default" | "instance" | "community"),
+      "effective_from must be default/instance/community, got `{}` for `{}`",
+      entry.effective_from,
+      entry.key,
+    );
+  }
+
+  Ok(())
+}
+
+/// Task 8 test 10: after a successful write, GET with `?key=jury.panel_size`
+/// returns a single entry whose `effective_from = "instance"` (the seed
+/// row + the new instance-scope write both exist, and the latest-wins
+/// probe picks the new one).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_single_key_with_provenance() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_config::{admin_get_config, admin_set_config};
+  use lemmy_api_common::governance::{AdminGetConfig, AdminSetConfig};
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_sk", true).await?;
+
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(11),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "provenance probe".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?
+  .into_inner();
+
+  let resp = admin_get_config(
+    Query(AdminGetConfig {
+      key: Some("jury.panel_size".to_string()),
+      community_id: None,
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(resp.entries.len(), 1, "single-key GET returns exactly one entry");
+  let entry = &resp.entries[0];
+  assert_eq!(entry.key, "jury.panel_size");
+  assert_eq!(entry.value, serde_json::json!(11), "value reflects the write");
+  assert_eq!(
+    entry.effective_from, "instance",
+    "effective_from must be 'instance' after an instance-scope write",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 11: five writes (3 successes, 2 denials) + a paginated GET
+/// with `limit=3` returns three entries in descending created_at order.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_audit_paginated() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_config::{admin_get_config_audit, admin_set_config};
+  use lemmy_api_common::governance::{AdminGetConfigAudit, AdminSetConfig};
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_ap", true).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "user_ap", false).await?;
+
+  // 3 successes — increments to panel_size (5 → 7 → 9 → 11)
+  for (i, v) in [7, 9, 11].iter().enumerate() {
+    admin_set_config(
+      Json(AdminSetConfig {
+        key: "jury.panel_size".to_string(),
+        value_type: "int".to_string(),
+        value: serde_json::json!(*v),
+        scope: "instance".to_string(),
+        apply_at: None,
+        dry_run: None,
+        reason: format!("bump {i}"),
+      }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?;
+  }
+  // 2 denials — non-admin attempts
+  for i in 0..2 {
+    let _ = admin_set_config(
+      Json(AdminSetConfig {
+        key: "jury.panel_size".to_string(),
+        value_type: "int".to_string(),
+        value: serde_json::json!(13),
+        scope: "instance".to_string(),
+        apply_at: None,
+        dry_run: None,
+        reason: format!("denied {i}"),
+      }),
+      context.clone(),
+      user_view.clone(),
+    )
+    .await;
+  }
+
+  let resp = admin_get_config_audit(
+    Query(AdminGetConfigAudit {
+      key: None,
+      scope: None,
+      actor_pseudonym: None,
+      since: None,
+      until: None,
+      page: None,
+      limit: Some(3),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(resp.len(), 3, "limit=3 returns three entries");
+  for pair in resp.windows(2) {
+    assert!(
+      pair[0].created_at >= pair[1].created_at,
+      "audit entries must be in desc created_at order",
+    );
+  }
+
+  Ok(())
+}
+
+/// Task 8 test 12 (NOT5 gate 3): write via HTTP handler AND write via raw
+/// SQL matching the shell script's INSERT. Payload JSONB must be
+/// byte-identical across both rows (ignoring actor_pseudonym, signature,
+/// entry_hash, prev_hash). Proof of shell-wrapper interchangeability.
+#[tokio::test(flavor = "multi_thread")]
+async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_pp", true).await?;
+
+  // Write #1: via the Rust HTTP handler.
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "parity probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?;
+
+  // Write #2: via raw SQL matching admin-config-write.sh:146-157 EXACTLY,
+  // including JSON key declaration order.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  diesel::sql_query(
+    "INSERT INTO governance_log (entry_kind, payload, actor_pseudonym) VALUES (\
+       'admin_config_changed',\
+       jsonb_build_object(\
+         'scope',      'instance',\
+         'key',        'jury.panel_size',\
+         'value_type', 'int',\
+         'value',      7,\
+         'reason',     'parity probe'\
+       ),\
+       'shell-wrapper-pseudo'\
+     )",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  // Load both rows.
+  let rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_changed"))
+    .order_by(governance_log::id.asc())
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(rows.len(), 2, "two admin_config_changed rows present");
+
+  // entry_kind must match (trivially; already filtered).
+  assert_eq!(rows[0].entry_kind, rows[1].entry_kind);
+
+  // Payload must be byte-identical across the two writes. This proves
+  // NOT5 gate 3: the Rust handler's `json!` macro + `preserve_order`
+  // serde_json feature produces byte-identical JSONB to the shell
+  // wrapper's `jsonb_build_object`.
+  //
+  // Postgres canonicalises jsonb column round-tripping (spaces after
+  // commas, colons, etc.) — both rows come through the same
+  // canonicaliser here, so the comparison is on the canonicalised
+  // form. That's still the contract we care about: what a downstream
+  // reader sees.
+  assert_eq!(
+    rows[0].payload, rows[1].payload,
+    "HTTP handler and shell-script payloads must be byte-identical (NOT5 gate 3)",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 13 (advisor edit #2 / v1-AD-a retro): after full migrations
+/// but with no seed row for `rule_set.active_version_id` AND no compile-time
+/// default, `config::get_int_opt(Scope::Instance, "rule_set.active_version_id")`
+/// returns `Ok(None)`. Proves that the accessor family correctly surfaces
+/// absent keys without panicking (CachedValue::Absent path).
+#[tokio::test(flavor = "multi_thread")]
+async fn rule_set_active_version_absent_returns_none() -> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::config::{ConfigCache, Scope, get_int_opt};
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, _context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+  let mut cache = ConfigCache::new();
+
+  let result = get_int_opt(
+    &mut cache,
+    &mut pool,
+    Scope::Instance,
+    "rule_set.active_version_id",
+  )
+  .await?;
+  assert!(
+    result.is_none(),
+    "rule_set.active_version_id has no seed + no const → Ok(None)",
+  );
+
+  Ok(())
+}

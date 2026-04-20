@@ -124,21 +124,46 @@ pub struct ConfigKeyMetadata {
 }
 
 impl Scope {
-  fn as_str(self) -> Cow<'static, str> {
+  /// Canonical wire representation — `"instance"` or `"community:<id>"`.
+  /// Matches the `governance_config.scope` column literal and the shell
+  /// wrapper's payload (`scripts/brehon/admin-config-write.sh:146-157`).
+  /// `pub` since v1-AD-b's `admin_config` handler needs it for both
+  /// policy dispatch logging and log-payload construction.
+  pub fn as_str(self) -> Cow<'static, str> {
     match self {
       Scope::Instance => Cow::Borrowed("instance"),
       Scope::Community(CommunityId(id)) => Cow::Owned(format!("community:{id}")),
     }
   }
+
+  /// Parse a wire-format scope string. Mirror of [`Scope::as_str`] —
+  /// accepts exactly `"instance"` or `"community:<i32>"` with no
+  /// whitespace. Returns `None` on any other shape so the caller can
+  /// emit a clean 400.
+  pub fn parse_wire(s: &str) -> Option<Self> {
+    if s == "instance" {
+      return Some(Scope::Instance);
+    }
+    let rest = s.strip_prefix("community:")?;
+    let id = rest.parse::<i32>().ok()?;
+    Some(Scope::Community(CommunityId(id)))
+  }
 }
 
 /// One cached value. Matches the row shape — only one variant populated.
+///
+/// `Absent` records a completed fetch whose cascade found no row, distinguishing
+/// "checked, nothing there" from "not yet queried" for the `get_*_opt` family.
+/// Typed non-opt accessors keep the `if let Some(CachedValue::<T>(_))` early-return
+/// pattern, so they naturally miss on an `Absent` entry and re-fetch — which
+/// then re-caches `Absent` and proceeds to the `const_default_*` branch.
 #[derive(Debug, Clone)]
 enum CachedValue {
   Int(i64),
   Float(f64),
   Bool(bool),
   Text(String),
+  Absent,
 }
 
 /// Per-request memo cache. Keys are `(scope_repr, key)` tuples.
@@ -289,6 +314,187 @@ pub async fn get_text(
     .entries
     .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Text(v.clone()));
   Ok(v)
+}
+
+// -- Opt accessors (v1-AD-b) -----------------------------------------------
+//
+// These mirror the typed accessors above but return `Ok(None)` when the
+// cascade finds no row, instead of falling through to a `const_default_*`.
+// Required by v1-AD-c rule-set handlers that read keys with NO seed AND NO
+// Rust const default — e.g. `rule_set.active_version_id`, where absence-of-
+// row is the "no active version" signal (v1-AD-a advisor edit #2).
+//
+// Callers wanting a default on miss should call the non-opt `get_<type>`,
+// which already does `None => const_default_<type>(key).ok_or_else(...)`.
+
+/// Opt variant of `get_int`. Returns `Ok(None)` when no row matches; never
+/// falls through to `const_default_int`. Caches the outcome as
+/// `CachedValue::Absent` on `None` so repeat lookups are O(1).
+pub async fn get_int_opt(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<i64>> {
+  let scope_repr = scope.as_str();
+  let cache_key = (scope_repr.as_ref().to_string(), key.to_string());
+
+  if let Some(entry) = cache.entries.get(&cache_key) {
+    match entry {
+      CachedValue::Int(v) => return Ok(Some(*v)),
+      CachedValue::Absent => return Ok(None),
+      other => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as int_opt but stored as {other:?}"
+        ))
+        .into());
+      }
+    }
+  }
+
+  let result = match fetch_value(pool, scope, key).await? {
+    Some(CachedValue::Int(v)) => Some(v),
+    Some(other) => {
+      return Err(LemmyErrorType::Unknown(format!(
+        "governance_config key `{key}` requested as int_opt but stored as {other:?}"
+      ))
+      .into());
+    }
+    None => None,
+  };
+
+  let cached = match result {
+    Some(v) => CachedValue::Int(v),
+    None => CachedValue::Absent,
+  };
+  cache.entries.insert(cache_key, cached);
+  Ok(result)
+}
+
+/// Opt variant of `get_float`. Same contract as `get_int_opt`.
+pub async fn get_float_opt(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<f64>> {
+  let scope_repr = scope.as_str();
+  let cache_key = (scope_repr.as_ref().to_string(), key.to_string());
+
+  if let Some(entry) = cache.entries.get(&cache_key) {
+    match entry {
+      CachedValue::Float(v) => return Ok(Some(*v)),
+      CachedValue::Absent => return Ok(None),
+      other => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as float_opt but stored as {other:?}"
+        ))
+        .into());
+      }
+    }
+  }
+
+  let result = match fetch_value(pool, scope, key).await? {
+    Some(CachedValue::Float(v)) => Some(v),
+    Some(other) => {
+      return Err(LemmyErrorType::Unknown(format!(
+        "governance_config key `{key}` requested as float_opt but stored as {other:?}"
+      ))
+      .into());
+    }
+    None => None,
+  };
+
+  let cached = match result {
+    Some(v) => CachedValue::Float(v),
+    None => CachedValue::Absent,
+  };
+  cache.entries.insert(cache_key, cached);
+  Ok(result)
+}
+
+/// Opt variant of `get_bool`. Same contract as `get_int_opt`.
+pub async fn get_bool_opt(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<bool>> {
+  let scope_repr = scope.as_str();
+  let cache_key = (scope_repr.as_ref().to_string(), key.to_string());
+
+  if let Some(entry) = cache.entries.get(&cache_key) {
+    match entry {
+      CachedValue::Bool(v) => return Ok(Some(*v)),
+      CachedValue::Absent => return Ok(None),
+      other => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
+        ))
+        .into());
+      }
+    }
+  }
+
+  let result = match fetch_value(pool, scope, key).await? {
+    Some(CachedValue::Bool(v)) => Some(v),
+    Some(other) => {
+      return Err(LemmyErrorType::Unknown(format!(
+        "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
+      ))
+      .into());
+    }
+    None => None,
+  };
+
+  let cached = match result {
+    Some(v) => CachedValue::Bool(v),
+    None => CachedValue::Absent,
+  };
+  cache.entries.insert(cache_key, cached);
+  Ok(result)
+}
+
+/// Opt variant of `get_text`. Same contract as `get_int_opt`.
+pub async fn get_text_opt(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  key: &str,
+) -> LemmyResult<Option<String>> {
+  let scope_repr = scope.as_str();
+  let cache_key = (scope_repr.as_ref().to_string(), key.to_string());
+
+  if let Some(entry) = cache.entries.get(&cache_key) {
+    match entry {
+      CachedValue::Text(v) => return Ok(Some(v.clone())),
+      CachedValue::Absent => return Ok(None),
+      other => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as text_opt but stored as {other:?}"
+        ))
+        .into());
+      }
+    }
+  }
+
+  let result = match fetch_value(pool, scope, key).await? {
+    Some(CachedValue::Text(v)) => Some(v),
+    Some(other) => {
+      return Err(LemmyErrorType::Unknown(format!(
+        "governance_config key `{key}` requested as text_opt but stored as {other:?}"
+      ))
+      .into());
+    }
+    None => None,
+  };
+
+  let cached = match &result {
+    Some(v) => CachedValue::Text(v.clone()),
+    None => CachedValue::Absent,
+  };
+  cache.entries.insert(cache_key, cached);
+  Ok(result)
 }
 
 // -- Membership state parser (task 51) --------------------------------------
@@ -450,7 +656,7 @@ pub const DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS: i64 = 24;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED: bool = true;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED: bool = false;
 
-fn const_default_int(key: &str) -> Option<i64> {
+pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
     "thresholds.reporting_accuracy" => Some(DEFAULT_THRESHOLDS_REPORTING_ACCURACY),
@@ -503,7 +709,7 @@ fn const_default_int(key: &str) -> Option<i64> {
   }
 }
 
-fn const_default_float(key: &str) -> Option<f64> {
+pub(crate) fn const_default_float(key: &str) -> Option<f64> {
   match key {
     "liability.founder_multiplier" => Some(DEFAULT_LIABILITY_FOUNDER_MULTIPLIER),
     "liability.regular_multiplier" => Some(DEFAULT_LIABILITY_REGULAR_MULTIPLIER),
@@ -515,7 +721,7 @@ fn const_default_float(key: &str) -> Option<f64> {
   }
 }
 
-fn const_default_bool(key: &str) -> Option<bool> {
+pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
   match key {
     "jury.fallback_on_small_pool" => Some(DEFAULT_JURY_FALLBACK_ON_SMALL_POOL),
     // v1-AD-a additions
@@ -538,7 +744,7 @@ fn const_default_bool(key: &str) -> Option<bool> {
   }
 }
 
-fn const_default_text(key: &str) -> Option<String> {
+pub(crate) fn const_default_text(key: &str) -> Option<String> {
   match key {
     "onboarding.default_membership_state" => {
       Some(DEFAULT_ONBOARDING_DEFAULT_MEMBERSHIP_STATE.to_string())
@@ -1523,5 +1729,32 @@ mod parity {
          const_default_{vtype}"
       );
     }
+  }
+
+  /// `rule_set.active_version_id` is deliberately NOT seeded and has NO Rust
+  /// const default (v1-AD-a advisor edit #2). Absence-of-row is the "no active
+  /// version" signal — v1-AD-c's rule-set handlers read this via the
+  /// `get_int_opt` accessor landing alongside this test. Regressing any of
+  /// these three invariants re-introduces the footgun advisor edit #2 removed.
+  #[test]
+  fn rule_set_active_version_not_in_seeded_keys() {
+    assert!(
+      !SEEDED_KEYS_WITH_CONSTS
+        .iter()
+        .any(|(k, _, _)| *k == "rule_set.active_version_id"),
+      "rule_set.active_version_id must NOT be in SEEDED_KEYS_WITH_CONSTS \
+       (v1-AD-a advisor edit #2)"
+    );
+    assert!(
+      !CONFIG_KEY_METADATA
+        .iter()
+        .any(|m| m.key == "rule_set.active_version_id"),
+      "rule_set.active_version_id must NOT be in CONFIG_KEY_METADATA \
+       (v1-AD-a advisor edit #2)"
+    );
+    assert!(
+      const_default_int("rule_set.active_version_id").is_none(),
+      "rule_set.active_version_id must have NO Rust const default"
+    );
   }
 }
