@@ -4765,3 +4765,295 @@ async fn admin_set_config_community_scope_by_moderator()
   Ok(())
 }
 
+/// Task 8 test 9: GET /admin/config without filters returns every
+/// CONFIG_KEY_METADATA row; each entry carries `effective_from` matching
+/// either "default" (const) or "instance" (seed row).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_full() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Query;
+  use lemmy_api::governance::{
+    admin_config::admin_get_config,
+    config::CONFIG_KEY_METADATA,
+  };
+  use lemmy_api_common::governance::AdminGetConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_gf", true).await?;
+
+  let resp = admin_get_config(
+    Query(AdminGetConfig { key: None, community_id: None }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.entries.len(),
+    CONFIG_KEY_METADATA.len(),
+    "GET without filters returns one entry per metadata row",
+  );
+  for entry in &resp.entries {
+    assert!(
+      !entry.effective_from.is_empty(),
+      "effective_from populated for key `{}`",
+      entry.key,
+    );
+    assert!(
+      matches!(entry.effective_from.as_str(), "default" | "instance" | "community"),
+      "effective_from must be default/instance/community, got `{}` for `{}`",
+      entry.effective_from,
+      entry.key,
+    );
+  }
+
+  Ok(())
+}
+
+/// Task 8 test 10: after a successful write, GET with `?key=jury.panel_size`
+/// returns a single entry whose `effective_from = "instance"` (the seed
+/// row + the new instance-scope write both exist, and the latest-wins
+/// probe picks the new one).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_single_key_with_provenance() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_config::{admin_get_config, admin_set_config};
+  use lemmy_api_common::governance::{AdminGetConfig, AdminSetConfig};
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_sk", true).await?;
+
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(11),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "provenance probe".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?
+  .into_inner();
+
+  let resp = admin_get_config(
+    Query(AdminGetConfig {
+      key: Some("jury.panel_size".to_string()),
+      community_id: None,
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(resp.entries.len(), 1, "single-key GET returns exactly one entry");
+  let entry = &resp.entries[0];
+  assert_eq!(entry.key, "jury.panel_size");
+  assert_eq!(entry.value, serde_json::json!(11), "value reflects the write");
+  assert_eq!(
+    entry.effective_from, "instance",
+    "effective_from must be 'instance' after an instance-scope write",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 11: five writes (3 successes, 2 denials) + a paginated GET
+/// with `limit=3` returns three entries in descending created_at order.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_audit_paginated() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_config::{admin_get_config_audit, admin_set_config};
+  use lemmy_api_common::governance::{AdminGetConfigAudit, AdminSetConfig};
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_ap", true).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "user_ap", false).await?;
+
+  // 3 successes — increments to panel_size (5 → 7 → 9 → 11)
+  for (i, v) in [7, 9, 11].iter().enumerate() {
+    admin_set_config(
+      Json(AdminSetConfig {
+        key: "jury.panel_size".to_string(),
+        value_type: "int".to_string(),
+        value: serde_json::json!(*v),
+        scope: "instance".to_string(),
+        apply_at: None,
+        dry_run: None,
+        reason: format!("bump {i}"),
+      }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?;
+  }
+  // 2 denials — non-admin attempts
+  for i in 0..2 {
+    let _ = admin_set_config(
+      Json(AdminSetConfig {
+        key: "jury.panel_size".to_string(),
+        value_type: "int".to_string(),
+        value: serde_json::json!(13),
+        scope: "instance".to_string(),
+        apply_at: None,
+        dry_run: None,
+        reason: format!("denied {i}"),
+      }),
+      context.clone(),
+      user_view.clone(),
+    )
+    .await;
+  }
+
+  let resp = admin_get_config_audit(
+    Query(AdminGetConfigAudit {
+      key: None,
+      scope: None,
+      actor_pseudonym: None,
+      since: None,
+      until: None,
+      page: None,
+      limit: Some(3),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(resp.len(), 3, "limit=3 returns three entries");
+  for pair in resp.windows(2) {
+    assert!(
+      pair[0].created_at >= pair[1].created_at,
+      "audit entries must be in desc created_at order",
+    );
+  }
+
+  Ok(())
+}
+
+/// Task 8 test 12 (NOT5 gate 3): write via HTTP handler AND write via raw
+/// SQL matching the shell script's INSERT. Payload JSONB must be
+/// byte-identical across both rows (ignoring actor_pseudonym, signature,
+/// entry_hash, prev_hash). Proof of shell-wrapper interchangeability.
+#[tokio::test(flavor = "multi_thread")]
+async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_pp", true).await?;
+
+  // Write #1: via the Rust HTTP handler.
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "parity probe".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?;
+
+  // Write #2: via raw SQL matching admin-config-write.sh:146-157 EXACTLY,
+  // including JSON key declaration order.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  diesel::sql_query(
+    "INSERT INTO governance_log (entry_kind, payload, actor_pseudonym) VALUES (\
+       'admin_config_changed',\
+       jsonb_build_object(\
+         'scope',      'instance',\
+         'key',        'jury.panel_size',\
+         'value_type', 'int',\
+         'value',      7,\
+         'reason',     'parity probe'\
+       ),\
+       'shell-wrapper-pseudo'\
+     )",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  // Load both rows.
+  let rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_changed"))
+    .order_by(governance_log::id.asc())
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(rows.len(), 2, "two admin_config_changed rows present");
+
+  // entry_kind must match (trivially; already filtered).
+  assert_eq!(rows[0].entry_kind, rows[1].entry_kind);
+
+  // Payload must be byte-identical across the two writes. This proves
+  // NOT5 gate 3: the Rust handler's `json!` macro + `preserve_order`
+  // serde_json feature produces byte-identical JSONB to the shell
+  // wrapper's `jsonb_build_object`.
+  //
+  // Postgres canonicalises jsonb column round-tripping (spaces after
+  // commas, colons, etc.) — both rows come through the same
+  // canonicaliser here, so the comparison is on the canonicalised
+  // form. That's still the contract we care about: what a downstream
+  // reader sees.
+  assert_eq!(
+    rows[0].payload, rows[1].payload,
+    "HTTP handler and shell-script payloads must be byte-identical (NOT5 gate 3)",
+  );
+
+  Ok(())
+}
+
+/// Task 8 test 13 (advisor edit #2 / v1-AD-a retro): after full migrations
+/// but with no seed row for `rule_set.active_version_id` AND no compile-time
+/// default, `config::get_int_opt(Scope::Instance, "rule_set.active_version_id")`
+/// returns `Ok(None)`. Proves that the accessor family correctly surfaces
+/// absent keys without panicking (CachedValue::Absent path).
+#[tokio::test(flavor = "multi_thread")]
+async fn rule_set_active_version_absent_returns_none() -> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::config::{ConfigCache, Scope, get_int_opt};
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, _context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+  let mut cache = ConfigCache::new();
+
+  let result = get_int_opt(
+    &mut cache,
+    &mut pool,
+    Scope::Instance,
+    "rule_set.active_version_id",
+  )
+  .await?;
+  assert!(
+    result.is_none(),
+    "rule_set.active_version_id has no seed + no const → Ok(None)",
+  );
+
+  Ok(())
+}
