@@ -1,4 +1,4 @@
-use crate::newtypes::{CommentId, CommunityId, ModerationCaseId, PostId};
+use crate::newtypes::{CommentId, CommunityId, ModerationCaseId, PostId, RuleSetVersionId};
 use chrono::{DateTime, Utc};
 use lemmy_db_schema_file::{
   PersonId,
@@ -7,6 +7,7 @@ use lemmy_db_schema_file::{
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::moderation_case;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
@@ -34,6 +35,14 @@ pub struct ModerationCase {
   pub opened_at: DateTime<Utc>,
   pub decided_at: Option<DateTime<Utc>>,
   pub closed_at: Option<DateTime<Utc>>,
+  /// v1-AD-a task 3/4: JSONB snapshot of `governance_config` values in effect
+  /// when this case opened. Populated by v1-AD-b's case-open handler; NULL
+  /// for pre-v1 cases and for v1 cases that pre-date the snapshot feature.
+  pub applied_config_snapshot: Option<Value>,
+  /// v1-AD-a task 3/4: FK to `rule_set_version.id` capturing which version
+  /// of the community rules was in force at case-open time. Populated by
+  /// v1-AD-c's rule-set wiring; NULL until then.
+  pub rule_set_version_id: Option<RuleSetVersionId>,
 }
 
 #[derive(Clone, Default)]
@@ -52,4 +61,8 @@ pub struct ModerationCaseInsertForm {
   pub severity: CaseSeverity,
   pub status: CaseStatus,
   pub threshold_score: i64,
+  /// v1-AD-a additions. Optional on insert — v1-AD-b handler populates
+  /// them; v0 + earlier-v1 callers leave both as `None`.
+  pub applied_config_snapshot: Option<Value>,
+  pub rule_set_version_id: Option<RuleSetVersionId>,
 }

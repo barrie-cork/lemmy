@@ -37,6 +37,8 @@
 //!   re-export).
 
 pub use lemmy_db_schema::source::governance::governance_log::{
+  ENTRY_KIND_ADMIN_CONFIG_CHANGED,
+  ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
   ENTRY_KIND_APPEAL_REQUESTED,
   ENTRY_KIND_CAPABILITY_CHANGED,
   ENTRY_KIND_CASE_DECIDED,

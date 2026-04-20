@@ -15,5 +15,7 @@ pub mod redaction;
 pub mod remote_sanction_notice;
 pub mod reputation_event;
 pub mod reputation_snapshot;
+pub mod rule_set_version;
 pub mod sanction;
+pub mod sponsor_allowlist;
 pub mod surety;

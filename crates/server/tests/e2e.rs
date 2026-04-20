@@ -137,6 +137,7 @@ async fn can_insert_moderation_case() -> Result<(), Box<dyn Error>> {
     severity: CaseSeverity::Low,
     status: CaseStatus::Open,
     threshold_score: 1,
+  ..Default::default()
   };
 
   let inserted_id: i32 = diesel::insert_into(moderation_case::table)
@@ -500,6 +501,7 @@ async fn list_open_cases_returns_seeded_rows() -> Result<(), Box<dyn Error>> {
       severity: CaseSeverity::Low,
       status: CaseStatus::ThresholdMet,
       threshold_score: 1,
+  ..Default::default()
     };
     diesel::insert_into(moderation_case::table)
       .values(&form)
@@ -593,6 +595,7 @@ async fn jury_queue_view_returns_assignments() -> Result<(), Box<dyn Error>> {
       severity: CaseSeverity::Medium,
       status: CaseStatus::InReview,
       threshold_score: 1,
+  ..Default::default()
     };
     let case_id: i32 = diesel::insert_into(moderation_case::table)
       .values(&case_form)
@@ -668,6 +671,7 @@ async fn modlog_view_returns_published_entries() -> Result<(), Box<dyn Error>> {
       severity: CaseSeverity::High,
       status: CaseStatus::InReview,
       threshold_score: 1,
+  ..Default::default()
     };
     let case_id: i32 = diesel::insert_into(moderation_case::table)
       .values(&case_form)
@@ -2481,6 +2485,7 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
       severity: CaseSeverity::Low,
       status: CaseStatus::Decided,
       threshold_score: 1,
+  ..Default::default()
     };
     diesel::insert_into(moderation_case::table)
       .values(&decided_form)
@@ -2746,6 +2751,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
       severity: CaseSeverity::Low,
       status: CaseStatus::Open,
       threshold_score: 1,
+  ..Default::default()
     };
     let case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
       diesel::insert_into(moderation_case::table)
@@ -3401,6 +3407,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
       // (admin_assign_jury normally flips Open→JurySelection.)
       status: CaseStatus::JurySelection,
       threshold_score: 1,
+  ..Default::default()
     };
     let case: ModerationCase = diesel::insert_into(
       lemmy_db_schema_file::schema::moderation_case::table,
@@ -3857,6 +3864,7 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn E
     severity: CaseSeverity::Low,
     status: CaseStatus::Decided,
     threshold_score: 1,
+  ..Default::default()
   };
   let case_a: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
     diesel::insert_into(moderation_case::table)
@@ -4109,6 +4117,7 @@ async fn declining_juror_not_picked_as_own_replacement() -> Result<(), Box<dyn E
       severity: CaseSeverity::Low,
       status: CaseStatus::Open,
       threshold_score: 1,
+  ..Default::default()
     };
     let case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
       diesel::insert_into(moderation_case::table)
