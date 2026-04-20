@@ -493,6 +493,33 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** Nothing in v0. `'open'` covers the event-driven recruitment use case until real pilot data motivates something more structured.
 - **Target:** v1, likely driven by the first community-event-after-launch that needs non-default sponsor gating.
 
+### OQ-V1-AD-01 — Server-rendered HTML page framework for admin dashboard
+
+- **Opened:** 2026-04-21
+- **Owner:** TBD (backend)
+- **Question:** v1 admin-dashboard PRD §6 assumes askama (or maud) for server-rendered admin HTML pages. Neither crate is in the workspace `Cargo.lock` today — adoption would add a templating dep + compile-time step to `lemmy_api`. Alternative: ship v1-AD-d API-only and defer HTML pages to v1.x or v2 (to land alongside the React frontend pass).
+- **Current lean:** Defer to v1.x. v1-AD-d ships API-only; askama decision revisits after pilot operator feedback on whether curl+jq-only workflow is operationally sufficient.
+- **Blocks:** v1-AD-e (askama HTML pages sub-phase).
+- **Target:** Before v1-AD-e plan writes.
+
+### OQ-V1-AD-02 — SSE implementation: actix-web-lab vs hand-rolled
+
+- **Opened:** 2026-04-21
+- **Owner:** TBD (backend)
+- **Question:** PRD §4 enumerates `GET /api/v4/governance/admin/audit/stream` as an SSE endpoint. Upstream Lemmy does not use `actix-web-lab` (grep of `Cargo.lock` 2026-04-19 returns no matches). Two paths: (a) add `actix-web-lab` dep for its `Sse` helper; (b) hand-roll ~80 LOC of chunked-response plumbing using `async-stream` (already a transitive dep). The Postgres `LISTEN governance_events` channel already exists (migration `2026-04-20-000000-0000`) — the SSE endpoint's only job is bridging Postgres NOTIFY payloads onto HTTP.
+- **Current lean:** Hand-roll (option b). Adds no new supply-chain surface and keeps Lemmy's actix-web dep shape intact.
+- **Blocks:** v1-AD-d (dashboard + SSE sub-phase).
+- **Target:** Before v1-AD-d plan writes.
+
+### OQ-V1-AD-03 — Dry-run impact computation inside vs outside run_transaction
+
+- **Opened:** 2026-04-21
+- **Owner:** TBD (backend)
+- **Question:** PRD §4.3 proposes running dry-run impact queries inside the same `run_transaction` as the config write with a `SAVEPOINT` rollback when `dry_run = true`. Inspection of `crates/diesel_utils/src/connection.rs:68-79` shows `run_transaction` wraps `diesel-async`'s `.transaction()` — no SAVEPOINT primitive is exposed. Either (a) extend `run_transaction` with a `run_savepoint` helper, or (b) compute impact as a read-only query BEFORE the tx opens against the proposed value and the current config snapshot, with no rollback needed.
+- **Current lean:** Option (b). Architecturally cleaner; dry-run is read-only; no tx-state visibility required. Reshape PRD §4.3 to match.
+- **Blocks:** v1-AD-b (POST /admin/config sub-phase).
+- **Target:** Before v1-AD-b plan writes.
+
 ---
 
 ## Changelog
@@ -519,3 +546,6 @@ OQ-004 resolved (cap=3 instance-wide, config-driven via `config.jury.max_concurr
 
 **2026-04-17** — *99, 01, IMPLEMENTATION-PLAN-v0*
 OQ-024 (v0 zero-floor clamp on sponsor-liability deltas, honour-price mapping) opened and resolved same day. OQ-025 (post-decision grace window, athgabál analogue) and OQ-026 (status-aware config extension pattern) opened, both deferred to v1. OQ-003 (restorative actions) amended: v0 reserves a single `Restoration { description: String }` variant in Phase 5b task 56 to avoid v1 data-migration tax across exhaustive matches and federation-outbound publishes; v1 refines into `Apology | ContentCorrection | CommunityService`. OQ-006 (case threshold formula) amended with a historical-fidelity note: the multiplicative structure is grounded in Brehon evidence weighting (Higgins 2010 p.4); the 0.1 floor matches the graduated-but-never-zero pattern; the 2.0 ceiling errs narrow vs the historical full-hierarchy ceiling and should be revisited at pilot retro. All five OQ changes ratify findings of the Brehon-law historical-fidelity review (PHASE-5-HISTORICAL-FIDELITY.md, uncommitted).
+
+**2026-04-21** — *99*
+OQ-V1-AD-01, OQ-V1-AD-02, OQ-V1-AD-03 opened. All three block v1-AD sub-phases (e/d/b respectively). Leans documented; resolution required before dependent plans write.
