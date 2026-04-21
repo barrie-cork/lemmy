@@ -98,6 +98,18 @@ deprecates the wrapper.
 | `ENTRY_KIND_ADMIN_CONFIG_CHANGED` | `admin_config_changed` | v1-AD-a const; v0 `scripts/brehon/admin-config-write.sh` call site | v1-AD-b `crates/api/api/src/governance/admin_config.rs` (pending) + v0 shell wrapper | Config row edit succeeded; payload carries `{scope, key, value_type, value, reason}` |
 | `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED` | `admin_config_change_denied` | v1-AD-a const; v1-AD-b call site | v1-AD-b `admin_config.rs` capability-check reject path | Capability / scope check rejected attempted config write; payload mirrors attempted-change with `denial_reason` |
 
+## v1-AD-c entry kinds (1, this sub-phase)
+
+Landed alongside task 3's `admin_create_rule_set` handler. The const +
+emitting call site land in the same commit. Payload carries the new
+`rule_set_version.id`, the parent (nullable), the canonical
+`text_sha256` (hex-encoded), and the `governance_config` row id flipping
+`rule_set.active_version_id` for the community.
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_RULE_SET_VERSION_CREATED` | `rule_set_version_created` | v1-AD-c shipped | `crates/api/api/src/governance/admin_rule_sets.rs::admin_create_rule_set` | Rule-set version inserted + activated atomically; payload carries `{community_id, version, parent_id, text_sha256, rule_set_version_id, config_id, activated_at}` |
+
 ## v1 PRD reservation sections (populated when each PRD's plan writes)
 
 Each future v1 sub-PRD OWNS a section below. Populated by that sub-PRD's
@@ -140,7 +152,7 @@ _To be populated by `v1-federation-inbound.plan.md`:_
 
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**25** at v1-AD-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**26** at v1-AD-c end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site (v1-AD-a's two consts pre-land their call sites: `_CHANGED` has the v0 shell wrapper today; `_CHANGE_DENIED` has no call site until v1-AD-b lands).

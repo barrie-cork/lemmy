@@ -152,6 +152,14 @@ pub const ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED: &str = "federation_attesta
 pub const ENTRY_KIND_ADMIN_CONFIG_CHANGED: &str = "admin_config_changed";
 pub const ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED: &str = "admin_config_change_denied";
 
+// v1-AD-c additions (task 3): rule-set version creation. Emitted from
+// `crates/api/api/src/governance/admin_rule_sets.rs::admin_create_rule_set`
+// inside the three-row atomic write (rule_set_version INSERT +
+// governance_config rule_set.active_version_id INSERT + governance_log
+// append). Per the registry rule's invariant, the literal must be unique
+// across all ENTRY_KIND_* string values in this file.
+pub const ENTRY_KIND_RULE_SET_VERSION_CREATED: &str = "rule_set_version_created";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
