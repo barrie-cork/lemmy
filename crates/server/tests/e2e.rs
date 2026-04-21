@@ -4321,6 +4321,27 @@ mod admin_config_fixtures {
   pub async fn bootstrap_instance(ctx: &LemmyContext) -> LemmyResult<Instance> {
     Ok(Instance::read_or_create(&mut ctx.pool(), "test.invalid").await?)
   }
+
+  /// v1-AD-c task 8 helper: seed a non-admin user AND register them as a
+  /// CommunityModerator on the given community. Returns the `LocalUserView`
+  /// ready to pass to `admin_create_rule_set` / `admin_list_rule_sets`. The
+  /// moderator path is the primary capability gate for rule-set CRUD —
+  /// v1-AD-d will re-use this helper for the audit-display tests.
+  pub async fn seed_community_moderator(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    community_id: lemmy_db_schema::newtypes::CommunityId,
+    name: &str,
+  ) -> LemmyResult<LocalUserView> {
+    use lemmy_db_schema::source::community::{CommunityActions, CommunityModeratorForm};
+    let (person_id, view) = seed_user(ctx, instance_id, name, false).await?;
+    CommunityActions::join(
+      &mut ctx.pool(),
+      &CommunityModeratorForm::new(community_id, person_id),
+    )
+    .await?;
+    Ok(view)
+  }
 }
 
 /// Task 8 test 1: instance-scope int write bumps `jury.panel_size` from 5
@@ -5061,6 +5082,658 @@ async fn rule_set_active_version_absent_returns_none() -> lemmy_utils::error::Le
     result.is_none(),
     "rule_set.active_version_id has no seed + no const → Ok(None)",
   );
+
+  Ok(())
+}
+
+// -- v1-AD-c task 8 — 8 new e2e tests -------------------------------------
+//
+// Groups: A (4 rule-set CRUD), B (1 Scope parser), C (2 audit payload),
+// D (1 case-open snapshot). See `.claude/PRPs/plans/v1-admin-dashboard-c.plan.md`
+// §13 task 8 and §14.1 for the group matrix.
+
+/// v1-AD-c task 8 test A1: moderator creates v1 (parent_id=None) then v2
+/// (parent_id=v1); assert rule_set_version row count == 2,
+/// governance_config row for `rule_set.active_version_id` flipped to v2,
+/// exactly 2 `rule_set_version_created` governance_log entries.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_create_rule_set_happy_path() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
+  use lemmy_api_common::governance::AdminCreateRuleSet;
+  use lemmy_db_schema::source::community::{Community, CommunityInsertForm};
+  use lemmy_db_schema_file::schema::{governance_config, governance_log, rule_set_version};
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "rs_happy".to_string(),
+      "Rule-Set Happy".to_string(),
+      "pk-rs-happy".to_string(),
+    ),
+  )
+  .await?;
+  let mod_view = admin_config_fixtures::seed_community_moderator(
+    &context,
+    instance.id,
+    community.id,
+    "rs_mod_hp",
+  )
+  .await?;
+
+  let v1 = admin_create_rule_set(
+    Json(AdminCreateRuleSet {
+      community_id: community.id,
+      rule_text: "rules v1 — initial".to_string(),
+      parent_id: None,
+      reason: "initial rule-set".to_string(),
+    }),
+    context.clone(),
+    mod_view.clone(),
+  )
+  .await?
+  .into_inner();
+  assert_eq!(v1.version, 1, "first version must be 1");
+
+  let v2 = admin_create_rule_set(
+    Json(AdminCreateRuleSet {
+      community_id: community.id,
+      rule_text: "rules v2 — revised".to_string(),
+      parent_id: Some(v1.rule_set_version_id),
+      reason: "revise rules".to_string(),
+    }),
+    context.clone(),
+    mod_view,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(v2.version, 2, "second version must be 2");
+  assert!(v2.rule_set_version_id > v1.rule_set_version_id, "id monotonic");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let rsv_count: i64 = rule_set_version::table
+    .filter(rule_set_version::community_id.eq(community.id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(rsv_count, 2, "two rule_set_version rows for this community");
+
+  let community_scope = format!("community:{}", community.id.0);
+  let active_rows: Vec<Option<i64>> = governance_config::table
+    .filter(governance_config::scope.eq(&community_scope))
+    .filter(governance_config::key.eq("rule_set.active_version_id"))
+    .order(governance_config::valid_from.desc())
+    .select(governance_config::value_int)
+    .load(&mut conn)
+    .await?;
+  assert_eq!(active_rows.len(), 2, "two active_version_id rows (one per create)");
+  assert_eq!(
+    active_rows[0],
+    Some(i64::from(v2.rule_set_version_id)),
+    "latest active_version_id == v2 id",
+  );
+
+  let log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("rule_set_version_created"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(log_count, 2, "exactly two rule_set_version_created entries");
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test A2: non-moderator non-admin caller attempts
+/// `admin_create_rule_set` → `LemmyErrorType::NotAnAdmin` AND a
+/// `admin_config_change_denied` governance_log entry with
+/// `denial_reason = "community_moderator_required"`. Actor pseudonym is
+/// populated even on denial (GDPR layer per plan §4.1).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_create_rule_set_non_moderator_rejected() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
+  use lemmy_api_common::governance::AdminCreateRuleSet;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::governance_log::GovernanceLog,
+  };
+  use lemmy_db_schema_file::schema::governance_log;
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "rs_denied".to_string(),
+      "Rule-Set Denied".to_string(),
+      "pk-rs-denied".to_string(),
+    ),
+  )
+  .await?;
+  // Seed a user that is NEITHER an admin NOR a moderator of this community.
+  let (_, outsider_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "rs_outsider", false).await?;
+
+  let result = admin_create_rule_set(
+    Json(AdminCreateRuleSet {
+      community_id: community.id,
+      rule_text: "sneaky rules".to_string(),
+      parent_id: None,
+      reason: "non-moderator probe".to_string(),
+    }),
+    context.clone(),
+    outsider_view,
+  )
+  .await;
+  assert!(result.is_err(), "non-moderator must be rejected");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let denial_rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_change_denied"))
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(denial_rows.len(), 1, "exactly one denial entry");
+  assert_eq!(
+    denial_rows[0]
+      .payload
+      .get("denial_reason")
+      .and_then(|v| v.as_str()),
+    Some("community_moderator_required"),
+    "denial_reason must be community_moderator_required",
+  );
+  assert!(
+    denial_rows[0].actor_pseudonym.is_some(),
+    "denied caller still gets a pseudonym (GDPR layer per plan §4.1)",
+  );
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test A3: two concurrent `admin_create_rule_set` calls
+/// with `parent_id = None` race on `UNIQUE(community_id, version)`. The
+/// handler computes `new_version = 1` for both concurrent callers before
+/// either insert completes; the DB then serialises the two inserts and
+/// the loser receives a UniqueViolation, which the handler maps to a
+/// retry error. This test exercises the handler's error-handling branch
+/// for that violation.
+///
+/// NOTE: plan §13 task 8 GOTCHA (Race test #3) proposes "run sequentially
+/// — create v1 twice with parent_id = None forcing version = 1 on both".
+/// That doesn't hold in practice: `lookup_latest_version` runs inside the
+/// handler before the transaction, so a second sequential call sees v1
+/// already committed and computes `new_version = 2` (no collision). The
+/// only way to force `new_version = 1` on two inserts is to have them
+/// race before either commits — i.e. tokio::join! with the shared pool.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_create_rule_set_duplicate_version_rejected()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
+  use lemmy_api_common::governance::AdminCreateRuleSet;
+  use lemmy_db_schema::source::community::{Community, CommunityInsertForm};
+  use lemmy_db_schema_file::schema::rule_set_version;
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "rs_dup".to_string(),
+      "Rule-Set Duplicate".to_string(),
+      "pk-rs-dup".to_string(),
+    ),
+  )
+  .await?;
+  let mod_view = admin_config_fixtures::seed_community_moderator(
+    &context,
+    instance.id,
+    community.id,
+    "rs_mod_dup",
+  )
+  .await?;
+
+  let ctx_a = context.clone();
+  let ctx_b = context.clone();
+  let view_a = mod_view.clone();
+  let view_b = mod_view;
+  let cid = community.id;
+
+  let (res_a, res_b) = tokio::join!(
+    admin_create_rule_set(
+      Json(AdminCreateRuleSet {
+        community_id: cid,
+        rule_text: "racer A".to_string(),
+        parent_id: None,
+        reason: "racer A".to_string(),
+      }),
+      ctx_a,
+      view_a,
+    ),
+    admin_create_rule_set(
+      Json(AdminCreateRuleSet {
+        community_id: cid,
+        rule_text: "racer B".to_string(),
+        parent_id: None,
+        reason: "racer B".to_string(),
+      }),
+      ctx_b,
+      view_b,
+    ),
+  );
+
+  let a_ok = res_a.is_ok();
+  let b_ok = res_b.is_ok();
+  // The stronger assertion is "not both succeed AND not both fail" — one
+  // of the two must prove UNIQUE serialisation held, the other proves
+  // the handler maps the error rather than crashing.
+  assert!(
+    !(a_ok && b_ok),
+    "UNIQUE(community_id, version) must prevent both concurrent inserts from succeeding",
+  );
+  assert!(
+    a_ok || b_ok,
+    "at least one racer must succeed — the other surfaces a retry error",
+  );
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let rsv_count: i64 = rule_set_version::table
+    .filter(rule_set_version::community_id.eq(community.id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    rsv_count, 1,
+    "exactly one rule_set_version row — the transaction rolled back the losing insert",
+  );
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test A4: after three successful creates, GET
+/// `/admin/rule-sets` returns all three versions ordered by `version`
+/// DESC and `active_version_id` equals the most recent id.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_list_rule_sets_returns_versions_with_active_version_id()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets};
+  use lemmy_api_common::governance::{AdminCreateRuleSet, AdminListRuleSetsRequest};
+  use lemmy_db_schema::source::community::{Community, CommunityInsertForm};
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "rs_list".to_string(),
+      "Rule-Set List".to_string(),
+      "pk-rs-list".to_string(),
+    ),
+  )
+  .await?;
+  let mod_view = admin_config_fixtures::seed_community_moderator(
+    &context,
+    instance.id,
+    community.id,
+    "rs_mod_list",
+  )
+  .await?;
+
+  let mut prev_id: Option<i32> = None;
+  let mut ids: Vec<i32> = Vec::with_capacity(3);
+  for i in 1..=3 {
+    let resp = admin_create_rule_set(
+      Json(AdminCreateRuleSet {
+        community_id: community.id,
+        rule_text: format!("rules v{i}"),
+        parent_id: prev_id,
+        reason: format!("revision {i}"),
+      }),
+      context.clone(),
+      mod_view.clone(),
+    )
+    .await?
+    .into_inner();
+    ids.push(resp.rule_set_version_id);
+    prev_id = Some(resp.rule_set_version_id);
+  }
+
+  let resp = admin_list_rule_sets(
+    Query(AdminListRuleSetsRequest {
+      community_id: community.id,
+    }),
+    context.clone(),
+    mod_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(resp.versions.len(), 3, "three versions returned");
+  // Ordered by version DESC
+  assert_eq!(resp.versions[0].version, 3);
+  assert_eq!(resp.versions[1].version, 2);
+  assert_eq!(resp.versions[2].version, 1);
+  assert_eq!(
+    resp.active_version_id,
+    Some(ids[2]),
+    "active_version_id == id of the most recently created version",
+  );
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test B1 (Issue #78): `Scope::parse_wire` rejects
+/// `community:-1` and `community:0` with the typed
+/// `ScopeParseError::NonPositiveCommunityId` variant carrying the
+/// offending integer. This is a direct-call unit-style assertion; no DB
+/// container needed, but kept in e2e.rs per plan §14's "integration-only"
+/// discipline.
+#[test]
+fn scope_parse_wire_rejects_negative_community_id() {
+  use lemmy_api::governance::config::{Scope, ScopeParseError};
+
+  assert_eq!(
+    Scope::parse_wire("community:-1"),
+    Err(ScopeParseError::NonPositiveCommunityId(-1)),
+    "negative community_id must be typed-rejected",
+  );
+  assert_eq!(
+    Scope::parse_wire("community:0"),
+    Err(ScopeParseError::NonPositiveCommunityId(0)),
+    "zero community_id must be typed-rejected",
+  );
+}
+
+/// v1-AD-c task 8 test C1 (Issue #77 write side): after a successful
+/// `admin_set_config` bumping `jury.panel_size` 5 → 7, the
+/// `admin_config_changed` governance_log payload carries
+/// `previous_value: 5, previous_from: "instance"` (the migration seed
+/// at `migrations/2026-04-18-000000-0000_add_governance_config/up.sql:82`
+/// inserts an instance-scoped row for this key with value=5, so the
+/// effective provenance is `"instance"` — NOT `"default"`). A second
+/// write 7 → 9 emits a row with `previous_value: 7, previous_from:
+/// "instance"` (the 5→7 write appended another instance-scope row;
+/// latest-wins reader picks it up). Both writes validate that the
+/// `previous_value` + `previous_from` fields thread through from the
+/// pre-tx read to the governance_log payload.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_set_config_persists_previous_value_and_from()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_config::admin_set_config;
+  use lemmy_api_common::governance::AdminSetConfig;
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_prev", true).await?;
+
+  // Write #1: 5 (seeded instance row) → 7.
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "bump to 7".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // Write #2: 7 (instance) → 9.
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(9),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "bump to 9".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let rows: Vec<GovernanceLog> = governance_log::table
+    .filter(governance_log::entry_kind.eq("admin_config_changed"))
+    .order(governance_log::id.asc())
+    .select(GovernanceLog::as_select())
+    .load::<GovernanceLog>(&mut conn)
+    .await?;
+  assert_eq!(rows.len(), 2, "two admin_config_changed rows");
+
+  // Write #1: previous is the seeded instance row (value=5, from="instance").
+  assert_eq!(
+    rows[0].payload.get("previous_value"),
+    Some(&serde_json::json!(5)),
+    "write #1 previous_value must equal the seeded instance row value 5",
+  );
+  assert_eq!(
+    rows[0].payload.get("previous_from").and_then(|v| v.as_str()),
+    Some("instance"),
+    "write #1 previous_from must be `instance` (seeded row exists at instance scope)",
+  );
+
+  // Write #2: previous is the just-written 7 with from = "instance".
+  assert_eq!(
+    rows[1].payload.get("previous_value"),
+    Some(&serde_json::json!(7)),
+    "write #2 previous_value must equal the 5→7 write",
+  );
+  assert_eq!(
+    rows[1].payload.get("previous_from").and_then(|v| v.as_str()),
+    Some("instance"),
+    "write #2 previous_from must be `instance` (latest-wins reads the 5→7 row)",
+  );
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test C2 (Issue #77 read side): after a 5→7 write,
+/// `GET /admin/config/audit` returns an entry whose `previous_value` +
+/// `previous_from` are hydrated from the payload written by task 4.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_get_config_audit_hydrates_previous_value()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Json, Query};
+  use lemmy_api::governance::admin_config::{admin_get_config_audit, admin_set_config};
+  use lemmy_api_common::governance::{AdminGetConfigAudit, AdminSetConfig};
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_hyd", true).await?;
+
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(7),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "hydration probe".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  let entries = admin_get_config_audit(
+    Query(AdminGetConfigAudit {
+      key: Some("jury.panel_size".to_string()),
+      scope: None,
+      actor_pseudonym: None,
+      since: None,
+      until: None,
+      page: None,
+      limit: None,
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(entries.len(), 1, "one audit entry for the bump");
+  assert_eq!(
+    entries[0].previous_value,
+    Some(serde_json::json!(5)),
+    "previous_value hydrated from payload — seeded instance value 5",
+  );
+  assert_eq!(
+    entries[0].previous_from.as_deref(),
+    Some("instance"),
+    "previous_from hydrated from payload — `instance` (seed row exists)",
+  );
+
+  Ok(())
+}
+
+/// v1-AD-c task 8 test D1: community-target `create_report` opens a case
+/// whose `applied_config_snapshot` contains exactly the 7
+/// `requires_re_jury` keys AND `rule_set_version_id` equals the
+/// community's active rule-set version.
+#[tokio::test(flavor = "multi_thread")]
+async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
+  use lemmy_api_common::governance::AdminCreateRuleSet;
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_common::governance::CreateGovernanceReport;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::moderation_case::ModerationCase,
+  };
+  use lemmy_db_schema_file::{enums::CaseTargetType, schema::moderation_case};
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "rs_pin".to_string(),
+      "Rule-Set Pin".to_string(),
+      "pk-rs-pin".to_string(),
+    ),
+  )
+  .await?;
+  let mod_view = admin_config_fixtures::seed_community_moderator(
+    &context,
+    instance.id,
+    community.id,
+    "rs_mod_pin",
+  )
+  .await?;
+  let (_, reporter_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "rs_reporter", false).await?;
+
+  // Seed a community rule-set version — this flips
+  // `rule_set.active_version_id` at Scope::Community(cid).
+  let v1 = admin_create_rule_set(
+    Json(AdminCreateRuleSet {
+      community_id: community.id,
+      rule_text: "community rules v1".to_string(),
+      parent_id: None,
+      reason: "pin probe".to_string(),
+    }),
+    context.clone(),
+    mod_view,
+  )
+  .await?
+  .into_inner();
+
+  // Open a case against the community (target_type=Community). The
+  // create_report handler pins the snapshot at Scope::Community(cid)
+  // because the reporter passed `community_id = Some(cid)`.
+  let resp = create_report(
+    Json(CreateGovernanceReport {
+      community_id: Some(community.id),
+      target_type: CaseTargetType::Community,
+      target_id: community.id.0,
+      reason_code: "test.pin".to_string(),
+      description: Some("pin probe".to_string()),
+    }),
+    context.clone(),
+    reporter_view,
+  )
+  .await?
+  .into_inner();
+  let case_id = resp.case_id.expect("case_id present on successful open");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let case: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select(ModerationCase::as_select())
+    .first(&mut conn)
+    .await?;
+
+  assert_eq!(
+    case.rule_set_version_id.map(|r| r.0),
+    Some(v1.rule_set_version_id),
+    "rule_set_version_id pinned to the active community version",
+  );
+
+  let snapshot = case
+    .applied_config_snapshot
+    .as_ref()
+    .expect("applied_config_snapshot populated on case open");
+  let snap_obj = snapshot
+    .as_object()
+    .expect("applied_config_snapshot is a JSON object");
+  let expected_keys: &[&str] = &[
+    "jury.panel_size",
+    "jury.quorum",
+    "jury.severity_thresholds.minor",
+    "jury.severity_thresholds.moderate",
+    "jury.severity_thresholds.severe",
+    "jury.diversity_constraints_enabled",
+    "jury.appeal_panel_size_increase",
+  ];
+  assert_eq!(
+    snap_obj.len(),
+    expected_keys.len(),
+    "snapshot has exactly 7 keys",
+  );
+  for key in expected_keys {
+    assert!(
+      snap_obj.contains_key(*key),
+      "snapshot contains `{key}`",
+    );
+  }
 
   Ok(())
 }
