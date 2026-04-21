@@ -415,13 +415,12 @@ pub async fn admin_set_config(
 
   // 2. Parse scope. Unrecognised → 400; no denial log for malformed input
   //    per §10.3 precedent (federation_outbox denial is for policy
-  //    rejections, not parsing errors).
-  let scope = Scope::parse_wire(&data.scope).ok_or_else(|| {
-    LemmyErrorType::Unknown(format!(
-      "scope `{}` is not recognised — expected `instance` or `community:<id>`",
-      data.scope
-    ))
-  })?;
+  //    rejections, not parsing errors). Wrap typed ScopeParseError in
+  //    LemmyErrorType::Unknown so existing wire behaviour (400 + readable
+  //    text) is preserved while the enum gives callers a discriminable
+  //    error variant; see v1-AD-c plan §10.2.
+  let scope = Scope::parse_wire(&data.scope)
+    .map_err(|e| LemmyErrorType::Unknown(e.to_string()))?;
 
   // 3. Reason must be non-empty trimmed — mirror of admin_close_case.
   if data.reason.trim().is_empty() {

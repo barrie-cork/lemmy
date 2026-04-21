@@ -137,16 +137,49 @@ impl Scope {
   }
 
   /// Parse a wire-format scope string. Mirror of [`Scope::as_str`] —
-  /// accepts exactly `"instance"` or `"community:<i32>"` with no
-  /// whitespace. Returns `None` on any other shape so the caller can
-  /// emit a clean 400.
-  pub fn parse_wire(s: &str) -> Option<Self> {
+  /// accepts exactly `"instance"` or `"community:<positive i32>"` with no
+  /// whitespace. Returns a typed [`ScopeParseError`] on any other shape
+  /// so the caller can emit a clean 400 and distinguish malformed input
+  /// from a non-positive community id.
+  pub fn parse_wire(s: &str) -> Result<Self, ScopeParseError> {
     if s == "instance" {
-      return Some(Scope::Instance);
+      return Ok(Scope::Instance);
     }
-    let rest = s.strip_prefix("community:")?;
-    let id = rest.parse::<i32>().ok()?;
-    Some(Scope::Community(CommunityId(id)))
+    let Some(rest) = s.strip_prefix("community:") else {
+      return Err(ScopeParseError::Malformed(s.to_owned()));
+    };
+    let id: i32 = rest
+      .parse()
+      .map_err(|_parse_err| ScopeParseError::Malformed(s.to_owned()))?;
+    if id < 1 {
+      return Err(ScopeParseError::NonPositiveCommunityId(id));
+    }
+    Ok(Scope::Community(CommunityId(id)))
+  }
+}
+
+/// Error returned by [`Scope::parse_wire`]. Kept minimal (no `reason`
+/// field) so tests can assert on equality; see task 1 GOTCHA in the
+/// v1-AD-c plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ScopeParseError {
+  /// Input did not match either `"instance"` or `"community:<int>"`.
+  Malformed(String),
+  /// Input matched `"community:<int>"` but the int was <= 0.
+  NonPositiveCommunityId(i32),
+}
+
+impl std::fmt::Display for ScopeParseError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ScopeParseError::Malformed(s) => write!(
+        f,
+        "scope `{s}` is not recognised — expected `instance` or `community:<positive int>`"
+      ),
+      ScopeParseError::NonPositiveCommunityId(n) => {
+        write!(f, "community_id must be >= 1; got {n}")
+      }
+    }
   }
 }
 
