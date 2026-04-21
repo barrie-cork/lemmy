@@ -1,0 +1,13 @@
+{
+  "name": "brehon-webhook-channel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP channel that pushes CI/CodeRabbit events into a Claude Code session",
+  "scripts": {
+    "start": "bun webhook.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

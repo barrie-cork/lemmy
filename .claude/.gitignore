@@ -3,5 +3,11 @@
 build-*.log
 audit-*.log
 
+# Pre-phase wrapper-audit completion flags (local cargo cache state, per-dev)
+audit-*-complete.flag
+
 # Ralph state file (transient — only exists during a loop)
 prp-ralph.state.md
+
+# Sensitive token stash (defense-in-depth — primary location is outside repo)
+brehon-telegram-token.txt
