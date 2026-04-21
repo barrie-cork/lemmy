@@ -1237,7 +1237,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **VALIDATE**:
   ```bash
   cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features full > .claude/build-task7.log 2>&1"; echo "exit: $?"
-  cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server --features full > .claude/build-task7-server.log 2>&1"; echo "exit: $?"
+  cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/build-task7-workspace.log 2>&1"; echo "exit: $?"
   ```
 - **COMMIT MESSAGE**: `feat(routes): wire /admin/rule-sets POST + GET (task 7)`
 
