@@ -37,13 +37,14 @@ use diesel::{
 use diesel_async::RunQueryDsl;
 use lemmy_api::governance::{
   actor_pseudonym_helper,
+  case_open_snapshot,
   config::{self, ConfigCache, Scope},
   governance_log,
   reputation_snapshot,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::{
-  newtypes::{CommentId, CommunityId, ModerationCaseId, PostId},
+  newtypes::{CommentId, CommunityId, ModerationCaseId, PostId, RuleSetVersionId},
   source::{
     comment::Comment,
     community::Community,
@@ -175,6 +176,31 @@ pub async fn create_report(
       } else {
         CaseStatus::Open
       };
+
+      // Pin the case-open snapshot per v1-AD-c §4.1. The scope mirrors
+      // the case's community: community-scoped reports pin against
+      // Scope::Community(cid); instance-scoped reports (no
+      // community_id) pin against Scope::Instance. In-flight juries
+      // read the pinned snapshot so later admin-config edits cannot
+      // retroactively change panel size, quorum, or thresholds
+      // (ADR-010 append-only invariant).
+      let case_scope = match data.community_id {
+        Some(cid) => Scope::Community(cid),
+        None => Scope::Instance,
+      };
+      let applied_config_snapshot =
+        case_open_snapshot::build_applied_config_snapshot(&mut conn.into(), case_scope).await?;
+      let active_version_i64 = config::get_int_opt(
+        &mut cache,
+        &mut conn.into(),
+        case_scope,
+        "rule_set.active_version_id",
+      )
+      .await?;
+      let rule_set_version_id = active_version_i64
+        .and_then(|i| i32::try_from(i).ok())
+        .map(RuleSetVersionId);
+
       let form = ModerationCaseInsertForm {
         community_id: data.community_id,
         creator_id: Some(reporter_id),
@@ -188,7 +214,8 @@ pub async fn create_report(
         severity: CaseSeverity::default(),
         status: initial_status,
         threshold_score: initial_score,
-        ..Default::default()
+        applied_config_snapshot: Some(applied_config_snapshot),
+        rule_set_version_id,
       };
       let row = insert_into(moderation_case::table)
         .values(&form)
