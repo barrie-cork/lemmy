@@ -515,6 +515,7 @@ pub async fn admin_set_config(
   let scope_for_tx = scope;
   let admin_id_for_tx = admin_id;
   let metadata_for_tx = metadata;
+  let previous_for_tx = preview.previous.clone();
 
   let (cfg_id, log_id, applied_at) = conn
     .run_transaction(|conn| {
@@ -526,6 +527,7 @@ pub async fn admin_set_config(
           scope_for_tx,
           metadata_for_tx,
           data_for_tx,
+          previous_for_tx,
         )
         .await
       }
@@ -553,6 +555,7 @@ async fn process_set_config(
   scope: Scope,
   metadata: ConfigKeyMetadata,
   data: AdminSetConfig,
+  previous: ConfigValueWithProvenance,
 ) -> LemmyResult<(i32, i64, chrono::DateTime<chrono::Utc>)> {
   // Unpack the JSON value into the four typed columns exactly as the shell
   // wrapper does: exactly one is `Some`, the other three are `None`. The
@@ -577,17 +580,7 @@ async fn process_set_config(
     .get_result::<GovernanceConfig>(conn)
     .await?;
 
-  // Shell-identical payload: `{scope, key, value_type, value, reason}` in
-  // this exact declaration order. `apply_at` is deliberately absent here
-  // so NOT5 gate 3 holds; the response carries `apply_at` via `preview`
-  // when task 5 extends the preview shape.
-  let payload = json!({
-    "scope":      row.scope,
-    "key":        row.key,
-    "value_type": row.value_type,
-    "value":      data.value,
-    "reason":     data.reason,
-  });
+  let payload = build_admin_config_changed_payload(&row, &data, &previous);
 
   let log_row = governance_log::append(
     &mut conn.into(),
@@ -598,6 +591,29 @@ async fn process_set_config(
   .await?;
 
   Ok((row.id.0, log_row.id.0, row.valid_from))
+}
+
+/// Build the `admin_config_changed` governance-log payload.
+///
+/// Field order is load-bearing: the shell-wrapper's 5 fields come first
+/// (so pre-v1-AD-c shell-written rows remain parseable by `project_to_audit_entry`),
+/// then the two v1-AD-c additions (`previous_value`, `previous_from`) at
+/// the tail. The reader degrades missing tail fields to `None` — see
+/// `project_to_audit_entry`.
+fn build_admin_config_changed_payload(
+  row: &GovernanceConfig,
+  data: &AdminSetConfig,
+  previous: &ConfigValueWithProvenance,
+) -> Value {
+  json!({
+    "scope":          row.scope,
+    "key":            row.key,
+    "value_type":     row.value_type,
+    "value":          data.value,
+    "reason":         data.reason,
+    "previous_value": previous.value,
+    "previous_from":  previous.effective_from,
+  })
 }
 
 // -- helpers (kept private to v1-AD-b's admin_config module) ----------------
@@ -1278,8 +1294,10 @@ fn numeric_range_tuple(r: NumericRange) -> (f64, f64) {
 /// always produce well-formed payloads, but future migrations may add
 /// fields and older rows should still list).
 ///
-/// `previous_value` is always `None` for v1-AD-b; a future revision may
-/// join to the prior row in the same `(scope, key)` bucket to hydrate it.
+/// `previous_value` + `previous_from` are hydrated from the payload's
+/// v1-AD-c tail fields via `.get(...).cloned()` / `.and_then(as_str)`.
+/// Shell-written rows and pre-v1-AD-c HTTP rows omit those keys; this
+/// projection returns `None` for them. See Issue #77.
 fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
   let payload = &row.payload;
   let scope = payload
@@ -1298,6 +1316,11 @@ fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
     .unwrap_or("")
     .to_string();
   let new_value = payload.get("value").cloned().unwrap_or(Value::Null);
+  let previous_value = payload.get("previous_value").cloned();
+  let previous_from = payload
+    .get("previous_from")
+    .and_then(|v| v.as_str())
+    .map(str::to_owned);
   let reason = payload
     .get("reason")
     .and_then(|v| v.as_str())
@@ -1318,8 +1341,8 @@ fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
     scope,
     key,
     value_type,
-    previous_value: None,
-    previous_from: None,
+    previous_value,
+    previous_from,
     new_value,
     reason,
     actor_pseudonym: row.actor_pseudonym,
@@ -1358,11 +1381,13 @@ mod payload_parity {
     );
   }
 
-  // Field order is load-bearing for shell parity. `serde_json` preserves
-  // macro-literal key order when built with `preserve_order`
-  // (`Cargo.toml:201`); this test pins the sequence that the handler
-  // emits at `admin_config.rs:571-593` and the shell at
-  // `admin-config-write.sh:146-157`.
+  // Field order is load-bearing for shell parity on the FIRST 5 FIELDS.
+  // `serde_json` preserves macro-literal key order when built with
+  // `preserve_order` (`Cargo.toml:201`). This test pins the 5-field
+  // shell-parity prefix emitted by the v0 wrapper
+  // (`admin-config-write.sh:146-157`). v1-AD-c's handler emits a 7-field
+  // payload by appending `previous_value` + `previous_from` after this
+  // prefix; see `build_admin_config_changed_payload_matches_preview_previous`.
   #[test]
   fn payload_field_order_matches_shell() {
     let payload = json!({
@@ -1379,5 +1404,75 @@ mod payload_parity {
       .map(String::as_str)
       .collect();
     assert_eq!(keys, vec!["scope", "key", "value_type", "value", "reason"]);
+  }
+}
+
+#[cfg(test)]
+mod build_payload_tests {
+  use super::build_admin_config_changed_payload;
+  use chrono::Utc;
+  use lemmy_api_common::governance::{AdminSetConfig, ConfigValueWithProvenance};
+  use lemmy_db_schema::{newtypes::GovernanceConfigId, source::governance::governance_config::GovernanceConfig};
+  use serde_json::json;
+
+  // Drift-guard for Issue #77. The HTTP response exposes
+  // `preview.previous` and the governance_log payload exposes
+  // `previous_value` + `previous_from`. Both are hydrated from the SAME
+  // pre-tx `ConfigValueWithProvenance`. If someone later changes the
+  // preview shape without updating the payload builder (or vice versa),
+  // this test catches the double-source-of-truth drift before it reaches
+  // the audit trail.
+  #[test]
+  fn build_admin_config_changed_payload_matches_preview_previous() {
+    let row = GovernanceConfig {
+      id: GovernanceConfigId(42),
+      scope: "community:7".to_string(),
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value_int: Some(9),
+      value_float: None,
+      value_bool: None,
+      value_text: None,
+      valid_from: Utc::now(),
+      updated_by: None,
+    };
+    let data = AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: json!(9),
+      scope: "community:7".to_string(),
+      apply_at: None,
+      dry_run: Some(false),
+      reason: "expand panel".to_string(),
+    };
+    let previous = ConfigValueWithProvenance {
+      value: json!(7),
+      effective_from: "instance".to_string(),
+    };
+
+    let payload = build_admin_config_changed_payload(&row, &data, &previous);
+    let obj = payload.as_object().expect("payload is a JSON object");
+
+    // Shell-parity prefix (first 5 keys in the shell-emitting order).
+    let keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+    assert_eq!(
+      keys,
+      vec![
+        "scope",
+        "key",
+        "value_type",
+        "value",
+        "reason",
+        "previous_value",
+        "previous_from",
+      ]
+    );
+
+    // The two v1-AD-c tail fields mirror preview.previous byte-for-byte.
+    assert_eq!(obj.get("previous_value"), Some(&previous.value));
+    assert_eq!(
+      obj.get("previous_from").and_then(|v| v.as_str()),
+      Some(previous.effective_from.as_str())
+    );
   }
 }
