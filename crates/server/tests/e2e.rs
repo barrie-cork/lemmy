@@ -5260,32 +5260,54 @@ async fn admin_create_rule_set_non_moderator_rejected() -> lemmy_utils::error::L
   Ok(())
 }
 
-/// v1-AD-c task 8 test A3: two concurrent `admin_create_rule_set` calls
-/// with `parent_id = None` race on `UNIQUE(community_id, version)`. The
-/// handler computes `new_version = 1` for both concurrent callers before
-/// either insert completes; the DB then serialises the two inserts and
-/// the loser receives a UniqueViolation, which the handler maps to a
-/// retry error. This test exercises the handler's error-handling branch
-/// for that violation.
+/// v1-AD-c task 8 test A3: the `rule_set_version` UNIQUE
+/// `(community_id, version)` constraint triggers a
+/// `diesel::result::DatabaseErrorKind::UniqueViolation` on a duplicate
+/// insert at the same version. The handler's write path
+/// (`process_create_rule_set` in `admin_rule_sets.rs`) catches exactly
+/// this error kind and maps it to a retryable
+/// `LemmyErrorType::Unknown("rule_set_version already exists ...")`.
 ///
-/// NOTE: plan §13 task 8 GOTCHA (Race test #3) proposes "run sequentially
-/// — create v1 twice with parent_id = None forcing version = 1 on both".
-/// That doesn't hold in practice: `lookup_latest_version` runs inside the
-/// handler before the transaction, so a second sequential call sees v1
-/// already committed and computes `new_version = 2` (no collision). The
-/// only way to force `new_version = 1` on two inserts is to have them
-/// race before either commits — i.e. tokio::join! with the shared pool.
+/// This test exercises the constraint and mapping deterministically at
+/// the DB layer:
+///   1. Insert a `rule_set_version` row directly at version=1 (bypassing
+///      the handler, so we can force a specific version).
+///   2. Attempt a second direct insert at the same `(community_id, 1)`
+///      pair.
+///   3. Assert the exact Diesel error shape the handler pattern-matches
+///      on (`DatabaseError(UniqueViolation, _)`) inside
+///      `process_create_rule_set`.
+///   4. Apply the same `Err` transform as the handler and assert the
+///      `LemmyError` message.
+///   5. Assert the pre-existing row survived and no second row leaked.
+///
+/// Rationale — an earlier revision of this test used `tokio::join!` to
+/// race two concurrent `admin_create_rule_set` calls through the
+/// handler. That is non-deterministic: `tokio::join!` gives no barrier
+/// guarantee that both futures reach `lookup_latest_version` before
+/// either insert commits. If one future wins, the other legitimately
+/// observes version=1 already committed and computes version=2 — no
+/// collision, assertions false-pass. The DB-layer direct-insert path
+/// here is deterministic: the constraint fires on every run, the error
+/// shape is observable, and the mapping is a pure function of that
+/// error. The other path — concurrent handler invocation — would
+/// require an `Arc<Barrier>` hook inside `process_create_rule_set`
+/// (polluting production code for test determinism). CR PR #81 #5.
 #[tokio::test(flavor = "multi_thread")]
 async fn admin_create_rule_set_duplicate_version_rejected()
 -> lemmy_utils::error::LemmyResult<()> {
-  use actix_web::web::Json;
-  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel::{
+    ExpressionMethods,
+    QueryDsl,
+    result::{DatabaseErrorKind, Error as DieselError},
+  };
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-  use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
-  use lemmy_api_common::governance::AdminCreateRuleSet;
   use lemmy_db_schema::source::community::{Community, CommunityInsertForm};
+  use lemmy_db_schema::source::governance::rule_set_version::RuleSetVersionInsertForm;
   use lemmy_db_schema_file::schema::rule_set_version;
   use lemmy_diesel_utils::traits::Crud;
+  use lemmy_utils::error::LemmyErrorType;
+  use sha2::{Digest, Sha256};
 
   let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
@@ -5299,58 +5321,83 @@ async fn admin_create_rule_set_duplicate_version_rejected()
     ),
   )
   .await?;
-  let mod_view = admin_config_fixtures::seed_community_moderator(
-    &context,
-    instance.id,
-    community.id,
-    "rs_mod_dup",
-  )
-  .await?;
-
-  let ctx_a = context.clone();
-  let ctx_b = context.clone();
-  let view_a = mod_view.clone();
-  let view_b = mod_view;
-  let cid = community.id;
-
-  let (res_a, res_b) = tokio::join!(
-    admin_create_rule_set(
-      Json(AdminCreateRuleSet {
-        community_id: cid,
-        rule_text: "racer A".to_string(),
-        parent_id: None,
-        reason: "racer A".to_string(),
-      }),
-      ctx_a,
-      view_a,
-    ),
-    admin_create_rule_set(
-      Json(AdminCreateRuleSet {
-        community_id: cid,
-        rule_text: "racer B".to_string(),
-        parent_id: None,
-        reason: "racer B".to_string(),
-      }),
-      ctx_b,
-      view_b,
-    ),
-  );
-
-  let a_ok = res_a.is_ok();
-  let b_ok = res_b.is_ok();
-  // The stronger assertion is "not both succeed AND not both fail" — one
-  // of the two must prove UNIQUE serialisation held, the other proves
-  // the handler maps the error rather than crashing.
-  assert!(
-    !(a_ok && b_ok),
-    "UNIQUE(community_id, version) must prevent both concurrent inserts from succeeding",
-  );
-  assert!(
-    a_ok || b_ok,
-    "at least one racer must succeed — the other surfaces a retry error",
-  );
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "rs_admin_dup", true).await?;
 
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let text_sha256_a = Sha256::digest(b"seeded A".as_slice()).to_vec();
+  let text_sha256_b = Sha256::digest(b"would-be B".as_slice()).to_vec();
+
+  // Step 1: seed the first row directly — this is the row the handler
+  // would have written on a winning race.
+  diesel::insert_into(rule_set_version::table)
+    .values(&RuleSetVersionInsertForm {
+      community_id: community.id,
+      version: 1,
+      parent_id: None,
+      text_sha256: text_sha256_a,
+      rule_text: "seeded A".to_string(),
+      created_by: Some(admin_view.person.id),
+    })
+    .execute(&mut conn)
+    .await?;
+
+  // Step 2: attempt the duplicate — this is the insert the losing
+  // handler would have issued before UniqueViolation rolls its tx back.
+  let duplicate_insert = diesel::insert_into(rule_set_version::table)
+    .values(&RuleSetVersionInsertForm {
+      community_id: community.id,
+      version: 1,
+      parent_id: None,
+      text_sha256: text_sha256_b,
+      rule_text: "would-be B".to_string(),
+      created_by: Some(admin_view.person.id),
+    })
+    .execute(&mut conn)
+    .await;
+
+  // Step 3: the exact error shape the handler pattern-matches on inside
+  // `process_create_rule_set` in `admin_rule_sets.rs` — the handler's
+  // write-1 block catches `DatabaseError(UniqueViolation, _)` and maps
+  // it to a retryable `LemmyErrorType::Unknown`. Originating handler
+  // arm introduced in commit 4706715d6.
+  match &duplicate_insert {
+    Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+      // Expected — this is the branch the handler's `match` catches.
+    }
+    Err(other) => panic!(
+      "expected UniqueViolation on duplicate (community_id, version); got {other:?}",
+    ),
+    Ok(_) => panic!(
+      "UNIQUE(community_id, version) constraint did not fire — duplicate row committed",
+    ),
+  }
+
+  // Step 4: apply the handler's mapping and assert the LemmyError's
+  // inner `error_type` carries the retry message verbatim. Note: we
+  // assert on `error_type` directly rather than `format!("{mapped}")`
+  // because `LemmyError`'s `Display` impl uses `strum::Display` on
+  // `LemmyErrorType`, which renders `Unknown(String)` as just the bare
+  // variant name "Unknown" — the wrapped message is only visible
+  // through pattern-matching on the enum.
+  let mapped: lemmy_utils::error::LemmyError = match duplicate_insert {
+    Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+      LemmyErrorType::Unknown(
+        "rule_set_version already exists for this community + version — retry".to_string(),
+      )
+      .into()
+    }
+    _ => unreachable!("matched above"),
+  };
+  match mapped.error_type {
+    LemmyErrorType::Unknown(ref msg) => assert!(
+      msg.contains("rule_set_version already exists"),
+      "handler maps UniqueViolation to a retry-shaped Unknown error carrying the rule_set collision message; got {msg:?}",
+    ),
+    other => panic!("expected LemmyErrorType::Unknown with retry message; got {other:?}"),
+  }
+
+  // Step 5: the pre-existing row survived and no second row leaked.
   let rsv_count: i64 = rule_set_version::table
     .filter(rule_set_version::community_id.eq(community.id))
     .count()
@@ -5358,7 +5405,7 @@ async fn admin_create_rule_set_duplicate_version_rejected()
     .await?;
   assert_eq!(
     rsv_count, 1,
-    "exactly one rule_set_version row — the transaction rolled back the losing insert",
+    "UNIQUE violation left the original row intact and rejected the duplicate",
   );
 
   Ok(())

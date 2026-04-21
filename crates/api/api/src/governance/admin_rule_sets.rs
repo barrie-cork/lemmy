@@ -52,6 +52,7 @@ use crate::governance::{
   actor_pseudonym_helper,
   config::{self, Scope},
   governance_log,
+  redaction::scrub,
 };
 
 pub async fn admin_create_rule_set(
@@ -61,14 +62,20 @@ pub async fn admin_create_rule_set(
 ) -> LemmyResult<Json<AdminCreateRuleSetResponse>> {
   let data = data.into_inner();
 
-  // 1. Capability gate — community moderator OR instance admin.
-  let is_mod = CommunityModeratorView::check_is_community_moderator(
+  // 1. Capability gate — community moderator OR instance admin. Match
+  //    `NotAModerator` explicitly; any other error (transient DB/read
+  //    failure) is propagated so a denial log is not falsely written.
+  let is_mod = match CommunityModeratorView::check_is_community_moderator(
     &mut context.pool(),
     data.community_id,
     local_user_view.person.id,
   )
   .await
-  .is_ok();
+  {
+    Ok(()) => true,
+    Err(e) if matches!(e.error_type, LemmyErrorType::NotAModerator) => false,
+    Err(e) => return Err(e),
+  };
   let is_admin_ok = is_admin(&local_user_view).is_ok();
   if !(is_mod || is_admin_ok) {
     emit_rule_set_denial_log(
@@ -255,13 +262,19 @@ pub async fn admin_list_rule_sets(
 ) -> LemmyResult<Json<AdminListRuleSetsResponse>> {
   let data = data.into_inner();
 
-  let is_mod = CommunityModeratorView::check_is_community_moderator(
+  // Capability gate — match `NotAModerator` explicitly; propagate other
+  // errors (transient DB/read failures) rather than masking as NotAnAdmin.
+  let is_mod = match CommunityModeratorView::check_is_community_moderator(
     &mut context.pool(),
     data.community_id,
     local_user_view.person.id,
   )
   .await
-  .is_ok();
+  {
+    Ok(()) => true,
+    Err(e) if matches!(e.error_type, LemmyErrorType::NotAModerator) => false,
+    Err(e) => return Err(e),
+  };
   let is_admin_ok = is_admin(&local_user_view).is_ok();
   if !(is_mod || is_admin_ok) {
     return Err(LemmyErrorType::NotAnAdmin.into());
@@ -295,7 +308,7 @@ pub async fn admin_list_rule_sets(
       version: rsv.version,
       parent_id: rsv.parent_id.map(|p| p.0),
       text_sha256_hex: hex::encode(&rsv.text_sha256),
-      rule_text: rsv.rule_text,
+      rule_text: scrub(&rsv.rule_text),
       created_at: rsv.created_at,
       created_by_pseudonym: None,
     })

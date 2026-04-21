@@ -172,9 +172,13 @@ pub enum ScopeParseError {
 impl std::fmt::Display for ScopeParseError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      ScopeParseError::Malformed(s) => write!(
+      // Raw `s` is untrusted user input from the wire; do not echo it back
+      // into the response. ADR-015: every user-visible string is scrubbed
+      // before leaving the handler, and the simplest form of scrub for an
+      // arbitrary-bytes field is to drop it entirely.
+      ScopeParseError::Malformed(_) => write!(
         f,
-        "scope `{s}` is not recognised — expected `instance` or `community:<positive int>`"
+        "scope is not recognised — expected `instance` or `community:<positive int>`"
       ),
       ScopeParseError::NonPositiveCommunityId(n) => {
         write!(f, "community_id must be >= 1; got {n}")
