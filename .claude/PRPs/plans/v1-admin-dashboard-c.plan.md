@@ -754,7 +754,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **GOTCHA**: `CommunityId` is imported from `lemmy_db_schema::newtypes`. Match the import style at line ~20 of governance.rs.
 - **GOTCHA**: `text_sha256_hex` — a hex string, not `Vec<u8>`. The DB column is `BYTEA` but the wire representation is hex for readability. The view mapper in task 3 does `hex::encode`.
 - **GOTCHA**: `created_by_pseudonym` — translated from `rule_set_version.created_by: Option<PersonId>` via a `LEFT JOIN actor_pseudonym` or a secondary lookup. Keep the view lookup simple (secondary query) — task 3's `admin_list_rule_sets` handler resolves this.
-- **VALIDATE**: `cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api_common --features full > .claude/build-task2.log 2>&1"; echo "exit: $?"`
+- **VALIDATE**: `cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features full > .claude/build-task2.log 2>&1"; echo "exit: $?"`
 - **COMMIT MESSAGE**: `feat(api-common): rule-set DTOs + AdminConfigAuditEntry.previous_from (task 2)`
 
 ### Task 3 — `admin_create_rule_set` + `admin_list_rule_sets` handlers + `ENTRY_KIND_RULE_SET_VERSION_CREATED` const
@@ -1192,7 +1192,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **VALIDATE**:
   ```bash
   cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features full > .claude/build-task5a.log 2>&1"; echo "exit: $?"
-  cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api_crud --features full > .claude/build-task5b.log 2>&1"; echo "exit: $?"
+  cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features full > .claude/build-task5b.log 2>&1"; echo "exit: $?"
   cmd //c "scripts\\brehon\\cargo-test.bat -p lemmy_api --features full case_open_snapshot > .claude/test-task5.log 2>&1"; echo "exit: $?"
   ```
 - **COMMIT MESSAGE**: `feat(case-open): pin applied_config_snapshot + rule_set_version_id (task 5)`
@@ -1236,7 +1236,7 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **GOTCHA**: `rate_limit.post()` middleware: the outer `/governance/admin` scope already applies the middleware. The inner `/rule-sets` scope inherits it — no explicit middleware annotation needed.
 - **VALIDATE**:
   ```bash
-  cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api_routes --features full > .claude/build-task7.log 2>&1"; echo "exit: $?"
+  cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_api --features full > .claude/build-task7.log 2>&1"; echo "exit: $?"
   cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server --features full > .claude/build-task7-server.log 2>&1"; echo "exit: $?"
   ```
 - **COMMIT MESSAGE**: `feat(routes): wire /admin/rule-sets POST + GET (task 7)`
