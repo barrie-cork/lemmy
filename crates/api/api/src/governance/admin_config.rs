@@ -1319,6 +1319,7 @@ fn project_to_audit_entry(row: GovernanceLog) -> AdminConfigAuditEntry {
     key,
     value_type,
     previous_value: None,
+    previous_from: None,
     new_value,
     reason,
     actor_pseudonym: row.actor_pseudonym,
