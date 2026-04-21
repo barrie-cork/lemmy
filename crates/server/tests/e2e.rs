@@ -4971,10 +4971,19 @@ async fn admin_get_config_audit_paginated() -> lemmy_utils::error::LemmyResult<(
   Ok(())
 }
 
-/// Task 8 test 12 (NOT5 gate 3): write via HTTP handler AND write via raw
-/// SQL matching the shell script's INSERT. Payload JSONB must be
-/// byte-identical across both rows (ignoring actor_pseudonym, signature,
-/// entry_hash, prev_hash). Proof of shell-wrapper interchangeability.
+/// Task 8 test 12 (NOT5 gate 3, continuity semantics per PRD §8.4 condition 3,
+/// amended 2026-04-21): write via HTTP handler AND write via raw SQL matching
+/// the shell script's INSERT. The two payloads are **continuous**, not
+/// byte-identical: for every key the shell script emits (`scope`, `key`,
+/// `value_type`, `value`, `reason`) the two payloads must agree
+/// byte-for-byte, AND the HTTP path may emit strictly more keys
+/// (`previous_value`, `previous_from` as of v1-AD-c task 4, closes
+/// GH #77). `project_to_audit_entry` degrades the HTTP-only fields to
+/// `None` on shell-written rows, so downstream readers see a coherent
+/// schema either way. This test guards the subset-parity contract +
+/// asserts the additive fields land on the HTTP row and are absent on
+/// the shell row (future drift would flip that asymmetry and must be
+/// caught here).
 #[tokio::test(flavor = "multi_thread")]
 async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResult<()> {
   use actix_web::web::Json;
@@ -5037,19 +5046,38 @@ async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResul
   // entry_kind must match (trivially; already filtered).
   assert_eq!(rows[0].entry_kind, rows[1].entry_kind);
 
-  // Payload must be byte-identical across the two writes. This proves
-  // NOT5 gate 3: the Rust handler's `json!` macro + `preserve_order`
-  // serde_json feature produces byte-identical JSONB to the shell
-  // wrapper's `jsonb_build_object`.
-  //
-  // Postgres canonicalises jsonb column round-tripping (spaces after
-  // commas, colons, etc.) — both rows come through the same
-  // canonicaliser here, so the comparison is on the canonicalised
-  // form. That's still the contract we care about: what a downstream
-  // reader sees.
-  assert_eq!(
-    rows[0].payload, rows[1].payload,
-    "HTTP handler and shell-script payloads must be byte-identical (NOT5 gate 3)",
+  // Subset parity: for every key the shell script emits, the two
+  // payloads must agree byte-for-byte. Postgres canonicalises jsonb on
+  // round-trip (spaces after commas, colons, etc.); both rows come
+  // through the same canonicaliser so the comparison is on the
+  // canonicalised form — the contract we care about is what a
+  // downstream reader sees.
+  for key in ["scope", "key", "value_type", "value", "reason"] {
+    assert_eq!(
+      rows[0].payload.get(key),
+      rows[1].payload.get(key),
+      "subset-parity: key `{key}` must be byte-identical across HTTP and shell paths (NOT5 gate 3, PRD §8.4 condition 3)",
+    );
+  }
+
+  // HTTP row carries the additive fields introduced by v1-AD-c task 4
+  // (closes GH #77). Shell row must not silently start emitting them
+  // until scripts/brehon/admin-config-write.sh is updated to match.
+  assert!(
+    rows[0].payload.get("previous_value").is_some_and(|v| !v.is_null()),
+    "HTTP row must carry previous_value (t4 extension, PRD §8.4 condition 3 amended)",
+  );
+  assert!(
+    rows[0].payload.get("previous_from").is_some_and(|v| !v.is_null()),
+    "HTTP row must carry previous_from (t4 extension, PRD §8.4 condition 3 amended)",
+  );
+  assert!(
+    rows[1].payload.get("previous_value").is_none(),
+    "shell row must NOT carry previous_value until admin-config-write.sh is updated (option A, chore #5)",
+  );
+  assert!(
+    rows[1].payload.get("previous_from").is_none(),
+    "shell row must NOT carry previous_from until admin-config-write.sh is updated (option A, chore #5)",
   );
 
   Ok(())
