@@ -34,7 +34,7 @@
 
 ## Branch topology at plan-time
 
-```
+```text
 governance-v0 @ cf89890f3          ← PR #81 merge commit, v1-AD-c landed
       │
       │  (plan PR will branch from here)
