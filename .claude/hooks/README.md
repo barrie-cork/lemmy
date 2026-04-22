@@ -1,99 +1,98 @@
-# PRP Ralph Hooks
+# Brehon hooks
 
-This directory contains hooks for the PRP Ralph autonomous loop system.
+This directory contains shell scripts wired to Claude Code lifecycle events
+via `.claude/settings.json`. Each script receives the event payload as JSON
+on stdin, and signals decisions through stdout/stderr + exit code per
+[hooks docs](https://code.claude.com/docs/en/hooks).
+
+## Inventory
+
+| Script                      | Event              | Matcher           | Purpose                                                                                              |
+| :-------------------------- | :----------------- | :---------------- | :--------------------------------------------------------------------------------------------------- |
+| `prp-ralph-stop.sh`         | `Stop`             | (any)             | Keeps the PRP Ralph autonomous loop running between iterations until `<promise>COMPLETE</promise>`. |
+| `check-cargo-pipe.sh`       | `PreToolUse`       | `Bash`            | Blocks `cargo … \| tail/head/grep/…` per `.claude/rules/cargo-output-capture.md`. Exit 2 with fix.  |
+| `inject-dq-state.sh`        | `UserPromptSubmit` | (any)             | Injects current decision-queue + task-hopper state when anything is pending. Silent in steady state. |
+| `pre-phase-audit.sh`        | `SessionStart`     | `startup`/`resume`| On `phase-*` branches, reminds the agent to run the 4 wrapper probes from `pre-phase-harness-audit.md` if not yet completed. |
 
 ## Setup
 
-### Option 1: Project-level hooks (Recommended)
+The hooks are wired in `.claude/settings.json` (committed), so they take
+effect on next session start. No per-developer configuration required.
 
-Add to your project's `.claude/settings.local.json`:
+To temporarily disable all hooks for a session, set `"disableAllHooks": true`
+in `.claude/settings.local.json`.
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/prp-ralph-stop.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+## Testing each hook manually
+
+```bash
+# check-cargo-pipe.sh — should block (exit 2) and print the fix message
+echo '{"tool_name":"Bash","tool_input":{"command":"cargo build | tail -40"}}' \
+  | bash .claude/hooks/check-cargo-pipe.sh
+echo "exit: $?"
+
+# check-cargo-pipe.sh — should allow (exit 0, no output)
+echo '{"tool_name":"Bash","tool_input":{"command":"cargo build > /tmp/x.log 2>&1; tail -40 /tmp/x.log"}}' \
+  | bash .claude/hooks/check-cargo-pipe.sh
+echo "exit: $?"
+
+# inject-dq-state.sh — emits JSON only when DQ pending or hopper escalated
+echo '{}' | bash .claude/hooks/inject-dq-state.sh
+echo "exit: $?"
+
+# pre-phase-audit.sh — emits reminder JSON only on phase-* branches without flag
+echo '{"source":"startup"}' | bash .claude/hooks/pre-phase-audit.sh
+echo "exit: $?"
 ```
 
-### Option 2: Global hooks
+After running all 4 wrapper probes from `pre-phase-harness-audit.md`, mark
+the audit complete so the SessionStart reminder stops firing for this branch:
 
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/path/to/project/.claude/hooks/prp-ralph-stop.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
+```bash
+touch .claude/audit-$(git rev-parse --abbrev-ref HEAD | tr / -)-complete.flag
 ```
 
-## How It Works
+## Ralph loop specifics
 
-1. When you run `/prp-ralph <plan>`, it creates `.claude/prp-ralph.state.md`
-2. The stop hook (`prp-ralph-stop.sh`) checks for this state file on every exit attempt
-3. If the state file exists and completion promise not found:
+The Stop hook (`prp-ralph-stop.sh`) keys off `.claude/prp-ralph.state.md`:
+
+1. `/prp-ralph <plan>` creates the state file with iteration counter.
+2. On every session-stop attempt, the hook checks for the state file.
+3. If state exists and `<promise>COMPLETE</promise>` not in last assistant message:
    - Increments iteration counter
-   - Feeds the same prompt back to Claude
+   - Feeds the plan execution prompt back to Claude
    - Loop continues
-4. If completion promise (`<promise>COMPLETE</promise>`) detected:
-   - State file is removed
-   - Session exits normally
-5. If max iterations reached:
+4. If completion promise detected OR max iterations reached:
    - State file is removed
    - Session exits normally
 
-## Files
-
-- `prp-ralph-stop.sh` - Stop hook that controls the loop
-- `README.md` - This file
+Manual cancellation: `/prp-ralph-cancel` or `rm .claude/prp-ralph.state.md`.
 
 ## Troubleshooting
 
 ### Hook not triggering
 
-1. Verify hook is configured in settings:
-   ```bash
-   cat .claude/settings.local.json | jq '.hooks'
-   ```
-
-2. Check hook script is executable:
-   ```bash
-   ls -la .claude/hooks/prp-ralph-stop.sh
-   ```
-
-3. Test hook manually:
-   ```bash
-   echo '{"transcript_path": "/tmp/test.jsonl"}' | .claude/hooks/prp-ralph-stop.sh
-   ```
-
-### Loop not stopping
-
-1. Verify completion promise is exact: `<promise>COMPLETE</promise>`
-2. Check state file exists: `cat .claude/prp-ralph.state.md`
-3. Check iteration count hasn't reached max
-
-### Manual cancellation
-
-Run `/prp-ralph-cancel` or:
 ```bash
-rm .claude/prp-ralph.state.md
+# Confirm wiring
+jq '.hooks' .claude/settings.json
+
+# Confirm executability
+ls -la .claude/hooks/
+
+# Tail the debug log (start session with: claude --debug-file /tmp/cc.log)
+tail -f /tmp/cc.log
 ```
+
+### Hook is too noisy
+
+`inject-dq-state.sh` is designed to be silent when nothing is pending.
+If it fires every prompt, check `.claude/decision-queue.json` for
+unresolved entries you forgot to move from `pending` to `resolved`.
+
+`pre-phase-audit.sh` is one-shot per branch — if it reminds you every
+session, you haven't created the audit-complete flag for the branch yet.
+
+### Hook output causes JSON parse errors
+
+Hooks run in non-interactive shells. If your `~/.bashrc` echoes anything
+unconditionally (e.g. `echo "Shell ready"`), wrap it in `[[ $- == *i* ]]`.
+See [hooks reference — JSON validation](https://code.claude.com/docs/en/hooks-guide#json-validation-failed).

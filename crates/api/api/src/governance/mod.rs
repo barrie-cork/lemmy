@@ -16,6 +16,8 @@ pub mod admin_close_case;
 pub mod admin_config;
 pub mod admin_emergency_remove;
 pub mod admin_reputation_stats;
+pub mod admin_rule_sets;
+pub mod case_open_snapshot;
 pub mod config;
 pub mod decline_jury_assignment;
 pub mod federation_outbox;

@@ -486,9 +486,12 @@ pub struct AdminGetConfigAudit {
 
 /// One row of the audit list. Fields are projected from the
 /// `governance_log.payload` JSONB column into typed response fields so the
-/// caller doesn't re-implement payload destructuring. `previous_value` is
-/// `None` on first change and on denials; `denial_reason` is populated
-/// only on `entry_kind = "admin_config_change_denied"` rows.
+/// caller doesn't re-implement payload destructuring. `previous_value` and
+/// `previous_from` are `None` on rows written before v1-AD-c's Issue #77
+/// refactor (the shell wrapper and pre-v1-AD-c handler rows); populated
+/// on every `admin_config_changed` row written by the post-v1-AD-c
+/// handler. `denial_reason` is populated only on
+/// `entry_kind = "admin_config_change_denied"` rows.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
@@ -500,10 +503,83 @@ pub struct AdminConfigAuditEntry {
   pub key: String,
   pub value_type: String,
   pub previous_value: Option<serde_json::Value>,
+  /// Provenance label for `previous_value` — one of `"default"` (const
+  /// fallback, no DB row), `"instance"`, or `"community:<id>"`. `None` on
+  /// pre-v1-AD-c rows (shell-written or pre-refactor handler-written) and
+  /// on denials.
+  pub previous_from: Option<String>,
   pub new_value: serde_json::Value,
   pub reason: String,
   pub actor_pseudonym: Option<String>,
   pub created_at: DateTime<Utc>,
   pub signature: Option<Vec<u8>>,
   pub denial_reason: Option<String>,
+}
+
+// ── Group C: Rule-set versioning (v1-AD-c) ────────────────────────────
+
+/// Create an append-only rule-set version for a community. Flips
+/// `rule_set.active_version_id` at `Scope::Community(community_id)` to
+/// the newly-inserted version atomically with the INSERT.
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminCreateRuleSet {
+  pub community_id: CommunityId,
+  pub rule_text: String,
+  /// Optional previous `rule_set_version.id` this version chains from.
+  /// Must belong to the same `community_id`. When `None`, the new version
+  /// is the root of its chain.
+  pub parent_id: Option<i32>,
+  pub reason: String,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminCreateRuleSetResponse {
+  pub rule_set_version_id: i32,
+  pub version: i32,
+  pub config_id: Option<i64>,
+  pub governance_log_id: i64,
+  pub created_at: DateTime<Utc>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminListRuleSetsRequest {
+  pub community_id: CommunityId,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminListRuleSetsResponse {
+  pub versions: Vec<RuleSetVersionView>,
+  pub active_version_id: Option<i32>,
+}
+
+/// A single rule-set version as projected for the list endpoint. The
+/// `text_sha256` DB column is `BYTEA`; the wire representation is hex
+/// (per Phase 6 federation convention). `created_by_pseudonym` is
+/// resolved via a secondary lookup against `actor_pseudonym` in the
+/// handler (`None` in v1-AD-c; full population lands with v1-AD-d).
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RuleSetVersionView {
+  pub id: i32,
+  pub community_id: CommunityId,
+  pub version: i32,
+  pub parent_id: Option<i32>,
+  pub text_sha256_hex: String,
+  pub rule_text: String,
+  pub created_at: DateTime<Utc>,
+  pub created_by_pseudonym: Option<String>,
 }
