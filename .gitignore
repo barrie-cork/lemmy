@@ -41,6 +41,14 @@ migrations/.diesel_lock
 .claude/scheduled_tasks.lock
 .claude/build-*.log
 .claude/audit-*.log
+.claude/audit-*.txt
+.claude/cr-*.json
+.claude/cr-*.txt
+.claude/dod-*.log
+.claude/resume-*.log
+.claude/test-*.log
+.claude/clippy-*.log
+.claude/sse-*.log
 .claude/prp-ralph.state.md
 .claude/worktrees/
 .claude/tmp/
