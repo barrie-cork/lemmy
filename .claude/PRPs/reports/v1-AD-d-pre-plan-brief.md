@@ -6,8 +6,8 @@
 ## Scope of v1-AD-d (from v1-AD-b plan §6)
 
 **Two endpoints:**
-1. `GET /admin/dashboard` — aggregate reader for all config + audit state (feeds the server-rendered HTML page path, but HTML itself is deferred to v1-AD-e per OQ-V1-AD-01 resolution)
-2. `GET /admin/audit/stream` — SSE endpoint streaming `admin_config_changed` + `admin_config_change_denied` events hand-rolled via `async-stream` (per OQ-V1-AD-02 resolution — no additional dep)
+1. `GET /api/v4/governance/admin/dashboard` — aggregate reader for all config + audit state (feeds the server-rendered HTML page path, but HTML itself is deferred to v1-AD-e per OQ-V1-AD-01 resolution)
+2. `GET /api/v4/governance/admin/audit/stream` — SSE endpoint streaming `admin_config_changed` + `admin_config_change_denied` events hand-rolled via `async-stream` (per OQ-V1-AD-02 resolution — no additional dep)
 
 **What v1-AD-d does NOT ship:**
 - Askama HTML pages (OQ-V1-AD-01 resolved "defer to v1.x / v1-AD-e")
