@@ -194,26 +194,12 @@ async fn process_create_rule_set(
     rule_text,
     created_by: Some(admin_id),
   };
-  let rsv: RuleSetVersion = match diesel::insert_into(rule_set_version::table)
+  let rsv: RuleSetVersion = diesel::insert_into(rule_set_version::table)
     .values(&rsv_form)
     .returning(RuleSetVersion::as_returning())
     .get_result(conn)
     .await
-  {
-    Ok(row) => row,
-    Err(diesel::result::Error::DatabaseError(
-      diesel::result::DatabaseErrorKind::UniqueViolation,
-      _,
-    )) => {
-      return Err(
-        LemmyErrorType::Unknown(
-          "rule_set_version already exists for this community + version — retry".to_string(),
-        )
-        .into(),
-      );
-    }
-    Err(other) => return Err(other.into()),
-  };
+    .map_err(map_rsv_unique_violation)?;
 
   // Write 2 — governance_config row flipping rule_set.active_version_id.
   let cfg_form = GovernanceConfigInsertForm {
@@ -255,6 +241,28 @@ async fn process_create_rule_set(
   Ok((rsv, cfg.id.0, log_row.id.0, created_at))
 }
 
+/// Map a diesel error from the `rule_set_version` INSERT to a `LemmyError`.
+/// `UniqueViolation` on `(community_id, version)` is a retry-shaped `Unknown`;
+/// all other errors pass through via the standard `.into()`.
+///
+/// Extracted so that `tests/e2e.rs::admin_create_rule_set_duplicate_version_rejected`
+/// exercises the real production mapping rather than recreating it inline
+/// (CR PR #81 round 2 finding D).
+pub fn map_rsv_unique_violation(
+  err: diesel::result::Error,
+) -> lemmy_utils::error::LemmyError {
+  match err {
+    diesel::result::Error::DatabaseError(
+      diesel::result::DatabaseErrorKind::UniqueViolation,
+      _,
+    ) => LemmyErrorType::Unknown(
+      "rule_set_version already exists for this community + version — retry".to_string(),
+    )
+    .into(),
+    other => other.into(),
+  }
+}
+
 pub async fn admin_list_rule_sets(
   data: Query<AdminListRuleSetsRequest>,
   context: Data<LemmyContext>,
@@ -283,22 +291,32 @@ pub async fn admin_list_rule_sets(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
-  let rows: Vec<RuleSetVersion> = rule_set_version::table
-    .filter(rule_set_version::community_id.eq(data.community_id))
-    .order(rule_set_version::version.desc())
-    .select(RuleSetVersion::as_select())
-    .load(conn)
-    .await?;
+  let community_id = data.community_id;
+  let (rows, active_version_id): (Vec<RuleSetVersion>, Option<i32>) = conn
+    .run_transaction(|conn| {
+      async move {
+        let rows: Vec<RuleSetVersion> = rule_set_version::table
+          .filter(rule_set_version::community_id.eq(community_id))
+          .order(rule_set_version::version.desc())
+          .select(RuleSetVersion::as_select())
+          .load(conn)
+          .await?;
 
-  let mut cache = config::ConfigCache::new();
-  let active_version_id = config::get_int_opt(
-    &mut cache,
-    &mut context.pool(),
-    Scope::Community(data.community_id),
-    "rule_set.active_version_id",
-  )
-  .await?
-  .and_then(|i| i32::try_from(i).ok());
+        let mut cache = config::ConfigCache::new();
+        let active_version_id = config::get_int_opt(
+          &mut cache,
+          &mut conn.into(),
+          Scope::Community(community_id),
+          "rule_set.active_version_id",
+        )
+        .await?
+        .and_then(|i| i32::try_from(i).ok());
+
+        Ok::<_, lemmy_utils::error::LemmyError>((rows, active_version_id))
+      }
+      .scope_boxed()
+    })
+    .await?;
 
   let versions = rows
     .into_iter()

@@ -5384,14 +5384,14 @@ async fn admin_create_rule_set_duplicate_version_rejected()
     .execute(&mut conn)
     .await;
 
-  // Step 3: the exact error shape the handler pattern-matches on inside
-  // `process_create_rule_set` in `admin_rule_sets.rs` — the handler's
-  // write-1 block catches `DatabaseError(UniqueViolation, _)` and maps
-  // it to a retryable `LemmyErrorType::Unknown`. Originating handler
-  // arm introduced in commit 4706715d6.
+  // Step 3: drive the duplicate through the DB layer (UNIQUE constraint
+  // fires), then route the resulting DieselError through the same helper
+  // `process_create_rule_set` uses — any change to
+  // `map_rsv_unique_violation` in admin_rule_sets.rs immediately affects
+  // this test's mapping assertion.
   match &duplicate_insert {
     Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-      // Expected — this is the branch the handler's `match` catches.
+      // Expected — this is the branch the helper catches.
     }
     Err(other) => panic!(
       "expected UniqueViolation on duplicate (community_id, version); got {other:?}",
@@ -5401,21 +5401,17 @@ async fn admin_create_rule_set_duplicate_version_rejected()
     ),
   }
 
-  // Step 4: apply the handler's mapping and assert the LemmyError's
-  // inner `error_type` carries the retry message verbatim. Note: we
-  // assert on `error_type` directly rather than `format!("{mapped}")`
-  // because `LemmyError`'s `Display` impl uses `strum::Display` on
-  // `LemmyErrorType`, which renders `Unknown(String)` as just the bare
-  // variant name "Unknown" — the wrapped message is only visible
-  // through pattern-matching on the enum.
+  // Step 4: route the DieselError through the real production mapping
+  // helper and assert the LemmyError's inner `error_type` carries the
+  // retry message verbatim. Note: we assert on `error_type` directly
+  // rather than `format!("{mapped}")` because `LemmyError`'s `Display`
+  // impl uses `strum::Display` on `LemmyErrorType`, which renders
+  // `Unknown(String)` as just the bare variant name "Unknown" — the
+  // wrapped message is only visible through pattern-matching on the
+  // enum.
   let mapped: lemmy_utils::error::LemmyError = match duplicate_insert {
-    Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-      LemmyErrorType::Unknown(
-        "rule_set_version already exists for this community + version — retry".to_string(),
-      )
-      .into()
-    }
-    _ => unreachable!("matched above"),
+    Err(err) => lemmy_api::governance::admin_rule_sets::map_rsv_unique_violation(err),
+    Ok(_) => unreachable!("UniqueViolation asserted at step above"),
   };
   match mapped.error_type {
     LemmyErrorType::Unknown(ref msg) => assert!(

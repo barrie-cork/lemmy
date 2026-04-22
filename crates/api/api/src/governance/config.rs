@@ -158,9 +158,10 @@ impl Scope {
   }
 }
 
-/// Error returned by [`Scope::parse_wire`]. Kept minimal (no `reason`
-/// field) so tests can assert on equality; see task 1 GOTCHA in the
-/// v1-AD-c plan.
+/// Error returned by [`Scope::parse_wire`]. Keeps a narrow shape so tests can
+/// assert on equality; malformed input currently carries the original wire text
+/// internally (suppressed in `Display` per ADR-015 — see impl below).
+/// See task 1 GOTCHA in the v1-AD-c plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScopeParseError {
   /// Input did not match either `"instance"` or `"community:<int>"`.
