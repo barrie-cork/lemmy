@@ -14,6 +14,21 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## advisor: Task 5 consolidation — 2026-04-23T22:00:00Z
+- **trigger:** context window ~200k used; parking BM+advisor session at clean Task 5 commit boundary before Task 6
+- **phase branch tip:** phase-v1-JM-a @ 7c46484e0 (5 task commits + plan cherry-pick above trunk)
+- **artifacts written:**
+  - `.claude/PRPs/reports/v1-JM-a-advisor-resume-state.md` (127 lines, trunk, committed @ 0a35f2391) — advisor-side self-contained resume brief
+  - `.claude/PRPs/reports/v1-JM-a-impl-resume-state.md` (~280 lines, JM-a worktree, UNTRACKED) — impl-side resume brief, written by advisor to the JM-a worktree as working-tree scaffolding
+- **plan drifts logged for Task 11 retro:** R3.2 (Task 3 validate), R5.1 (Task 5 §10.7 GOTCHA) — both in advisor risk register (trunk)
+- **DQ pending at handover:** 0
+- **PR #91 (plan):** OPEN, CLEAN, no CR yet — BM session will poll via /bm-poll-cr when user asks
+- **trunk state:** 3 commits ahead of origin (2 setup + 1 consolidation), not pushed — intentional per BM rule (trunk pushes need user confirm)
+- **next advisor trigger:** (1) impl hits Task 8 reconciliation gate with non-27 count, (2) impl hits Task 10 PHASE_1_MIGRATION_COUNT question, (3) user asks to poll PR #91 CR, (4) unexpected impl failure
+- **next impl trigger:** fresh /prp-core:prp-implement session auto-detects Task 5 done via DQ #42 task-resume detection; loads Task 6 as "STARTING HERE"
+
+---
+
 ## advisor: setup complete — 2026-04-23T20:00:00Z
 - **role:** advisor (dual-role with BM, same session, separate artifact classes)
 - **supports:** v1-JM-a impl (runs in C:/Users/barri/Developer/brehon-fork-phase-v1-JM-a)
