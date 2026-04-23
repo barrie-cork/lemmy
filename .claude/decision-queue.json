@@ -1,64 +1,7 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [
-    {
-      "id": 42,
-      "from": "impl",
-      "timestamp": "2026-04-23T02:30:00Z",
-      "question": "Patch /prp-core:prp-implement Phase 1 LOAD to detect already-completed tasks by scanning branch commits before restarting at task 1? v1-AD-d session resumed at commit be9fae19e (tasks 1-3 already landed) and I had to manually scan `git log --oneline -8`, parse task numbers from commit subjects, and decide to start at task 4. The command template's Phase 2.2 branch-decision matrix has no row for 'some tasks committed.' Worked this session only because commits cited 'task N' verbatim — would fail silently on less-disciplined histories or a resumed session weeks later, causing duplicate task-1 commits or file-collision diagnosis.",
-      "options": [
-        "(a) Add a Phase 1.4 step 'Detect Already-Completed Tasks' that runs `git log {base-branch}..HEAD --oneline`, matches each commit subject against the plan's §13 task COMMIT MESSAGE lines, and prints 'Task N: ALREADY DONE (commit <sha>)' or 'Task N: STARTING HERE'. If no clean 1:1 mapping, STOP and surface to user. ~5-line command-template edit. Patch text in v1-AD-d-retro.md §2.1.",
-        "(b) Add a weaker 'If the branch has commits since {base-branch}, list them and ASK the user which task to resume at' step. Lower friction but requires user input every resumed session — annoying for happy paths.",
-        "(c) Defer — document the resume pattern in a separate .claude/rules/ file but don't change the command template. Relies on implementer-discipline, which is what failed in the scenario description."
-      ],
-      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §2.1. Observed during v1-AD-d tasks 4-6 session on 2026-04-23. The risk isn't that I did the wrong thing this time — I inferred correctly from commit messages — but that the command template provides no structural guardrail. A future implementer on a plan whose commits don't cite 'task N' verbatim, or a session restarted after a context window, could silently redo tasks or collide with already-committed state. Patch is cheap (5 lines) and prints the resume decision explicitly. LEAN: (a) — structural fix beats documentation.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
-      "id": 43,
-      "from": "impl",
-      "timestamp": "2026-04-23T02:30:00Z",
-      "question": "Patch /prp-core:prp-implement Phase 4 VALIDATE to audit HTTP status codes against Lemmy's LemmyErrorType::status_code() mapping when the plan names specific statuses in acceptance criteria? v1-AD-d plan §16 said '409 on second concurrent SSE connection from same PersonId.' The plan's §10 SSE skeleton used `actix_web::error::ErrorConflict(...)` which, wrapped through LemmyErrorType::Unknown, maps to HTTP 400 — not 409. `LemmyError::status_code()` at crates/utils/src/error.rs:223-230 only special-cases IncorrectLogin→401 and NotFound→404; everything else is 400. I caught this via self-review before writing the 409-asserting test (lucky); if I'd trusted the plan skeleton the test would have failed with 'expected 409 got 400' and cost 10+ minutes of diagnosis.",
-      "options": [
-        "(a) Add Phase 4.1.1 step 'HTTP Status Code Audit' that (1) greps the plan's acceptance criteria for '4[0-9][0-9]' or 'HTTP 4[0-9][0-9]' patterns, (2) for each status found, greps new files for matching `HttpResponse::<Status>()` constructor OR a LemmyErrorType variant with special-case handling in status_code(). Document the two correct ways to emit non-400/401/404 in the command body (either HttpResponse::<Status>() direct or extend LemmyErrorType::status_code()). ~10-line edit. Patch in retro §2.2.",
-        "(b) Document the LemmyErrorType footgun in a new .claude/rules/lemmy-error-status-code-mapping.md file but leave command template alone. Relies on implementer reading rules.",
-        "(c) Fix at the source: extend LemmyErrorType::status_code() to special-case more variants so `ErrorConflict` et al. map sensibly. Much bigger change (touches shared error module workspace-wide, CR risk). Not my call."
-      ],
-      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §2.2. Real bug caught this session: plan skeleton used actix's generic error constructor which LemmyErrorType::Unknown flattens to 400. Fix shipped in commit 674231b4d as `HttpResponse::Conflict().body(...)` direct return. Option (a) adds a grep-based check that would have caught this before test-writing, saving one re-test cycle. Option (c) is the 'fix the tool' option but cross-crate impact is out of scope for a command-template patch. LEAN: (a) — pragmatic, cheap, catches the real bug class at the right phase.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
-      "id": 44,
-      "from": "impl",
-      "timestamp": "2026-04-23T02:30:00Z",
-      "question": "Patch /prp-core:prp-implement Phase 4 VALIDATE to add a Docker daemon preflight probe before any `cargo test --test e2e` invocation? v1-AD-d session: ran `cargo test --test e2e admin_dashboard`, all 3 tests failed with `start_postgres: failed to create a container: Error in the hyper legacy client: client error (Connect)`. The error reads as 'postgres container failed to start' — not 'Docker daemon isn't running.' Only after a `docker ps` probe did I see `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. ~3 min lost this session; could be 15+ for someone unfamiliar with testcontainers-rs error signatures.",
-      "options": [
-        "(a) Add Phase 4.2.0 step 'Docker daemon preflight' that runs `docker ps > /dev/null 2>&1 && echo 'DOCKER OK' || { echo 'DOCKER NOT RUNNING — start Docker Desktop / dockerd before continuing'; exit 1; }` before the first `cargo test --test e2e` line in the DoD sequence. Platform-specific recovery hints in the error message (Docker Desktop on Win/macOS, systemctl on Linux). ~5-line edit. Patch in retro §2.3.",
-        "(b) Add probe to the `.claude/rules/pre-phase-harness-audit.md` rule file instead of the command (daemon state is a harness-level concern, not per-phase). Pro: runs at phase start, fails fast. Con: doesn't cover mid-session daemon stop (docker killed between task 3 and task 6).",
-        "(c) Do both (a) AND (b) — phase-start probe in pre-phase-audit rule + per-e2e-command probe in prp-implement. Belt and braces. Marginal cost."
-      ],
-      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §2.3. Probe cost is ~50ms. Worst-case diagnosis cost without probe is 15+ min (testcontainers error looks like test-code failure, not env failure). LEAN: (c) — put probe in both places, costs almost nothing. If advisor wants to pick one, (a) is sufficient for the common case (Docker was running at phase start but stopped mid-session). Brehon runs on Windows primarily (per CLAUDE.md), Docker Desktop has a habit of stopping on sleep/resume, so mid-session stops are realistic.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
-      "id": 46,
-      "from": "impl",
-      "timestamp": "2026-04-23T02:30:00Z",
-      "question": "Add a Phase 5 REPORT prompt for 'v1/limitation GH issues to file?' The v1-AD-d implementation cites plan-§4.1-accepted limitations (per-admin SSE cap is single-process/non-durable; tokio_postgres NoTls only for sslmode=disable Postgres). My report names them in the body but I did NOT file GH tracking issues. When someone reads the code later and wonders 'is single-process cap on purpose?', the only pointer is my report paragraph — which requires them to find the report. A GH issue with a 'v2' label would be a first-class TODO. Should the command template prompt for this?",
-      "options": [
-        "(a) Add to Phase 5 REPORT a checklist item: '[ ] Any v1 limitation cited in plan §4.1 that should be tracked as a future-work GH issue? List each with a proposed `gh issue create` invocation.' The implementer runs or drafts the invocations, advisor decides whether to file. ~3-line edit.",
-        "(b) Add the checklist AND auto-create GH issues for every plan-§4.1 bullet. Over-automation; many §4.1 bullets are intentional v1 scope decisions that will never be 'fixed' (they're not bugs). False-positive issues pollute the backlog.",
-        "(c) Status quo — implementer mentions in report body, advisor files issues ad-hoc later. Risk: context decay — the implementer who wrote the code and knows the exact tradeoff is the best person to phrase the issue, and they're no longer in context a week later."
-      ],
-      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §3.2. This is the lowest-priority of the 5 retro items (retro §6 row 5). The cost is a one-line checklist addition; the benefit is keeping advisor's backlog fresh with implementer-written (not advisor-inferred) tracking issues. LEAN: (a) — cheap, useful, preserves implementer context. Could be deferred with no real harm.",
-      "answer": null,
-      "answered_by": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 45,
