@@ -14,6 +14,24 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## advisor: Task 9 boundary park — 2026-04-23T23:15:00Z
+- **trigger:** impl session parked at Task 9 commit per user "stop after task 9"; impl context approaching window limit; advisor context also approaching
+- **phase branch tip:** phase-v1-JM-a @ 3537daa3b (8 task commits + plan cherry-pick above trunk)
+- **tasks committed this impl-session segment:** 6 (7d4678c92), 7+8-recon-gate (c082ebb4c), 9 (3537daa3b) — all green on cargo check --workspace --features full
+- **Task 8 reconciliation gate:** 27/27/27/27 counts, empty symmetric diff, e2e config_parity_round_trip 1 passed with 88 keys — no drift
+- **Task 9 Level-7 invariants:** 32 ENTRY_KIND defines, 32 re-exports, 0 duplicate literals — all green
+- **artifacts written:**
+  - `.claude/PRPs/reports/v1-JM-a-advisor-resume-state.md` (overwritten, trunk) — advisor-side resume brief, Task 9 → Task 10 boundary, including pre-analyzed R10.1 advisor lean (c) with arithmetic verification
+  - `.claude/PRPs/reports/v1-JM-a-impl-resume-state.md` (on JM-a worktree, untracked) — impl-side resume brief updated by impl session itself at Task 9 close
+- **new plan drift logged:** R10.1 — PHASE_1_MIGRATION_COUNT=9 semantic mismatch (comment claims 6+2+1, but LIFO revert would actually pick top-9-by-timestamp which includes 2 log_notify + 1 federation_attestations, not what the comment says); impl will file DQ on restart; advisor will answer lean (c) → extend by 3 to 12 + inline TODO + new GH issue sketch for count-model
+- **DQ pending at park:** 0 (R10.1 not yet filed; impl files on restart)
+- **PR #91 (plan):** still OPEN, CLEAN, no CR yet — BM session will poll via /bm-poll-cr when user asks
+- **trunk state:** 4 commits ahead of origin (2 docs/advisor + 2 chore/bm consolidation), not pushed — intentional (trunk pushes need user confirm)
+- **next advisor trigger:** impl files R10.1 DQ on restart → advisor answers; OR impl hits unexpected Task 10 compile/test signal; OR user asks to poll PR #91 CR
+- **next impl trigger:** fresh /prp-core:prp-implement session in JM-a worktree; command template auto-detects Task 9 done; Task 10 loads as "STARTING HERE" — will file R10.1 DQ first per plan §13 Task 10 line 1270
+
+---
+
 ## advisor: Task 5 consolidation — 2026-04-23T22:00:00Z
 - **trigger:** context window ~200k used; parking BM+advisor session at clean Task 5 commit boundary before Task 6
 - **phase branch tip:** phase-v1-JM-a @ 7c46484e0 (5 task commits + plan cherry-pick above trunk)
