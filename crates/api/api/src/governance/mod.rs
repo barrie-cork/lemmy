@@ -12,6 +12,7 @@
 pub mod accept_jury_assignment;
 pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;
+pub mod admin_audit_stream;
 pub mod admin_close_case;
 pub mod admin_config;
 pub mod admin_dashboard;

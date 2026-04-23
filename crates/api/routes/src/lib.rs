@@ -35,8 +35,10 @@ use lemmy_api::{
   governance::{
     accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
+    admin_audit_stream::admin_audit_stream,
     admin_close_case::admin_close_case,
     admin_config::{admin_get_config, admin_get_config_audit, admin_set_config},
+    admin_dashboard::admin_dashboard,
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     decline_jury_assignment::decline_jury_assignment,
@@ -535,6 +537,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
               .route("/assign-jury", post().to(admin_assign_jury))
               .route("/close-case", post().to(admin_close_case))
               .route("/reputation-stats", get().to(admin_reputation_stats))
+              .route("/dashboard", get().to(admin_dashboard))
               .service(
                 scope("/config")
                   .route("", post().to(admin_set_config))
@@ -545,7 +548,8 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
                 scope("/rule-sets")
                   .route("", post().to(admin_create_rule_set))
                   .route("", get().to(admin_list_rule_sets)),
-              ),
+              )
+              .service(scope("/audit").route("/stream", get().to(admin_audit_stream))),
           ),
       ),
   );
