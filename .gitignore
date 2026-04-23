@@ -56,6 +56,11 @@ migrations/.diesel_lock
 .claude/task-hopper.json.lock/
 .claude/task-hopper.json.tmp.*
 
+# Branch-manager (BM) per-PR runtime artifacts (the SCHEMA.md + pr-*-review.md ARE committed)
+.claude/PRPs/reviews/pr-*-findings.yaml
+.claude/PRPs/reviews/pr-*-comment.md
+.claude/PRPs/reviews/.cr-cache/
+
 # Local environment — never commit secrets
 .env
 .env.local
