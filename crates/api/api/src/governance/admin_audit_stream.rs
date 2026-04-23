@@ -1,8 +1,17 @@
 //! `GET /api/v4/governance/admin/audit/stream` — hand-rolled Server-Sent
 //! Events wrapper around Postgres `LISTEN governance_events`.
 //!
-//! The `governance_log_notify_trigger` migration (v1-AD-a) fires
-//! `pg_notify('governance_events', ...)` on every `governance_log` INSERT.
+//! The `governance_log_notify_trigger` (defined in migration
+//! `2026-04-20-000100-0000_fix_governance_log_notify_trigger_after_sign`,
+//! superseding the initial v1-AD-a trigger) fires
+//! `pg_notify('governance_events', ...)` on `AFTER UPDATE OF signature`
+//! when `signature` transitions `NULL → NOT NULL`. That is the moment a
+//! row becomes a subscribable artifact (the `governance_log_signature_gate`
+//! trigger permits exactly one such transition per row, so the notify
+//! fires at most once per row). Subscribers observing the prior INSERT
+//! would see `signature IS NULL` rows that the V2 messaging bridge
+//! cannot verify.
+//!
 //! This handler holds a dedicated `tokio_postgres::Client` for the lifetime
 //! of the HTTP response, filters notifications to the two `admin_config_*`
 //! entry kinds, hydrates the full `governance_log` row from a pooled

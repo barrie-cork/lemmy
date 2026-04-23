@@ -114,11 +114,20 @@ async fn count_jury_queue(conn: &mut AsyncPgConnection) -> LemmyResult<JuryQueue
 async fn list_recent_config_changes(
   conn: &mut AsyncPgConnection,
 ) -> LemmyResult<Vec<AdminConfigAuditEntry>> {
+  // Filter `signature IS NOT NULL` so rows left half-written by a failed
+  // signature UPDATE (see `governance_log::append` in
+  // crates/api/api/src/governance/governance_log.rs) cannot leak into the
+  // dashboard. This matches the SSE audit-stream invariant: the
+  // `governance_log_notify_trigger` fires on `signature NULL → NOT NULL`,
+  // so signed rows are the only subscribable artifacts. Unsigned rows
+  // would also not carry a verifiable hash chain position, so rendering
+  // them in the dashboard would mislead the admin (cr-22).
   let rows: Vec<GovernanceLog> = governance_log_schema::table
     .filter(governance_log_schema::entry_kind.eq_any(vec![
       ENTRY_KIND_ADMIN_CONFIG_CHANGED,
       ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
     ]))
+    .filter(governance_log_schema::signature.is_not_null())
     .order_by((
       governance_log_schema::created_at.desc(),
       governance_log_schema::id.desc(),

@@ -6053,6 +6053,83 @@ async fn admin_dashboard_aggregates_populated_data()
   Ok(())
 }
 
+/// cr-22 regression lock: `recent_config_changes` MUST exclude rows whose
+/// `signature` is NULL. Those rows represent a half-written append (the
+/// INSERT succeeded but the follow-up signature UPDATE in
+/// `governance_log::append` failed). Surfacing them in the dashboard
+/// would display unsigned audit entries that carry no verifiable hash
+/// chain position — a misleading artifact for an admin reviewing
+/// governance activity. Seeds one signed row and one unsigned row
+/// directly via diesel (bypassing the append helper) and asserts only
+/// the signed one is returned.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_recent_config_changes_excludes_unsigned_rows()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_dashboard::admin_dashboard;
+  use lemmy_db_schema::source::governance::governance_log::{
+    ENTRY_KIND_ADMIN_CONFIG_CHANGED, GovernanceLogInsertForm,
+  };
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "dash_unsigned_filter", true).await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // Row A — "unsigned": INSERT only, signature stays NULL (simulates a
+  // failed follow-up UPDATE in governance_log::append).
+  let unsigned_id: i64 = diesel::insert_into(governance_log::table)
+    .values(&GovernanceLogInsertForm {
+      entry_kind: ENTRY_KIND_ADMIN_CONFIG_CHANGED.to_string(),
+      payload: serde_json::json!({ "marker": "unsigned_row_should_not_leak" }),
+      actor_pseudonym: Some("test-unsigned".to_string()),
+    })
+    .returning(governance_log::id)
+    .get_result(&mut conn)
+    .await?;
+
+  // Row B — "signed": INSERT then flip signature NULL → NOT NULL. The
+  // signature-gate trigger permits exactly one such transition per row.
+  let signed_id: i64 = diesel::insert_into(governance_log::table)
+    .values(&GovernanceLogInsertForm {
+      entry_kind: ENTRY_KIND_ADMIN_CONFIG_CHANGED.to_string(),
+      payload: serde_json::json!({ "marker": "signed_row_should_appear" }),
+      actor_pseudonym: Some("test-signed".to_string()),
+    })
+    .returning(governance_log::id)
+    .get_result(&mut conn)
+    .await?;
+  diesel::update(governance_log::table.find(signed_id))
+    .set(governance_log::signature.eq(Some(vec![0xAAu8; 64])))
+    .execute(&mut conn)
+    .await?;
+
+  let resp = admin_dashboard(context.clone(), admin_view).await?.into_inner();
+
+  assert_eq!(
+    resp.recent_config_changes.len(),
+    1,
+    "dashboard must include the signed row and exclude the unsigned row; \
+     got {:?} entries",
+    resp.recent_config_changes.len(),
+  );
+  // Sanity: unsigned row's marker must not appear in any projected entry.
+  for entry in &resp.recent_config_changes {
+    let serialized = serde_json::to_string(entry)?;
+    assert!(
+      !serialized.contains("unsigned_row_should_not_leak"),
+      "unsigned governance_log row leaked into recent_config_changes: {entry:?}",
+    );
+  }
+
+  let _ = (unsigned_id, signed_id);
+  Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn admin_audit_stream_forbidden_for_non_admin()
 -> lemmy_utils::error::LemmyResult<()> {
