@@ -5,6 +5,66 @@ prefixed `bm:` and timestamped UTC. Created 2026-04-23.
 
 ---
 
+## bm: push — 2026-04-23T19:10:00Z
+- **branch:** chore/v1-AD-wrap-up
+- **commits pushed:** 1 (fb51cbd5b) — chore(docs): markdownlint fixes on v1-AD-meta-retro.md (cr-2, cr-3)
+- **remote ref:** origin/chore/v1-AD-wrap-up @ fb51cbd5b
+- **upstream tracking:** set (PR #90 exists; CR will re-review on push)
+- **next:** /bm-poll-cr 90 (in 5–10 min to pick up CR re-review)
+
+---
+
+## bm: triage — 2026-04-23T18:45:00Z
+- **PR:** #90 — chore(v1-AD): wrap-up — DQ cleanup + meta-retro
+- **Buckets:** fix-in-pr 2 | rebut 0 | carry-forward 0 | done 0 | wont-fix 2
+- **Bucket transitions:**
+  - cr-1 (low, PR-template pre-merge-check) fix-in-pr → wont-fix (chore PR type; template inapplicable)
+  - cr-2 (low, MD022 ~24 headings in v1-AD-meta-retro.md) stays fix-in-pr
+  - cr-3 (low, MD040 fenced block in v1-AD-meta-retro.md) stays fix-in-pr
+  - cr-4 (low, MD022 bm-runlog.md line 8) fix-in-pr → wont-fix (append-only BM-owned ledger; intentional format)
+- **Comment posted?** HOLD — parent (impl) session will gate the post via AskUserQuestion
+- **Comment draft:** .claude/PRPs/reviews/pr-90-comment.md
+- **Carry-forward issues filed:** 0 (no carry-forward findings)
+- **Recommendation:** approve (only low severity in fix-in-pr; no critical/major)
+
+---
+
+## bm: poll-cr — 2026-04-23T18:27:00Z
+- **PR:** #90
+- **head SHA:** 552414d44 (first poll — no prior SHA)
+- **CR comments seen:** 5 (1 review-summary / 3 inline / 1 issue-walkthrough)
+- **Actionable findings ingested:** 4 (1 from walkthrough pre-merge-check)
+- **New findings this poll:** 4 (cr-1 through cr-4)
+- **Findings addressed since last poll:** 0 (first poll)
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 4/0/0 | nit 0/0/0
+- **Recommendation:** approve (all findings low severity; no critical/major)
+- **YAML:** .claude/PRPs/reviews/pr-90-findings.yaml
+- **Notes:** docs-only PR; 3 markdownlint findings (MD022 + MD040) on v1-AD-meta-retro.md and bm-runlog.md; 1 pre-merge-check warning on PR description completeness. Walkthrough noted: "Estimated review effort: 🎯 2 (Simple) | ~12 minutes". Zero outside-diff findings. No CR failures or throttle warnings.
+
+---
+
+## bm: PR opened — 2026-04-23T17:35:00Z
+- **PR:** #90 — chore(v1-AD): wrap-up — DQ cleanup + meta-retro
+- **URL:** https://github.com/barrie-cork/lemmy/pull/90
+- **Base ← Head:** governance-v0 ← chore/v1-AD-wrap-up
+- **Body source:** commits-only (no completion report, no plan file — chore branch)
+- **Draft?** No (CR-eligible)
+- **Commits included:** 2
+  - `552414d44` docs(v1-AD): meta-retro consolidation across AD-a..AD-d
+  - `c6bdb6ea9` docs(decision-queue): clean up v1-AD pending→resolved + log BM cut
+- **Next:** wait ~5–10 min for CodeRabbit; then `/bm-poll-cr 90`
+
+---
+
+## bm: push — 2026-04-23T17:30:00Z
+- **branch:** chore/v1-AD-wrap-up
+- **commits pushed:** 2 (c6bdb6ea9..552414d44)
+- **remote ref:** origin/chore/v1-AD-wrap-up @ 552414d44
+- **upstream tracking:** set
+- **next:** /bm-pr (no PR exists yet)
+
+---
+
 ## bm: branch cut — 2026-04-23T17:15:00Z
 - **branch:** chore/v1-AD-wrap-up
 - **off:** governance-v0 @ dbc0fecad
