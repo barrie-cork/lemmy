@@ -85,6 +85,44 @@
 
 **Lean (HIGH)**: `crates/db_schema/src/newtypes.rs` (the `db_schema` crate, not `db_schema_file`). Memory `feedback_newtype_locations_lemmy_db_schema_vs_file.md` already established this for `ModerationCaseId`; JM follows suit.
 
+### R3.2 — CAUGHT — Task 3 validate `expect 0` is a plan drift vs Phase 1 precedent
+
+**Symptom observed 2026-04-23 during impl**: Task 3 plan §13 says `cargo-check.bat --workspace --features full # expect 0`. Task 3 adds three enums with `ExistingTypePath = "crate::schema::sql_types::SeverityTier"` etc., but Task 4 (not yet run) is what adds `sql_types::SeverityTier` to `schema.rs`. Therefore Task 3 standalone **cannot** green `--features full` compile.
+
+**Precedent**: Phase 1 commit `083a9f3f9 feat(db-schema-file): add governance enums` deliberately committed with a known interim-failure commit message:
+
+> This commit intentionally fails `cargo check -p lemmy_db_schema_file` — the new enums reference `crate::schema::sql_types::CaseStatus` etc. which do not exist until task 10 regenerates schema.rs via `diesel print-schema`. Task 10 greens this.
+
+**Resolution applied (user-delivered to impl 2026-04-23)**: Follow Phase 1 precedent. Task 3 commits with an explicit fail-note; Task 4 greens. Skip Task 3's plan §13 `expect 0` check or document the non-zero exit as expected.
+
+**Retro carry-forward (Task 11 must capture this)**:
+
+- **Observation**: JM-a plan §13 Task 3 drifted from Phase 1 precedent on the validate step. The drift is low-severity (impl caught it, advisor confirmed via Phase 1 inspection in ~2 min), but if left in subsequent JM-b/c/d/e plans that follow the same "enums first, schema.rs next" split, it would regress the well-established interim-failure pattern.
+- **Root cause hypothesis**: JM-a plan author treated the two-step split as purely organisational (Task 3 = edit enums.rs, Task 4 = edit schema.rs) without noting that the `ExistingTypePath` annotation creates a hard compile-time coupling. v1-AD-a precedent, which JM-a was pattern-mirroring, did NOT involve new Rust enums (it added `rule_set` table, not enum types), so the enum-specific interim-failure pattern was not carried forward from Phase 1.
+- **Plan-amendment recommendation**: before JM-b is planned, update the plan-template guidance (or the JM-a plan file directly, if still useful) so the Task N validate command for "enums.rs-only" commits documents the known interim-failure mode rather than `expect 0`. Alternative: restructure as "Task 3: combined enums + schema.rs extensions" single commit. Phase 1's split (two commits) is the cleaner precedent — keep the split, fix the `expect 0`.
+- **Not a DQ**: impl caught this themselves and the user-delivered answer unblocked within minutes. No queue entry needed. Documented here for Task 11 retro only.
+
+---
+
+## Task 5 — Diesel models
+
+### R5.1 — CAUGHT — Plan §10.7 GOTCHA wording incomplete re: InsertForm call-site impact
+
+**Symptom observed 2026-04-23 during impl**: Plan §10.7 GOTCHA claims "Option<_> → v0/earlier-v1 callers continue to compile without setting them explicitly". Impl hit compile error on `create_report.rs:204` ("missing fields ... and 3 other fields in initializer") — Rust struct literals require every field to be named or `..rest` fallback; `Option<_>` typing doesn't magic away the naming requirement.
+
+**Resolution (user-delivered to impl 2026-04-23)**: Go with (a) — `..Default::default()` at call sites. Key facts verified:
+- `ModerationCaseInsertForm` ALREADY derives `Default` (line 77-78 of `moderation_case.rs`) — impl doesn't need to add the derive
+- `JuryAssignmentInsertForm` hasn't gained new fields (per plan line 917, role isn't added to InsertForm) — zero call-site changes needed for jury_assignment writers
+- Scope reduction: impl's initial list of 5 affected files narrows to 2 production + e2e.rs (admin_assign_jury.rs and decline_jury_assignment.rs build `JuryAssignmentInsertForm`, not `ModerationCaseInsertForm` — verified via grep)
+- The one OUT-list file that remains (`admin_emergency_remove.rs`) gets a single `..Default::default()` line — syntax-only, no handler-logic edit, §12 OUT intent preserved
+
+**Retro carry-forward (Task 11 must capture this)**:
+
+- **Observation**: JM-a plan §10.7 GOTCHA wording overloaded "Option<_> → no call-site change" onto a mechanism that actually requires `..Default::default()`. The plan's *intent* (struct derives Default, calls use struct-update syntax) is correct; the *language* implied something Rust doesn't do.
+- **Root cause hypothesis**: Plan author likely wrote the GOTCHA mid-way through drafting §10.7 and didn't compile-verify. This is a second Task-N plan drift caught by impl (first was R3.2 Task 3 `expect 0`); both are "plan-author model vs Rust compiler" errors.
+- **Plan-amendment recommendation**: before JM-b is planned, update the plan-template guidance so InsertForm-extension GOTCHAs use language like "struct already derives Default; callers use `..Default::default()`" rather than "Option<_> → no call-site change". Pattern-repetition hazard: every future sub-phase that extends an InsertForm will hit this same drift if left as-is.
+- **Scope deviation logged**: impl's commit message for Task 5 includes a paragraph naming `admin_emergency_remove.rs`'s single-line struct-update edit as syntax-only, §12 OUT-intent preserved. This is the audit trail.
+
 ---
 
 ## Task 6 — config.rs extension
