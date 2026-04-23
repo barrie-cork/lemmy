@@ -646,3 +646,77 @@ pub enum MembershipState {
   Provisional,
   Suspended,
 }
+
+// ========================================================================
+// Governance enums (v1-JM-a — jury mechanics sub-phase A)
+//
+// These three enums frame the procedural state every JM-b/c/d/e read or
+// write keys off of. All three use DbValueStyle = "verbatim" mirroring
+// CaseStatus / JuryDecision / SanctionAction (the majority pattern); they
+// are read/written by governance handler code, not by config-text
+// round-trips. PascalCase variants match the PostgreSQL CREATE TYPE
+// values in migrations/2026-04-23-000000-0000_add_jury_mechanics_enums.
+// ========================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::SeverityTier"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics severity tier per PRD §3.1. Maps `SanctionAction` /
+/// case context to a procedural threshold tier (Minor/Moderate/Severe).
+/// Frozen at admin_assign_jury time per ADR-010 (no retroactive
+/// invalidation of in-flight juries) — `moderation_case.severity_tier`
+/// is the snapshotted value; mid-flight config changes do not alter it.
+pub enum SeverityTier {
+  #[default]
+  Minor,
+  Moderate,
+  Severe,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::CaseStatusTier"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics target-status tier per PRD §3.1. Determined from
+/// the target's `reputation_event` / `membership_state` at case-open time
+/// (Founder seeded > Regular default > Probation triggered by adverse
+/// reputation events). Cascade key for `jury.panel_size.<status>.<severity>`.
+pub enum CaseStatusTier {
+  Founder,
+  #[default]
+  Regular,
+  Probation,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::JuryAssignmentRole"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics role discriminator per PRD §8.2. Distinguishes
+/// original-jury rows from appeal-jury rows on the same case so the
+/// appeal-panel-pick query (v1-JM-d) can exclude original jurors via
+/// `WHERE role = 'Original'` while the appeal panel writes `Appeal` rows.
+pub enum JuryAssignmentRole {
+  #[default]
+  Original,
+  Appeal,
+}
