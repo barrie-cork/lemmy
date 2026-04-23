@@ -99,13 +99,18 @@ pub async fn admin_audit_stream(
 
   let admin_id = local_user_view.person.id;
 
+  // Per-admin cap: return 409 Conflict via a direct response so the HTTP
+  // status is correct without touching the shared `LemmyErrorType` enum.
+  // See plan §16 acceptance: "Per-admin SSE cap returns 409 on second
+  // concurrent connection from same PersonId".
   {
     let mut set = active_sse_admins().lock().await;
     if set.contains(&admin_id) {
-      return Err(LemmyErrorType::Unknown(
-        "another SSE stream is already open for this admin".to_string(),
-      )
-      .into());
+      return Ok(
+        HttpResponse::Conflict()
+          .content_type("text/plain; charset=utf-8")
+          .body("another SSE stream is already open for this admin"),
+      );
     }
     set.insert(admin_id);
   }

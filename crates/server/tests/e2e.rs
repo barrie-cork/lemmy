@@ -5808,3 +5808,305 @@ async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
 
   Ok(())
 }
+
+// ============================================================================
+// v1-AD-d — admin dashboard aggregate + SSE audit stream
+//
+// Five tests covering the two new read-only handlers:
+// - `admin_dashboard_returns_aggregate_for_admin`    — zero-row happy path
+// - `admin_dashboard_forbidden_for_non_admin`        — capability gate
+// - `admin_dashboard_aggregates_populated_data`      — data fidelity
+// - `admin_audit_stream_forbidden_for_non_admin`     — capability gate
+// - `admin_audit_stream_enforces_per_admin_cap`      — 409 on 2nd connection
+//
+// Dashboard tests invoke the handler directly (same pattern as the
+// v1-AD-b `admin_get_config_full` test). SSE tests avoid an in-process
+// HTTP server — the handler's error-path checks (non-admin + per-admin
+// cap) are exercised via direct invocation; the live-stream emission is
+// already validated by the Phase 6 `governance_log_notify_trigger_emits_notification`
+// test, which proves the NOTIFY substrate the SSE body consumes.
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_returns_aggregate_for_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard::admin_dashboard;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_dash_hp", true).await?;
+
+  let before = chrono::Utc::now();
+  let resp = admin_dashboard(context.clone(), admin_view).await?.into_inner();
+  let after = chrono::Utc::now();
+
+  // Zero-row DB — every widget populates with defaults, none error.
+  assert_eq!(resp.active_cases.total_active, 0, "no active cases on fresh DB");
+  assert!(
+    resp.active_cases.by_status.is_empty() || resp.active_cases.by_status.values().sum::<i64>() == 0,
+    "by_status empty or all zeros",
+  );
+  assert_eq!(resp.jury_queue.pending_accept, 0);
+  assert_eq!(resp.jury_queue.accepted, 0);
+  assert_eq!(resp.jury_queue.submitted, 0);
+  assert_eq!(resp.recent_config_changes.len(), 0, "no config-change events");
+  assert_eq!(resp.federation.active, 0);
+  assert_eq!(resp.federation.expired, 0);
+  assert_eq!(resp.federation.total, 0);
+  assert_eq!(resp.rule_sets.communities_with_rule_sets, 0);
+  assert_eq!(resp.rule_sets.total_versions, 0);
+  assert_eq!(resp.rule_sets.per_community.len(), 0);
+
+  // calculated_at within the request window (±5s slack either side).
+  let slack = chrono::Duration::seconds(5);
+  assert!(
+    resp.calculated_at >= before - slack && resp.calculated_at <= after + slack,
+    "calculated_at {} outside [{}, {}]",
+    resp.calculated_at,
+    before - slack,
+    after + slack,
+  );
+
+  // Reputation widget is the instance-scope stub on a fresh DB.
+  assert_eq!(
+    resp.reputation.buckets.reporting_accuracy.len(),
+    5,
+    "bucket shape preserved (5 buckets per dimension)",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard::admin_dashboard;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "dash_nonadmin", false).await?;
+
+  let result = admin_dashboard(context.clone(), user_view).await;
+  assert!(result.is_err(), "non-admin must be rejected by is_admin()");
+
+  // Dashboard is read-only — ADR-008 compliance: no governance_log
+  // entry is emitted on capability-deny (unlike admin_set_config's
+  // denial path).
+  use diesel::{QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_db_schema::source::governance::governance_log::GovernanceLog;
+  use lemmy_db_schema_file::schema::governance_log;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let rows: Vec<GovernanceLog> = governance_log::table
+    .select(GovernanceLog::as_select())
+    .load(&mut conn)
+    .await?;
+  assert_eq!(rows.len(), 0, "dashboard rejection must NOT emit a governance_log entry");
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_aggregates_populated_data()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_dashboard::admin_dashboard;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::{
+      federation_attestation::FederationAttestationInsertForm,
+      moderation_case::ModerationCaseInsertForm,
+      rule_set_version::RuleSetVersionInsertForm,
+    },
+  };
+  use lemmy_db_schema_file::enums::{AttestationType, CaseSeverity, CaseStatus, CaseTargetType};
+  use lemmy_db_schema_file::schema::{
+    federation_attestation, moderation_case, rule_set_version,
+  };
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_dash_seed", true).await?;
+
+  // Seed a community so we can hang a rule_set_version off of it.
+  let community = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "dash_comm".to_string(),
+      "Dashboard Seed Community".to_string(),
+      "dash-pubkey".to_string(),
+    ),
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // 3 moderation_case rows across three statuses. Open + JurySelection
+  // count toward `total_active` (2); Decided does not.
+  for status in [CaseStatus::Open, CaseStatus::JurySelection, CaseStatus::Decided] {
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some(format!("https://example.invalid/dash/{status:?}")),
+      reason_code: "dashboard_seed".to_string(),
+      severity: CaseSeverity::Low,
+      status,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .execute(&mut conn)
+      .await?;
+  }
+
+  // 1 active federation_attestation (valid_until in the future).
+  let future = chrono::Utc::now() + chrono::Duration::days(30);
+  diesel::insert_into(federation_attestation::table)
+    .values(&FederationAttestationInsertForm {
+      actor_url: "https://test.invalid/u/seed-actor".to_string(),
+      subject_url: "https://test.invalid/u/seed-subject".to_string(),
+      attestation_type: AttestationType::TrustedReporter,
+      valid_until: Some(future),
+      signature: "seed-sig".to_string(),
+    })
+    .execute(&mut conn)
+    .await?;
+
+  // 1 rule_set_version on the seeded community (version 1, no parent).
+  diesel::insert_into(rule_set_version::table)
+    .values(&RuleSetVersionInsertForm {
+      community_id: community.id,
+      version: 1,
+      parent_id: None,
+      text_sha256: vec![0u8; 32],
+      rule_text: "seed rule text".to_string(),
+      created_by: None,
+    })
+    .execute(&mut conn)
+    .await?;
+
+  // Invoke the dashboard handler and assert aggregates.
+  let resp = admin_dashboard(context.clone(), admin_view).await?.into_inner();
+
+  assert!(
+    resp.active_cases.by_status.get("Open").copied().unwrap_or_default() >= 1,
+    "Open case count present",
+  );
+  assert!(
+    resp.active_cases.by_status.get("JurySelection").copied().unwrap_or_default() >= 1,
+    "JurySelection case count present",
+  );
+  assert!(
+    resp.active_cases.by_status.get("Decided").copied().unwrap_or_default() >= 1,
+    "Decided case count present",
+  );
+  assert_eq!(
+    resp.active_cases.total_active, 2,
+    "total_active excludes Decided (and Closed/EmergencyRemove)",
+  );
+
+  assert_eq!(resp.federation.active, 1, "one active attestation");
+  assert_eq!(resp.federation.expired, 0);
+  assert_eq!(resp.federation.total, 1);
+
+  assert_eq!(
+    resp.rule_sets.communities_with_rule_sets, 1,
+    "one community has a rule_set_version",
+  );
+  assert_eq!(resp.rule_sets.total_versions, 1);
+  // per_community includes one entry; active_version_id is None because
+  // no governance_config row was seeded for rule_set.active_version_id.
+  assert_eq!(resp.rule_sets.per_community.len(), 1);
+  assert_eq!(resp.rule_sets.per_community[0].community_id, community.id.0);
+  assert_eq!(resp.rule_sets.per_community[0].active_version_id, None);
+
+  // recent_config_changes remains empty — no admin_config_changed rows
+  // were inserted by any of the seeds above (they go through direct
+  // table inserts, not the governance_log::append path).
+  assert_eq!(resp.recent_config_changes.len(), 0);
+
+  // Silence unused variable warnings on the fields we checked via other
+  // branches.
+  let _ = instance;
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_stream_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "sse_nonadmin", false).await?;
+
+  let result = admin_audit_stream(context.clone(), user_view).await;
+  assert!(result.is_err(), "non-admin must be rejected by is_admin()");
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_stream_enforces_per_admin_cap()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::http::StatusCode;
+  use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  // Unique username avoids PersonId collision with other SSE tests in
+  // the same process (module-static HashSet leaks across tests per plan
+  // §14 GOTCHA).
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "sse_cap_admin", true).await?;
+
+  // First connection succeeds — returns 200 with text/event-stream body.
+  let resp1 = admin_audit_stream(context.clone(), admin_view.clone()).await?;
+  assert_eq!(resp1.status(), StatusCode::OK, "first connection returns 200");
+  assert_eq!(
+    resp1
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default(),
+    "text/event-stream",
+    "Content-Type is text/event-stream",
+  );
+
+  // Second concurrent connection — same admin — returns 409 Conflict.
+  let resp2 = admin_audit_stream(context.clone(), admin_view.clone()).await?;
+  assert_eq!(
+    resp2.status(),
+    StatusCode::CONFLICT,
+    "second concurrent connection from same admin returns 409",
+  );
+
+  // Drop the first response body so the SseGuard drops and releases
+  // the per-admin slot. Then a third connection should succeed within
+  // a short window — proves SseGuard::Drop ran.
+  drop(resp1);
+  // The Drop impl spawns an async cleanup task; yield to let it run.
+  for _ in 0..20 {
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    let resp3 = admin_audit_stream(context.clone(), admin_view.clone()).await?;
+    if resp3.status() == StatusCode::OK {
+      drop(resp3);
+      return Ok(());
+    }
+    drop(resp3);
+  }
+  panic!("third connection did not succeed after first was dropped — SseGuard::Drop may not be releasing the cap entry");
+}
