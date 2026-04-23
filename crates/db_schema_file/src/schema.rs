@@ -22,6 +22,10 @@ pub mod sql_types {
   pub struct CaseStatus;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "case_status_tier"))]
+  pub struct CaseStatusTier;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "case_target_type"))]
   pub struct CaseTargetType;
 
@@ -52,6 +56,10 @@ pub mod sql_types {
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "image_mode_enum"))]
   pub struct ImageModeEnum;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "jury_assignment_role"))]
+  pub struct JuryAssignmentRole;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "jury_assignment_status"))]
@@ -108,6 +116,10 @@ pub mod sql_types {
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "sanction_scope"))]
   pub struct SanctionScope;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "severity_tier"))]
+  pub struct SeverityTier;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "tag_color_enum"))]
@@ -511,6 +523,7 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
+    use super::sql_types::JuryAssignmentRole;
     use super::sql_types::JuryAssignmentStatus;
 
     jury_assignment (id) {
@@ -521,6 +534,9 @@ diesel::table! {
         selected_at -> Timestamptz,
         responded_at -> Nullable<Timestamptz>,
         submitted_at -> Nullable<Timestamptz>,
+        // v1-JM-a additions per PRD §8.2:
+        selected_under_constraints -> Nullable<Jsonb>,
+        role -> JuryAssignmentRole,
     }
 }
 
@@ -739,6 +755,8 @@ diesel::table! {
     use super::sql_types::CaseTargetType;
     use super::sql_types::CaseSeverity;
     use super::sql_types::CaseStatus;
+    use super::sql_types::CaseStatusTier;
+    use super::sql_types::SeverityTier;
 
     moderation_case (id) {
         id -> Int4,
@@ -759,6 +777,13 @@ diesel::table! {
         closed_at -> Nullable<Timestamptz>,
         applied_config_snapshot -> Nullable<Jsonb>,
         rule_set_version_id -> Nullable<Int4>,
+        // v1-JM-a additions per PRD §8.1:
+        severity_tier -> SeverityTier,
+        status_tier -> CaseStatusTier,
+        panel_size_snapshot -> Nullable<Int4>,
+        quorum_snapshot -> Nullable<Int4>,
+        threshold_count_snapshot -> Nullable<Int4>,
+        appeal_window_expires_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -1303,6 +1328,21 @@ diesel::table! {
     }
 }
 
+// v1-JM-a addition per PRD §8.3 — append-only audit row written every
+// time select_eligible_jurors relaxes a diversity/recency/cluster
+// constraint (v1-JM-b). No PII (Watch 10).
+diesel::table! {
+    jury_constraint_violation_log (id) {
+        id -> Int4,
+        case_id -> Int4,
+        constraint_name -> Text,
+        relaxation_reason -> Text,
+        pool_size_at_relax -> Int4,
+        panel_size_target -> Int4,
+        relaxed_at -> Timestamptz,
+    }
+}
+
 diesel::table! {
     tagline (id) {
         id -> Int4,
@@ -1481,6 +1521,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   surety,
   rule_set_version,
   sponsor_allowlist,
+  jury_constraint_violation_log,
   person_actions,
   image_details,
 );
