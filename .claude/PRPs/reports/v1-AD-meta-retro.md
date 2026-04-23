@@ -57,6 +57,7 @@ Derived from `git log` on `governance-v0` restricted to handler files
 under `crates/api/api/src/governance/`.
 
 ### AD-a foundation (PR #72, merged 2026-04-20 08:05:47Z)
+
 - New consts: `ENTRY_KIND_ADMIN_CONFIG_CHANGED`, `ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED`
 - New schema columns: `moderation_case.applied_config_snapshot`, `moderation_case.rule_set_version_id`
 - `CONFIG_KEY_METADATA` array (61 rows) + `SEEDED_KEYS_WITH_CONSTS`
@@ -64,6 +65,7 @@ under `crates/api/api/src/governance/`.
 - 27 seeded config rows in `governance_config` (via migration)
 
 ### AD-b config HTTP endpoints (PR #76, merged 2026-04-20 23:10:55Z)
+
 - 3 new handlers: `admin_set_config` (POST), `admin_get_config` (GET), `admin_get_config_audit` (GET)
 - 9 DTOs in `api_common/governance.rs`
 - Wire-format parsing via `Scope::parse_wire`, `ConfigValueType::parse_wire`
@@ -72,6 +74,7 @@ under `crates/api/api/src/governance/`.
 - First CR round on AD work: 5 mechanical findings, 1 commit
 
 ### AD-c rule-sets + snapshot pin (PR #81, merged 2026-04-22 16:19:24Z)
+
 - 2 new handlers: `admin_create_rule_set` (POST), `admin_list_rule_sets` (GET)
 - Issue #78 fix: `Scope::parse_wire` rejects non-positive `community_id` with typed `ScopeParseError`
 - Issue #77 fix: `admin_config_changed` payload carries `previous_value` + `previous_from`
@@ -82,6 +85,7 @@ under `crates/api/api/src/governance/`.
 - 8 e2e tests + 3 CR rounds (rounds 1/2 on commits `5c04e6ec2`/`6c8fc3211`, round 3 on `6baabfd7a`)
 
 ### AD-d dashboard + SSE (PR #87, merged 2026-04-23 16:51:31Z)
+
 - 2 new handlers: `admin_dashboard` (GET aggregate), `admin_audit_stream` (GET SSE)
 - Shared `audit_projection::project_to_audit_entry` extracted from AD-b
 - Bounded tokio `mpsc::channel(256)` drop-policy for slow SSE clients
@@ -95,6 +99,7 @@ under `crates/api/api/src/governance/`.
 ## 3. Process evolution across the four sub-phases
 
 ### 3.1 CR-review load doubled every sub-phase
+
 - AD-a: 0 rounds (no CR findings on impl PR — CR caught nothing the parity test hadn't already)
 - AD-b: 1 round, 5 mechanical findings
 - AD-c: 3 rounds, ~8 findings across rounds (4 Major, rebuttals + fixes)
@@ -108,6 +113,7 @@ streaming. More places to get wrong. The **fix-in-PR discipline** held
 — zero regressions merged.
 
 ### 3.2 Plan PR → impl PR same-day cadence
+
 Three of the four AD sub-phases had plan-PR-merged and impl-PR-merged
 on the **same UTC day**:
 - AD-a: plan #44 merged 04-19 19:47Z → impl #72 merged 04-20 08:05Z (next-day impl, 12h 18m gap)
@@ -121,6 +127,7 @@ plans that sat unimplemented (e.g. the deferred v1-JM plan) accumulate
 drift.
 
 ### 3.3 Branch-manager agent landed between AD-c and AD-d
+
 The 9 `/bm-*` commands + `branch-manager` subagent (commit
 `bf5eb1a3b`, merged just before AD-d impl) replaced ad-hoc `gh pr
 create` / `gh pr merge` / CR-triage work with a four-bucket discipline
@@ -138,6 +145,7 @@ review is a new scope category the prior bm/rules/ files had never
 received.
 
 ### 3.4 pre-phase-harness-audit.md added Probe 4 (exit-code propagation)
+
 Added mid-AD-c after the `cargo-test.bat` wrapper silently masked a
 real failure (`e7cad24fd`, RCA in
 `.claude/PRPs/debug/rca-issue-8-cargo-test-exit-code-masking.md`). The
@@ -146,10 +154,11 @@ negative-feature) now gates every phase-start. AD-d ran all four green
 in Task 0 audit (`.claude/PRPs/reports/v1-AD-d-task0-audit.md`).
 
 ### 3.5 Fix-session chain pattern emerged in AD-d
+
 AD-d PR #87 shipped 7 CR-fix commits after the initial 11-commit impl.
 Chain shape:
 
-```
+```text
 task 1-6 (11 commits)    →  push + /bm-poll-cr        → 4 fix-in-PR findings
 ├─ 6c1654cb7 (cr-13,18)  →  push + /bm-poll-cr        → 2 new fix-in-PR
 ├─ 0699a1ac0 (cr-14,15)  →  push + /bm-poll-cr + triage→ 0 new findings
@@ -172,6 +181,7 @@ polls fit that; waiting longer would have slowed the chain.
 ## 4. What worked across all four sub-phases — keep
 
 ### 4.1 Plan §10 pattern-block discipline
+
 Every sub-phase plan named exact file + line-number mirrors for new
 code. AD-d's SSE skeleton cited
 `crates/server/tests/e2e.rs:2979-2998` as the NOTIFY-probe mirror; the
@@ -180,6 +190,7 @@ that. Plans that *don't* pin a line number (seen in drafts of early
 v1-AD-a sections) cost ~5 minutes of re-grep each time.
 
 ### 4.2 Parity tests converted error-prone edits into compile-time signals
+
 AD-a's `every_seeded_key_has_metadata` test caught the 27-row vs
 61-metadata drift instantly. AD-d inherited the pattern for
 `ADMIN_DASHBOARD_WIDGET_MATRIX` (plan §6.2) — widget count is asserted
@@ -188,6 +199,7 @@ converts manual cross-referencing (easy to miss) into test-time signal
 (impossible to miss).
 
 ### 4.3 Atomic task-per-commit with `feat(<scope>): task N — <summary>`
+
 All four sub-phases held task-per-commit discipline. CR can read each
 task's delta in isolation; retros can reconstruct from `git log`. Fix
 commits appended as additional commits (never amended) and counted
@@ -195,11 +207,13 @@ toward the PR total. **Never squash on merge** — this is `phase-branch.md`
 §"Do not squash"; AD-a-d all merged with `--merge`.
 
 ### 4.4 Captured cargo output → file, exit code preserved
+
 Zero exit-code masking across four sub-phases. The `cargo-output-capture.md`
 rule + `same-shell $?` + `no-cargo-output-paste.md` trio held. AD-c's
 wrapper exit-code-masking RCA was a harness bug, not a rule failure.
 
 ### 4.5 GOTCHA sections that predict specific failure modes
+
 AD-d's task 5 GOTCHAs (SSE `\n\n` ending, `SseGuard::Drop` abort,
 `OnceLock` vs `once_cell`, `NoTls` default) all landed correctly
 without re-learning. Vague "be careful" GOTCHAs don't prevent
@@ -210,6 +224,7 @@ anything — specific-failure-mode GOTCHAs do.
 ## 5. What caused friction across sub-phases — fix in future PRDs
 
 ### 5.1 Plan drift on clippy DoD (AD-a → AD-b → AD-c)
+
 Three sub-phases drifted the clippy DoD command:
 - AD-a used `-p lemmy_api --features full` (worked because handlers
   were all in `lemmy_api`)
@@ -224,6 +239,7 @@ warnings` the default for plan DoD templates. It's the only form that
 works with feature propagation.
 
 ### 5.2 AD-c had no separate plan PR
+
 AD-c's plan (`v1-admin-dashboard-c.plan.md`) landed on the impl branch
 itself via `docs(plan)` commits rather than in its own PR. Reviewers
 had to diff the plan against its own impl in one PR — review surface
@@ -231,6 +247,7 @@ had to diff the plan against its own impl in one PR — review surface
 from AD-a/b/d should be standardised.
 
 ### 5.3 CR tooling findings spilled onto feature PRs
+
 11 of AD-d PR #87's 26 findings targeted `.claude/commands/bm/*.md` and
 `.claude/rules/branch-manager.md` — the BM tooling introduced just
 before AD-d. Putting tooling-scope work on a feature-scope PR doubled
@@ -238,6 +255,7 @@ the review surface. **Fix:** tooling changes land in a dedicated
 `chore(bm)` PR before the first feature-PR using the tooling.
 
 ### 5.4 `LemmyErrorType::Unknown` flattens to HTTP 400
+
 AD-d plan §10 SSE skeleton used `actix_web::error::ErrorConflict(...)`
 which, wrapped through `LemmyErrorType::Unknown`, maps to HTTP 400 —
 not 409. Caught via self-review before test-writing. DQ #43's Phase
@@ -246,6 +264,7 @@ template level (already applied via PR #89). **Keep the audit step in
 plan DoDs.**
 
 ### 5.5 Docker daemon assumed running
+
 AD-d session lost ~3 minutes diagnosing a testcontainers error that
 read like "Postgres failed to start" but was actually "Docker daemon
 not running". DQ #44 added Probe 0 (Docker preflight) to both
@@ -257,6 +276,7 @@ not running". DQ #44 added Probe 0 (Docker preflight) to both
 ## 6. What the per-sub-phase retros DON'T say
 
 ### 6.1 Total e2e test count in tree grew from ~58 to ~90
+
 AD-a added 2 parity tests; AD-b added ~8 config-endpoint tests; AD-c
 added 8 rule-set + snapshot tests; AD-d added 6 dashboard + SSE tests.
 **~24 new e2e tests** across v1-AD. Cold e2e suite runtime on Windows
@@ -265,6 +285,7 @@ The cold-build gate per sub-phase ran ~4× during v1-AD — budgeted time
 well.
 
 ### 6.2 Two carry-forward issues (#77, #78) opened during AD-b closed in AD-c
+
 Issue #77 (previous_value provenance in audit payload) and #78
 (non-positive community_id parse) were opened as AD-b CR findings
 deferred to AD-c scope. Both closed in AD-c commits `d623bcff5` and
@@ -273,6 +294,7 @@ real issues that don't belong in the current PR get tracked but not
 dropped.
 
 ### 6.3 OQ-V1-AD-01/02/03 resolved via PR #74
+
 Before AD-b impl, three OQs from the v1-AD PRD were closed via PR #74
 (resolving: audit-projection shape, widget-matrix authoritative
 source, LIMIT 100 disclosure pattern). **OQ resolution before
@@ -281,6 +303,7 @@ a CR finding (cr-12, cr-16, cr-17), the rebuttal cited a PRD section
 stabilised by #74. Without #74 those rebuttals would have been weaker.
 
 ### 6.4 The `v1-admin-dashboard.prd.md` itself evolved during implementation
+
 - PR #74: OQ-reshape + §4.3 rewrite (−13 / +31 lines)
 - AD-b impl (PR #76 commit `403b01b72`): §8.4 NOT5 reframing
 - AD-c round-2 (PR #81 commit `6c8fc3211`): §8.4 condition 3 updated
@@ -295,6 +318,7 @@ documentation PRs. This keeps PRD and code synchronised; the PRD never
 lies about what ships.
 
 ### 6.5 Total DQ entries filed and resolved during v1-AD
+
 From `git log` + DQ JSON:
 - AD-a: DQ #36–37 (1 technical substitution, 1 attribution-correction)
 - AD-b: DQ #38 (plan drift on clippy scope)
