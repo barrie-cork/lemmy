@@ -1,6 +1,7 @@
 ---
 description: BM — cut a new phase or plan branch off governance-v0 trunk
 argument-hint: <branch-suffix> (e.g. "v1-AD-e" → phase-v1-AD-e; "v1-AD-e --plan" → plan/v1-AD-e)
+disable-model-invocation: true
 ---
 
 # /bm-cut — cut phase or plan branch

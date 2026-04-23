@@ -1,6 +1,7 @@
 ---
 description: BM — final pre-merge gate; ASKS before gh pr merge --merge
 argument-hint: <PR#>
+disable-model-invocation: true
 ---
 
 # /bm-merge — final merge gate (no squash, no auto)

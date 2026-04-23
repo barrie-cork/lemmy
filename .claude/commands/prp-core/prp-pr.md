@@ -1,6 +1,7 @@
 ---
 description: Create a PR from current branch with unpushed commits (Brehon fork default base: governance-v0)
 argument-hint: [--base <branch>] (default: governance-v0 for brehon-fork)
+disable-model-invocation: true
 ---
 
 # Create Pull Request (Brehon)

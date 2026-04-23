@@ -1,6 +1,7 @@
 ---
 description: BM — poll CodeRabbit reviews on a PR; write/update findings YAML
 argument-hint: <PR#>
+disable-model-invocation: true
 ---
 
 # /bm-poll-cr — ingest CodeRabbit findings into YAML

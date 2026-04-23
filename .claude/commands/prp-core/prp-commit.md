@@ -1,6 +1,7 @@
 ---
 description: Quick commit with natural language file targeting
 argument-hint: [target description] (blank = all changes)
+disable-model-invocation: true
 ---
 
 # Commit

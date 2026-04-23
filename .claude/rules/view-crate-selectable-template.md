@@ -1,3 +1,8 @@
+---
+paths:
+  - "crates/db_views/**/*.rs"
+---
+
 # View crate Selectable template
 
 When creating a new `crates/db_views/*` crate in the Brehon fork, follow

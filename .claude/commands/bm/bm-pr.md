@@ -1,6 +1,7 @@
 ---
 description: BM — open a PR from current phase/plan branch into governance-v0 (auto, no prompt)
 argument-hint: [--draft] (rare; CR skips drafts per phase-branch.md)
+disable-model-invocation: true
 ---
 
 # /bm-pr — open PR into governance-v0

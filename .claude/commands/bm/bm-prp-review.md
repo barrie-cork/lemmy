@@ -1,6 +1,7 @@
 ---
 description: BM — run Brehon /prp-review (ADR + cargo) and merge findings into the same YAML
 argument-hint: <PR#>
+disable-model-invocation: true
 ---
 
 # /bm-prp-review — Brehon ADR + cargo review, ingested into findings YAML

@@ -1,3 +1,13 @@
+---
+paths:
+  - "crates/db_schema/src/source/governance/governance_log.rs"
+  - "crates/api/api/src/governance/**/*.rs"
+  - "crates/api/api_crud/src/governance/**/*.rs"
+  - "crates/apub/activities/src/governance/**/*.rs"
+  - "migrations/*governance*/*.sql"
+  - "migrations/*_seed_v1_config_keys/*.sql"
+---
+
 # governance_log entry_kind registry
 
 The `governance_log` table records every governance event as a row with an

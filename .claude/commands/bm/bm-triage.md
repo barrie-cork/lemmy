@@ -1,6 +1,7 @@
 ---
 description: BM — re-classify findings into four buckets; draft digest comment; ASK before posting
 argument-hint: <PR#>
+disable-model-invocation: true
 ---
 
 # /bm-triage — four-bucket triage + digest comment

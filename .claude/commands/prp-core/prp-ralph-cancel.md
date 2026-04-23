@@ -1,5 +1,6 @@
 ---
 description: Cancel active PRP Ralph loop
+disable-model-invocation: true
 ---
 
 # Cancel PRP Ralph Loop

@@ -1,6 +1,7 @@
 ---
 description: BM — show current branch, unpushed commits, PR state, CR count, DQ pending
 argument-hint: (none)
+disable-model-invocation: true
 ---
 
 # /bm-status — read-only branch + PR snapshot
