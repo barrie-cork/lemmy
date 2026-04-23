@@ -45,20 +45,6 @@
       "answered_by": null
     },
     {
-      "id": 45,
-      "from": "impl",
-      "timestamp": "2026-04-23T02:30:00Z",
-      "question": "Decide test-substitution policy for /prp-core:prp-implement. v1-AD-d plan §14 listed `admin_audit_stream_emits_config_change` as a required e2e test. I substituted `admin_audit_stream_forbidden_for_non_admin` (still 5 tests total) because (1) NOTIFY substrate already validated by pre-existing `governance_events_notify_fires` test, (2) SSE body is pure logic over that substrate, (3) in-process HTTP server + reqwest bytes_stream adds ~100 lines of fixture for a regression already covered. I did NOT file a DQ entry for the substitution — current rules at `.claude/rules/decision-queue.md` say 'Do NOT use the queue for: Anything the plan or rules already cover,' which is ambiguous for this case. The command template just says 'deviations documented' (satisfied in the report). Was my substitution within implementer judgment or should it have been a queued decision?",
-      "options": [
-        "(a) Tighten the rule: any test substitution (even coverage-equivalent) requires a DQ entry. Pro: explicit advisor awareness of every plan deviation. Con: adds queue churn for judgment calls the plan's §14 footgun section would have caught anyway.",
-        "(b) Allow implementer-judgment substitutions BUT require the implementation report's Deviations section to explicitly call out the plan-specified test that was swapped and why. De facto what I did. Codify by adding a checklist item to Phase 5 REPORT template: '[ ] Any plan-specified test substitutions explicitly named with rationale.'",
-        "(c) Status quo — rule is fine, 'deviations documented' is sufficient. Risk: implementer judgment drifts over time; advisor doesn't see substitutions unless they read the report deviations section carefully."
-      ],
-      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §3.1. The substitution in question was coverage-neutral (NOTIFY covered elsewhere, SSE logic pure). But 'implementer believes coverage is equivalent' is a judgment call — and some substitutions would NOT be coverage-equivalent. Option (b) codifies existing practice without adding queue friction for clear-win substitutions. Option (a) is safer for implementers whose judgment we don't yet trust. LEAN: (b) — pragmatic, documents in the right place (report) without DQ noise for every micro-deviation.",
-      "answer": null,
-      "answered_by": null
-    },
-    {
       "id": 46,
       "from": "impl",
       "timestamp": "2026-04-23T02:30:00Z",
@@ -74,6 +60,21 @@
     }
   ],
   "resolved": [
+    {
+      "id": 45,
+      "from": "impl",
+      "timestamp": "2026-04-23T02:30:00Z",
+      "question": "Decide test-substitution policy for /prp-core:prp-implement. v1-AD-d plan §14 listed `admin_audit_stream_emits_config_change` as a required e2e test. I substituted `admin_audit_stream_forbidden_for_non_admin` (still 5 tests total) because (1) NOTIFY substrate already validated by pre-existing `governance_events_notify_fires` test, (2) SSE body is pure logic over that substrate, (3) in-process HTTP server + reqwest bytes_stream adds ~100 lines of fixture for a regression already covered. I did NOT file a DQ entry for the substitution — current rules at `.claude/rules/decision-queue.md` say 'Do NOT use the queue for: Anything the plan or rules already cover,' which is ambiguous for this case. The command template just says 'deviations documented' (satisfied in the report). Was my substitution within implementer judgment or should it have been a queued decision?",
+      "options": [
+        "(a) Tighten the rule: any test substitution (even coverage-equivalent) requires a DQ entry. Pro: explicit advisor awareness of every plan deviation. Con: adds queue churn for judgment calls the plan's §14 footgun section would have caught anyway.",
+        "(b) Allow implementer-judgment substitutions BUT require the implementation report's Deviations section to explicitly call out the plan-specified test that was swapped and why. De facto what I did. Codify by adding a checklist item to Phase 5 REPORT template: '[ ] Any plan-specified test substitutions explicitly named with rationale.'",
+        "(c) Status quo — rule is fine, 'deviations documented' is sufficient. Risk: implementer judgment drifts over time; advisor doesn't see substitutions unless they read the report deviations section carefully."
+      ],
+      "context": "Source: .claude/PRPs/reports/v1-admin-dashboard-d-retro.md §3.1. The substitution in question was coverage-neutral (NOTIFY covered elsewhere, SSE logic pure). But 'implementer believes coverage is equivalent' is a judgment call — and some substitutions would NOT be coverage-equivalent. Option (b) codifies existing practice without adding queue friction for clear-win substitutions. Option (a) is safer for implementers whose judgment we don't yet trust. LEAN: (b) — pragmatic, documents in the right place (report) without DQ noise for every micro-deviation.",
+      "answer": "(b') — strengthened option (b), impl-self-resolved 2026-04-23T03:15Z after an advisor-role review of the v1-AD-d substitution on the impl worktree with user approval (user said 'yes' to answering #45 in-channel). The v1-AD-d substitution turned out NOT to be coverage-neutral: advisor review identified three specific invariants the swap dropped — (1) the `kind == ADMIN_CONFIG_CHANGED || CHANGE_DENIED` filter branch at admin_audit_stream.rs:181-185, (2) the `entry_id` → governance_log row hydration at :186-200, and (3) the SSE frame-format assertion `event: X\ndata: Y\n\n` per HTML5 §9.2.4 at :203-205. The pre-existing `governance_events_notify_fires` test only proves the substrate (NOTIFY fires on INSERT); it does NOT prove any of those three invariants. A new test `admin_audit_stream_emits_frame_on_config_change` was added (commit pending on phase-v1-AD-d) that exercises all three end-to-end in ~150 lines using `MessageBody::poll_next` (no in-process HTTP server, no new dev-deps). Cost: ~90 min advisor+impl round-trip. Policy: option (b) with a load-bearing refinement — implementer MAY substitute tests without a DQ entry ONLY when the substitution preserves the invariants the plan-specified test was probing (path coverage, branch coverage, frame-format assertions, error-mapping assertions, etc.); substitutions that DROP any plan-named invariant MUST be queued to advisor BEFORE commit. Heuristic: 'what does the plan-specified test uniquely prove that the substrate test does not?' If the answer is anything non-trivial, queue it. Codify by patching Phase 5 REPORT template to add TWO checklist items: (1) '[ ] For each plan-specified test NOT shipped: name it, name the replacement, and enumerate the plan invariants preserved vs dropped.' (2) '[ ] Any dropped invariant? If yes, STOP and queue DQ before committing the report.' Option (a) rejected as over-restrictive for coverage-equivalent swaps; option (c) rejected because the current rule ambiguity IS the policy gap. The impl-self-resolved label reflects that this session runs on the impl worktree, not the homeserver advisor session — per the attribution rule at .claude/rules/decision-queue.md, the `advisor` label is reserved for advisor-session commits with `chore(advisor)` or `docs(decision-queue)` subjects. Homeserver advisor may override via a subsequent `docs(decision-queue)` commit if this policy is wrong.",
+      "answered_by": "impl-self-resolved",
+      "answered_at": "2026-04-23T03:15:00Z"
+    },
     {
       "id": 41,
       "from": "impl",

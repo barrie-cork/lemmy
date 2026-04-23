@@ -30,7 +30,7 @@ Zero migrations, zero new governance_log entry kinds, zero writes. Pure consumer
 
 1. **Per-admin cap 409 path**: the plan's skeleton (§10 SSE_HAND_ROLLED_STREAM) used `actix_web::error::ErrorConflict(...)`. I initially used `LemmyErrorType::Unknown(...)` which maps to HTTP 400 — not the 409 the acceptance criterion (§16) requires. Fixed at task 6 by returning `HttpResponse::Conflict().body(...)` directly on the duplicate-connection path, bypassing `LemmyErrorType`. This is pragmatic — adding a dedicated `LemmyErrorType::SseStreamAlreadyOpen` variant would touch the shared error enum across the workspace for one handler.
 
-2. **e2e SSE "emits on admin_config_changed" test**: the plan §14 specified this as one of 5 tests, requiring an in-process actix HTTP server + `reqwest::Client::get(...).bytes_stream()`. I swapped it for `admin_audit_stream_forbidden_for_non_admin` (still 5 tests total). Rationale: (a) the NOTIFY substrate is already validated by the pre-existing `governance_events_notify_fires` test in e2e.rs; (b) the SSE body generator is pure Rust logic over that substrate — if NOTIFY works and the filter logic is right, the frame is right; (c) the in-process HTTP server + stream-client adds ~100 lines of test harness for a scenario already exercised at the substrate level. The 5 tests I shipped cover: handler direct invocation (3 dashboard, 2 SSE), capability gates, per-admin cap 200/409 transition, SseGuard::Drop releases the slot.
+2. **e2e SSE "emits on admin_config_changed" test** (initially swapped, then reinstated on advisor review): the plan §14 specified this as one of 5 tests, requiring an in-process actix HTTP server + `reqwest::Client::get(...).bytes_stream()`. I initially swapped it for `admin_audit_stream_forbidden_for_non_admin`, reasoning that the NOTIFY substrate was already validated by `governance_events_notify_fires` and the SSE body was pure logic. **Advisor review on 2026-04-23 reversed this**: the substrate test does NOT cover (a) the `kind == ADMIN_CONFIG_CHANGED || CHANGE_DENIED` filter branch at `admin_audit_stream.rs:181-185`, (b) the `entry_id` → `governance_log` row hydration at `:186-200`, or (c) the SSE frame-format assertion `event: X\ndata: Y\n\n` per HTML5 §9.2.4 at `:203-205`. A new test `admin_audit_stream_emits_frame_on_config_change` was added in a follow-up commit that exercises all three end-to-end in ~150 lines using `MessageBody::poll_next` on the `HttpResponse` body — no in-process HTTP server, no new dev-deps, mirrors the `governance_events_notify_fires` bridge pattern. Final test count on phase-v1-AD-d: **6 tests** (3 dashboard + 3 SSE, all passing). Policy captured in DQ #45 resolution.
 
 3. **`once_cell` vs `OnceLock`**: the plan's §10 snippet used `once_cell::sync::Lazy`; task 4 GOTCHA permitted `std::sync::OnceLock<Mutex<...>>` as a no-new-dep alternative. I used `OnceLock` since `once_cell` wasn't already a workspace dep (checked per task 4).
 
@@ -47,6 +47,7 @@ Zero migrations, zero new governance_log entry kinds, zero writes. Pure consumer
 | 4 | async-stream + reqwest stream feature | `Cargo.toml`, `Cargo.lock`, `crates/api/api/Cargo.toml` | ✅ (commit `521703715`) |
 | 5 | `admin_audit_stream` SSE + routes | `crates/api/api/src/governance/admin_audit_stream.rs` (CREATE), `mod.rs`, `crates/api/routes/src/lib.rs` | ✅ (commit `f9b6ed8dd`) |
 | 6 | 5 e2e tests + 409 fix | `crates/server/tests/e2e.rs` (+302 lines), `admin_audit_stream.rs` (409 fix) | ✅ (commit `674231b4d`) |
+| 6b | Add 6th e2e test — live SSE emission on `admin_config_changed` (advisor review follow-up per §Deviation 2) | `crates/server/tests/e2e.rs` (+~150 lines) | ✅ (commit pending; see §Deviation 2) |
 
 ---
 
@@ -56,9 +57,9 @@ Zero migrations, zero new governance_log entry kinds, zero writes. Pure consumer
 |---|---|---|
 | `cargo check --workspace --features full` | ✅ | exit 0, zero errors |
 | `cargo clippy --workspace --features full --no-deps -- -D warnings` | ✅ | exit 0, zero warnings (matches v1-AD-c baseline) |
-| `cargo test --test e2e admin_dashboard -p lemmy_server` | ✅ | 3/3 pass in 73s |
-| `cargo test --test e2e admin_audit_stream -p lemmy_server` | ✅ | 2/2 pass in 50s |
-| `cargo test --test e2e -p lemmy_server` (full regression) | ✅ | 42 passed, 0 failed, 3 ignored (all pre-existing known flakes per GH #42/#43/#45) in 955s |
+| `cargo test --test e2e admin_dashboard -p lemmy_server` | ✅ | 3/3 pass in 108.87s (post task-6b re-run) |
+| `cargo test --test e2e admin_audit_stream -p lemmy_server` | ✅ | 3/3 pass in 115.80s (post task-6b re-run; includes new emission test) |
+| `cargo test --test e2e -p lemmy_server` (full regression, pre task-6b) | ✅ | 42 passed, 0 failed, 3 ignored (all pre-existing known flakes per GH #42/#43/#45) in 955s |
 | Migration round-trip | ⏭️ | N/A — zero migrations added |
 | Registry invariant (Level 5) | ✅ | ENTRY_KIND_* count = 26 (unchanged); shim re-export parity = 26; zero duplicate literals |
 | Cross-cutting verification (Level 6) | ✅ | Zero `match.*CaseStatus` in new files; zero `governance_log::append` in new files |
@@ -75,7 +76,7 @@ Zero migrations, zero new governance_log entry kinds, zero writes. Pure consumer
 | `crates/api/api/src/governance/mod.rs` | UPDATE | +1 (admin_audit_stream module) |
 | `crates/api/api/src/governance/admin_audit_stream.rs` | CREATE | +213 |
 | `crates/api/routes/src/lib.rs` | UPDATE | +4 (imports + 2 route registrations) |
-| `crates/server/tests/e2e.rs` | UPDATE | +302 (5 new tests + comment banner) |
+| `crates/server/tests/e2e.rs` | UPDATE | +302 (5 new tests + comment banner) in commit `674231b4d`; +~150 (6th emission test) in pending follow-up commit (task 6b) |
 
 Tasks 1–3 (audit-projection extraction, DTOs, dashboard handler) landed in earlier commits on the same phase branch.
 
@@ -112,6 +113,7 @@ Tasks 1–3 (audit-projection extraction, DTOs, dashboard handler) landed in ear
 | `admin_dashboard_aggregates_populated_data` | Data fidelity with 3 cases across 3 statuses, 1 attestation, 1 rule-set version; `total_active` excludes `Decided`; `per_community.active_version_id = None` without seeded config |
 | `admin_audit_stream_forbidden_for_non_admin` | Capability gate on SSE handler |
 | `admin_audit_stream_enforces_per_admin_cap` | 1st connection 200 + text/event-stream; 2nd concurrent same-admin connection 409 Conflict; 3rd connection after 1st dropped succeeds (proves `SseGuard::Drop` releases the slot) |
+| `admin_audit_stream_emits_frame_on_config_change` (task 6b — advisor-review follow-up) | End-to-end live SSE emission: (1) initial `event: retry\ndata: 10000\n\n` frame, (2) `admin_set_config` INSERT fires `governance_events` NOTIFY, (3) handler's LISTEN→filter→row-hydration→`project_to_audit_entry` produces `event: admin_config_changed\ndata: {json}\n\n` within 10s, (4) JSON payload matches projected `AdminConfigAuditEntry` shape (key, scope, value_type, new_value, entry_kind, id, created_at) |
 
 ---
 
