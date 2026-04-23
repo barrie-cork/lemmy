@@ -138,7 +138,7 @@ pub async fn admin_reputation_stats(
 /// Run the `CASE WHEN` bucket query for one dimension column. The column
 /// name is interpolated literally into the SQL — the only legal callers
 /// are the four hardcoded names above, none of them user-controlled.
-async fn bucket_query(
+pub(crate) async fn bucket_query(
   conn: &mut AsyncPgConnection,
   column: &str,
   community_bind: Option<i32>,
@@ -193,7 +193,7 @@ async fn bucket_query(
 }
 
 /// Three capability counts in one round-trip via `FILTER` aggregates.
-async fn capability_query(
+pub(crate) async fn capability_query(
   conn: &mut AsyncPgConnection,
   community_bind: Option<i32>,
 ) -> LemmyResult<CapabilityCounts> {
@@ -221,7 +221,7 @@ async fn capability_query(
 /// `expires_at`, split on whether the expiry is future or past relative
 /// to `now()`. Scoped by `community_id` using `IS NOT DISTINCT FROM` to
 /// match the convention used by `bucket_query` and `capability_query`.
-async fn founder_query(
+pub(crate) async fn founder_query(
   conn: &mut AsyncPgConnection,
   community_bind: Option<i32>,
 ) -> LemmyResult<FounderEventStats> {

@@ -14,6 +14,7 @@ pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;
 pub mod admin_close_case;
 pub mod admin_config;
+pub mod admin_dashboard;
 pub mod admin_emergency_remove;
 pub mod admin_reputation_stats;
 pub mod admin_rule_sets;
