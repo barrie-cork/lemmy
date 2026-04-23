@@ -14,6 +14,29 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: v1-JM-a PR cut — 2026-04-24T00:25:00Z
+- **PR:** #92 — Phase v1-JM-a — jury-mechanics schema + enums + config keys + backfill smoke test
+- **URL:** https://github.com/barrie-cork/lemmy/pull/92
+- **base <- head:** governance-v0 (9dd35c4ab) <- phase-v1-JM-a (00baee04b)
+- **commits on branch:** 11 (tasks 1–11 + impl resume brief)
+- **files changed:** migrations/3, Rust across db_schema + api + server tests, retro + resume brief docs
+- **pre-PR sequence:** PR #91 merged via rebase → trunk @ 9dd35c4ab → phase-v1-JM-a rebased onto new trunk (plan cherry-pick 92705f302 auto-deduped) → push -u origin phase-v1-JM-a → gh pr create
+- **draft?** no (CR skips drafts per phase-branch.md)
+- **CR expected:** yes (PR touches crates/** + migrations/** + tests/**)
+- **Telegram ping:** skipped silently (MCP disconnected; per BM rules, pings are notifications not gating)
+
+---
+
+## bm: PR #91 merged — 2026-04-24T00:20:00Z
+- **PR:** #91 — Plan: v1-JM-a — jury-mechanics schema + enums + snapshot columns + backfill
+- **merge method:** rebase
+- **trunk before:** 02189988d; trunk after: 9dd35c4ab
+- **CR state:** skipped (plan markdown file only, no reviewable code)
+- **user confirmation:** explicit via AskUserQuestion → "Merge with rebase (Recommended)"
+- **post-merge action:** fast-forward of phase-v1-JM-a via rebase; plan cherry-pick deduped
+
+---
+
 ## advisor: Task 9 boundary park — 2026-04-23T23:15:00Z
 - **trigger:** impl session parked at Task 9 commit per user "stop after task 9"; impl context approaching window limit; advisor context also approaching
 - **phase branch tip:** phase-v1-JM-a @ 3537daa3b (8 task commits + plan cherry-pick above trunk)
