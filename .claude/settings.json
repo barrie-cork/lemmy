@@ -1,9 +1,7 @@
 {
   "model": "claude-opus-4-7",
   "effortLevel": "max",
-  "env": {
-    "SLASH_COMMAND_TOOL_CHAR_BUDGET": "3000"
-  },
+  "skillListingBudgetFraction": 0.005,
   "hooks": {
     "Stop": [
       {
