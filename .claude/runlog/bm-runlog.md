@@ -5,6 +5,16 @@ prefixed `bm:` and timestamped UTC. Created 2026-04-23.
 
 ---
 
+## bm: branch cut — 2026-04-23T17:15:00Z
+- **branch:** chore/v1-AD-wrap-up
+- **off:** governance-v0 @ dbc0fecad
+- **plan:** n/a — chore branch (wrap-up for v1-AD-a..d retro + DQ cleanup)
+- **carry-forward from trunk:** `.claude/decision-queue.json` (modified, 4 pending→0) + `.claude/PRPs/reports/v1-AD-meta-retro.md` (new, 353 lines)
+- **pushed?:** No (deferred to first commit + `/bm-push`)
+- **next:** impl session stages + commits carry-forward, then `/bm-push` + `/bm-pr`
+
+---
+
 ## bm: merge — 2026-04-23T16:51:31Z
 - **PR:** #87 — Phase v1-AD-d — Dashboard aggregate + SSE audit stream
 - **Base ← Head:** `governance-v0` ← `phase-v1-AD-d` @ `83e0dfdb7`
