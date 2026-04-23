@@ -583,3 +583,89 @@ pub struct RuleSetVersionView {
   pub created_at: DateTime<Utc>,
   pub created_by_pseudonym: Option<String>,
 }
+
+// ── Group D: Admin dashboard aggregate (v1-AD-d) ──────────────────────
+
+/// Single-fetch instance-wide dashboard aggregate. `Eq` is intentionally
+/// omitted because `recent_config_changes` carries `serde_json::Value`
+/// payload fields via `AdminConfigAuditEntry` (no `Eq` impl).
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminDashboardResponse {
+  pub active_cases: ActiveCasesSummary,
+  pub jury_queue: JuryQueueSummary,
+  pub recent_config_changes: Vec<AdminConfigAuditEntry>,
+  pub federation: FederationSummary,
+  pub reputation: AdminReputationStatsResponse,
+  pub rule_sets: RuleSetSummary,
+  pub calculated_at: DateTime<Utc>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct ActiveCasesSummary {
+  /// Keys: PascalCase `CaseStatus` variants ("Open", "ThresholdMet", ...).
+  /// `BTreeMap` (not `HashMap`) so serialisation order is stable for
+  /// golden tests and matches the verbatim `DbValueStyle` casing of the
+  /// Postgres `case_status` enum.
+  pub by_status: std::collections::BTreeMap<String, i64>,
+  /// Sum of counts for all variants EXCEPT `Decided`, `Closed`,
+  /// `EmergencyRemove`. Clients that disagree about which variants are
+  /// "active" (e.g. wanting to count `Appealed` separately) can re-derive
+  /// from `by_status`.
+  pub total_active: i64,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct JuryQueueSummary {
+  /// `JuryAssignment.status = 'Selected'` — juror notified, not yet
+  /// responded.
+  pub pending_accept: i64,
+  /// `JuryAssignment.status = 'Accepted'`.
+  pub accepted: i64,
+  /// `JuryAssignment.status = 'Submitted'` — vote cast.
+  pub submitted: i64,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct FederationSummary {
+  /// `valid_until IS NULL OR valid_until > now()`.
+  pub active: i64,
+  /// `valid_until IS NOT NULL AND valid_until <= now()`.
+  pub expired: i64,
+  pub total: i64,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RuleSetSummary {
+  pub communities_with_rule_sets: i64,
+  pub total_versions: i64,
+  /// Bounded to 100 entries per the v1-AD-d plan §4.1 load-bearing
+  /// decision; pilot instances have ≤5 communities with rule-sets in v1.
+  pub per_community: Vec<PerCommunityActiveRuleSet>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct PerCommunityActiveRuleSet {
+  pub community_id: CommunityId,
+  /// `None` if the community has `rule_set_version` rows but no
+  /// `rule_set.active_version_id` config row (allowed by design — v1-AD-c
+  /// never seeds the key).
+  pub active_version_id: Option<i32>,
+}

@@ -12,11 +12,14 @@
 pub mod accept_jury_assignment;
 pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;
+pub mod admin_audit_stream;
 pub mod admin_close_case;
 pub mod admin_config;
+pub mod admin_dashboard;
 pub mod admin_emergency_remove;
 pub mod admin_reputation_stats;
 pub mod admin_rule_sets;
+pub(crate) mod audit_projection;
 pub mod case_open_snapshot;
 pub mod config;
 pub mod decline_jury_assignment;
