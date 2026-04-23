@@ -5896,7 +5896,7 @@ async fn admin_dashboard_forbidden_for_non_admin()
   // (cr-18).
   let err = result.expect_err("non-admin must be rejected by is_admin()");
   assert!(
-    matches!(err.error_type, LemmyErrorType::NotAnAdmin),
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
     "expected NotAnAdmin, got {:?}",
     err.error_type,
   );
@@ -6281,7 +6281,7 @@ async fn admin_audit_stream_forbidden_for_non_admin()
   // to the capability gate (cr-18).
   let err = result.expect_err("non-admin must be rejected by is_admin()");
   assert!(
-    matches!(err.error_type, LemmyErrorType::NotAnAdmin),
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
     "expected NotAnAdmin, got {:?}",
     err.error_type,
   );
