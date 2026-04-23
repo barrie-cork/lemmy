@@ -13,6 +13,38 @@ first iteration.
 
 ## What to audit
 
+### 0. Docker daemon preflight
+
+Probe 0 runs before any other probe. The e2e harness (`cargo test --test
+e2e`) uses testcontainers-rs → Postgres in a container; if the Docker
+daemon is down, the test failure prints as
+`start_postgres: failed to create a container: Error in the hyper legacy
+client: client error (Connect)` — which reads like "Postgres container
+crashed" when the actual problem is "Docker Desktop is stopped." Brehon
+runs primarily on Windows per CLAUDE.md, and Docker Desktop has a habit
+of stopping on sleep/resume, so mid-session stops are realistic too.
+
+```bash
+# Probe 0 — Docker daemon running
+docker ps > /dev/null 2>&1 && echo "DOCKER OK" || {
+  echo "DOCKER NOT RUNNING — start Docker Desktop / dockerd before continuing"
+  exit 1
+}
+```
+
+Expected: `DOCKER OK`. If not, STOP — start Docker Desktop and re-run
+Probe 0 before any cargo invocation (cargo itself doesn't need Docker,
+but every e2e probe and every task-level test invocation does).
+
+Note: the `/prp-core:prp-implement` command template also runs this
+same probe at §4.2.0 before every `cargo test --test e2e` invocation.
+Running it here too catches the common case (Docker was stopped before
+the phase started) without waiting for the first e2e run to fail; the
+per-command repeat catches the mid-session stop case.
+
+Per DQ #44 (v1-AD-d retro §2.3) lean (c) — probe in both places, costs
+~50ms per run.
+
 ### 1. Wrapper script behavior vs intent
 
 The scripts under `scripts/brehon/` are the only supported way to run
