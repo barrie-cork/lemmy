@@ -5812,19 +5812,20 @@ async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
 // ============================================================================
 // v1-AD-d — admin dashboard aggregate + SSE audit stream
 //
-// Five tests covering the two new read-only handlers:
+// Six tests covering the two new read-only handlers:
 // - `admin_dashboard_returns_aggregate_for_admin`    — zero-row happy path
 // - `admin_dashboard_forbidden_for_non_admin`        — capability gate
 // - `admin_dashboard_aggregates_populated_data`      — data fidelity
 // - `admin_audit_stream_forbidden_for_non_admin`     — capability gate
 // - `admin_audit_stream_enforces_per_admin_cap`      — 409 on 2nd connection
+// - `admin_audit_stream_emits_frame_on_config_change` — live SSE emission
 //
 // Dashboard tests invoke the handler directly (same pattern as the
-// v1-AD-b `admin_get_config_full` test). SSE tests avoid an in-process
-// HTTP server — the handler's error-path checks (non-admin + per-admin
-// cap) are exercised via direct invocation; the live-stream emission is
-// already validated by the Phase 6 `governance_log_notify_trigger_emits_notification`
-// test, which proves the NOTIFY substrate the SSE body consumes.
+// v1-AD-b `admin_get_config_full` test). SSE tests invoke the handler
+// directly and drain the streaming body via `MessageBody::poll_next`
+// without an in-process actix HTTP server — the live emission test
+// exercises the full NOTIFY → filter → row hydration → frame-format
+// path end-to-end.
 // ============================================================================
 
 #[tokio::test(flavor = "multi_thread")]
@@ -6109,4 +6110,183 @@ async fn admin_audit_stream_enforces_per_admin_cap()
     drop(resp3);
   }
   panic!("third connection did not succeed after first was dropped — SseGuard::Drop may not be releasing the cap entry");
+}
+
+/// Drive `admin_audit_stream`'s streaming body end-to-end: open the SSE
+/// connection, trigger an `admin_config_changed` write via
+/// `admin_set_config`, and assert a correctly-framed `admin_config_changed`
+/// SSE event arrives with the expected JSON payload.
+///
+/// Exercises the full live-stream path the other two SSE tests skip:
+///   - the `kind == ENTRY_KIND_ADMIN_CONFIG_CHANGED` filter branch
+///   - the `entry_id` → `governance_log` row hydration via `get_conn`
+///   - `project_to_audit_entry` round-trip through the streaming body
+///   - `event: X\ndata: Y\n\n` frame format per HTML5 §9.2.4
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_stream_emits_frame_on_config_change()
+-> lemmy_utils::error::LemmyResult<()> {
+  use std::{
+    future::poll_fn,
+    pin::Pin,
+    time::Duration as StdDuration,
+  };
+  use actix_web::{body::MessageBody, http::StatusCode, web::Json};
+  use lemmy_api::governance::{
+    admin_audit_stream::admin_audit_stream,
+    admin_config::admin_set_config,
+  };
+  use lemmy_api_common::governance::AdminSetConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  // Unique username avoids PersonId collision with the other SSE tests
+  // (the module-static cap HashSet persists across tests in the same
+  // process).
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "sse_emit_admin", true).await?;
+
+  // Open the SSE stream. The handler returns a 200 with a streaming
+  // body; we drain frames below via `MessageBody::poll_next`.
+  let resp = admin_audit_stream(context.clone(), admin_view.clone()).await?;
+  assert_eq!(resp.status(), StatusCode::OK, "stream opens with 200");
+  assert_eq!(
+    resp
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default(),
+    "text/event-stream",
+    "Content-Type is text/event-stream",
+  );
+
+  // `into_body()` yields the `BoxBody` driving the stream. We poll it
+  // frame-by-frame with a timeout. Each SSE message arrives as a single
+  // `Bytes` chunk (the handler emits `yield Ok(Bytes::from(...))` per
+  // frame).
+  let mut body = resp.into_body();
+
+  // First frame is the initial `event: retry\ndata: 10000\n\n` the
+  // handler emits before entering its select loop. Pull it out so the
+  // subsequent reads see a clean stream.
+  let retry_frame = tokio::time::timeout(StdDuration::from_secs(5), poll_fn(|cx| {
+    Pin::new(&mut body).poll_next(cx)
+  }))
+  .await
+  .map_err(|_| anyhow::anyhow!("timed out waiting for initial retry frame"))?
+  .ok_or_else(|| anyhow::anyhow!("body ended before retry frame"))?
+  .map_err(|e| anyhow::anyhow!("body error on retry frame: {e}"))?;
+  let retry_str = std::str::from_utf8(&retry_frame)
+    .map_err(|e| anyhow::anyhow!("retry frame not utf-8: {e}"))?;
+  assert_eq!(
+    retry_str, "event: retry\ndata: 10000\n\n",
+    "initial frame is the SSE retry directive",
+  );
+
+  // Trigger an `admin_config_changed` write. The governance_log INSERT
+  // fires the `governance_events` NOTIFY, which the handler's dedicated
+  // tokio-postgres LISTEN connection observes and forwards into the
+  // stream.
+  let _set_resp = admin_set_config(
+    Json(AdminSetConfig {
+      key: "jury.panel_size".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(9),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "v1-AD-d SSE emission test".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // Drain frames (skipping `: keepalive\n\n` comments) until we observe
+  // an `event: admin_config_changed` frame or time out. The handler
+  // heartbeat interval is 15s, so under a 10s budget we expect zero
+  // keepalive frames — but the loop is defensive against scheduling
+  // jitter and future interval changes.
+  let config_frame = tokio::time::timeout(StdDuration::from_secs(10), async {
+    loop {
+      let chunk = poll_fn(|cx| Pin::new(&mut body).poll_next(cx))
+        .await
+        .ok_or_else(|| anyhow::anyhow!("body ended before config-change frame"))?
+        .map_err(|e| anyhow::anyhow!("body error: {e}"))?;
+      let s = std::str::from_utf8(&chunk)
+        .map_err(|e| anyhow::anyhow!("frame not utf-8: {e}"))?
+        .to_owned();
+      if s.starts_with(": keepalive") {
+        continue;
+      }
+      return Ok::<String, anyhow::Error>(s);
+    }
+  })
+  .await
+  .map_err(|_| anyhow::anyhow!("timed out waiting for admin_config_changed frame"))??;
+
+  // SSE framing: `event: admin_config_changed\ndata: {json}\n\n`.
+  assert!(
+    config_frame.ends_with("\n\n"),
+    "SSE frame terminates with two newlines (HTML5 §9.2.4); got: {config_frame:?}",
+  );
+  let mut lines = config_frame.trim_end_matches("\n\n").split('\n');
+  let event_line = lines
+    .next()
+    .ok_or_else(|| anyhow::anyhow!("frame has no event line: {config_frame:?}"))?;
+  let data_line = lines
+    .next()
+    .ok_or_else(|| anyhow::anyhow!("frame has no data line: {config_frame:?}"))?;
+  assert!(
+    lines.next().is_none(),
+    "frame has exactly event + data lines; got extra: {config_frame:?}",
+  );
+  assert_eq!(
+    event_line, "event: admin_config_changed",
+    "event line names the entry kind",
+  );
+  let data_json = data_line
+    .strip_prefix("data: ")
+    .ok_or_else(|| anyhow::anyhow!("data line missing 'data: ' prefix: {data_line:?}"))?;
+  let payload: serde_json::Value = serde_json::from_str(data_json)
+    .map_err(|e| anyhow::anyhow!("data payload not valid JSON ({e}): {data_json:?}"))?;
+
+  // The payload is the full `AdminConfigAuditEntry` shape produced by
+  // `project_to_audit_entry`.
+  assert_eq!(
+    payload["entry_kind"].as_str(),
+    Some("admin_config_changed"),
+    "payload.entry_kind mirrors the event type",
+  );
+  assert_eq!(
+    payload["scope"].as_str(),
+    Some("instance"),
+    "payload.scope reflects the admin_set_config call",
+  );
+  assert_eq!(
+    payload["key"].as_str(),
+    Some("jury.panel_size"),
+    "payload.key reflects the admin_set_config call",
+  );
+  assert_eq!(
+    payload["value_type"].as_str(),
+    Some("int"),
+    "payload.value_type reflects the admin_set_config call",
+  );
+  assert_eq!(
+    payload["new_value"], serde_json::json!(9),
+    "payload.new_value reflects the written value",
+  );
+  assert!(
+    payload["id"].as_i64().unwrap_or_default() > 0,
+    "payload.id is the governance_log row id",
+  );
+  assert!(
+    payload["created_at"].as_str().is_some(),
+    "payload.created_at populated",
+  );
+
+  // Drop the stream so the SseGuard releases the per-admin cap entry
+  // before the container tear-down runs.
+  drop(body);
+  Ok(())
 }
