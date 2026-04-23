@@ -7,14 +7,16 @@
 use crate::governance::{
   admin_reputation_stats::{bucket_query, capability_query, founder_query},
   audit_projection::project_to_audit_entry,
-  config::{ConfigCache, Scope, get_int, get_int_opt},
+  config::{ConfigCache, Scope, get_int},
   governance_log::{ENTRY_KIND_ADMIN_CONFIG_CHANGED, ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED},
 };
 use actix_web::web::{Data, Json};
 use chrono::Utc;
 use diesel::{
-  ExpressionMethods, QueryDsl, QueryableByName, SelectableHelper, sql_query,
-  sql_types::{BigInt, Integer, Text},
+  ExpressionMethods, QueryDsl, QueryableByName, SelectableHelper,
+  dsl::count_star,
+  sql_query,
+  sql_types::{BigInt, Integer},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_common::governance::{
@@ -24,7 +26,10 @@ use lemmy_api_common::governance::{
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{newtypes::CommunityId, source::governance::governance_log::GovernanceLog};
-use lemmy_db_schema_file::schema::governance_log as governance_log_schema;
+use lemmy_db_schema_file::{
+  enums::CaseStatus,
+  schema::{governance_log as governance_log_schema, moderation_case},
+};
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
@@ -45,7 +50,7 @@ pub async fn admin_dashboard(
   let recent_config_changes = list_recent_config_changes(conn).await?;
   let federation = federation_summary(conn).await?;
   let reputation = reputation_instance_scope(conn, &mut cache, &mut context.pool()).await?;
-  let rule_sets = rule_sets_summary(conn, &mut cache, &mut context.pool()).await?;
+  let rule_sets = rule_sets_summary(conn).await?;
 
   Ok(Json(AdminDashboardResponse {
     active_cases,
@@ -58,27 +63,65 @@ pub async fn admin_dashboard(
   }))
 }
 
-#[derive(QueryableByName)]
-struct StatusCountRow {
-  #[diesel(sql_type = Text)]
-  status: String,
-  #[diesel(sql_type = BigInt)]
-  c: i64,
+/// Classifies a `CaseStatus` variant as active (counts toward
+/// `total_active`) or not. The exhaustive match makes any new enum
+/// variant a compile error forcing this decision — no silent drift
+/// (cr-23; ADR-013 coding guideline).
+///
+/// Per `ActiveCasesSummary` DTO contract, `Decided`, `Closed`, and
+/// `EmergencyRemove` are terminal states that do NOT count.
+/// `AdminReview` is paused by a direct mod action (OQ-008 resolution)
+/// but remains pending admin resume — kept in the active set so the
+/// dashboard surfaces it as work-in-progress.
+fn is_active_status(status: CaseStatus) -> bool {
+  match status {
+    CaseStatus::Open
+    | CaseStatus::ThresholdMet
+    | CaseStatus::JurySelection
+    | CaseStatus::InReview
+    | CaseStatus::Appealed
+    | CaseStatus::AdminReview => true,
+    CaseStatus::Decided | CaseStatus::Closed | CaseStatus::EmergencyRemove => false,
+  }
+}
+
+/// Renders a `CaseStatus` as the PascalCase key used in
+/// `ActiveCasesSummary.by_status` — byte-identical to the verbatim
+/// `DbValueStyle` string that the prior `status::text` SQL cast
+/// produced, so consumers keyed to "Open", "EmergencyRemove", ... keep
+/// working.
+fn status_key(status: CaseStatus) -> &'static str {
+  match status {
+    CaseStatus::Open => "Open",
+    CaseStatus::ThresholdMet => "ThresholdMet",
+    CaseStatus::JurySelection => "JurySelection",
+    CaseStatus::InReview => "InReview",
+    CaseStatus::Decided => "Decided",
+    CaseStatus::Appealed => "Appealed",
+    CaseStatus::Closed => "Closed",
+    CaseStatus::EmergencyRemove => "EmergencyRemove",
+    CaseStatus::AdminReview => "AdminReview",
+  }
 }
 
 async fn count_active_cases(conn: &mut AsyncPgConnection) -> LemmyResult<ActiveCasesSummary> {
-  let sql = "\
-     SELECT status::text AS status, COUNT(*)::bigint AS c \
-     FROM moderation_case \
-     GROUP BY status";
-  let rows: Vec<StatusCountRow> = sql_query(sql).load(conn).await?;
-  let by_status: BTreeMap<String, i64> = rows.into_iter().map(|r| (r.status, r.c)).collect();
+  // Use Diesel's typed DSL so the rows come back as `CaseStatus` enum
+  // values — the downstream `is_active_status` match is then
+  // compile-time exhaustive (cr-23).
+  let rows: Vec<(CaseStatus, i64)> = moderation_case::table
+    .group_by(moderation_case::status)
+    .select((moderation_case::status, count_star()))
+    .load(conn)
+    .await?;
 
-  let total_active: i64 = by_status
-    .iter()
-    .filter(|(k, _)| !matches!(k.as_str(), "Decided" | "Closed" | "EmergencyRemove"))
-    .map(|(_, v)| *v)
-    .sum();
+  let mut by_status: BTreeMap<String, i64> = BTreeMap::new();
+  let mut total_active: i64 = 0;
+  for (status, count) in rows {
+    if is_active_status(status) {
+      total_active += count;
+    }
+    by_status.insert(status_key(status).to_string(), count);
+  }
 
   Ok(ActiveCasesSummary {
     by_status,
@@ -178,11 +221,15 @@ struct CommunityIdRow {
   community_id: i32,
 }
 
-async fn rule_sets_summary(
-  conn: &mut AsyncPgConnection,
-  cache: &mut ConfigCache,
-  pool: &mut DbPool<'_>,
-) -> LemmyResult<RuleSetSummary> {
+#[derive(diesel::Queryable)]
+struct ScopeValueIntRow {
+  scope: String,
+  value_int: Option<i64>,
+}
+
+async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetSummary> {
+  use lemmy_db_schema_file::schema::governance_config_current;
+
   let agg: RuleSetAggregateRow = sql_query(
     "SELECT \
        COUNT(DISTINCT community_id)::bigint AS communities_with_rule_sets, \
@@ -201,17 +248,58 @@ async fn rule_sets_summary(
   .load(conn)
   .await?;
 
+  // cr-24: batched replacement for the per-community
+  // `get_int_opt(..., Scope::Community(cid), "rule_set.active_version_id")`
+  // loop. The prior shape issued 2×N DB round-trips worst case (one per
+  // community, each cascading Community→Instance) while `conn` was still
+  // held and `pool` was borrowed. One set-based SELECT closes both: the
+  // IN-list covers every community scope plus the shared instance
+  // fallback, and a simple map-lookup per community replays the
+  // cascade semantics of `get_int_opt`.
+  //
+  // `ConfigCache` is deliberately NOT populated here: it is a
+  // per-request memo, the per-request handler reads
+  // `rule_set.active_version_id` exactly once per community (above), and
+  // each community maps to a distinct `(scope, key)` cache entry — so
+  // populating the cache would cost a HashMap insert with no downstream
+  // reader. If a future call site reads these keys later in the same
+  // request, it can re-fetch through `get_int_opt` unchanged.
+  let scope_strings: Vec<String> = community_ids
+    .iter()
+    .map(|r| format!("community:{}", r.community_id))
+    .chain(std::iter::once("instance".to_string()))
+    .collect();
+
+  let scope_value_rows: Vec<ScopeValueIntRow> = governance_config_current::table
+    .filter(governance_config_current::key.eq("rule_set.active_version_id"))
+    .filter(governance_config_current::value_type.eq("int"))
+    .filter(governance_config_current::scope.eq_any(&scope_strings))
+    .select((
+      governance_config_current::scope,
+      governance_config_current::value_int,
+    ))
+    .load::<ScopeValueIntRow>(conn)
+    .await?;
+
+  let mut scope_to_int: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+  for row in scope_value_rows {
+    if let Some(v) = row.value_int {
+      scope_to_int.insert(row.scope, v);
+    }
+  }
+  let instance_fallback = scope_to_int.get("instance").copied();
+
   let mut per_community = Vec::with_capacity(community_ids.len());
   for r in community_ids {
     let cid = CommunityId(r.community_id);
-    let active_version_id = get_int_opt(
-      cache,
-      pool,
-      Scope::Community(cid),
-      "rule_set.active_version_id",
-    )
-    .await?
-    .and_then(|i| i32::try_from(i).ok());
+    // Cascade: community-scoped row wins; fall back to instance-scoped.
+    // Same semantics as `fetch_value` / `get_int_opt` for
+    // `Scope::Community(_)`.
+    let active_version_id = scope_to_int
+      .get(&format!("community:{}", r.community_id))
+      .copied()
+      .or(instance_fallback)
+      .and_then(|i| i32::try_from(i).ok());
     per_community.push(PerCommunityActiveRuleSet {
       community_id: cid,
       active_version_id,

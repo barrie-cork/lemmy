@@ -6053,6 +6053,133 @@ async fn admin_dashboard_aggregates_populated_data()
   Ok(())
 }
 
+/// cr-24 regression lock: the batched `active_version_id` lookup in
+/// `rule_sets_summary` must return the correct per-community value, and
+/// must fall back to the `instance`-scoped row when no community-scoped
+/// row exists. Seeds two communities: the first has its own
+/// community-scoped `rule_set.active_version_id`; the second has none,
+/// so the cascade falls back to the instance-scoped row. Asserts each
+/// community gets its own value from a single batched SELECT.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_per_community_active_version_cascade()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_dashboard::admin_dashboard;
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::rule_set_version::RuleSetVersionInsertForm,
+  };
+  use lemmy_db_schema_file::schema::rule_set_version;
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "dash_cascade_admin", true).await?;
+
+  let community_a = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "cascade_a".to_string(),
+      "Cascade A".to_string(),
+      "cascade-a-pk".to_string(),
+    ),
+  )
+  .await?;
+  let community_b = Community::create(
+    &mut context.pool(),
+    &CommunityInsertForm::new(
+      instance.id,
+      "cascade_b".to_string(),
+      "Cascade B".to_string(),
+      "cascade-b-pk".to_string(),
+    ),
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // Each community needs a rule_set_version row so it shows up in
+  // `per_community`.
+  diesel::insert_into(rule_set_version::table)
+    .values(&RuleSetVersionInsertForm {
+      community_id: community_a.id,
+      version: 1,
+      parent_id: None,
+      text_sha256: vec![0x11u8; 32],
+      rule_text: "community A rules".to_string(),
+      created_by: None,
+    })
+    .execute(&mut conn)
+    .await?;
+  diesel::insert_into(rule_set_version::table)
+    .values(&RuleSetVersionInsertForm {
+      community_id: community_b.id,
+      version: 1,
+      parent_id: None,
+      text_sha256: vec![0x22u8; 32],
+      rule_text: "community B rules".to_string(),
+      created_by: None,
+    })
+    .execute(&mut conn)
+    .await?;
+
+  // Seed instance-scoped fallback: version 999. Community B falls back
+  // to this because it has no community-scoped row.
+  diesel::sql_query(
+    "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+     VALUES ('instance', 'rule_set.active_version_id', 'int', 999, now())",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  // Seed community A: community-scoped override to version 42. This
+  // must win over the instance-scoped row per `get_int_opt`'s cascade.
+  diesel::sql_query(format!(
+    "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+     VALUES ('community:{}', 'rule_set.active_version_id', 'int', 42, now())",
+    community_a.id.0,
+  ))
+  .execute(&mut conn)
+  .await?;
+
+  let resp = admin_dashboard(context.clone(), admin_view).await?.into_inner();
+
+  // Locate each community's row in the response — per_community is
+  // ORDER BY community_id in the handler, so community A sorts before B
+  // if community_a.id.0 < community_b.id.0 (which is always true since
+  // they were inserted in that order under a serial PK).
+  let per_a = resp
+    .rule_sets
+    .per_community
+    .iter()
+    .find(|r| r.community_id == community_a.id)
+    .ok_or_else(|| anyhow::anyhow!("community A not in per_community"))?;
+  let per_b = resp
+    .rule_sets
+    .per_community
+    .iter()
+    .find(|r| r.community_id == community_b.id)
+    .ok_or_else(|| anyhow::anyhow!("community B not in per_community"))?;
+
+  assert_eq!(
+    per_a.active_version_id,
+    Some(42),
+    "community A has a community-scoped override; batched query should \
+     surface it (community:{} → 42), not the instance fallback",
+    community_a.id.0,
+  );
+  assert_eq!(
+    per_b.active_version_id,
+    Some(999),
+    "community B has no community-scoped row; batched query must fall \
+     back to the instance-scoped row (value 999)",
+  );
+
+  Ok(())
+}
+
 /// cr-22 regression lock: `recent_config_changes` MUST exclude rows whose
 /// `signature` is NULL. Those rows represent a half-written append (the
 /// INSERT succeeded but the follow-up signature UPDATE in
