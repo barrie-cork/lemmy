@@ -307,18 +307,43 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
   use lemmy_diesel_utils::schema_setup::{self, Options};
 
-  /// Count of branch-added migrations that must revert cleanly for the
-  /// Phase 1 enum and table assertions below to hold. Started at 6 in Phase
-  /// 1 (tasks 2–7). Each subsequent phase that adds a migration bumps this
-  /// by its migration count. Current composition:
+  /// Count of top-N migrations to revert via the native runner, LIFO, so the
+  /// assertions below can probe the post-revert and post-re-apply states.
+  ///
+  /// **This is a LIFO-positional count, not a semantic set.** The runner at
+  /// `lemmy_diesel_utils::schema_setup::run` with `.revert().limit(N)` reverts
+  /// the top-N-by-timestamp pending migrations. Any migration added to the
+  /// fork after the last bump of this constant silently takes the Nth slot
+  /// without renaming — the name-list probes below (`moderation_case`, enum
+  /// drops, etc.) only assert what happens to be in the LIFO window at this
+  /// count. Counting phase-by-phase is a useful bookkeeping fiction, not a
+  /// semantic invariant.
+  ///
+  /// Bumped to 12 in v1-JM-a (adds 3: add_jury_mechanics_enums @
+  /// 2026-04-23-000000, add_jury_mechanics_columns @ 2026-04-23-000100,
+  /// seed_v1_jm_config_keys @ 2026-04-23-000200). Phase-by-phase breakdown
+  /// (bookkeeping, not enforced):
   ///   - 6 Phase 1 migrations (enums, core, jury, rep+surety, pseudonym,
-  ///     governance_log — the last one was actually added in Phase 4b task 8
-  ///     but is still part of the contiguous governance-bootstrap block that
-  ///     this test reverts LIFO)
-  ///   - 2 Phase 5a migrations (add_governance_config + add_person_membership_state)
+  ///     governance_log — the last added in Phase 4b task 8 but part of the
+  ///     contiguous governance-bootstrap LIFO block)
+  ///   - 2 Phase 5a migrations (add_governance_config +
+  ///     add_person_membership_state)
   ///   - 1 Phase 5b Slice A migration (add_restoration_sanction_variant
-  ///     — task 56 / OQ-003; total 9)
-  const PHASE_1_MIGRATION_COUNT: u64 = 9;
+  ///     — task 56 / OQ-003)
+  ///   - 3 v1-JM-a migrations (this bump)
+  ///
+  /// **Uncounted drift**: v1-AD-a shipped 4 migrations (rule_set_versions,
+  /// sponsor_allowlist, case_applied_config_snapshot, seed_v1_config_keys)
+  /// but did not bump this constant. When this test is un-ignored (see GH
+  /// issue #43), a separate `chore(test): retrofit v1-AD-a migrations into
+  /// phase1_migrations_round_trip` commit must reconcile this — not JM-a's
+  /// concern per advisor 2026-04-23 (option (c)).
+  ///
+  // TODO(v0-polish): replace count-based revert with a named-migration list
+  // to stop LIFO-positional slot-swap silently hiding uncounted drift. See
+  // GH issue #43 (existing #[ignore] reason) + the count-model GH issue
+  // sketched in `.claude/PRPs/reports/phase-v1-JM-a-retro.md` §3.
+  const PHASE_1_MIGRATION_COUNT: u64 = 12;
 
   /// Query shape for `COUNT(*)` probes via `sql_query`.
   #[derive(diesel::QueryableByName)]
@@ -350,6 +375,7 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       "jury_pool",
       "jury_assignment",
       "jury_vote",
+      "jury_constraint_violation_log",
       "surety",
       "endorsement",
       "reputation_event",
@@ -387,6 +413,7 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       "jury_pool",
       "jury_assignment",
       "jury_vote",
+      "jury_constraint_violation_log",
       "surety",
       "endorsement",
       "reputation_event",
@@ -420,6 +447,9 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       "appeal_status",
       "reputation_dimension",
       "attestation_type",
+      "severity_tier",
+      "case_status_tier",
+      "jury_assignment_role",
     ] {
       let result: Count = sql_query(format!(
         "SELECT count(*) AS n FROM pg_type WHERE typname = '{type_name}'"
@@ -447,6 +477,255 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
     assert_eq!(
       result.n, 0,
       "governance_log should exist and be empty after revert + re-apply"
+    );
+  }
+
+  Ok(())
+}
+
+/// v1-JM-a backfill smoke test (PRD §8.4 + plan §13 Task 10 sub-edit 3).
+///
+/// Exercises the exact up/down/up cycle production will see if an admin
+/// deploys JM-a, rolls it back, and re-deploys:
+///   1. Start fresh Postgres container, apply ALL migrations (JM-a included).
+///   2. Revert the 3 JM-a migrations LIFO (seed_v1_jm_config_keys,
+///      add_jury_mechanics_columns, add_jury_mechanics_enums).
+///   3. Insert two `moderation_case` rows in the pre-JM-a shape — no
+///      JM-a columns exist because their migration is reverted. One row
+///      has `decided_at` set (simulates a v0 case that was Decided before
+///      JM-a shipped); the other has only `opened_at` (simulates a v0
+///      Open case in flight at migration time).
+///   4. Re-apply the 3 JM-a migrations — backfill UPDATE fires.
+///   5. Query both rows; assert snapshot columns are Minor/Regular/5/3/3
+///      per PRD §8.4, and `appeal_window_expires_at` semantics match the
+///      migration's `COALESCE(closed_at, decided_at + '7 days', NULL)`
+///      branches.
+///
+/// Raw SQL throughout — the Diesel `moderation_case` struct has JM-a
+/// columns after re-apply, but the test must also operate between revert
+/// and re-apply when those columns do not exist, so a typed model read
+/// would not compile against both states. `sql_query` + `QueryableByName`
+/// keeps the probe column-set flexible.
+#[tokio::test]
+async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> {
+  use diesel::sql_types::{Int4, Int8, Nullable, Text, Timestamptz};
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
+  use lemmy_diesel_utils::schema_setup::{self, Options};
+
+  /// Snapshot read after re-apply. Columns only exist post-JM-a, so this
+  /// shape is only valid in the step-5 probe. The three `_snapshot`
+  /// columns are INTEGER NOT NULL after backfill. `severity_tier` and
+  /// `status_tier` read as TEXT because the enum values print as their
+  /// label (`"Minor"`, `"Regular"`) via pg's implicit enum→text cast
+  /// (using explicit `::text` in the SELECT avoids a Diesel type-binding
+  /// issue for the new enum sql_types).
+  #[derive(diesel::QueryableByName, Debug)]
+  #[allow(dead_code)]
+  struct BackfilledRow {
+    #[diesel(sql_type = Int4)]
+    id: i32,
+    #[diesel(sql_type = Text)]
+    severity_tier: String,
+    #[diesel(sql_type = Text)]
+    status_tier: String,
+    #[diesel(sql_type = Int4)]
+    panel_size_snapshot: i32,
+    #[diesel(sql_type = Int4)]
+    quorum_snapshot: i32,
+    #[diesel(sql_type = Int4)]
+    threshold_count_snapshot: i32,
+    #[diesel(sql_type = Nullable<Timestamptz>)]
+    appeal_window_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[diesel(sql_type = Nullable<Timestamptz>)]
+    decided_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[diesel(sql_type = Nullable<Timestamptz>)]
+    closed_at: Option<chrono::DateTime<chrono::Utc>>,
+  }
+
+  /// Shape of `RETURNING id` from the raw INSERTs in step 3.
+  #[derive(diesel::QueryableByName)]
+  struct IdRow {
+    #[diesel(sql_type = Int4)]
+    id: i32,
+  }
+
+  /// Probe shape for asserting JM-a columns are absent after revert.
+  #[derive(diesel::QueryableByName)]
+  struct CountRow {
+    #[diesel(sql_type = Int8)]
+    n: i64,
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+
+  // Step 1: full forward apply.
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  // Step 2: revert the 3 JM-a migrations LIFO. Runner takes
+  // pg_advisory_lock(0) so the forbid_diesel_cli trigger does not fire.
+  schema_setup::run(Options::default().revert().limit(3), &db_url)?;
+
+  // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
+  // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
+  // and the backfill branch would be untested (step 5's assertion would
+  // pass even if the migration's UPDATE did nothing).
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let row: CountRow = sql_query(
+      "SELECT count(*) AS n FROM information_schema.columns \
+       WHERE table_name = 'moderation_case' \
+       AND column_name = 'severity_tier'",
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      row.n, 0,
+      "severity_tier column should be absent between revert and re-apply"
+    );
+    let row: CountRow = sql_query(
+      "SELECT count(*) AS n FROM information_schema.tables \
+       WHERE table_name = 'jury_constraint_violation_log'",
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      row.n, 0,
+      "jury_constraint_violation_log should be absent between revert and re-apply"
+    );
+  }
+
+  // Step 3: seed two v0-shape rows via raw SQL. Any column that the
+  // pre-JM-a `moderation_case` schema requires (target_type, reason_code)
+  // must be explicit; everything else falls to NOT NULL DEFAULTs.
+  //
+  // Row A: Decided case with decided_at = 2026-04-20T00:00:00Z and no
+  // closed_at. Post-backfill: appeal_window_expires_at should be
+  // decided_at + 7 days (= 2026-04-27T00:00:00Z).
+  //
+  // Row B: Open case with neither decided_at nor closed_at. Post-backfill:
+  // appeal_window_expires_at should be NULL (the migration's CASE
+  // expression returns NULL when both timestamps are NULL).
+  let (case_a_id, case_b_id) = {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let row_a: IdRow = sql_query(
+      "INSERT INTO moderation_case \
+        (target_type, target_remote_url, reason_code, severity, status, \
+         threshold_score, opened_at, decided_at) \
+       VALUES \
+        ('RemoteInstance', 'https://example.invalid/a', 'spam', 'Medium', 'Decided', \
+         1, '2026-04-19T00:00:00Z', '2026-04-20T00:00:00Z') \
+       RETURNING id",
+    )
+    .get_result(&mut conn)?;
+
+    let row_b: IdRow = sql_query(
+      "INSERT INTO moderation_case \
+        (target_type, target_remote_url, reason_code, severity, status, \
+         threshold_score, opened_at) \
+       VALUES \
+        ('RemoteInstance', 'https://example.invalid/b', 'harassment', 'Low', 'Open', \
+         1, '2026-04-19T00:00:00Z') \
+       RETURNING id",
+    )
+    .get_result(&mut conn)?;
+    (row_a.id, row_b.id)
+  };
+
+  // Step 4: re-apply the 3 JM-a migrations. The `UPDATE moderation_case
+  // SET ... WHERE panel_size_snapshot IS NULL` backfill in
+  // add_jury_mechanics_columns/up.sql runs over BOTH rows (neither row
+  // had the column before, so attmissingval fills NULL, matching the
+  // WHERE clause).
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  // Step 5: assert both rows have the expected v0-equivalent snapshot
+  // per PRD §8.4: severity_tier='Minor', status_tier='Regular',
+  // panel_size=5, quorum=3, threshold_count=3.
+  //
+  // Enum values are SELECTed as `::text` because our QueryableByName
+  // derive uses the plain `Text` sql_type — this avoids needing to
+  // register the new severity_tier / case_status_tier Diesel sql_type
+  // bindings in the test scope.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let rows: Vec<BackfilledRow> = sql_query(
+      "SELECT id, \
+              severity_tier::text AS severity_tier, \
+              status_tier::text AS status_tier, \
+              panel_size_snapshot, \
+              quorum_snapshot, \
+              threshold_count_snapshot, \
+              appeal_window_expires_at, \
+              decided_at, \
+              closed_at \
+       FROM moderation_case \
+       ORDER BY id ASC",
+    )
+    .load(&mut conn)?;
+    assert_eq!(rows.len(), 2, "both seeded rows should be present");
+
+    for row in &rows {
+      assert_eq!(
+        row.severity_tier, "Minor",
+        "case id={}: severity_tier should backfill to Minor per PRD §8.4",
+        row.id
+      );
+      assert_eq!(
+        row.status_tier, "Regular",
+        "case id={}: status_tier should backfill to Regular per PRD §8.4",
+        row.id
+      );
+      assert_eq!(
+        row.panel_size_snapshot, 5,
+        "case id={}: panel_size_snapshot should backfill to 5 per PRD §8.4",
+        row.id
+      );
+      assert_eq!(
+        row.quorum_snapshot, 3,
+        "case id={}: quorum_snapshot should backfill to 3 per PRD §8.4",
+        row.id
+      );
+      assert_eq!(
+        row.threshold_count_snapshot, 3,
+        "case id={}: threshold_count_snapshot should backfill to 3 per PRD §8.4",
+        row.id
+      );
+    }
+
+    // Row A (Decided, no closed_at): appeal window = decided_at + 7d.
+    let row_a = rows
+      .iter()
+      .find(|r| r.id == case_a_id)
+      .expect("Row A (Decided) should be present");
+    let decided_a = row_a.decided_at.expect("Row A seeded with decided_at");
+    let expected_a = decided_a + chrono::Duration::days(7);
+    let actual_a = row_a
+      .appeal_window_expires_at
+      .expect("Row A should have appeal_window_expires_at = decided_at + 7d");
+    assert_eq!(
+      actual_a, expected_a,
+      "Row A: appeal_window_expires_at should be decided_at + 7 days"
+    );
+
+    // Row B (Open, no decided_at, no closed_at): appeal window is NULL.
+    let row_b = rows
+      .iter()
+      .find(|r| r.id == case_b_id)
+      .expect("Row B (Open) should be present");
+    assert!(
+      row_b.appeal_window_expires_at.is_none(),
+      "Row B: appeal_window_expires_at should remain NULL when neither decided_at \
+       nor closed_at is set at backfill time"
+    );
+  }
+
+  // jury_constraint_violation_log must exist and be empty post-re-apply.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let row: CountRow = sql_query("SELECT count(*) AS n FROM jury_constraint_violation_log")
+      .get_result(&mut conn)?;
+    assert_eq!(
+      row.n, 0,
+      "jury_constraint_violation_log should exist and be empty after re-apply"
     );
   }
 
