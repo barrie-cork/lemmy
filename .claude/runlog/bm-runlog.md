@@ -3,6 +3,99 @@
 Append-only ledger of BM-session state-changing actions. Each entry is
 prefixed `bm:` and timestamped UTC. Created 2026-04-23.
 
+**Role topology** (added 2026-04-23 at v1-JM-a kickoff): this session wears
+two hats — BM (git/PR/runlog) AND advisor (DQ answers/deviation validation
+/plan amendments) — in the primary worktree `brehon-fork` on `governance-v0`.
+Impl runs separately in `brehon-fork-phase-v1-JM-a`. Advisor entries below
+are prefixed `advisor:` to preserve attribution. Per
+`.claude/rules/decision-queue.md:73-97`, advisor DQ-answer commits use
+`docs(decision-queue)` or `chore(advisor)` subjects; BM PR/runlog commits
+use `chore(bm)` subjects; the two are never mixed.
+
+---
+
+## advisor: setup complete — 2026-04-23T20:00:00Z
+- **role:** advisor (dual-role with BM, same session, separate artifact classes)
+- **supports:** v1-JM-a impl (runs in C:/Users/barri/Developer/brehon-fork-phase-v1-JM-a)
+- **duties (per user confirm 2026-04-23):** (1) answer blocking DQ entries, (2) validate plan deviations before impl commits, (3) author plan amendments if impl finds plan wrong mid-flight
+- **artifacts written:**
+  - `.claude/PRPs/reports/v1-JM-a-advisor-brief.md` — operational playbook + attribution discipline + cold-resume checklist + plan-section index
+  - `.claude/PRPs/reports/v1-JM-a-advisor-risk-register.md` — 14 risk entries keyed to plan tasks 0-11 + 2 cross-cutting scope-creep risks + escalation table
+- **attribution guardrails confirmed:** advisor never writes `answered_by: "advisor"` under a `feat(...)`/`chore(bm)` subject; BM hat never touches DQ `answered_by` field; role-split enforced by commit-subject pattern (per decision-queue.md §attribution-integrity)
+- **pre-seeded leans (high-confidence, plan-derived):** see risk register §Task 1/2/9/Task 10 R10.2 entries — these are near-deterministic from plan + v1-AD-a precedent
+- **unknowns (LOW-confidence, dig before answering):** R6.1 (27-count reconciliation), R6.2 (threshold_fraction vs severity_thresholds namespace), R10.1 (PHASE_1_MIGRATION_COUNT drift)
+- **next advisor action:** none until impl starts Task 0 or files a DQ. Standing by. Cold-resume brief will be written at session close per `.claude/PRPs/reports/v1-AD-c-advisor-resume-state.md` precedent.
+
+---
+
+## bm: impl setup — 2026-04-23T19:50:00Z
+- **branch:** phase-v1-JM-a
+- **action:** cherry-pick 1bc32fcc0 (plan commit from plan/v1-JM-a) → new SHA 92705f302 on phase-v1-JM-a
+- **HEAD:** 92705f302 (plan cherry-pick) on top of 02189988d (trunk FF)
+- **rationale:** unblocks impl session; plan file now present in JM-a worktree. When PR #91 merges, subsequent FF on phase-v1-JM-a will dedupe via patch-id (identical diff)
+- **worktree readiness:** ✅ plan file 1558 lines at .claude/PRPs/plans/phase-v1-JM-a.plan.md; ✅ .env present; ✅ settings.local.json synced; ✅ submodule a3f9e4669 initialised; ✅ Docker daemon up (Probe 0)
+- **pre-phase harness audit:** Probe 0 only (Docker). Probes 1–4 + §2 DoD smoke + §3 clippy baseline = impl session's Task 0 responsibility per plan §13 Task 0
+- **remote push:** deferred — phase-v1-JM-a not yet on origin. First push happens after impl Task 1 lands; /bm-push from impl session
+- **next gate (impl session):** open new CC session in brehon-fork-phase-v1-JM-a worktree → /prp-core:prp-implement .claude/PRPs/plans/phase-v1-JM-a.plan.md
+- **next gate (BM session, separate):** /bm-poll-cr 91 after CR posts on plan PR; /bm-merge 91 when CR clean
+
+---
+
+## bm: phase branch FF — 2026-04-23T19:45:00Z
+- **branch:** phase-v1-JM-a
+- **from:** e61f78edf (PR #72 merge — 4 days stale, pre-AD-b/c/d/wrap-up)
+- **to:** 02189988d (current trunk HEAD; includes AD-b/c/d + wrap-up + meta-retro)
+- **method:** git merge --ff-only origin/governance-v0 (no merge commit; clean FF)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-phase-v1-JM-a — unchanged path; no re-add
+- **submodule:** crates/email/translations at a3f9e4669 (already initialised per prior bootstrap)
+- **.env:** present (268 bytes, from prior bootstrap; unchanged)
+- **settings.local.json:** SYNCED from primary worktree (primary had 17 extra permission rules + enabledPlugins.telegram that JM-a was missing; copied to prevent silent deny per feedback_settings_local_json_worktree_bootstrap)
+- **plan file present?** NO — plan lives on plan/v1-JM-a branch (PR #91, still OPEN). Impl session cannot start /prp-core:prp-implement until PR #91 merges AND a second FF brings the plan commit onto phase-v1-JM-a.
+- **remote branch:** NOT pushed (phase-v1-JM-a is not on origin; no prior upstream tracking)
+- **next gate:** await PR #91 CR + merge → second FF on phase-v1-JM-a → worktree ready for impl
+
+---
+
+## bm: PR opened — 2026-04-23T19:30:00Z
+- **PR:** #91 — Plan: v1-JM-a — jury-mechanics schema + enums + snapshot columns + backfill
+- **URL:** https://github.com/barrie-cork/lemmy/pull/91
+- **base <- head:** governance-v0 (02189988d) <- plan/v1-JM-a (1bc32fcc0)
+- **commits on branch:** 1 (1bc32fcc0 — docs(v1-JM-a): add jury-mechanics sub-phase A plan)
+- **files changed:** 1 new (.claude/PRPs/plans/phase-v1-JM-a.plan.md, 1558 lines)
+- **draft?** no (CR skips drafts per phase-branch.md)
+- **CR expected:** yes (will poll via /bm-poll-cr in 5-10 min)
+- **Telegram ping:** skipped silently (MCP disconnected; per BM rules, pings are notifications not gating)
+- **user confirmation:** pre-confirmed in-channel ("Green-light (2) + (7)")
+
+---
+
+## bm: branch delete — 2026-04-23T19:28:00Z
+- **branch:** plan/v1-JM-a (stale, 850678806)
+- **scope:** local + remote
+- **reason:** superseded — prior draft (1843-line v1-jury-mechanics-a.plan.md) replaced by current 1558-line phase-v1-JM-a.plan.md per user 2026-04-23
+- **PRs affected:** 0 (stale branch had no PR open)
+- **user confirmation:** explicit ("delete remote origin/plan/v1-JM-a?")
+
+---
+
+## bm: PR cut — 2026-04-23T19:29:00Z
+- **branch:** plan/v1-JM-a (fresh)
+- **cut from:** governance-v0 @ 02189988d (trunk HEAD, synced with origin)
+- **upstream:** origin/plan/v1-JM-a (pushed with -u)
+- **first commit:** 1bc32fcc0 (plan file only; Brehn-Consensus-*.{md,docx} + modified bm-runlog.md left on trunk untouched)
+
+---
+
+## bm: merge — 2026-04-23T18:40:24Z
+- **PR:** #90 (chore(v1-AD): wrap-up — DQ cleanup + meta-retro)
+- **base <- head:** governance-v0 <- chore/v1-AD-wrap-up
+- **merge sha:** 02189988d2d1ec1a8d166df092aed7af71de111c
+- **remote branch deleted?** yes (--delete-branch)
+- **trunk position:** 02189988d — Merge pull request #90 from barrie-cork/chore/v1-AD-wrap-up
+- **findings YAML archived:** .claude/PRPs/reviews/pr-90-findings.yaml (merged_at + merge_commit set)
+- **re-poll gate:** waived — cr-2+cr-3 fix commit (fb51cbd5b) names findings by ID; user explicitly authorised merge without re-poll
+- **user confirmation:** pre-confirmed in impl session invocation (no AskUserQuestion needed)
+
 ---
 
 ## bm: push — 2026-04-23T19:10:00Z
