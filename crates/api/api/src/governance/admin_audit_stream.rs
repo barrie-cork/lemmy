@@ -60,6 +60,14 @@ use tokio_postgres::{AsyncMessage, NoTls, Notification};
 /// decisions).
 static ACTIVE_SSE_ADMINS: OnceLock<Mutex<HashSet<PersonId>>> = OnceLock::new();
 
+/// Bounded capacity for the SSE notification channel. If a slow client
+/// can't drain within 256 pending notifications, new notifications are
+/// dropped (try_send on Full) rather than back-pressuring the
+/// tokio-postgres LISTEN connection. Governance events are small; 256
+/// gives a fast client comfortable headroom and a slow client a
+/// diagnosable gap instead of memory growth.
+const SSE_CHANNEL_CAPACITY: usize = 256;
+
 fn active_sse_admins() -> &'static Mutex<HashSet<PersonId>> {
   ACTIVE_SSE_ADMINS.get_or_init(|| Mutex::new(HashSet::new()))
 }
@@ -127,7 +135,6 @@ pub async fn admin_audit_stream(
   // which is the wrong direction — Postgres is not waiting for us.
   // Dropped events reach the client as a gap; the client can reconnect and
   // re-read `/admin/config/audit` for the backfill.
-  const SSE_CHANNEL_CAPACITY: usize = 256;
   let (tx, rx): (_, mpsc::Receiver<Notification>) = mpsc::channel(SSE_CHANNEL_CAPACITY);
   let driver = tokio::spawn(async move {
     let mut connection = pg_conn;
