@@ -216,6 +216,7 @@ pub async fn create_report(
         threshold_score: initial_score,
         applied_config_snapshot: Some(applied_config_snapshot),
         rule_set_version_id,
+        ..Default::default()
       };
       let row = insert_into(moderation_case::table)
         .values(&form)
