@@ -59,6 +59,7 @@ migrations/.diesel_lock
 # Branch-manager (BM) per-PR runtime artifacts (the SCHEMA.md + pr-*-review.md ARE committed)
 .claude/PRPs/reviews/pr-*-findings.yaml
 .claude/PRPs/reviews/pr-*-comment.md
+.claude/PRPs/reviews/pr-*-cf-issue-body.md
 .claude/PRPs/reviews/.cr-cache/
 
 # Local environment — never commit secrets
