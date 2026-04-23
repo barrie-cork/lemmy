@@ -18,7 +18,7 @@ Invoke:
 > Return a one-screen summary followed by a "Next suggested" line per
 > your return-format rule.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="haiku", prompt=<the above>)`. Mechanical read-only verb — Haiku 4.5 is sufficient; no semantic judgment required.
 
 ---
 

@@ -24,7 +24,7 @@ Invoke:
 > carry-forward issue before `gh issue create`. Return the bucket
 > counts + posted status + "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="opus", prompt=<the above>)`. Judgment-heavy: four-bucket classification is the merge-gate brain. Keep on Opus — misbucketing a critical fix-in-pr as rebut/wont-fix is the exact failure mode CodeRabbit-block-merge discipline (`feedback_coderabbit_block_merge_critical.md`, 3× caught) exists to prevent. Also applies the "if I revert this, does the symptom return?" test (`feedback_severity_labels_dont_imply_semantic.md`).
 
 ---
 

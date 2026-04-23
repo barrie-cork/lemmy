@@ -21,7 +21,7 @@ Invoke:
 > governance-v0 via `gh pr create --repo barrie-cork/lemmy --base governance-v0`.
 > Return a "PR opened" summary followed by a "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="sonnet", prompt=<the above>)`. Templated PR-body assembly + outbound PR-create (auto, no-ask) — Sonnet 4.6 balances cost with the prose-composition judgment. Not Haiku: body tone + ADR-constraint awareness matter for the PR description.
 
 ---
 

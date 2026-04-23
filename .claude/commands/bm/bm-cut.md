@@ -21,7 +21,7 @@ Invoke:
 > cut the branch locally without pushing. Return a "Branch cut" summary
 > followed by a "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="haiku", prompt=<the above>)`. Mechanical local-only write — Haiku 4.5 is sufficient; regex branch-name check + 3 precondition gates.
 
 ---
 

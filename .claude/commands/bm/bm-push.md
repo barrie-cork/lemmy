@@ -20,7 +20,7 @@ Invoke:
 > the user via AskUserQuestion before pushing. Return a "Pushed" summary
 > followed by a "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="haiku", prompt=<the above>)`. Mechanical — one `git push -u`; `--force-with-lease` confirm gate is literal-string match, not judgment.
 
 ---
 

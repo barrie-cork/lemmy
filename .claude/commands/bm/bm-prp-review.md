@@ -32,7 +32,7 @@ Invoke:
 > `source: claude`, set top-level `recommendation`. Return the cargo
 > exit codes + ADR summary + "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="opus", prompt=<the above>)`. Judgment-heavy: interprets cargo failures, writes severity/bucket, cross-checks ADRs. Keep on Opus — misclassifying a cargo failure or ADR violation as non-blocking is the `feedback_coderabbit_block_merge_critical.md` failure mode.
 
 ---
 

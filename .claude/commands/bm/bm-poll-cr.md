@@ -22,7 +22,7 @@ Invoke:
 > merge into `.claude/PRPs/reviews/pr-<N>-findings.yaml` per SCHEMA.md.
 > Return the counters table and "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="sonnet", prompt=<the above>)`. Structured ingestion — CR severity parse + stable-ID assignment + YAML merge. Sonnet 4.6 (not Haiku): the findings YAML is the load-bearing input to `/bm-triage`, so garbage-in → bad merge-gate decisions.
 
 ---
 

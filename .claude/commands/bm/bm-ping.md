@@ -30,7 +30,7 @@ Invoke:
 > sending, send via `mcp__plugin_telegram_telegram__reply`. Return the
 > event + sent-status + "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="haiku", prompt=<the above>)`. Mechanical — 5 literal event names, pre-send regex refusal scan, mandatory user-confirm. Haiku 4.5 is sufficient; all the judgment is encoded as bright-line refusals in the script and the `feedback_telegram_scope_notification_only.md` memory.
 
 ---
 

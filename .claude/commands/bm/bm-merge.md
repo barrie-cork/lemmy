@@ -25,7 +25,7 @@ Invoke:
 > `merged_at`/`merge_commit`. Return the merge SHA + trunk position +
 > "Next suggested" line.
 
-The parent (impl) session should call `Agent(subagent_type="branch-manager", prompt=<the above>)`. The subagent handles the rest.
+The parent (impl) session should call `Agent(subagent_type="branch-manager", model="sonnet", prompt=<the above>)`. Pre-merge gate checks + final confirm: mostly mechanical (YAML counters, mergeStateStatus, CI, DQ scan), but the stakes are high (merge is irrevocable). Sonnet 4.6 — not Haiku (gate checks must be robust), not Opus (user's AskUserQuestion confirm is the final judgment gate).
 
 ---
 
