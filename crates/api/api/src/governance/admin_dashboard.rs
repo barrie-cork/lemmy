@@ -204,7 +204,7 @@ async fn rule_sets_summary(
     .await?
     .and_then(|i| i32::try_from(i).ok());
     per_community.push(PerCommunityActiveRuleSet {
-      community_id: r.community_id,
+      community_id: cid,
       active_version_id,
     });
   }

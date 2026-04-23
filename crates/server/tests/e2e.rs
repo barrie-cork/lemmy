@@ -5883,6 +5883,7 @@ async fn admin_dashboard_returns_aggregate_for_admin()
 async fn admin_dashboard_forbidden_for_non_admin()
 -> lemmy_utils::error::LemmyResult<()> {
   use lemmy_api::governance::admin_dashboard::admin_dashboard;
+  use lemmy_utils::error::LemmyErrorType;
 
   let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
@@ -5890,7 +5891,15 @@ async fn admin_dashboard_forbidden_for_non_admin()
     admin_config_fixtures::seed_user(&context, instance.id, "dash_nonadmin", false).await?;
 
   let result = admin_dashboard(context.clone(), user_view).await;
-  assert!(result.is_err(), "non-admin must be rejected by is_admin()");
+  // is_err() alone would also pass on a pre-admin-check DB error; the
+  // specific-variant match anchors the test to the capability gate
+  // (cr-18).
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
 
   // Dashboard is read-only — ADR-008 compliance: no governance_log
   // entry is emitted on capability-deny (unlike admin_set_config's
@@ -6030,7 +6039,7 @@ async fn admin_dashboard_aggregates_populated_data()
   // per_community includes one entry; active_version_id is None because
   // no governance_config row was seeded for rule_set.active_version_id.
   assert_eq!(resp.rule_sets.per_community.len(), 1);
-  assert_eq!(resp.rule_sets.per_community[0].community_id, community.id.0);
+  assert_eq!(resp.rule_sets.per_community[0].community_id, community.id);
   assert_eq!(resp.rule_sets.per_community[0].active_version_id, None);
 
   // recent_config_changes remains empty — no admin_config_changed rows
@@ -6048,6 +6057,7 @@ async fn admin_dashboard_aggregates_populated_data()
 async fn admin_audit_stream_forbidden_for_non_admin()
 -> lemmy_utils::error::LemmyResult<()> {
   use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
+  use lemmy_utils::error::LemmyErrorType;
 
   let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
@@ -6055,7 +6065,15 @@ async fn admin_audit_stream_forbidden_for_non_admin()
     admin_config_fixtures::seed_user(&context, instance.id, "sse_nonadmin", false).await?;
 
   let result = admin_audit_stream(context.clone(), user_view).await;
-  assert!(result.is_err(), "non-admin must be rejected by is_admin()");
+  // is_err() alone would also pass on a tokio_postgres::connect failure
+  // before the admin check; the specific-variant match anchors the test
+  // to the capability gate (cr-18).
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
 
   Ok(())
 }

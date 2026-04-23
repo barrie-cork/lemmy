@@ -663,7 +663,7 @@ pub struct RuleSetSummary {
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 pub struct PerCommunityActiveRuleSet {
-  pub community_id: i32,
+  pub community_id: CommunityId,
   /// `None` if the community has `rule_set_version` rows but no
   /// `rule_set.active_version_id` config row (allowed by design — v1-AD-c
   /// never seeds the key).
