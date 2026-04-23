@@ -160,6 +160,19 @@ pub const ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED: &str = "admin_config_change_den
 // across all ENTRY_KIND_* string values in this file.
 pub const ENTRY_KIND_RULE_SET_VERSION_CREATED: &str = "rule_set_version_created";
 
+// v1-JM-a additions (v1 jury-mechanics sub-phase A). All six emitting
+// call sites land in v1-JM-b/c/d per PRD §9.2/§9.3/§9.4/§9.5. v1-JM-a
+// ships the const declarations and the registry entry only; actual
+// governance_log::append calls land with the handler edits in later
+// sub-phases (b: constraint_relaxed + severity_tier_frozen;
+// d: appeal_* kinds incl. window_expired scheduler tick).
+pub const ENTRY_KIND_JURY_CONSTRAINT_RELAXED: &str = "jury_constraint_relaxed";
+pub const ENTRY_KIND_APPEAL_PANEL_ASSEMBLED: &str = "appeal_panel_assembled";
+pub const ENTRY_KIND_APPEAL_DECIDED: &str = "appeal_decided";
+pub const ENTRY_KIND_APPEAL_REJECTED: &str = "appeal_rejected";
+pub const ENTRY_KIND_APPEAL_WINDOW_EXPIRED: &str = "appeal_window_expired";
+pub const ENTRY_KIND_SEVERITY_TIER_FROZEN: &str = "severity_tier_frozen";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
