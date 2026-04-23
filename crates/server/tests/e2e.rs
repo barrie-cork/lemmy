@@ -6165,9 +6165,9 @@ async fn admin_audit_stream_emits_frame_on_config_change()
   // frame).
   let mut body = resp.into_body();
 
-  // First frame is the initial `event: retry\ndata: 10000\n\n` the
-  // handler emits before entering its select loop. Pull it out so the
-  // subsequent reads see a clean stream.
+  // First frame is the initial `retry: 10000\n\n` the handler emits
+  // before entering its select loop. Pull it out so the subsequent reads
+  // see a clean stream.
   let retry_frame = tokio::time::timeout(StdDuration::from_secs(5), poll_fn(|cx| {
     Pin::new(&mut body).poll_next(cx)
   }))
@@ -6178,8 +6178,8 @@ async fn admin_audit_stream_emits_frame_on_config_change()
   let retry_str = std::str::from_utf8(&retry_frame)
     .map_err(|e| anyhow::anyhow!("retry frame not utf-8: {e}"))?;
   assert_eq!(
-    retry_str, "event: retry\ndata: 10000\n\n",
-    "initial frame is the SSE retry directive",
+    retry_str, "retry: 10000\n\n",
+    "initial frame is the SSE retry field (HTML5 §9.2.5, not a custom event)",
   );
 
   // Trigger an `admin_config_changed` write. The governance_log INSERT

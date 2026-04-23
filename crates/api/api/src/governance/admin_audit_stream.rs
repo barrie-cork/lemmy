@@ -49,10 +49,7 @@ use std::{
   time::Duration,
 };
 use tokio::{
-  sync::{
-    Mutex,
-    mpsc::{self, UnboundedReceiver},
-  },
+  sync::{Mutex, mpsc},
   time::interval,
 };
 use tokio_postgres::{AsyncMessage, NoTls, Notification};
@@ -124,13 +121,31 @@ pub async fn admin_audit_stream(
     }
   };
 
-  let (tx, rx): (_, UnboundedReceiver<Notification>) = mpsc::unbounded_channel();
+  // Bounded channel: if a slow SSE client can't drain fast enough, drop
+  // new notifications on Full instead of letting the backlog grow without
+  // bound (cr-14). Back-pressure would propagate upstream to tokio-postgres,
+  // which is the wrong direction — Postgres is not waiting for us.
+  // Dropped events reach the client as a gap; the client can reconnect and
+  // re-read `/admin/config/audit` for the backfill.
+  const SSE_CHANNEL_CAPACITY: usize = 256;
+  let (tx, rx): (_, mpsc::Receiver<Notification>) = mpsc::channel(SSE_CHANNEL_CAPACITY);
   let driver = tokio::spawn(async move {
     let mut connection = pg_conn;
     std::future::poll_fn(move |cx| loop {
       match Pin::new(&mut connection).poll_message(cx) {
         Poll::Ready(Some(Ok(AsyncMessage::Notification(n)))) => {
-          let _ = tx.send(n);
+          match tx.try_send(n) {
+            Ok(()) => {}
+            Err(mpsc::error::TrySendError::Full(_)) => {
+              tracing::warn!(
+                "admin_audit_stream SSE channel full (capacity {SSE_CHANNEL_CAPACITY}); \
+                 dropping governance_events notification — slow client will see a gap"
+              );
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+              return Poll::Ready(());
+            }
+          }
         }
         Poll::Ready(Some(Ok(_))) => {}
         Poll::Ready(Some(Err(_))) | Poll::Ready(None) => {
@@ -160,7 +175,12 @@ pub async fn admin_audit_stream(
     let _client = pg_client; // hold conn alive for request lifetime
     let mut rx = rx;
 
-    yield Ok::<Bytes, actix_web::Error>(Bytes::from("event: retry\ndata: 10000\n\n"));
+    // Top-level SSE `retry:` field per HTML5 §9.2.5 — sets EventSource's
+    // reconnection interval to 10 s. An `event: retry\ndata: 10000\n\n`
+    // frame would be a custom event named "retry" with data `10000`, which
+    // browsers dispatch to any `addEventListener("retry", ...)` listener
+    // but do NOT apply as the reconnect interval (cr-15).
+    yield Ok::<Bytes, actix_web::Error>(Bytes::from("retry: 10000\n\n"));
 
     let mut heartbeat = interval(Duration::from_secs(15));
     heartbeat.tick().await;
