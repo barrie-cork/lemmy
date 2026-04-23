@@ -6010,17 +6010,24 @@ async fn admin_dashboard_aggregates_populated_data()
   // Invoke the dashboard handler and assert aggregates.
   let resp = admin_dashboard(context.clone(), admin_view).await?.into_inner();
 
-  assert!(
-    resp.active_cases.by_status.get("Open").copied().unwrap_or_default() >= 1,
-    "Open case count present",
+  // Each seed inserts exactly one case per status (three total). Assert
+  // exact values so a regression that double-counts or drops a status
+  // bucket surfaces, and so a missing key (None) is distinguished from
+  // a zero count (cr-25).
+  assert_eq!(
+    resp.active_cases.by_status.get("Open").copied(),
+    Some(1),
+    "Open case count should be exactly 1 (one seed)",
   );
-  assert!(
-    resp.active_cases.by_status.get("JurySelection").copied().unwrap_or_default() >= 1,
-    "JurySelection case count present",
+  assert_eq!(
+    resp.active_cases.by_status.get("JurySelection").copied(),
+    Some(1),
+    "JurySelection case count should be exactly 1 (one seed)",
   );
-  assert!(
-    resp.active_cases.by_status.get("Decided").copied().unwrap_or_default() >= 1,
-    "Decided case count present",
+  assert_eq!(
+    resp.active_cases.by_status.get("Decided").copied(),
+    Some(1),
+    "Decided case count should be exactly 1 (one seed)",
   );
   assert_eq!(
     resp.active_cases.total_active, 2,
