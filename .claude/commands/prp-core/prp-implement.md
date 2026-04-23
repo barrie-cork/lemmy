@@ -105,11 +105,49 @@ Error: Plan not found at $ARGUMENTS
 Create one first: /prp-plan "Phase N — <name from IMPLEMENTATION-PLAN-v0.md §3>"
 ```
 
+### 1.4 Detect Already-Completed Tasks (resumed-session safety)
+
+Before starting work, check whether any plan tasks have already been committed on the current branch. This protects against duplicate-task commits when a session is resumed after a context-window reset, a branch is cut part-way through a phase, or an impl session picks up work another session started.
+
+```bash
+git log {base-branch}..HEAD --oneline
+```
+
+For each commit subject returned, match it against the plan's §13 "COMMIT MESSAGE" lines (one per task). The expected convention per `feedback_commit_hygiene_lockfiles_and_task_labels.md` is `feat(scope): <title> (task N)` or similar — the parenthesised task number is the match key.
+
+Print one line per plan task:
+
+```
+Task 1: ALREADY DONE (commit abc1234)
+Task 2: ALREADY DONE (commit def5678)
+Task 3: ALREADY DONE (commit 90ab12c)
+Task 4: STARTING HERE
+Task 5: pending
+Task 6: pending
+...
+```
+
+**STOP conditions** (surface to user before any file edit):
+
+- A plan task has **two** matching commits (duplicate work already landed).
+- A commit exists on the branch that does **not** match any plan task (scope drift or unrelated commit).
+- Commits exist but none cite a task number verbatim (commit-hygiene failure — cannot safely resume; ask user which task to start at).
+- The plan's §13 task list is missing COMMIT MESSAGE lines (plan is malformed for resume).
+
+**Happy paths:**
+
+- Zero commits since `{base-branch}` → start at Task 1.
+- N contiguous commits matching Tasks 1..N → start at Task N+1.
+- Non-contiguous matches (Task 1, 2, 4 done but not 3) → STOP and surface; ordering matters.
+
+Per DQ #42 (v1-AD-d retro §2.1). Replaces the v1-AD-d-era manual `git log --oneline -8` scan with a structural guardrail. This step is cheap (~1 second) and catches a failure class the Phase 2.2 branch-decision matrix does not cover.
+
 **PHASE_1_CHECKPOINT:**
 - [ ] Plan file loaded
 - [ ] Key sections identified
 - [ ] Tasks list extracted
 - [ ] Cross-cutting touches noted
+- [ ] Already-completed tasks detected; resume-point printed; STOP conditions checked
 
 ---
 
@@ -236,9 +274,47 @@ If clippy complains:
 2. Manually fix anything clippy couldn't auto-fix
 3. **Never suppress with `#[allow(...)]` unless the clippy lint is genuinely wrong** — explain in a code comment if you do
 
+### 4.1.1 HTTP Status Code Audit (if plan names specific HTTP statuses)
+
+`LemmyError::status_code()` at `crates/utils/src/error.rs:223-230` only special-cases `IncorrectLogin → 401` and `NotFound → 404`. Every other `LemmyErrorType` variant — including `LemmyErrorType::Unknown` which is what `actix_web::error::ErrorConflict(...)` and friends flatten into — maps to **HTTP 400**. So a plan skeleton that uses `ErrorConflict`, `ErrorForbidden`, `ErrorGone`, etc. and expects a 4xx other than 400/401/404 will silently produce 400 at runtime.
+
+**Audit the plan before writing tests** that assert on specific status codes:
+
+```bash
+# Find status-code references in the plan's §16 Acceptance Criteria and §9 DoD:
+grep -E '\b(4[0-9][0-9]|5[0-9][0-9])\b' {plan-file}
+```
+
+For each status code named (e.g. `409 Conflict`, `403 Forbidden`, `410 Gone`):
+
+1. Find the handler that should return it.
+2. Check: does the handler return `HttpResponse::<Variant>()` directly (e.g. `HttpResponse::Conflict().body(...)`)?
+   - **YES** → status flows through correctly. OK.
+   - **NO** → handler routes via `LemmyError` / `actix_web::error::Error<Variant>`. That will map to **400**, not the plan's expected code. STOP: patch the handler to return the direct `HttpResponse` variant, or change the plan's expected status to 400.
+3. Codes that route through `LemmyError` correctly by special-case: **401** (`IncorrectLogin`), **404** (`NotFound`). All others require direct `HttpResponse::<Variant>()`.
+
+**Skip this step** if the plan's §16 only asserts `200 OK` / generic 4xx-or-5xx. Only run it when a specific non-{200,401,404} code is named.
+
+Per DQ #43 (v1-AD-d retro §2.2). The bug shipped once in v1-AD-d where the plan skeleton used `ErrorConflict(...)` and the 409-asserting test would have failed with "expected 409 got 400" had the implementer trusted the skeleton.
+
 ### 4.2 Integration Tests
 
 **You MUST write or update tests for new code.** Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md): integration-only, all in `tests/e2e.rs`.
+
+#### 4.2.0 Docker daemon preflight (MANDATORY before every `cargo test --test e2e`)
+
+The e2e harness spins up a real Postgres via testcontainers-rs. If the Docker daemon isn't running, the test failure is reported as `start_postgres: failed to create a container: Error in the hyper legacy client: client error (Connect)` — which reads like "Postgres container crashed" when the actual problem is "Docker Desktop is stopped." Silent-daemon-down has cost ~15 min of RCA diagnosis per occurrence; the probe below costs ~50ms.
+
+Run this probe immediately before every e2e invocation:
+
+```bash
+docker ps > /dev/null 2>&1 || {
+  echo "DOCKER NOT RUNNING — start Docker Desktop / dockerd before continuing"
+  exit 1
+}
+```
+
+If the probe fails, STOP and surface to the user — Docker Desktop on Windows has a habit of stopping on sleep/resume and this probe catches it at the right boundary. **Do not** attempt `cargo test --test e2e` before the probe passes.
 
 Write tests, then run:
 
@@ -247,6 +323,8 @@ cargo test --test e2e {pattern-from-plan}
 ```
 
 **Postgres in Docker requirement**: the e2e harness spins up a real Postgres per test run. **Always run the container with `--user $(id -u):$(id -g)`** to prevent root-owned files from blocking git worktree cleanup.
+
+Per DQ #44 (v1-AD-d retro §2.3). See also `pre-phase-harness-audit.md` Probe 0 which runs the same check at phase start.
 
 **If tests fail:**
 1. Read the failure output (cargo test shows clear panics)
@@ -392,6 +470,22 @@ mkdir -p .claude/PRPs/reports
 - [ ] Review implementation
 - [ ] Create PR: `/prp-pr` (if ready)
 - [ ] Mark the relevant phase in [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) as done (in a separate commit in the homeserver repo — do NOT edit from inside brehon-fork)
+
+---
+
+## Follow-up GH issues (v1 / v2 limitations)
+
+Scan the plan's **§3 (Out of scope)** and **§4.1 (Accepted limitations)** sections. For each bullet that is an intentional v1 scope decision but represents a real limitation a future reader might want to understand or fix, propose a `gh issue create` sketch. The implementer who just wrote the code has the exact tradeoff context in their head; filing the issue now beats advisor-inferred ad-hoc triage weeks later.
+
+| Limitation | Issue title | Label | One-line body |
+|---|---|---|---|
+| {bullet from plan §3 or §4.1} | {suggested title ≤70 chars} | `v2-candidate` / `v1.5-candidate` | {why it matters + pointer to the code location} |
+
+**If there are no §3/§4.1 limitations worth tracking**, write `(none — implementation covers the full plan scope)`.
+
+Don't auto-create the issues — propose the sketches and let the user / advisor decide which to file. Many §3 bullets are permanent scope decisions that will never be "fixed" (e.g. "instance-wide juries are v2 territory per ADR-014"); those don't need an issue. Only file for bullets where a future implementer would benefit from a first-class TODO.
+
+Per DQ #46 (v1-AD-d retro §3.2). Keeps the advisor's backlog fresh with implementer-written tracking issues where the code author's context is still warm.
 ```
 
 ### 5.3 Archive Plan
