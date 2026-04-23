@@ -117,7 +117,7 @@ For each commit subject returned, match it against the plan's §13 "COMMIT MESSA
 
 Print one line per plan task:
 
-```
+```text
 Task 1: ALREADY DONE (commit abc1234)
 Task 2: ALREADY DONE (commit def5678)
 Task 3: ALREADY DONE (commit 90ab12c)
