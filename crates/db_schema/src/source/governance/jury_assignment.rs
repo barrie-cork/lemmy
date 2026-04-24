@@ -1,9 +1,13 @@
 use crate::newtypes::{JuryAssignmentId, ModerationCaseId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{PersonId, enums::JuryAssignmentStatus};
+use lemmy_db_schema_file::{
+  PersonId,
+  enums::{JuryAssignmentRole, JuryAssignmentStatus},
+};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::jury_assignment;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
@@ -22,6 +26,16 @@ pub struct JuryAssignment {
   pub selected_at: DateTime<Utc>,
   pub responded_at: Option<DateTime<Utc>>,
   pub submitted_at: Option<DateTime<Utc>>,
+  /// v1-JM-a §8.2: JSONB payload listing which constraints were applied
+  /// at panel-pick time (per PRD Watch 10: constraint names only, no
+  /// person_id). Written by v1-JM-b admin_assign_jury; NULL pre-v1.
+  pub selected_under_constraints: Option<Value>,
+  /// v1-JM-a §8.2: distinguishes original-jury rows from appeal-jury
+  /// rows on the same case. DB DEFAULT 'Original' covers every v0
+  /// writer; v1-JM-d's `select_appeal_panel` writes 'Appeal' via a new
+  /// call site. The InsertForm intentionally does NOT add a `role`
+  /// field — DEFAULT covers the v0/v1-JM-b writer paths.
+  pub role: JuryAssignmentRole,
 }
 
 #[derive(Clone, Default)]

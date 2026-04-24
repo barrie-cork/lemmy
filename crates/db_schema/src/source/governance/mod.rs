@@ -6,6 +6,7 @@ pub mod federation_attestation;
 pub mod governance_config;
 pub mod governance_log;
 pub mod jury_assignment;
+pub mod jury_constraint_violation_log;
 pub mod jury_pool;
 pub mod jury_vote;
 pub mod moderation_case;

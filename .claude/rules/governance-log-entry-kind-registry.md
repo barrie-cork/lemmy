@@ -126,12 +126,22 @@ Each future v1 sub-PRD OWNS a section below. Populated by that sub-PRD's
 own plan file at its const-introducing task. Reserved slots avoid
 re-ordering churn when a later PRD lands first.
 
-### jury-mechanics-v1 (reserved — §8.5 of PRD enumerates 6 new kinds)
+## v1-JM-a entry kinds (6, this sub-phase)
 
-_To be populated by `v1-jury-mechanics.plan.md` at the const-landing
-task:_ `jury_constraint_relaxed`, `appeal_panel_assembled`,
-`appeal_decided`, `appeal_rejected`, `appeal_window_expired`,
-`severity_tier_frozen`.
+Landed alongside task 9's dual-file edit. v1-JM-a writes the const
+declarations only; emitting call sites land in v1-JM-b (constraint
+relaxation + `severity_tier_frozen` on admin_assign_jury), v1-JM-d
+(appeal_* kinds — panel_assembled, decided, rejected), and v1-JM-d
+background job (appeal_window_expired scheduler tick).
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_JURY_CONSTRAINT_RELAXED` | `jury_constraint_relaxed` | v1-JM-a const; v1-JM-b call site | v1-JM-b `crates/api/api/src/governance/admin_assign_jury.rs::select_eligible_jurors` (pending) | R1/R2/R3 relaxation cascade fired; payload carries `{case_id, constraint_dropped, reason_code, phase}` where `reason_code` is one of the 4 `JuryConstraintRelaxationReason` variants (`small_pool` / `cluster_pressure` / `cluster_pressure_exhausted` / `admin_override`) — serde snake_case serialisation of the Rust enum. PR #92 cr-9: `reason` was free-text TEXT; bounded-vocabulary enum closes ADR-015 pseudonymisation gap. |
+| `ENTRY_KIND_APPEAL_PANEL_ASSEMBLED` | `appeal_panel_assembled` | v1-JM-a const; v1-JM-d call site | v1-JM-d `crates/api/api_crud/src/governance/request_appeal.rs::select_appeal_panel` + `crates/api/api/src/governance/admin_trigger_appeal_rejury.rs` (both pending) | Appeal jury seated (original jurors excluded, higher threshold tier); payload carries `{case_id, new_panel_pseudonyms, excluded_juror_count, appeal_threshold_count}` |
+| `ENTRY_KIND_APPEAL_DECIDED` | `appeal_decided` | v1-JM-a const; v1-JM-d call site | v1-JM-d `submit_jury_vote.rs` appeal-panel vote-tally path (pending) | Appeal panel returned a verdict; payload mirrors the original case_decided shape plus `{original_winning_decision, appeal_winning_decision}` |
+| `ENTRY_KIND_APPEAL_REJECTED` | `appeal_rejected` | v1-JM-a const; v1-JM-d call site | v1-JM-d `admin_reject_appeal.rs` (handler name TBD; pending) | Admin denied the appeal request before the appeal panel was seated; payload carries `{case_id, reason, reviewer_pseudonym}` |
+| `ENTRY_KIND_APPEAL_WINDOW_EXPIRED` | `appeal_window_expired` | v1-JM-a const; v1-JM-d background job | v1-JM-d `crates/server/src/governance.rs` appeal-window-expiry scheduled task (pending) | Cron tick found a `Decided` case with `appeal_window_expires_at < now()`; case flipped to `Closed`; payload carries `{case_id, decided_at, window_expired_at}` |
+| `ENTRY_KIND_SEVERITY_TIER_FROZEN` | `severity_tier_frozen` | v1-JM-a const; v1-JM-b call site | v1-JM-b `admin_assign_jury.rs` (pending) | `moderation_case.severity_tier` snapshotted at jury-assemble time per PRD §9.2; payload carries `{case_id, severity_tier, status_tier, panel_size_snapshot, quorum_snapshot, threshold_count_snapshot, cascade_resolved_path}` |
 
 ### sponsor-liability-v1 (reserved — §17 of PRD enumerates 5 new kinds)
 
@@ -162,10 +172,10 @@ _To be populated by `v1-federation-inbound.plan.md`:_
 
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**26** at v1-AD-c end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**32** at v1-JM-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
-- [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site (v1-AD-a's two consts pre-land their call sites: `_CHANGED` has the v0 shell wrapper today; `_CHANGE_DENIED` has no call site until v1-AD-b lands).
+- [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (all six await downstream sub-phases: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_DECIDED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.
 - [ ] Registry file matches the "Proposed deliverable" enumeration of GH issue #41 at land-time.
 
 ## Closes

@@ -646,3 +646,122 @@ pub enum MembershipState {
   Provisional,
   Suspended,
 }
+
+// ========================================================================
+// Governance enums (v1-JM-a — jury mechanics sub-phase A)
+//
+// These three enums frame the procedural state every JM-b/c/d/e read or
+// write keys off of. All three use DbValueStyle = "verbatim" mirroring
+// CaseStatus / JuryDecision / SanctionAction (the majority pattern); they
+// are read/written by governance handler code, not by config-text
+// round-trips. PascalCase variants match the PostgreSQL CREATE TYPE
+// values in migrations/2026-04-23-000000-0000_add_jury_mechanics_enums.
+// ========================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::SeverityTier"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics severity tier per PRD §3.1. Maps `SanctionAction` /
+/// case context to a procedural threshold tier (Minor/Moderate/Severe).
+/// Frozen at admin_assign_jury time per ADR-010 (no retroactive
+/// invalidation of in-flight juries) — `moderation_case.severity_tier`
+/// is the snapshotted value; mid-flight config changes do not alter it.
+pub enum SeverityTier {
+  #[default]
+  Minor,
+  Moderate,
+  Severe,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::CaseStatusTier"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics target-status tier per PRD §3.1. Determined from
+/// the target's `reputation_event` / `membership_state` at case-open time
+/// (Founder seeded > Regular default > Probation triggered by adverse
+/// reputation events). Cascade key for `jury.panel_size.<status>.<severity>`.
+pub enum CaseStatusTier {
+  Founder,
+  #[default]
+  Regular,
+  Probation,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::JuryAssignmentRole"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics role discriminator per PRD §8.2. Distinguishes
+/// original-jury rows from appeal-jury rows on the same case so the
+/// appeal-panel-pick query (v1-JM-d) can exclude original jurors via
+/// `WHERE role = 'Original'` while the appeal panel writes `Appeal` rows.
+pub enum JuryAssignmentRole {
+  #[default]
+  Original,
+  Appeal,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::JuryConstraintRelaxationReason"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1 jury-mechanics constraint-relaxation reason code per PRD §5.3
+/// R1/R2/R3 cascade + PRD §8.3's explicit `AdminOverride` extension.
+/// Written by v1-JM-b's `select_eligible_jurors` every time a
+/// diversity/recency/cluster constraint is relaxed during panel
+/// assembly. Bounded vocabulary (no `Other`) per PR #92 cr-9
+/// resolution — the four codes cover the full cascade surface
+/// documented in PRD §5.3 + the admin-bypass path in §8.3. Adding a
+/// new reason requires a new enum variant + Postgres enum migration;
+/// that friction is the ADR-015 pseudonymisation safeguard (replaces
+/// the originally-proposed free-text `relaxation_reason TEXT` which
+/// could have leaked usernames / emails into the governance audit
+/// log).
+///
+/// Serde-renders as snake_case (e.g. `SmallPool` → `"small_pool"`)
+/// to match PRD §5.3's narrative vocabulary in `governance_log`
+/// payload fields. Postgres enum literal is PascalCase (`'SmallPool'`)
+/// matching the `DbValueStyle = "verbatim"` convention shared with
+/// `SeverityTier` / `CaseStatusTier` / `JuryAssignmentRole`.
+pub enum JuryConstraintRelaxationReason {
+  /// PRD §5.3 R1: Phase 1 pool too small post-cooldown — cheapest
+  /// relaxation, lifts `no_recent_juror_repeat`.
+  #[default]
+  SmallPool,
+  /// PRD §5.3 R2: Phase 2 sample violates
+  /// `no_majority_from_same_sponsor_cluster` after N_RETRIES re-rolls;
+  /// drop `geographic_diversity_preferred` as a soft bias.
+  ClusterPressure,
+  /// PRD §5.3 R3: Phase 2 still violates after R2 — drop
+  /// `no_majority_from_same_sponsor_cluster` entirely (warn!-logged).
+  ClusterPressureExhausted,
+  /// PRD §8.3: admin explicitly bypassed the cascade (e.g. emergency
+  /// panel assembly under ADR-013 EmergencyRemove pathway).
+  AdminOverride,
+}

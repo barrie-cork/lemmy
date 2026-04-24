@@ -79,6 +79,7 @@ pub enum ValueType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfigScope {
   Instance,
+  #[expect(dead_code, reason = "forward-compat for v1-AD community-scoped config overrides")]
   Community,
   Both,
 }
@@ -628,6 +629,9 @@ pub const DEFAULT_THRESHOLDS_ENDORSEMENT_STRENGTH: i64 = 25;
 pub const DEFAULT_JURY_PANEL_SIZE: i64 = 5;
 pub const DEFAULT_JURY_QUORUM: i64 = 3;
 pub const DEFAULT_JURY_AGE_REQUIREMENT_DAYS: i64 = 60;
+/// Per-case cap on how many jurors on a single panel may be assigned concurrently.
+/// Pairs with `DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL` (authoritative
+/// for global cross-case juror load); this constant bounds within-panel concurrency only.
 pub const DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS: i64 = 3;
 pub const DEFAULT_JURY_FALLBACK_ON_SMALL_POOL: bool = true;
 pub const DEFAULT_DELTAS_JUROR_ALIGNED: i64 = 10;
@@ -694,6 +698,59 @@ pub const DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS: i64 = 24;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED: bool = true;
 pub const DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED: bool = false;
 
+// -- v1-JM-a additions (jury-mechanics sub-phase A) -------------------------
+//
+// 27 new keys seeded by migration `2026-04-23-000200-0000_seed_v1_jm_config_keys`.
+// Authoritative list = PRD §10 defaults matrix. Breakdown: 9 panel_size cells
+// (status × severity) + 3 quorum_fraction (per severity) + 3 threshold_fraction
+// (per severity) + 5 jury.constraints.* (4 bool + 1 int cooldown) + 2 more
+// jury.* (max_retries_before_relax int, max_concurrent_assignments_per_juror_total
+// int) + 5 appeal.* (1 float multiplier + 3 int + 1 bool). Distinct from
+// v1-AD-a's `jury.severity_thresholds.*` (text display strings) and
+// `jury.diversity_constraints_enabled` (coarse toggle) — both coexist.
+
+// jury.panel_size.<status>.<severity> — 9 keys (int)
+pub const DEFAULT_JURY_PANEL_SIZE_REGULAR_MINOR: i64 = 5;
+pub const DEFAULT_JURY_PANEL_SIZE_REGULAR_MODERATE: i64 = 5;
+pub const DEFAULT_JURY_PANEL_SIZE_REGULAR_SEVERE: i64 = 7;
+pub const DEFAULT_JURY_PANEL_SIZE_FOUNDER_MINOR: i64 = 5;
+pub const DEFAULT_JURY_PANEL_SIZE_FOUNDER_MODERATE: i64 = 7;
+pub const DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE: i64 = 9;
+pub const DEFAULT_JURY_PANEL_SIZE_PROBATION_MINOR: i64 = 3;
+pub const DEFAULT_JURY_PANEL_SIZE_PROBATION_MODERATE: i64 = 5;
+pub const DEFAULT_JURY_PANEL_SIZE_PROBATION_SEVERE: i64 = 5;
+
+// jury.quorum_fraction.<severity> — 3 keys (float)
+pub const DEFAULT_JURY_QUORUM_FRACTION_MINOR: f64 = 0.6;
+pub const DEFAULT_JURY_QUORUM_FRACTION_MODERATE: f64 = 0.6;
+pub const DEFAULT_JURY_QUORUM_FRACTION_SEVERE: f64 = 0.71;
+
+// jury.threshold_fraction.<severity> — 3 keys (float)
+pub const DEFAULT_JURY_THRESHOLD_FRACTION_MINOR: f64 = 0.5001;
+pub const DEFAULT_JURY_THRESHOLD_FRACTION_MODERATE: f64 = 0.6;
+pub const DEFAULT_JURY_THRESHOLD_FRACTION_SEVERE: f64 = 0.75;
+
+// jury.constraints.* — 5 keys (4 bool + 1 int)
+pub const DEFAULT_JURY_CONSTRAINTS_NO_MAJORITY_FROM_SAME_SPONSOR_CLUSTER: bool = true;
+pub const DEFAULT_JURY_CONSTRAINTS_GEOGRAPHIC_DIVERSITY_PREFERRED: bool = true;
+pub const DEFAULT_JURY_CONSTRAINTS_NO_RECENT_JUROR_REPEAT: bool = true;
+pub const DEFAULT_JURY_CONSTRAINTS_JUROR_COOLDOWN_DAYS: i64 = 7;
+pub const DEFAULT_JURY_CONSTRAINTS_NO_SAME_ENDORSEMENT_CHAIN: bool = false;
+
+// jury.constraints.max_retries_before_relax + jury.max_concurrent_* — 2 keys (int)
+pub const DEFAULT_JURY_CONSTRAINTS_MAX_RETRIES_BEFORE_RELAX: i64 = 5;
+/// Global cross-case cap on concurrent assignments per juror. Authoritative for
+/// overall juror-load throttling across the whole network; `DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS`
+/// (above) bounds within-panel concurrency for a single case only.
+pub const DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL: i64 = 2;
+
+// appeal.* — 5 keys (1 float + 3 int + 1 bool)
+pub const DEFAULT_APPEAL_PANEL_SIZE_MULTIPLIER: f64 = 1.5;
+pub const DEFAULT_APPEAL_PANEL_SIZE_FLOOR_INCREMENT: i64 = 2;
+pub const DEFAULT_APPEAL_THRESHOLD_TIER_BUMP: i64 = 1;
+pub const DEFAULT_APPEAL_WINDOW_DAYS: i64 = 7;
+pub const DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE: bool = true;
+
 pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
@@ -743,6 +800,28 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "rule_set.version_propagation_delay_hours" => {
       Some(DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS)
     }
+    // v1-JM-a additions
+    "jury.panel_size.regular.minor" => Some(DEFAULT_JURY_PANEL_SIZE_REGULAR_MINOR),
+    "jury.panel_size.regular.moderate" => Some(DEFAULT_JURY_PANEL_SIZE_REGULAR_MODERATE),
+    "jury.panel_size.regular.severe" => Some(DEFAULT_JURY_PANEL_SIZE_REGULAR_SEVERE),
+    "jury.panel_size.founder.minor" => Some(DEFAULT_JURY_PANEL_SIZE_FOUNDER_MINOR),
+    "jury.panel_size.founder.moderate" => Some(DEFAULT_JURY_PANEL_SIZE_FOUNDER_MODERATE),
+    "jury.panel_size.founder.severe" => Some(DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE),
+    "jury.panel_size.probation.minor" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_MINOR),
+    "jury.panel_size.probation.moderate" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_MODERATE),
+    "jury.panel_size.probation.severe" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_SEVERE),
+    "jury.constraints.juror_cooldown_days" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_JUROR_COOLDOWN_DAYS)
+    }
+    "jury.constraints.max_retries_before_relax" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_MAX_RETRIES_BEFORE_RELAX)
+    }
+    "jury.max_concurrent_assignments_per_juror_total" => {
+      Some(DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL)
+    }
+    "appeal.panel_size_floor_increment" => Some(DEFAULT_APPEAL_PANEL_SIZE_FLOOR_INCREMENT),
+    "appeal.threshold_tier_bump" => Some(DEFAULT_APPEAL_THRESHOLD_TIER_BUMP),
+    "appeal.window_days" => Some(DEFAULT_APPEAL_WINDOW_DAYS),
     _ => None,
   }
 }
@@ -755,6 +834,14 @@ pub(crate) fn const_default_float(key: &str) -> Option<f64> {
     "report.clamp_min" => Some(DEFAULT_REPORT_CLAMP_MIN),
     "report.clamp_max" => Some(DEFAULT_REPORT_CLAMP_MAX),
     "report.recency_half_life_hours" => Some(DEFAULT_REPORT_RECENCY_HALF_LIFE_HOURS),
+    // v1-JM-a additions
+    "jury.quorum_fraction.minor" => Some(DEFAULT_JURY_QUORUM_FRACTION_MINOR),
+    "jury.quorum_fraction.moderate" => Some(DEFAULT_JURY_QUORUM_FRACTION_MODERATE),
+    "jury.quorum_fraction.severe" => Some(DEFAULT_JURY_QUORUM_FRACTION_SEVERE),
+    "jury.threshold_fraction.minor" => Some(DEFAULT_JURY_THRESHOLD_FRACTION_MINOR),
+    "jury.threshold_fraction.moderate" => Some(DEFAULT_JURY_THRESHOLD_FRACTION_MODERATE),
+    "jury.threshold_fraction.severe" => Some(DEFAULT_JURY_THRESHOLD_FRACTION_SEVERE),
+    "appeal.panel_size_multiplier" => Some(DEFAULT_APPEAL_PANEL_SIZE_MULTIPLIER),
     _ => None,
   }
 }
@@ -777,6 +864,22 @@ pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
     }
     "governance.dashboard.step_up_enforced" => {
       Some(DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED)
+    }
+    // v1-JM-a additions
+    "jury.constraints.no_majority_from_same_sponsor_cluster" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_NO_MAJORITY_FROM_SAME_SPONSOR_CLUSTER)
+    }
+    "jury.constraints.geographic_diversity_preferred" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_GEOGRAPHIC_DIVERSITY_PREFERRED)
+    }
+    "jury.constraints.no_recent_juror_repeat" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_NO_RECENT_JUROR_REPEAT)
+    }
+    "jury.constraints.no_same_endorsement_chain" => {
+      Some(DEFAULT_JURY_CONSTRAINTS_NO_SAME_ENDORSEMENT_CHAIN)
+    }
+    "appeal.auto_select_on_appeal_acceptance" => {
+      Some(DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE)
     }
     _ => None,
   }
@@ -921,6 +1024,129 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
     "DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED",
     "bool",
   ),
+  // v1-JM-a additions (v1 jury-mechanics sub-phase A — 27 new keys per
+  // PRD §10 defaults matrix + §3.5 cascade). Distinct from the v1-AD-a
+  // `jury.severity_thresholds.*` text display strings and the v1-AD-a
+  // coarse `jury.diversity_constraints_enabled` toggle — both coexist.
+  (
+    "jury.panel_size.regular.minor",
+    "DEFAULT_JURY_PANEL_SIZE_REGULAR_MINOR",
+    "int",
+  ),
+  (
+    "jury.panel_size.regular.moderate",
+    "DEFAULT_JURY_PANEL_SIZE_REGULAR_MODERATE",
+    "int",
+  ),
+  (
+    "jury.panel_size.regular.severe",
+    "DEFAULT_JURY_PANEL_SIZE_REGULAR_SEVERE",
+    "int",
+  ),
+  (
+    "jury.panel_size.founder.minor",
+    "DEFAULT_JURY_PANEL_SIZE_FOUNDER_MINOR",
+    "int",
+  ),
+  (
+    "jury.panel_size.founder.moderate",
+    "DEFAULT_JURY_PANEL_SIZE_FOUNDER_MODERATE",
+    "int",
+  ),
+  (
+    "jury.panel_size.founder.severe",
+    "DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE",
+    "int",
+  ),
+  (
+    "jury.panel_size.probation.minor",
+    "DEFAULT_JURY_PANEL_SIZE_PROBATION_MINOR",
+    "int",
+  ),
+  (
+    "jury.panel_size.probation.moderate",
+    "DEFAULT_JURY_PANEL_SIZE_PROBATION_MODERATE",
+    "int",
+  ),
+  (
+    "jury.panel_size.probation.severe",
+    "DEFAULT_JURY_PANEL_SIZE_PROBATION_SEVERE",
+    "int",
+  ),
+  ("jury.quorum_fraction.minor", "DEFAULT_JURY_QUORUM_FRACTION_MINOR", "float"),
+  (
+    "jury.quorum_fraction.moderate",
+    "DEFAULT_JURY_QUORUM_FRACTION_MODERATE",
+    "float",
+  ),
+  ("jury.quorum_fraction.severe", "DEFAULT_JURY_QUORUM_FRACTION_SEVERE", "float"),
+  (
+    "jury.threshold_fraction.minor",
+    "DEFAULT_JURY_THRESHOLD_FRACTION_MINOR",
+    "float",
+  ),
+  (
+    "jury.threshold_fraction.moderate",
+    "DEFAULT_JURY_THRESHOLD_FRACTION_MODERATE",
+    "float",
+  ),
+  (
+    "jury.threshold_fraction.severe",
+    "DEFAULT_JURY_THRESHOLD_FRACTION_SEVERE",
+    "float",
+  ),
+  (
+    "jury.constraints.no_majority_from_same_sponsor_cluster",
+    "DEFAULT_JURY_CONSTRAINTS_NO_MAJORITY_FROM_SAME_SPONSOR_CLUSTER",
+    "bool",
+  ),
+  (
+    "jury.constraints.geographic_diversity_preferred",
+    "DEFAULT_JURY_CONSTRAINTS_GEOGRAPHIC_DIVERSITY_PREFERRED",
+    "bool",
+  ),
+  (
+    "jury.constraints.no_recent_juror_repeat",
+    "DEFAULT_JURY_CONSTRAINTS_NO_RECENT_JUROR_REPEAT",
+    "bool",
+  ),
+  (
+    "jury.constraints.juror_cooldown_days",
+    "DEFAULT_JURY_CONSTRAINTS_JUROR_COOLDOWN_DAYS",
+    "int",
+  ),
+  (
+    "jury.constraints.no_same_endorsement_chain",
+    "DEFAULT_JURY_CONSTRAINTS_NO_SAME_ENDORSEMENT_CHAIN",
+    "bool",
+  ),
+  (
+    "jury.constraints.max_retries_before_relax",
+    "DEFAULT_JURY_CONSTRAINTS_MAX_RETRIES_BEFORE_RELAX",
+    "int",
+  ),
+  (
+    "jury.max_concurrent_assignments_per_juror_total",
+    "DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL",
+    "int",
+  ),
+  (
+    "appeal.panel_size_multiplier",
+    "DEFAULT_APPEAL_PANEL_SIZE_MULTIPLIER",
+    "float",
+  ),
+  (
+    "appeal.panel_size_floor_increment",
+    "DEFAULT_APPEAL_PANEL_SIZE_FLOOR_INCREMENT",
+    "int",
+  ),
+  ("appeal.threshold_tier_bump", "DEFAULT_APPEAL_THRESHOLD_TIER_BUMP", "int"),
+  ("appeal.window_days", "DEFAULT_APPEAL_WINDOW_DAYS", "int"),
+  (
+    "appeal.auto_select_on_appeal_acceptance",
+    "DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE",
+    "bool",
+  ),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -936,6 +1162,15 @@ pub const EXPECTED_SEED_COUNT: usize = 34;
 /// plan §4.1). Sponsor-liability v1's 10 `liability.*` keys ship in
 /// sponsor-liability-v1 under their own parametric count.
 pub const EXPECTED_SEED_COUNT_V1_AD: usize = 27;
+
+/// v1-JM-a adds 27 jury-mechanics-owned keys to `SEEDED_KEYS_WITH_CONSTS`.
+/// Parametric per advisor directive 2026-04-19 #4 — each v1 sub-PRD adds its
+/// own `EXPECTED_SEED_COUNT_V1_*` beside the v0 + v1-AD-a invariants without
+/// churning them. Count is authoritative against on-disk reality: plan §13
+/// Task 8 reconciliation gate asserts `SEEDED_KEYS_WITH_CONSTS` contains
+/// exactly this many v1-JM-a-block tuples AND the seed migration has exactly
+/// this many INSERT rows.
+pub const EXPECTED_SEED_COUNT_V1_JM: usize = 27;
 
 /// Enum variants for `federation.quarantine_recommendation_severity_floor`.
 const ENUM_SEVERITY_FLOOR: &[&str] = &["minor", "moderate", "severe"];
@@ -1693,6 +1928,340 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     description: "Whether step-up auth is enforced (v2); v1 default is advisory.",
     doc_anchor: "§7.2",
   },
+  // ---- v1-JM-a additions (27) -------------------------------------------
+  // jury.panel_size.<status>.<severity> — 9 keys (int, range 3..=11 per PRD
+  // §3.4). NextJuryCycle: in-flight juries keep their snapshotted panel size
+  // via moderation_case.panel_size_snapshot (ADR-010).
+  ConfigKeyMetadata {
+    key: "jury.panel_size.regular.minor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for regular-status targets with minor-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.regular.moderate",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for regular-status targets with moderate-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.regular.severe",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for regular-status targets with severe-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.founder.minor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for founder-status targets with minor-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.founder.moderate",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for founder-status targets with moderate-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.founder.severe",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for founder-status targets with severe-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.probation.minor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for probation-status targets with minor-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.probation.moderate",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for probation-status targets with moderate-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.panel_size.probation.severe",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Panel size for probation-status targets with severe-severity cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  // jury.quorum_fraction.<severity> — 3 keys (float). NextJuryCycle.
+  ConfigKeyMetadata {
+    key: "jury.quorum_fraction.minor",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of seated jurors required to reach quorum (minor severity).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.quorum_fraction.moderate",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of seated jurors required to reach quorum (moderate severity).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.quorum_fraction.severe",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of seated jurors required to reach quorum (severe severity).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  // jury.threshold_fraction.<severity> — 3 keys (float). NextJuryCycle.
+  ConfigKeyMetadata {
+    key: "jury.threshold_fraction.minor",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of votes required to uphold (minor severity; strict majority).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.threshold_fraction.moderate",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of votes required to uphold (moderate severity).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.threshold_fraction.severe",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Fraction of votes required to uphold (severe severity; supermajority).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  // jury.constraints.* — 5 keys (4 bool + 1 int). NextJuryCycle.
+  ConfigKeyMetadata {
+    key: "jury.constraints.no_majority_from_same_sponsor_cluster",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Granular constraint: forbid a majority of jurors from one sponsor cluster.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.constraints.geographic_diversity_preferred",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Granular constraint: prefer geographic diversity on panel pick.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.constraints.no_recent_juror_repeat",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Granular constraint: exclude jurors with recent service (see cooldown key).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.constraints.juror_cooldown_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 365.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Days since last juror service before a person is re-eligible.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.constraints.no_same_endorsement_chain",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: true,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Granular constraint: forbid jurors in a shared endorsement chain (v1.5 gate).",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  // jury.constraints.max_retries_before_relax + jury.max_concurrent_* — 2 keys.
+  ConfigKeyMetadata {
+    key: "jury.constraints.max_retries_before_relax",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 50.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Retry attempts before select_eligible_jurors relaxes constraints.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "jury.max_concurrent_assignments_per_juror_total",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 20.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Maximum concurrent jury assignments per juror across all cases.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  // appeal.* — 5 keys. window_days + auto_select_on_appeal_acceptance apply
+  // immediately (LIVE read per PRD §9.1 step 9); the rest NextJuryCycle.
+  ConfigKeyMetadata {
+    key: "appeal.panel_size_multiplier",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 1.0, max: 3.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Multiplier on original panel size when seating an appeal panel.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "appeal.panel_size_floor_increment",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Minimum extra jurors added to appeal panels beyond the multiplied base.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "appeal.threshold_tier_bump",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 2.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextJuryCycle,
+    description: "Severity-tier bump when moving from original panel to appeal panel.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "appeal.window_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 90.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Days after case-decision during which an appeal can be requested.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "appeal.auto_select_on_appeal_acceptance",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether accepting an appeal request auto-seats the appeal panel.",
+    doc_anchor: "v1-jury-mechanics.prd.md§10",
+  },
 ];
 
 
@@ -1702,16 +2271,17 @@ mod parity {
 
   #[test]
   fn seeded_keys_count_matches_const_count() {
-    let expected = EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD;
+    let expected = EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD + EXPECTED_SEED_COUNT_V1_JM;
     assert_eq!(
       SEEDED_KEYS_WITH_CONSTS.len(),
       expected,
       "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) + \
-       EXPECTED_SEED_COUNT_V1_AD ({}) = {} — add/remove keys in both places when changing the \
-       seed list",
+       EXPECTED_SEED_COUNT_V1_AD ({}) + EXPECTED_SEED_COUNT_V1_JM ({}) = {} — add/remove keys \
+       in both places when changing the seed list",
       SEEDED_KEYS_WITH_CONSTS.len(),
       EXPECTED_SEED_COUNT,
       EXPECTED_SEED_COUNT_V1_AD,
+      EXPECTED_SEED_COUNT_V1_JM,
       expected,
     );
   }
