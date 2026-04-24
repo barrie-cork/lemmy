@@ -19,6 +19,21 @@
   ],
   "resolved": [
     {
+      "id": 48,
+      "from": "impl",
+      "timestamp": "2026-04-24T00:00:00Z",
+      "question": "JM-a drift discovered at v1-JM-b Task 4 prep: JuryAssignmentInsertForm in crates/db_schema/src/source/governance/jury_assignment.rs:41-48 does NOT carry the selected_under_constraints field. JM-a schema.rs HAS the column (Nullable<Jsonb>). JM-a struct JuryAssignment (read model) HAS the field. Only the InsertForm is missing it. Plan §10.11 GOTCHA says this should be fixed via DQ entry before Task 4.",
+      "options": [
+        "(a) bundle into Task 4 commit with note in body",
+        "(b) preliminary chore(v1-JM-a-drift) commit preceding Task 4",
+        "(c) skip InsertForm extension entirely; emit JSONB via raw sql_query insert instead"
+      ],
+      "context": "Verified: crates/db_schema_file/src/schema.rs:541 has selected_under_constraints -> Nullable<Jsonb>; JuryAssignment struct at jury_assignment.rs:29-32 has pub selected_under_constraints: Option<Value>; but InsertForm at jury_assignment.rs:41-48 lacks it. JM-a Task 5 commit fdbe7f25c updated models + schema.rs but missed the InsertForm. Adding the field is 1 line. Option (b) is cleanest for git archaeology — drift-fix commit separate from feature commit. LEAN: (b). Self-resolving because the drift is mechanical, the fix is unambiguous, and plan §10.11 pre-authorises fix-before-Task-4.",
+      "answer": "(b) impl-self-resolved. Pre-Task-4 preliminary commit chore(v1-JM-a-drift): add selected_under_constraints field to JuryAssignmentInsertForm. One line added to jury_assignment.rs InsertForm struct (#[derive(Default)] auto-defaults Option<Value> to None). Task 4 rides on top and populates the field. Drift attributed to JM-a Task 5 commit fdbe7f25c which updated the READ model + schema.rs but missed the WRITE form. Self-resolve label because (1) fix is mechanical, (2) plan §10.11 GOTCHA pre-authorises this exact action, (3) advisor DQ round-trip would be pure churn. A future docs(decision-queue) commit can re-attribute to advisor if needed.",
+      "answered_by": "impl-self-resolved",
+      "answered_at": "2026-04-24T00:00:00Z"
+    },
+    {
       "id": 45,
       "from": "impl",
       "timestamp": "2026-04-23T02:30:00Z",
