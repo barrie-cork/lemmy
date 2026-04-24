@@ -32,15 +32,17 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_JURY_CONSTRAINT_RELAXED},
+  governance_log::{
+    self, ENTRY_KIND_JURY_CONSTRAINT_RELAXED, ENTRY_KIND_SEVERITY_TIER_FROZEN,
+  },
   jury_common::panel_has_sponsor_majority_cluster,
 };
 use actix_web::web::{Data, Json};
 use diesel::{
-  ExpressionMethods, QueryDsl, QueryableByName, SelectableHelper,
-  sql_query,
+  ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, SelectableHelper,
+  dsl::{exists, now, select},
+  insert_into, sql_query,
   sql_types::{Array, BigInt, Integer, Nullable},
-  insert_into,
   update,
 };
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
@@ -53,8 +55,14 @@ use lemmy_db_schema::source::governance::{
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseStatus, JuryAssignmentStatus, JuryConstraintRelaxationReason},
-  schema::{jury_assignment, jury_constraint_violation_log, local_user, moderation_case, person},
+  enums::{
+    CaseStatus, CaseStatusTier, JuryAssignmentStatus, JuryConstraintRelaxationReason,
+    MembershipState, ReputationDimension, SeverityTier,
+  },
+  schema::{
+    jury_assignment, jury_constraint_violation_log, local_user, moderation_case, person,
+    reputation_event,
+  },
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::{connection::get_conn, utils::functions::random};
@@ -117,17 +125,65 @@ async fn process_assignment(
     | CaseStatus::AdminReview => return Err(LemmyErrorType::NotFound.into()),
   }
 
-  // 3. Read panel_size from config for this assignment + downstream check.
-  let panel_size =
-    config::get_int(&mut cache, &mut (&mut *conn).into(), Scope::Instance, "jury.panel_size")
-      .await?;
+  // 3. Compute the status tier BEFORE any other &mut *conn borrow. The
+  //    JM-a DEFAULT is Regular — if that's the snapshot, compute eagerly;
+  //    otherwise trust the backfilled value. `compute_status_tier` is the
+  //    only call in this fn that reads reputation_event/person, so
+  //    hoisting avoids borrow-contention with the cascade reads below.
+  //    Plan §10.3 + §10.4.
+  let severity = case.severity_tier;
+  let status = if case.status_tier == CaseStatusTier::Regular {
+    compute_status_tier(conn, &case).await?
+  } else {
+    case.status_tier
+  };
+  let status_str = status_tier_slug(status);
+  let severity_str = severity_tier_slug(severity);
 
-  // 4. Select eligible jurors via the 3-phase diversity-aware algorithm.
+  // 4. Cascade panel_size on (status, severity); quorum_fraction +
+  //    threshold_fraction cascade on (severity,) only per PRD §4.4.
+  let panel_size = config::get_int_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.panel_size",
+    &[status_str, severity_str],
+  )
+  .await?;
+  let quorum_fraction = config::get_float_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.quorum_fraction",
+    &[severity_str],
+  )
+  .await?;
+  let threshold_fraction = config::get_float_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.threshold_fraction",
+    &[severity_str],
+  )
+  .await?;
+
+  // Resolve fractions to integer counts via ceil (PRD §3.4). The admin-
+  // dashboard write path bounds panel_size to [3, 11] (PRD §10) and the
+  // fractions to [0, 1]; so ceil(panel_size * fraction) ∈ [0, 11], which
+  // fits i32 trivially. try_from on the panel_size i64 defends against
+  // out-of-band writes; the f64 → i32 narrowing is safe by the same bound.
+  let panel_size_i32: i32 = i32::try_from(panel_size).map_err(|_e| {
+    LemmyErrorType::Unknown(format!("panel_size {panel_size} out of i32 range"))
+  })?;
+  let quorum = ceil_count(f64::from(panel_size_i32) * quorum_fraction, "quorum")?;
+  let threshold_count =
+    ceil_count(f64::from(panel_size_i32) * threshold_fraction, "threshold_count")?;
+
+  // 5. Select eligible jurors via the 3-phase diversity-aware algorithm.
   //    Falls back to the Phase 4 unfiltered shape if the strict filter
   //    under-fills after the R1 cooldown relaxation and
-  //    `jury.fallback_on_small_pool` is true. v1-JM-b Task 5 evolves this
-  //    caller to cascade panel_size + consume the ConstraintRecord.
-  let (eligible, _constraint_record) =
+  //    `jury.fallback_on_small_pool` is true.
+  let (eligible, constraint_record) =
     select_eligible_jurors(conn, &case, panel_size, None, &mut cache).await?;
   let eligible_count = i64::try_from(eligible.len())
     .map_err(|_e| LemmyErrorType::Unknown("eligible count overflow".to_string()))?;
@@ -135,24 +191,51 @@ async fn process_assignment(
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 5. Insert JuryAssignment rows with status=Selected (task 64 activation).
-  //    Phase 4 used Accepted directly for v0 testability. Task 64 adds the
-  //    accept/decline handshake so jurors transition Selected → Accepted via
-  //    `accept_jury_assignment` (or → Declined via `decline_jury_assignment`).
-  //    submit_jury_vote still filters on status=Accepted, so a decline that
-  //    is not replaced in time will fail voting — exactly the intended v0
-  //    behaviour.
-  // Task 5 populates `selected_under_constraints` with the JSONB
-  // generated from `_constraint_record.to_json()`. Keeping None here
-  // preserves Task 4 as a pure refactor of the selector; the write path
-  // remains the v0 shape until Task 5 upgrades it.
+  // 6. Snapshot the resolved tier + counts and fold the v0 status flip
+  //    (Open|ThresholdMet|EmergencyRemove → JurySelection) into the same
+  //    UPDATE — one round trip. Plan §10.5.
+  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+    .set((
+      moderation_case::panel_size_snapshot.eq(Some(panel_size_i32)),
+      moderation_case::quorum_snapshot.eq(Some(quorum)),
+      moderation_case::threshold_count_snapshot.eq(Some(threshold_count)),
+      moderation_case::status_tier.eq(status),
+      moderation_case::status.eq(CaseStatus::JurySelection),
+    ))
+    .execute(conn)
+    .await?;
+
+  // 7. severity_tier_frozen governance_log entry — admin is the actor.
+  //    Emitted BEFORE per-juror jury_assigned so the audit timeline reads
+  //    severity_tier_frozen → jury_assigned × N → panel_assembled. Plan §10.6.
+  governance_log::append(
+    &mut conn.into(),
+    ENTRY_KIND_SEVERITY_TIER_FROZEN,
+    json!({
+      "case_id": data.case_id.0,
+      "severity_tier": severity_str,
+      "status_tier": status_str,
+      "panel_size_snapshot": panel_size_i32,
+      "quorum_snapshot": quorum,
+      "threshold_count_snapshot": threshold_count,
+    }),
+    Some(admin_pseudonym.clone()),
+  )
+  .await?;
+
+  // 8. Insert JuryAssignment rows with status=Selected and the per-row
+  //    `selected_under_constraints` JSONB. Plan §10.11. Keep `role`
+  //    default-driven so the v1-JM-d appeal-path writer can add
+  //    `JuryAssignmentRole::Appeal` explicitly without disturbing this
+  //    original-jury writer.
+  let constraints_applied_json = constraint_record.to_json();
   let forms: Vec<JuryAssignmentInsertForm> = eligible
     .iter()
     .map(|person_id| JuryAssignmentInsertForm {
       case_id: data.case_id,
       person_id: *person_id,
       status: JuryAssignmentStatus::Selected,
-      selected_under_constraints: None,
+      selected_under_constraints: Some(constraints_applied_json.clone()),
     })
     .collect();
   insert_into(jury_assignment::table)
@@ -160,15 +243,9 @@ async fn process_assignment(
     .execute(conn)
     .await?;
 
-  // 6. Flip case → JurySelection (plan shorthand "InPanel").
-  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
-    .set(moderation_case::status.eq(CaseStatus::JurySelection))
-    .execute(conn)
-    .await?;
-
-  // 7. One governance_log "jury_assigned" row per juror. Each payload
+  // 9. One governance_log "jury_assigned" row per juror. Each payload
   //    carries the per-juror pseudonym so the modlog stays pseudonymous
-  //    per [99 ADR-015].
+  //    per [99 ADR-015]. Unchanged from v0.
   for person_id in &eligible {
     let juror_pseudonym =
       actor_pseudonym_helper::get_or_create(&mut conn.into(), *person_id).await?;
@@ -184,13 +261,23 @@ async fn process_assignment(
     .await?;
   }
 
-  // 8. Single panel_assembled marker — canonical record of Open→panel.
+  // 10. Extended panel_assembled marker — carries the resolved tiers,
+  //     applied-constraints snapshot, and relaxations that fired. Plan §10.12.
   governance_log::append(
     &mut conn.into(),
     "panel_assembled",
     json!({
       "case_id": data.case_id.0,
-      "juror_count": panel_size,
+      "juror_count": panel_size_i32,
+      "severity_tier": severity_str,
+      "status_tier": status_str,
+      "constraints_applied": {
+        "no_majority_from_same_sponsor_cluster": constraint_record.no_majority_from_same_sponsor_cluster,
+        "geographic_diversity_preferred": constraint_record.geographic_diversity_preferred,
+        "no_recent_juror_repeat": constraint_record.no_recent_juror_repeat,
+        "no_same_endorsement_chain": constraint_record.no_same_endorsement_chain,
+      },
+      "relaxations": constraint_record.relaxations_fired,
     }),
     Some(admin_pseudonym.clone()),
   )
@@ -200,6 +287,102 @@ async fn process_assignment(
     case_id: data.case_id,
     assigned_person_ids: eligible,
   })
+}
+
+/// Narrow `ceil(f64)` to a non-negative `i32` under the PRD §10 panel_size
+/// bound. `panel_size ∈ [3, 11]` and fractions `∈ [0, 1]` imply the
+/// ceiling fits i32 trivially; NaN / infinite inputs are defence against
+/// malformed config and return `Unknown`. The narrowing cast is therefore
+/// safe by construction.
+#[expect(
+  clippy::as_conversions,
+  clippy::cast_possible_truncation,
+  reason = "input is ceil(panel_size ∈ [3, 11] × fraction ∈ [0, 1]); the is_finite + sign check keeps the cast safe on malformed config"
+)]
+fn ceil_count(value: f64, label: &str) -> LemmyResult<i32> {
+  if !value.is_finite() || value < 0.0 {
+    return Err(LemmyErrorType::Unknown(format!(
+      "{label} {value} is not a finite non-negative number"
+    ))
+    .into());
+  }
+  let ceiled = value.ceil();
+  if ceiled > f64::from(i32::MAX) {
+    return Err(
+      LemmyErrorType::Unknown(format!("{label} {value} exceeds i32::MAX after ceil")).into(),
+    );
+  }
+  Ok(ceiled as i32)
+}
+
+/// Resolve the status tier for a case's target. Mirrors `is_founder` at
+/// `sponsor_liability.rs:217-228`. Cases without a `target_person_id`
+/// (post/comment/community-targeted paths) default to `Regular` per PRD §4.2.
+///
+/// Founder > Probation > Regular precedence: a founder who is also
+/// provisional resolves to Founder (founders are effectively full members
+/// — the membership_state check exists for v1 deferred-enforcement).
+///
+/// Exactly one async read for the Founder check, plus one optional read
+/// for the MembershipState short-circuit. Both borrow `conn` sequentially.
+async fn compute_status_tier(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case: &ModerationCase,
+) -> LemmyResult<CaseStatusTier> {
+  let Some(target_id) = case.target_person_id else {
+    return Ok(CaseStatusTier::Regular);
+  };
+
+  // Founder check — matches `is_founder` at sponsor_liability.rs:217-228.
+  let is_founder: bool = select(exists(
+    reputation_event::table
+      .filter(reputation_event::person_id.eq(target_id))
+      .filter(reputation_event::dimension.eq(ReputationDimension::EndorsementStrength))
+      .filter(reputation_event::reason.eq("founder_seed"))
+      .filter(reputation_event::expires_at.is_not_null())
+      .filter(reputation_event::expires_at.gt(now)),
+  ))
+  .get_result::<bool>(conn)
+  .await?;
+  if is_founder {
+    return Ok(CaseStatusTier::Founder);
+  }
+
+  // Probation check — membership_state is deferred-enforcement (v0 handlers
+  // MUST NOT consult it for authorization), but v1-JM-b reads it purely as
+  // a tier signal for severity-aware panel sizing, not to gate capability.
+  let membership: Option<MembershipState> = person::table
+    .filter(person::id.eq(target_id))
+    .select(person::membership_state)
+    .first::<MembershipState>(conn)
+    .await
+    .optional()?;
+  if matches!(membership, Some(MembershipState::Provisional)) {
+    return Ok(CaseStatusTier::Probation);
+  }
+
+  Ok(CaseStatusTier::Regular)
+}
+
+/// Snake-case slug for `CaseStatusTier`. Used at the cascade-key
+/// construction boundary (`"jury.panel_size.<status>.<severity>"`) and at
+/// the governance_log JSON payload boundary. Keeps the rest of the file
+/// working in terms of the strongly-typed enum.
+const fn status_tier_slug(tier: CaseStatusTier) -> &'static str {
+  match tier {
+    CaseStatusTier::Founder => "founder",
+    CaseStatusTier::Regular => "regular",
+    CaseStatusTier::Probation => "probation",
+  }
+}
+
+/// Snake-case slug for `SeverityTier`. Mirror of [`status_tier_slug`].
+const fn severity_tier_slug(tier: SeverityTier) -> &'static str {
+  match tier {
+    SeverityTier::Minor => "minor",
+    SeverityTier::Moderate => "moderate",
+    SeverityTier::Severe => "severe",
+  }
 }
 
 /// v1-JM-b per-assignment constraint-application record. Captures which
@@ -221,10 +404,6 @@ impl ConstraintRecord {
   /// the extended panel_assembled governance_log payload. Keys match PRD
   /// §5.1 constraint names verbatim; values are bounded status tokens so
   /// no user-supplied text can leak into the column or log.
-  #[expect(
-    dead_code,
-    reason = "called at v1-JM-b Task 5 jury_assignment.selected_under_constraints insert"
-  )]
   pub(crate) fn to_json(&self) -> Value {
     json!({
       "no_majority_from_same_sponsor_cluster": self.no_majority_from_same_sponsor_cluster,
