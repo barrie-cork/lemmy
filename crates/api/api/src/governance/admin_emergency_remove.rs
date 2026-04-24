@@ -31,7 +31,7 @@ use lemmy_db_schema::{
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus},
+  enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus, SeverityTier},
   schema::{comment, community, jury_assignment, moderation_case, post},
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -151,6 +151,7 @@ async fn process_emergency_remove(
     target_remote_url: None,
     reason_code: "emergency_remove".to_string(),
     severity: CaseSeverity::default(),
+    severity_tier: Some(SeverityTier::Severe),
     status: CaseStatus::EmergencyRemove,
     threshold_score: 0,
     ..Default::default()
