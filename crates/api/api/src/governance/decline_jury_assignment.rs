@@ -12,7 +12,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   admin_assign_jury::select_eligible_jurors,
-  config::ConfigCache,
+  config::{self, ConfigCache, DEFAULT_JURY_PANEL_SIZE, Scope},
   governance_log::{
     self,
     ENTRY_KIND_JURY_DECLINED,
@@ -142,9 +142,33 @@ async fn process_decline(
   exclude_person_ids.push(caller_id);
 
   // 6. Try to pick ONE replacement. `select_eligible_jurors` returns up
-  //    to panel_size; we take the head only.
-  let replacements =
-    select_eligible_jurors(conn, &case, Some(&exclude_person_ids), &mut cache).await?;
+  //    to panel_size; we take the head only. The case's panel_size
+  //    snapshot (v1-JM-a addition) tells us how wide the original panel
+  //    was — use that so replacement-selection picks from the same
+  //    constraint-profile the original assemble used. Falls back to
+  //    bare `jury.panel_size` (v0-compatible) when no snapshot is set
+  //    (e.g. pre-JM-a case that got a replacement request).
+  let panel_size = match case.panel_size_snapshot {
+    Some(n) => i64::from(n),
+    None => {
+      config::get_int(
+        &mut cache,
+        &mut (&mut *conn).into(),
+        Scope::Instance,
+        "jury.panel_size",
+      )
+      .await
+      .unwrap_or(DEFAULT_JURY_PANEL_SIZE)
+    }
+  };
+  let (replacements, _record) = select_eligible_jurors(
+    conn,
+    &case,
+    panel_size,
+    Some(&exclude_person_ids),
+    &mut cache,
+  )
+  .await?;
   let replacement_id = replacements.into_iter().next();
 
   // 7. If a replacement exists, insert a Selected row + emit a
@@ -154,6 +178,12 @@ async fn process_decline(
       case_id: data.case_id,
       person_id: new_id,
       status: JuryAssignmentStatus::Selected,
+      // Replacement picks inherit the original panel's constraint profile
+      // by virtue of running through the same `select_eligible_jurors`
+      // selector; the per-row JSONB snapshot is out of scope for decline
+      // handling in v1-JM-b (the replacement pick's constraint_record is
+      // discarded above).
+      selected_under_constraints: None,
     };
     insert_into(jury_assignment::table)
       .values(&form)

@@ -17,7 +17,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   admin_assign_jury,
-  config::ConfigCache,
+  config::{self, ConfigCache, Scope},
   governance_log,
 };
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
@@ -163,12 +163,26 @@ async fn process_emergency_remove(
   let case_id = case_row.id;
 
   // 3. Post-facto jury — reuse the eligibility logic from admin_assign_jury.
-  //    Per Phase 5b task 57, the filter is reputation-gated + concurrent-
-  //    capped; the small-pool fallback keeps behaviour defined on
-  //    bootstrapping instances.
+  //    Per Phase 5b task 57 + v1-JM-b task 4, the filter is reputation-
+  //    gated + concurrent-capped with diversity / cooldown constraints;
+  //    the small-pool fallback keeps behaviour defined on bootstrapping
+  //    instances. `panel_size` reads the bare `jury.panel_size` key — the
+  //    case row's severity_tier is seeded Minor at this point (v1-JM-b
+  //    task 6 will flip emergency-remove's InsertForm to Severe, at which
+  //    point the cascade read will upgrade the panel to Severe-tier
+  //    sizing). `_record` is discarded here because admin_emergency_remove
+  //    writes its own audit entry; task 6 does not extend this helper's
+  //    governance_log footprint beyond the emergency_removed marker.
   let mut cache = ConfigCache::new();
-  let eligible =
-    admin_assign_jury::select_eligible_jurors(conn, &case_row, None, &mut cache).await?;
+  let panel_size = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.panel_size",
+  )
+  .await?;
+  let (eligible, _record) =
+    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache).await?;
   if !eligible.is_empty() {
     let forms: Vec<JuryAssignmentInsertForm> = eligible
       .iter()
@@ -176,6 +190,7 @@ async fn process_emergency_remove(
         case_id,
         person_id: *person_id,
         status: JuryAssignmentStatus::Accepted,
+        selected_under_constraints: None,
       })
       .collect();
     insert_into(jury_assignment::table)

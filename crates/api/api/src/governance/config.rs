@@ -79,7 +79,6 @@ pub enum ValueType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfigScope {
   Instance,
-  #[expect(dead_code, reason = "forward-compat for v1-AD community-scoped config overrides")]
   Community,
   Both,
 }
@@ -401,7 +400,10 @@ pub async fn get_int_cascade(
   if !segments.is_empty() {
     candidates.push(format!("{namespace}.{}", segments.join(".")));
     for i in 1..segments.len() {
-      candidates.push(format!("{namespace}.{}", segments[i..].join(".")));
+      candidates.push(format!(
+        "{namespace}.{}",
+        segments.get(i..).unwrap_or(&[]).join(".")
+      ));
     }
   }
   candidates.push(namespace.to_string());
@@ -450,7 +452,10 @@ pub async fn get_float_cascade(
   if !segments.is_empty() {
     candidates.push(format!("{namespace}.{}", segments.join(".")));
     for i in 1..segments.len() {
-      candidates.push(format!("{namespace}.{}", segments[i..].join(".")));
+      candidates.push(format!(
+        "{namespace}.{}",
+        segments.get(i..).unwrap_or(&[]).join(".")
+      ));
     }
   }
   candidates.push(namespace.to_string());
