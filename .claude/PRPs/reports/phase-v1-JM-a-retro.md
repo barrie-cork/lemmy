@@ -91,6 +91,43 @@ The `NOT building in v1-JM-a` list kept session 2 from drifting into handler edi
 
 **Fix — handover-skill design input (advisor-facing)**: advisor relay schema should grow a `prd_refs` frontmatter field for any answer that names concrete identifiers (enum values, column names, function names, config keys). Pattern: if the answer says "use X, Y, Z" as vocabulary, the relay must cite the PRD §§ and line numbers where X, Y, Z are named. That makes the cross-check path explicit and lets impl verify against a known section rather than chasing speculation. Noted for the `/handover` skill design the user is working on separately.
 
+### 2.2b R5.3 — CR + advisor both hallucinated CaseStatusTier variants (cr-4 lows batch)
+
+**Symptom**: During the cr-4 docstring fix, CR's original finding proposed `Regular/Escalated/Maximum` as the accurate `CaseStatusTier` variants. Advisor relay `pr92-lows-batch.md` echoed that triplet without cross-checking. Impl verified against PRD §4.1 line 239-242 AND `crates/db_schema_file/src/enums.rs:697` and found the real variants are `Founder / Regular / Probation`.
+
+**Caught by**: impl cross-check before writing code. Fixed in-commit with the correct variant names; commit body documents the drift.
+
+**Root cause**: advisor accepted CR's claim at face value and propagated it in the relay. Did not cite PRD section + line in the relay body. Same failure mode as R5.2 — the advisor's enum-value proposals outran the underlying source-of-truth (PRD + enums.rs).
+
+**Resolution**: commit `8ad8a3b56` uses the PRD-faithful variants. No separate commit needed; the fix is in-line with the cr-4 fix.
+
+**Retro carry (plan-amendment recommendation)**: see §2.2c below — pattern-level entry supersedes the per-instance recommendations from R5.2 and R5.3 individually.
+
+### 2.2c Pattern: advisor/CR enum-value drift (R5.2 + R5.3)
+
+**Pattern**: Both R5.2 (cr-9 `JuryConstraintRelaxationReason` vocabulary) and R5.3 (cr-4 `CaseStatusTier` variants) share a common failure mode:
+
+1. CR or advisor names specific enum-value strings in a finding/relay
+2. The names sound plausible (`reputation_waiver`, `emergency_panel`, `Regular`, `Escalated`) because they match domain-adjacent vocabulary
+3. The names are NOT the actual PRD + `enums.rs` variants
+4. Impl detects by cross-checking PRD section + line before writing code
+
+**Frequency**: 2 occurrences in v1-JM-a (one with CR as the source, one where CR's drift was echoed by advisor without verification). Both enum-related. Both caught by impl pre-write.
+
+**Load-bearing observation**: **CR + advisor enum-value proposals are untrusted input until verified against PRD + the `enums.rs` or analogous source-of-truth file.** This is now a plan-authoring rule, not a retro curiosity.
+
+**Plan-template amendments required** (for v1-JM-b and future sub-phases):
+
+1. **For PRD-adjacent enum proposals in plans or relays**: every enum-value string named in a plan must cite `PRD §X.Y line Z` or `<file>:<line>` inline. Missing citation = reject at plan review.
+2. **For advisor relays answering CR findings**: if the relay names concrete identifiers (enum values, column names, function names, const names), the relay MUST include a `# Source cross-check` section listing the PRD ref + code-path ref the advisor verified against. Missing section = impl treats the proposal as untrusted.
+3. **For impl receiving a relay with named identifiers**: pre-write verification is mandatory — `grep -n <identifier> crates/` + PRD read. Impl's pattern in R5.2 (catch + file relay) and R5.3 (catch + fix in-commit) are both acceptable; the difference is whether the drift is large enough to block (R5.2, new vocabulary) or small enough to fix inline (R5.3, docstring).
+
+**Memory note suggestion**: add a new `feedback_advisor_cr_enum_drift.md` memory entry with this pattern. Title: "Advisor/CR enum-value proposals require source-of-truth verification." Applicable to all v1+ sub-phases until the pattern stops recurring (three phases clean = pattern retired).
+
+**Load-bearing quote for future planners**: "If the advisor or CR names a specific enum value string, the impl's default assumption should be: not in the PRD until proven otherwise. This defaults toward verification, not trust."
+
+**See also**: R5.2 (§2.2a), R5.3 (§2.2b) individual entries; plan-amendment row 4a in §3.2 (below) for JM-b onwards.
+
 ### 2.3 R10.1 — `PHASE_1_MIGRATION_COUNT` is a LIFO count, not a semantic set
 
 **Observed (Task 10, session 2)**: Plan §13 Task 10 anticipated a single-number drift ("extend 9 → 12 or 16"). Reality is worse: the constant is a **LIFO-positional** count, not a semantic set of named migrations. The `lemmy_diesel_utils::schema_setup::run` runner with `.revert().limit(N)` reverts the top-N-by-timestamp pending migrations; the comment at `e2e.rs:311-321` claimed "6 Phase 1 + 2 Phase 5a + 1 Phase 5b Slice A = 9" but the actual LIFO revert at count=9 included the 2 `governance_log_notify` migrations + `federation_attestations` + `restoration_sanction_variant` — not 6 Phase 1 migrations. Any migration added post-trunk after the last count bump silently takes the Nth slot and the comment rots.
@@ -131,8 +168,9 @@ Do NOT auto-file. User / advisor decides post-merge which of the three (0, 1, 2,
 | 2 | Rewrite §10.7 GOTCHA to enumerate InsertForm-extension caller-side impact: `..Default::default()` propagation. Add pre-task `rg -l '<FormName> {' crates/` step. | §2.2 R5.1 | Medium |
 | 3 | When a task bumps `PHASE_1_MIGRATION_COUNT`, mention LIFO-positional semantics in the task's `VALIDATE` block so the impl knows not to infer a semantic set from the constant's name. | §2.3 R10.1 | Low (only applies if new migrations land) |
 | 4 | `/handover` skill design input: advisor relay schema should grow a `prd_refs` frontmatter field for answers naming concrete identifiers (enum values, column names, config keys). Makes the PRD cross-check path explicit. | §2.2a R5.2 | High (but not a plan amendment — skill/relay-protocol amendment) |
+| 4a | Supersedes row 4. Plan-template amendment: every enum-value string in a plan or relay MUST cite PRD §§line. Relays with named identifiers MUST include a `# Source cross-check` section. Impl MUST pre-verify any named identifier via `grep -n <identifier> crates/` + PRD read before writing code. | §2.2c pattern (R5.2 + R5.3) | High (mandatory for JM-b onwards; also design input for future `/handover` skill) |
 
-Items 1-3 are one-line plan-wording fixes. Items 1 and 2 are mandatory for JM-b/c/d/e if those phases add enums or extend InsertForms; item 3 only if they add migrations. Item 4 is a skill/protocol design note for the advisor-side `/handover` work.
+Items 1-3 are one-line plan-wording fixes. Items 1 and 2 are mandatory for JM-b/c/d/e if those phases add enums or extend InsertForms; item 3 only if they add migrations. Items 4 + 4a are protocol/skill-design amendments — 4a supersedes 4 and turns it into a three-way discipline (plan / relay / impl).
 
 ### 3.3 New GH issue sketch — `PHASE_1_MIGRATION_COUNT` model redesign
 
@@ -200,7 +238,112 @@ If the three plan amendments in §3.2 are applied to JM-b/c/d/e, those sub-phase
 
 ---
 
-## 6. Suggested action items for the advisor
+## 6. Tool-use self-assessment (added 2026-04-24)
+
+Baseline for v1-JM-a. Same section becomes a plan-template requirement for v1-JM-b onwards. Self-report, not defensive — the goal is concrete lessons, not a pass/fail.
+
+### 6.1 Tools used heavily this phase
+
+- `Read`: ~80 reads across all three sessions. Plan file (§13 task blocks read per task), PRD (§5.3, §8.4, §4.1, §8.3 re-read per enum/seed/backfill/docstring check), existing crate source (moderation_case.rs, config.rs, enums.rs, schema.rs), prior retros + plan-cherry-pick, findings YAML on primary worktree, migration files.
+- `Edit`: ~40 edits. Predominantly small targeted edits (docstrings, enum additions, migration SQL, SEEDED_KEYS rows). `Write` used only for net-new files (relays, retro amendments).
+- `Bash`: ~60 calls. git status/diff/log/commit, cargo wrappers, `rg` grep-equivalents, `ls` directory listings, `docker ps` preflight, migration file checks.
+- `Grep`: ~25 calls. Cross-checking enum vocab, searching for call sites, ENTRY_KIND count invariants, `CaseStatusTier` variants, `joinable!` block pattern match, `DEFAULT_JURY_MAX_CONCURRENT` sites.
+- `TaskUpdate` / `TaskGet` / `TaskOutput`: ~15 calls. Managed the 7 cr-* lows batch as a task list; used `TaskOutput` with `block=true` to await long cargo runs rather than polling.
+
+Approximate ratio: Read:Edit ≈ 2:1. Grep:Read ≈ 1:3. This is healthy — more reading than writing, more focused reads than broad greps.
+
+### 6.2 Tools NOT used that would have helped
+
+- **Agent (subagent_type=Explore)**: zero usage across all three sessions. At least three moments would have been cheaper as a single parallel Explore: (a) initial enum-vocab cross-check (R5.2) where I manually ran PRD search + enums.rs search + config.rs search sequentially; (b) initial cr-3 joinable! pattern discovery (I ran two greps + one Read to establish alphabetical convention); (c) pre-commit completeness check on cr-1..cr-6 scope (one Explore could have surveyed "every file that mentions `jury_constraint_violation_log` or `CaseStatusTier`" in parallel). Didn't use because the sequential reads felt cheap enough in the moment; retrospect: a parallel Explore would have dropped 5-8 turns and reduced context burn.
+- **`Plan` tool (EnterPlanMode/ExitPlanMode)**: zero usage. Tasks came from an existing plan file, so formal plan-mode wasn't needed, BUT the cr-4 drift moment (discovering CR + advisor both proposed wrong variants) could have benefited from a brief plan-mode pause — the decision was close to "relay vs fix-inline" and a structured plan-tool output would have forced the tradeoff explicit. I made the call in-line; it worked, but the `Plan` tool is the right match for that class of mid-phase decision.
+- **IDE LSP (`mcp__ide__getDiagnostics`)**: not available this session (the MCP server disconnected before tool-use section could use it; noted in `<system-reminder>` at turn start). In a session where it IS available, it's the right call for any docstring or struct-literal edit — diagnostics would surface missing `..Default::default()` propagation (R5.1) before running cargo check.
+- **WebFetch**: zero usage. PRD is local so no URL to fetch. ADR pages are markdown files in `docs/brehon-law-inspired-network/`, so Read is the right tool. Not a miss.
+- **ref-context MCP (`ref_search_documentation`)**: zero usage. Could have been used to verify Diesel API patterns (e.g. `sql_query` bind syntax, `schema_setup::run` `.revert_to(name)` whether it exists); I relied on existing-code patterns from grep instead. Not a critical miss; the patterns were well-established in the codebase.
+
+### 6.3 Rule-violation near-misses
+
+- `cargo-output-capture.md` / `no-cargo-output-paste.md`: zero exit-code-masking incidents. All cargo runs redirected to `.claude/PRPs/debug/*.log` first. Tail-reads stayed under 20 lines except for two failure investigations (cr-5 pg_type probe failure, L3 env-setup failures) where wider reads were load-bearing. Clean.
+- `decision-queue.md §attribution-integrity`: zero DQ writes this phase. The relay protocol supplanted DQ for cross-session questions. Clean.
+- `pm-plugin-hooks-stable.md`: no PM-adjacent code touched (JM-a is governance-log + schema only). Verified via file-path sweep at session start. Clean.
+- `pre-phase-harness-audit.md`: Task 0 audit ran all 4 wrapper probes + Docker preflight + DoD smoke test + clippy baseline at session 1 start. Clean across all three sessions.
+- `phase-branch.md`: zero direct commits to `governance-v0`. All 17 commits land on `phase-v1-JM-a`. BM handles the PR. Clean.
+- **Near-miss (actual)**: cr-5's initial pg_type probe used `format!` inside `sql_query` for the 4 type names. `sql_query` bind syntax would have been slightly cleaner, but the values are hardcoded iterator literals (zero user input, zero injection surface) and the file's existing idiom is `sql_query("... 'literal' ...")`. Not a violation — a style choice — but worth flagging as a spot where pattern consistency won over cleaner-in-isolation API use.
+
+### 6.4 Context-management signals
+
+- Approximate session token high-water mark: session 2 hit ~220k at task 10 start (resume brief + 10-task plan re-read); session 3 compacted mid-phase after the CR-major batch and reached ~300k post-compact pre-lows-batch. No reasoning degradation observed, but both sessions were in the "use-with-care" zone per `feedback_context_trim_verify_empirically`.
+- Re-reads: plan §13 re-read per task start (expected — 10 tasks × ~50 lines = load-bearing). PRD re-read ~6 times for cross-references (§5.3 twice, §8.4 once, §4.1 once, §8.3 once). Could have been reduced to 2 reads if I'd extracted the PRD sections to a local summary once. Trade-off: re-reading catches drift if the PRD changes mid-phase (it didn't this time, but the re-read was cheap insurance).
+- Cargo output budget: all long cargo output stayed in `.claude/PRPs/debug/*.log` (15 log files, ~50MB total). Conversation cargo output: ~8 `tail -N | head` reads averaging ~15 lines each = ~120 lines total in conversation. Well under the ~200-line threshold that prior phases hit. Clean on the dominant cost axis.
+
+### 6.5 Agent/subagent use
+
+Zero Agent invocations across all three sessions. In retrospect, at least two moments would have benefited from parallel Explore:
+1. Pre-plan enum-vocab cross-check (sessions 1 + 3, R5.2 and R5.3 pre-write verification) — would have caught both drifts faster in a single Explore sweep rather than N sequential greps.
+2. Cr-5 probe coverage verification (lows batch) — Explore could have inventoried "every PG enum type that v1-JM-a migrations create" and surfaced the `.limit(3)` vs 4-enum mismatch before the test run, instead of the test catching it.
+
+Self-assessment: **under-using Agent is the single biggest tool-use gap this phase.** The model-effort cost of a parallel Explore is trivial vs the context-burn cost of 4-6 sequential Read+Grep turns that it replaces. JM-b plan template should explicitly suggest Explore for any task that starts "cross-check X against existing patterns Y".
+
+### 6.6 Lessons for JM-b and the plan template
+
+1. **JM-b plan template §13 task blocks should name the right tool for each task's shape.** E.g. Task 3 "enum creation": "Read PRD §X, Edit Rust file, Bash cargo-check.bat -p lemmy_db_schema". Task 5 "InsertForm extension": "Grep all callers first, Edit struct def, Edit all callers, Bash cargo-check.bat --workspace". Primes the session to reach for the right tool.
+2. **Tool-use-hint section on handover briefs** — per advisor relay `retro-tool-use-amendment.md`, the future `/handover` skill should include per-task tool hints. This retro's §6.6 is the first instance; pattern proves out if JM-b's retro confirms the hints helped.
+3. **Explore-first-not-grep-first mandate for cross-reference checks.** If a task requires cross-checking 2+ files against a pattern (e.g. "does every ENTRY_KIND have a shim re-export?"), the default tool should be parallel Explore, not sequential Grep. Plan template suggestion: any task with "verify invariant across multiple files" gets an explicit `Agent(subagent_type=Explore)` hint.
+
+---
+
+## 7. CR finding quality — PR #92 (added 2026-04-24)
+
+### 7.1 Hallucinations — findings that didn't match reality
+
+- **cr-4 (low)** — CR claimed `CaseStatusTier` variants were `Regular/Escalated/Maximum`; actual per PRD §4.1 line 239-242 + `crates/db_schema_file/src/enums.rs:697` is `Founder/Regular/Probation`. Underlying concern (disambiguate from `severity_tier`, name enum explicitly) was VALID; CR's proposed variant names were INVALID. Fixed in-commit with correct variants per R5.3 + §2.2c pattern.
+- **cr-11 (low, post-advisor-triage)** — user bucketed `wont-fix` 2026-04-24. (Specific CR claim not re-read for this retro; disposition recorded for the accuracy rollup.)
+
+### 7.2 Line-number drift — findings with wrong line:col but right concern
+
+- **cr-3 (low)** — CR pointed at `crates/db_schema_file/src/schema.rs:1344`; actual position for the `diesel::joinable!` block is 1370+ (the joinable! block sits after the `diesel::table!` declarations). Line 1344 is inside the `jury_constraint_violation_log` table-comment block. Off by ~25 lines. Class: generated-file drift (`schema.rs` regenerates on Diesel CLI runs; line numbers shift between CR review and current HEAD). Concern was real and actionable; only the anchor was wrong.
+
+### 7.3 False-positive classes — findings valid in pattern but not in this codebase
+
+None observed in cr-1..cr-10. All 10 findings' underlying concerns were valid at some level (correct, correct-but-wrong-location, correct-but-wrong-proposed-fix). No generic-idiom misfits against Brehon conventions.
+
+### 7.4 Correct + actionable findings (the bulk)
+
+Of 10 findings ingested (cr-1..cr-10), 8 were exactly correct in file:line + concern (80%). Of those, the 4 majors (cr-7, cr-8, cr-9, cr-10) drove real fixes that improved the code beyond cosmetic:
+- **cr-9** (ADR-015 leak via free-text `relaxation_reason`): was a real blindspot in the plan — PRD §8.3 already specified a bounded reason vocabulary but the plan/impl didn't enforce it. CR caught the pseudonymisation gap before merge.
+- **cr-10** (non-idempotent seed): was actually buggy despite the commit message claiming idempotent. CR caught the missing stable `valid_from` literal; fix required a test (`v1_jm_a_seed_migration_is_idempotent`) to verify.
+- **cr-7 / cr-8** (missing ADR exception trail on protected-table migrations): caught a plan-wording gap — protected-table edits need explicit ADR citations in migration SQL headers per Phase 5c precedent. Fixed.
+
+CR's catch rate on the 4 majors was 100% in both file:line and concern accuracy. The accuracy issues were concentrated in the lows (cr-3 line drift, cr-4 variant hallucination).
+
+### 7.5 Per-severity accuracy rollup
+
+| Severity | Findings ingested | Correct + actionable | Wrong location | Hallucinated | False-positive class |
+|----------|-------------------|----------------------|----------------|--------------|----------------------|
+| Critical | 0 | — | — | — | — |
+| Major    | 4 | 4 | 0 | 0 | 0 |
+| Medium   | 0 | — | — | — | — |
+| Low      | 5 | 4 | 1 (cr-3 anchor off ~25 lines) | 0 | 0 |
+| Nit      | 1 | 1 | 0 | 0 | 0 |
+| (Lows cont.) | cr-4 | — | — | 1 (variants hallucinated; concern valid) | 0 |
+| Post-batch | cr-11 | — | — | — | wont-fix (user 2026-04-24) |
+
+Net: 9 correct-and-fixed / 1 variant-hallucination / 1 wont-fix across 11 findings. 82% full accuracy, 100% concern-validity.
+
+### 7.6 Impact on four-bucket triage
+
+- CR's line-number drift on `schema.rs` is consistent with the generated-file drift class. **Default to verify-before-fix for any `schema.rs` finding** — cheap to grep the actual location; the concern is usually right even when the anchor is stale.
+- CR's hallucination rate on this phase was 1/11 (9%). Compare to prior phases once data accumulates. If the rate climbs across v1-JM-b, c, d, we should consider lowering CR's authority weight in the four-bucket triage gate (currently CR critical = auto-block-merge per `feedback_coderabbit_block_merge_critical`). At 9% on lows and 0% on majors, current weighting is right.
+- No CR finding rebutted as invalid this phase — all 11 had valid underlying concerns. Confirms the `feedback_coderabbit_block_merge_critical` rule holds for v1-JM-a: CR's track record on majors was 100% in both file:line and concern.
+
+### 7.7 Recommendation: add to `feedback_pr_review_triage_pattern` memory
+
+The pattern that CR's concerns are valid at >90% across all severities, but CR's file:line anchors and enum-value proposals drift for lows, is novel enough to capture in the memory. Suggest updating `feedback_pr_review_triage_pattern.md`:
+
+> **Per-severity accuracy distribution (v1-JM-a data)**: CR majors = 100% fully correct (4/4). CR lows = 80% fully correct (4/5 concerns + anchors + proposed fixes right). The remaining 20% on lows split: 1 file:line drift, 1 proposed-variant hallucination. **Implication**: apply CR majors directly after a read-verify; apply CR lows after a grep-verify of anchor and a PRD-verify of any named identifiers.**
+
+---
+
+## 8. Suggested action items for the advisor
 
 In priority order:
 
@@ -216,7 +359,20 @@ Items 1 and 2 are copy-paste plan edits. Items 3 and 5 are GH filing decisions. 
 
 ---
 
-## 7. For future v1-JM wave sub-phases (v1-JM-b, v1-JM-c, v1-JM-d, v1-JM-e)
+## 8a. Handover skill design inputs (collected from 2026-04-24 retro-amendment relays)
+
+These bullets accumulate during v1-JM-a and feed the user's future `/handover` skill design. Not consumed by JM-a itself; carried forward to the skill-design discussion at the retro-park/resume flow (see `project_handover_skill_retro_pending.md`).
+
+- **Tool-use hint per task** (from `retro-tool-use-amendment.md`): handover briefs should include a one-liner per task naming the tools/subagents that match that task shape (e.g. Task 3: "Rust enum creation — Read PG migration first, Edit Rust file, run `cargo-check.bat -p lemmy_db_schema`"). Primes the fresh session to reach for the right tools without re-deriving the mapping.
+- **CR-quality signal, not count** (from `retro-cr-quality-amendment.md`): handover briefs should NOT summarise CR findings as "N majors, M lows" — they should carry the finding-quality signal forward ("CR line-drift observed on `schema.rs` this phase; future phases should pre-verify `schema.rs` findings"). Keeps the four-bucket triage empirically tuned.
+- **`# Source cross-check` section mandatory for identifier-naming relays** (from `retro-r53-enum-drift-pattern.md`): handover briefs from advisor → impl must include a `# Source cross-check` section for any answer naming concrete identifiers (enum values, column names, function names, const names). Without the section, impl should default to verify-before-write. Codifies the R5.2 + R5.3 pattern as a schema-level guarantee, not per-relay discipline the advisor can forget.
+- **`prd_refs` frontmatter field** (from R5.2 retro note): relay schema should grow a `prd_refs` frontmatter field listing PRD §§ + lines the relay cross-checked against. Structured form of the `# Source cross-check` section above; makes it grep-able across relays for pattern analysis.
+
+Carry all four into the skill-design retro at v1-JM-a close (park/resume flow for /handover skill design inputs per `project_handover_skill_retro_pending.md`).
+
+---
+
+## 9. For future v1-JM wave sub-phases (v1-JM-b, v1-JM-c, v1-JM-d, v1-JM-e)
 
 Carry-forward specifics:
 
