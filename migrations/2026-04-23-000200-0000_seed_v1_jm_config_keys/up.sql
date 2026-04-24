@@ -24,35 +24,39 @@
 -- + the e2e `config_parity_round_trip` walk this list and fail closed on
 -- drift.
 --
--- ON CONFLICT (scope, key, valid_from) DO NOTHING keeps this migration
--- idempotent across reruns; the per-statement now() resolves once so the
--- 27 rows share a valid_from within a single run.
-INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text) VALUES
-    ('instance', 'jury.panel_size.regular.minor',                          'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.regular.moderate',                       'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.regular.severe',                         'int',   7,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.founder.minor',                          'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.founder.moderate',                       'int',   7,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.founder.severe',                         'int',   9,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.probation.minor',                        'int',   3,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.probation.moderate',                     'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.panel_size.probation.severe',                       'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.quorum_fraction.minor',                             'float', NULL,  0.6,    NULL, NULL),
-    ('instance', 'jury.quorum_fraction.moderate',                          'float', NULL,  0.6,    NULL, NULL),
-    ('instance', 'jury.quorum_fraction.severe',                            'float', NULL,  0.71,   NULL, NULL),
-    ('instance', 'jury.threshold_fraction.minor',                          'float', NULL,  0.5001, NULL, NULL),
-    ('instance', 'jury.threshold_fraction.moderate',                       'float', NULL,  0.6,    NULL, NULL),
-    ('instance', 'jury.threshold_fraction.severe',                         'float', NULL,  0.75,   NULL, NULL),
-    ('instance', 'jury.constraints.no_majority_from_same_sponsor_cluster', 'bool',  NULL,  NULL, true,  NULL),
-    ('instance', 'jury.constraints.geographic_diversity_preferred',        'bool',  NULL,  NULL, true,  NULL),
-    ('instance', 'jury.constraints.no_recent_juror_repeat',                'bool',  NULL,  NULL, true,  NULL),
-    ('instance', 'jury.constraints.juror_cooldown_days',                   'int',   7,     NULL, NULL, NULL),
-    ('instance', 'jury.constraints.no_same_endorsement_chain',             'bool',  NULL,  NULL, false, NULL),
-    ('instance', 'jury.constraints.max_retries_before_relax',              'int',   5,     NULL, NULL, NULL),
-    ('instance', 'jury.max_concurrent_assignments_per_juror_total',        'int',   2,     NULL, NULL, NULL),
-    ('instance', 'appeal.panel_size_multiplier',                           'float', NULL,  1.5,    NULL, NULL),
-    ('instance', 'appeal.panel_size_floor_increment',                      'int',   2,     NULL, NULL, NULL),
-    ('instance', 'appeal.threshold_tier_bump',                             'int',   1,     NULL, NULL, NULL),
-    ('instance', 'appeal.window_days',                                     'int',   7,     NULL, NULL, NULL),
-    ('instance', 'appeal.auto_select_on_appeal_acceptance',                'bool',  NULL,  NULL, true,  NULL)
+-- Idempotency: every row pins `valid_from` to a STABLE LITERAL — the
+-- seed-migration timestamp `2026-04-23T00:02:00Z` — so that reruns target
+-- the same row under the governance_config unique index on
+-- (scope, key, valid_from) and `ON CONFLICT DO NOTHING` is a true no-op.
+-- Without the literal, `valid_from` defaults to `now()` and each rerun
+-- inserts a duplicate active row (cr-10 of PR #92). Pre-existing AD-a +
+-- Phase 5a seeds have the same bug; retrofit tracked separately.
+INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text, valid_from) VALUES
+    ('instance', 'jury.panel_size.regular.minor',                          'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.regular.moderate',                       'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.regular.severe',                         'int',   7,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.founder.minor',                          'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.founder.moderate',                       'int',   7,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.founder.severe',                         'int',   9,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.probation.minor',                        'int',   3,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.probation.moderate',                     'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.panel_size.probation.severe',                       'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.quorum_fraction.minor',                             'float', NULL,  0.6,    NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.quorum_fraction.moderate',                          'float', NULL,  0.6,    NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.quorum_fraction.severe',                            'float', NULL,  0.71,   NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.threshold_fraction.minor',                          'float', NULL,  0.5001, NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.threshold_fraction.moderate',                       'float', NULL,  0.6,    NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.threshold_fraction.severe',                         'float', NULL,  0.75,   NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.no_majority_from_same_sponsor_cluster', 'bool',  NULL,  NULL, true,  NULL,   '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.geographic_diversity_preferred',        'bool',  NULL,  NULL, true,  NULL,   '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.no_recent_juror_repeat',                'bool',  NULL,  NULL, true,  NULL,   '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.juror_cooldown_days',                   'int',   7,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.no_same_endorsement_chain',             'bool',  NULL,  NULL, false, NULL,   '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.constraints.max_retries_before_relax',              'int',   5,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'jury.max_concurrent_assignments_per_juror_total',        'int',   2,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'appeal.panel_size_multiplier',                           'float', NULL,  1.5,    NULL, NULL, '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'appeal.panel_size_floor_increment',                      'int',   2,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'appeal.threshold_tier_bump',                             'int',   1,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'appeal.window_days',                                     'int',   7,     NULL, NULL, NULL,    '2026-04-23T00:02:00Z'::timestamptz),
+    ('instance', 'appeal.auto_select_on_appeal_acceptance',                'bool',  NULL,  NULL, true,  NULL,   '2026-04-23T00:02:00Z'::timestamptz)
 ON CONFLICT (scope, key, valid_from) DO NOTHING;

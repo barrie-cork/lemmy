@@ -1,9 +1,16 @@
 -- Reverse of 2026-04-23-000200-0000_seed_v1_jm_config_keys up.sql.
--- Deletes exactly the 27 v1-JM-a keys seeded by the companion up.sql.
--- The parity tests + config_parity_round_trip e2e walk ensures drift between
--- this list and up.sql's INSERT row list is caught at test time.
+-- Deletes exactly the 27 v1-JM-a seed rows (identified by the stable
+-- `valid_from = '2026-04-23T00:02:00Z'` literal the up.sql pinned, per
+-- cr-10 fix). Targeting the seed row explicitly preserves any admin
+-- edits at `valid_from = now()` that landed since seed-time — those are
+-- community-authored config history and must survive revert+reapply.
+--
+-- The parity tests + config_parity_round_trip e2e walk ensures drift
+-- between this list and up.sql's INSERT row list is caught at test time.
 DELETE FROM governance_config
-WHERE scope = 'instance' AND key IN (
+WHERE scope = 'instance'
+  AND valid_from = '2026-04-23T00:02:00Z'::timestamptz
+  AND key IN (
     'jury.panel_size.regular.minor',
     'jury.panel_size.regular.moderate',
     'jury.panel_size.regular.severe',

@@ -1696,6 +1696,73 @@ async fn config_parity_round_trip() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+/// PR #92 cr-10 fix probe: the v1-JM-a seed migration must be idempotent
+/// across manual reruns. Prior to cr-10, `valid_from` defaulted to
+/// `now()` per statement, so each rerun inserted a duplicate row (the
+/// unique index on `(scope, key, valid_from)` treated two different
+/// `now()` values as distinct). The fix pins `valid_from` to a stable
+/// literal so `ON CONFLICT DO NOTHING` is a true no-op on rerun.
+///
+/// Test shape: apply all migrations (seed lands → 27 rows), then
+/// execute the seed migration's up.sql a SECOND time directly via
+/// `batch_execute`. The second run must leave the row count unchanged.
+/// If the `ON CONFLICT` target doesn't match on the second run (the
+/// cr-10 bug), the second apply would insert 27 duplicate rows, the
+/// governance_config_typed CHECK still passes (every row typed
+/// correctly), and the count would be 54 instead of 27.
+#[tokio::test]
+async fn v1_jm_a_seed_migration_is_idempotent() -> Result<(), Box<dyn Error>> {
+  use diesel::sql_types::Int8;
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection, sql_query};
+
+  #[derive(diesel::QueryableByName)]
+  struct Count {
+    #[diesel(sql_type = Int8)]
+    n: i64,
+  }
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let mut conn = PgConnection::establish(&db_url)?;
+  governance_fixtures::apply_all_schema(&mut conn)?;
+
+  // Count rows at the stable seed valid_from. Expect 27 after first apply.
+  let q = "SELECT count(*) AS n FROM governance_config \
+           WHERE scope = 'instance' \
+             AND valid_from = '2026-04-23T00:02:00Z'::timestamptz";
+  let first: Count = sql_query(q).get_result(&mut conn)?;
+  assert_eq!(
+    first.n, 27,
+    "v1-JM-a seed must insert exactly 27 rows on first apply"
+  );
+
+  // Re-execute the seed migration's up.sql directly — simulates a
+  // manual rerun (e.g. idempotent redeploy or ops script). The stable
+  // valid_from literal + ON CONFLICT DO NOTHING must leave the count
+  // unchanged.
+  conn.batch_execute(include_str!(
+    "../../../migrations/2026-04-23-000200-0000_seed_v1_jm_config_keys/up.sql"
+  ))?;
+
+  let second: Count = sql_query(q).get_result(&mut conn)?;
+  assert_eq!(
+    second.n, 27,
+    "v1-JM-a seed must remain at 27 rows after second apply (cr-10 idempotency)"
+  );
+
+  // And again — triple-check the idempotency holds across multiple reruns.
+  conn.batch_execute(include_str!(
+    "../../../migrations/2026-04-23-000200-0000_seed_v1_jm_config_keys/up.sql"
+  ))?;
+  let third: Count = sql_query(q).get_result(&mut conn)?;
+  assert_eq!(
+    third.n, 27,
+    "v1-JM-a seed must remain at 27 rows after third apply (cr-10 idempotency)"
+  );
+
+  Ok(())
+}
+
 // ============================================================================
 // Phase 5b task 60 — sponsor_liability_with_founder_multiplier (3 branches)
 // ============================================================================
