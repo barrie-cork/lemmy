@@ -81,6 +81,16 @@ The `NOT building in v1-JM-a` list kept session 2 from drifting into handler edi
 
 **Fix — plan amendment for future InsertForm-extension tasks**: §10.7 GOTCHA wording should read `adding fields to a struct-with-Default-derive requires ..Default::default() at every caller site; enumerate the existing callers and confirm they all use the derive or need an explicit-init update`. A pre-task grep would surface the caller count (`rg -l 'ModerationCaseInsertForm {' crates/`). Low-effort, high-clarity.
 
+### 2.2a R5.2 — PRD-drift-risk from advisor speculation (cr-9 enum vocabulary)
+
+**Observed (post-merge, during CR fix batch)**: CodeRabbit flagged cr-9 on PR #92 as an ADR-015 pseudonymisation violation on `jury_constraint_violation_log.relaxation_reason TEXT`. The advisor's initial relay (`pr92-cr-findings.md`) proposed a 5-value enum vocabulary — `reputation_waiver`, `emergency_panel`, `sponsor_vouched`, `admin_override`, `other` — for the replacement `reason_code` column. None of those five names appear anywhere in the authoritative PRD §5.3 R1/R2/R3 cascade table, which names exactly three call-site values: `small_pool`, `cluster_pressure`, `cluster_pressure_exhausted` (plus `admin_override` from PRD §8.3's explicit "etc." extension). Additionally, `other` as an enum variant would re-open the ADR-015 free-text leak under an "other" label — defeating the whole point of the cr-9 fix.
+
+**Resolution (relayed, session 3)**: impl filed `impl-relays/cr-9-enum-vocab.md` cross-checking the advisor's proposal against PRD §5.3 + §8.3, proposed option (A) using PRD's exact call-site vocabulary. Advisor answered `cr-9-enum-vocab-answer.md` with `decision: option-A`, conceding the PRD drift and acknowledging "advisor speculation is not" the contract. Final shipped enum: 4 values — `SmallPool`, `ClusterPressure`, `ClusterPressureExhausted`, `AdminOverride` — matching PRD §5.3 + §8.3 verbatim. No `Other` variant.
+
+**Root cause**: advisor session drafted the cr-9 fix-direction without re-reading PRD §5.3 first. The advisor's five values were reasonable-sounding placeholders that happened to match the class of thing the enum should contain, but not the actual PRD vocabulary. Impl caught the drift by cross-checking PRD before writing the migration (per the established pattern — PRD is authoritative).
+
+**Fix — handover-skill design input (advisor-facing)**: advisor relay schema should grow a `prd_refs` frontmatter field for any answer that names concrete identifiers (enum values, column names, function names, config keys). Pattern: if the answer says "use X, Y, Z" as vocabulary, the relay must cite the PRD §§ and line numbers where X, Y, Z are named. That makes the cross-check path explicit and lets impl verify against a known section rather than chasing speculation. Noted for the `/handover` skill design the user is working on separately.
+
 ### 2.3 R10.1 — `PHASE_1_MIGRATION_COUNT` is a LIFO count, not a semantic set
 
 **Observed (Task 10, session 2)**: Plan §13 Task 10 anticipated a single-number drift ("extend 9 → 12 or 16"). Reality is worse: the constant is a **LIFO-positional** count, not a semantic set of named migrations. The `lemmy_diesel_utils::schema_setup::run` runner with `.revert().limit(N)` reverts the top-N-by-timestamp pending migrations; the comment at `e2e.rs:311-321` claimed "6 Phase 1 + 2 Phase 5a + 1 Phase 5b Slice A = 9" but the actual LIFO revert at count=9 included the 2 `governance_log_notify` migrations + `federation_attestations` + `restoration_sanction_variant` — not 6 Phase 1 migrations. Any migration added post-trunk after the last count bump silently takes the Nth slot and the comment rots.
@@ -120,8 +130,9 @@ Do NOT auto-file. User / advisor decides post-merge which of the three (0, 1, 2,
 | 1 | Rewrite §13 Task-level `VALIDATE` wording for interim-failure Rust-enum tasks to say `expect compile error` rather than `expect 0`; or combine enum-and-schema tasks into one commit. | §2.1 R3.2 | Medium |
 | 2 | Rewrite §10.7 GOTCHA to enumerate InsertForm-extension caller-side impact: `..Default::default()` propagation. Add pre-task `rg -l '<FormName> {' crates/` step. | §2.2 R5.1 | Medium |
 | 3 | When a task bumps `PHASE_1_MIGRATION_COUNT`, mention LIFO-positional semantics in the task's `VALIDATE` block so the impl knows not to infer a semantic set from the constant's name. | §2.3 R10.1 | Low (only applies if new migrations land) |
+| 4 | `/handover` skill design input: advisor relay schema should grow a `prd_refs` frontmatter field for answers naming concrete identifiers (enum values, column names, config keys). Makes the PRD cross-check path explicit. | §2.2a R5.2 | High (but not a plan amendment — skill/relay-protocol amendment) |
 
-All three amendments are one-line plan-wording fixes. Items 1 and 2 are mandatory for JM-b/c/d/e if those phases add enums or extend InsertForms; item 3 only if they add migrations.
+Items 1-3 are one-line plan-wording fixes. Items 1 and 2 are mandatory for JM-b/c/d/e if those phases add enums or extend InsertForms; item 3 only if they add migrations. Item 4 is a skill/protocol design note for the advisor-side `/handover` work.
 
 ### 3.3 New GH issue sketch — `PHASE_1_MIGRATION_COUNT` model redesign
 
@@ -132,9 +143,35 @@ Per R10.1 TODO in the JM-a commit's new comment block, a new GH issue sketch to 
 - **Body**: `PHASE_1_MIGRATION_COUNT is a LIFO count, not a semantic set. The runner reverts top-N-by-timestamp pending migrations. The comment names specific migrations but the runner doesn't honour the name — any migration added to the fork after the last count bump silently takes the Nth slot, and the comment rots. v1-AD-a's 4 migrations are currently uncounted (sitting below the JM-a count=12 LIFO window) and will be silently swapped into the revert list when the test is un-ignored (GH #43). Fix: replace the count with a named-migration list; extend the schema_setup::run API to support revert-up-to-named-target (may already exist; verify). Related: GH #43. Code: crates/server/tests/e2e.rs:310-330 (count + comment rewrite landed in commit 7cecf4727; TODO pointer embedded).`
 - **Closes**: none (this issue exists alongside #43; fixing this makes un-ignoring #43 tractable).
 
-### 3.4 Handoff notes for JM-b
+### 3.4 CR fix batch (session 3, 2026-04-24 post-PR-open)
 
-- **Schema is ready**: all 6 new `moderation_case` columns + 2 new `jury_assignment` columns + `jury_constraint_violation_log` table present, Diesel structs generate cleanly, newtype `JuryConstraintViolationLogId` exists at `db_schema::newtypes`.
+PR #92 opened after Task 11 commit `ac27a81c2`. CodeRabbit posted 10
+findings (4 major, 5 low, 1 nit). Session 3 addressed the 4 majors
+per advisor relay `pr92-cr-findings.md`:
+
+| CR | Severity | Fix commit | Summary |
+|---|---|---|---|
+| cr-9 | major | `c406016a3` | ADR-015 pseudonymisation: `relaxation_reason TEXT` → `reason_code` enum (4 values) + `relaxation_metadata JSONB`. New enum migration at timestamp 000050 between existing 000000 and 000100 so the enum type exists before the column ALTER references it. Rust cascade: new `JuryConstraintRelaxationReason` enum, schema.rs sql_type, Diesel model rename, registry payload-shape update. Vocabulary picked via advisor-relay (impl caught PRD drift in advisor's initial proposal — see §2.2a R5.2). |
+| cr-10 | major | `6261bc6d5` | Seed idempotency: pin `valid_from = '2026-04-23T00:02:00Z'::timestamptz` in every VALUES tuple so reruns hit the unique index and `ON CONFLICT DO NOTHING` is a true no-op. Tightened down.sql to delete only at the seed literal (preserves admin edits). Added `v1_jm_a_seed_migration_is_idempotent` e2e test — 3 reruns × 27 rows stable. |
+| cr-7 | major | `faecec88a` | ADR exception trail on `add_jury_mechanics_columns/down.sql` — explicit protected-table + ADR-010 + reversibility rationale. Mirrors v1-AD-a `add_case_applied_config_snapshot` precedent. |
+| cr-8 | major | `c406016a3` (bundled with cr-9) | ADR exception trail on `add_jury_mechanics_columns/up.sql` — same pattern as cr-7. Bundled into cr-9 commit because the header explicitly names cr-9's rationale (reason_code column = ADR-015-compliant replacement) and splitting would rot CR→commit linkage. |
+
+All 4 CR-major fixes shipped; all 8 Plan §15 validation levels green
+post-fix. Lows + nit deferred to a separate batch commit per advisor
+direction.
+
+**Root-cause observation — shared pre-existing debt**: cr-10's seed-
+idempotency bug exists in TWO merged trunk migrations that JM-a
+mirrored: Phase 5a `add_governance_config/up.sql:113` (34 rows) and
+v1-AD-a `seed_v1_config_keys/up.sql:53` (27 rows). The JM-a fix
+tracks a `chore(test): retrofit AD-a + Phase 5a seed idempotency`
+follow-up for post-merge — out-of-scope for this PR but load-bearing
+if those seeds are ever rerun operationally. Advisor already noted
+this in the `pr92-cr-findings.md` retro-carry.
+
+### 3.5 Handoff notes for JM-b
+
+- **Schema is ready**: all 6 new `moderation_case` columns + 2 new `jury_assignment` columns + `jury_constraint_violation_log` table present, Diesel structs generate cleanly, newtype `JuryConstraintViolationLogId` exists at `db_schema::newtypes`. **Post-cr-9**: the jcvl table has `reason_code: JuryConstraintRelaxationReason` (enum, 4 values) + `relaxation_metadata: Option<Value>` (nullable JSONB) in place of the original `relaxation_reason: String`. JM-b's write call in `select_eligible_jurors` constructs `JuryConstraintViolationLogInsertForm { reason_code: JuryConstraintRelaxationReason::SmallPool, relaxation_metadata: Some(json!({"dropped_constraint_name": "no_recent_juror_repeat", "phase": "pool_build"})), ... }`. Never free-text metadata.
 - **Backfill is verified**: `v1_jm_a_backfill_populates_v0_snapshot` passes against a real Postgres; pre-v1 cases get Minor/Regular/5/3/3 and appeal-window semantics per PRD §8.4. JM-b can safely assume every pre-v1 case has non-NULL snapshot columns.
 - **Config is seeded**: 88 rows total in `SEEDED_KEYS_WITH_CONSTS` (27 new JM-a), `EXPECTED_SEED_COUNT_V1_JM=27`. The cascade helpers (`get_int_cascade`, `get_float_cascade`) are JM-b's first consumer — build them alongside their first use in `admin_assign_jury.rs::select_eligible_jurors`.
 - **ENTRY_KIND reservations are live**: all 6 JM-a ENTRY_KIND consts exist in `db_schema` with shim re-exports. JM-b wires the first call sites (`jury_constraint_relaxed` + `severity_tier_frozen` in `admin_assign_jury.rs`). JM-c wires `appeal_decided` / `appeal_rejected` / `appeal_window_expired`. JM-d wires `appeal_panel_assembled`.
