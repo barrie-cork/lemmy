@@ -5,7 +5,7 @@
 //! Phase 5c risk-reduction strategy Move 5. Both handlers need the same
 //! sponsor-cluster conflict check against the case target.
 
-use diesel::{QueryableByName, sql_query, sql_types::{Bool, Integer}};
+use diesel::{QueryableByName, sql_query, sql_types::{Array, BigInt, Bool, Integer}};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema_file::PersonId;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
@@ -14,6 +14,12 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 struct BoolRow {
   #[diesel(sql_type = Bool)]
   present: bool,
+}
+
+#[derive(QueryableByName)]
+struct ClusterCountRow {
+  #[diesel(sql_type = BigInt)]
+  max_shared: i64,
 }
 
 /// Returns `true` when `a` and `b` share at least one active sponsor
@@ -42,4 +48,48 @@ pub(crate) async fn shares_active_sponsor(
   .await
   .map_err(|_e| LemmyErrorType::Unknown("shares_active_sponsor query failed".to_string()))?;
   Ok(row.present)
+}
+
+/// Returns `true` when `>50%` of the supplied panel shares a single active
+/// sponsor. PRD §5.1 hard constraint — used by v1-JM-b's 3-phase
+/// select_eligible_jurors as the Phase-2 re-roll trigger and by later
+/// sub-phases as the cross-juror cluster invariant.
+///
+/// Implementation: one grouped self-join on `surety`, producing the max
+/// cluster size across all sponsors that cover at least one panel member.
+/// Majority threshold is `(len/2)+1` for the common odd panel sizes (5/7/9).
+/// `len < 2` returns `Ok(false)` because a one-person panel cannot have a
+/// majority cluster by definition (and the `(1/2)+1 = 1` threshold would
+/// always be satisfied by one sponsor covering that lone member).
+pub(crate) async fn panel_has_sponsor_majority_cluster(
+  conn: &mut AsyncPgConnection,
+  person_ids: &[PersonId],
+) -> LemmyResult<bool> {
+  if person_ids.len() < 2 {
+    return Ok(false);
+  }
+  let ids_bind: Vec<i32> = person_ids.iter().map(|p| p.0).collect();
+
+  let row: ClusterCountRow = sql_query(
+    "SELECT COALESCE(MAX(c), 0) AS max_shared FROM ( \
+       SELECT s.sponsor_id, COUNT(DISTINCT s.sponsored_id) AS c \
+       FROM surety s \
+       WHERE s.sponsored_id = ANY($1) \
+         AND s.revoked_at IS NULL \
+       GROUP BY s.sponsor_id \
+     ) t",
+  )
+  .bind::<Array<Integer>, _>(ids_bind)
+  .get_result(conn)
+  .await
+  .map_err(|_e| {
+    LemmyErrorType::Unknown("panel_has_sponsor_majority_cluster query failed".to_string())
+  })?;
+
+  let majority = (person_ids.len() / 2) + 1;
+  let max_shared: usize = row
+    .max_shared
+    .try_into()
+    .unwrap_or(usize::MAX); // BigInt can't exceed panel_size in practice; saturate instead of error.
+  Ok(max_shared >= majority)
 }
