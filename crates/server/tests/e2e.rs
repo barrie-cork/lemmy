@@ -918,6 +918,7 @@ async fn jury_queue_view_returns_assignments() -> Result<(), Box<dyn Error>> {
       case_id: ModerationCaseId(case_id),
       person_id: PersonId(person_id),
       status: lemmy_db_schema_file::enums::JuryAssignmentStatus::Selected,
+      selected_under_constraints: None,
     };
     diesel::insert_into(jury_assignment::table)
       .values(&assignment_form)
@@ -3171,6 +3172,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
         case_id: dummy_case,
         person_id: eligibles[0],
         status: JuryAssignmentStatus::Accepted,
+        selected_under_constraints: None,
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
@@ -3812,6 +3814,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
         case_id,
         person_id: juror_id,
         status: JuryAssignmentStatus::Accepted,
+        selected_under_constraints: None,
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
@@ -6899,5 +6902,695 @@ async fn admin_audit_stream_emits_frame_on_config_change()
   // Drop the stream so the SseGuard releases the per-admin cap entry
   // before the container tear-down runs.
   drop(body);
+  Ok(())
+}
+
+// ============================================================================
+// v1-JM-b Task 7 — severity/status cascade fixture + tests
+// ============================================================================
+//
+// Six tests per plan §14 Task 7:
+//
+// 1. regular/minor  → panel 5 / quorum 3 / threshold 3
+// 2. regular/severe → panel 7 / quorum 5 / threshold 6
+// 3. founder/severe → panel 9 / quorum 7 / threshold 7
+// 4. `jury_assignment.selected_under_constraints` JSONB shape
+// 5. `severity_tier_frozen` governance_log row emitted
+// 6. `config::get_int_cascade` walks founder.severe → severe → bare → const
+//
+// The fixture mirrors `admin_config_fixtures::bootstrap` at e2e.rs:~4620.
+// admin_assign_jury's small-pool-fallback (Phase 4 `legacy_select_eligible_jurors`
+// shape) seats the panel when no reputation_snapshot rows exist, so the
+// fixture skips snapshot seeding — the cascade-resolved panel_size still
+// applies upstream of the fallback and the snapshot fields still land.
+
+mod v1_jm_b_fixtures {
+  use actix_web::web::Data;
+  use chrono::{Duration as ChronoDuration, Utc};
+  use diesel::{Connection as _, PgConnection};
+  use diesel_async::{AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::{
+      moderation_case::ModerationCaseInsertForm,
+      reputation_event::ReputationEventInsertForm,
+      reputation_snapshot::ReputationSnapshotInsertForm,
+    },
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    InstanceId,
+    PersonId,
+    enums::{
+      CaseSeverity, CaseStatus, CaseTargetType, ReputationDimension, SeverityTier,
+    },
+    schema::{moderation_case, reputation_event, reputation_snapshot},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+  use std::error::Error;
+
+  pub async fn bootstrap() -> LemmyResult<(
+    testcontainers::ContainerAsync<testcontainers::GenericImage>,
+    Data<LemmyContext>,
+    String,
+  )> {
+    const SIGNING_SEED_HEX: &str =
+      "0000000000000000000000000000000000000000000000000000000000000001";
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    }
+
+    let (container, host_port) = super::governance_fixtures::start_postgres()
+      .await
+      .map_err(|e| anyhow::anyhow!("start_postgres: {e}"))?;
+    let db_url = super::governance_fixtures::db_url(host_port);
+    unsafe {
+      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+    }
+
+    {
+      let mut sync_conn = PgConnection::establish(&db_url)
+        .map_err(|e| -> Box<dyn Error + Send + Sync> {
+          format!("PgConnection::establish: {e}").into()
+        })
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+      super::governance_fixtures::apply_all_schema(&mut sync_conn)
+        .map_err(|e| anyhow::anyhow!("apply_all_schema: {e}"))?;
+    }
+
+    let pool: ActualDbPool = build_db_pool_for_tests();
+    let client = client_builder(&SETTINGS).build()?;
+    let middleware_client = ClientBuilder::new(client).build();
+    let secret = Secret { id: 0, jwt_secret: String::new().into() };
+    let rate_limit = RateLimit::with_debug_config();
+    let context = Data::new(LemmyContext::create(
+      pool,
+      middleware_client.clone(),
+      middleware_client,
+      secret,
+      rate_limit,
+    ));
+
+    Ok((container, context, db_url))
+  }
+
+  pub async fn seed_user(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<(PersonId, LocalUserView)> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    let view = LocalUserView::read_person(&mut ctx.pool(), person.id).await?;
+    Ok((person.id, view))
+  }
+
+  pub async fn seed_community(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+  ) -> LemmyResult<Community> {
+    let community_form = CommunityInsertForm::new(
+      instance_id,
+      "testcomm".to_string(),
+      "Test Community".to_string(),
+      "comm-pubkey".to_string(),
+    );
+    Ok(Community::create(&mut ctx.pool(), &community_form).await?)
+  }
+
+  /// Seed `count` jurors and return their PersonIds in insertion order.
+  /// Names are `juror_<i>` zero-padded to ensure sort stability in lookups.
+  pub async fn seed_jurors(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    count: usize,
+  ) -> LemmyResult<Vec<PersonId>> {
+    let mut ids = Vec::with_capacity(count);
+    for i in 0..count {
+      let name = format!("juror_{i:02}");
+      let (pid, _) = seed_user(ctx, instance_id, &name, false).await?;
+      ids.push(pid);
+    }
+    Ok(ids)
+  }
+
+  /// Insert a case directly with the given severity_tier. `creator_id` is
+  /// NULL so the admin is not excluded from the panel. `community_id` is
+  /// NULL (instance-scope) so the eligibility query's
+  /// `rs.community_id IS NOT DISTINCT FROM $1` matches any snapshot (or,
+  /// under the small-pool fallback, ignores community scope entirely).
+  pub async fn seed_case(
+    db_url: &str,
+    target: PersonId,
+    severity_tier: SeverityTier,
+  ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error + Send + Sync>> {
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "v1_jm_b_test".to_string(),
+      severity: CaseSeverity::default(),
+      severity_tier: Some(severity_tier),
+      status: CaseStatus::Open,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let mut sync_conn = PgConnection::establish(db_url)?;
+    let case_id: i32 = diesel::RunQueryDsl::get_result(
+      diesel::insert_into(moderation_case::table)
+        .values(&form)
+        .returning(moderation_case::id),
+      &mut sync_conn,
+    )?;
+    Ok(lemmy_db_schema::newtypes::ModerationCaseId(case_id))
+  }
+
+  /// Seed a `reputation_snapshot` row with `jury_eligible = true` for
+  /// every person in `persons`. This is what unlocks the strict
+  /// eligibility query — without it, admin_assign_jury's small-pool
+  /// fallback fires and the constraint record records
+  /// `relaxed_small_pool` + `legacy_fallback` instead of the steady-state
+  /// `applied` values. Tests that assert on the constraint-record shape
+  /// must seed these rows first.
+  pub async fn seed_jury_eligible_snapshots(
+    conn: &mut AsyncPgConnection,
+    persons: &[PersonId],
+  ) -> LemmyResult<()> {
+    for person in persons {
+      let form = ReputationSnapshotInsertForm {
+        person_id: *person,
+        community_id: None,
+        reporting_accuracy: 100,
+        jury_reliability: 100,
+        participation_consistency: 100,
+        endorsement_strength: 100,
+        jury_eligible: true,
+        trusted_reporter: false,
+        ..Default::default()
+      };
+      diesel::insert_into(reputation_snapshot::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+    }
+    Ok(())
+  }
+
+  /// Insert a `reputation_event` row with `reason = "founder_seed"` and an
+  /// unexpired `expires_at`, matching the is_founder probe shape in
+  /// `compute_status_tier` (mirror of sponsor_liability.rs:217-228).
+  pub async fn seed_founder_event(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+  ) -> LemmyResult<()> {
+    let expiry = Utc::now() + ChronoDuration::days(90);
+    let form = ReputationEventInsertForm {
+      person_id: person,
+      community_id: None,
+      dimension: ReputationDimension::EndorsementStrength,
+      delta: 100,
+      source_case_id: None,
+      source_report_id: None,
+      reason: "founder_seed".to_string(),
+      expires_at: Some(expiry),
+    };
+    diesel::insert_into(reputation_event::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(())
+  }
+}
+
+/// v1-JM-b Task 7 test 1 — regular/minor → panel_size 5, quorum 3,
+/// threshold 3. Asserts both the handler's response count and the
+/// `moderation_case.panel_size_snapshot / quorum_snapshot /
+/// threshold_count_snapshot` row shape per plan §10.5.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_severity_tier_regular_minor_panel_5_jurors()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
+
+  use lemmy_db_schema::source::instance::Instance;
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_rm", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_rm", false).await?;
+  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.assigned_person_ids.len(),
+    5,
+    "regular/minor → panel_size = 5 (jury.panel_size.regular.minor seed)"
+  );
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let snapshot: (Option<i32>, Option<i32>, Option<i32>) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::panel_size_snapshot,
+      moderation_case::quorum_snapshot,
+      moderation_case::threshold_count_snapshot,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(snapshot.0, Some(5), "panel_size_snapshot = 5");
+  assert_eq!(snapshot.1, Some(3), "quorum_snapshot = ceil(5 × 0.6) = 3");
+  assert_eq!(
+    snapshot.2,
+    Some(3),
+    "threshold_count_snapshot = ceil(5 × 0.5001) = 3"
+  );
+  Ok(())
+}
+
+/// v1-JM-b Task 7 test 2 — regular/severe → panel_size 7, quorum 5,
+/// threshold 6. Same cascade shape as test 1 with the higher severity
+/// tier exercising a different branch of `jury.panel_size.<status>.<severity>`.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_severity_tier_regular_severe_panel_7_jurors()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
+
+  use lemmy_db_schema::source::instance::Instance;
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_rs", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_rs", false).await?;
+  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Severe)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.assigned_person_ids.len(),
+    7,
+    "regular/severe → panel_size = 7 (jury.panel_size.regular.severe seed)"
+  );
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let snapshot: (Option<i32>, Option<i32>, Option<i32>) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::panel_size_snapshot,
+      moderation_case::quorum_snapshot,
+      moderation_case::threshold_count_snapshot,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(snapshot.0, Some(7), "panel_size_snapshot = 7");
+  assert_eq!(snapshot.1, Some(5), "quorum_snapshot = ceil(7 × 0.71) = 5");
+  assert_eq!(
+    snapshot.2,
+    Some(6),
+    "threshold_count_snapshot = ceil(7 × 0.75) = 6"
+  );
+  Ok(())
+}
+
+/// v1-JM-b Task 7 test 3 — founder/severe → panel_size 9, quorum 7,
+/// threshold 7. Target has a `reputation_event.reason = 'founder_seed'`
+/// row with an unexpired `expires_at`, which `compute_status_tier`
+/// resolves to `CaseStatusTier::Founder`. Asserts
+/// `moderation_case.status_tier = Founder` is snapshotted alongside the
+/// count fields (plan §10.5).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_severity_tier_founder_severe_panel_9_jurors()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatusTier, SeverityTier},
+    schema::moderation_case,
+  };
+
+  use lemmy_db_schema::source::instance::Instance;
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_fs", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_fs", false).await?;
+  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  // Elevate target to Founder via reputation_event.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_founder_event(&mut conn, target).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Severe)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.assigned_person_ids.len(),
+    9,
+    "founder/severe → panel_size = 9 (jury.panel_size.founder.severe seed)"
+  );
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let row: (Option<i32>, Option<i32>, Option<i32>, CaseStatusTier) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::panel_size_snapshot,
+      moderation_case::quorum_snapshot,
+      moderation_case::threshold_count_snapshot,
+      moderation_case::status_tier,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(row.0, Some(9), "panel_size_snapshot = 9");
+  assert_eq!(row.1, Some(7), "quorum_snapshot = ceil(9 × 0.71) = 7");
+  assert_eq!(
+    row.2,
+    Some(7),
+    "threshold_count_snapshot = ceil(9 × 0.75) = 7"
+  );
+  assert_eq!(
+    row.3,
+    CaseStatusTier::Founder,
+    "status_tier snapshotted as Founder (compute_status_tier resolved the founder_seed event)"
+  );
+  Ok(())
+}
+
+/// v1-JM-b Task 7 test 4 — every `jury_assignment` row carries a non-null
+/// `selected_under_constraints` JSONB with the PRD §5.1 four-axis status
+/// shape. Seeds used: `no_majority_from_same_sponsor_cluster` = true,
+/// `geographic_diversity_preferred` = true, `no_recent_juror_repeat` =
+/// true, `no_same_endorsement_chain` = false.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_writes_selected_under_constraints_jsonb()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema_file::{enums::SeverityTier, schema::jury_assignment};
+  use serde_json::Value;
+
+  use lemmy_db_schema::source::instance::Instance;
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_suc", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_suc", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  // Seed reputation_snapshot rows so the strict eligibility path succeeds
+  // and the constraint record reflects steady-state "applied" values
+  // instead of the small-pool-fallback relaxation cascade.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(resp.assigned_person_ids.len(), 5, "5-juror panel expected");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let constraint_payloads: Vec<Option<Value>> = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case_id))
+    .select(jury_assignment::selected_under_constraints)
+    .load(&mut conn)
+    .await?;
+  assert_eq!(
+    constraint_payloads.len(),
+    5,
+    "exactly 5 jury_assignment rows for the case"
+  );
+  for (idx, payload) in constraint_payloads.iter().enumerate() {
+    let value = payload
+      .as_ref()
+      .ok_or_else(|| anyhow::anyhow!("selected_under_constraints row {idx} is NULL"))?;
+    assert_eq!(
+      value["no_majority_from_same_sponsor_cluster"], Value::String("applied".to_string()),
+      "row {idx} cluster constraint = applied"
+    );
+    assert_eq!(
+      value["geographic_diversity_preferred"], Value::String("applied_soft".to_string()),
+      "row {idx} geographic preference = applied_soft"
+    );
+    assert_eq!(
+      value["no_recent_juror_repeat"], Value::String("applied".to_string()),
+      "row {idx} juror cooldown = applied"
+    );
+    assert_eq!(
+      value["no_same_endorsement_chain"], Value::String("disabled".to_string()),
+      "row {idx} endorsement chain = disabled (seed flag = false)"
+    );
+  }
+  Ok(())
+}
+
+/// v1-JM-b Task 7 test 5 — `severity_tier_frozen` governance_log entry
+/// is emitted once per assign-jury call, with a payload naming the
+/// resolved severity_tier slug + status_tier slug per plan §10.6.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_emits_severity_tier_frozen_governance_log()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema_file::{enums::SeverityTier, schema::governance_log};
+  use serde_json::Value;
+
+  use lemmy_db_schema::source::instance::Instance;
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_stf", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_stf", false).await?;
+  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let _ = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let rows: Vec<Value> = governance_log::table
+    .filter(governance_log::entry_kind.eq("severity_tier_frozen"))
+    .select(governance_log::payload)
+    .load(&mut conn)
+    .await?;
+  assert_eq!(
+    rows.len(),
+    1,
+    "exactly one severity_tier_frozen entry per assign-jury"
+  );
+  let payload = rows
+    .get(0)
+    .ok_or_else(|| anyhow::anyhow!("no severity_tier_frozen row"))?;
+  assert_eq!(
+    payload["severity_tier"], Value::String("minor".to_string()),
+    "severity_tier slug = minor"
+  );
+  assert_eq!(
+    payload["status_tier"], Value::String("regular".to_string()),
+    "status_tier slug = regular"
+  );
+  assert_eq!(payload["panel_size_snapshot"], Value::from(5));
+  assert_eq!(payload["quorum_snapshot"], Value::from(3));
+  assert_eq!(payload["threshold_count_snapshot"], Value::from(3));
+  Ok(())
+}
+
+/// v1-JM-b Task 7 test 6 — cascade walks
+/// `jury.panel_size.founder.severe` → `jury.panel_size.severe` →
+/// bare `jury.panel_size` → `DEFAULT_JURY_PANEL_SIZE` const. Uses raw SQL
+/// to delete config rows between walks since `governance_config` is
+/// append-only via `valid_from` but has no DELETE-forbid trigger.
+#[tokio::test(flavor = "multi_thread")]
+async fn config_get_int_cascade_resolves_founder_severe_to_bare_then_const()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel::sql_query;
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::config::{ConfigCache, Scope, get_int_cascade};
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let (_container, _context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // ---- Step 1 — seed `jury.panel_size.severe = 7` then assert cascade
+  //      with no `jury.panel_size.founder.severe` returns 7 (fallback to
+  //      the bare severity key).
+  sql_query(
+    "DELETE FROM governance_config \
+     WHERE scope = 'instance' AND key = 'jury.panel_size.founder.severe'",
+  )
+  .execute(&mut conn)
+  .await?;
+  sql_query(
+    "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+     VALUES ('instance', 'jury.panel_size.severe', 'int', 7, now())",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  {
+    let mut cache = ConfigCache::new();
+    let mut pool: DbPool<'_> = (&mut conn).into();
+    let got = get_int_cascade(
+      &mut cache,
+      &mut pool,
+      Scope::Instance,
+      "jury.panel_size",
+      &["founder", "severe"],
+    )
+    .await?;
+    assert_eq!(
+      got, 7,
+      "cascade resolves founder.severe → severe when per-tier key absent"
+    );
+  }
+
+  // ---- Step 2 — delete `jury.panel_size.severe`; cascade should fall
+  //      to bare `jury.panel_size = 5` (JM-a seed).
+  sql_query(
+    "DELETE FROM governance_config \
+     WHERE scope = 'instance' AND key = 'jury.panel_size.severe'",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  {
+    let mut cache = ConfigCache::new();
+    let mut pool: DbPool<'_> = (&mut conn).into();
+    let got = get_int_cascade(
+      &mut cache,
+      &mut pool,
+      Scope::Instance,
+      "jury.panel_size",
+      &["founder", "severe"],
+    )
+    .await?;
+    assert_eq!(
+      got, 5,
+      "cascade falls through severe → bare jury.panel_size when severity key absent"
+    );
+  }
+
+  // ---- Step 3 — delete bare `jury.panel_size`; cascade should fall to
+  //      the Rust const default DEFAULT_JURY_PANEL_SIZE = 5.
+  sql_query(
+    "DELETE FROM governance_config \
+     WHERE scope = 'instance' AND key = 'jury.panel_size'",
+  )
+  .execute(&mut conn)
+  .await?;
+
+  {
+    let mut cache = ConfigCache::new();
+    let mut pool: DbPool<'_> = (&mut conn).into();
+    let got = get_int_cascade(
+      &mut cache,
+      &mut pool,
+      Scope::Instance,
+      "jury.panel_size",
+      &["founder", "severe"],
+    )
+    .await?;
+    assert_eq!(
+      got, 5,
+      "cascade falls to const DEFAULT_JURY_PANEL_SIZE = 5 when DB has no matching row"
+    );
+  }
   Ok(())
 }
