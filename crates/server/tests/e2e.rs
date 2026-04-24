@@ -488,14 +488,15 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
 /// Exercises the exact up/down/up cycle production will see if an admin
 /// deploys JM-a, rolls it back, and re-deploys:
 ///   1. Start fresh Postgres container, apply ALL migrations (JM-a included).
-///   2. Revert the 3 JM-a migrations LIFO (seed_v1_jm_config_keys,
-///      add_jury_mechanics_columns, add_jury_mechanics_enums).
+///   2. Revert the 4 JM-a migrations LIFO (seed_v1_jm_config_keys,
+///      add_jury_mechanics_columns, add_jury_constraint_relaxation_reason_enum,
+///      add_jury_mechanics_enums).
 ///   3. Insert two `moderation_case` rows in the pre-JM-a shape — no
 ///      JM-a columns exist because their migration is reverted. One row
 ///      has `decided_at` set (simulates a v0 case that was Decided before
 ///      JM-a shipped); the other has only `opened_at` (simulates a v0
 ///      Open case in flight at migration time).
-///   4. Re-apply the 3 JM-a migrations — backfill UPDATE fires.
+///   4. Re-apply the 4 JM-a migrations — backfill UPDATE fires.
 ///   5. Query both rows; assert snapshot columns are Minor/Regular/5/3/3
 ///      per PRD §8.4, and `appeal_window_expires_at` semantics match the
 ///      migration's `COALESCE(closed_at, decided_at + '7 days', NULL)`
@@ -612,6 +613,17 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
         "pg_type '{pg_type}' should be absent between revert and re-apply"
       );
     }
+    // cr-14: verify JM-a seed rows are also absent after revert.
+    let row: CountRow = sql_query(
+      "SELECT count(*) AS n FROM governance_config \
+       WHERE scope = 'instance' \
+         AND valid_from = '2026-04-23T00:02:00Z'::timestamptz",
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      row.n, 0,
+      "v1-JM-a governance_config seed rows should be absent between revert and re-apply"
+    );
   }
 
   // Step 3: seed two v0-shape rows via raw SQL. Any column that the
@@ -1735,6 +1747,7 @@ async fn config_parity_round_trip() -> Result<(), Box<dyn Error>> {
 async fn v1_jm_a_seed_migration_is_idempotent() -> Result<(), Box<dyn Error>> {
   use diesel::sql_types::Int8;
   use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection, sql_query};
+  use lemmy_api::governance::config::EXPECTED_SEED_COUNT_V1_JM;
 
   #[derive(diesel::QueryableByName)]
   struct Count {
@@ -1747,14 +1760,16 @@ async fn v1_jm_a_seed_migration_is_idempotent() -> Result<(), Box<dyn Error>> {
   let mut conn = PgConnection::establish(&db_url)?;
   governance_fixtures::apply_all_schema(&mut conn)?;
 
-  // Count rows at the stable seed valid_from. Expect 27 after first apply.
+  let expected = EXPECTED_SEED_COUNT_V1_JM as i64;
+
+  // Count rows at the stable seed valid_from.
   let q = "SELECT count(*) AS n FROM governance_config \
            WHERE scope = 'instance' \
              AND valid_from = '2026-04-23T00:02:00Z'::timestamptz";
   let first: Count = sql_query(q).get_result(&mut conn)?;
   assert_eq!(
-    first.n, 27,
-    "v1-JM-a seed must insert exactly 27 rows on first apply"
+    first.n, expected,
+    "v1-JM-a seed must insert exactly {expected} rows on first apply"
   );
 
   // Re-execute the seed migration's up.sql directly — simulates a
@@ -1767,8 +1782,8 @@ async fn v1_jm_a_seed_migration_is_idempotent() -> Result<(), Box<dyn Error>> {
 
   let second: Count = sql_query(q).get_result(&mut conn)?;
   assert_eq!(
-    second.n, 27,
-    "v1-JM-a seed must remain at 27 rows after second apply (cr-10 idempotency)"
+    second.n, expected,
+    "v1-JM-a seed must remain at {expected} rows after second apply (cr-10 idempotency)"
   );
 
   // And again — triple-check the idempotency holds across multiple reruns.
@@ -1777,8 +1792,8 @@ async fn v1_jm_a_seed_migration_is_idempotent() -> Result<(), Box<dyn Error>> {
   ))?;
   let third: Count = sql_query(q).get_result(&mut conn)?;
   assert_eq!(
-    third.n, 27,
-    "v1-JM-a seed must remain at 27 rows after third apply (cr-10 idempotency)"
+    third.n, expected,
+    "v1-JM-a seed must remain at {expected} rows after third apply (cr-10 idempotency)"
   );
 
   Ok(())
