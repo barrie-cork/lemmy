@@ -355,6 +355,137 @@ pub async fn get_text(
   Ok(v)
 }
 
+// -- Cascade accessors (v1-JM-b) -------------------------------------------
+//
+// Dotted-namespace cascade: `<namespace>.<seg1>.<seg2>...` falls back to
+// `<namespace>.<seg2>...` and so on down to the bare `<namespace>` key,
+// finally to the Rust const default on the bare namespace. Each level runs
+// through `fetch_value`, so the scope cascade (community → instance)
+// applies at every level independently.
+//
+// Returns the value found at the MOST specific level that has a row (or a
+// const default at the bare namespace). Absence at a more specific level
+// does NOT fall through to a less-specific const — the const-default is
+// only consulted after every DB level has been probed. Example cascade for
+// `jury.panel_size` + `["founder", "severe"]`:
+//
+//   1. DB `jury.panel_size.founder.severe`
+//   2. DB `jury.panel_size.severe`
+//   3. DB `jury.panel_size`
+//   4. const `DEFAULT_JURY_PANEL_SIZE` (via `const_default_int("jury.panel_size")`)
+//
+// Only added for Int and Float — the PRD §3.5 / §4 cascade pattern applies
+// to numeric knobs (panel size, quorum fraction, threshold fraction) only.
+// Adding `get_bool_cascade` / `get_text_cascade` is YAGNI per plan §10.2.
+
+/// Walk a dotted-namespace cascade to resolve an int config key. See module
+/// docs for the cascade shape. `namespace` is the bare key (e.g.
+/// `"jury.panel_size"`); `segments` are the discriminating segments from
+/// most-specific to least-specific (e.g. `&["founder", "severe"]`).
+///
+/// Each candidate is cached independently; a cache hit at any level short-
+/// circuits the walk. Absent rows at a level are NOT cached (to keep the
+/// hot-path simple — the seed migration covers the common case, and a
+/// post-seed delete is rare enough that re-querying is acceptable).
+pub async fn get_int_cascade(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  namespace: &str,
+  segments: &[&str],
+) -> LemmyResult<i64> {
+  // Build the candidate list: most-specific first, then progressive tail
+  // strips, then the bare namespace. `segments = &["founder", "severe"]`
+  // yields `["<ns>.founder.severe", "<ns>.severe", "<ns>"]`.
+  let mut candidates: Vec<String> = Vec::with_capacity(segments.len() + 1);
+  if !segments.is_empty() {
+    candidates.push(format!("{namespace}.{}", segments.join(".")));
+    for i in 1..segments.len() {
+      candidates.push(format!("{namespace}.{}", segments[i..].join(".")));
+    }
+  }
+  candidates.push(namespace.to_string());
+
+  for candidate in &candidates {
+    let scope_repr = scope.as_str();
+    let cache_key = (scope_repr.as_ref().to_string(), candidate.clone());
+    if let Some(CachedValue::Int(v)) = cache.entries.get(&cache_key) {
+      return Ok(*v);
+    }
+    match fetch_value(pool, scope, candidate).await? {
+      Some(CachedValue::Int(v)) => {
+        cache
+          .entries
+          .insert((scope_repr.into_owned(), candidate.clone()), CachedValue::Int(v));
+        return Ok(v);
+      }
+      Some(other) => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{candidate}` requested as int but stored as {other:?}"
+        ))
+        .into());
+      }
+      None => continue,
+    }
+  }
+
+  const_default_int(namespace).ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
+    ))
+    .into()
+  })
+}
+
+/// Float variant of [`get_int_cascade`]. Same contract: most-specific first,
+/// bare-namespace last, const default on miss of every DB level.
+pub async fn get_float_cascade(
+  cache: &mut ConfigCache,
+  pool: &mut DbPool<'_>,
+  scope: Scope,
+  namespace: &str,
+  segments: &[&str],
+) -> LemmyResult<f64> {
+  let mut candidates: Vec<String> = Vec::with_capacity(segments.len() + 1);
+  if !segments.is_empty() {
+    candidates.push(format!("{namespace}.{}", segments.join(".")));
+    for i in 1..segments.len() {
+      candidates.push(format!("{namespace}.{}", segments[i..].join(".")));
+    }
+  }
+  candidates.push(namespace.to_string());
+
+  for candidate in &candidates {
+    let scope_repr = scope.as_str();
+    let cache_key = (scope_repr.as_ref().to_string(), candidate.clone());
+    if let Some(CachedValue::Float(v)) = cache.entries.get(&cache_key) {
+      return Ok(*v);
+    }
+    match fetch_value(pool, scope, candidate).await? {
+      Some(CachedValue::Float(v)) => {
+        cache
+          .entries
+          .insert((scope_repr.into_owned(), candidate.clone()), CachedValue::Float(v));
+        return Ok(v);
+      }
+      Some(other) => {
+        return Err(LemmyErrorType::Unknown(format!(
+          "governance_config key `{candidate}` requested as float but stored as {other:?}"
+        ))
+        .into());
+      }
+      None => continue,
+    }
+  }
+
+  const_default_float(namespace).ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
+    ))
+    .into()
+  })
+}
+
 // -- Opt accessors (v1-AD-b) -----------------------------------------------
 //
 // These mirror the typed accessors above but return `Ok(None)` when the
