@@ -1,7 +1,22 @@
 {
   "phase": "6",
   "schema_version": 1,
-  "pending": [],
+  "pending": [
+    {
+      "id": 47,
+      "from": "planner",
+      "timestamp": "2026-04-24T00:00:00Z",
+      "question": "OQ-V1-JM-07 — Post-JM-b general case-open severity-tier inference. v1-JM-b ships the pick-time severity cascade but does not add the case-open writer for non-emergency paths. Which inference shape becomes the v1.5 writer: (a) hardcoded reason_code → severity_tier table in a new severity_inference.rs, (b) per-community policy under governance_config, (c) reporter-facing DTO field with admin-override?",
+      "options": [
+        "(a) hardcoded table in severity_inference.rs called from create_report",
+        "(b) per-community governance_config key report.reason_code_severity_map",
+        "(c) reporter-facing create_report DTO field severity_tier_suggested + admin-override"
+      ],
+      "context": "Opened by v1-JM-b plan §7.1. Source: .claude/PRPs/plans/v1-jury-mechanics-b.plan.md §7.1; also appended to docs/brehon-law-inspired-network/99-decisions-and-open-questions.md §Open Questions. Plan lean is (a) — hardcoded keeps v1.5 PRs small, avoids expanding the reporter DTO or adding a new seeded config key. Per-community override via (b) stays open as v1.5+ if pilot reveals the hardcoded table is wrong for specific communities. This entry is labelled answered_by: planner because the advisor-reviewed lean (option a) is already documented in the plan — the plan author wrote the lean, not the advisor. Impl session does NOT resolve this; v1.5 planner reads the resolution.",
+      "answer": null,
+      "answered_by": null
+    }
+  ],
   "resolved": [
     {
       "id": 45,

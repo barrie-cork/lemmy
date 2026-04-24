@@ -521,6 +521,15 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** v1-AD-b (POST /admin/config sub-phase).
 - **Target:** ~~Before v1-AD-b plan writes~~ — resolved.
 
+### OQ-V1-JM-07 — Post-JM-b general case-open severity-tier inference
+
+- **Opened:** 2026-04-24 (v1-JM-b Task 1, per plan §7.1)
+- **Owner:** TBD (backend + domain)
+- **Question:** v1-JM-b makes `admin_assign_jury` severity-tier-aware at pick time, but does NOT populate `moderation_case.severity_tier` at case-open time for non-emergency paths. Every non-emergency-remove case is still created with the JM-a-backfilled `severity_tier = 'Minor'` default. What inference path becomes the general case-open writer? Three shapes: (a) hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` module, called from `create_report` at case-open; (b) per-community policy stored in a new `report.reason_code_severity_map` text/JSON key under `governance_config`, read via the v1-JM-b cascade at case-open; (c) a new reporter-facing DTO field `severity_tier_suggested` on `create_report` with an admin-override at case-open.
+- **Current lean:** (a) — hardcoded table in `severity_inference.rs`. Simplest to ship post-JM-b; keeps the v1 PRs small; avoids a new seeded config key and avoids expanding the reporter DTO surface. Per-community overrides via (b) are v1.5 scope once pilot data indicates the hardcoded table is wrong for specific communities. (c) is v2+ (UX surface change, reporter-facing).
+- **Blocks:** v1.5 general-severity-inference sub-phase only. Does NOT block v1-JM-c (vote tally), v1-JM-d (appeals), or v1-JM-e (capstone) because those paths only READ `moderation_case.severity_tier` — and the NOT NULL DEFAULT 'Minor' at the column level means every case pre-inference-ship remains Minor, which the JM-b cascade handles correctly.
+- **Target:** v1.5 sub-phase. Resolve before any implementer writes the first call-site in `create_report`.
+
 ---
 
 ## Changelog
@@ -553,3 +562,6 @@ OQ-V1-AD-01, OQ-V1-AD-02, OQ-V1-AD-03 opened (under v1-AD-a task 9, commit `a27b
 
 **2026-04-20** — *99, v1-admin-dashboard PRD*
 OQ-V1-AD-01/02/03 resolved per their documented leans. OQ-V1-AD-01: defer HTML pages to v1.x, v1-AD-e descoped from current wave. OQ-V1-AD-02: hand-roll SSE via `async-stream` (no new dep). OQ-V1-AD-03: compute dry-run impact BEFORE `run_transaction` as a read-only query. PRD §4.3 reshaped to reflect OQ-03 resolution — removes the SAVEPOINT sentence, adds the before-tx read-only contract and the dry-run early-return. Unblocks v1-AD-b/c/d planning.
+
+**2026-04-24** — *99*
+OQ-V1-JM-07 opened under v1-JM-b Task 1 per plan §7.1. Post-JM-b general case-open severity-tier inference; lean (a) hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` module. Blocks v1.5 general-severity-inference sub-phase only; does NOT block v1-JM-c/d/e. JM-b ships without resolution because the NOT NULL DEFAULT 'Minor' column value plus the cascade in `admin_assign_jury` is the complete pick-time contract.
