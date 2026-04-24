@@ -1175,7 +1175,7 @@ Execute in order. **One commit per task** on branch `phase-v1-JM-b`. Each task h
   cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-JM-b-task4-check.log 2>&1"
   echo "exit: $?"   # expect 0
   tail -40 .claude/PRPs/debug/v1-JM-b-task4-check.log
-  cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-JM-b-task4-clippy.log 2>&1"
+  cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-JM-b-task4-clippy.log 2>&1"
   echo "clippy exit: $?"   # expect 0
   tail -40 .claude/PRPs/debug/v1-JM-b-task4-clippy.log
   ```
@@ -1207,7 +1207,7 @@ Execute in order. **One commit per task** on branch `phase-v1-JM-b`. Each task h
   cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-JM-b-task5-check.log 2>&1"
   echo "exit: $?"
   tail -40 .claude/PRPs/debug/v1-JM-b-task5-check.log
-  cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-JM-b-task5-clippy.log 2>&1"
+  cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-JM-b-task5-clippy.log 2>&1"
   echo "clippy exit: $?"
   tail -20 .claude/PRPs/debug/v1-JM-b-task5-clippy.log
   ```
