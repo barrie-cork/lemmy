@@ -14,6 +14,85 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: push + poll-cr (poll #3) + triage (run #2) — 2026-04-24T10:24:09Z
+
+### push
+- **branch:** phase-v1-JM-a
+- **commits pushed:** 1 (8f50a5e00..8ad8a3b56) — `chore(v1-JM-a): address 5 low + 1 nit CR findings (cr-1 through cr-6)`
+- **remote ref:** origin/phase-v1-JM-a @ 8ad8a3b568f6ce3cc830779617458e345dce3a96
+- **upstream tracking:** set (pre-existing)
+- **post-push mergeStateStatus:** UNSTABLE (CI re-running on new head — expected)
+- **R5.3 drift flag:** impl caught + corrected advisor drift mid-commit (cr-4 docstring used CR/advisor-suggested variants `Regular/Escalated/Maximum` but impl correctly applied real PRD variants `Founder/Regular/Probation`). R5.3 candidate; advisor to decide retro amendment. Not written to retro (advisor's lane).
+
+### poll-cr — poll #3
+- **PR:** #92
+- **head SHA:** 8ad8a3b56 (advanced from 8f50a5e00 at poll #2 — PROCEED write)
+- **CR comments seen:** 14 total (2 reviews / 11 inline / 1 issue)
+- **Actionable findings ingested:** 11 (10 pre-existing; 1 new from CR re-review of lows commit)
+- **New findings this poll:** 1 — cr-11 (nit) on .claude/rules/governance-log-entry-kind-registry.md:139 — readability suggestion for ENTRY_KIND_JURY_CONSTRAINT_RELAXED table cell
+- **Findings addressed since last poll:** 6 (cr-1..cr-6 -> 8ad8a3b56 via commit subject `cr-1 through cr-6`)
+- **SHA verification:** 8ad8a3b56 confirmed as new origin head via gh pr view headRefOid
+- **Counters post-poll (pre-triage):** critical 0/0/0 | major 0/4/0 | medium 0/0/0 | low 5/0/0 | nit 2/0/0 (open/done/rebutted) [open = addressed but not yet triage-promoted]
+- **Pre-merge-check walkthrough:** all 5 CR pre-merge checks PASSED (title/description/docstring coverage/linked issues/out-of-scope — all green)
+- **YAML:** C:/Users/barri/Developer/brehon-fork/.claude/PRPs/reviews/pr-92-findings.yaml
+
+### triage — run #2
+- **PR:** #92
+- **Bucket transitions:**
+  - cr-1 (low) fix-in-pr -> done (addressed_in=8ad8a3b56)
+  - cr-2 (nit) fix-in-pr -> done (addressed_in=8ad8a3b56)
+  - cr-3 (low) fix-in-pr -> done (addressed_in=8ad8a3b56)
+  - cr-4 (low) fix-in-pr -> done (addressed_in=8ad8a3b56 — impl used real PRD enum variants, not CR's suggested ones; see R5.3 flag above)
+  - cr-5 (low) fix-in-pr -> done (addressed_in=8ad8a3b56)
+  - cr-6 (low) fix-in-pr -> done (addressed_in=8ad8a3b56)
+  - cr-11 (nit) fix-in-pr -> carry-forward (cosmetic readability nit on BM-owned .md; no functional risk; GH issue needs user confirm before filing)
+- **Counters post-triage:** critical 0/0/0 | major 0/4/0 | medium 0/0/0 | low 0/5/0 | nit 0/1/0 + 1 carry_forward (open/done/rebutted)
+- **Recommendation:** approve (zero open critical/major/medium/low/nit; 1 nit in carry-forward)
+- **Merge-readiness:** all findings done or carry-forward; zero fix-in-pr open; CI on 8f50a5e00 was ALL GREEN; CI re-running on 8ad8a3b56 (UNSTABLE expected during run); lows commit is docs + 1 test + 1 schema.rs addition + 1 migration edit — low-risk
+- **Comment posted?** No — pending user confirm (AskUserQuestion required)
+- **Carry-forward issues filed:** 0 (cr-11 needs user confirm per bm-triage Phase 6 gate)
+- **Telegram ping:** skipped (MCP disconnected per BM rules)
+- **YAML:** C:/Users/barri/Developer/brehon-fork/.claude/PRPs/reviews/pr-92-findings.yaml (updated, 11 findings, counters regenerated)
+
+---
+
+## bm: push-verify + poll-cr (poll #2) + triage (run #1) — 2026-04-24T02:10:00Z
+
+### push-verify
+- **PR:** #92 — phase-v1-JM-a
+- **Expected push:** 4 commits (c406016a3..8f50a5e00) — impl session had already pushed before BM invocation
+- **Verified:** fetch showed origin/phase-v1-JM-a advanced 00baee04b -> 8f50a5e00 (pre-pushed by impl); local HEAD = remote tip
+- **Remote ref:** origin/phase-v1-JM-a @ 8f50a5e00 (full: 8f50a5e00e606645daab3a08fd8dfebcc1c51329)
+- **No BM push needed:** already in sync
+
+### poll-cr — poll #2
+- **PR:** #92
+- **head SHA:** 8f50a5e00 (advanced from 00baee04b at poll #1 — PROCEED write)
+- **CR comments seen:** 12 total (1 review / 10 inline / 1 issue)
+- **Actionable findings ingested:** 10 (all pre-existing; 0 new from CR re-review — CR has not re-reviewed the 4 fix commits yet)
+- **New findings this poll:** 0 (CR has not posted new comments since last poll at 23:30:44Z)
+- **Findings addressed since last poll:** 4 (cr-7 -> faecec88a, cr-8 -> c406016a3, cr-9 -> c406016a3, cr-10 -> 6261bc6d5) via commit-subject heuristic
+- **SHA verification:** all 4 SHAs confirmed present via git cat-file; no force-push detected
+- **Counters (post-poll, pre-triage):** critical 0/0/0 | major 4(all with addressed_in set)/0/0 | medium 0/0/0 | low 5/0/0 | nit 1/0/0
+- **YAML:** C:/Users/barri/Developer/brehon-fork/.claude/PRPs/reviews/pr-92-findings.yaml
+
+### triage — run #1
+- **PR:** #92
+- **Bucket transitions:**
+  - cr-7 (major) fix-in-pr -> done (addressed_in=faecec88a — ADR exception trail commit)
+  - cr-8 (major) fix-in-pr -> done (addressed_in=c406016a3 — bundled into cr-9 commit; same up.sql ADR header)
+  - cr-9 (major) fix-in-pr -> done (addressed_in=c406016a3 — ADR-015 pseudonymisation fix)
+  - cr-10 (major) fix-in-pr -> done (addressed_in=6261bc6d5 — idempotent seed fix)
+- **Remaining fix-in-pr:** cr-1 (low), cr-2 (nit), cr-3 (low), cr-4 (low), cr-5 (low), cr-6 (low) — all deferred per user/impl relay (batch separately)
+- **Counters post-triage:** critical 0/0/0 | major 0/4/0 | medium 0/0/0 | low 5/0/0 | nit 1/0/0 (open/done/rebutted)
+- **Recommendation:** approve (zero critical/major in fix-in-pr; only low/nit remaining)
+- **Comment posted?** No — per BM autonomy table, PR comments require user confirmation (AskUserQuestion)
+- **Carry-forward issues filed:** 0
+- **Telegram ping:** skipped (MCP disconnected per BM rules)
+- **YAML:** C:/Users/barri/Developer/brehon-fork/.claude/PRPs/reviews/pr-92-findings.yaml (updated)
+
+---
+
 ## bm: v1-JM-a PR cut — 2026-04-24T00:25:00Z
 - **PR:** #92 — Phase v1-JM-a — jury-mechanics schema + enums + config keys + backfill smoke test
 - **URL:** https://github.com/barrie-cork/lemmy/pull/92
@@ -52,6 +131,23 @@ use `chore(bm)` subjects; the two are never mixed.
 - **trunk state:** 4 commits ahead of origin (2 docs/advisor + 2 chore/bm consolidation), not pushed — intentional (trunk pushes need user confirm)
 - **next advisor trigger:** impl files R10.1 DQ on restart → advisor answers; OR impl hits unexpected Task 10 compile/test signal; OR user asks to poll PR #91 CR
 - **next impl trigger:** fresh /prp-core:prp-implement session in JM-a worktree; command template auto-detects Task 9 done; Task 10 loads as "STARTING HERE" — will file R10.1 DQ first per plan §13 Task 10 line 1270
+
+---
+
+## bm: poll-cr — 2026-04-23T23:34:32Z
+- **PR:** #92 — Phase v1-JM-a — jury-mechanics schema + enums + config keys + backfill smoke test
+- **head SHA:** 00baee04b (poll #1 — no prior YAML; first poll, no change-detection short-circuit)
+- **CR comments seen:** 11 total (1 review / 10 inline / 1 issue/walkthrough)
+- **Actionable findings ingested:** 10 (0 from walkthrough/pre-merge checks — all 5 pre-merge checks passed)
+- **New findings this poll:** 10 (poll #1 — all findings new)
+- **Findings addressed since last poll:** 0 (poll #1)
+- **Counters:** critical 0/0/0 | major 4/0/0 | medium 0/0/0 | low 5/0/0 | nit 1/0/0
+- **Recommendation:** request-changes (4 major open in fix-in-pr)
+- **YAML:** .claude/PRPs/reviews/pr-92-findings.yaml (6259 bytes)
+- **Walkthrough summary:** CR effort estimate 3/5 (Moderate, ~35 min). 5 pre-merge checks all passed. No failed checks. Change cohort: 8 groups — docs/retros, governance config, governance log, DB schema models, DB schema enums, migrations (enums), migrations (columns+backfill), migrations (seed)+e2e.
+- **Notable findings:** cr-7 + cr-8 (major) — protected governance-table ALTER/DROP in migrations requires explicit ADR exception trail; cr-9 (major) — relaxation_reason TEXT violates ADR-015 pseudonymisation; cr-10 (major) — non-idempotent ON CONFLICT seed. No critical findings.
+- **Outside-diff findings:** 0 (all 10 finding files are in the PR diff)
+- **Telegram ping:** skipped silently (MCP disconnected per BM rules; pings are notifications not gating signals)
 
 ---
 
