@@ -1394,6 +1394,7 @@ diesel::joinable!(instance_actions -> instance (instance_id));
 diesel::joinable!(instance_actions -> person (person_id));
 diesel::joinable!(jury_assignment -> moderation_case (case_id));
 diesel::joinable!(jury_assignment -> person (person_id));
+diesel::joinable!(jury_constraint_violation_log -> moderation_case (case_id));
 diesel::joinable!(jury_pool -> community (community_id));
 diesel::joinable!(jury_pool -> person (person_id));
 diesel::joinable!(jury_vote -> moderation_case (case_id));

@@ -562,9 +562,11 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 3 JM-a migrations LIFO. Runner takes
-  // pg_advisory_lock(0) so the forbid_diesel_cli trigger does not fire.
-  schema_setup::run(Options::default().revert().limit(3), &db_url)?;
+  // Step 2: revert the 4 JM-a migrations LIFO (Task 1 enums, PR #92 cr-9's
+  // jury_constraint_relaxation_reason enum added in 000050, Task 2
+  // columns+table, Task 3 seed). Runner takes pg_advisory_lock(0) so the
+  // forbid_diesel_cli trigger does not fire.
+  schema_setup::run(Options::default().revert().limit(4), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -591,6 +593,25 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
       row.n, 0,
       "jury_constraint_violation_log should be absent between revert and re-apply"
     );
+    // PR #92 cr-5: also assert the 4 JM-a PG enum types are absent post-revert.
+    // Protects against a future schema_setup::revert() that drops a table but
+    // leaves its backing enum type dangling (which would make the re-apply step
+    // fail with "type already exists").
+    for pg_type in [
+      "severity_tier",
+      "case_status_tier",
+      "jury_assignment_role",
+      "jury_constraint_relaxation_reason",
+    ] {
+      let row: CountRow = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_type WHERE typname = '{pg_type}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        row.n, 0,
+        "pg_type '{pg_type}' should be absent between revert and re-apply"
+      );
+    }
   }
 
   // Step 3: seed two v0-shape rows via raw SQL. Any column that the

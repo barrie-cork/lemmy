@@ -628,6 +628,9 @@ pub const DEFAULT_THRESHOLDS_ENDORSEMENT_STRENGTH: i64 = 25;
 pub const DEFAULT_JURY_PANEL_SIZE: i64 = 5;
 pub const DEFAULT_JURY_QUORUM: i64 = 3;
 pub const DEFAULT_JURY_AGE_REQUIREMENT_DAYS: i64 = 60;
+/// Per-case cap on how many jurors on a single panel may be assigned concurrently.
+/// Pairs with `DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL` (authoritative
+/// for global cross-case juror load); this constant bounds within-panel concurrency only.
 pub const DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS: i64 = 3;
 pub const DEFAULT_JURY_FALLBACK_ON_SMALL_POOL: bool = true;
 pub const DEFAULT_DELTAS_JUROR_ALIGNED: i64 = 10;
@@ -735,6 +738,9 @@ pub const DEFAULT_JURY_CONSTRAINTS_NO_SAME_ENDORSEMENT_CHAIN: bool = false;
 
 // jury.constraints.max_retries_before_relax + jury.max_concurrent_* — 2 keys (int)
 pub const DEFAULT_JURY_CONSTRAINTS_MAX_RETRIES_BEFORE_RELAX: i64 = 5;
+/// Global cross-case cap on concurrent assignments per juror. Authoritative for
+/// overall juror-load throttling across the whole network; `DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS`
+/// (above) bounds within-panel concurrency for a single case only.
 pub const DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS_PER_JUROR_TOTAL: i64 = 2;
 
 // appeal.* — 5 keys (1 float + 3 int + 1 bool)

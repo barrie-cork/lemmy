@@ -50,9 +50,13 @@ pub struct ModerationCase {
   /// the procedural-tier classifier that drives the
   /// `jury.panel_size.<status>.<severity>` cascade.
   pub severity_tier: SeverityTier,
-  /// v1-JM-a §8.1: Founder/Regular/Probation tier determined from the
-  /// target's reputation_event / membership_state at case-open time.
-  /// Cascade key for jury sizing per PRD §3.3.
+  /// v1-JM-a §8.1: target-status tier typed as `CaseStatusTier`
+  /// (Founder / Regular / Probation — see `crates/db_schema_file/src/enums.rs`),
+  /// determined from the target's `reputation_event` / `membership_state` at
+  /// case-open time. Distinct from `severity_tier` (`SeverityTier`
+  /// Minor/Moderate/Severe — procedural tier). Both snapshot at jury-seating
+  /// and together key the `jury.panel_size.<status>.<severity>` cascade per
+  /// PRD §3.3.
   pub status_tier: CaseStatusTier,
   /// v1-JM-a §8.1: integer snapshot at jury-seating time. NULL for
   /// cases that haven't reached `JurySelection` yet; populated by
