@@ -66,6 +66,10 @@ pub mod sql_types {
   pub struct JuryAssignmentStatus;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "jury_constraint_relaxation_reason"))]
+  pub struct JuryConstraintRelaxationReason;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "jury_decision"))]
   pub struct JuryDecision;
 
@@ -1331,12 +1335,23 @@ diesel::table! {
 // v1-JM-a addition per PRD §8.3 — append-only audit row written every
 // time select_eligible_jurors relaxes a diversity/recency/cluster
 // constraint (v1-JM-b). No PII (Watch 10).
+//
+// PR #92 cr-9 fix: `reason_code` is bounded-vocabulary enum replacing
+// the originally-proposed `relaxation_reason TEXT`; `relaxation_metadata`
+// is optional JSONB for bounded structured ancillary payloads (never
+// free-text user input). See migration
+// 2026-04-23-000050-0000_add_jury_constraint_relaxation_reason_enum
+// for the enum definition.
 diesel::table! {
+    use diesel::sql_types::{Int4, Jsonb, Nullable, Text, Timestamptz};
+    use super::sql_types::JuryConstraintRelaxationReason;
+
     jury_constraint_violation_log (id) {
         id -> Int4,
         case_id -> Int4,
         constraint_name -> Text,
-        relaxation_reason -> Text,
+        reason_code -> JuryConstraintRelaxationReason,
+        relaxation_metadata -> Nullable<Jsonb>,
         pool_size_at_relax -> Int4,
         panel_size_target -> Int4,
         relaxed_at -> Timestamptz,

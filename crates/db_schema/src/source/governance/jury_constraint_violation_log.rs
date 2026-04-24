@@ -1,8 +1,10 @@
 use crate::newtypes::{JuryConstraintViolationLogId, ModerationCaseId};
 use chrono::{DateTime, Utc};
+use lemmy_db_schema_file::enums::JuryConstraintRelaxationReason;
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::jury_constraint_violation_log;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
@@ -17,11 +19,21 @@ use serde_with::skip_serializing_none;
 /// diversity / recency / cluster constraint per PRD §5.3 (v1-JM-b
 /// owns the call-site). Append-only; no `AsChangeset` derive — same
 /// rationale as `governance_log`.
+///
+/// PR #92 cr-9: `reason_code` is a bounded-vocabulary enum (4 values
+/// per PRD §5.3 R1/R2/R3 cascade + §8.3 AdminOverride) replacing the
+/// originally-proposed free-text `relaxation_reason` column to close
+/// the ADR-015 pseudonymisation gap. `relaxation_metadata` is
+/// optional JSONB for bounded structured ancillary payload (e.g.
+/// `{"dropped_constraint_name": "no_recent_juror_repeat",
+///   "phase": "pool_build"}`); call sites MUST NEVER write free-text
+/// user-supplied strings into this column.
 pub struct JuryConstraintViolationLog {
   pub id: JuryConstraintViolationLogId,
   pub case_id: ModerationCaseId,
   pub constraint_name: String,
-  pub relaxation_reason: String,
+  pub reason_code: JuryConstraintRelaxationReason,
+  pub relaxation_metadata: Option<Value>,
   pub pool_size_at_relax: i32,
   pub panel_size_target: i32,
   pub relaxed_at: DateTime<Utc>,
@@ -33,7 +45,8 @@ pub struct JuryConstraintViolationLog {
 pub struct JuryConstraintViolationLogInsertForm {
   pub case_id: ModerationCaseId,
   pub constraint_name: String,
-  pub relaxation_reason: String,
+  pub reason_code: JuryConstraintRelaxationReason,
+  pub relaxation_metadata: Option<Value>,
   pub pool_size_at_relax: i32,
   pub panel_size_target: i32,
 }
