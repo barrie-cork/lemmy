@@ -14,6 +14,209 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## session-close — 2026-04-24T~22:50Z (dual-role BM+advisor v1-JM-a session)
+
+### What shipped this session
+- PR #92 merged (merge commit `e1c22c759`); 6 polls, 4 triages, 1 digest post
+- cr-12 overreach caught by CI, surgically reverted (`92950055f`) — kept only `jury.max_concurrent_assignments_per_juror_total` as Instance
+- `phase-v1-JM-b` impl branch cut off merged `governance-v0`, plan committed (`08ed5b1f9`), pushed, worktree bootstrapped at `brehon-fork-phase-v1-JM-b`
+- 4 feedback-memory entries extracted from JM-a retro (R3.2, R5.1, R5.2/R5.3 pattern, R10.1); indexed in MEMORY.md under new "Plan-authoring lessons (retro-derived)" section
+- Plan for `/bm-retro-extract` command drafted at `.claude/PRPs/plans/bm-retro-extract.plan.md` (systemic retro→memory feedback-loop fix; impl deferred to a future session)
+- Advisor handover brief written at `.claude/PRPs/reports/v1-JM-b-advisor-handover.md` — JM-b advisor runs as its own session, not dual-role
+
+### Known open items handed to next cycle
+- JM-b impl hasn't started (no PR, no commits beyond the plan). Impl session kicks off with `/prp-core:prp-implement .claude/PRPs/plans/v1-jury-mechanics-b.plan.md` on the JM-b worktree.
+- JM-a worktree (`brehon-fork-phase-v1-JM-a`) intentionally kept — holds unique impl-relays + retro artifacts not on trunk. User decided not to delete; systemic archiving gap queued for `/bm-archive` (not yet planned).
+- Plan worktree (`brehon-fork-plan-v1-JM-b`) still present with uncommitted plan file (same content as what's on `phase-v1-JM-b`). Safe to remove when user decides.
+- `/bm-retro-extract` plan ready for a separate session to implement (~1-2h).
+
+### Next session cold-start pointers
+- **BM session:** read this file's last ~40 lines + `gh pr list --repo barrie-cork/lemmy --state open`
+- **JM-b advisor session (new):** read `.claude/PRPs/reports/v1-JM-b-advisor-handover.md` — reads-for-cold-resume list inside
+- **JM-b impl session:** read `.claude/PRPs/plans/v1-jury-mechanics-b.plan.md` + run /prp-core:prp-implement
+
+---
+
+## bm: jm-b-kickoff — 2026-04-24T22:22Z
+
+### phase-v1-JM-b branch cut + plan committed + push
+- **Branch cut from:** `origin/governance-v0` @ `e1c22c759` (the PR #92 merge commit)
+- **New worktree:** `C:/Users/barri/Developer/brehon-fork-phase-v1-JM-b` on branch `phase-v1-JM-b`
+- **Bootstrap complete:**
+  - Plan file copied from `brehon-fork-plan-v1-JM-b/.claude/PRPs/plans/v1-jury-mechanics-b.plan.md` (uncommitted there; `governance-v1` is plan-only) → `brehon-fork-phase-v1-JM-b/.claude/PRPs/plans/` (109823 bytes)
+  - `settings.local.json` copied from primary worktree per `feedback_settings_local_json_worktree_bootstrap.md`
+  - `git submodule update --init --recursive` — `crates/email/translations` initialized
+  - Upstream tracking unset after `worktree add` (was erroneously tracking governance-v0); re-set by push below
+- **First commit on phase-v1-JM-b:** `08ed5b1f9` — `docs(plan): v1-JM-b — jury-mechanics sub-phase B implementation plan` (+1557 lines)
+- **Pushed:** `origin/phase-v1-JM-b` created with `-u` tracking
+- **Plan worktree untouched:** `brehon-fork-plan-v1-JM-b` on `governance-v1` still holds the same plan file uncommitted — the plan branch was an ephemeral planning sandbox; its value has been fully extracted. Safe to remove via `git worktree remove` when the user decides (not BM's call — touches workspace topology).
+- **Impl session kickoff ready:** from `brehon-fork-phase-v1-JM-b`, the impl session can now run `/prp-core:prp-implement .claude/PRPs/plans/v1-jury-mechanics-b.plan.md`. No PR yet — PR is cut at phase-close, not at phase-start.
+
+---
+
+## bm: merge — 2026-04-24T20:19:14Z
+
+### PR #92 MERGED to governance-v0
+- **Merge commit:** `e1c22c759d606d1e0a617bde8aa10decaee64edd`
+- **Strategy:** `--merge` (merge commit), NOT squash — preserves 20-commit task-per-commit history per `phase-branch.md`
+- **Remote branch deleted:** `origin/phase-v1-JM-a` auto-removed via `--delete-branch`
+- **Local branch preserved:** `phase-v1-JM-a` (upstream shows `gone`); keep for retros, delete manually when no longer needed
+- **Pre-merge gates all green:**
+  - mergeStateStatus: CLEAN
+  - governance e2e: SUCCESS (completed 20:09:01Z)
+  - Red-flag diff scan: SUCCESS
+  - AI review: SUCCESS
+  - CodeRabbit: SUCCESS
+  - Findings YAML: 0 open / 15 done / 1 wont-fix; recommendation = approve
+- **User gate:** confirmed in parent session (BM subagent's AskUserQuestion relayed via parent typing `Merge`)
+- **PR closed at:** 2026-04-24T20:19:14Z after 1 day 13h open (from 2026-04-23 initial push)
+- **Findings summary:** 16 total CR findings across 6 polls; 15 resolved, 1 wont-fix (cr-11 cosmetic); 1 rebut handled in-place on cr-4 R5.3 enum-drift hallucination
+- **Retro artifact:** `.claude/PRPs/reviews/pr-92-findings.yaml` preserved (gitignored); `.claude/PRPs/reviews/pr-92-comment.md` posted as https://github.com/barrie-cork/lemmy/pull/92#issuecomment-4316018652
+
+---
+
+## bm: comment-post — 2026-04-24T21:55Z
+
+### consolidated digest posted on PR #92
+- **Comment URL:** https://github.com/barrie-cork/lemmy/pull/92#issuecomment-4316018652
+- **Body:** .claude/PRPs/reviews/pr-92-comment.md (62 lines)
+- **Coverage:** all 16 CR findings across 6 polls — 15 done grouped by addressing commit (92950055f, 2974f1b0a, 43046e86d, faecec88a/c406016a3/6261bc6d5, 8ad8a3b56) + 1 wont-fix (cr-11).
+- **Recommendation:** approve (CR clean on 92950055f; CI e2e still in progress)
+- **Gate:** user confirmed in parent session (auto-mode respects outbound confirmation rule).
+- **Next:** wait for CI e2e green on 92950055f, then `/bm-merge 92` (user confirm).
+
+---
+
+## bm: push — 2026-04-24T21:35Z
+
+### push (handoff from impl — cr-12 revert overreach)
+- **branch:** phase-v1-JM-a (worktree `brehon-fork-phase-v1-JM-a`)
+- **commits pushed:** 1 (2974f1b0a..92950055f) — `fix(v1-JM-a): cr-12 revert overreach — keep only max_concurrent_assignments_per_juror_total as Instance`
+- **remote ref:** origin/phase-v1-JM-a @ 92950055f
+- **scope:** crates/api/api/src/governance/config.rs only (1 file, +36/-37)
+- **why:** CI e2e on 2974f1b0a failed `admin_set_config_community_scope_by_moderator` — cr-12 had flipped 37 jury/* keys from `Both → Instance`, but CR's actual finding named exactly ONE key (`jury.max_concurrent_assignments_per_juror_total`). The failing test deliberately picks `jury.quorum` as a `Both`-scope key to exercise the moderator-at-community-scope write path; cr-12 broke the test by narrowing `jury.quorum` to `Instance`. Revert restores `Both` on 36 legitimately-per-community keys (quorum, panel_size, severity_thresholds, threshold_fraction, constraints, appeal.*, plus 2 non-jury keys cr-12 also captured: `report.case_threshold_micros` + `rule_set.*`). The one exception (`..._per_juror_total`) legitimately stays `Instance`.
+- **ConfigScope enum:** `#[expect(dead_code)]` removed from `Both` variant (used again on 36 keys); retained on `Community` (still unused; forward-compat for v1-AD community-scoped overrides).
+- **local verification (from impl):**
+  - `cargo check --workspace --features full` exit 0
+  - `admin_set_config_community_scope_by_moderator` e2e: 1/1 passed, 25.71s locally
+  - Scope counts: 36 Both / 52 Instance (sum = 88 = 34 v0 + 27 v1-AD + 27 v1-JM seed counts)
+- **relay-ask and relay-complete artifacts:**
+  - `.claude/runlog/impl-relays/pr92-cr-12-overreach-revert-ask.md` (BM → impl, 2026-04-24)
+  - `.claude/runlog/impl-relays/pr92-cr-12-overreach-revert-complete.md` (impl → BM, 2026-04-24T21:30Z)
+- **impl correction to BM's ask:** relay listed `jury.appeal_panel_size_increase` at line 1670, but authoritative `git show 43046e86d^` shows `jury.deadline_window_hours` was the `Both` key at that position. Impl applied revert to the correct key. BM lesson: next time, cite the ask's line list from `git show <prior-head>^` output, not from post-cr-12 source (line numbers drift).
+- **role note:** BM committed under impl-handoff (`fix(v1-JM-a):` subject) per established pattern since 18:47Z. Impl did the surgical analysis (cross-checked pre-cr-12 source via `git show 43046e86d^`), drafted + tested the commit, and handed off for push per BM's lane.
+- **untouched:** `.claude/runlog/impl-relays/` stays untracked (impl-session artifact).
+- **next:** `/bm-poll-cr 92` — CR may confirm addressed or post a follow-up clarification on the per-key scope rationale. Expected: cr-12 gets updated `addressed_in: 92950055f` and `notes:` reflecting partial-revert semantics (CR's original one-key concern preserved, overreach removed). CI e2e will re-run on 92950055f — previously-failing test now passes locally so CI expected to mirror.
+
+---
+
+## bm: push — 2026-04-24T19:25Z
+
+### push (handoff from impl — cr-16 contract-consistency fix)
+- **branch:** phase-v1-JM-a (worktree `brehon-fork-phase-v1-JM-a`)
+- **commits pushed:** 1 (43046e86d..2974f1b0a) — `fix(v1-JM-a): cr-16 — requires_re_jury: true on jury.* metadata`
+- **remote ref:** origin/phase-v1-JM-a @ 2974f1b0a
+- **scope:** crates/api/api/src/governance/config.rs only (1 file, +20/-20)
+- **fix landed:** cr-16 (major) — 20 `requires_re_jury: false → true` flips on JM-a ConfigKeyMetadata entries:
+  - `jury.panel_size.{regular,founder,probation}.{minor,moderate,severe}` (9)
+  - `jury.quorum_fraction.{minor,moderate,severe}` (3)
+  - `jury.threshold_fraction.{minor,moderate,severe}` (3)
+  - `jury.constraints.*` (5: sponsor_cluster_majority_forbid, geographic_diversity_prefer, recent_service_cooldown_exclude, recent_service_cooldown_days, endorsement_chain_shared_forbid)
+- **ground-truth verification (two independent reads):** impl confirmed "20 flipped, 0 remaining in the range"; BM verified via `git diff --stat` showing 20/20 + per-hunk inspection — no adjacent field churn, `scope: ConfigScope::Instance` unchanged across all 20 (cr-12 scope fix preserved), `requires_step_up: false` unchanged, `apply_at_default` unchanged.
+- **contract rationale:** legacy `jury.panel_size` / `jury.quorum` keys use `requires_re_jury: true`; JM-a's new metadata initially used `false`, which would have let a runtime config mutation silently bypass re-jury on in-flight cases. cr-16 is a substantive contract-consistency bug, not cosmetic.
+- **role note:** BM committed under impl-handoff (`fix(v1-JM-a):` subject); user relayed impl's "ready to stage and commit" summary with exact counts, and BM's spot-check matched before staging. Same pattern as cr-12/13/14/15 push at 18:47Z.
+- **untouched:** `.claude/runlog/impl-relays/` stays untracked (impl-session artifact).
+- **next:** `/bm-poll-cr 92` in ~5-10 min (CR re-review latency) → `/bm-triage 92` → consolidated digest post → `/bm-merge 92`. Expected poll result: cr-16 gets `addressed_in: 2974f1b0a`; no new findings likely (trivial boolean flip, no new surface).
+
+---
+
+## bm: push — 2026-04-24T18:47Z
+
+### push (handoff from impl — CR-fix batch for cr-12 cr-13 cr-14 cr-15)
+- **branch:** phase-v1-JM-a (worktree `brehon-fork-phase-v1-JM-a`)
+- **commits pushed:** 1 (f638cc780..43046e86d) — `fix(v1-JM-a): cr-12 cr-13 cr-14 cr-15 — PR #92 review fixes`
+- **remote ref:** origin/phase-v1-JM-a @ 43046e86d
+- **upstream tracking:** set (pre-existing)
+- **scope:** crates/api/api/src/governance/config.rs + crates/server/tests/e2e.rs (2 files, +64/-47)
+- **fixes landed:**
+  - cr-12 (major): ConfigScope::Both → ConfigScope::Instance on 37 jury/* metadata entries; #[expect(dead_code)] on Community + Both variants (forward-compat retention for v1-AD community-scoped overrides)
+  - cr-13 (low): e2e.rs:503 docblock "3 JM-a migrations" → "4 JM-a migrations"; added `add_jury_constraint_relaxation_reason_enum` name in both step 2 and step 4 descriptions
+  - cr-14 (major): governance_config seed-row absence probe added post-revert in `v1_jm_a_backfill_populates_v0_snapshot` (COUNT(*) on JM-a seed valid_from asserts 0 — proves seed_v1_jm_config_keys actually rolled back, not just that a neighbouring row shifted into the limit(4) window)
+  - cr-15 (nit): 3 hardcoded `27` values → `EXPECTED_SEED_COUNT_V1_JM as i64` in `v1_jm_a_seed_migration_is_idempotent`; constant imported from lemmy_api::governance::config
+- **role note:** BM committed under impl-handoff per branch-manager.md "impl has explicitly handed off" clause (user relayed impl's "ready for you to commit" summary). Commit authored under `fix(v1-JM-a):` subject matching impl-side commit-subject style, not `chore(pr-review):` — the changes are code fixes addressing CR findings, not review-artifact housekeeping.
+- **untouched:** `.claude/runlog/impl-relays/` directory (untracked, impl-session artifact; not BM's lane to commit)
+- **next:** CR will re-review on the new head; expect a poll-cr in ~5-10 min. `/bm-poll-cr 92` when ready.
+
+---
+
+## bm: triage — 2026-04-24T20:12Z
+
+### triage (run #4)
+- **PR:** #92
+- **buckets:** fix-in-pr 1 | rebut 0 | carry-forward 0 | done 14 | wont-fix 1
+- **promoted to done (4):** cr-12 (major ConfigScope), cr-13 (low docblock), cr-14 (major seed-absence probe), cr-15 (nit constant) — all addressed_in 43046e86d per poll #5; bucket moved fix-in-pr → done.
+- **open fix-in-pr (1):** cr-16 (major) — ~20 JM-a ConfigKeyMetadata entries use `requires_re_jury: false`; legacy jury keys use `true`. Real contract-consistency bug (revert test: reverting restores surface where config mutations skip re-jury on in-flight cases). Unaddressed as of 43046e86d.
+- **counters recomputed:** major 1 open / 6 done / 0 rebutted | low 0 open / 6 done | nit 0 open / 2 done / 1 wont-fix | total 16.
+- **comment draft:** .claude/PRPs/reviews/pr-92-comment.md (refreshed for this moment's state — cr-16 open, 14 done, cr-11 wont-fix).
+- **comment posted?** aborted (BM recommendation) — per auto-mode outbound gate + task-side guidance: fresh impl fix for cr-16 is landing imminently in parallel; posting now would make the digest stale within minutes. Better path: wait for cr-16 fix commit → re-poll → re-triage → consolidated digest. Draft stays on disk for reuse.
+- **recommendation:** request-changes (1 open major — cr-16).
+- **YAML:** .claude/PRPs/reviews/pr-92-findings.yaml (counters refreshed; 4 bucket promotions; poll_count still 5 — no poll this phase).
+
+---
+
+## bm: poll-cr — poll #5 — 2026-04-24T19:05Z
+
+- **PR:** #92
+- **head SHA:** 43046e86d (advanced from f638cc780 — fix commit for cr-12..cr-15 landed)
+- **CR comments seen:** 4 review / 16 inline / 1 issue
+- **Actionable findings ingested:** 1 new (cr-16 from review #4 submitted 2026-04-24T18:57:26Z)
+- **New findings this poll:** 1 — cr-16 (major): `requires_re_jury: false` on ~20 JM-a panel_size/quorum/threshold/constraint ConfigKeyMetadata entries; should be `true` to match legacy key contract
+- **Findings addressed since last poll:** 4 — cr-12 (major), cr-13 (low), cr-14 (major), cr-15 (nit) — `addressed_in: 43046e86d` set; bucket stays `fix-in-pr` per script (triage promotes to `done`)
+- **Counters:** critical 0/0/0 | major 3 open/4 done/0 rebutted | medium 0 | low 1 open/5 done/0 | nit 1 open/1 done/0/1 wont-fix
+- **Recommendation:** request-changes (cr-12 + cr-14 addressed_in set but triage not run yet; cr-16 open)
+- **YAML:** .claude/PRPs/reviews/pr-92-findings.yaml (poll_count: 5, total: 16)
+- **Walkthrough:** All 5 pre-merge checks passed. Estimated review effort: 4 (Complex). CR auto-paused reviews due to active development cadence.
+- **Notes:** CR review #4 covered only 2 files (config.rs + e2e.rs — the fix commit diff). The `450-452` enum-drop probe (jury_constraint_relaxation_reason missing) appeared as a duplicate in review #4 body but has no new separate inline URL — not ingested as new finding.
+
+---
+
+## bm: triage — 2026-04-24T18:32:44Z
+
+### triage (run #3)
+- **PR:** #92
+- **buckets:** fix-in-pr 4 | rebut 0 | carry-forward 0 | done 10 | wont-fix 1
+- **fix-in-pr (4):** cr-12 (major config.rs scope), cr-13 (low e2e docblock), cr-14 (major e2e seed-absence probe), cr-15 (nit e2e constant)
+- **cr-4 R5.3 re-flag:** confirmed rebutted-at-source (actual enum `Founder/Regular/Probation` matches code at HEAD; CR's `Regular/Escalated/Maximum` repeats the advisor-drift hallucination caught during push on 10:24Z). Stays `done` at 8ad8a3b56; rebuttal noted in finding's rationale/notes.
+- **comment draft:** .claude/PRPs/reviews/pr-92-comment.md (75 lines; not posted — auto mode forbids visible outbound without explicit user confirm)
+- **YAML:** counters unchanged; buckets already correct from poll #4.
+- **recommendation:** request-changes (2 open majors)
+
+---
+
+## bm: poll-cr — poll #4 — 2026-04-24T18:20:45Z
+
+### poll-cr — poll #4
+- **PR:** #92
+- **head SHA:** f638cc780 (advanced from 8ad8a3b56 at poll #3 — PROCEED write)
+- **CR comments seen:** 19 total (3 reviews / 15 inline / 1 issue) — review #3 posted 2026-04-24T10:29:36Z, ~5 min after poll #3 closed
+- **Actionable findings ingested:** 15 (11 pre-existing + 4 new from CR review #3)
+- **New findings this poll:** 4
+  - cr-12 (major) crates/api/api/src/governance/config.rs:2200 — `jury.max_concurrent_assignments_per_juror_total` scope should be Instance not Both (cross-community spread bypasses global cap)
+  - cr-13 (low) crates/server/tests/e2e.rs:503 — docblock says "3 JM-a migrations" but test reverts 4 (missing 000050 enum migration)
+  - cr-14 (major) crates/server/tests/e2e.rs:615 — add governance_config seed-row absence probe post-revert (limit(4) is positional; test can false-green if slot shifts)
+  - cr-15 (nit) crates/server/tests/e2e.rs:1782 — replace hard-coded literal 27 with EXPECTED_SEED_COUNT_V1_JM constant
+- **Findings addressed since last poll:** 0 (only commit since poll #3 is f638cc780 docs-only retro amendment — no CR fixes shipped in window)
+- **CR re-flag on existing finding:** cr-4 (moderation_case.rs status_tier docstring) — CR review #3 duplicate-flags "still describes the wrong enum" and proposes changing to `Regular/Escalated/Maximum`. Ground-truth at HEAD f638cc780: current docstring already says "Founder / Regular / Probation" which matches actual `CaseStatusTier` enum (verified at db_schema_file/src/enums.rs:697 + PRD §4.1:239-242). CR's suggestion repeats the R5.3 advisor-drift hallucination. Re-flag rebutted in YAML notes; cr-4 remains `bucket: done addressed_in: 8ad8a3b56`.
+- **CR duplicate flag on cr-2:** CR review #3 also flagged CONFIG_KEY_METADATA entry at line 1280 (description text still says "Max open jury assignments a single juror can hold") as an inconsistent follow-up to cr-2. Ground-truth confirms the metadata description text is indeed unchanged at HEAD — but CR emitted it as a duplicate-flag, not a fresh inline comment, so no new `cr-<seq>` is issued. Noted in cr-2's `notes`. Triage may choose to address when fixing cr-12 (same file, adjacent metadata surface).
+- **SHA verification:** f638cc780 confirmed as remote head via gh pr view headRefOid
+- **Counters post-poll:** critical 0/0/0 | major 2/4/0 | medium 0/0/0 | low 1/5/0 | nit 1/1/0 (open/done/rebutted; wont_fix 1 on nit=cr-11)
+- **Recommendation transition:** `approve` → `request-changes` (2 new major findings in fix-in-pr; PR is no longer merge-ready)
+- **Pre-merge-check walkthrough:** review #3's issue-level comment is the "no actionable comments 🎉" stub reviewing only the retro-doc amendment in f638cc780 — not to be confused with review #3's reviews-endpoint body which has the 4 new findings
+- **YAML:** C:/Users/barri/Developer/brehon-fork/.claude/PRPs/reviews/pr-92-findings.yaml
+- **Notes for user:** the 4 new findings reference files that were stable-for-merge before CR's re-pass — the re-pass caught real gaps. cr-12 and cr-14 are substantive (scope semantics + test falsifiability); cr-13 and cr-15 are cosmetic doc/constant hygiene. Suggest /bm-triage 92 next; CR can be pinged via /bm-ping cr-posted if user wants an alert.
+
+---
+
 ## bm: push + poll-cr (poll #3) + triage (run #2) — 2026-04-24T10:24:09Z
 
 ### push
@@ -634,3 +837,74 @@ use `chore(bm)` subjects; the two are never mixed.
 - **YAML:** .claude/PRPs/reviews/pr-87-findings.yaml (25 findings, counters regenerated)
 - **Notes:** CR review #4163587247 (submitted 15:07:35Z) re-reviewed diff 8b99a3401..7ea0844cd and posted exactly 1 actionable finding: cr-25 at `crates/server/tests/e2e.rs:6024` (Minor, tighten `>= 1` assertions to `Some(1)` exact — CR flags that current loose comparison would mask double-counting regressions in `count_active_cases`). No follow-ups on cr-23/cr-24 (CR considers those addressed by the refactor). No comments on the `is_active_status` / `status_key` helpers, the `LIMIT 100` guardrail, or the cascade test — all considered acceptable. No "Duplicate comments" block this time. Commit subject `refactor(admin-dashboard): exhaustive CaseStatus + batched cfg query (cr-23, cr-24)` matched heuristic cleanly; both inline findings mapped to `addressed_in: 7ea0844cd`.
 - **Next:** `/bm-triage 87` for run #4 to (a) promote cr-21 + cr-22 fix-in-pr → done (addressed_in=8b99a3401), (b) promote cr-23 + cr-24 fix-in-pr → done (addressed_in=7ea0844cd), (c) triage cr-25 (low/test-quality nit — plausibly fix-in-pr quick-patch or carry-forward depending on appetite). After triage, post fresh digest then `/bm-merge 87`.
+
+---
+
+## bm: triage — 2026-04-24T18:32:44Z
+
+### triage run — PR #92
+- **PR:** #92 (phase-v1-JM-a → governance-v0)
+- **Head SHA at triage:** f638cc7803063dca62d5e0ae6321232e25321dd3 (matches last_polled_head_sha from poll #4)
+- **Buckets after triage:** fix-in-pr 4 | rebut 0 | carry-forward 0 | done 10 | wont-fix 1 (total 15)
+- **Severity × bucket matrix:**
+  - fix-in-pr: 0 critical / 2 major (cr-12, cr-14) / 0 medium / 1 low (cr-13) / 1 nit (cr-15)
+  - done: 0 critical / 4 major (cr-7..cr-10) / 0 medium / 5 low (cr-1, cr-3..cr-6) / 1 nit (cr-2)
+  - wont-fix: 1 nit (cr-11)
+- **Recommendation:** request-changes (2 major fix-in-pr, no critical)
+- **New triage decisions this run:** none — all 4 new findings (cr-12..cr-15) were pre-bucketed `fix-in-pr` during poll #4 and survived the four-bucket re-classification. Applied "if I revert, does symptom return?" test to each:
+  - cr-12: revert reintroduces cross-community cap bypass → real bug → `fix-in-pr` stands.
+  - cr-14: revert masks incomplete seed-migration rollback (limit(4) positional trap) → real test gap → `fix-in-pr` stands.
+  - cr-13: docstring lag only but trivial to fix, in scope → `fix-in-pr` stands.
+  - cr-15: cosmetic test refactor but ~3-line edit and removes drift surface → `fix-in-pr` stands (could be `wont-fix` but ROI is positive given batching with cr-12/cr-14).
+- **cr-4 not re-triaged:** CR review #3 re-flag was advisor-drift hallucination (actual enum `Founder/Regular/Probation` matches HEAD docstring at `moderation_case.rs:53`); prior rebuttal in cr-4 rationale stands, bucket remains `done` with `addressed_in: 8ad8a3b56`.
+- **Comment posted?** **not yet — awaiting user confirm** (auto mode does not authorise visible outbound per `.claude/rules/branch-manager.md` Autonomy bounds and auto-mode constraint 6). Draft at `.claude/PRPs/reviews/pr-92-comment.md`.
+- **Carry-forward issues filed:** 0 (no carry-forward findings this triage).
+- **YAML:** `.claude/PRPs/reviews/pr-92-findings.yaml` — no state changes this run (already in correct triaged state post-poll #4); counters verified.
+- **Next:** parent session invokes `AskUserQuestion` to confirm comment post (or user types `confirm`/`dry-run`/`abort` directly). If `confirm` → `gh pr comment 92 --repo barrie-cork/lemmy --body-file .claude/PRPs/reviews/pr-92-comment.md`. After comment posted, impl reads YAML `yq '.findings[] | select(.bucket=="fix-in-pr")'` and works cr-12/13/14/15; then `/bm-poll-cr 92` to capture SHAs and `/bm-triage 92` to promote to `done`.
+
+---
+
+## bm: poll-cr — 2026-04-24T20:02:24Z
+
+- **PR:** #92 (phase-v1-JM-a → governance-v0)
+- **Poll #:** 6 (post-revert; prior poll #5 at 2026-04-24T19:02:08Z)
+- **head SHA:** 92950055f (changed since last poll — prior was 43046e86d; jumped 2 commits: 2974f1b0a cr-16 fix → 92950055f cr-12 revert-overreach)
+- **CR comments seen:** 16 total (0 reviews / 16 inline / 1 issue comment — all pre-existing; 0 new since last poll)
+- **Actionable findings ingested:** 0 new (CR paused auto-review on active branch; re-review on 92950055f returned SUCCESS with no new inline comments — confirmed by gh api query returning 0 comments with created_at > 2026-04-24T19:02:08Z)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 2
+  - cr-16: `addressed_in` set to `2974f1b0a` (commit subject "fix(v1-JM-a): cr-16 — requires_re_jury: true on jury.* metadata" directly names cr-16; was `null` in poll #5 — CR review #4 at 43046e86d hadn't landed yet when that commit was made post-triage)
+  - cr-12: `addressed_in` updated from `43046e86d` to `92950055f` (partial revert at 92950055f — commit "fix(v1-JM-a): cr-12 revert overreach"; restored ConfigScope::Both on 36 keys that legitimately support per-community overrides; kept ConfigScope::Instance only on jury.max_concurrent_assignments_per_juror_total per CR's original single-key concern; CR's core intent preserved; addressed_in updated to most recent commit confirming addressed state)
+- **Force-push detection:** all 7 existing addressed_in SHAs verified present in git log — no force-push detected
+- **Counters:** critical 0/0/0/0/0 | major 1/6/0/0/0 | medium 0/0/0/0/0 | low 0/6/0/0/0 | nit 0/2/0/0/1 (open/done/rebutted/carry_forward/wont_fix)
+- **Recommendation:** request-changes (cr-16 still fix-in-pr with addressed_in=2974f1b0a; triage promotes to done)
+- **YAML:** `.claude/PRPs/reviews/pr-92-findings.yaml` (16 findings, counters regenerated, poll_count=6, last_polled_head_sha=92950055f809801f484d58f0ba4affdf86ed2a04)
+- **Notes:** CR issue comment shows "Reviews paused — branch under active development" (auto-pause after influx of commits). No walkthrough pre-merge-check failures. CR re-review on 92950055f was SUCCESS per gh pr view (verified by parent session prior to this poll invocation). cr-12 revert is a refinement, not a regression — CR's core concern (cross-community cap bypass on total juror assignments) is preserved; the 36-key overreach that incorrectly set ConfigScope::Instance on per-community-tunable keys (panel_size, quorum, thresholds, constraints, appeal.* etc.) has been corrected.
+
+---
+
+## bm: triage — 2026-04-24T20:07:53Z
+
+### triage run #5 — PR #92 (final promotion pass)
+- **PR:** #92 (phase-v1-JM-a → governance-v0)
+- **Head SHA at triage:** 92950055f809801f484d58f0ba4affdf86ed2a04 (matches last_polled_head_sha from poll #6)
+- **Buckets after triage:** fix-in-pr 0 | rebut 0 | carry-forward 0 | done 15 | wont-fix 1 (total 16)
+- **Severity × bucket matrix (final):**
+  - done: 0 critical / 7 major (cr-7, cr-8, cr-9, cr-10, cr-12, cr-14, cr-16) / 0 medium / 6 low (cr-1, cr-3, cr-4, cr-5, cr-6, cr-13) / 2 nit (cr-2, cr-15)
+  - wont-fix: 1 nit (cr-11)
+- **Recommendation:** approve (0 open findings; CR clean on HEAD 92950055f; CI e2e still in progress)
+- **Promotions this run:**
+  - cr-12 (major): was `bucket: done` already from triage #4 with `addressed_in: 92950055f` (refreshed in poll #6). Notes refreshed to reflect triage #5 confirmation — partial revert IS terminal addressing; CR's core single-key concern (jury.max_concurrent_assignments_per_juror_total = ConfigScope::Instance) preserved; 36-key overreach corrected; CR re-review on 92950055f = SUCCESS.
+  - cr-16 (major): `fix-in-pr` → `done`. addressed_in: 2974f1b0a. Commit subject "fix(v1-JM-a): cr-16 — requires_re_jury: true on jury.* metadata" directly names the finding; ~20 ConfigKeyMetadata entries now carry requires_re_jury: true matching legacy contract.
+- **Counters regenerated:** critical 0/0/0/0/0 | major 0/7/0/0/0 | medium 0/0/0/0/0 | low 0/6/0/0/0 | nit 0/2/0/0/1 (open/done/rebutted/carry_forward/wont_fix).
+- **Recommendation field updated:** request-changes → approve.
+- **Consolidated digest drafted:** `.claude/PRPs/reviews/pr-92-comment.md` rewritten to cover full PR journey (all 16 findings, 15 done + 1 wont-fix, recommendation=approve, CI gating noted). This would be the first comment posted on PR #92 by BM (prior triage runs all deferred posting).
+- **Comment posted?** **not yet — awaiting user confirm** (auto mode does not authorise visible outbound per `.claude/rules/branch-manager.md` Autonomy bounds: PR comments are Manual — YES). Draft ready at `.claude/PRPs/reviews/pr-92-comment.md`.
+- **Carry-forward issues filed:** 0 (no carry-forward findings).
+- **YAML:** `.claude/PRPs/reviews/pr-92-findings.yaml` — cr-12 notes refreshed, cr-16 promoted to done, counters regenerated, recommendation=approve.
+- **Next:** parent session invokes AskUserQuestion to confirm comment post. If `confirm` → `gh pr comment 92 --repo barrie-cork/lemmy --body-file .claude/PRPs/reviews/pr-92-comment.md`. After comment posted and CI e2e green on 92950055f → `/bm-merge 92` (also user-gated).
+- **Next:** `/bm-triage 92` to promote cr-16 from fix-in-pr → done (addressed_in=2974f1b0a) and update cr-12 bucket validation (already done). After triage promote, all findings will be in terminal buckets → recommendation flips to approve → `/bm-merge 92`.
+
+2026-04-24T23:35Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-04-24-HEAD-f676ed280.md branch=governance-v0 head=f676ed280
+
+2026-04-24T23:58Z | bm | skills | impl-helpers | added 3 user-invocable skills under .claude/skills/ — cargo-validate, test-write (with 2 helpers e2e-harness-pattern.md + rate-limit-debug.md), edit-mechanical — for impl context-saving on JM-b Tasks 5-9 and beyond. Drafted by advisor turn earlier this session, committed by BM-hat now. Trimmed descriptions (~25 tokens each) to keep baseline-context cost low. Not yet pushed (BM-lane chore; awaiting user push instruction).
