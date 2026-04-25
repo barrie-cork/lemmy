@@ -7099,10 +7099,25 @@ mod v1_jm_b_fixtures {
     conn: &mut AsyncPgConnection,
     persons: &[PersonId],
   ) -> LemmyResult<()> {
+    seed_jury_eligible_snapshots_scoped(conn, persons, None).await
+  }
+
+  /// Like [`seed_jury_eligible_snapshots`], but with explicit
+  /// `community_id` scope. Required when the case being tested is
+  /// community-scoped (e.g. emergency-remove with a `Some(community_id)`
+  /// argument): the eligibility query joins
+  /// `reputation_snapshot` on `community_id IS NOT DISTINCT FROM
+  /// case.community_id`, so an instance-scoped (`NULL`) snapshot does
+  /// not match a community-scoped case.
+  pub async fn seed_jury_eligible_snapshots_scoped(
+    conn: &mut AsyncPgConnection,
+    persons: &[PersonId],
+    community_id: Option<lemmy_db_schema::newtypes::CommunityId>,
+  ) -> LemmyResult<()> {
     for person in persons {
       let form = ReputationSnapshotInsertForm {
         person_id: *person,
-        community_id: None,
+        community_id,
         reporting_accuracy: 100,
         jury_reliability: 100,
         participation_consistency: 100,
@@ -7762,16 +7777,162 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   )
   .await?;
 
+  // Snapshot + tier assertions. PR #95 cr-3 + cr-4: emergency-remove
+  // routes through the same cascade/snapshot path as admin_assign_jury,
+  // so a Severe + Regular (no target_person_id) case freezes
+  // panel_size = 7 / quorum = 5 / threshold = 6 from
+  // jury.panel_size.regular.severe + jury.{quorum,threshold}_fraction.severe.
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
-  let severity_tier: SeverityTier = moderation_case::table
+  let row: (
+    SeverityTier,
+    Option<i32>,
+    Option<i32>,
+    Option<i32>,
+  ) = moderation_case::table
     .filter(moderation_case::id.eq(case_id))
-    .select(moderation_case::severity_tier)
+    .select((
+      moderation_case::severity_tier,
+      moderation_case::panel_size_snapshot,
+      moderation_case::quorum_snapshot,
+      moderation_case::threshold_count_snapshot,
+    ))
     .first(&mut conn)
     .await?;
   assert_eq!(
-    severity_tier,
+    row.0,
     SeverityTier::Severe,
     "emergency_remove opens case with severity_tier = Severe (plan §10.13 / ADR-013)"
   );
+  assert_eq!(
+    row.1,
+    Some(7),
+    "panel_size_snapshot = 7 (jury.panel_size.regular.severe seed; PR #95 cr-3)"
+  );
+  assert_eq!(
+    row.2,
+    Some(5),
+    "quorum_snapshot = ceil(7 × 0.71) = 5 (PR #95 cr-3)"
+  );
+  assert_eq!(
+    row.3,
+    Some(6),
+    "threshold_count_snapshot = ceil(7 × 0.75) = 6 (PR #95 cr-3)"
+  );
+  Ok(())
+}
+
+/// PR #95 cr-3 + cr-4 — emergency-remove with a seedable juror pool seats
+/// the full Severe-tier panel, persists `selected_under_constraints` per
+/// juror, and emits both `severity_tier_frozen` and the extended
+/// `panel_assembled` payload, matching `admin_assign_jury` exactly.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_emergency_remove_seats_severe_panel_with_constraint_record()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_emergency_remove::{
+    EmergencyRemoveTarget, emergency_remove_open_case,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::schema::{governance_log, jury_assignment};
+  use serde_json::Value;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (admin_id, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_erp", true).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  // Reputation snapshots scoped to the same community as the case so
+  // the strict eligibility join's
+  // `rs.community_id IS NOT DISTINCT FROM case.community_id` predicate
+  // matches; instance-scoped (NULL) snapshots would miss the
+  // community-scoped emergency-remove case and force R1 + fallback.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots_scoped(
+      &mut conn,
+      &jurors,
+      Some(community.id),
+    )
+    .await?;
+  }
+
+  let case_id = emergency_remove_open_case(
+    &mut context.pool(),
+    admin_id,
+    EmergencyRemoveTarget::Community(community.id),
+    Some(community.id),
+    "ADR-013 panel-seating test".to_string(),
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // 7 jurors seated (Regular + Severe → panel_size 7).
+  let assignment_count: i64 = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    assignment_count, 7,
+    "emergency-remove seats Severe-tier panel of 7 jurors"
+  );
+
+  // Per-juror selected_under_constraints JSONB carries the steady-state
+  // ConstraintRecord shape (PRD §5.1).
+  let constraints: Vec<Option<Value>> = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case_id))
+    .select(jury_assignment::selected_under_constraints)
+    .load(&mut conn)
+    .await?;
+  for (idx, payload) in constraints.iter().enumerate() {
+    let value = payload
+      .as_ref()
+      .ok_or_else(|| anyhow::anyhow!("emergency-seated row {idx} missing constraint record"))?;
+    assert_eq!(
+      value["no_majority_from_same_sponsor_cluster"],
+      Value::String("applied".to_string()),
+      "emergency-seated row {idx} cluster constraint applied"
+    );
+    assert_eq!(
+      value["no_recent_juror_repeat"],
+      Value::String("applied".to_string()),
+      "emergency-seated row {idx} cooldown constraint applied"
+    );
+  }
+
+  // Exactly one severity_tier_frozen entry — admin is the actor.
+  let stf_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("severity_tier_frozen"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    stf_count, 1,
+    "emergency-remove emits exactly one severity_tier_frozen entry"
+  );
+
+  // Exactly one panel_assembled entry per emergency-remove (single
+  // assign call); payload carries the resolved tiers + relaxations
+  // per Task 5 §10.12 mirror.
+  let panel_payloads: Vec<Value> = governance_log::table
+    .filter(governance_log::entry_kind.eq("panel_assembled"))
+    .select(governance_log::payload)
+    .load(&mut conn)
+    .await?;
+  assert_eq!(
+    panel_payloads.len(),
+    1,
+    "exactly one panel_assembled entry per emergency-remove"
+  );
+  let payload = panel_payloads
+    .get(0)
+    .ok_or_else(|| anyhow::anyhow!("no panel_assembled payload"))?;
+  assert_eq!(payload["juror_count"], Value::from(7));
+  assert_eq!(payload["severity_tier"], Value::String("severe".to_string()));
+  assert_eq!(payload["status_tier"], Value::String("regular".to_string()));
   Ok(())
 }

@@ -299,7 +299,7 @@ async fn process_assignment(
   clippy::cast_possible_truncation,
   reason = "input is ceil(panel_size ∈ [3, 11] × fraction ∈ [0, 1]); the is_finite + sign check keeps the cast safe on malformed config"
 )]
-fn ceil_count(value: f64, label: &str) -> LemmyResult<i32> {
+pub(crate) fn ceil_count(value: f64, label: &str) -> LemmyResult<i32> {
   if !value.is_finite() || value < 0.0 {
     return Err(LemmyErrorType::Unknown(format!(
       "{label} {value} is not a finite non-negative number"
@@ -325,7 +325,7 @@ fn ceil_count(value: f64, label: &str) -> LemmyResult<i32> {
 ///
 /// Exactly one async read for the Founder check, plus one optional read
 /// for the MembershipState short-circuit. Both borrow `conn` sequentially.
-async fn compute_status_tier(
+pub(crate) async fn compute_status_tier(
   conn: &mut diesel_async::AsyncPgConnection,
   case: &ModerationCase,
 ) -> LemmyResult<CaseStatusTier> {
@@ -368,7 +368,7 @@ async fn compute_status_tier(
 /// construction boundary (`"jury.panel_size.<status>.<severity>"`) and at
 /// the governance_log JSON payload boundary. Keeps the rest of the file
 /// working in terms of the strongly-typed enum.
-const fn status_tier_slug(tier: CaseStatusTier) -> &'static str {
+pub(crate) const fn status_tier_slug(tier: CaseStatusTier) -> &'static str {
   match tier {
     CaseStatusTier::Founder => "founder",
     CaseStatusTier::Regular => "regular",
@@ -377,7 +377,7 @@ const fn status_tier_slug(tier: CaseStatusTier) -> &'static str {
 }
 
 /// Snake-case slug for `SeverityTier`. Mirror of [`status_tier_slug`].
-const fn severity_tier_slug(tier: SeverityTier) -> &'static str {
+pub(crate) const fn severity_tier_slug(tier: SeverityTier) -> &'static str {
   match tier {
     SeverityTier::Minor => "minor",
     SeverityTier::Moderate => "moderate",
