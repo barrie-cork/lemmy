@@ -7594,3 +7594,184 @@ async fn config_get_int_cascade_resolves_founder_severe_to_bare_then_const()
   }
   Ok(())
 }
+
+// ============================================================================
+// v1-JM-b Task 8 — R1 relaxation + admin_emergency_remove severity_tier
+// ============================================================================
+
+/// v1-JM-b Task 8 test 1 — 3 of 5 jurors are "recently served" (their
+/// jury_assignment row on a prior case has `responded_at = now() - 1 day`
+/// and `status = Submitted`). The cooldown subquery at
+/// admin_assign_jury.rs:820-828 excludes those 3, the strict pool under-
+/// fills (2 < panel_size=5), R1 fires, cooldown is dropped, the re-run
+/// pool is 5 ≥ panel_size, and the panel seats.
+///
+/// Asserts:
+/// - Panel is seated at exactly 5 jurors.
+/// - One `jury_constraint_violation_log` row exists with
+///   `constraint_name = 'no_recent_juror_repeat'` and
+///   `reason_code = 'small_pool'` (the snake_case serde rendering of
+///   `JuryConstraintRelaxationReason::SmallPool`).
+/// - One `governance_log` row exists with
+///   `entry_kind = 'jury_constraint_relaxed'`.
+///
+/// PRD §5.1/§8.3 + plan §10.9.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_assign_jury_small_pool_triggers_r1_relaxation()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl, sql_query};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::AdminAssignJury;
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{JuryConstraintRelaxationReason, SeverityTier},
+    schema::{governance_log, jury_constraint_violation_log},
+  };
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_r1", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_r1", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 5).await?;
+
+  // Unlock the strict eligibility path for all 5 jurors.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  // Seed a prior case + 3 "recently served" jury_assignment rows on the
+  // first three jurors so the cooldown subquery excludes them. The INSERT
+  // uses raw SQL because the InsertForm doesn't carry `responded_at` —
+  // that column is written by accept/decline/submit_vote handlers. The
+  // prior-case id is captured so this test can isolate its
+  // jury_constraint_violation_log count to the NEW case only.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let prior_case_id: i32 = sql_query(
+      "INSERT INTO moderation_case (community_id, target_type, reason_code, severity, status, \
+                                    threshold_score, severity_tier, status_tier) \
+       VALUES (NULL, 'RemoteInstance', 'prior_case', 'Low', 'Closed', 0, 'Minor', 'Regular') \
+       RETURNING id",
+    )
+    .get_result::<SingleI32>(&mut conn)
+    .await?
+    .id;
+    for juror in jurors.iter().take(3) {
+      sql_query(
+        "INSERT INTO jury_assignment (case_id, person_id, status, selected_at, responded_at) \
+         VALUES ($1, $2, 'Submitted', now() - INTERVAL '2 days', now() - INTERVAL '1 day')",
+      )
+      .bind::<diesel::sql_types::Int4, _>(prior_case_id)
+      .bind::<diesel::sql_types::Int4, _>(juror.0)
+      .execute(&mut conn)
+      .await?;
+    }
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  assert_eq!(
+    resp.assigned_person_ids.len(),
+    5,
+    "R1 fires → cooldown dropped → all 5 jurors seated"
+  );
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // Scope the violation-log query to the NEW case_id so the prior-case
+  // seed doesn't interfere if future test setup changes.
+  let jcvl_rows: Vec<(String, JuryConstraintRelaxationReason)> =
+    jury_constraint_violation_log::table
+      .filter(jury_constraint_violation_log::case_id.eq(case_id))
+      .select((
+        jury_constraint_violation_log::constraint_name,
+        jury_constraint_violation_log::reason_code,
+      ))
+      .load::<(String, JuryConstraintRelaxationReason)>(&mut conn)
+      .await?;
+  assert_eq!(
+    jcvl_rows.len(),
+    1,
+    "exactly one jury_constraint_violation_log row written for the R1 event"
+  );
+  let row = jcvl_rows
+    .get(0)
+    .ok_or_else(|| anyhow::anyhow!("no jury_constraint_violation_log row"))?;
+  assert_eq!(row.0, "no_recent_juror_repeat", "constraint_name matches");
+  assert_eq!(
+    row.1,
+    JuryConstraintRelaxationReason::SmallPool,
+    "reason_code = SmallPool"
+  );
+
+  let relaxed_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("jury_constraint_relaxed"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    relaxed_count, 1,
+    "exactly one jury_constraint_relaxed governance_log entry"
+  );
+
+  Ok(())
+}
+
+/// v1-JM-b Task 8 test 2 — `emergency_remove_open_case` opens a case row
+/// whose `severity_tier = Severe`, as required by ADR-013 + plan §10.13.
+/// Uses a community target to avoid needing a post/comment fixture.
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_emergency_remove_case_has_severity_tier_severe()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_emergency_remove::{
+    EmergencyRemoveTarget, emergency_remove_open_case,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (admin_id, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_er", true).await?;
+
+  let case_id = emergency_remove_open_case(
+    &mut context.pool(),
+    admin_id,
+    EmergencyRemoveTarget::Community(community.id),
+    Some(community.id),
+    "ADR-013 test removal".to_string(),
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let severity_tier: SeverityTier = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select(moderation_case::severity_tier)
+    .first(&mut conn)
+    .await?;
+  assert_eq!(
+    severity_tier,
+    SeverityTier::Severe,
+    "emergency_remove opens case with severity_tier = Severe (plan §10.13 / ADR-013)"
+  );
+  Ok(())
+}
