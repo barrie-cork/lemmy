@@ -13,9 +13,11 @@
       "context": "Opened by v1-JM-b plan §7.1. Source: .claude/PRPs/plans/v1-jury-mechanics-b.plan.md §7.1; also appended to docs/brehon-law-inspired-network/99-decisions-and-open-questions.md §Open Questions. Plan lean is (a) — hardcoded keeps v1.5 PRs small, avoids expanding the reporter DTO or adding a new seeded config key. Per-community override via (b) stays open as v1.5+ if pilot reveals the hardcoded table is wrong for specific communities. This entry is labelled answered_by: planner because the advisor-reviewed lean (option a) is already documented in the plan — the plan author wrote the lean, not the advisor. Impl session does NOT resolve this; v1.5 planner reads the resolution.",
       "answer": null,
       "answered_by": null
-    },
+    }
+  ],
+  "resolved": [
     {
-      "id": 49,
+      "id": 50,
       "from": "impl",
       "timestamp": "2026-04-25T00:00:00Z",
       "question": "JM-c Task 6 Test 6 (submit_jury_vote_concurrent_votes_decide_exactly_once) hits a deterministic Postgres deadlock when two votes race via tokio::join!. Diagnosis: both transactions INSERT into jury_vote first (taking FK SHARE locks on the parent moderation_case row), then later attempt SELECT ... FOR UPDATE on the same case row → mutual wait → deadlock_detected. The handler structure (vote INSERT at step 2, FOR UPDATE at step 6) is pre-existing v0/JM-b-era and out of JM-c file-ownership scope to refactor. The plan §10.8 'concurrency test pattern' assumed FOR UPDATE alone would serialise cleanly; the FK-SHARE-then-EXCLUSIVE upgrade pattern was missed.",
@@ -24,13 +26,11 @@
         "(b) Restructure Test 6 to verify exactly-once via sequential late arrivals — basically a more focused version of golden-path test's idempotency assertions. Pro: 6 passing tests. Con: doesn't actually test concurrency.",
         "(c) Refactor handler to acquire FOR UPDATE on case_row BEFORE vote INSERT. Eliminates FK-share-then-upgrade deadlock. Pro: test passes as written. Con: out of JM-c file-ownership scope; needs design review."
       ],
-      "context": "Test failure is reproducible 100%: 'LemmyError { message: Unknown(\"deadlock detected\"), caller: submit_jury_vote.rs:240:34 }'. Tests 1-5 all pass. Plan §10.8 GOTCHA: 'If the test is flaky, it's a sign the lock semantics don't hold — escalate to advisor; do NOT add tokio::time::sleep workarounds.' Not flaky here, deterministic — clearer-cut than the GOTCHA anticipated. LEAN: (a). Self-resolving because (1) diagnosis unambiguous, (2) scope boundary hard, (3) GOTCHA in §10.8 anticipated this exact escalation. A future docs(decision-queue) commit can re-attribute if needed.",
+      "context": "Test failure is reproducible 100%: 'LemmyError { message: Unknown(\"deadlock detected\"), caller: submit_jury_vote.rs:240:34 }'. Tests 1-5 all pass. Plan §10.8 GOTCHA: 'If the test is flaky, it's a sign the lock semantics don't hold — escalate to advisor; do NOT add tokio::time::sleep workarounds.' Not flaky here, deterministic — clearer-cut than the GOTCHA anticipated. LEAN: (a). Self-resolving because (1) diagnosis unambiguous, (2) scope boundary hard, (3) GOTCHA in §10.8 anticipated this exact escalation. A future docs(decision-queue) commit can re-attribute if needed. NOTE: originally filed in pending[] as id=49 — collided with an existing resolved[] id=49 (v1-JM-b Task 4 cargo clippy validation). Relocated to resolved[] and reassigned id=50 via chore(dq) commit to fix CR cr-1 finding on PR #98 per feedback_dq_self_resolved_belongs_in_resolved_array.md.",
       "answer": "(a) impl-self-resolved. Marked Test 6 #[ignore] with multi-line comment naming the FK-SHARE-then-FOR-UPDATE pattern, the handler line at submit_jury_vote.rs:240, and pointing to this DQ + a follow-up GH issue (filed during Task 8 retro per v1-AD-d retro §3.2 / DQ #46 pattern). Test code stays in source as anchor for either (1) JM-d handler refactor that acquires FOR UPDATE before vote INSERT, or (2) separate chore(handler) commit. Tests 1-5 ship as JM-c's e2e coverage; exactly-once-under-sequential-late-arrival remains covered by report_to_modlog_golden_path at line 1061+. Self-resolve label per .claude/rules/decision-queue.md attribution rules.",
       "answered_by": "impl-self-resolved",
       "answered_at": "2026-04-25T00:00:00Z"
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 48,
       "from": "impl",
