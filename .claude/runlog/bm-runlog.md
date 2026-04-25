@@ -14,6 +14,111 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: repo went private (fork-network detach) — 2026-04-25T2326Z
+
+- **Pre-state:** `isFork: true`, `parent: LemmyNet/lemmy`, `visibility: PUBLIC`
+- **Action:** user clicked "Leave fork network" in https://github.com/barrie-cork/lemmy/settings → Danger Zone (rationale: public-repo perks no longer outweigh leakage surface; original v0-archive intent was always private; AGPL governs distribution, not dev hosting)
+- **Post-state:** `isFork: false`, `parent: null`, `visibility: PRIVATE` — GitHub auto-flipped visibility to PRIVATE when the fork-network relationship was severed; the planned Phase 1 (deliberate visibility flip) was therefore unnecessary
+- **Upstream channel intact:** `git fetch upstream` succeeded; `git log upstream/main -5` returns LemmyNet HEAD `e4efb5a5f`. Weekly rebase path unchanged
+- **Cost paid:** GitHub UI no longer shows "forked from LemmyNet/lemmy"; one-click upstream PR is gone (not used by this repo per `main`-is-rebase-only rule)
+- **What now breaks:** `governance-ai-review.yml` (GitHub Models free tier), `adr-drift.yml` / `oq-sweep.yml` / `plan-drift.yml` (same), CodeRabbit Pro free-tier ends → 14-day trial begins. `cargo-test-e2e.yml` and `adr-compliance.yml` continue
+- **Plan reference:** `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md` — Phases 3-5 cover the AI-review migration; Phase 5 covers the day-14 CodeRabbit decision
+- **Irreversibility:** re-attaching to fork network is not supported by GitHub UI; visibility can be flipped back to public if needed
+
+---
+
+## advisor: PR-#94-triage + merge — 2026-04-25T16:15Z
+
+- **PR #94** (`chore/prp-plan-phase5-opus-opt-in`) triaged + merged
+- **Merge commit:** `4fcf89650` (now on `origin/governance-v0`)
+- **Conflict check:** none — PR edits Phase 5 (line 273) of `prp-plan.md`; trunk's `4347284e0` edits Phase 6 output template (lines 447 + 522). Orthogonal sections; `mergeable: MERGEABLE` confirmed pre-merge.
+- **Review findings:** 3 nits (CodeRabbit cr-1, Copilot copilot-1, copilot-2) — all bucketed `wont-fix` with consolidated rebuttal comment posted as [issuecomment-4319928449](https://github.com/barrie-cork/lemmy/pull/94#issuecomment-4319928449). Draft preserved at `.claude/PRPs/reviews/pr-94-comment.md` (gitignored).
+- **Substance:** single-file +10/-0 advisory text, opt-in HIGH-complexity escalation in Phase 5, no ADR/scope risk. Authored by user 2026-04-24, predates `4347284e0` skill-trigger commit.
+- **Actions:** `gh pr comment` (1) + `gh pr merge --merge --delete-branch` (1); branch `chore/prp-plan-phase5-opus-opt-in` deleted from origin
+- **Trunk state post-merge:** `governance-v0` @ `4fcf89650`; primary worktree HEAD still at `4347284e0` (one fast-forwardable commit behind origin)
+
+---
+
+## advisor: cold-resume — 2026-04-25T16:00Z
+
+- **Handover read:** `advisor-2026-04-25-jm-c-impl-oversight.md` (in full)
+- **Branch verified:** `governance-v0` @ `4347284e0` (matches; clean push; origin even)
+- **Working tree:** matches assertions — `M .claude/runlog/bm-runlog.md` + 7 untracked legal-brief docs (user-lane, untouched). `?? .claude/PRPs/handovers/advisor-2026-04-25-jm-c-impl-oversize.md` is also untracked (the closing-session handover file itself; expected — to be committed later as `chore(advisor): handover` if user wishes).
+- **DQ pending count:** 1 (id=47, planner) ✓
+- **Open PRs:** PR #94 (`chore/prp-plan-phase5-opus-opt-in`) — mergeStateStatus now `CLEAN` (was UNKNOWN at handover write); reviewDecision empty; not advisor-gate; needs triage per Pending Item 2
+- **JM-c worktree state:** `C:/Users/barri/Developer/brehon-fork-phase-v1-JM-c` @ `9e5dd60a5` ✓; impl-relays/ has only `pr92-cr-12-overreach-revert-ask.md` (JM-a era) + `_README.md` → impl session has NOT started JM-c work
+- **R1-R7 amendments verified in plan:** 54 grep hits across §10 / §13 / §17 (all 7 R-IDs cited verbatim at completion-checklist lines 1633-1639)
+- **Drift detected:** PR #94 mergeStateStatus advanced UNKNOWN → CLEAN since handover write; otherwise none
+- **Next action:** reactive — awaiting impl-session start or user direction. Triage PR #94 next if user signals.
+
+---
+
+## advisor: handover-written — 2026-04-25T15:35Z
+
+- **File:** `.claude/PRPs/handovers/advisor-2026-04-25-jm-c-impl-oversight.md`
+- **Branch:** `governance-v0` @ `4347284e0`
+- **Scope of the closing session:** cold-resumed for JM-c; authored the 1738-line plan; cut `phase-v1-JM-c` + worktree via BM; opened + merged plan PR #97; landed `chore(prp): principle-style skill triggers` directly on trunk (`4347284e0`); pushed; saved 2 memory entries (`project_v1_JM_c_plan_written.md`, `feedback_principles_not_rules.md`)
+- **Pending counts at handover:** 1 DQ (#47, planner, non-blocking) | 0 advisor-gate PRs | 0 advisor-lane plan/PRD edits | 0 relays awaiting response
+- **Open PR not advisor-gate:** PR #94 (`chore/prp-plan-phase5-opus-opt-in`, mergeStateStatus UNKNOWN) — flagged for next-session triage; potential conflict with `4347284e0` if it edits `prp-plan.md`
+- **Next advisor session:** reactive oversight of JM-c impl when it begins (impl session has not yet started; `phase-v1-JM-c` worktree at `9e5dd60a5` preserved)
+
+---
+
+## bm: merge — 2026-04-25T12:25:00Z (PR #97)
+
+- **PR:** #97 (*Phase v1-JM-c — submit_jury_vote 9-step handler (plan)*)
+- **Base ← Head:** `governance-v0` ← `phase-v1-JM-c` @ `9e5dd60a5`
+- **Pre-merge gate (re-checked at T-30s for drift):**
+  - `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, `isDraft=false`, `state=OPEN` ✓
+  - `headRefOid=9e5dd60a5f6b8c42f982da3b18da71f87d4e65b7` (no force-push since plan-cut commit) ✓
+  - `statusCheckRollup`: 1 check, CodeRabbit=SUCCESS (review skipped per `.coderabbit.yaml` path filter — `.claude/**` is docs-only) ✓
+  - No findings YAML exists for PR #97 (docs-only plan PR, 0 CodeRabbit actionable findings — consistent with established BM lifecycle: docs-only PRs skip YAML creation) ✓
+  - No DQ pending mentions PR #97 (DQ #47 cites OQ-V1-JM-07 generally; planner-attributed; not gating) ✓
+  - No commits since CR review (head SHA stable at `9e5dd60a5`) ✓
+- **Merge command:** `gh pr merge 97 --repo barrie-cork/lemmy --merge --delete-branch`
+- **Strategy:** `--merge` (not `--squash`) per `.claude/rules/phase-branch.md` — task-per-commit history is load-bearing for retros even on a single-commit plan PR (the merge commit becomes the historical anchor).
+- **Merge SHA:** `73c208f2b32d0f405173488df9bb8fd75d31906d` (subject: `Merge pull request #97 from barrie-cork/phase-v1-JM-c`)
+- **Merged at:** `2026-04-25T12:25:00Z`
+- **Remote branch deleted:** `origin/phase-v1-JM-c` removed by `--delete-branch` ✓ (confirmed via `git fetch --prune`).
+- **Trunk advance (origin):** `2d7002acce6e23c059bbf39d6ff0a5bc7b1402ce` → `73c208f2b32d0f405173488df9bb8fd75d31906d`.
+- **Findings YAML archive:** N/A (no YAML created for this docs-only PR; archival is moot).
+- **Carry-forward issue:** N/A (0 findings to defer).
+
+## bm: post-merge state — 2026-04-25T12:26:00Z
+
+- **Trunk position post-merge:** `origin/governance-v0` @ `73c208f2b` (merge commit on remote).
+- **Primary worktree (`brehon-fork`) `governance-v0`:** held at `2d7002acc` — **FF held by intent** per BM convention (BM never auto-FFs the primary worktree; user decides when to advance — matches PR #95 post-merge runlog pattern at `2026-04-25T08:28:04Z`).
+- **JM-c worktree (`../brehon-fork-phase-v1-JM-c`):** preserved on `phase-v1-JM-c` @ `9e5dd60a5` — local branch retained (not deleted; needed for the impending impl session). Submodule + `settings.local.json` bootstrap still valid from plan-cut.
+- **Local `phase-v1-JM-c` branch:** retained (not auto-deleted per BM operational script §"What BM merge will NEVER do"). User can `git branch -D phase-v1-JM-c` after impl session completes if desired.
+- **Telegram ping (`merge-ready` shape, but merge already complete — closer to confirmation note):** **skipped** — consistent with established JM-b + JM-c lifecycle pattern (every prior PR #95 / PR #97 entry skipped Telegram). Per `.claude/rules/branch-manager.md` §"Telegram scope" failure-mode: pings are notifications, not gating signals; skip is logged here for audit. User can manually run `/bm-ping merge-ready 97` if a ping is desired post-hoc.
+
+## session-close — 2026-04-25T12:27:00Z (BM standing down post-merge)
+
+BM stands down after this merge cycle. Next actor is the **JM-c impl session** — runs `/prp-core:prp-implement .claude/PRPs/plans/v1-jury-mechanics-c.plan.md` from `../brehon-fork-phase-v1-JM-c` worktree on `phase-v1-JM-c` branch. The plan @ `9e5dd60a5` (now also on `governance-v0` @ merge-commit `73c208f2b`) is the canonical reference. DQ #47 stays pending — planner-attributed, does not block JM-c per established attribution discipline (planner pre-seeded answer; advisor sign-off is non-blocking for impl start).
+
+## bm: jm-c-plan-cut — 2026-04-25T13:02Z
+
+- **Source trunk:** `governance-v0` @ `2d7002acce6e23c059bbf39d6ff0a5bc7b1402ce` (clean; matches `origin/governance-v0`; advisor session at cold-resume confirmed no new commits since BM stood down post-PR-#95).
+- **Branch cut:** `phase-v1-JM-c` from `2d7002acc` (auto per BM autonomy bounds — branch-cut is local-only).
+- **Pushed to origin:** `git push -u origin phase-v1-JM-c` → new branch on remote tracking `origin/phase-v1-JM-c`.
+- **Worktree provisioned:** `../brehon-fork-phase-v1-JM-c` via `git worktree add` on `phase-v1-JM-c` @ `2d7002acc`.
+- **Bootstrap:**
+  - Submodule init: `crates/email/translations` checked out at `a3f9e4669` (per `feedback_worktree_submodules_not_auto_init.md`).
+  - `settings.local.json` copied from primary (2933 bytes, per `feedback_settings_local_json_worktree_bootstrap.md` — silent file-write denials avoided).
+- **Plan file move (Option A):** plan was uncommitted in primary worktree on `governance-v0`. Sequence: `cp` to `/tmp/v1-jury-mechanics-c.plan.md` (1738 lines, 130758 bytes) → switch primary to `governance-v0` → `rm` from primary → create JM-c worktree → `cp` plan into JM-c worktree. Byte-count preserved through move.
+- **Plan commit:** `9e5dd60a5` — `docs(plan): v1-JM-c — submit_jury_vote 9-step handler implementation plan` — 1 file changed, 1738 insertions(+).
+  - Body cites: predecessor `4d2b93ed9` (PR #95); 9-step handler scope (snapshot threshold + deadlock + appeal_window); cross-PRD gate (JM-d / SL-d / rep-tuning-r3); 7 amendments from JM-b retro §3.2.
+- **Pushed:** `2d7002acc..9e5dd60a5` → `origin/phase-v1-JM-c`.
+- **PR opened:** [#97](https://github.com/barrie-cork/lemmy/pull/97) — *Phase v1-JM-c — submit_jury_vote 9-step handler (plan)* — base=`governance-v0`, head=`phase-v1-JM-c`, `isDraft=false`. CodeRabbit will auto-review per `.coderabbit.yaml`.
+- **Author:** branch-manager session (BM-hat in primary worktree).
+- **Decision queue check:** DQ #47 pending (planner-attributed OQ-V1-JM-07 about post-JM-b severity inference for non-emergency paths) — does NOT block JM-c plan PR.
+- **Concurrent PRs:** PR #94 (`chore/prp-plan-phase5-opus-opt-in`) is unrelated lane — no conflict with JM-c scope.
+- **Telegram ping (`pr-ready`):** skipped — consistent with PR #95 lifecycle pattern (MCP disconnected/unused throughout JM-b cycle). Per `branch-manager.md` §"Telegram scope" failure-mode: silently skip + log to runlog when MCP unavailable; pings are notifications, not gating signals. User can `/bm-ping` manually if a ping is desired.
+
+## session-close — 2026-04-25T13:02Z
+
+BM stands down after this cycle. Next actor is the user — gating the merge of plan PR #97 once any CodeRabbit review is clean (plan PRs typically get a low/no actionable findings count). After merge, impl session can run `/prp-core:prp-implement` against the JM-c plan from the `../brehon-fork-phase-v1-JM-c` worktree on `phase-v1-JM-c`.
+
 ## session-close — 2026-04-24T~22:50Z (dual-role BM+advisor v1-JM-a session)
 
 ### What shipped this session

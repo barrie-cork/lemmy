@@ -62,6 +62,10 @@ migrations/.diesel_lock
 .claude/PRPs/reviews/pr-*-cf-issue-body.md
 .claude/PRPs/reviews/.cr-cache/
 
+# Microsoft Word lock + temp files (created by Word when editing .docx in-place)
+~$*
+~WRL*.tmp
+
 # Local environment — never commit secrets
 .env
 .env.local
