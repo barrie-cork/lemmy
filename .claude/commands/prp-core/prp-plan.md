@@ -447,6 +447,14 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 
 Execute in order. One commit per task. Each task has a MIRROR reference, an exact file path, and a validation command.
 
+> **Skill triggers in task wording (principle, not rule).** When a task is *shaped like* one of the project's user-invocable implementation skills, name the skill in the task body — but only as a "prefer when…" signal, never as a mandate. Each skill's own SKILL.md is authoritative for the conditions; plans defer to it. The principles below explain what each skill buys you so the impl session can decide.
+>
+> - **`/test-write`** enforces the e2e harness's `LemmyResult<()>` + pseudonymisation + no-`unwrap` discipline. Mention it in tasks that add new e2e cases under `crates/server/tests/e2e.rs` needing fixture scaffolding. Don't mention it for inline assertion extensions or `#[cfg(test)] mod tests` unit cases.
+> - **`/edit-mechanical`** makes rg-enumerate-first a precondition for repeat-pattern edits (R5.1-class bug prevention). Mention it in tasks that propagate a single pattern across N call sites: struct-field additions with `derive(Default)`, enum-variant renames, lint-fix attribute applications. Don't mention it for one-of-a-kind edits or changes needing type/borrow reasoning beyond the rename surface.
+> - **`/cargo-validate`** keeps cargo's exit code intact and the conversation context lean. Mention it in **VALIDATE** lines where the cargo run is the gating signal for the task (per-task DoD checks). Don't mention it for incidental scratch runs or background sweeps.
+>
+> When in doubt, omit the skill mention — the impl session can still invoke the skill on its own judgment. A spurious "use `/test-write` here" in a one-line assertion task is worse than no mention.
+
 ### Task 1: CREATE `migrations/{ts}_add_xx/up.sql` + `down.sql`
 - **ACTION**: Generate migration via `diesel migration generate add_xx`, then write the SQL
 - **IMPLEMENT**: Table + indexes per [04 §1](docs/brehon-law-inspired-network/04-data-model-and-api.md). Enum types defined in the earlier enums migration
@@ -521,6 +529,8 @@ Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTAT
 ## Validation Commands
 
 Use these exact commands — do NOT substitute npm/pnpm/etc. This is a Rust project.
+
+> **Wrapping cargo invocations.** The cargo command lines below are the *canonical shape* of what gets run; the impl session will typically execute them through `/cargo-validate`, which captures full output to a log file and returns exit code + tail-20. The wrapping serves two concerns documented in `.claude/rules/`: it preserves cargo's exit code (which inline pipes to `tail`/`head`/`grep` mask) and it keeps cargo log tails out of the conversation token budget. Plans don't need to spell out the wrapper invocation in every Level — the discipline lives in the skill, and the cargo command lines below are what gets passed to it.
 
 ### Level 1: STATIC_ANALYSIS
 

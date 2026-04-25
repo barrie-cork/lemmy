@@ -214,6 +214,13 @@ For each numbered task in the plan's **Step-by-Step Tasks** section:
 5. **Never write a raw string to `public_case_log` or `governance_log.payload`** — always go through `redaction::scrub(...)` + `governance_log::append(...)`
 6. **Never use `_ =>` on a `match case.status` arm** — `CaseStatus::EmergencyRemove` must be handled explicitly ([ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md))
 
+#### Implementation skills — when they shorten the work
+
+Two project skills exist to handle implementation patterns that recur often enough across Brehon impl sessions to be worth treating as their own discipline. Both are user-invocable (`/test-write`, `/edit-mechanical`) and authoritative on their own scope — defer to each skill's `## When to invoke` / `## Skip when` blocks for the conditions; the principles below name the trade-off they embody so you can decide whether to delegate.
+
+- **`/test-write`** exists to enforce the e2e harness's `LemmyResult<()>` + pseudonymisation + no-`unwrap`/`expect` discipline that's easy to drift from when writing tests inline. Prefer it when adding new e2e cases under `crates/server/tests/e2e.rs` that need fixture scaffolding (golden path, error case, idempotency, constraint cascade). Inline is the right shape when the test is a `#[cfg(test)] mod tests` unit case that doesn't touch the harness, when extending an existing test with one extra assertion, or when the assertion patterns of the surrounding tests are already idiomatic and you'd be introducing skill ceremony without value.
+- **`/edit-mechanical`** exists to make the rg-enumerate-first step a precondition for repeat-pattern edits — the R5.1 class of bug (PR #92 cr-12, JM-b Event 2) is what happens when a propagation skips enumeration. Prefer it when the change is a single repeated pattern across multiple call sites: adding a field to a struct with `derive(Default)`, renaming an enum variant, applying `#[expect(lint, reason="...")]` to N sites with the same shape, replacing a deprecated API call across known sites. Inline is the right shape when the edit needs type/borrow reasoning beyond the rename surface, when the change is one-of-a-kind, or when the surrounding context makes a single targeted Edit faster than the skill's enumerate→classify→edit→verify ceremony.
+
 ### 3.3 Validate Immediately
 
 After **every file change**, run:
@@ -221,6 +228,12 @@ After **every file change**, run:
 ```bash
 cargo check -p <affected-crate>
 ```
+
+#### `/cargo-validate` — when the cargo run is the gating signal
+
+The `/cargo-validate` skill exists to keep cargo's exit code intact (per `.claude/rules/cargo-output-capture.md`) and the conversation context lean (per `.claude/rules/no-cargo-output-paste.md`). Both concerns compound across a long implementation session: a piped `cargo ... 2>&1 | tail -40` masks the upstream exit code (cargo can fail and the surrounding tooling reports success), and 4 KB+ of cargo output pasted into the conversation per task drains the reasoning budget by mid-phase. The skill captures full output to a log under `.claude/build-*.log` (or `.claude/PRPs/debug/v1-<phase>-*.log` from a phase-branch worktree), tails the last 20 lines, returns the exit code as the report's headline.
+
+Prefer it whenever the cargo run *is* the gating signal for a decision: per-task DoD checks after each Edit, plan §15 validation gates, the negative-probe check for wrapper sanity at session start (see [pre-phase-harness-audit.md](.claude/rules/pre-phase-harness-audit.md) §1 probe 4). Inline is the right shape when the cargo run is incidental (one-off scratch invocation you won't reference again), when an outer harness has already captured the output, or when the cargo run is itself a long-running background job — in that case use the cargo-runner background subagent instead. See `/cargo-validate` `## Skip when` for the canonical exclusion list.
 
 **If it fails:**
 1. Read the error (Rust errors are usually precise — trust them)
