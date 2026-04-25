@@ -8242,8 +8242,9 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
   assert!(final_resp.decision.is_none(), "deadlock has no winning decision");
 
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
-  let (status, decided_at, appeal_expires): (
+  let (status, decided_at, appeal_expires, closed_at): (
     CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
     Option<chrono::DateTime<chrono::Utc>>,
     Option<chrono::DateTime<chrono::Utc>>,
   ) = moderation_case::table
@@ -8252,6 +8253,7 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
       moderation_case::status,
       moderation_case::decided_at,
       moderation_case::appeal_window_expires_at,
+      moderation_case::closed_at,
     ))
     .first(&mut conn)
     .await?;
@@ -8267,6 +8269,10 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
   assert!(
     appeal_expires.is_none(),
     "deadlock leaves appeal_window_expires_at NULL — no appeal window for stuck cases"
+  );
+  assert!(
+    closed_at.is_none(),
+    "deadlock leaves closed_at NULL — JM-c removed the close write; appeal/admin-review cases reopen"
   );
 
   let sanction_count: i64 = sanction::table
@@ -8324,6 +8330,16 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
   assert_eq!(
     public_log_published_count, 0,
     "public_log_published NOT emitted on deadlock path"
+  );
+
+  let sanction_created_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("sanction_created"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    sanction_created_log_count, 0,
+    "sanction_created NOT emitted on deadlock path — no sanction means no log"
   );
 
   Ok(())
