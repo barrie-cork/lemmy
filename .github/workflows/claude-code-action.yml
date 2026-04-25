@@ -70,6 +70,18 @@ jobs:
             fi
           } > /tmp/rubric.md
 
+          # Push the assembled rubric into a step output so the Claude
+          # Code Action prompt can interpolate it via ${{ steps.X.outputs.Y }}.
+          # Bash $(...) substitution is NOT expanded inside an action's
+          # `prompt:` input — GHA passes inputs as literal strings unless
+          # they go through ${{ }} expression interpolation. See
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          {
+            echo "rubric<<RUBRIC_EOF"
+            cat /tmp/rubric.md
+            echo "RUBRIC_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Claude Code Action review
         uses: anthropics/claude-code-action@v1
         with:
@@ -80,4 +92,4 @@ jobs:
             ADR-015). Cite file:line when quoting code. Silence is fine if
             nothing is wrong.
 
-            $(cat /tmp/rubric.md)
+            ${{ steps.rubric.outputs.rubric }}

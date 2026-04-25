@@ -22,7 +22,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
+  issues: write
+  id-token: write  # Required by anthropics/claude-code-action@v1 for OIDC auth.
 
 concurrency:
   group: gov-ai-review-${{ github.event.pull_request.number }}
@@ -71,16 +72,15 @@ jobs:
           BASE=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
           git diff --unified=3 "$BASE"...HEAD > /tmp/full.diff
           full_bytes=$(wc -c < /tmp/full.diff)
-          # actions/ai-inference@v2 has a hard 8000-token input cap on the
-          # GitHub Models endpoint (free / Pro / Education / Business — only
-          # paid-usage tier raises it). 28000 bytes is ~7K tokens, leaving
-          # ~1K headroom for the rubric + prompt scaffolding.
-          # Phase-size PRs always exceed this cap; truncating to the first
-          # 28KB would give a noisy partial review of just the
-          # alphabetically-earliest files. Better to skip cleanly and let
-          # CodeRabbit Pro + the ADR-compliance scanner cover phase PRs,
-          # while AI review still runs on small (single-task) PRs where
-          # it adds signal.
+          # The 28KB cap is preserved from the GitHub Models era to keep
+          # the "AI review for small PRs only" semantic: phase-size PRs
+          # are skipped cleanly so AI review adds signal on focused diffs
+          # rather than producing noisy partial reads of phase commits.
+          # Claude itself can take much larger inputs (200K context), so
+          # the cap is a deliberate scope choice, not a technical limit.
+          # On-demand review for phase-size PRs is available via
+          # `@claude review this phase` comment routed through
+          # claude-code-action.yml (separate workflow, comment-triggered).
           # See feedback_ai_review_413_oversize.md.
           if [ "$full_bytes" -gt 28000 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -93,10 +93,11 @@ jobs:
             wc -c /tmp/pr.diff
           fi
 
-      - name: Load ADR rubric and phase rubric
-        id: rubric
+      - name: Load rubric + diff into step outputs
+        id: payload
         if: steps.diff.outputs.skip == 'false'
         run: |
+          # Assemble rubric: ADR rubric + phase-specific rubric (if any).
           cat .github/ai-review-prompts/adr-rubric.md > /tmp/rubric.md
           phase="${{ steps.phase.outputs.phase }}"
           if [ -f ".github/ai-review-prompts/phase-${phase}-rubric.md" ]; then
@@ -107,80 +108,44 @@ jobs:
           fi
           wc -c /tmp/rubric.md
 
-      - name: Assemble prompt
-        id: prompt
-        if: steps.diff.outputs.skip == 'false'
-        run: |
+          # Push rubric + diff into step outputs as multiline values so the
+          # claude-code-action prompt can interpolate them via ${{ steps.X.outputs.Y }}.
+          # Bash $(...) substitution is NOT expanded inside an action's `prompt:` input;
+          # GHA step outputs interpolated via ${{ }} ARE expanded. See
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           {
-            echo "You are an ADR-compliance reviewer for a Rust governance fork of Lemmy."
-            echo "Produce a short, actionable review comment, under 400 words, valid Markdown."
-            echo ""
-            echo "## Rules"
-            echo "- Cite ADR IDs exactly (ADR-001 through ADR-015 only) when flagging."
-            echo "- Cite file:line when quoting code."
-            echo "- Silence is fine: if nothing is wrong, say \"No ADR violations detected in this diff.\" and stop."
-            echo "- Do NOT critique upstream Lemmy conventions outside governance namespaces."
-            echo "- Do NOT duplicate Woodpecker CI checks (cargo build, clippy, rustfmt, tests)."
-            echo ""
-            echo "## Detected phase"
-            echo "Phase ${{ steps.phase.outputs.phase }}"
-            echo ""
-            echo "## ADR rubric + phase rubric"
+            echo "rubric<<RUBRIC_EOF"
             cat /tmp/rubric.md
-            echo ""
-            echo "## Diff (truncated to 28KB)"
-            echo '```diff'
+            echo "RUBRIC_EOF"
+            echo "diff<<DIFF_EOF"
             cat /tmp/pr.diff
-            echo '```'
-          } > /tmp/prompt.txt
-          wc -c /tmp/prompt.txt
+            echo "DIFF_EOF"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Run AI inference
-        id: infer
+      - name: Claude Code Action governance review
         if: steps.diff.outputs.skip == 'false'
-        uses: actions/ai-inference@v2
+        uses: anthropics/claude-code-action@v1
         with:
-          model: openai/gpt-4o-mini
-          prompt-file: /tmp/prompt.txt
-          max-tokens: 4000
-          system-prompt: |
-            You are a precise, laconic code reviewer. Output valid Markdown.
-            Never hallucinate ADR IDs. Only reference ADR-001 through ADR-015
-            as listed in the rubric. If the diff is empty or unreviewable,
-            say so plainly and stop.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are the Brehon governance ADR reviewer for phase ${{ steps.phase.outputs.phase }}.
+            Produce a short, actionable review comment under 400 words, valid Markdown.
 
-      - name: Post AI review as PR comment
-        if: steps.diff.outputs.skip == 'false'
-        uses: actions/github-script@v7
-        env:
-          # Passing the model output through env avoids GitHub Actions
-          # expression interpolation injecting backticks or dollar signs
-          # into the JavaScript template literal below.
-          AI_REVIEW: ${{ steps.infer.outputs.response }}
-          PHASE: ${{ steps.phase.outputs.phase }}
-        with:
-          script: |
-            const review = process.env.AI_REVIEW || '_AI inference returned empty output. Check the workflow run for details._';
-            const phase = process.env.PHASE || 'unknown';
-            const runId = context.runId;
-            const body = [
-              `## AI governance review — phase ${phase}`,
-              '',
-              review,
-              '',
-              '<details><summary>About this review</summary>',
-              '',
-              'Generated by [`actions/ai-inference@v2`](https://github.com/actions/ai-inference) using `openai/gpt-4o-mini` on the GitHub Models tier (8K input cap; phase-size PRs are skipped). Advisory only — a maintainer must act on or dismiss each finding before merge.',
-              '',
-              `Re-run: \`gh run rerun ${runId} --failed\``,
-              '</details>'
-            ].join('\n');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: body
-            });
+            ## Rules
+            - Cite ADR IDs exactly (ADR-001 through ADR-015 only) when flagging.
+            - Cite file:line when quoting code.
+            - Silence is fine: if nothing is wrong, say "No ADR violations detected in this diff." and stop.
+            - Do NOT critique upstream Lemmy conventions outside governance namespaces.
+            - Do NOT duplicate Woodpecker / cargo-test-e2e CI checks (cargo build, clippy, rustfmt, tests).
+            - Never hallucinate ADR IDs. Only reference ADR-001 through ADR-015 as listed in the rubric.
+
+            ## ADR rubric + phase rubric
+            ${{ steps.payload.outputs.rubric }}
+
+            ## Diff (truncated to 28KB; phase-size PRs are skipped earlier)
+            ```diff
+            ${{ steps.payload.outputs.diff }}
+            ```
 
       - name: Post skip notice for phase-size PR
         if: steps.diff.outputs.skip == 'true'
@@ -195,9 +160,9 @@ jobs:
             const body = [
               `## AI governance review — phase ${phase} — skipped`,
               '',
-              `Diff is ${bytes} bytes, which exceeds the 28KB cap that fits within the \`actions/ai-inference@v2\` 8000-token input limit. Phase-size PRs are skipped cleanly rather than reviewed against a truncated first-28KB slice that would miss most of the diff.`,
+              `Diff is ${bytes} bytes, which exceeds the 28KB scope cap for automatic governance review. Phase-size PRs are skipped here so the auto-review stays focused on small (single-task) PRs where it adds signal.`,
               '',
-              'Coverage on this PR comes from CodeRabbit Pro (assertive review) and the deterministic ADR-compliance scanner. AI review still runs on small (single-task) PRs where the full diff fits.',
+              'Coverage on this PR comes from CodeRabbit (auto-review) and the deterministic ADR-compliance scanner. For on-demand AI review of phase-size PRs, post a comment containing `@claude review this phase` to invoke `.github/workflows/claude-code-action.yml` (no input cap; full diff reviewed).',
               '',
               '_See `feedback_ai_review_413_oversize.md` for the rationale._'
             ].join('\n');

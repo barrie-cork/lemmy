@@ -14,6 +14,17 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: ai-review workflows migrated to Claude — 2026-04-25T2344Z
+
+- **Plan reference:** Phase 3 of `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md`
+- **Trigger:** post-private flip, `governance-ai-review.yml` (auto-on-PR) + `claude-code-action.yml` (comment-driven) both used `actions/ai-inference@v2` → GitHub Models, which loses free-tier on private repos
+- **Migrated:** `governance-ai-review.yml` step `Run AI inference` (was `actions/ai-inference@v2` w/ `openai/gpt-4o-mini`) → `anthropics/claude-code-action@v1` w/ `CLAUDE_CODE_OAUTH_TOKEN`. Removed downstream `Post AI review as PR comment` step (action posts its own comment via `pull-requests: write`). `permissions:` reshaped: dropped `models: read`, added `issues: write` + `id-token: write`
+- **Latent bug fixed (both files):** `prompt:` input contained literal `$(cat /tmp/rubric.md)` which `claude-code-action@v1` does NOT bash-expand — Claude was receiving the literal string, not the rubric body. Fixed via GHA multiline step-output pattern: rubric (and in governance-ai-review.yml, the diff body) now written to `$GITHUB_OUTPUT` via heredoc, then interpolated via `${{ steps.X.outputs.Y }}` in the prompt
+- **Preserved invariants:** 28KB phase-skip cap (deliberate scope, not a Claude limit), governance-namespace path filter, concurrency cancel-in-progress, skip-notice PR comment for phase-size PRs (now references `@claude review this phase` for on-demand path)
+- **Verification pending:** `Phase 3 verification` step in plan — open trivial PR against `governance-v0` once the next code change is ready, confirm `ai-review` job posts a Claude review comment on a small PR, and `cargo-test-e2e` stays green
+
+---
+
 ## bm: repo went private (fork-network detach) — 2026-04-25T2326Z
 
 - **Pre-state:** `isFork: true`, `parent: LemmyNet/lemmy`, `visibility: PUBLIC`
