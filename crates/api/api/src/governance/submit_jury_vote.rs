@@ -9,7 +9,9 @@
 //!    without deciding.
 //! 4. At quorum, tally votes by simple majority. Record the decision on
 //!    the case row (status → `Decided`, `decided_at = now`,
-//!    `closed_at = now + 7 days` for the appeal window per [05 §6]).
+//!    `appeal_window_expires_at = now + appeal.window_days` per PRD
+//!    §9.1 step 9 — LIVE config read, the single deliberate exception
+//!    to the snapshot-everything rule).
 //! 5. Map the winning `JuryDecision` to a `Sanction` per the table
 //!    below; `NoAction` writes no sanction row.
 //! 6. Publish a redacted summary to `public_case_log`.
@@ -82,14 +84,6 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 
-/// Appeal window length per [05 §6]. v0 hardcoded value retained for the
-/// step 8 case-UPDATE site at line ~327 until v1-JM-c task 5 replaces both
-/// the `closed_at` write and this constant with a LIVE `config::get_int`
-/// read for `appeal.window_days` per PRD §9.1 step 9 (the deliberate
-/// snapshot-rule exception). v1-JM-c task 2 deletes only the `QUORUM`
-/// constant; `APPEAL_WINDOW_DAYS` survives one more task to keep the
-/// const-removal paired with its single call site.
-const APPEAL_WINDOW_DAYS: i64 = 7;
 // Per-juror / per-reporter reputation deltas now flow through `ConfigCache`
 // via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
 // keys (Phase 5a seeded). See `process_vote` for the cached reads.
@@ -460,13 +454,18 @@ async fn process_vote(
     }
   }
 
-  // 9. Flip case → Decided.
-  let closed_at = now + Duration::days(APPEAL_WINDOW_DAYS);
+  // 8.9. Flip case → Decided. Step 9 (appeal_window_expires_at write) lands
+  // AFTER the step-10/11/12 writes below — keeping it as a separate UPDATE
+  // makes SL-d's graft cleaner per PRD §9.1 cross-references (SL-d will set
+  // `case.status = SponsorLiabilityPending` here instead of Decided, and the
+  // appeal_window write must fire on BOTH paths). `closed_at` is no longer
+  // written by submit_jury_vote — it becomes a JM-d concern (the
+  // appeal-window-expiry background job will set `closed_at = now()` when
+  // transitioning Decided → Closed).
   update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
     .set((
       moderation_case::status.eq(CaseStatus::Decided),
       moderation_case::decided_at.eq(Some(now)),
-      moderation_case::closed_at.eq(Some(closed_at)),
     ))
     .execute(conn)
     .await?;
@@ -600,6 +599,26 @@ async fn process_vote(
   // (admin Person, not the juror — ADR-015 attribution) so we pass
   // only the conn + context here. See federation_outbox.rs head-of-
   // module DQ-6.7 note for the parameter rationale.
+  // 9. Appeal-window expiry write — LIVE config read per PRD §9.1 step 9
+  // (the deliberate snapshot-rule exception: changing `appeal.window_days`
+  // mid-flight affects future decisions, not in-flight cases — but the
+  // *appeal window itself* is a procedural input read at the *decision
+  // moment*, not the *jury-seating moment*). JM-c is the first writer of
+  // this column on post-JM-a cases. JM-d will be the first reader via the
+  // bounded-window appeal check.
+  let window_days_i64 = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.window_days",
+  )
+  .await?;
+  let appeal_window_expires_at = now + Duration::days(window_days_i64);
+  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+    .set(moderation_case::appeal_window_expires_at.eq(Some(appeal_window_expires_at)))
+    .execute(conn)
+    .await?;
+
   // Log the case decision FIRST so the hash chain records the local
   // determination before any federation broadcast that results from it
   // (ADR-008 causality). Previously `federation_sanction_sent` appeared
@@ -612,7 +631,7 @@ async fn process_vote(
     json!({
       "case_id": data.case_id.0,
       "decision": winning_decision,
-      "closed_at": closed_at,
+      "appeal_window_expires_at": appeal_window_expires_at,
     }),
     None,
   )
