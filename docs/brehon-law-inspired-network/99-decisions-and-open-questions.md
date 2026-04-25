@@ -493,6 +493,22 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** Nothing in v0. `'open'` covers the event-driven recruitment use case until real pilot data motivates something more structured.
 - **Target:** v1, likely driven by the first community-event-after-launch that needs non-default sponsor gating.
 
+### OQ-027 — Autonomi as governance-log anchor and evidence-storage backend (v2-research)
+
+- **Opened:** 2026-04-25
+- **Owner:** TBD (backend + infrastructure)
+- **Question:** v0 anchors the governance log via a local sha2 hash chain in Postgres (ADR-003). v2 security hardening needs an external tamper-evidence layer. Should Autonomi's content-addressed immutable storage replace or complement blockchain anchoring for (a) governance-log hash batches, (b) case-evidence archival, and (c) reputation-snapshot checkpoints? Separately: does Autonomi's x0x real-time gossip layer (CRDT pub/sub) offer a viable alternative to the Matrix+LiveKit bridge planned in V2/messaging.md?
+- **Options:**
+  - **(a) Autonomi for anchoring only** — batch governance-log hashes to Autonomi chunks (pay-once, permanent, content-addressed). Simpler than blockchain; no gas fees; post-quantum transport. Communication stays Matrix.
+  - **(b) Autonomi for anchoring + evidence storage** — (a) plus case evidence (screenshots, content snapshots) stored as private DataMaps with juror-scoped key delegation. Replaces an S3/object-store dependency.
+  - **(c) Autonomi for anchoring + evidence + comms (x0x)** — (b) plus evaluate x0x gossip layer as a V2 messaging transport instead of Matrix. Highest reward but highest dependency risk — x0x is pre-production as of 2026-04.
+  - **(d) No Autonomi** — proceed with blockchain anchoring per ADR-003's original intent; Matrix+LiveKit for V2 comms.
+- **Current lean:** (b). The storage-layer fit is strong and aligns with ADR-003's "public memory" posture without blockchain complexity. x0x maturity is the gating question for (c) — evaluate when v1 federation (Phase 6, outbound-only AP) is shipping; by then x0x will have either matured or stalled, and the answer writes itself.
+- **Key references:** ADR-003 (blockchain as public memory), ADR-012 (Extism plugin host), V2/messaging.md §4.4/§8.1, autonomi.com, github.com/maidsafe/autonomi.
+- **Technical notes:** Autonomi is a Rust monorepo (94% Rust, libp2p/QUIC/Kademlia DHT). Post-quantum crypto (ML-KEM-768, ML-DSA-65). Self-encryption via ChaCha20-Poly1305 + BLAKE3. No ActivityPub — zero overlap with our federation layer. ANT token is storage-payment only (no governance-token conflict with ADR-002).
+- **Blocks:** Nothing in v0 or v1. This is a v2-research item.
+- **Target:** v2 security-hardening research spike. Revisit when v1 Phase 6 (federation) is shipping.
+
 ### OQ-V1-AD-01 — Server-rendered HTML page framework for admin dashboard
 
 - **Opened:** 2026-04-19
@@ -565,3 +581,6 @@ OQ-V1-AD-01/02/03 resolved per their documented leans. OQ-V1-AD-01: defer HTML p
 
 **2026-04-24** — *99*
 OQ-V1-JM-07 opened under v1-JM-b Task 1 per plan §7.1. Post-JM-b general case-open severity-tier inference; lean (a) hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` module. Blocks v1.5 general-severity-inference sub-phase only; does NOT block v1-JM-c/d/e. JM-b ships without resolution because the NOT NULL DEFAULT 'Minor' column value plus the cascade in `admin_assign_jury` is the complete pick-time contract.
+
+**2026-04-25** — *99*
+OQ-027 opened (v2-research): Autonomi as governance-log anchor and evidence-storage backend. Four options (anchoring-only / +evidence / +x0x comms / no Autonomi). Lean (b) — storage-layer fit is strong; comms layer (x0x) deferred pending maturity. References ADR-002 (no conflict), ADR-003 (public memory alignment). Blocks nothing in v0/v1; target is v2 security-hardening research spike.

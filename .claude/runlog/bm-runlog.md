@@ -908,3 +908,123 @@ use `chore(bm)` subjects; the two are never mixed.
 2026-04-24T23:35Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-04-24-HEAD-f676ed280.md branch=governance-v0 head=f676ed280
 
 2026-04-24T23:58Z | bm | skills | impl-helpers | added 3 user-invocable skills under .claude/skills/ — cargo-validate, test-write (with 2 helpers e2e-harness-pattern.md + rate-limit-debug.md), edit-mechanical — for impl context-saving on JM-b Tasks 5-9 and beyond. Drafted by advisor turn earlier this session, committed by BM-hat now. Trimmed descriptions (~25 tokens each) to keep baseline-context cost low. Not yet pushed (BM-lane chore; awaiting user push instruction).
+
+## bm: push — 2026-04-25T00:55Z
+
+- **branch:** phase-v1-JM-b
+- **commits pushed:** 12 (08ed5b1f9..20c4411b0)
+- **remote ref:** origin/phase-v1-JM-b @ 20c4411b0
+- **worktree:** brehon-fork-phase-v1-JM-b (cross-worktree push from primary BM session)
+- **upstream tracking:** set
+- **pre-push state:** 13 commits ahead of origin/governance-v0 (1 already on origin from plan push, 12 new)
+- **working tree status:** 3 untracked impl-side scratch files (gitignored audit JSON + 2 superseded handovers); not pushed
+- **next:** /bm-pr (no PR exists yet for phase-v1-JM-b; CR auto-reviews on open per .coderabbit.yaml)
+
+Phase complete per impl session: all 9 plan tasks shipped, all 8 new JM-b e2e tests green inside 55-pass total. Retro at .claude/PRPs/reports/v1-JM-b-retro.md (on phase-v1-JM-b worktree, committed in 20c4411b0). DQ #47 (OQ-V1-JM-07) remains pending — planner-attributed, non-blocking, v1.5 candidate.
+
+## bm: PR opened — 2026-04-25T01:05Z
+
+- **PR:** #95 — Phase v1-JM-b — jury-mechanics handler: cascade + diversity + severity/status snapshot
+- **URL:** https://github.com/barrie-cork/lemmy/pull/95
+- **Base ← Head:** governance-v0 ← phase-v1-JM-b
+- **Body source:** retro file (TL;DR §) + plan reference + 13-commit chronological log
+- **Draft?** No (CR-eligible per phase-branch.md)
+- **Telegram ping:** skipped (MCP disconnected per BM rules)
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 95`. After CR digest, `/bm-prp-review 95` for Brehon ADR + cargo cross-check.
+
+## bm: poll-cr — 2026-04-25T01:08Z
+
+- **PR:** #95 (poll #1)
+- **head SHA:** 20c4411b0 (initial; no prior poll)
+- **CR comments seen:** 1 (0 review / 0 inline / 1 issue)
+- **Actionable findings ingested:** 0
+- **Walkthrough:** placeholder only — CR posted "Currently processing new changes" status block at 07:08:36Z (~13s after PR open). Run ID f73e414f. Files-selected list (11) matches diff-files.txt exactly.
+- **Counters:** all zero
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-95-findings.yaml (1098 bytes; baseline only)
+- **Notes:** CR mid-run; re-poll in ~5–10 min. Per BM script Phase 5.1, re-poll will compare 20c4411b0 head SHA + check for new actionable findings (CR walkthrough comment will mutate to include the findings list when it completes).
+
+## bm: poll-cr — 2026-04-25T01:23Z (poll #2)
+
+- **PR:** #95 (poll #2)
+- **head SHA:** 20c4411b0 (unchanged since poll #1)
+- **CR comments seen:** 9 (1 review summary / 7 inline / 1 walkthrough)
+- **Actionable findings ingested:** 9 (7 inline + 1 outside-diff Major + 1 pre-merge-check warning)
+- **New findings this poll:** 9
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0 open | major 4 open | medium 0 | low 3 open | nit 2 open
+- **Recommendation:** request-changes (4 Majors open)
+- **YAML:** .claude/PRPs/reviews/pr-95-findings.yaml (5150 bytes)
+- **Notes:** All 7 inline + 1 outside-diff finding are in-diff or directly diff-adjacent. cr-9 (pre-merge-check) is a PR-body gap (DoD checklist + ADR matrix missing) not a code issue. Headers used 🟠/🟡/🔵 emoji set; second-token mapping: Major→major, Minor→low, Trivial→nit.
+
+### CR Major findings (the 4 fast-merge gates)
+
+- **cr-3** admin_emergency_remove.rs:186 — emergency-remove bypasses cascade snapshot
+- **cr-4** admin_emergency_remove.rs:194 — emergency-remove drops constraint record (None)
+- **cr-5** config.rs:439 — candidate-level const fallbacks not walked (only namespace)
+- **cr-8** decline_jury_assignment.rs:164 — replacement insert drops ConstraintRecord (None)
+
+Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintRecord/snapshot dropped on non-primary insert paths." cr-5 is config-resolver semantics. **None are critical.** Per fast-merge strategy, triage will likely bucket all four as carry-forward unless ADR-013 (cr-3) makes emergency-remove cascade mandatory at merge.
+
+## bm: triage — 2026-04-25T01:30Z (PR #95)
+
+- **Strategy:** β + b (user-confirmed) — fix cr-3 in PR (ADR-013 emergency-remove cascade); carry-forward cr-1/2/4/5/6/7/8; wont-fix cr-9
+- **Buckets after triage:** fix-in-pr 1 | carry-forward 7 | wont-fix 1 | done 0 | rebut 0
+- **Severity × bucket matrix:**
+  - fix-in-pr: 1 major (cr-3)
+  - carry-forward: 3 major (cr-4 admin_emergency_remove constraint-record, cr-5 config.rs candidate fallback, cr-8 decline_jury_assignment constraint-record) / 2 low (cr-1 retro markdown lint, cr-7 seed_case severity consistency) / 2 nit (cr-2 no-op cleanup, cr-6 fixture relocation)
+  - wont-fix: 1 low (cr-9 PR-body template — Brehon shape vs CR template)
+- **Counters regenerated:** critical 0/0/0/0/0 | major 1/0/0/3/0 | medium 0/0/0/0/0 | low 0/0/0/2/1 | nit 0/0/0/2/0 (open/done/rebutted/carry_forward/wont_fix)
+- **Recommendation:** request-changes (until cr-3 lands; flips to approve at re-poll after impl push)
+- **Advisor relay written:** `.claude/runlog/advisor-relays/pr95-cr-3-emergency-remove-cascade.md` (cr-3 fix sketch with file:line refs, ADR-013 grounding, file-targeted scope discipline preventing cr-4 bleed-through)
+- **Comment posted?** No — digest comment will be drafted post-fix-land per BM autonomy table (PR comments require AskUserQuestion confirm)
+- **Carry-forward issues filed:** 0 yet — will batch into single `chore(carry-forward): PR #95 follow-ups` issue post-merge per BM script
+- **Telegram ping:** skipped (MCP disconnected)
+- **Next:** impl session reads relay → fixes cr-3 → push → BM re-polls → cr-3 promotes done → BM drafts comment → user confirms → merge → BM files carry-forward issue → JM-c planning unblocked.
+
+## bm: push — 2026-04-25T08:58Z (cr-3+cr-4 fix)
+
+- **branch:** phase-v1-JM-b
+- **commits pushed:** 1 (20c4411b0..918b1f872)
+- **remote ref:** origin/phase-v1-JM-b @ 918b1f872
+- **mode:** standard fast-forward push (no --force needed; 0 behind, 1 ahead)
+- **Note:** user described it as "git push --force-with-lease" but no history rewrite — divergence shows 0 left / 1 right. Standard `git push` was the correct tool; --force-with-lease would have triggered the BM manual confirm gate without need.
+- **Commit subject:** "fix(v1-JM-b): emergency_remove cascade + snapshot + ConstraintRecord persist (PR #95 cr-3, cr-4)" by Barrie 2026-04-25T08:58Z
+- **Scope deviation from advisor relay:** advisor relay scoped to cr-3 only (with explicit "DO NOT change cr-4" guard at "Step 3"). Impl extended scope to fix cr-4 in same commit, justified by both findings touching admin_emergency_remove.rs and sharing the cascade rewrite. Acceptable scope creep — not a process breach. YAML promoted both to done at 918b1f872.
+
+## bm: poll-cr-implicit + triage update — 2026-04-25T08:59Z (poll #3)
+
+- **PR:** #95 (poll #3 — implicit; YAML update from impl push, no new CR comments yet)
+- **head SHA:** 918b1f872 (advanced from 20c4411b0)
+- **CR comments seen since push:** 0 (CR re-review will fire ~5-10 min after push)
+- **Findings promoted this poll:** 2 (cr-3 + cr-4 fix-in-pr → done; carry-forward updated as well per impl scope extension)
+- **Counters post-promotion:** critical 0/0/0/0/0 | major 0/2/0/2/0 | medium 0/0/0/0/0 | low 0/0/0/2/1 | nit 0/0/0/2/0
+- **Recommendation:** approve (0 open; all terminal buckets)
+- **YAML:** .claude/PRPs/reviews/pr-95-findings.yaml (poll_count=3, last_polled_head_sha=918b1f872)
+- **Next:** wait ~5-10 min for CR re-review on 918b1f872 → `/bm-poll-cr 95` to confirm CR didn't surface new findings → `/bm-triage 95` to draft digest comment → user confirms post → `/bm-merge 95`. CR will likely emit a green check on the cr-3/cr-4 fix; if it raises new findings, triage them per same β strategy.
+
+## bm: poll-cr — 2026-04-25T09:10Z (poll #4)
+
+- **PR:** #95 (poll #4)
+- **head SHA:** 918b1f872 (advanced from 20c4411b0)
+- **CR comments seen:** review #2 (id 4175320816 at 08:09:30Z) + 1 new inline + walkthrough refresh
+- **Actionable findings ingested:** 1 new (cr-10)
+- **Findings addressed since last poll:** 2 (cr-3 → done, cr-4 → done at 918b1f872 — already promoted by impl push); CR confirms by NOT re-flagging in review #2
+- **Findings re-confirmed open by CR (♻️ Duplicate comments):** 3 (cr-2, cr-6, cr-7) — these were carry-forward triaged, CR re-flags them because it doesn't see triage state. No action needed; carry-forward bucket persists.
+- **New finding:** cr-10 (low) — assert CaseStatus::EmergencyRemove in test admin_emergency_remove_case_has_severity_tier_severe (e2e.rs:7820). Cites ADR-013 ("EmergencyRemove from day 1"). One-line test rigor add.
+- **Counters:** critical 0/0/0/0/0 | major 0/2/0/2/0 | medium 0/0/0/0/0 | low 1/0/0/2/1 | nit 0/0/0/2/0 (open/done/rebutted/carry_forward/wont_fix)
+- **Recommendation:** pending (cr-10 needs triage decision)
+- **YAML:** .claude/PRPs/reviews/pr-95-findings.yaml (7773 bytes)
+- **Notes:** CR's "Actionable comments posted: 1" header confirms the cr-3/cr-4 cascade rewrite passes review. Run ID 3f1d1fa1. cr-10 is the only new gate. Two triage options: (a) carry-forward (consistent with β fast-merge); (b) fix-in-PR (~5 min, ADR-013 grounded). Awaiting user.
+
+## bm: triage cr-10 — 2026-04-25T09:11Z (PR #95)
+
+- **Decision:** carry-forward (user-confirmed)
+- **Rationale:** Low test-rigor strengthening; not a production-correctness gate. emergency-remove insert at admin_emergency_remove.rs:155 explicitly sets `status: CaseStatus::EmergencyRemove`, so no path is at risk. Per β fast-merge strategy.
+- **Final buckets after triage:** fix-in-pr 0 | done 2 | carry-forward 7 | wont-fix 1 | rebut 0 (10 total)
+- **Severity × bucket matrix (final):**
+  - done (2): cr-3 major (emergency-remove cascade), cr-4 major (constraint-record persist)
+  - carry-forward (7): cr-1 low (markdown lint), cr-2 nit (no-op cleanup), cr-5 major (config fallback), cr-6 nit (fixture relocate), cr-7 low (seed_case consistency), cr-8 major (decline_jury constraint-record), cr-10 low (test status assertion)
+  - wont-fix (1): cr-9 low (PR-body template)
+- **Recommendation:** approve (0 open; all terminal buckets)
+- **Next:** /bm-triage 95 to draft digest comment summarizing the 10-finding journey + carry-forward intent → user confirms post → /bm-merge 95 (also user-gated) → BM files single carry-forward issue covering 7 findings → JM-c planning unblocked.
