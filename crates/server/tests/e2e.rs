@@ -3796,7 +3796,19 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
       // (admin_assign_jury normally flips Open→JurySelection.)
       status: CaseStatus::JurySelection,
       threshold_score: 1,
-  ..Default::default()
+      // v1-JM-c fold-in: submit_jury_vote now reads `quorum_snapshot` /
+      // `panel_size_snapshot` / `threshold_count_snapshot` directly from
+      // `case` per PRD §9.1 (snapshots written by admin_assign_jury at
+      // jury-assemble time). NULL here triggers a hard error per the
+      // process-breach guard added in JM-c task 2 (line ~209). This test
+      // bypasses `admin_assign_jury`, so we mirror what the handler would
+      // write for a 5-juror Minor case (panel=5, quorum=3, threshold=3 —
+      // matching `jury.panel_size.regular.minor=5` × `quorum_fraction=0.6` ×
+      // `threshold_fraction=0.5001` per the JM-a config seed).
+      panel_size_snapshot: Some(5),
+      quorum_snapshot: Some(3),
+      threshold_count_snapshot: Some(3),
+      ..Default::default()
     };
     let case: ModerationCase = diesel::insert_into(
       lemmy_db_schema_file::schema::moderation_case::table,
