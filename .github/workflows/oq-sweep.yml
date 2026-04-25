@@ -1,8 +1,14 @@
 name: oq-sweep
 
+# Schedule disabled 2026-04-25 with the public→private repo flip.
+# This workflow calls https://models.github.ai/inference/chat/completions
+# (GitHub Models free tier), which requires public-repo eligibility.
+# Manual firing via `gh workflow run oq-sweep.yml` is preserved for
+# debugging; restore the cron line once the workflow is migrated to
+# Claude API or a paid alternative. See the go-private plan
+# (Phase 4) at C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md
+# and feedback memory project_brehon_fork_private_again.md.
 on:
-  schedule:
-    - cron: '0 4 1-31/2 * *'
   workflow_dispatch:
     inputs:
       only_oq:

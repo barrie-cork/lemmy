@@ -14,6 +14,17 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: drift workflows schedule disabled — 2026-04-25T2347Z
+
+- **Plan reference:** Phase 4 of `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md`
+- **Files touched:** `.github/workflows/adr-drift.yml`, `.github/workflows/oq-sweep.yml`, `.github/workflows/plan-drift.yml`
+- **Change:** removed `schedule: cron:` triggers from all three. Each workflow calls GitHub Models (`https://models.github.ai/inference/chat/completions`), which requires public-repo eligibility for free-tier access. Manual `workflow_dispatch:` preserved on all three for ad-hoc invocation
+- **Cadence loss:** biweekly (1-31/2) ADR-drift / OQ-sweep / plan-drift audits will not fire automatically. Deterministic `adr-compliance.yml` (per-PR, no AI) covers the highest-value subset
+- **Restoration path:** rewrite each to call Claude API directly (or pay for GitHub Copilot for PR), then restore the `schedule:` line. Deferred until SL-a or earlier if a real drift slips through `adr-compliance.yml`. Each workflow's top-of-file comment names this restoration path
+- **Plan note:** v0-archive memory `project_ci_review_stack.md` claimed "GitHub Actions: unlimited minutes on public repos". On private + GitHub Student Pack, included Actions minutes are 3,000/month (current burn ~30% at 904 min by day 22 of cycle), so disabling these three workflows also reclaims ~12 min/biweekly that they used to consume
+
+---
+
 ## bm: ai-review workflows migrated to Claude — 2026-04-25T2344Z
 
 - **Plan reference:** Phase 3 of `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md`
