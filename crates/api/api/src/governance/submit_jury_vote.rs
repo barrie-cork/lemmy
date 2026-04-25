@@ -432,6 +432,21 @@ async fn process_vote(
     // 8.5. Sponsor-liability deltas (OQ-022 multiplier, OQ-024 floor clamp).
     // Only Person-target cases reach here with sponsors; Post/Comment-target
     // cases have `target_person_id = None` per GOTCHA-56h and skip silently.
+    //
+    // SOURCE: NEW in JM-c — load-bearing TODO at the SL-d graft point
+    //
+    // TODO(v1-sponsor-liability-d): replace this v0 apply_sponsor_liability call with the
+    // compute/fire split per .claude/PRPs/prds/v1-sponsor-liability.prd.md §9.1 + §9.3:
+    //   - compute_sponsor_liability(...) returns deltas (no event rows yet)
+    //   - flip case.status = CaseStatus::SponsorLiabilityPending
+    //   - set case.grace_expires_at = now + grace_window_for_severity(severity)
+    //   - emit governance_log entry sponsor_liability_pending
+    //   - notify_sponsor_of_pending_liability(...) for each delta
+    //   - DEFER public_case_log + juror reputation_events to scheduler fire/escape time
+    //
+    // The current v0 apply_sponsor_liability stays in place for JM-c — SL-d is the rewrite.
+    // JM-c's appeal_window_expires_at write at step 9 fires on BOTH this v0 path AND the
+    // (future) sponsor-liability path; SL-d must preserve that semantic.
     if let Some(target_id) = case_row.target_person_id {
       sponsor_liability::apply_sponsor_liability(
         conn,
