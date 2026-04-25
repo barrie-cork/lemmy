@@ -1142,3 +1142,36 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Counters (final):** critical 0 open / 0 done / 1 carry-forward | major 0 open / 1 done / 0 carry-forward | low 0 open / 1 done / 0 carry-forward | total 3 findings: 2 done + 1 carry-forward
 - **Block-merge gate:** cr-2 is critical but carry-forward (scope decision per DQ #49), NOT fix-in-pr, so `feedback_coderabbit_block_merge_critical.md` block does NOT apply. Merge is unblocked.
 - **Next:** /bm-triage 98 to refresh digest comment with cr-3=done baked in, then ASK user: (1) post digest comment? (2) file cr-2 carry-forward GH issue? After user confirms both, ready for `/bm-merge 98`.
+
+## bm: triage (refresh) — 2026-04-25T23:35Z
+
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **Buckets (post-refresh):** fix-in-pr 0 | rebut 0 | carry-forward 1 | done 2 | wont-fix 0
+- **Comment posted?** _pending parent confirmation_ (subagent has no AskUserQuestion tool; gating bubbles back to impl session)
+- **Carry-forward issues filed:** 0 (cr-2 issue body refreshed at `.claude/PRPs/reviews/pr-98-carry-forward-cr-2.md`, awaiting confirmation)
+- **Recommendation:** approve-pending-carry-forward (was request-changes; both cr-1 fix `e9fa1e01a` and cr-3 fix `c972c085d` landed since first triage)
+- **What changed vs first triage:**
+  - cr-1 fix-in-pr → done (addressed_in `e9fa1e01a`, no longer needs in-PR mention)
+  - cr-3 fix-in-pr → done (addressed_in `c972c085d`, no longer needs in-PR mention)
+  - cr-2 carry-forward unchanged (still awaiting GH issue file + URL → notes)
+  - DQ #49 → DQ #50 references updated in carry-forward issue body (resolved-array relocation completed by cr-1 fix)
+- **Comment file refreshed:** `.claude/PRPs/reviews/pr-98-comment.md` — bucket table now shows 1 carry-forward / 2 done / 0 fix-in-pr; recommendation line says "approve-pending-carry-forward"
+- **Carry-forward body refreshed:** `.claude/PRPs/reviews/pr-98-carry-forward-cr-2.md` — DQ ref now reads "resolved DQ #50 (originally filed as #49, relocated as part of cr-1 fix in `e9fa1e01a`)"
+- **Block-merge gate:** clear. cr-2 is critical but carry-forward, NOT fix-in-pr; `feedback_coderabbit_block_merge_critical.md` block does NOT apply.
+- **Next:** parent (impl) session to AskUserQuestion for two visible outbound actions (post digest comment + file cr-2 GH issue), then `/bm-merge 98` once both confirmed.
+
+## bm: outbound actions complete — 2026-04-25T23:50Z
+
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **Action 1 — carry-forward GH issue filed:** https://github.com/barrie-cork/lemmy/issues/99
+  - Title: "carry-forward from PR #98: submit_jury_vote lock-ordering deadlock fix (JM-d-candidate)"
+  - Labels: carry-forward, source-coderabbit, JM-d-candidate, risk:critical
+  - Created label: JM-d-candidate (color fbca04)
+- **Action 2 — digest comment posted:** https://github.com/barrie-cork/lemmy/pull/98#issuecomment-4320728886
+  - Body: pr-98-comment.md (100 lines) embedded with issue #99 URL
+- **YAML updates:**
+  - recommendation: approve-pending-carry-forward → approve (carry-forward issue tracked)
+  - digest_comment_url: https://github.com/barrie-cork/lemmy/pull/98#issuecomment-4320728886
+  - cr-2.notes: appended GH issue URL + label manifest
+- **Merge gate:** UNBLOCKED (no fix-in-pr remaining; cr-2 critical is carry-forward, not fix-in-pr; no block-merge rule applies per `feedback_coderabbit_block_merge_critical.md`; cr-1 + cr-3 done)
+- **Next:** `/bm-merge 98` (asks before merging)
