@@ -36,7 +36,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log,
+  governance_log::{self, ENTRY_KIND_JURY_DEADLOCK},
   redaction,
   sponsor_liability,
 };
@@ -79,7 +79,7 @@ use lemmy_db_schema_file::{
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 /// Appeal window length per [05 §6]. v0 hardcoded value retained for the
@@ -236,25 +236,7 @@ async fn process_vote(
     });
   }
 
-  // 6. Tally. Load every vote for the case, group by decision in Rust.
-  let all_votes: Vec<(JuryDecision, Option<String>)> = jury_vote::table
-    .filter(jury_vote::case_id.eq(data.case_id))
-    .select((jury_vote::decision, jury_vote::rationale))
-    .load::<(JuryDecision, Option<String>)>(conn)
-    .await?;
-  let mut tally: HashMap<JuryDecision, Vec<Option<String>>> = HashMap::new();
-  for (decision, rationale) in all_votes {
-    tally.entry(decision).or_default().push(rationale);
-  }
-  let winning_decision = pick_majority(&tally)?;
-  let winning_rationales: Vec<String> = tally
-    .get(&winning_decision)
-    .into_iter()
-    .flatten()
-    .filter_map(Option::clone)
-    .collect();
-
-  // 7. Read the case row for context (community_id, targets, creator_id).
+  // 6. Read the case row for context (community_id, targets, creator_id).
   // SELECT FOR UPDATE serialises late-arriving votes against the
   // post-decision block: vote N (the quorum-tripper) holds the row lock
   // through `status -> Decided` at step 9; subsequent votes block here,
@@ -268,7 +250,7 @@ async fn process_vote(
     .first(conn)
     .await?;
 
-  // 7.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
+  // 6.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
   // returns early when *under* quorum — votes 4 and 5 in a 5-juror panel
   // arrive after vote 3 has flipped the case to Decided, fall through
   // the count check, and would otherwise re-run the entire post-decision
@@ -300,6 +282,122 @@ async fn process_vote(
       decision: None,
     });
   }
+
+  // 7. Per-decision threshold tally. Read the JM-b-written snapshot fields
+  // (panel_size_snapshot, threshold_count_snapshot) — both populated
+  // alongside `quorum_snapshot` at admin_assign_jury time, so a NULL here
+  // is the same kind of process breach as the NULL quorum_snapshot path
+  // above. Iterate JuryDecision variants in stable enum-order; the first
+  // decision meeting `threshold_count_snapshot` wins. PRD §9.1 step 5.
+  let panel_size_snapshot: i32 = case_row.panel_size_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has NULL panel_size_snapshot; admin_assign_jury did not run",
+      data.case_id.0
+    ))
+  })?;
+  let threshold_count_snapshot: i32 = case_row.threshold_count_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has NULL threshold_count_snapshot; admin_assign_jury did not run",
+      data.case_id.0
+    ))
+  })?;
+  let threshold_count_i64 = i64::from(threshold_count_snapshot);
+
+  // Single query: load every vote for the case (decision + rationale).
+  // Rationales feed the public_case_log redaction below; the per-decision
+  // count drives the threshold pick. Loading both in one query keeps the
+  // round-trip count identical to v0.
+  let all_votes: Vec<(JuryDecision, Option<String>)> = jury_vote::table
+    .filter(jury_vote::case_id.eq(data.case_id))
+    .select((jury_vote::decision, jury_vote::rationale))
+    .load::<(JuryDecision, Option<String>)>(conn)
+    .await?;
+  let mut tally: HashMap<JuryDecision, Vec<Option<String>>> = HashMap::new();
+  for (decision, rationale) in all_votes {
+    tally.entry(decision).or_default().push(rationale);
+  }
+
+  // Stable enum-order iteration (hardcoded to avoid a strum dependency).
+  // INVARIANT: this iteration list MUST cover every JuryDecision variant.
+  // `map_decision_to_sanction` (below) is the canonical exhaustive match
+  // — any new variant added to the enum will fail to compile in that
+  // helper first. When extending JuryDecision, update this list too.
+  let mut winning_decision: Option<JuryDecision> = None;
+  for candidate in [
+    JuryDecision::NoAction,
+    JuryDecision::AdvisoryLabel,
+    JuryDecision::Warning,
+    JuryDecision::Cooldown,
+    JuryDecision::RemoveContent,
+    JuryDecision::SuspendLocalUser,
+    JuryDecision::SuspendCommunityMember,
+    JuryDecision::RecommendFederationAction,
+  ] {
+    let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
+      LemmyErrorType::Unknown(format!(
+        "vote count for {candidate:?} on case {} overflows i64",
+        data.case_id.0
+      ))
+    })?;
+    if count >= threshold_count_i64 {
+      winning_decision = Some(candidate);
+      break;
+    }
+  }
+
+  // 7.5. Deadlock branch + partial-tally early return.
+  // SOURCE MIRROR: admin_assign_jury.rs:211-224 (governance_log::append +
+  // json! payload + actor_pseudonym shape). The casting juror's pseudonym
+  // is the actor: they triggered the deadlock detection by being the
+  // panel_size-th voter without a winner emerging. ADR-015 attribution.
+  let winning_decision = match winning_decision {
+    Some(decision) => decision,
+    None => {
+      if vote_count == i64::from(panel_size_snapshot) {
+        // DEADLOCK: all jurors voted, no decision met threshold.
+        // Status flips to AdminReview ONLY — no decided_at, no closed_at,
+        // no appeal_window_expires_at. A deadlocked case is not "decided";
+        // it's "stuck pending admin." Lifecycle terminates here. Per plan
+        // §10.4 GOTCHA.
+        update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+          .set(moderation_case::status.eq(CaseStatus::AdminReview))
+          .execute(conn)
+          .await?;
+
+        let tally_payload: serde_json::Map<String, Value> = tally
+          .iter()
+          .map(|(decision, votes)| (format!("{decision:?}"), Value::from(votes.len())))
+          .collect();
+
+        governance_log::append(
+          &mut conn.into(),
+          ENTRY_KIND_JURY_DEADLOCK,
+          json!({
+            "case_id": data.case_id.0,
+            "panel_size_snapshot": panel_size_snapshot,
+            "threshold_count_snapshot": threshold_count_snapshot,
+            "tally": tally_payload,
+          }),
+          Some(juror_pseudonym.clone()),
+        )
+        .await?;
+      }
+      // Both deadlock and partial-tally paths return the same response
+      // shape (vote_recorded: true, case_decided: false). Deadlock differs
+      // by the side effects (status UPDATE + governance_log entry) above.
+      return Ok(SubmitJuryVoteResponse {
+        vote_recorded: true,
+        case_decided: false,
+        decision: None,
+      });
+    }
+  };
+  let winning_rationales: Vec<String> = tally
+    .get(&winning_decision)
+    .into_iter()
+    .flatten()
+    .filter_map(Option::clone)
+    .collect();
 
   // 8. Emit sanction (for everything except NoAction).
   if let Some((scope, action)) = map_decision_to_sanction(winning_decision) {
@@ -522,23 +620,6 @@ async fn process_vote(
     case_decided: true,
     decision: Some(winning_decision),
   })
-}
-
-/// Pick the most-voted-for `JuryDecision`. Simple majority; ties are
-/// broken by iteration order of the `HashMap` which is non-deterministic
-/// — v0 per [99 ADR-007] allows this since the probability of a perfect
-/// tie with a 5-juror / 3-quorum panel is vanishingly small and any
-/// tie-break rule is acceptable. Phase 5 may introduce a deterministic
-/// tie-break (e.g. alphabetic on the `JuryDecision` enum name) per the
-/// advisor's call.
-fn pick_majority(
-  tally: &HashMap<JuryDecision, Vec<Option<String>>>,
-) -> LemmyResult<JuryDecision> {
-  tally
-    .iter()
-    .max_by_key(|(_, votes)| votes.len())
-    .map(|(decision, _)| *decision)
-    .ok_or_else(|| LemmyErrorType::NotFound.into())
 }
 
 /// Map a winning `JuryDecision` onto a `(SanctionScope, SanctionAction)`
