@@ -17,8 +17,8 @@
 use crate::governance::{
   actor_pseudonym_helper,
   admin_assign_jury,
-  config::ConfigCache,
-  governance_log,
+  config::{self, ConfigCache, Scope},
+  governance_log::{self, ENTRY_KIND_SEVERITY_TIER_FROZEN},
 };
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
@@ -31,7 +31,7 @@ use lemmy_db_schema::{
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus},
+  enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryAssignmentStatus, SeverityTier},
   schema::{comment, community, jury_assignment, moderation_case, post},
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -151,6 +151,7 @@ async fn process_emergency_remove(
     target_remote_url: None,
     reason_code: "emergency_remove".to_string(),
     severity: CaseSeverity::default(),
+    severity_tier: Some(SeverityTier::Severe),
     status: CaseStatus::EmergencyRemove,
     threshold_score: 0,
     ..Default::default()
@@ -163,19 +164,109 @@ async fn process_emergency_remove(
   let case_id = case_row.id;
 
   // 3. Post-facto jury — reuse the eligibility logic from admin_assign_jury.
-  //    Per Phase 5b task 57, the filter is reputation-gated + concurrent-
-  //    capped; the small-pool fallback keeps behaviour defined on
-  //    bootstrapping instances.
+  //    Per Phase 5b task 57 + v1-JM-b task 4, the filter is reputation-
+  //    gated + concurrent-capped with diversity / cooldown constraints;
+  //    the small-pool fallback keeps behaviour defined on bootstrapping
+  //    instances. v1-JM-b task 6 flipped the case's `severity_tier` to
+  //    `Severe`; PR #95 cr-3 routes the panel-seating step through the
+  //    same cascade + snapshot + governance_log path that
+  //    `admin_assign_jury::process_assignment` uses, so emergency-remove
+  //    cases get the larger Severe-tier panel they deserve and their
+  //    snapshot fields freeze at seat-time (consistent with ADR-010 —
+  //    no retroactive invalidation by mid-flight config changes).
   let mut cache = ConfigCache::new();
-  let eligible =
-    admin_assign_jury::select_eligible_jurors(conn, &case_row, None, &mut cache).await?;
+  let severity = case_row.severity_tier;
+  let status = if case_row.status_tier == CaseStatusTier::Regular {
+    admin_assign_jury::compute_status_tier(conn, &case_row).await?
+  } else {
+    case_row.status_tier
+  };
+  let status_str = admin_assign_jury::status_tier_slug(status);
+  let severity_str = admin_assign_jury::severity_tier_slug(severity);
+
+  let panel_size = config::get_int_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.panel_size",
+    &[status_str, severity_str],
+  )
+  .await?;
+  let quorum_fraction = config::get_float_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.quorum_fraction",
+    &[severity_str],
+  )
+  .await?;
+  let threshold_fraction = config::get_float_cascade(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.threshold_fraction",
+    &[severity_str],
+  )
+  .await?;
+
+  let panel_size_i32: i32 = i32::try_from(panel_size).map_err(|_e| {
+    lemmy_utils::error::LemmyErrorType::Unknown(format!(
+      "panel_size {panel_size} out of i32 range"
+    ))
+  })?;
+  let quorum =
+    admin_assign_jury::ceil_count(f64::from(panel_size_i32) * quorum_fraction, "quorum")?;
+  let threshold_count = admin_assign_jury::ceil_count(
+    f64::from(panel_size_i32) * threshold_fraction,
+    "threshold_count",
+  )?;
+
+  let (eligible, record) =
+    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache).await?;
+
+  // 3a. Snapshot the resolved tier + counts onto the case row. Mirrors
+  //     `admin_assign_jury::process_assignment` step 6 (plan §10.5) but
+  //     without the `status → JurySelection` flip — the case is already
+  //     in `EmergencyRemove` status and stays there per ADR-013.
+  update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+    .set((
+      moderation_case::panel_size_snapshot.eq(Some(panel_size_i32)),
+      moderation_case::quorum_snapshot.eq(Some(quorum)),
+      moderation_case::threshold_count_snapshot.eq(Some(threshold_count)),
+      moderation_case::status_tier.eq(status),
+    ))
+    .execute(conn)
+    .await?;
+
+  // 3b. severity_tier_frozen governance_log entry — admin is the actor.
+  //     Plan §10.6 mirror.
+  governance_log::append(
+    &mut conn.into(),
+    ENTRY_KIND_SEVERITY_TIER_FROZEN,
+    json!({
+      "case_id": case_id.0,
+      "severity_tier": severity_str,
+      "status_tier": status_str,
+      "panel_size_snapshot": panel_size_i32,
+      "quorum_snapshot": quorum,
+      "threshold_count_snapshot": threshold_count,
+    }),
+    Some(admin_pseudonym.clone()),
+  )
+  .await?;
+
   if !eligible.is_empty() {
+    // 3c. Persist the ConstraintRecord per-juror via JSONB. Plan §10.11
+    //     mirror — same shape as process_assignment so a later
+    //     decline/replacement reads the originally seated context.
+    let constraints_applied_json = record.to_json();
     let forms: Vec<JuryAssignmentInsertForm> = eligible
       .iter()
       .map(|person_id| JuryAssignmentInsertForm {
         case_id,
         person_id: *person_id,
         status: JuryAssignmentStatus::Accepted,
+        selected_under_constraints: Some(constraints_applied_json.clone()),
       })
       .collect();
     insert_into(jury_assignment::table)
@@ -196,6 +287,29 @@ async fn process_emergency_remove(
       )
       .await?;
     }
+
+    // 3d. Extended panel_assembled payload — same shape as
+    //     process_assignment §10.12 so the audit timeline of
+    //     emergency-remove cases reads the same as normal cases.
+    governance_log::append(
+      &mut conn.into(),
+      "panel_assembled",
+      json!({
+        "case_id": case_id.0,
+        "juror_count": panel_size_i32,
+        "severity_tier": severity_str,
+        "status_tier": status_str,
+        "constraints_applied": {
+          "no_majority_from_same_sponsor_cluster": record.no_majority_from_same_sponsor_cluster,
+          "geographic_diversity_preferred": record.geographic_diversity_preferred,
+          "no_recent_juror_repeat": record.no_recent_juror_repeat,
+          "no_same_endorsement_chain": record.no_same_endorsement_chain,
+        },
+        "relaxations": record.relaxations_fired,
+      }),
+      Some(admin_pseudonym.clone()),
+    )
+    .await?;
   }
 
   // 4. Extra-visible log entry per [06 §2.2.1]. The jury CANNOT

@@ -45,4 +45,12 @@ pub struct JuryAssignmentInsertForm {
   pub case_id: ModerationCaseId,
   pub person_id: PersonId,
   pub status: JuryAssignmentStatus,
+  /// v1-JM-a drift-fix: JSONB carrying the applied-constraints map written
+  /// by v1-JM-b `admin_assign_jury::select_eligible_jurors`. The read-side
+  /// `JuryAssignment` field already shipped in JM-a; the InsertForm was
+  /// missed in JM-a Task 5 (commit `fdbe7f25c`). Default `None` so v0
+  /// writers (Phase 4/5 paths, `decline_jury_assignment` replacement) that
+  /// construct the form via `..Default::default()` remain source-compatible.
+  /// Added as a preliminary fix in v1-JM-b per decision-queue #48.
+  pub selected_under_constraints: Option<Value>,
 }
