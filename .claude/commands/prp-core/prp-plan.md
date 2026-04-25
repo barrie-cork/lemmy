@@ -273,6 +273,16 @@ Example (adjust to the phase):
 
 For complex phases, launch one more `Explore` agent focused on how existing Lemmy architecture behaves at the integration points identified in Phase 2.
 
+**HIGH-complexity escalation (opt-in).** When (a) `Complexity == HIGH` per Phase 1 AND (b) ≥3 crates are affected per Phase 1's Affected crates list, launch **up to 2 parallel `Explore` agents alongside** the integration-point agent above, in a single message:
+
+1. **Cross-cutting audit agent** — scope: return a per-concern verdict of `TOUCHED` / `NOT_TOUCHED` / `UNCLEAR` with one-sentence evidence for each of: (1) governance log hash chain (append + sha2 trigger + ed25519), (2) `actor_pseudonym` + `redaction::scrub` ([ADR-015](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)), (3) `CaseStatus::EmergencyRemove` exhaustive match ([ADR-013](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)), (4) AGPLv3 source disclosure ([ADR-011](docs/brehon-law-inspired-network/99-decisions-and-open-questions.md)), (5) the seven PM plugin hook call sites per `.claude/rules/pm-plugin-hooks-stable.md`, (6) the v0 11-endpoint scope per [05 §2](docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md). Grep-only; no cargo.
+
+2. **Failure-mode + enum-hole scan agent** — scope: scan the crates identified in Phase 1 for (a) existing `match` expressions on `CaseStatus` / governance enums that the plan's new call sites must mirror, (b) unindexed read paths along the proposed query shape, (c) existing n+1 patterns in neighbouring view crates the plan will mirror. Return concrete file:line references; no speculation on the new design.
+
+Reuse the Phase 2 **Agent brief template** (above) verbatim — swap `{scope from Phase 1}` for each agent's scope line here. Per `feedback_subagent_model_and_effort.md`, set `model="opus"` on each call and include an explicit "Run at maximum effort — deepest reasoning, most thorough exploration" directive in each brief.
+
+On LOW or MEDIUM complexity, or when <3 crates are affected, **skip this escalation entirely** — the single integration-point agent above is sufficient.
+
 **Then analyse:**
 - ARCHITECTURE_FIT: does this respect the plane separation in [03 §4](docs/brehon-law-inspired-network/03-architecture.md)? Is governance code in the governance crate paths, not in `crates/server/`?
 - EXECUTION_ORDER: dependency order of tasks (schema → model → view → DTO → handler → route)
