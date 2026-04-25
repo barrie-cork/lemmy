@@ -143,6 +143,21 @@ background job (appeal_window_expired scheduler tick).
 | `ENTRY_KIND_APPEAL_WINDOW_EXPIRED` | `appeal_window_expired` | v1-JM-a const; v1-JM-d background job | v1-JM-d `crates/server/src/governance.rs` appeal-window-expiry scheduled task (pending) | Cron tick found a `Decided` case with `appeal_window_expires_at < now()`; case flipped to `Closed`; payload carries `{case_id, decided_at, window_expired_at}` |
 | `ENTRY_KIND_SEVERITY_TIER_FROZEN` | `severity_tier_frozen` | v1-JM-a const; v1-JM-b call site | v1-JM-b `admin_assign_jury.rs` (pending) | `moderation_case.severity_tier` snapshotted at jury-assemble time per PRD §9.2; payload carries `{case_id, severity_tier, status_tier, panel_size_snapshot, quorum_snapshot, threshold_count_snapshot, cascade_resolved_path}` |
 
+## v1-JM-c entry kinds (1, this sub-phase)
+
+Landed alongside the `submit_jury_vote` 9-step rewrite. JM-c declares the
+const AND ships the live emitting call site in the same sub-phase
+(deadlock branch in `submit_jury_vote.rs::process_vote` step 5). Per PRD
+§9.1 step 5, this kind fires when all jurors have voted but no
+`JuryDecision` met `threshold_count_snapshot` — case flips to
+`CaseStatus::AdminReview` and lifecycle terminates pending human
+intervention (no subsequent `case_decided`, `sanction_created`, or
+`public_log_published`).
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_JURY_DEADLOCK` | `jury_deadlock` | v1-JM-c shipped | `crates/api/api/src/governance/submit_jury_vote.rs::process_vote` (deadlock branch) | Jury panel reached `panel_size_snapshot` votes but no `JuryDecision` met `threshold_count_snapshot`. Case flipped to `CaseStatus::AdminReview`. Payload: `{ case_id, panel_size_snapshot, threshold_count_snapshot, tally: {<JuryDecision>: count, ...} }` |
+
 ### sponsor-liability-v1 (reserved — §17 of PRD enumerates 5 new kinds)
 
 _To be populated by `v1-sponsor-liability.plan.md`:_
@@ -172,7 +187,7 @@ _To be populated by `v1-federation-inbound.plan.md`:_
 
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**32** at v1-JM-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**33** at v1-JM-c end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (all six await downstream sub-phases: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_DECIDED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.

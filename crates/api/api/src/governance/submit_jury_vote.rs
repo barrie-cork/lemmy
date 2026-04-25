@@ -9,7 +9,9 @@
 //!    without deciding.
 //! 4. At quorum, tally votes by simple majority. Record the decision on
 //!    the case row (status → `Decided`, `decided_at = now`,
-//!    `closed_at = now + 7 days` for the appeal window per [05 §6]).
+//!    `appeal_window_expires_at = now + appeal.window_days` per PRD
+//!    §9.1 step 9 — LIVE config read, the single deliberate exception
+//!    to the snapshot-everything rule).
 //! 5. Map the winning `JuryDecision` to a `Sanction` per the table
 //!    below; `NoAction` writes no sanction row.
 //! 6. Publish a redacted summary to `public_case_log`.
@@ -36,7 +38,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log,
+  governance_log::{self, ENTRY_KIND_JURY_DEADLOCK},
   redaction,
   sponsor_liability,
 };
@@ -79,13 +81,9 @@ use lemmy_db_schema_file::{
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
-/// v0 quorum per [99 ADR-007] / [05 §3].
-const QUORUM: i64 = 3;
-/// Appeal window length per [05 §6]. Hardcoded in v0.
-const APPEAL_WINDOW_DAYS: i64 = 7;
 // Per-juror / per-reporter reputation deltas now flow through `ConfigCache`
 // via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
 // keys (Phase 5a seeded). See `process_vote` for the cached reads.
@@ -199,12 +197,32 @@ async fn process_vote(
   .await?;
 
   // 5. Count submitted votes. If under quorum, done.
+  //
+  // Quorum is read from `case.quorum_snapshot` (v1-JM-b writes this at
+  // admin_assign_jury time per PRD §9.1 step 4 / ADR-010). This is a
+  // non-locking single-column read so the partial-tally fast-path
+  // (vote_count < quorum) avoids taking the FOR UPDATE lock that the
+  // post-decision block (lines ~240+) acquires. A NULL snapshot can only
+  // arise if the case bypassed admin_assign_jury, which is impossible for
+  // any case in JurySelection or later post-JM-a-backfill — `Unknown`
+  // here surfaces a process breach loudly.
+  let quorum_snapshot: i32 = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(moderation_case::quorum_snapshot)
+    .first::<Option<i32>>(conn)
+    .await?
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "case {} has NULL quorum_snapshot; admin_assign_jury did not run",
+        data.case_id.0
+      ))
+    })?;
   let vote_count: i64 = jury_vote::table
     .filter(jury_vote::case_id.eq(data.case_id))
     .select(count_star())
     .first::<i64>(conn)
     .await?;
-  if vote_count < QUORUM {
+  if vote_count < i64::from(quorum_snapshot) {
     return Ok(SubmitJuryVoteResponse {
       vote_recorded: true,
       case_decided: false,
@@ -212,25 +230,7 @@ async fn process_vote(
     });
   }
 
-  // 6. Tally. Load every vote for the case, group by decision in Rust.
-  let all_votes: Vec<(JuryDecision, Option<String>)> = jury_vote::table
-    .filter(jury_vote::case_id.eq(data.case_id))
-    .select((jury_vote::decision, jury_vote::rationale))
-    .load::<(JuryDecision, Option<String>)>(conn)
-    .await?;
-  let mut tally: HashMap<JuryDecision, Vec<Option<String>>> = HashMap::new();
-  for (decision, rationale) in all_votes {
-    tally.entry(decision).or_default().push(rationale);
-  }
-  let winning_decision = pick_majority(&tally)?;
-  let winning_rationales: Vec<String> = tally
-    .get(&winning_decision)
-    .into_iter()
-    .flatten()
-    .filter_map(Option::clone)
-    .collect();
-
-  // 7. Read the case row for context (community_id, targets, creator_id).
+  // 6. Read the case row for context (community_id, targets, creator_id).
   // SELECT FOR UPDATE serialises late-arriving votes against the
   // post-decision block: vote N (the quorum-tripper) holds the row lock
   // through `status -> Decided` at step 9; subsequent votes block here,
@@ -244,7 +244,7 @@ async fn process_vote(
     .first(conn)
     .await?;
 
-  // 7.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
+  // 6.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
   // returns early when *under* quorum — votes 4 and 5 in a 5-juror panel
   // arrive after vote 3 has flipped the case to Decided, fall through
   // the count check, and would otherwise re-run the entire post-decision
@@ -276,6 +276,122 @@ async fn process_vote(
       decision: None,
     });
   }
+
+  // 7. Per-decision threshold tally. Read the JM-b-written snapshot fields
+  // (panel_size_snapshot, threshold_count_snapshot) — both populated
+  // alongside `quorum_snapshot` at admin_assign_jury time, so a NULL here
+  // is the same kind of process breach as the NULL quorum_snapshot path
+  // above. Iterate JuryDecision variants in stable enum-order; the first
+  // decision meeting `threshold_count_snapshot` wins. PRD §9.1 step 5.
+  let panel_size_snapshot: i32 = case_row.panel_size_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has NULL panel_size_snapshot; admin_assign_jury did not run",
+      data.case_id.0
+    ))
+  })?;
+  let threshold_count_snapshot: i32 = case_row.threshold_count_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has NULL threshold_count_snapshot; admin_assign_jury did not run",
+      data.case_id.0
+    ))
+  })?;
+  let threshold_count_i64 = i64::from(threshold_count_snapshot);
+
+  // Single query: load every vote for the case (decision + rationale).
+  // Rationales feed the public_case_log redaction below; the per-decision
+  // count drives the threshold pick. Loading both in one query keeps the
+  // round-trip count identical to v0.
+  let all_votes: Vec<(JuryDecision, Option<String>)> = jury_vote::table
+    .filter(jury_vote::case_id.eq(data.case_id))
+    .select((jury_vote::decision, jury_vote::rationale))
+    .load::<(JuryDecision, Option<String>)>(conn)
+    .await?;
+  let mut tally: HashMap<JuryDecision, Vec<Option<String>>> = HashMap::new();
+  for (decision, rationale) in all_votes {
+    tally.entry(decision).or_default().push(rationale);
+  }
+
+  // Stable enum-order iteration (hardcoded to avoid a strum dependency).
+  // INVARIANT: this iteration list MUST cover every JuryDecision variant.
+  // `map_decision_to_sanction` (below) is the canonical exhaustive match
+  // — any new variant added to the enum will fail to compile in that
+  // helper first. When extending JuryDecision, update this list too.
+  let mut winning_decision: Option<JuryDecision> = None;
+  for candidate in [
+    JuryDecision::NoAction,
+    JuryDecision::AdvisoryLabel,
+    JuryDecision::Warning,
+    JuryDecision::Cooldown,
+    JuryDecision::RemoveContent,
+    JuryDecision::SuspendLocalUser,
+    JuryDecision::SuspendCommunityMember,
+    JuryDecision::RecommendFederationAction,
+  ] {
+    let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
+      LemmyErrorType::Unknown(format!(
+        "vote count for {candidate:?} on case {} overflows i64",
+        data.case_id.0
+      ))
+    })?;
+    if count >= threshold_count_i64 {
+      winning_decision = Some(candidate);
+      break;
+    }
+  }
+
+  // 7.5. Deadlock branch + partial-tally early return.
+  // SOURCE MIRROR: admin_assign_jury.rs:211-224 (governance_log::append +
+  // json! payload + actor_pseudonym shape). The casting juror's pseudonym
+  // is the actor: they triggered the deadlock detection by being the
+  // panel_size-th voter without a winner emerging. ADR-015 attribution.
+  let winning_decision = match winning_decision {
+    Some(decision) => decision,
+    None => {
+      if vote_count == i64::from(panel_size_snapshot) {
+        // DEADLOCK: all jurors voted, no decision met threshold.
+        // Status flips to AdminReview ONLY — no decided_at, no closed_at,
+        // no appeal_window_expires_at. A deadlocked case is not "decided";
+        // it's "stuck pending admin." Lifecycle terminates here. Per plan
+        // §10.4 GOTCHA.
+        update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+          .set(moderation_case::status.eq(CaseStatus::AdminReview))
+          .execute(conn)
+          .await?;
+
+        let tally_payload: serde_json::Map<String, Value> = tally
+          .iter()
+          .map(|(decision, votes)| (format!("{decision:?}"), Value::from(votes.len())))
+          .collect();
+
+        governance_log::append(
+          &mut conn.into(),
+          ENTRY_KIND_JURY_DEADLOCK,
+          json!({
+            "case_id": data.case_id.0,
+            "panel_size_snapshot": panel_size_snapshot,
+            "threshold_count_snapshot": threshold_count_snapshot,
+            "tally": tally_payload,
+          }),
+          Some(juror_pseudonym.clone()),
+        )
+        .await?;
+      }
+      // Both deadlock and partial-tally paths return the same response
+      // shape (vote_recorded: true, case_decided: false). Deadlock differs
+      // by the side effects (status UPDATE + governance_log entry) above.
+      return Ok(SubmitJuryVoteResponse {
+        vote_recorded: true,
+        case_decided: false,
+        decision: None,
+      });
+    }
+  };
+  let winning_rationales: Vec<String> = tally
+    .get(&winning_decision)
+    .into_iter()
+    .flatten()
+    .filter_map(Option::clone)
+    .collect();
 
   // 8. Emit sanction (for everything except NoAction).
   if let Some((scope, action)) = map_decision_to_sanction(winning_decision) {
@@ -310,6 +426,21 @@ async fn process_vote(
     // 8.5. Sponsor-liability deltas (OQ-022 multiplier, OQ-024 floor clamp).
     // Only Person-target cases reach here with sponsors; Post/Comment-target
     // cases have `target_person_id = None` per GOTCHA-56h and skip silently.
+    //
+    // SOURCE: NEW in JM-c — load-bearing TODO at the SL-d graft point
+    //
+    // TODO(v1-sponsor-liability-d): replace this v0 apply_sponsor_liability call with the
+    // compute/fire split per .claude/PRPs/prds/v1-sponsor-liability.prd.md §9.1 + §9.3:
+    //   - compute_sponsor_liability(...) returns deltas (no event rows yet)
+    //   - flip case.status = CaseStatus::SponsorLiabilityPending
+    //   - set case.grace_expires_at = now + grace_window_for_severity(severity)
+    //   - emit governance_log entry sponsor_liability_pending
+    //   - notify_sponsor_of_pending_liability(...) for each delta
+    //   - DEFER public_case_log + juror reputation_events to scheduler fire/escape time
+    //
+    // The current v0 apply_sponsor_liability stays in place for JM-c — SL-d is the rewrite.
+    // JM-c's appeal_window_expires_at write at step 9 fires on BOTH this v0 path AND the
+    // (future) sponsor-liability path; SL-d must preserve that semantic.
     if let Some(target_id) = case_row.target_person_id {
       sponsor_liability::apply_sponsor_liability(
         conn,
@@ -323,13 +454,18 @@ async fn process_vote(
     }
   }
 
-  // 9. Flip case → Decided.
-  let closed_at = now + Duration::days(APPEAL_WINDOW_DAYS);
+  // 8.9. Flip case → Decided. Step 9 (appeal_window_expires_at write) lands
+  // AFTER the step-10/11/12 writes below — keeping it as a separate UPDATE
+  // makes SL-d's graft cleaner per PRD §9.1 cross-references (SL-d will set
+  // `case.status = SponsorLiabilityPending` here instead of Decided, and the
+  // appeal_window write must fire on BOTH paths). `closed_at` is no longer
+  // written by submit_jury_vote — it becomes a JM-d concern (the
+  // appeal-window-expiry background job will set `closed_at = now()` when
+  // transitioning Decided → Closed).
   update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
     .set((
       moderation_case::status.eq(CaseStatus::Decided),
       moderation_case::decided_at.eq(Some(now)),
-      moderation_case::closed_at.eq(Some(closed_at)),
     ))
     .execute(conn)
     .await?;
@@ -463,6 +599,26 @@ async fn process_vote(
   // (admin Person, not the juror — ADR-015 attribution) so we pass
   // only the conn + context here. See federation_outbox.rs head-of-
   // module DQ-6.7 note for the parameter rationale.
+  // 9. Appeal-window expiry write — LIVE config read per PRD §9.1 step 9
+  // (the deliberate snapshot-rule exception: changing `appeal.window_days`
+  // mid-flight affects future decisions, not in-flight cases — but the
+  // *appeal window itself* is a procedural input read at the *decision
+  // moment*, not the *jury-seating moment*). JM-c is the first writer of
+  // this column on post-JM-a cases. JM-d will be the first reader via the
+  // bounded-window appeal check.
+  let window_days_i64 = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.window_days",
+  )
+  .await?;
+  let appeal_window_expires_at = now + Duration::days(window_days_i64);
+  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+    .set(moderation_case::appeal_window_expires_at.eq(Some(appeal_window_expires_at)))
+    .execute(conn)
+    .await?;
+
   // Log the case decision FIRST so the hash chain records the local
   // determination before any federation broadcast that results from it
   // (ADR-008 causality). Previously `federation_sanction_sent` appeared
@@ -475,7 +631,7 @@ async fn process_vote(
     json!({
       "case_id": data.case_id.0,
       "decision": winning_decision,
-      "closed_at": closed_at,
+      "appeal_window_expires_at": appeal_window_expires_at,
     }),
     None,
   )
@@ -498,23 +654,6 @@ async fn process_vote(
     case_decided: true,
     decision: Some(winning_decision),
   })
-}
-
-/// Pick the most-voted-for `JuryDecision`. Simple majority; ties are
-/// broken by iteration order of the `HashMap` which is non-deterministic
-/// — v0 per [99 ADR-007] allows this since the probability of a perfect
-/// tie with a 5-juror / 3-quorum panel is vanishingly small and any
-/// tie-break rule is acceptable. Phase 5 may introduce a deterministic
-/// tie-break (e.g. alphabetic on the `JuryDecision` enum name) per the
-/// advisor's call.
-fn pick_majority(
-  tally: &HashMap<JuryDecision, Vec<Option<String>>>,
-) -> LemmyResult<JuryDecision> {
-  tally
-    .iter()
-    .max_by_key(|(_, votes)| votes.len())
-    .map(|(decision, _)| *decision)
-    .ok_or_else(|| LemmyErrorType::NotFound.into())
 }
 
 /// Map a winning `JuryDecision` onto a `(SanctionScope, SanctionAction)`

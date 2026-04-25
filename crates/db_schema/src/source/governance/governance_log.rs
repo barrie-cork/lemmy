@@ -167,6 +167,17 @@ pub const ENTRY_KIND_RULE_SET_VERSION_CREATED: &str = "rule_set_version_created"
 // sub-phases (b: constraint_relaxed + severity_tier_frozen;
 // d: appeal_* kinds incl. window_expired scheduler tick).
 pub const ENTRY_KIND_JURY_CONSTRAINT_RELAXED: &str = "jury_constraint_relaxed";
+/// Jury panel reached `panel_size_snapshot` votes but no `JuryDecision`
+/// variant met `threshold_count_snapshot`. Case is flipped to
+/// `CaseStatus::AdminReview` for human resolution. Payload:
+/// `{ case_id, panel_size_snapshot, threshold_count_snapshot,
+///   tally: {<JuryDecision>: count, ...} }`. Emitted exactly once per
+/// case at the deadlock-detection moment (PRD §9.1 step 5). Per ADR-010,
+/// AdminReview is a procedurally-mandatory terminal state; admin
+/// intervention is required to resume. No subsequent `case_decided`,
+/// `sanction_created`, or `public_log_published` fires for a deadlocked
+/// case.
+pub const ENTRY_KIND_JURY_DEADLOCK: &str = "jury_deadlock";
 pub const ENTRY_KIND_APPEAL_PANEL_ASSEMBLED: &str = "appeal_panel_assembled";
 pub const ENTRY_KIND_APPEAL_DECIDED: &str = "appeal_decided";
 pub const ENTRY_KIND_APPEAL_REJECTED: &str = "appeal_rejected";

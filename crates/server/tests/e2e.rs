@@ -1428,7 +1428,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     // is guarded.
     assert_eq!(vote_count, 5, "5 jury_vote rows (all jurors recorded)");
 
-    let (status, decided_at, closed_at): (
+    let (status, decided_at, appeal_window_expires_at): (
       CaseStatus,
       Option<DateTime<Utc>>,
       Option<DateTime<Utc>>,
@@ -1437,19 +1437,24 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .select((
         moderation_case::status,
         moderation_case::decided_at,
-        moderation_case::closed_at,
+        moderation_case::appeal_window_expires_at,
       ))
       .first(conn)
       .await?;
     assert!(matches!(status, CaseStatus::Decided), "case must be Decided");
     let decided = decided_at.expect("decided_at set");
-    let closed = closed_at.expect("closed_at set");
-    let gap = closed.signed_duration_since(decided);
-    // DB precision can drift by microseconds; assert within 1 second of 7d.
+    let appeal_expires =
+      appeal_window_expires_at.expect("appeal_window_expires_at set by JM-c step 9");
+    let gap = appeal_expires.signed_duration_since(decided);
+    // DB precision can drift by microseconds; assert within 1 second of 7d
+    // (the seeded `appeal.window_days = 7` default per JM-a config seed).
+    // JM-c step 9 reads `appeal.window_days` LIVE at decision time and writes
+    // `appeal_window_expires_at = decided_at + window_days` (no longer
+    // `closed_at = decided_at + 7d`).
     let expected = Duration::days(7);
     assert!(
       (gap - expected).num_milliseconds().abs() < 1_000,
-      "closed_at should be ~ decided_at + 7 days (got gap = {gap:?})"
+      "appeal_window_expires_at should be ~ decided_at + 7 days (got gap = {gap:?})"
     );
 
     let sanction_count: i64 = sanction::table
@@ -3791,7 +3796,19 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
       // (admin_assign_jury normally flips Open→JurySelection.)
       status: CaseStatus::JurySelection,
       threshold_score: 1,
-  ..Default::default()
+      // v1-JM-c fold-in: submit_jury_vote now reads `quorum_snapshot` /
+      // `panel_size_snapshot` / `threshold_count_snapshot` directly from
+      // `case` per PRD §9.1 (snapshots written by admin_assign_jury at
+      // jury-assemble time). NULL here triggers a hard error per the
+      // process-breach guard added in JM-c task 2 (line ~209). This test
+      // bypasses `admin_assign_jury`, so we mirror what the handler would
+      // write for a 5-juror Minor case (panel=5, quorum=3, threshold=3 —
+      // matching `jury.panel_size.regular.minor=5` × `quorum_fraction=0.6` ×
+      // `threshold_fraction=0.5001` per the JM-a config seed).
+      panel_size_snapshot: Some(5),
+      quorum_snapshot: Some(3),
+      threshold_count_snapshot: Some(3),
+      ..Default::default()
     };
     let case: ModerationCase = diesel::insert_into(
       lemmy_db_schema_file::schema::moderation_case::table,
@@ -7934,5 +7951,994 @@ async fn admin_emergency_remove_seats_severe_panel_with_constraint_record()
   assert_eq!(payload["juror_count"], Value::from(7));
   assert_eq!(payload["severity_tier"], Value::String("severe".to_string()));
   assert_eq!(payload["status_tier"], Value::String("regular".to_string()));
+  Ok(())
+}
+
+// ============================================================================
+// v1-JM-c Task 6 — six e2e tests for snapshot-aware threshold + deadlock +
+// appeal_window_expires_at write.
+//
+// All six tests reuse `v1_jm_b_fixtures::{bootstrap, seed_user, seed_community,
+// seed_jurors, seed_jury_eligible_snapshots, seed_case}` per JM-b retro §3.2
+// amendment 2 (R2). EVERY test seeds reputation_snapshot rows BEFORE
+// `admin_assign_jury` so the small-pool fallback does not fire.
+//
+// Test names use lowercase snake_case per JM-b retro §3.2 amendment 4 (R4).
+// ============================================================================
+
+/// JM-c Task 6 test 1 — 7-juror Severe panel decides at 6 votes
+/// (threshold_count_snapshot = ceil(7 × 0.75) = 6 per JM-b seeded values).
+///
+/// The plan §14.1 row 1 mentions "decides at 5 votes (threshold=5)" but the
+/// actual JM-b snapshot machinery freezes Severe panels at threshold = 6
+/// (verified against `admin_assign_jury_severity_tier_regular_severe_panel_7_jurors`
+/// at line 7228+). We cast 6 votes and assert the case decides on vote 6.
+#[tokio::test(flavor = "multi_thread")]
+async fn submit_jury_vote_severe_panel_meets_threshold()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::{governance_log, moderation_case, sanction},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc1", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc1", false).await?;
+  // Seed 9 jurors so admin_assign_jury can pick 7 and snapshot panel_size = 7.
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+
+  // R2: seed jury_eligible snapshots BEFORE admin_assign_jury.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Severe)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(
+    assign_resp.assigned_person_ids.len(),
+    7,
+    "Severe panel = 7 jurors per JM-b snapshot"
+  );
+
+  // submit_jury_vote takes federation Data per Phase 6 task 76.
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  // Accept all assignments first — submit_jury_vote requires Accepted status.
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Cast 6 RemoveContent votes (threshold_count_snapshot = 6 for Severe).
+  let voting_jurors: Vec<PersonId> = assign_resp
+    .assigned_person_ids
+    .iter()
+    .copied()
+    .take(6)
+    .collect();
+  let mut last_resp = None;
+  for (i, juror_id) in voting_jurors.iter().enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: Some(format!("severe vote {i}")),
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+    if i < 5 {
+      assert!(
+        !resp.case_decided,
+        "vote {i}: must NOT be decided pre-threshold"
+      );
+    }
+    last_resp = Some(resp);
+  }
+  let final_resp = last_resp.expect("at least one vote cast");
+  assert!(
+    final_resp.case_decided,
+    "vote 6 (threshold_count_snapshot for Severe) must decide the case"
+  );
+  assert_eq!(final_resp.decision, Some(JuryDecision::RemoveContent));
+
+  // Assert post-decision DB state.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (status, decided_at, appeal_expires): (
+    CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+  ) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::status,
+      moderation_case::decided_at,
+      moderation_case::appeal_window_expires_at,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(status, CaseStatus::Decided, "case must be Decided");
+  assert!(decided_at.is_some(), "decided_at populated");
+  assert!(
+    appeal_expires.is_some(),
+    "appeal_window_expires_at populated by JM-c step 9"
+  );
+
+  let sanction_count: i64 = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(sanction_count, 1, "exactly one sanction row");
+
+  let case_decided_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("case_decided"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(case_decided_log_count, 1, "exactly one case_decided entry");
+
+  Ok(())
+}
+
+/// JM-c Task 6 test 2 — 5-juror Minor panel split 2/2/1 → AdminReview +
+/// `jury_deadlock` log. After all 5 jurors vote with no decision meeting
+/// `threshold_count_snapshot = 3`, the case must:
+///   - flip to `CaseStatus::AdminReview`
+///   - leave `decided_at` and `appeal_window_expires_at` NULL
+///   - emit exactly one `jury_deadlock` governance_log entry
+///   - NOT emit `case_decided`, `sanction_created`, or `public_log_published`
+///   - write zero `sanction` or `public_case_log` rows
+///   - write zero `reputation_event` rows for the case
+#[tokio::test(flavor = "multi_thread")]
+async fn submit_jury_vote_deadlock_flips_to_admin_review()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::{governance_log, moderation_case, public_case_log, reputation_event, sanction},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc2", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc2", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(
+    assign_resp.assigned_person_ids.len(),
+    5,
+    "Minor panel = 5 jurors per JM-b snapshot"
+  );
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Vote split 2/2/1: jurors 0+1 RemoveContent, 2+3 NoAction, 4 AdvisoryLabel.
+  // No decision meets threshold_count_snapshot = 3; deadlock fires on vote 5.
+  let votes = [
+    JuryDecision::RemoveContent,
+    JuryDecision::RemoveContent,
+    JuryDecision::NoAction,
+    JuryDecision::NoAction,
+    JuryDecision::AdvisoryLabel,
+  ];
+  let mut last_resp = None;
+  for (i, juror_id) in assign_resp.assigned_person_ids.iter().enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: votes[i],
+        rationale: Some(format!("split vote {i}")),
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+    // Deadlock returns case_decided: false on the final vote — the case is
+    // NOT decided, it's stuck pending admin (per submit_jury_vote.rs deadlock
+    // branch comment "Deadlock differs ... vote_recorded: true, case_decided:
+    // false").
+    assert!(
+      !resp.case_decided,
+      "vote {i}: deadlock means case_decided stays false even on the panel-completing vote"
+    );
+    last_resp = Some(resp);
+  }
+  let final_resp = last_resp.expect("at least one vote cast");
+  assert!(final_resp.vote_recorded, "vote 5 recorded");
+  assert!(final_resp.decision.is_none(), "deadlock has no winning decision");
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (status, decided_at, appeal_expires, closed_at): (
+    CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+  ) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::status,
+      moderation_case::decided_at,
+      moderation_case::appeal_window_expires_at,
+      moderation_case::closed_at,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(
+    status,
+    CaseStatus::AdminReview,
+    "deadlock flips status to AdminReview"
+  );
+  assert!(
+    decided_at.is_none(),
+    "deadlock leaves decided_at NULL — the case is not decided"
+  );
+  assert!(
+    appeal_expires.is_none(),
+    "deadlock leaves appeal_window_expires_at NULL — no appeal window for stuck cases"
+  );
+  assert!(
+    closed_at.is_none(),
+    "deadlock leaves closed_at NULL — JM-c removed the close write; appeal/admin-review cases reopen"
+  );
+
+  let sanction_count: i64 = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(sanction_count, 0, "no sanction row for deadlocked case");
+
+  let public_log_count: i64 = public_case_log::table
+    .filter(public_case_log::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    public_log_count, 0,
+    "no public_case_log entry for deadlocked case"
+  );
+
+  let rep_event_count: i64 = reputation_event::table
+    .filter(reputation_event::source_case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    rep_event_count, 0,
+    "no reputation_event rows for deadlocked case"
+  );
+
+  let deadlock_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("jury_deadlock"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    deadlock_log_count, 1,
+    "exactly one jury_deadlock governance_log entry"
+  );
+
+  let case_decided_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("case_decided"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    case_decided_log_count, 0,
+    "case_decided NOT emitted on deadlock path"
+  );
+
+  let public_log_published_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("public_log_published"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    public_log_published_count, 0,
+    "public_log_published NOT emitted on deadlock path"
+  );
+
+  let sanction_created_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("sanction_created"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    sanction_created_log_count, 0,
+    "sanction_created NOT emitted on deadlock path — no sanction means no log"
+  );
+
+  Ok(())
+}
+
+/// JM-c Task 6 test 3 — `appeal_window_expires_at` populated on no-sponsor
+/// path with default `appeal.window_days = 7`. Also asserts `closed_at` is
+/// NULL (JM-c removed the close write at step 8).
+#[tokio::test(flavor = "multi_thread")]
+async fn submit_jury_vote_writes_appeal_window_default()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use chrono::Duration;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc3", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc3", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Cast 3 RemoveContent votes to meet threshold_count_snapshot = 3 for Minor.
+  for juror_id in assign_resp.assigned_person_ids.iter().take(3) {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (status, decided_at, closed_at, appeal_expires): (
+    CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+  ) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::status,
+      moderation_case::decided_at,
+      moderation_case::closed_at,
+      moderation_case::appeal_window_expires_at,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(status, CaseStatus::Decided);
+  let decided = decided_at.expect("decided_at set");
+  let expires = appeal_expires.expect("appeal_window_expires_at set");
+  let gap = expires - decided;
+  let expected = Duration::days(7);
+  assert!(
+    (gap - expected).num_milliseconds().abs() < 1_000,
+    "appeal_window_expires_at = decided_at + 7d (default); got gap = {gap:?}"
+  );
+  assert!(
+    closed_at.is_none(),
+    "closed_at must be NULL — JM-c removed the v0 closed_at write"
+  );
+
+  Ok(())
+}
+
+/// JM-c Task 6 test 4 — `appeal_window_expires_at` reflects mid-flight
+/// `appeal.window_days` config bump. Bump from 7 → 30 BEFORE the
+/// threshold-meeting vote and assert the live read picked up 30.
+#[tokio::test(flavor = "multi_thread")]
+async fn submit_jury_vote_writes_appeal_window_live_config()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use chrono::Duration;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    admin_config::admin_set_config,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, AdminSetConfig, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc4", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc4", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?
+  .into_inner();
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Bump appeal.window_days BEFORE any vote. JM-c step 9 is a LIVE config
+  // read at decision time (the deliberate snapshot exception).
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "appeal.window_days".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(30),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "JM-c live-read test bump".to_string(),
+    }),
+    context.clone(),
+    admin_view,
+  )
+  .await?;
+
+  for juror_id in assign_resp.assigned_person_ids.iter().take(3) {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (status, decided_at, appeal_expires): (
+    CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+  ) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::status,
+      moderation_case::decided_at,
+      moderation_case::appeal_window_expires_at,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(status, CaseStatus::Decided);
+  let decided = decided_at.expect("decided_at set");
+  let expires = appeal_expires.expect("appeal_window_expires_at set");
+  let gap = expires - decided;
+  let expected = Duration::days(30);
+  assert!(
+    (gap - expected).num_milliseconds().abs() < 1_000,
+    "appeal_window_expires_at = decided_at + 30d (LIVE config bumped from 7); got gap = {gap:?}"
+  );
+
+  Ok(())
+}
+
+/// JM-c Task 6 test 5 — PRD §11 canonical regression. A case opened under
+/// v0 defaults (panel=5, threshold=3, appeal_window=7) completes under those
+/// snapshot values even after the admin flips three governance config keys
+/// mid-flight to wildly different values. The appeal_window_expires_at uses
+/// the LIVE bumped value (60d) — the deliberate snapshot exception per
+/// ADR-010 + PRD §9.1 cross-references.
+#[tokio::test(flavor = "multi_thread")]
+async fn v0_case_completes_under_v0_rules_after_v1_config_flip()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use chrono::Duration;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    admin_config::admin_set_config,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, AdminSetConfig, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc5", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc5", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  // Step 1: open case under v0 defaults (Minor severity).
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?
+  .into_inner();
+  // Snapshot fields should be: panel=5, quorum=3, threshold=3.
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let snap: (Option<i32>, Option<i32>, Option<i32>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::panel_size_snapshot,
+        moderation_case::quorum_snapshot,
+        moderation_case::threshold_count_snapshot,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      snap,
+      (Some(5), Some(3), Some(3)),
+      "v0-default snapshot values"
+    );
+  }
+
+  // Step 2: admin flips three config keys WHILE case is in InReview.
+  for (key, value_type, value) in [
+    (
+      "jury.panel_size.regular.minor",
+      "int",
+      serde_json::json!(11),
+    ),
+    (
+      "jury.threshold_fraction.minor",
+      "float",
+      serde_json::json!(0.95),
+    ),
+    ("appeal.window_days", "int", serde_json::json!(60)),
+  ] {
+    admin_set_config(
+      Json(AdminSetConfig {
+        key: key.to_string(),
+        value_type: value_type.to_string(),
+        value,
+        scope: "instance".to_string(),
+        apply_at: None,
+        dry_run: None,
+        reason: "v0-compat regression test".to_string(),
+      }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?;
+  }
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Step 3: cast 3 RemoveContent votes — v0 threshold = 3 must still apply,
+  // NOT the new 0.95 × 11 = 11 fraction-derived value.
+  for juror_id in assign_resp.assigned_person_ids.iter().take(3) {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Step 4: assert case decided under v0 snapshot rules; appeal_window
+  // uses LIVE config (60d), the deliberate exception.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (status, decided_at, appeal_expires): (
+    CaseStatus,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<chrono::DateTime<chrono::Utc>>,
+  ) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::status,
+      moderation_case::decided_at,
+      moderation_case::appeal_window_expires_at,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(
+    status,
+    CaseStatus::Decided,
+    "decided despite mid-flight config change (v0 snapshot rules honoured)"
+  );
+  let decided = decided_at.expect("decided_at set");
+  let expires = appeal_expires.expect("appeal_window_expires_at set");
+  let gap = expires - decided;
+  let expected = Duration::days(60);
+  assert!(
+    (gap - expected).num_milliseconds().abs() < 1_000,
+    "appeal_window uses LIVE config (60), not snapshotted v0 default (7); got gap = {gap:?}"
+  );
+
+  Ok(())
+}
+
+/// JM-c Task 6 test 6 — concurrency: two jurors race to be the
+/// threshold-meeting vote via `tokio::join!`. The FOR UPDATE lock at the
+/// case load + the idempotency guard SHOULD ensure exactly-once
+/// post-decision side effects. Both calls SHOULD succeed; only one sanction
+/// + one case_decided log SHOULD fire.
+///
+/// **STATUS: ignored — see DQ #49.** This test surfaces a deterministic
+/// Postgres deadlock between two concurrent transactions:
+///   1. Each tx INSERTs a row into `jury_vote` (step 2 of submit_jury_vote).
+///      The INSERT takes a foreign-key SHARE lock on the parent
+///      `moderation_case` row.
+///   2. Each tx then tries to acquire SELECT ... FOR UPDATE on that same
+///      `moderation_case` row at submit_jury_vote.rs:240 (step 6).
+///   3. Both txs hold SHARE on the case row and wait for the other to
+///      release it before EXCLUSIVE can be granted. Postgres' deadlock
+///      detector kills one with `ERROR: deadlock detected`.
+///
+/// The handler's vote-INSERT-before-FOR-UPDATE structure is pre-existing
+/// (v0/JM-b era) and out of JM-c file-ownership scope to refactor. Plan
+/// §10.8 GOTCHA anticipated escalation here. The fix is one of:
+///   - JM-d (or a separate chore): acquire FOR UPDATE on case_row BEFORE
+///     the vote INSERT so the lock-acquisition order is consistent across
+///     concurrent voters.
+///   - Accept that real-prod concurrent voting on the same case is rare
+///     and that one juror occasionally sees deadlock_detected and retries.
+///
+/// Tests 1-5 ship as JM-c's e2e coverage. The exactly-once invariant under
+/// SEQUENTIAL late arrivals (votes 4-5 after vote 3 trips threshold) remains
+/// covered by `report_to_modlog_golden_path` at line ~1061. The test body
+/// below is preserved as the diagnostic anchor for a future handler refactor.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "v1-JM-c DQ #49: deterministic Postgres deadlock under truly-concurrent votes; handler structure (vote INSERT before FOR UPDATE) out of JM-c scope to refactor"]
+async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{JuryDecision, SeverityTier},
+    schema::{governance_log, jury_vote, sanction},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc6", true).await?;
+  let (target, _) =
+    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc6", false).await?;
+  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+    .await
+    .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+  let assign_resp = admin_assign_jury(
+    Json(AdminAssignJury { case_id }),
+    context.clone(),
+    admin_view,
+  )
+  .await?
+  .into_inner();
+  assert_eq!(assign_resp.assigned_person_ids.len(), 5);
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  for juror_id in &assign_resp.assigned_person_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    accept_jury_assignment(
+      Json(AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Cast 2 votes serially; threshold (3) not yet met.
+  for juror_id in assign_resp.assigned_person_ids.iter().take(2) {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Now race jurors 2 and 3. Both vote RemoveContent. Whichever wins the
+  // FOR UPDATE lock first runs the post-decision block; the other observes
+  // status=Decided via the idempotency guard and short-circuits.
+  let view_a = LocalUserView::read_person(&mut context.pool(), assign_resp.assigned_person_ids[2])
+    .await?;
+  let view_b = LocalUserView::read_person(&mut context.pool(), assign_resp.assigned_person_ids[3])
+    .await?;
+  let fed_a = federation_context.reset_request_count();
+  let fed_b = federation_context.reset_request_count();
+
+  let (res_a, res_b) = tokio::join!(
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      fed_a,
+      view_a,
+    ),
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::RemoveContent,
+        rationale: None,
+      }),
+      fed_b,
+      view_b,
+    ),
+  );
+  res_a?;
+  res_b?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+  let vote_count: i64 = jury_vote::table
+    .filter(jury_vote::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    vote_count, 4,
+    "all 4 votes recorded (2 sequential + 2 concurrent)"
+  );
+
+  let sanction_count: i64 = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    sanction_count, 1,
+    "post-decision block ran exactly once — exactly one sanction row"
+  );
+
+  let case_decided_log_count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("case_decided"))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    case_decided_log_count, 1,
+    "case_decided emitted exactly once despite the race"
+  );
+
   Ok(())
 }
