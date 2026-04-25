@@ -82,9 +82,13 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
 use std::collections::HashMap;
 
-/// v0 quorum per [99 ADR-007] / [05 §3].
-const QUORUM: i64 = 3;
-/// Appeal window length per [05 §6]. Hardcoded in v0.
+/// Appeal window length per [05 §6]. v0 hardcoded value retained for the
+/// step 8 case-UPDATE site at line ~327 until v1-JM-c task 5 replaces both
+/// the `closed_at` write and this constant with a LIVE `config::get_int`
+/// read for `appeal.window_days` per PRD §9.1 step 9 (the deliberate
+/// snapshot-rule exception). v1-JM-c task 2 deletes only the `QUORUM`
+/// constant; `APPEAL_WINDOW_DAYS` survives one more task to keep the
+/// const-removal paired with its single call site.
 const APPEAL_WINDOW_DAYS: i64 = 7;
 // Per-juror / per-reporter reputation deltas now flow through `ConfigCache`
 // via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
@@ -199,12 +203,32 @@ async fn process_vote(
   .await?;
 
   // 5. Count submitted votes. If under quorum, done.
+  //
+  // Quorum is read from `case.quorum_snapshot` (v1-JM-b writes this at
+  // admin_assign_jury time per PRD §9.1 step 4 / ADR-010). This is a
+  // non-locking single-column read so the partial-tally fast-path
+  // (vote_count < quorum) avoids taking the FOR UPDATE lock that the
+  // post-decision block (lines ~240+) acquires. A NULL snapshot can only
+  // arise if the case bypassed admin_assign_jury, which is impossible for
+  // any case in JurySelection or later post-JM-a-backfill — `Unknown`
+  // here surfaces a process breach loudly.
+  let quorum_snapshot: i32 = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(moderation_case::quorum_snapshot)
+    .first::<Option<i32>>(conn)
+    .await?
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "case {} has NULL quorum_snapshot; admin_assign_jury did not run",
+        data.case_id.0
+      ))
+    })?;
   let vote_count: i64 = jury_vote::table
     .filter(jury_vote::case_id.eq(data.case_id))
     .select(count_star())
     .first::<i64>(conn)
     .await?;
-  if vote_count < QUORUM {
+  if vote_count < i64::from(quorum_snapshot) {
     return Ok(SubmitJuryVoteResponse {
       vote_recorded: true,
       case_decided: false,
