@@ -14,6 +14,22 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: dependabot config added — 2026-04-25T2355Z
+
+- **Trigger:** post-flip rescan surfaced 55 open Dependabot alerts (3 critical, 19 high, 24 medium, 9 low) — pre-existing dep debt that became visible because private repos get the full per-repo scan
+- **Distribution:**
+  - **Cargo.lock:** 24 alerts. Notable: 2 criticals on `wasmtime` 37.0.3 → 42.0.2 (transitive via `extism` per ADR-012); 1 high on `rustls-webpki` 0.103.10 → 0.103.13
+  - **api_tests/pnpm-lock.yaml:** 31 alerts. Notable: 1 critical on `handlebars` 4.7.9; 18 highs across handlebars, picomatch, minimatch, glob, validator, path-to-regexp, @hapi/content, flatted. **`api_tests/` is upstream Lemmy's federation test harness, NOT invoked by any workflow under `.github/workflows/` on this fork** (per `feedback_ci_runs_integration_tests_only.md`). Lockfile bumps cannot break our CI — npm-group PR can be merged with low caution
+- **Action taken:** wrote `.github/dependabot.yml` with two ecosystems (cargo, npm), both targeting `governance-v0`, both grouping all bumps into one weekly PR each (Mondays 07:00 Europe/Dublin), labelled `dependabot` + `deps:cargo|npm`. Open-PR limit 5 (cargo) and 3 (npm)
+- **What this does NOT do:**
+  - Does not bump `Cargo.toml` (BM file-ownership boundary — that's an impl-session decision)
+  - Does not run `pnpm update` locally (no `pnpm` on the BM session's PATH; installing pnpm globally as a side-effect of triage is too invasive)
+  - Does not touch `extism` directly — the wasmtime fix needs an extism major bump that may have ADR-012 implications; let Dependabot's cargo-group PR fail-loud at `cargo test --test e2e` if it doesn't slot in cleanly
+- **Expected next:** within 24h Dependabot opens 2 grouped PRs against `governance-v0`. The cargo PR will route through `cargo-test-e2e.yml` + `governance-ai-review.yml`. Each PR can be closed/edited individually if it doesn't build
+- **Out of scope for this work:** any *direct* triage of the 55 alerts. The infrastructure is now in place for Dependabot to do it; manual override available via `gh pr` if a specific alert can't wait for the weekly cycle
+
+---
+
 ## bm: go-private plan complete (Phases 0.5-6) — 2026-04-25T2350Z
 
 - **Plan:** `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md` — all phases except day-14 CodeRabbit decision (Phase 5) done

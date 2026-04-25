@@ -1,0 +1,64 @@
+# Dependabot configuration for the brehon-fork.
+#
+# 55 vulnerabilities surfaced after the public→private flip on 2026-04-25
+# (a side-effect of private repos getting the full Dependabot per-repo
+# scan). Adding auto-PRs for Cargo.lock and api_tests/pnpm-lock.yaml so
+# Dependabot does the bump work rather than the BM session manually.
+#
+# - Targets governance-v0 (per .claude/rules/phase-branch.md — main is
+#   reserved for upstream rebases).
+# - Groups all bumps in each ecosystem into one weekly PR to avoid PR
+#   spam and keep CodeRabbit/Claude review burn manageable.
+# - Adds the "dependabot" label so the PR is filterable and the BM
+#   session can recognise them in /bm-* commands.
+#
+# Notes:
+# - api_tests/ is upstream Lemmy's federation test harness. It is NOT
+#   invoked by any workflow under .github/workflows/ on this fork — see
+#   feedback_ci_runs_integration_tests_only.md. Bumping its lockfile
+#   cannot break our CI; the npm group can be merged with low caution.
+# - Cargo.lock bumps need cargo-test-e2e green before merging. The
+#   wasmtime advisory (#43, #46) requires bumping extism (ADR-012
+#   plugin host) since wasmtime is a transitive dep, which Dependabot
+#   may not handle cleanly — manually triage if the cargo PR fails to
+#   build.
+
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    target-branch: "governance-v0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Dublin"
+    labels:
+      - "dependabot"
+      - "deps:cargo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(cargo)"
+    groups:
+      cargo-all:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/api_tests"
+    target-branch: "governance-v0"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Dublin"
+    labels:
+      - "dependabot"
+      - "deps:npm"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps(api_tests)"
+    groups:
+      npm-all:
+        patterns:
+          - "*"
