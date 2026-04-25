@@ -1028,3 +1028,44 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - wont-fix (1): cr-9 low (PR-body template)
 - **Recommendation:** approve (0 open; all terminal buckets)
 - **Next:** /bm-triage 95 to draft digest comment summarizing the 10-finding journey + carry-forward intent → user confirms post → /bm-merge 95 (also user-gated) → BM files single carry-forward issue covering 7 findings → JM-c planning unblocked.
+
+## bm: triage + comment-post — 2026-04-25T08:25Z (PR #95)
+
+- **Triage decision:** β strategy applied (user-confirmed all 3 calls — initial β + b on cr-1..cr-9, then carry-forward on cr-10)
+- **Final buckets:** fix-in-pr 0 | done 2 (cr-3 + cr-4 at 918b1f872) | carry-forward 7 (cr-1, cr-2, cr-5, cr-6, cr-7, cr-8, cr-10) | wont-fix 1 (cr-9 PR-body template)
+- **Comment file:** .claude/PRPs/reviews/pr-95-comment.md (~4KB)
+- **Comment posted:** https://github.com/barrie-cork/lemmy/pull/95#issuecomment-4318545474 (user confirmed)
+- **Author:** branch-manager session (BM-hat in primary worktree)
+- **Telegram ping:** skipped (MCP disconnected)
+
+## bm: merge — 2026-04-25T08:28:04Z (PR #95)
+
+- **Pre-merge gates (all green):** mergeable=MERGEABLE, mergeStateStatus=CLEAN, 4/4 CI checks SUCCESS (Red-flag diff scan, governance e2e, AI review, CodeRabbit), 0 fix-in-pr findings, isDraft=false
+- **Merge command:** `gh pr merge 95 --repo barrie-cork/lemmy --merge --delete-branch`
+- **Strategy:** --merge (preserves task-per-commit history per phase-branch.md — load-bearing for retros)
+- **Merge commit:** 4d2b93ed972ef18b6c39879f3c00ff2262153e5f on governance-v0
+- **mergedAt:** 2026-04-25T08:28:04Z
+- **mergedBy:** barrie-cork (user-confirmed merge)
+- **Remote branch deleted:** origin/phase-v1-JM-b (per --delete-branch)
+- **Local branch retained:** phase-v1-JM-b (in worktree brehon-fork-phase-v1-JM-b for retro reads; user can `git branch -D` later)
+
+## bm: carry-forward issue filed — 2026-04-25T08:30Z
+
+- **Issue:** https://github.com/barrie-cork/lemmy/issues/96
+- **Title:** carry-forward from PR #95: 7 follow-ups (3 Major, 2 Low, 2 Nit)
+- **Labels:** carry-forward
+- **Body source:** .claude/PRPs/reviews/pr-95-carry-forward-issue.md (organized as 2 clusters: ConstraintRecord+config-resolver Majors / test-fixture Low+Nit)
+- **Findings tracked:** cr-1, cr-2, cr-5, cr-6, cr-7, cr-8, cr-10 (7 findings)
+- **YAML annotated:** all 7 carry-forward findings now carry `notes: ... | tracked: <issue URL>`
+- **Author:** BM session (user-confirmed)
+- **Note (per user):** issue #96 will be addressed separately, NOT by this BM session. JM-c planning is the active path.
+
+## bm: post-merge state — 2026-04-25T08:35Z
+
+- **Trunk after merge:** origin/governance-v0 @ 4d2b93ed9 (15 commits ahead of pre-merge HEAD f676ed280; includes 3-commit chore(ops) CC-config upgrade triplet 67257d263/d29fabd57/99f7eb80d + my reworked 5546c2973→c900f1372 + 3e3ad1742→87010291e + the v1-JM-b history + merge commit)
+- **Trunk-advance signal:** 3571b5cd3 docs(oq): OQ-027 — Autonomi as v2 governance-log anchor (1 commit ahead on local primary; same upgrade source as chore(ops); not BM-authored)
+- **Primary worktree FF status:** held back by intent (advisor/docs lane changes pending; not BM-lane)
+- **YAML archived:** .claude/PRPs/reviews/pr-95-findings.yaml — added merged_at/merge_commit/merge_strategy/carry_forward_issue/recommendation=merged/final_state=archived
+- **Memory note:** `project_jmc_cc_upgrade_landed.md` written so future sessions don't flag the rewritten BM SHAs as a process breach
+- **JM-c readiness:** governance-v0 at 4d2b93ed9 contains JM-b + CC config upgrades + skills + handover commands. JM-c planning unblocked.
+- **Next:** advisor session to retro-extract JM-b (consume v1-JM-b-retro-events.md + v1-JM-b-retro.md merged on trunk + this PR-#95 BM journey). JM-c PRD planning to follow.
