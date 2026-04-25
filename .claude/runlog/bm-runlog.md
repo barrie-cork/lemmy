@@ -37,6 +37,17 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: push — 2026-04-25T21:27Z
+
+### phase-v1-JM-c pushed to origin
+- **branch:** phase-v1-JM-c
+- **commits pushed:** 7 (5e2f58181..c4bd3cbca)
+- **remote ref:** origin/phase-v1-JM-c
+- **upstream tracking:** set
+- **next:** /bm-pr (no PR yet; will create new PR into governance-v0)
+
+---
+
 ## bm: jm-b-kickoff — 2026-04-24T22:22Z
 
 ### phase-v1-JM-b branch cut + plan committed + push
@@ -316,6 +327,19 @@ use `chore(bm)` subjects; the two are never mixed.
 - **CR state:** skipped (plan markdown file only, no reviewable code)
 - **user confirmation:** explicit via AskUserQuestion → "Merge with rebase (Recommended)"
 - **post-merge action:** fast-forward of phase-v1-JM-a via rebase; plan cherry-pick deduped
+
+---
+
+## bm: PR opened — 2026-04-25T~13:00Z
+
+- **PR:** #98 — Phase v1-JM-c — submit_jury_vote 9-step handler (snapshot-aware threshold + deadlock + appeal_window)
+- **URL:** https://github.com/barrie-cork/lemmy/pull/98
+- **Base <- Head:** governance-v0 <- phase-v1-JM-c
+- **Commits on branch:** 7 (tasks 1–8, no task-0 commit; plan on trunk pre-merged)
+- **Body source:** completion report (v1-JM-c-retro.md) + plan reference + commit log
+- **Draft?** No (CR-eligible)
+- **Telegram ping:** skipped (MCP not available in subagent context; per BM rules, silently skipped)
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 98`
 
 ---
 
@@ -1069,3 +1093,52 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Memory note:** `project_jmc_cc_upgrade_landed.md` written so future sessions don't flag the rewritten BM SHAs as a process breach
 - **JM-c readiness:** governance-v0 at 4d2b93ed9 contains JM-b + CC config upgrades + skills + handover commands. JM-c planning unblocked.
 - **Next:** advisor session to retro-extract JM-b (consume v1-JM-b-retro-events.md + v1-JM-b-retro.md merged on trunk + this PR-#95 BM journey). JM-c PRD planning to follow.
+
+## bm: poll-cr — 2026-04-25T21:50Z
+
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **head SHA:** c4bd3cbc (first poll — no prior SHA)
+- **CR comments seen:** 5 total (1 review / 3 inline / 1 issue); review body = metadata block only (not actionable); issue comment = walkthrough + pre-merge checks (all 5 PASSED, no failed checks)
+- **Actionable findings ingested:** 3 (all inline; 0 from walkthrough/pre-merge)
+- **New findings this poll:** 3 (cr-1, cr-2, cr-3)
+- **Findings addressed since last poll:** 0 (first poll)
+- **Walkthrough summary:** "4 (Complex), ~60 minutes review effort; cohorts: governance-log constants, submit_jury_vote handler, e2e tests, docs/process artefacts"
+- **Counters:** critical 1/0/0 | major 1/0/0 | medium 0/0/0 | low 1/0/0 | nit 0/0/0
+- **Recommendation:** block (cr-2 critical fix-in-pr)
+- **YAML:** .claude/PRPs/reviews/pr-98-findings.yaml
+- **Notes:** cr-2 (Critical) is the lock-ordering deadlock — the handler inserts into jury_vote BEFORE acquiring FOR UPDATE on moderation_case, causing upgrade deadlock on concurrent votes. This is a real production failure, not test-only. cr-1 (Major) is a DQ.json process hygiene issue (id:49 in pending but already resolved). cr-3 (Low) is test-coverage hardening for the deadlock branch. All three findings are in-diff files.
+
+## bm: triage — 2026-04-25T22:00Z
+
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **Buckets:** fix-in-pr 2 | rebut 0 | carry-forward 1 | done 0 | wont-fix 0
+- **Comment posted?** _pending parent confirmation_ (subagent has no AskUserQuestion tool; gating bubbles back to impl session)
+- **Carry-forward issues filed:** 0 (cr-2 issue body drafted at `.claude/PRPs/reviews/pr-98-carry-forward-cr-2.md`, awaiting confirmation)
+- **Recommendation:** request-changes
+- **Bucket rationales:**
+  - cr-1 (major) → fix-in-pr — DQ id=49 collision is real schema corruption per `feedback_dq_self_resolved_belongs_in_resolved_array.md`; mechanical fix in BM-owned file (`.claude/decision-queue.json`); land as `chore(dq):` on phase branch
+  - cr-2 (critical) → carry-forward — CR correct on merits (revert → deadlock returns; existing #[ignore] test confirms symptom). Pending DQ #49 (impl-self-resolved option (a)) explicitly defers lock-ordering refactor to JM-d on file-ownership grounds. Carry-forward (not rebut) preserves the documented scope decision while honouring `feedback_coderabbit_block_merge_critical.md` (block-merge applies only to fix-in-pr critical, NOT carry-forward critical).
+  - cr-3 (low) → fix-in-pr — Real test-hardening gap (`closed_at=NULL` + `sanction_created` log-absent invariants missing). Small-scope, 2-3 lines per deadlock test. Belongs to impl session via `/prp-implement` since it's a `tests/**` write.
+- **Comment file:** `.claude/PRPs/reviews/pr-98-comment.md` (100 lines)
+- **Cross-finding linkage:** cr-2 carry-forward issue body cites pending DQ #49 (which cr-1 is relocating). Recommend cr-1 fix and DQ-relocation land BEFORE the carry-forward issue is filed so the issue body's "DQ #49 (currently being relocated)" → "DQ #49 (resolved)" reads cleanly.
+
+## bm: chore(dq) — 2026-04-25T22:15Z
+
+- **Action:** Relocated self-resolved DQ entry from pending[] to resolved[] to fix id collision (CR cr-1 on PR #98)
+- **Commit:** `e9fa1e01a` — `chore(dq): relocate self-resolved JM-c Task 6 entry to resolved[] (CR cr-1)` on `phase-v1-JM-c`
+- **Change:** pending[] id=49 (JM-c Task 6 deadlock; answered_by=impl-self-resolved) moved to resolved[] with id=50 (next unused). Collision with existing resolved[] id=49 (v1-JM-b Task 4 cargo clippy) eliminated.
+- **Findings YAML update:** cr-1 bucket → done, addressed_in → e9fa1e01a, major.done 0→1, major.open 1→0
+- **Pushed to origin:** yes (phase-v1-JM-c fast-forward push c4bd3cbca → e9fa1e01a)
+
+## bm: cr-3 fix landed — 2026-04-25T23:25Z (PR #98)
+
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **Commit:** `c972c085d` — test(v1-JM-c): add closed_at + sanction_created log invariants to deadlock test (CR cr-3)
+- **Author:** impl session (test-edit, not a /prp-implement full run)
+- **Files touched:** crates/server/tests/e2e.rs (+17 lines, -1 line)
+- **Validation:** cargo test --test e2e -p lemmy_server --no-run → exit 0; targeted run of submit_jury_vote_deadlock_flips_to_admin_review → 1 passed in 40.97s
+- **Test hardening:** Extended SELECT tuple from (status, decided_at, appeal_window_expires_at) to include closed_at. Added assert!(closed_at.is_none(), ...) + sanction_created governance_log count assertion (0 expected in deadlock branch per PRD §9.1 step 5). Applied to both deadlock tests (lines 8256 and 8299-8327).
+- **YAML update:** pr-98-findings.yaml — cr-3: bucket fix-in-pr → done; addressed_in null → c972c085d; low.open 1→0, low.done 0→1; last_polled_head_sha c4bd3cbc → c972c085d; recommendation request-changes → approve-pending-carry-forward
+- **Counters (final):** critical 0 open / 0 done / 1 carry-forward | major 0 open / 1 done / 0 carry-forward | low 0 open / 1 done / 0 carry-forward | total 3 findings: 2 done + 1 carry-forward
+- **Block-merge gate:** cr-2 is critical but carry-forward (scope decision per DQ #49), NOT fix-in-pr, so `feedback_coderabbit_block_merge_critical.md` block does NOT apply. Merge is unblocked.
+- **Next:** /bm-triage 98 to refresh digest comment with cr-3=done baked in, then ASK user: (1) post digest comment? (2) file cr-2 carry-forward GH issue? After user confirms both, ready for `/bm-merge 98`.
