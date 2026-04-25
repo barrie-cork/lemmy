@@ -14,6 +14,23 @@ use `chore(bm)` subjects; the two are never mixed.
 
 ---
 
+## bm: go-private plan complete (Phases 0.5-6) — 2026-04-25T2350Z
+
+- **Plan:** `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md` — all phases except day-14 CodeRabbit decision (Phase 5) done
+- **Final assertions verified:**
+  - `gh repo view barrie-cork/lemmy --json isFork,parent,visibility` → `false / null / PRIVATE` ✓
+  - `gh workflow list` → 8 workflows registered: adr-compliance, adr-drift (manual-only), cargo-test-e2e, claude-code-action, governance-ai-review, oq-sweep (manual-only), plan-drift (manual-only), Copilot code review (GitHub App via Student Pack)
+  - Trunk advanced this session: `2326dca77` → `c441cfd04` (3 commits: `72c8bb914` private flip, `300fb043a` Claude migration, `c441cfd04` drift schedules off)
+- **Memory updates:**
+  - New: `project_brehon_fork_private_again.md` — supersedes the v0-archive `project_brehon_fork.md:16` "will stay PRIVATE" claim with current state
+  - New: `feedback_gha_action_input_no_bash_expansion.md` — transferable lesson: GHA `with:` inputs are literal; `$(...)` does NOT expand
+  - Index updated: MEMORY.md top of "Active project state" + new line under "CI / workflow patterns"
+- **Bonus discovery:** `Copilot code review` is registered as a GitHub App on the repo, free via Student Pack, auto-fires on all PRs with no input cap. Effectively a free parallel AI review stream alongside the migrated `governance-ai-review.yml`
+- **Pending:** Phase 5 of the plan — at day 14 (~2026-05-09) decide on CodeRabbit (drop / pay $24/mo / pay $48/mo / Student-free if eligible at https://www.coderabbit.ai/students)
+- **Open Dependabot debt:** post-flip rescan flagged 55 vulnerabilities (3 critical, 19 high, 24 moderate, 9 low) on `Cargo.lock`. Pre-existing — became visible because private repos get Dependabot's full per-repo scan. Out of scope for this plan; defer to a separate session
+
+---
+
 ## bm: drift workflows schedule disabled — 2026-04-25T2347Z
 
 - **Plan reference:** Phase 4 of `C:\Users\barri\.claude\plans\create-a-paln-to-refactored-hummingbird.md`
