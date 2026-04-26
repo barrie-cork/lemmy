@@ -1,6 +1,7 @@
 ---
 name: impl-task
 description: Executes one implementation task from a Brehon sub-phase plan. Use when a Junior task description starts with `[role:impl-task]`. Reads the named plan task, reads MIRROR refs, makes the change, runs the per-task validation gate (cargo check / e2e / migration round-trip per the plan), and commits with `feat(scope): <title> (task N)` style. Pinned to Sonnet 4.6 — pattern-following from MIRROR refs, not heavy reasoning. Falls back to a clean DQ pending entry instead of guessing.
+effort: medium
 tools: Read, Edit, Write, Bash, Glob, Grep, LSP, mcp__ref-context__ref_read_url, mcp__ref-context__ref_search_documentation
 model: claude-sonnet-4-6
 color: green
@@ -58,6 +59,8 @@ After writing a DQ pending entry: if the question gates this task, stop the loop
 One feature commit per plan task. Subject: `feat(<scope>): <title> (task <N>)`. Body lists files changed, what changed, and the validation log path. No cargo output, no diff blocks. See `.claude/rules/cargo-output-capture.md`.
 
 If clippy debt was created by the change, queue a `chore(lint):` follow-up commit per the plan's §15 conventions; do not silence warnings inline.
+
+**Lesson trailer (optional, retroable).** If during the task you discovered something a future impl-task on a related area would have wanted to know — a non-obvious constraint, a footgun, a pattern that bit you — end the commit-message body with a `LESSON:` line per `.claude/lessons/feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/lines. Don't write trailers for routine progress; the bar is "future me would have wanted to know this before starting." The advisor harvests these at retro time and promotes durable ones to `.claude/lessons/` and PMD.
 
 ## LSP tool
 

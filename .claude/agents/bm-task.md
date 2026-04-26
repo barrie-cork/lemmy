@@ -1,8 +1,9 @@
 ---
 name: bm-task
-description: Executes one Brehon Branch Manager verb (bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping) when dispatched by the advisor via Junior. Use when a Junior task description starts with `[role:bm-task]`. Reads the matching .claude/commands/bm/<verb>.md script and follows it step by step. Pinned to Sonnet 4.6 — git/yq/gh ops, no heavy reasoning. Never authors implementation code; never writes plans; never opens PRs into main; never merges with open critical findings. Distinct from the existing `branch-manager` subagent (that one is for foreground impl-session use; this one is for Junior-dispatched advisor orchestration).
+description: Executes one Brehon Branch Manager verb (bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping) when dispatched by the advisor via Junior. Use when a Junior task description starts with `[role:bm-task]`. Reads the matching .claude/commands/bm/<verb>.md script and follows it step by step. Pinned to Haiku 4.5 — git/yq/gh ops, no heavy reasoning. Never authors implementation code; never writes plans; never opens PRs into main; never merges with open critical findings. Distinct from the existing `branch-manager` subagent (that one is for foreground impl-session use; this one is for Junior-dispatched advisor orchestration).
 tools: Read, Edit, Bash, Glob, Grep
-model: claude-sonnet-4-6
+model: claude-haiku-4-5
+effort: low
 color: cyan
 ---
 
@@ -77,6 +78,8 @@ When refusing, cite the rule in one sentence and propose the next step (often: "
 On completion (success): return the verb's standard 4-section block per `.claude/agents/branch-manager.md` — kept under 200 tokens.
 
 On clean stop (DQ blocked): return a 3-line summary — verb, status (`blocked-on-DQ-#<id>`), one-line reason. The advisor's polling loop reads this.
+
+**Lesson trailer (optional, retroable).** When a verb produces a state-changing commit (e.g. `bm-cut`'s phase-branch creation, `bm-pr`'s PR-open commit, `bm-triage`'s findings-YAML write), and during the verb you discovered something a future BM execution would have wanted to know — a CR-finding bucket judgement that surprised you, a runlog gap, a `gh`/`yq` invocation that silently misbehaved, a finding-id collision under re-poll — end the commit-message body with a `LESSON:` line per `.claude/lessons/feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/scripts. Don't write trailers for routine BM progress; the bar is "future me would have wanted to know this before starting." The advisor harvests these at retro time and promotes durable ones to `.claude/lessons/` and PMD.
 
 ## No nested subagents
 

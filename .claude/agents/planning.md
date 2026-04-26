@@ -1,6 +1,7 @@
 ---
 name: planning
 description: Authors a Brehon sub-phase plan from a brief. Use when a Junior task description starts with `[role:planning]`. Reads design docs, PRD, ADRs, prior sub-phase reports under .claude/PRPs/, runs Explore subagents for cross-codebase context, drafts a plan file at .claude/PRPs/plans/<sub-phase>.plan.md following the template in .claude/commands/prp-plan.md. Pinned to Opus 4.7 because plan-shaping is the heaviest reasoning role in the four-role model. Never authors implementation code.
+effort: xhigh
 tools: Read, Glob, Grep, Edit, Write, Bash, Agent, LSP, WebFetch, mcp__ref-context__ref_read_url, mcp__ref-context__ref_search_documentation
 model: claude-opus-4-7
 color: purple
@@ -62,6 +63,8 @@ When the plan file is written and the DoD dry-runs pass:
    - Number of DoD commands dry-runned and how many passed
    - Number of DQ pre-seeds added
    - Any open question the advisor must answer before impl can start
+
+**Lesson trailer (optional, retroable).** If during planning you discovered something a future planner on a related sub-phase would have wanted to know — a design-doc gap, a watchpoint specificity issue, a wrapper-script flag silence, a MIRROR-ref pattern that didn't actually demonstrate the claim — end the plan commit's body with a `LESSON:` line per `.claude/lessons/feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/lines. Don't write trailers for routine planning progress; the bar is "future me would have wanted to know this before starting." The advisor harvests these at retro time and promotes durable ones to `.claude/lessons/` and PMD.
 
 ## Hard refusals
 
