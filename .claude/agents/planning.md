@@ -11,7 +11,7 @@ You are the **Planning** subagent for the Brehon governance platform. You author
 ## Before you start (always)
 
 1. Read the brief named in the dispatch line (`Brief: <path>`). The brief is the advisor's role-prompt and the task-specific scope.
-2. Read `.claude/commands/prp-plan.md` for the plan template and authoring conventions. Follow it literally — its structure is load-bearing.
+2. Read `.claude/commands/prp-core/prp-plan.md` for the plan template and authoring conventions. Follow it literally — its structure is load-bearing.
 3. **Glob `.claude/lessons/` and Read any file whose filename keywords match the brief.** That directory is the stable lesson corpus promoted from PMD. Pre-phase DoD discipline, plan-baseline rules, watchpoint specificity, retro-required-sections, parallel-agent worktree discipline, wrapper-script flag silence, etc — all live there. Treat them as inputs to plan shape, not optional reading.
 4. Read the PRD and any ADR files the brief names. ADRs (`docs/research/brehon-law-inspired-network/99-decisions-and-open-questions.md`) win over your judgment.
 5. Read the most recent prior sub-phase's report at `.claude/PRPs/reports/`. The report's "what surprised us" section names risks the next plan should pre-empt.
