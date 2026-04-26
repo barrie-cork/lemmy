@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 47,
       "from": "planner",
@@ -11,11 +12,10 @@
         "(c) reporter-facing create_report DTO field severity_tier_suggested + admin-override"
       ],
       "context": "Opened by v1-JM-b plan §7.1. Source: .claude/PRPs/plans/v1-jury-mechanics-b.plan.md §7.1; also appended to docs/brehon-law-inspired-network/99-decisions-and-open-questions.md §Open Questions. Plan lean is (a) — hardcoded keeps v1.5 PRs small, avoids expanding the reporter DTO or adding a new seeded config key. Per-community override via (b) stays open as v1.5+ if pilot reveals the hardcoded table is wrong for specific communities. This entry is labelled answered_by: planner because the advisor-reviewed lean (option a) is already documented in the plan — the plan author wrote the lean, not the advisor. Impl session does NOT resolve this; v1.5 planner reads the resolution.",
-      "answer": null,
-      "answered_by": null
-    }
-  ],
-  "resolved": [
+      "answer": "(a) confirmed — advisor. Hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` module called from `create_report` at case-open. Rationale: (1) immediately buildable — `create_report` already passes `reason_code` into `ModerationCaseInsertForm`, so a single match-arm module fits the existing None-insert branch with no schema, config, or DTO change; (2) keeps the v1.5 PR small and review-shaped; (3) per-community overrides via (b) remain a v1.5+ escape valve once pilot data shows the hardcoded table is wrong for a specific community; (4) reporter-tagged severity (c) is v2+ — DTO versioning + UX surface change. (b) rejected for v1.5 — the `governance_config` table and reader exist, but `report.reason_code_severity_map` is not seeded, the JSON-blob config-reader path has no call-site precedent, and OQ-V1-AD-18 (admin-config-write endpoint) is itself a v1 scope item not yet shipped. Three layers of pre-requisite work would inflate the v1.5 sub-phase scope. (c) rejected for v1.5 — reporter-facing API surface change requiring DTO versioning, an admin-override code path in `create_report`, and front-end exposure. Correctly labelled v2+ in the OQ entry. Sources: v1-jury-mechanics-b.plan.md §7.1 + §4 (\"Bundle create_report severity-inference into JM-b. Rejected\"); v1-jury-mechanics-b retro §3.1/§3.4/§8; v1-jury-mechanics-c.plan.md §12 + §25; docs/brehon-law-inspired-network/99-decisions-and-open-questions.md §OQ-V1-JM-07 (lines 540–547) + Changelog 2026-04-24 (line 583). OQ-V1-JM-07 itself remains OPEN — the v1.5 general-severity-inference sub-phase planner closes it via a docs(99): commit on the v1.5 plan branch when the actual implementation slice is cut.",
+      "answered_by": "advisor",
+      "answered_at": "2026-04-26T00:00:00Z"
+    },
     {
       "id": 50,
       "from": "impl",

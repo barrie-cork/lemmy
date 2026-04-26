@@ -1335,3 +1335,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - cr-2.notes: appended GH issue URL + label manifest
 - **Merge gate:** UNBLOCKED (no fix-in-pr remaining; cr-2 critical is carry-forward, not fix-in-pr; no block-merge rule applies per `feedback_coderabbit_block_merge_critical.md`; cr-1 + cr-3 done)
 - **Next:** `/bm-merge 98` (asks before merging)
+
+## advisor: chore(advisor) — 2026-04-26T00:00Z
+
+- **Action:** Resolved DQ #47 (OQ-V1-JM-07) — confirmed lean (a) hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` for the v1.5 general case-open writer.
+- **Change:** `.claude/decision-queue.json` — pending[] {id=47} → resolved[] {answered_by: advisor, answered_at: 2026-04-26T00:00:00Z, answer: full rationale + sources}. pending[] now empty (0 entries).
+- **Rationale:** Per topology change (PC=advisor, Junior daemons on Ubuntu=impl/planner) this PC session writes the `advisor` label per `.claude/rules/decision-queue.md:81-89`. Lean evidence-confirmed across JM-b plan §7.1 + §4, JM-b retro §3.1/§3.4/§8, JM-c plan §12 + §25, OQ block at 99-decisions:540-547; codebase review confirmed (a) immediately buildable, (b) needs unsealed prereqs (governance_config seeded key + JSON-blob reader + OQ-V1-AD-18 admin-config-write), (c) is v2+ DTO break.
+- **OQ block at 99-decisions-and-open-questions.md:540-547:** intentionally left OPEN — v1.5 general-severity-inference planner closes it via separate `docs(99):` commit on the v1.5 plan branch.
+- **Pushed to origin:** pending — waiting on commit + push.
+- **Next:** push to `origin/governance-v0`. Coordination signal `DQ pending: 1 [#47]` should drop to `0` on next session start.
