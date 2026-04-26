@@ -121,3 +121,63 @@ Only one writer at a time. The impl agent writes during ralph
 iterations. The advisor or user writes between iterations. Since the
 impl agent pauses between iterations, there is no true concurrent
 write risk — but always read before writing to avoid clobbering.
+
+## Mid-task visibility (Junior worktrees)
+
+When the writer is a Junior subagent (`impl-task`, `bm-task`, or any
+`-p` mode session running on a worktree on the EliteDesk), DQ writes
+must commit and push immediately. Without this, the entry is trapped
+in the worktree until Junior's finalize step runs at task end —
+sometimes minutes, sometimes hours. The advisor's polling loop reads
+`decision-queue.json` on `governance-v0` (or the phase branch) and
+will not see entries that haven't been pushed.
+
+**Required steps after writing a `pending` entry from a Junior
+subagent:**
+
+```
+git add .claude/decision-queue.json
+git commit -m "chore(decision-queue): <role> raised DQ #<id> — <slug>"
+git push origin <current-branch>
+```
+
+Use `<role>` as `impl`, `bm`, or `planner` per the entry's `from`
+field. The slug is a 3-5 word handle from the question. Push to the
+**current branch** (the worktree's phase branch or junior-task
+branch), not to `governance-v0`. The advisor's `git fetch origin` on
+its next poll picks up the branch's new HEAD and sees the entry.
+
+**Foreground sessions (laptop, interactive):** the existing pattern
+applies — write the entry, commit at the next natural break (per-task
+commit, end-of-iteration commit, etc). The push happens when the user
+or `bm-task` pushes the branch. No special mid-iteration push is
+required because the advisor session is on the same machine and reads
+the file directly.
+
+**Why this asymmetry exists:** Junior's per-task isolation is
+deliberate (per `feedback_parallel_agents_one_worktree_per_agent`).
+The advisor cannot read worktree-local state without `git fetch`.
+The mid-task push is the bridge — it preserves isolation while
+restoring visibility.
+
+## Subagents and attribution
+
+Junior dispatches tasks to subagents named in the dispatch line
+(`[role:planning|impl-task|bm-task]`). The subagent's identity
+determines which `from` value is valid:
+
+- `planning` subagent → `from: "planner"`. May pre-seed `pending` or
+  `resolved` entries with `answered_by: "planner"` (forward-looking
+  OQs the planner has a recommendation on).
+- `impl-task` subagent → `from: "impl"`. Pending entries only —
+  `answered_by: null`. Self-resolve only with
+  `answered_by: "impl-self-resolved"`.
+- `bm-task` subagent → `from: "bm"`. Pending entries with
+  `answered_by: null`, or self-resolve as `"bm-self-resolved"`.
+
+None of the subagents may write `answered_by: "advisor"` or
+`answered_by: "user"`. Those labels are reserved for commits authored
+by the persistent advisor session (label: `advisor`) or for entries
+where the advisor relayed a user reply in-channel (label: `user`).
+This rule applies to both foreground and Junior-dispatched
+invocations.
