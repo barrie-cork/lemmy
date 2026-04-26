@@ -7,8 +7,7 @@ not delete them, rename them, or remove either the `_before_*` or
 `_after_*` half of any pair without writing a new ADR that supersedes
 ADR-012.
 
-This rule auto-loads in `-p` mode. Every ralph loop touching PM code
-reads it at first iteration.
+This rule loads at session start (along with the rest of `.claude/rules/`). Every ralph loop touching PM code reads it at first iteration.
 
 ## The hook names and their call sites
 

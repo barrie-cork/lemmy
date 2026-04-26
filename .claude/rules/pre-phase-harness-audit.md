@@ -8,8 +8,7 @@ this in Phase 2a caused a four-layer cascade at checkpoint-2 that cost
 invisible to `cargo check --workspace` and survives prior-phase
 validation.
 
-This rule auto-loads in `-p` mode. Every ralph loop reads it at its
-first iteration.
+This rule loads at session start (along with the rest of `.claude/rules/`). Every ralph loop reads it at its first iteration.
 
 ## OS-aware wrapper invocation
 

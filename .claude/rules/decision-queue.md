@@ -125,7 +125,7 @@ write risk — but always read before writing to avoid clobbering.
 ## Mid-task visibility (Junior worktrees)
 
 When the writer is a Junior subagent (`impl-task`, `bm-task`, or any
-`-p` mode session running on a worktree on the EliteDesk), DQ writes
+non-interactive session running on a worktree on the EliteDesk), DQ writes
 must commit and push immediately. Without this, the entry is trapped
 in the worktree until Junior's finalize step runs at task end —
 sometimes minutes, sometimes hours. The advisor's polling loop reads

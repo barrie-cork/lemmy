@@ -5,8 +5,8 @@ ingestion, Brehon `/prp-review` runs, and a small Telegram ping surface
 for a Brehon sub-phase. It runs in a **separate Claude Code session**
 from the impl session, in the same worktree.
 
-This rule auto-loads in `-p` mode whenever `/bm-*` commands run, and
-sets the boundaries the BM session must respect. The companion files
+This rule loads at session start (along with the rest of `.claude/rules/`)
+and sets the boundaries the BM session must respect. The companion files
 that operationalise this rule are:
 
 - `.claude/commands/bm/bm-*.md` — the 9 slash commands

@@ -65,5 +65,4 @@ build, write the wrong progress log entry, and poison the state file for
 the next iteration. False-green is worse than red because the loop won't
 self-correct.
 
-This rule is mandatory for `claude -p` mode (PRP commands, ralph loop) and
-loaded automatically.
+This rule is mandatory for any cargo invocation (PRP commands, ralph loop, BM tasks) and is loaded automatically at session start.

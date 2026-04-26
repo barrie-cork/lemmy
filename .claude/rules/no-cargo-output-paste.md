@@ -60,8 +60,7 @@ Together they keep each sub-phase's ralph session in the <200k reasoning
 zone where Phase 1 actually went smoothly (the first ~8 tasks) rather than
 the >300k zone where cosmetic-churn intercepts became necessary.
 
-This rule is mandatory for `claude -p` mode (PRP commands, ralph loop) and
-loaded automatically.
+This rule is mandatory for any cargo invocation (PRP commands, ralph loop, BM tasks) and is loaded automatically at session start.
 
 ## Related rules
 

@@ -9,8 +9,7 @@ When creating a new `crates/db_views/*` crate in the Brehon fork, follow
 this rule before writing any view struct that derives
 `#[cfg_attr(feature = "full", derive(Queryable, Selectable))]`.
 
-This rule auto-loads in `-p` mode. Every ralph loop that touches a new
-`db_views` crate reads it.
+This rule loads at session start (along with the rest of `.claude/rules/`). Every ralph loop that touches a new `db_views` crate reads it.
 
 ## The rule
 

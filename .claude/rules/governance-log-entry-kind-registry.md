@@ -53,8 +53,7 @@ Adding a new kind requires:
    reference `EXPECTED_SEED_COUNT` or `EXPECTED_SEED_COUNT_V1_*` (which
    are config-key-seed parity counters, a different domain).
 
-This file is MANDATORY READING in `-p` mode. Every PRP plan that touches
-governance writes reads it at first iteration.
+This file is MANDATORY READING for any session touching governance log writes. Every PRP plan that touches governance writes reads it at first iteration.
 
 ## v0 entry kinds (19, shipped governance-v0)
 
