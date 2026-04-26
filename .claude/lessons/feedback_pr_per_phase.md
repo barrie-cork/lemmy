@@ -1,12 +1,12 @@
 ---
-name: Brehon phases ship via PR into governance-v0 (Phase 5 onwards)
-description: Every Brehon phase from Phase 5 forward runs on its own phase branch and closes via PR into governance-v0 so CodeRabbit reviews the phase. Phases 1–4 were grandfathered onto direct governance-v0 commits.
+name: Brehon phases ship via PR into governance-v0 (Phase 5 onwards, code only)
+description: Brehon code deliveries from Phase 5 forward run on a phase branch and close via PR into governance-v0 for CodeRabbit review. Meta-work (.claude/, docs/, scripts/, infra) commits direct to governance-v0. Phases 1–4 grandfathered.
 type: feedback
 originSessionId: 50cf5c6f-6b81-45b0-b3b4-45ac46b352d8
 ---
-Every Brehon phase from **Phase 5 onwards** runs on its own branch (`phase-5`, `phase-5a`, `phase-6`, …) and closes via a PR into `governance-v0`. Ralph commits land on the phase branch, never directly on `governance-v0`.
+Every Brehon **code delivery** from **Phase 5 onwards** runs on its own branch (`phase-5`, `phase-5a`, `phase-6`, sub-phase ids like `v1-JM-c`, …) and closes via a PR into `governance-v0`. Code commits land on the phase branch, never directly on `governance-v0`. **Meta-work** (`.claude/` lessons/agents/rules/commands/briefs, `docs/` retros/notes/research, `scripts/` tooling, `.gitignore`/`.mcp.json.example`/sync manifests) commits direct on `governance-v0` with no PR — see `.claude/rules/phase-branch.md` for the file-set litmus test.
 
-**Why:** `.coderabbit.yaml` auto-reviews PRs whose base is `governance-v0` with phase-specific `path_instructions` (Phase 1 through Phase 6 all have dedicated rule blocks citing their ADRs). Committing straight to `governance-v0` silently skips that review — which is what Phases 1–4 did. From Phase 5 on, every phase closes with a CodeRabbit-reviewed PR so the review layer actually fires before code lands on the integration branch.
+**Why:** `.coderabbit.yaml` auto-reviews PRs whose base is `governance-v0` with phase-specific `path_instructions` (Phase 1 through Phase 6 all have dedicated rule blocks citing their ADRs). For code under `crates/**`, `migrations/**`, `tests/**`, that review is net-signal — CR catches Rust idiom drift, SQL footguns, missing tests. For meta-work (advisor-prompt prose, lesson markdown, hook scripts), CR review is net-noise. The fork is private (no AGPL §13 visibility trigger pre-pilot), so there's no external-audit reason to PR meta-work; the PR flow exists purely for CR review value, and that value is concentrated in code.
 
 **How to apply:**
 
@@ -38,7 +38,10 @@ Every Brehon phase from **Phase 5 onwards** runs on its own branch (`phase-5`, `
 **Edge case — sub-phase splits:** if a phase is split (e.g. 5a and 5b per the 10–12-task rule), each sub-phase gets its own branch and its own PR. Sub-phase A merges into `governance-v0`, then sub-phase B branches fresh from the updated `governance-v0`.
 
 **Do not:**
-- Commit directly to `governance-v0` from Phase 5 onward
+- Commit code (`crates/`, `migrations/`, `tests/`, `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.coderabbit.yaml`) directly to `governance-v0` from Phase 5 onward
 - Open a PR against `main` — `main` is reserved for upstream rebases
-- Squash-merge the PR — task-per-commit history is load-bearing for the retro + bisect workflow
-- Skip CodeRabbit because "the diff is small" — the Phase 4 DTO-only files are exactly the kind of thing it catches mistakes in
+- Squash-merge the code PR — task-per-commit history is load-bearing for the retro + bisect workflow
+- Skip CodeRabbit on a code PR because "the diff is small" — the Phase 4 DTO-only files are exactly the kind of thing it catches mistakes in
+- Open a PR for pure meta-work (`.claude/`, `docs/`, `scripts/`, infra) — direct on `governance-v0` per `phase-branch.md`'s file-set policy. PR overhead with no CR signal is anti-discipline.
+
+**Mixed diffs:** if a single commit/branch touches both code and meta-work, the code half wins — go through PR flow. CR will only inline-comment on code paths anyway.
