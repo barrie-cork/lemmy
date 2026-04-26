@@ -1336,6 +1336,33 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Merge gate:** UNBLOCKED (no fix-in-pr remaining; cr-2 critical is carry-forward, not fix-in-pr; no block-merge rule applies per `feedback_coderabbit_block_merge_critical.md`; cr-1 + cr-3 done)
 - **Next:** `/bm-merge 98` (asks before merging)
 
+---
+
+## bm: merge gate — 2026-04-25T22:45Z (pre-merge check, no merge yet)
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **HEAD checked:** db18367ec
+- **Gate results:**
+  - Findings YAML: critical.open=0, major.open=0, all fix-in-pr addressed, recommendation=approve — PASS
+  - mergeStateStatus: UNSTABLE (governance e2e IN_PROGRESS — CI not yet complete) — BLOCKED
+  - CI: governance e2e IN_PROGRESS; Red-flag diff scan SUCCESS; AI review SUCCESS; CodeRabbit PENDING — BLOCKED
+  - DQ pending mentioning PR #98: 0 (DQ #47 is OQ-V1-JM-07, unrelated) — PASS
+  - CR re-poll: 2 commits since last poll (c972c085d → db18367ec); both chore(bm) touching .claude/runlog/bm-runlog.md only — no code/test changes, no re-poll required — PASS (waived: BM-only metadata commits)
+  - No critical findings in fix-in-pr: cr-2 is carry-forward (not fix-in-pr) — PASS
+- **Action:** gate run complete; bubbled results to impl session for user confirm gate; merge NOT executed (awaiting user confirm + CI completion)
+
+## bm: merge — 2026-04-25T22:56Z
+- **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
+- **base ← head:** governance-v0 ← phase-v1-JM-c
+- **merge sha:** 2326dca77ff4f7fa727a000d1a556f2efb1af4ac
+- **merge type:** --merge (preserves task-per-commit history per phase-branch.md)
+- **remote branch deleted?** yes (--delete-branch via gh pr merge)
+- **CI gate at merge:** governance e2e SUCCESS (13min run); Red-flag diff scan SUCCESS; AI review SUCCESS
+- **Findings final state:** cr-1 done @ e9fa1e01a; cr-3 done @ c972c085d; cr-2 carry-forward → issue #99
+- **digest comment:** https://github.com/barrie-cork/lemmy/pull/98#issuecomment-4320728886
+- **trunk position:** origin/governance-v0 @ 2326dca77 (verify: git log origin/governance-v0 -1 --oneline)
+- **findings YAML archived:** .claude/PRPs/reviews/pr-98-findings.yaml (merged_at=2026-04-25T22:56:16Z; merge_commit=2326dca77ff4f7fa727a000d1a556f2efb1af4ac; final_recommendation=approve)
+- **next:** v1-JM-d planning (lock-ordering refactor per issue #99 + appeal-panel work)
+
 ## advisor: chore(advisor) — 2026-04-26T00:00Z
 
 - **Action:** Resolved DQ #47 (OQ-V1-JM-07) — confirmed lean (a) hardcoded `reason_code → severity_tier` table in a new `severity_inference.rs` for the v1.5 general case-open writer.
