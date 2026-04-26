@@ -2,6 +2,31 @@
 
 Read on demand when planning or implementing. This file is NOT auto-loaded — `CLAUDE.md` stays lean and points here for lookups.
 
+## Orchestration model — full detail
+
+CLAUDE.md names four roles (Advisor + Planning + Impl + BM) and points at this file for the operational detail. The canonical source-of-truth is `.claude/rules/advisor-orchestrator.md` (loads at session start with the rest of `.claude/rules/`); subagent contracts are in `.claude/agents/{planning,impl-task,bm-task}.md`.
+
+**Model selection per role** (per `.claude/agents/<name>.md` frontmatter):
+
+| Role | Subagent file | Model | Color | Primary purpose |
+|---|---|---|---|---|
+| Advisor | (not a Junior subagent — runs as the persistent CC session on laptop) | Opus 4.7 (1M) | n/a | Meta-oversight: queue Junior tasks, triage DQ, run DoD smoke tests, surface user gates. Never authors content. |
+| Planning | `.claude/agents/planning.md` | `claude-opus-4-7` | purple | Author plan files. Reads PRD + ADRs + lessons; runs Explore agents; commits one plan file. |
+| Impl-task | `.claude/agents/impl-task.md` | `claude-sonnet-4-6` | green | Execute one task from an approved plan. Pattern-following from MIRROR refs. Per-task validation gate. |
+| BM-task | `.claude/agents/bm-task.md` | `claude-sonnet-4-6` | (default) | Single `/bm-*` shape — branch op, PR, CR triage, runlog write. |
+
+**Dispatch mechanism:** the advisor calls `mcp__junior-brehon__create_task(description: "[role:planning] <slug> — see .claude/PRPs/briefs/<file>.md")`. Junior on the EliteDesk reads the description, matches the leading `[role:X]` token against the subagent's `description` frontmatter (which mentions the same token), and dispatches to that subagent in a fresh worktree. **The `[role:X]` token is a brief-content convention, not a Claude Code feature** — Claude Code's actual subagent selection mechanism is description-field matching. See `.claude/rules/advisor-orchestrator.md` "Junior task description template."
+
+**User-facing kickoff:** `/start-brehon` slash command in the `homeserver/` repo (CWD must be `homeserver/` for the `mcp__junior-brehon__*` MCP to load). Pulls live state from authoritative sources (git, gh, decision-queue, runlog, briefs/plans/retros, Junior daemon) and synthesizes a one-screen status report with a suggested next action. Read-only.
+
+**User gates (mandatory, advisor never skips):** plan approval, judgment-heavy DQ entries (ADR-affecting), CR triage approval, merge confirm, retro sign-off. Per `advisor-orchestrator.md` "Mandatory user gates."
+
+**Lessons corpus:** `.claude/lessons/` (promoted from laptop PMD). Both the advisor and Junior subagents read these — same source of truth, two read paths (raw repo for subagents, search-indexed via memory MCP for advisor authoring). Per the one-system-memory principle.
+
+**Opt-in scope:** v1-JM-d onward. Foreground use of `/prp-core:prp-plan` / `/prp-core:prp-implement` from a hand-driven session in this CWD remains valid for one-off work. Phases 1–6 + v1-AD-* + v1-JM-{a,b,c} all shipped on the foreground model.
+
+**Custom orchestration disclaimer:** the multi-repo "homeserver CWD orchestrates brehon-fork via SSH + Junior daemon" pattern is project-specific, not a documented Claude Code workflow. `--add-dir` does NOT load another repo's `.claude/` config — that's why `homeserver/.claude/rules/advisor-orchestrator.md` is a deliberate copy of `brehon-fork/.claude/rules/advisor-orchestrator.md`. Surface a diff at session start if they go out of sync.
+
 ## Authoritative design docs
 
 The design docs are vendored into this fork under `docs/brehon-law-inspired-network/` (the canonical source per commit `e960a128c`). Always reference them with the fork-local relative paths below:
