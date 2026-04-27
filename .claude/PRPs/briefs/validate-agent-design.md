@@ -49,6 +49,42 @@ The validate subagent reads the cargo output, decides one of:
 
 This is the model-escalation lever. The model is invoked only when its judgment adds value.
 
+### 3.5 Planning-side implication — task composition needs to be reconsidered
+
+This is the most consequential downstream effect of the design and easy to miss until plan-write time.
+
+Today's plan-task composition (the §13 step list in plan files) bundles work along this implicit shape:
+
+```
+Task N: edit file(s) + run §15 DoD inline + commit
+```
+
+The task's "natural" boundary is "everything that should happen between two cargo-clean states." That shape exists *because* cargo runs in-band — the impl-task can't commit without first knowing cargo passes, so the unit-of-work is "code change + validation."
+
+Under Shape C, cargo runs **after** the commit, asynchronously. The natural unit-of-work changes:
+
+```
+Task N: edit file(s) + commit
+Task N validation: cargo (out-of-band, no model attention)
+Task N+1: edit file(s) + commit
+...
+Task M validation: cargo (out-of-band)
+```
+
+The impl-task's "definition of done" shifts from "cargo passes" to "code edits committed; validate-pending DQ entry filed." Cargo failures arrive *after* the impl-task has handed off, surfacing through the DQ.
+
+**Three concrete changes the planner must make:**
+
+1. **Task granularity may shrink.** Today, a task that touches 6+ files is bundled because re-running cargo 6 times is wasteful. Under Shape C, cargo runs once per *batch*, not once per task. A planner can split "Diesel models + R3 sweep" (today's task #13 — 11 files in one commit) into 3 smaller commits, each its own task, with one shared validate-pending entry covering all three commits via `validate-after-commits: [<sha1>, <sha2>, <sha3>]`. **Smaller tasks → faster impl-slot turnover → less worktree contention.** Today's bundling drift (per `feedback_retro_task_complexity_score`) was a symptom of in-band cargo; the design's planning-side implication is that the symptom can be cured upstream.
+
+2. **Inter-task validation gates may collapse.** Today, plan §13 task 4 may depend on task 3's cargo passing. Under Shape C, task 4 can start as soon as task 3 *commits* — task 3's validation runs in parallel with task 4's editing. The plan's task-dependency graph stops being "task 4 reads task 3's cargo result" and becomes "task 4 reads task 3's commit." Tasks become more parallelisable in principle (modulo file-overlap constraints, which the existing `[P]` cohort dispatch already tracks).
+
+3. **The §15 DoD section's role changes.** Today §15 is the impl-task's self-check list. Under Shape C, §15 becomes the validate-runner's input: a structured list of commands + expected exit codes, copied verbatim into each `validate-pending` DQ entry. The plan-write discipline shifts: §15 must be expressed as `<command, expected-exit-code>` pairs (machine-readable), not as prose. This aligns with the existing `feedback_pre_phase_dod_smoke_test` discipline and makes §15 dual-purpose (advisor smoke-tests it pre-plan-approval; validate-runner consumes it post-impl).
+
+**Why this matters for the implementing session:** the planning brief that comes from this design will need to author *not just the validate-agent feature*, but *new plan-template guidance* for plans authored under the new shape. PRDs that translate into v1-JM-e and later sub-phase plans should be re-examined: do they still naturally compose into 6 impl-tasks, or could they compose into 12 smaller tasks with parallel validation? The planning subagent's `planning.md` "Plan content discipline" sub-section needs an addition: "if Shape C is shipped, prefer smaller tasks over bundled tasks; cargo cost is amortised by validate-runner not per-task."
+
+**Mitigation against premature optimisation:** the implementing session should **not** retrofit existing plans. Forward-only — JM-e and later. Existing plans (JM-d) ran under the old composition assumption and should not be re-examined retroactively. This matches the schema-changing-spec retrofit pattern from `feedback_schema_changing_spec_retrofit_question` — plan-shape changes apply forward, not backward.
+
 ## 4. Files this design will touch (when implemented)
 
 This brief is design-only. The implementation in a future session will need to author plans for the following changes:
@@ -189,6 +225,7 @@ A future session takes this brief and:
 
 ## 11. Out of scope (explicit)
 
+- **Retrofitting existing plans** (v1-JM-d and earlier). Per §3.5 mitigation, plan-composition changes are forward-only. Existing PRDs that have already been translated into plans stay under their original task composition.
 - Changes to BM verbs (bm-cut, bm-pr, bm-merge, etc) — validate is a sibling stage, not a BM verb.
 - Cross-provider model trials (MiniMax, Gemini for cheaper validate) — Brehon stays Anthropic-only per `feedback_brehon_anthropic_only`. Validate subagent is Sonnet 4.6.
 - Replacing the §15 DoD definition itself — we're changing where DoD runs (out-of-band vs in-band), not what it tests.
@@ -204,6 +241,9 @@ The implementing session ships this when:
 3. `.claude/agents/validate.md` exists in brehon-fork, mirrors the four-role frontmatter shape, and is dispatched by `[role:validate]`.
 4. `.claude/rules/decision-queue.md` enumerates `kind: "validate"` with the schema from §5 of this brief.
 5. `.claude/rules/advisor-orchestrator.md` "Stage-shape orchestration" sub-section adds the validate stage between impl-task complete and bm-cut.
+5a. `.claude/agents/planning.md` "Plan content discipline" sub-section gains the §3.5 task-composition guidance: under Shape C, prefer smaller tasks; §15 DoD must be expressed as `<command, expected-exit-code>` machine-readable pairs.
+5b. `.claude/PRPs/templates/plan.template.md` §13 gains an optional `validate_path` field and §15 gains the machine-readable DoD shape.
+5c. The first plan authored under the new shape (v1-JM-e or later) demonstrates both the smaller-task composition and the structured §15 DoD. The plan's §3.5-equivalent retrofit-question gate per `feedback_schema_changing_spec_retrofit_question` confirms no existing-plan retrofit (forward-only).
 6. The first sub-phase (v1-JM-e) runs end-to-end with Layer C handling at least 4 of its 6 impl-tasks' validation, and Layer A engaging at least once for a real escalation.
 7. JM-e retro section §5 reports per-task wall-clock savings (target: ≥20 minutes per impl-task on cargo-heavy tasks).
 8. Library registration of new scripts/agents/lessons happens in the same commit that ships them — per the now-3rd-recurrence library-registration-lag pattern in PATTERNS.md.
