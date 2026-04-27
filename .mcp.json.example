@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "/path/to/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code",
+        "--project-from-cwd"
+      ]
+    },
+    "project-memory": {
+      "command": "node",
+      "args": [
+        "/path/to/MCPs/project-memory-mcp/dist/index.js"
+      ],
+      "env": {
+        "PROJECT_MEMORY_DB": "/path/to/brehon-fork/.project-memory/memory.db",
+        "PROJECT_ROOT": "/path/to/brehon-fork",
+        "PROJECT_NAME": "brehon-fork"
+      }
+    },
+    "Ref": {
+      "type": "http",
+      "url": "https://api.ref.tools/mcp",
+      "headers": {
+        "x-ref-api-key": "<paste your Ref API key here>"
+      }
+    }
+  }
+}
