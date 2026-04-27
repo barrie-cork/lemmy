@@ -37,9 +37,9 @@ gh run view <id> --repo barrie-cork/lemmy --json status,databaseId > /dev/null 2
 timeout 3600 gh run watch <id> --exit-status --repo barrie-cork/lemmy > /tmp/ci-watch.log 2>&1
 status=$?
 
-# 3. If shell-side timeout fired, write validate-failed result=timeout.
+# 3. If shell-side timeout fired, write validate-failed result=timed_out.
 if [ "$status" = "124" ]; then
-  # validate-failed result=timeout
+  # validate-failed result=timed_out (matches GitHub's conclusion enum spelling)
   ...
 fi
 
@@ -66,7 +66,7 @@ case "$conclusion" in
     # Write validate-failed result=cancelled to PENDING, commit + push, exit 0.
     ;;
   timed_out)
-    # Write validate-failed result=timeout to PENDING, commit + push, exit 0.
+    # Write validate-failed result=timed_out to PENDING, commit + push, exit 0.
     ;;
   *)
     # Anything else (action_required | neutral | skipped | stale | empty)
@@ -87,7 +87,7 @@ Captured during v1-validate-agent Task 2 empirical-gating against three real wor
 | In-progress watched live → failure         | 0         | `failure`                      | `validate-failed: fail`      |
 | Cancelled (deferred — conclusion-string fallback covers it; empirical probe deferred to next CR cycle) | (deferred) | `cancelled`                    | `validate-failed: cancelled` |
 | Queued-only (deferred — gh run watch blocks until terminal so it never returns while still-queued) | (deferred) | (none if still queued)         | (gh run watch blocks until terminal) |
-| 60-min wall-clock cap (shell-side `timeout 3600`) | 124       | (any non-terminal)             | `validate-failed: timeout`   |
+| 60-min wall-clock cap (shell-side `timeout 3600`) | 124       | (any non-terminal)             | `validate-failed: timed_out` |
 
 **Critical finding:** `gh run watch <id> --exit-status` returned exit 0 in all three observed terminal scenarios on gh CLI 2.89.0, despite the flag's `--help` text saying "Exit with non-zero status if run fails". **The exit code is unreliable for pass/fail classification.** ci-watcher MUST always run `gh run view <id> --json conclusion --jq '.conclusion'` post-watch and classify on the conclusion string. The exit code is captured for the polling-loop completion signal only (i.e. "the watch returned at all"), never for pass/fail.
 
@@ -124,7 +124,7 @@ Goes **directly to `resolved`**. Commit + push immediately per the mid-task disc
   "workflow_run_id": <id>,
   "branch": "<branch>",
   "phase_task": <task-number>,
-  "result": "fail" | "cancelled" | "timeout" | "gh_unauth" | "run_not_found",
+  "result": "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found",
   "log_slice": "<last ~200 lines per failed job, or empty for non-fail results>",
   "failed_jobs": ["<job-name>", ...],
   "answer": null,
@@ -155,7 +155,7 @@ On completion (success path):
 3. Return a 3-line summary: workflow_run_id, branch, conclusion=success.
 
 On completion (failure path):
-1. One new pending DQ entry of `kind: "validate-failed"`, with `result` ∈ {fail, cancelled, timeout, gh_unauth, run_not_found}.
+1. One new pending DQ entry of `kind: "validate-failed"`, with `result` ∈ {fail, cancelled, timed_out, gh_unauth, run_not_found}.
 2. For `result: "fail"`: `log_slice` is the last ~200 lines from `gh run view <id> --log-failed`; `failed_jobs` lists job names with conclusion=failure.
 3. Commit + push the DQ update.
 4. Return a 3-line summary: workflow_run_id, branch, result.

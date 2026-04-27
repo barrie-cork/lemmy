@@ -17,7 +17,7 @@ Poll `gh run watch <id> --exit-status --repo barrie-cork/lemmy` (single long-pol
    timeout 3600 gh run watch <id> --exit-status --repo barrie-cork/lemmy > /tmp/ci-watch.log 2>&1
    status=$?
    ```
-   If `status == 124` → write `validate-failed result: "timeout"`, commit + push, exit 0.
+   If `status == 124` → write `validate-failed result: "timed_out"`, commit + push, exit 0.
 
 4. **Disambiguate via conclusion (mandatory — `--exit-status` is unreliable on gh CLI 2.89.0 per the empirical exit-code table in `.claude/agents/ci-watcher.md`):**
    ```bash
@@ -28,7 +28,7 @@ Poll `gh run watch <id> --exit-status --repo barrie-cork/lemmy` (single long-pol
    - `success` → write `validate-result result: "pass"` to `resolved`, `from: "ci-watcher"`, `answered_by: "ci-watcher-self-resolved"`. Commit + push. Exit 0.
    - `failure` → run `gh run view <id> --log-failed` (slice last ~200 lines), capture `failed_jobs` via `--json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name]'`. Write `validate-failed result: "fail"` with `log_slice` + `failed_jobs` to `pending`. Commit + push. Exit 0.
    - `cancelled` → write `validate-failed result: "cancelled"` to `pending`. Commit + push. Exit 0.
-   - `timed_out` → write `validate-failed result: "timeout"` to `pending`. Commit + push. Exit 0.
+   - `timed_out` → write `validate-failed result: "timed_out"` to `pending`. Commit + push. Exit 0.
    - other (`action_required` | `neutral` | `skipped` | `stale` | empty) → write `validate-failed result: "fail"` with the exact conclusion recorded in `log_slice` for advisor classifier-miss handling. Commit + push. Exit 0.
 
 The DQ entry's `id` is computed by `max(all_ids) + 1` across both `pending` and `resolved` arrays (and any `decision-queue-archive-*.json` files), per `.claude/rules/decision-queue.md` next-id discipline.

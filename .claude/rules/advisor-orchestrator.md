@@ -331,7 +331,7 @@ Stop the loop and surface to user immediately if:
 - A `bm-task` opens a PR into `main` instead of `governance-v0`.
 - The phase branch has uncommitted state when a Junior task reports complete (Junior's finalize push should have flushed it).
 - Rust-analyzer-lsp is missing on the EliteDesk daemon and a `planning` or `impl-task` task that depended on `LSP` returns failed.
-- A workflow run exceeds the 60-min ci-watcher cap → ci-watcher writes `kind: "validate-failed"` with `result: "timeout"`. Surface to user with the workflow run id and the elapsed wall-clock; do not auto-rerun.
+- A workflow run exceeds the 60-min ci-watcher cap → ci-watcher writes `kind: "validate-failed"` with `result: "timed_out"` (matches GitHub's conclusion enum spelling). Surface to user with the workflow run id and the elapsed wall-clock; do not auto-rerun.
 - ci-watcher's `gh run watch <id> --exit-status` returns an exit code not enumerated in the empirical exit-code table at `.claude/agents/ci-watcher.md` "Empirical exit-code table" — surface as classifier-miss with the observed exit code, the workflow run id, and the run's `gh run view <id> --json status,conclusion` snapshot. The exit-code table is grow-on-evidence; record the new pair (exit_code → conclusion) and update the table at retro time.
 
 For each, include the catch-fire reason and the rule it violated in the surfaced message.

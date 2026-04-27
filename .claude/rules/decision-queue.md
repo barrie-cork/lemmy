@@ -184,21 +184,33 @@ polling loop applies different routing per kind.
   reads this entry and dispatches a `[role:ci-watcher]` Junior task
   to poll the workflow run. The originating impl-task is gated until
   ci-watcher resolves. Writer: **impl-task only**.
-- **`kind: "validate-result"`** — the ci-watcher subagent observed
-  workflow conclusion `success` via `gh run watch <id> --exit-status`.
-  Goes **directly to `resolved`** with `from: "ci-watcher"`,
-  `answered_by: "ci-watcher-self-resolved"`, `result: "pass"`. The
-  advisor reads this entry and advances the §13-task pipeline (cohort
-  check). Writer: **ci-watcher only**.
-- **`kind: "validate-failed"`** — the ci-watcher subagent observed
-  workflow conclusion `failure | cancelled | timeout` (or hit its own
-  60-min wall-clock cap). Goes to `pending` with `from: "ci-watcher"`,
-  `answered_by: null`, `result: "fail" | "cancelled" | "timeout" |
-  "gh_unauth"`. Required fields when `result: "fail"`: `log_slice`
-  (last ~200 lines per failed job), `failed_jobs` (array of job
-  names). The advisor reads this entry, runs the §G4 classifier
-  (auto-queue fix-impl-task for allowlist matches ≤3 file edits, else
-  catch-fire). Writer: **ci-watcher only**.
+- **`kind: "validate-result"`** — the ci-watcher subagent classified
+  the workflow after reading `conclusion: "success"` from
+  `gh run view <id> --json conclusion` (do NOT rely on
+  `gh run watch <id> --exit-status` for final classification — per
+  `feedback_gh_run_watch_exit_status_unreliable.md`, the exit code is
+  unreliable on gh CLI 2.89.0). Goes **directly to `resolved`** with
+  `from: "ci-watcher"`, `answered_by: "ci-watcher-self-resolved"`,
+  `result: "pass"`. The advisor reads this entry and advances the
+  §13-task pipeline (cohort check). Writer: **ci-watcher only**.
+- **`kind: "validate-failed"`** — the ci-watcher subagent classified
+  the workflow after reading `conclusion: "failure" | "cancelled" |
+  "timed_out"` from `gh run view <id> --json conclusion` (or hit its
+  own 60-min wall-clock cap, or the run was unreachable). Goes to
+  `pending` with `from: "ci-watcher"`, `answered_by: null`,
+  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`.
+  Required fields when `result: "fail"`: `log_slice` (last ~200 lines
+  per failed job), `failed_jobs` (array of job names). The advisor
+  reads this entry, runs the §G4 classifier (auto-queue fix-impl-task
+  for allowlist matches ≤3 file edits, else catch-fire). Writer:
+  **ci-watcher only**.
+
+> **Note on enum values:** GitHub's workflow `conclusion` API returns
+> `timed_out` (with underscore) for timeout state — the `result` enum
+> mirrors GitHub's exact spelling. `run_not_found` covers the case
+> where `gh run view <id>` fails with run-not-found (e.g. wrong
+> branch, run garbage-collected, GitHub-side eviction); ci-watcher's
+> pre-flight run-existence check writes this result and exits 0.
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
@@ -382,7 +394,7 @@ These are the recurring failure modes the audit and Phase-6 #37 incident produce
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
 6. **NEVER write `kind: "clarify"` from a non-advisor session.** That kind is advisor-only — produced by `/brehon-clarify` at the pre-planning gate. A Junior subagent that writes `kind: "clarify"` has misunderstood the workflow (impl-task ambiguity → `kind: "blocker"` from `from: "impl"`; brief ambiguity at planning time is the advisor's responsibility, not the planner's).
-7. **NEVER write `kind: "validate-result" | "validate-failed"` from a non-ci-watcher session.** Those kinds are ci-watcher-only — produced by polling a workflow run via `gh run watch <id> --exit-status`. impl-task writes `kind: "validate-pending"` (with `from: "impl"`); ci-watcher writes the result/failed sibling entries (with `from: "ci-watcher"`). Cross-role authoring is a process breach.
+7. **NEVER write `kind: "validate-result" | "validate-failed"` from a non-ci-watcher session.** Those kinds are ci-watcher-only — produced by ci-watcher reading `conclusion` via `gh run view <id> --json conclusion` after a `gh run watch <id> --exit-status` long-poll (the watch is for blocking, not for classification — see `feedback_gh_run_watch_exit_status_unreliable.md`). impl-task writes `kind: "validate-pending"` (with `from: "impl"`); ci-watcher writes the result/failed sibling entries (with `from: "ci-watcher"`). Cross-role authoring is a process breach.
 
 ## After writing a question
 
@@ -533,7 +545,7 @@ identity determines which `from` value is valid:
   `kind: "validate-result"` (always to `resolved` with
   `answered_by: "ci-watcher-self-resolved"`, `result: "pass"`) or
   `kind: "validate-failed"` (to `pending` with `answered_by: null`,
-  `result: "fail" | "cancelled" | "timeout" | "gh_unauth"`,
+  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`,
   `log_slice`, `failed_jobs`). Pinned to Haiku 4.5, narrow-tools
   (Read, Edit, Write, Bash). Never invokes cargo, never edits code
   in `crates/` / `migrations/` / `tests/` / `docs/` / `.github/
