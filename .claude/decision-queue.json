@@ -711,6 +711,105 @@
       "answer": "(A) Hard-revert on EliteDesk + audit user-scope settings.json separately. Investigation findings: (1) `opus[1m]` is the value in /home/barrie/.claude/settings.json (user-scope on EliteDesk); (2) Claude Code worker performed a settings consistency-write at 2026-04-26 14:25 UTC pulling from user-scope, mutating /srv/brehon-fork/.claude/settings.json from `claude-opus-4-7` → `opus[1m]` and reformatting indent 2-space → 4-space; (3) the project-level canonical is `claude-opus-4-7` per docs/research/Claude 4.x Model Selection — model-selection research explicitly recommends `claude-opus-4-7` for the planning subagent and notes Opus 4.7 default 200K context suffices (1M not needed at subagent level); (4) per-agent frontmatter in .claude/agents/*.md drives subagent model selection (planning=opus-4-7, impl-task=sonnet-4-6, bm-task=haiku-4-5) — project settings.json `model` is the fallback for agents marked `inherit` (currently only branch-manager); (5) feedback_opus_max_effort.md applies to ADVISOR sessions where 1M context is load-bearing (handoffs cross 200k), not subagent sessions. Action 1: revert /srv/brehon-fork/.claude/settings.json to committed canonical (`claude-opus-4-7`) + remove .bak. Action 2 (separate, deferred): audit /home/barrie/.claude/settings.json on EliteDesk — `opus[1m]` is appropriate for laptop advisor sessions but not for the EliteDesk where Junior subagents run; should likely be `claude-opus-4-7` to match project canonical, or omitted entirely so per-agent frontmatter is authoritative. Surface this as a future task, not blocking JM-d. Lesson candidate: 'Settings consistency writes pull from user-scope on first-run' — Claude Code can mutate project settings.json at task start to match user-scope; this is silent and survives across worktrees as uncommitted drift. Generalisation: any setting that has both project-level canonical and user-scope deviation needs explicit handling; otherwise the project-canonical silently rots.",
       "answered_by": "advisor",
       "resolved_at": "2026-04-27T09:20:37Z"
+    },
+    {
+      "id": 55,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "Layer A escalation: when validate-runner returns fail-unknown and the validate subagent is queued, what memory cap should it run under? Same junior@brehon-fork cgroup (10G MemoryMax / 8G MemoryHigh) since validate is a Junior subagent, or a separate cap?",
+      "options": [
+        "(a) Same junior@brehon-fork cgroup (10G/8G) — Junior subagent dispatched via [role:validate], inherits the daemon's existing memory contract",
+        "(b) Separate systemd unit with its own cap",
+        "(c) No cap (run in advisor session)"
+      ],
+      "context": "Source: validate-agent-design.md §9.2(1). Brief recommends option (a). Cross-references: design-brief §3 (Layer A is a Junior subagent), homeserver/CLAUDE.md 'Junior' sub-section confirms 10G/8G cap on junior@brehon-fork (deployed 2026-04-27 in homeserver commit 20f251b after task #10 OOM). Layer A workload is mechanical reasoning over cargo log + small-file edits — doesn't peak above impl-task's profile, so the existing cap is sufficient. PMD project_elitedesk_hung_2026_04_27 is the originating incident.",
+      "answer": "(a) Same junior@brehon-fork cgroup (10G MemoryMax / 8G MemoryHigh). Layer A is dispatched as a Junior task via [role:validate] per validate-agent-design.md §3 and §9.2(1). All Junior subagents on this daemon inherit the daemon's cgroup memory contract — that's the design of systemd's MemoryAccounting=true on the templated junior@<repo>.service unit. The validate subagent's workload (read cargo log, optionally apply ≤3 file edits per Q3, file DQ entry) does not exceed impl-task's memory profile, so the 10G cap that already accommodates impl-task's cargo work also accommodates validate's smaller workload. Cite: homeserver/CLAUDE.md 'Junior' sub-section + homeserver/systemd/junior@brehon-fork.service.d/*.conf for the deployed cap. No new systemd unit needed for Layer A — it's a Junior subagent, not a separate process.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T17:01:02Z"
+    },
+    {
+      "id": 56,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "Where should validate-runner.sh + its systemd timer/service live: homeserver-level (cross-cutting infra) or brehon-fork-level (single-repo coupled)?",
+      "options": [
+        "(a) homeserver-level — homeserver/scripts/brehon/validate-runner.sh + homeserver/systemd/validate-runner.{timer,service}",
+        "(b) brehon-fork-level — brehon-fork/scripts/validate-runner.sh + ad-hoc cron",
+        "(c) Hybrid: shell script in brehon-fork, systemd unit in homeserver"
+      ],
+      "context": "Source: validate-agent-design.md §9.2(2). Brief recommends option (a). homeserver/CLAUDE.md 'What This Repo Is' explicitly designates homeserver as the orchestrator/infra repo; brehon-fork is application code. The homeserver/systemd/ tree already hosts cross-cutting infra (junior@.service, junior-monitor.timer, restore-drill.timer, pmd-snapshot.timer). validate-runner is cross-cutting — if other Rust repos (food-producer's pulumi-rs work, hypothetical future Brehon-adjacent crates) join the validation pipeline, having validate-runner at homeserver makes that future trivial. brehon-fork already hosts repo-scoped wrappers (scripts/brehon/cargo-{check,clippy,test}.sh) — those stay; the cross-cutting orchestrator is one layer up.",
+      "answer": "(a) homeserver-level. validate-runner.sh ships at homeserver/scripts/brehon/ (directory does not yet exist — Phase 1 confirmed; the planning brief must include a 'create directory' step). The systemd timer + service ship at homeserver/systemd/validate-runner.{timer,service} mirroring the existing pmd-snapshot.timer / restore-drill.timer pattern. Registration in homeserver/library.yaml in the same commit per feedback_library_add_after_shipping.md. Cite: homeserver/CLAUDE.md 'What This Repo Is' (homeserver = orchestrator/infra) + homeserver/systemd/ existing pattern (junior@.service, restore-drill.timer, pmd-snapshot.timer all live here). brehon-fork's existing scripts/brehon/cargo-*.sh wrappers stay — validate-runner.sh calls them via SSH (or, if the new tmp-dir clone path per Q4 is taken, calls cargo directly inside /tmp/validate-<sha>/).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T17:01:02Z"
+    },
+    {
+      "id": 57,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "When validate-runner returns fail-unknown and the validate subagent (Layer A) starts a fix, how many file edits is the threshold before it stops fixing and escalates to a new impl-task brief instead?",
+      "options": [
+        "(a) ≤3 file edits = validate fixes; >3 = escalate to impl-task",
+        "(b) ≤1 file edit = validate fixes; ≥2 = impl-task",
+        "(c) Validate never fixes; always escalates",
+        "(d) ≤5 file edits OR <50 LOC = validate fixes"
+      ],
+      "context": "Source: validate-agent-design.md §9.2(3). Judgment-heavy — affects how aggressive Layer A is and how often the user is paged. Brief recommends option (a). The trade-off is between fast-path (Layer A handles trivial mechanical errors like clippy lints, missing imports, single-file refactors) and audit-path (impl-task brief with full clarify gate for anything broader). Per user's plan-mode answer, 4-role model treats Layer A as a constrained fixer with explicit boundary.",
+      "answer": "(a) ≤3 file edits = validate fixes; >3 = escalate to impl-task (per user 2026-04-27). Trivial fixes (clippy lints, missing imports, single-file mechanical errors) typically touch ≤3 files. Anything broader signals real surprise warranting advisor-side decision-making + a new impl-task brief with proper §15 DoD. Threshold encoded in validate.md frontmatter or in the validate-triage.md command's hard-refusals section. The validate subagent must enforce: count distinct files in the planned edit; if >3, file a 'validate-failed' DQ pending entry and exit; advisor decides whether to queue an impl-task or hand to user.",
+      "answered_by": "user",
+      "resolved_at": "2026-04-27T17:01:02Z"
+    },
+    {
+      "id": 58,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "Layer C concurrency model: cargo runs against committed code. Two main options to avoid contention with a running impl-task on the same worktree: (a) tmp-dir clone — git clone phase-branch into /tmp/validate-<sha>/ each run, run cargo there; (b) worktree-reuse — cargo runs in the existing phase-branch worktree, blocked by flock if impl-task is editing.",
+      "options": [
+        "(a) tmp-dir clone — robust, cold cargo cache per run",
+        "(b) worktree-reuse with flock — fast, risk of file conflicts",
+        "(c) Hybrid: tmp-dir for first run, worktree-reuse for retries",
+        "(d) Shared target dir + tmp-dir source"
+      ],
+      "context": "Source: validate-agent-design.md §9.2(4) + §8 'Failure modes to design against'. Judgment-heavy — affects validate-runner's robustness model + cold-cache cost per validation. Brief recommends option (a). Cargo cache penalty is one-time per phase since /tmp/validate-* dirs persist within a sub-phase (validate-runner can keep CARGO_TARGET_DIR=/tmp/validate-<phase>/target/ as a phase-scoped shared cache, deleting only on phase close). Worktree-reuse fails when an impl-task pre-commit edit overlaps validate's read.",
+      "answer": "(a) tmp-dir clone (per user 2026-04-27). Each validate run does `git clone --shared --branch <commit_sha> /tmp/validate-<sha>/`, sets CARGO_TARGET_DIR=/tmp/validate-<phase>/target/ (shared across runs within a phase to keep cargo cache warm), runs cargo there, deletes the source dir after (target dir persists until phase close). Robust: zero risk of clobbering an in-flight impl-task. The cargo cache penalty is mitigated by phase-scoped target dir reuse — cold cache only on first validation per phase. Reasoning supplemental to user choice: option (d) shared target dir was rejected because cargo's incremental compilation state isn't robust under concurrent writes. Option (b) flock has a hidden failure mode where validate queues indefinitely behind a stuck impl-task. Option (c) hybrid adds run-mode logic to validate-runner unnecessarily.",
+      "answered_by": "user",
+      "resolved_at": "2026-04-27T17:01:02Z"
+    },
+    {
+      "id": 59,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "Branch model for the validate-agent sub-phase. validate-agent-design.md §10.1 says 'meta-work commits direct to governance-v0, not phase-branch + PR'. But §11/§12.6 describe a 'v1-validate-agent sub-phase' with 4-6 impl-tasks and a JM-e dogfood trial — which is sub-phase shape, not direct-commit shape. Which is correct?",
+      "options": [
+        "(a) Phase branch + PR — phase-v1-validate-agent cut off governance-v0, impl-tasks against it, PR back to governance-v0 with CodeRabbit review",
+        "(b) Direct commits to governance-v0 — each impl-task commits directly, no PR, no CR review",
+        "(c) Hybrid — phase branch for code-touching tasks, direct for doc-only tasks"
+      ],
+      "context": "Source: validate-agent-design.md §10.1 vs §12.6 internal conflict, surfaced via my coverage-pass (Step 3 axis 'Undeclared constraint conflict'). The brief's §10.1 wording misapplies feedback_pr_per_phase.md, which gates individual meta-work commits (rule edits, lesson promotions) — not whole 4-6-task sub-phases. A sub-phase with 4-6 impl-tasks crossing both Rust code (validate-runner.sh, systemd units) and meta artifacts (.claude/agents/validate.md, .claude/rules/decision-queue.md) cannot reasonably ship as direct-to-governance-v0 commits — it loses CR review for the load-bearing infra change.",
+      "answer": "(a) Phase branch + PR (per user plan-mode answer 2026-04-27). Cut phase-v1-validate-agent off governance-v0 via bm-cut. Impl-tasks run against the phase branch. Final PR back to governance-v0 with CodeRabbit review per feedback_pr_per_phase.md. The brief's §10.1 'direct to governance-v0' is overridden — that line was the brief author misapplying feedback_pr_per_phase (which scopes to individual meta-commits, not whole sub-phases). The planning brief's §2 Source must explicitly cite this DQ #59 override so the planning subagent doesn't honour the brief's literal §10.1 wording. Also note: the phase branch must NOT be cut while v1-JM-d is still running on phase-v1-JM-d (no concurrent phase branches per Brehon's bm-cut discipline) — see DQ #60 for the contract-change timing constraint.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T17:01:02Z"
+    },
+    {
+      "id": 60,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T17:01:02Z",
+      "question": "validate-agent-design.md §4.2 modifies .claude/agents/impl-task.md so impl-task no longer self-runs §15 DoD — it files a validate-pending DQ entry and exits. JM-d task #13 is currently running on phase-v1-JM-d and reads impl-task.md at task-0. If validate-agent ships before JM-d completes, JM-d's remaining tasks would inherit the new contract mid-phase. When does the impl-task.md change land?",
+      "options": [
+        "(a) After JM-d ships, before JM-e starts — wait for JM-d retro signoff before merging the validate-agent PR",
+        "(b) Land impl-task.md change with feature-flag gating — .claude/.validate-agent-active sentinel",
+        "(c) Land during JM-d but only for unstarted tasks — Junior worktrees pull at task-0 only",
+        "(d) Refactor impl-task.md so the change is non-breaking — both old (in-band §15) and new (validate-pending DQ) paths work"
+      ],
+      "context": "Source: my coverage-pass (Step 3 axis 'Cross-phase invariant'). Load-bearing — impl-task.md is a cross-cutting contract file read by every Junior subagent at task-0. Mid-phase contract drift on a contract file is the exact pattern feedback_schema_changing_spec_retrofit_question.md warns against. JM-d task #13 is in-flight on phase-v1-JM-d (per mcp__junior-brehon__list_tasks); JM-d has 6 impl-tasks total per its plan §13 (Tasks 0-7), of which Task 2 is currently running with multiple cancelled retries (#10/#11/#12 → #13 RESUME).",
+      "answer": "(a) After JM-d ships, before JM-e starts (per user 2026-04-27). Wait for JM-d retro signoff before merging the validate-agent PR back to governance-v0. JM-d completes under the old impl-task.md contract (in-band §15 self-run). validate-agent's PR opens after JM-d retro, with the impl-task.md change in scope. JM-e is the first sub-phase to start under the new contract — matching brief §12.6 'first sub-phase (v1-JM-e) runs end-to-end with Layer C handling at least 4 of its 6 impl-tasks' validation'. Concrete sequencing: validate-agent's bm-cut cuts phase-v1-validate-agent off governance-v0 AFTER JM-d's bm-merge confirms governance-v0 is updated with JM-d. No concurrent phase branches. The validate-agent PR's CodeRabbit review can run in parallel with JM-d's late tasks if branch isolation allows, but the merge to governance-v0 must follow JM-d's. Reject (b) feature-flag — adds complexity to a contract file read by every subagent; flag drift is the failure mode. Reject (c) mid-phase land — Junior worktrees DO pull at task-0 only, but JM-d task #13 is already running and its task-0 read happened against the old contract; subsequent JM-d tasks (Task 3-7) would read mismatched contracts. Reject (d) double-belt — defeats the model-efficiency goal during the entire transition window and bloats impl-task.md unnecessarily.",
+      "answered_by": "user",
+      "resolved_at": "2026-04-27T17:01:02Z"
     }
   ],
   "schema_version": 2
