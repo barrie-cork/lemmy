@@ -125,19 +125,46 @@ The daemon now runs under a cgroup memory cap: `MemoryMax=10G`, `MemoryHigh=8G` 
 
 Task 1 produced a high-value LESSON trailer about `lemmy_diesel_utils` CLI args (DQ #55). Task 2 is a candidate for similar — particularly if the schema-regen path or `diesel` CLI install surfaces anything plan-relevant. Per `feedback_junior_pmd_write_convention.md`, end the commit body with a single `LESSON:` line for any discrete future-relevant finding.
 
-## 5. Validation gates (per plan §13 task 2 VALIDATE block)
+## 5. Validation gates (out-of-band on GH Actions per Shape G)
 
-Capture each to `.claude/PRPs/debug/v1-JM-d-task2-<probe>.log`. All exit-0.
+Retrofitted from inline cargo to push-and-exit per DQ #61 + v1-validate-agent.plan.md Task 5 (`feat(plan): v1-validate-agent`).
 
-1. `bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-JM-d-task2-check.log 2>&1` → exit 0.
-2. `bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-JM-d-task2-clippy.log 2>&1` → exit 0.
-3. `bash scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server > .claude/PRPs/debug/v1-JM-d-task2-test-no-run.log 2>&1` → exit 0 (compile-only; tests don't run yet — Task 8 territory).
+Validation runs out-of-band on GitHub Actions (Shape G). After committing your work, push to your worktree branch and exit. Do NOT run cargo locally.
 
-If any fails, **STOP and surface to advisor via DQ.** Do not patch around `cargo-check` or `clippy` failures by `#[allow]`-spamming — fix the root cause.
+After `git push`:
 
-**GOTCHA from plan §13:** if `cargo check -p lemmy_db_schema --features full` fails after the schema regen with a `check_for_backend(diesel::pg::Pg)` error, the regen mismatched the `Queryable` derive's expected types. Re-run the regen and confirm the `winning_decision -> Nullable<JuryDecision>` mapping is exact.
+1. Capture the workflow_run id:
+   ```bash
+   gh run list --branch <your-branch> --limit 1 \
+     --json databaseId --jq '.[0].databaseId'
+   ```
+   Retry with exponential backoff up to ~2 min if the run hasn't appeared yet (push-to-trigger lag is normal).
 
-**GOTCHA from `feedback_clippy_test_style.md`:** the workspace denies `expect_used`, `unwrap_used`, `allow_attributes` *including in tests*. Tests must use `?`. Don't add escape-hatches.
+2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
+   ```json
+   {
+     "id": <next>,
+     "from": "impl",
+     "kind": "validate-pending",
+     "timestamp": "<ISO 8601 UTC>",
+     "workflow_run_id": <id>,
+     "branch": "<your-branch>",
+     "phase_task": 2,
+     "answer": null,
+     "answered_by": null,
+     "resolved_at": null
+   }
+   ```
+
+3. Commit + push the DQ update.
+
+4. Exit with success.
+
+The impl-task slot frees as soon as the push lands. ci-watcher polls the workflow asynchronously and writes the result back into the DQ. The advisor reads `validate-result` (pass) or `validate-failed` (fail/timeout) on its next polling tick.
+
+**GOTCHA from plan §13 (now surfaces on GH Actions, not locally):** if `cargo check --workspace --features full` on the runner fails with a `check_for_backend(diesel::pg::Pg)` error after the schema regen, the regen mismatched the `Queryable` derive's expected types. Pull the failure log slice from the `validate-failed` DQ entry, re-run the regen locally, and confirm the `winning_decision -> Nullable<JuryDecision>` mapping is exact before re-pushing.
+
+**GOTCHA from `feedback_clippy_test_style.md`:** the workspace denies `expect_used`, `unwrap_used`, `allow_attributes` *including in tests*. Tests must use `?`. Don't add escape-hatches. Failures land in the GH Actions clippy step; the failure log slice in the `validate-failed` DQ entry will name the file:line.
 
 ## 6. Expected output (return to advisor)
 
