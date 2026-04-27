@@ -44,7 +44,8 @@ The advisor authorises forbidden-window runs via DQ override only — see `.clau
 3. Read **only the plan section for the task you were dispatched to execute** — not the whole plan. The dispatch line will name the task number (`Task 4` etc).
 4. **Glob `.claude/lessons/` and Read any file whose filename keywords match the task**, e.g. clippy/cargo files when running clippy, pq-sys files when touching DB connection code, plan-baseline files when checking ancestry, parallel-agent files when committing.
 5. **Read `.claude/decision-queue.json`** at the very start. If any pending entry's question gates this task, stop cleanly with a one-line note naming the DQ id — do not start the task.
-6. `git fetch origin` and `git status --short`. Know where you are. The phase branch is the working branch; `governance-v0` is read-only from here.
+6. **Read the brief's §3a "Handover from prior cohort"** if the section is non-empty. Per `feedback_handover_trailer_cohort_propagation.md`. The advisor populates this on cohort transitions; ignore if `(none — first cohort)` or `(none — prior task non-[P])`. `keyDecisions` from prior cohort tasks are load-bearing context — diverging without a stated reason is a planner gap (file a DQ pending entry). Diverging with a stated reason (e.g. "Cohort N chose A; this task chose B because <plan §10.5 mirror demands B>") is fine and goes into this task's own `HANDOVER:` trailer.
+7. `git fetch origin` and `git status --short`. Know where you are. The phase branch is the working branch; `governance-v0` is read-only from here.
 
 ## MIRROR refs are load-bearing
 
@@ -154,6 +155,37 @@ After writing a DQ pending entry: if the question gates this task, stop the loop
 One feature commit per plan task. Subject: `feat(<scope>): <title> (task <N>)`. Body lists files changed, what changed, and the validation log path. No cargo output, no diff blocks. See `.claude/rules/cargo-output-capture.md`.
 
 If clippy debt was created by the change, queue a `chore(lint):` follow-up commit per the plan's §15 conventions; do not silence warnings inline.
+
+### HANDOVER trailer (cohort-internal-share, opt-in)
+
+Per `feedback_handover_trailer_cohort_propagation.md`. If your task is a `[P]`-marked cohort member (the dispatch line's slug matches a `[P]` task in plan §13), end the commit-message body with a structured `HANDOVER:` YAML trailer. The advisor reads this on cohort completion, aggregates across cohort peers, and injects the result into the **next** cohort's brief §3a. This is how cohort N+1 sees cohort N's keyDecisions without grep-discovery.
+
+Trailer shape (one block, end of commit body, before any `LESSON:` lines):
+
+```
+HANDOVER:
+  filesCreated:
+    - <path>
+    - <path>
+  filesModified:
+    - <path>
+    - <path>
+  keyDecisions:
+    - <one-line decision + brief reason citing plan §X.Y or MIRROR ref>
+    - <one-line decision + brief reason>
+  notes: <free-text, ≤2 lines, gotchas the next cohort would benefit from>
+```
+
+**Skip the trailer entirely if:**
+- Your task is non-`[P]` (no cohort siblings — the next task reads your commit body normally).
+- Your task is Task 0 (pre-flight harness — no impl content).
+- Your task is the retro task (no successor).
+
+**`keyDecisions` discipline:** include only decisions that a future cohort peer would *otherwise have to grep for*. Routine implementation choices fully described in the plan §13 task body don't need a trailer entry. The bar is the same as the optional `LESSON:` trailer: "future me would have wanted to know this before starting cohort N+1."
+
+**`filesCreated` / `filesModified` discipline:** these MUST match the plan §13 FILES YAML block for this task (`creates:` / `modifies:`). Drift between the plan-side declaration and the actual commit is a discrepancy the advisor surfaces — file a DQ pending entry naming the drift before pushing.
+
+`HANDOVER:` and `LESSON:` are independent. Both can appear in the same commit body. `HANDOVER:` is opt-in for cohort-internal-share; `LESSON:` is opt-in for retroable cross-phase learning.
 
 **Lesson trailer (optional, retroable).** If during the task you discovered something a future impl-task on a related area would have wanted to know — a non-obvious constraint, a footgun, a pattern that bit you — end the commit-message body with a `LESSON:` line per `.claude/lessons/feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/lines. Don't write trailers for routine progress; the bar is "future me would have wanted to know this before starting." The advisor harvests these at retro time and promotes durable ones to `.claude/lessons/` and PMD.
 

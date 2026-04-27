@@ -29,14 +29,58 @@ Per `.claude/lessons/feedback_features_full_p_crate_incompatible.md`, never comb
 
 Per `.claude/lessons/feedback_wrapper_script_flag_silence.md`, before referencing any `scripts/brehon/cargo-*.bat` or `.sh` wrapper in the plan, verify the wrapper actually accepts the flags you depend on. Wrappers may silently hardcode scope.
 
+## §13 per-task `creates:` / `modifies:` YAML block (load-bearing)
+
+Per `.claude/PRPs/templates/plan.template.md` §13 + `feedback_explicit_file_arrays_on_tasks.md`: every §13 task body (every task — `[P]`, non-`[P]`, Task 0, retro task) carries a **FILES** YAML block declaring `creates:` (new files this task adds) and `modifies:` (existing files this task edits). The block sits between **ACTION:** and **IMPLEMENT (file 1 of N):**.
+
+Mechanical discipline:
+
+1. After authoring all §13 task bodies, walk each task and assert `union(creates, modifies)` exactly equals the set of file paths named in that task's `**IMPLEMENT (file N of M):** in <file>` lines. If they differ, fix the YAML or fix the IMPLEMENT lines before commit. The cohort-dispatch logic and `/brehon-verify` consume the YAML, not the prose — drift produces silent dispatch errors or false-negative phantom checks.
+2. For Task 0 (pre-flight harness audit), `creates: []` and `modifies: []` are valid — Task 0 commits nothing. The block is still present (uniformity).
+3. For the retro task, `creates: [.claude/PRPs/reports/<phase>-retro.md]` and `modifies: []` is the canonical shape; lessons promotion adds `modifies: [.claude/lessons/feedback_<new>.md]` per `feedback_one_system_memory_in_repo.md`.
+4. Migration up.sql + down.sql go in **the same task's `creates:`** (one logical unit per `feedback_parallel_cohort_dispatch.md`). Two different migrations in two different tasks are cohort-compatible.
+5. The YAML block is the source-of-truth for `[P]`-marker assignment: two tasks are cohort-compatible iff `intersect(union(creates, modifies)_taskA, union(creates, modifies)_taskB) == ∅`. Compute this mechanically; do not hand-judge from IMPLEMENT-line headers.
+
+If a §13 task body lacks the FILES YAML block, that's an unmergeable plan — surface as a planner self-DQ (`from: "planner"`, `kind: "blocker"`, `question: "§13 Task <N> missing FILES YAML block — please retrofit before commit"`) per the decision-queue mid-task discipline.
+
+## §5 complexity score + split threshold (load-bearing)
+
+Per `.claude/PRPs/templates/plan.template.md` §5.1 + `feedback_complexity_score_pre_split.md`: compute the complexity score before commit using the factor table in the template. The score is mechanical:
+
+| Factor | Weight | Source of count |
+|---|---|---|
+| §13 impl tasks above 5 | +1 each | Count §13 tasks excluding Task 0 (pre-flight) and the retro task |
+| Migrations touched | +2 each | Count entries in `creates:` / `modifies:` matching `migrations/<id>__<name>/{up,down}.sql` |
+| Crates touched | +1 each | Count distinct `crates/<X>/` prefixes across all §13 tasks' YAML |
+| `crates/lemmy_server/tests/e2e/*.rs` edits | +3 each | Count §13 tasks with `crates/lemmy_server/tests/e2e/` in `modifies:` |
+| New ADR-affecting decisions | +2 each | Count §2 Source ADR citations that *supersede* (not just reference) `99-decisions-and-open-questions.md` entries |
+| Cargo budget peak above 6 GB | +1 per GB | Pre-Shape-G plans only; Shape G plans contribute 0 |
+
+Write the breakdown into §5.1 of the plan. If `total > 8`, **before committing the plan**, file a DQ pending entry:
+
+```json
+{
+  "from": "planner",
+  "kind": "blocker",
+  "question": "Complexity score N exceeds 8 — split <slug> into <slug>-1 + <slug>-2, or proceed?",
+  "context": "<one-line summary of which factors contributed most>",
+  "options": ["split", "proceed"],
+  "answered_by": null
+}
+```
+
+The advisor decides split-or-proceed. If split: re-plan with reduced scope per the decision (the planner re-runs after the advisor edits the brief). If proceed: the advisor self-resolves the DQ with `answered_by: "advisor"`, citing the prior phase whose complexity score was similar and whose retro showed acceptable execution.
+
+This gate runs once per plan, before the planning subagent's commit. The complexity score in §5 is permanent (not retroactively edited).
+
 ## §13 [P] parallel-task markers (load-bearing)
 
-Per `.claude/PRPs/templates/plan.template.md` §13 + `feedback_parallel_cohort_dispatch.md`: every §13 task header must carry a `[P]` marker iff the task's IMPLEMENT files are disjoint from every other `[P]`-marked task in the same cohort. The marker shape is `### Task N [P]: <title>`.
+Per `.claude/PRPs/templates/plan.template.md` §13 + `feedback_parallel_cohort_dispatch.md`: every §13 task header must carry a `[P]` marker iff the task's file-set is disjoint from every other `[P]`-marked task in the same cohort. The marker shape is `### Task N [P]: <title>`.
 
 Mechanical rule for assigning `[P]`:
 
-1. Walk §13 in task order. Build the file-set for each task by reading its `**IMPLEMENT (file N of M):** in <file>` lines.
-2. Two tasks are **cohort-compatible** if their file-sets share zero paths. Note: the `migrations/<id>__<name>/{up,down}.sql` pair is a single logical unit — two different migrations are cohort-compatible; the up/down pair within one migration is not.
+1. Walk §13 in task order. Build the file-set for each task by reading its **FILES** YAML block (per "§13 per-task `creates:` / `modifies:` YAML block" above) — `union(creates, modifies)`. Do not hand-build from the IMPLEMENT-line headers; the YAML is canonical.
+2. Two tasks are **cohort-compatible** if their file-sets share zero paths. Note: the `migrations/<id>__<name>/{up,down}.sql` pair is a single logical unit (a single task's `creates:` lists both); two different migrations in two different tasks are cohort-compatible.
 3. Task 0 (pre-flight harness audit) is **always** non-`[P]` — it's a verification barrier that must complete before any impl runs.
 4. The retro task (last task) is **always** non-`[P]` — it depends on every prior task's commit being on the phase branch.
 5. Tasks that touch `crates/db_schema/src/source/governance/<file>.rs` for the same `<file>` are not `[P]`-compatible (file-set overlap, even if the lines edited differ).
