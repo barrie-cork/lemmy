@@ -2,6 +2,100 @@
   "pending": [],
   "resolved": [
     {
+      "id": 67,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "Workflow YAML DoD dry-run discipline for v1-validate-agent plan §15. Brief §57 prescribes 'YAML parses cleanly and act/gh workflow run runs green on current HEAD' but `act` is not installed and `gh workflow run` requires the workflow to be merged + pushed first — the dry-run is bootstrap-circular. Choose: (a) accept partial DoD (YAML parse via yamllint/gh workflow view); (b) install act and require full dry-run; (c) ship a temporary test-yml workflow first, then remove.",
+      "options": [
+        "(a) accept partial DoD: YAML parse only via yamllint or `gh workflow view`",
+        "(b) install act locally; require full local dry-run via Docker",
+        "(c) ship a temporary test-yml workflow first as a §13 task, then remove"
+      ],
+      "context": "The brief's §57 specifies the dry-run shape but every shape conflicts with the bootstrap problem: a workflow YAML can only run on GH Actions after it's been pushed; you cannot truly dry-run it pre-merge. `act` is a third-party tool not currently in this codebase. The user picked (a) via AskUserQuestion 2026-04-27.",
+      "answer": "(a) accept partial DoD: YAML parse only (per user 2026-04-27). Plan §15 dry-run for workflow-referenced entries is satisfied by `yamllint .github/workflows/cargo-validate-workspace.yml` exit 0 OR `gh workflow view --repo barrie-cork/lemmy --ref <phase-branch> cargo-validate-workspace.yml` returning a parsed view. Real end-to-end validation happens on the first push to the phase branch — Shape G's whole point is that GH Actions IS the validation. The plan's first impl-task that creates the workflow ALSO ships the first 'test push' to confirm trigger fires + runs green. The plan must include this 'first test push' as a §13 task DoD, separate from the workflow-authoring task. Source: ci-validation-design.md §3 Layer G1 + brief §57. Honour DQ #67 in plan §15 wording: do NOT prescribe `act` invocations; do NOT require pre-merge full dry-run.",
+      "answered_by": "user",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
+      "id": 66,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "Workflow trigger pattern for cargo-validate-workspace.yml. cargo-test-e2e.yml triggers on `pull_request:` to governance-v0; Shape G brief §150 proposes `push:` to phase-v1-* and junior/* (so validation runs before PR open). Choose: (a) push-only on phase-v1-* + junior/*; (b) push + pull_request defence-in-depth; (c) pull_request only (mirror cargo-test-e2e.yml).",
+      "options": [
+        "(a) push to phase-v1-* + junior/* only",
+        "(b) push to phase-v1-* + junior/* AND pull_request to governance-v0 (defence-in-depth)",
+        "(c) pull_request to governance-v0 only (mirror cargo-test-e2e.yml)"
+      ],
+      "context": "The brief's 'mirror cargo-test-e2e.yml' phrasing is partially false — cache strategy + libpq install + Rust toolchain DO mirror, but trigger pattern is a deliberate divergence. Shape G's flow requires push triggers (impl-task push → workflow → ci-watcher poll). User picked (a) via AskUserQuestion 2026-04-27.",
+      "answer": "(a) push to phase-v1-* + junior/* only (per user 2026-04-27). Mitigates web-UI-merge bypass risk via branch-protection rules + advisor-orchestrator merge gate (validate-result must exist on the latest phase-branch SHA before bm-merge). Cheapest in minutes (~$1.40/sub-phase). The plan must specify both branch patterns in `on.push.branches` so impl-task worktree branches (`junior/<slug>`) trigger validation in addition to phase branches (`phase-v1-*`). Source: ci-validation-design.md §3 Layer G1 + §6 cost note. Honour DQ #66 in plan §13 workflow-authoring task: trigger spec is `on: { push: { branches: ['phase-v1-*', 'junior/*'] } }`. Do NOT add `pull_request` trigger.",
+      "answered_by": "user",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
+      "id": 65,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "Brief §3 cites both `.claude/commands/prp-core/prp-plan.md` AND `.claude/PRPs/templates/plan.template.md` as canonical for the plan template. Which one should the planning subagent follow literally? They predate vs post-date the spec-kit upgrade; one is canonical, the other is reference.",
+      "options": [
+        "(a) plan.template.md is canonical (post-spec-kit, includes §16a Stories block + [P] markers)",
+        "(b) prp-plan.md is canonical (older command file the brief still cites)"
+      ],
+      "context": "plan.template.md was added 2026-04-27 with §16a Stories block + [P] cohort markers per spec-kit adoption. prp-plan.md predates this and may be stale. planning.md §'Plan content discipline' references both. The brief's §3 lists prp-plan.md as item 2 and plan.template.md as item 14 — confusing ordering. Self-resolvable from feedback_clarify_before_plan.md + plan.template.md's own header which explicitly says 'canonical 20-section schema'.",
+      "answer": "(a) plan.template.md is canonical (advisor self-answer 2026-04-27). The post-spec-kit-adoption template at `.claude/PRPs/templates/plan.template.md` carries the §16a Stories block + [P] markers + structural conventions that the spec-kit upgrade introduced. prp-plan.md predates this and remains as a slash-command implementation reference but is NOT the canonical structural template. The brief's §3 should be updated: prp-plan.md becomes 'reference only', plan.template.md is the literal-follow target. The planner reads BOTH but follows plan.template.md's section schema. Source: plan.template.md header lines 1-9 (explicitly self-described as canonical), feedback_clarify_before_plan.md (spec-kit adoption rationale), planning.md §'§13 [P] parallel-task markers' + §'§16a Stories block' (both cite plan.template.md by path). Honour DQ #65 by editing brief §3 item 2: change 'canonical' to 'reference for /prp-core:prp-plan command'; promote plan.template.md item from 14 to 2 with 'canonical' label.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
+      "id": 64,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "ci-validation-design.md §G2 prescribes editing impl-task.md '§4 Constraints' and '§5 Validation' but impl-task.md does not have numbered sections — it has named H2 sections (Per-task validation gate, Hard refusals, Decision-queue, etc.). Which named section should the new contract land in?",
+      "options": [
+        "(a) Replace 'Per-task validation gate' contents with the push-and-exit contract; rename to 'Per-task validation gate (out-of-band on GH Actions)'",
+        "(b) Add a new H2 'Validation contract (Shape G)' between 'MIRROR refs' and 'Per-task validation gate'",
+        "(c) Edit 'Per-task validation gate' inline + add a §G2-shape paragraph to 'Hard refusals' ('Never run cargo locally')"
+      ],
+      "context": "Brief §3 item 10 + §1 of design refer to 'impl-task.md §5' but the file has no §5 — sections are named, not numbered. This is a real ambiguity for the planner authoring the §13 task that modifies impl-task.md. Self-resolvable from the file's own structure + canonical-first discipline.",
+      "answer": "(a) replace 'Per-task validation gate' contents + rename (advisor self-answer 2026-04-27). The current 'Per-task validation gate' H2 (impl-task.md lines ~53-59) is exactly the section whose content changes — today it says 'Run only the commands the plan §15 names; capture exit codes'. Under Shape G it becomes 'Push to phase branch + write validate-pending DQ entry + exit; do not run cargo locally'. Rename to 'Per-task validation gate (out-of-band on GH Actions)'. ALSO add a single line to 'Hard refusals' section (impl-task.md lines ~130-139): 'Never invoke cargo for build/lint/test — validation runs out-of-band on GH Actions per the validation gate above'. The combined edit (a section rewrite + one hard-refusal line) is the cleanest match to the design's §G2 + §G2 escalation paragraph. Plan §13 task that modifies impl-task.md must cite the section by NAME ('Per-task validation gate'), not by §-number — impl-task.md has no §-numbers. Source: impl-task.md current H2 structure (Read 2026-04-27), feedback_read_canonical_before_writing_spec.md, feedback_update_rule_doc_with_schema_additive.md (consumers + writers in same commit). Honour DQ #64 in plan §13 by referencing impl-task.md sections by H2 name, never '§N'.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
+      "id": 63,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "ci-validation-design.md §5 says new DQ entries have `from: \"impl-task\"` and `from: \"ci-watcher\"`. But decision-queue.md currently enumerates only `impl`, `bm`, `planner`, `advisor` as valid `from` values. The plan must extend the schema. Choose: (a) add `from: \"ci-watcher\"` only; reuse `from: \"impl\"` for impl-task; (b) add both `from: \"impl-task\"` and `from: \"ci-watcher\"`; (c) keep `from: \"impl\"` for both writers (impl-task + ci-watcher), differentiate by `kind`.",
+      "options": [
+        "(a) add `from: \"ci-watcher\"` only; impl-task reuses existing `from: \"impl\"`",
+        "(b) add both `from: \"impl-task\"` and `from: \"ci-watcher\"` to the schema",
+        "(c) keep `from: \"impl\"` for both writers; differentiate by kind: `validate-pending` (impl-task writes) vs `validate-result|validate-failed` (ci-watcher writes)"
+      ],
+      "context": "Schema-additive question per feedback_update_rule_doc_with_schema_additive.md. Current decision-queue.md §'Subagents and attribution' (lines ~460-485) enumerates 4 from values. Adding 2 more vs reusing existing requires explicit choice. Self-resolvable from feedback_update_rule_doc_with_schema_additive.md + parsimony principle.",
+      "answer": "(a) add `from: \"ci-watcher\"` only; impl-task reuses existing `from: \"impl\"` (advisor self-answer 2026-04-27). Rationale: impl-task subagent already exists with `from: \"impl\"` writes throughout the resolved DQ history (DQ #48, #50 are both `from: \"impl\"`). Renaming to `from: \"impl-task\"` would be a non-additive change requiring history rewrite — forbidden per decision-queue.md schema-v2 'forward-only consistency' rule. ci-watcher is a NEW subagent with no historical writes; clean to add as `from: \"ci-watcher\"`. The schema additive in plan §13 task that updates decision-queue.md must: (1) add `ci-watcher` to the 'Subagents and attribution' enumeration; (2) explicitly note that impl-task continues writing as `from: \"impl\"` even when its writes carry `kind: \"validate-pending\"`. Plan §13 must NOT rewrite historical entries. Source: decision-queue.md schema-v2 forward-only rule (lines ~14-26), feedback_update_rule_doc_with_schema_additive.md, feedback_clippy_test_style.md (parsimony principle for net-new schema). Honour DQ #63 in plan §13 schema-additive task: add `ci-watcher` only; explicitly document impl-task's continued use of `from: \"impl\"`.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
+      "id": 62,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-04-27T18:29:09Z",
+      "question": "ci-validation-design.md has internal contradiction on ci-watcher polling mechanism: §G3 says 'poll `gh run view` every ~30 seconds' but §8.3 says 'use `gh run watch` (single long-poll)'. Brief §150 reads the design as `gh run watch`. Which is correct: (a) gh run watch (single long-poll); (b) gh run view repeated polling.",
+      "options": [
+        "(a) `gh run watch <id>` — single long-poll, 1 API call per task",
+        "(b) `gh run view <id> --json status,conclusion,jobs` repeated every 30s — 120 calls/hour per task"
+      ],
+      "context": "Design is self-contradictory: §G3 prescribes (b), §8.3 prescribes (a) as a rate-limit mitigation. Brief §150 reads the design as (a). Self-resolvable from §8.3's reasoning + GH Actions rate-limit budget.",
+      "answer": "(a) `gh run watch <id>` (advisor self-answer 2026-04-27). The design's own §8.3 supersedes §G3 — §G3 was the initial design sketch; §8.3 is the rate-limit-mitigation refinement. `gh run watch` is the canonical mechanism: single long-poll, 1 API call per ci-watcher task vs 120 calls/hour for the §G3 mechanism. Plan §13 task that authors ci-watcher.md must use `gh run watch <id> --exit-status` (the `--exit-status` flag returns non-zero on workflow failure, simplifying classification). NOTE: there is no precedent for `gh run watch` in this codebase — implementing session must validate `gh run watch` exit-code semantics empirically before authoring ci-watcher.md (per the brief's §144 Boundary-of-judgment item). Surface this empirical-validation requirement in plan §4 as a watchpoint with the specific test command. Source: ci-validation-design.md §8.3, feedback_pipes_mask_exit_codes.md (exit-code discipline). Honour DQ #62 in plan §13 ci-watcher-authoring task by specifying `gh run watch --exit-status` (NOT `gh run view` polling) + add §4 watchpoint requiring empirical validation of `gh run watch` exit semantics before authoring ci-watcher.md's contract.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T18:29:09Z"
+    },
+    {
       "id": 61,
       "from": "advisor",
       "kind": "log",
