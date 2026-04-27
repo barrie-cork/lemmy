@@ -919,6 +919,7 @@ async fn jury_queue_view_returns_assignments() -> Result<(), Box<dyn Error>> {
       person_id: PersonId(person_id),
       status: lemmy_db_schema_file::enums::JuryAssignmentStatus::Selected,
       selected_under_constraints: None,
+      ..Default::default()
     };
     diesel::insert_into(jury_assignment::table)
       .values(&assignment_form)
@@ -3178,6 +3179,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
         person_id: eligibles[0],
         status: JuryAssignmentStatus::Accepted,
         selected_under_constraints: None,
+        ..Default::default()
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
@@ -3832,6 +3834,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
         person_id: juror_id,
         status: JuryAssignmentStatus::Accepted,
         selected_under_constraints: None,
+        ..Default::default()
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
