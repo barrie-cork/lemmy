@@ -236,6 +236,7 @@ async fn process_assignment(
       person_id: *person_id,
       status: JuryAssignmentStatus::Selected,
       selected_under_constraints: Some(constraints_applied_json.clone()),
+      ..Default::default()
     })
     .collect();
   insert_into(jury_assignment::table)

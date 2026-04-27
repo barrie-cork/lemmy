@@ -184,6 +184,7 @@ async fn process_decline(
       // handling in v1-JM-b (the replacement pick's constraint_record is
       // discarded above).
       selected_under_constraints: None,
+      ..Default::default()
     };
     insert_into(jury_assignment::table)
       .values(&form)

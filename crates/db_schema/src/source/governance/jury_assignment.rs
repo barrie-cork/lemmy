@@ -32,9 +32,8 @@ pub struct JuryAssignment {
   pub selected_under_constraints: Option<Value>,
   /// v1-JM-a §8.2: distinguishes original-jury rows from appeal-jury
   /// rows on the same case. DB DEFAULT 'Original' covers every v0
-  /// writer; v1-JM-d's `select_appeal_panel` writes 'Appeal' via a new
-  /// call site. The InsertForm intentionally does NOT add a `role`
-  /// field — DEFAULT covers the v0/v1-JM-b writer paths.
+  /// writer; v1-JM-d's `select_appeal_panel` writes 'Appeal' via
+  /// `InsertForm.role = Some(JuryAssignmentRole::Appeal)`.
   pub role: JuryAssignmentRole,
 }
 
@@ -53,4 +52,12 @@ pub struct JuryAssignmentInsertForm {
   /// construct the form via `..Default::default()` remain source-compatible.
   /// Added as a preliminary fix in v1-JM-b per decision-queue #48.
   pub selected_under_constraints: Option<Value>,
+  /// v1-JM-d §6.6 + §8.2: appeal-panel writer (`select_appeal_panel`)
+  /// sets `Some(JuryAssignmentRole::Appeal)`; v0/v1-JM-b/JM-c writers
+  /// (admin_assign_jury, admin_emergency_remove,
+  /// decline_jury_assignment replacement, the e2e fixture sites at
+  /// e2e.rs:917 / :3176 / :3830) keep `None` and rely on the DB
+  /// DEFAULT 'Original'. Optional per the same `derive(Default)`
+  /// pattern used for selected_under_constraints (DQ #48).
+  pub role: Option<JuryAssignmentRole>,
 }

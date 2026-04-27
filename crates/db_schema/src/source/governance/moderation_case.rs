@@ -2,7 +2,7 @@ use crate::newtypes::{CommentId, CommunityId, ModerationCaseId, PostId, RuleSetV
 use chrono::{DateTime, Utc};
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, SeverityTier},
+  enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryDecision, SeverityTier},
 };
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::moderation_case;
@@ -74,6 +74,13 @@ pub struct ModerationCase {
   /// the case is decided; pre-v1 backfill: COALESCE(closed_at,
   /// decided_at + 7d) — see `2026-04-23-000100_*/up.sql`.
   pub appeal_window_expires_at: Option<DateTime<Utc>>,
+  /// v1-JM-d §9.3: snapshot of the winning JuryDecision recorded by
+  /// submit_jury_vote at decision time. Used by request_appeal's
+  /// reporter-rights check (PRD §6.4) to determine whether the
+  /// original reporter has a legitimate grievance (only on NoAction or
+  /// AdvisoryLabel outcomes). NULL until JM-d is in place; pre-v1
+  /// Decided cases stay NULL and reporter-rights is naturally false.
+  pub winning_decision: Option<JuryDecision>,
 }
 
 #[derive(Clone, Default)]
@@ -107,4 +114,10 @@ pub struct ModerationCaseInsertForm {
   pub quorum_snapshot: Option<i32>,
   pub threshold_count_snapshot: Option<i32>,
   pub appeal_window_expires_at: Option<DateTime<Utc>>,
+  /// v1-JM-d §9.3 InsertForm extension. Default `None`; submit_jury_vote
+  /// writes via update().set(...) rather than re-inserting, so the
+  /// InsertForm path is only exercised by case-open writers
+  /// (create_report, admin_emergency_remove) which don't yet know the
+  /// decision.
+  pub winning_decision: Option<JuryDecision>,
 }
