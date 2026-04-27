@@ -2,6 +2,21 @@
   "pending": [],
   "resolved": [
     {
+      "id": 70,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-04-27T22:00:00Z",
+      "question": "Empirical probe of `gh run watch <id> --exit-status` on gh CLI 2.89.0 against three real workflow-run scenarios revealed it returns exit 0 for ALL three: (a) already-completed-success run (25017407689), (b) already-completed-failure run (25017407659), (c) in-progress run watched live to completion-failure (25017554049). The flag's --help text says 'Exit with non-zero status if run fails' but observed behaviour is exit 0 in all cases.",
+      "options": [
+        "(a) ci-watcher must NEVER trust --exit-status; instead always run `gh run view <id> --json conclusion --jq '.conclusion'` post-watch and branch on the conclusion string (success | failure | cancelled | timed_out | etc)",
+        "(b) report upstream gh CLI bug + add a workaround comment in ci-watcher.md citing the gh version it was tested against"
+      ],
+      "context": "Three probes captured during v1-validate-agent Task 2 empirical-gating. The defensive fallback in plan §10.6 — 'post-watch gh run view to disambiguate' — was framed as defensive; empirical evidence makes it MANDATORY. ci-watcher's exit-code table is therefore: 'exit code from gh run watch is unreliable; always disambiguate via gh run view conclusion'. The plan §4 watchpoint #1's whole purpose was to discover this before authoring ci-watcher.md.",
+      "answer": "(a) — ci-watcher MUST always run `gh run view <id> --json conclusion --jq '.conclusion'` after `gh run watch <id> --exit-status` returns; classify on the conclusion string, never on the exit code. The exit code is captured but treated as advisory only. The empirical exit-code table in ci-watcher.md §5 records: gh CLI 2.89.0 returns exit 0 for success/failure/in-progress→failure (3 probes). Cancelled and queued-only probes deferred — not blocking ci-watcher authoring because the conclusion-string fallback covers all conclusion values (success | failure | cancelled | timed_out | action_required | neutral | skipped | stale).",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-04-27T22:00:00Z"
+    },
+    {
       "id": 69,
       "from": "impl",
       "kind": "log",
