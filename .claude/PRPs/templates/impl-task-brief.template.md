@@ -8,6 +8,8 @@ related_dq: <id-or-null>
 
 # Brief — <phase> Task <N> — <title>
 
+> **Clarify provenance:** this brief's parent **planning** brief was clarified via `/brehon-clarify` before the planning task was queued (per `.claude/rules/advisor-orchestrator.md` "Clarify gate"). Any DQ #<id> with `from: "advisor"` and `kind: "clarify"` referenced in §3 below is a clarification that gated planning — read those entries to understand decisions baked into the plan. If this brief is for an impl-task and no clarify-DQ is cited, that's expected: clarify gates planning briefs only.
+
 ## 0. Pre-flight (subagent runs this before reading anything else)
 
 The `impl-task` agent already runs the forbidden-window check from `.claude/agents/impl-task.md` "Task-0 pre-flight". This brief inherits that — do not duplicate the bash. If the dispatch line includes `forbidden-window-override: DQ #<id>`, the agent skips the check.

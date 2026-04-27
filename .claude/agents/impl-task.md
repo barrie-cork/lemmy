@@ -58,6 +58,17 @@ Per `.claude/lessons/feedback_pipes_mask_exit_codes.md`, never pipe cargo throug
 
 If a validation command fails: fix the root cause and retry. Never accumulate broken state across commits. Per `.claude/lessons/feedback_test_impact_verification_before_patching.md`, when a test fails, identify the impact before changing the test — patching a test to pass is a process breach.
 
+## Story-checkpoint awareness (read-only at task start)
+
+If the plan has a §16a Stories block, find the story containing this task's number. Note its **Checkpoint command** and **Brief-Scope outputs to verify** — these are what the advisor's `/brehon-verify` will run against the worktree branch after every cohort completes.
+
+You do **not** run the story checkpoint yourself (that's the advisor's verify pass). But knowing the checkpoint helps you prioritise:
+
+- If your task is the **last in a story**, the story's checkpoint command is what verifies your story shipped — make sure your commit's validation gate runs the same checkpoint (or a superset). A green per-task validation that doesn't exercise the story's behaviour is a partial signal.
+- If your task is in the **middle of a multi-task story**, your per-task validation is intentionally narrower than the story checkpoint. That's fine — the story checkpoint runs after the last task's commit lands.
+
+If the §16a Brief-Scope outputs name a file or symbol that your task's IMPLEMENT list doesn't produce, surface as a DQ pending entry — either the story is mis-mapped to your task, or the IMPLEMENT list is incomplete. Both are planner-side misses you should escalate, not paper over.
+
 ## Decision-queue — when to write a `pending` entry
 
 Use the queue when:

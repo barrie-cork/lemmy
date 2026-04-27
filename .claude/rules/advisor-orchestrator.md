@@ -25,6 +25,16 @@ A brief contains exactly four sections:
 
 Briefs are tracked in git. They are the audit trail of what the advisor asked for.
 
+## Pre-queue lesson check (consult-only)
+
+Before writing a brief for a Junior task, the advisor must `memory_search_hybrid` the homeserver PMD for lessons relevant to the task's scope. Query with 2-3 keywords drawn from the task slug or the system being modified (e.g. `query: "diesel migration"` for a JM-d-task touching `crates/db_schema/migrations/`, `query: "cargo features full"` for a workspace-wide build task).
+
+This is **consult-only** — the advisor reads the hits, internalises them, and lets them shape the brief's Constraints section or Required reading paths. The brief does **not** need to cite the PMD search itself (no audit overhead), but if a hit is directly load-bearing (e.g. a known footgun the task will hit), surface it explicitly in §4 Constraints.
+
+**Cost discipline (goal #4):** one `memory_search_hybrid` call per brief, `limit: 5`, total round-trip <2s. If the search returns nothing relevant, that's a one-line decision: nothing applies, move on. Do not chain multiple searches per brief.
+
+This subsumes the "Memory injection happens at session start" line in the polling loop — session-start glob over `.claude/lessons/` is still required, but pre-queue search adds the fresh lookup right before the brief is written.
+
 ## Junior task description template
 
 The task description (the string passed to `mcp__junior-brehon__create_task`) is intentionally minimal — under 100 chars per `feedback_branch_manager_pm_split` and the homeserver Junior best-practice rules:
@@ -134,16 +144,72 @@ When a retro promotes a new lesson, the advisor copies the lesson file into `.cl
 
 Per the c-inherited-dragon plan's "Stages of a sub-phase" map, the advisor knows what to queue next on each completion:
 
-- **Planning complete** → run DoD smoke test → surface to user → on user approval, queue `bm-cut` to make the phase branch
-- **bm-cut complete** → queue `impl-task` for plan task 1
-- **Each impl-task complete** → check plan task list; queue `impl-task` for next task; or if all tasks done, queue `bm-cut` follow-up (`chore(lint):` if needed) then `bm-pr`
+- **Brief authored, no planning task yet** → run `/brehon-clarify .claude/PRPs/briefs/<phase>-planning-N.md` → resolve every clarify-DQ entry (advisor-mode for evident, user-relay for judgment-heavy) → only then queue the planning task. Skipping `/brehon-clarify` on a planning brief is a process breach the advisor must justify in the planning task's commit body.
+- **Planning complete** → run DoD smoke test → run watchpoint-specificity gate → surface to user → on user approval, queue `bm-cut` to make the phase branch
+- **bm-cut complete** → queue impl per **Cohort dispatch** (next section): if plan §13 Task 1 (or first non-pre-flight task) carries `[P]`, compute the cohort and queue all members simultaneously; otherwise queue Task 1 alone.
+- **Each impl-task complete** → check plan task list; **if cohort still has pending peers, wait** for all-complete before computing next cohort; otherwise compute next cohort starting from the next pending task. If all tasks done, queue `bm-cut` follow-up (`chore(lint):` if needed) then `bm-pr`.
+- **All §16a stories `[done]`** (between last impl complete and bm-merge confirm) → run `/brehon-verify` → if any phantom, surface to user via catch-fire; otherwise advance to bm-pr stages below
 - **bm-pr complete** → wait for CodeRabbit (`bm-task` polls) → on CR posted, queue `bm-poll-cr`
 - **bm-poll-cr complete** → queue `bm-triage` (draft auto)
 - **Triage drafted** → surface to user → on approval, queue `impl-task` for fix-in-PR commits
-- **No critical findings open** → surface merge-confirm to user → on confirm, queue `bm-merge`
+- **No critical findings open** → confirm `/brehon-verify` report shows all stories ✓ → surface merge-confirm to user → on confirm, queue `bm-merge`
 - **bm-merge complete** → author retro → surface to user → on sign-off, run `/brehon-phase-transition`
 
 The advisor never auto-merges or auto-resolves ADR-affecting DQ. User gates stay.
+
+## Clarify gate (pre-planning, advisor-side)
+
+Per `.claude/commands/brehon-clarify.md` (spec-kit pattern adoption — `feedback_clarify_before_plan.md`):
+
+Before queueing any **planning** Junior task, the advisor runs `/brehon-clarify <brief-path>`. The command produces DQ entries with `from: "advisor"`, `kind: "clarify"`, that gate the planning stage. The planning task is queueable only when every clarify-DQ entry on this brief is resolved (either advisor self-answer with citation, or user answer relayed verbatim).
+
+This gate applies to **planning briefs only**. impl-task and bm-task briefs do not run clarify (per `brehon-clarify.md` "When to skip" — impl briefs derive from a plan that was itself clarified, BM briefs are mechanical).
+
+The advisor surfaces clarify-pass results to the user only when (a) the brief required edits, or (b) `--mode user-relay` was needed for any question. A pure advisor-mode pass that produced citations-only DQ entries reports completion in the polling-loop output without escalation.
+
+## Cohort dispatch (impl-task parallelism)
+
+Per `.claude/PRPs/templates/plan.template.md` §13 (`[P]` markers) and `feedback_parallel_cohort_dispatch.md`:
+
+When a plan §13 task carries `[P]` and is the next pending task, the advisor computes the **cohort** — all consecutive `[P]`-marked tasks from the next pending forward, until a non-`[P]` boundary (the barrier task). Task 0 (pre-flight harness audit) is **always** non-`[P]`, so it queues alone.
+
+### Cohort dispatch sequence
+
+1. Read plan §13. Locate the next pending task by id (smallest-numbered task whose impl commit is not yet on the phase branch).
+2. If that task is non-`[P]` (or it is Task 0): queue it alone via `mcp__junior-brehon__create_task` and wait for complete/failed before computing next.
+3. If that task is `[P]`: walk §13 forward collecting consecutive `[P]` tasks until a non-`[P]` boundary or end-of-list. The collected list is the **cohort**.
+4. **Budget check**: estimate cumulative cargo memory for the cohort (each `cargo check --workspace --features full` ≈ 6 GB peak per the EliteDesk's deployed cap; serial budget is `MemoryMax=10G`). If `cohort_size × per_task_peak > 10 GB`, **degrade to serial** — queue the cohort tasks one at a time as if non-`[P]`. Per `feedback_resource_budget_pre_queue.md`. Note the degrade in the polling-loop output: `cohort degraded to serial: budget exceeded (<size> tasks × <peak> GB > 10 GB)`.
+5. **Forbidden-window check**: re-evaluate the forbidden-windows table for the cohort's expected start time. If any cohort task would start in a forbidden window, defer the entire cohort per the existing self-defer rule. Cohort dispatch and forbidden-window deferral compose naturally — the advisor defers the whole cohort, not individual tasks.
+6. **Queue every cohort task simultaneously** via parallel `mcp__junior-brehon__create_task` calls (single message, multiple tool uses). Each task gets its own Junior worktree per `feedback_parallel_agents_one_worktree_per_agent.md`. Brief paths are unique per task (`.claude/PRPs/briefs/<phase>-impl-<N>.md`).
+7. **Wait for all cohort members to reach complete or failed** before computing the next cohort. A failed task in the cohort blocks advancement — the advisor surfaces the failure (catch-fire if it's a hard-refusal violation) and does not queue beyond the failure boundary until resolved.
+
+### Cohort dispatch refusals
+
+- **Never queue a cohort whose tasks have not all been clarified.** The clarify gate runs once per planning brief, but if a cohort's tasks reference §13 entries that surfaced new ambiguity post-clarify (e.g. a brief edit introduced overlap), file a DQ pending entry and re-run `/brehon-clarify` on the affected brief.
+- **Never queue a cohort during a forbidden window**, even partially. Either the entire cohort defers or none does.
+- **Never re-queue a cohort task that already shows running.** Junior's task IDs are unique per worktree; re-queueing creates a duplicate worktree and conflicting branch names.
+- **Never queue a `[P]` task whose IMPLEMENT files overlap a non-`[P]` task that's still running**. The `[P]` marker is a planner-side promise of file disjointness within the cohort, not across cohort boundaries — if the prior cohort's barrier hasn't completed, wait.
+
+### Plans without `[P]` markers (back-compat)
+
+If a plan §13 has no `[P]` annotations (legacy plans pre-this-rule, or plans where the planner judged no parallelism was safe), every task is treated as non-`[P]` and dispatched serially. The cohort-dispatch logic does not broaden serial dispatch into accidental parallel — `[P]` must be explicit.
+
+## Verify gate (post-impl, pre-merge)
+
+Per `.claude/commands/brehon-verify.md` (spec-kit pattern adoption — `feedback_brehon_verify_pre_merge.md`):
+
+Before queueing `bm-merge`, the advisor runs `/brehon-verify <phase>`. The command iterates plan §16a stories, runs each story's checkpoint command against the worktree branch, confirms each Brief-Scope output exists + matches its structural pattern, and writes a report at `.claude/PRPs/reports/<phase>-verify.md`.
+
+Outcome handling:
+
+- **All stories ✓**: report committed; advance to merge-confirm user gate.
+- **Any phantom** (task complete but expected output absent or empty): catch-fire — surface to user with the phantom story names + the failing structural patterns + a one-line "what was expected vs what's there". Do not queue bm-merge.
+- **Any ✗ from checkpoint failure** (output exists but checkpoint command exits non-zero): catch-fire — surface as "regression suspected; CR triage missed it". File a DQ pending entry citing the story and the checkpoint output.
+
+Verify is distinct from CR triage:
+- Verify catches **phantom completions** (advisor-side reconciliation between brief Scope + plan §13 IMPLEMENT lists vs. worktree branch state).
+- CR triage handles **regressions and quality findings** (CodeRabbit-side review post-PR).
+Both gates stay; neither replaces the other.
 
 ## Catch-fire procedures
 
