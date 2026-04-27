@@ -46,6 +46,7 @@ The polling loop must stay lean to satisfy goal #4 (model-efficient):
 - Read the plan file once after the planning subagent completes — not on every poll.
 - Read `.claude/decision-queue.json` on every poll only if `git fetch origin` reports new commits.
 - Memory injection (Glob `.claude/lessons/`, search PMD) happens at session start, not per poll.
+- During a single-task poll loop, prefer `/start-brehon --fast <N>` (5 probes incl. DQ pending count) over the full 9-probe spec. If DQ pending > 0, escalate to `/check-dq` for full triage; otherwise dispatch on task status per the fast-mode heuristic table.
 
 If a polling cycle reveals **no state change**, the only output is "no change" — nothing else loaded into context.
 
