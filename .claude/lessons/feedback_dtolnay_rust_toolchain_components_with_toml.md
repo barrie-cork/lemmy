@@ -39,18 +39,22 @@ The `components:` input is documented as the canonical way to add components to 
 For any workflow YAML that invokes `cargo clippy` (or any other component beyond `rustc` + `cargo`) on a repo with `rust-toolchain.toml` pinning a channel:
 
 1. Use `dtolnay/rust-toolchain@master` for the channel install (it reads `rust-toolchain.toml` correctly).
-2. **Add an explicit `rustup component add` step** for each required component, citing the pinned channel + target:
+2. **Add an explicit `rustup component add` step** that derives the toolchain dynamically from `rustup show active-toolchain` — this tracks `rust-toolchain.toml` automatically across channel bumps and runner-target changes:
 
 ```yaml
 - uses: dtolnay/rust-toolchain@master
   with:
     components: clippy   # NB: silently ignored when rust-toolchain.toml exists; kept for documentation
 
-- name: Install clippy for pinned toolchain
-  run: rustup component add clippy --toolchain 1.95-x86_64-unknown-linux-gnu
+- name: Install clippy for active toolchain
+  run: |
+    toolchain="$(rustup show active-toolchain | awk '{print $1}')"
+    rustup component add clippy --toolchain "$toolchain"
 ```
 
 The redundant `with: components:` line is a documentation marker for future readers; the `rustup component add` line is what actually installs.
+
+**Anti-pattern to avoid:** hard-coding the toolchain version + triple in the `rustup component add` line (e.g. `rustup component add clippy --toolchain 1.95-x86_64-unknown-linux-gnu`). This breaks silently when `rust-toolchain.toml` is bumped to 1.96 (clippy installs into the wrong toolchain; the actual active one still has none) or when the runner target changes (e.g. `aarch64-unknown-linux-gnu` for arm64 runners). Always derive from `rustup show active-toolchain`. CR finding cr-4 on PR #104 caught the hard-coded form.
 
 ## Generalises to
 

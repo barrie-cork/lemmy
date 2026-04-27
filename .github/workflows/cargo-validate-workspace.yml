@@ -53,13 +53,16 @@ jobs:
           # Pinned in rust-toolchain.toml; the action reads that file.
           toolchain: stable
 
-      - name: Install clippy for pinned toolchain
+      - name: Install clippy for active toolchain
         run: |
-          # rust-toolchain.toml pins channel = "1.95", which dtolnay's
-          # action installs without clippy by default. cargo-validate-
-          # workspace runs clippy, so install it explicitly against the
-          # pinned channel.
-          rustup component add clippy --toolchain 1.95-x86_64-unknown-linux-gnu
+          # rust-toolchain.toml pins the channel, which dtolnay's action
+          # installs without clippy by default. cargo-validate-workspace
+          # runs clippy, so install it explicitly for the active toolchain
+          # rustup actually selected — this tracks rust-toolchain.toml
+          # automatically (channel bumps, target changes), unlike the
+          # earlier hard-coded "1.95-x86_64-unknown-linux-gnu" form.
+          toolchain="$(rustup show active-toolchain | awk '{print $1}')"
+          rustup component add clippy --toolchain "$toolchain"
 
       - name: Install libpq
         run: |
