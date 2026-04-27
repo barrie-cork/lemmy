@@ -1371,3 +1371,19 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **OQ block at 99-decisions-and-open-questions.md:540-547:** intentionally left OPEN — v1.5 general-severity-inference planner closes it via separate `docs(99):` commit on the v1.5 plan branch.
 - **Pushed to origin:** pending — waiting on commit + push.
 - **Next:** push to `origin/governance-v0`. Coordination signal `DQ pending: 1 [#47]` should drop to `0` on next session start.
+
+## advisor: handover written (v1-validate-agent plan-write paused mid-research) — 2026-04-27T19:46Z
+
+- **Action:** Authored `.claude/PRPs/handovers/advisor-2026-04-27-v1-validate-agent-planning.md` mid-`/prp-core:prp-plan` flow. User signalled "We will continue this in another session" + "so update relevant files" between Phase 3 (research) and Phase 5 (architect).
+- **State at handover:**
+  - `governance-v0` clean @ `ba949f27f`.
+  - Plan file at `.claude/PRPs/plans/v1-validate-agent.plan.md` does NOT exist yet — to be authored by resume session.
+  - 0 DQ pending (all clarify-DQ #62–#67 resolved before brief was finalised).
+  - 6-task §13 cohort layout pre-shaped in handover ("Plan shape decided" section); resume session does NOT need to re-derive it.
+  - 6 §16a stories pre-shaped.
+  - 9 §4 watchpoints pre-listed (incl. `gh run watch --exit-status` empirical-validation requirement per DQ #62).
+- **Change:** added handover at `.claude/PRPs/handovers/advisor-2026-04-27-v1-validate-agent-planning.md`; superseded scratch progress note at `.claude/PRPs/debug/v1-validate-agent-planning-progress.md` (deleted — debug/ is NOT in .gitignore so leaving it would commit a redundant copy).
+- **Rationale:** per `.claude/rules/handover.md` — handover file lives at `.claude/PRPs/handovers/advisor-*.md` (tracked). Length 280-line range matches existing corpus (`v1-prd-edit-pass-2026-04-19.md` 322 lines is upper bound; this handover ~330 lines, slight over because Phase-2 Explore outputs are inlined to spare resume-session tokens).
+- **Pushed to origin:** pending — handover commit + this runlog append in same commit.
+- **Next:** resume session reads the handover; authors `.claude/PRPs/plans/v1-validate-agent.plan.md` per the §13 cohort layout; runs §15 dry-run smoke; commits `docs(plan): v1-validate-agent plan written`; surfaces plan to user for approval before queueing `bm-cut`.
+
