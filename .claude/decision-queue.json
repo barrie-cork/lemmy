@@ -1,5 +1,21 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 54,
+      "from": "advisor",
+      "timestamp": "2026-04-27T09:14:53Z",
+      "question": "Uncommitted drift on EliteDesk's main checkout: .claude/settings.json was mutated from `model: claude-opus-4-7` → `model: opus[1m]` (plus 2-space → 4-space indent reformat) during task #5 (failed planning, 2026-04-26 ~16:25 UTC). A backup `.claude/settings.json.bak.1777213507` was written next to it. The drift survived `git checkout phase-v1-JM-d` and will follow impl-task #1's worktree. Per feedback_opus_max_effort.md, the model setting is load-bearing; both values arguably correct intent but only one is canonical. How to resolve before queueing impl-task #1?",
+      "options": [
+        "(A) Hard-revert on EliteDesk (`git checkout .claude/settings.json && rm .bak`) — restores the committed canonical value `claude-opus-4-7`. Source-of-truth wins. Risk: if the autonomous mutation was correct intent (e.g. some skill detected `[1m]` was needed), the canonical value may itself be wrong and the silent revert would mask that. Cheapest, keeps moving.",
+        "(B) Investigate the mutator first. Read /opt/junior-src logs, .claude/hooks/, skills, and the task #5 run log to identify which process wrote `opus[1m]` and what it intended. If correct intent, commit `opus[1m]` to trunk; otherwise revert. More expensive but unblocks confidently and may surface a feedback memory worth keeping.",
+        "(C) Commit `opus[1m]` on `governance-v0` directly as the new canonical (per feedback_opus_max_effort.md the 1M variant is load-bearing — `[1m]` is the explicit shorthand for that). Then fast-forward phase-v1-JM-d (or rebase). Aligns the committed config with the user's memory. Risk: the canonical model ID syntax across Claude Code versions may not be `opus[1m]`; if invalid the daemon might silently fall back.",
+        "(D) Both A + a follow-up investigation task. Revert now to unblock impl-task #1, queue a separate impl-task to investigate which process mutated the file and decide the canonical value. Two-step but doesn't gate JM-d on this side issue."
+      ],
+      "context": "EliteDesk `/srv/brehon-fork`'s main checkout was on governance-v0 during task #5 (failed planning). Backup file timestamp 1777213507 = 2026-04-26 16:25 UTC, matching task #5 window. Committed value on origin/governance-v0 is `claude-opus-4-7`. The bm-cut subagent (task #8) ran inside its own worktree and didn't touch the main checkout; the drift therefore persisted from the pre-cut state. Memory feedback_opus_max_effort says: 'pinned via global + project settings.json; env vars unreliable on Windows' — implying the project settings.json IS the canonical declaration site for this server.",
+      "answer": null,
+      "answered_by": null
+    }
+  ],
   "resolved": [
     {
       "id": 47,
