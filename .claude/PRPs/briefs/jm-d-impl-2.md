@@ -133,12 +133,17 @@ Validation runs out-of-band on GitHub Actions (Shape G). After committing your w
 
 After `git push`:
 
-1. Capture the workflow_run id:
+1. Capture the workflow_run id for the workspace validation run (NOT the migration run — see note below):
    ```bash
-   gh run list --branch <your-branch> --limit 1 \
+   gh run list --repo barrie-cork/lemmy --branch <your-branch> \
+     --workflow cargo-validate-workspace --limit 1 \
      --json databaseId --jq '.[0].databaseId'
    ```
    Retry with exponential backoff up to ~2 min if the run hasn't appeared yet (push-to-trigger lag is normal).
+
+   `--repo barrie-cork/lemmy` is mandatory — without it, `gh` defaults to upstream LemmyNet/lemmy and returns nothing (per `feedback_gh_pr_fork_repo_flag.md`).
+
+   `--workflow cargo-validate-workspace` is mandatory on JM-d branches — both `cargo-validate-workspace.yml` and `cargo-validate-migration.yml` trigger on this push (the worktree branch's diff vs governance-v0 includes the migrations from JM-d Task 1, which match the migration workflow's `paths:` filter). The migration workflow runs the `migrate-roundtrip.sh` stub, which is design-intended to fail on any branch that introduces real migrations vs governance-v0 until v1-JM-e replaces the stub body. Capture only the workspace run id; ignore the migration run. ci-watcher will poll only what we write to the DQ entry.
 
 2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
    ```json
