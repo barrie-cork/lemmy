@@ -1,19 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 56,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-04-27T20:40:03Z",
-      "question": "phase-v1-JM-d: ModerationCase Queryable trait-bound mismatch blocks e2e test compilation. moderation_case schema has 25 columns (appeal_*, severity_tier, status_tier, jury_decision from incomplete JM-d task 2 work) but ModerationCase struct still derives Queryable for older 24-col tuple shape. cargo check passes; cargo test --test e2e --workspace --features full fails with 5 E0277 errors. Required to validate the #99 deadlock fix runtime. How to resolve?",
-      "options": [
-        "(a) finish JM-d task 2 properly - queue a fresh impl-task with the existing brief + e2e.rs Edit-hang mitigations (advisor pre-edit any e2e.rs touches per PMD #117). Largest scope; produces the canonical fix.",
-        "(b) minimal struct sync only - extend ModerationCase struct in moderation_case.rs to include the 5 missing fields (appeal_*, severity_tier, status_tier, jury_decision) WITHOUT shipping any new business logic. Smallest scope to unblock the test; may still need follow-up task.",
-        "(c) defer test validation - accept that deadlock fix is functionally validated via cargo check + clippy + code review; mark e2e test as still gated until JM-d task 2 ships; merge deadlock fix to governance-v0 anyway. Riskier - runtime deadlock behaviour unverified."
-      ],
-      "context": "Pre-existing schema work from cancelled tasks #10/#11/#12/#13/#14. Current branch tip: 8e3bba1 (governance_config rename) + 27b212e (deadlock fix #99). cargo check --workspace --features full -> exit 0. Clippy -> exit 0. Test compilation -> 5 E0277 errors at moderation_case.rs:15 (Queryable derive) cascading to e2e.rs:4530 + 4 other call sites. The deadlock fix itself is correct; validation channel is broken by separate schema work."
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 47,
@@ -738,6 +724,22 @@
       "context": "Forward-apply via the runner CLI works (validations 1, 3, 4, 5 all green). The library API exposes Options::default().revert().limit(N) but the workspace binary main.rs hard-rejects args. feedback_lemmy_migration_runner.md confirms the library call is the canonical path; the plan's CLI-revert form was a planner mis-statement.",
       "answer": "(A) impl-self-resolved. Manually exercised down.sql via psql under pg_advisory_lock(0), DELETEd the two migration rows, then re-ran the runner \u2014 re-applied cleanly (.claude/PRPs/debug/v1-JM-d-task1-{revert,reapply,psql-*}.log all exit-0; columns dropped then restored). down.sql correctness verified at task-1 time without modifying the binary or touching crates/. Plan \u00a713 Task 1 VALIDATE block should be revised by the next planner pass to reference either the library API or the manual-psql substitute; the e2e phase1_migrations_round_trip test remains the deeper exerciser on the next full e2e run.",
       "answered_by": "impl-self-resolved"
+    },
+    {
+      "id": 56,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-04-27T20:40:03Z",
+      "question": "phase-v1-JM-d: ModerationCase Queryable trait-bound mismatch blocks e2e test compilation. moderation_case schema has 25 columns (appeal_*, severity_tier, status_tier, jury_decision from incomplete JM-d task 2 work) but ModerationCase struct still derives Queryable for older 24-col tuple shape. cargo check passes; cargo test --test e2e --workspace --features full fails with 5 E0277 errors. Required to validate the #99 deadlock fix runtime. How to resolve?",
+      "options": [
+        "(a) finish JM-d task 2 properly - queue a fresh impl-task with the existing brief + e2e.rs Edit-hang mitigations (advisor pre-edit any e2e.rs touches per PMD #117). Largest scope; produces the canonical fix.",
+        "(b) minimal struct sync only - extend ModerationCase struct in moderation_case.rs to include the 5 missing fields (appeal_*, severity_tier, status_tier, jury_decision) WITHOUT shipping any new business logic. Smallest scope to unblock the test; may still need follow-up task.",
+        "(c) defer test validation - accept that deadlock fix is functionally validated via cargo check + clippy + code review; mark e2e test as still gated until JM-d task 2 ships; merge deadlock fix to governance-v0 anyway. Riskier - runtime deadlock behaviour unverified."
+      ],
+      "context": "Pre-existing schema work from cancelled tasks #10/#11/#12/#13/#14. Current branch tip: 8e3bba1 (governance_config rename) + 27b212e (deadlock fix #99). cargo check --workspace --features full -> exit 0. Clippy -> exit 0. Test compilation -> 5 E0277 errors at moderation_case.rs:15 (Queryable derive) cascading to e2e.rs:4530 + 4 other call sites. The deadlock fix itself is correct; validation channel is broken by separate schema work.",
+      "answer": "(b) minimal struct sync only. Brief committed at 25c730d on phase-v1-JM-d. Adds winning_decision field to ModerationCase + ModerationCaseInsertForm only \u2014 no business logic, no e2e.rs touch, no R3 sweep, no submit_jury_vote write. Full JM-d task 2 remains parked. Drift stub per PMD #14 (build only what tests exercise) \u2014 unblocks cargo test --test e2e --no-run to validate the #99 deadlock fix runtime.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T20:51:28Z"
     }
   ],
   "schema_version": 2
