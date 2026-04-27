@@ -44,10 +44,17 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install libpq + Postgres client
+      - name: Install libpq
         run: |
+          # libpq-dev + pkg-config compile pq-sys against libpq (needed
+          # for any cargo step that touches diesel/pq-sys). postgresql-
+          # client (the psql CLI) is intentionally NOT installed yet —
+          # the migrate-roundtrip stub doesn't use it. The first
+          # sub-phase that ships real round-trip logic (likely
+          # testcontainers Postgres + a SELECT probe) re-adds
+          # postgresql-client to this step at that time.
           sudo apt-get update
-          sudo apt-get install -y libpq-dev pkg-config postgresql-client
+          sudo apt-get install -y libpq-dev pkg-config
 
       - name: Cache cargo registry + target
         uses: actions/cache@v4
