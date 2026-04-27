@@ -71,11 +71,11 @@ echo "exit: $?"; tail -5 .claude/PRPs/debug/v1-JM-d-task2-migrate.log
 # Expected: exit 0; idempotent — Task 1's migrations already applied via DQ #55 manual psql, but this is a no-op safety re-apply
 
 # Stage B — regenerate schema.rs via the diesel CLI (NOT lemmy_diesel_utils)
+# diesel CLI is pre-installed on the EliteDesk daemon at /home/barrie/.cargo/bin/diesel
+# (diesel 2.3.8, postgres backend). Verify with `which diesel`. If it's missing,
+# DO NOT attempt to install — file a DQ pending entry; the install belongs to advisor preflight.
 diesel print-schema > crates/db_schema_file/src/schema.rs.new 2> .claude/PRPs/debug/v1-JM-d-task2-printschema.log
 echo "exit: $?"
-# If exit ≠ 0: the diesel CLI may not be installed on the worktree's PATH. Check
-#   `which diesel` and `cargo install diesel_cli --no-default-features --features postgres`
-#   if missing. If install fails, file a DQ pending entry — do NOT modify schema.rs by hand.
 mv crates/db_schema_file/src/schema.rs.new crates/db_schema_file/src/schema.rs
 cargo +nightly fmt --package lemmy_db_schema_file > .claude/PRPs/debug/v1-JM-d-task2-fmt.log 2>&1
 ```
@@ -105,6 +105,14 @@ For each `JuryAssignmentInsertForm { ... }` literal:
 Same for `ModerationCaseInsertForm` and `AppealInsertForm` enumerations.
 
 **Skip `request_appeal.rs:122-128` AppealInsertForm site** — Task 3 rewrites it with explicit `requester_role: Some(...)`.
+
+### Memory-cap awareness (new since first attempt)
+
+The daemon now runs under a cgroup memory cap: `MemoryMax=10G`, `MemoryHigh=8G` (deployed at `homeserver` repo `20f251b` after task #10's first attempt OOM-cascaded the EliteDesk on 2026-04-27). This cap propagates to your worker subtree.
+
+- If `cargo check --workspace --features full` hits the cap, the cgroup OOM-killer terminates the worker process. Junior reports a non-zero exit; you'll see `Killed` in the log. **Do NOT retry blindly** — file a DQ pending entry with the cargo log tail and the `dmesg | grep oom` output if accessible. Advisor will decide whether to bump the cap or break the validation into per-crate invocations.
+- The cap is high enough that workspace-wide checks *should* succeed on a clean cargo cache. If the cache is dirty/cold, the first build may peak higher than usual.
+- `cargo install <anything>` is now an advisor-side responsibility — diesel_cli is pre-installed (verified at 11:06 UTC). Do not attempt other cargo installs without DQ-asking first.
 
 ### Branch + commit discipline
 
