@@ -117,7 +117,7 @@ When a new pending entry appears in `decision-queue.json`:
 - **Judgment-heavy DQ entries.** ADR-affecting, scope-changing, visible-to-others impact. Use the user-relay branch above.
 - **CR triage approval.** After `bm-task` runs `bm-poll-cr` + draft triage, surface the four-bucket triage to user. Wait for explicit approval before queueing fix-in-PR impl tasks.
 - **Merge confirm.** Before queueing `bm-merge`, surface to user. Wait for explicit confirm.
-- **Retro sign-off.** Author the retro per `feedback_retro_not_report` and `feedback_retro_required_sections`; surface to user. Wait for sign-off before phase transition.
+- **Retro sign-off.** Author the retro per `feedback_retro_not_report`, `feedback_four_role_retro_signals`, and `feedback_retro_task_complexity_score` (per-task one-line `<files>/<commits>/<runtime-min>/<max-log-silence-min>` metric, aggregated in §5); surface to user. Wait for sign-off before phase transition.
 
 The advisor never skips these gates for speed (goal #3: slow-OK). Belt-and-braces.
 
