@@ -105,6 +105,8 @@ Out-of-scope items, with rationale. Each entry pairs a "tempting addition" with 
 Execute in dependency order. **One commit per task** (per `feedback_pr_per_phase.md`'s code-only-via-PR rule). Each task header carries a `[P]` marker iff its **IMPLEMENT** files share no path with any other `[P]`-marked task in the same cohort. Task 0 is **always** non-`[P]` (barrier for verification).
 
 > **Cohort dispatch (advisor-side):** the advisor groups consecutive `[P]`-marked tasks into a "cohort" and queues them simultaneously to Junior, each on its own worktree (per `feedback_parallel_agents_one_worktree_per_agent.md`). Cohort dispatch is degraded to serial above the EliteDesk cargo budget (per `feedback_resource_budget_pre_queue.md`). Non-`[P]` tasks are barriers — they queue alone. See `.claude/rules/advisor-orchestrator.md` "Cohort dispatch" for the mechanical rules.
+>
+> **Shape G (Layer G2 push-and-exit, v1-JM-e onward):** plans authored under Shape G compose tasks as edit + commit + push (validation runs async on GH Actions); cargo invocations belong to the workflow YAML at `.github/workflows/cargo-validate-*.yml`, not to the §13 task body. impl-task subagents capture the workflow_run_id post-push, write a `kind: "validate-pending"` DQ entry, and exit. The cohort budget check (memory cap) is non-binding under Shape G since cargo runs off-box; the forbidden-window check is non-binding for impl-task throughput. Pre-existing plans (v1-JM-d and earlier) keep their inline cargo task body — forward-only-immune per `feedback_schema_changing_spec_retrofit_question.md`.
 
 ### Task 0: Pre-flight harness audit + branch verification
 
@@ -215,6 +217,28 @@ Bulleted checklist of invariants the planner asserts hold at end-of-phase:
 - [ ] R5: Task 0 enumerated all probes
 - [ ] R6: all clippy invocations use `--no-deps` uniformly
 - [ ] …
+
+### 15.6 DoD per workflow (Shape G plans — v1-JM-e onward)
+
+Plans authored under Shape G (Layer G2 push-and-exit, per
+`.claude/PRPs/plans/v1-validate-agent.plan.md`) reference workflow
+files by path + expected `conclusion` field rather than enumerating
+cargo commands inline. The advisor's `/brehon-verify` cross-checks
+the latest workflow run on the phase-branch SHA against the listed
+conclusion before queueing `bm-merge`.
+
+Shape:
+
+- **DoD entry**: `<workflow-name>.yml` on `<phase-branch>` SHA `<sha>` → `conclusion: "success"`
+- **Validation command**: `gh run list --repo barrie-cork/lemmy --branch <branch> --limit 1 --json conclusion,databaseId --jq '.[0]'`
+- **EXPECT**: `{"conclusion": "success", "databaseId": <id>}`
+
+Pre-existing JM-d/JM-c/JM-b/JM-a plans stay under prose §15
+(forward-only per
+`feedback_schema_changing_spec_retrofit_question.md`). The single
+bounded retrofit at `.claude/PRPs/briefs/jm-d-impl-2.md` §5 switches
+to push-and-exit for the parked JM-d Task 2 brief; all other
+pre-Shape-G plans and briefs keep their inline cargo §15 entries.
 
 ---
 
