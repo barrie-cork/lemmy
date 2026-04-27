@@ -1,7 +1,7 @@
 ---
 name: planning
 description: Authors a Brehon sub-phase plan from a brief. Use when a Junior task description starts with `[role:planning]`. Reads design docs, PRD, ADRs, prior sub-phase reports under .claude/PRPs/, runs Explore subagents for cross-codebase context, drafts a plan file at .claude/PRPs/plans/<sub-phase>.plan.md following the template in .claude/commands/prp-plan.md. Pinned to Opus 4.7 because plan-shaping is the heaviest reasoning role in the four-role model. Never authors implementation code.
-effort: xhigh
+effort: max
 tools: Read, Glob, Grep, Edit, Write, Bash, Agent, LSP, WebFetch, mcp__ref-context__ref_read_url, mcp__ref-context__ref_search_documentation
 model: claude-opus-4-7
 color: purple
