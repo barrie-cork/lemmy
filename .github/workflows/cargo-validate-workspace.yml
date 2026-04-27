@@ -1,0 +1,80 @@
+name: cargo-validate-workspace
+
+# Out-of-band cargo validation for Brehon phase branches. Runs
+# `cargo check + clippy + test --no-run` on every push to a
+# `phase-v1-*` or `junior/*` branch, freeing the EliteDesk Junior
+# worker slot from in-band cargo work (Shape G — see
+# .claude/PRPs/plans/v1-validate-agent.plan.md).
+#
+# Trigger pattern is push-only per DQ #66. PR-side status checks
+# come via branch protection rules, configured out-of-band.
+
+on:
+  push:
+    branches:
+      - 'phase-v1-*'
+      - 'junior/*'
+    paths:
+      - 'crates/**'
+      - 'migrations/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/cargo-validate-workspace.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Use github.ref so concurrent pushes to the same branch cancel-in-progress;
+  # different branches run independently. Differs from cargo-test-e2e.yml
+  # which uses pull_request.number.
+  group: cargo-validate-workspace-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-workspace:
+    name: validate workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          # crates/email/translations/ is a submodule pointing to
+          # LemmyNet/lemmy-translations; lemmy_email/build.rs reads it
+          # at compile time, so we must initialise it.
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          # Pinned in rust-toolchain.toml; the action reads that file.
+          toolchain: stable
+          components: clippy
+
+      - name: Install libpq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev pkg-config
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-validate-workspace-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-validate-workspace-${{ runner.os }}-
+
+      - name: cargo check workspace + features full
+        run: cargo check --workspace --features full --no-deps
+
+      - name: cargo clippy workspace + features full
+        run: cargo clippy --workspace --features full --no-deps -- -D warnings
+
+      - name: cargo test compile (no-run)
+        run: cargo test --no-run -p lemmy_server --test e2e
