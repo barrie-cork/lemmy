@@ -158,6 +158,26 @@ Specific dogfood targets:
 
 The gate is mechanical: a commit that adds `.claude/commands/<verb>.md` without a "Pre-commit dogfood" note in the body is a process miss. Prose lints catch typos; dogfood catches semantics. Cost of pre-commit dogfood ≈ 5 minutes; cost of post-deploy fix ≈ 10× that.
 
+## Schema-changing-spec retrofit gate (mandatory in plan-mode for shape changes)
+
+Per `.claude/lessons/feedback_schema_changing_spec_retrofit_question.md`: when an advisor plan-mode session produces a plan that changes the shape of an existing artifact class (new section in a template, new marker in a section, new field in a schema, new required sub-section in a frontmatter), the advisor must call `AskUserQuestion` **once, before `ExitPlanMode`**, asking whether to retrofit existing artifacts.
+
+Triggers:
+
+- **New section in `*.template.md`** (e.g. §16a Stories block in plan.template.md).
+- **New marker in an existing section** (e.g. `[P]` in §13 task headers).
+- **New field in JSON/YAML schema** (e.g. `kind: "clarify"` in decision-queue.json).
+- **New required sub-section in a frontmatter shape** (e.g. dogfood gate's `<rationale>` requirement on `.claude/commands/*.md`).
+
+The question shape:
+
+- "The new pattern applies forward-only to artifacts authored after this lands. Should I also retrofit the existing artifact(s) [<list>] in a follow-up commit?"
+- Options: "Retrofit all" / "Retrofit named subset" / "Forward-only (no retrofit)"
+
+The user's answer goes into the plan's "Out of scope" or a new "Retrofit scope" section verbatim. If user picks "Forward-only", the plan ships with an explicit "Pre-existing X are not affected; retrofit deferred indefinitely" line. If user picks retrofit, a Phase Z is added at the end of the implementation phases. Skipping the question is a process miss — the symptom shows up in the post-implementation retro as "should we retrofit X?" appearing as a deferred follow-up.
+
+**When to skip:** plans that add purely additive functionality (new commands that don't change other commands' shape), bug fixes (the retrofit is the work itself), or plans explicitly limited to one artifact.
+
 ## Memory and lessons (one-system principle)
 
 The advisor reads two memory paths:

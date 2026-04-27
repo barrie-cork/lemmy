@@ -234,4 +234,21 @@ Earlier (post each task) would race with the impl daemon and produce flapping re
 
 After fix-in-PR commits land on the phase branch, re-run `/brehon-verify` to confirm phantoms cleared. The report is committed at each run (not amended) — the audit trail matters.
 
+### Pre-commit dogfood (per `.claude/lessons/feedback_dogfood_slash_command_specs.md`)
+
+Mentally walked through against `.claude/PRPs/plans/v1-jury-mechanics-d.plan.md` (the most-recent plan; in flight as of 2026-04-27, predates §16a) before commit.
+
+**What worked:**
+
+- Step 1 (Locate inputs): plan-by-phase-slug match works — `v1-JM-d` resolves to `v1-jury-mechanics-d.plan.md` via the §5 Metadata `Phase:` lookup pattern.
+- Step 2 pre-flight refusal "Plan has no §16a stories block" fires correctly on this plan — `grep '^## 16a\.'` returns nothing. The "When to skip" path triggers ("Plans without §16a stories block. Pre-rule legacy plans get manual reconciliation"). Verify halts gracefully and asks the planner to retrofit. ✓ Working as designed.
+
+**What didn't work / known limitations:**
+
+- The structural-pattern parser in Step 4a is descriptor-grammar-bound. A planner who writes a Brief-Scope output as "trait `JuryEligibility` exists in `crates/db_schema/src/source/governance/jury_panel.rs:142`" gets parsed; one who writes "the eligibility trait is implemented" gets `[malformed]`. The spec mentions this ("under-specified descriptors are a planner-side miss") but doesn't enumerate the parseable grammar. Future revision should formalise: `<token> exists in <file>`, `<token> re-exports <symbol>`, `test <fn> exists in <test_file>`, `migration <id>__<name> runs forward+backward`. Anything else → `[malformed]`.
+- The `git fetch origin` in Step 1 assumes network availability at verify-time. If the EliteDesk is offline (host-side failure, DNS chain), verify can't refresh the phase branch and may run against a stale checkout. The spec should add a "fail loud if `git fetch` exits non-zero" check at Step 1 — currently silent on this.
+- Cargo-class checkpoints in Step 4b run against the worktree branch. A worktree on a branch behind `origin/phase-<phase>` produces a wrong answer. Step 4b should `git diff origin/phase-<phase> phase-<phase>` first and refuse if the local checkout is behind.
+
+The dogfood note above is what the rule's "Pre-commit dogfood" sub-section requires. Future authors of slash commands under `.claude/commands/` should write an analogous block before commit — it doesn't have to be long, just real.
+
 </rationale>
