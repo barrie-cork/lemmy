@@ -144,17 +144,17 @@ Keep `question` under 50 words. Put evidence in `context`, not in the
 question. Always provide at least two concrete `options` — never ask
 open-ended questions.
 
-## kind: "blocker" vs "log"
+## kind: "blocker" vs "log" vs "clarify"
 
-The `kind` field separates entries that gate a task from entries that
-record a finding for later harvest. Both go in `decision-queue.json` so
-they're committed/pushed atomically with the work that produced them,
-but the advisor's polling loop only stops for `kind: "blocker"` pending
-entries.
+The `kind` field separates entries by what they gate and who writes
+them. All go in `decision-queue.json` so they're committed/pushed
+atomically with the work that produced them, but the advisor's
+polling loop applies different routing per kind.
 
-- **`kind: "blocker"`** — the writer cannot or will not proceed without
-  an answer. The advisor's polling loop must surface these. Goes to
-  `pending` with `answered_by: null`. This is the original DQ purpose.
+- **`kind: "blocker"`** — the writer (impl/bm) cannot or will not
+  proceed without an answer. The advisor's polling loop must surface
+  these. Goes to `pending` with `answered_by: null`. This is the
+  original DQ purpose. Writers: impl, bm.
 - **`kind: "log"`** — the writer found something durable a future task
   on related code would have wanted to know (subtle constraint, plan
   inaccuracy, footgun). Goes **directly to `resolved`** with the writer
@@ -162,7 +162,18 @@ entries.
   `answer` filled with the recommended action ("file as a lesson",
   "amend the brief template", "watchpoint for next phase"). The
   advisor harvests these at retro time and promotes durable ones to
-  `.claude/lessons/`.
+  `.claude/lessons/`. Writers: impl, bm, planner.
+- **`kind: "clarify"`** — the **advisor** raised a coverage question
+  on a draft brief BEFORE the planning task is queued. Goes to `pending`
+  with `from: "advisor"` and `answered_by: null` if mode=user-relay; or
+  directly to `resolved` with `answered_by: "advisor"` if the advisor
+  self-answered from the lessons corpus or prior plans. The advisor's
+  stage-shape orchestrator gates the planning task on every clarify-DQ
+  on this brief being resolved (per
+  `.claude/rules/advisor-orchestrator.md` "Clarify gate"). Writer:
+  **advisor only** — never impl, bm, or planner. Produced by
+  `/brehon-clarify` (per `.claude/commands/brehon-clarify.md` and
+  `feedback_clarify_before_plan.md`).
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
@@ -170,9 +181,31 @@ the finding is gated to a specific question/decision pattern. Use a
 clutter the queue. When in doubt, prefer `LESSON:` trailer — DQ should
 stay tight.
 
+Use `kind: "clarify"` only at the pre-planning gate; never to
+re-litigate a brief mid-planning or to clarify an impl-task brief.
+Impl-task ambiguity uses `kind: "blocker"` from `from: "impl"`.
+
 Default `kind` (if missing on a pre-v2 entry) is treated as
 `"blocker"` — preserves prior intent for the 51 entries already in
 the file.
+
+### Polling-loop routing per kind
+
+The advisor's polling loop reads `decision-queue.json` and routes by
+`(kind, status)` pair:
+
+- `(blocker, pending)` — surface to user via the DQ triage decision
+  tree (advisor-answer / catch-fire / user-relay). The Junior task
+  that raised it is gated on a resolution.
+- `(blocker, resolved)` — historical record only. No action.
+- `(log, resolved)` — harvest at retro time. No mid-loop action.
+- `(log, pending)` — **schema breach** (per Hard refusals: log entries
+  always go to resolved). Surface as catch-fire.
+- `(clarify, pending)` — advisor's own backlog from `/brehon-clarify`.
+  If mode=user-relay, surface to user via AskUserQuestion. The
+  planning task is gated until every clarify-pending on the brief is
+  resolved.
+- `(clarify, resolved)` — historical record. No action.
 
 ## Recipes (copy-pasteable)
 
@@ -300,6 +333,7 @@ These are the recurring failure modes the audit and Phase-6 #37 incident produce
 3. **NEVER raise a `kind: blocker` for a question you can answer by reading the codebase, the plan, or `.claude/lessons/`.** The advisor-loop stop is expensive. If the answer is in a file you haven't read yet, read it first.
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
+6. **NEVER write `kind: "clarify"` from a non-advisor session.** That kind is advisor-only — produced by `/brehon-clarify` at the pre-planning gate. A Junior subagent that writes `kind: "clarify"` has misunderstood the workflow (impl-task ambiguity → `kind: "blocker"` from `from: "impl"`; brief ambiguity at planning time is the advisor's responsibility, not the planner's).
 
 ## After writing a question
 
@@ -433,16 +467,28 @@ determines which `from` value is valid:
 
 - `planning` subagent → `from: "planner"`. May pre-seed `pending` or
   `resolved` entries with `answered_by: "planner"` (forward-looking
-  OQs the planner has a recommendation on).
+  OQs the planner has a recommendation on). Writes `kind: "blocker"`
+  or `kind: "log"`.
 - `impl-task` subagent → `from: "impl"`. Pending entries only —
   `answered_by: null`. Self-resolve only with
-  `answered_by: "impl-self-resolved"`.
+  `answered_by: "impl-self-resolved"`. Writes `kind: "blocker"` or
+  `kind: "log"`.
 - `bm-task` subagent → `from: "bm"`. Pending entries with
-  `answered_by: null`, or self-resolve as `"bm-self-resolved"`.
+  `answered_by: null`, or self-resolve as `"bm-self-resolved"`. Writes
+  `kind: "blocker"` or `kind: "log"`.
+- **Advisor session** (homeserver, persistent, never on Junior worktree)
+  → `from: "advisor"`. Writes the full triage spectrum: answers to
+  pending blockers (`answered_by: "advisor"` on resolved entries from
+  the DQ triage decision tree); user-relayed answers
+  (`answered_by: "user"`); and pre-planning clarify entries via
+  `/brehon-clarify` (`kind: "clarify"`, see "kind: clarify" above).
+  **The advisor is the only writer of `kind: "clarify"`.**
 
-None of the subagents may write `answered_by: "advisor"` or
+None of the Junior subagents may write `answered_by: "advisor"` or
 `answered_by: "user"`. Those labels are reserved for commits authored
 by the persistent advisor session (label: `advisor`) or for entries
 where the advisor relayed a user reply in-channel (label: `user`).
-This rule applies to both foreground and Junior-dispatched
+None of the Junior subagents may write `kind: "clarify"` — that kind
+is advisor-only by design (clarify gates planning before any Junior
+task runs). This rule applies to both foreground and Junior-dispatched
 invocations.

@@ -19,6 +19,8 @@ You are the **Planning** subagent for the Brehon governance platform. You author
 
 ## Plan content discipline
 
+Per `.claude/lessons/feedback_read_canonical_before_writing_spec.md`, before authoring any plan section that prescribes shape (§11 Files to change, §13 Step-by-step tasks, §15 Validation commands, §16a Stories), `Glob` + `Read` the most recent shipped sibling plan in `.claude/PRPs/plans/` and cite it in §2 Source. Plan files have a 20-section canonical schema that is implicit in the corpus — the cheap `Glob` + `grep '^## '` step prevents schema drift mid-implementation.
+
 Per `.claude/lessons/feedback_advisor_watchpoint_specificity.md`, every watchpoint in §4 must cite a **specific** file, table, or `schema.rs` line. Never write a watchpoint whose subject is just a concept ("watch for trait drift") — name the trait, the impl, the line.
 
 Per `.claude/lessons/feedback_pre_phase_dod_smoke_test.md` and `feedback_plan_dod_dry_run_at_write.md`, every DoD validation command in §15 must be **executable as written** against current HEAD. Before committing the plan, dry-run each DoD command yourself; if any fails to execute (missing flag, missing crate, wrong wrapper script), fix it in the plan before commit. An unexecutable DoD is the single most common advisor-side miss.

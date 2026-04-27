@@ -131,6 +131,33 @@ If a DoD command is unexecutable (missing `--features full`, missing `--no-deps`
 
 Per `.claude/lessons/feedback_advisor_watchpoint_specificity.md`: every watchpoint in the plan's §4 must cite a specific table, file, or `schema.rs` line. If any watchpoint is just a concept ("watch for trait drift" without naming the trait), file a DQ requesting revision before approval.
 
+## Canonical-schema-first gate (mandatory before authoring any spec)
+
+Per `.claude/lessons/feedback_read_canonical_before_writing_spec.md`: before the advisor (or any subagent the advisor dispatches) authors a new spec, template, or rule that prescribes the shape of an artifact, `Glob` + `Read` 1-2 existing canonical instances of that artifact class first.
+
+This applies to:
+
+- **New rules** under `.claude/rules/` — read 1-2 sibling rules to match the section-header style and the "auto-loaded" + "cite by filename" conventions.
+- **New commands** under `.claude/commands/` — read 1-2 sibling commands (`bm/<verb>.md` or `prp-core/<verb>.md`) to match frontmatter shape (`description:`, `argument-hint:`) and the `<objective>` / `<workflow>` / `<hard-refusals>` block conventions.
+- **New lessons** under `.claude/lessons/` — read 1-2 sibling lessons to match the `name: / description: / type: feedback` frontmatter and the "Why / How to apply / Generalises to / Symptom to recognise" body shape.
+- **New templates** under `.claude/PRPs/templates/` — read the canonical instances of the artifact the template prescribes (e.g. for `plan.template.md`, read `phase-v1-JM-a.plan.md` + `v1-jury-mechanics-c.plan.md` first; the section schema is §1..§20 with specific titles).
+- **Schema additions to existing rules** — read the existing enumeration before adding a value; cite the new value's writers + readers in the same edit.
+
+The gate is mechanical: an advisor (or planner) commit that adds a `*.md` under `.claude/{rules,commands,lessons,PRPs/templates}` without citing a canonical example in the file body or commit body is a process miss. The retro should flag it. Generalises to any spec/template/rule authorship — `grep '^##'` against an existing instance is always worth the 2-second read.
+
+## Dogfood gate (mandatory for new slash commands)
+
+Per `.claude/lessons/feedback_dogfood_slash_command_specs.md`: every new slash command authored under `.claude/commands/` must include a "Pre-commit dogfood" sub-section under its `<rationale>` block. The sub-section names a real existing input the command was mentally walked-through against (a brief, plan, log, or runlog), what worked, and what didn't.
+
+Specific dogfood targets:
+
+- **Planning-stage command** (e.g. `/brehon-clarify`) → most-recent planning brief at `.claude/PRPs/briefs/<phase>-planning-N.md`.
+- **Impl-stage command** → most-recent impl brief at `.claude/PRPs/briefs/<phase>-impl-N.md`.
+- **Verification command** (e.g. `/brehon-verify`) → most-recent shipped plan at `.claude/PRPs/plans/<phase>.plan.md`.
+- **BM verb** → most-recent runlog entry at `.claude/runlog/<phase>.md`.
+
+The gate is mechanical: a commit that adds `.claude/commands/<verb>.md` without a "Pre-commit dogfood" note in the body is a process miss. Prose lints catch typos; dogfood catches semantics. Cost of pre-commit dogfood ≈ 5 minutes; cost of post-deploy fix ≈ 10× that.
+
 ## Memory and lessons (one-system principle)
 
 The advisor reads two memory paths:
