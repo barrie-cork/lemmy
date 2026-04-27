@@ -173,10 +173,14 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 ## Output discipline
 
 On completion (success):
-1. All per-task validation gates pass
-2. Commit chain is one feature commit + at most one `chore(lint):` follow-up
-3. Junior's finalize step pushes — do not push manually unless a DQ write requires it (see "Mid-task commit-and-push" above)
-4. Return a 5-line summary: task number, files changed (count), validation gates run (and pass/fail), commits made (short SHAs), any DQ entries written.
+1. **Validation mode** depends on the plan shape:
+   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and writes the result; the impl-task subagent is done once the validate-pending entry is on the remote.
+   - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan pass locally before commit (cargo check / clippy / test --no-run / e2e per the plan's §15). No DQ entry written for validation; advisor reads the commit subject.
+2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
+3. Pushing:
+   - Under Shape G: the impl-task pushes the feature commit AND the validate-pending DQ commit before exiting (manual push is mandatory — finalize is too late for the workflow_run_id capture).
+   - Pre-Shape-G: Junior's finalize step pushes — do not push manually unless a DQ write requires it (see "Mid-task commit-and-push" above).
+4. Return a 5-line summary: task number, files changed (count), validation mode (`shape-g pending` with workflow_run_id, or pre-shape-g `pass/fail` per gate), commits made (short SHAs), any DQ entries written (including the validate-pending entry under Shape G).
 
 On clean stop (DQ blocked or external constraint):
 1. No partial state in the working tree (`git status` clean)
