@@ -47,7 +47,7 @@ serde_with.workspace = true
 html2md = "0.2.15"
 html2text = { workspace = true }
 stringreader = "0.1.1"
-semver = "1.0.27"
+semver = "1.0.28"
 either = "1.15.0"
 assert-json-diff = "2.0.2"
 lemmy_diesel_utils = { workspace = true }
