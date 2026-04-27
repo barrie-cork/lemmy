@@ -726,6 +726,27 @@ pub enum JuryAssignmentRole {
 #[cfg_attr(feature = "full", derive(DbEnum))]
 #[cfg_attr(
   feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::AppealRequesterRole"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// v1-JM-d §6.4 / §9.3: discriminates the requester of an appeal so
+/// the eligibility check (defendant always; reporter only on NoAction
+/// / AdvisoryLabel) can be reproduced from a stored row without
+/// re-walking case ownership. Backfill DEFAULT 'Defendant' covers
+/// pre-v1 rows (pre-JM-d, only the target_person_id could appeal).
+pub enum AppealRequesterRole {
+  #[default]
+  Defendant,
+  OriginalReporter,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
   ExistingTypePath = "crate::schema::sql_types::JuryConstraintRelaxationReason"
 )]
 #[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
