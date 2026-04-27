@@ -29,10 +29,21 @@
 
 set -euo pipefail
 
+# Verify the diff base ref is fetched. CI uses fetch-depth: 0 so this
+# should always pass, but fail loud if it doesn't — a missing ref would
+# silently exit 0 and defeat the guard (the original cr-1 finding on
+# PR #104).
+if ! git rev-parse --verify origin/governance-v0 >/dev/null 2>&1; then
+    echo "ERROR: migrate-roundtrip.sh requires origin/governance-v0 to be" >&2
+    echo "  fetched. The CI checkout step must use fetch-depth: 0 (or" >&2
+    echo "  explicitly fetch governance-v0). Aborting." >&2
+    exit 2
+fi
+
 # If the working tree contains a real new migration vs governance-v0, fail loud.
 # Otherwise this is a no-op (the workflow's path filter shouldn't trigger us
 # without a migrations/ change, but defence in depth).
-if git diff --name-only origin/governance-v0...HEAD -- migrations/ 2>/dev/null | grep -q '\.sql$'; then
+if git diff --name-only origin/governance-v0...HEAD -- migrations/ | grep -q '\.sql$'; then
     echo "ERROR: migrate-roundtrip.sh is a stub. A real migration was detected" >&2
     echo "  in the diff vs governance-v0 — replace this stub with real round-trip" >&2
     echo "  logic before merging. See script header for the v1-JM-e checklist." >&2

@@ -31,7 +31,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          # fetch-depth: 0 is required because migrate-roundtrip.sh
+          # diffs migrations/ vs origin/governance-v0 — a shallow
+          # checkout (default fetch-depth: 1) does not include that
+          # ref and the diff would silently exit 0, defeating the
+          # guard. Full history is cheap on this runner.
+          fetch-depth: 0
           submodules: recursive
 
       - name: Install Rust toolchain
