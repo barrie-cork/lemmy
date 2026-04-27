@@ -87,6 +87,8 @@ Before queueing any new `impl-task`, the advisor checks current UTC time. If in 
 
 This is mechanical, not heuristic — the advisor decides by reading the table above + `date -u`.
 
+**Shape G note:** under Shape G (v1-validate-agent onward), cargo no longer runs locally for impl-task throughput — the workflow YAMLs at `.github/workflows/cargo-validate-*.yml` run cargo on GitHub-hosted runners (off-box, ephemeral). Forbidden windows are non-binding for Shape-G impl-task dispatch. They remain binding for: (a) ad-hoc local cargo validation by the advisor pre-plan-approval (DoD smoke test), (b) pre-Shape-G plan dispatches (v1-JM-d and earlier impl-task briefs that still run cargo locally), (c) any local diagnostic cargo run authorised by the user during a CR fix-in-PR cycle.
+
 ### Subagent enforcement (defence in depth)
 
 The `impl-task` subagent's task-0 pre-flight check (per `.claude/agents/impl-task.md`) refuses to start work in a forbidden window and exits non-zero with `FORBIDDEN_WINDOW: <window>`. This catches the case where the advisor mistakenly queues during a forbidden window (e.g. cron table out of sync, daylight-saving edge case).
@@ -117,7 +119,7 @@ When a new pending entry appears in `decision-queue.json`:
 - **Judgment-heavy DQ entries.** ADR-affecting, scope-changing, visible-to-others impact. Use the user-relay branch above.
 - **CR triage approval.** After `bm-task` runs `bm-poll-cr` + draft triage, surface the four-bucket triage to user. Wait for explicit approval before queueing fix-in-PR impl tasks.
 - **Merge confirm.** Before queueing `bm-merge`, surface to user. Wait for explicit confirm.
-- **Retro sign-off.** Author the retro per `feedback_retro_not_report` and `feedback_retro_required_sections`; surface to user. Wait for sign-off before phase transition.
+- **Retro sign-off.** Author the retro per `feedback_retro_not_report`, `feedback_four_role_retro_signals`, and `feedback_retro_task_complexity_score` (per-task one-line `<files>/<commits>/<runtime-min>/<max-log-silence-min>` metric, aggregated in §5); surface to user. Wait for sign-off before phase transition.
 
 The advisor never skips these gates for speed (goal #3: slow-OK). Belt-and-braces.
 
@@ -130,6 +132,53 @@ If a DoD command is unexecutable (missing `--features full`, missing `--no-deps`
 ## Watchpoint specificity gate (mandatory before plan approval)
 
 Per `.claude/lessons/feedback_advisor_watchpoint_specificity.md`: every watchpoint in the plan's §4 must cite a specific table, file, or `schema.rs` line. If any watchpoint is just a concept ("watch for trait drift" without naming the trait), file a DQ requesting revision before approval.
+
+## Canonical-schema-first gate (mandatory before authoring any spec)
+
+Per `.claude/lessons/feedback_read_canonical_before_writing_spec.md`: before the advisor (or any subagent the advisor dispatches) authors a new spec, template, or rule that prescribes the shape of an artifact, `Glob` + `Read` 1-2 existing canonical instances of that artifact class first.
+
+This applies to:
+
+- **New rules** under `.claude/rules/` — read 1-2 sibling rules to match the section-header style and the "auto-loaded" + "cite by filename" conventions.
+- **New commands** under `.claude/commands/` — read 1-2 sibling commands (`bm/<verb>.md` or `prp-core/<verb>.md`) to match frontmatter shape (`description:`, `argument-hint:`) and the `<objective>` / `<workflow>` / `<hard-refusals>` block conventions.
+- **New lessons** under `.claude/lessons/` — read 1-2 sibling lessons to match the `name: / description: / type: feedback` frontmatter and the "Why / How to apply / Generalises to / Symptom to recognise" body shape.
+- **New templates** under `.claude/PRPs/templates/` — read the canonical instances of the artifact the template prescribes (e.g. for `plan.template.md`, read `phase-v1-JM-a.plan.md` + `v1-jury-mechanics-c.plan.md` first; the section schema is §1..§20 with specific titles).
+- **Schema additions to existing rules** — read the existing enumeration before adding a value; cite the new value's writers + readers in the same edit.
+
+The gate is mechanical: an advisor (or planner) commit that adds a `*.md` under `.claude/{rules,commands,lessons,PRPs/templates}` without citing a canonical example in the file body or commit body is a process miss. The retro should flag it. Generalises to any spec/template/rule authorship — `grep '^##'` against an existing instance is always worth the 2-second read.
+
+## Dogfood gate (mandatory for new slash commands)
+
+Per `.claude/lessons/feedback_dogfood_slash_command_specs.md`: every new slash command authored under `.claude/commands/` must include a "Pre-commit dogfood" sub-section under its `<rationale>` block. The sub-section names a real existing input the command was mentally walked-through against (a brief, plan, log, or runlog), what worked, and what didn't.
+
+Specific dogfood targets:
+
+- **Planning-stage command** (e.g. `/brehon-clarify`) → most-recent planning brief at `.claude/PRPs/briefs/<phase>-planning-N.md`.
+- **Impl-stage command** → most-recent impl brief at `.claude/PRPs/briefs/<phase>-impl-N.md`.
+- **Verification command** (e.g. `/brehon-verify`) → most-recent shipped plan at `.claude/PRPs/plans/<phase>.plan.md`.
+- **BM verb** → most-recent runlog entry at `.claude/runlog/<phase>.md`.
+
+The gate is mechanical: a commit that adds `.claude/commands/<verb>.md` without a "Pre-commit dogfood" note in the body is a process miss. Prose lints catch typos; dogfood catches semantics. Cost of pre-commit dogfood ≈ 5 minutes; cost of post-deploy fix ≈ 10× that.
+
+## Schema-changing-spec retrofit gate (mandatory in plan-mode for shape changes)
+
+Per `.claude/lessons/feedback_schema_changing_spec_retrofit_question.md`: when an advisor plan-mode session produces a plan that changes the shape of an existing artifact class (new section in a template, new marker in a section, new field in a schema, new required sub-section in a frontmatter), the advisor must call `AskUserQuestion` **once, before `ExitPlanMode`**, asking whether to retrofit existing artifacts.
+
+Triggers:
+
+- **New section in `*.template.md`** (e.g. §16a Stories block in plan.template.md).
+- **New marker in an existing section** (e.g. `[P]` in §13 task headers).
+- **New field in JSON/YAML schema** (e.g. `kind: "clarify"` in decision-queue.json).
+- **New required sub-section in a frontmatter shape** (e.g. dogfood gate's `<rationale>` requirement on `.claude/commands/*.md`).
+
+The question shape:
+
+- "The new pattern applies forward-only to artifacts authored after this lands. Should I also retrofit the existing artifact(s) [<list>] in a follow-up commit?"
+- Options: "Retrofit all" / "Retrofit named subset" / "Forward-only (no retrofit)"
+
+The user's answer goes into the plan's "Out of scope" or a new "Retrofit scope" section verbatim. If user picks "Forward-only", the plan ships with an explicit "Pre-existing X are not affected; retrofit deferred indefinitely" line. If user picks retrofit, a Phase Z is added at the end of the implementation phases. Skipping the question is a process miss — the symptom shows up in the post-implementation retro as "should we retrofit X?" appearing as a deferred follow-up.
+
+**When to skip:** plans that add purely additive functionality (new commands that don't change other commands' shape), bug fixes (the retrofit is the work itself), or plans explicitly limited to one artifact.
 
 ## Memory and lessons (one-system principle)
 
@@ -147,7 +196,9 @@ Per the c-inherited-dragon plan's "Stages of a sub-phase" map, the advisor knows
 - **Brief authored, no planning task yet** → run `/brehon-clarify .claude/PRPs/briefs/<phase>-planning-N.md` → resolve every clarify-DQ entry (advisor-mode for evident, user-relay for judgment-heavy) → only then queue the planning task. Skipping `/brehon-clarify` on a planning brief is a process breach the advisor must justify in the planning task's commit body.
 - **Planning complete** → run DoD smoke test → run watchpoint-specificity gate → surface to user → on user approval, queue `bm-cut` to make the phase branch
 - **bm-cut complete** → queue impl per **Cohort dispatch** (next section): if plan §13 Task 1 (or first non-pre-flight task) carries `[P]`, compute the cohort and queue all members simultaneously; otherwise queue Task 1 alone.
-- **Each impl-task complete** → check plan task list; **if cohort still has pending peers, wait** for all-complete before computing next cohort; otherwise compute next cohort starting from the next pending task. If all tasks done, queue `bm-cut` follow-up (`chore(lint):` if needed) then `bm-pr`.
+- **Each impl-task complete (under pre-Shape-G plans, v1-JM-d and earlier)** → check plan task list; **if cohort still has pending peers, wait** for all-complete before computing next cohort; otherwise compute next cohort starting from the next pending task. If all tasks done, queue `bm-cut` follow-up (`chore(lint):` if needed) then `bm-pr`.
+- **Each impl-task complete (under Shape G, v1-JM-e onward)** → impl-task already wrote a `kind: "validate-pending"` DQ entry post-push containing `workflow_run_id` + `branch` + `phase_task`; queue a `[role:ci-watcher]` Junior task with brief filled from the DQ entry's fields (template at `.claude/PRPs/templates/ci-watcher-brief.template.md`). The originating impl-task stays gated until ci-watcher resolves. ci-watcher runs ~10 sec model-time during the long-poll; the cargo work itself is GitHub-runner-side.
+- **ci-watcher complete** → read the resulting DQ entry. If `kind: "validate-result"` (`result: "pass"`), advance per the cohort/task pipeline (same logic as the pre-Shape-G "Each impl-task complete" rule above). If `kind: "validate-failed"`, run the §G4 classifier (see "§G4 classifier" sub-section below): allowlist match (≤3 file edits + clippy auto-fix or missing import or deprecated API) → queue narrow fix-impl-task brief; else → catch-fire to user with the `log_slice` + `failed_jobs`.
 - **All §16a stories `[done]`** (between last impl complete and bm-merge confirm) → run `/brehon-verify` → if any phantom, surface to user via catch-fire; otherwise advance to bm-pr stages below
 - **bm-pr complete** → wait for CodeRabbit (`bm-task` polls) → on CR posted, queue `bm-poll-cr`
 - **bm-poll-cr complete** → queue `bm-triage` (draft auto)
@@ -194,6 +245,65 @@ When a plan §13 task carries `[P]` and is the next pending task, the advisor co
 
 If a plan §13 has no `[P]` annotations (legacy plans pre-this-rule, or plans where the planner judged no parallelism was safe), every task is treated as non-`[P]` and dispatched serially. The cohort-dispatch logic does not broaden serial dispatch into accidental parallel — `[P]` must be explicit.
 
+### Cohort dispatch under Shape G (parallel validate-pending)
+
+Under Shape G (v1-JM-e onward), cohort members each enter
+`kind: "validate-pending"` simultaneously after their respective
+push — one workflow run per cohort task, fanned out on GitHub-hosted
+runners. The advisor dispatches one `[role:ci-watcher]` Junior task
+per `validate-pending` entry. Cohort advancement waits for **all**
+cohort members to reach `kind: "validate-result"` with `result:
+"pass"`. A single `kind: "validate-failed"` in the cohort blocks
+advancement and triggers the §G4 classifier per the validate-stage
+Stage-shape rule. If multiple cohort members fail simultaneously,
+classify each independently — auto-queue allowlist matches as
+parallel fix-impl-tasks (each forming its own [P]-marker degenerate
+cohort), surface non-allowlist failures to user as a single
+catch-fire bundle.
+
+## §G4 classifier
+
+Per `.claude/PRPs/plans/v1-validate-agent.plan.md` §4 watchpoint #7
++ §10.9. When a `kind: "validate-failed"` DQ entry surfaces, the
+advisor reads its `result`, `log_slice`, and `failed_jobs`, then
+applies the classifier:
+
+**Allowlist (auto-queue narrow fix-impl-task, ≤3 file edits):**
+
+| Failure signature | Auto-fix | Source lesson |
+|---|---|---|
+| `clippy::doc_lazy_continuation` warning | reword + mid-paragraph "and" | `feedback_clippy_doc_lazy_continuation_in_doc_comments.md` |
+| `error[E0432]: unresolved import` | add the missing `use` per the suggestion | n/a (mechanical) |
+| `warning: use of deprecated <api>` | replace with the suggested replacement | n/a (mechanical) |
+
+For an allowlist match, the advisor authors a narrow fix-impl-task
+brief at `.claude/PRPs/briefs/<phase>-fix-impl-<n>.md` containing:
+the failed-job log slice (≤200 lines), the specific file:line cited
+by the lint, the auto-fix recipe from the source lesson (or
+mechanical replacement), and a hard cap "≤3 file edits". The brief
+is dispatched as a normal `[role:impl-task]` Junior task; the
+resulting commit lands on the phase branch and re-triggers the
+workflow.
+
+**Non-allowlist (catch-fire to user):**
+
+- compile errors (any `error[E*]` other than `E0432`)
+- test failures (panics, assertion fails, e2e flakes, testcontainers
+  issues)
+- timeout / OOM / runner death
+- any failure whose log slice doesn't match a row in the allowlist
+
+Surface as: "validate-failed on `<branch>` (workflow run `<id>`):
+non-allowlist failure. Failed jobs: `<failed_jobs>`. Log slice
+attached. Surfaced to user — no auto-fix attempted."
+
+The allowlist is **conservative by design** (per
+`feedback_principles_not_rules.md` — guidance over rigid rules).
+Grow it only on retro evidence: if a CR-triage cycle classifies a
+non-allowlist failure as "this could have been auto-fixed", record
+it in the retro §5 watch-items and add to the allowlist on the next
+sub-phase's plan if the pattern reproduces.
+
 ## Verify gate (post-impl, pre-merge)
 
 Per `.claude/commands/brehon-verify.md` (spec-kit pattern adoption — `feedback_brehon_verify_pre_merge.md`):
@@ -221,6 +331,8 @@ Stop the loop and surface to user immediately if:
 - A `bm-task` opens a PR into `main` instead of `governance-v0`.
 - The phase branch has uncommitted state when a Junior task reports complete (Junior's finalize push should have flushed it).
 - Rust-analyzer-lsp is missing on the EliteDesk daemon and a `planning` or `impl-task` task that depended on `LSP` returns failed.
+- A workflow run exceeds the 60-min ci-watcher cap → ci-watcher writes `kind: "validate-failed"` with `result: "timed_out"` (matches GitHub's conclusion enum spelling). Surface to user with the workflow run id and the elapsed wall-clock; do not auto-rerun.
+- ci-watcher's `gh run watch <id> --exit-status` returns an exit code not enumerated in the empirical exit-code table at `.claude/agents/ci-watcher.md` "Empirical exit-code table" — surface as classifier-miss with the observed exit code, the workflow run id, and the run's `gh run view <id> --json status,conclusion` snapshot. The exit-code table is grow-on-evidence; record the new pair (exit_code → conclusion) and update the table at retro time.
 
 For each, include the catch-fire reason and the rule it violated in the surfaced message.
 

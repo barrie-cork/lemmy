@@ -57,7 +57,7 @@ echo "exit: $?"; tail -10 /tmp/jm-d-impl-2-min-clippy.log
 
 bash scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server > /tmp/jm-d-impl-2-min-test-no-run.log 2>&1
 echo "exit: $?"; tail -10 /tmp/jm-d-impl-2-min-test-no-run.log
-# Expected: exit 0 — this is the gate that DQ #56 names. Without this exit 0, the task has not unblocked the deadlock-fix validation channel.
+# Expected: exit 0 — this is the gate that DQ #72 names. Without this exit 0, the task has not unblocked the deadlock-fix validation channel.
 ```
 
 If `cargo test --test e2e --no-run` still emits E0277 errors after the field is added in correct position, **stop**. The cause is either field-ordering wrong or `JuryDecision` mapping mismatched in the import — file a DQ entry rather than retrying.
@@ -76,5 +76,5 @@ Unblocks `cargo test --test e2e --workspace --features full --no-run`, which is
 required to runtime-validate the submit_jury_vote deadlock fix on `phase-v1-JM-d`
 (commit 27b212e).
 
-Resolves DQ #56 option (b).
+Resolves DQ #72 option (b).
 ```

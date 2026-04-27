@@ -157,4 +157,22 @@ The lessons corpus + resolved DQ + prior plans answer most clarify questions tri
 
 For planning briefs (the load-bearing case): always run `/brehon-clarify` first. Skipping is a process breach the advisor must justify in the planning task's commit body.
 
+### Pre-commit dogfood (per `.claude/lessons/feedback_dogfood_slash_command_specs.md`)
+
+Mentally walked through against `.claude/PRPs/briefs/jm-d-planning-1.md` (the planning brief that produced `v1-jury-mechanics-d.plan.md`) before commit.
+
+**What worked:**
+
+- Step 1 (Read brief): the brief has §1 Role+dispatch, §2 Scope, §3 Required reading, §4 Constraints — conforms to the impl-task-brief.template.md shape (this is a planning brief but uses the same 4-section shell).
+- Step 3 axes table: real questions surfaced. "Missing required-reading" axis fired — the brief cites `prp-core/prp-plan.md` as the canonical template but predates the new `.claude/PRPs/templates/plan.template.md` (shipped 2026-04-27, after the brief was authored). Generates a question: "should the planner follow `prp-core/prp-plan.md` (the brief's reference) or `plan.template.md` (the post-spec-kit-adoption canonical)?" Self-answerable from `feedback_clarify_before_plan.md`: prefer the post-adoption template, retrofit §3 of the brief.
+- Step 3 "Watchpoint specificity" axis: the brief's §4 Constraints cite `feedback_advisor_watchpoint_specificity.md` correctly. No question generated — citation already there.
+- Step 4 advisor-mode: the questions surfaced trace cleanly to `.claude/lessons/` entries; the cheap-path self-answer worked.
+
+**What didn't work / known limitations:**
+
+- The spec doesn't say what to do for briefs authored **before** the spec-kit upgrade landed (where `[P]` markers + §16a stories aren't yet in the planner's expected shape). The rational reading: clarify retrofits §3 to cite the new template + lessons, and the planner produces a plan that has `[P]` + §16a even though the original brief didn't ask for them. A future revision of `brehon-clarify.md` should make this explicit (auto-add §3 citations to the new template + cohort/story lessons whenever the brief was written before 2026-04-27).
+- Step 3 axes are heuristic — the table doesn't bound the count of questions per brief. On a 99-line brief like jm-d-planning-1.md, 8 axes × multiple questions per axis could flood the queue. A future revision should cap question-count per brief (e.g. max 5 clarify entries; prioritise by axis severity).
+
+The dogfood note above is what the rule's "Pre-commit dogfood" sub-section requires. Future authors of slash commands under `.claude/commands/` should write an analogous block before commit — it doesn't have to be long, just real.
+
 </rationale>
