@@ -2,6 +2,21 @@
   "pending": [],
   "resolved": [
     {
+      "id": 61,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-04-27T18:20:40Z",
+      "question": "JM-d Task 2 (jm-d-impl-2.md) park: ship under existing in-band validation now, or block on v1-validate-agent (Shape G) shipping first?",
+      "options": [
+        "(a) park Task 2 until v1-validate-agent ships + bm-merges; then bounded retrofit of jm-d-impl-2.md §5 to push-and-exit; cargo runs on GH Actions",
+        "(b) ship Task 2 now under in-band validation per the existing brief; accept OOM-cascade risk against the just-barely-tight 10G cgroup cap"
+      ],
+      "context": "Plan-mode session 2026-04-27 (foamy-otter) chose Shape G over Shape C for Brehon validation. Trigger evidence: task #14 mid-cargo-check at load 15.83, swap exhausted, RAM 13Gi/15Gi; task #13 wedged 158min log-silent with empty worktree; v1-JM-d task #10 OOM-cascade 2026-04-27 ~10:35 UTC. Shape G eliminates cargo from EliteDesk; Shape C only mitigates contention. User chose option (a) via AskUserQuestion in plan-mode. Plan file: ~/.claude/plans/plan-mode-session-foamy-otter.md.",
+      "answer": "(a) park JM-d Task 2 until v1-validate-agent has shipped + bm-merged. Advisor polling loop must NOT queue Task 2 in the meantime. Other JM-d work (bm-task verbs, doc edits, planning) continues normally. Once Shape G lands, single-brief retrofit of jm-d-impl-2.md §5 (inline cargo → push-and-exit + ci-watcher poll per ci-validation-design.md Layer G2). Bounded retrofit; jm-d-impl-{1,3,4,5,6,7} stay forward-only-immune. Next concrete action: author v1-validate-agent-planning-1.md brief, run /brehon-clarify on it, queue planning Junior task. Recommended action: watchpoint-for-polling-loop — do not queue Task 2 until v1-validate-agent bm-merge completes.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T18:20:40Z"
+    },
+    {
       "id": 47,
       "from": "planner",
       "timestamp": "2026-04-24T00:00:00Z",
