@@ -4,6 +4,27 @@ When you hit a decision you cannot make alone during a ralph loop, use
 the decision queue at `.claude/decision-queue.json` instead of stopping
 the loop entirely.
 
+## Schema (v2)
+
+Top-level keys: `pending` (array), `resolved` (array), `schema_version`
+(integer; currently `2`). The legacy `phase` field was removed in v2 —
+it tracked the Brehon sub-phase but was never read by any agent or
+rule and drifted four sub-phases stale (last bumped at "6", current is
+v1-JM-d). Sub-phase membership is derivable from the entry's
+`timestamp` + git history; no top-level field needed.
+
+v2 adds the `kind` field on entries (`"blocker"` | `"log"` — see
+"kind: blocker vs log" below) and standardises a `resolved_at` ISO 8601
+timestamp on resolved entries (replacing the historical drift between
+`answered_at` / `ts_resolved` / `resolved_timestamp` / missing).
+**Do not rewrite historical entries** — pre-v2 idiosyncrasies stay as
+the audit trail. Forward-only consistency.
+
+If `schema_version` is missing or `1`, treat entries as v1 (no `kind`,
+varied resolved-timestamp keys). When you read a v1 entry into a v2
+write context, do not backfill `kind` or `resolved_at` — leave the
+historical record untouched.
+
 ## When to use
 
 Use the queue when:
@@ -24,18 +45,50 @@ Read `.claude/decision-queue.json`, add an entry to `pending`:
 {
   "id": <next integer>,
   "from": "impl",
+  "kind": "blocker",
   "timestamp": "<ISO 8601>",
   "question": "<clear, specific question — one sentence>",
   "options": ["option-a", "option-b"],
   "context": "<what you checked that led to this question — 1-2 sentences>",
   "answer": null,
-  "answered_by": null
+  "answered_by": null,
+  "resolved_at": null
 }
 ```
 
 Keep `question` under 50 words. Put evidence in `context`, not in the
 question. Always provide at least two concrete `options` — never ask
 open-ended questions.
+
+## kind: "blocker" vs "log"
+
+The `kind` field separates entries that gate a task from entries that
+record a finding for later harvest. Both go in `decision-queue.json` so
+they're committed/pushed atomically with the work that produced them,
+but the advisor's polling loop only stops for `kind: "blocker"` pending
+entries.
+
+- **`kind: "blocker"`** — the writer cannot or will not proceed without
+  an answer. The advisor's polling loop must surface these. Goes to
+  `pending` with `answered_by: null`. This is the original DQ purpose.
+- **`kind: "log"`** — the writer found something durable a future task
+  on related code would have wanted to know (subtle constraint, plan
+  inaccuracy, footgun). Goes **directly to `resolved`** with the writer
+  as `answered_by` (`impl-self-resolved`, `bm-self-resolved`, etc),
+  `answer` filled with the recommended action ("file as a lesson",
+  "amend the brief template", "watchpoint for next phase"). The
+  advisor harvests these at retro time and promotes durable ones to
+  `.claude/lessons/`.
+
+Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
+the finding is gated to a specific question/decision pattern. Use a
+`LESSON:` trailer when the finding is purely informational and would
+clutter the queue. When in doubt, prefer `LESSON:` trailer — DQ should
+stay tight.
+
+Default `kind` (if missing on a pre-v2 entry) is treated as
+`"blocker"` — preserves prior intent for the 51 entries already in
+the file.
 
 ## After writing a question
 
@@ -57,9 +110,10 @@ At the start of each ralph iteration, read `decision-queue.json`. If
 any `pending` entry has `answer` filled in:
 
 1. Read the answer
-2. Move the entry from `pending` to `resolved`
-3. Write the updated file back
-4. Apply the decision and continue
+2. Set `resolved_at` to the current ISO 8601 timestamp (UTC)
+3. Move the entry from `pending` to `resolved`
+4. Write the updated file back
+5. Apply the decision and continue
 
 ## Who answers
 
