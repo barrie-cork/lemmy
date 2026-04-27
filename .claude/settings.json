@@ -1,5 +1,4 @@
 {
-  "model": "opus[1m]",
   "effortLevel": "max",
   "skillListingBudgetFraction": 0.005,
   "hooks": {
