@@ -90,6 +90,133 @@ Default `kind` (if missing on a pre-v2 entry) is treated as
 `"blocker"` — preserves prior intent for the 51 entries already in
 the file.
 
+## Recipes (copy-pasteable)
+
+Three concrete operations subagents perform on the queue. Each recipe is the canonical sequence — drift from it produces the recurring failure modes called out in the audit trail (attribution breaches, missed mid-task pushes, log-as-blocker conflations, id collisions).
+
+### Recipe 1: Raise a blocker (the work is stuck)
+
+Use when the question genuinely gates progress and you need an answer before continuing. If you can self-resolve with evidence, prefer Recipe 2 instead.
+
+```bash
+# Step A: compute next safe id (no collisions)
+python3 - <<'PY'
+import json
+data = json.load(open('.claude/decision-queue.json'))
+all_ids = [e['id'] for e in data.get('pending',[]) + data.get('resolved',[])]
+print(f'next_id: {max(all_ids, default=0) + 1}')
+PY
+
+# Step B: edit decision-queue.json — append to "pending" array
+# Use Edit tool with the JSON literal below. Substitute <NEXT_ID>, <SLUG>, etc.
+```
+
+```json
+{
+  "id": <NEXT_ID>,
+  "from": "impl",
+  "kind": "blocker",
+  "timestamp": "<NOW_ISO>",
+  "question": "<one-sentence question, under 50 words>",
+  "options": ["<concrete option a>", "<concrete option b>"],
+  "context": "<what you checked, 1-2 sentences>",
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null
+}
+```
+
+```bash
+# Step C: commit + push so advisor can see (REQUIRED — see Mid-task visibility)
+git add .claude/decision-queue.json
+git commit -m "chore(decision-queue): impl raised DQ #<NEXT_ID> — <SLUG>"
+git push origin <current-branch>
+```
+
+If the question gates this task and no other task can proceed, stop the loop cleanly with `blocked-on-DQ-#<NEXT_ID>` in your completion summary. If you can continue with independent work, do so and come back.
+
+### Recipe 2: Self-resolve with a `kind: log` entry (the work proceeds, but a finding is worth recording)
+
+Use when you discovered something a future task on related code would have wanted to know — a subtle constraint, a plan inaccuracy, a footgun — and you have a defensible action you took or recommend. The advisor harvests these at retro time.
+
+```bash
+# Step A: compute next safe id (same as Recipe 1)
+python3 - <<'PY'
+import json
+data = json.load(open('.claude/decision-queue.json'))
+all_ids = [e['id'] for e in data.get('pending',[]) + data.get('resolved',[])]
+print(f'next_id: {max(all_ids, default=0) + 1}')
+PY
+
+# Step B: edit decision-queue.json — append directly to "resolved" array (NOT pending)
+```
+
+```json
+{
+  "id": <NEXT_ID>,
+  "from": "impl",
+  "kind": "log",
+  "timestamp": "<NOW_ISO>",
+  "question": "<the finding framed as a question or a 'should we…' statement>",
+  "options": ["<the action taken>", "<the alternative not taken>"],
+  "context": "<what you observed, 1-2 sentences>",
+  "answer": "<recommended action: file-as-lesson, amend-brief-template, watchpoint-for-next-phase, etc>",
+  "answered_by": "impl-self-resolved",
+  "resolved_at": "<NOW_ISO>"
+}
+```
+
+```bash
+# Step C: commit + push (the kind: log entry rides the same commit + push as the work that produced it)
+git add .claude/decision-queue.json <other files from the work>
+git commit -m "feat(<scope>): <work title> (task <N>) + log DQ #<NEXT_ID>"
+git push origin <current-branch>
+```
+
+A `kind: log` entry MUST go directly into `resolved` with the writer in `answered_by`. Do NOT put it in `pending` — it doesn't gate anything, and putting it in `pending` triggers the advisor's polling loop to stop unnecessarily (the audit found ~25% of historical resolved entries were log-shape but mistakenly raised as blockers, polluting the loop).
+
+If the finding doesn't fit the question/decision shape and is purely informational ("future me should know X"), prefer a `LESSON:` commit-trailer over a `kind: log` entry. The trailer keeps the queue tighter.
+
+### Recipe 3: Self-resolve a blocker without an answer arriving
+
+Use when you raised a `kind: blocker` (Recipe 1), then while waiting you found a defensible answer yourself with evidence — typically by reading more of the codebase or a spec you missed.
+
+```bash
+# Step A: read decision-queue.json, find the pending entry by id
+# Step B: edit it — fill answer, answered_by, resolved_at; move from pending → resolved
+```
+
+Edit the entry in-place with these fields set (other fields untouched):
+
+```json
+{
+  "answer": "<the answer you found, with evidence cited>",
+  "answered_by": "impl-self-resolved",
+  "resolved_at": "<NOW_ISO>"
+}
+```
+
+Then move the entry from the `pending` array to the `resolved` array — same JSON shape, just relocated.
+
+```bash
+# Step C: commit + push
+git add .claude/decision-queue.json
+git commit -m "chore(decision-queue): impl self-resolved DQ #<ID> — <SLUG>"
+git push origin <current-branch>
+```
+
+Self-resolution is a judgment call. The bar: would the advisor have answered the same way given the same evidence? If yes, self-resolve. If no, leave it pending and respect the gate.
+
+## Hard refusals (write-side)
+
+These are the recurring failure modes the audit and Phase-6 #37 incident produced. Every Junior subagent must refuse:
+
+1. **NEVER write `"answered_by": "advisor"` from a non-advisor session.** This is the Phase-6 #37 process breach. The advisor label is reserved for commits authored by the persistent advisor session in its own writes — detected by commit-subject pattern (see "Attribution integrity" below). If you self-attribute under "advisor", that's a breach even if no one notices.
+2. **NEVER reuse an existing id.** Always compute `max(all_ids, default=0) + 1` from both `pending` and `resolved`. The DQ #50 incident (collision with #49, had to be relocated via `e9fa1e01a`) was the lesson.
+3. **NEVER raise a `kind: blocker` for a question you can answer by reading the codebase, the plan, or `.claude/lessons/`.** The advisor-loop stop is expensive. If the answer is in a file you haven't read yet, read it first.
+4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
+5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
+
 ## After writing a question
 
 1. **Check if you can continue with other tasks.** If the blocked task
