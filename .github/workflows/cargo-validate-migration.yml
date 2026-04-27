@@ -1,0 +1,71 @@
+name: cargo-validate-migration
+
+# Out-of-band migration round-trip validation for Brehon phase
+# branches. Runs only when migrations/** changes in a push to a
+# `phase-v1-*` or `junior/*` branch. Companion to
+# cargo-validate-workspace.yml — see
+# .claude/PRPs/plans/v1-validate-agent.plan.md §10.4.
+
+on:
+  push:
+    branches:
+      - 'phase-v1-*'
+      - 'junior/*'
+    paths:
+      - 'migrations/**'
+      - '.github/workflows/cargo-validate-migration.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cargo-validate-migration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-migration:
+    name: validate migration round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 is required because migrate-roundtrip.sh
+          # diffs migrations/ vs origin/governance-v0 — a shallow
+          # checkout (default fetch-depth: 1) does not include that
+          # ref and the diff would silently exit 0, defeating the
+          # guard. Full history is cheap on this runner.
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install libpq
+        run: |
+          # libpq-dev + pkg-config compile pq-sys against libpq (needed
+          # for any cargo step that touches diesel/pq-sys). postgresql-
+          # client (the psql CLI) is intentionally NOT installed yet —
+          # the migrate-roundtrip stub doesn't use it. The first
+          # sub-phase that ships real round-trip logic (likely
+          # testcontainers Postgres + a SELECT probe) re-adds
+          # postgresql-client to this step at that time.
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev pkg-config
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-validate-migration-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-validate-migration-${{ runner.os }}-
+
+      - name: Migration round-trip
+        run: bash scripts/brehon/migrate-roundtrip.sh

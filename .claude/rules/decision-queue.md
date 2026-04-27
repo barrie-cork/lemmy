@@ -144,7 +144,7 @@ Keep `question` under 50 words. Put evidence in `context`, not in the
 question. Always provide at least two concrete `options` — never ask
 open-ended questions.
 
-## kind: "blocker" vs "log" vs "clarify"
+## kind: "blocker" vs "log" vs "clarify" vs "validate-pending" vs "validate-result" vs "validate-failed"
 
 The `kind` field separates entries by what they gate and who writes
 them. All go in `decision-queue.json` so they're committed/pushed
@@ -174,6 +174,43 @@ polling loop applies different routing per kind.
   **advisor only** — never impl, bm, or planner. Produced by
   `/brehon-clarify` (per `.claude/commands/brehon-clarify.md` and
   `feedback_clarify_before_plan.md`).
+- **`kind: "validate-pending"`** — the impl-task subagent committed
+  + pushed and is awaiting out-of-band cargo validation on GitHub
+  Actions (Shape G, per `v1-validate-agent.plan.md` §4 + §10.7). Goes
+  to `pending` with `from: "impl"`, `answered_by: null`. Required
+  fields: `workflow_run_id` (integer, captured via `gh run list
+  --branch <branch> --limit 1 --json databaseId`), `branch`,
+  `phase_task` (the §13 task number). The advisor's polling loop
+  reads this entry and dispatches a `[role:ci-watcher]` Junior task
+  to poll the workflow run. The originating impl-task is gated until
+  ci-watcher resolves. Writer: **impl-task only**.
+- **`kind: "validate-result"`** — the ci-watcher subagent classified
+  the workflow after reading `conclusion: "success"` from
+  `gh run view <id> --json conclusion` (do NOT rely on
+  `gh run watch <id> --exit-status` for final classification — per
+  `feedback_gh_run_watch_exit_status_unreliable.md`, the exit code is
+  unreliable on gh CLI 2.89.0). Goes **directly to `resolved`** with
+  `from: "ci-watcher"`, `answered_by: "ci-watcher-self-resolved"`,
+  `result: "pass"`. The advisor reads this entry and advances the
+  §13-task pipeline (cohort check). Writer: **ci-watcher only**.
+- **`kind: "validate-failed"`** — the ci-watcher subagent classified
+  the workflow after reading `conclusion: "failure" | "cancelled" |
+  "timed_out"` from `gh run view <id> --json conclusion` (or hit its
+  own 60-min wall-clock cap, or the run was unreachable). Goes to
+  `pending` with `from: "ci-watcher"`, `answered_by: null`,
+  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`.
+  Required fields when `result: "fail"`: `log_slice` (last ~200 lines
+  per failed job), `failed_jobs` (array of job names). The advisor
+  reads this entry, runs the §G4 classifier (auto-queue fix-impl-task
+  for allowlist matches ≤3 file edits, else catch-fire). Writer:
+  **ci-watcher only**.
+
+> **Note on enum values:** GitHub's workflow `conclusion` API returns
+> `timed_out` (with underscore) for timeout state — the `result` enum
+> mirrors GitHub's exact spelling. `run_not_found` covers the case
+> where `gh run view <id>` fails with run-not-found (e.g. wrong
+> branch, run garbage-collected, GitHub-side eviction); ci-watcher's
+> pre-flight run-existence check writes this result and exits 0.
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
@@ -206,6 +243,29 @@ The advisor's polling loop reads `decision-queue.json` and routes by
   planning task is gated until every clarify-pending on the brief is
   resolved.
 - `(clarify, resolved)` — historical record. No action.
+- `(validate-pending, pending)` — advisor dispatches a
+  `[role:ci-watcher]` Junior task with brief filled from the entry's
+  `workflow_run_id` + `branch` + `phase_task`. The originating
+  impl-task stays gated until ci-watcher resolves. Per
+  `advisor-orchestrator.md` Stage-shape "Each impl-task complete
+  (under Shape G)".
+- `(validate-pending, resolved)` — historical record only (the
+  validate-pending entry was superseded by a sibling `validate-result`
+  or `validate-failed` entry; the resolved transition is bookkeeping).
+- `(validate-result, resolved)` — advisor reads `result: "pass"` and
+  advances the §13-task pipeline (cohort check). No mid-loop user
+  surfacing.
+- `(validate-result, pending)` — **schema breach** (validate-result
+  entries are always self-resolved by ci-watcher). Surface as
+  catch-fire.
+- `(validate-failed, pending)` — advisor runs the §G4 classifier:
+  if the failure matches the allowlist (≤3 file edits + clippy
+  auto-fix or missing import or deprecated API), auto-queue a narrow
+  fix-impl-task; else surface to user as catch-fire with the
+  `log_slice` + `failed_jobs`. Per `advisor-orchestrator.md`
+  "§G4 classifier" sub-section.
+- `(validate-failed, resolved)` — historical record only (the failure
+  was triaged + addressed in a follow-up commit/cohort).
 
 ## Recipes (copy-pasteable)
 
@@ -334,6 +394,7 @@ These are the recurring failure modes the audit and Phase-6 #37 incident produce
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
 6. **NEVER write `kind: "clarify"` from a non-advisor session.** That kind is advisor-only — produced by `/brehon-clarify` at the pre-planning gate. A Junior subagent that writes `kind: "clarify"` has misunderstood the workflow (impl-task ambiguity → `kind: "blocker"` from `from: "impl"`; brief ambiguity at planning time is the advisor's responsibility, not the planner's).
+7. **NEVER write `kind: "validate-result" | "validate-failed"` from a non-ci-watcher session.** Those kinds are ci-watcher-only — produced by ci-watcher reading `conclusion` via `gh run view <id> --json conclusion` after a `gh run watch <id> --exit-status` long-poll (the watch is for blocking, not for classification — see `feedback_gh_run_watch_exit_status_unreliable.md`). impl-task writes `kind: "validate-pending"` (with `from: "impl"`); ci-watcher writes the result/failed sibling entries (with `from: "ci-watcher"`). Cross-role authoring is a process breach.
 
 ## After writing a question
 
@@ -462,8 +523,8 @@ restoring visibility.
 ## Subagents and attribution
 
 Junior dispatches tasks to subagents named in the dispatch line
-(`[role:planning|impl-task|bm-task]`). The subagent's identity
-determines which `from` value is valid:
+(`[role:planning|impl-task|bm-task|ci-watcher]`). The subagent's
+identity determines which `from` value is valid:
 
 - `planning` subagent → `from: "planner"`. May pre-seed `pending` or
   `resolved` entries with `answered_by: "planner"` (forward-looking
@@ -471,11 +532,25 @@ determines which `from` value is valid:
   or `kind: "log"`.
 - `impl-task` subagent → `from: "impl"`. Pending entries only —
   `answered_by: null`. Self-resolve only with
-  `answered_by: "impl-self-resolved"`. Writes `kind: "blocker"` or
-  `kind: "log"`.
+  `answered_by: "impl-self-resolved"`. Writes `kind: "blocker"`,
+  `kind: "log"`, or `kind: "validate-pending"` (the last one
+  introduced by Shape G in v1-validate-agent — the post-push
+  validation handoff). impl-task continues writing as `from: "impl"`
+  even when the entry carries `kind: "validate-pending"` (per DQ
+  #63); the new `from: "ci-watcher"` is ci-watcher's only.
 - `bm-task` subagent → `from: "bm"`. Pending entries with
   `answered_by: null`, or self-resolve as `"bm-self-resolved"`. Writes
   `kind: "blocker"` or `kind: "log"`.
+- `ci-watcher` subagent → `from: "ci-watcher"`. Writes
+  `kind: "validate-result"` (always to `resolved` with
+  `answered_by: "ci-watcher-self-resolved"`, `result: "pass"`) or
+  `kind: "validate-failed"` (to `pending` with `answered_by: null`,
+  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`,
+  `log_slice`, `failed_jobs`). Pinned to Haiku 4.5, narrow-tools
+  (Read, Edit, Write, Bash). Never invokes cargo, never edits code
+  in `crates/` / `migrations/` / `tests/` / `docs/` / `.github/
+  workflows/`, never applies clippy auto-fixes (those are advisor
+  §G4 classifier work). Per `.claude/agents/ci-watcher.md`.
 - **Advisor session** (homeserver, persistent, never on Junior worktree)
   → `from: "advisor"`. Writes the full triage spectrum: answers to
   pending blockers (`answered_by: "advisor"` on resolved entries from
@@ -490,5 +565,6 @@ by the persistent advisor session (label: `advisor`) or for entries
 where the advisor relayed a user reply in-channel (label: `user`).
 None of the Junior subagents may write `kind: "clarify"` — that kind
 is advisor-only by design (clarify gates planning before any Junior
-task runs). This rule applies to both foreground and Junior-dispatched
-invocations.
+task runs). Only ci-watcher may write `kind: "validate-result" |
+"validate-failed"`; only impl-task may write `kind: "validate-pending"`.
+This rule applies to both foreground and Junior-dispatched invocations.

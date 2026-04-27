@@ -50,13 +50,69 @@ The advisor authorises forbidden-window runs via DQ override only — see `.clau
 
 The plan's task body cites MIRROR refs — file:line ranges in existing Lemmy code that demonstrate the pattern to follow. Read each MIRROR ref with the Read tool before editing. The plan tasks are pattern-following exercises by design — when you start improvising past the MIRROR, you are usually about to make a mistake. If the MIRROR doesn't actually demonstrate what the plan claims, queue a DQ entry rather than guess.
 
-## Per-task validation gate
+## Per-task validation gate (out-of-band on GH Actions)
 
-The plan §15 defines the validation commands. Run **only** the commands the plan names for this task — Level 1 (cargo check), Level 2 (e2e), Level 4 (migration round-trip), Level 5 (cross-cutting verify). Do not invent extra validation. If a command requires a wrapper (`./scripts/brehon/cargo-*.sh` on Linux, `.bat` on Windows), use that wrapper exactly as the plan names it.
+Validation runs out-of-band on GitHub Actions (Shape G, per
+`.claude/PRPs/plans/v1-validate-agent.plan.md`). After committing your
+work, push to your worktree branch and exit. Do NOT run cargo locally.
 
-Per `.claude/lessons/feedback_pipes_mask_exit_codes.md`, never pipe cargo through tail/head/grep when you need to know if it succeeded — capture the full output to a file with `> .claude/build-task<N>.log 2>&1` and check the exit code. Per `.claude/lessons/feedback_no_cargo_output_paste.md`, never paste cargo output into commit messages or DQ entries.
+After `git push`:
 
-If a validation command fails: fix the root cause and retry. Never accumulate broken state across commits. Per `.claude/lessons/feedback_test_impact_verification_before_patching.md`, when a test fails, identify the impact before changing the test — patching a test to pass is a process breach.
+1. Capture the workflow_run id:
+   ```bash
+   gh run list --branch <your-branch> --limit 1 \
+     --json databaseId --jq '.[0].databaseId'
+   ```
+   Retry with exponential backoff up to ~2 min if the run hasn't
+   appeared yet (push-to-trigger lag is normal).
+
+2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
+   ```json
+   {
+     "id": <next>,
+     "from": "impl",
+     "kind": "validate-pending",
+     "timestamp": "<ISO 8601 UTC>",
+     "workflow_run_id": <id>,
+     "branch": "<your-branch>",
+     "phase_task": <task-number>,
+     "answer": null,
+     "answered_by": null,
+     "resolved_at": null
+   }
+   ```
+
+3. Commit + push the DQ update.
+
+4. Exit with success.
+
+The impl-task slot frees as soon as the push lands. ci-watcher polls
+the workflow asynchronously and writes the result back into the DQ.
+The advisor reads `validate-result` (pass) or `validate-failed`
+(fail/timeout) on its next polling tick.
+
+**Pre-Shape-G plans (v1-JM-d and earlier).** Plans authored before
+v1-validate-agent shipped use inline cargo invocation in their §15
+DoD entries. If your plan is one of those (jm-d-impl-1.md, jm-d-impl-3
+through jm-d-impl-7, all v1-JM-a/b/c briefs, all v1-AD-* briefs), run
+the cargo commands the plan names — wrapper-aware
+(`./scripts/brehon/cargo-*.sh` Linux, `.bat` Windows). Do not run
+cargo locally for plans authored under Shape G (v1-JM-e onward). The
+single bounded retrofit at `jm-d-impl-2.md` §5 is Shape-G-compliant
+ahead of when its parked Task 2 work is queued.
+
+Per `.claude/lessons/feedback_pipes_mask_exit_codes.md`, never pipe
+cargo through tail/head/grep when you need to know if it succeeded —
+applies to local cargo (pre-Shape-G plans) and to any local diagnostic
+runs the advisor authorises. Per
+`.claude/lessons/feedback_no_cargo_output_paste.md`, never paste cargo
+output into commit messages or DQ entries.
+
+If a validation command fails (locally or out-of-band): fix the root
+cause and retry. Never accumulate broken state across commits. Per
+`.claude/lessons/feedback_test_impact_verification_before_patching.md`,
+when a test fails, identify the impact before changing the test —
+patching a test to pass is a process breach.
 
 ## Story-checkpoint awareness (read-only at task start)
 
@@ -117,10 +173,14 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 ## Output discipline
 
 On completion (success):
-1. All per-task validation gates pass
-2. Commit chain is one feature commit + at most one `chore(lint):` follow-up
-3. Junior's finalize step pushes — do not push manually unless a DQ write requires it (see "Mid-task commit-and-push" above)
-4. Return a 5-line summary: task number, files changed (count), validation gates run (and pass/fail), commits made (short SHAs), any DQ entries written.
+1. **Validation mode** depends on the plan shape:
+   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and writes the result; the impl-task subagent is done once the validate-pending entry is on the remote.
+   - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan pass locally before commit (cargo check / clippy / test --no-run / e2e per the plan's §15). No DQ entry written for validation; advisor reads the commit subject.
+2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
+3. Pushing:
+   - Under Shape G: the impl-task pushes the feature commit AND the validate-pending DQ commit before exiting (manual push is mandatory — finalize is too late for the workflow_run_id capture).
+   - Pre-Shape-G: Junior's finalize step pushes — do not push manually unless a DQ write requires it (see "Mid-task commit-and-push" above).
+4. Return a 5-line summary: task number, files changed (count), validation mode (`shape-g pending` with workflow_run_id, or pre-shape-g `pass/fail` per gate), commits made (short SHAs), any DQ entries written (including the validate-pending entry under Shape G).
 
 On clean stop (DQ blocked or external constraint):
 1. No partial state in the working tree (`git status` clean)
@@ -136,3 +196,4 @@ On clean stop (DQ blocked or external constraint):
 - Never queue another Junior task from inside this subagent
 - Never write `answered_by: "advisor"` in `decision-queue.json`
 - Never invoke `Agent(...)` — subagents cannot nest
+- Never invoke cargo for build/lint/test on Shape-G plans — validation runs out-of-band on GH Actions per the validation gate above

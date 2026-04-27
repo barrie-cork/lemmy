@@ -2,6 +2,52 @@
   "pending": [],
   "resolved": [
     {
+      "id": 70,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-04-27T22:00:00Z",
+      "question": "Empirical probe of `gh run watch <id> --exit-status` on gh CLI 2.89.0 against three real workflow-run scenarios revealed it returns exit 0 for ALL three: (a) already-completed-success run (25017407689), (b) already-completed-failure run (25017407659), (c) in-progress run watched live to completion-failure (25017554049). The flag's --help text says 'Exit with non-zero status if run fails' but observed behaviour is exit 0 in all cases.",
+      "options": [
+        "(a) ci-watcher must NEVER trust --exit-status; instead always run `gh run view <id> --json conclusion --jq '.conclusion'` post-watch and branch on the conclusion string (success | failure | cancelled | timed_out | etc)",
+        "(b) report upstream gh CLI bug + add a workaround comment in ci-watcher.md citing the gh version it was tested against"
+      ],
+      "context": "Three probes captured during v1-validate-agent Task 2 empirical-gating. The defensive fallback in plan §10.6 — 'post-watch gh run view to disambiguate' — was framed as defensive; empirical evidence makes it MANDATORY. ci-watcher's exit-code table is therefore: 'exit code from gh run watch is unreliable; always disambiguate via gh run view conclusion'. The plan §4 watchpoint #1's whole purpose was to discover this before authoring ci-watcher.md.",
+      "answer": "(a) — ci-watcher MUST always run `gh run view <id> --json conclusion --jq '.conclusion'` after `gh run watch <id> --exit-status` returns; classify on the conclusion string, never on the exit code. The exit code is captured but treated as advisory only. The empirical exit-code table in ci-watcher.md §5 records: gh CLI 2.89.0 returns exit 0 for success/failure/in-progress→failure (3 probes). Cancelled and queued-only probes deferred — not blocking ci-watcher authoring because the conclusion-string fallback covers all conclusion values (success | failure | cancelled | timed_out | action_required | neutral | skipped | stale).",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-04-27T22:00:00Z"
+    },
+    {
+      "id": 69,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-04-27T21:35:00Z",
+      "question": "Plan §13 Task 1 prescribes `cargo check --workspace --features full --no-deps` for the validate-workspace workflow, but `cargo check` does NOT accept `--no-deps` (that's a `cargo clippy` flag). First push to phase-v1-validate-agent failed at workflow run 25017407659 with: error: unexpected argument '--no-deps' found.",
+      "options": [
+        "(a) drop --no-deps from cargo check step; keep it on the cargo clippy step (where it's valid)",
+        "(b) replace cargo check with cargo clippy --no-deps to deduplicate (clippy implies check)"
+      ],
+      "context": "First test push to phase-v1-validate-agent failed after ~30s with the above error. The plan inherited the --no-deps flag from earlier-phase clippy DoD wording in §13 (where it's valid for clippy and prevents linting transitive deps). For `cargo check`, no such flag exists; check by default does not lint transitive deps the way clippy does, so the flag is meaningless even if it parsed.",
+      "answer": "(a) — dropped --no-deps from the cargo check step in cargo-validate-workspace.yml; left --no-deps on the cargo clippy step (valid + intentional per feedback_features_full_p_crate_incompatible.md). Plan §13 Task 1 IMPLEMENT block was wrong on this one flag. Surfaced for retro §5 watch-items as a planner DoD-discipline miss (the plan's own §15 dry-run did not catch this because it dry-runs YAML parse, not cargo invocation — confirms why empirical first-push validation matters).",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-04-27T21:35:00Z"
+    },
+    {
+      "id": 68,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-04-27T21:20:00Z",
+      "question": "Plan §13 Task 1 references `bash scripts/brehon/migrate-roundtrip.sh` as an existing script (per JM-d §10.6 / scheduled-tasks pattern), but the script doesn't exist in the repo and JM-d's plan does not contain it either — phantom dependency.",
+      "options": [
+        "(a) ship a stub migrate-roundtrip.sh that exits 0 when no migrations/ change detected and exits non-zero (forcing replacement) when a real migration appears",
+        "(b) inline the migration round-trip logic in cargo-validate-migration.yml itself",
+        "(c) delete cargo-validate-migration.yml and defer to v1-JM-e"
+      ],
+      "context": "Foreground impl session checked `ls scripts/brehon/` and `grep -rn 'migrate-roundtrip' scripts/` — both empty. JM-d plan does not author the script either. The migration workflow would be triggered only on `migrations/**` push, and v1-validate-agent ships no migrations, so the stub is non-binding for this sub-phase — v1-JM-e (or whichever sub-phase ships the first post-Shape-G migration) replaces the stub.",
+      "answer": "(a) — shipped stub at scripts/brehon/migrate-roundtrip.sh in same Task 1 commit. Exits non-zero if a real migration is detected vs governance-v0 (forcing the next migration-authoring sub-phase to replace it). Documented as planning-side gap for retro §5 watch-items.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-04-27T21:20:00Z"
+    },
+    {
       "id": 67,
       "from": "advisor",
       "kind": "clarify",
