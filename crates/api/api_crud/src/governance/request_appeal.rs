@@ -125,6 +125,7 @@ async fn process_appeal(
     requester_id: caller_id,
     reason: data.reason.clone(),
     status: AppealStatus::Requested,
+    ..Default::default()
   };
   let new_appeal: Appeal = insert_into(appeal::table)
     .values(&form)
