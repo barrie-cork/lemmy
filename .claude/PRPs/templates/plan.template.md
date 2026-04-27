@@ -1,6 +1,6 @@
 # Plan: <phase-slug> — <one-line title>
 
-> Template for Brehon sub-phase plans. Authored by the `planning` subagent (see `.claude/agents/planning.md`). The template carries the canonical 20-section schema observed in shipped plans (`phase-v1-JM-a.plan.md`, `v1-jury-mechanics-c.plan.md`, etc.) plus two spec-kit-derived additions: **`[P]` parallel-task markers in §13** and **§16a Stories block** for story-grain checkpoints.
+> Template for Brehon sub-phase plans. Authored by the `planning` subagent (see `.claude/agents/planning.md`). The template carries the canonical 20-section schema observed in shipped plans (`phase-v1-JM-a.plan.md`, `v1-jury-mechanics-c.plan.md`, etc.) plus four spec-kit-derived additions: **`[P]` parallel-task markers in §13**, **§16a Stories block** for story-grain checkpoints, **§5 complexity score + factor breakdown**, and **per-task `creates:`/`modifies:` YAML block** in §13 (machine-parseable file-set declarations consumed by cohort dispatch + `/brehon-verify`).
 >
 > Delete this leading note and the inline `<...>` placeholders before committing.
 
@@ -38,6 +38,23 @@ The architectural shape of the change. Diagram-grain — leave file:line detail 
 - **Estimated tasks:** N (pre-flight + impl + retro)
 - **Estimated cargo budget:** `<X> GB peak` (sum across cohorts; check against `feedback_resource_budget_pre_queue.md`)
 - **Forbidden-window applicability:** standard (per advisor-orchestrator.md table)
+- **Complexity score:** `<N>/10` — see breakdown below
+
+### 5.1 Complexity factor breakdown
+
+Per `feedback_complexity_score_pre_split.md`. The planner computes the score mechanically and writes it before commit. If `score > 8`, the planner files a `pending` DQ entry to the advisor with `from: "planner"`, `kind: "blocker"`, asking "complexity N exceeds threshold — split into `<slug>-1` + `<slug>-2`, or proceed?" The advisor answers split-or-proceed in `--mode advisor` (citing prior similar phases) or escalates to `--mode user-relay` if judgment-heavy.
+
+| Factor | Weight | This plan | Notes |
+|---|---|---|---|
+| §13 impl tasks above 5 | +1 each | <count> | Excludes Task 0 (pre-flight) and the retro task |
+| Migrations touched | +2 each | <count> | Round-trip risk + production rollback cost |
+| Crates touched | +1 each | <count> | Read from §11 grouping |
+| `crates/lemmy_server/tests/e2e/*.rs` edits | +3 each | <count> | Per `feedback_junior_worker_e2e_edit_hang.md` (worker-hang risk on >8000 line files) |
+| New ADR-affecting decisions | +2 each | <count> | Any decision that supersedes an entry in `docs/research/brehon-law-inspired-network/99-decisions-and-open-questions.md` |
+| Cargo budget peak above 6 GB | +1 per GB | <count> | Pre-Shape-G plans only; Shape-G plans set this to 0 (cargo runs off-box) |
+| **Total** | — | **<N>** | Threshold for split-DQ: `>8` |
+
+If the plan ships under Shape G (v1-JM-e onward, validation off-box), the cargo-budget factor is 0 and the e2e factor's threshold is unchanged (Edit-hang risk is a function of file size, not where validation runs).
 
 ## 6. Relationship to other v<N>-<family> sub-phases
 
@@ -137,6 +154,19 @@ gh pr list --repo barrie-cork/lemmy --state open --json number,title,headRefName
 
 **ACTION:** <one-sentence summary>.
 
+**FILES (machine-parseable, used by `/brehon-verify` + cohort dispatch):**
+
+```yaml
+creates:
+  - <new-file-1>
+  - <new-file-2>
+modifies:
+  - <existing-file-1>   # what changes (one line)
+  - <existing-file-2>   # what changes (one line)
+```
+
+> **Discipline:** the planner asserts that `union(creates, modifies)` exactly equals the set of files named in the **IMPLEMENT (file N of M)** lines below. Drift between the YAML and the IMPLEMENT lines is a planner-side miss — file a DQ pending entry asking the planner to fix before any impl runs. The cohort-dispatch logic in `.claude/rules/advisor-orchestrator.md` "Cohort dispatch" intersects `union(creates, modifies)` across `[P]`-cohort peers and refuses to dispatch a cohort with overlap. `/brehon-verify` consumes `creates:` for the phantom-presence check (each `creates:` entry must exist + non-empty on the worktree branch).
+
 **IMPLEMENT (file 1 of N):** in `<file>`, `<edit description>`. Use the verbatim doc-comment from §10.X.
 
 **MIRROR:** `<file>:<line-range>` (`<symbol>` declaration) for the shape.
@@ -154,11 +184,11 @@ tail -20 .claude/PRPs/debug/<phase>-task1-check.log
 
 ### Task 2 [P]: <title>
 
-(same shape; `[P]` because IMPLEMENT files don't overlap Task 1)
+(same shape — including the **FILES** YAML block; `[P]` because `union(creates, modifies)` from Task 2 shares zero paths with Task 1's `union(creates, modifies)`)
 
 ### Task 3: <title>
 
-(non-`[P]` — IMPLEMENT files overlap Task 2; this task is a barrier)
+(non-`[P]` — Task 3's `modifies:` overlaps Task 2's `creates:` or `modifies:`; this task is a barrier. Include the **FILES** YAML block uniformly — non-`[P]` tasks declare file-sets too, so cross-cohort refusals also work mechanically.)
 
 …
 
