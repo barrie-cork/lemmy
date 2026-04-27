@@ -71,7 +71,7 @@ jobs:
             cargo-validate-workspace-${{ runner.os }}-
 
       - name: cargo check workspace + features full
-        run: cargo check --workspace --features full --no-deps
+        run: cargo check --workspace --features full
 
       - name: cargo clippy workspace + features full
         run: cargo clippy --workspace --features full --no-deps -- -D warnings

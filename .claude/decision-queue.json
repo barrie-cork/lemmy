@@ -2,6 +2,21 @@
   "pending": [],
   "resolved": [
     {
+      "id": 69,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-04-27T21:35:00Z",
+      "question": "Plan §13 Task 1 prescribes `cargo check --workspace --features full --no-deps` for the validate-workspace workflow, but `cargo check` does NOT accept `--no-deps` (that's a `cargo clippy` flag). First push to phase-v1-validate-agent failed at workflow run 25017407659 with: error: unexpected argument '--no-deps' found.",
+      "options": [
+        "(a) drop --no-deps from cargo check step; keep it on the cargo clippy step (where it's valid)",
+        "(b) replace cargo check with cargo clippy --no-deps to deduplicate (clippy implies check)"
+      ],
+      "context": "First test push to phase-v1-validate-agent failed after ~30s with the above error. The plan inherited the --no-deps flag from earlier-phase clippy DoD wording in §13 (where it's valid for clippy and prevents linting transitive deps). For `cargo check`, no such flag exists; check by default does not lint transitive deps the way clippy does, so the flag is meaningless even if it parsed.",
+      "answer": "(a) — dropped --no-deps from the cargo check step in cargo-validate-workspace.yml; left --no-deps on the cargo clippy step (valid + intentional per feedback_features_full_p_crate_incompatible.md). Plan §13 Task 1 IMPLEMENT block was wrong on this one flag. Surfaced for retro §5 watch-items as a planner DoD-discipline miss (the plan's own §15 dry-run did not catch this because it dry-runs YAML parse, not cargo invocation — confirms why empirical first-push validation matters).",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-04-27T21:35:00Z"
+    },
+    {
       "id": 68,
       "from": "impl",
       "kind": "log",
