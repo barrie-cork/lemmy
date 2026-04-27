@@ -49,6 +49,46 @@ The polling loop must stay lean to satisfy goal #4 (model-efficient):
 
 If a polling cycle reveals **no state change**, the only output is "no change" — nothing else loaded into context.
 
+## Forbidden execution windows
+
+The EliteDesk shares cron-driven workloads (NAS backups, web-archive crawls, weekly review) with Brehon Junior tasks. `cargo check`/`cargo test` workloads contend with these for memory and disk I/O. Repeated OOM cascades (incident 2026-04-27) confirmed that **temporal isolation > spatial isolation** — the box has enough RAM if heavy jobs don't run concurrently.
+
+Forbidden windows (UTC). Source-of-truth: `homeserver/docs/troubleshooting-laptop-elitedesk.md` "Temporal isolation" section.
+
+| Window (UTC) | Why |
+|---|---|
+| Daily 02:55–04:15 | NAS backup chain (03:00, 03:15) + web-archive `govie-search` (03:00, 03:30) |
+| Sunday 01:55–02:35 | HSE crawl (02:00) + `junior-weekly-review.sh` (02:30) |
+| Sunday 03:55–04:30 | `restore-drill.timer` (04:00) |
+| Wednesday 03:55–04:15 | `web-archive govie-cdx` (04:00) — subset of daily, no extra constraint |
+
+**Recommended Brehon execution windows (UTC):**
+- **Primary:** 16:00–02:30 (10.5 hours daily). Evening/overnight, well clear.
+- **Secondary:** 04:30–14:59 (10.5 hours). Post-crawl, pre-evening.
+
+### Advisor enforcement
+
+Before queueing any new `impl-task`, the advisor checks current UTC time. If in a forbidden window:
+
+1. Compute the next "safe" minute (end of current forbidden window).
+2. Note the deferral in the polling-loop output: `deferring <task-slug> until <HH:MM UTC>`.
+3. Re-check on the next poll. Queue the task once the window closes. **No DQ entry is needed for routine deferrals — the advisor self-resolves.**
+
+This is mechanical, not heuristic — the advisor decides by reading the table above + `date -u`.
+
+### Subagent enforcement (defence in depth)
+
+The `impl-task` subagent's task-0 pre-flight check (per `.claude/agents/impl-task.md`) refuses to start work in a forbidden window and exits non-zero with `FORBIDDEN_WINDOW: <window>`. This catches the case where the advisor mistakenly queues during a forbidden window (e.g. cron table out of sync, daylight-saving edge case).
+
+### When to override
+
+Forbidden windows protect from contention, not from absolute prohibition. If the user explicitly authorises a forbidden-window run (e.g. one-off urgent fix during a crawl), the advisor:
+
+1. Files a DQ entry citing the user's override.
+2. Queues the task with a brief note: "user-authorised forbidden-window override per DQ #<id>".
+
+Do not silently queue inside a forbidden window without a DQ trail.
+
 ## DQ triage decision tree
 
 When a new pending entry appears in `decision-queue.json`:
