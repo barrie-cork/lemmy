@@ -4,18 +4,26 @@
 //! from [04 §8] and the v0 simplifications from [05 §3] and [05 §6]:
 //!
 //! 1. Verify the caller has an `Accepted` assignment on the case.
-//! 2. Insert the vote and flip the assignment to `Submitted`.
-//! 3. If fewer than **3** votes are in (quorum per [99 ADR-007]), return
-//!    without deciding.
-//! 4. At quorum, tally votes by simple majority. Record the decision on
+//! 2. SELECT FOR UPDATE on the moderation_case row (lock-ordering: must
+//!    precede the jury_vote INSERT so concurrent voters serialise here
+//!    rather than deadlocking on FK SHARE → EXCLUSIVE upgrade — PR #98
+//!    cr-2 / DQ #50).
+//! 3. Insert the vote and flip the assignment to `Submitted`.
+//! 4. If the case is already in a terminal state (Decided / Closed /
+//!    Appealed / EmergencyRemove / AdminReview), return early — the
+//!    vote was recorded for audit, but no post-decision side effects
+//!    re-fire (idempotency guard for late-arriving votes 4-5 of 5).
+//! 5. If fewer than `case.quorum_snapshot` votes are in (per [99 ADR-007]),
+//!    return without deciding.
+//! 6. At quorum, tally votes by simple majority. Record the decision on
 //!    the case row (status → `Decided`, `decided_at = now`,
 //!    `appeal_window_expires_at = now + appeal.window_days` per PRD
 //!    §9.1 step 9 — LIVE config read, the single deliberate exception
 //!    to the snapshot-everything rule).
-//! 5. Map the winning `JuryDecision` to a `Sanction` per the table
+//! 7. Map the winning `JuryDecision` to a `Sanction` per the table
 //!    below; `NoAction` writes no sanction row.
-//! 6. Publish a redacted summary to `public_case_log`.
-//! 7. Emit per-juror reputation events (`JuryReliability +10` for
+//! 8. Publish a redacted summary to `public_case_log`.
+//! 9. Emit per-juror reputation events (`JuryReliability +10` for
 //!    majority-aligned, `-5` for outliers) and a per-reporter reputation
 //!    event on the `ReportingAccuracy` dimension.
 //!
@@ -156,7 +164,30 @@ async fn process_vote(
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 2. Insert vote row.
+  // 2. SELECT FOR UPDATE on moderation_case BEFORE the jury_vote INSERT.
+  // Lock-ordering: the jury_vote INSERT at step 3 below takes an FK SHARE
+  // lock on this same moderation_case row (Postgres acquires it implicitly
+  // for FK validation). Acquiring FOR UPDATE first means concurrent voters
+  // serialise on the row-exclusive lock here, then run the INSERT under an
+  // already-held EXCLUSIVE; the FK SHARE within the same transaction is
+  // compatible with our own EXCLUSIVE so no upgrade ever fires. The
+  // previous order (INSERT first → FOR UPDATE second) caused a
+  // deterministic deadlock when two concurrent transactions both held
+  // FK SHARE and both then waited to upgrade to EXCLUSIVE. Regression
+  // test: `submit_jury_vote_concurrent_votes_decide_exactly_once` in
+  // `crates/server/tests/e2e.rs`. PR #98 cr-2.
+  //
+  // Loading the full row here also gives every later step direct access to
+  // `case_row.quorum_snapshot`, `panel_size_snapshot`, `target_*`,
+  // `community_id`, `creator_id` — eliminating a second locking read.
+  let case_row: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(ModerationCase::as_select())
+    .for_update()
+    .first(conn)
+    .await?;
+
+  // 3. Insert vote row.
   let vote_form = JuryVoteInsertForm {
     case_id: data.case_id,
     juror_id,
@@ -169,7 +200,7 @@ async fn process_vote(
     .get_result(conn)
     .await?;
 
-  // 3. Flip assignment → Submitted. submitted_at is set by the trigger.
+  // 4. Flip assignment → Submitted. submitted_at is set by the trigger.
   let now = Utc::now();
   update(
     jury_assignment::table
@@ -183,7 +214,7 @@ async fn process_vote(
   .execute(conn)
   .await?;
 
-  // 4. Log this vote.
+  // 5. Log this vote.
   governance_log::append(
     &mut conn.into(),
     "jury_vote_submitted",
@@ -196,67 +227,17 @@ async fn process_vote(
   )
   .await?;
 
-  // 5. Count submitted votes. If under quorum, done.
-  //
-  // Quorum is read from `case.quorum_snapshot` (v1-JM-b writes this at
-  // admin_assign_jury time per PRD §9.1 step 4 / ADR-010). This is a
-  // non-locking single-column read so the partial-tally fast-path
-  // (vote_count < quorum) avoids taking the FOR UPDATE lock that the
-  // post-decision block (lines ~240+) acquires. A NULL snapshot can only
-  // arise if the case bypassed admin_assign_jury, which is impossible for
-  // any case in JurySelection or later post-JM-a-backfill — `Unknown`
-  // here surfaces a process breach loudly.
-  let quorum_snapshot: i32 = moderation_case::table
-    .filter(moderation_case::id.eq(data.case_id))
-    .select(moderation_case::quorum_snapshot)
-    .first::<Option<i32>>(conn)
-    .await?
-    .ok_or_else(|| {
-      LemmyErrorType::Unknown(format!(
-        "case {} has NULL quorum_snapshot; admin_assign_jury did not run",
-        data.case_id.0
-      ))
-    })?;
-  let vote_count: i64 = jury_vote::table
-    .filter(jury_vote::case_id.eq(data.case_id))
-    .select(count_star())
-    .first::<i64>(conn)
-    .await?;
-  if vote_count < i64::from(quorum_snapshot) {
-    return Ok(SubmitJuryVoteResponse {
-      vote_recorded: true,
-      case_decided: false,
-      decision: None,
-    });
-  }
-
-  // 6. Read the case row for context (community_id, targets, creator_id).
-  // SELECT FOR UPDATE serialises late-arriving votes against the
-  // post-decision block: vote N (the quorum-tripper) holds the row lock
-  // through `status -> Decided` at step 9; subsequent votes block here,
-  // then observe the Decided status below and short-circuit. Without
-  // FOR UPDATE, two votes racing on different connections could both
-  // see status=Open and both run the post-decision block.
-  let case_row: ModerationCase = moderation_case::table
-    .filter(moderation_case::id.eq(data.case_id))
-    .select(ModerationCase::as_select())
-    .for_update()
-    .first(conn)
-    .await?;
-
-  // 6.5. Idempotency guard. The `vote_count >= QUORUM` gate above only
-  // returns early when *under* quorum — votes 4 and 5 in a 5-juror panel
-  // arrive after vote 3 has flipped the case to Decided, fall through
-  // the count check, and would otherwise re-run the entire post-decision
-  // block (sanction insert, sponsor liability, public_case_log,
-  // reputation events, federation publish, governance_log
-  // case_decided / sanction_created / public_log_published). The vote
-  // INSERT at step 2 sits *above* this guard intentionally so audit
-  // integrity is preserved (every vote is recorded), but no downstream
-  // effects re-fire. Regression test: report_to_modlog_golden_path votes
-  // all 5 jurors and asserts exactly-once on every post-decision write;
-  // sanction_notice_round_trip does the same for the federation publish.
-  // CodeRabbit PR #46 finding #15.
+  // 6. Idempotency guard. Votes 4 and 5 in a 5-juror panel arrive after
+  // vote 3 has flipped the case to Decided. We still INSERT their vote
+  // rows above (audit integrity — every vote is recorded), but the
+  // post-decision block (sanction insert, sponsor liability,
+  // public_case_log, reputation events, federation publish,
+  // governance_log case_decided / sanction_created / public_log_published)
+  // must not re-fire. Regression tests: report_to_modlog_golden_path
+  // votes all 5 jurors and asserts exactly-once on every post-decision
+  // write; sanction_notice_round_trip does the same for federation
+  // publish; submit_jury_vote_concurrent_votes_decide_exactly_once
+  // covers the truly-concurrent variant. CodeRabbit PR #46 finding #15.
   //
   // Tracks terminal states explicitly (rather than `!= Open`) so live-flow
   // states like ThresholdMet / JurySelection / InReview don't trip the
@@ -273,6 +254,32 @@ async fn process_vote(
     return Ok(SubmitJuryVoteResponse {
       vote_recorded: true,
       case_decided: true,
+      decision: None,
+    });
+  }
+
+  // 7. Count submitted votes. If under quorum, done.
+  //
+  // Quorum is read from `case_row.quorum_snapshot` (v1-JM-b writes this at
+  // admin_assign_jury time per PRD §9.1 step 4 / ADR-010). A NULL snapshot
+  // can only arise if the case bypassed admin_assign_jury, which is
+  // impossible for any case in JurySelection or later post-JM-a-backfill
+  // — `Unknown` here surfaces a process breach loudly.
+  let quorum_snapshot: i32 = case_row.quorum_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has NULL quorum_snapshot; admin_assign_jury did not run",
+      data.case_id.0
+    ))
+  })?;
+  let vote_count: i64 = jury_vote::table
+    .filter(jury_vote::case_id.eq(data.case_id))
+    .select(count_star())
+    .first::<i64>(conn)
+    .await?;
+  if vote_count < i64::from(quorum_snapshot) {
+    return Ok(SubmitJuryVoteResponse {
+      vote_recorded: true,
+      case_decided: false,
       decision: None,
     });
   }

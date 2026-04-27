@@ -8797,7 +8797,6 @@ async fn v0_case_completes_under_v0_rules_after_v1_config_flip()
 /// covered by `report_to_modlog_golden_path` at line ~1061. The test body
 /// below is preserved as the diagnostic anchor for a future handler refactor.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "v1-JM-c DQ #49: deterministic Postgres deadlock under truly-concurrent votes; handler structure (vote INSERT before FOR UPDATE) out of JM-c scope to refactor"]
 async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
 -> lemmy_utils::error::LemmyResult<()> {
   use actix_web::web::Json;
