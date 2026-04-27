@@ -1,21 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 53,
-      "from": "advisor",
-      "timestamp": "2026-04-27T08:59:04Z",
-      "question": "How does an impl-task Junior worktree commit onto phase-v1-JM-d when create_task only takes a description and the daemon's base is governance-v0? bm-cut #8 created phase-v1-JM-d on the EliteDesk's main checkout but the MCP exposes no base-branch override; future impl tasks will branch off governance-v0 and finalize back to it.",
-      "options": [
-        "(A) Push phase-v1-JM-d to origin from inside the bm-cut subagent so it's a remote ref; teach impl-task subagent to git fetch + checkout phase-v1-JM-d at task start (ignoring its junior/role-* worktree branch as a transport vehicle), commit there, then push the phase branch directly. Junior's finalize-merge-to-base becomes a no-op because the worktree branch has no commits. Contradicts bm-cut Phase 3 'don't push until first impl commit' but the deferral was specifically to avoid empty-branch PR-target confusion — that risk lapses the moment task 1 is queued.",
-        "(B) Add base_branch override to the junior-brehon MCP create_task tool + Junior daemon (.junior/config.yaml or per-task field). Set it to phase-v1-JM-d after bm-cut. Each impl-task worktree branches off phase-v1-JM-d, finalize merges back to phase-v1-JM-d. Cleanest semantics but requires shipping MCP/daemon code.",
-        "(C) bm-cut subagent should reconfigure the daemon's base in-place after cutting (e.g. yq write into .junior/config.yaml + restart the daemon). bm-merge later resets it to governance-v0. Cheap if the daemon honors config reloads but adds restart-during-task fragility and breaks the abstraction that bm-task verbs are read-only on infra.",
-        "(D) Skip the phase-branch model entirely for v1-JM-d: queue impl tasks against governance-v0, accept that finalize lands them on trunk, do bm-pr from governance-v0 directly. Loses CR-on-PR review of the phase-as-unit but gets us moving. Departs from the established v0/v1 phase-branch convention."
-      ],
-      "context": "After bm-cut #8 (commit 9abe25a) the EliteDesk has phase-v1-JM-d as a local branch ahead of governance-v0 by one commit (the runlog). The branch is not on origin (per bm-cut Phase 3). Junior's create_task MCP only accepts {description}; .junior/config.yaml has no base_branch field. The advisor-orchestrator stage map says 'bm-cut complete → queue impl-task for plan task 1' but doesn't specify how the impl task lands on phase-v1-JM-d. Per feedback_pr_per_phase.md code deliveries run on phase branch + PR — that contract assumes the phase branch is reachable by impl tasks. Without resolution, queueing impl-task #1 will likely commit to governance-v0 and pollute trunk.",
-      "answer": null,
-      "answered_by": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 47,
@@ -695,6 +679,22 @@
       "answer": "(A) Add `moderation_case.winning_decision JuryDecision NULL` column. Reasoning: PRD §9.3 already recommends (A); the planner's edit-region analysis (§4.2 watchpoint on submit_jury_vote.rs) confirms the `winning_decision` write at the post-decision UPDATE block is in a different statement than SL-d's `apply_sponsor_liability` graft anchor — git merge handles parallel edits cleanly. PRD §17.1's 'different files' framing is a soft guideline aimed at merge-conflict cost, which is bounded to near-zero here. Option (B) re-tally trades a one-line schema column for a runtime hot path that walks 8 enum variants × N votes per appeal request, doubling maintenance surface and worsening latency on a security-sensitive endpoint. Plan §10.2 + §13 Task 1+2+3 stay as written.",
       "answered_by": "advisor",
       "answered_at": "2026-04-27T05:35:05Z"
+    },
+    {
+      "id": 53,
+      "from": "advisor",
+      "timestamp": "2026-04-27T08:59:04Z",
+      "question": "How does an impl-task Junior worktree commit onto phase-v1-JM-d when create_task only takes a description and the daemon's base is governance-v0? bm-cut #8 created phase-v1-JM-d on the EliteDesk's main checkout but the MCP exposes no base-branch override; future impl tasks will branch off governance-v0 and finalize back to it.",
+      "options": [
+        "(A) Push phase-v1-JM-d to origin from inside the bm-cut subagent so it's a remote ref; teach impl-task subagent to git fetch + checkout phase-v1-JM-d at task start (ignoring its junior/role-* worktree branch as a transport vehicle), commit there, then push the phase branch directly. Junior's finalize-merge-to-base becomes a no-op because the worktree branch has no commits. Contradicts bm-cut Phase 3 'don't push until first impl commit' but the deferral was specifically to avoid empty-branch PR-target confusion — that risk lapses the moment task 1 is queued.",
+        "(B) Add base_branch override to the junior-brehon MCP create_task tool + Junior daemon (.junior/config.yaml or per-task field). Set it to phase-v1-JM-d after bm-cut. Each impl-task worktree branches off phase-v1-JM-d, finalize merges back to phase-v1-JM-d. Cleanest semantics but requires shipping MCP/daemon code.",
+        "(C) bm-cut subagent should reconfigure the daemon's base in-place after cutting (e.g. yq write into .junior/config.yaml + restart the daemon). bm-merge later resets it to governance-v0. Cheap if the daemon honors config reloads but adds restart-during-task fragility and breaks the abstraction that bm-task verbs are read-only on infra.",
+        "(D) Skip the phase-branch model entirely for v1-JM-d: queue impl tasks against governance-v0, accept that finalize lands them on trunk, do bm-pr from governance-v0 directly. Loses CR-on-PR review of the phase-as-unit but gets us moving. Departs from the established v0/v1 phase-branch convention."
+      ],
+      "context": "After bm-cut #8 (commit 9abe25a) the EliteDesk has phase-v1-JM-d as a local branch ahead of governance-v0 by one commit (the runlog). The branch is not on origin (per bm-cut Phase 3). Junior's create_task MCP only accepts {description}; .junior/config.yaml has no base_branch field. The advisor-orchestrator stage map says 'bm-cut complete → queue impl-task for plan task 1' but doesn't specify how the impl task lands on phase-v1-JM-d. Per feedback_pr_per_phase.md code deliveries run on phase branch + PR — that contract assumes the phase branch is reachable by impl tasks. Without resolution, queueing impl-task #1 will likely commit to governance-v0 and pollute trunk.",
+      "answer": "(B) baseBranch override via .junior/config.yaml. Smallest slice: (1) add `base_branch:` field to .junior/config.yaml read at daemon start, default governance-v0; (2) extend bm-cut Phase 6 to write `base_branch: phase-<suffix>` after cutting + `systemctl reload junior@brehon-fork` (restart if reload unsupported); (3) extend bm-merge to reset to governance-v0 after merge; (4) no create_task MCP API change — MCP shells to junior CLI which reads config. Rationale: only option where the orchestrator stage map abstraction matches reality; one-time investment reused every sub-phase; removes silent-trunk-pollution bug class entirely. (A) was second-best but loads correctness onto subagent-rule discipline; (C) restarts daemon mid-orchestration and crosses bm-read-only-on-infra; (D) abandons phase-branch contract. Implementation queued as a chore impl-task before JM-d task 1.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-27T09:06:56Z"
     }
   ],
   "phase": "6",
