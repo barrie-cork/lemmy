@@ -27,6 +27,41 @@ Per `.claude/lessons/feedback_features_full_p_crate_incompatible.md`, never comb
 
 Per `.claude/lessons/feedback_wrapper_script_flag_silence.md`, before referencing any `scripts/brehon/cargo-*.bat` or `.sh` wrapper in the plan, verify the wrapper actually accepts the flags you depend on. Wrappers may silently hardcode scope.
 
+## §13 [P] parallel-task markers (load-bearing)
+
+Per `.claude/PRPs/templates/plan.template.md` §13 + `feedback_parallel_cohort_dispatch.md`: every §13 task header must carry a `[P]` marker iff the task's IMPLEMENT files are disjoint from every other `[P]`-marked task in the same cohort. The marker shape is `### Task N [P]: <title>`.
+
+Mechanical rule for assigning `[P]`:
+
+1. Walk §13 in task order. Build the file-set for each task by reading its `**IMPLEMENT (file N of M):** in <file>` lines.
+2. Two tasks are **cohort-compatible** if their file-sets share zero paths. Note: the `migrations/<id>__<name>/{up,down}.sql` pair is a single logical unit — two different migrations are cohort-compatible; the up/down pair within one migration is not.
+3. Task 0 (pre-flight harness audit) is **always** non-`[P]` — it's a verification barrier that must complete before any impl runs.
+4. The retro task (last task) is **always** non-`[P]` — it depends on every prior task's commit being on the phase branch.
+5. Tasks that touch `crates/db_schema/src/source/governance/<file>.rs` for the same `<file>` are not `[P]`-compatible (file-set overlap, even if the lines edited differ).
+
+Mark `[P]` only when the disjoint-files rule is satisfied. Conservative is correct here — a missing `[P]` only means serial dispatch (slower but safe); an incorrect `[P]` causes worktree merge conflicts (broken).
+
+If §13 has no parallelisable tasks (every task touches an overlapping file, or the phase has only 1-2 impl tasks), simply omit `[P]` markers entirely. The advisor's cohort-dispatch logic falls back to serial when no `[P]` is present.
+
+## §16a Stories block (independently-testable behaviour units)
+
+Per `.claude/PRPs/templates/plan.template.md` §16a + `feedback_story_grain_checkpoint.md`: insert a Stories block between §16 Acceptance criteria and §17 Completion checklist. A story is the smallest unit that produces an end-to-end testable behaviour.
+
+For each story:
+
+- **Composing tasks:** list of §13 task numbers (must be a contiguous run, or a `[P]` cohort).
+- **Checkpoint command:** the bash literal block — typically the e2e probe nearest the behaviour. The advisor's `/brehon-verify` runs this verbatim against the worktree branch.
+- **Expected output:** the literal output line confirming success (e.g. `1 passed; 0 failed`).
+- **Brief-Scope outputs to verify:** bulleted list of `<file>` + structural-pattern descriptors (e.g. "contains `<symbol>` declaration", "test `<test_fn>` exists in `<test_file>`"). The advisor's `/brehon-verify` parses these mechanically — under-specified descriptors are a planner-side miss.
+
+A small phase (1-3 tasks) ships a **single story** whose checkpoint is the phase-as-a-whole — back-compatible with current plans. Phases with 4+ tasks should ship 2-3 stories.
+
+If §16a is omitted, the advisor falls back to phase-grain verification (no story-grain phantom check). Including §16a is the cheap path to reducing post-merge revert risk.
+
+## Per-task IMPLEMENT discipline
+
+Each §13 task body must explicitly enumerate **IMPLEMENT (file N of M):** lines with the exact path. The `[P]` cohort logic and `/brehon-verify` Brief-Scope-output check both parse these lines mechanically. A task that lists only "ACTION:" without "IMPLEMENT:" lines is unparseable for cohort dispatch and verify — surface as a DQ pending entry asking the planner to retrofit before impl runs.
+
 ## Use of Explore subagents
 
 You can call `Agent(subagent_type: "Explore")` for codebase questions that span multiple files. Reserve this for questions like "where is X used", "how is Y wired up across crates", "is Z already implemented somewhere." For single-file questions, use Glob + Read directly. The advisor's brief should already have most of the cross-cutting context; use Explore to verify, not to discover from scratch.

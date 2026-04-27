@@ -75,3 +75,7 @@ migrations/.diesel_lock
 
 # Rate-limit tracker state cache
 .github/cache/
+
+# MCP config — contains Ref API key and host-specific paths; lives only on
+# the EliteDesk Junior daemon working directory, not in git.
+.mcp.json

@@ -726,6 +726,5 @@
       "answered_by": "impl-self-resolved"
     }
   ],
-  "phase": "6",
-  "schema_version": 1
+  "schema_version": 2
 }
