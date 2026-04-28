@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 80,
       "from": "advisor",
@@ -15,10 +16,12 @@
       ],
       "answer": "Workflow run 25056300174 on phase-v1-JM-d completed with conclusion=failure.",
       "answered_by": "ci-watcher",
-      "resolved_at": "2026-04-28T14:06:36.005293+00:00"
-    }
-  ],
-  "resolved": [
+      "resolved_at": "2026-04-28T14:06:36.005293+00:00",
+      "superseded_by": 83,
+      "superseded_at": "2026-04-28T17:55:00Z",
+      "superseded_by_run_id": 25067030047,
+      "superseded_note": "Phase 2 e2e re-run on phase-v1-JM-d tip f2e4056cc (post-fix-3c) passed at run 25067030047 \u2014 see DQ #83. Original failure at run 25056300174 triggered DQ #81 and the fix-3c chain."
+    },
     {
       "id": 81,
       "from": "advisor",
