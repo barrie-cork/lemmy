@@ -95,7 +95,7 @@ The latent failure was invisible until Task 7 first ran the e2e binary build.
 
 **Fix — plan amendment for JM-c/d/e and future struct-extension chores**: when a `chore(<phase>-drift)` commit extends a struct, the chore's commit message should call out which crates the struct is used in (here, `lemmy_db_schema` defines + `lemmy_server` test fixtures consume) and the chore's commit should sweep ALL consumers, not just the canonical writer. The fix is adding a `git grep` step to the chore-commit checklist:
 
-```
+```bash
 git grep -l '<StructName> {' -- ':!target' ':!.git'
 ```
 

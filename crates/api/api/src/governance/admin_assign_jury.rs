@@ -744,7 +744,6 @@ pub(crate) async fn select_eligible_jurors(
       if !violates {
         // Keep current_geo_enabled as false so a future read of the record
         // reflects R2 fired (relaxations_fired already lists "R2").
-        let _ = current_geo_enabled;
         return Ok((sample, record));
       }
     }
