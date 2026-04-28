@@ -2,17 +2,22 @@ name: cargo-validate-workspace
 
 # Out-of-band cargo validation for Brehon phase branches. Runs
 # `cargo check + clippy + test --no-run` on every push to a
-# `phase-v1-*` or `junior/*` branch, freeing the EliteDesk Junior
-# worker slot from in-band cargo work (Shape G — see
+# `junior/*` worker branch, freeing the EliteDesk Junior worker slot
+# from in-band cargo work (Shape G — see
 # .claude/PRPs/plans/v1-validate-agent.plan.md).
 #
 # Trigger pattern is push-only per DQ #66. PR-side status checks
 # come via branch protection rules, configured out-of-band.
+#
+# `phase-v1-*` branches are intentionally NOT triggered here:
+# cargo-test-e2e.yml runs on those, and it does `cargo test --no-run`
+# which already compiles the workspace. Running both = ~60% duplicated
+# build work. Removing phase-v1-* saves ~60 min/month on the Actions
+# bill (per 2026-04-28 minutes-budget audit).
 
 on:
   push:
     branches:
-      - 'phase-v1-*'
       - 'junior/*'
     paths:
       - 'crates/**'

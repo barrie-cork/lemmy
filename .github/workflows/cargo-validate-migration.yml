@@ -2,14 +2,17 @@ name: cargo-validate-migration
 
 # Out-of-band migration round-trip validation for Brehon phase
 # branches. Runs only when migrations/** changes in a push to a
-# `phase-v1-*` or `junior/*` branch. Companion to
-# cargo-validate-workspace.yml — see
-# .claude/PRPs/plans/v1-validate-agent.plan.md §10.4.
+# `junior/*` worker branch. Companion to cargo-validate-workspace.yml
+# — see .claude/PRPs/plans/v1-validate-agent.plan.md §10.4.
+#
+# `phase-v1-*` branches are intentionally NOT triggered here:
+# cargo-test-e2e.yml runs migrations on those branches as part of its
+# testcontainers setup, so running this workflow would duplicate the
+# round-trip exercise.
 
 on:
   push:
     branches:
-      - 'phase-v1-*'
       - 'junior/*'
     paths:
       - 'migrations/**'
