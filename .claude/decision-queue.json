@@ -1,18 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 73,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-27T23:45:49Z",
-      "workflow_run_id": 25025616075,
-      "branch": "junior/role-impl-task-v1-jm-d-task-2-see-claude-prps-briefs-jm-d-impl-2-md-25",
-      "phase_task": 2,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 70,
@@ -1028,6 +1015,18 @@
       "workflow_run_id": 25025616075,
       "branch": "junior/role-impl-task-v1-jm-d-task-2-see-claude-prps-briefs-jm-d-impl-2-md-25",
       "phase_task": 2
+    },
+    {
+      "id": 73,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-27T23:45:49Z",
+      "workflow_run_id": 25025616075,
+      "branch": "junior/role-impl-task-v1-jm-d-task-2-see-claude-prps-briefs-jm-d-impl-2-md-25",
+      "phase_task": 2,
+      "answer": "Resolved by validate-result DQ #74 (workflow run 25025616075 conclusion=success).",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-04-28T05:51:32.991140Z"
     }
   ],
   "schema_version": 2
