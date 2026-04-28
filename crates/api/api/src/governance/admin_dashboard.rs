@@ -228,7 +228,7 @@ struct ScopeValueIntRow {
 }
 
 async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetSummary> {
-  use lemmy_db_schema_file::schema::governance_config_current;
+  use lemmy_db_schema_file::schema::governance_config;
 
   let agg: RuleSetAggregateRow = sql_query(
     "SELECT \
@@ -270,13 +270,13 @@ async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetS
     .chain(std::iter::once("instance".to_string()))
     .collect();
 
-  let scope_value_rows: Vec<ScopeValueIntRow> = governance_config_current::table
-    .filter(governance_config_current::key.eq("rule_set.active_version_id"))
-    .filter(governance_config_current::value_type.eq("int"))
-    .filter(governance_config_current::scope.eq_any(&scope_strings))
+  let scope_value_rows: Vec<ScopeValueIntRow> = governance_config::table
+    .filter(governance_config::key.eq("rule_set.active_version_id"))
+    .filter(governance_config::value_type.eq("int"))
+    .filter(governance_config::scope.eq_any(&scope_strings))
     .select((
-      governance_config_current::scope,
-      governance_config_current::value_int,
+      governance_config::scope,
+      governance_config::value_int,
     ))
     .load::<ScopeValueIntRow>(conn)
     .await?;

@@ -919,6 +919,7 @@ async fn jury_queue_view_returns_assignments() -> Result<(), Box<dyn Error>> {
       person_id: PersonId(person_id),
       status: lemmy_db_schema_file::enums::JuryAssignmentStatus::Selected,
       selected_under_constraints: None,
+      ..Default::default()
     };
     diesel::insert_into(jury_assignment::table)
       .values(&assignment_form)
@@ -3178,6 +3179,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
         person_id: eligibles[0],
         status: JuryAssignmentStatus::Accepted,
         selected_under_constraints: None,
+        ..Default::default()
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
@@ -3832,6 +3834,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
         person_id: juror_id,
         status: JuryAssignmentStatus::Accepted,
         selected_under_constraints: None,
+        ..Default::default()
       };
       diesel::insert_into(jury_assignment::table)
         .values(&form)
@@ -8794,7 +8797,6 @@ async fn v0_case_completes_under_v0_rules_after_v1_config_flip()
 /// covered by `report_to_modlog_golden_path` at line ~1061. The test body
 /// below is preserved as the diagnostic anchor for a future handler refactor.
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "v1-JM-c DQ #49: deterministic Postgres deadlock under truly-concurrent votes; handler structure (vote INSERT before FOR UPDATE) out of JM-c scope to refactor"]
 async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
 -> lemmy_utils::error::LemmyResult<()> {
   use actix_web::web::Json;

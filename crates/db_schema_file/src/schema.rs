@@ -6,6 +6,10 @@ pub mod sql_types {
   pub struct ActorTypeEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "appeal_requester_role"))]
+  pub struct AppealRequesterRole;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "appeal_status"))]
   pub struct AppealStatus;
 
@@ -146,6 +150,7 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::AppealStatus;
+    use super::sql_types::AppealRequesterRole;
 
     appeal (id) {
         id -> Int4,
@@ -155,6 +160,9 @@ diesel::table! {
         status -> AppealStatus,
         created_at -> Timestamptz,
         decided_at -> Nullable<Timestamptz>,
+        requester_role -> AppealRequesterRole,
+        panel_size_snapshot -> Nullable<Int4>,
+        threshold_count_snapshot -> Nullable<Int4>,
     }
 }
 
@@ -458,24 +466,6 @@ diesel::table! {
     }
 }
 
-// View over governance_config — most-recent row per (scope, key). Diesel does
-// not auto-detect views, so this `table!` block is hand-written. `id` is the
-// primary key of the underlying row surfaced through the view.
-diesel::table! {
-    governance_config_current (id) {
-        id -> Int4,
-        scope -> Text,
-        key -> Text,
-        value_type -> Text,
-        value_int -> Nullable<Int8>,
-        value_float -> Nullable<Float8>,
-        value_bool -> Nullable<Bool>,
-        value_text -> Nullable<Text>,
-        valid_from -> Timestamptz,
-        updated_by -> Nullable<Int4>,
-    }
-}
-
 diesel::table! {
     governance_log (id) {
         id -> Int8,
@@ -527,8 +517,8 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::JuryAssignmentRole;
     use super::sql_types::JuryAssignmentStatus;
+    use super::sql_types::JuryAssignmentRole;
 
     jury_assignment (id) {
         id -> Int4,
@@ -538,9 +528,24 @@ diesel::table! {
         selected_at -> Timestamptz,
         responded_at -> Nullable<Timestamptz>,
         submitted_at -> Nullable<Timestamptz>,
-        // v1-JM-a additions per PRD §8.2:
         selected_under_constraints -> Nullable<Jsonb>,
         role -> JuryAssignmentRole,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::JuryConstraintRelaxationReason;
+
+    jury_constraint_violation_log (id) {
+        id -> Int4,
+        case_id -> Int4,
+        constraint_name -> Text,
+        reason_code -> JuryConstraintRelaxationReason,
+        relaxation_metadata -> Nullable<Jsonb>,
+        pool_size_at_relax -> Int4,
+        panel_size_target -> Int4,
+        relaxed_at -> Timestamptz,
     }
 }
 
@@ -759,8 +764,9 @@ diesel::table! {
     use super::sql_types::CaseTargetType;
     use super::sql_types::CaseSeverity;
     use super::sql_types::CaseStatus;
-    use super::sql_types::CaseStatusTier;
     use super::sql_types::SeverityTier;
+    use super::sql_types::CaseStatusTier;
+    use super::sql_types::JuryDecision;
 
     moderation_case (id) {
         id -> Int4,
@@ -781,13 +787,13 @@ diesel::table! {
         closed_at -> Nullable<Timestamptz>,
         applied_config_snapshot -> Nullable<Jsonb>,
         rule_set_version_id -> Nullable<Int4>,
-        // v1-JM-a additions per PRD §8.1:
         severity_tier -> SeverityTier,
         status_tier -> CaseStatusTier,
         panel_size_snapshot -> Nullable<Int4>,
         quorum_snapshot -> Nullable<Int4>,
         threshold_count_snapshot -> Nullable<Int4>,
         appeal_window_expires_at -> Nullable<Timestamptz>,
+        winning_decision -> Nullable<JuryDecision>,
     }
 }
 
@@ -1224,6 +1230,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    rule_set_version (id) {
+        id -> Int4,
+        community_id -> Int4,
+        version -> Int4,
+        parent_id -> Nullable<Int4>,
+        text_sha256 -> Bytea,
+        rule_text -> Text,
+        created_at -> Timestamptz,
+        created_by -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::SanctionScope;
     use super::sql_types::SanctionAction;
@@ -1300,30 +1319,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    surety (id) {
-        id -> Int4,
-        sponsor_id -> Int4,
-        sponsored_id -> Int4,
-        community_id -> Nullable<Int4>,
-        created_at -> Timestamptz,
-        revoked_at -> Nullable<Timestamptz>,
-    }
-}
-
-diesel::table! {
-    rule_set_version (id) {
-        id -> Int4,
-        community_id -> Int4,
-        version -> Int4,
-        parent_id -> Nullable<Int4>,
-        text_sha256 -> Bytea,
-        rule_text -> Text,
-        created_at -> Timestamptz,
-        created_by -> Nullable<Int4>,
-    }
-}
-
-diesel::table! {
     sponsor_allowlist (id) {
         id -> Int4,
         community_id -> Int4,
@@ -1332,29 +1327,14 @@ diesel::table! {
     }
 }
 
-// v1-JM-a addition per PRD §8.3 — append-only audit row written every
-// time select_eligible_jurors relaxes a diversity/recency/cluster
-// constraint (v1-JM-b). No PII (Watch 10).
-//
-// PR #92 cr-9 fix: `reason_code` is bounded-vocabulary enum replacing
-// the originally-proposed `relaxation_reason TEXT`; `relaxation_metadata`
-// is optional JSONB for bounded structured ancillary payloads (never
-// free-text user input). See migration
-// 2026-04-23-000050-0000_add_jury_constraint_relaxation_reason_enum
-// for the enum definition.
 diesel::table! {
-    use diesel::sql_types::{Int4, Jsonb, Nullable, Text, Timestamptz};
-    use super::sql_types::JuryConstraintRelaxationReason;
-
-    jury_constraint_violation_log (id) {
+    surety (id) {
         id -> Int4,
-        case_id -> Int4,
-        constraint_name -> Text,
-        reason_code -> JuryConstraintRelaxationReason,
-        relaxation_metadata -> Nullable<Jsonb>,
-        pool_size_at_relax -> Int4,
-        panel_size_target -> Int4,
-        relaxed_at -> Timestamptz,
+        sponsor_id -> Int4,
+        sponsored_id -> Int4,
+        community_id -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -1390,6 +1370,7 @@ diesel::joinable!(endorsement -> community (community_id));
 diesel::joinable!(federation_allowlist -> instance (instance_id));
 diesel::joinable!(federation_blocklist -> instance (instance_id));
 diesel::joinable!(federation_queue_state -> instance (instance_id));
+diesel::joinable!(governance_config -> person (updated_by));
 diesel::joinable!(instance_actions -> instance (instance_id));
 diesel::joinable!(instance_actions -> person (person_id));
 diesel::joinable!(jury_assignment -> moderation_case (case_id));
@@ -1413,10 +1394,6 @@ diesel::joinable!(login_token -> local_user (user_id));
 diesel::joinable!(moderation_case -> comment (target_comment_id));
 diesel::joinable!(moderation_case -> post (target_post_id));
 diesel::joinable!(moderation_case -> rule_set_version (rule_set_version_id));
-diesel::joinable!(rule_set_version -> community (community_id));
-diesel::joinable!(rule_set_version -> person (created_by));
-diesel::joinable!(sponsor_allowlist -> community (community_id));
-diesel::joinable!(sponsor_allowlist -> person (person_id));
 diesel::joinable!(modlog -> comment (target_comment_id));
 diesel::joinable!(modlog -> community (target_community_id));
 diesel::joinable!(modlog -> instance (target_instance_id));
@@ -1465,6 +1442,8 @@ diesel::joinable!(reputation_event -> moderation_case (source_case_id));
 diesel::joinable!(reputation_event -> person (person_id));
 diesel::joinable!(reputation_snapshot -> community (community_id));
 diesel::joinable!(reputation_snapshot -> person (person_id));
+diesel::joinable!(rule_set_version -> community (community_id));
+diesel::joinable!(rule_set_version -> person (created_by));
 diesel::joinable!(sanction -> comment (target_comment_id));
 diesel::joinable!(sanction -> community (target_community_id));
 diesel::joinable!(sanction -> moderation_case (case_id));
@@ -1473,6 +1452,8 @@ diesel::joinable!(sanction -> post (target_post_id));
 diesel::joinable!(site -> instance (instance_id));
 diesel::joinable!(site_language -> language (language_id));
 diesel::joinable!(site_language -> site (site_id));
+diesel::joinable!(sponsor_allowlist -> community (community_id));
+diesel::joinable!(sponsor_allowlist -> person (person_id));
 diesel::joinable!(surety -> community (community_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -1490,12 +1471,13 @@ diesel::allow_tables_to_appear_in_same_query!(
   email_verification,
   endorsement,
   federation_allowlist,
-  federation_attestation,
   federation_blocklist,
   federation_queue_state,
+  governance_config,
   instance,
   instance_actions,
   jury_assignment,
+  jury_constraint_violation_log,
   jury_pool,
   jury_vote,
   language,
@@ -1531,13 +1513,12 @@ diesel::allow_tables_to_appear_in_same_query!(
   report_combined,
   reputation_event,
   reputation_snapshot,
+  rule_set_version,
   sanction,
   site,
   site_language,
-  surety,
-  rule_set_version,
   sponsor_allowlist,
-  jury_constraint_violation_log,
+  surety,
   person_actions,
   image_details,
 );

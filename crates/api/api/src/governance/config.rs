@@ -43,7 +43,7 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::CommunityId;
 use lemmy_db_schema_file::enums::MembershipState;
-use lemmy_db_schema_file::schema::governance_config_current;
+use lemmy_db_schema_file::schema::governance_config;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use std::borrow::Cow;
@@ -693,7 +693,7 @@ pub fn parse_membership_state(s: &str) -> MembershipState {
 
 // -- Private helpers --------------------------------------------------------
 
-/// Tuple shape for the `governance_config_current` row load. Module-scope
+/// Tuple shape for the `governance_config` row load. Module-scope
 /// because `items-after-statements` is denied at workspace level.
 type ConfigRow = (
   String,
@@ -703,7 +703,7 @@ type ConfigRow = (
   Option<String>,
 );
 
-/// Fetch a single value from `governance_config_current` — the view already
+/// Fetch a single value from `governance_config` — the view already
 /// returns the most-recent row per `(scope, key)`. Returns `None` if no row
 /// matches the requested scope.
 ///
@@ -730,15 +730,15 @@ async fn fetch_value_at_scope(
 ) -> LemmyResult<Option<CachedValue>> {
   let conn = &mut get_conn(pool).await?;
 
-  let row: Option<ConfigRow> = governance_config_current::table
-    .filter(governance_config_current::scope.eq(scope_str.into_owned()))
-    .filter(governance_config_current::key.eq(key))
+  let row: Option<ConfigRow> = governance_config::table
+    .filter(governance_config::scope.eq(scope_str.into_owned()))
+    .filter(governance_config::key.eq(key))
     .select((
-      governance_config_current::value_type,
-      governance_config_current::value_int,
-      governance_config_current::value_float,
-      governance_config_current::value_bool,
-      governance_config_current::value_text,
+      governance_config::value_type,
+      governance_config::value_int,
+      governance_config::value_float,
+      governance_config::value_bool,
+      governance_config::value_text,
     ))
     .first::<ConfigRow>(conn)
     .await

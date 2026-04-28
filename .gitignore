@@ -62,6 +62,9 @@ migrations/.diesel_lock
 .claude/PRPs/reviews/pr-*-cf-issue-body.md
 .claude/PRPs/reviews/.cr-cache/
 
+# Per-task validation logs (the rca-*.md notes ARE committed)
+.claude/PRPs/debug/*.log
+
 # Microsoft Word lock + temp files (created by Word when editing .docx in-place)
 ~$*
 ~WRL*.tmp
