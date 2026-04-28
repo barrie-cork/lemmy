@@ -59,7 +59,6 @@ use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
   newtypes::{AppealId, ModerationCaseId},
   source::governance::{
-    appeal::Appeal,
     jury_assignment::JuryAssignmentInsertForm,
     jury_constraint_violation_log::JuryConstraintViolationLogInsertForm,
     moderation_case::ModerationCase,
