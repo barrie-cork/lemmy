@@ -43,7 +43,7 @@ When the next pending §13 task is cargo-class (Brehon `[role:impl-task]` whose 
 
 1. The planner's split-or-proceed DQ should already be resolved (the planning gate refuses to ship a plan with score `> 8` and an unresolved planner-side DQ). Confirm by reading `.claude/decision-queue.json` resolved entries with `from: "planner"` referencing this plan.
 2. If the dominant factor is `crates/lemmy_server/tests/e2e/*.rs` edits (≥2 e2e edits in this task or its cohort), append the `feedback_junior_worker_e2e_edit_hang.md` lesson to the brief's §3 Required reading. Per the "Pre-queue lesson check" cost discipline, this is a single citation, not a re-search.
-3. If the dominant factor is migrations (≥2 migrations) AND the plan is pre-Shape-G, additionally run the memory-headroom check (the "Memory headroom check" sub-section under "When to override" below) — migration round-trips peak above the typical ~6 GB cargo-check budget.
+3. If the dominant factor is migrations (≥2 migrations) AND the plan is pre-Shape-G, the validate-pending-laptop run should expect cargo+migration peak memory above ~6 GB on the laptop — note in the polling-loop output if the laptop is on battery + low. (The historical EliteDesk memory-headroom check is obsolete per the "Cargo never runs on the EliteDesk worker" sub-section below.)
 
 This is mechanical: read score, read top factor, add citation. No additional DQ, no escalation. The complexity score is the planner's pre-impl signal; the advisor's job here is to make sure the lesson corpus consulted at brief-write time matches the score's top factor.
 
@@ -114,21 +114,45 @@ Forbidden windows protect from contention, not from absolute prohibition. If the
 
 Do not silently queue inside a forbidden window without a DQ trail.
 
-### Memory headroom check (informational only under Shape G)
+### Cargo never runs on the EliteDesk worker (2026-04-28 incident)
 
-Under Shape G the memory headroom check is **informational only** — cargo runs off-box on GitHub-hosted runners. Retain this check for: (a) local diagnostic cargo runs the advisor authorises during a CR fix-in-PR cycle, (b) pre-Shape-G plan dispatches (v1-JM-d and earlier briefs whose §5 still runs cargo locally), (c) any one-off local cargo invocation the user explicitly approves.
+**The EliteDesk worker (Junior daemon) does not run cargo for any plan, Shape-G or pre-Shape-G.** Per the 2026-04-28 task #47 incident: cargo check --workspace --features full ran on the EliteDesk worktree for >1 hour with sustained OOM-cascade risk (4.0 GB swap fully consumed, 2.4 GB available, contended with web-archive OpenSearch's 2.2 GB always-on JVM and impending NAS backups at 03:00 UTC).
 
-The EliteDesk has 15 GB RAM. The `junior@brehon-fork` cgroup is capped at `MemoryMax=10G` (`MemoryHigh=8G`). A `cargo check --workspace --features full` worker peaks ~6 GB; rust-analyzer + LSP children can add ~4 GB more. The cap prevents a single Brehon worker from cascading the box (per `project_elitedesk_hung_2026_04_27`), but it does not protect the *system* from concurrent non-Junior memory holders — most notably web-archive's OpenSearch JVM (~2.2 GB always-on).
+Both validation modes route cargo OFF the worker:
 
-Before queueing any cargo-heavy `impl-task` (Brehon `[role:impl-task]` whose §15 DoD names `cargo check`, `cargo clippy --workspace`, or `cargo test --workspace`) **on a pre-Shape-G plan**, the advisor checks:
+- **Shape-G plans** (v1-validate-agent onward): cargo runs on GitHub-hosted runners. impl-task pushes branch, raises `kind: "validate-pending"` DQ entry; ci-watcher polls workflow, mutates entry. Already documented above under "Stage-shape orchestration → Each impl-task complete (under Shape G)".
+- **Pre-Shape-G plans** (v1-JM-d and earlier): cargo runs on the **laptop** (the advisor session's CWD `C:\Users\barri\Developer\brehon-fork`). impl-task pushes branch, raises `kind: "validate-pending-laptop"` DQ entry naming the §15 DoD commands verbatim; the advisor (laptop) reads the entry on next polling tick, runs each command sequentially in the laptop's local checkout, and mutates the entry (see "validate-pending-laptop handler" below).
 
-1. `ssh homeserver 'free -h'` — note `available` MB.
-2. If `available` < 3 GB: offer the user `bash scripts/web-archive-pause.sh` to free ~2.2 GB. State the trade-off explicitly: search UI returns 502 until unpause; pause across 02:00 UTC misses that day's HSE/Govie crawl.
-3. After user confirms or declines, queue the task. If the pause was applied, **note the pause** in the polling-loop output (`web-archive paused for cargo headroom`) so the corresponding `web-archive-unpause.sh` is remembered when the impl-task completes.
+The historical "Memory headroom check" (free -h + web-archive-pause.sh) is now obsolete for cargo dispatch — kept only for informational reference if the user explicitly authorises a one-off local diagnostic cargo run on the EliteDesk during a CR fix-in-PR cycle, which should itself be rare. The default path for any cargo invocation is laptop-side.
 
-**When to skip the check:** non-cargo impl-tasks (doc edits, brief writes, retros), `bm-task` of any verb (mechanical, low memory), `planning` tasks (Opus-only thinking, no cargo), Shape-G impl-tasks (cargo runs off-box). The check is mechanical — local cargo workspace verb in the brief's §5 validation gates → check `free -h` → decide.
+### validate-pending-laptop handler
 
-**Pause/unpause are user-gated, not silent.** This is by design — pausing web-archive is visible-to-others impact (the search UI 502s) and falls under the same "actions that affect shared state" caution as Telegram messages or PR creation. Never auto-pause without surfacing the trade-off.
+When a `kind: "validate-pending-laptop"` DQ entry appears in `pending[]` (raised by impl-task per `.claude/agents/impl-task.md` "Pre-Shape-G plans" sub-section):
+
+1. **Fetch the impl-task's worker branch** to the laptop:
+   ```
+   git -C C:/Users/barri/Developer/brehon-fork fetch origin <entry.branch>
+   git -C C:/Users/barri/Developer/brehon-fork checkout origin/<entry.branch>
+   ```
+   The laptop checkout is detached-HEAD on the worker branch — no local edits, just for cargo to read the canonical source.
+
+2. **Run each command in `entry.commands[]` sequentially.** Use `Bash` with `run_in_background: true` for cargo runs that take >5 min (cargo-check.sh ~8 min, e2e ~26 min). Capture stdout+stderr to per-command logs at `C:\Users\barri\.claude\logs\validate-laptop-<entry.id>-cmd-<n>.log`.
+
+   - On each command, record exit code and capture log path.
+   - If a command exits non-zero, **stop the chain** — do not run subsequent commands. Note which command failed.
+   - If all commands exit zero, the entry passes.
+
+3. **Mutate the DQ entry in place** (similar to ci-watcher's option-2 mutation):
+   - On all-pass: set `result: "pass"`, `log_slice: null`, `failed_commands: null`, `answer: "All <N> validation commands passed locally on laptop."`, `answered_by: "advisor-laptop"`, `resolved_at: <now>`. Move entry from `pending[]` to `resolved[]`.
+   - On any-fail: set `result: "fail"`, `log_slice: <last 100 lines of failing command's log>`, `failed_commands: [<command-string-that-failed>]`, `answer: <one-line summary>`, `answered_by: "advisor-laptop"`, `resolved_at: <now>`. Entry stays in `pending[]` for §G4 triage.
+
+4. **Commit + push** the DQ mutation to `governance-v0`. Commit subject: `chore(decision-queue): advisor-laptop mutated DQ #<id> — <pass|fail> validate-pending-laptop`.
+
+5. **Apply §G4 classifier on fail** same as Shape-G fail handling. Allowlist match → queue narrow fix-impl-task. Non-allowlist → catch-fire to user.
+
+**Wall-clock cost.** The laptop has more RAM than the EliteDesk's daemon cgroup and isn't contended with NAS/web-archive workloads. cargo check --workspace --features full on the laptop runs ~8-12 min cold, ~3-5 min warm. e2e runs ~26 min single-threaded. Use `run_in_background: true` and continue polling other tasks while cargo runs; do NOT block.
+
+**E2E follows the same flow** — same DQ entry shape (or `kind: "validate-pending-laptop-e2e"` if e2e is the only validation), same mutation, same §G4 triage on fail.
 
 ## DQ triage decision tree
 

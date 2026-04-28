@@ -55,11 +55,23 @@ The advisor authorises forbidden-window runs via DQ override only — see `.clau
 
 The plan's task body cites MIRROR refs — file:line ranges in existing Lemmy code that demonstrate the pattern to follow. Read each MIRROR ref with the Read tool before editing. The plan tasks are pattern-following exercises by design — when you start improvising past the MIRROR, you are usually about to make a mistake. If the MIRROR doesn't actually demonstrate what the plan claims, queue a DQ entry rather than guess.
 
-## Per-task validation gate (out-of-band on GH Actions)
+## Per-task validation gate (out-of-band)
 
-Validation runs out-of-band on GitHub Actions (Shape G, per
-`.claude/PRPs/plans/v1-validate-agent.plan.md`). After committing your
-work, push to your worktree branch and exit. Do NOT run cargo locally.
+Validation runs out-of-band — never on the EliteDesk worker. Two
+modes by plan shape:
+
+- **Shape-G plans (v1-validate-agent onward):** validation on GitHub
+  Actions, polled by ci-watcher. See "Shape-G push procedure" below.
+- **Pre-Shape-G plans (v1-JM-d and earlier):** validation delegated
+  to the laptop advisor session via `validate-pending-laptop` DQ
+  entry. See "Pre-Shape-G plans" sub-section further down.
+
+In both modes: after committing your work, push to your worktree
+branch and exit. **Do NOT run cargo locally on the EliteDesk worker
+under any circumstances** — the box is memory-constrained and cargo
+thrashes it for >1 hour (incident 2026-04-28 task #47).
+
+### Shape-G push procedure
 
 After `git push`:
 
@@ -108,15 +120,63 @@ to `resolved[]`; failures (fail / cancelled / timed_out / gh_unauth /
 run_not_found) stay in `pending[]` for advisor §G4 triage. The
 advisor reads the mutated entry on its next polling tick.
 
-**Pre-Shape-G plans (v1-JM-d and earlier).** Plans authored before
-v1-validate-agent shipped use inline cargo invocation in their §15
-DoD entries. If your plan is one of those (jm-d-impl-1.md, jm-d-impl-3
-through jm-d-impl-7, all v1-JM-a/b/c briefs, all v1-AD-* briefs), run
-the cargo commands the plan names — wrapper-aware
-(`./scripts/brehon/cargo-*.sh` Linux, `.bat` Windows). Do not run
-cargo locally for plans authored under Shape G (v1-JM-e onward). The
-single bounded retrofit at `jm-d-impl-2.md` §5 is Shape-G-compliant
-ahead of when its parked Task 2 work is queued.
+### Pre-Shape-G plans (v1-JM-d and earlier)
+
+Plans authored before v1-validate-agent shipped use inline cargo
+invocation in their §15 DoD entries. **Do NOT run cargo on the
+EliteDesk worker** — it is memory-constrained (15 GB total, 4 GB
+swap, contended with NAS backups + web-archive crawls) and
+`cargo check --workspace --features full` thrashes the box for
+>1 hour with sustained OOM-cascade risk (per
+`project_elitedesk_hung_2026_04_27` and the 2026-04-28 task #47
+incident). Instead, push your branch and **delegate the cargo run
+to the laptop advisor session** via a `kind: "validate-pending-laptop"`
+DQ entry. Skeleton:
+
+```json
+{
+  "id": <next>,
+  "from": "impl",
+  "kind": "validate-pending-laptop",
+  "timestamp": "<ISO 8601 UTC>",
+  "branch": "<your-branch>",
+  "phase_task": <task-number>,
+  "commands": [
+    "./scripts/brehon/cargo-check.sh --workspace --features full",
+    "./scripts/brehon/cargo-clippy.sh -p <crate> --features full -- -D warnings"
+  ],
+  "result": null,
+  "log_slice": null,
+  "failed_commands": null,
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null
+}
+```
+
+The `commands[]` list MUST quote the §15 DoD verbatim (don't summarise; copy the exact lines including arguments). The advisor (laptop session) reads this entry on its next polling tick, runs each command sequentially on the laptop's local `brehon-fork` checkout (which has more RAM and isn't contended), and mutates the entry: populates `result` (pass / fail), `log_slice` (last 100 lines on first failure), `failed_commands` (subset that exited non-zero), `answered_by: "advisor-laptop"`, `resolved_at`. On `pass` the entry moves to `resolved[]`; on `fail` it stays in `pending[]` for §G4 triage same as workflow validation.
+
+This applies to: jm-d-impl-1.md, jm-d-impl-3 through jm-d-impl-7,
+all v1-JM-a/b/c briefs, all v1-AD-* briefs. The single bounded
+retrofit at `jm-d-impl-2.md` §5 is Shape-G-compliant ahead of when
+its parked Task 2 work is queued. Plans authored under Shape G
+(v1-JM-e onward) use the workflow-driven `validate-pending` flow
+above — neither EliteDesk nor laptop runs cargo.
+
+**E2E tests follow the same delegation.** Pre-Shape-G plans whose §15
+names `cargo test --features full -- --test-threads=1` (e2e):
+include the e2e command in the same `validate-pending-laptop` entry
+(or a separate one if e2e is the only validation, named
+`kind: "validate-pending-laptop-e2e"` for clarity). Never run e2e
+on the EliteDesk worker — testcontainers + postgres + 8945-line
+`e2e.rs` will OOM the box more aggressively than cargo check.
+
+If the §15 DoD names a wrapper like `./scripts/brehon/cargo-check.sh`
+that doesn't exist on the laptop, use the corresponding `.bat` on
+Windows or fall back to the bare cargo invocation the wrapper
+shells (read the wrapper's source if unsure). The advisor handles
+this on the laptop side, not the impl-task; you just quote the
+§15 line verbatim into `commands[]`.
 
 Per `.claude/lessons/feedback_pipes_mask_exit_codes.md`, never pipe
 cargo through tail/head/grep when you need to know if it succeeded —
@@ -223,12 +283,12 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 On completion (success):
 1. **Validation mode** depends on the plan shape:
    - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry (with nullable `result`/`log_slice`/`failed_jobs` initialised to null) is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and **mutates this entry in place** (option 2; entry's `kind` stays `"validate-pending"`; `result` populated; entry moves `pending[]` → `resolved[]` on pass, stays in `pending[]` on fail/cancelled/timed_out for advisor triage). The impl-task subagent is done once the validate-pending entry is on the remote.
-   - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan pass locally before commit (cargo check / clippy / test --no-run / e2e per the plan's §15). No DQ entry written for validation; advisor reads the commit subject.
+   - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan are delegated to the laptop advisor session via `kind: "validate-pending-laptop"` DQ entry (per "Per-task validation gate → Pre-Shape-G plans" above). The impl-task pushes the feature commit AND the validate-pending-laptop DQ commit before exiting (manual push is mandatory — finalize is too late for the advisor to pick it up promptly). Local cargo MUST NOT run on the EliteDesk worker. The advisor mutates the entry on pass/fail same as Shape-G ci-watcher mutation.
 2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
 3. Pushing:
    - Under Shape G: the impl-task pushes the feature commit AND the validate-pending DQ commit before exiting (manual push is mandatory — finalize is too late for the workflow_run_id capture).
-   - Pre-Shape-G: Junior's finalize step pushes — do not push manually unless a DQ write requires it (see "Mid-task commit-and-push" above).
-4. Return a 5-line summary: task number, files changed (count), validation mode (`shape-g pending` with workflow_run_id, or pre-shape-g `pass/fail` per gate), commits made (short SHAs), any DQ entries written (including the validate-pending entry under Shape G).
+   - Pre-Shape-G: the impl-task ALSO pushes manually before exiting (feature commit + validate-pending-laptop DQ commit). Do not rely on Junior's finalize step — the advisor needs the commit on origin to pick up the DQ entry promptly. Mirrors the Shape-G push discipline above.
+4. Return a 5-line summary: task number, files changed (count), validation mode (`shape-g pending` with workflow_run_id, or `pre-shape-g laptop-pending` with command list), commits made (short SHAs), any DQ entries written (validate-pending or validate-pending-laptop).
 
 On clean stop (DQ blocked or external constraint):
 1. No partial state in the working tree (`git status` clean)
@@ -245,3 +305,5 @@ On clean stop (DQ blocked or external constraint):
 - Never write `answered_by: "advisor"` in `decision-queue.json`
 - Never invoke `Agent(...)` — subagents cannot nest
 - Never invoke cargo for build/lint/test on Shape-G plans — validation runs out-of-band on GH Actions per the validation gate above
+- Never invoke cargo for build/lint/test on Pre-Shape-G plans either — emit a `validate-pending-laptop` DQ entry; the advisor laptop session runs cargo. The EliteDesk worker is memory-constrained (15 GB RAM, 4 GB swap, contended cron workloads) and `cargo check --workspace --features full` thrashes the box for >1 hour — see `project_elitedesk_hung_2026_04_27` and the 2026-04-28 task #47 incident.
+- Never invoke `cargo test ... e2e` on the worker — testcontainers + postgres + 8945-line e2e.rs OOMs more aggressively than cargo check. Delegate to laptop via `validate-pending-laptop` (or `validate-pending-laptop-e2e`) DQ entry.
