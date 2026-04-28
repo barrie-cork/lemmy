@@ -3,16 +3,9 @@ role: impl-task
 plan_task: 3
 phase: v1-JM-d
 created: 2026-04-28
-status: draft — pending CI-scope review (see top-of-file note)
+status: ready
 related_dq: null
 ---
-
-> **DRAFT — DO NOT QUEUE YET.** This brief was authored 2026-04-28 before a CI-scope decision was made. The user signalled that e2e tests should also run on GH Actions per push (currently they run only at PR time via `cargo-test-e2e.yml`). Before queueing Task 3, the next session must:
-> 1. Decide whether to flip `cargo-test-e2e.yml` from `pull_request` → `push` trigger (matching `cargo-validate-workspace.yml`'s pattern).
-> 2. Update §5 of this brief if the validation contract changes (e.g. now-2 workflow_run_ids per push, or one combined workflow).
-> 3. Update `.claude/agents/ci-watcher.md` to poll multiple runs AND migrate paired pending → resolved (system gap noted in §C5 below).
->
-> Rest of the brief is content-correct against plan §13 lines 1370-1538. Just §5 is the open piece.
 
 # Brief — v1-JM-d Task 3 — Bounded-window appeal + reporter-rights + auto-rejury + winning_decision write
 
@@ -62,8 +55,8 @@ You are the **impl-task** subagent (Sonnet 4.6 per your frontmatter and the home
 In this order:
 
 1. **`.claude/decision-queue.json` resolved entries**:
-   - **#73** (validate-pending → resolved 2026-04-28) — Task 2's workflow run + branch. Establishes the Shape G push-and-exit pattern your validation gate inherits.
-   - **#74** (validate-result → resolved 2026-04-28) — confirms run 25025616075 passed; you are building on a known-good baseline.
+   - **#73** (validate-pending → resolved 2026-04-28) — Task 2's workflow run + branch. Establishes the Shape G push-and-exit pattern your validation gate inherits. Note: this is the historical two-entry shape (paired with deprecated #74 below); option 2 (PMD #156, locked 2026-04-28) replaces this with single-entry mutation. Your validate-pending entry under §5 follows the new shape.
+   - **#74** (validate-result → resolved 2026-04-28) — DEPRECATED kind. Confirms run 25025616075 passed; you are building on a known-good baseline. Do NOT write a new `validate-result` or `validate-failed` entry under any circumstance — those kinds were retired by option 2. ci-watcher mutates the paired `validate-pending` entry in place going forward.
    - **#71** (Task 2 schema regen override — `diesel print-schema` not `lemmy_diesel_utils -- print-schema`). You won't regen schema, but read it to understand the diesel toolchain layout.
 2. **Plan §13 Task 3 (lines 1370-1538)** — the canonical step list. Execute Parts A/B/C verbatim. The four GOTCHAs in this section are load-bearing — read them all.
 3. **Plan §10.2 + §10.3 + §10.5 + §10.6** — exact field/enum shapes. The schema is already in place from Task 2; you are *consuming* it.
@@ -130,7 +123,7 @@ If you find yourself wanting to run a workspace check locally to debug, **don't*
 
 ### Branch + commit discipline
 
-- You start on a Junior worktree off `phase-v1-JM-d` (currently at `30597b436` — post-DQ-cleanup tip). Finalize merges your worktree branch back; do not push to `phase-v1-JM-d` directly.
+- You start on a Junior worktree off `phase-v1-JM-d` (currently at `606f9db5e` — post-merge tip carrying option (b) e2e workflow flip + option 2 schema-v2 + ci-watcher rewrite). Finalize merges your worktree branch back; do not push to `phase-v1-JM-d` directly.
 - One commit. Parts A + B + C all go in the same commit. If clippy/check fails, amend or fixup; do not split.
 - Mid-task DQ visibility: if you raise a `pending` entry, **commit + push immediately** to your worktree branch per `.claude/CLAUDE.md` cheatsheet. The advisor cannot read worktree-local state otherwise.
 - No `answered_by: "advisor"` or `"user"` from this subagent. Self-resolve only as `"impl-self-resolved"`.
@@ -155,7 +148,7 @@ After `git push`:
 
    `--repo barrie-cork/lemmy` is mandatory (per `feedback_gh_pr_fork_repo_flag.md`). `--workflow cargo-validate-workspace` is mandatory on JM-d branches — both cargo-validate-workspace.yml and cargo-validate-migration.yml trigger; the migration workflow runs the `migrate-roundtrip.sh` stub which is design-intended to fail on JM-d branches until v1-JM-e replaces the stub body. Capture only the workspace run id.
 
-2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
+2. Append a `validate-pending` entry to `.claude/decision-queue.json`. Per option 2 (PMD #156, locked 2026-04-28), the entry includes the nullable mutation fields (`result`, `log_slice`, `failed_jobs`) initialised to `null` at write time — they are populated by ci-watcher when it mutates this entry post-workflow.
    ```json
    {
      "id": <next>,
@@ -165,6 +158,9 @@ After `git push`:
      "workflow_run_id": <id>,
      "branch": "<your-branch>",
      "phase_task": 3,
+     "result": null,
+     "log_slice": null,
+     "failed_jobs": null,
      "answer": null,
      "answered_by": null,
      "resolved_at": null
@@ -175,19 +171,11 @@ After `git push`:
 
 4. **Exit with success.**
 
-The impl-task slot frees as soon as the push lands. ci-watcher polls the workflow asynchronously and writes the result back into the DQ. The advisor reads `validate-result` (pass) or `validate-failed` (fail/timeout) on its next polling tick.
-
-### Migrate paired pending → resolved (system gap fix-forward)
-
-**Read this — it's the fix-forward for a bug discovered post-Task-2.**
-
-Task 2's ci-watcher correctly wrote DQ #74 (validate-result, pass) but did NOT migrate the paired DQ #73 (validate-pending) from `pending[]` to `resolved[]`. The advisor had to clean it up manually post-hoc (commit `30597b436`).
-
-For Task 3, the **ci-watcher will be instructed to migrate the paired pending → resolved** when writing its validate-result. The change to ci-watcher's brief is the advisor's job, not yours. But you should be aware: when your `validate-pending` entry lands, it will eventually be migrated to `resolved[]` rather than left orphaned.
+The impl-task slot frees as soon as the push lands. ci-watcher polls the workflow asynchronously and **mutates this entry in place**: populates `result` + `log_slice` + `failed_jobs` + `answer` + `answered_by: "ci-watcher"` + `resolved_at`. The entry's `kind` stays `"validate-pending"`; on `result: "pass"` the entry moves from `pending[]` to `resolved[]`; failures (fail / cancelled / timed_out / gh_unauth / run_not_found) stay in `pending[]` for advisor §G4 triage. The advisor reads the mutated entry on its next polling tick.
 
 ### Plan §13 GOTCHA on `check_for_backend(diesel::pg::Pg)`
 
-If `cargo check --workspace --features full` on the runner fails with `check_for_backend(diesel::pg::Pg)`, the schema regen mismatched the `Queryable` derive's expected types — but **schema regen happened in Task 2**, not here. If this error appears in Task 3, it's a downstream effect of how your code consumes the schema (e.g. wrong column type read in a `Queryable`). Pull the failure log slice from `validate-failed`, fix in a fix-in-PR commit, do not re-regen.
+If `cargo check --workspace --features full` on the runner fails with `check_for_backend(diesel::pg::Pg)`, the schema regen mismatched the `Queryable` derive's expected types — but **schema regen happened in Task 2**, not here. If this error appears in Task 3, it's a downstream effect of how your code consumes the schema (e.g. wrong column type read in a `Queryable`). Pull the failure log slice from the mutated `validate-pending` entry's `log_slice` field (per option 2), fix in a fix-in-PR commit, do not re-regen.
 
 ### Plan §13 GOTCHA on clippy `expect_used`/`unwrap_used`
 
