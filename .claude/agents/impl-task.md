@@ -71,7 +71,12 @@ After `git push`:
    Retry with exponential backoff up to ~2 min if the run hasn't
    appeared yet (push-to-trigger lag is normal).
 
-2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
+2. Append a `validate-pending` entry to `.claude/decision-queue.json`.
+   Per option 2 (PMD #156, locked 2026-04-28), the entry includes the
+   nullable mutation fields (`result`, `log_slice`, `failed_jobs`)
+   initialised to `null` at write time — they are populated by
+   ci-watcher when it mutates this entry post-workflow.
+
    ```json
    {
      "id": <next>,
@@ -81,6 +86,9 @@ After `git push`:
      "workflow_run_id": <id>,
      "branch": "<your-branch>",
      "phase_task": <task-number>,
+     "result": null,
+     "log_slice": null,
+     "failed_jobs": null,
      "answer": null,
      "answered_by": null,
      "resolved_at": null
@@ -92,9 +100,13 @@ After `git push`:
 4. Exit with success.
 
 The impl-task slot frees as soon as the push lands. ci-watcher polls
-the workflow asynchronously and writes the result back into the DQ.
-The advisor reads `validate-result` (pass) or `validate-failed`
-(fail/timeout) on its next polling tick.
+the workflow asynchronously and **mutates this entry in place**:
+populates `result` + `log_slice` + `failed_jobs` + `answer` +
+`answered_by: "ci-watcher"` + `resolved_at`. The entry's `kind` stays
+`"validate-pending"`; on `result: "pass"` it moves from `pending[]`
+to `resolved[]`; failures (fail / cancelled / timed_out / gh_unauth /
+run_not_found) stay in `pending[]` for advisor §G4 triage. The
+advisor reads the mutated entry on its next polling tick.
 
 **Pre-Shape-G plans (v1-JM-d and earlier).** Plans authored before
 v1-validate-agent shipped use inline cargo invocation in their §15
@@ -210,7 +222,7 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 
 On completion (success):
 1. **Validation mode** depends on the plan shape:
-   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and writes the result; the impl-task subagent is done once the validate-pending entry is on the remote.
+   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry (with nullable `result`/`log_slice`/`failed_jobs` initialised to null) is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and **mutates this entry in place** (option 2; entry's `kind` stays `"validate-pending"`; `result` populated; entry moves `pending[]` → `resolved[]` on pass, stays in `pending[]` on fail/cancelled/timed_out for advisor triage). The impl-task subagent is done once the validate-pending entry is on the remote.
    - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan pass locally before commit (cargo check / clippy / test --no-run / e2e per the plan's §15). No DQ entry written for validation; advisor reads the commit subject.
 2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
 3. Pushing:
