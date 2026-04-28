@@ -1,5 +1,7 @@
 # Advisor as orchestrator (persistent session)
 
+> **Mirror note:** this file is mirrored at `homeserver/.claude/rules/advisor-orchestrator.md`. The brehon-fork copy is canonical for in-repo execution; the homeserver copy mirrors it. Keep them in sync — surface a `diff` if they drift.
+
 The persistent advisor session is the **orchestrator** for sub-phases that run end-to-end through Junior. This rule defines how the advisor session queues Junior tasks, polls for state, triages DQ entries, and surfaces only the named user gates.
 
 This rule covers the **persistent advisor session** only. The Junior subagents the advisor dispatches (`planning`, `impl-task`, `bm-task`) have their own rules — see `.claude/agents/`. The four-role model: **Advisor (this session) + Planning + Impl + BM**. Advisor is meta-oversight; never authors content.
@@ -41,7 +43,7 @@ When the next pending §13 task is cargo-class (Brehon `[role:impl-task]` whose 
 
 1. The planner's split-or-proceed DQ should already be resolved (the planning gate refuses to ship a plan with score `> 8` and an unresolved planner-side DQ). Confirm by reading `.claude/decision-queue.json` resolved entries with `from: "planner"` referencing this plan.
 2. If the dominant factor is `crates/lemmy_server/tests/e2e/*.rs` edits (≥2 e2e edits in this task or its cohort), append the `feedback_junior_worker_e2e_edit_hang.md` lesson to the brief's §3 Required reading. Per the "Pre-queue lesson check" cost discipline, this is a single citation, not a re-search.
-3. If the dominant factor is migrations (≥2 migrations) AND the plan is pre-Shape-G, additionally run the memory-headroom check (next sub-section) — migration round-trips peak above the typical ~6 GB cargo-check budget.
+3. If the dominant factor is migrations (≥2 migrations) AND the plan is pre-Shape-G, additionally run the memory-headroom check (the "Memory headroom check" sub-section under "When to override" below) — migration round-trips peak above the typical ~6 GB cargo-check budget.
 
 This is mechanical: read score, read top factor, add citation. No additional DQ, no escalation. The complexity score is the planner's pre-impl signal; the advisor's job here is to make sure the lesson corpus consulted at brief-write time matches the score's top factor.
 
@@ -111,6 +113,22 @@ Forbidden windows protect from contention, not from absolute prohibition. If the
 2. Queues the task with a brief note: "user-authorised forbidden-window override per DQ #<id>".
 
 Do not silently queue inside a forbidden window without a DQ trail.
+
+### Memory headroom check (informational only under Shape G)
+
+Under Shape G the memory headroom check is **informational only** — cargo runs off-box on GitHub-hosted runners. Retain this check for: (a) local diagnostic cargo runs the advisor authorises during a CR fix-in-PR cycle, (b) pre-Shape-G plan dispatches (v1-JM-d and earlier briefs whose §5 still runs cargo locally), (c) any one-off local cargo invocation the user explicitly approves.
+
+The EliteDesk has 15 GB RAM. The `junior@brehon-fork` cgroup is capped at `MemoryMax=10G` (`MemoryHigh=8G`). A `cargo check --workspace --features full` worker peaks ~6 GB; rust-analyzer + LSP children can add ~4 GB more. The cap prevents a single Brehon worker from cascading the box (per `project_elitedesk_hung_2026_04_27`), but it does not protect the *system* from concurrent non-Junior memory holders — most notably web-archive's OpenSearch JVM (~2.2 GB always-on).
+
+Before queueing any cargo-heavy `impl-task` (Brehon `[role:impl-task]` whose §15 DoD names `cargo check`, `cargo clippy --workspace`, or `cargo test --workspace`) **on a pre-Shape-G plan**, the advisor checks:
+
+1. `ssh homeserver 'free -h'` — note `available` MB.
+2. If `available` < 3 GB: offer the user `bash scripts/web-archive-pause.sh` to free ~2.2 GB. State the trade-off explicitly: search UI returns 502 until unpause; pause across 02:00 UTC misses that day's HSE/Govie crawl.
+3. After user confirms or declines, queue the task. If the pause was applied, **note the pause** in the polling-loop output (`web-archive paused for cargo headroom`) so the corresponding `web-archive-unpause.sh` is remembered when the impl-task completes.
+
+**When to skip the check:** non-cargo impl-tasks (doc edits, brief writes, retros), `bm-task` of any verb (mechanical, low memory), `planning` tasks (Opus-only thinking, no cargo), Shape-G impl-tasks (cargo runs off-box). The check is mechanical — local cargo workspace verb in the brief's §5 validation gates → check `free -h` → decide.
+
+**Pause/unpause are user-gated, not silent.** This is by design — pausing web-archive is visible-to-others impact (the search UI 502s) and falls under the same "actions that affect shared state" caution as Telegram messages or PR creation. Never auto-pause without surfacing the trade-off.
 
 ## DQ triage decision tree
 
@@ -207,8 +225,10 @@ Per the c-inherited-dragon plan's "Stages of a sub-phase" map, the advisor knows
 - **Planning complete** → run DoD smoke test → run watchpoint-specificity gate → surface to user → on user approval, queue `bm-cut` to make the phase branch
 - **bm-cut complete** → queue impl per **Cohort dispatch** (next section): if plan §13 Task 1 (or first non-pre-flight task) carries `[P]`, compute the cohort and queue all members simultaneously; otherwise queue Task 1 alone.
 - **Each impl-task complete (under pre-Shape-G plans, v1-JM-d and earlier)** → check plan task list; **if cohort still has pending peers, wait** for all-complete before computing next cohort; otherwise compute next cohort starting from the next pending task. If all tasks done, queue `bm-cut` follow-up (`chore(lint):` if needed) then `bm-pr`.
-- **Each impl-task complete (under Shape G, v1-JM-e onward)** → impl-task already wrote a `kind: "validate-pending"` DQ entry post-push containing `workflow_run_id` + `branch` + `phase_task`; queue a `[role:ci-watcher]` Junior task with brief filled from the DQ entry's fields (template at `.claude/PRPs/templates/ci-watcher-brief.template.md`). The originating impl-task stays gated until ci-watcher resolves. ci-watcher runs ~10 sec model-time during the long-poll; the cargo work itself is GitHub-runner-side.
-- **ci-watcher complete** → read the resulting DQ entry. If `kind: "validate-result"` (`result: "pass"`), advance per the cohort/task pipeline (same logic as the pre-Shape-G "Each impl-task complete" rule above). If `kind: "validate-failed"`, run the §G4 classifier (see "§G4 classifier" sub-section below): allowlist match (≤3 file edits + clippy auto-fix or missing import or deprecated API) → queue narrow fix-impl-task brief; else → catch-fire to user with the `log_slice` + `failed_jobs`.
+- **Each impl-task complete (under Shape G, v1-JM-e onward)** — two-phase validation per option (b) decision 2026-04-28:
+  - **Phase 1 (workspace-check on `junior/*`):** impl-task already wrote a `kind: "validate-pending"` DQ entry post-push containing `workflow_run_id` (workspace-check run) + `branch` + `phase_task` + null `result`/`log_slice`/`failed_jobs`. Queue a `[role:ci-watcher]` Junior task with brief filled from the DQ entry's fields (template at `.claude/PRPs/templates/ci-watcher-brief.template.md`). The originating impl-task stays gated until ci-watcher resolves. ci-watcher runs ~10 sec model-time during the long-poll; the cargo work itself is GitHub-runner-side.
+  - **Phase 2 (e2e on `phase-v1-*`, advisor-driven):** after Junior's daemon finalize-merges the impl-task worktree branch into the phase branch, the advisor's polling loop detects the new phase-branch tip on next `git fetch`. The push to `phase-v1-*` triggers `cargo-test-e2e.yml` (per option b — e2e fires on push to `phase-v1-*`, not `junior/*`). The advisor captures the e2e workflow_run_id via `gh run list --repo barrie-cork/lemmy --branch phase-v1-<phase> --workflow cargo-test-e2e --limit 1 --json databaseId`, raises a NEW `kind: "validate-pending"` DQ entry from `from: "advisor"` (commit subject `chore(advisor): raise e2e validate-pending for phase-v1-<phase> tip <sha>`), then queues a second `[role:ci-watcher]` task to poll the e2e run. Cohort advancement waits for BOTH workspace AND e2e validate-pending entries to be mutated to `result: "pass"` (workspace per Phase 1, e2e per Phase 2).
+- **ci-watcher complete** → read the mutated DQ entry. The entry's `kind` stays `"validate-pending"` regardless of result (kind records what was raised, not current state). If `result: "pass"` (entry now in `resolved[]`), advance per the cohort/task pipeline — for a workspace ci-watcher, await the Phase 2 e2e dispatch above; for an e2e ci-watcher, advance to the next §13 task. If `result: "fail" | "cancelled" | "timed_out"` (entry still in `pending[]`), run the §G4 classifier (see "§G4 classifier" sub-section below): allowlist match (≤3 file edits + clippy auto-fix or missing import or deprecated API) → queue narrow fix-impl-task brief; else → catch-fire to user with the `log_slice` + `failed_jobs`.
 - **All §16a stories `[done]`** (between last impl complete and bm-merge confirm) → run `/brehon-verify` → if any phantom, surface to user via catch-fire; otherwise advance to bm-pr stages below
 - **bm-pr complete** → wait for CodeRabbit (`bm-task` polls) → on CR posted, queue `bm-poll-cr`
 - **bm-poll-cr complete** → queue `bm-triage` (draft auto)
@@ -256,7 +276,7 @@ When a plan §13 task carries `[P]` and is the next pending task, the advisor co
 
 ### Cohort handover aggregation
 
-Per `feedback_handover_trailer_cohort_propagation.md`. Once all cohort members reach `complete` (and under Shape G, all corresponding `validate-result` DQ entries with `result: "pass"`), the advisor populates the *next* cohort's brief §3a "Handover from prior cohort" before queueing any task in that next cohort.
+Per `feedback_handover_trailer_cohort_propagation.md`. Once all cohort members reach `complete` (and under Shape G, all corresponding `validate-pending` DQ entries mutated to `result: "pass"` for both Phase 1 workspace and Phase 2 e2e per the option-b two-phase validation), the advisor populates the *next* cohort's brief §3a "Handover from prior cohort" before queueing any task in that next cohort.
 
 Sequence:
 
@@ -291,23 +311,39 @@ If a plan §13 has no `[P]` annotations (legacy plans pre-this-rule, or plans wh
 
 Under Shape G (v1-JM-e onward), cohort members each enter
 `kind: "validate-pending"` simultaneously after their respective
-push — one workflow run per cohort task, fanned out on GitHub-hosted
-runners. The advisor dispatches one `[role:ci-watcher]` Junior task
-per `validate-pending` entry. Cohort advancement waits for **all**
-cohort members to reach `kind: "validate-result"` with `result:
-"pass"`. A single `kind: "validate-failed"` in the cohort blocks
-advancement and triggers the §G4 classifier per the validate-stage
-Stage-shape rule. If multiple cohort members fail simultaneously,
-classify each independently — auto-queue allowlist matches as
-parallel fix-impl-tasks (each forming its own [P]-marker degenerate
-cohort), surface non-allowlist failures to user as a single
-catch-fire bundle.
+push — one Phase-1 workspace-check workflow run per cohort task,
+fanned out on GitHub-hosted runners. The advisor dispatches one
+`[role:ci-watcher]` Junior task per `validate-pending` entry. Each
+ci-watcher mutates its paired entry on completion (per option 2;
+the entry's `kind` stays `"validate-pending"`, but `result`/
+`log_slice`/`failed_jobs`/`answer`/`answered_by`/`resolved_at` are
+populated, and the entry moves `pending[]` → `resolved[]` only on
+`result: "pass"`).
+
+Cohort advancement waits for **all** Phase-1 cohort members to reach
+`result: "pass"` (entries in `resolved[]`). A single member with
+`result: "fail" | "cancelled" | "timed_out"` (entry remaining in
+`pending[]`) blocks advancement and triggers the §G4 classifier
+per the validate-stage Stage-shape rule. If multiple cohort members
+fail simultaneously, classify each independently — auto-queue
+allowlist matches as parallel fix-impl-tasks (each forming its own
+[P]-marker degenerate cohort), surface non-allowlist failures to
+user as a single catch-fire bundle.
+
+After all Phase-1 cohort members pass and the daemon finalize-merges
+each into the phase branch, the advisor raises a SINGLE Phase-2 e2e
+`validate-pending` DQ entry for the post-finalize phase-branch tip
+(one e2e run per cohort barrier, not per cohort member — option (b)
+e2e fires once when the phase-branch tip moves). Cohort advancement
+to the *next* cohort waits on this e2e ci-watcher resolving with
+`result: "pass"` as well.
 
 ## §G4 classifier
 
 Per `.claude/PRPs/plans/v1-validate-agent.plan.md` §4 watchpoint #7
-+ §10.9. When a `kind: "validate-failed"` DQ entry surfaces, the
-advisor reads its `result`, `log_slice`, and `failed_jobs`, then
++ §10.9. When a `validate-pending` DQ entry is mutated to
+`result: "fail" | "cancelled" | "timed_out"` and remains in `pending[]`,
+the advisor reads its `result`, `log_slice`, and `failed_jobs`, then
 applies the classifier:
 
 **Allowlist (auto-queue narrow fix-impl-task, ≤3 file edits):**
@@ -373,7 +409,7 @@ Stop the loop and surface to user immediately if:
 - A `bm-task` opens a PR into `main` instead of `governance-v0`.
 - The phase branch has uncommitted state when a Junior task reports complete (Junior's finalize push should have flushed it).
 - Rust-analyzer-lsp is missing on the EliteDesk daemon and a `planning` or `impl-task` task that depended on `LSP` returns failed.
-- A workflow run exceeds the 60-min ci-watcher cap → ci-watcher writes `kind: "validate-failed"` with `result: "timed_out"` (matches GitHub's conclusion enum spelling). Surface to user with the workflow run id and the elapsed wall-clock; do not auto-rerun.
+- A workflow run exceeds the 60-min ci-watcher cap → ci-watcher mutates the paired `validate-pending` entry to `result: "timed_out"` (entry stays in `pending[]`). Surface to user with the workflow run id and the elapsed wall-clock; do not auto-rerun.
 - ci-watcher's `gh run watch <id> --exit-status` returns an exit code not enumerated in the empirical exit-code table at `.claude/agents/ci-watcher.md` "Empirical exit-code table" — surface as classifier-miss with the observed exit code, the workflow run id, and the run's `gh run view <id> --json status,conclusion` snapshot. The exit-code table is grow-on-evidence; record the new pair (exit_code → conclusion) and update the table at retro time.
 
 For each, include the catch-fire reason and the rule it violated in the surfaced message.
