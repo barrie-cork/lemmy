@@ -563,11 +563,12 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 4 JM-a migrations LIFO (Task 1 enums, PR #92 cr-9's
-  // jury_constraint_relaxation_reason enum added in 000050, Task 2
-  // columns+table, Task 3 seed). Runner takes pg_advisory_lock(0) so the
-  // forbid_diesel_cli trigger does not fire.
-  schema_setup::run(Options::default().revert().limit(4), &db_url)?;
+  // Step 2: revert the 6 JM-a + JM-d Task 1 migrations LIFO (4 JM-a
+  // migrations from 2026-04-23-000000 through 2026-04-23-000200, plus 2
+  // JM-d Task 1 migrations from 2026-04-27-000000 and 2026-04-27-000100).
+  // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
+  // not fire.
+  schema_setup::run(Options::default().revert().limit(6), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -2891,14 +2892,15 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
       .execute(&mut async_conn)
       .await?;
 
-    // Stamp closed_at in the future on every Decided seeded case so the
-    // #34 appeal window guard admits the appeal. Scope the UPDATE to
-    // status=Decided so it only touches the decided_form row even if
-    // other tests extend this seed later.
+    // Stamp appeal_window_expires_at in the future on every Decided seeded
+    // case so the appeal window guard admits the appeal (Task 3 switched the
+    // check from closed_at to appeal_window_expires_at). Scope the UPDATE to
+    // status=Decided so it only touches the decided_form row even if other
+    // tests extend this seed later.
     let future = chrono::Utc::now() + chrono::Duration::days(7);
     diesel::update(moderation_case::table)
       .filter(moderation_case::status.eq(CaseStatus::Decided))
-      .set(moderation_case::closed_at.eq(Some(future)))
+      .set(moderation_case::appeal_window_expires_at.eq(Some(future)))
       .execute(&mut async_conn)
       .await?;
   }
@@ -4290,17 +4292,17 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn E
 
   let future = Utc::now() + Duration::days(1);
   diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_a.id)))
-    .set(moderation_case::closed_at.eq(Some(future)))
+    .set(moderation_case::appeal_window_expires_at.eq(Some(future)))
     .execute(&mut async_conn)
     .await?;
 
   let past = Utc::now() - Duration::days(1);
   diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_b.id)))
-    .set(moderation_case::closed_at.eq(Some(past)))
+    .set(moderation_case::appeal_window_expires_at.eq(Some(past)))
     .execute(&mut async_conn)
     .await?;
 
-  // Case A: closed_at in the future → appeal succeeds.
+  // Case A: appeal_window_expires_at in the future → appeal succeeds.
   let resp_a = request_appeal(
     Json(RequestAppeal { case_id: case_a.id, reason: "try me".to_string() }),
     context.clone(),
@@ -4311,11 +4313,11 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn E
   .into_inner();
   assert!(
     resp_a.appeal_id.0 > 0,
-    "GH #34: appeal with closed_at in future must succeed (appeal_id positive)",
+    "GH #34: appeal with appeal_window_expires_at in future must succeed (appeal_id positive)",
   );
   assert_eq!(resp_a.case_id, case_a.id, "response case_id round-trips");
 
-  // Case B: closed_at in the past → appeal fails with NotFound.
+  // Case B: appeal_window_expires_at in the past → appeal fails with NotFound.
   let resp_b = request_appeal(
     Json(RequestAppeal { case_id: case_b.id, reason: "expired".to_string() }),
     context.clone(),
@@ -4324,7 +4326,7 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn E
   .await;
   assert!(
     resp_b.is_err(),
-    "GH #34: appeal with closed_at in past must fail (window expired)",
+    "GH #34: appeal with appeal_window_expires_at in past must fail (window expired)",
   );
 
   Ok(())
