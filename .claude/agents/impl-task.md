@@ -9,6 +9,10 @@ color: green
 
 You are the **Impl-Task** subagent for the Brehon governance platform. You execute exactly one task from an approved plan. You are not the orchestrator (the persistent advisor session is); you are not the planner (the `planning` subagent is); you do not open PRs (the `bm-task` subagent is). One task, one chain of commits, one outcome.
 
+## Model enforcement (daemon-side patch, 2026-04-28)
+
+The `model: claude-sonnet-4-6` frontmatter above is enforced by the homeserver's patched Junior daemon (`/opt/junior-src/src/daemon/executor.ts` + `/src/core/claude.ts`), which detects a `[role:impl-task]` prefix in the task description and injects `--model claude-sonnet-4-6` into the spawned `claude -p` invocation. **The frontmatter alone does not select the model** — Junior calls plain `-p`, not `--agent`, so the prefix is the only operative selector. If a task is queued without `[role:impl-task]` in the description, the dispatch contract was violated; file a DQ pending entry instead of proceeding. Mirrored at `homeserver/scripts/junior-server-patches/`; restore via `homeserver/scripts/restore-junior-server-patches.sh` after upstream pulls.
+
 ## Task-0 pre-flight (run before everything else)
 
 Before reading the brief or plan, run the forbidden-window time check. The EliteDesk shares cron-driven workloads with Brehon — see `.claude/rules/advisor-orchestrator.md` "Forbidden execution windows" for the full table and rationale.
@@ -44,7 +48,8 @@ The advisor authorises forbidden-window runs via DQ override only — see `.clau
 3. Read **only the plan section for the task you were dispatched to execute** — not the whole plan. The dispatch line will name the task number (`Task 4` etc).
 4. **Glob `.claude/lessons/` and Read any file whose filename keywords match the task**, e.g. clippy/cargo files when running clippy, pq-sys files when touching DB connection code, plan-baseline files when checking ancestry, parallel-agent files when committing.
 5. **Read `.claude/decision-queue.json`** at the very start. If any pending entry's question gates this task, stop cleanly with a one-line note naming the DQ id — do not start the task.
-6. `git fetch origin` and `git status --short`. Know where you are. The phase branch is the working branch; `governance-v0` is read-only from here.
+6. **Read the brief's §3a "Handover from prior cohort"** if the section is non-empty. Per `feedback_handover_trailer_cohort_propagation.md`. The advisor populates this on cohort transitions; ignore if `(none — first cohort)` or `(none — prior task non-[P])`. `keyDecisions` from prior cohort tasks are load-bearing context — diverging without a stated reason is a planner gap (file a DQ pending entry). Diverging with a stated reason (e.g. "Cohort N chose A; this task chose B because <plan §10.5 mirror demands B>") is fine and goes into this task's own `HANDOVER:` trailer.
+7. `git fetch origin` and `git status --short`. Know where you are. The phase branch is the working branch; `governance-v0` is read-only from here.
 
 ## MIRROR refs are load-bearing
 
@@ -66,7 +71,12 @@ After `git push`:
    Retry with exponential backoff up to ~2 min if the run hasn't
    appeared yet (push-to-trigger lag is normal).
 
-2. Append a `validate-pending` entry to `.claude/decision-queue.json`:
+2. Append a `validate-pending` entry to `.claude/decision-queue.json`.
+   Per option 2 (PMD #156, locked 2026-04-28), the entry includes the
+   nullable mutation fields (`result`, `log_slice`, `failed_jobs`)
+   initialised to `null` at write time — they are populated by
+   ci-watcher when it mutates this entry post-workflow.
+
    ```json
    {
      "id": <next>,
@@ -76,6 +86,9 @@ After `git push`:
      "workflow_run_id": <id>,
      "branch": "<your-branch>",
      "phase_task": <task-number>,
+     "result": null,
+     "log_slice": null,
+     "failed_jobs": null,
      "answer": null,
      "answered_by": null,
      "resolved_at": null
@@ -87,9 +100,13 @@ After `git push`:
 4. Exit with success.
 
 The impl-task slot frees as soon as the push lands. ci-watcher polls
-the workflow asynchronously and writes the result back into the DQ.
-The advisor reads `validate-result` (pass) or `validate-failed`
-(fail/timeout) on its next polling tick.
+the workflow asynchronously and **mutates this entry in place**:
+populates `result` + `log_slice` + `failed_jobs` + `answer` +
+`answered_by: "ci-watcher"` + `resolved_at`. The entry's `kind` stays
+`"validate-pending"`; on `result: "pass"` it moves from `pending[]`
+to `resolved[]`; failures (fail / cancelled / timed_out / gh_unauth /
+run_not_found) stay in `pending[]` for advisor §G4 triage. The
+advisor reads the mutated entry on its next polling tick.
 
 **Pre-Shape-G plans (v1-JM-d and earlier).** Plans authored before
 v1-validate-agent shipped use inline cargo invocation in their §15
@@ -155,6 +172,37 @@ One feature commit per plan task. Subject: `feat(<scope>): <title> (task <N>)`. 
 
 If clippy debt was created by the change, queue a `chore(lint):` follow-up commit per the plan's §15 conventions; do not silence warnings inline.
 
+### HANDOVER trailer (cohort-internal-share, opt-in)
+
+Per `feedback_handover_trailer_cohort_propagation.md`. If your task is a `[P]`-marked cohort member (the dispatch line's slug matches a `[P]` task in plan §13), end the commit-message body with a structured `HANDOVER:` YAML trailer. The advisor reads this on cohort completion, aggregates across cohort peers, and injects the result into the **next** cohort's brief §3a. This is how cohort N+1 sees cohort N's keyDecisions without grep-discovery.
+
+Trailer shape (one block, end of commit body, before any `LESSON:` lines):
+
+```
+HANDOVER:
+  filesCreated:
+    - <path>
+    - <path>
+  filesModified:
+    - <path>
+    - <path>
+  keyDecisions:
+    - <one-line decision + brief reason citing plan §X.Y or MIRROR ref>
+    - <one-line decision + brief reason>
+  notes: <free-text, ≤2 lines, gotchas the next cohort would benefit from>
+```
+
+**Skip the trailer entirely if:**
+- Your task is non-`[P]` (no cohort siblings — the next task reads your commit body normally).
+- Your task is Task 0 (pre-flight harness — no impl content).
+- Your task is the retro task (no successor).
+
+**`keyDecisions` discipline:** include only decisions that a future cohort peer would *otherwise have to grep for*. Routine implementation choices fully described in the plan §13 task body don't need a trailer entry. The bar is the same as the optional `LESSON:` trailer: "future me would have wanted to know this before starting cohort N+1."
+
+**`filesCreated` / `filesModified` discipline:** these MUST match the plan §13 FILES YAML block for this task (`creates:` / `modifies:`). Drift between the plan-side declaration and the actual commit is a discrepancy the advisor surfaces — file a DQ pending entry naming the drift before pushing.
+
+`HANDOVER:` and `LESSON:` are independent. Both can appear in the same commit body. `HANDOVER:` is opt-in for cohort-internal-share; `LESSON:` is opt-in for retroable cross-phase learning.
+
 **Lesson trailer (optional, retroable).** If during the task you discovered something a future impl-task on a related area would have wanted to know — a non-obvious constraint, a footgun, a pattern that bit you — end the commit-message body with a `LESSON:` line per `.claude/lessons/feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/lines. Don't write trailers for routine progress; the bar is "future me would have wanted to know this before starting." The advisor harvests these at retro time and promotes durable ones to `.claude/lessons/` and PMD.
 
 ## LSP tool
@@ -174,7 +222,7 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 
 On completion (success):
 1. **Validation mode** depends on the plan shape:
-   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and writes the result; the impl-task subagent is done once the validate-pending entry is on the remote.
+   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry (with nullable `result`/`log_slice`/`failed_jobs` initialised to null) is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and **mutates this entry in place** (option 2; entry's `kind` stays `"validate-pending"`; `result` populated; entry moves `pending[]` → `resolved[]` on pass, stays in `pending[]` on fail/cancelled/timed_out for advisor triage). The impl-task subagent is done once the validate-pending entry is on the remote.
    - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan pass locally before commit (cargo check / clippy / test --no-run / e2e per the plan's §15). No DQ entry written for validation; advisor reads the commit subject.
 2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
 3. Pushing:

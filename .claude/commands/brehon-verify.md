@@ -60,26 +60,34 @@ For each story:
 
 #### Step 4a: Output presence + structural-pattern check
 
-For each Brief-Scope output:
+The check has two layers:
 
-```bash
-# Confirm file exists on phase branch
-git show origin/phase-<phase>:<file> > /dev/null 2>&1 || echo "PHANTOM: <file> absent"
+1. **Primary — FILES YAML phantom-presence (V1+ plans).** For each story's composing §13 task, parse the **FILES** YAML block from the plan (the `creates:` array per `feedback_explicit_file_arrays_on_tasks.md`). For each `creates:` entry, mechanically assert presence + non-empty on the phase branch. Two lines, no descriptor-grammar.
 
-# Confirm non-empty
-[ "$(git show origin/phase-<phase>:<file> | wc -c)" -gt 0 ] || echo "PHANTOM: <file> empty"
+   ```bash
+   # For each f in union(creates: across composing tasks):
+   git show origin/phase-<phase>:<f> > /dev/null 2>&1 || echo "PHANTOM: <f> absent"
+   [ "$(git show origin/phase-<phase>:<f> | wc -c)" -gt 0 ] || echo "PHANTOM: <f> empty"
+   ```
 
-# Confirm structural pattern (parsed from "X contains Y", "Y exists in X", "test Z exists in <test_file>", etc)
-git show origin/phase-<phase>:<file> | rg -q '<pattern>' || echo "PHANTOM: <pattern> not found in <file>"
-```
+   The YAML check is the **primary signal** for "did the task ship its files at all" on V1+ plans. Drift between the plan's §13 FILES YAML and §16a Brief-Scope outputs is a planner-side miss — file a DQ pending entry naming the drift and continue with the YAML as authoritative (the YAML is mechanical; Brief-Scope is descriptive).
 
-The structural pattern is the descriptor next to each Brief-Scope output bullet. Examples:
-- "contains `<symbol>` declaration" → `rg -q 'pub (const|fn|struct|trait|enum) <symbol>'`
-- "re-exports `<symbol>`" → `rg -q 'pub use .*<symbol>'`
-- "test `<test_fn>` exists in `<test_file>`" → `rg -q 'fn <test_fn>\b' <test_file>` (parsed from descriptor)
-- "migration `<id>__<name>` runs forward+backward" → check `migrations/<id>__<name>/up.sql` and `down.sql` both exist + non-empty + (optionally) run `bash scripts/brehon/migrate-roundtrip.sh <id>__<name>` if available
+2. **Secondary — Brief-Scope structural-pattern check (always).** For each Brief-Scope output bullet under the story (§16a), parse the structural-pattern descriptor and `rg`-check inside the file content:
 
-If a structural pattern can't be parsed mechanically, the planner left an under-specified descriptor — file a DQ pending entry asking for revision and treat the story as `[malformed]`.
+   ```bash
+   # Confirm structural pattern (parsed from "X contains Y", "Y exists in X", "test Z exists in <test_file>", etc)
+   git show origin/phase-<phase>:<file> | rg -q '<pattern>' || echo "PHANTOM: <pattern> not found in <file>"
+   ```
+
+   The structural pattern is the descriptor next to each Brief-Scope output bullet. Examples:
+   - "contains `<symbol>` declaration" → `rg -q 'pub (const|fn|struct|trait|enum) <symbol>'`
+   - "re-exports `<symbol>`" → `rg -q 'pub use .*<symbol>'`
+   - "test `<test_fn>` exists in `<test_file>`" → `rg -q 'fn <test_fn>\b' <test_file>` (parsed from descriptor)
+   - "migration `<id>__<name>` runs forward+backward" → check `migrations/<id>__<name>/up.sql` and `down.sql` both exist + non-empty + (optionally) run `bash scripts/brehon/migrate-roundtrip.sh <id>__<name>` if available
+
+   If a structural pattern can't be parsed mechanically, the planner left an under-specified descriptor — file a DQ pending entry asking for revision and treat the story as `[malformed]`.
+
+**Pre-V1 plans (no FILES YAML in §13):** skip layer 1 entirely; rely on the structural-pattern descriptor check (layer 2) as the only signal. Back-compat unchanged. Detection: `grep -E '^creates:|^modifies:' .claude/PRPs/plans/<plan>.plan.md` returns nothing → pre-V1. Note `back-compat: pre-V1 plan` in the verify report's outcome summary.
 
 #### Step 4b: Checkpoint command execution
 
@@ -101,8 +109,8 @@ For each story, classify as:
 
 - **✓** all outputs present + structural patterns matched + checkpoint exit 0
 - **✗ regression** outputs present + structural patterns matched + **checkpoint exit non-zero** (suspected regression CR triage missed)
-- **✗ phantom** any output absent, empty, or structural-pattern-failing
-- **[malformed]** plan §16a entry under-specified — needs planner retrofit
+- **✗ phantom** any output absent, empty, or structural-pattern-failing (V1+ plans: any §13 `creates:` entry absent or empty in layer 1; pre-V1 plans: any descriptor-pattern failing in layer 2)
+- **[malformed]** plan §16a entry under-specified, OR §13 FILES YAML drifts from §16a Brief-Scope outputs — needs planner retrofit
 
 ### Step 5: Write verify report
 
@@ -229,6 +237,12 @@ Earlier (post each task) would race with the impl daemon and produce flapping re
 - **Plans without §16a stories block.** Pre-rule legacy plans get manual reconciliation; the rule applies forward-only (per memory-injection's forward-only consistency principle).
 - **Single-story phases (1-3 tasks).** The phase-as-a-whole is the story; CR triage catches regressions; verify report is one row.
 - **Retro-only commits.** No impl, no §13 tasks, nothing to verify.
+
+### V1 schema additive: FILES YAML primary signal (per `feedback_explicit_file_arrays_on_tasks.md`)
+
+For plans authored under V1+ (those whose §13 tasks carry the **FILES** YAML block — `creates:` + `modifies:` arrays), Step 4a's primary phantom-presence signal is a mechanical `git show` over the union of `creates:` arrays for the story's composing tasks. The Brief-Scope structural-pattern descriptor check (layer 2) remains as the secondary signal for in-file content (the symbol exists *inside* the file, not just that the file exists). Pre-V1 plans skip layer 1 entirely and use layer 2 as the only signal — back-compat unchanged.
+
+The two-layer split removes the descriptor-grammar parser as the sole gate for "did the task ship its files." A planner who writes `creates: - crates/db_schema/src/source/governance/log_entry/gist_7.rs` cannot under-specify the descriptor — the YAML is the descriptor. Drift between the YAML and §16a Brief-Scope outputs is itself a `[malformed]` signal that escalates to the planner.
 
 ### Re-running /brehon-verify
 

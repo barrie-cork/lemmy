@@ -1,18 +1,25 @@
 name: cargo-test-e2e
 
-# Runs the governance e2e test suite on PRs to governance-v0. Each test
-# spins up its own Postgres via testcontainers (see
+# Runs the governance e2e test suite on push to phase-v1-* branches.
+# Each test spins up its own Postgres via testcontainers (see
 # crates/server/tests/e2e.rs:83), so the runner only needs Docker — no
 # services: block required.
 #
+# Trigger pattern is push-only on phase-v1-* per option (b) decided
+# 2026-04-28: e2e fires when the daemon's finalize-merge moves the
+# phase-branch tip, NOT on every junior/* worktree push (workspace
+# check + clippy still runs on junior/* via cargo-validate-workspace.yml).
+# This saves ~80% of e2e runs across a sub-phase; trade-off is e2e
+# regressions surface AFTER impl finalize-merges, requiring fix-in-PR.
+#
 # This workflow complements the upstream Woodpecker CI (.woodpecker.yml)
 # which runs Lemmy's native cargo checks. Here we surface e2e pass/fail
-# in GitHub's status-check UI so PRs can block on it.
+# on phase-branch tips so the BM (and ci-watcher) can gate merges.
 
 on:
-  pull_request:
+  push:
     branches:
-      - governance-v0
+      - 'phase-v1-*'
     paths:
       - 'crates/**'
       - 'migrations/**'
@@ -25,7 +32,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: cargo-test-e2e-${{ github.event.pull_request.number }}
+  # Use github.ref so concurrent pushes to the same branch cancel-in-progress;
+  # different branches run independently. Matches cargo-validate-workspace.yml.
+  group: cargo-test-e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,11 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout PR head
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          ref: ${{ github.event.pull_request.head.sha }}
           # crates/email/translations/ is a submodule pointing to
           # LemmyNet/lemmy-translations; lemmy_email/build.rs reads it
           # at compile time, so we must initialise it.

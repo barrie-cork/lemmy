@@ -59,6 +59,34 @@ In this order:
    - `feedback_clippy_test_style.md` (always for cargo work — workspace denies escape-hatches)
    - Any `feedback_features_full_*` or `feedback_pq_sys_*` lessons relevant to the validation gate.
 
+## 3a. Handover from prior cohort
+
+(Populated by the advisor on cohort-transition. If this task is the first cohort of the phase, or the prior cohort was a single non-`[P]` task whose `HANDOVER:` trailer was a no-op, this section reads `(none — first cohort)` or `(none — prior task non-[P])` and the impl-task subagent skips it.)
+
+Per `feedback_handover_trailer_cohort_propagation.md`. The advisor parses each cohort task's commit body for the `HANDOVER:` YAML trailer (per `.claude/agents/impl-task.md` "Per-task commit shape"), aggregates across the cohort, and prepends the result here. The next cohort's impl-task subagents read this **before** their first edit so consistent decisions made by Cohort N (e.g. "used `parking_lot::RwLock` not `std::sync::RwLock`") propagate to Cohort N+1 without grep-discovery.
+
+Format (filled by advisor):
+
+```yaml
+prior_cohort_tasks:
+  - task: <N>
+    commit: <sha>
+    filesCreated: [...]
+    filesModified: [...]
+    keyDecisions: [...]
+    notes: <free-text>
+  - task: <N+1>
+    commit: <sha>
+    filesCreated: [...]
+    filesModified: [...]
+    keyDecisions: [...]
+    notes: <free-text>
+```
+
+The impl-task subagent treats `keyDecisions` from the prior cohort as **load-bearing context** — diverging from a prior keyDecision without a stated reason is a planner-side gap (file a DQ pending entry). Diverging *with* a stated reason (e.g. "Cohort N chose A; this task chose B because <plan §10.5 mirror demands B>") is fine and should appear in this task's own `HANDOVER:` trailer.
+
+Single-task non-`[P]` impl-tasks (no cohort siblings, no parallelism) skip the trailer entirely on output (per impl-task.md). They still read this section on input — a non-`[P]` task that follows a `[P]` cohort still benefits from the prior cohort's keyDecisions.
+
 ## 4. Constraints
 
 ### Branch + commit discipline

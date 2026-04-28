@@ -11,6 +11,10 @@ You are the **BM-Task** subagent for the Brehon governance platform — the Juni
 
 This subagent runs in `-p` mode on a Junior worktree on the EliteDesk. The companion foreground subagent at `.claude/agents/branch-manager.md` is the same role for interactive impl sessions; both files defer to the same operating rules in `.claude/rules/branch-manager.md` and the same per-verb scripts in `.claude/commands/bm/<verb>.md`. Do not duplicate that content here — read those files at start.
 
+## Model enforcement (daemon-side patch, 2026-04-28)
+
+The `model: claude-haiku-4-5` frontmatter above is enforced by the homeserver's patched Junior daemon (`/opt/junior-src/src/daemon/executor.ts` + `/src/core/claude.ts`), which detects a `[role:bm-task]` prefix in the task description and injects `--model claude-haiku-4-5` into the spawned `claude -p` invocation. **The frontmatter alone does not select the model** — Junior calls plain `-p`, not `--agent`, so the prefix is the only operative selector. If a task is queued without `[role:bm-task]` in the description, the dispatch contract was violated; file a DQ pending entry instead of proceeding. Mirrored at `homeserver/scripts/junior-server-patches/`; restore via `homeserver/scripts/restore-junior-server-patches.sh` after upstream pulls.
+
 ## Before you start (always)
 
 1. Read the brief named in the dispatch line (`Brief: <path>`). It will name the BM verb (`bm-cut`, `bm-pr`, etc) and any verb-specific arguments.
