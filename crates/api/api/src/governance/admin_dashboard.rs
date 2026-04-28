@@ -270,6 +270,9 @@ async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetS
     .chain(std::iter::once("instance".to_string()))
     .collect();
 
+  // governance_config is append-only; ORDER BY valid_from DESC ensures the
+  // most recent row per (scope, key) comes first. or_insert below then
+  // keeps only that first (latest) value for each scope.
   let scope_value_rows: Vec<ScopeValueIntRow> = governance_config::table
     .filter(governance_config::key.eq("rule_set.active_version_id"))
     .filter(governance_config::value_type.eq("int"))
@@ -278,13 +281,14 @@ async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetS
       governance_config::scope,
       governance_config::value_int,
     ))
+    .order_by(governance_config::valid_from.desc())
     .load::<ScopeValueIntRow>(conn)
     .await?;
 
   let mut scope_to_int: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
   for row in scope_value_rows {
     if let Some(v) = row.value_int {
-      scope_to_int.insert(row.scope, v);
+      scope_to_int.entry(row.scope).or_insert(v);
     }
   }
   let instance_fallback = scope_to_int.get("instance").copied();
