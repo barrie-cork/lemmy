@@ -144,7 +144,7 @@ Keep `question` under 50 words. Put evidence in `context`, not in the
 question. Always provide at least two concrete `options` — never ask
 open-ended questions.
 
-## kind: "blocker" vs "log" vs "clarify" vs "validate-pending" vs "validate-result" vs "validate-failed"
+## kind: "blocker" vs "log" vs "clarify" vs "validate-pending"
 
 The `kind` field separates entries by what they gate and who writes
 them. All go in `decision-queue.json` so they're committed/pushed
@@ -177,40 +177,97 @@ polling loop applies different routing per kind.
 - **`kind: "validate-pending"`** — the impl-task subagent committed
   + pushed and is awaiting out-of-band cargo validation on GitHub
   Actions (Shape G, per `v1-validate-agent.plan.md` §4 + §10.7). Goes
-  to `pending` with `from: "impl"`, `answered_by: null`. Required
-  fields: `workflow_run_id` (integer, captured via `gh run list
-  --branch <branch> --limit 1 --json databaseId`), `branch`,
-  `phase_task` (the §13 task number). The advisor's polling loop
-  reads this entry and dispatches a `[role:ci-watcher]` Junior task
-  to poll the workflow run. The originating impl-task is gated until
-  ci-watcher resolves. Writer: **impl-task only**.
-- **`kind: "validate-result"`** — the ci-watcher subagent classified
-  the workflow after reading `conclusion: "success"` from
-  `gh run view <id> --json conclusion` (do NOT rely on
-  `gh run watch <id> --exit-status` for final classification — per
-  `feedback_gh_run_watch_exit_status_unreliable.md`, the exit code is
-  unreliable on gh CLI 2.89.0). Goes **directly to `resolved`** with
-  `from: "ci-watcher"`, `answered_by: "ci-watcher-self-resolved"`,
-  `result: "pass"`. The advisor reads this entry and advances the
-  §13-task pipeline (cohort check). Writer: **ci-watcher only**.
-- **`kind: "validate-failed"`** — the ci-watcher subagent classified
-  the workflow after reading `conclusion: "failure" | "cancelled" |
-  "timed_out"` from `gh run view <id> --json conclusion` (or hit its
-  own 60-min wall-clock cap, or the run was unreachable). Goes to
-  `pending` with `from: "ci-watcher"`, `answered_by: null`,
-  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`.
-  Required fields when `result: "fail"`: `log_slice` (last ~200 lines
-  per failed job), `failed_jobs` (array of job names). The advisor
-  reads this entry, runs the §G4 classifier (auto-queue fix-impl-task
-  for allowlist matches ≤3 file edits, else catch-fire). Writer:
-  **ci-watcher only**.
+  to `pending` with `from: "impl"` (or `from: "advisor"` for the
+  Phase-2 e2e dispatch — see "Two-phase validation under Shape G"
+  below), `answered_by: null`. Required fields at write time:
+  `workflow_run_id` (integer, captured via `gh run list --branch
+  <branch> --limit 1 --json databaseId`), `branch`, `phase_task` (the
+  §13 task number). Required nullable fields at write time (populated
+  by ci-watcher on mutation): `result` (null), `log_slice` (null),
+  `failed_jobs` (null). The advisor's polling loop reads this entry
+  and dispatches a `[role:ci-watcher]` Junior task to poll the
+  workflow run. The originating impl-task is gated until ci-watcher
+  mutates the entry. Writers: **impl-task** for Phase-1 workspace-
+  check entries; **advisor** for Phase-2 e2e entries (the daemon
+  finalize-merge triggers e2e on the phase branch tip, but only the
+  advisor sees the new tip on its next poll, so the advisor raises
+  the Phase-2 entry).
+
+### ci-watcher mutation pattern (option 2, locked 2026-04-28)
+
+ci-watcher does NOT write a separate result entry. It MUTATES the
+existing `validate-pending` entry in place by matching
+`workflow_run_id`, populating `result` + `log_slice` + `failed_jobs`
++ `answer` + `answered_by: "ci-watcher"` + `resolved_at`, and moving
+the entry from `pending[]` to `resolved[]` only when
+`result: "pass"`. Failures (fail / cancelled / timed_out / gh_unauth
+/ run_not_found) stay in `pending[]` for advisor §G4 triage. The
+entry's `kind` stays `"validate-pending"` regardless — kind records
+what was raised, not the current state.
+
+`result` enum values: `"pass" | "fail" | "cancelled" | "timed_out" |
+"gh_unauth" | "run_not_found"`. `timed_out` uses the underscore
+spelling to mirror GitHub's workflow `conclusion` API.
+
+This option-2 pattern supersedes the historical two-entry design
+(impl-task writes validate-pending; ci-watcher writes a sibling
+validate-result or validate-failed). The two-entry pattern was
+killed because nothing migrated the paired pending → resolved when
+ci-watcher wrote a new entry — DQ #73 was orphaned for ~7 hours
+before manual cleanup at `30597b436`. Single-entry mutation makes
+the inconsistency impossible.
+
+### Deprecated kinds (historical-only — do not use for new writes)
+
+- **`kind: "validate-result"`** — DEPRECATED 2026-04-28 by option 2.
+  ci-watcher MUST NOT write this kind. Reading-side: schema-v2
+  consumers handle historical entries with this kind for back-compat.
+  Two such entries exist on `governance-v0` as of 2026-04-28: DQ #74
+  (the original two-entry validate-result) and the historical
+  resolved version of DQ #73 at `30597b436` (manually migrated
+  pending → resolved during the contamination cleanup; carries
+  `kind: "validate-pending"` because it was migrated post-hoc, but
+  paired with the deprecated DQ #74).
+- **`kind: "validate-failed"`** — DEPRECATED 2026-04-28 by option 2.
+  ci-watcher MUST NOT write this kind. Reading-side: schema-v2
+  consumers handle historical entries with this kind. No such
+  entries exist on `governance-v0` as of 2026-04-28; the deprecation
+  is forward-looking only.
 
 > **Note on enum values:** GitHub's workflow `conclusion` API returns
 > `timed_out` (with underscore) for timeout state — the `result` enum
 > mirrors GitHub's exact spelling. `run_not_found` covers the case
 > where `gh run view <id>` fails with run-not-found (e.g. wrong
 > branch, run garbage-collected, GitHub-side eviction); ci-watcher's
-> pre-flight run-existence check writes this result and exits 0.
+> pre-flight run-existence check mutates the paired entry with this
+> result and exits 0.
+
+### Two-phase validation under Shape G (option (b), locked 2026-04-28)
+
+Per `cargo-test-e2e.yml` triggering on push to `phase-v1-*` only
+(not `junior/*` worktree branches — option (b) defers e2e to the
+phase-branch tip; saves ~80% of e2e runs across a sub-phase):
+
+- **Phase 1 (workspace check on `junior/*`):** impl-task writes a
+  `validate-pending` entry referencing the
+  `cargo-validate-workspace.yml` run id. Goes to `pending`,
+  `from: "impl"`. Advisor queues a ci-watcher to mutate it.
+- **Phase 2 (e2e on `phase-v1-*`):** after Junior's daemon finalize-
+  merges the impl-task worktree branch into the phase branch, the
+  advisor's polling loop detects the new phase-branch tip on next
+  `git fetch`. The push to `phase-v1-*` triggers
+  `cargo-test-e2e.yml`. The advisor captures the e2e workflow_run_id
+  via `gh run list --repo barrie-cork/lemmy --branch
+  phase-v1-<phase> --workflow cargo-test-e2e --limit 1 --json
+  databaseId`, and writes a NEW `validate-pending` entry,
+  `from: "advisor"` (the advisor commit subject is `chore(advisor):
+  raise e2e validate-pending for phase-v1-<phase> tip <sha>` per
+  `^(chore|docs)\((advisor|decision-queue)\)`). Advisor queues a
+  second ci-watcher to mutate it.
+
+Both phases use the same single-entry mutation pattern. Cohort
+advancement waits on both phases per the cohort dispatch rule in
+`.claude/rules/advisor-orchestrator.md`.
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
@@ -243,29 +300,34 @@ The advisor's polling loop reads `decision-queue.json` and routes by
   planning task is gated until every clarify-pending on the brief is
   resolved.
 - `(clarify, resolved)` — historical record. No action.
-- `(validate-pending, pending)` — advisor dispatches a
-  `[role:ci-watcher]` Junior task with brief filled from the entry's
-  `workflow_run_id` + `branch` + `phase_task`. The originating
-  impl-task stays gated until ci-watcher resolves. Per
-  `advisor-orchestrator.md` Stage-shape "Each impl-task complete
-  (under Shape G)".
-- `(validate-pending, resolved)` — historical record only (the
-  validate-pending entry was superseded by a sibling `validate-result`
-  or `validate-failed` entry; the resolved transition is bookkeeping).
-- `(validate-result, resolved)` — advisor reads `result: "pass"` and
-  advances the §13-task pipeline (cohort check). No mid-loop user
-  surfacing.
-- `(validate-result, pending)` — **schema breach** (validate-result
-  entries are always self-resolved by ci-watcher). Surface as
-  catch-fire.
-- `(validate-failed, pending)` — advisor runs the §G4 classifier:
-  if the failure matches the allowlist (≤3 file edits + clippy
-  auto-fix or missing import or deprecated API), auto-queue a narrow
-  fix-impl-task; else surface to user as catch-fire with the
-  `log_slice` + `failed_jobs`. Per `advisor-orchestrator.md`
-  "§G4 classifier" sub-section.
-- `(validate-failed, resolved)` — historical record only (the failure
-  was triaged + addressed in a follow-up commit/cohort).
+- `(validate-pending, pending)` — two cases:
+  - **Pre-mutation** (`result == null`): advisor dispatches a
+    `[role:ci-watcher]` Junior task with brief filled from the
+    entry's `workflow_run_id` + `branch` + `phase_task`. The
+    originating impl-task (Phase 1) or the cohort barrier (Phase 2)
+    stays gated until ci-watcher mutates the entry. Per
+    `advisor-orchestrator.md` Stage-shape "Each impl-task complete
+    (under Shape G)".
+  - **Post-mutation, failure** (`result ∈ {"fail", "cancelled",
+    "timed_out", "gh_unauth", "run_not_found"}`): advisor runs the
+    §G4 classifier (per `advisor-orchestrator.md` "§G4 classifier"
+    sub-section). Allowlist match → auto-queue narrow
+    fix-impl-task. Non-allowlist → catch-fire to user with
+    `log_slice` + `failed_jobs`.
+- `(validate-pending, resolved)` — post-mutation success (`result ==
+  "pass"`). Advisor advances the §13-task pipeline (cohort check
+  / Phase-2 e2e dispatch). No mid-loop user surfacing.
+- `(validate-result | validate-failed, *)` — DEPRECATED kinds.
+  Schema-v2 readers must handle historical entries with these kinds
+  for back-compat (DQ #74 + the resolved version of DQ #73 on
+  `governance-v0`). Routing for historical entries: treat
+  `(validate-result, resolved)` as the success-pass equivalent of
+  `(validate-pending, resolved)` — the §13-task pipeline already
+  advanced when this entry was historically written. No mid-loop
+  action. Treat any other historical (kind, status) combinations
+  here as bookkeeping; the advisor never receives new entries with
+  these kinds because ci-watcher is hard-refused from writing them
+  (Hard refusal #7 below).
 
 ## Recipes (copy-pasteable)
 
@@ -394,7 +456,7 @@ These are the recurring failure modes the audit and Phase-6 #37 incident produce
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
 6. **NEVER write `kind: "clarify"` from a non-advisor session.** That kind is advisor-only — produced by `/brehon-clarify` at the pre-planning gate. A Junior subagent that writes `kind: "clarify"` has misunderstood the workflow (impl-task ambiguity → `kind: "blocker"` from `from: "impl"`; brief ambiguity at planning time is the advisor's responsibility, not the planner's).
-7. **NEVER write `kind: "validate-result" | "validate-failed"` from a non-ci-watcher session.** Those kinds are ci-watcher-only — produced by ci-watcher reading `conclusion` via `gh run view <id> --json conclusion` after a `gh run watch <id> --exit-status` long-poll (the watch is for blocking, not for classification — see `feedback_gh_run_watch_exit_status_unreliable.md`). impl-task writes `kind: "validate-pending"` (with `from: "impl"`); ci-watcher writes the result/failed sibling entries (with `from: "ci-watcher"`). Cross-role authoring is a process breach.
+7. **NEVER write `kind: "validate-result" | "validate-failed"` from any session.** Those kinds are DEPRECATED (option 2 supersedes; PMD #156, locked 2026-04-28). ci-watcher mutates the existing `validate-pending` entry in place by matching `workflow_run_id` — populates `result` + `log_slice` + `failed_jobs` + `answer` + `answered_by: "ci-watcher"` + `resolved_at`; moves `pending[]` → `resolved[]` only on `result: "pass"`. The entry's `kind` stays `"validate-pending"` (kind records what was raised, not current state). impl-task writes new `validate-pending` entries (Phase 1, `from: "impl"`); advisor writes new `validate-pending` entries for the Phase-2 e2e dispatch (`from: "advisor"`); ci-watcher MUTATES — never writes a new entry. Hard refusal applies to all sessions, including ci-watcher itself.
 
 ## After writing a question
 
@@ -541,16 +603,21 @@ identity determines which `from` value is valid:
 - `bm-task` subagent → `from: "bm"`. Pending entries with
   `answered_by: null`, or self-resolve as `"bm-self-resolved"`. Writes
   `kind: "blocker"` or `kind: "log"`.
-- `ci-watcher` subagent → `from: "ci-watcher"`. Writes
-  `kind: "validate-result"` (always to `resolved` with
-  `answered_by: "ci-watcher-self-resolved"`, `result: "pass"`) or
-  `kind: "validate-failed"` (to `pending` with `answered_by: null`,
-  `result: "fail" | "cancelled" | "timed_out" | "gh_unauth" | "run_not_found"`,
-  `log_slice`, `failed_jobs`). Pinned to Haiku 4.5, narrow-tools
-  (Read, Edit, Write, Bash). Never invokes cargo, never edits code
-  in `crates/` / `migrations/` / `tests/` / `docs/` / `.github/
-  workflows/`, never applies clippy auto-fixes (those are advisor
-  §G4 classifier work). Per `.claude/agents/ci-watcher.md`.
+- `ci-watcher` subagent → mutates an existing `kind: "validate-pending"`
+  entry (option 2, locked 2026-04-28). Finds the entry by matching
+  `workflow_run_id`; populates `result` (`"pass" | "fail" | "cancelled"
+  | "timed_out" | "gh_unauth" | "run_not_found"`) + `log_slice`
+  (last ~200 lines on fail, null otherwise) + `failed_jobs` (array
+  on fail, null otherwise) + `answer` + `answered_by: "ci-watcher"` +
+  `resolved_at`. Moves the entry from `pending[]` to `resolved[]` only
+  on `result: "pass"`; failures stay in `pending[]` for advisor §G4
+  triage. The entry's `kind` stays `"validate-pending"`; the entry's
+  `from` stays as written (`"impl"` for Phase 1, `"advisor"` for
+  Phase 2). Pinned to Haiku 4.5, narrow-tools (Read, Edit, Write, Bash).
+  Never invokes cargo, never edits code in `crates/` / `migrations/`
+  / `tests/` / `docs/` / `.github/workflows/`, never applies clippy
+  auto-fixes (those are advisor §G4 classifier work), never writes a
+  new DQ entry. Per `.claude/agents/ci-watcher.md`.
 - **Advisor session** (homeserver, persistent, never on Junior worktree)
   → `from: "advisor"`. Writes the full triage spectrum: answers to
   pending blockers (`answered_by: "advisor"` on resolved entries from
@@ -565,6 +632,10 @@ by the persistent advisor session (label: `advisor`) or for entries
 where the advisor relayed a user reply in-channel (label: `user`).
 None of the Junior subagents may write `kind: "clarify"` — that kind
 is advisor-only by design (clarify gates planning before any Junior
-task runs). Only ci-watcher may write `kind: "validate-result" |
-"validate-failed"`; only impl-task may write `kind: "validate-pending"`.
-This rule applies to both foreground and Junior-dispatched invocations.
+task runs). impl-task writes `kind: "validate-pending"` for Phase 1
+(workspace check on `junior/*`); the advisor writes `kind:
+"validate-pending"` for Phase 2 (e2e on `phase-v1-*` post-finalize-
+merge); ci-watcher MUTATES existing `validate-pending` entries (does
+not write new ones). The deprecated `kind: "validate-result" |
+"validate-failed"` MUST NOT be written by any session. This rule
+applies to both foreground and Junior-dispatched invocations.
