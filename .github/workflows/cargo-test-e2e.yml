@@ -1,32 +1,37 @@
 name: cargo-test-e2e
 
-# Runs the governance e2e test suite on push to phase-v1-* branches.
-# Each test spins up its own Postgres via testcontainers (see
+# Runs the governance e2e test suite on a chosen ref. Each test spins
+# up its own Postgres via testcontainers (see
 # crates/server/tests/e2e.rs:83), so the runner only needs Docker — no
 # services: block required.
 #
-# Trigger pattern is push-only on phase-v1-* per option (b) decided
-# 2026-04-28: e2e fires when the daemon's finalize-merge moves the
-# phase-branch tip, NOT on every junior/* worktree push (workspace
-# check + clippy still runs on junior/* via cargo-validate-workspace.yml).
-# This saves ~80% of e2e runs across a sub-phase; trade-off is e2e
-# regressions surface AFTER impl finalize-merges, requiring fix-in-PR.
+# Trigger pattern is `workflow_dispatch`-only per 2026-04-28 minutes-
+# budget audit. Auto-on-push to phase-v1-* burned ~26 min/run = ~129
+# min/month — too expensive for the GitHub Free / Student-Pro 3,000
+# min quota. Local laptop e2e is the primary path:
+#
+#   cargo test -p lemmy_server --test e2e --features full -- --test-threads=1
+#
+# (~26 min on PC; same wall-clock as GH Actions, zero billed.)
+#
+# Use the GH-Actions path (workflow_dispatch) only when:
+#   (a) advisor wants an audit-trail log surface for a contested run,
+#   (b) PC is unavailable, or
+#   (c) cross-environment reproducibility is the question.
+#
+# To dispatch:
+#   gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>
 #
 # This workflow complements the upstream Woodpecker CI (.woodpecker.yml)
-# which runs Lemmy's native cargo checks. Here we surface e2e pass/fail
-# on phase-branch tips so the BM (and ci-watcher) can gate merges.
+# which runs Lemmy's native cargo checks.
 
 on:
-  push:
-    branches:
-      - 'phase-v1-*'
-    paths:
-      - 'crates/**'
-      - 'migrations/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - '.github/workflows/cargo-test-e2e.yml'
+  workflow_dispatch:
+    inputs:
+      ref_to_test:
+        description: 'Branch or SHA to checkout (defaults to caller-supplied ref)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
