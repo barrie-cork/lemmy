@@ -1,21 +1,6 @@
 {
   "pending": [
     {
-      "id": 83,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-28T17:11:00Z",
-      "workflow_run_id": 25067030047,
-      "branch": "phase-v1-JM-d",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
       "id": 80,
       "from": "advisor",
       "kind": "validate-pending",
@@ -1167,6 +1152,21 @@
       "answer": "Workflow run 25063238243 on junior/role-impl-task-v1-jm-d-fix-3c-see-claude-prps-briefs-jm-d-fix-impl-3c-md-42 completed with conclusion=success.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-04-28T16:18:37Z"
+    },
+    {
+      "id": 83,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T17:11:00Z",
+      "workflow_run_id": 25067030047,
+      "branch": "phase-v1-JM-d",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run 25067030047 on phase-v1-JM-d completed with conclusion=success.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-04-28T17:37:19.421503Z"
     }
   ],
   "schema_version": 2
