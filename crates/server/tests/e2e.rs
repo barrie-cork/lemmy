@@ -2894,13 +2894,22 @@ async fn all_mvp_endpoints_return_non_404() -> Result<(), Box<dyn Error>> {
 
     // Stamp appeal_window_expires_at in the future on every Decided seeded
     // case so the appeal window guard admits the appeal (Task 3 switched the
-    // check from closed_at to appeal_window_expires_at). Scope the UPDATE to
-    // status=Decided so it only touches the decided_form row even if other
-    // tests extend this seed later.
+    // check from closed_at to appeal_window_expires_at). Also seed
+    // panel_size_snapshot — Task 3's request_appeal calls select_appeal_panel
+    // (admin_assign_jury.rs:1097), which guards on case.panel_size_snapshot
+    // being non-NULL. The direct ModerationCaseInsertForm path bypasses
+    // admin_assign_jury, leaving the column NULL. Seed to the JM-a default
+    // for Minor severity (`jury.panel_size.regular.minor` = 5 from
+    // migrations/2026-04-23-000200-0000_seed_v1_jm_config_keys/up.sql:35).
+    // Scope both UPDATEs to status=Decided so they only touch the decided_form
+    // row even if other tests extend this seed later.
     let future = chrono::Utc::now() + chrono::Duration::days(7);
     diesel::update(moderation_case::table)
       .filter(moderation_case::status.eq(CaseStatus::Decided))
-      .set(moderation_case::appeal_window_expires_at.eq(Some(future)))
+      .set((
+        moderation_case::appeal_window_expires_at.eq(Some(future)),
+        moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+      ))
       .execute(&mut async_conn)
       .await?;
   }
@@ -4290,15 +4299,27 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> Result<(), Box<dyn E
       .get_result(&mut async_conn)
       .await?;
 
+  // Task 3 invariant: request_appeal calls select_appeal_panel, which reads
+  // case.panel_size_snapshot (admin_assign_jury.rs:1097 guard). The direct
+  // ModerationCaseInsertForm path here bypasses admin_assign_jury, leaving
+  // panel_size_snapshot NULL. Seed it on both cases to the JM-a default for
+  // Minor severity (`jury.panel_size.regular.minor` = 5 from
+  // migrations/2026-04-23-000200-0000_seed_v1_jm_config_keys/up.sql:35).
   let future = Utc::now() + Duration::days(1);
   diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_a.id)))
-    .set(moderation_case::appeal_window_expires_at.eq(Some(future)))
+    .set((
+      moderation_case::appeal_window_expires_at.eq(Some(future)),
+      moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+    ))
     .execute(&mut async_conn)
     .await?;
 
   let past = Utc::now() - Duration::days(1);
   diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_b.id)))
-    .set(moderation_case::appeal_window_expires_at.eq(Some(past)))
+    .set((
+      moderation_case::appeal_window_expires_at.eq(Some(past)),
+      moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+    ))
     .execute(&mut async_conn)
     .await?;
 
