@@ -730,6 +730,12 @@ async fn fetch_value_at_scope(
 ) -> LemmyResult<Option<CachedValue>> {
   let conn = &mut get_conn(pool).await?;
 
+  // governance_config is append-only with multiple rows per (scope, key)
+  // keyed by valid_from. ORDER BY valid_from DESC + LIMIT 1 (.first) is
+  // load-bearing — without it Postgres returns arbitrary order and reads
+  // can return stale seeded rows instead of admin_set_config writes.
+  // Regression history: commit 8e3bba1 dropped the governance_config_current
+  // view; this code path needs to do the latest-wins ordering itself.
   let row: Option<ConfigRow> = governance_config::table
     .filter(governance_config::scope.eq(scope_str.into_owned()))
     .filter(governance_config::key.eq(key))
@@ -740,6 +746,7 @@ async fn fetch_value_at_scope(
       governance_config::value_bool,
       governance_config::value_text,
     ))
+    .order_by(governance_config::valid_from.desc())
     .first::<ConfigRow>(conn)
     .await
     .optional()?;
