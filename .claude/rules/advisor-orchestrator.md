@@ -129,6 +129,12 @@ The historical "Memory headroom check" (free -h + web-archive-pause.sh) is now o
 
 When a `kind: "validate-pending-laptop"` DQ entry appears in `pending[]` (raised by impl-task per `.claude/agents/impl-task.md` "Pre-Shape-G plans" sub-section):
 
+0. **Pre-flight checks** (mandatory, before fetch):
+   - **Clean working tree on laptop:** `git -C C:/Users/barri/Developer/brehon-fork status --short` must be empty. If dirty, the advisor cannot detached-HEAD checkout — surface to user: "laptop checkout is dirty (<files>); commit or stash before validate-pending-laptop runs". Do NOT auto-stash (user's in-progress work).
+   - **Log directory exists:** `mkdir -p C:/Users/barri/.claude/logs/` (idempotent; first-run creates it).
+   - **Concurrent-cargo serialization:** if another `validate-pending-laptop` DQ entry is currently being processed (advisor was already running cargo when this one arrived — most commonly because a `[P]` cohort dispatched and all members raised entries simultaneously), serialize: queue this entry behind the in-progress one. Two cargos against the same `target/` = lock contention + thrash. The rule of thumb: laptop processes validate-pending-laptop entries one at a time, in DQ entry-id order. (For Shape-G plans, ci-watcher already serializes per `[P]` cohort; this is the laptop equivalent.)
+   - **Docker Desktop check (e2e only):** if the entry's `commands[]` includes any `cargo test ... --features full` or `cargo test ... e2e` (testcontainers-using e2e), check `docker ps` returns 0. If not running, surface to user: "Docker Desktop is not running on laptop; start it before continuing, or pick GH dispatch via the Phase 2 e2e user gate". cargo check / cargo clippy / `cargo test --no-run` (compile-only) do not need Docker — proceed without the check.
+
 1. **Fetch the impl-task's worker branch** to the laptop:
    ```
    git -C C:/Users/barri/Developer/brehon-fork fetch origin <entry.branch>
@@ -149,6 +155,13 @@ When a `kind: "validate-pending-laptop"` DQ entry appears in `pending[]` (raised
 4. **Commit + push** the DQ mutation to `governance-v0`. Commit subject: `chore(decision-queue): advisor-laptop mutated DQ #<id> — <pass|fail> validate-pending-laptop`.
 
 5. **Apply §G4 classifier on fail** same as Shape-G fail handling. Allowlist match → queue narrow fix-impl-task. Non-allowlist → catch-fire to user.
+
+6. **Return laptop checkout to governance-v0** as the final step:
+   ```
+   git -C C:/Users/barri/Developer/brehon-fork checkout governance-v0
+   git -C C:/Users/barri/Developer/brehon-fork pull --ff-only origin governance-v0
+   ```
+   The laptop must be on `governance-v0` (not detached on a junior/* branch) so that subsequent advisor commits (next brief, next DQ supersede annotation, next rule update) land on the trunk. Skip step 6 only if the user explicitly indicated they want the laptop kept on the worker branch (rare — typically for hand-debugging an impl-task's output).
 
 **Wall-clock cost.** The laptop has more RAM than the EliteDesk's daemon cgroup and isn't contended with NAS/web-archive workloads. cargo check --workspace --features full on the laptop runs ~8-12 min cold, ~3-5 min warm. e2e runs ~26 min single-threaded. Use `run_in_background: true` and continue polling other tasks while cargo runs; do NOT block.
 

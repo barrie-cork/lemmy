@@ -192,6 +192,28 @@ polling loop applies different routing per kind.
   finalize-merge triggers e2e on the phase branch tip, but only the
   advisor sees the new tip on its next poll, so the advisor raises
   the Phase-2 entry).
+- **`kind: "validate-pending-laptop"`** — the impl-task subagent
+  committed + pushed under a **pre-Shape-G plan** and the §15 cargo
+  commands are delegated to the laptop advisor session (per the
+  2026-04-28 task #47 decision; see `advisor-orchestrator.md`
+  "Cargo never runs on the EliteDesk worker" + "validate-pending-
+  laptop handler" sub-sections). Goes to `pending` with `from:
+  "impl"`, `answered_by: null`. Required fields at write time:
+  `commands` (string array, the §15 DoD lines verbatim including
+  scope flags + `--features full`), `branch`, `phase_task`.
+  Required nullable fields populated by advisor-laptop on mutation:
+  `result` (null), `log_slice` (null), `failed_commands` (null).
+  Mutation: advisor-laptop sets `result: "pass" | "fail"`, populates
+  `log_slice` (last 100 lines of failing command on fail) +
+  `failed_commands` (subset that exited non-zero), `answered_by:
+  "advisor-laptop"`, `resolved_at`. On `pass` entry moves to
+  `resolved[]`; on fail stays in `pending[]` for §G4 triage.
+  Variant: `kind: "validate-pending-laptop-e2e"` for entries whose
+  sole content is e2e (testcontainers + Docker required); same shape
+  + same mutation, separate kind only for clarity in DQ scans.
+  Writer: **impl-task** (Pre-Shape-G plans only). The advisor
+  laptop session reads this entry and runs the commands locally; no
+  Junior subagent is dispatched (the laptop IS the runner).
 
 ### ci-watcher mutation pattern (option 2, locked 2026-04-28)
 
