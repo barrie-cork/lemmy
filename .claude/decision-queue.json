@@ -14,6 +14,21 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 77,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T12:40:00Z",
+      "workflow_run_id": 25053153541,
+      "branch": "phase-v1-JM-d",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
