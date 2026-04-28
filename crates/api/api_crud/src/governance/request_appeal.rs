@@ -23,9 +23,9 @@ use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update}
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
-  admin_assign_jury::select_appeal_panel,
+  admin_assign_jury::{seat_appeal_panel, select_appeal_panel},
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_APPEAL_PANEL_ASSEMBLED, ENTRY_KIND_APPEAL_REQUESTED},
+  governance_log::{self, ENTRY_KIND_APPEAL_REQUESTED},
 };
 use lemmy_api_common::governance::{RequestAppeal, RequestAppealResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -33,21 +33,13 @@ use lemmy_db_schema::{
   newtypes::AppealId,
   source::governance::{
     appeal::{Appeal, AppealInsertForm},
-    jury_assignment::JuryAssignmentInsertForm,
     moderation_case::ModerationCase,
   },
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{
-    AppealRequesterRole,
-    AppealStatus,
-    CaseStatus,
-    JuryAssignmentRole,
-    JuryAssignmentStatus,
-    JuryDecision,
-  },
-  schema::{appeal, jury_assignment, moderation_case},
+  enums::{AppealRequesterRole, AppealStatus, CaseStatus, JuryDecision},
+  schema::{appeal, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
@@ -186,50 +178,7 @@ async fn process_appeal(
 
   if auto_select {
     let selection = select_appeal_panel(conn, &case, &mut cache).await?;
-
-    // Pre-compute the constraints JSON once; clone per juror row.
-    let constraints_json = selection.constraint_record.to_json();
-
-    // Seat each appeal-panel juror and collect pseudonyms for the log payload.
-    let mut panel_pseudonyms = Vec::with_capacity(selection.person_ids.len());
-    for person_id in &selection.person_ids {
-      let pseudonym =
-        actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), *person_id).await?;
-      panel_pseudonyms.push(pseudonym);
-      let juror_form = JuryAssignmentInsertForm {
-        case_id: data.case_id,
-        person_id: *person_id,
-        status: JuryAssignmentStatus::Selected,
-        selected_under_constraints: Some(constraints_json.clone()),
-        role: Some(JuryAssignmentRole::Appeal),
-      };
-      insert_into(jury_assignment::table)
-        .values(&juror_form)
-        .execute(conn)
-        .await?;
-    }
-
-    // One appeal_panel_assembled entry per panel (not per juror).
-    governance_log::append(
-      &mut (&mut *conn).into(),
-      ENTRY_KIND_APPEAL_PANEL_ASSEMBLED,
-      json!({
-        "case_id": data.case_id.0,
-        "new_panel_pseudonyms": panel_pseudonyms,
-        "excluded_juror_count": selection.excluded_juror_count,
-        "appeal_threshold_count": selection.threshold_count_snapshot,
-      }),
-      Some(caller_pseudonym.clone()),
-    )
-    .await?;
-
-    // Stamp panel-size + threshold snapshots onto the Appeal row.
-    update(appeal::table.filter(appeal::id.eq(new_appeal.id)))
-      .set((
-        appeal::panel_size_snapshot.eq(Some(selection.panel_size_snapshot)),
-        appeal::threshold_count_snapshot.eq(Some(selection.threshold_count_snapshot)),
-      ))
-      .execute(conn)
+    seat_appeal_panel(conn, data.case_id, new_appeal.id, &selection, caller_pseudonym.clone())
       .await?;
   }
 

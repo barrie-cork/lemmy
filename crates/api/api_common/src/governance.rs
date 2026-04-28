@@ -185,6 +185,25 @@ pub struct AdminCloseCaseResponse {
   pub closed: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Admin-triggered appeal-rejury request — used when
+/// `appeal.auto_select_on_appeal_acceptance = false`.
+pub struct AdminTriggerAppealRejury {
+  pub case_id: ModerationCaseId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from admin-trigger-appeal-rejury.
+pub struct AdminTriggerAppealRejuryResponse {
+  pub case_id: ModerationCaseId,
+  pub appeal_id: AppealId,
+  pub panel_person_ids: Vec<PersonId>,
+}
+
 // ── Group C: Appeals ──────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]

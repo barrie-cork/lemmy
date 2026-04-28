@@ -41,6 +41,7 @@ use lemmy_api::{
     admin_dashboard::admin_dashboard,
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
+    admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
     decline_jury_assignment::decline_jury_assignment,
     get_case::get_case,
     get_my_reputation::get_my_reputation,
@@ -536,6 +537,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
             scope("/admin")
               .route("/assign-jury", post().to(admin_assign_jury))
               .route("/close-case", post().to(admin_close_case))
+              .route("/trigger-appeal-rejury", post().to(admin_trigger_appeal_rejury))
               .route("/reputation-stats", get().to(admin_reputation_stats))
               .route("/dashboard", get().to(admin_dashboard))
               .service(

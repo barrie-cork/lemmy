@@ -32,7 +32,12 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_JURY_CONSTRAINT_RELAXED, ENTRY_KIND_SEVERITY_TIER_FROZEN},
+  governance_log::{
+    self,
+    ENTRY_KIND_APPEAL_PANEL_ASSEMBLED,
+    ENTRY_KIND_JURY_CONSTRAINT_RELAXED,
+    ENTRY_KIND_SEVERITY_TIER_FROZEN,
+  },
   jury_common::panel_has_sponsor_majority_cluster,
 };
 use actix_web::web::{Data, Json};
@@ -51,10 +56,14 @@ use diesel::{
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{AdminAssignJury, AdminAssignJuryResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
-use lemmy_db_schema::source::governance::{
-  jury_assignment::JuryAssignmentInsertForm,
-  jury_constraint_violation_log::JuryConstraintViolationLogInsertForm,
-  moderation_case::ModerationCase,
+use lemmy_db_schema::{
+  newtypes::{AppealId, ModerationCaseId},
+  source::governance::{
+    appeal::Appeal,
+    jury_assignment::JuryAssignmentInsertForm,
+    jury_constraint_violation_log::JuryConstraintViolationLogInsertForm,
+    moderation_case::ModerationCase,
+  },
 };
 use lemmy_db_schema_file::{
   PersonId,
@@ -69,6 +78,7 @@ use lemmy_db_schema_file::{
     SeverityTier,
   },
   schema::{
+    appeal,
     jury_assignment,
     jury_constraint_violation_log,
     local_user,
@@ -1155,4 +1165,70 @@ pub async fn select_appeal_panel(
     constraint_record,
     excluded_juror_count,
   })
+}
+
+/// v1-JM-d §6.6: seat an appeal panel for an already-filed `appeal` row.
+///
+/// Extracted so both `request_appeal` (auto-rejury path) and
+/// `admin_trigger_appeal_rejury` (manual fallback) share identical seating
+/// logic without duplication.
+///
+/// Callers MUST already be inside a `run_transaction` — this function does
+/// NOT open its own transaction.
+///
+/// `pub` (not `pub(crate)`) because `lemmy_api_crud::governance::request_appeal`
+/// calls this function across crate boundaries (same pattern as `select_appeal_panel`).
+pub async fn seat_appeal_panel(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case_id: ModerationCaseId,
+  appeal_id: AppealId,
+  selection: &AppealPanelSelection,
+  actor_pseudonym: String,
+) -> LemmyResult<Vec<String>> {
+  // Pre-compute constraints JSON once; clone per juror row.
+  let constraints_json = selection.constraint_record.to_json();
+
+  // Seat each appeal-panel juror and collect pseudonyms for the log payload.
+  let mut panel_pseudonyms = Vec::with_capacity(selection.person_ids.len());
+  for person_id in &selection.person_ids {
+    let pseudonym =
+      actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), *person_id).await?;
+    panel_pseudonyms.push(pseudonym);
+    let juror_form = JuryAssignmentInsertForm {
+      case_id,
+      person_id: *person_id,
+      status: JuryAssignmentStatus::Selected,
+      selected_under_constraints: Some(constraints_json.clone()),
+      role: Some(JuryAssignmentRole::Appeal),
+    };
+    insert_into(jury_assignment::table)
+      .values(&juror_form)
+      .execute(conn)
+      .await?;
+  }
+
+  // One appeal_panel_assembled entry per panel (not per juror).
+  governance_log::append(
+    &mut (&mut *conn).into(),
+    ENTRY_KIND_APPEAL_PANEL_ASSEMBLED,
+    json!({
+      "case_id": case_id.0,
+      "new_panel_pseudonyms": panel_pseudonyms,
+      "excluded_juror_count": selection.excluded_juror_count,
+      "appeal_threshold_count": selection.threshold_count_snapshot,
+    }),
+    Some(actor_pseudonym),
+  )
+  .await?;
+
+  // Stamp panel-size + threshold snapshots onto the Appeal row.
+  update(appeal::table.filter(appeal::id.eq(appeal_id)))
+    .set((
+      appeal::panel_size_snapshot.eq(Some(selection.panel_size_snapshot)),
+      appeal::threshold_count_snapshot.eq(Some(selection.threshold_count_snapshot)),
+    ))
+    .execute(conn)
+    .await?;
+
+  Ok(panel_pseudonyms)
 }
