@@ -1,5 +1,21 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 84,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T19:37:51.456+00:00",
+      "workflow_run_id": 25073660917,
+      "branch": "junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 80,
