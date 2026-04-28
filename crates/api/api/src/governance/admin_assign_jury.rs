@@ -24,24 +24,27 @@
 //! persons with snapshot rows. When the strict filter returns fewer than
 //! `jury.panel_size` candidates, the handler consults
 //! `jury.fallback_on_small_pool`:
-//! - `true` (seeded default) — re-run the Phase 4 filter without the
-//!   reputation gate; a `warn!` log entry fires so operators notice.
-//! - `false` — return `NotFound` so the admin learns the pool is too
-//!   small rather than silently seating an unqualified panel.
+//! - `true` (seeded default) — re-run the Phase 4 filter without the reputation gate; a `warn!` log
+//!   entry fires so operators notice.
+//! - `false` — return `NotFound` so the admin learns the pool is too small rather than silently
+//!   seating an unqualified panel.
 
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{
-    self, ENTRY_KIND_JURY_CONSTRAINT_RELAXED, ENTRY_KIND_SEVERITY_TIER_FROZEN,
-  },
+  governance_log::{self, ENTRY_KIND_JURY_CONSTRAINT_RELAXED, ENTRY_KIND_SEVERITY_TIER_FROZEN},
   jury_common::panel_has_sponsor_majority_cluster,
 };
 use actix_web::web::{Data, Json};
 use diesel::{
-  ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, SelectableHelper,
+  ExpressionMethods,
+  OptionalExtension,
+  QueryDsl,
+  QueryableByName,
+  SelectableHelper,
   dsl::{exists, now, select},
-  insert_into, sql_query,
+  insert_into,
+  sql_query,
   sql_types::{Array, BigInt, Integer, Nullable},
   update,
 };
@@ -56,11 +59,21 @@ use lemmy_db_schema::source::governance::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::{
-    CaseStatus, CaseStatusTier, JuryAssignmentStatus, JuryConstraintRelaxationReason,
-    MembershipState, ReputationDimension, SeverityTier,
+    CaseStatus,
+    CaseStatusTier,
+    JuryAssignmentRole,
+    JuryAssignmentStatus,
+    JuryConstraintRelaxationReason,
+    MembershipState,
+    ReputationDimension,
+    SeverityTier,
   },
   schema::{
-    jury_assignment, jury_constraint_violation_log, local_user, moderation_case, person,
+    jury_assignment,
+    jury_constraint_violation_log,
+    local_user,
+    moderation_case,
+    person,
     reputation_event,
   },
 };
@@ -125,12 +138,10 @@ async fn process_assignment(
     | CaseStatus::AdminReview => return Err(LemmyErrorType::NotFound.into()),
   }
 
-  // 3. Compute the status tier BEFORE any other &mut *conn borrow. The
-  //    JM-a DEFAULT is Regular — if that's the snapshot, compute eagerly;
-  //    otherwise trust the backfilled value. `compute_status_tier` is the
-  //    only call in this fn that reads reputation_event/person, so
-  //    hoisting avoids borrow-contention with the cascade reads below.
-  //    Plan §10.3 + §10.4.
+  // 3. Compute the status tier BEFORE any other &mut *conn borrow. The JM-a DEFAULT is Regular — if
+  //    that's the snapshot, compute eagerly; otherwise trust the backfilled value.
+  //    `compute_status_tier` is the only call in this fn that reads reputation_event/person, so
+  //    hoisting avoids borrow-contention with the cascade reads below. Plan §10.3 + §10.4.
   let severity = case.severity_tier;
   let status = if case.status_tier == CaseStatusTier::Regular {
     compute_status_tier(conn, &case).await?
@@ -140,8 +151,8 @@ async fn process_assignment(
   let status_str = status_tier_slug(status);
   let severity_str = severity_tier_slug(severity);
 
-  // 4. Cascade panel_size on (status, severity); quorum_fraction +
-  //    threshold_fraction cascade on (severity,) only per PRD §4.4.
+  // 4. Cascade panel_size on (status, severity); quorum_fraction + threshold_fraction cascade on
+  //    (severity,) only per PRD §4.4.
   let panel_size = config::get_int_cascade(
     &mut cache,
     &mut (&mut *conn).into(),
@@ -172,16 +183,16 @@ async fn process_assignment(
   // fractions to [0, 1]; so ceil(panel_size * fraction) ∈ [0, 11], which
   // fits i32 trivially. try_from on the panel_size i64 defends against
   // out-of-band writes; the f64 → i32 narrowing is safe by the same bound.
-  let panel_size_i32: i32 = i32::try_from(panel_size).map_err(|_e| {
-    LemmyErrorType::Unknown(format!("panel_size {panel_size} out of i32 range"))
-  })?;
+  let panel_size_i32: i32 = i32::try_from(panel_size)
+    .map_err(|_e| LemmyErrorType::Unknown(format!("panel_size {panel_size} out of i32 range")))?;
   let quorum = ceil_count(f64::from(panel_size_i32) * quorum_fraction, "quorum")?;
-  let threshold_count =
-    ceil_count(f64::from(panel_size_i32) * threshold_fraction, "threshold_count")?;
+  let threshold_count = ceil_count(
+    f64::from(panel_size_i32) * threshold_fraction,
+    "threshold_count",
+  )?;
 
-  // 5. Select eligible jurors via the 3-phase diversity-aware algorithm.
-  //    Falls back to the Phase 4 unfiltered shape if the strict filter
-  //    under-fills after the R1 cooldown relaxation and
+  // 5. Select eligible jurors via the 3-phase diversity-aware algorithm. Falls back to the Phase 4
+  //    unfiltered shape if the strict filter under-fills after the R1 cooldown relaxation and
   //    `jury.fallback_on_small_pool` is true.
   let (eligible, constraint_record) =
     select_eligible_jurors(conn, &case, panel_size, None, &mut cache).await?;
@@ -192,8 +203,8 @@ async fn process_assignment(
   }
 
   // 6. Snapshot the resolved tier + counts and fold the v0 status flip
-  //    (Open|ThresholdMet|EmergencyRemove → JurySelection) into the same
-  //    UPDATE — one round trip. Plan §10.5.
+  //    (Open|ThresholdMet|EmergencyRemove → JurySelection) into the same UPDATE — one round trip.
+  //    Plan §10.5.
   update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
     .set((
       moderation_case::panel_size_snapshot.eq(Some(panel_size_i32)),
@@ -205,9 +216,9 @@ async fn process_assignment(
     .execute(conn)
     .await?;
 
-  // 7. severity_tier_frozen governance_log entry — admin is the actor.
-  //    Emitted BEFORE per-juror jury_assigned so the audit timeline reads
-  //    severity_tier_frozen → jury_assigned × N → panel_assembled. Plan §10.6.
+  // 7. severity_tier_frozen governance_log entry — admin is the actor. Emitted BEFORE per-juror
+  //    jury_assigned so the audit timeline reads severity_tier_frozen → jury_assigned × N →
+  //    panel_assembled. Plan §10.6.
   governance_log::append(
     &mut conn.into(),
     ENTRY_KIND_SEVERITY_TIER_FROZEN,
@@ -223,11 +234,9 @@ async fn process_assignment(
   )
   .await?;
 
-  // 8. Insert JuryAssignment rows with status=Selected and the per-row
-  //    `selected_under_constraints` JSONB. Plan §10.11. Keep `role`
-  //    default-driven so the v1-JM-d appeal-path writer can add
-  //    `JuryAssignmentRole::Appeal` explicitly without disturbing this
-  //    original-jury writer.
+  // 8. Insert JuryAssignment rows with status=Selected and the per-row `selected_under_constraints`
+  //    JSONB. Plan §10.11. Keep `role` default-driven so the v1-JM-d appeal-path writer can add
+  //    `JuryAssignmentRole::Appeal` explicitly without disturbing this original-jury writer.
   let constraints_applied_json = constraint_record.to_json();
   let forms: Vec<JuryAssignmentInsertForm> = eligible
     .iter()
@@ -244,9 +253,8 @@ async fn process_assignment(
     .execute(conn)
     .await?;
 
-  // 9. One governance_log "jury_assigned" row per juror. Each payload
-  //    carries the per-juror pseudonym so the modlog stays pseudonymous
-  //    per [99 ADR-015]. Unchanged from v0.
+  // 9. One governance_log "jury_assigned" row per juror. Each payload carries the per-juror
+  //    pseudonym so the modlog stays pseudonymous per [99 ADR-015]. Unchanged from v0.
   for person_id in &eligible {
     let juror_pseudonym =
       actor_pseudonym_helper::get_or_create(&mut conn.into(), *person_id).await?;
@@ -262,8 +270,8 @@ async fn process_assignment(
     .await?;
   }
 
-  // 10. Extended panel_assembled marker — carries the resolved tiers,
-  //     applied-constraints snapshot, and relaxations that fired. Plan §10.12.
+  // 10. Extended panel_assembled marker — carries the resolved tiers, applied-constraints snapshot,
+  //     and relaxations that fired. Plan §10.12.
   governance_log::append(
     &mut conn.into(),
     "panel_assembled",
@@ -302,10 +310,12 @@ async fn process_assignment(
 )]
 pub(crate) fn ceil_count(value: f64, label: &str) -> LemmyResult<i32> {
   if !value.is_finite() || value < 0.0 {
-    return Err(LemmyErrorType::Unknown(format!(
-      "{label} {value} is not a finite non-negative number"
-    ))
-    .into());
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "{label} {value} is not a finite non-negative number"
+      ))
+      .into(),
+    );
   }
   let ceiled = value.ceil();
   if ceiled > f64::from(i32::MAX) {
@@ -391,8 +401,12 @@ pub(crate) const fn severity_tier_slug(tier: SeverityTier) -> &'static str {
 /// writes it both into every `jury_assignment.selected_under_constraints`
 /// JSONB column and into the extended `panel_assembled` governance_log
 /// payload.
+///
+/// `pub` (not `pub(crate)`) so `lemmy_api_crud::governance::request_appeal`
+/// can access constraint metadata for the `appeal_panel_assembled` log entry
+/// via the `AppealPanelSelection` return of `select_appeal_panel`.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct ConstraintRecord {
+pub struct ConstraintRecord {
   pub no_majority_from_same_sponsor_cluster: &'static str,
   pub geographic_diversity_preferred: &'static str,
   pub no_recent_juror_repeat: &'static str,
@@ -405,7 +419,7 @@ impl ConstraintRecord {
   /// the extended panel_assembled governance_log payload. Keys match PRD
   /// §5.1 constraint names verbatim; values are bounded status tokens so
   /// no user-supplied text can leak into the column or log.
-  pub(crate) fn to_json(&self) -> Value {
+  pub fn to_json(&self) -> Value {
     json!({
       "no_majority_from_same_sponsor_cluster": self.no_majority_from_same_sponsor_cluster,
       "geographic_diversity_preferred": self.geographic_diversity_preferred,
@@ -420,23 +434,18 @@ impl ConstraintRecord {
 /// summarising which constraints applied and which were relaxed during
 /// assembly.
 ///
-/// - **Phase 1 — pool build**: `run_extended_eligibility_query` consults
-///   the reputation gate, the community-wide concurrent-cap, the
-///   cross-community total-assignment cap
-///   (`jury.max_concurrent_assignments_per_juror_total`), and the recent-
-///   juror cooldown (`jury.constraints.juror_cooldown_days`). If the pool
-///   comes back < `panel_size`, R1 fires: cooldown is dropped and the
-///   query re-runs.
-/// - **Phase 2 — sample + sponsor-cluster check**: sample `panel_size`
-///   jurors via SQL `ORDER BY random() LIMIT N`; if
-///   `panel_has_sponsor_majority_cluster` violates, re-roll up to
-///   `jury.constraints.max_retries_before_relax` times. On exhaustion, R2
-///   drops the geographic-diversity bias, R3 drops the cluster constraint
-///   entirely.
+/// - **Phase 1 — pool build**: `run_extended_eligibility_query` consults the reputation gate, the
+///   community-wide concurrent-cap, the cross-community total-assignment cap
+///   (`jury.max_concurrent_assignments_per_juror_total`), and the recent- juror cooldown
+///   (`jury.constraints.juror_cooldown_days`). If the pool comes back < `panel_size`, R1 fires:
+///   cooldown is dropped and the query re-runs.
+/// - **Phase 2 — sample + sponsor-cluster check**: sample `panel_size` jurors via SQL `ORDER BY
+///   random() LIMIT N`; if `panel_has_sponsor_majority_cluster` violates, re-roll up to
+///   `jury.constraints.max_retries_before_relax` times. On exhaustion, R2 drops the
+///   geographic-diversity bias, R3 drops the cluster constraint entirely.
 /// - **Phase 3 — geographic-diversity soft bias**: if
-///   `jury.constraints.geographic_diversity_preferred` is true and more
-///   than one cluster-passing sample survives, the higher-
-///   `geographic_diversity_score` sample wins.
+///   `jury.constraints.geographic_diversity_preferred` is true and more than one cluster-passing
+///   sample survives, the higher- `geographic_diversity_score` sample wins.
 ///
 /// Each R1/R2/R3 event writes BOTH a `jury_constraint_violation_log` row
 /// AND a `governance_log` `jury_constraint_relaxed` entry inside the
@@ -525,8 +534,16 @@ pub(crate) async fn select_eligible_jurors(
     } else {
       "disabled"
     },
-    geographic_diversity_preferred: if geo_pref_enabled { "applied_soft" } else { "disabled" },
-    no_recent_juror_repeat: if cooldown_enabled { "applied" } else { "disabled" },
+    geographic_diversity_preferred: if geo_pref_enabled {
+      "applied_soft"
+    } else {
+      "disabled"
+    },
+    no_recent_juror_repeat: if cooldown_enabled {
+      "applied"
+    } else {
+      "disabled"
+    },
     no_same_endorsement_chain: "disabled",
     relaxations_fired: Vec::new(),
   };
@@ -645,17 +662,20 @@ pub(crate) async fn select_eligible_jurors(
       continue;
     }
 
-    let violates = if cluster_constraint_enabled && record.no_majority_from_same_sponsor_cluster == "applied" {
-      panel_has_sponsor_majority_cluster(conn, &sample).await?
-    } else {
-      false
-    };
+    let violates =
+      if cluster_constraint_enabled && record.no_majority_from_same_sponsor_cluster == "applied" {
+        panel_has_sponsor_majority_cluster(conn, &sample).await?
+      } else {
+        false
+      };
     if violates {
       continue;
     }
 
     if current_geo_enabled {
-      let score = geographic_diversity_score(conn, &sample).await.unwrap_or(0.0);
+      let score = geographic_diversity_score(conn, &sample)
+        .await
+        .unwrap_or(0.0);
       if score > best_score {
         best_score = score;
         chosen = Some(sample);
@@ -774,12 +794,11 @@ struct ExtendedEligibilityRow {
 /// - `$1` — community_id as nullable `Int4`
 /// - `$2` — excluded person ids as `Int4[]`
 /// - `$3` — `jury.max_concurrent_assignments` (per-community, `BigInt`)
-/// - `$4` — `jury.max_concurrent_assignments_per_juror_total`
-///   (instance-wide total, `BigInt`)
-/// - `$5` — `jury.constraints.juror_cooldown_days` (`BigInt`); the query
-///   short-circuits the cooldown predicate when `$5 <= 0`
-/// - `$6` — `LIMIT` (`BigInt`); the caller picks a pool_limit larger than
-///   `panel_size` for Phase-2 re-roll headroom
+/// - `$4` — `jury.max_concurrent_assignments_per_juror_total` (instance-wide total, `BigInt`)
+/// - `$5` — `jury.constraints.juror_cooldown_days` (`BigInt`); the query short-circuits the
+///   cooldown predicate when `$5 <= 0`
+/// - `$6` — `LIMIT` (`BigInt`); the caller picks a pool_limit larger than `panel_size` for Phase-2
+///   re-roll headroom
 async fn run_extended_eligibility_query(
   conn: &mut diesel_async::AsyncPgConnection,
   community_id: Option<lemmy_db_schema::newtypes::CommunityId>,
@@ -948,8 +967,7 @@ async fn write_constraint_relaxation(
   // `reason_code` serialises to its snake_case shape per the enum's serde
   // rename_all attribute. The fallback to Null is belt-and-braces — a
   // fixed-shape enum cannot actually fail to_value at runtime.
-  let reason_code_json =
-    serde_json::to_value(reason_code).unwrap_or(Value::Null);
+  let reason_code_json = serde_json::to_value(reason_code).unwrap_or(Value::Null);
   governance_log::append(
     &mut conn.into(),
     ENTRY_KIND_JURY_CONSTRAINT_RELAXED,
@@ -998,4 +1016,143 @@ async fn legacy_select_eligible_jurors(
     .load::<PersonId>(conn)
     .await
     .map_err(Into::into)
+}
+
+/// Clamp-upward bump on [`SeverityTier`] by `bump` index steps.
+/// Returns [`SeverityTier::Severe`] when the result would exceed the top tier.
+/// `bump = 0` returns the original tier unchanged.
+fn bump_severity(tier: SeverityTier, bump: i64) -> SeverityTier {
+  let idx = match tier {
+    SeverityTier::Minor => 0i64,
+    SeverityTier::Moderate => 1,
+    SeverityTier::Severe => 2,
+  };
+  match (idx + bump).clamp(0, 2) {
+    0 => SeverityTier::Minor,
+    1 => SeverityTier::Moderate,
+    _ => SeverityTier::Severe,
+  }
+}
+
+/// PRD §6.1 appeal-panel size: `max(ceil(orig × multiplier), orig + floor_increment)`
+/// clamped to `[3, 11]`.
+#[expect(
+  clippy::as_conversions,
+  clippy::cast_possible_truncation,
+  reason = "result is clamped to [3, 11] before the final cast, so it always fits i32; ceil of a finite non-negative f64 is safe with the explicit clamp"
+)]
+fn compute_appeal_panel_size(original: i32, multiplier: f64, floor_increment: i64) -> i32 {
+  let from_multiplier = (f64::from(original) * multiplier).ceil() as i64;
+  let from_floor = i64::from(original).saturating_add(floor_increment);
+  from_multiplier.max(from_floor).clamp(3, 11) as i32
+}
+
+/// Return type for [`select_appeal_panel`]. Carries the seated panel ids,
+/// size + threshold snapshots (for the `appeal` row UPDATE), the constraint
+/// record (for `selected_under_constraints` JSONB on each
+/// `jury_assignment` row and the `appeal_panel_assembled` governance_log
+/// payload), and the count of original-panel jurors that were excluded.
+///
+/// `pub` (not `pub(crate)`) because `lemmy_api_crud::governance::request_appeal`
+/// consumes this type across crate boundaries.
+pub struct AppealPanelSelection {
+  pub person_ids: Vec<PersonId>,
+  pub panel_size_snapshot: i32,
+  pub threshold_count_snapshot: i32,
+  pub constraint_record: ConstraintRecord,
+  /// Count of original-panel jurors excluded from the appeal pool.
+  /// Derived from the `jury_assignment` query inside `select_appeal_panel`.
+  pub excluded_juror_count: i32,
+}
+
+/// v1-JM-d §6.6 + §6.1: assemble the appeal panel for a `Decided` case.
+/// Excludes original jurors (PRD §6.2 hard rule); panel size derived per
+/// PRD §6.1 multiplier+floor bounded by `[3, 11]`; threshold resolved at
+/// the bumped severity per PRD §6.3.
+///
+/// Returns the panel ids alongside an [`AppealPanelSelection`] carrying
+/// the constraint-record so the caller can write
+/// `selected_under_constraints` to each appeal-panel `jury_assignment` row.
+///
+/// `pub` (not `pub(crate)`) because `lemmy_api_crud::governance::request_appeal`
+/// calls this function across crate boundaries.
+pub async fn select_appeal_panel(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case: &ModerationCase,
+  cache: &mut ConfigCache,
+) -> LemmyResult<AppealPanelSelection> {
+  // 1. Load original jurors (role = Original) — their ids become the exclusion list.
+  let original_juror_ids: Vec<PersonId> = jury_assignment::table
+    .filter(jury_assignment::case_id.eq(case.id))
+    .filter(jury_assignment::role.eq(JuryAssignmentRole::Original))
+    .select(jury_assignment::person_id)
+    .load(conn)
+    .await?;
+  let excluded_juror_count = i32::try_from(original_juror_ids.len()).unwrap_or(i32::MAX);
+
+  // 2. Compute appeal panel size (PRD §6.1).
+  // Decided cases always have panel_size_snapshot populated (the status-guard
+  // in request_appeal.rs rejects all non-Decided statuses). ok_or_else is the
+  // defensive guard against the impossible NULL case.
+  let original_panel_size = case.panel_size_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(
+      "appeal panel: case.panel_size_snapshot is null on a Decided case".to_string(),
+    )
+  })?;
+  let multiplier = config::get_float(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.panel_size_multiplier",
+  )
+  .await?;
+  let floor_increment = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.panel_size_floor_increment",
+  )
+  .await?;
+  let appeal_panel_size =
+    compute_appeal_panel_size(original_panel_size, multiplier, floor_increment);
+
+  // 3. Threshold cascade at the bumped severity (PRD §6.3).
+  let bump = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.threshold_tier_bump",
+  )
+  .await?;
+  let bumped_severity = bump_severity(case.severity_tier, bump);
+  let threshold_fraction = config::get_float_cascade(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.threshold_fraction",
+    &[severity_tier_slug(bumped_severity)],
+  )
+  .await?;
+  let appeal_threshold_count = ceil_count(
+    f64::from(appeal_panel_size) * threshold_fraction,
+    "appeal_threshold_count",
+  )?;
+
+  // 4. Reuse select_eligible_jurors with the original-juror exclusion list.
+  let (person_ids, constraint_record) = select_eligible_jurors(
+    conn,
+    case,
+    i64::from(appeal_panel_size),
+    Some(&original_juror_ids),
+    cache,
+  )
+  .await?;
+
+  Ok(AppealPanelSelection {
+    person_ids,
+    panel_size_snapshot: appeal_panel_size,
+    threshold_count_snapshot: appeal_threshold_count,
+    constraint_record,
+    excluded_juror_count,
+  })
 }
