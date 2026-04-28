@@ -431,12 +431,15 @@ pub async fn get_int_cascade(
     }
   }
 
-  const_default_int(namespace).ok_or_else(|| {
-    LemmyErrorType::Unknown(format!(
-      "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
-    ))
-    .into()
-  })
+  candidates
+    .iter()
+    .find_map(|c| const_default_int(c))
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
+      ))
+      .into()
+    })
 }
 
 /// Float variant of [`get_int_cascade`]. Same contract: most-specific first,
@@ -483,12 +486,15 @@ pub async fn get_float_cascade(
     }
   }
 
-  const_default_float(namespace).ok_or_else(|| {
-    LemmyErrorType::Unknown(format!(
-      "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
-    ))
-    .into()
-  })
+  candidates
+    .iter()
+    .find_map(|c| const_default_float(c))
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "cascade walked {candidates:?} — no DB row found and no Rust const default for namespace `{namespace}`"
+      ))
+      .into()
+    })
 }
 
 // -- Opt accessors (v1-AD-b) -----------------------------------------------
