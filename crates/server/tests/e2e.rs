@@ -7113,6 +7113,11 @@ mod v1_jm_b_fixtures {
     target: PersonId,
     severity_tier: SeverityTier,
   ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error + Send + Sync>> {
+    let severity = match severity_tier {
+      SeverityTier::Minor => CaseSeverity::Low,
+      SeverityTier::Moderate => CaseSeverity::Medium,
+      SeverityTier::Severe => CaseSeverity::High,
+    };
     let form = ModerationCaseInsertForm {
       community_id: None,
       creator_id: None,
@@ -7123,7 +7128,7 @@ mod v1_jm_b_fixtures {
       target_community_id: None,
       target_remote_url: None,
       reason_code: "v1_jm_b_test".to_string(),
-      severity: CaseSeverity::default(),
+      severity,
       severity_tier: Some(severity_tier),
       status: CaseStatus::Open,
       threshold_score: 1,
@@ -7811,7 +7816,7 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
     EmergencyRemoveTarget, emergency_remove_open_case,
   };
   use lemmy_db_schema::source::instance::Instance;
-  use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
+  use lemmy_db_schema_file::{enums::{CaseStatus, SeverityTier}, schema::moderation_case};
 
   let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
@@ -7836,6 +7841,7 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
   let row: (
     SeverityTier,
+    CaseStatus,
     Option<i32>,
     Option<i32>,
     Option<i32>,
@@ -7843,6 +7849,7 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
     .filter(moderation_case::id.eq(case_id))
     .select((
       moderation_case::severity_tier,
+      moderation_case::status,
       moderation_case::panel_size_snapshot,
       moderation_case::quorum_snapshot,
       moderation_case::threshold_count_snapshot,
@@ -7856,16 +7863,21 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   );
   assert_eq!(
     row.1,
+    CaseStatus::EmergencyRemove,
+    "emergency_remove opens case with status = EmergencyRemove (ADR-013)"
+  );
+  assert_eq!(
+    row.2,
     Some(7),
     "panel_size_snapshot = 7 (jury.panel_size.regular.severe seed; PR #95 cr-3)"
   );
   assert_eq!(
-    row.2,
+    row.3,
     Some(5),
     "quorum_snapshot = ceil(7 × 0.71) = 5 (PR #95 cr-3)"
   );
   assert_eq!(
-    row.3,
+    row.4,
     Some(6),
     "threshold_count_snapshot = ceil(7 × 0.75) = 6 (PR #95 cr-3)"
   );
