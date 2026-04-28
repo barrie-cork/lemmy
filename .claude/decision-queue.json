@@ -20,6 +20,21 @@
   ],
   "resolved": [
     {
+      "id": 81,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-04-28T15:40:00Z",
+      "question": "Production bug in fetch_value_at_scope diagnosed by Opus 4.7 during fix-3b Task #41. Should fix-3c land before any further e2e validation?",
+      "options": [
+        "(A) ship fix-3c (one-line .order_by(valid_from.desc())) per jm-d-fix-impl-3c.md, then re-run Phase 2 e2e",
+        "(B) defer production fix to JM-e and skip the 5 affected tests for now"
+      ],
+      "context": "Commit 8e3bba1 (fix(governance): rename governance_config_current to governance_config) dropped the latest-wins view but did NOT update fetch_value_at_scope at crates/api/api/src/governance/config.rs:733 to do the ordering server-side. Result: governance_config reads can return stale seeded rows instead of admin_set_config writes, breaking 5 of 7 fix-3b failures (admin_get_config_single_key_with_provenance, admin_list_rule_sets_returns_versions_with_active_version_id, admin_set_config_persists_previous_value_and_from, submit_jury_vote_writes_appeal_window_live_config, v0_case_completes_under_v0_rules_after_v1_config_flip). The fix-3b brief incorrectly framed these as test fixture issues; Opus 4.7's static analysis caught the production regression. Cluster A test fixture fix (panel_size_snapshot seeding) shipped at cd6d74b for the other 2 of 7 failures. Recommended fix is one-line: .order_by(governance_config::valid_from.desc()) inserted before .first::<ConfigRow>(conn). Sweep for other readers needed.",
+      "answer": "Take option (A). Per advisor decision — ship fix-3c targeting config.rs:733 with .order_by(valid_from.desc()) plus a sweep for other ungrounded readers. Reroute to Sonnet 4.6 (impl-task default) for the implementation due to memory pressure observed on Opus 4.7 during Task #41 (cgroup capped at 8.5G/10G with 3.5G swap fully used). Brief at .claude/PRPs/briefs/jm-d-fix-impl-3c.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-04-28T15:40:00Z"
+    },
+    {
       "id": 79,
       "from": "impl",
       "kind": "validate-pending",
