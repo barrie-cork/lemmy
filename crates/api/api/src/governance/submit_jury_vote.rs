@@ -4,28 +4,24 @@
 //! from [04 §8] and the v0 simplifications from [05 §3] and [05 §6]:
 //!
 //! 1. Verify the caller has an `Accepted` assignment on the case.
-//! 2. SELECT FOR UPDATE on the moderation_case row (lock-ordering: must
-//!    precede the jury_vote INSERT so concurrent voters serialise here
-//!    rather than deadlocking on FK SHARE → EXCLUSIVE upgrade — PR #98
-//!    cr-2 / DQ #50).
+//! 2. SELECT FOR UPDATE on the moderation_case row (lock-ordering: must precede the jury_vote
+//!    INSERT so concurrent voters serialise here rather than deadlocking on FK SHARE → EXCLUSIVE
+//!    upgrade — PR #98 cr-2 / DQ #50).
 //! 3. Insert the vote and flip the assignment to `Submitted`.
-//! 4. If the case is already in a terminal state (Decided / Closed /
-//!    Appealed / EmergencyRemove / AdminReview), return early — the
-//!    vote was recorded for audit, but no post-decision side effects
-//!    re-fire (idempotency guard for late-arriving votes 4-5 of 5).
-//! 5. If fewer than `case.quorum_snapshot` votes are in (per [99 ADR-007]),
-//!    return without deciding.
-//! 6. At quorum, tally votes by simple majority. Record the decision on
-//!    the case row (status → `Decided`, `decided_at = now`,
-//!    `appeal_window_expires_at = now + appeal.window_days` per PRD
-//!    §9.1 step 9 — LIVE config read, the single deliberate exception
-//!    to the snapshot-everything rule).
-//! 7. Map the winning `JuryDecision` to a `Sanction` per the table
-//!    below; `NoAction` writes no sanction row.
+//! 4. If the case is already in a terminal state (Decided / Closed / Appealed / EmergencyRemove /
+//!    AdminReview), return early — the vote was recorded for audit, but no post-decision side
+//!    effects re-fire (idempotency guard for late-arriving votes 4-5 of 5).
+//! 5. If fewer than `case.quorum_snapshot` votes are in (per [99 ADR-007]), return without
+//!    deciding.
+//! 6. At quorum, tally votes by simple majority. Record the decision on the case row (status →
+//!    `Decided`, `decided_at = now`, `appeal_window_expires_at = now + appeal.window_days` per PRD
+//!    §9.1 step 9 — LIVE config read, the single deliberate exception to the snapshot-everything
+//!    rule).
+//! 7. Map the winning `JuryDecision` to a `Sanction` per the table below; `NoAction` writes no
+//!    sanction row.
 //! 8. Publish a redacted summary to `public_case_log`.
-//! 9. Emit per-juror reputation events (`JuryReliability +10` for
-//!    majority-aligned, `-5` for outliers) and a per-reporter reputation
-//!    event on the `ReportingAccuracy` dimension.
+//! 9. Emit per-juror reputation events (`JuryReliability +10` for majority-aligned, `-5` for
+//!    outliers) and a per-reporter reputation event on the `ReportingAccuracy` dimension.
 //!
 //! | `JuryDecision` | `SanctionScope` | `SanctionAction` |
 //! |---|---|---|
@@ -53,14 +49,7 @@ use crate::governance::{
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use chrono::{Duration, Utc};
-use diesel::{
-  ExpressionMethods,
-  QueryDsl,
-  SelectableHelper,
-  dsl::count_star,
-  insert_into,
-  update,
-};
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -84,7 +73,14 @@ use lemmy_db_schema_file::{
     SanctionAction,
     SanctionScope,
   },
-  schema::{jury_assignment, jury_vote, moderation_case, public_case_log, reputation_event, sanction},
+  schema::{
+    jury_assignment,
+    jury_vote,
+    moderation_case,
+    public_case_log,
+    reputation_event,
+    sanction,
+  },
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
@@ -473,6 +469,7 @@ async fn process_vote(
     .set((
       moderation_case::status.eq(CaseStatus::Decided),
       moderation_case::decided_at.eq(Some(now)),
+      moderation_case::winning_decision.eq(Some(winning_decision)),
     ))
     .execute(conn)
     .await?;
@@ -565,16 +562,10 @@ async fn process_vote(
     } else {
       "deltas.reporter_upheld"
     };
-    let delta_i64 = config::get_int(
-      &mut cache,
-      &mut (&mut *conn).into(),
-      Scope::Instance,
-      key,
-    )
-    .await?;
-    let delta = i32::try_from(delta_i64).map_err(|_e| {
-      LemmyErrorType::Unknown(format!("{key} ({delta_i64}) overflows i32"))
-    })?;
+    let delta_i64 =
+      config::get_int(&mut cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
+    let delta = i32::try_from(delta_i64)
+      .map_err(|_e| LemmyErrorType::Unknown(format!("{key} ({delta_i64}) overflows i32")))?;
     let reason = if matches!(winning_decision, JuryDecision::NoAction) {
       "report_dismissed"
     } else {
@@ -648,12 +639,8 @@ async fn process_vote(
     map_decision_to_sanction(winning_decision),
     Some((SanctionScope::FederatedRecommendation, _)),
   ) {
-    crate::governance::federation_outbox::send_local_sanction_notice(
-      data.case_id,
-      conn,
-      context,
-    )
-    .await?;
+    crate::governance::federation_outbox::send_local_sanction_notice(data.case_id, conn, context)
+      .await?;
   }
 
   Ok(SubmitJuryVoteResponse {
@@ -666,21 +653,19 @@ async fn process_vote(
 /// Map a winning `JuryDecision` onto a `(SanctionScope, SanctionAction)`
 /// pair. Returns `None` for `NoAction` (no sanction row is created).
 /// Exhaustive per [ADR-013].
-fn map_decision_to_sanction(
-  decision: JuryDecision,
-) -> Option<(SanctionScope, SanctionAction)> {
+fn map_decision_to_sanction(decision: JuryDecision) -> Option<(SanctionScope, SanctionAction)> {
   match decision {
     JuryDecision::NoAction => None,
     JuryDecision::AdvisoryLabel => Some((SanctionScope::Community, SanctionAction::Label)),
-    JuryDecision::Warning => {
-      Some((SanctionScope::Community, SanctionAction::VisibilityReduction))
-    }
-    JuryDecision::Cooldown => {
-      Some((SanctionScope::Community, SanctionAction::TemporaryRestriction))
-    }
-    JuryDecision::RemoveContent => {
-      Some((SanctionScope::Community, SanctionAction::ContentRemoval))
-    }
+    JuryDecision::Warning => Some((
+      SanctionScope::Community,
+      SanctionAction::VisibilityReduction,
+    )),
+    JuryDecision::Cooldown => Some((
+      SanctionScope::Community,
+      SanctionAction::TemporaryRestriction,
+    )),
+    JuryDecision::RemoveContent => Some((SanctionScope::Community, SanctionAction::ContentRemoval)),
     JuryDecision::SuspendLocalUser => {
       Some((SanctionScope::Instance, SanctionAction::InstanceSuspension))
     }

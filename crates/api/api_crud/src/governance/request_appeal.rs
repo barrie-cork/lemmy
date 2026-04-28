@@ -1,18 +1,19 @@
-//! `POST /api/v4/governance/appeal` — sanction target requests an appeal
-//! of a decided case.
+//! `POST /api/v4/governance/appeal` — sanction target or original reporter
+//! requests an appeal of a decided case.
 //!
-//! v0 scope per IMPLEMENTATION-PLAN-v0.md line 381 and ADR-010:
+//! v1-JM-d introduces two caller-eligibility paths:
+//! - **Defendant** (`target_person_id`): always eligible while the appeal window is open.
+//! - **OriginalReporter** (`creator_id`, light-touch-outcome cases only): eligible when the winning
+//!   decision is `NoAction` or `AdvisoryLabel`.
 //!
-//! - Only the case `target_person_id` can appeal. Original-reporter appeals
-//!   are deferred to v1.
-//! - No automatic re-jury. The case flips `Decided → Appealed` and sits
-//!   until `admin_close_case` runs. The larger-jury appeal flow is a v1
-//!   item per ADR-010.
-//! - Appeal window is explicit: while `case.closed_at > now()`. `submit_jury_vote`
-//!   stamps `closed_at = decided_at + 7 days` when flipping a case to
-//!   `Decided`, so every Decided case has an open window for 7 days.
-//!   `admin_close_case` may stamp `closed_at = now()` earlier to short-circuit
-//!   the window; appeals after `closed_at` are rejected.
+//! Appeal window check uses `appeal_window_expires_at` (computed at
+//! `submit_jury_vote.rs` step 9 per JM-c §10.5). The v0 `closed_at` check
+//! was a regression corrected in this sub-phase.
+//!
+//! When `appeal.auto_select_on_appeal_acceptance = true`, the appeal panel is
+//! seated immediately (original jurors excluded, larger panel, bumped threshold
+//! tier per PRD §6.1-§6.3). Otherwise the case sits in `Appealed` awaiting
+//! `admin_trigger_appeal_rejury`.
 //!
 //! `CaseStatus` is matched exhaustively per ADR-013 (no `_ =>`).
 
@@ -22,7 +23,9 @@ use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update}
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
-  governance_log::{self, ENTRY_KIND_APPEAL_REQUESTED},
+  admin_assign_jury::select_appeal_panel,
+  config::{self, ConfigCache, Scope},
+  governance_log::{self, ENTRY_KIND_APPEAL_PANEL_ASSEMBLED, ENTRY_KIND_APPEAL_REQUESTED},
 };
 use lemmy_api_common::governance::{RequestAppeal, RequestAppealResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -30,13 +33,21 @@ use lemmy_db_schema::{
   newtypes::AppealId,
   source::governance::{
     appeal::{Appeal, AppealInsertForm},
+    jury_assignment::JuryAssignmentInsertForm,
     moderation_case::ModerationCase,
   },
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{AppealStatus, CaseStatus},
-  schema::{appeal, moderation_case},
+  enums::{
+    AppealRequesterRole,
+    AppealStatus,
+    CaseStatus,
+    JuryAssignmentRole,
+    JuryAssignmentStatus,
+    JuryDecision,
+  },
+  schema::{appeal, jury_assignment, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
@@ -62,10 +73,8 @@ pub async fn request_appeal(
 
   let appeal_id = conn
     .run_transaction(|conn| {
-      async move {
-        process_appeal(conn, caller_id, pseudonym_for_tx, data_for_tx).await
-      }
-      .scope_boxed()
+      async move { process_appeal(conn, caller_id, pseudonym_for_tx, data_for_tx).await }
+        .scope_boxed()
     })
     .await?;
 
@@ -104,27 +113,39 @@ async fn process_appeal(
     }
   }
 
-  // 3. Appeal window: closed_at must be in the future. `submit_jury_vote`
-  // stamps closed_at = decided_at + 7d on Decided-flip, so every Decided
-  // case has a real 7-day window that `is_some()` alone would reject. Also
-  // reject NULL closed_at on a Decided case as a data error — the flip
-  // path must populate it (GH #34).
-  let within_window = case.closed_at.map(|c| c > Utc::now()).unwrap_or(false);
+  // 3. Appeal window: appeal_window_expires_at must be in the future.
+  // submit_jury_vote step 9 stamps this at decided-flip time (JM-c §10.5).
+  // NULL on a Decided case is treated as an expired window (data error).
+  let within_window = case
+    .appeal_window_expires_at
+    .map(|t| t > Utc::now())
+    .unwrap_or(false);
   if !within_window {
     return Err(LemmyErrorType::NotFound.into());
   }
 
-  // 4. Caller must be the sanction target.
-  if case.target_person_id != Some(caller_id) {
+  // 4. Caller eligibility — defendant or original-reporter.
+  let requester_role = if case.target_person_id == Some(caller_id) {
+    AppealRequesterRole::Defendant
+  } else if case.creator_id == Some(caller_id)
+    && matches!(
+      case.winning_decision,
+      Some(JuryDecision::NoAction | JuryDecision::AdvisoryLabel)
+    )
+  {
+    AppealRequesterRole::OriginalReporter
+  } else {
     return Err(LemmyErrorType::NotFound.into());
-  }
+  };
 
-  // 5. Insert the Appeal row.
+  // 5. Insert the Appeal row. Snapshot fields are NULL until the auto-rejury
+  // branch (step 8) stamps them via UPDATE.
   let form = AppealInsertForm {
     case_id: data.case_id,
     requester_id: caller_id,
     reason: data.reason.clone(),
     status: AppealStatus::Requested,
+    requester_role: Some(requester_role),
     ..Default::default()
   };
   let new_appeal: Appeal = insert_into(appeal::table)
@@ -151,6 +172,66 @@ async fn process_appeal(
     Some(caller_pseudonym.clone()),
   )
   .await?;
+
+  // 8. Auto-rejury branch: seat the appeal panel inside this same transaction
+  // so a panel-seating failure rolls back the appeal-row insert as well.
+  let mut cache = ConfigCache::new();
+  let auto_select = config::get_bool(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "appeal.auto_select_on_appeal_acceptance",
+  )
+  .await?;
+
+  if auto_select {
+    let selection = select_appeal_panel(conn, &case, &mut cache).await?;
+
+    // Pre-compute the constraints JSON once; clone per juror row.
+    let constraints_json = selection.constraint_record.to_json();
+
+    // Seat each appeal-panel juror and collect pseudonyms for the log payload.
+    let mut panel_pseudonyms = Vec::with_capacity(selection.person_ids.len());
+    for person_id in &selection.person_ids {
+      let pseudonym =
+        actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), *person_id).await?;
+      panel_pseudonyms.push(pseudonym);
+      let juror_form = JuryAssignmentInsertForm {
+        case_id: data.case_id,
+        person_id: *person_id,
+        status: JuryAssignmentStatus::Selected,
+        selected_under_constraints: Some(constraints_json.clone()),
+        role: Some(JuryAssignmentRole::Appeal),
+      };
+      insert_into(jury_assignment::table)
+        .values(&juror_form)
+        .execute(conn)
+        .await?;
+    }
+
+    // One appeal_panel_assembled entry per panel (not per juror).
+    governance_log::append(
+      &mut (&mut *conn).into(),
+      ENTRY_KIND_APPEAL_PANEL_ASSEMBLED,
+      json!({
+        "case_id": data.case_id.0,
+        "new_panel_pseudonyms": panel_pseudonyms,
+        "excluded_juror_count": selection.excluded_juror_count,
+        "appeal_threshold_count": selection.threshold_count_snapshot,
+      }),
+      Some(caller_pseudonym.clone()),
+    )
+    .await?;
+
+    // Stamp panel-size + threshold snapshots onto the Appeal row.
+    update(appeal::table.filter(appeal::id.eq(new_appeal.id)))
+      .set((
+        appeal::panel_size_snapshot.eq(Some(selection.panel_size_snapshot)),
+        appeal::threshold_count_snapshot.eq(Some(selection.threshold_count_snapshot)),
+      ))
+      .execute(conn)
+      .await?;
+  }
 
   Ok(new_appeal.id)
 }
