@@ -1,6 +1,36 @@
 {
   "pending": [
     {
+      "id": 87,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:00:00.000Z",
+      "workflow_run_id": 25081966699,
+      "branch": "junior/role-impl-task-issue-96-cluster2-see-claude-prps-briefs-issue-96-impl-1b-md-50",
+      "phase_task": "issue-96-cluster2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 86,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:05:00.000Z",
+      "workflow_run_id": 25081578635,
+      "branch": "junior/role-impl-task-issue-96-cluster1-see-claude-prps-briefs-issue-96-impl-1a-md-49",
+      "phase_task": "issue-96-cluster1",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
       "id": 85,
       "from": "impl",
       "kind": "validate-pending",
@@ -8,12 +38,14 @@
       "workflow_run_id": 25081414634,
       "branch": "junior/role-impl-task-v1-jm-d-fix-4a-v2-see-claude-prps-briefs-jm-d-fix-impl-4a-v2-md-48",
       "phase_task": 4,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "validate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:06.2007888Z [1m[92m    Checking[0m lemmy_db_views_governance_case v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/db_views/governance_case)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:09.6017825Z [1m[92m    Checking[0m lemmy_db_views_reputation v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/db_views/reputation)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:10.0243884Z [1m[92m    Checking[0m lemmy_db_views_vote v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/db_views/vote)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:11.9197648Z [1m[92m    Checking[0m lemmy_api_common v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/api/api_common)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:13.5727581Z [1m[92m    Checking[0m lemmy_db_views_governance_modlog v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/db_views/governance_modlog)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:14.0451233Z [1m[92m    Checking[0m lemmy_db_views_jury_queue v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/db_views/jury_queue)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:14.4243940Z [1m[92m    Checking[0m lemmy_apub_send v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/apub/send)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:19.0824520Z [1m[92m    Checking[0m lemmy_apub v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/apub/apub)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:22.0956775Z [1m[92m    Checking[0m lemmy_api v1.0.0-test-arm-qemu.0 (/home/runner/work/lemmy/lemmy/crates/api/api)\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7337836Z [1m[91merror[0m[1m: using `clone` on type `AdminTriggerAppealRejury` which implements the `Copy` trait[0m\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7339644Z   [1m[94m--> [0mcrates/api/api/src/governance/admin_trigger_appeal_rejury.rs:47:21\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7340676Z    [1m[94m|[0m\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7354738Z [1m[94m47[0m [1m[94m|[0m   let data_for_tx = data.clone();\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7356290Z    [1m[94m|[0m                     [1m[91m^^^^^^^^^^^^[0m [1m[91mhelp: try removing the `clone` call: `data`[0m\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7357558Z    [1m[94m|[0m\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7358860Z    [1m[91m= [0m[1mhelp[0m: for further information visit https://rust-lang.org/rust-clippy/rust-1.95.0/index.html#clone_on_copy\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7364759Z    [1m[94m= [0m[1mnote[0m: `-D clippy::clone-on-copy` implied by `-D clippy::complexity`\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7366676Z    [1m[94m= [0m[1mhelp[0m: to override `-D clippy::complexity` add `#[allow(clippy::clone_on_copy)]`\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:36.7367593Z \nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:37.1594894Z [1m[91merror[0m: could not compile `lemmy_api` (lib) due to 1 previous error\nvalidate workspace\tcargo clippy workspace + features full\t2026-04-28T22:56:37.2114920Z ##[error]Process completed with exit code 101.",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "clippy lint failure: clone_on_copy in admin_trigger_appeal_rejury.rs:47 \u2014 allowlist match for auto-fix",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-04-28T23:00:15.269590+00:00"
     },
     {
       "id": 84,

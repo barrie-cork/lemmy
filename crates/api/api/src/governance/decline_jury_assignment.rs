@@ -161,7 +161,7 @@ async fn process_decline(
       .unwrap_or(DEFAULT_JURY_PANEL_SIZE)
     }
   };
-  let (replacements, _record) = select_eligible_jurors(
+  let (replacements, record) = select_eligible_jurors(
     conn,
     &case,
     panel_size,
@@ -178,12 +178,7 @@ async fn process_decline(
       case_id: data.case_id,
       person_id: new_id,
       status: JuryAssignmentStatus::Selected,
-      // Replacement picks inherit the original panel's constraint profile
-      // by virtue of running through the same `select_eligible_jurors`
-      // selector; the per-row JSONB snapshot is out of scope for decline
-      // handling in v1-JM-b (the replacement pick's constraint_record is
-      // discarded above).
-      selected_under_constraints: None,
+      selected_under_constraints: Some(record.to_json()),
       ..Default::default()
     };
     insert_into(jury_assignment::table)
