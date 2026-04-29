@@ -1225,6 +1225,29 @@
       "superseded_at": "2026-04-29T05:22:44Z",
       "superseded_by_run_id": 25084505547,
       "superseded_note": "fix-4a-v3 workspace check passed (DQ #88, run 25084505547); the line-62 unused-import fix at 5bf306003 + the .clone() removal at 0198a2936 cleared the original failure root cause"
+    },
+    {
+      "id": 89,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-04-29T06:41:08Z",
+      "branch": "phase-v1-JM-d",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-test.bat --test e2e -p lemmy_server"
+      ],
+      "context": "Phase 2 e2e for v1-JM-d Task 4 (admin_trigger_appeal_rejury). Mandatory user gate per advisor-orchestrator (Phase 2 e2e \u2014 local vs dispatch). User picked option (a) local on 2026-04-29 per feedback_e2e_local_or_dispatch_user_choice.md. Run deferred from 2026-04-29 morning session due to laptop dev-env gap (LNK1181 libpq.lib); resolved this session by adding libpq env wiring to cargo-test.sh + cargo clean -p pq-sys (commit 49ed9db8e) and re-running via cargo-test.bat.",
+      "question": "Did Phase 2 e2e pass on the laptop for phase-v1-JM-d tip f62d586df?",
+      "options": [
+        "pass \u2014 advance to next \u00a713 task",
+        "fail \u2014 apply \u00a7G4 classifier"
+      ],
+      "result": "pass",
+      "log_slice": "test result: ok. 62 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1620.91s. The 3 ignored tests are pre-existing v0-polish known-flakes at GH #42 (ineligible_user_cannot_be_picked_for_jury), #43 (phase1_migrations_round_trip), #45 (sponsor_liability_with_founder_multiplier) \u2014 not Brehon Task 4 regressions.",
+      "failed_commands": null,
+      "answer": "All 62 e2e tests passed locally on laptop. Wall-clock 1620.91s (27.0 min), in line with GH Actions reference. Phase 2 e2e user gate cleared for v1-JM-d Task 4.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-04-29T06:41:08Z"
     }
   ],
   "schema_version": 2
