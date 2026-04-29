@@ -1,6 +1,6 @@
 ---
-name: pq-sys wrapper-env poisoning (cargo-check.bat then cargo-test.bat)
-description: cargo-check.bat does not set PQ_LIB_DIR; pq-sys build.rs caches Err(NotPresent) and subsequent cargo-test.bat runs inherit the stale cache, causing LINK1181 libpq.lib missing.
+name: pq-sys wrapper-env poisoning (any cargo wrapper without PQ_LIB_DIR)
+description: Any cargo wrapper script (cargo-check.bat, cargo-test.sh, etc.) that does not export PQ_LIB_DIR causes pq-sys build.rs to cache Err(NotPresent); a subsequent run with PQ_LIB_DIR set still inherits the stale cache and fails with LNK1181 libpq.lib missing.
 type: feedback
 originSessionId: 50ffed48-0dd6-4010-8ffb-d915ca13314c
 ---
@@ -17,5 +17,9 @@ On Windows, running `scripts\brehon\cargo-check.bat` **before** `scripts\brehon\
 - If you plan to run both check AND test against the same target dir (fresh worktree or post-clean), either (a) set `PQ_LIB_DIR` in `cargo-check.bat` too, or (b) after check but before the first test run, do `rm -rf target/debug/build/pq-sys-* target/debug/deps/pq_sys-*` to force a rebuild.
 - When debugging `LNK1181: libpq.lib` errors, cat `target/debug/build/pq-sys-*/output` FIRST. If it shows `PQ_LIB_DIR = Err(NotPresent)`, the cache is poisoned — clean pq-sys and re-run.
 - Long-term fix is a one-line edit to `cargo-check.bat` copying the `set VCPKG_ROOT=... / set PQ_LIB_DIR=... / set PQ_INCLUDE_DIR=... / set PATH=...` block from `cargo-test.bat`. That parity eliminates the cache-poisoning failure mode entirely.
+
+**2026-04-29 second occurrence (cargo-test.sh on Git Bash):** the bash sibling `scripts/brehon/cargo-test.sh` has the same gap — it had no Windows-side libpq env wiring at all. A Git Bash invocation linked lemmy_server with no `/LIBPATH` for libpq and failed with the identical LNK1181, despite the canonical vcpkg install being present at `C:\Users\barri\Developer\vcpkg\installed\x64-windows\`. Fixed in the same shape: a `case "${OSTYPE:-}" in msys*|cygwin*|win32*)` block exporting `VCPKG_ROOT`, `PQ_LIB_DIR`, `PQ_INCLUDE_DIR`, and prepending `/c/Users/barri/Developer/vcpkg/installed/x64-windows/bin` to PATH. The `cargo clean -p pq-sys` step from this lesson was still required to recover from the poisoned cache the failing run produced.
+
+**Generalisation:** any new cargo wrapper script in `scripts/brehon/` (or anywhere) MUST export `PQ_LIB_DIR` on Windows when its caller's expected platform is Windows-laptop. Treat libpq-env wiring as part of the wrapper's contract, not an optional add-on. If reviewing a new wrapper, grep it for `PQ_LIB_DIR` before merging.
 
 Do NOT confuse this with the `feedback_cargo_invocations.md` topic (which covers vcvars + vcpkg install). The install is correct; the wrapper parity is what fails.
