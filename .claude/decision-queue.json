@@ -1,38 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 85,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-28T22:42:00.000Z",
-      "workflow_run_id": 25081414634,
-      "branch": "junior/role-impl-task-v1-jm-d-fix-4a-v2-see-claude-prps-briefs-jm-d-fix-impl-4a-v2-md-48",
-      "phase_task": 4,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 84,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-28T19:37:51.456+00:00",
-      "workflow_run_id": 25073660917,
-      "branch": "junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45",
-      "phase_task": 4,
-      "result": "fail",
-      "log_slice": "error: unused import: `appeal::Appeal` at crates/api/api/src/governance/admin_assign_jury.rs:62:5. Note: `#[deny(unused_imports)]` on by default. Help: remove this import. error: aborting due to previous error",
-      "failed_jobs": [
-        "validate workspace"
-      ],
-      "answer": "Workflow run 25073660917 on junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45 completed with conclusion=failure. cargo clippy failed with error: unused import `appeal::Appeal` at crates/api/api/src/governance/admin_assign_jury.rs:62:5.",
-      "answered_by": "ci-watcher",
-      "resolved_at": "2026-04-28T19:53:15.560Z"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 80,
@@ -1218,6 +1185,46 @@
       "answer": "Workspace validation passed on GitHub Actions (cargo-validate-workspace.yml run 25084505547).",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-04-29T05:04:29.727890+00:00"
+    },
+    {
+      "id": 85,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T22:42:00.000Z",
+      "workflow_run_id": 25081414634,
+      "branch": "junior/role-impl-task-v1-jm-d-fix-4a-v2-see-claude-prps-briefs-jm-d-fix-impl-4a-v2-md-48",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "superseded_by": 88,
+      "superseded_at": "2026-04-29T05:22:44Z",
+      "superseded_by_run_id": 25084505547,
+      "superseded_note": "fix-4a-v3 workspace check passed (DQ #88, run 25084505547); the line-62 unused-import fix at 5bf306003 + the .clone() removal at 0198a2936 cleared the original failure root cause"
+    },
+    {
+      "id": 84,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T19:37:51.456+00:00",
+      "workflow_run_id": 25073660917,
+      "branch": "junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45",
+      "phase_task": 4,
+      "result": "fail",
+      "log_slice": "error: unused import: `appeal::Appeal` at crates/api/api/src/governance/admin_assign_jury.rs:62:5. Note: `#[deny(unused_imports)]` on by default. Help: remove this import. error: aborting due to previous error",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Workflow run 25073660917 on junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45 completed with conclusion=failure. cargo clippy failed with error: unused import `appeal::Appeal` at crates/api/api/src/governance/admin_assign_jury.rs:62:5.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-04-28T19:53:15.560Z",
+      "superseded_by": 88,
+      "superseded_at": "2026-04-29T05:22:44Z",
+      "superseded_by_run_id": 25084505547,
+      "superseded_note": "fix-4a-v3 workspace check passed (DQ #88, run 25084505547); the line-62 unused-import fix at 5bf306003 + the .clone() removal at 0198a2936 cleared the original failure root cause"
     }
   ],
   "schema_version": 2
