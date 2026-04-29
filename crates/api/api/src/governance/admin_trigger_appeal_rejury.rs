@@ -44,7 +44,7 @@ pub async fn admin_trigger_appeal_rejury(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
-  let data_for_tx = data.clone();
+  let data_for_tx = data;
   let pseudonym_for_tx = admin_pseudonym.clone();
 
   let outcome = conn
