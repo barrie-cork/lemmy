@@ -29,22 +29,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 90,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-30T13:00:00.000Z",
-      "workflow_run_id": 25173804973,
-      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
-      "phase_task": 5,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "renumber_note": "renumbered from id 89 due to id collision with origin resolved #89 (different entry content); merge 2026-04-30"
     }
   ],
   "resolved": [
@@ -1410,6 +1394,22 @@
       "answer": "Full e2e suite passed on laptop: 62 passed, 0 failed, 3 ignored (pre-existing v0-polish flakes GH #42, #43, #45), 1741.48s wall-clock. Build cached from prior run, ~5m31s recompile + 28m51s test execution. Run via .bat wrapper (Task 5 worker branch predates the .sh libpq fix at 49ed9db8e; .bat sets PATH for libpq.dll runtime correctly). Validates Task 5 (appeal-window-expiry background job + hourly scheduler tick) does not regress existing e2e behaviour.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-04-30T17:30:00.000Z"
+    },
+    {
+      "id": 90,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-30T13:00:00.000Z",
+      "workflow_run_id": 25173804973,
+      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
+      "phase_task": 5,
+      "result": "superseded",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Superseded by: (1) downstream clippy fix at junior/jm-d-task-5-workspace-recheck commit 3f7dfec22 (\"drop unused mut on current_geo_enabled in admin_assign_jury\"); (2) GH workspace-check run 25181904020 against 78eff0de9 surfaced the sibling unused-mut at admin_assign_jury.rs:653 that the original fix at 953a8360b unmasked by removing the dead-store on line 727; (3) Local laptop clippy clean against 3f7dfec22 — cargo clippy -p lemmy_api --features full --no-deps -- -D warnings finished 7m31s, cargo clippy --workspace --features full --no-deps -- -D warnings finished 4m12s, both warning-free; (4) Re-run workspace-check 25183284432 in_progress against 3f7dfec22 at supersede time (not awaited per advisor-laptop X1 path). JM-d retro at .claude/PRPs/reports/v1-JM-d-retro.md is the substantive evidence; retro §3.5/3.6 + §1.2 document the full chain. Functional Task 5 closure already evidenced by DQ #97 (e2e pass on laptop, 62/0/3, 1741.48s wall-clock).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-04-30T20:05:00Z",
+      "renumber_note": "renumbered from id 89 due to id collision with origin resolved #89 (different entry content); merge 2026-04-30"
     }
   ],
   "schema_version": 2
