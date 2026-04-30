@@ -129,6 +129,18 @@ fi
 # in SQL — psql applies single-quote escaping so no injection is possible.
 # Numeric/bool values were validated by regex above and are safe to interpolate
 # as literals.
+#
+# Closes #84 (option A): the payload now includes `previous_value` and
+# `previous_from` at the tail, mirroring the Rust handler shape from commit
+# d623bcff5 (`crates/api/api/src/governance/admin_config.rs`
+# `build_admin_config_changed_payload`). The pre-INSERT SELECT below reads
+# the row that THIS write will supersede — same scope, same key, latest
+# valid_from <= now(). When no prior row exists, both fields are JSON null,
+# which matches the handler's behaviour for a fresh key.
+# Field order is load-bearing per the handler:
+#   scope, key, value_type, value, reason, previous_value, previous_from
+# project_to_audit_entry hydrates previous_value/previous_from from the
+# tail; missing-tail rows (pre-deprecation shell writes) degrade to None.
 # ---------------------------------------------------------------------------
 psql "$DATABASE_URL" \
   -v scope="$SCOPE" \
@@ -140,6 +152,12 @@ psql "$DATABASE_URL" \
   <<SQL
 BEGIN;
 
+-- Capture the pre-INSERT row (if any) into a transactional CTE-driven
+-- temp value. We can't use a CTE across separate statements, so use a
+-- DO block with PERFORM-style read into temp records via psql's gset
+-- isn't viable inside a single SQL stream — instead, project the previous
+-- row at INSERT time using a sub-SELECT in jsonb_build_object below.
+
 INSERT INTO governance_config (scope, key, value_type, ${VALUE_COL}, valid_from, updated_by)
 VALUES (:'scope', :'key', :'vtype', ${VALUE_SQL}, now(), ${UPDATED_BY});
 
@@ -147,11 +165,42 @@ INSERT INTO governance_log (entry_kind, payload, actor_pseudonym)
 VALUES (
   'admin_config_changed',
   jsonb_build_object(
-    'scope',      :'scope',
-    'key',        :'key',
-    'value_type', :'vtype',
-    'value',      ${VALUE_PAYLOAD_SQL},
-    'reason',     :'reason'
+    'scope',          :'scope',
+    'key',            :'key',
+    'value_type',     :'vtype',
+    'value',          ${VALUE_PAYLOAD_SQL},
+    'reason',         :'reason',
+    -- previous_value: the JSON value from the most recent governance_config
+    -- row for (scope, key) STRICTLY BEFORE the INSERT above. The INSERT in
+    -- this same tx has valid_from = now(); a sub-SELECT with valid_from <
+    -- now() excludes the row we just wrote and finds the prior row (or none).
+    -- Returns JSON null when no prior row exists (fresh key).
+    'previous_value', (
+      SELECT CASE prev.value_type
+               WHEN 'int'   THEN to_jsonb(prev.value_int)
+               WHEN 'float' THEN to_jsonb(prev.value_float)
+               WHEN 'bool'  THEN to_jsonb(prev.value_bool)
+               WHEN 'text'  THEN to_jsonb(prev.value_text)
+             END
+      FROM governance_config prev
+      WHERE prev.scope = :'scope'
+        AND prev.key   = :'key'
+        AND prev.valid_from < now()
+      ORDER BY prev.valid_from DESC
+      LIMIT 1
+    ),
+    -- previous_from: ISO-8601 timestamp of the prior row's valid_from
+    -- (the handler's `previous.effective_from`). JSON null when no prior row.
+    'previous_from', (
+      SELECT to_char(prev.valid_from AT TIME ZONE 'UTC',
+                     'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+      FROM governance_config prev
+      WHERE prev.scope = :'scope'
+        AND prev.key   = :'key'
+        AND prev.valid_from < now()
+      ORDER BY prev.valid_from DESC
+      LIMIT 1
+    )
   ),
   :'admin_pseudonym'
 );

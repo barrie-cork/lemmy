@@ -5560,18 +5560,46 @@ async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResul
   )
   .await?;
 
-  // Write #2: via raw SQL matching admin-config-write.sh:146-157 EXACTLY,
-  // including JSON key declaration order.
+  // Write #2: via raw SQL matching admin-config-write.sh's payload-build SQL
+  // EXACTLY (including JSON key declaration order, the previous_value/from
+  // sub-SELECTs, and the to_char timestamp formatting).
+  // Updated for #84 (option A): shell wrapper now emits previous_value +
+  // previous_from at the tail. The sub-SELECTs read from governance_config
+  // for the most-recent row (scope, key) with valid_from < now() — i.e. the
+  // row Write #1 just inserted, since the HTTP handler writes to BOTH
+  // governance_config and governance_log.
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
   diesel::sql_query(
     "INSERT INTO governance_log (entry_kind, payload, actor_pseudonym) VALUES (\
        'admin_config_changed',\
        jsonb_build_object(\
-         'scope',      'instance',\
-         'key',        'jury.panel_size',\
-         'value_type', 'int',\
-         'value',      7,\
-         'reason',     'parity probe'\
+         'scope',          'instance',\
+         'key',            'jury.panel_size',\
+         'value_type',     'int',\
+         'value',          7,\
+         'reason',         'parity probe',\
+         'previous_value', (\
+           SELECT CASE prev.value_type \
+                    WHEN 'int'   THEN to_jsonb(prev.value_int) \
+                    WHEN 'float' THEN to_jsonb(prev.value_float) \
+                    WHEN 'bool'  THEN to_jsonb(prev.value_bool) \
+                    WHEN 'text'  THEN to_jsonb(prev.value_text) \
+                  END \
+           FROM governance_config prev \
+           WHERE prev.scope = 'instance' \
+             AND prev.key   = 'jury.panel_size' \
+             AND prev.valid_from < now() \
+           ORDER BY prev.valid_from DESC LIMIT 1 \
+         ),\
+         'previous_from', (\
+           SELECT to_char(prev.valid_from AT TIME ZONE 'UTC', \
+                          'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') \
+           FROM governance_config prev \
+           WHERE prev.scope = 'instance' \
+             AND prev.key   = 'jury.panel_size' \
+             AND prev.valid_from < now() \
+           ORDER BY prev.valid_from DESC LIMIT 1 \
+         )\
        ),\
        'shell-wrapper-pseudo'\
      )",
@@ -5605,24 +5633,38 @@ async fn governance_log_payload_shell_parity() -> lemmy_utils::error::LemmyResul
     );
   }
 
-  // HTTP row carries the additive fields introduced by v1-AD-c task 4
-  // (closes GH #77). Shell row must not silently start emitting them
-  // until scripts/brehon/admin-config-write.sh is updated to match.
+  // Both rows must carry the additive fields introduced by v1-AD-c task 4
+  // (closes GH #77 + #84). HTTP and shell paths now both emit
+  // `previous_value` and `previous_from` per option A.
+  //
+  // Important: by this test's setup order (Write #1 = HTTP, Write #2 = shell),
+  // the two rows' `previous_*` fields legitimately DIFFER:
+  //   - HTTP row's previous_* reflects pre-Write-1 state (no prior row → null).
+  //   - Shell row's previous_* reflects post-Write-1 state (Write #1's value).
+  // That divergence is correct behavior, not a parity bug — each row carries
+  // the previous-value the writer observed at action-time.
   assert!(
-    rows[0].payload.get("previous_value").is_some_and(|v| !v.is_null()),
-    "HTTP row must carry previous_value (t4 extension, PRD §8.4 condition 3 amended)",
+    rows[0].payload.get("previous_value").is_some(),
+    "HTTP row must carry previous_value field (t4 extension, PRD §8.4 condition 3 amended)",
   );
   assert!(
-    rows[0].payload.get("previous_from").is_some_and(|v| !v.is_null()),
-    "HTTP row must carry previous_from (t4 extension, PRD §8.4 condition 3 amended)",
+    rows[0].payload.get("previous_from").is_some(),
+    "HTTP row must carry previous_from field (t4 extension, PRD §8.4 condition 3 amended)",
   );
   assert!(
-    rows[1].payload.get("previous_value").is_none(),
-    "shell row must NOT carry previous_value until admin-config-write.sh is updated (option A, chore #5)",
+    rows[1].payload.get("previous_value").is_some(),
+    "shell row must carry previous_value field (closes #84, option A)",
   );
   assert!(
-    rows[1].payload.get("previous_from").is_none(),
-    "shell row must NOT carry previous_from until admin-config-write.sh is updated (option A, chore #5)",
+    rows[1].payload.get("previous_from").is_some(),
+    "shell row must carry previous_from field (closes #84, option A)",
+  );
+  // Shell's previous_value should observe Write #1's row (value 7), since
+  // Write #1's HTTP handler wrote to governance_config too.
+  assert_eq!(
+    rows[1].payload.get("previous_value"),
+    Some(&serde_json::json!(7)),
+    "shell row's previous_value should equal Write #1's value (post-Write-1 state observed)",
   );
 
   Ok(())
