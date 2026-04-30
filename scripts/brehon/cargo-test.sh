@@ -26,6 +26,28 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo "TOOLCHAIN_OK"
 command -v cargo && cargo --version
+
+# ---- libpq discovery on Windows (vcpkg-based, x64-windows dynamic triplet) ----
+# Mirror of the cargo-test.bat sibling's libpq env wiring. Without this, a Git
+# Bash invocation of this script links lemmy_server with no /LIBPATH for libpq
+# and fails at MSVC link.exe with `LNK1181: cannot open input file 'libpq.lib'`.
+# Per feedback_pq_sys_stale_cache.md (PMD #25): the env vars MUST be set in the
+# same shell that invokes cargo, because cargo's pq-sys build fingerprint hashes
+# PQ_LIB_DIR. If unset, cargo selects a stale "PQ_LIB_DIR=NotPresent" build
+# output and emits no rustc-link-search directive.
+case "${OSTYPE:-}" in
+  msys*|cygwin*|win32*)
+    : "${VCPKG_ROOT:=C:\\Users\\barri\\Developer\\vcpkg}"
+    export VCPKG_ROOT
+    export PQ_LIB_DIR="${VCPKG_ROOT}\\installed\\x64-windows\\lib"
+    export PQ_INCLUDE_DIR="${VCPKG_ROOT}\\installed\\x64-windows\\include"
+    # Prepend libpq.dll dir to PATH so the spawned lemmy_server.exe finds it at
+    # e2e runtime. Use Git Bash mount form (`/c/...`) and `:` separator — Git
+    # Bash converts to `;`-separated Windows PATH when invoking Windows processes.
+    export PATH="/c/Users/barri/Developer/vcpkg/installed/x64-windows/bin:${PATH}"
+    echo "PQ_LIB_DIR=${PQ_LIB_DIR}"
+    ;;
+esac
 echo "---"
 cd "$REPO_ROOT"
 
