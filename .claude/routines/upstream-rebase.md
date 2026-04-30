@@ -51,14 +51,20 @@ producing a rebase impact analysis.
    git fetch https://github.com/LemmyNet/lemmy.git main:upstream-main
 
 2. Find the pinned upstream commit from CLAUDE.md (`@ d1975776a` or
-   whatever the current pin is — read CLAUDE.md to confirm).
+   whatever the current pin is — read CLAUDE.md to confirm). The same
+   SHA is also logged in `AGPL-NOTICE.md`; both files track the pin.
 
-3. List commits since the pin:
+3. If the pinned commit matches `upstream-main` HEAD (cheap ref check),
+   exit silently — no work to do, do not run `git log`.
+
+4. List commits since the pin:
    git log --oneline upstream-main ^<pinned-sha>
 
-4. If the count is ZERO, exit silently — do not open a PR. Post nothing.
+5. If the count is ZERO, exit silently — do not open a PR. Post nothing.
+   (Step 3 already covers most zero-commit cases via the cheaper ref
+   check, but step 5 catches any drift between the two.)
 
-5. If the count is non-zero, classify each commit:
+6. If the count is non-zero, classify each commit:
    - **governance-touching** if it modifies any path under:
      - crates/db_schema/src/source/governance/
      - crates/db_views/governance_*/
@@ -70,30 +76,39 @@ producing a rebase impact analysis.
      - crates/server/src/governance.rs
      - migrations/*governance*/
      - crates/api/api_utils/src/plugins.rs (Extism host)
-     - crates/api/api_crud/src/private_message/ (PM hooks per pm-plugin-hooks-stable.md)
+     - crates/api/api_crud/src/private_message/ (PM hooks per
+       `.claude/rules/pm-plugin-hooks-stable.md`)
    - **schema-touching** if it modifies migrations/ or crates/db_schema/
      outside the governance subtree
    - **other** for everything else
 
-6. For each governance-touching commit, dump:
+7. For each governance-touching commit, dump:
    - SHA + subject
    - Full diff stat (`git show --stat <sha>`)
-   - Whether it touches files the fork has modified — check with
-     `git log --all --oneline -- <touched-paths>` filtered to fork commits
+   - Whether it touches files the fork has modified. A "fork commit"
+     is any commit on `barrie-cork/lemmy:governance-v0` whose first-
+     parent ancestry does not include the upstream `LemmyNet/lemmy:main`
+     ref `upstream-main`. Check with:
 
-7. Open a draft PR on barrie-cork/lemmy:
+     ```
+     git log --oneline ^upstream-main governance-v0 -- <touched-paths>
+     ```
+
+     If non-empty, the upstream commit conflicts with fork work.
+
+8. Open a draft PR on barrie-cork/lemmy:
    - Branch: `claude/upstream-rebase-<YYYY-MM-DD>`
    - Base: `governance-v0`
    - Title: `chore(rebase): upstream impact analysis <YYYY-MM-DD> — <N> commits, <M> governance-touching`
    - Body: a markdown summary with three sections:
      - "Summary" — counts by category, recommended action (rebase soon / can defer)
-     - "Governance-touching commits" — the dumps from step 6, in chronological order
+     - "Governance-touching commits" — the dumps from step 7, in chronological order
      - "Schema-touching commits" — SHA + subject for each
      - "AGPL-NOTICE update" — the new pin SHA + `git describe` output, ready to paste
    - Do NOT actually rebase. Do NOT push to governance-v0. The PR is
      analysis only.
 
-8. If a Slack connector is available, post a one-line summary to
+9. If a Slack connector is available, post a one-line summary to
    #brehon-alerts (or whichever channel is connected): "Upstream impact
    <date>: <N> new commits, <M> governance-touching. Analysis: <PR-URL>"
 
@@ -102,10 +117,11 @@ producing a rebase impact analysis.
 - Never modify governance-v0 directly.
 - Never run `cargo` — this is analysis only.
 - Never push to or close existing PRs.
-- If the GitHub connector is missing, skip step 7 and instead leave the
+- If the GitHub connector is missing, skip step 8 and instead leave the
   analysis as a Markdown comment on the routine session — do not crash.
-- If the AGPL-NOTICE pin matches the current upstream HEAD, exit silently
-  (no work to do).
+- The pin matches step 3 above (CLAUDE.md is the source-of-truth;
+  AGPL-NOTICE.md tracks the same SHA). The early-exit logic lives in
+  step 3, not as a separate constraint.
 ```
 
 ## Cost estimate

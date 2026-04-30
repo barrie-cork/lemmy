@@ -60,10 +60,15 @@ After this, only your Telegram account can push messages into the session.
 To get *both* phone DMs and CI/CodeRabbit push events into the same session:
 
 ```bash
-claude --channels \
+claude --dangerously-load-development-channels --channels \
   plugin:telegram@claude-plugins-official \
   server:brehon-webhook
 ```
+
+<!-- cr-issue-#85: development-channel flag is required for the
+     `server:brehon-webhook` channel during the research preview;
+     the alias on line 80 already shows the correct form. -->
+
 
 (Multiple channels can be passed space-separated. The webhook channel is
 defined in `.mcp.json` at the repo root — see `webhook/README.md`.)
@@ -111,9 +116,11 @@ If the token leaks:
 1. Open BotFather in Telegram → `/mybots` → select your bot → API Token →
    Revoke current token → Generate new one
 2. Overwrite the stash:
+
    ```bash
    echo "NEW_TOKEN_HERE" > ~/.claude/brehon-telegram-token.txt
    ```
+
 3. Re-run `/telegram:configure $(cat ~/.claude/brehon-telegram-token.txt)`
 4. Restart Claude Code with the channel flag
 

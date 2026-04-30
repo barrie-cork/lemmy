@@ -41,13 +41,14 @@ constraint).
 ## Push an event
 
 The server listens on `http://127.0.0.1:8788` (localhost only). POST events
-with three required headers:
+with two required headers (`X-Sender`, `X-Kind`) and one optional header
+(`X-Ref`):
 
-| Header     | Purpose                                                                 |
-| :--------- | :---------------------------------------------------------------------- |
-| `X-Sender` | Must match `BREHON_WEBHOOK_SENDERS` (default: `gh-actions,coderabbit,local-cargo`) |
-| `X-Kind`   | Categorises the event for the agent's routing logic                     |
-| `X-Ref`    | Optional. Anything that helps the agent find the source (PR #, commit SHA) |
+| Header     | Required | Purpose                                                                 |
+| :--------- | :------: | :---------------------------------------------------------------------- |
+| `X-Sender` | yes | Must match `BREHON_WEBHOOK_SENDERS` (default: `gh-actions,coderabbit,local-cargo`) |
+| `X-Kind`   | yes | Categorises the event for the agent's routing logic                     |
+| `X-Ref`    | no  | Anything that helps the agent find the source (PR #, commit SHA) |
 
 Examples:
 

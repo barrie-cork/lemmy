@@ -36,6 +36,16 @@ if [[ -f "$FLAG_FILE" ]]; then
   exit 0
 fi
 
+# CR #85: the documented skip condition includes "audit logs already present
+# from prior probes (mid-loop resume case)". Treat any of the four expected
+# audit logs as evidence the audit was started — don't re-emit the reminder.
+if [[ -f ".claude/audit-cargo-check-p.log" ]] \
+  || [[ -f ".claude/audit-cargo-check-features.log" ]] \
+  || [[ -f ".claude/audit-cargo-test.log" ]] \
+  || [[ -f ".claude/audit-cargo-test-negative.log" ]]; then
+  exit 0
+fi
+
 REMINDER="Pre-phase wrapper audit not yet completed for branch ${CURRENT_BRANCH}.
 
 Per .claude/rules/pre-phase-harness-audit.md, run the 4 probes BEFORE task 1:

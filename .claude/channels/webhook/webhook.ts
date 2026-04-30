@@ -67,15 +67,22 @@ Bun.serve({
     const ref = req.headers.get('X-Ref');
     if (ref) meta.ref = ref;
 
-    await mcp.notification({
-      method: 'notifications/claude/channel',
-      params: {
-        content: body,
-        meta,
-      },
-    });
-
-    return new Response('ok');
+    // CR #85: wrap MCP dispatch in try/catch — transport hiccups otherwise
+    // turn into an unstructured failure path for webhook calls. Return 502
+    // on dispatch failure so callers (gh-actions etc.) can retry sensibly.
+    try {
+      await mcp.notification({
+        method: 'notifications/claude/channel',
+        params: {
+          content: body,
+          meta,
+        },
+      });
+      return new Response('ok');
+    } catch (err) {
+      console.error('[brehon-webhook] MCP dispatch failed:', { err, meta });
+      return new Response('upstream dispatch failed', { status: 502 });
+    }
   },
 });
 

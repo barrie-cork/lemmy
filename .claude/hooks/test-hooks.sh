@@ -79,20 +79,36 @@ fi
 echo ""
 echo "=== pre-phase-audit.sh ==="
 
-# Current branch is phase-v1-AD-c, audit flag absent → expect reminder JSON.
+# CR #85 (test-hooks.sh:91): make pre-phase reminder assertion branch-aware.
+# pre-phase-audit.sh exits silently on non-phase branches; the test must
+# match that behavior so it passes on main / governance-v0 / chore branches.
+BRANCH=$(git rev-parse --abbrev-ref HEAD | tr / -)
 OUTPUT=$(echo '{"source":"startup"}' | bash .claude/hooks/pre-phase-audit.sh 2>/dev/null)
 EXIT=$?
-if [[ $EXIT -eq 0 ]] && echo "$OUTPUT" | grep -q "Pre-phase wrapper audit"; then
-  echo "  PASS: emits reminder on phase branch without flag (exit 0, JSON contains reminder)"
-  PASS=$((PASS+1))
+if [[ "$BRANCH" == phase-* ]]; then
+  if [[ $EXIT -eq 0 ]] && echo "$OUTPUT" | grep -q "Pre-phase wrapper audit"; then
+    echo "  PASS: emits reminder on phase branch without flag (exit 0, JSON contains reminder)"
+    PASS=$((PASS+1))
+  else
+    echo "  FAIL: expected reminder JSON, got exit=$EXIT output=$OUTPUT"
+    FAIL=$((FAIL+1))
+  fi
 else
-  echo "  FAIL: expected reminder JSON, got exit=$EXIT output=$OUTPUT"
-  FAIL=$((FAIL+1))
+  if [[ $EXIT -eq 0 ]] && [[ -z "$OUTPUT" ]]; then
+    echo "  PASS: silent on non-phase branch ($BRANCH) (exit 0, no output)"
+    PASS=$((PASS+1))
+  else
+    echo "  FAIL: expected silence on non-phase branch, got exit=$EXIT output=$OUTPUT"
+    FAIL=$((FAIL+1))
+  fi
 fi
 
-# Create flag, expect silence.
-BRANCH=$(git rev-parse --abbrev-ref HEAD | tr / -)
+# CR #85 (test-hooks.sh:107): preserve pre-existing audit flag.
+# If a flag existed before the test ran, the cleanup must NOT delete it —
+# that would silently destroy user state.
 FLAG=".claude/audit-${BRANCH}-complete.flag"
+FLAG_WAS_PRESENT=0
+[[ -e "$FLAG" ]] && FLAG_WAS_PRESENT=1
 touch "$FLAG"
 OUTPUT=$(echo '{"source":"startup"}' | bash .claude/hooks/pre-phase-audit.sh 2>/dev/null)
 EXIT=$?
@@ -103,7 +119,9 @@ else
   echo "  FAIL: expected silent with flag, got exit=$EXIT output=$OUTPUT"
   FAIL=$((FAIL+1))
 fi
-rm -f "$FLAG"
+if [[ $FLAG_WAS_PRESENT -eq 0 ]]; then
+  rm -f "$FLAG"
+fi
 
 echo ""
 echo "=== TOTALS: $PASS passed, $FAIL failed ==="

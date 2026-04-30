@@ -30,8 +30,13 @@ if [[ -z "$COMMAND" ]]; then
   exit 0
 fi
 
-# Allow if the command opts into pipefail explicitly.
-if printf '%s' "$COMMAND" | grep -Eq '(^|;|&&|\|\|)\s*set\s+-o\s+pipefail'; then
+# Allow only when `set -o pipefail` appears BEFORE any pipeline operator
+# in the command. CR #85: the prior unconstrained match let `set -o pipefail`
+# slip through if it appeared *after* the cargo pipeline (where it would have
+# no effect on that pipeline). Require the next non-whitespace token after
+# `pipefail` to be `;` or `&&` (i.e. another statement boundary), so the
+# pipefail directive precedes the cargo pipeline.
+if printf '%s' "$COMMAND" | grep -Eq '(^|;|&&|\|\|)\s*set\s+-o\s+pipefail(\s*;|\s*&&)'; then
   exit 0
 fi
 
