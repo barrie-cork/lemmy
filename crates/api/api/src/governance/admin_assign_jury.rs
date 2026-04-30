@@ -650,7 +650,7 @@ pub(crate) async fn select_eligible_jurors(
   // ============================================================
   let mut chosen: Option<Vec<PersonId>> = None;
   let mut best_score: f64 = -1.0;
-  let mut current_geo_enabled = geo_pref_enabled;
+  let current_geo_enabled = geo_pref_enabled;
 
   let attempts = usize::try_from(max_retries.max(1)).unwrap_or(1);
   for _attempt in 0..attempts {
