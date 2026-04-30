@@ -1,3 +1,19 @@
+// v0 endpoint-count guideline (per ADR-010 + 05-mvp-and-delivery-plan §2):
+// v0 is EXACTLY 11 user-facing endpoints. DTOs in this file that do not map
+// to one of those 11 are explicitly carved out:
+//
+//   - `RevokeEndorsement` — endorsement-management UX flow, not a top-level
+//     v0 endpoint.
+//   - `Admin*` DTOs (`AdminAssignJury`, `AdminCloseCase`,
+//     `AdminTriggerAppealRejury`, `AdminReputationStats`, `AdminSetConfig`,
+//     `AdminGetConfig`, `AdminGetConfigAudit`, `AdminCreateRuleSet`,
+//     `AdminListRuleSets`, `AdminDashboard*`, …) — admin backstops, not
+//     user-facing. Approved as out-of-scope of the 11-endpoint count by
+//     plan §11.2 GOTCHA + Phase 5b/5c decision notes.
+//
+// New non-Admin DTOs added here that don't correspond to one of the 11
+// require a new carve-out entry above. Closes #40.
+
 use chrono::{DateTime, Utc};
 use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId};
 use lemmy_db_schema_file::{

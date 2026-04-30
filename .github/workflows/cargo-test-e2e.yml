@@ -58,10 +58,10 @@ jobs:
           submodules: recursive
 
       - name: Install Rust toolchain
+        # Pinned in rust-toolchain.toml (1.95). With no `toolchain:` input,
+        # dtolnay/rust-toolchain@master reads rust-toolchain.toml. Specifying
+        # `toolchain: stable` would silently override the pin (closes #37).
         uses: dtolnay/rust-toolchain@master
-        with:
-          # Pinned in rust-toolchain.toml; the action reads that file.
-          toolchain: stable
 
       - name: Install libpq
         run: |
