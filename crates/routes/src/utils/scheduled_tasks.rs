@@ -78,6 +78,18 @@ impl Drop for RunningGuard {
   }
 }
 
+// Concurrency guard for the hourly Brehon appeal-window-expiry tick.
+// Mirrors REPUTATION_SNAPSHOT_RUNNING + RunningGuard above.
+static APPEAL_WINDOW_EXPIRY_RUNNING: AtomicBool = AtomicBool::new(false);
+
+struct AppealWindowExpiryRunningGuard;
+
+impl Drop for AppealWindowExpiryRunningGuard {
+  fn drop(&mut self) {
+    APPEAL_WINDOW_EXPIRY_RUNNING.store(false, Ordering::Release);
+  }
+}
+
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // https://github.com/mdsherry/clokwerk/issues/38
@@ -229,6 +241,35 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         }
         Err(e) => warn!("snapshot staleness check: get_conn failed: {e}"),
       }
+    }
+  });
+
+  // Brehon governance: appeal-window expiry. Hourly tick — finds
+  // Decided cases whose appeal_window_expires_at is past and flips
+  // them to Closed.
+  //
+  // Concurrency guard mirrors REPUTATION_SNAPSHOT_RUNNING. Disable
+  // for e2e tests via BREHON_DISABLE_APPEAL_WINDOW_JOB=1 so test
+  // fixtures don't race the cron.
+  let context_appeal_expiry = context.reset_request_count();
+  scheduler.every(CTimeUnits::hour(1)).run(move || {
+    let context = context_appeal_expiry.reset_request_count();
+    async move {
+      if std::env::var("BREHON_DISABLE_APPEAL_WINDOW_JOB").as_deref() == Ok("1") {
+        return;
+      }
+      if APPEAL_WINDOW_EXPIRY_RUNNING
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+      {
+        warn!("appeal_window_expiry: previous batch still running, skipping this tick");
+        return;
+      }
+      let _guard = AppealWindowExpiryRunningGuard;
+      lemmy_api::governance::appeal_window_expiry::run_appeal_window_expiry_batch(&context)
+        .await
+        .inspect_err(|e| warn!("Failed to run appeal_window_expiry batch: {e}"))
+        .ok();
     }
   });
 
