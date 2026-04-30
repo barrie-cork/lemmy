@@ -40,8 +40,24 @@ async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
 // ============================================================================
 
 mod governance_fixtures {
-  use diesel::{PgConnection, connection::SimpleConnection};
+  use actix_web::web::Data;
+  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
   use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{InstanceId, PersonId};
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
   use std::error::Error;
 
   /// Migrations are embedded at compile time from the repo-root `migrations/`
@@ -109,6 +125,107 @@ mod governance_fixtures {
   /// Build a standard test DB URL for the given mapped host port.
   pub fn db_url(host_port: u16) -> String {
     format!("postgres://lemmy:password@localhost:{host_port}/lemmy")
+  }
+
+  pub const SIGNING_SEED_HEX: &str =
+    "0000000000000000000000000000000000000000000000000000000000000001";
+
+  /// Spin a fresh Postgres, apply the full Brehon schema, build a real
+  /// `LemmyContext` wrapped in `Data`, and return the context handle,
+  /// the container guard (keep alive via `_container`), and the db URL.
+  pub async fn bootstrap() -> LemmyResult<(
+    testcontainers::ContainerAsync<testcontainers::GenericImage>,
+    Data<LemmyContext>,
+    String,
+  )> {
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    }
+
+    let (container, host_port) = start_postgres()
+      .await
+      .map_err(|e| anyhow::anyhow!("start_postgres: {e}"))?;
+    let db_url = db_url(host_port);
+    unsafe {
+      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+    }
+
+    {
+      let mut sync_conn = PgConnection::establish(&db_url)
+        .map_err(|e| -> Box<dyn Error + Send + Sync> {
+          format!("PgConnection::establish: {e}").into()
+        })
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+      apply_all_schema(&mut sync_conn)
+        .map_err(|e| anyhow::anyhow!("apply_all_schema: {e}"))?;
+    }
+
+    let pool: ActualDbPool = build_db_pool_for_tests();
+    let client = client_builder(&SETTINGS).build()?;
+    let middleware_client = ClientBuilder::new(client).build();
+    let secret = Secret { id: 0, jwt_secret: String::new().into() };
+    let rate_limit = RateLimit::with_debug_config();
+    let context = Data::new(LemmyContext::create(
+      pool,
+      middleware_client.clone(),
+      middleware_client,
+      secret,
+      rate_limit,
+    ));
+
+    Ok((container, context, db_url))
+  }
+
+  /// Seed a person/local_user pair, returning both the PersonId and the
+  /// `LocalUserView` callers need to invoke handlers.
+  pub async fn seed_user(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<(PersonId, LocalUserView)> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    let view = LocalUserView::read_person(&mut ctx.pool(), person.id).await?;
+    Ok((person.id, view))
+  }
+
+  /// Seed a community for use in governance tests.
+  pub async fn seed_community(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+  ) -> LemmyResult<Community> {
+    let community_form = CommunityInsertForm::new(
+      instance_id,
+      "testcomm".to_string(),
+      "Test Community".to_string(),
+      "comm-pubkey".to_string(),
+    );
+    Ok(Community::create(&mut ctx.pool(), &community_form).await?)
+  }
+
+  /// Seed `count` jurors and return their PersonIds in insertion order.
+  /// Names are `juror_<i>` zero-padded to ensure sort stability in lookups.
+  pub async fn seed_jurors(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    count: usize,
+  ) -> LemmyResult<Vec<PersonId>> {
+    let mut ids = Vec::with_capacity(count);
+    for i in 0..count {
+      let name = format!("juror_{i:02}");
+      let (pid, _) = seed_user(ctx, instance_id, &name, false).await?;
+      ids.push(pid);
+    }
+    Ok(ids)
   }
 }
 
@@ -6968,132 +7085,23 @@ async fn admin_audit_stream_emits_frame_on_config_change()
 // applies upstream of the fallback and the snapshot fields still land.
 
 mod v1_jm_b_fixtures {
-  use actix_web::web::Data;
   use chrono::{Duration as ChronoDuration, Utc};
   use diesel::{Connection as _, PgConnection};
   use diesel_async::{AsyncPgConnection, RunQueryDsl};
-  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
-  use lemmy_db_schema::source::{
-    community::{Community, CommunityInsertForm},
-    governance::{
-      moderation_case::ModerationCaseInsertForm,
-      reputation_event::ReputationEventInsertForm,
-      reputation_snapshot::ReputationSnapshotInsertForm,
-    },
-    local_user::{LocalUser, LocalUserInsertForm},
-    person::{Person, PersonInsertForm},
-    secret::Secret,
+  use lemmy_db_schema::source::governance::{
+    moderation_case::ModerationCaseInsertForm,
+    reputation_event::ReputationEventInsertForm,
+    reputation_snapshot::ReputationSnapshotInsertForm,
   };
   use lemmy_db_schema_file::{
-    InstanceId,
     PersonId,
     enums::{
       CaseSeverity, CaseStatus, CaseTargetType, ReputationDimension, SeverityTier,
     },
     schema::{moderation_case, reputation_event, reputation_snapshot},
   };
-  use lemmy_db_views_local_user::LocalUserView;
-  use lemmy_diesel_utils::{
-    connection::{ActualDbPool, build_db_pool_for_tests},
-    traits::Crud,
-  };
-  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
-  use reqwest_middleware::ClientBuilder;
+  use lemmy_utils::error::LemmyResult;
   use std::error::Error;
-
-  pub async fn bootstrap() -> LemmyResult<(
-    testcontainers::ContainerAsync<testcontainers::GenericImage>,
-    Data<LemmyContext>,
-    String,
-  )> {
-    const SIGNING_SEED_HEX: &str =
-      "0000000000000000000000000000000000000000000000000000000000000001";
-    unsafe {
-      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-    }
-
-    let (container, host_port) = super::governance_fixtures::start_postgres()
-      .await
-      .map_err(|e| anyhow::anyhow!("start_postgres: {e}"))?;
-    let db_url = super::governance_fixtures::db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
-
-    {
-      let mut sync_conn = PgConnection::establish(&db_url)
-        .map_err(|e| -> Box<dyn Error + Send + Sync> {
-          format!("PgConnection::establish: {e}").into()
-        })
-        .map_err(|e| anyhow::anyhow!("{e}"))?;
-      super::governance_fixtures::apply_all_schema(&mut sync_conn)
-        .map_err(|e| anyhow::anyhow!("apply_all_schema: {e}"))?;
-    }
-
-    let pool: ActualDbPool = build_db_pool_for_tests();
-    let client = client_builder(&SETTINGS).build()?;
-    let middleware_client = ClientBuilder::new(client).build();
-    let secret = Secret { id: 0, jwt_secret: String::new().into() };
-    let rate_limit = RateLimit::with_debug_config();
-    let context = Data::new(LemmyContext::create(
-      pool,
-      middleware_client.clone(),
-      middleware_client,
-      secret,
-      rate_limit,
-    ));
-
-    Ok((container, context, db_url))
-  }
-
-  pub async fn seed_user(
-    ctx: &LemmyContext,
-    instance_id: InstanceId,
-    name: &str,
-    is_admin: bool,
-  ) -> LemmyResult<(PersonId, LocalUserView)> {
-    let person_form = PersonInsertForm::test_form(instance_id, name);
-    let person = Person::create(&mut ctx.pool(), &person_form).await?;
-    let mut lu_form = if is_admin {
-      LocalUserInsertForm::test_form_admin(person.id)
-    } else {
-      LocalUserInsertForm::test_form(person.id)
-    };
-    lu_form.accepted_application = Some(true);
-    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
-    let view = LocalUserView::read_person(&mut ctx.pool(), person.id).await?;
-    Ok((person.id, view))
-  }
-
-  pub async fn seed_community(
-    ctx: &LemmyContext,
-    instance_id: InstanceId,
-  ) -> LemmyResult<Community> {
-    let community_form = CommunityInsertForm::new(
-      instance_id,
-      "testcomm".to_string(),
-      "Test Community".to_string(),
-      "comm-pubkey".to_string(),
-    );
-    Ok(Community::create(&mut ctx.pool(), &community_form).await?)
-  }
-
-  /// Seed `count` jurors and return their PersonIds in insertion order.
-  /// Names are `juror_<i>` zero-padded to ensure sort stability in lookups.
-  pub async fn seed_jurors(
-    ctx: &LemmyContext,
-    instance_id: InstanceId,
-    count: usize,
-  ) -> LemmyResult<Vec<PersonId>> {
-    let mut ids = Vec::with_capacity(count);
-    for i in 0..count {
-      let name = format!("juror_{i:02}");
-      let (pid, _) = seed_user(ctx, instance_id, &name, false).await?;
-      ids.push(pid);
-    }
-    Ok(ids)
-  }
 
   /// Insert a case directly with the given severity_tier. `creator_id` is
   /// NULL so the admin is not excluded from the panel. `community_id` is
@@ -7105,6 +7113,11 @@ mod v1_jm_b_fixtures {
     target: PersonId,
     severity_tier: SeverityTier,
   ) -> Result<lemmy_db_schema::newtypes::ModerationCaseId, Box<dyn Error + Send + Sync>> {
+    let severity = match severity_tier {
+      SeverityTier::Minor => CaseSeverity::Low,
+      SeverityTier::Moderate => CaseSeverity::Medium,
+      SeverityTier::Severe => CaseSeverity::High,
+    };
     let form = ModerationCaseInsertForm {
       community_id: None,
       creator_id: None,
@@ -7115,7 +7128,7 @@ mod v1_jm_b_fixtures {
       target_community_id: None,
       target_remote_url: None,
       reason_code: "v1_jm_b_test".to_string(),
-      severity: CaseSeverity::default(),
+      severity,
       severity_tier: Some(severity_tier),
       status: CaseStatus::Open,
       threshold_score: 1,
@@ -7218,14 +7231,14 @@ async fn admin_assign_jury_severity_tier_regular_minor_panel_5_jurors()
   use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
 
   use lemmy_db_schema::source::instance::Instance;
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_rm", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_rm", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_rm", false).await?;
-  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_rm", false).await?;
+  let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
     .await
@@ -7279,14 +7292,14 @@ async fn admin_assign_jury_severity_tier_regular_severe_panel_7_jurors()
   use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
 
   use lemmy_db_schema::source::instance::Instance;
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_rs", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_rs", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_rs", false).await?;
-  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_rs", false).await?;
+  let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Severe)
     .await
@@ -7346,14 +7359,14 @@ async fn admin_assign_jury_severity_tier_founder_severe_panel_9_jurors()
   };
 
   use lemmy_db_schema::source::instance::Instance;
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_fs", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_fs", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_fs", false).await?;
-  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_fs", false).await?;
+  let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   // Elevate target to Founder via reputation_event.
   {
@@ -7422,14 +7435,14 @@ async fn admin_assign_jury_writes_selected_under_constraints_jsonb()
   use serde_json::Value;
 
   use lemmy_db_schema::source::instance::Instance;
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_suc", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_suc", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_suc", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_suc", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   // Seed reputation_snapshot rows so the strict eligibility path succeeds
   // and the constraint record reflects steady-state "applied" values
@@ -7502,14 +7515,14 @@ async fn admin_assign_jury_emits_severity_tier_frozen_governance_log()
   use serde_json::Value;
 
   use lemmy_db_schema::source::instance::Instance;
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_stf", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_stf", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_stf", false).await?;
-  let _jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_stf", false).await?;
+  let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
     .await
@@ -7563,7 +7576,7 @@ async fn config_get_int_cascade_resolves_founder_severe_to_bare_then_const()
   use lemmy_api::governance::config::{ConfigCache, Scope, get_int_cascade};
   use lemmy_diesel_utils::connection::DbPool;
 
-  let (_container, _context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, _context, db_url) = governance_fixtures::bootstrap().await?;
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
 
   // ---- Step 1 — seed `jury.panel_size.severe = 7` then assert cascade
@@ -7688,14 +7701,14 @@ async fn admin_assign_jury_small_pool_triggers_r1_relaxation()
     schema::{governance_log, jury_constraint_violation_log},
   };
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_r1", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_r1", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_r1", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 5).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_r1", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 5).await?;
 
   // Unlock the strict eligibility path for all 5 jurors.
   {
@@ -7803,13 +7816,13 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
     EmergencyRemoveTarget, emergency_remove_open_case,
   };
   use lemmy_db_schema::source::instance::Instance;
-  use lemmy_db_schema_file::{enums::SeverityTier, schema::moderation_case};
+  use lemmy_db_schema_file::{enums::{CaseStatus, SeverityTier}, schema::moderation_case};
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (admin_id, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_er", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_er", true).await?;
 
   let case_id = emergency_remove_open_case(
     &mut context.pool(),
@@ -7828,6 +7841,7 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
   let row: (
     SeverityTier,
+    CaseStatus,
     Option<i32>,
     Option<i32>,
     Option<i32>,
@@ -7835,6 +7849,7 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
     .filter(moderation_case::id.eq(case_id))
     .select((
       moderation_case::severity_tier,
+      moderation_case::status,
       moderation_case::panel_size_snapshot,
       moderation_case::quorum_snapshot,
       moderation_case::threshold_count_snapshot,
@@ -7848,16 +7863,21 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   );
   assert_eq!(
     row.1,
+    CaseStatus::EmergencyRemove,
+    "emergency_remove opens case with status = EmergencyRemove (ADR-013)"
+  );
+  assert_eq!(
+    row.2,
     Some(7),
     "panel_size_snapshot = 7 (jury.panel_size.regular.severe seed; PR #95 cr-3)"
   );
   assert_eq!(
-    row.2,
+    row.3,
     Some(5),
     "quorum_snapshot = ceil(7 × 0.71) = 5 (PR #95 cr-3)"
   );
   assert_eq!(
-    row.3,
+    row.4,
     Some(6),
     "threshold_count_snapshot = ceil(7 × 0.75) = 6 (PR #95 cr-3)"
   );
@@ -7880,12 +7900,12 @@ async fn admin_emergency_remove_seats_severe_panel_with_constraint_record()
   use lemmy_db_schema_file::schema::{governance_log, jury_assignment};
   use serde_json::Value;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (admin_id, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_erp", true).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_erp", true).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   // Reputation snapshots scoped to the same community as the case so
   // the strict eligibility join's
@@ -8021,15 +8041,15 @@ async fn submit_jury_vote_severe_panel_meets_threshold()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc1", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc1", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc1", false).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc1", false).await?;
   // Seed 9 jurors so admin_assign_jury can pick 7 and snapshot panel_size = 7.
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 9).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 9).await?;
 
   // R2: seed jury_eligible snapshots BEFORE admin_assign_jury.
   {
@@ -8180,14 +8200,14 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc2", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc2", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc2", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc2", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 7).await?;
 
   {
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
@@ -8396,14 +8416,14 @@ async fn submit_jury_vote_writes_appeal_window_default()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc3", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc3", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc3", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc3", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 7).await?;
 
   {
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
@@ -8515,14 +8535,14 @@ async fn submit_jury_vote_writes_appeal_window_live_config()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc4", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc4", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc4", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc4", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 7).await?;
 
   {
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
@@ -8647,14 +8667,14 @@ async fn v0_case_completes_under_v0_rules_after_v1_config_flip()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc5", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc5", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc5", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc5", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 7).await?;
 
   {
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
@@ -8840,14 +8860,14 @@ async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
   };
   use lemmy_db_views_local_user::LocalUserView;
 
-  let (_container, context, db_url) = v1_jm_b_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-  let _community = v1_jm_b_fixtures::seed_community(&context, instance.id).await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
   let (_, admin_view) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "admin_jmc6", true).await?;
+    governance_fixtures::seed_user(&context, instance.id, "admin_jmc6", true).await?;
   let (target, _) =
-    v1_jm_b_fixtures::seed_user(&context, instance.id, "target_jmc6", false).await?;
-  let jurors = v1_jm_b_fixtures::seed_jurors(&context, instance.id, 7).await?;
+    governance_fixtures::seed_user(&context, instance.id, "target_jmc6", false).await?;
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 7).await?;
 
   {
     let mut conn = AsyncPgConnection::establish(&db_url).await?;

@@ -1,5 +1,52 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 87,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:00:00.000Z",
+      "workflow_run_id": 25081966699,
+      "branch": "junior/role-impl-task-issue-96-cluster2-see-claude-prps-briefs-issue-96-impl-1b-md-50",
+      "phase_task": "issue-96-cluster2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 86,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:05:00.000Z",
+      "workflow_run_id": 25081578635,
+      "branch": "junior/role-impl-task-issue-96-cluster1-see-claude-prps-briefs-issue-96-impl-1a-md-49",
+      "phase_task": "issue-96-cluster1",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 90,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-30T13:00:00.000Z",
+      "workflow_run_id": 25173804973,
+      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
+      "phase_task": 5,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "renumber_note": "renumbered from id 89 due to id collision with origin resolved #89 (different entry content); merge 2026-04-30"
+    }
+  ],
   "resolved": [
     {
       "id": 80,

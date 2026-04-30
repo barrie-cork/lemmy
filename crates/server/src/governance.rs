@@ -25,4 +25,9 @@ pub fn schedule_governance_jobs(_context: &LemmyContext) {
      lemmy_api::governance::reputation_snapshot::run_snapshot_batch \
      (15-minute tick in scheduled_tasks::setup; BREHON_DISABLE_SNAPSHOT_JOB=1 disables for e2e)",
   );
+  info!(
+    "governance: appeal-window expiry job registered via \
+     lemmy_api::governance::appeal_window_expiry::run_appeal_window_expiry_batch \
+     (hourly tick in scheduled_tasks::setup; BREHON_DISABLE_APPEAL_WINDOW_JOB=1 disables for e2e)",
+  );
 }
