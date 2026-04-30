@@ -509,6 +509,17 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** Nothing in v0 or v1. This is a v2-research item.
 - **Target:** v2 security-hardening research spike. Revisit when v1 Phase 6 (federation) is shipping.
 
+### OQ-028 — Named governance-profile bundles for v1 tuning rollout
+
+- **Opened:** 2026-04-30
+- **Owner:** TBD (solo dev)
+- **Question:** Several v1-tunable values (jury thresholds, reputation deltas, decay rates, threshold formula constants, sponsor-gate strategy, jury parameters) will accrue evidence from internal dev-team usage between v0 ship and the OQ-011 pilot launch. The dev team is a small, homogeneous sample — values that "feel right" internally may be wrong for a grassroots-organisation pilot. Do we ship a single set of v1 defaults derived from dev-team dogfooding (which collapses dev-team and pilot evidence at first overwrite), or a **set of named profiles** (e.g. `dev-team-2026Q3`, `pilot-1`, `canonical-v1`) so the pilot retro can fork its own profile rather than overwrite a single canonical default?
+- **Current lean:** Named profiles. v0's existing `governance_config` table (Phase 5a task 50) is keyed by `(scope, key)`; v1 introduces a parallel `governance_config_profile` row keyed by profile name with a top-level `config.profile.active` pointer. Profile rows shadow individual `governance_config` keys at read time. v0 ships one implicit profile (`v0-defaults`); v1 promotes accumulated dev-team evidence into a named `dev-team-2026Q3` profile; the OQ-011 pilot launch creates `pilot-1` by copy-on-write rather than overwriting `dev-team-2026Q3`. Treat dev-team-tuned defaults as a **starting point**, not the canonical, so the comparison between dev-team and pilot evidence is preserved rather than collapsed at first overwrite. Profile switching is an instance-admin action via the OQ-018 admin config write endpoint when that lands.
+- **Candidate dogfood-tunable OQs that feed v1 profile rollout:** OQ-006 (case threshold formula constants — `clamp_max=2.0` ceiling explicitly flagged for pilot-week retro), OQ-013 resolved deltas (`+5` endorsement_strength / `+5` participation_consistency at endorsement creation), OQ-019 (`participation_consistency` event sources — weekly cadence, `+1` per active week / `-2` per dormant 30 days), OQ-020 (sponsor gate-strategy expansion — which v1 strategies the pilot actually needs), OQ-024 resolved liability floor (`zero` v0 default vs `unbounded` vs `honour_price_fraction`), OQ-025 (sponsor grace-window magnitudes — 24/72/168h placeholders), OQ-003 amended (Restoration sub-variants — `Apology | ContentCorrection | CommunityService` only meaningful once jurors actually want to pick them), ADR-007 jury parameters (5→7 jurors, severity thresholds 60%/75%, diversity constraints — the diversity constraints in particular were noted in ADR-007 as needing real data to tune).
+- **Out of scope of dogfood resolution:** OQ-002 (rule-set versioning — schema), OQ-010 (signing keys / HSM — security/ops), OQ-018 (admin config write endpoint shape — API design), OQ-026 (status-aware rule extension — schema architecture). These are architectural choices, not tuning-by-experience choices, and the profile concept does not apply to them.
+- **Blocks:** Nothing in v0. Becomes relevant once v1 §7.1 governance-mechanics work begins.
+- **Target:** Before v1 design phase begins. Earlier resolution is better — every internal usage between now and the pilot is evidence that should be captured against a known profile name rather than thrown away.
+
 ### OQ-V1-AD-01 — Server-rendered HTML page framework for admin dashboard
 
 - **Opened:** 2026-04-19
@@ -584,3 +595,6 @@ OQ-V1-JM-07 opened under v1-JM-b Task 1 per plan §7.1. Post-JM-b general case-o
 
 **2026-04-25** — *99*
 OQ-027 opened (v2-research): Autonomi as governance-log anchor and evidence-storage backend. Four options (anchoring-only / +evidence / +x0x comms / no Autonomi). Lean (b) — storage-layer fit is strong; comms layer (x0x) deferred pending maturity. References ADR-002 (no conflict), ADR-003 (public memory alignment). Blocks nothing in v0/v1; target is v2 security-hardening research spike.
+
+**2026-04-30** — *99*
+OQ-028 (named governance-profile bundles for v1 tuning rollout) opened. Captures the dogfood-vs-pilot evidence-preservation problem: dev-team usage between v0 ship and the OQ-011 pilot launch produces tuning evidence for OQ-006 / OQ-013 / OQ-019 / OQ-020 / OQ-024 / OQ-025 / OQ-003 / ADR-007, but the dev team is a homogeneous sample. Named profiles preserve the dev-team-vs-pilot comparison rather than collapsing it at first overwrite. Architectural OQs (OQ-002 / OQ-010 / OQ-018 / OQ-026) explicitly excluded — they are not tuning-by-experience choices.
