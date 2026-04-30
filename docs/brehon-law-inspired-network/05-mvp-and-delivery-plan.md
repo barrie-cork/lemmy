@@ -180,6 +180,10 @@ Post-MVP work is split into three staged releases. Each is independently shippab
 
 Finishes the governance mechanic. Brings jury parameters and reputation model up to the full spec, and ships self-host packaging so other communities can stand up an instance without reverse-engineering the source.
 
+#### Governance-profile bundles
+
+Several v1-tunable values (jury thresholds, reputation deltas, formula constants, sponsor-gate strategy, jury parameters) accrue evidence from internal dev-team usage between v0 ship and the OQ-011 pilot launch. The dev team is a small, homogeneous sample, so v1 introduces **named governance profiles** (e.g. `dev-team-2026Q3`, `pilot-1`, `canonical-v1`) so dev-team-tuned defaults bundle into a named starting profile rather than overwriting a single canonical default. Pilot retros fork their own profile by copy-on-write, preserving the dev-team-vs-pilot evidence comparison rather than collapsing it. See [99 OQ-028](99-decisions-and-open-questions.md) for the profile mechanic and the list of dogfood-tunable OQs that feed v1 profile rollout.
+
 #### Governance mechanics
 
 - Jury size increase to 7
