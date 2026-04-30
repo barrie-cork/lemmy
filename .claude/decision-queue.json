@@ -63,6 +63,21 @@
       "answer": "Workflow run 25073660917 on junior/role-impl-task-v1-jm-d-task-4-see-claude-prps-briefs-jm-d-impl-4-md-45 completed with conclusion=failure. cargo clippy failed with error: unused import `appeal::Appeal` at crates/api/api/src/governance/admin_assign_jury.rs:62:5.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-04-28T19:53:15.560Z"
+    },
+    {
+      "id": 89,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-30T13:00:00.000Z",
+      "workflow_run_id": 25173804973,
+      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
+      "phase_task": 5,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
