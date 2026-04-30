@@ -17,9 +17,21 @@ below and follows it step by step.
 so the BM agent cannot call `/prp-core:prp-review` itself. If the
 parent wants a full `/prp-review` run, the parent invokes it first
 and then runs `/bm-prp-review <N>` so BM ingests the resulting
-`.claude/PRPs/reviews/pr-<N>-review.md`. Otherwise, BM runs the cargo
-steps itself (check, clippy, test --no-run) via its `Bash` tool and
-captures logs per `cargo-output-capture.md`.
+`.claude/PRPs/reviews/pr-<N>-review.md`.
+
+**The markdown report is REQUIRED.** If `pr-<N>-review.md` is missing,
+BM STOPS and tells the user to run `/prp-review` first. BM does NOT
+proceed with a partial `source: claude` review derived only from cargo
+output, because that path skips the ADR / cross-cutting / API-shape
+checks that the full `/prp-review` performs. Emitting an incomplete
+`source: claude` set would let blocking ADR violations slip past the
+merge gate.
+
+<!-- cr-8 (closes #88): the prior fallback path described only cargo
+     capture but the command still labelled findings as `source: claude`,
+     which the schema treats as ADR-/cross-cutting-aware. Make the full
+     `/prp-review` mandatory rather than emit incomplete claude-* rows. -->
+
 
 Invoke:
 
@@ -164,8 +176,14 @@ After merging, set the YAML's top-level `recommendation:`:
 |---|---|
 | Any `critical` open in `fix-in-pr` | `block` |
 | Any `major` open in `fix-in-pr` AND no critical | `request-changes` |
-| Only `medium`/`low`/`nit` open | `approve` |
-| All `bucket: done` or `wont-fix` | `approve` |
+| Only `medium`/`low`/`nit` open in `fix-in-pr` | `approve` |
+| All remaining findings in `bucket: rebut` / `carry-forward` / `done` / `wont-fix` (no `fix-in-pr` rows of any severity) | `approve` |
+
+<!-- cr-9 (closes #88): a PR with no open `fix-in-pr` rows could
+     previously keep a non-`approve` recommendation if all surviving
+     findings were `rebut`/`carry-forward`/`done`/`wont-fix` only,
+     blocking `/bm-merge`. The fourth row makes that explicit. -->
+
 
 This is the BM's recommendation, not auto-posted. `/bm-triage` reads
 this when drafting the digest comment.

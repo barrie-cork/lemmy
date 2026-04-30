@@ -73,13 +73,23 @@ yq '.counters' .claude/PRPs/reviews/pr-{N}-findings.yaml
 |---|---|
 | `critical.open == 0` | YES (per `feedback_coderabbit_block_merge_critical.md`) |
 | `major.open == 0` | YES (or all in `bucket: rebut|carry-forward|wont-fix` with rationale) |
-| All `fix-in-pr` rows have `addressed_in` SHA | YES |
+| **No `fix-in-pr` rows remain (all `fix-in-pr` work has been moved to `bucket: done` with an `addressed_in` SHA)** | YES |
 | `recommendation: approve` | YES |
+
+<!-- cr-2 (closes #88): the findings schema reserves `addressed_in` for
+     `bucket: done`, not for `bucket: fix-in-pr` (which is "still pending
+     a code change"). The merge gate now requires zero remaining `fix-in-pr`
+     rows; any addressed work must have moved to `bucket: done` carrying
+     its `addressed_in` SHA. -->
 
 If any check fails, STOP and print the exact rows blocking merge:
 
 ```bash
-yq '.findings[] | select(.bucket=="fix-in-pr" and .addressed_in==null)' \
+# Any unaddressed fix-in-pr work — must move to bucket: done before merge
+yq '.findings[] | select(.bucket=="fix-in-pr")' \
+  .claude/PRPs/reviews/pr-{N}-findings.yaml
+# Any done-bucket row missing its commit SHA — schema-invalid
+yq '.findings[] | select(.bucket=="done" and .addressed_in==null)' \
   .claude/PRPs/reviews/pr-{N}-findings.yaml
 ```
 
@@ -107,11 +117,16 @@ gh pr view {N} --repo barrie-cork/lemmy \
   --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS" and .conclusion != null) | {name, conclusion, detailsUrl}'
 ```
 
-If any check is FAILURE / CANCELLED / TIMED_OUT / null (still
-running): STOP and list them.
+If any check is FAILURE / CANCELLED / TIMED_OUT: STOP and list them.
 
-If checks are PENDING but not failing: ASK user "checks still
-running — wait or proceed anyway?"
+If any check is PENDING / null / still-running: STOP and wait. Re-poll
+every 30-60 seconds until all required checks settle, then re-evaluate
+the gate. Never offer "proceed anyway" — merging while a required check
+is unsettled races CI and can land a PR before a blocking signal arrives.
+
+<!-- cr-3 (closes #88): the prior "proceed anyway" branch was unsafe —
+     a merge gate must wait for all required checks to settle, not race them. -->
+
 
 ### 2.4 No DQ pending that mentions this PR
 

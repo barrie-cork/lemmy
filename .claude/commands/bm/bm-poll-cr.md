@@ -89,9 +89,17 @@ in `.cr-cache/` for Phase 3 to parse.
 ```bash
 gh api --paginate "repos/barrie-cork/lemmy/pulls/{N}/reviews" \
   --jq '.[] | select(.user.login == "coderabbitai[bot]")
-        | {kind: "review", id, submitted_at, body, html_url, state}' \
+        | {kind: "review", id, created_at: .submitted_at, body, html_url, state}' \
   > .claude/PRPs/reviews/.cr-cache/pr-{N}-reviews.jsonl
 ```
+
+<!-- cr-4 (closes #88): aliased `.submitted_at` to a common `created_at`
+     field so PR-level review items sort with the same key as inline /
+     issue comments. Phase 4's `cr-<seq>` chronological sort would
+     otherwise see a missing `created_at` on review items and assignment
+     would drift between polls. The same alias must be applied to the
+     issue-comments query at line ~361 below. -->
+
 
 ### 2.2 In-line review comments (per file/line)
 
@@ -180,6 +188,17 @@ contains procedural signals worth ingesting. Two patterns to look for:
    informational; do NOT emit findings. Log to runlog as
    `walkthrough_summary: "..."` for human reference.
 
+<!-- cr-5 (closes #88): walkthrough-derived findings must NOT be keyed
+     solely by `cr_url` because one walkthrough comment can yield
+     multiple findings (one per `❌ Warning` row), all sharing the same
+     comment URL. Phase 4's identity for walkthrough rows is the tuple
+     `(source, cr_url, check_name)` where `check_name` is the failed-
+     check name from the `❌ Warning` row's first column. For inline /
+     review-level comments (which always map 1:1 with their URL),
+     `(source, cr_url)` is still sufficient. The same disambiguation
+     applies to the section around lines 194-197 below. -->
+
+
 If parser finds zero actionable findings on a non-draft PR open >30
 min, log a warning to runlog AND emit a top-level `notes:` field on
 the YAML (CR may have failed silently or the bot is throttled).
@@ -192,7 +211,10 @@ For each CR comment, the stable `id` is `cr-<seq>` where `<seq>` is
 assigned in chronological order across all three sources (review +
 inline + issue/walkthrough findings) on first poll. Re-polls:
 
-- Match existing finding by `(source, cr_url)` pair.
+- Match existing finding by `(source, cr_url)` for inline / review-
+  level rows, or `(source, cr_url, check_name)` for walkthrough-row
+  findings (per cr-5 above — one walkthrough comment can yield several
+  findings, all sharing the same comment URL).
 - If found → update `posted_at`, `summary`, `notes` only. Preserve
   `bucket`, `addressed_in`, `rationale`.
 - If new → assign next `cr-<seq+1>` and append.
@@ -208,16 +230,34 @@ Never renumber or reorder. The findings YAML is append-mostly; the
 
 Before any merge work, compare the PR's current `headRefOid`
 (captured in Phase 1) against the YAML's `last_polled_head_sha` (if
-the YAML exists). Then count the new CR comments.
+the YAML exists). Compute a **fingerprint** of the fetched comment
+set to detect edits and deletions:
 
-| Head SHA changed? | New CR comments? | Action |
+```bash
+# Fingerprint = sha256 of newline-joined "<id>:<sha256(body)>" entries,
+# sorted by id. Captures: new comments, edited bodies, deleted ids
+# (deleted ids drop from the fingerprint).
+jq -r '.[] | "\(.id):\(.body | @base64)"' \
+  .claude/PRPs/reviews/.cr-cache/pr-{N}-*.jsonl \
+  | sort | sha256sum | awk '{print $1}'
+```
+
+Compare to the YAML's `last_polled_fingerprint` (if present).
+
+| Head SHA changed? | Fingerprint changed? | Action |
 |---|---|---|
 | No | No | **SKIP write.** Print "no change since poll #N" and STOP cleanly. Do not bump `poll_count`, do not update `last_poll_at`. |
-| No | Yes | PROCEED (CR posted without a code change — common for late-arriving findings). |
+| No | Yes | PROCEED (CR posted/edited/deleted without a code change — common for late-arriving findings or CR re-summarisation). |
 | Yes | Either | PROCEED. |
 
-This guards against poll-as-curiosity inflating the counter. The YAML
-stores `last_polled_head_sha` after every PROCEED-write.
+The YAML stores `last_polled_head_sha` AND `last_polled_fingerprint`
+after every PROCEED-write.
+
+<!-- cr-6 (closes #88): "head SHA + new comment count" was insufficient —
+     CR can edit a finding, rewrite a summary, or delete a comment with
+     both signals unchanged. Fingerprint of (id + body-hash) detects all
+     three cases per Phase 4 / Edge Cases. -->
+
 
 ### 5.2 Addressed-finding detection (commit-SHA matching)
 

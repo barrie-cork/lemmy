@@ -74,11 +74,41 @@ ls .claude/PRPs/plans/<phase-suffix>*.plan.md 2>/dev/null
 # Read the H1 / first heading from the plan
 ```
 
-If no plan file, fall back to the first commit's subject:
+If no plan file:
+
+- **For phase implementation branches** (branch matches `^phase-v\d+-`)
+  or **plan branches** (`^plan/`): STOP. A plan file is REQUIRED for
+  phase/code work — `IMPLEMENTATION-PLAN-v0.md §2` mandates planning
+  and implementation as separate phases. Tell the user to create the
+  plan first under `.claude/PRPs/plans/<phase>*.plan.md` and re-run
+  `/bm-pr`.
+- **For chore/docs branches** (`^chore/`): fall back to the first
+  commit's subject. Annotate the PR body with `Ad-hoc — no plan file
+  (chore branch)` so reviewers see this branch was opened without a
+  plan and that's intentional.
 
 ```bash
-git log governance-v0..HEAD --oneline --reverse | head -1
+# Branch-class detection
+branch="$(git rev-parse --abbrev-ref HEAD)"
+case "$branch" in
+  phase-v*|plan/*)
+    if [ ! -f "$(ls .claude/PRPs/plans/${branch#phase-}*.plan.md 2>/dev/null | head -1)" ]; then
+      echo "ERROR: phase/plan branches require a plan file in .claude/PRPs/plans/" >&2
+      exit 1
+    fi
+    ;;
+  chore/*)
+    git log governance-v0..HEAD --oneline --reverse | head -1
+    ;;
+esac
 ```
+
+<!-- cr-7 (closes #88): falling back to commit-subject for phase
+     implementation branches let `/bm-pr` open unplanned implementation
+     PRs labelled `Ad-hoc — no plan file`, violating
+     IMPLEMENTATION-PLAN-v0.md §2. The fallback is now safe only for
+     `chore/*` branches; phase/plan branches must STOP. -->
+
 
 ---
 

@@ -88,7 +88,7 @@ invocation, before any state-changing call.
 | Edit own PR body (`gh pr edit --body-file`) | Auto | No |
 | Run `/prp-review` cargo validation | Auto | No |
 | Post a comment on a PR (`gh pr comment`) | Manual | **YES** |
-| Submit a PR review (`gh pr review --approve|--request-changes`) | Manual | **YES** |
+| Submit a PR review (`gh pr review --approve\|--request-changes`) | Manual | **YES** |
 | Merge a PR (`gh pr merge`) | Manual | **YES** |
 | Send a Telegram ping (`mcp__plugin_telegram_telegram__reply`) | Manual | **YES** |
 | Force-push (`git push --force`, `--force-with-lease`) | Manual | **YES** |

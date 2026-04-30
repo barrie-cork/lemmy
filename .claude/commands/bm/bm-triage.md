@@ -92,6 +92,16 @@ For each newly-bucketed finding:
 - Set `rationale: "<one-sentence why>"` if bucket is `rebut` or `wont-fix`
 - Set `notes:` to the GH issue URL if bucket is `carry-forward`
 - Recompute `counters` block
+- **Recompute the top-level `recommendation`** using the same condition
+  table as `/bm-prp-review` Phase 6. Bucket changes can flip a PR from
+  `block` / `request-changes` to `approve` (e.g. last `fix-in-pr` major
+  moved to `wont-fix` with rationale); leaving a stale recommendation
+  blocks `/bm-merge` even though the PR is now mergeable.
+
+<!-- cr-10 (closes #88): triage updates `counters` only, but `/bm-merge`
+     gates on `recommendation: approve`. Recompute the recommendation in
+     the same YAML write so triage decisions take effect immediately. -->
+
 
 For `carry-forward` findings, BM creates the GH issue **after** asking
 user (next phase). It does NOT auto-create issues silently — those are

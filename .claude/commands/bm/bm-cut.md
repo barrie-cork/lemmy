@@ -29,9 +29,13 @@ The parent (impl) session should call `Agent(subagent_type="branch-manager", mod
 ## Operational script (for the subagent)
 
 The BM agent cuts a new branch off `governance-v0` for a sub-phase
-or plan. Verifies trunk is clean and up-to-date first. Sets upstream
-on creation. Auto, no prompt (local-only action per
+or plan. Verifies trunk is clean and up-to-date first. The branch is
+local-only at this stage (Phase 5 below pushes with `-u` to set
+upstream tracking). Auto, no prompt (local-only action per
 `.claude/rules/branch-manager.md`).
+<!-- cr-1 (closes #88): wording aligned with the actual command flow —
+     `git checkout -b` does not set upstream; `git push -u` in Phase 5 does. -->
+
 
 **Reads:** `.claude/rules/branch-manager.md`, `.claude/rules/phase-branch.md`.
 
