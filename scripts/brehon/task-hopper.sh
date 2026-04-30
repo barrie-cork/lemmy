@@ -198,13 +198,13 @@ release_lock() {
   # fresh dir we can never touch (CodeRabbit PR #46 #2p-7).
   #
   # Owner-file pattern stays sibling-to-lock-dir per the brief's
-  # "smaller diff" decision. The fallback `cat "$lock_owner_file"`
-  # below covers the case where this process never wrote the owner
-  # file but inherited the lock (currently impossible, kept for safety).
+  # "smaller diff" decision; the owner file is at $lock_owner_file, never
+  # inside $lock_dir. (Closes #71: an earlier `cat "$staging/owner"`
+  # fallback was dead code — no file is ever written at that path.)
   local staging="$lock_dir.releasing.$$"
   if mv "$lock_dir" "$staging" 2>/dev/null; then
     local current
-    current="$(cat "$staging/owner" 2>/dev/null || cat "$lock_owner_file" 2>/dev/null || true)"
+    current="$(cat "$lock_owner_file" 2>/dev/null || true)"
     if [ "$current" = "$lock_token" ]; then
       rm -f "$lock_owner_file"
       rmdir "$staging" 2>/dev/null || rm -rf "$staging"

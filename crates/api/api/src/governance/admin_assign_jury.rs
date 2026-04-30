@@ -724,7 +724,6 @@ pub(crate) async fn select_eligible_jurors(
     .await?;
     record.geographic_diversity_preferred = "relaxed";
     record.relaxations_fired.push("R2");
-    current_geo_enabled = false;
 
     for _attempt in 0..attempts {
       let sample = sample_panel(
@@ -742,8 +741,6 @@ pub(crate) async fn select_eligible_jurors(
       }
       let violates = panel_has_sponsor_majority_cluster(conn, &sample).await?;
       if !violates {
-        // Keep current_geo_enabled as false so a future read of the record
-        // reflects R2 fired (relaxations_fired already lists "R2").
         return Ok((sample, record));
       }
     }
