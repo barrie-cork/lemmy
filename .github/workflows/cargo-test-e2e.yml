@@ -58,12 +58,12 @@ jobs:
           submodules: recursive
 
       - name: Install Rust toolchain
-        # `toolchain: file` reads rust-toolchain.toml (1.95 pin).
-        # dtolnay/rust-toolchain@master no longer auto-reads the file
-        # without an explicit input (breaking change observed 2026-05-01).
+        # `toolchain: stable` satisfies the required input; rust-toolchain.toml
+        # (1.95 pin) overrides the active toolchain via rustup's directory
+        # override mechanism. Mirrors cargo-validate-workspace.yml.
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: file
+          toolchain: stable
 
       - name: Install libpq
         run: |
