@@ -45,27 +45,6 @@
       "answer": "Compile failure in e2e test: LocalSiteInsertForm::new() signature changed to require 2 arguments (site_id, system_account: PersonId), but calls at lines 3824 and 4091 still provide only 1 argument. Also system_account field expects PersonId, not Option<PersonId>.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-01T11:40:00Z"
-    },
-    {
-      "id": 102,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T14:30:00Z",
-      "question": "workspace-check for v1-JM-e task 1 fix2",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
-      "workflow_run_id": 25213381649,
-      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
-      "phase_task": "1-fix2",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -1508,6 +1487,27 @@
       "answer": "(A) \u2014 AdminTriggerAppealRejury is the closest v1 endpoint to a 'mid-case admin override' (per PRD \u00a712.3 framing); it carries the slot with #[serde(default)] ignore-behaviour; v2 step-up-aware admin endpoints can graft onto the same DTO shape without a wire migration. Per advisor pre-decision review (brief \u00a72.1.e). Pre-resolved as planner because brief explicitly notes both placements are fine.",
       "answered_by": "planner",
       "resolved_at": "2026-04-30T20:35:00Z"
+    },
+    {
+      "id": 102,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T14:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1 fix2",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
+      "workflow_run_id": 25213381649,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
+      "phase_task": "1-fix2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "All workspace validation commands passed: cargo check, clippy, and test compile all succeeded on GitHub Actions (run 25213381649, 27m14s total).",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T12:22:14Z"
     }
   ],
   "schema_version": 2
