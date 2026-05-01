@@ -201,13 +201,18 @@ pub struct AdminCloseCaseResponse {
   pub closed: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 /// Admin-triggered appeal-rejury request — used when
 /// `appeal.auto_select_on_appeal_acceptance = false`.
 pub struct AdminTriggerAppealRejury {
   pub case_id: ModerationCaseId,
+  /// v1-JM-e + PRD §12.3: reserved slot for v2 step-up auth on admin-mediated mid-case
+  /// actions. v1 ignore-behaviour — the field is read from the wire, never validated,
+  /// never rejected.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub step_up_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
