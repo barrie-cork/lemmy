@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 87,
       "from": "impl",
@@ -8,12 +9,12 @@
       "workflow_run_id": 25081966699,
       "branch": "junior/role-impl-task-issue-96-cluster2-see-claude-prps-briefs-issue-96-impl-1b-md-50",
       "phase_task": "issue-96-cluster2",
-      "result": null,
+      "result": "run_not_found",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found — no action required.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T09:49:36Z"
     },
     {
       "id": 86,
@@ -23,15 +24,13 @@
       "workflow_run_id": 25081578635,
       "branch": "junior/role-impl-task-issue-96-cluster1-see-claude-prps-briefs-issue-96-impl-1a-md-49",
       "phase_task": "issue-96-cluster1",
-      "result": null,
+      "result": "run_not_found",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
-  "resolved": [
+      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found — no action required.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T09:49:36Z"
+    },
     {
       "id": 1,
       "from": "advisor",
