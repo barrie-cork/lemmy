@@ -50,14 +50,14 @@
       "id": 103,
       "from": "advisor",
       "kind": "validate-pending",
-      "timestamp": "2026-05-01T13:12:35Z",
+      "timestamp": "2026-05-01T13:51:48Z",
       "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "cargo-test-e2e.yml re-dispatched after fixing toolchain: stable (run 25215418484 failed with invalid toolchain: file)",
-      "workflow_run_id": 25215520709,
+      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
+      "workflow_run_id": 25216808963,
       "local_log_path": null,
       "branch": "phase-v1-JM-e",
       "phase_task": 1,
