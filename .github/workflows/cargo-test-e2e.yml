@@ -10,7 +10,7 @@ name: cargo-test-e2e
 # min/month — too expensive for the GitHub Free / Student-Pro 3,000
 # min quota. Local laptop e2e is the primary path:
 #
-#   cargo test -p lemmy_server --test e2e --features full -- --test-threads=1
+#   cargo test --workspace --features full --test e2e -- --test-threads=1
 #
 # (~26 min on PC; same wall-clock as GH Actions, zero billed.)
 #
@@ -58,10 +58,12 @@ jobs:
           submodules: recursive
 
       - name: Install Rust toolchain
-        # Pinned in rust-toolchain.toml (1.95). With no `toolchain:` input,
-        # dtolnay/rust-toolchain@master reads rust-toolchain.toml. Specifying
-        # `toolchain: stable` would silently override the pin (closes #37).
+        # `toolchain: file` reads rust-toolchain.toml (1.95 pin).
+        # dtolnay/rust-toolchain@master no longer auto-reads the file
+        # without an explicit input (breaking change observed 2026-05-01).
         uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: file
 
       - name: Install libpq
         run: |
@@ -80,9 +82,9 @@ jobs:
             cargo-e2e-${{ runner.os }}-
 
       - name: Compile e2e test target
-        run: cargo test --test e2e -p lemmy_server --no-run
+        run: cargo test --workspace --features full --test e2e --no-run
 
       - name: Run e2e (single-threaded; testcontainers per test)
         env:
           RUST_BACKTRACE: 1
-        run: cargo test --test e2e -p lemmy_server -- --test-threads=1
+        run: cargo test --workspace --features full --test e2e -- --test-threads=1
