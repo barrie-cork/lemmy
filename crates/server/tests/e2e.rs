@@ -9027,3 +9027,363 @@ async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
 
   Ok(())
 }
+
+// ============================================================================
+// v1-JM-e fixtures + capstone
+// ============================================================================
+//
+// `mod v1_jm_e_fixtures` houses the cross-sub-phase helpers and tests that
+// exercise the full original-decide → request_appeal → appeal-panel-decide
+// lifecycle as one piece. Authored by the advisor session per PMD #117 (Junior
+// workers hang on Edit calls into this 9000+ line file).
+
+mod v1_jm_e_fixtures {
+  use actix_web::web::Json;
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, RequestAppeal, SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::request_appeal::request_appeal;
+  use lemmy_api_utils::context::LemmyContext;
+  use lemmy_db_schema::newtypes::{AppealId, ModerationCaseId};
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{JuryAssignmentRole, JuryDecision, SeverityTier},
+    schema::jury_assignment,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_utils::error::LemmyResult;
+  use diesel::{ExpressionMethods, QueryDsl};
+
+  /// Drive a case end-to-end up to and including a successful `request_appeal`,
+  /// returning everything the capstone test needs to drive the appeal panel
+  /// through accept + vote.
+  ///
+  /// Sequence:
+  ///   1. seed 13 jury_eligible snapshots (5 original + 8 appeal panel).
+  ///   2. seed Minor-severity case via `v1_jm_b_fixtures::seed_case`.
+  ///   3. `admin_assign_jury` → 5 original jurors seated (Minor panel = 5).
+  ///   4. all 5 accept their assignments.
+  ///   5. all 5 vote `NoAction` (5/5 ≥ threshold 3 → NoAction wins; case → Decided
+  ///      with `winning_decision = Some(NoAction)`).
+  ///   6. `request_appeal` (caller = target — request_appeal allows the case
+  ///      target to appeal a NoAction verdict per the test author's pre-existing
+  ///      JM-d `appeal_inside_window_succeeds_expired_rejects` precedent).
+  ///      Internally calls `select_appeal_panel` + `seat_appeal_panel`,
+  ///      seating 8 appeal-panel jurors with the 5 originals excluded.
+  ///   7. returns (case_id, appeal_id, appeal_panel_person_ids).
+  ///
+  /// **Math** — verified against `compute_appeal_panel_size` in
+  /// `crates/api/api/src/governance/admin_assign_jury.rs:1049`:
+  ///   - original_panel_size = 5 (Minor)
+  ///   - multiplier = 1.5 → from_multiplier = ceil(5 × 1.5) = 8
+  ///   - floor_increment = 2 → from_floor = 5 + 2 = 7
+  ///   - max(8, 7) = 8, clamped to [3, 11] = **appeal panel = 8**
+  ///   - bumped severity = Moderate (Minor + 1)
+  ///   - threshold_fraction (Moderate) = 0.6 → ceil(0.6 × 8) = ceil(4.8) = **threshold = 5**
+  ///
+  /// Plan §13 narrative said "panel of 7" — actual default-config math yields
+  /// 8 (logged as kind: "log" DQ for retro flag).
+  pub async fn seed_appealed_case_with_panel(
+    context: &actix_web::web::Data<LemmyContext>,
+    db_url: &str,
+    target: PersonId,
+    target_view: LocalUserView,
+    admin_view: LocalUserView,
+    jurors: &[PersonId],
+    federation_context: activitypub_federation::config::Data<LemmyContext>,
+  ) -> LemmyResult<(ModerationCaseId, AppealId, Vec<PersonId>)> {
+    assert!(
+      jurors.len() >= 13,
+      "seed_appealed_case_with_panel requires >=13 eligibles (5 original + 8 appeal); got {}",
+      jurors.len()
+    );
+
+    // R2: seed jury_eligible snapshots BEFORE admin_assign_jury.
+    {
+      let mut conn = AsyncPgConnection::establish(db_url).await?;
+      super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, jurors).await?;
+    }
+
+    let case_id = super::v1_jm_b_fixtures::seed_case(db_url, target, SeverityTier::Minor)
+      .await
+      .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(
+      assign_resp.assigned_person_ids.len(),
+      5,
+      "Minor panel = 5 jurors per JM-b snapshot"
+    );
+
+    // Original jurors accept.
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    // 5 NoAction votes → NoAction wins (5 ≥ threshold 3 for Minor).
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::NoAction,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    // request_appeal — caller is the case target (NoAction verdict appealable
+    // by the target per JM-d `appeal_inside_window_succeeds_expired_rejects`).
+    // Internally seats the appeal panel via select_appeal_panel + seat_appeal_panel.
+    let appeal_resp = request_appeal(
+      Json(RequestAppeal {
+        case_id,
+        reason: "capstone appeal".to_string(),
+      }),
+      context.clone(),
+      target_view,
+    )
+    .await?
+    .into_inner();
+
+    // Read appeal-panel jurors directly (role = Appeal) for the caller to drive.
+    let mut conn = AsyncPgConnection::establish(db_url).await?;
+    let appeal_panel: Vec<PersonId> = jury_assignment::table
+      .filter(jury_assignment::case_id.eq(case_id))
+      .filter(jury_assignment::role.eq(JuryAssignmentRole::Appeal))
+      .select(jury_assignment::person_id)
+      .load(&mut conn)
+      .await?;
+    assert_eq!(
+      appeal_panel.len(),
+      8,
+      "appeal panel = 8 jurors per compute_appeal_panel_size(5, 1.5, 2)"
+    );
+
+    Ok((case_id, appeal_resp.appeal_id, appeal_panel))
+  }
+}
+
+/// v1-JM-e Task 2 — capstone: full appeal lifecycle.
+///
+/// Drives original-jury NoAction → request_appeal → appeal panel of 8 votes 5
+/// AdvisoryLabel → appeal_decided emitted with original=NoAction +
+/// appeal_winning=AdvisoryLabel; case → Closed; no NEW sanction row inserted.
+/// Then runs `appeal_window_expiry::run_appeal_window_expiry_batch` directly
+/// and asserts no-op (case is already Closed, not Decided).
+#[tokio::test(flavor = "multi_thread")]
+async fn appeal_panel_decides_no_action_overrides_to_advisory_label_chain()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    appeal_window_expiry::run_appeal_window_expiry_batch,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::SubmitJuryVote;
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, AppealStatus},
+    schema::{appeal, governance_log, moderation_case, sanction},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use serde_json::Value;
+
+  // Disable the appeal-window-expiry background scheduler so the capstone
+  // can drive run_appeal_window_expiry_batch directly without race.
+  // SAFETY: e2e tests run with --test-threads=1 (LazyLock SETTINGS singleton),
+  // so this set_var is effectively single-threaded for the test process.
+  unsafe {
+    std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", "1");
+  }
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    governance_fixtures::seed_user(&context, instance.id, "admin_jme1", true).await?;
+  let (target, target_view) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme1", false).await?;
+  // 13 jurors: 5 original + 8 appeal panel (compute_appeal_panel_size(5, 1.5, 2) = 8).
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 13).await?;
+
+  // Federation context for submit_jury_vote (Phase 6 task 76).
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  // Seed + appeal — fixture drives original NoAction verdict + appeal seating.
+  let (case_id, appeal_id, appeal_panel_ids) =
+    v1_jm_e_fixtures::seed_appealed_case_with_panel(
+      &context,
+      &db_url,
+      target,
+      target_view,
+      admin_view,
+      &jurors,
+      federation_context.reset_request_count(),
+    )
+    .await?;
+
+  // Snapshot governance_log + sanction counts BEFORE the appeal vote so we can
+  // assert "no NEW sanction row was inserted by the appeal verdict".
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let sanctions_before: i64 = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  // Original NoAction → no sanction row (map_decision_to_sanction(NoAction) = None).
+  assert_eq!(
+    sanctions_before, 0,
+    "NoAction original verdict produces no sanction"
+  );
+
+  // All 8 appeal-panel jurors accept (handler recognises Appeal role per JM-d).
+  for juror_id in &appeal_panel_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    lemmy_api::governance::accept_jury_assignment::accept_jury_assignment(
+      Json(lemmy_api_common::governance::AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // 5 of 8 vote AdvisoryLabel (threshold = ceil(0.6 × 8) = 5 for Moderate).
+  let voting_jurors: Vec<_> = appeal_panel_ids.iter().take(5).copied().collect();
+  let mut last_resp = None;
+  for (i, juror_id) in voting_jurors.iter().enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::AdvisoryLabel,
+        rationale: Some(format!("appeal vote {i}")),
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?
+    .into_inner();
+    if i < 4 {
+      assert!(
+        !resp.case_decided,
+        "appeal vote {i}: must NOT be decided pre-threshold"
+      );
+    }
+    last_resp = Some(resp);
+  }
+  let final_resp = last_resp.expect("at least one appeal vote cast");
+  assert!(
+    final_resp.case_decided,
+    "appeal vote 5 (threshold for Moderate-bumped panel of 8) must decide the case"
+  );
+  assert_eq!(final_resp.decision, Some(JuryDecision::AdvisoryLabel));
+
+  // Assert appeal.decided_at populated + status = Decided.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (appeal_decided_at, appeal_status): (
+    Option<chrono::DateTime<chrono::Utc>>,
+    AppealStatus,
+  ) = appeal::table
+    .filter(appeal::id.eq(appeal_id))
+    .select((appeal::decided_at, appeal::status))
+    .first(&mut conn)
+    .await?;
+  assert!(appeal_decided_at.is_some(), "appeal.decided_at populated");
+  assert_eq!(appeal_status, AppealStatus::Decided, "appeal status = Decided");
+
+  // Assert governance_log[appeal_decided] payload carries
+  // original_winning_decision + appeal_winning_decision.
+  let appeal_decided_payloads: Vec<Value> = governance_log::table
+    .filter(governance_log::entry_kind.eq("appeal_decided"))
+    .select(governance_log::payload)
+    .load(&mut conn)
+    .await?;
+  assert_eq!(
+    appeal_decided_payloads.len(),
+    1,
+    "exactly one appeal_decided entry"
+  );
+  let payload = &appeal_decided_payloads[0];
+  assert_eq!(
+    payload["original_winning_decision"],
+    Value::String("NoAction".to_string()),
+    "original_winning_decision = NoAction"
+  );
+  assert_eq!(
+    payload["appeal_winning_decision"],
+    Value::String("AdvisoryLabel".to_string()),
+    "appeal_winning_decision = AdvisoryLabel"
+  );
+  assert_eq!(
+    payload["case_id"],
+    Value::Number(case_id.0.into()),
+    "payload.case_id matches"
+  );
+  assert_eq!(
+    payload["appeal_id"],
+    Value::Number(appeal_id.0.into()),
+    "payload.appeal_id matches"
+  );
+
+  // Assert case → Closed + closed_at populated.
+  let (status, closed_at): (CaseStatus, Option<chrono::DateTime<chrono::Utc>>) =
+    moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::closed_at))
+      .first(&mut conn)
+      .await?;
+  assert_eq!(status, CaseStatus::Closed, "case → Closed after appeal verdict");
+  assert!(closed_at.is_some(), "closed_at populated");
+
+  // No NEW sanction row inserted by the appeal verdict.
+  let sanctions_after: i64 = sanction::table
+    .filter(sanction::case_id.eq(case_id))
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert_eq!(
+    sanctions_after, 0,
+    "appeal verdict creates no sanction (PRD §4.1 v1 simplification + ADR-014)"
+  );
+
+  // Drive run_appeal_window_expiry_batch directly — case is already Closed,
+  // so the filter (status = Decided) does not match → no-op.
+  let outcome = run_appeal_window_expiry_batch(&context).await?;
+  assert_eq!(
+    outcome.cases_processed, 0,
+    "appeal_window_expiry on Closed case is a no-op"
+  );
+
+  Ok(())
+}
+

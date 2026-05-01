@@ -1575,6 +1575,21 @@
       "answer": "All 62 tests passed (3 pre-existing ignores: GH #42, #43, #45). E2E suite finished in 1553.14s on phase-v1-JM-e tip 34ddd561d. NOTE: DQ commands[] specified raw cargo which hit STATUS_DLL_NOT_FOUND on first attempt; re-run via scripts/brehon/cargo-test.bat (lesson promoted to .claude/lessons/feedback_validate_pending_laptop_must_use_wrapper.md + PMD #240). Cascade test config_get_int_cascade_resolves_founder_severe_to_bare_then_const = pass — fix-impl-3 assertion fix validated.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-01T15:53:03Z"
+    },
+    {
+      "id": 106,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-01T19:52:04Z",
+      "question": "Plan §13 Task 2 narrative quotes appeal panel = 7 jurors but compute_appeal_panel_size(5, 1.5, 2) yields 8.",
+      "options": [
+        "(taken) Author capstone with panel = 8 + threshold = 5 (ceil(0.6x8)) per actual default-config math.",
+        "(not taken) Override appeal.panel_size_multiplier in test bootstrap to force panel = 7."
+      ],
+      "context": "compute_appeal_panel_size at admin_assign_jury.rs:1049 returns max(ceil(5*1.5)=8, 5+2=7) = 8. Plan said 'panel of 7' - minor narrative drift from actual defaults. Threshold count = 5 (ceil(0.6*8)) is unchanged from plan, so the test still drives 5 votes; only the panel-seat count + accept-loop count differ.",
+      "answer": "Capstone authored with panel=8 + threshold=5 (correct math). Plan narrative drift recorded for retro section 5 watch-items. No code change needed in implementation.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T19:52:04Z"
     }
   ],
   "schema_version": 2
