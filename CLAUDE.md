@@ -1,10 +1,13 @@
-# CLAUDE.md — Brehon Fork
+# CLAUDE.md — Brehon Fork (advisor CWD)
 
 **Fork of:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ `d1975776a` (Lemmy 1.0-beta; last rebase 2026-04-18)
 **Working branch:** `governance-v0` (v0 feature work; `main` is reserved for upstream-sync rebases)
+**Active sub-phase:** `phase-v1-JM-e` (cut from `governance-v0` at `ebb34bb414`)
 **Rust toolchain:** `1.95` · **License:** AGPL-3.0 (see `AGPL-NOTICE.md`)
 
 A governance-enabled fork of Lemmy 1.0-beta. v0 goal: 11 new API endpoints for a Brehon-style reputation + jury workflow, tamper-evident governance log, and outbound federation of governance signals — while staying compatible with vanilla-Lemmy content federation.
+
+This CWD is the **persistent advisor session** for Brehon governance work. Non-Brehon ops (Docker stacks, agent-grey, midleton-market, web-archive, weekly review, NAS backups, n8n, infra) live in `C:\Users\barri\Developer\homeserver`.
 
 ## Hard constraints (do NOT re-litigate)
 
@@ -24,13 +27,74 @@ From `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md`, the 
 
 If a plan contradicts any of these, STOP and surface to the user. Do not silently fix in the plan body.
 
-## Orchestration model (v1-JM-d onward)
+## Four-role model
 
-Four roles, four files: **Advisor** (persistent CC session on laptop, runs from `homeserver/` CWD; never authors content) + **Planning** + **Impl** + **BM** (all Junior subagents on the EliteDesk daemon, dispatched via `mcp__junior-brehon__*`). Full detail in `.claude/rules/advisor-orchestrator.md` (loads at session start with the rest of `.claude/rules/`); subagent contracts in `.claude/agents/{planning,impl-task,bm-task}.md`; user-facing kickoff via `/start-brehon` in the `homeserver/` repo. Lessons corpus that subagents read lives at `.claude/lessons/` (promoted from laptop PMD per the one-system-memory principle).
+The advisor session here drives one Brehon sub-phase end-to-end via four Junior subagents. The advisor is the fourth role — meta-oversight, never authors content.
 
-This is project-specific orchestration on top of Claude Code, not a documented Claude Code workflow. Three things to know: (1) the `[role:planning]` token in Junior task descriptions is a convention the **brief content** uses — Claude Code itself selects subagents by their `description` frontmatter, so the `description` field in each agent file mirrors the `[role:X]` token; (2) the multi-repo "homeserver CWD orchestrates brehon-fork via SSH + Junior daemon" pattern is custom — `--add-dir` does not load the other repo's `.claude/` config, hence the deliberate copy of `advisor-orchestrator.md` into `homeserver/.claude/rules/`; (3) DQ visibility across worktrees needs the mid-task commit-and-push discipline in `.claude/rules/decision-queue.md` because Junior's per-task isolation otherwise traps DQ writes until finalize.
+| Role | Where it runs | Model | Triggered by |
+|---|---|---|---|
+| **Advisor** | This persistent CC session (laptop, brehon-fork CWD) | Opus 4.7 (1M) — set in `.claude/settings.json` | User opens session |
+| **Planning** | Junior worker on EliteDesk | Opus 4.7 (1M) | `[role:planning]` task prefix |
+| **Impl** | Junior worker on EliteDesk | Sonnet 4.6 | `[role:impl-task]` task prefix |
+| **BM** | Junior worker on EliteDesk | Haiku 4.5 | `[role:bm-task]` task prefix |
+| **ci-watcher** | Junior worker on EliteDesk (ad-hoc) | Haiku 4.5 | `[role:ci-watcher]` task prefix |
 
-This model is opt-in for v1 sub-phases — direct foreground use of `/prp-core:prp-plan` / `/prp-core:prp-implement` from a hand-driven CC session in this CWD remains valid for one-off work, hotfixes, and any sub-phase where Junior overhead isn't worth it. Phases 1–6 + v1-AD-* + v1-JM-{a,b,c} all shipped on the foreground model; v1-JM-d is the first to use the orchestrated model.
+EliteDesk = Tailscale alias `homeserver`, headless Ubuntu Server 24.04 LTS; reach via `ssh homeserver`. Junior daemon: `junior@brehon-fork`. Brehon fork at `/srv/brehon-fork` on EliteDesk; this CWD on the laptop.
+
+Model tiering enforced by the four-role tiering patch on the EliteDesk. Patch source mirrored at `homeserver/scripts/junior-server-patches/`; restore via `bash C:/Users/barri/Developer/homeserver/scripts/restore-junior-server-patches.sh` after upstream junior-src updates.
+
+## Polling loop
+
+The advisor reads brief + plan once at session start, then runs a steady ~10-minute poll loop: `mcp__junior-brehon__list_tasks` (status only); on transition `show_task` + `git fetch` + read `.claude/decision-queue.json`; triage DQ; queue next per stage shape (planning → impl cohort(s) → bm-cut/pr → bm-poll-cr → bm-triage → bm-merge → retro).
+
+Full polling loop discipline, brief-writing pattern, DQ triage decision tree, stage-shape orchestration, cohort dispatch, Shape G two-phase validation, §G4 classifier, DoD smoke test gate, watchpoint specificity gate, forbidden execution windows, and catch-fire procedures all live in `.claude/rules/advisor-orchestrator.md` and the path-scoped sibling rules `.claude/rules/brehon-cohort-dispatch.md` + `.claude/rules/brehon-validate-stage.md`.
+
+## Mandatory user gates (never skip)
+
+1. **Plan approval** — after planning task ships, advisor runs DoD smoke test (every §15 command literally) + watchpoint-specificity gate → surface to user → wait.
+2. **Judgment-heavy DQ** — ADR-affecting / scope-changing / visible-to-others-impact entries → surface → wait.
+3. **CR triage approval** — after `bm-poll-cr` + `bm-triage` draft → surface four-bucket counts → wait.
+4. **Merge confirm** — before `bm-merge` → surface → wait.
+5. **Phase 2 e2e — local vs dispatch** — never auto-pick after PR #105.
+6. **Retro sign-off** — author retro per `feedback_retro_not_report` + `feedback_four_role_retro_signals` → wait → then `/brehon-phase-transition`.
+
+## Branch Manager (BM) verbs
+
+BM dispatched as a Junior task with `[role:bm-task]`; the brief names exactly one verb. Advisor never authors BM verbs; advisor queues them. Verb catalog, file-ownership, autonomy, hard refusals: `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md`.
+
+## Shape G — GH-Actions-side cargo validation
+
+Heavy cargo work runs on GH Actions (workflows under `.github/workflows/cargo-validate-*.yml` + `cargo-test-e2e.yml`), not on the EliteDesk. Option (b) workflow flip + option 2 ci-watcher single-entry-mutation shipped 2026-04-29. Pre-Shape-G plans (≤v1-JM-d) run cargo on the laptop via the validate-pending-laptop handler in `.claude/rules/advisor-orchestrator.md`. JM-e onward = pure Shape G.
+
+## Pre-queue git pre-flight (mandatory)
+
+Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/brehon-fork`. Before every real-work `mcp__junior-brehon__create_task`: run `/precheck` (user-scope command, registered at `~/.claude/commands/precheck.md`). Smoke / diagnostic tasks must branch off a throwaway branch first to isolate contamination.
+
+## Resume / state-recovery
+
+`/start-brehon` (optional `$ARGUMENTS` like `v1-JM-e`) — read-only; pulls live state from git, gh PRs, decision-queue, runlog, briefs/plans/retros, and the Junior daemon over SSH; synthesises a one-screen status report.
+
+`/start-brehon --fast <N>` — 5-probe variant for mid-task focused polling. If DQ pending > 0, escalate to `/check-dq` for full triage.
+
+## MCPs available in this CWD
+
+`junior-brehon` (Junior CLI shim → EliteDesk daemon), `project-memory` (local SQLite PMD; PROJECT_NAME=brehon-fork → writes to `…\C--Users-barri-Developer-brehon-fork\memory\`), `ref-context` (user-scope; public docs lookup), `tavily` (user-scope; web search).
+
+## Canonical paths
+
+- **Brief paths (this CWD on phase branch):** `.claude/PRPs/briefs/<phase>-<role>-<n>.md`
+- **Active plan:** `.claude/PRPs/plans/v1-jury-mechanics-e.plan.md`
+- **DQ:** `.claude/decision-queue.json` (on phase branch)
+- **Runlog:** `.claude/runlog/v1-JM-e-runlog.md` (on phase branch, created by first runlog entry)
+- **Lessons (Junior reads at task-0):** `.claude/lessons/feedback_*.md` and `.claude/lessons/reference_*.md` in this repo
+- **PMD index (advisor session start):** `C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork\memory\MEMORY.md`
+- **Plans (laptop scratch):** `C:\Users\barri\.claude\plans\*.md` (do NOT auto-delete; consult before queueing)
+- **Promoted commands/skills (user scope):** `~/.claude/commands/{precheck,start-brehon,advisor-checkpoint}.md` and `~/.claude/skills/{check-dq,brehon-phase-transition}/`
+
+## Sensitive files
+
+- `.env` (repo root) — API keys, never commit
+- `.mcp.json` (repo root) — gitignored (.gitignore line 81); contains junior-brehon + project-memory server configs
 
 ## Where to look next
 

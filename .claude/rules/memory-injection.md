@@ -18,6 +18,7 @@ Apply any relevant patterns or known issues to your current task. These are conf
 - **Creating directories under /srv/ needs sudo** — `/srv/` is root-owned; use `sudo mkdir -p /srv/<dir> && sudo chown barrie:barrie /srv/<dir>`. Same applies to `/srv/webdata/`, `/srv/backups/`
 - **Verify before mutating** — before `mv`/`cp`/`rm -rf` on files or directories: backup live DBs first, check for untracked/ignored content in git repos, generate a manifest for batch deletions (3+ items). When `rm -rf` partially fails, STOP and investigate — don't force-retry
 - **When removing a class/function, grep the entire repo for its name first** — imports in `__init__.py`, test files, and downstream consumers will break silently if not updated
+- **Don't queue long-running jobs as Junior tasks** — Junior's inactivity watchdog kills workers after ~6 min of no stdout (exit 143), orphaning child processes. Run data pipelines (enrichment, reindex, full test suites) via SSH + screen/nohup instead
 
 ## PMD search before acting
 
