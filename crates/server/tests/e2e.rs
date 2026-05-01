@@ -3819,10 +3819,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     let sysacct_form = PersonInsertForm::test_form(instance_a.id, "instance_a_sysacct");
     let sysacct = Person::create(pool, &sysacct_form).await
       .map_err(|e| -> Box<dyn Error> { format!("sysacct: {e}").into() })?;
-    let local_site_form_a = LocalSiteInsertForm {
-      system_account: Some(sysacct.id),
-      ..LocalSiteInsertForm::new(site_a.id)
-    };
+    let local_site_form_a = LocalSiteInsertForm::new(site_a.id, sysacct.id);
     let local_site_a = LocalSite::create(pool, &local_site_form_a).await
       .map_err(|e| -> Box<dyn Error> { format!("local_site A: {e}").into() })?;
     LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site_a.id))
@@ -4086,10 +4083,7 @@ async fn sanction_notice_round_trip() -> Result<(), Box<dyn Error>> {
     let sysacct_form = PersonInsertForm::test_form(_instance_b.id, "instance_b_sysacct");
     let sysacct = Person::create(pool, &sysacct_form).await
       .map_err(|e| -> Box<dyn Error> { format!("sysacct B: {e}").into() })?;
-    let local_site_form_b = LocalSiteInsertForm {
-      system_account: Some(sysacct.id),
-      ..LocalSiteInsertForm::new(site_b.id)
-    };
+    let local_site_form_b = LocalSiteInsertForm::new(site_b.id, sysacct.id);
     let local_site_b = LocalSite::create(pool, &local_site_form_b).await
       .map_err(|e| -> Box<dyn Error> { format!("local_site B: {e}").into() })?;
     LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site_b.id))
