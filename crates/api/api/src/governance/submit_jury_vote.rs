@@ -49,7 +49,7 @@ use crate::governance::{
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use chrono::{DateTime, Duration, Utc};
-use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
