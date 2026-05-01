@@ -14,12 +14,14 @@
       "workflow_run_id": 25211371998,
       "branch": "junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
       "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "error[E0599]: no method named `on` found for struct `lemmy_db_schema_file::schema::jury_assignment::table`\n   --> crates/api/api/src/governance/submit_jury_vote.rs:760:30\n    |\n760 |       jury_assignment::table.on(\n    |       ---------------------^^\n    |\nhelp: trait `JoinOnDsl` which provides `on` is implemented but not in scope; perhaps you want to import it\n    |\n42  + use diesel::JoinOnDsl;\n    |\n\nerror[E0599]: no method named `and` found for struct `diesel::expression::grouped::Grouped<T>` in the current scope\n   --> crates/api/api/src/governance/submit_jury_vote.rs:763:12\n    |\n763 |           .and(jury_assignment::person_id.eq(jury_vote::juror_id)),\n    |            ^^^ method not found in `Grouped<Eq<case_id, case_id>>`\n    |\nhelp: the following traits which provide `and` are implemented but not in scope; perhaps you want to import one of them\n    |\n42  + use diesel::BoolExpressionMethods;\n\nerror: could not compile `lemmy_api` (lib) due to 2 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Cargo compilation failed: missing trait imports (JoinOnDsl, BoolExpressionMethods) in submit_jury_vote.rs",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T11:02:20.806522+00:00Z"
     }
   ],
   "resolved": [
