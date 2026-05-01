@@ -7601,9 +7601,12 @@ async fn admin_assign_jury_emits_severity_tier_frozen_governance_log()
 
 /// v1-JM-b Task 7 test 6 — cascade walks
 /// `jury.panel_size.founder.severe` → `jury.panel_size.severe` →
-/// bare `jury.panel_size` → `DEFAULT_JURY_PANEL_SIZE` const. Uses raw SQL
-/// to delete config rows between walks since `governance_config` is
-/// append-only via `valid_from` but has no DELETE-forbid trigger.
+/// bare `jury.panel_size` (DB rows). When all DB rows are absent, the
+/// const-table fallback walks the SAME candidate list (most-specific
+/// first) and returns the per-tier const
+/// `DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE = 9`. Uses raw SQL to delete
+/// config rows between walks since `governance_config` is append-only
+/// via `valid_from` but has no DELETE-forbid trigger.
 #[tokio::test(flavor = "multi_thread")]
 async fn config_get_int_cascade_resolves_founder_severe_to_bare_then_const()
 -> lemmy_utils::error::LemmyResult<()> {
@@ -7695,8 +7698,9 @@ async fn config_get_int_cascade_resolves_founder_severe_to_bare_then_const()
     )
     .await?;
     assert_eq!(
-      got, 5,
-      "cascade falls to const DEFAULT_JURY_PANEL_SIZE = 5 when DB has no matching row"
+      got, 9,
+      "cascade falls to per-tier const DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE = 9 \
+       when DB has no matching row (most-specific-first const cascade per v1-JM-a)"
     );
   }
   Ok(())
