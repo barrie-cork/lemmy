@@ -44,31 +44,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 107,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-01T20:12:20Z",
-      "question": "laptop e2e validation for v1-JM-e Task 2 capstone",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Targeted e2e for new appeal_panel_decides_no_action_overrides_to_advisory_label_chain on phase-v1-JM-e tip a2be76a49 (Task 2 capstone). Cargo check + clippy --no-deps already passed locally. Workflow-trigger gap: cargo-validate-workspace.yml only fires on junior/* not phase-v1-*; running locally per advisor-orchestrator.md validate-pending-laptop handler.",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e -- appeal_panel_decides_no_action_overrides_to_advisory_label_chain --test-threads=1\""
-      ],
-      "branch": "phase-v1-JM-e",
-      "phase_task": 2,
-      "result": "fail",
-      "log_slice": "test appeal_panel_decides_no_action_overrides_to_advisory_label_chain ... FAILED\n\nfailures:\n\n---- appeal_panel_decides_no_action_overrides_to_advisory_label_chain stdout ----\nLEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS was set, any configuration file has been ignored.\nUse with other environment variables to configure this instance further; e.g. LEMMY_DATABASE_URL.\nError: LemmyError { message: NotFound, caller: crates\u0007pi\u0007pi\\src\\governance\u0007ccept_jury_assignment.rs:106:43, inner: NotFound }\n\n\nfailures:\n    appeal_panel_decides_no_action_overrides_to_advisory_label_chain\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 65 filtered out; finished in 48.10s\n\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`",
-      "failed_commands": [
-        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --features full --test e2e -- appeal_panel_decides_no_action_overrides_to_advisory_label_chain --test-threads=1\""
-      ],
-      "answer": "Test FAILED at accept_jury_assignment.rs:106 (NotFound). Real defect: handler rejects accept calls when case.status == Appealed, but JM-d's appeal-panel jurors get seated post-request_appeal when status is exactly Appealed. submit_jury_vote already dispatches Appeal-role jurors via process_appeal_vote (per JM-e plan §13 task 1 GOTCHA), but accept_jury_assignment was not given a parallel dispatch in JM-d. Non-allowlist failure — real integration gap, requires surfacing to user.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-01T20:17:02Z"
     }
   ],
   "resolved": [
@@ -1615,6 +1590,29 @@
       "answer": "Capstone authored with panel=8 + threshold=5 (correct math). Plan narrative drift recorded for retro section 5 watch-items. No code change needed in implementation.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-01T19:52:04Z"
+    },
+    {
+      "id": 107,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-01T20:12:20Z",
+      "question": "laptop e2e validation for v1-JM-e Task 2 capstone",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Targeted e2e for new appeal_panel_decides_no_action_overrides_to_advisory_label_chain on phase-v1-JM-e tip a2be76a49 (Task 2 capstone). Cargo check + clippy --no-deps already passed locally. Workflow-trigger gap: cargo-validate-workspace.yml only fires on junior/* not phase-v1-*; running locally per advisor-orchestrator.md validate-pending-laptop handler.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e -- appeal_panel_decides_no_action_overrides_to_advisory_label_chain --test-threads=1\""
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Capstone passed after two fixes: (1) accept_jury_assignment role-dispatch landed at 360c24cb9 (Original-role accepts JurySelection|InReview, Appeal-role accepts Appealed), (2) audit-log payload assertions corrected to snake_case at 263a08f00 (JuryDecision serializes via #[serde(rename_all = \"snake_case\")]). Test result: ok. 1 passed; 0 failed; finished in 49.00s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-01T21:06:18Z"
     }
   ],
   "schema_version": 2
