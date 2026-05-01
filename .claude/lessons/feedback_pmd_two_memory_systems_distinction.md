@@ -35,4 +35,4 @@ The brehon-fork PMD at `~/.claude/projects/C--Users-barri-Developer-brehon-fork/
 
 **Related lessons:**
 - `feedback_runbook_audit_drift_post_event_check.md` — the companion lesson from the same migration event; verify runbook claims against live state before executing
-- `feedback_pmd_split_brehon_vs_homeserver.md` (memory) — the overall PMD split strategy
+- `feedback_pmd_split_brehon_vs_homeserver.md` (laptop memory dir only, not in `.claude/lessons/`) — the overall PMD split strategy
