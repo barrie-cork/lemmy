@@ -61,12 +61,14 @@
       ],
       "branch": "phase-v1-JM-e",
       "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "test appeal_panel_decides_no_action_overrides_to_advisory_label_chain ... FAILED\n\nfailures:\n\n---- appeal_panel_decides_no_action_overrides_to_advisory_label_chain stdout ----\nLEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS was set, any configuration file has been ignored.\nUse with other environment variables to configure this instance further; e.g. LEMMY_DATABASE_URL.\nError: LemmyError { message: NotFound, caller: crates\u0007pi\u0007pi\\src\\governance\u0007ccept_jury_assignment.rs:106:43, inner: NotFound }\n\n\nfailures:\n    appeal_panel_decides_no_action_overrides_to_advisory_label_chain\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 65 filtered out; finished in 48.10s\n\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`",
+      "failed_commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --features full --test e2e -- appeal_panel_decides_no_action_overrides_to_advisory_label_chain --test-threads=1\""
+      ],
+      "answer": "Test FAILED at accept_jury_assignment.rs:106 (NotFound). Real defect: handler rejects accept calls when case.status == Appealed, but JM-d's appeal-panel jurors get seated post-request_appeal when status is exactly Appealed. submit_jury_vote already dispatches Appeal-role jurors via process_appeal_vote (per JM-e plan §13 task 1 GOTCHA), but accept_jury_assignment was not given a parallel dispatch in JM-d. Non-allowlist failure — real integration gap, requires surfacing to user.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-01T20:17:02Z"
     }
   ],
   "resolved": [
