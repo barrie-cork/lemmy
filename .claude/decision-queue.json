@@ -50,14 +50,14 @@
       "id": 103,
       "from": "advisor",
       "kind": "validate-pending",
-      "timestamp": "2026-05-01T12:55:46Z",
+      "timestamp": "2026-05-01T13:09:11Z",
       "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "cargo-test-e2e.yml dispatched on phase-v1-JM-e tip 5ed7bfb91 (local Windows DLL failure prompted GH dispatch)",
-      "workflow_run_id": 25215020381,
+      "context": "cargo-test-e2e.yml re-dispatched after fixing toolchain:file + --workspace --features full (run 25215020381 failed at toolchain setup)",
+      "workflow_run_id": 25215418484,
       "local_log_path": null,
       "branch": "phase-v1-JM-e",
       "phase_task": 1,
