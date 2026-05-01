@@ -9334,15 +9334,19 @@ async fn appeal_panel_decides_no_action_overrides_to_advisory_label_chain()
     "exactly one appeal_decided entry"
   );
   let payload = &appeal_decided_payloads[0];
+  // JuryDecision serializes via #[serde(rename_all = "snake_case")] —
+  // see crates/db_schema_file/src/enums.rs:489. Audit-log payloads carry
+  // the snake_case form ("no_action", "advisory_label"), not the
+  // PascalCase Rust variant name.
   assert_eq!(
     payload["original_winning_decision"],
-    Value::String("NoAction".to_string()),
-    "original_winning_decision = NoAction"
+    Value::String("no_action".to_string()),
+    "original_winning_decision = no_action"
   );
   assert_eq!(
     payload["appeal_winning_decision"],
-    Value::String("AdvisoryLabel".to_string()),
-    "appeal_winning_decision = AdvisoryLabel"
+    Value::String("advisory_label".to_string()),
+    "appeal_winning_decision = advisory_label"
   );
   assert_eq!(
     payload["case_id"],
