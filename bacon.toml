@@ -1,0 +1,36 @@
+# Bacon config for brehon-fork inner-loop dev.
+#
+# `cargo-watch` is in maintenance-only mode since September 2024;
+# `bacon` is the actively maintained successor with smarter
+# incremental rendering, workspace-level change detection, and a
+# persistent TUI that doesn't clear the terminal on each run.
+#
+# Default job is `clippy` — runs cargo clippy on save. Per Perplexity
+# research 2026-05-02: clippy subsumes cargo check (it performs full
+# type-checking PLUS lints), and running cargo check + cargo clippy
+# sequentially double-compiles workspace members because the two
+# drivers store artifacts under different fingerprint hashes
+# (RUSTC_WORKSPACE_WRAPPER). Drop cargo check; run clippy only.
+#
+# Install:  cargo install bacon
+# Run:      bacon          # defaults to clippy
+#           bacon test-smoke
+#           bacon test-full
+
+default_job = "clippy"
+
+[jobs.clippy]
+command = ["cargo", "clippy", "--workspace", "--features", "full", "--no-deps", "--", "-D", "warnings"]
+need_stdout = false
+watch = ["src", "*/src", "Cargo.toml", "*/Cargo.toml", "migrations"]
+
+[jobs.test-smoke]
+# A single fast e2e test for the save-loop. `postgres_container_boots`
+# is the smoke test added in Phase 0 of the e2e harness — runs in
+# ~3-5s once the testcontainer image is cached locally.
+command = ["cargo", "nextest", "run", "--workspace", "--features", "full", "--test", "e2e", "-E", "test(postgres_container_boots)"]
+need_stdout = true
+
+[jobs.test-full]
+command = ["cargo", "nextest", "run", "--workspace", "--features", "full", "--test", "e2e"]
+need_stdout = true

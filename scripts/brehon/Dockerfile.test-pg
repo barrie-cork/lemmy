@@ -1,0 +1,33 @@
+# Pre-baked Postgres image with Brehon migrations applied.
+#
+# Built on demand by testcontainers-rs's `GenericBuildableImage` from
+# `governance_fixtures::start_postgres` in `crates/server/tests/e2e.rs`.
+# The image tag is the sha256 of `migrations/` contents — Docker
+# rebuilds only when migrations change, so per-test container startup
+# drops from ~90s (cold migrations) to ~5-15s (already-applied).
+#
+# Per Perplexity research 2026-05-02: testcontainers-rs 0.27 supports
+# `with_skip_if_exists(true)` which is thread-safe under nextest
+# parallelism — multiple tests calling this concurrently are
+# serialized at the Docker daemon level.
+#
+# Built FROM the same upstream image Lemmy production uses
+# (pgautoupgrade/pgautoupgrade:18-alpine), so the migration round-trip
+# behaviour matches prod exactly.
+
+FROM pgautoupgrade/pgautoupgrade:18-alpine
+
+# initdb.d scripts run automatically on first container start (when
+# the data directory is empty). Once Docker commits the resulting
+# image layer, the bake is permanent — subsequent `docker run`
+# invocations of this tag start with the schema already in place.
+COPY migrations /tmp/migrations
+COPY scripts/brehon/apply-migrations-to-image.sh /docker-entrypoint-initdb.d/01-brehon-migrations.sh
+COPY crates/diesel_utils/replaceable_schema/utils.sql /tmp/replaceable_schema/utils.sql
+COPY crates/diesel_utils/replaceable_schema/triggers.sql /tmp/replaceable_schema/triggers.sql
+
+# Match the upstream entrypoint behavior — initdb.d runs on first init
+# only. The image is healthy when Postgres logs the ready message.
+ENV POSTGRES_USER=lemmy
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=lemmy
