@@ -27,6 +27,45 @@ DQ count summary (this sub-phase contribution): pending 2 → 0; resolved +12 (#
 
 ---
 
+## What surprised us
+
+Per `feedback_retro_not_report.md` canonical-header requirement.
+
+- **Cross-test env-var leak missed on round-1 fix-in-pr.** Round-1 cr-9 fix only patched the capstone test (line 9415) for `BREHON_DISABLE_APPEAL_WINDOW_JOB`. CR re-review caught the same pattern at line 9640 (Task 3 audit-log test). Lesson: when fixing a state-leak bug, grep ALL set sites of the same env var/global before declaring done. (Surfaces deeper in §3.4)
+- **Closure-vs-fn helper-shape gotcha cost 2 compile-fix cycles on Task 4.** Inner `async fn` doesn't see test-body's `use` imports; closure does. PersonId is at `lemmy_db_schema_file::PersonId`, not `lemmy_db_schema::newtypes`. Both patterns exist in e2e.rs; picking wrong one cost cycles. (§2.1, §3.4)
+- **CR misread on cr-11 emit-order critical.** CR claimed `case_decided` should fire before `public_log_published` based on a comment that was actually comparing case_decided vs federation_sanction_sent. Test passed twice in regression on the actual order. Saved by pre-emptively verifying rebut against source code. (§2.1)
+- **Plan §10.7 expected_prefix drift was 8 vs 11.** Plan listed 8-entry sequence; reality emits 11 (severity_tier_frozen, jury_accepted, public_log_published added). Test corrected; plan is the lifecycle-shape view, test is the every-emission view. (§3.1)
+- **Branch-switch contamination during multi-session work.** Another session checked out `governance-v0` mid-flight while I was about to mutate DQ #109 on `phase-v1-JM-e`. Edited the wrong branch's DQ file; caught via expected-count anomaly. (§2.1, §3.2)
+- **CR converged on DQ historical entries by round 4.** After two real-fix rounds, CR review 4 produced 1 finding (cr-21) on the same DQ #105 audit-trail, same as cr-1/14/15. The audit-trail principle (decision-queue.md "forward-only") repeatedly produces wont-fix bucket. CR can't model "this file shouldn't be edited."
+
+## What to change
+
+Per `feedback_retro_not_report.md`. Forward-going changes the next advisor / sub-phase should adopt.
+
+- **Always grep ALL set sites of a state-leak target before declaring done.** When patching env var / global state restoration, `git grep <SYMBOL>` first; fix every site in one commit. Round-1 cr-9 fix would have caught cr-9-dup-2 if done this way.
+- **Pre-emptively grep both async-fn and async-closure patterns in e2e.rs before authoring a helper.** Both patterns exist; the right choice depends on whether the helper needs the test body's `use` imports (closure) or is fully self-contained (fn).
+- **Verify rebut rationales against source code, not just CR's claim.** cr-11 emit-order rebut was right; the verification at submit_jury_vote.rs:505 + 637 + 631 saved a full e2e re-run on a wrong "fix".
+- **`git rev-parse --abbrev-ref HEAD` before any mutating commit, especially after a wait/poll cycle.** Multi-session contamination was a near-miss; re-checking branch is muscle-memory now.
+- **Audit-log invariant tests should snapshot a live emit sequence, not synthesise from PRD prose.** The §10.7 drift would have been caught at plan-write time if the planner had run a live test against the prefix.
+- **Brief-template for retro can keep the deeper structure (§1 What worked / §2 Per-role signals / §3 What didn't / etc.) but MUST also include the canonical three H2 headers (`## What surprised us / ## What to change / ## What to carry forward`) as anchor sections.** The skill's retro-gate checks for the anchor headers; mine almost broke the gate.
+
+## What to carry forward
+
+Per `feedback_retro_not_report.md`. Patterns and discipline the next advisor should explicitly inherit.
+
+- **Per-commit + local laptop e2e cadence under user gate** (`feedback_e2e_local_or_dispatch_user_choice.md`). Two regressions (29:46 + 28:44) cost ~58 min cumulative; saved ~28 min by self-resolving Task 5 on byte-identical-bytes citation. GH Actions minutes near zero.
+- **Sibling-test discipline (PMD #117).** Any test-only Brehon work in `crates/server/tests/e2e.rs` is laptop-authored. Junior workers hang on Edit calls into the >10k-line file. JM-e validated this for 4 of 6 tasks.
+- **Advisor-laptop pre-edit pattern for tests-only work.** ~10–25 min author + 1 min single-test verify, far below Junior's per-task overhead. Right runner when IMPLEMENT files are exclusively `e2e.rs`.
+- **§G4 classifier kept fix-impl narrow.** Each fix-impl cycle stayed ≤3 file edits across 3 cycles (Task 1 + Task 2 ×2). Plan §10.6 + §10.7 patterns gave each fix-impl an obvious target.
+- **Audit-trail principle for DQ historical entries.** Forward-only per `.claude/rules/decision-queue.md`; rewriting resolved entries falsifies the audit. CR will repeatedly suggest fixes here; bucket them as wont-fix with a citation. JM-e CR cycles 1–4 had 7 such findings; all wont-fix with consistent rationale.
+- **Lesson `feedback_brehon_config_micros_scaled.md`** (committed Task 3 ship). Brehon's 11 governance config keys are micros-scaled with strict `>` comparisons; reputation_snapshot rows feed weight formulas. Tests driving handlers must seed snapshots and respect strict-inequality math. Generalises to: sanction-weight, reputation-event, sponsor-liability, jury-threshold, federation-decay.
+- **Watch-items for v1-SL-d (next sub-phase) from §7 Follow-up GH issue candidates:**
+  - decline_jury_assignment role-dispatch gap (DQ #108 — mirror of accept_jury_assignment Task 2 fix-impl)
+  - Audit-log invariant test plan-prefix drift verification (lint at retro-time)
+  - Branch-switch contamination canary (pre-commit hook)
+
+---
+
 ## 1. What worked — keep doing
 
 ### 1.1 Per-commit + local laptop e2e cadence under user gate
