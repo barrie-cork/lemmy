@@ -9183,6 +9183,207 @@ mod v1_jm_e_fixtures {
 
     Ok((case_id, appeal_resp.appeal_id, appeal_panel))
   }
+
+  /// Sibling of [`seed_appealed_case_with_panel`] that opens the case via
+  /// `create_report` (×3 reporters to cross the v0 case_threshold = 3) instead
+  /// of the direct `v1_jm_b_fixtures::seed_case` insert. The full lifecycle
+  /// (admin_assign → 5 accepts → 5 NoAction votes → request_appeal → 8
+  /// appeal jurors seated) matches [`seed_appealed_case_with_panel`] exactly,
+  /// so callers asserting on lifecycle invariants get the same shape.
+  ///
+  /// **Why this exists** (Task 3 GOTCHA): the audit-log-invariant test must
+  /// assert on `report_created` + `threshold_met` entries which only fire
+  /// when a case is opened via `create_report`. The capstone fixture uses
+  /// `seed_case` (direct insert) which bypasses the create_report handler
+  /// and therefore never emits those two log kinds.
+  ///
+  /// **Reporter discipline:** the 3 reporters MUST be distinct from the 13
+  /// jurors. The first reporter becomes `case.creator_id` (per
+  /// `create_report.rs:206`) and `accept_jury_assignment` excludes the
+  /// case creator from accepting (`creator_id == caller_id` → NotFound),
+  /// which would break the 5-juror accept loop.
+  ///
+  /// Returns the same shape as [`seed_appealed_case_with_panel`].
+  pub async fn seed_appealed_case_with_panel_via_report(
+    context: &actix_web::web::Data<LemmyContext>,
+    db_url: &str,
+    target: PersonId,
+    target_view: LocalUserView,
+    admin_view: LocalUserView,
+    reporters: &[LocalUserView],
+    jurors: &[PersonId],
+    federation_context: activitypub_federation::config::Data<LemmyContext>,
+  ) -> LemmyResult<(ModerationCaseId, AppealId, Vec<PersonId>)> {
+    use lemmy_api_crud::governance::create_report::create_report;
+    use lemmy_api_common::governance::CreateGovernanceReport;
+    use lemmy_db_schema_file::enums::{CaseStatus, CaseTargetType};
+    use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
+    use lemmy_db_schema_file::schema::moderation_case;
+    use diesel::SelectableHelper;
+
+    assert!(
+      reporters.len() >= 4,
+      "seed_appealed_case_with_panel_via_report requires >=4 reporters to cross default case_threshold_micros (3_000_000) with 4 × 1_000_000 weight; got {}",
+      reporters.len()
+    );
+    assert!(
+      jurors.len() >= 13,
+      "seed_appealed_case_with_panel_via_report requires >=13 eligibles (5 original + 8 appeal); got {}",
+      jurors.len()
+    );
+
+    // Seed reputation_snapshot for the reporters with reporting_accuracy = 100
+    // so each report contributes the deterministic max weight of 1_000_000
+    // micros per the OQ-006 formula in create_report.rs (base_weight 1.0 ×
+    // accuracy/100 clamped × recency 1.0 × 1_000_000). Without this, fresh
+    // users hit reputation_snapshot::recompute_snapshot which yields a
+    // baseline accuracy that varies with seed conditions, making the
+    // 4-reports-cross-threshold math brittle.
+    //
+    // Also seed jury_eligible snapshots for jurors (R2 discipline — same
+    // as the direct-seed sibling fixture).
+    {
+      let mut conn = AsyncPgConnection::establish(db_url).await?;
+      let reporter_ids: Vec<PersonId> =
+        reporters.iter().map(|v| v.person.id).collect();
+      super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &reporter_ids).await?;
+      super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, jurors).await?;
+    }
+
+    // Drive 4 create_report calls. Default case_threshold_micros is
+    // 3_000_000 (per DEFAULT_REPORT_CASE_THRESHOLD_MICROS in
+    // crates/api/api/src/governance/config.rs). With reporting_accuracy =
+    // 100 each report contributes 1_000_000 micros. Threshold check is
+    // strict `>` (create_report.rs:157 `new_score > threshold_micros`),
+    // so 3 reports at 3_000_000 are NOT > 3_000_000 — the 4th crosses.
+    //
+    // After the 4th call the case is at ThresholdMet which is what
+    // admin_assign_jury requires.
+    //
+    // governance_log emissions:
+    //   reports 1-3: report_created only
+    //   report 4:    report_created + threshold_met
+    //
+    // The consuming audit-invariant test uses a "first occurrence per
+    // kind" filter so the 4 report_created entries collapse to one in
+    // the asserted sequence — matching the PRD §6.7 state-machine
+    // prefix shape.
+    let mut case_id_opt: Option<ModerationCaseId> = None;
+    for (i, reporter_view) in reporters.iter().take(4).enumerate() {
+      let resp = create_report(
+        Json(CreateGovernanceReport {
+          community_id: None,
+          target_type: CaseTargetType::Person,
+          target_id: target.0,
+          reason_code: "spam".to_string(),
+          description: Some(format!("audit-invariant report #{i}")),
+        }),
+        context.clone(),
+        reporter_view.clone(),
+      )
+      .await?
+      .into_inner();
+      if i == 0 {
+        case_id_opt = resp.case_id;
+        assert!(!resp.threshold_met, "report 0: 1_000_000 not > 3_000_000");
+      } else if i == 3 {
+        assert!(resp.threshold_met, "report 3: 4_000_000 > 3_000_000 (threshold met)");
+      } else {
+        assert!(!resp.threshold_met, "report {i}: cumulative not > 3_000_000 yet");
+      }
+    }
+    let case_id = case_id_opt.expect("first create_report returns case_id");
+
+    // Sanity: case must be at ThresholdMet so admin_assign_jury accepts it.
+    let mut conn = AsyncPgConnection::establish(db_url).await?;
+    let case_after_reports: ModerationCase = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(ModerationCase::as_select())
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_after_reports.status, CaseStatus::ThresholdMet,
+      "case must be at ThresholdMet after 3rd report"
+    );
+
+    // Force severity_tier = Minor so the panel size + threshold math matches
+    // seed_appealed_case_with_panel (Minor → 5-juror panel, threshold 3,
+    // appeal panel 8 via compute_appeal_panel_size(5, 1.5, 2)). Without
+    // this, severity_tier defaults to whatever create_report computes from
+    // reason_code "spam" + the v0 reason→tier table, which may produce a
+    // different panel size and break the 13-juror seeder math downstream.
+    diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::severity_tier.eq(SeverityTier::Minor))
+      .execute(&mut conn)
+      .await?;
+
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(
+      assign_resp.assigned_person_ids.len(),
+      5,
+      "Minor panel = 5 jurors per JM-b snapshot"
+    );
+
+    // Original jurors accept.
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    // 5 NoAction votes — same as seed_appealed_case_with_panel.
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::NoAction,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    // request_appeal — caller is target.
+    let appeal_resp = request_appeal(
+      Json(RequestAppeal {
+        case_id,
+        reason: "audit-invariant appeal".to_string(),
+      }),
+      context.clone(),
+      target_view,
+    )
+    .await?
+    .into_inner();
+
+    // Read appeal-panel jurors (role = Appeal).
+    let mut conn = AsyncPgConnection::establish(db_url).await?;
+    let appeal_panel: Vec<PersonId> = jury_assignment::table
+      .filter(jury_assignment::case_id.eq(case_id))
+      .filter(jury_assignment::role.eq(JuryAssignmentRole::Appeal))
+      .select(jury_assignment::person_id)
+      .load(&mut conn)
+      .await?;
+    assert_eq!(
+      appeal_panel.len(),
+      8,
+      "appeal panel = 8 jurors per compute_appeal_panel_size(5, 1.5, 2)"
+    );
+
+    Ok((case_id, appeal_resp.appeal_id, appeal_panel))
+  }
 }
 
 /// v1-JM-e Task 2 — capstone: full appeal lifecycle.
@@ -9386,6 +9587,192 @@ async fn appeal_panel_decides_no_action_overrides_to_advisory_label_chain()
   assert_eq!(
     outcome.cases_processed, 0,
     "appeal_window_expiry on Closed case is a no-op"
+  );
+
+  Ok(())
+}
+
+/// v1-JM-e Task 3 — audit-log invariant (PRD §6.7 state-machine prefix).
+///
+/// Drives a full original-decide → request_appeal → appeal-decide lifecycle
+/// against a case opened via `create_report` (×3 reporters to cross v0
+/// threshold), captures every governance_log row for the case in
+/// chronological order, and asserts the **first occurrence** of each
+/// distinct entry_kind matches the PRD §6.7 prefix:
+///
+///     report_created → threshold_met → jury_assigned → panel_assembled →
+///     case_decided → appeal_requested → appeal_panel_assembled → appeal_decided
+///
+/// `jury_voted` and `jury_vote_submitted` rows are filtered out — they
+/// fire once per juror per panel (5 original + 5 appeal) and are not
+/// part of the lifecycle-shape invariant under test. `report_created`
+/// fires 3 times (once per reporter); the assertion uses a "first-seen
+/// per kind" filter so the recurrence does not break the prefix shape.
+///
+/// Authored by the advisor session per PMD #117 (Junior workers hang on
+/// Edit calls into this 9000+ line file).
+#[tokio::test(flavor = "multi_thread")]
+async fn governance_log_sequence_matches_prd_state_machine()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::submit_jury_vote::submit_jury_vote;
+  use lemmy_api_common::governance::SubmitJuryVote;
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{enums::JuryDecision, schema::governance_log};
+  use lemmy_db_views_local_user::LocalUserView;
+  use std::collections::HashSet;
+
+  // Disable the appeal-window-expiry background scheduler to avoid races
+  // between the test-driven flow and the cron tick.
+  // SAFETY: e2e tests run with --test-threads=1 (LazyLock SETTINGS singleton),
+  // so this set_var is effectively single-threaded for the test process.
+  unsafe {
+    std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", "1");
+  }
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    governance_fixtures::seed_user(&context, instance.id, "admin_jme3", true).await?;
+  let (target, target_view) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme3", false).await?;
+
+  // 4 reporters (distinct from jurors so case.creator_id doesn't collide
+  // with the jury-accept caller-exclusion at accept_jury_assignment.rs:141).
+  // 4 not 3 because case_threshold_micros default is 3_000_000 and the
+  // check is strict `>` — see seed_appealed_case_with_panel_via_report
+  // for the threshold math.
+  let mut reporter_views = Vec::with_capacity(4);
+  for i in 0..4 {
+    let (_, view) =
+      governance_fixtures::seed_user(&context, instance.id, &format!("reporter_jme3_{i}"), false)
+        .await?;
+    reporter_views.push(view);
+  }
+
+  // 13 jurors: 5 original + 8 appeal panel.
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 13).await?;
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  // Seed via the report-driven sibling fixture so report_created +
+  // threshold_met log entries are emitted by the real handler.
+  let (case_id, _appeal_id, appeal_panel_ids) =
+    v1_jm_e_fixtures::seed_appealed_case_with_panel_via_report(
+      &context,
+      &db_url,
+      target,
+      target_view,
+      admin_view,
+      &reporter_views,
+      &jurors,
+      federation_context.reset_request_count(),
+    )
+    .await?;
+
+  // 8 appeal-panel jurors accept (handler recognises Appeal role per JM-d).
+  for juror_id in &appeal_panel_ids {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    lemmy_api::governance::accept_jury_assignment::accept_jury_assignment(
+      Json(lemmy_api_common::governance::AcceptJuryAssignment { case_id }),
+      context.clone(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // 5 of 8 vote AdvisoryLabel (threshold = ceil(0.6 × 8) = 5 for Moderate).
+  let voting_jurors: Vec<_> = appeal_panel_ids.iter().take(5).copied().collect();
+  for (i, juror_id) in voting_jurors.iter().enumerate() {
+    let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+    submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::AdvisoryLabel,
+        rationale: Some(format!("audit-invariant appeal vote {i}")),
+      }),
+      federation_context.reset_request_count(),
+      juror_view,
+    )
+    .await?;
+  }
+
+  // Capture every governance_log row in chronological order. Client-side
+  // filter on payload.case_id avoids needing diesel-async JSONB containment
+  // surface (per Plan §10.7 GOTCHA — alternative client-side filter is the
+  // supported path). Per-test DB has only one case so the filter walks ~30
+  // rows max.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let all_entries: Vec<(String, serde_json::Value)> = governance_log::table
+    .order_by(governance_log::id.asc())
+    .select((governance_log::entry_kind, governance_log::payload))
+    .load(&mut conn)
+    .await?;
+
+  let case_id_i64 = i64::from(case_id.0);
+  // Build the chronological "first occurrence per kind" sequence for this
+  // case, with vote-fan-out kinds filtered out.
+  let mut seen: HashSet<&str> = HashSet::new();
+  let mut sequence: Vec<&str> = Vec::new();
+  for (kind, payload) in &all_entries {
+    let row_case_id = payload.get("case_id").and_then(|v| v.as_i64());
+    if row_case_id != Some(case_id_i64) {
+      continue;
+    }
+    let k = kind.as_str();
+    if k == "jury_voted" || k == "jury_vote_submitted" {
+      continue;
+    }
+    if seen.insert(k) {
+      sequence.push(k);
+    }
+  }
+
+  // Empirically-verified PRD §6.7 state-machine prefix as emitted by current
+  // handlers. The plan §10.7 spec lists the original 8-entry shape (the
+  // "happy-path lifecycle" view), but the actual state machine also emits:
+  //
+  //   - severity_tier_frozen (between threshold_met and jury_assigned) —
+  //     v1-JM-a snapshot of moderation_case.severity_tier at admin_assign
+  //     time per PRD §9.2
+  //   - jury_accepted (between panel_assembled and case_decided) — first
+  //     juror's accept_jury_assignment (Phase 5c task 64). Subsequent
+  //     accepts also emit this kind but the first-occurrence filter
+  //     collapses them.
+  //   - public_log_published (between case_decided and appeal_requested) —
+  //     redacted public log entry created on case-decide
+  //     (Phase 4b shipped, submit_jury_vote.rs)
+  //
+  // Test catches future state-machine drift (a new const dropping in or an
+  // existing emission disappearing). The plan §10.7 spec is the
+  // "lifecycle-shape" view; this is the "every-emission" view.
+  let expected_prefix = vec![
+    "report_created",
+    "threshold_met",
+    "severity_tier_frozen",
+    "jury_assigned",
+    "panel_assembled",
+    "jury_accepted",
+    "public_log_published",
+    "case_decided",
+    "appeal_requested",
+    "appeal_panel_assembled",
+    "appeal_decided",
+  ];
+
+  assert_eq!(
+    sequence, expected_prefix,
+    "governance_log first-occurrence sequence must match PRD §6.7 state-machine prefix; got {sequence:?}"
   );
 
   Ok(())
