@@ -1,29 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 113,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-02T13:14:54.427982Z",
-      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 537bd2f0f (post-CR-round-2)",
-      "options": [
-        "(A) pass — round-2 CR fixes regression-clean (cr-16 doc / cr-18 NOT_FOUND / cr-9-dup-2 second env restore)",
-        "(B) fail — §G4 classifier triage on log_slice"
-      ],
-      "context": "CR re-review posted 5 new + 2 duplicate findings on tip a2051d98c. Round-2 fix-in-pr commit 537bd2f0f: cr-16 (doc update), cr-18 (NOT_FOUND assert), cr-9-dup-2 (Task 3 env restore). Compile-check exit 0.",
-      "commands": [
-        "cargo test --workspace --features full --test e2e -- --test-threads=1"
-      ],
-      "branch": "phase-v1-JM-e",
-      "phase_task": "fix-in-pr-round-2",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 104,
@@ -1743,6 +1719,29 @@
       "answer": "All e2e tests passed locally on laptop (post-CR-fix-in-pr). test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1721.64s. Both new tests still green (Task 4 config-churn line ~91; Task 5 §12 cluster line 95; Task 3 audit-log invariant line 100). cr-9 env var restore verified (capstone test still passes); cr-8 ALL_JURY_DECISIONS const verified (process_vote + process_appeal_vote both compile + run).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-02T13:07:09.311680Z"
+    },
+    {
+      "id": 113,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T13:14:54.427982Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 537bd2f0f (post-CR-round-2)",
+      "options": [
+        "(A) pass — round-2 CR fixes regression-clean (cr-16 doc / cr-18 NOT_FOUND / cr-9-dup-2 second env restore)",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "CR re-review posted 5 new + 2 duplicate findings on tip a2051d98c. Round-2 fix-in-pr commit 537bd2f0f: cr-16 (doc update), cr-18 (NOT_FOUND assert), cr-9-dup-2 (Task 3 env restore). Compile-check exit 0.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": "fix-in-pr-round-2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All e2e tests passed locally on laptop (post-CR-round-2). test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1720.60s. cr-18 NOT_FOUND assertion verified (Task 5 spoof line 95 still passes); cr-9-dup-2 env restore verified (Task 3 audit-log line 100 still passes); cr-16 doc update has no runtime impact (lesson file).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T13:46:22.078265Z"
     }
   ],
   "schema_version": 2
