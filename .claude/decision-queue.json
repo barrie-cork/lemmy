@@ -1,51 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 101,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T11:15:09Z",
-      "question": "workspace-check for v1-JM-e task 1 fix",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
-      "workflow_run_id": 25212353950,
-      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
-      "phase_task": "1-fix",
-      "result": "fail",
-      "log_slice": "error[E0061]: this function takes 2 arguments but 1 argument was supplied\n    --> crates/server/tests/e2e.rs:3824:9\nerror[E0308]: mismatched types\n    --> crates/server/tests/e2e.rs:3823:23\nerror: could not compile `lemmy_server` (test \"e2e\") due to 4 previous errors",
-      "failed_jobs": [
-        "validate workspace"
-      ],
-      "answer": "Compile failure in e2e test: LocalSiteInsertForm::new() signature changed to require 2 arguments (site_id, system_account: PersonId), but calls at lines 3824 and 4091 still provide only 1 argument. Also system_account field expects PersonId, not Option<PersonId>.",
-      "answered_by": "ci-watcher",
-      "resolved_at": "2026-05-01T11:40:00Z"
-    },
-    {
-      "id": 103,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T13:51:48Z",
-      "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
-      "workflow_run_id": 25216808963,
-      "local_log_path": null,
-      "branch": "phase-v1-JM-e",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 104,
@@ -1613,6 +1567,51 @@
       "answer": "Capstone passed after two fixes: (1) accept_jury_assignment role-dispatch landed at 360c24cb9 (Original-role accepts JurySelection|InReview, Appeal-role accepts Appealed), (2) audit-log payload assertions corrected to snake_case at 263a08f00 (JuryDecision serializes via #[serde(rename_all = \"snake_case\")]). Test result: ok. 1 passed; 0 failed; finished in 49.00s.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-01T21:06:18Z"
+    },
+    {
+      "id": 101,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T11:15:09Z",
+      "question": "workspace-check for v1-JM-e task 1 fix",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "workflow_run_id": 25212353950,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "phase_task": "1-fix",
+      "result": "fail",
+      "log_slice": "error[E0061]: this function takes 2 arguments but 1 argument was supplied\n    --> crates/server/tests/e2e.rs:3824:9\nerror[E0308]: mismatched types\n    --> crates/server/tests/e2e.rs:3823:23\nerror: could not compile `lemmy_server` (test \"e2e\") due to 4 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded — workspace-check failure was on junior/* worktree branch that never merged to phase-v1-JM-e. Task 1 fix landed via fix-impl-3 (commit 8cf152bcf) on a different junior/* branch; Task 2 capstone passed local e2e (DQ #107, commit 43ed59097). The compile error cited (LocalSiteInsertForm signature) is no longer reachable from phase-v1-JM-e tip.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
+    },
+    {
+      "id": 103,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T13:51:48Z",
+      "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
+      "workflow_run_id": 25216808963,
+      "local_log_path": null,
+      "branch": "phase-v1-JM-e",
+      "phase_task": 1,
+      "result": "superseded",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Superseded — Phase-2 e2e was raised for phase-v1-JM-e tip 3e1242d6f (Task 1 finalize-merge). Phase tip has since advanced through Task 2 capstone (commit 43ed59097) which passed local e2e via DQ #107 advisor-laptop run. The flake-check workflow run 25216808963 is stale; no ci-watcher will mutate this entry. Going forward, Phase-2 e2e for v1-JM-e runs locally on the laptop per the validate-pending-laptop handler (decision 2026-04-28 PR #105 minutes-budget audit + 2026-05-01 user choice for Task 2 capstone).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
     }
   ],
   "schema_version": 2
