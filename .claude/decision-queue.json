@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 110,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T10:51:19.391635Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip c83aaec05 (post-Task 4 ship)",
+      "options": [
+        "(A) pass — full e2e suite green; Task 4 + entire JM-e cohort regression-clean",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "Task 4 (config-churn appeal.window_days regression test) shipped at c83aaec05. Single-test PASS in 44.09s. Per user: per-commit cadence + local laptop runner.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 104,
