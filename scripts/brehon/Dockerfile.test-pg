@@ -1,10 +1,14 @@
 # Pre-baked Postgres image with Brehon migrations applied.
 #
-# Built on demand by testcontainers-rs's `GenericBuildableImage` from
-# `governance_fixtures::start_postgres` in `crates/server/tests/e2e.rs`.
-# The image tag is the sha256 of `migrations/` contents — Docker
-# rebuilds only when migrations change, so per-test container startup
-# drops from ~90s (cold migrations) to ~5-15s (already-applied).
+# Built out-of-band (e.g. via `docker build -f scripts/brehon/Dockerfile.test-pg .`
+# or a CI step) and then consumed by `GenericImage` in
+# `governance_fixtures::start_postgres` (crates/server/tests/e2e.rs) by
+# referencing the resulting image tag. The image tag is the sha256 of
+# `migrations/` contents — rebuild only when migrations change, so
+# per-test container startup drops from ~90s (cold migrations) to ~5-15s
+# (already-applied). copilot-3: header previously claimed
+# `GenericBuildableImage` was used; the harness uses plain `GenericImage`
+# pointed at the pre-baked tag.
 #
 # Per Perplexity research 2026-05-02: testcontainers-rs 0.27 supports
 # `with_skip_if_exists(true)` which is thread-safe under nextest

@@ -27,9 +27,12 @@
 slow-timeout = { period = "60s", terminate-after = 3 }
 test-threads = "num-cpus"
 
-# All e2e tests need a Postgres container — gate concurrency.
+# Only e2e tests need a Postgres container — gate concurrency on the
+# e2e binary specifically (copilot-4: previous filter `test(/.*/)`
+# threw the same throttle on every unit test, slowing the whole
+# workspace pointlessly).
 [[profile.default.overrides]]
-filter = 'test(/.*/)'
+filter = 'binary(=e2e)'
 threads-required = 4
 
 [profile.ci]
@@ -38,3 +41,10 @@ threads-required = 4
 # accounts for ubuntu-latest cold-start.
 slow-timeout = { period = "120s", terminate-after = 5 }
 test-threads = "num-cpus"
+
+# cr-7: explicit CI-profile override mirrors the threads-required gate
+# rather than relying on profile.default.overrides fallback. Same
+# binary scope as the default profile — only e2e is throttled.
+[[profile.ci.overrides]]
+filter = 'binary(=e2e)'
+threads-required = 4

@@ -45,7 +45,7 @@ Raw `cargo test --workspace --features full --test e2e -- --test-threads=1` will
 
 Background cargo task reports `exit code 0` BUT the tee'd log ends with:
 
-```
+```text
 error: test failed, to rerun pass `-p lemmy_server --test e2e`
 
 Caused by:

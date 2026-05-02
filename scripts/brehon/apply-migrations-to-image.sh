@@ -31,32 +31,49 @@ set -eu
 
 POSTGRES_USER="${POSTGRES_USER:-lemmy}"
 POSTGRES_DB="${POSTGRES_DB:-lemmy}"
+# cr-12: pg_advisory_lock(0) is session-scoped, so the lock plus every
+# migration/INSERT/replaceable-schema apply MUST run inside ONE psql
+# session — not separate ${PSQL} -c invocations, which open new
+# sessions and silently drop the lock between calls. We assemble a
+# single SQL script via stdin (here-doc) with ON_ERROR_STOP=1 so any
+# migration failure aborts the whole apply (and thus fails the Docker
+# image build). copilot-2 fix: removed `|| true` swallowing on the
+# __diesel_schema_migrations INSERT; ON CONFLICT DO NOTHING is the
+# explicit idempotency mechanism, and any other error must surface.
 PSQL="psql -v ON_ERROR_STOP=1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
 
-echo "brehon-fixtures: acquiring advisory lock"
-${PSQL} -c "SELECT pg_advisory_lock(0);"
+echo "brehon-fixtures: assembling single-session SQL stream"
+SQL_SCRIPT="$(mktemp /tmp/brehon-fixtures-XXXXXX.sql)"
+trap 'rm -f "$SQL_SCRIPT"' EXIT
 
-echo "brehon-fixtures: applying migrations from /tmp/migrations"
-# Apply migrations in lexicographic order. Diesel migration directory
-# layout: each migration is a directory containing up.sql + down.sql.
-# We only apply up.sql here.
+# 1. Acquire the lock — session-scoped, so it spans the entire stream.
+echo "SELECT pg_advisory_lock(0);" > "$SQL_SCRIPT"
+
+# 2. Apply every migration's up.sql in lexicographic order, immediately
+#    followed by the __diesel_schema_migrations INSERT. The schema
+#    table is created by the first Diesel migration, so the INSERT
+#    after migration #1 finds the table present.
 for migration_dir in $(ls -1 /tmp/migrations | sort); do
     if [ -f "/tmp/migrations/${migration_dir}/up.sql" ]; then
-        echo "  applying ${migration_dir}/up.sql"
-        ${PSQL} -f "/tmp/migrations/${migration_dir}/up.sql"
-        # Record in __diesel_schema_migrations so MigrationHarness.run_pending_migrations
-        # is a no-op on this image. The schema_migrations table itself is
-        # created by the first Diesel migration.
-        ${PSQL} -c "INSERT INTO __diesel_schema_migrations (version) VALUES ('${migration_dir%%_*}') ON CONFLICT DO NOTHING;" || true
+        echo "  scheduling ${migration_dir}/up.sql"
+        echo "\\echo applying ${migration_dir}/up.sql" >> "$SQL_SCRIPT"
+        echo "\\i /tmp/migrations/${migration_dir}/up.sql" >> "$SQL_SCRIPT"
+        echo "INSERT INTO __diesel_schema_migrations (version) VALUES ('${migration_dir%%_*}') ON CONFLICT DO NOTHING;" >> "$SQL_SCRIPT"
     fi
 done
 
-echo "brehon-fixtures: rebuilding replaceable schema"
-${PSQL} -c "DROP SCHEMA IF EXISTS r CASCADE; CREATE SCHEMA r;"
-${PSQL} -f /tmp/replaceable_schema/utils.sql
-${PSQL} -f /tmp/replaceable_schema/triggers.sql
+# 3. Replaceable schema (rebuild from scratch; r.* is recreated on
+#    every cargo run too, so resetting here matches runtime semantics).
+echo "\\echo rebuilding replaceable schema" >> "$SQL_SCRIPT"
+echo "DROP SCHEMA IF EXISTS r CASCADE; CREATE SCHEMA r;" >> "$SQL_SCRIPT"
+echo "\\i /tmp/replaceable_schema/utils.sql" >> "$SQL_SCRIPT"
+echo "\\i /tmp/replaceable_schema/triggers.sql" >> "$SQL_SCRIPT"
 
-echo "brehon-fixtures: releasing advisory lock"
-${PSQL} -c "SELECT pg_advisory_unlock(0);"
+# 4. Release the lock at script end (psql disconnect would also drop
+#    it, but make the unlock explicit for symmetry with the lock).
+echo "SELECT pg_advisory_unlock(0);" >> "$SQL_SCRIPT"
+
+echo "brehon-fixtures: executing single-session apply"
+${PSQL} -f "$SQL_SCRIPT"
 
 echo "brehon-fixtures: done"

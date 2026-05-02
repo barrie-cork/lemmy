@@ -43,7 +43,14 @@ case "${OSTYPE:-}" in
     export VCPKG_ROOT
     export PQ_LIB_DIR="${VCPKG_ROOT}\\installed\\x64-windows\\lib"
     export PQ_INCLUDE_DIR="${VCPKG_ROOT}\\installed\\x64-windows\\include"
-    export PATH="/c/Users/barri/Developer/vcpkg/installed/x64-windows/bin:${PATH}"
+    # cr-13 / copilot-1: derive the POSIX PATH segment from $VCPKG_ROOT so
+    # users overriding the vcpkg location keep PATH consistent with
+    # PQ_LIB_DIR / PQ_INCLUDE_DIR. Translate Windows path → MSYS POSIX
+    # form (C:\X → /c/X; backslash → forward slash).
+    _vcpkg_posix="$(printf '%s' "$VCPKG_ROOT" \
+      | sed -e 's|\\\\|/|g' -e 's|\\|/|g' -e 's|^\([A-Za-z]\):|/\L\1|')"
+    export PATH="${_vcpkg_posix}/installed/x64-windows/bin:${PATH}"
+    unset _vcpkg_posix
     echo "PQ_LIB_DIR=${PQ_LIB_DIR}"
     ;;
 esac

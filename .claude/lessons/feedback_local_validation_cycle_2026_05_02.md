@@ -51,10 +51,12 @@ The historical `--test-threads=1` constraint on `crates/server/tests/e2e.rs` exi
 
 **How to apply:**
 - Land `.cargo/config.toml` at workspace root with:
+
   ```toml
   [target.x86_64-pc-windows-msvc]
   linker = "rust-lld"
   ```
+
 - Rollback: comment the block; no `target/` invalidation needed beyond cargo's normal config-change rebuild.
 - **Do not** add `lld-link.exe` from system LLVM unless `rust-lld` doesn't work for some reason — the two are separate codepaths.
 
