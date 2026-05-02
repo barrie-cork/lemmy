@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 113,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T13:14:54.427982Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 537bd2f0f (post-CR-round-2)",
+      "options": [
+        "(A) pass — round-2 CR fixes regression-clean (cr-16 doc / cr-18 NOT_FOUND / cr-9-dup-2 second env restore)",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "CR re-review posted 5 new + 2 duplicate findings on tip a2051d98c. Round-2 fix-in-pr commit 537bd2f0f: cr-16 (doc update), cr-18 (NOT_FOUND assert), cr-9-dup-2 (Task 3 env restore). Compile-check exit 0.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": "fix-in-pr-round-2",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 104,
