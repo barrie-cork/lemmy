@@ -1612,6 +1612,21 @@
       "answer": "Superseded — Phase-2 e2e was raised for phase-v1-JM-e tip 3e1242d6f (Task 1 finalize-merge). Phase tip has since advanced through Task 2 capstone (commit 43ed59097) which passed local e2e via DQ #107 advisor-laptop run. The flake-check workflow run 25216808963 is stale; no ci-watcher will mutate this entry. Going forward, Phase-2 e2e for v1-JM-e runs locally on the laptop per the validate-pending-laptop handler (decision 2026-04-28 PR #105 minutes-budget audit + 2026-05-01 user choice for Task 2 capstone).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-02T07:44:06Z"
+    },
+    {
+      "id": 108,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-02T07:44:55Z",
+      "question": "decline_jury_assignment.rs has no role-dispatch guard — should it match the Original/Appeal dispatch added to accept_jury_assignment in Task 2?",
+      "options": [
+        "(A) file-as-fix-impl post-JM-e — add role-aware case.status guard mirroring accept_jury_assignment",
+        "(B) leave as-is — decline-from-wrong-role is rare and the GOTCHA-cited replacement-pool pollution is bounded by select_eligible_jurors filtering"
+      ],
+      "context": "Audit pre-flight before Task 3 found decline_jury_assignment.rs accepts decline from any role on any (Selected | Accepted) status. accept_jury_assignment.rs (post-Task-2-fix at line 360cb9c0) has full Original/Appeal × case.status dispatch lines 110-136. An Appeal-role juror declining while case is in Appealed works, but an Original-role juror declining a case stuck in Appealed (or vice versa) hits select_eligible_jurors with the wrong role's exclude list, picking a replacement from the wrong pool.",
+      "answer": "Recommended: file-as-fix-impl post-JM-e ship. The decline-replacement-pool pollution is bounded today (no in-flight Appeal-role declines observed) but the gap is structurally identical to the accept_jury_assignment defect that hit Task 2 capstone. Mirror the Original/Appeal × case.status match arms from accept_jury_assignment lines 110-136, with the additional concern that select_eligible_jurors needs role-aware exclude lists too (decline.rs line 135 filters jury_assignment by .ne(Declined) + .ne(Expired) without role filtering — Appeal-role declines should pull replacements from the appeal-eligible pool, not the original-eligible pool). Promote to fix-impl in v1-JM-e retro §7 follow-up issue candidates.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:55Z"
     }
   ],
   "schema_version": 2
