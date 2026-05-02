@@ -1,29 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 109,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-02T08:04:50Z",
-      "question": "full e2e regression for v1-JM-e Task 3 — phase-v1-JM-e tip 53e1b9ef8",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "User-elected local laptop run (option a) per feedback_e2e_local_or_dispatch_user_choice. Single-test gov-log-sequence test already passed locally (test-task3-r3.log: 1 passed/0 failed/55.49s); this is the full-suite regression on the phase-tip after Task 3 commit 53e1b9ef8.",
-      "commands": [
-        "cargo test --workspace --features full --test e2e -- --test-threads=1"
-      ],
-      "branch": "phase-v1-JM-e",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 104,
@@ -1651,6 +1627,29 @@
       "answer": "Recommended: file-as-fix-impl post-JM-e ship. The decline-replacement-pool pollution is bounded today (no in-flight Appeal-role declines observed) but the gap is structurally identical to the accept_jury_assignment defect that hit Task 2 capstone. Mirror the Original/Appeal × case.status match arms from accept_jury_assignment lines 110-136, with the additional concern that select_eligible_jurors needs role-aware exclude lists too (decline.rs line 135 filters jury_assignment by .ne(Declined) + .ne(Expired) without role filtering — Appeal-role declines should pull replacements from the appeal-eligible pool, not the original-eligible pool). Promote to fix-impl in v1-JM-e retro §7 follow-up issue candidates.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-02T07:44:55Z"
+    },
+    {
+      "id": 109,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T08:04:50Z",
+      "question": "full e2e regression for v1-JM-e Task 3 — phase-v1-JM-e tip 53e1b9ef8",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "User-elected local laptop run (option a) per feedback_e2e_local_or_dispatch_user_choice. Single-test gov-log-sequence test already passed locally (test-task3-r3.log: 1 passed/0 failed/55.49s); this is the full-suite regression on the phase-tip after Task 3 commit 53e1b9ef8.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Full e2e regression passed locally on laptop: 64 passed, 0 failed, 3 ignored, finished in 1785.92s (29:46). Phase tip 53e1b9ef8 (Task 3 commit) + 9f78d2532 (this DQ-raise commit) clean. Log at .claude/runlog/e2e-v1-JM-e-53e1b9ef8.log. Includes the new governance_log_sequence_matches_prd_state_machine test passing as part of the suite.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T08:41:24Z"
     }
   ],
   "schema_version": 2
