@@ -18,6 +18,12 @@ codegen-units = 1 # Reduce parallel code generation.
 # out temporarily, but make sure to leave this in the main branch.
 [profile.dev]
 debug = 0
+incremental = true
+# `split-debuginfo = "packed"` is the only stable value on Windows MSVC
+# (see cargo PR #11347). Setting it explicitly keeps incremental rebuilds
+# fast and prevents future toolchain bumps from silently changing
+# defaults. No-op on Linux/macOS where defaults already match.
+split-debuginfo = "packed"
 
 # Optimize procedural macros
 [profile.dev.build-override]
