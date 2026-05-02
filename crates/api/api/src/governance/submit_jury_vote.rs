@@ -42,20 +42,21 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_JURY_DEADLOCK},
+  governance_log::{self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK},
   redaction,
   sponsor_liability,
 };
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
-use chrono::{Duration, Utc};
-use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
+use chrono::{DateTime, Duration, Utc};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::{
   newtypes::{CommunityId, ModerationCaseId},
   source::governance::{
+    appeal::Appeal,
     jury_vote::{JuryVote, JuryVoteInsertForm},
     moderation_case::ModerationCase,
     public_case_log::PublicCaseLogInsertForm,
@@ -66,7 +67,9 @@ use lemmy_db_schema::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::{
+    AppealStatus,
     CaseStatus,
+    JuryAssignmentRole,
     JuryAssignmentStatus,
     JuryDecision,
     ReputationDimension,
@@ -74,6 +77,7 @@ use lemmy_db_schema_file::{
     SanctionScope,
   },
   schema::{
+    appeal,
     jury_assignment,
     jury_vote,
     moderation_case,
@@ -91,6 +95,23 @@ use std::collections::HashMap;
 // Per-juror / per-reporter reputation deltas now flow through `ConfigCache`
 // via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
 // keys (Phase 5a seeded). See `process_vote` for the cached reads.
+
+// Stable enum-order iteration list for tally loops in `process_vote` (original
+// jury) + `process_appeal_vote` (appeal jury). Single source of truth — adding
+// a new `JuryDecision` variant requires extending this list. Compile-time
+// exhaustiveness is enforced by `map_decision_to_sanction` below; this const
+// is the runtime tally order. Mirrors stable enum-declaration order in
+// `crates/db_schema_file/src/enums.rs` and the [04 §8] aggregation rule.
+const ALL_JURY_DECISIONS: [JuryDecision; 8] = [
+  JuryDecision::NoAction,
+  JuryDecision::AdvisoryLabel,
+  JuryDecision::Warning,
+  JuryDecision::Cooldown,
+  JuryDecision::RemoveContent,
+  JuryDecision::SuspendLocalUser,
+  JuryDecision::SuspendCommunityMember,
+  JuryDecision::RecommendFederationAction,
+];
 
 pub async fn submit_jury_vote(
   Json(data): Json<SubmitJuryVote>,
@@ -147,18 +168,16 @@ async fn process_vote(
   // ConfigCache lives for the whole vote-tally transaction. All typed reads
   // go through `(&mut *conn).into()` — same pattern as `reputation_snapshot`.
   let mut cache = ConfigCache::new();
-  // 1. Verify assignment is Accepted (not Submitted — double-vote guard).
-  let assignment_exists: bool = jury_assignment::table
+  // 1. Verify assignment is Accepted (not Submitted — double-vote guard); capture role for
+  //    step-2.5 branch dispatch (v1-JM-e: Appeal-role jurors go to process_appeal_vote).
+  let role: JuryAssignmentRole = jury_assignment::table
     .filter(jury_assignment::case_id.eq(data.case_id))
     .filter(jury_assignment::person_id.eq(juror_id))
     .filter(jury_assignment::status.eq(JuryAssignmentStatus::Accepted))
-    .count()
-    .get_result::<i64>(conn)
-    .await?
-    > 0;
-  if !assignment_exists {
-    return Err(LemmyErrorType::NotFound.into());
-  }
+    .select(jury_assignment::role)
+    .first::<JuryAssignmentRole>(conn)
+    .await
+    .map_err(|_e| LemmyErrorType::NotFound)?;
 
   // 2. SELECT FOR UPDATE on moderation_case BEFORE the jury_vote INSERT.
   // Lock-ordering: the jury_vote INSERT at step 3 below takes an FK SHARE
@@ -183,6 +202,16 @@ async fn process_vote(
     .first(conn)
     .await?;
 
+  let now = Utc::now();
+
+  // Step 2.5 (v1-JM-e): branch on jury_assignment.role BEFORE the idempotency guard.
+  // Appeal-role jurors follow the appeal-panel tally path; Original-role jurors continue below.
+  // GOTCHA: the idempotency guard below lists `Appealed` as terminal, but appeal-panel votes
+  // MUST fire on Appealed cases — so the dispatch precedes the guard.
+  if role == JuryAssignmentRole::Appeal {
+    return process_appeal_vote(conn, juror_id, juror_pseudonym, data, &case_row, now).await;
+  }
+
   // 3. Insert vote row.
   let vote_form = JuryVoteInsertForm {
     case_id: data.case_id,
@@ -197,7 +226,6 @@ async fn process_vote(
     .await?;
 
   // 4. Flip assignment → Submitted. submitted_at is set by the trigger.
-  let now = Utc::now();
   update(
     jury_assignment::table
       .filter(jury_assignment::case_id.eq(data.case_id))
@@ -314,22 +342,11 @@ async fn process_vote(
     tally.entry(decision).or_default().push(rationale);
   }
 
-  // Stable enum-order iteration (hardcoded to avoid a strum dependency).
-  // INVARIANT: this iteration list MUST cover every JuryDecision variant.
-  // `map_decision_to_sanction` (below) is the canonical exhaustive match
-  // — any new variant added to the enum will fail to compile in that
-  // helper first. When extending JuryDecision, update this list too.
+  // Stable enum-order tally per [04 §8] — see ALL_JURY_DECISIONS const at
+  // module top for the single source of truth. `map_decision_to_sanction`
+  // below is the compile-time exhaustiveness check.
   let mut winning_decision: Option<JuryDecision> = None;
-  for candidate in [
-    JuryDecision::NoAction,
-    JuryDecision::AdvisoryLabel,
-    JuryDecision::Warning,
-    JuryDecision::Cooldown,
-    JuryDecision::RemoveContent,
-    JuryDecision::SuspendLocalUser,
-    JuryDecision::SuspendCommunityMember,
-    JuryDecision::RecommendFederationAction,
-  ] {
+  for candidate in ALL_JURY_DECISIONS {
     let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
       LemmyErrorType::Unknown(format!(
         "vote count for {candidate:?} on case {} overflows i64",
@@ -647,6 +664,224 @@ async fn process_vote(
     vote_recorded: true,
     case_decided: true,
     decision: Some(winning_decision),
+  })
+}
+
+/// Appeal-panel vote tally (v1-JM-e). Dispatched from `process_vote` when
+/// `jury_assignment.role == Appeal`. Runs inside the same `run_transaction`
+/// block as the outer handler — do NOT open a new transaction here.
+///
+/// Steps 3-5 mirror `process_vote` verbatim. Step 6 uses a narrower
+/// idempotency guard (`Appealed` is the EXPECTED case status here, not a
+/// terminal). Steps 7-8 load the `Appeal` row snapshots and run the appeal-
+/// panel threshold tally.
+async fn process_appeal_vote(
+  conn: &mut diesel_async::AsyncPgConnection,
+  juror_id: PersonId,
+  juror_pseudonym: String,
+  data: SubmitJuryVote,
+  case_row: &ModerationCase,
+  now: DateTime<Utc>,
+) -> LemmyResult<SubmitJuryVoteResponse> {
+  // Step 3: Insert vote row.
+  let vote_form = JuryVoteInsertForm {
+    case_id: data.case_id,
+    juror_id,
+    decision: data.decision,
+    rationale: data.rationale.clone(),
+  };
+  let vote_row: JuryVote = insert_into(jury_vote::table)
+    .values(&vote_form)
+    .returning(JuryVote::as_returning())
+    .get_result(conn)
+    .await?;
+
+  // Step 4: Flip assignment → Submitted.
+  update(
+    jury_assignment::table
+      .filter(jury_assignment::case_id.eq(data.case_id))
+      .filter(jury_assignment::person_id.eq(juror_id)),
+  )
+  .set((
+    jury_assignment::status.eq(JuryAssignmentStatus::Submitted),
+    jury_assignment::submitted_at.eq(Some(now)),
+  ))
+  .execute(conn)
+  .await?;
+
+  // Step 5: Log this vote. The v0 literal is preserved verbatim per plan §12 out-of-scope
+  // (JM-c v0-literal cleanup is coordinated for a later sub-phase).
+  governance_log::append(
+    &mut conn.into(),
+    "jury_vote_submitted",
+    json!({
+      "case_id": data.case_id.0,
+      "decision": data.decision,
+      "vote_id": vote_row.id.0,
+    }),
+    Some(juror_pseudonym.clone()),
+  )
+  .await?;
+
+  // Step 6: Narrower idempotency guard — `Appealed` is the EXPECTED status during appeal-panel
+  // voting. Only truly terminal states short-circuit here.
+  if matches!(
+    case_row.status,
+    CaseStatus::Closed | CaseStatus::EmergencyRemove | CaseStatus::AdminReview
+  ) {
+    return Ok(SubmitJuryVoteResponse {
+      vote_recorded: true,
+      case_decided: true,
+      decision: None,
+    });
+  }
+
+  // Step 7-appeal: Load Appeal row; read panel snapshots. These were written by
+  // `seat_appeal_panel` (JM-d). NULL on either snapshot is a process breach.
+  let appeal_row: Appeal = appeal::table
+    .filter(appeal::case_id.eq(data.case_id))
+    .select(Appeal::as_select())
+    .first(conn)
+    .await
+    .map_err(|_e| LemmyErrorType::NotFound)?;
+
+  let appeal_panel_size: i32 = appeal_row.panel_size_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "appeal {} has NULL panel_size_snapshot; seat_appeal_panel did not run",
+      appeal_row.id.0
+    ))
+  })?;
+  let appeal_threshold_count: i32 = appeal_row.threshold_count_snapshot.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "appeal {} has NULL threshold_count_snapshot; seat_appeal_panel did not run",
+      appeal_row.id.0
+    ))
+  })?;
+  let appeal_threshold_count_i64 = i64::from(appeal_threshold_count); // R1: i64::from, never `as`
+
+  // Step 7.5-appeal: Per-decision tally on Appeal-role jurors only (JOIN filters out
+  // original-jury votes which would otherwise pollute the appeal tally).
+  let all_appeal_votes: Vec<(JuryDecision, Option<String>)> = jury_vote::table
+    .inner_join(
+      jury_assignment::table.on(
+        jury_assignment::case_id
+          .eq(jury_vote::case_id)
+          .and(jury_assignment::person_id.eq(jury_vote::juror_id)),
+      ),
+    )
+    .filter(jury_vote::case_id.eq(data.case_id))
+    .filter(jury_assignment::role.eq(JuryAssignmentRole::Appeal))
+    .select((jury_vote::decision, jury_vote::rationale))
+    .load::<(JuryDecision, Option<String>)>(conn)
+    .await?;
+  let mut tally: HashMap<JuryDecision, Vec<Option<String>>> = HashMap::new();
+  for (decision, rationale) in all_appeal_votes {
+    tally.entry(decision).or_default().push(rationale);
+  }
+  let appeal_vote_count: i64 =
+    i64::try_from(tally.values().map(Vec::len).sum::<usize>())
+      .map_err(|_e| LemmyErrorType::Unknown("appeal vote count overflows i64".to_string()))?;
+
+  // Stable enum-order tally — same source-of-truth as process_vote.
+  let mut appeal_winning_decision: Option<JuryDecision> = None;
+  for candidate in ALL_JURY_DECISIONS {
+    let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
+      LemmyErrorType::Unknown(format!(
+        "appeal vote count for {candidate:?} on case {} overflows i64",
+        data.case_id.0
+      ))
+    })?;
+    if count >= appeal_threshold_count_i64 {
+      appeal_winning_decision = Some(candidate);
+      break;
+    }
+  }
+
+  // Step 8-appeal: Deadlock-or-decide.
+  let appeal_winning_decision = match appeal_winning_decision {
+    Some(decision) => decision,
+    None => {
+      if appeal_vote_count == i64::from(appeal_panel_size) {
+        // APPEAL DEADLOCK: all appeal jurors voted, no decision met threshold.
+        // Flip to AdminReview — do NOT set appeal.decided_at. Mirrors process_vote deadlock.
+        update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+          .set(moderation_case::status.eq(CaseStatus::AdminReview))
+          .execute(conn)
+          .await?;
+
+        let tally_payload: serde_json::Map<String, Value> = tally
+          .iter()
+          .map(|(decision, votes)| (format!("{decision:?}"), Value::from(votes.len())))
+          .collect();
+
+        governance_log::append(
+          &mut conn.into(),
+          ENTRY_KIND_JURY_DEADLOCK,
+          json!({
+            "case_id": data.case_id.0,
+            "appeal_id": appeal_row.id.0,
+            "panel_kind": "appeal",
+            "panel_size_snapshot": appeal_panel_size,
+            "threshold_count_snapshot": appeal_threshold_count,
+            "tally": tally_payload,
+          }),
+          Some(juror_pseudonym.clone()),
+        )
+        .await?;
+      }
+      return Ok(SubmitJuryVoteResponse {
+        vote_recorded: true,
+        case_decided: false,
+        decision: None,
+      });
+    }
+  };
+
+  // Appeal verdict reached threshold.
+  // Set appeal.decided_at + appeal.status = Decided.
+  update(appeal::table.filter(appeal::id.eq(appeal_row.id)))
+    .set((
+      appeal::decided_at.eq(Some(now)),
+      appeal::status.eq(AppealStatus::Decided),
+    ))
+    .execute(conn)
+    .await?;
+
+  // Flip case to Closed (appeal verdict is terminal — Decided→Closed in one step per PRD §6.7).
+  // Write closed_at = now. The appeal_window_expiry job's filter (status=Decided) will NOT
+  // match after this UPDATE, so the two writers never collide.
+  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+    .set((
+      moderation_case::status.eq(CaseStatus::Closed),
+      moderation_case::closed_at.eq(Some(now)),
+    ))
+    .execute(conn)
+    .await?;
+
+  let original_winning_decision: Option<JuryDecision> = case_row.winning_decision;
+
+  // ENTRY_KIND_APPEAL_DECIDED fires here; ENTRY_KIND_CASE_DECIDED does NOT re-fire
+  // (it already fired at original-jury decision time). No sanction row, no federation
+  // outbound. Per plan §4.1 v1 simplifications + ADR-014.
+  governance_log::append(
+    &mut conn.into(),
+    ENTRY_KIND_APPEAL_DECIDED,
+    json!({
+      "case_id": data.case_id.0,
+      "appeal_id": appeal_row.id.0,
+      "original_winning_decision": original_winning_decision,
+      "appeal_winning_decision": appeal_winning_decision,
+      "appeal_panel_size": appeal_panel_size,
+      "appeal_threshold_count": appeal_threshold_count,
+    }),
+    Some(juror_pseudonym.clone()),
+  )
+  .await?;
+
+  Ok(SubmitJuryVoteResponse {
+    vote_recorded: true,
+    case_decided: true,
+    decision: Some(appeal_winning_decision),
   })
 }
 

@@ -1,0 +1,50 @@
+# cargo-nextest config for brehon-fork.
+#
+# Nextest's process-per-test model isolates LazyLock<Settings> across
+# tests, so the historical `--test-threads=1` constraint disappears.
+# Each test gets its own process — `LazyLock` re-initializes per
+# process and `LEMMY_DATABASE_URL` can differ per test.
+#
+# threads-required caps Docker-Desktop concurrency to avoid OOM /
+# socket exhaustion. Each `pgautoupgrade:18-alpine` container uses
+# ~150-300 MB; with 64 GB RAM, the bottleneck is Docker's named-pipe
+# concurrency on Windows, not RAM.
+#
+# Tune `threads-required` by measuring under load: start at 4
+# (effectively 2 concurrent containers on an 8-core machine), raise
+# to 8 if Docker is comfortable, lower to 2 if socket exhaustion or
+# OOM appears.
+#
+# Background:
+#   - Perplexity research 2026-05-02 (saved at
+#     C:\Users\barri\Downloads\I maintain a Rust monorepo*.md)
+#   - feedback_local_validation_cycle_2026_05_02.md (this commit)
+
+[profile.default]
+# 60s slow-test threshold; terminate after 3× (180s). Container
+# startup + ~40 Diesel migrations currently runs ~90s per test cold;
+# the pre-baked image (Phase 3 of plan) drops this to ~5-15s.
+slow-timeout = { period = "60s", terminate-after = 3 }
+test-threads = "num-cpus"
+
+# Only e2e tests need a Postgres container — gate concurrency on the
+# e2e binary specifically (copilot-4: previous filter `test(/.*/)`
+# threw the same throttle on every unit test, slowing the whole
+# workspace pointlessly).
+[[profile.default.overrides]]
+filter = 'binary(=e2e)'
+threads-required = 4
+
+[profile.ci]
+# Used by `cargo nextest run --profile ci`. Reserved for any future
+# milestone-PR e2e dispatch on GitHub Actions; longer slow-timeout
+# accounts for ubuntu-latest cold-start.
+slow-timeout = { period = "120s", terminate-after = 5 }
+test-threads = "num-cpus"
+
+# cr-7: explicit CI-profile override mirrors the threads-required gate
+# rather than relying on profile.default.overrides fallback. Same
+# binary scope as the default profile — only e2e is throttled.
+[[profile.ci.overrides]]
+filter = 'binary(=e2e)'
+threads-required = 4

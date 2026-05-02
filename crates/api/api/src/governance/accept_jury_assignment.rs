@@ -16,6 +16,12 @@
 //!    `target_person_id` (one-hop sponsor-cluster rule; v1 may extend
 //!    to two-hop / endorsement clusters per OQ-008).
 //!
+//! v1-JM-e role-dispatch: Original-role jurors accept while the case is
+//! in JurySelection or InReview (the v0 lifecycle); Appeal-role jurors
+//! (seated by `seat_appeal_panel` per JM-d) accept while the case is in
+//! Appealed (the appeal-panel lifecycle). This mirrors the role-dispatch
+//! JM-c added to `submit_jury_vote`.
+//!
 //! All checks run inside one `run_transaction` with the status flip and
 //! governance-log append, so a failed conflict check leaves no
 //! half-written state.
@@ -34,7 +40,7 @@ use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseStatus, JuryAssignmentStatus},
+  enums::{CaseStatus, JuryAssignmentRole, JuryAssignmentStatus},
   schema::{jury_assignment, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
@@ -71,18 +77,19 @@ async fn process_accept(
   caller_pseudonym: String,
   data: AcceptJuryAssignment,
 ) -> LemmyResult<AcceptJuryAssignmentResponse> {
-  // 1. Verify assignment exists with status = Selected.
-  let assignment_exists: bool = jury_assignment::table
+  // 1. Verify assignment exists with status = Selected; capture role for the
+  //    role-aware case-status guard in step 3. JM-d shipped Appeal-role
+  //    assignments seated post-`request_appeal` (case status = Appealed);
+  //    the role-dispatch here mirrors the dispatch in `submit_jury_vote`
+  //    (Appeal-role jurors take a different lifecycle than Original).
+  let role: JuryAssignmentRole = jury_assignment::table
     .filter(jury_assignment::case_id.eq(data.case_id))
     .filter(jury_assignment::person_id.eq(caller_id))
     .filter(jury_assignment::status.eq(JuryAssignmentStatus::Selected))
-    .count()
-    .get_result::<i64>(conn)
-    .await?
-    > 0;
-  if !assignment_exists {
-    return Err(LemmyErrorType::NotFound.into());
-  }
+    .select(jury_assignment::role)
+    .first(conn)
+    .await
+    .map_err(|_| LemmyErrorType::NotFound)?;
 
   // 2. Load case for conflict checks.
   let case: ModerationCase = moderation_case::table
@@ -91,20 +98,41 @@ async fn process_accept(
     .first(conn)
     .await?;
 
-  // 3. Guard: accept is only valid while the case is in JurySelection or
-  //    InReview. All other statuses — including EmergencyRemove per ADR-013 —
-  //    return NotFound so callers cannot infer internal state.
-  match case.status {
-    CaseStatus::JurySelection | CaseStatus::InReview => {}
-    CaseStatus::Open
-    | CaseStatus::ThresholdMet
-    | CaseStatus::Decided
-    | CaseStatus::Appealed
-    | CaseStatus::Closed
-    | CaseStatus::EmergencyRemove
-    | CaseStatus::AdminReview => {
-      return Err(LemmyErrorType::NotFound.into());
-    }
+  // 3. Guard: accept is only valid while the case is in a status the role
+  //    expects. Original-role jurors accept while the case is in
+  //    JurySelection or InReview (the original-jury lifecycle, per Phase 5c
+  //    task 64). Appeal-role jurors accept while the case is in Appealed
+  //    (the appeal-jury lifecycle introduced by JM-d's `seat_appeal_panel`,
+  //    mirroring the role-dispatch JM-c added to `submit_jury_vote`).
+  //    All other (role, status) combinations — including EmergencyRemove
+  //    per ADR-013 — return NotFound so callers cannot infer internal state.
+  //    Both arms enumerate CaseStatus exhaustively per ADR-013 (no `_ =>`).
+  match role {
+    JuryAssignmentRole::Original => match case.status {
+      CaseStatus::JurySelection | CaseStatus::InReview => {}
+      CaseStatus::Open
+      | CaseStatus::ThresholdMet
+      | CaseStatus::Decided
+      | CaseStatus::Appealed
+      | CaseStatus::Closed
+      | CaseStatus::EmergencyRemove
+      | CaseStatus::AdminReview => {
+        return Err(LemmyErrorType::NotFound.into());
+      }
+    },
+    JuryAssignmentRole::Appeal => match case.status {
+      CaseStatus::Appealed => {}
+      CaseStatus::Open
+      | CaseStatus::JurySelection
+      | CaseStatus::InReview
+      | CaseStatus::ThresholdMet
+      | CaseStatus::Decided
+      | CaseStatus::Closed
+      | CaseStatus::EmergencyRemove
+      | CaseStatus::AdminReview => {
+        return Err(LemmyErrorType::NotFound.into());
+      }
+    },
   }
 
   // 4. Conflict 1: caller is not the case creator (v0 "first reporter"

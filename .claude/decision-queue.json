@@ -2,6 +2,50 @@
   "pending": [],
   "resolved": [
     {
+      "id": 104,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T14:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1 fix3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
+      "workflow_run_id": 25218399860,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
+      "phase_task": "1-fix3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run 25218399860 on junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78 completed with conclusion=success.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T15:02:10Z"
+    },
+    {
+      "id": 100,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T10:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
+      "workflow_run_id": 25211371998,
+      "branch": "junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
+      "phase_task": 1,
+      "result": "fail",
+      "log_slice": "error[E0599]: no method named `on` found for struct `lemmy_db_schema_file::schema::jury_assignment::table`\n   --> crates/api/api/src/governance/submit_jury_vote.rs:760:30\n    |\n760 |       jury_assignment::table.on(\n    |       ---------------------^^\n    |\nhelp: trait `JoinOnDsl` which provides `on` is implemented but not in scope; perhaps you want to import it\n    |\n42  + use diesel::JoinOnDsl;\n    |\n\nerror[E0599]: no method named `and` found for struct `diesel::expression::grouped::Grouped<T>` in the current scope\n   --> crates/api/api/src/governance/submit_jury_vote.rs:763:12\n    |\n763 |           .and(jury_assignment::person_id.eq(jury_vote::juror_id)),\n    |            ^^^ method not found in `Grouped<Eq<case_id, case_id>>`\n    |\nhelp: the following traits which provide `and` are implemented but not in scope; perhaps you want to import one of them\n    |\n42  + use diesel::BoolExpressionMethods;\n\nerror: could not compile `lemmy_api` (lib) due to 2 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Cargo compilation failed: missing trait imports (JoinOnDsl, BoolExpressionMethods) in submit_jury_vote.rs",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T11:02:20.806522+00:00Z"
+    },
+    {
       "id": 87,
       "from": "impl",
       "kind": "validate-pending",
@@ -1440,6 +1484,264 @@
       "answer": "(A) — AdminTriggerAppealRejury is the closest v1 endpoint to a 'mid-case admin override' (per PRD §12.3 framing); it carries the slot with #[serde(default)] ignore-behaviour; v2 step-up-aware admin endpoints can graft onto the same DTO shape without a wire migration. Per advisor pre-decision review (brief §2.1.e). Pre-resolved as planner because brief explicitly notes both placements are fine.",
       "answered_by": "planner",
       "resolved_at": "2026-04-30T20:35:00Z"
+    },
+    {
+      "id": 102,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T14:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1 fix2",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
+      "workflow_run_id": 25213381649,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-2-see-claude-prps-briefs-jm-e-fix-impl-2-md-72",
+      "phase_task": "1-fix2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "All workspace validation commands passed: cargo check, clippy, and test compile all succeeded on GitHub Actions (run 25213381649, 27m14s total).",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T12:22:14Z"
+    },
+    {
+      "id": 105,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-01T15:17:42Z",
+      "question": "Phase 2 e2e for v1-JM-e Task 1 (post-fix-impl-3, phase tip 36888e071)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Local laptop e2e run on phase-v1-JM-e tip 36888e071 â€” fix-impl-3 cascade test assertion fix. User chose (a) local over (b) GH dispatch.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 1,
+      "local_log_path": ".claude/runlog/e2e-v1-JM-e-34ddd561d.log",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 62 tests passed (3 pre-existing ignores: GH #42, #43, #45). E2E suite finished in 1553.14s on phase-v1-JM-e tip 34ddd561d. NOTE: DQ commands[] specified raw cargo which hit STATUS_DLL_NOT_FOUND on first attempt; re-run via scripts/brehon/cargo-test.bat (lesson promoted to .claude/lessons/feedback_validate_pending_laptop_must_use_wrapper.md + PMD #240). Cascade test config_get_int_cascade_resolves_founder_severe_to_bare_then_const = pass — fix-impl-3 assertion fix validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-01T15:53:03Z"
+    },
+    {
+      "id": 106,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-01T19:52:04Z",
+      "question": "Plan §13 Task 2 narrative quotes appeal panel = 7 jurors but compute_appeal_panel_size(5, 1.5, 2) yields 8.",
+      "options": [
+        "(taken) Author capstone with panel = 8 + threshold = 5 (ceil(0.6x8)) per actual default-config math.",
+        "(not taken) Override appeal.panel_size_multiplier in test bootstrap to force panel = 7."
+      ],
+      "context": "compute_appeal_panel_size at admin_assign_jury.rs:1049 returns max(ceil(5*1.5)=8, 5+2=7) = 8. Plan said 'panel of 7' - minor narrative drift from actual defaults. Threshold count = 5 (ceil(0.6*8)) is unchanged from plan, so the test still drives 5 votes; only the panel-seat count + accept-loop count differ.",
+      "answer": "Capstone authored with panel=8 + threshold=5 (correct math). Plan narrative drift recorded for retro section 5 watch-items. No code change needed in implementation.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T19:52:04Z"
+    },
+    {
+      "id": 107,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-01T20:12:20Z",
+      "question": "laptop e2e validation for v1-JM-e Task 2 capstone",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Targeted e2e for new appeal_panel_decides_no_action_overrides_to_advisory_label_chain on phase-v1-JM-e tip a2be76a49 (Task 2 capstone). Cargo check + clippy --no-deps already passed locally. Workflow-trigger gap: cargo-validate-workspace.yml only fires on junior/* not phase-v1-*; running locally per advisor-orchestrator.md validate-pending-laptop handler.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e -- appeal_panel_decides_no_action_overrides_to_advisory_label_chain --test-threads=1\""
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Capstone passed after two fixes: (1) accept_jury_assignment role-dispatch landed at 360c24cb9 (Original-role accepts JurySelection|InReview, Appeal-role accepts Appealed), (2) audit-log payload assertions corrected to snake_case at 263a08f00 (JuryDecision serializes via #[serde(rename_all = \"snake_case\")]). Test result: ok. 1 passed; 0 failed; finished in 49.00s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-01T21:06:18Z"
+    },
+    {
+      "id": 101,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T11:15:09Z",
+      "question": "workspace-check for v1-JM-e task 1 fix",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "workflow_run_id": 25212353950,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "phase_task": "1-fix",
+      "result": "fail",
+      "log_slice": "error[E0061]: this function takes 2 arguments but 1 argument was supplied\n    --> crates/server/tests/e2e.rs:3824:9\nerror[E0308]: mismatched types\n    --> crates/server/tests/e2e.rs:3823:23\nerror: could not compile `lemmy_server` (test \"e2e\") due to 4 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded — workspace-check failure was on junior/* worktree branch that never merged to phase-v1-JM-e. Task 1 fix landed via fix-impl-3 (commit 8cf152bcf) on a different junior/* branch; Task 2 capstone passed local e2e (DQ #107, commit 43ed59097). The compile error cited (LocalSiteInsertForm signature) is no longer reachable from phase-v1-JM-e tip.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
+    },
+    {
+      "id": 103,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T13:51:48Z",
+      "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
+      "workflow_run_id": 25216808963,
+      "local_log_path": null,
+      "branch": "phase-v1-JM-e",
+      "phase_task": 1,
+      "result": "superseded",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Superseded — Phase-2 e2e was raised for phase-v1-JM-e tip 3e1242d6f (Task 1 finalize-merge). Phase tip has since advanced through Task 2 capstone (commit 43ed59097) which passed local e2e via DQ #107 advisor-laptop run. The flake-check workflow run 25216808963 is stale; no ci-watcher will mutate this entry. Going forward, Phase-2 e2e for v1-JM-e runs locally on the laptop per the validate-pending-laptop handler (decision 2026-04-28 PR #105 minutes-budget audit + 2026-05-01 user choice for Task 2 capstone).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
+    },
+    {
+      "id": 108,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-02T07:44:55Z",
+      "question": "decline_jury_assignment.rs has no role-dispatch guard — should it match the Original/Appeal dispatch added to accept_jury_assignment in Task 2?",
+      "options": [
+        "(A) file-as-fix-impl post-JM-e — add role-aware case.status guard mirroring accept_jury_assignment",
+        "(B) leave as-is — decline-from-wrong-role is rare and the GOTCHA-cited replacement-pool pollution is bounded by select_eligible_jurors filtering"
+      ],
+      "context": "Audit pre-flight before Task 3 found decline_jury_assignment.rs accepts decline from any role on any (Selected | Accepted) status. accept_jury_assignment.rs (post-Task-2-fix at line 360cb9c0) has full Original/Appeal × case.status dispatch lines 110-136. An Appeal-role juror declining while case is in Appealed works, but an Original-role juror declining a case stuck in Appealed (or vice versa) hits select_eligible_jurors with the wrong role's exclude list, picking a replacement from the wrong pool.",
+      "answer": "Recommended: file-as-fix-impl post-JM-e ship. The decline-replacement-pool pollution is bounded today (no in-flight Appeal-role declines observed) but the gap is structurally identical to the accept_jury_assignment defect that hit Task 2 capstone. Mirror the Original/Appeal × case.status match arms from accept_jury_assignment lines 110-136, with the additional concern that select_eligible_jurors needs role-aware exclude lists too (decline.rs line 135 filters jury_assignment by .ne(Declined) + .ne(Expired) without role filtering — Appeal-role declines should pull replacements from the appeal-eligible pool, not the original-eligible pool). Promote to fix-impl in v1-JM-e retro §7 follow-up issue candidates.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:55Z"
+    },
+    {
+      "id": 109,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T08:04:50Z",
+      "question": "full e2e regression for v1-JM-e Task 3 — phase-v1-JM-e tip 53e1b9ef8",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "User-elected local laptop run (option a) per feedback_e2e_local_or_dispatch_user_choice. Single-test gov-log-sequence test already passed locally (test-task3-r3.log: 1 passed/0 failed/55.49s); this is the full-suite regression on the phase-tip after Task 3 commit 53e1b9ef8.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Full e2e regression passed locally on laptop: 64 passed, 0 failed, 3 ignored, finished in 1785.92s (29:46). Phase tip 53e1b9ef8 (Task 3 commit) + 9f78d2532 (this DQ-raise commit) clean. Log at .claude/runlog/e2e-v1-JM-e-53e1b9ef8.log. Includes the new governance_log_sequence_matches_prd_state_machine test passing as part of the suite.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T08:41:24Z"
+    },
+    {
+      "id": 110,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T10:51:19.391635Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip c83aaec05 (post-Task 4 ship)",
+      "options": [
+        "(A) pass — full e2e suite green; Task 4 + entire JM-e cohort regression-clean",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "Task 4 (config-churn appeal.window_days regression test) shipped at c83aaec05. Single-test PASS in 44.09s. Per user: per-commit cadence + local laptop runner.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 4,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All e2e tests passed locally on laptop. test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1724.24s. Both Task 4 (config_churn_appeal_window_days_does_not_invalidate_decided_cases) and Task 5 (constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing — uncommitted code in this run) passed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T11:24:33.885918Z"
+    },
+    {
+      "id": 111,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T11:26:24.560332Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 7726f8cf4 (post-Task 5 ship)",
+      "options": [
+        "(A) self-resolve — Task 5 test code byte-identical to c83aaec05 regression; test ran green at line 104",
+        "(B) re-run — full 28-min e2e regression on Task 5 commit"
+      ],
+      "context": "Task 5 (constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing) shipped at 7726f8cf4. The test code is the same bytes that ran in the c83aaec05 regression (DQ #110 pass, 66/0/3 in 28:44). No fixture/handler/migration code changed between commits.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Self-resolved (A). The Task 5 test passed in the c83aaec05 regression (DQ #110, log line 104: `constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing ... ok`). The Task 5 commit (7726f8cf4) is the same e2e.rs bytes minus the unused `LocalUserView` import — no semantic change. Per `feedback_principles_not_rules.md` (guidance > rigid rules), a 28-min rerun on byte-identical code adds no signal. Counted as pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T11:26:24.560332Z"
+    },
+    {
+      "id": 112,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T12:35:29.201933Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 04fc66a32 (post-CR-fix-in-pr)",
+      "options": [
+        "(A) pass — CR fixes regression-clean, Task 4 capstone test still green with env-var restore",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "CR fix-in-pr bundle 1 (5e008a576: ALL_JURY_DECISIONS const + env var restore) + bundle 2 (04fc66a32: tooling). Compile-check passed (.claude/build-fixinpr1.log exit 0). User per-commit cadence + local laptop runner.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": "fix-in-pr",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All e2e tests passed locally on laptop (post-CR-fix-in-pr). test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1721.64s. Both new tests still green (Task 4 config-churn line ~91; Task 5 §12 cluster line 95; Task 3 audit-log invariant line 100). cr-9 env var restore verified (capstone test still passes); cr-8 ALL_JURY_DECISIONS const verified (process_vote + process_appeal_vote both compile + run).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T13:07:09.311680Z"
+    },
+    {
+      "id": 113,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T13:14:54.427982Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 537bd2f0f (post-CR-round-2)",
+      "options": [
+        "(A) pass — round-2 CR fixes regression-clean (cr-16 doc / cr-18 NOT_FOUND / cr-9-dup-2 second env restore)",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "CR re-review posted 5 new + 2 duplicate findings on tip a2051d98c. Round-2 fix-in-pr commit 537bd2f0f: cr-16 (doc update), cr-18 (NOT_FOUND assert), cr-9-dup-2 (Task 3 env restore). Compile-check exit 0.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": "fix-in-pr-round-2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All e2e tests passed locally on laptop (post-CR-round-2). test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1720.60s. cr-18 NOT_FOUND assertion verified (Task 5 spoof line 95 still passes); cr-9-dup-2 env restore verified (Task 3 audit-log line 100 still passes); cr-16 doc update has no runtime impact (lesson file).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T13:46:22.078265Z"
     }
   ],
   "schema_version": 2
