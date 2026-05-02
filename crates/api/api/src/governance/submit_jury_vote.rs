@@ -96,6 +96,23 @@ use std::collections::HashMap;
 // via `config::get_int` against the `deltas.juror_*` and `deltas.reporter_*`
 // keys (Phase 5a seeded). See `process_vote` for the cached reads.
 
+// Stable enum-order iteration list for tally loops in `process_vote` (original
+// jury) + `process_appeal_vote` (appeal jury). Single source of truth — adding
+// a new `JuryDecision` variant requires extending this list. Compile-time
+// exhaustiveness is enforced by `map_decision_to_sanction` below; this const
+// is the runtime tally order. Mirrors stable enum-declaration order in
+// `crates/db_schema_file/src/enums.rs` and the [04 §8] aggregation rule.
+const ALL_JURY_DECISIONS: [JuryDecision; 8] = [
+  JuryDecision::NoAction,
+  JuryDecision::AdvisoryLabel,
+  JuryDecision::Warning,
+  JuryDecision::Cooldown,
+  JuryDecision::RemoveContent,
+  JuryDecision::SuspendLocalUser,
+  JuryDecision::SuspendCommunityMember,
+  JuryDecision::RecommendFederationAction,
+];
+
 pub async fn submit_jury_vote(
   Json(data): Json<SubmitJuryVote>,
   context: Data<LemmyContext>,
@@ -325,22 +342,11 @@ async fn process_vote(
     tally.entry(decision).or_default().push(rationale);
   }
 
-  // Stable enum-order iteration (hardcoded to avoid a strum dependency).
-  // INVARIANT: this iteration list MUST cover every JuryDecision variant.
-  // `map_decision_to_sanction` (below) is the canonical exhaustive match
-  // — any new variant added to the enum will fail to compile in that
-  // helper first. When extending JuryDecision, update this list too.
+  // Stable enum-order tally per [04 §8] — see ALL_JURY_DECISIONS const at
+  // module top for the single source of truth. `map_decision_to_sanction`
+  // below is the compile-time exhaustiveness check.
   let mut winning_decision: Option<JuryDecision> = None;
-  for candidate in [
-    JuryDecision::NoAction,
-    JuryDecision::AdvisoryLabel,
-    JuryDecision::Warning,
-    JuryDecision::Cooldown,
-    JuryDecision::RemoveContent,
-    JuryDecision::SuspendLocalUser,
-    JuryDecision::SuspendCommunityMember,
-    JuryDecision::RecommendFederationAction,
-  ] {
+  for candidate in ALL_JURY_DECISIONS {
     let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
       LemmyErrorType::Unknown(format!(
         "vote count for {candidate:?} on case {} overflows i64",
@@ -776,19 +782,9 @@ async fn process_appeal_vote(
     i64::try_from(tally.values().map(Vec::len).sum::<usize>())
       .map_err(|_e| LemmyErrorType::Unknown("appeal vote count overflows i64".to_string()))?;
 
-  // Stable enum-order iteration (mirrors process_vote). INVARIANT: must cover every JuryDecision
-  // variant — `map_decision_to_sanction` below is the exhaustive compile-time check.
+  // Stable enum-order tally — same source-of-truth as process_vote.
   let mut appeal_winning_decision: Option<JuryDecision> = None;
-  for candidate in [
-    JuryDecision::NoAction,
-    JuryDecision::AdvisoryLabel,
-    JuryDecision::Warning,
-    JuryDecision::Cooldown,
-    JuryDecision::RemoveContent,
-    JuryDecision::SuspendLocalUser,
-    JuryDecision::SuspendCommunityMember,
-    JuryDecision::RecommendFederationAction,
-  ] {
+  for candidate in ALL_JURY_DECISIONS {
     let count = i64::try_from(tally.get(&candidate).map_or(0, Vec::len)).map_err(|_e| {
       LemmyErrorType::Unknown(format!(
         "appeal vote count for {candidate:?} on case {} overflows i64",

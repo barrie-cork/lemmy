@@ -9416,6 +9416,10 @@ async fn appeal_panel_decides_no_action_overrides_to_advisory_label_chain()
   // can drive run_appeal_window_expiry_batch directly without race.
   // SAFETY: e2e tests run with --test-threads=1 (LazyLock SETTINGS singleton),
   // so this set_var is effectively single-threaded for the test process.
+  // Capture prev value so we restore at test end (cr-9: prevent state leak
+  // to other tests that also touch run_appeal_window_expiry_batch).
+  let prev_appeal_window_disable =
+    std::env::var_os("BREHON_DISABLE_APPEAL_WINDOW_JOB");
   unsafe {
     std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", "1");
   }
@@ -9588,6 +9592,15 @@ async fn appeal_panel_decides_no_action_overrides_to_advisory_label_chain()
     outcome.cases_processed, 0,
     "appeal_window_expiry on Closed case is a no-op"
   );
+
+  // cr-9: restore BREHON_DISABLE_APPEAL_WINDOW_JOB to its pre-test state so
+  // other tests in the same --test-threads=1 process don't inherit the flag.
+  unsafe {
+    match prev_appeal_window_disable {
+      Some(val) => std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", val),
+      None => std::env::remove_var("BREHON_DISABLE_APPEAL_WINDOW_JOB"),
+    }
+  }
 
   Ok(())
 }
