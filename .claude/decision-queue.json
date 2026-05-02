@@ -1,29 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 110,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-02T10:51:19.391635Z",
-      "question": "Phase 2 e2e regression on phase-v1-JM-e tip c83aaec05 (post-Task 4 ship)",
-      "options": [
-        "(A) pass — full e2e suite green; Task 4 + entire JM-e cohort regression-clean",
-        "(B) fail — §G4 classifier triage on log_slice"
-      ],
-      "context": "Task 4 (config-churn appeal.window_days regression test) shipped at c83aaec05. Single-test PASS in 44.09s. Per user: per-commit cadence + local laptop runner.",
-      "commands": [
-        "cargo test --workspace --features full --test e2e -- --test-threads=1"
-      ],
-      "branch": "phase-v1-JM-e",
-      "phase_task": 4,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 104,
@@ -1674,6 +1650,29 @@
       "answer": "Full e2e regression passed locally on laptop: 64 passed, 0 failed, 3 ignored, finished in 1785.92s (29:46). Phase tip 53e1b9ef8 (Task 3 commit) + 9f78d2532 (this DQ-raise commit) clean. Log at .claude/runlog/e2e-v1-JM-e-53e1b9ef8.log. Includes the new governance_log_sequence_matches_prd_state_machine test passing as part of the suite.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-02T08:41:24Z"
+    },
+    {
+      "id": 110,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T10:51:19.391635Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip c83aaec05 (post-Task 4 ship)",
+      "options": [
+        "(A) pass — full e2e suite green; Task 4 + entire JM-e cohort regression-clean",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "Task 4 (config-churn appeal.window_days regression test) shipped at c83aaec05. Single-test PASS in 44.09s. Per user: per-commit cadence + local laptop runner.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 4,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All e2e tests passed locally on laptop. test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1724.24s. Both Task 4 (config_churn_appeal_window_days_does_not_invalidate_decided_cases) and Task 5 (constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing — uncommitted code in this run) passed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-02T11:24:33.885918Z"
     }
   ],
   "schema_version": 2
