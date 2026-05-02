@@ -64,6 +64,26 @@ echo PQ_LIB_DIR=%PQ_LIB_DIR%
 echo ---
 cd /d "%~dp0..\.."
 
+REM ---- BREHON_USE_NEXTEST=1 dispatch path --------------------------------
+REM When BREHON_USE_NEXTEST=1 is set, redirect through cargo-nextest. Per
+REM Perplexity research 2026-05-02 + .config/nextest.toml: nextest's
+REM process-per-test isolates LazyLock<Settings>, so the --test-threads=1
+REM guard below is unnecessary under nextest. Concurrency caps are in
+REM .config/nextest.toml (threads-required).
+REM
+REM Note: nextest invocation form is `cargo nextest run <args>` — the
+REM `run` subcommand is added here automatically.
+if "%BREHON_USE_NEXTEST%"=="1" (
+    where cargo-nextest >nul 2>&1
+    if errorlevel 1 (
+        echo CARGO_NEXTEST_NOT_INSTALLED: run `cargo install cargo-nextest` first.
+        exit /b 1
+    )
+    echo BREHON_USE_NEXTEST: dispatching through cargo nextest run
+    "%USERPROFILE%\.cargo\bin\cargo.exe" nextest run %*
+    exit /b !errorlevel!
+)
+
 REM ---- --test-threads=1 enforcement for e2e runs --------------------------
 REM Phase 5b carry-forward #3: the e2e suite races under parallelism because
 REM SETTINGS is a LazyLock singleton that caches the first test's
