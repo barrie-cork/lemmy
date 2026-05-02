@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 112,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T12:35:29.201933Z",
+      "question": "Phase 2 e2e regression on phase-v1-JM-e tip 04fc66a32 (post-CR-fix-in-pr)",
+      "options": [
+        "(A) pass — CR fixes regression-clean, Task 4 capstone test still green with env-var restore",
+        "(B) fail — §G4 classifier triage on log_slice"
+      ],
+      "context": "CR fix-in-pr bundle 1 (5e008a576: ALL_JURY_DECISIONS const + env var restore) + bundle 2 (04fc66a32: tooling). Compile-check passed (.claude/build-fixinpr1.log exit 0). User per-commit cadence + local laptop runner.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": "fix-in-pr",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 104,
