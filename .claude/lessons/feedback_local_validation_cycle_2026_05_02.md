@@ -4,6 +4,8 @@ description: Drop cargo check, prefer cargo nextest, use rust-lld, pre-bake Post
 type: feedback
 ---
 
+# Local validation cycle speedup (2026-05-02)
+
 The brehon-fork validation cycle runs entirely on the laptop (Windows + MSVC + vcpkg). GitHub Actions is reserved for milestone-PR CodeRabbit review only. This lesson captures four high-leverage local-cycle changes confirmed by Perplexity research 2026-05-02 (saved at `C:\Users\barri\Downloads\I'm working on a Rust monorepo*.md` + `C:\Users\barri\Downloads\I maintain a Rust monorepo*.md`).
 
 ## Rule 1: Drop `cargo check`; run `cargo clippy --no-deps` only
