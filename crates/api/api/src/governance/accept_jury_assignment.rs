@@ -89,7 +89,7 @@ async fn process_accept(
     .select(jury_assignment::role)
     .first(conn)
     .await
-    .map_err(|_| LemmyErrorType::NotFound)?;
+    .map_err(|_e| LemmyErrorType::NotFound)?;
 
   // 2. Load case for conflict checks.
   let case: ModerationCase = moderation_case::table
