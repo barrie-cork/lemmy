@@ -70,12 +70,12 @@ Each e2e test currently spawns a fresh `pgautoupgrade:18-alpine` container, then
 
 A pre-baked image (built once, cached by Docker, keyed on `sha256(migrations/)`) ships with the schema already applied. Per-test container startup drops to the time it takes Postgres to start accepting connections — ~5-15s.
 
-**Why:** testcontainers-rs 0.27 supports `GenericBuildableImage` with `with_skip_if_exists(true)` — thread-safe under nextest parallelism. The image tag = migrations hash, so Docker rebuilds only when migrations change. No drift risk.
+**Why:** the pre-baked image is built **out-of-band** (e.g. via `docker build -f scripts/brehon/Dockerfile.test-pg .` or a CI step), tagged with `sha256(migrations/)`, and **consumed via plain `GenericImage`** in the test harness — pointed at the pre-baked tag rather than rebuilt per-test. Docker rebuilds only when migrations change. No drift risk. (Earlier draft of this lesson referenced `GenericBuildableImage`; corrected to match actual harness pattern per CR review on PR #107.)
 
 **How to apply:**
-- `scripts/brehon/Dockerfile.test-pg` — builds from `pgautoupgrade:18-alpine`, runs `apply-migrations-to-image.sh` in the initdb.d phase.
-- `scripts/brehon/apply-migrations-to-image.sh` — replicates `governance_fixtures::apply_all_schema` (acquire `pg_advisory_lock(0)`, run migrations in order, rebuild `r` schema, install replaceable schema utils + triggers).
-- `governance_fixtures::start_postgres` (in `e2e.rs`) replaces `GenericImage::new(...)` with `GenericBuildableImage::new("brehon-pg-fixtures", &migrations_hash())`. The function signature `(ContainerAsync<...>, u16)` is preserved.
+- `scripts/brehon/Dockerfile.test-pg` — builds from `pgautoupgrade:18-alpine`, runs `apply-migrations-to-image.sh` in the initdb.d phase. Built out-of-band; produces the pre-baked image tag.
+- `scripts/brehon/apply-migrations-to-image.sh` — replicates `governance_fixtures::apply_all_schema` (acquire `pg_advisory_lock(0)`, run migrations in order, rebuild `r` schema, install replaceable schema utils + triggers). Must run inside a single psql session so the lock spans the whole apply (see in-script note for the consolidated single-session pattern).
+- `governance_fixtures::start_postgres` (in `e2e.rs`) consumes the pre-baked image via `GenericImage::new("brehon-pg-fixtures", &migrations_hash())`. The function signature `(ContainerAsync<...>, u16)` is preserved.
 - `governance_fixtures::apply_all_schema` gets a fast-path probe (check for `governance_log` table existence) — skips re-running migrations on the pre-baked image. Backwards compatible with tests that build their own container.
 
 **Generalises to:** any test suite that runs identical schema setup per test against a containerised database.

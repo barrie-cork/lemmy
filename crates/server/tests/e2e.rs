@@ -9641,6 +9641,10 @@ async fn governance_log_sequence_matches_prd_state_machine()
   // between the test-driven flow and the cron tick.
   // SAFETY: e2e tests run with --test-threads=1 (LazyLock SETTINGS singleton),
   // so this set_var is effectively single-threaded for the test process.
+  // cr-9 round 2 (CR re-review): capture prev value so we restore at test
+  // end (mirror of the capstone test fix at line ~9415).
+  let prev_appeal_window_disable =
+    std::env::var_os("BREHON_DISABLE_APPEAL_WINDOW_JOB");
   unsafe {
     std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", "1");
   }
@@ -9787,6 +9791,15 @@ async fn governance_log_sequence_matches_prd_state_machine()
     sequence, expected_prefix,
     "governance_log first-occurrence sequence must match PRD §6.7 state-machine prefix; got {sequence:?}"
   );
+
+  // cr-9 round 2: restore BREHON_DISABLE_APPEAL_WINDOW_JOB (mirror of the
+  // capstone test cleanup at line ~9596).
+  unsafe {
+    match prev_appeal_window_disable {
+      Some(val) => std::env::set_var("BREHON_DISABLE_APPEAL_WINDOW_JOB", val),
+      None => std::env::remove_var("BREHON_DISABLE_APPEAL_WINDOW_JOB"),
+    }
+  }
 
   Ok(())
 }
@@ -10190,6 +10203,10 @@ async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spo
 
   // Spoofer is neither target_orphan nor case.creator (NULL). The
   // request_appeal eligibility branch must fall through to NotFound.
+  // cr-18: assert specifically LemmyErrorType::NotFound — `is_err()` alone
+  // would also pass on a pre-eligibility DB error (e.g. case-not-found,
+  // window-expired); the variant match anchors the test to the
+  // pseudo-403 spoofing-protection branch at request_appeal.rs:130.
   let resp = request_appeal(
     Json(RequestAppeal {
       case_id: orphan_case_id,
@@ -10199,9 +10216,13 @@ async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spo
     spoofer_view,
   )
   .await;
-  assert!(
-    resp.is_err(),
+  let err = resp.expect_err(
     "§12.4: orphaned-case (creator_id=NULL) appeal-rights cannot be spoofed by a non-defendant; request_appeal must Err(NotFound)"
+  );
+  assert!(
+    matches!(&err.error_type, lemmy_utils::error::LemmyErrorType::NotFound),
+    "§12.4: expected LemmyErrorType::NotFound on orphan-case spoof, got {:?}",
+    err.error_type,
   );
 
   Ok(())
