@@ -10000,3 +10000,197 @@ async fn config_churn_appeal_window_days_does_not_invalidate_decided_cases()
   Ok(())
 }
 
+// ============================================================================
+// v1-JM-e Task 5 — §12 security cluster: admin-visibility + spoofing-protection
+// ============================================================================
+//
+// Bundles two §12 assertions per plan §10.9 + §10.10:
+//
+// (1) §12.2 admin-visibility — when a small-pool case fires R1 relaxation
+//     (4 jurors available, Minor severity needs 5), `admin_assign_jury`
+//     writes a `jury_constraint_violation_log` row. A community admin
+//     issuing a Diesel query joining `jury_constraint_violation_log` ⨝
+//     `moderation_case` on `community_id` must see that row.
+//
+// (2) §12.4 spoofing-protection — `request_appeal.rs:120-131`
+//     elif-branch falls through to `Err(LemmyErrorType::NotFound)` when
+//     the caller is neither defendant nor original-reporter. An orphaned
+//     Decided case (`creator_id = NULL`) must reject `request_appeal`
+//     from any non-defendant caller — the original-reporter branch
+//     can't fire because there's no creator to match.
+//
+// Authored as a sibling test (NOT in-place patch) per PMD #117. Uses
+// the existing `governance_fixtures::*` and `v1_jm_b_fixtures::*`
+// helpers, mirrors the small-pool R1 setup at e2e.rs:7730 and the
+// orphaned-case `ModerationCaseInsertForm` direct-insert pattern at
+// e2e.rs:4381.
+#[tokio::test(flavor = "multi_thread")]
+async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use chrono::{Duration, Utc};
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_assign_jury::admin_assign_jury;
+  use lemmy_api_common::governance::{AdminAssignJury, RequestAppeal};
+  use lemmy_api_crud::governance::request_appeal::request_appeal;
+  use lemmy_db_schema::source::{
+    governance::moderation_case::ModerationCaseInsertForm, instance::Instance,
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryDecision, SeverityTier},
+    schema::{jury_constraint_violation_log, moderation_case},
+  };
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    governance_fixtures::seed_user(&context, instance.id, "admin_jme5", true).await?;
+  let (target_relax, _) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme5_relax", false).await?;
+  let (target_orphan, _) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme5_orphan", false).await?;
+  let (_, spoofer_view) =
+    governance_fixtures::seed_user(&context, instance.id, "spoofer_jme5", false).await?;
+
+  // ============================================================================
+  // (1) §12.2 admin-visibility: small-pool case → R1 relaxation row →
+  //     community-admin Diesel query sees it.
+  // ============================================================================
+
+  // Seed only 4 jurors — Minor severity needs 5 → small_pool relaxation
+  // fires per JM-b R1.
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 4).await?;
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // Scope eligibility to the community (case is community-scoped, so
+    // the strict eligibility join requires community_id-matched rows).
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots_scoped(&mut conn, &jurors, Some(community.id))
+      .await?;
+  }
+
+  // Insert a community-scoped Minor case (the §12.2 query filter is
+  // `community_id = $admin_community`).
+  let small_pool_case_id = {
+    let form = ModerationCaseInsertForm {
+      community_id: Some(community.id),
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target_relax),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "small_pool_admin_visibility".to_string(),
+      severity: CaseSeverity::Low,
+      severity_tier: Some(SeverityTier::Minor),
+      status: CaseStatus::Open,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .returning(moderation_case::id)
+      .get_result::<lemmy_db_schema::newtypes::ModerationCaseId>(&mut conn)
+      .await?
+  };
+
+  // Drive admin_assign_jury — small_pool relaxation fires (4 < 5
+  // eligible) → writes jury_constraint_violation_log row.
+  admin_assign_jury(
+    Json(AdminAssignJury {
+      case_id: small_pool_case_id,
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // §12.2: community-admin query — count relaxation rows for cases in
+  // their community via eq_any(subquery). Per plan §10.10 pattern.
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let admin_visible_relaxations: i64 = jury_constraint_violation_log::table
+    .filter(
+      jury_constraint_violation_log::case_id.eq_any(
+        moderation_case::table
+          .filter(moderation_case::community_id.eq(Some(community.id)))
+          .select(moderation_case::id),
+      ),
+    )
+    .count()
+    .get_result(&mut conn)
+    .await?;
+  assert!(
+    admin_visible_relaxations > 0,
+    "§12.2: community-admin Diesel query must see relaxation rows for cases in their community; got {admin_visible_relaxations}"
+  );
+
+  // ============================================================================
+  // (2) §12.4 spoofing-protection: orphaned Decided case → request_appeal
+  //     from non-defendant non-creator returns NotFound.
+  // ============================================================================
+
+  // Insert an orphaned Decided case (creator_id = NULL, no community).
+  // Mirrors the JM-d orphan pattern at e2e.rs:4381 — the request_appeal
+  // status guard requires Decided + non-expired window +
+  // panel_size_snapshot, so we UPDATE those after insert.
+  let orphan_case_id = {
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(target_orphan),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "orphan_appeal_spoof".to_string(),
+      severity: CaseSeverity::Low,
+      severity_tier: Some(SeverityTier::Minor),
+      status: CaseStatus::Decided,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let case_id = diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .returning(moderation_case::id)
+      .get_result::<lemmy_db_schema::newtypes::ModerationCaseId>(&mut conn)
+      .await?;
+    let future = Utc::now() + Duration::days(7);
+    diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set((
+        moderation_case::appeal_window_expires_at.eq(Some(future)),
+        moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+        // Set winning_decision to a value that WOULD enable the
+        // OriginalReporter branch IF the caller had been the creator —
+        // the test then proves the spoofer (not creator, not defendant)
+        // still falls through to NotFound.
+        moderation_case::winning_decision.eq(Some(JuryDecision::NoAction)),
+      ))
+      .execute(&mut conn)
+      .await?;
+    case_id
+  };
+
+  // Spoofer is neither target_orphan nor case.creator (NULL). The
+  // request_appeal eligibility branch must fall through to NotFound.
+  let resp = request_appeal(
+    Json(RequestAppeal {
+      case_id: orphan_case_id,
+      reason: "spoof attempt".to_string(),
+    }),
+    context.clone(),
+    spoofer_view,
+  )
+  .await;
+  assert!(
+    resp.is_err(),
+    "§12.4: orphaned-case (creator_id=NULL) appeal-rights cannot be spoofed by a non-defendant; request_appeal must Err(NotFound)"
+  );
+
+  Ok(())
+}
+
