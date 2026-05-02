@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 109,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-02T08:04:50Z",
+      "question": "full e2e regression for v1-JM-e Task 3 — phase-v1-JM-e tip 53e1b9ef8",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "User-elected local laptop run (option a) per feedback_e2e_local_or_dispatch_user_choice. Single-test gov-log-sequence test already passed locally (test-task3-r3.log: 1 passed/0 failed/55.49s); this is the full-suite regression on the phase-tip after Task 3 commit 53e1b9ef8.",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "branch": "phase-v1-JM-e",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 104,
