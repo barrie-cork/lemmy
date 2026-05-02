@@ -9778,3 +9778,225 @@ async fn governance_log_sequence_matches_prd_state_machine()
   Ok(())
 }
 
+/// v1-JM-e Task 4 — config-churn regression: appeal.window_days.
+///
+/// Asserts that flipping `appeal.window_days` AFTER cases A + B reach
+/// `Decided` does NOT retroactively change their `appeal_window_expires_at`.
+/// Case C (decided AFTER the flip) gets the new window. This is the
+/// inverse of the JM-c happy-path snapshot test
+/// (`v0_case_completes_under_v0_rules_after_v1_config_flip` at e2e.rs:8689),
+/// which asserted the deliberate exception that `appeal.window_days` reads
+/// LIVE config at decision time. JM-e Task 4 makes the consequence explicit:
+/// once a case is Decided, its `appeal_window_expires_at` is FROZEN — a
+/// later config flip cannot retroactively expire (or extend) the window.
+///
+/// Sequence:
+///   1. Seed 5 jurors + admin + 3 targets (A, B, C). Use Minor severity
+///      (panel = 5, threshold = 3).
+///   2. Drive case A through report → admin_assign → 5 accepts → 3
+///      RemoveContent votes → Decided. `appeal_window_expires_at - decided_at
+///      ≈ 7 days` (default).
+///   3. Drive case B identically. Same gap.
+///   4. Flip `appeal.window_days = 30` via `admin_set_config` (instance
+///      scope).
+///   5. Drive case C through the same lifecycle. New gap ≈ 30 days.
+///   6. Re-read A + B from DB AFTER C completes; confirm their gaps are
+///      STILL ≈ 7 days (not retroactively extended to 30).
+///
+/// Authored by the advisor session per PMD #117 (Junior workers hang on
+/// Edit calls into this 9000+ line file). Mirrors the JM-c v0-compat
+/// pattern's lifecycle drive but in sibling-test form (per plan §13
+/// "GOTCHA: sibling test, NOT in-place patch").
+#[tokio::test(flavor = "multi_thread")]
+async fn config_churn_appeal_window_days_does_not_invalidate_decided_cases()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use chrono::Duration;
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    admin_config::admin_set_config,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, AdminSetConfig, SubmitJuryVote,
+  };
+  use lemmy_db_schema::source::instance::Instance;
+  use lemmy_db_schema_file::{
+    enums::{CaseStatus, JuryDecision, SeverityTier},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let _community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let (_, admin_view) =
+    governance_fixtures::seed_user(&context, instance.id, "admin_jme4", true).await?;
+  let (target_a, _) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme4_a", false).await?;
+  let (target_b, _) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme4_b", false).await?;
+  let (target_c, _) =
+    governance_fixtures::seed_user(&context, instance.id, "target_jme4_c", false).await?;
+  // 5 jurors — same panel can serve all three cases (no eligibility-filter
+  // collision; previously-decided cases don't bar a juror from a new panel).
+  let jurors = governance_fixtures::seed_jurors(&context, instance.id, 5).await?;
+
+  // R2: seed jury_eligible snapshots BEFORE admin_assign_jury (per JM-b
+  // discipline; without this the small-pool fallback fires).
+  {
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &jurors).await?;
+  }
+
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+  let federation_context = federation_config.to_request_data();
+
+  // Helper closure to drive one case from seed → Decided. Reused 3×.
+  // Returns the case_id so the test body can re-read decided_at +
+  // appeal_window_expires_at from the DB.
+  // NOTE: async closure (not async fn) so it inherits the outer scope's
+  // `use` imports for LemmyContext, PersonId, etc.
+  let drive_case_to_decided = async |target: lemmy_db_schema_file::PersonId|
+   -> lemmy_utils::error::LemmyResult<lemmy_db_schema::newtypes::ModerationCaseId> {
+    let case_id = v1_jm_b_fixtures::seed_case(&db_url, target, SeverityTier::Minor)
+      .await
+      .map_err(|e| anyhow::anyhow!("seed_case: {e}"))?;
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?
+    .into_inner();
+    assert_eq!(
+      assign_resp.assigned_person_ids.len(),
+      5,
+      "Minor panel = 5 jurors per JM-b snapshot"
+    );
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+    // Cast 3 RemoveContent votes — Minor threshold = 3 → case Decided on
+    // the 3rd vote.
+    for juror_id in assign_resp.assigned_person_ids.iter().take(3) {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::RemoveContent,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+    Ok(case_id)
+  };
+
+  // Step 2 + 3: drive A + B to Decided BEFORE the config flip.
+  let case_a = drive_case_to_decided(target_a).await?;
+  let case_b = drive_case_to_decided(target_b).await?;
+
+  // Snapshot A + B's appeal_window gap RIGHT NOW so we have a baseline
+  // independent of any later mutation. Both should be ≈ 7 days (default
+  // appeal.window_days).
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let read_gap = async |conn: &mut AsyncPgConnection,
+                        case_id: lemmy_db_schema::newtypes::ModerationCaseId|
+   -> lemmy_utils::error::LemmyResult<(Duration, CaseStatus)> {
+    let (status, decided_at, expires): (
+      CaseStatus,
+      Option<chrono::DateTime<chrono::Utc>>,
+      Option<chrono::DateTime<chrono::Utc>>,
+    ) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::decided_at,
+        moderation_case::appeal_window_expires_at,
+      ))
+      .first(conn)
+      .await?;
+    let decided = decided_at.expect("decided_at set");
+    let expires_at = expires.expect("appeal_window_expires_at set");
+    Ok((expires_at - decided, status))
+  };
+
+  let (gap_a_before, status_a_before) = read_gap(&mut conn, case_a).await?;
+  let (gap_b_before, status_b_before) = read_gap(&mut conn, case_b).await?;
+  assert_eq!(status_a_before, CaseStatus::Decided, "case A Decided");
+  assert_eq!(status_b_before, CaseStatus::Decided, "case B Decided");
+  let default_window = Duration::days(7);
+  assert!(
+    (gap_a_before - default_window).num_milliseconds().abs() < 1_000,
+    "case A appeal_window ≈ 7 days at decision (default); got {gap_a_before:?}"
+  );
+  assert!(
+    (gap_b_before - default_window).num_milliseconds().abs() < 1_000,
+    "case B appeal_window ≈ 7 days at decision (default); got {gap_b_before:?}"
+  );
+
+  // Step 4: flip appeal.window_days = 30 (instance scope).
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "appeal.window_days".to_string(),
+      value_type: "int".to_string(),
+      value: serde_json::json!(30),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "Task 4 config-churn regression test".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // Step 5: drive case C to Decided AFTER the flip. Should pick up the
+  // new live value.
+  let case_c = drive_case_to_decided(target_c).await?;
+
+  // Step 6: re-read A + B (their gaps must NOT have moved) and read C
+  // (its gap should be ≈ 30 days).
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let (gap_a_after, _) = read_gap(&mut conn, case_a).await?;
+  let (gap_b_after, _) = read_gap(&mut conn, case_b).await?;
+  let (gap_c, status_c) = read_gap(&mut conn, case_c).await?;
+  assert_eq!(status_c, CaseStatus::Decided, "case C Decided");
+
+  let new_window = Duration::days(30);
+  assert!(
+    (gap_c - new_window).num_milliseconds().abs() < 1_000,
+    "case C appeal_window ≈ 30 days (LIVE config at decision time per JM-c discovery); got {gap_c:?}"
+  );
+  assert_eq!(
+    gap_a_after.num_milliseconds(),
+    gap_a_before.num_milliseconds(),
+    "case A appeal_window UNCHANGED by appeal.window_days flip (frozen at decision time)"
+  );
+  assert_eq!(
+    gap_b_after.num_milliseconds(),
+    gap_b_before.num_milliseconds(),
+    "case B appeal_window UNCHANGED by appeal.window_days flip (frozen at decision time)"
+  );
+
+  Ok(())
+}
+
