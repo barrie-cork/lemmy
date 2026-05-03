@@ -183,27 +183,6 @@
       "failed_jobs": [
         "validate workspace"
       ]
-    },
-    {
-      "id": 130,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-03T14:21:18Z",
-      "question": "workspace-check for advisor \u00a7G4 manual fix to clippy::map-err-ignore (DQ #129 follow-up \u2014 UNIFYING GREEN-GATE retry)",
-      "options": [
-        "(A) pass \u2014 cohort A+B fail pattern closes; first workspace-check green this sub-phase",
-        "(B) fail \u2014 additional unforeseen lint or compile error; new \u00a7G4 triage"
-      ],
-      "context": "Advisor manually applied lint-suggested rename |_| \u2192 |_e| at accept_jury_assignment.rs:92 (commit eff00b19d). Pushed via junior branch junior/role-advisor-fix-sl-a-task-5-clippy-map-err-ignore-129 (force-rewritten so the fix commit is the new head; phase-v1-* path filter excludes workspace-check). Workflow run id 25281617538 in_progress at 14:20 UTC.",
-      "workflow_run_id": 25281617538,
-      "branch": "junior/role-advisor-fix-sl-a-task-5-clippy-map-err-ignore-129",
-      "phase_task": 5,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -2085,6 +2064,27 @@
       "answer": "Advisor \u00a7G4 manual fix (option B per user decision). Single clippy::map-err-ignore at accept_jury_assignment.rs:92 (introduced in Task 5 commit b2e31c97e). Applied lint-suggested rename |_| \u2192 |_e| (1 character, 1 line, 1 file). Triggers fresh workspace-check; new workflow run id captured below in this entry once push lands. Allowlist growth candidate (map_err_ignore mechanical |_| \u2192 |_e|) for next sub-phase plan per \u00a7G4 retro-evidence rule.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-03T14:14:26Z"
+    },
+    {
+      "id": 130,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T14:21:18Z",
+      "question": "workspace-check for advisor \u00a7G4 manual fix to clippy::map-err-ignore (DQ #129 follow-up \u2014 UNIFYING GREEN-GATE retry)",
+      "options": [
+        "(A) pass \u2014 cohort A+B fail pattern closes; first workspace-check green this sub-phase",
+        "(B) fail \u2014 additional unforeseen lint or compile error; new \u00a7G4 triage"
+      ],
+      "context": "Advisor manually applied lint-suggested rename |_| \u2192 |_e| at accept_jury_assignment.rs:92 (commit eff00b19d). Pushed via junior branch junior/role-advisor-fix-sl-a-task-5-clippy-map-err-ignore-129 (force-rewritten so the fix commit is the new head; phase-v1-* path filter excludes workspace-check). Workflow run id 25281617538 in_progress at 14:20 UTC.",
+      "workflow_run_id": 25281617538,
+      "branch": "junior/role-advisor-fix-sl-a-task-5-clippy-map-err-ignore-129",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "All workspace-check steps passed (cargo check + clippy + test compile no-run) on workflow run 25281617538. First green workspace-check on v1-SL-a. Recovered from daemon split-brain \u2014 see commit body.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T15:07:16Z"
     }
   ],
   "schema_version": 2
