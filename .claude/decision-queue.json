@@ -1,5 +1,21 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 116,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-03T08:18:10Z",
+      "question": "Complexity score 13 exceeds 8 — split v1-sponsor-liability-a into v1-SL-a-1 (Tasks 1-5) + v1-SL-a-2 (Tasks 6-8) + retro, or proceed as one plan?",
+      "options": [
+        "(A) split — v1-SL-a-1 (SQL+enum+schema.rs+Diesel struct+ADR-013 sweep, score 6) + v1-SL-a-2 (config.rs+ENTRY_KIND consts+e2e, score 6) + retro per piece",
+        "(B) proceed as one — JM-e at score 15 shipped proceed-as-one with no operational regret; PRD §15 names the deliverable as one atomic 'Schema + enum + migration' unit; mechanical work with strong JM-a precedent"
+      ],
+      "context": "SL-a §5.1 breakdown: 8 impl tasks (+3) + 1 migration (+2) + 5 crates (+5) + 1 e2e edit (+3) + 0 ADR + 0 cargo budget = 13. Brief pre-estimate of 5-7 was mathematically optimistic (undercounted api_crud + e2e edit; mis-attributed lemmy_diesel_utils as a touched crate). Per feedback_principles_not_rules.md the score is a signal not a hard rule — planner leans (B) but advisor decides.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 104,
