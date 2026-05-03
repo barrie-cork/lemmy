@@ -1,3 +1,4 @@
+-- no-transaction
 -- v1-SL-a task 1 (split half 1 of 2): add three SponsorLiability* variants
 -- to case_status enum.
 --
@@ -8,10 +9,12 @@
 --     (combined skeleton, superseded by this split).
 --   - Fix: .claude/PRPs/briefs/sl-a-fix-impl-1.md (DQ #122 — Postgres
 --     refuses "unsafe use of new value" within the same migration).
+--   - Fix-2: .claude/PRPs/briefs/sl-a-fix-impl-2.md (DQ #132 — diesel
+--     migration runner needs `-- no-transaction` on line 1, not after
+--     header comments).
 --   - Mirror: migrations/2026-04-19-000000-0000_add_restoration_sanction_variant
 --     (Phase 5b precedent for enum-only -- no-transaction migration).
 
--- no-transaction
 ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityPending';
 ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityFired';
 ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityEscaped';
