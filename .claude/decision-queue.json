@@ -1,21 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 116,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-03T08:18:10Z",
-      "question": "Complexity score 13 exceeds 8 — split v1-sponsor-liability-a into v1-SL-a-1 (Tasks 1-5) + v1-SL-a-2 (Tasks 6-8) + retro, or proceed as one plan?",
-      "options": [
-        "(A) split — v1-SL-a-1 (SQL+enum+schema.rs+Diesel struct+ADR-013 sweep, score 6) + v1-SL-a-2 (config.rs+ENTRY_KIND consts+e2e, score 6) + retro per piece",
-        "(B) proceed as one — JM-e at score 15 shipped proceed-as-one with no operational regret; PRD §15 names the deliverable as one atomic 'Schema + enum + migration' unit; mechanical work with strong JM-a precedent"
-      ],
-      "context": "SL-a §5.1 breakdown: 8 impl tasks (+3) + 1 migration (+2) + 5 crates (+5) + 1 e2e edit (+3) + 0 ADR + 0 cargo budget = 13. Brief pre-estimate of 5-7 was mathematically optimistic (undercounted api_crud + e2e edit; mis-attributed lemmy_diesel_utils as a touched crate). Per feedback_principles_not_rules.md the score is a signal not a hard rule — planner leans (B) but advisor decides.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 104,
@@ -1789,6 +1773,21 @@
       "answer": "Option A: liability.grace_window_*_hours keys are stored as raw integer hours, NOT micros-scaled. Per feedback_brehon_config_micros_scaled.md the lesson scopes to reputation/score-formula math; PRD §8.4 confirms the storage shape via the 'decided_at + INTERVAL ''24 hours''' SQL backfill expression. Brief §3 adds citation to the lesson; §4.1 adds an explicit note that hour-typed wall-clock keys are NOT micros-scaled.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-03T07:11:01Z"
+    },
+    {
+      "id": 116,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-03T08:18:10Z",
+      "question": "Complexity score 13 exceeds 8 — split v1-sponsor-liability-a into v1-SL-a-1 (Tasks 1-5) + v1-SL-a-2 (Tasks 6-8) + retro, or proceed as one plan?",
+      "options": [
+        "(A) split — v1-SL-a-1 (SQL+enum+schema.rs+Diesel struct+ADR-013 sweep, score 6) + v1-SL-a-2 (config.rs+ENTRY_KIND consts+e2e, score 6) + retro per piece",
+        "(B) proceed as one — JM-e at score 15 shipped proceed-as-one with no operational regret; PRD §15 names the deliverable as one atomic 'Schema + enum + migration' unit; mechanical work with strong JM-a precedent"
+      ],
+      "context": "SL-a §5.1 breakdown: 8 impl tasks (+3) + 1 migration (+2) + 5 crates (+5) + 1 e2e edit (+3) + 0 ADR + 0 cargo budget = 13. Brief pre-estimate of 5-7 was mathematically optimistic (undercounted api_crud + e2e edit; mis-attributed lemmy_diesel_utils as a touched crate). Per feedback_principles_not_rules.md the score is a signal not a hard rule — planner leans (B) but advisor decides.",
+      "answer": "User chose (B) proceed as one (per user 2026-05-03 via AskUserQuestion). Rationale: JM-e at score 15 shipped proceed-as-one with no operational regret per its retro; JM-a precedent at similar 11-task shape; PRD §15 row 1 names the deliverable atomically as 'Schema + enum + migration'; mechanical schema work does not benefit from artificial fragmentation per feedback_principles_not_rules.md. Phase branch phase-v1-SL-a will hold all 10 tasks.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-03T08:28:12Z"
     }
   ],
   "schema_version": 2
