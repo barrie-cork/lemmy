@@ -900,6 +900,50 @@ pub const DEFAULT_APPEAL_THRESHOLD_TIER_BUMP: i64 = 1;
 pub const DEFAULT_APPEAL_WINDOW_DAYS: i64 = 7;
 pub const DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE: bool = true;
 
+// -- v1-SL-a additions (sponsor-liability sub-phase A) ---------------
+//
+// 13 new keys seeded by migration `2026-05-03-000000-0000_add_sponsor_liability_grace_window`.
+// Authoritative list = PRD §10 defaults matrix. Breakdown:
+// 6 grace_window_*_hours (int) + 2 restoration escape (1 bool + 1 int)
+// + 1 multi_sponsor_escape_rule (text) + 1 revoke_rate_limit_per_day (int)
+// + 3 job.grace_check_* (2 int + 1 float) = 13 keys total.
+//
+// Per DQ #115 (advisor 2026-05-03): all hour keys are raw integer hours
+// (NOT micros-scaled); used as Postgres `INTERVAL '<N> hours'` operands
+// in PRD §6.2 scheduler + PRD §8.4 backfill SQL. The
+// `feedback_brehon_config_micros_scaled.md` lesson scopes to
+// reputation/score-formula math; wall-clock units are out of scope.
+//
+// Distinct from existing v0 `liability.*` keys (founder_multiplier,
+// regular_multiplier, sponsor_liability_floor — lines 795-797). Both
+// coexist; SL-a's keys all carry `liability.grace_window_*` /
+// `liability.restoration_*` / `liability.multi_sponsor_*` /
+// `liability.revoke_*` namespace prefixes per PRD §18 B4 key-rename
+// table.
+
+// liability.grace_window_*_hours — 6 keys (int; raw hours per DQ #115)
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_MINOR_HOURS: i64 = 24;
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_MODERATE_HOURS: i64 = 72;
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_SEVERE_HOURS: i64 = 168;
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_MINIMUM_HOURS: i64 = 1;
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_MAXIMUM_HOURS: i64 = 720;
+pub const DEFAULT_LIABILITY_GRACE_WINDOW_ALERT_THRESHOLD_HOURS: i64 = 24;
+
+// liability.restoration_* — 2 keys (1 bool + 1 int)
+pub const DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY: bool = true;
+pub const DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS: i64 = 0;
+
+// liability.multi_sponsor_escape_rule — 1 key (text; enum: any_revocation | all_revocation | majority_revocation)
+pub const DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE: &str = "any_revocation";
+
+// liability.revoke_rate_limit_per_day — 1 key (int; per-user per-rolling-24h cap)
+pub const DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY: i64 = 5;
+
+// job.grace_check_* — 3 keys (2 int + 1 float)
+pub const DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES: i64 = 5;
+pub const DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE: i64 = 100;
+pub const DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER: f64 = 2.0;
+
 pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
@@ -971,6 +1015,21 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "appeal.panel_size_floor_increment" => Some(DEFAULT_APPEAL_PANEL_SIZE_FLOOR_INCREMENT),
     "appeal.threshold_tier_bump" => Some(DEFAULT_APPEAL_THRESHOLD_TIER_BUMP),
     "appeal.window_days" => Some(DEFAULT_APPEAL_WINDOW_DAYS),
+    // v1-SL-a additions
+    "liability.grace_window_minor_hours" => Some(DEFAULT_LIABILITY_GRACE_WINDOW_MINOR_HOURS),
+    "liability.grace_window_moderate_hours" => Some(DEFAULT_LIABILITY_GRACE_WINDOW_MODERATE_HOURS),
+    "liability.grace_window_severe_hours" => Some(DEFAULT_LIABILITY_GRACE_WINDOW_SEVERE_HOURS),
+    "liability.grace_window_minimum_hours" => Some(DEFAULT_LIABILITY_GRACE_WINDOW_MINIMUM_HOURS),
+    "liability.grace_window_maximum_hours" => Some(DEFAULT_LIABILITY_GRACE_WINDOW_MAXIMUM_HOURS),
+    "liability.grace_window_alert_threshold_hours" => {
+      Some(DEFAULT_LIABILITY_GRACE_WINDOW_ALERT_THRESHOLD_HOURS)
+    }
+    "liability.restoration_severity_reduction_steps" => {
+      Some(DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS)
+    }
+    "liability.revoke_rate_limit_per_day" => Some(DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY),
+    "job.grace_check_interval_minutes" => Some(DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES),
+    "job.grace_check_batch_size" => Some(DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE),
     _ => None,
   }
 }
@@ -991,6 +1050,10 @@ pub(crate) fn const_default_float(key: &str) -> Option<f64> {
     "jury.threshold_fraction.moderate" => Some(DEFAULT_JURY_THRESHOLD_FRACTION_MODERATE),
     "jury.threshold_fraction.severe" => Some(DEFAULT_JURY_THRESHOLD_FRACTION_SEVERE),
     "appeal.panel_size_multiplier" => Some(DEFAULT_APPEAL_PANEL_SIZE_MULTIPLIER),
+    // v1-SL-a additions
+    "job.grace_check_staleness_alert_multiplier" => {
+      Some(DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER)
+    }
     _ => None,
   }
 }
@@ -1030,6 +1093,10 @@ pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
     "appeal.auto_select_on_appeal_acceptance" => {
       Some(DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE)
     }
+    // v1-SL-a additions
+    "liability.restoration_escapes_liability" => {
+      Some(DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY)
+    }
     _ => None,
   }
 }
@@ -1057,6 +1124,10 @@ pub(crate) fn const_default_text(key: &str) -> Option<String> {
     }
     "federation.quarantine_recommendation_severity_floor" => {
       Some(DEFAULT_FEDERATION_QUARANTINE_RECOMMENDATION_SEVERITY_FLOOR.to_string())
+    }
+    // v1-SL-a additions
+    "liability.multi_sponsor_escape_rule" => {
+      Some(DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE.to_string())
     }
     _ => None,
   }
@@ -1296,6 +1367,22 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
     "DEFAULT_APPEAL_AUTO_SELECT_ON_APPEAL_ACCEPTANCE",
     "bool",
   ),
+  // v1-SL-a additions (sponsor-liability sub-phase A — 13 new keys per
+  // PRD §10 defaults matrix; flat liability.* + job.grace_check_*
+  // namespaces per PRD §18 B4 key-rename table).
+  ("job.grace_check_batch_size", "DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE", "int"),
+  ("job.grace_check_interval_minutes", "DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES", "int"),
+  ("job.grace_check_staleness_alert_multiplier", "DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER", "float"),
+  ("liability.grace_window_alert_threshold_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_ALERT_THRESHOLD_HOURS", "int"),
+  ("liability.grace_window_maximum_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MAXIMUM_HOURS", "int"),
+  ("liability.grace_window_minimum_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MINIMUM_HOURS", "int"),
+  ("liability.grace_window_minor_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MINOR_HOURS", "int"),
+  ("liability.grace_window_moderate_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MODERATE_HOURS", "int"),
+  ("liability.grace_window_severe_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_SEVERE_HOURS", "int"),
+  ("liability.multi_sponsor_escape_rule", "DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE", "text"),
+  ("liability.restoration_escapes_liability", "DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY", "bool"),
+  ("liability.restoration_severity_reduction_steps", "DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS", "int"),
+  ("liability.revoke_rate_limit_per_day", "DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY", "int"),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -1321,6 +1408,19 @@ pub const EXPECTED_SEED_COUNT_V1_AD: usize = 27;
 /// this many INSERT rows.
 pub const EXPECTED_SEED_COUNT_V1_JM: usize = 27;
 
+/// v1-SL-a adds 13 sponsor-liability-owned keys to `SEEDED_KEYS_WITH_CONSTS`.
+/// Parametric per advisor directive 2026-04-19 #4 — each v1 sub-PRD adds
+/// its own `EXPECTED_SEED_COUNT_V1_*` beside the v0 + v1-AD-a + v1-JM-a
+/// invariants without churning them. Count is authoritative against
+/// on-disk reality: plan §13 Task 6 reconciliation gate asserts
+/// `SEEDED_KEYS_WITH_CONSTS` contains exactly this many v1-SL-a-block
+/// tuples AND the seed migration has exactly this many INSERT rows.
+/// Per DQ #115: all `liability.grace_window_*_hours` keys are raw
+/// integer hours (NOT micros-scaled); the lesson
+/// `feedback_brehon_config_micros_scaled.md` scopes to reputation/score-
+/// formula math, not wall-clock INTERVAL operands.
+pub const EXPECTED_SEED_COUNT_V1_SL: usize = 13;
+
 /// Enum variants for `federation.quarantine_recommendation_severity_floor`.
 const ENUM_SEVERITY_FLOOR: &[&str] = &["minor", "moderate", "severe"];
 
@@ -1337,6 +1437,13 @@ const ENUM_MEMBERSHIP_STATE: &[&str] = &["member", "provisional", "suspended"];
 /// v1-AD per OQ-020: `age` | `reputation` | `allowlist`). Listed here so
 /// v1-AD-b's POST /admin/config handler has one canonical reference.
 const ENUM_SPONSOR_GATE_STRATEGY: &[&str] = &["age", "reputation", "allowlist"];
+
+/// Enum variants for `liability.multi_sponsor_escape_rule` (v1-SL-a key).
+/// Per PRD §13.1 + §13 escape-rule table: `any_revocation` (default) means
+/// one sponsor revoking escapes all; `all_revocation` requires every active
+/// sponsor to revoke; `majority_revocation` requires >50%.
+const ENUM_MULTI_SPONSOR_ESCAPE_RULE: &[&str] =
+  &["any_revocation", "all_revocation", "majority_revocation"];
 
 /// Compile-time metadata for every seeded `governance_config` key. Length
 /// must equal `SEEDED_KEYS_WITH_CONSTS.len()` (enforced by
@@ -2411,6 +2518,168 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     description: "Whether accepting an appeal request auto-seats the appeal panel.",
     doc_anchor: "v1-jury-mechanics.prd.md§10",
   },
+  // ---- v1-SL-a keys (13) -------------------------------------------------
+  // liability.grace_window_*_hours — 6 keys (int; raw hours per DQ #115)
+  ConfigKeyMetadata {
+    key: "liability.grace_window_minor_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Hours before sponsor liability fires for a minor-severity decision (community-configurable grace window).",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.grace_window_moderate_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Hours before sponsor liability fires for a moderate-severity decision (community-configurable grace window).",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.grace_window_severe_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Hours before sponsor liability fires for a severe-severity decision (community-configurable grace window).",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.grace_window_minimum_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Instance-level floor: communities cannot set any per-tier grace window below this value.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.grace_window_maximum_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Instance-level ceiling: communities cannot set any per-tier grace window above this value.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.grace_window_alert_threshold_hours",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Instance-level audit alert threshold: admin dashboard warns when a community sets any grace window below this value.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  // liability.restoration_* — 2 keys (1 bool + 1 int)
+  ConfigKeyMetadata {
+    key: "liability.restoration_escapes_liability",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Whether a sponsee's restoration action within the grace window escapes sponsor liability entirely.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "liability.restoration_severity_reduction_steps",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 3.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Number of severity steps reduced when restoration escapes liability (0 = full escape; 1+ = partial mitigation cascade).",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  // liability.multi_sponsor_escape_rule — 1 key (text/enum)
+  ConfigKeyMetadata {
+    key: "liability.multi_sponsor_escape_rule",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_MULTI_SPONSOR_ESCAPE_RULE),
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Escape rule when a sponsee has multiple sponsors: any_revocation, all_revocation, or majority_revocation.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  // liability.revoke_rate_limit_per_day — 1 key (int)
+  ConfigKeyMetadata {
+    key: "liability.revoke_rate_limit_per_day",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum sponsor revocations permitted per user per rolling 24-hour window (instance-level cap).",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  // job.grace_check_* — 3 keys (2 int + 1 float)
+  ConfigKeyMetadata {
+    key: "job.grace_check_interval_minutes",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 60.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "How often (minutes) the grace-window scheduler checks for expiring windows; config changes take effect at next server restart.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "job.grace_check_batch_size",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 10000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum sponsee records processed per grace-check scheduler tick.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "job.grace_check_staleness_alert_multiplier",
+    value_type: ValueType::Float,
+    valid_range: Some(NumericRange { min: 1.0, max: 10.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Multiplier of interval_minutes before a stale grace-check run triggers a staleness alert.",
+    doc_anchor: "v1-sponsor-liability.prd.md§10",
+  },
 ];
 
 
@@ -2420,17 +2689,22 @@ mod parity {
 
   #[test]
   fn seeded_keys_count_matches_const_count() {
-    let expected = EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD + EXPECTED_SEED_COUNT_V1_JM;
+    let expected = EXPECTED_SEED_COUNT
+      + EXPECTED_SEED_COUNT_V1_AD
+      + EXPECTED_SEED_COUNT_V1_JM
+      + EXPECTED_SEED_COUNT_V1_SL;
     assert_eq!(
       SEEDED_KEYS_WITH_CONSTS.len(),
       expected,
       "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) + \
-       EXPECTED_SEED_COUNT_V1_AD ({}) + EXPECTED_SEED_COUNT_V1_JM ({}) = {} — add/remove keys \
-       in both places when changing the seed list",
+       EXPECTED_SEED_COUNT_V1_AD ({}) + EXPECTED_SEED_COUNT_V1_JM ({}) + \
+       EXPECTED_SEED_COUNT_V1_SL ({}) = {} — add/remove keys in both places \
+       when changing the seed list",
       SEEDED_KEYS_WITH_CONSTS.len(),
       EXPECTED_SEED_COUNT,
       EXPECTED_SEED_COUNT_V1_AD,
       EXPECTED_SEED_COUNT_V1_JM,
+      EXPECTED_SEED_COUNT_V1_SL,
       expected,
     );
   }

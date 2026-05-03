@@ -405,6 +405,26 @@ pub enum CaseStatus {
   /// A direct moderator action (Lemmy compat layer) paused the case. Admin must
   /// explicitly resume. Per OQ-008 resolution.
   AdminReview,
+  /// v1-SL-a §8.1 + PRD §3.1 (OQ-025 athgabál grace window). Case has
+  /// been Decided AND a sanction with sponsor-liability implications
+  /// was created; the case is in its grace window.
+  /// `moderation_case.grace_expires_at` holds the computed deadline.
+  /// Sponsor revocation OR defendant restoration during this window
+  /// transitions to `SponsorLiabilityEscaped`. Window expiry triggers
+  /// `SponsorLiabilityFired`. Set by SL-d (`submit_jury_vote` rewrite);
+  /// pre-v1 backfill in v1-SL-a sets it for v0 mid-flight cases.
+  SponsorLiabilityPending,
+  /// v1-SL-a §8.1 + PRD §3.1. Terminal — the grace window expired
+  /// without escape. The `apply_sponsor_liability` helper (v0 Phase 5b
+  /// code, gated post-SL-c) ran and the `reputation_event` rows for
+  /// sponsors were written. Set by SL-c scheduler.
+  SponsorLiabilityFired,
+  /// v1-SL-a §8.1 + PRD §3.1. Terminal — sponsor revoked OR defendant
+  /// restored within the grace window. `moderation_case.liability_escape_reason`
+  /// records the escape mechanism. No `reputation_event` rows for
+  /// sponsors were written. Set by SL-b (revoke_endorsement) or SL-c
+  /// (scheduler escape branch).
+  SponsorLiabilityEscaped,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
