@@ -54,15 +54,15 @@
     },
     {
       "id": 136,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-03T19:54:21Z",
-      "question": "Did the e2e run on phase-v1-SL-a tip pass after finalize-merge of fix-impl-3?",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-03T23:00:44Z",
+      "question": "Did the local laptop e2e on phase-v1-SL-a tip 88436bce7 pass after fix-impl-3 SELECT 1; append?",
       "options": [
         "(A) pass \u2014 cohort B tail closes, advance to SL-a Task 9 retro",
         "(B) fail \u2014 surface to advisor for \u00a7G4 triage"
       ],
-      "context": "Pre-allocated DQ for e2e on phase-tip after daemon finalize-merges the fix-impl-3 worktree branch. workflow_run_id=null until advisor raises it post-finalize.",
+      "context": "Advisor mutated to laptop-e2e form per validate-pending-laptop handler. Workspace-check passed (DQ #135 resolved). User picked local laptop e2e via Phase 2 user gate.",
       "workflow_run_id": null,
       "branch": "phase-v1-SL-a",
       "phase_task": "1-fix-3",
@@ -71,7 +71,11 @@
       "failed_jobs": null,
       "answer": null,
       "answered_by": null,
-      "resolved_at": null
+      "resolved_at": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-a-88436bce7.log",
+      "commands": [
+        "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
+      ]
     }
   ],
   "resolved": [
