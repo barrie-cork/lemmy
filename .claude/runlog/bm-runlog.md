@@ -1387,3 +1387,15 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Pushed to origin:** pending — handover commit + this runlog append in same commit.
 - **Next:** resume session reads the handover; authors `.claude/PRPs/plans/v1-validate-agent.plan.md` per the §13 cohort layout; runs §15 dry-run smoke; commits `docs(plan): v1-validate-agent plan written`; surfaces plan to user for approval before queueing `bm-cut`.
 
+
+## advisor: handover written (sl-a-task-0-shipped-cohort-a-ready) — 2026-05-03T08:58Z
+
+- **Action:** Authored `.claude/PRPs/handovers/advisor-2026-05-03-sl-a-task-0-shipped-cohort-a-ready.md`. Session shipped: SL-a planning (#81 done @ 08:20Z) → DQ #116 user-resolved (proceed-as-one) → bm-cut (#82 done @ 08:34Z; phase-v1-SL-a @ ea322cd0a) → Task 0 (#83 done @ 08:56Z; migrate-roundtrip.sh stub replaced per DQ #114, finalize 1b47a3ff4).
+- **State at handover:**
+  - `governance-v0` @ `93146ada2` (synced).
+  - `origin/phase-v1-SL-a` @ `1b47a3ff4` (Task 0 finalize-merge; pushed).
+  - 0 DQ pending. 113 resolved.
+  - 3 retro-harvest items recorded (bm-cut over-push, stale settings.json check, undocumented brief-cherry-pick step).
+  - 2 carry-forward PRs (#108, #109) open — not on SL-a critical path.
+- **Pushed to origin:** pending — handover commit + this runlog append in same commit.
+- **Next:** resume session reads the handover; authors 3 impl-task briefs (sl-a-impl-{1,2,3}.md) for Cohort A; runs YAML overlap check; cherry-picks briefs onto phase-v1-SL-a; queues all 3 in parallel.
