@@ -1,0 +1,23 @@
+# Local-only build configuration for brehon-fork.
+# Companion to scripts/brehon/cargo-*.bat / *.sh — those wrappers set
+# the vcvars + libpq env that this file's linker selection depends on.
+#
+# Per Perplexity research 2026-05-02: rust-lld is the Rust-vendored
+# LLD (NOT lld-link.exe from system LLVM, which has a mixed 2024
+# track record on Windows). rust-lld:
+#   - Ships with rustup; no separate install needed
+#   - Tuned for Rust's exact LLVM version
+#   - Saves ~10-30s on test binary linking
+#   - Irrelevant for cargo check/clippy (codegen skipped)
+#
+# Background:
+#   - LLD became default on Linux x86_64 in Rust 1.90 (Sept 2025)
+#   - Windows MSVC has issue #71520 still open; manual opt-in here
+#   - Modrinth Labrinth (similar Rust/Actix/Diesel stack) adopted
+#     this in 2025: github.com/modrinth/code commit c899d955
+#
+# Rollback: comment the [target...] block; cargo silently falls
+# back to link.exe.
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
