@@ -38,15 +38,25 @@ async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
     #[diesel(sql_type = BigInt)]
     count: i64,
   }
+  // Mirror the two-signal sentinel from `apply_all_schema` (CR
+  // finding #13): require BOTH `public.governance_log` AND
+  // `r.parent_comment_ids`, so this smoke test fails on the same
+  // partial-restore shape that the production sentinel rejects.
   let row: CountRow = diesel::sql_query(
-    "SELECT COUNT(*)::bigint AS count FROM information_schema.tables \
-     WHERE table_schema = 'public' AND table_name = 'governance_log'",
+    "SELECT \
+       (SELECT COUNT(*) FROM information_schema.tables \
+        WHERE table_schema = 'public' AND table_name = 'governance_log') \
+     + (SELECT COUNT(*) FROM information_schema.routines \
+        WHERE routine_schema = 'r' AND routine_name = 'parent_comment_ids') \
+     AS count",
   )
   .get_result(&mut conn)?;
   assert_eq!(
-    row.count, 1,
-    "governance_log not present in public schema after container boot \
-     (template restore or legacy apply_all_schema should have populated it)"
+    row.count, 2,
+    "two-signal schema check failed after container boot — expected \
+     both `public.governance_log` and `r.parent_comment_ids` to be \
+     present (template restore or legacy apply_all_schema should have \
+     populated both)"
   );
 
   Ok(())
@@ -312,14 +322,29 @@ mod governance_fixtures {
 
     async fn load_or_build() -> Result<Vec<u8>, Box<dyn Error>> {
       let path = cache_path()?;
-      // Layer 2: disk cache hit
+      // Layer 2: disk cache hit. Validate the magic header before
+      // returning (CR finding #14): pg_dump custom-format files start
+      // with the byte string "PGDMP". A truncated, partially-written,
+      // or wrong-format file at the cache path would otherwise be
+      // returned and fail later inside pg_restore_into. Treat any
+      // non-PGDMP file as corrupt cache, delete it, and fall through
+      // to cold bootstrap — making the cache self-healing.
       if let Ok(bytes) = tokio::fs::read(&path).await {
-        tracing::info!(
-          bytes = bytes.len(),
+        if bytes.starts_with(b"PGDMP") {
+          tracing::info!(
+            bytes = bytes.len(),
+            path = %path.display(),
+            "pg_template: disk cache hit (skipping bootstrap)"
+          );
+          return Ok(bytes);
+        }
+        tracing::warn!(
           path = %path.display(),
-          "pg_template: disk cache hit (skipping bootstrap)"
+          first_bytes = ?bytes.get(..bytes.len().min(8)),
+          "pg_template: invalid disk cache header (expected PGDMP), \
+           rebuilding"
         );
-        return Ok(bytes);
+        let _ = tokio::fs::remove_file(&path).await;
       }
       // Layer 3: cold bootstrap (preflight docker first so the error
       // surfaces before we boot a container that we can't dump).
