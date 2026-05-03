@@ -168,18 +168,11 @@ mod governance_fixtures {
       return Ok(());
     }
 
-    conn.batch_execute("SELECT pg_advisory_lock(0);")?;
-    conn
-      .run_pending_migrations(MIGRATIONS)
-      .map_err(|e| -> Box<dyn Error> { format!("migrations failed: {e}").into() })?;
-    conn.batch_execute("DROP SCHEMA IF EXISTS r CASCADE; CREATE SCHEMA r;")?;
-    conn.batch_execute(include_str!(
-      "../../../crates/diesel_utils/replaceable_schema/utils.sql"
-    ))?;
-    conn.batch_execute(include_str!(
-      "../../../crates/diesel_utils/replaceable_schema/triggers.sql"
-    ))?;
-    Ok(())
+    // Sentinel missed → schema not fully populated by template
+    // restore. Delegate to the legacy bootstrap path so the
+    // migration + r-schema rebuild logic lives in exactly one place
+    // (CR finding #12 DRY).
+    apply_all_schema_legacy(conn)
   }
 
   /// Tier 3 — pg_dump template captured once per nextest process (and
@@ -215,6 +208,14 @@ mod governance_fixtures {
     /// load-bearing if anyone runs `cargo test` (one-process-many-tests).
     static TEMPLATE_DUMP: tokio::sync::OnceCell<Vec<u8>> =
       tokio::sync::OnceCell::const_new();
+
+    /// Track whether `ensure_docker_cli()` has run successfully in
+    /// this process. Both the cold-bootstrap path AND the cache-hit
+    /// `pg_restore_into` path need a working `docker` binary, so the
+    /// preflight must run on whichever code path fires first (CR
+    /// finding #10). OnceCell ensures we pay the ~30ms `docker
+    /// --version` cost at most once per nextest process.
+    static DOCKER_CHECKED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
     /// Compute the disk cache path. Lives under `target/tmp/` so
     /// `cargo clean` clears it; suffixed with the test binary's mtime
@@ -264,34 +265,49 @@ mod governance_fixtures {
     /// than using the bollard API like testcontainers-rs does
     /// elsewhere), so the binary is a hard dependency. Surface a
     /// clear actionable error here instead of letting `Command::new`
-    /// fail with `program not found` mid-run (CR finding #1).
-    async fn check_docker_cli() -> Result<(), Box<dyn Error>> {
-      let out = Command::new("docker")
-        .arg("--version")
-        .kill_on_drop(true)
-        .output()
+    /// fail with `program not found` mid-run (CR findings #1, #10).
+    ///
+    /// OnceCell-gated so the ~30ms `docker --version` runs at most
+    /// once per nextest process, regardless of whether the first
+    /// caller is the cold-bootstrap path or a cache-hit
+    /// `pg_restore_into`.
+    pub(super) async fn ensure_docker_cli() -> Result<(), Box<dyn Error>> {
+      // Cloning the error path: OnceCell::get_or_try_init caches only
+      // success. On failure the next call retries, which is what we
+      // want — if the user installs docker after a missed first call,
+      // subsequent ensure_docker_cli() calls succeed.
+      DOCKER_CHECKED
+        .get_or_try_init(|| async {
+          let out = Command::new("docker")
+            .arg("--version")
+            .kill_on_drop(true)
+            .output()
+            .await
+            .map_err(|e| -> Box<dyn Error> {
+              format!(
+                "Tier 3 needs `docker` on PATH for pg_dump/pg_restore \
+                 via `docker exec`, but spawning failed: {e}. \
+                 Either install Docker CLI, or set \
+                 BREHON_E2E_NO_TEMPLATE=1 to bypass the template path \
+                 entirely (legacy migration runner)."
+              )
+              .into()
+            })?;
+          if !out.status.success() {
+            return Err::<(), Box<dyn Error>>(
+              format!(
+                "`docker --version` exited {:?}: {}. Tier 3 needs a \
+                 working docker CLI (or BREHON_E2E_NO_TEMPLATE=1).",
+                out.status.code(),
+                String::from_utf8_lossy(&out.stderr)
+              )
+              .into(),
+            );
+          }
+          Ok(())
+        })
         .await
-        .map_err(|e| -> Box<dyn Error> {
-          format!(
-            "Tier 3 needs `docker` on PATH for pg_dump/pg_restore via \
-             `docker exec`, but spawning failed: {e}. \
-             Either install Docker CLI, or set BREHON_E2E_NO_TEMPLATE=1 \
-             to bypass the template path entirely (legacy migration runner)."
-          )
-          .into()
-        })?;
-      if !out.status.success() {
-        return Err(
-          format!(
-            "`docker --version` exited {:?}: {}. Tier 3 needs a working \
-             docker CLI (or BREHON_E2E_NO_TEMPLATE=1).",
-            out.status.code(),
-            String::from_utf8_lossy(&out.stderr)
-          )
-          .into(),
-        );
-      }
-      Ok(())
+        .map(|_| ())
     }
 
     async fn load_or_build() -> Result<Vec<u8>, Box<dyn Error>> {
@@ -307,7 +323,7 @@ mod governance_fixtures {
       }
       // Layer 3: cold bootstrap (preflight docker first so the error
       // surfaces before we boot a container that we can't dump).
-      check_docker_cli().await?;
+      ensure_docker_cli().await?;
       let dump = build_template().await?;
       // Best-effort write. Atomic via tmp-per-pid + rename. On race:
       // - Linux/macOS rename atomically replaces the destination.
@@ -482,6 +498,10 @@ mod governance_fixtures {
       dump: &[u8],
     ) -> Result<(), Box<dyn Error>> {
       use tokio::io::AsyncWriteExt;
+      // CR finding #10: cache-hit paths land here without going through
+      // load_or_build, so the docker CLI preflight must run here too.
+      // OnceCell makes it free on every call after the first.
+      ensure_docker_cli().await?;
       let start = std::time::Instant::now();
       let mut child = Command::new("docker")
         .args([
@@ -511,22 +531,29 @@ mod governance_fixtures {
         // outlives the cancellation and ties up the docker daemon.
         .kill_on_drop(true)
         .spawn()?;
-      {
-        let stdin = child
-          .stdin
-          .as_mut()
-          .ok_or_else(|| -> Box<dyn Error> { "no stdin on pg_restore child".into() })?;
-        stdin.write_all(dump).await?;
-        stdin.flush().await?;
-      }
-      // Drop stdin so pg_restore sees EOF.
-      drop(child.stdin.take());
-      // Hard timeout (CR finding #7). On expiry, kill the child so
-      // the file descriptor is freed and the next test can proceed
-      // with a deterministic failure rather than a wedged nextest run.
+      // Hard timeout (CR findings #7 + #11). Wraps the ENTIRE
+      // stdin-write + drop + wait flow because if the child becomes
+      // unresponsive while consuming stdin, the buffer fills and
+      // write_all stalls — we need that stall to count against the
+      // timeout. kill_on_drop on the Command above ensures the
+      // underlying docker exec is killed when this future is
+      // cancelled mid-write.
       let output = match tokio::time::timeout(
         std::time::Duration::from_secs(PG_RESTORE_TIMEOUT_SECS),
-        child.wait_with_output(),
+        async {
+          {
+            let stdin = child.stdin.as_mut().ok_or_else(|| -> Box<dyn Error> {
+              "no stdin on pg_restore child".into()
+            })?;
+            stdin.write_all(dump).await?;
+            stdin.flush().await?;
+          }
+          // Drop stdin so pg_restore sees EOF.
+          drop(child.stdin.take());
+          child.wait_with_output().await.map_err(|e| -> Box<dyn Error> {
+            format!("wait_with_output: {e}").into()
+          })
+        },
       )
       .await
       {
@@ -535,9 +562,10 @@ mod governance_fixtures {
           return Err(
             format!(
               "pg_restore timed out after {PG_RESTORE_TIMEOUT_SECS}s — \
-               docker daemon or postgres may be stalled. Container ID: \
-               {container_id}. Consider BREHON_E2E_NO_TEMPLATE=1 as a \
-               workaround."
+               docker daemon or postgres may be stalled, or stdin \
+               write blocked because the child stopped consuming. \
+               Container ID: {container_id}. Consider \
+               BREHON_E2E_NO_TEMPLATE=1 as a workaround."
             )
             .into(),
           );
