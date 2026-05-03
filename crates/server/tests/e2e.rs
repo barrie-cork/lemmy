@@ -18,7 +18,7 @@ use std::error::Error;
 /// caller follows up with `apply_all_schema` (legacy path).
 #[tokio::test]
 async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
-  use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_types::BigInt};
+  use diesel::{Connection as _, PgConnection};
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   assert!(host_port > 0, "postgres mapped port should be non-zero");
@@ -33,28 +33,13 @@ async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
     governance_fixtures::apply_all_schema(&mut conn)?;
   }
 
-  #[derive(diesel::QueryableByName)]
-  struct CountRow {
-    #[diesel(sql_type = BigInt)]
-    count: i64,
-  }
-  // Mirror the two-signal sentinel from `apply_all_schema` (CR
-  // finding #13): require BOTH `public.governance_log` AND
-  // `r.parent_comment_ids`, so this smoke test fails on the same
-  // partial-restore shape that the production sentinel rejects.
-  let row: CountRow = diesel::sql_query(
-    "SELECT \
-       (SELECT COUNT(*) FROM information_schema.tables \
-        WHERE table_schema = 'public' AND table_name = 'governance_log') \
-     + (SELECT COUNT(*) FROM information_schema.routines \
-        WHERE routine_schema = 'r' AND routine_name = 'parent_comment_ids') \
-     AS count",
-  )
-  .get_result(&mut conn)?;
-  assert_eq!(
-    row.count, 2,
-    "two-signal schema check failed after container boot — expected \
-     both `public.governance_log` and `r.parent_comment_ids` to be \
+  // Reuse the production sentinel helper so this smoke test stays
+  // bound to whatever invariant the runtime fast-path enforces
+  // (CR finding #16 DRY).
+  assert!(
+    governance_fixtures::schema_sentinel_satisfied(&mut conn)?,
+    "schema sentinel failed after container boot — expected both \
+     `public.governance_log` and `r.parent_comment_ids` to be \
      present (template restore or legacy apply_all_schema should have \
      populated both)"
   );
@@ -74,17 +59,22 @@ async fn template_dump_capture() -> Result<(), Box<dyn Error>> {
     return Ok(());
   }
   let dump = governance_fixtures::pg_template::ensure_template().await?;
-  assert!(
-    dump.len() > 100_000,
-    "template dump suspiciously small: {} bytes (expected > 100KB once \
-     all migrations + replaceable schema applied)",
-    dump.len()
-  );
-  // pg_dump custom-format files start with the magic bytes "PGDMP".
+  // pg_dump custom-format files start with the magic bytes "PGDMP";
+  // the rest of the format is the structural check (CR finding #15).
+  // We previously asserted len > 100_000 here to catch silently-empty
+  // dumps; that's brittle to legitimate compression / pg_dump version
+  // / schema changes. A tiny floor (>1 KB) catches the truly-empty
+  // case without flagging healthy variance.
   assert!(
     dump.starts_with(b"PGDMP"),
     "not a pg_dump custom-format payload (first 8 bytes: {:02x?})",
     &dump[..dump.len().min(8)]
+  );
+  assert!(
+    dump.len() > 1_024,
+    "template dump implausibly small: {} bytes (header valid but body \
+     near-empty — likely bootstrap container produced no schema)",
+    dump.len()
   );
   Ok(())
 }
@@ -154,7 +144,19 @@ mod governance_fixtures {
   /// To force the legacy path (cold migrations) for debugging, set
   /// `BREHON_E2E_NO_TEMPLATE=1` before the test run — `start_postgres`
   /// then skips the restore and the sentinel here misses.
-  pub fn apply_all_schema(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
+  /// Two-signal schema sentinel (CR finding #6 + #16). Returns true
+  /// only when BOTH `public.governance_log` (proves all migrations
+  /// ran through that point) AND `r.parent_comment_ids` (proves the
+  /// LAST step of `apply_all_schema_legacy` — `triggers.sql` —
+  /// completed) are present. Either alone indicates a partial-init
+  /// DB that must be re-bootstrapped, not skipped.
+  ///
+  /// Single source of truth — used by `apply_all_schema` for the
+  /// fast-path short-circuit AND by `postgres_container_boots` for
+  /// the smoke-test assertion. Extracting the SQL ensures the smoke
+  /// test and the runtime gate stay in sync if this check ever
+  /// gains a third signal or moves to a different invariant.
+  pub fn schema_sentinel_satisfied(conn: &mut PgConnection) -> Result<bool, Box<dyn Error>> {
     use diesel::sql_types::BigInt;
     #[derive(diesel::QueryableByName)]
     struct CountRow {
@@ -171,10 +173,11 @@ mod governance_fixtures {
     )
     .get_result::<CountRow>(conn)
     .map_err(|e| -> Box<dyn Error> { format!("schema sentinel query failed: {e}").into() })?;
-    // Both sentinels present → schema fully populated by template restore.
-    // If only one is present, the DB is in a partial-init state and we
-    // must fall through to bootstrap.
-    if row.count == 2 {
+    Ok(row.count == 2)
+  }
+
+  pub fn apply_all_schema(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
+    if schema_sentinel_satisfied(conn)? {
       return Ok(());
     }
 
@@ -407,7 +410,7 @@ mod governance_fixtures {
     }
 
     async fn build_template() -> Result<Vec<u8>, Box<dyn Error>> {
-      use diesel::{Connection as _, PgConnection};
+      use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_types::Text};
       let total = std::time::Instant::now();
       let (container, host_port) = super::start_postgres_vanilla().await?;
       let db_url = super::db_url(host_port);
@@ -416,7 +419,35 @@ mod governance_fixtures {
           format!("template bootstrap establish: {e}").into()
         })?;
       super::apply_all_schema_legacy(&mut conn)?;
-      let dump = pg_dump(container.id()).await?;
+
+      // Query pg_extension for every non-builtin extension installed
+      // by the migrations, so the pg_dump command captures all of
+      // them dynamically (CR finding #17). The previous version hard-
+      // coded `pgcrypto`, `ltree`, `pg_trgm` — easy to forget when a
+      // new migration adds an extension. Excluding `plpgsql` (built-
+      // in to every Postgres database since 9.x; pg_dump skips it
+      // automatically and including it produces a benign warning).
+      #[derive(diesel::QueryableByName)]
+      struct ExtRow {
+        #[diesel(sql_type = Text)]
+        extname: String,
+      }
+      let ext_rows: Vec<ExtRow> = diesel::sql_query(
+        "SELECT extname FROM pg_extension \
+         WHERE extname <> 'plpgsql' \
+         ORDER BY extname",
+      )
+      .get_results(&mut conn)
+      .map_err(|e| -> Box<dyn Error> {
+        format!("query pg_extension: {e}").into()
+      })?;
+      let extensions: Vec<String> = ext_rows.into_iter().map(|r| r.extname).collect();
+      tracing::info!(
+        extensions = ?extensions,
+        "pg_template: extensions discovered for dump"
+      );
+
+      let dump = pg_dump(container.id(), &extensions).await?;
       tracing::info!(
         bytes = dump.len(),
         ms = total.elapsed().as_millis(),
@@ -438,45 +469,50 @@ mod governance_fixtures {
     /// ~6× the observed worst case.
     const PG_RESTORE_TIMEOUT_SECS: u64 = 90;
 
-    /// Capture a custom-format pg_dump of `public` + `r` schemas via
-    /// `docker exec`. Custom format is more compact than plain SQL and
-    /// pg_restore's `--single-transaction --exit-on-error` semantics
-    /// give clean failure on per-test restore.
-    async fn pg_dump(container_id: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    /// Capture a custom-format pg_dump of `public` + `r` schemas + the
+    /// supplied extension list via `docker exec`. Custom format is more
+    /// compact than plain SQL and pg_restore's `--single-transaction
+    /// --exit-on-error` semantics give clean failure on per-test
+    /// restore.
+    ///
+    /// **Extensions:** `-e <name>` flags are required because
+    /// pg_restore `--clean --if-exists` drops the default `public`
+    /// schema, which cascades the extensions installed there. Without
+    /// these, restore fails with `type public.<X> does not exist` when
+    /// r.* functions reference extension-provided types (e.g.
+    /// `public.ltree`). The list is queried dynamically from
+    /// `pg_extension` in `build_template` (CR finding #17), so a
+    /// future migration that adds an extension automatically gets
+    /// captured without code changes here.
+    async fn pg_dump(
+      container_id: &str,
+      extensions: &[String],
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
       let start = std::time::Instant::now();
+      // Build the args list dynamically: fixed prefix + per-extension
+      // -e flags + format=custom suffix.
+      let mut args: Vec<String> = vec![
+        "exec".into(),
+        "-u".into(),
+        "postgres".into(),
+        container_id.into(),
+        "pg_dump".into(),
+        "-U".into(),
+        "lemmy".into(),
+        "-d".into(),
+        "lemmy".into(),
+        "--no-owner".into(),
+        "--no-privileges".into(),
+        "--schema=public".into(),
+        "--schema=r".into(),
+      ];
+      for ext in extensions {
+        args.push("-e".into());
+        args.push(ext.clone());
+      }
+      args.push("--format=custom".into());
       let dump_future = Command::new("docker")
-        .args([
-          "exec",
-          "-u",
-          "postgres",
-          container_id,
-          "pg_dump",
-          "-U",
-          "lemmy",
-          "-d",
-          "lemmy",
-          "--no-owner",
-          "--no-privileges",
-          "--schema=public",
-          "--schema=r",
-          // -e dumps extension definitions (CREATE EXTENSION ...).
-          // Required because pg_restore --clean --if-exists drops the
-          // default `public` schema, which cascades the extensions
-          // installed there. Without these, restore fails with
-          // `type public.ltree does not exist` when r.* functions
-          // reference ltree types. Migrations install: pgcrypto
-          // (2021-09-20-112945_jwt-secret), ltree (2022-07-07-182650
-          // _comment_ltrees), pg_trgm (2023-07-24-232635_trigram-
-          // index). If a future migration adds a fourth extension,
-          // add it to this list.
-          "-e",
-          "pgcrypto",
-          "-e",
-          "ltree",
-          "-e",
-          "pg_trgm",
-          "--format=custom",
-        ])
+        .args(&args)
         .kill_on_drop(true)
         .output();
       let output = tokio::time::timeout(
