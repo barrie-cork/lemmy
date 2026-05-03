@@ -1399,3 +1399,15 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - 2 carry-forward PRs (#108, #109) open — not on SL-a critical path.
 - **Pushed to origin:** pending — handover commit + this runlog append in same commit.
 - **Next:** resume session reads the handover; authors 3 impl-task briefs (sl-a-impl-{1,2,3}.md) for Cohort A; runs YAML overlap check; cherry-picks briefs onto phase-v1-SL-a; queues all 3 in parallel.
+
+
+## advisor: handover written (sl-a-cohort-a-merged-ci-watchers-running) — 2026-05-03T11:08Z
+
+- **Action:** Authored `.claude/PRPs/handovers/advisor-2026-05-03-sl-a-cohort-a-merged-ci-watchers-running.md`. Session shipped: cohort A 5-way [P] dispatch hit DQ #118 collision (T2/T3/T6/T7); daemon raced ahead and finalize-merged with renumbered ids; advisor accepted Option AA (daemon mapping + analytical commit on top); force-pushed origin to align; cherry-picked DQ #124 retro lesson + 6 ci-watcher briefs onto phase-v1-SL-a; queued ci-watchers #89-#94.
+- **State at handover:**
+  - `governance-v0` @ `eb7f183a9` (synced); phase-v1-SL-a @ `094cf58e2` (synced both sides).
+  - 0 DQ pending on governance-v0; 6 DQ pending on phase-v1-SL-a (cohort A validate-pending).
+  - 2 advisor lessons logged: DQ #117 (cohort-fail-expected rule mismatch) + DQ #124 (cohort-id-collision lesson).
+  - 6 ci-watchers running #89-#94; expected to resolve within minutes.
+- **Pushed to origin:** governance-v0 + phase-v1-SL-a both synced before handover.
+- **Next:** resume session polls #89-#94; on all-resolved, surfaces DQ pass/fail summary; on user gate, authors cohort B briefs (Tasks 4+5) using the new DQ id pre-allocation pattern (DQ #124).
