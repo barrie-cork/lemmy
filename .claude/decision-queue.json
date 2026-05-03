@@ -183,29 +183,6 @@
       "failed_jobs": [
         "validate workspace"
       ]
-    },
-    {
-      "id": 129,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-03T11:30:00Z",
-      "question": "workspace-check for v1-SL-a task 5 (ADR-013 enum-exhaustiveness sweep \u2014 UNIFIED GREEN-GATE per plan \u00a714 Story 1)",
-      "options": [
-        "(A) pass \u2014 cohort A barrier closed, first workspace-check green this sub-phase",
-        "(B) fail \u2014 advisor \u00a7G4 classifier triage"
-      ],
-      "context": "Task 5 extended 6 planned sites (plan \u00a710.5 rows 1-7) + 2 planner-missed sites found via R3 sweep addendum (admin_dashboard.rs is_active_status/status_key + get_case.rs is_public_status; confirmed from DQ #118 log_slice). All 9 match sites now cover SponsorLiabilityPending/Fired/Escaped. Workflow run id 25281046608 on branch junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100.",
-      "workflow_run_id": 25281046608,
-      "branch": "junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100",
-      "phase_task": 5,
-      "result": "fail",
-      "log_slice": "error: `map_err(|_|...)` wildcard pattern discards the original error\n  --> crates/api/api/src/governance/accept_jury_assignment.rs:92:14\n   |\n92 |     .map_err(|_| LemmyErrorType::NotFound)?;\n   |              ^^^\n   |\n= help: consider storing the original error as a source in the new error, or silence this warning using an ignored identifier (`.map_err(|_foo| ...`)\n= help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#map_err_ignore\n= note: requested on the command line with `-D clippy::map-err-ignore`\n\nerror: could not compile `lemmy_api` (lib) due to 1 previous error",
-      "failed_jobs": [
-        "validate workspace"
-      ],
-      "answer": "cargo clippy failed on clippy::map-err-ignore lint at crates/api/api/src/governance/accept_jury_assignment.rs:92. Wildcard pattern discards original error.",
-      "answered_by": "ci-watcher",
-      "resolved_at": "2026-05-03T14:11:20Z"
     }
   ],
   "resolved": [
@@ -2064,6 +2041,29 @@
       "answer": "Recommend (B) for SL-a retro: amend PRD \u00a78.5 + plan template \u00a710.1 to require enum-add migrations to be SEPARATED from any migration that uses the new value (UPDATE/INSERT/index predicate). The fix-impl sl-a-fix-impl-1 implements this for SL-a. Add a planning-stage check to the planning subagent's brief template: 'when introducing new enum values, are they referenced by UPDATE/INSERT/predicate in the same migration? If yes, split.' Optional: codify as a dq-classifier rule (kind: validate-pending fail with log_slice matching 'unsafe use of new value' \u2192 \u00a7G4 allowlist for migration-split fix-impl auto-queue, similar to clippy::doc_lazy_continuation entry).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-03T11:42:00Z"
+    },
+    {
+      "id": 129,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T11:30:00Z",
+      "question": "workspace-check for v1-SL-a task 5 (ADR-013 enum-exhaustiveness sweep \u2014 UNIFIED GREEN-GATE per plan \u00a714 Story 1)",
+      "options": [
+        "(A) pass \u2014 cohort A barrier closed, first workspace-check green this sub-phase",
+        "(B) fail \u2014 advisor \u00a7G4 classifier triage"
+      ],
+      "context": "Task 5 extended 6 planned sites (plan \u00a710.5 rows 1-7) + 2 planner-missed sites found via R3 sweep addendum (admin_dashboard.rs is_active_status/status_key + get_case.rs is_public_status; confirmed from DQ #118 log_slice). All 9 match sites now cover SponsorLiabilityPending/Fired/Escaped. Workflow run id 25281046608 on branch junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100.",
+      "workflow_run_id": 25281046608,
+      "branch": "junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100",
+      "phase_task": 5,
+      "result": "fail",
+      "log_slice": "error: `map_err(|_|...)` wildcard pattern discards the original error\n  --> crates/api/api/src/governance/accept_jury_assignment.rs:92:14\n   |\n92 |     .map_err(|_| LemmyErrorType::NotFound)?;\n   |              ^^^\n   |\n= help: consider storing the original error as a source in the new error, or silence this warning using an ignored identifier (`.map_err(|_foo| ...`)\n= help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#map_err_ignore\n= note: requested on the command line with `-D clippy::map-err-ignore`\n\nerror: could not compile `lemmy_api` (lib) due to 1 previous error",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Advisor \u00a7G4 manual fix (option B per user decision). Single clippy::map-err-ignore at accept_jury_assignment.rs:92 (introduced in Task 5 commit b2e31c97e). Applied lint-suggested rename |_| \u2192 |_e| (1 character, 1 line, 1 file). Triggers fresh workspace-check; new workflow run id captured below in this entry once push lands. Allowlist growth candidate (map_err_ignore mechanical |_| \u2192 |_e|) for next sub-phase plan per \u00a7G4 retro-evidence rule.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T14:14:26Z"
     }
   ],
   "schema_version": 2
