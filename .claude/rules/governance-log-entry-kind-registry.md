@@ -157,12 +157,20 @@ intervention (no subsequent `case_decided`, `sanction_created`, or
 |---|---|---|---|---|
 | `ENTRY_KIND_JURY_DEADLOCK` | `jury_deadlock` | v1-JM-c shipped | `crates/api/api/src/governance/submit_jury_vote.rs::process_vote` (deadlock branch) | Jury panel reached `panel_size_snapshot` votes but no `JuryDecision` met `threshold_count_snapshot`. Case flipped to `CaseStatus::AdminReview`. Payload: `{ case_id, panel_size_snapshot, threshold_count_snapshot, tally: {<JuryDecision>: count, ...} }` |
 
-### sponsor-liability-v1 (reserved — §17 of PRD enumerates 5 new kinds)
+## v1-SL-a entry kinds (5, this sub-phase)
 
-_To be populated by `v1-sponsor-liability.plan.md`:_
-`sponsor_liability_pending`, `sponsor_liability_fired`,
-`sponsor_liability_escaped`, `endorsement_revoked`,
-`restoration_completed`.
+Landed alongside task 7's dual-file edit. v1-SL-a writes the const
+declarations only; emitting call sites land in v1-SL-b/c/d +
+restorative-mechanics-v1 per the registry rule's pre-landed-const
+exemption (each pending row names a specific downstream plan).
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_SPONSOR_LIABILITY_PENDING` | `sponsor_liability_pending` | v1-SL-a const; v1-SL-d call site | v1-SL-d `crates/api/api/src/governance/submit_jury_vote.rs::process_vote` Decided->SponsorLiabilityPending transition (pending) | Case transitioned to grace-window state at jury-decision time per PRD §9.3 step 1. Payload: `{case_id, target_person_id, severity, grace_expires_at, sponsors_pseudonyms}`. Replaces v0 immediate-fire path on cases with active sureties. |
+| `ENTRY_KIND_SPONSOR_LIABILITY_FIRED` | `sponsor_liability_fired` | v1-SL-a const; v1-SL-c call site | v1-SL-c `crates/api/api/src/governance/sponsor_liability_grace.rs::run_grace_check_batch` fire branch (pending) | Grace window expired without escape; the v0 `apply_sponsor_liability` ran and `reputation_event` rows for sponsors were written. Payload: `{case_id, fired_at, sponsor_count, deltas: [{sponsor_pseudonym, delta}, ...]}`. Per PRD §6.2 step 5. |
+| `ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED` | `sponsor_liability_escaped` | v1-SL-a const; v1-SL-b + v1-SL-c call sites | v1-SL-b `crates/api/api/src/governance/revoke_endorsement.rs` escape branch (pending) AND v1-SL-c `sponsor_liability_grace.rs::evaluate_escape_conditions` (pending) | Sponsor revocation OR defendant restoration severed the liability chain during grace window; case transitioned to terminal `SponsorLiabilityEscaped`; no `reputation_event` rows for sponsors. Payload mirrors `liability_escape_reason` JSONB column: `{case_id, escaped_at, reason, actor_pseudonym, endorsement_id\|restoration_id}`. Per PRD §5.3 step 4 + §6.2 step 4. |
+| `ENTRY_KIND_ENDORSEMENT_REVOKED` | `endorsement_revoked` | v1-SL-a const; v1-SL-b call site | v1-SL-b `crates/api/api_crud/src/governance/revoke_endorsement.rs` (pending) | Endorsement revocation succeeded (always emitted, even when no grace-window severance occurred). Payload: `{endorsement_id, revoker_pseudonym, revoked_at, sponsored_id, reason, liability_chain_severed_for_cases: [<case_ids>]}`. Per PRD §5.3 step 5. |
+| `ENTRY_KIND_RESTORATION_COMPLETED` | `restoration_completed` | v1-SL-a const; restorative-mechanics-v1 call site | restorative-mechanics-v1 PRD `crates/api/api_crud/src/governance/restoration_complete.rs` (pending — owned by separate PRD) | Defendant marked restoration complete + admin attested. Payload: `{restoration_id, defendant_pseudonym, attestor_pseudonym, completed_at, sanction_id}`. SL-a declares the const here for `governance_log.rs` const-discipline (per PRD §17 cross-cutting impact); the actual emitter ships in restorative-mechanics-v1. Cross-PRD coordination: sponsor-liability owns ESCAPE semantics (§7.3); restorative-mechanics-v1 owns the COMPLETION mechanism. |
 
 ### reputation-tuning-v1 (reserved — §7 of PRD enumerates 7 new kinds)
 
@@ -186,7 +194,7 @@ _To be populated by `v1-federation-inbound.plan.md`:_
 
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**33** at v1-JM-c end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**38** at v1-SL-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (downstream call sites: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`; `_APPEAL_DECIDED` → v1-JM-e `submit_jury_vote.rs::process_appeal_vote`, **flipped active 2026-05-02**). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.
