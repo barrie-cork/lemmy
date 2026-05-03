@@ -124,13 +124,26 @@ mod governance_fixtures {
   ///      `public.governance_log`.
   ///
   /// **Tier 3 fast path:** when `start_postgres` has already restored the
-  /// template dump into this container, `governance_log` exists and steps
-  /// 1-3 would re-do work the dump already captured. The sentinel check
+  /// template dump into this container, the schema is fully populated and
+  /// steps 1-3 would re-do work the dump already captured. The sentinel
   /// short-circuits to `Ok(())` so existing call sites that pair
   /// `start_postgres()` + `apply_all_schema(&mut conn)` get the speedup
-  /// transparently. To force the legacy path (cold migrations) for
-  /// debugging, set `BREHON_E2E_NO_TEMPLATE=1` before the test run —
-  /// `start_postgres` then skips the restore and the sentinel here misses.
+  /// transparently.
+  ///
+  /// **Sentinel correctness (CR finding #6):** `governance_log` (in `public`)
+  /// is introduced by a mid-set migration, so a partial-init DB could have
+  /// `governance_log` but be missing later migrations or the `r` schema —
+  /// short-circuiting on `governance_log` alone would mask that broken
+  /// state. The fix is to require BOTH `public.governance_log` (proves
+  /// all migrations ran through that point) AND `r.parent_comment_ids`
+  /// (proves the last replaceable-schema rebuild completed — `triggers.sql`
+  /// is the last include in `apply_all_schema_legacy`). If either is
+  /// missing, fall through to the legacy bootstrap rather than risking
+  /// silent partial-init.
+  ///
+  /// To force the legacy path (cold migrations) for debugging, set
+  /// `BREHON_E2E_NO_TEMPLATE=1` before the test run — `start_postgres`
+  /// then skips the restore and the sentinel here misses.
   pub fn apply_all_schema(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
     use diesel::sql_types::BigInt;
     #[derive(diesel::QueryableByName)]
@@ -139,13 +152,19 @@ mod governance_fixtures {
       count: i64,
     }
     let row: CountRow = diesel::sql_query(
-      "SELECT COUNT(*)::bigint AS count FROM information_schema.tables \
-       WHERE table_schema = 'public' AND table_name = 'governance_log'",
+      "SELECT \
+         (SELECT COUNT(*) FROM information_schema.tables \
+          WHERE table_schema = 'public' AND table_name = 'governance_log') \
+       + (SELECT COUNT(*) FROM information_schema.routines \
+          WHERE routine_schema = 'r' AND routine_name = 'parent_comment_ids') \
+       AS count",
     )
-    .get_result(conn)
+    .get_result::<CountRow>(conn)
     .map_err(|e| -> Box<dyn Error> { format!("schema sentinel query failed: {e}").into() })?;
-    if row.count > 0 {
-      // Tier 3 template-restore path already populated the schema.
+    // Both sentinels present → schema fully populated by template restore.
+    // If only one is present, the DB is in a partial-init state and we
+    // must fall through to bootstrap.
+    if row.count == 2 {
       return Ok(());
     }
 
@@ -163,9 +182,21 @@ mod governance_fixtures {
     Ok(())
   }
 
-  /// Tier 3 — pg_dump template captured once per nextest process,
-  /// then pg_restore'd into every fresh container. Drops per-test
-  /// boot cost from ~90s (cold migrations) to ~1-3s (restore).
+  /// Tier 3 — pg_dump template captured once per nextest process (and
+  /// cached on disk across processes), then pg_restore'd into every
+  /// fresh container.
+  ///
+  /// **Throughput (PG18 + this laptop, nextest threads-required=4):**
+  /// template path 12m17s vs nextest legacy 12m02s for 67/67 e2e tests
+  /// — i.e. measurably **NEUTRAL**, not a 60× speedup as the original
+  /// plan projected. pg_restore (binary command replay) takes the same
+  /// wall-clock as Diesel `MigrationHarness::run_pending_migrations`
+  /// (SQL replay) on this hardware. Tier 3 ships as scaffolding for
+  /// future option-3 (per-test schema isolation) work, NOT as a
+  /// throughput improvement on this laptop. Likely speedup on slower
+  /// environments where Diesel migration runner overhead dominates.
+  /// Full discussion: `.claude/lessons/feedback_local_validation_cycle_2026_05_02.md`
+  /// Rule 4.
   ///
   /// Both `pg_dump` and `pg_restore` shell out via `docker exec` against
   /// the live container, so no host-side Postgres client toolchain is
@@ -187,16 +218,24 @@ mod governance_fixtures {
 
     /// Compute the disk cache path. Lives under `target/tmp/` so
     /// `cargo clean` clears it; suffixed with the test binary's mtime
-    /// so any source-or-migration change invalidates the cache (the
-    /// `embed_migrations!` macro recompiles on `migrations/` changes
-    /// → new test binary → new mtime → cache miss → rebuild).
+    /// (nanosecond precision) so any source-or-migration change
+    /// invalidates the cache (the `embed_migrations!` macro recompiles
+    /// on `migrations/` changes → new test binary → new mtime → cache
+    /// miss → rebuild).
+    ///
+    /// **Cache key precision (CR finding #3):** earlier draft used
+    /// `as_secs()` which collides on rebuilds within the same second
+    /// — incremental cargo can finish a touch-and-rebuild cycle under
+    /// 1s on a hot cache, producing a stale-dump-reuse hazard. Nanos
+    /// is overkill but cheap; collisions are now astronomically
+    /// unlikely (filesystem mtime resolution is the floor anyway).
     fn cache_path() -> Result<PathBuf, Box<dyn Error>> {
       let exe = std::env::current_exe()?;
       let mtime = std::fs::metadata(&exe)?
         .modified()?
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| -> Box<dyn Error> { format!("clock skew: {e}").into() })?
-        .as_secs();
+        .as_nanos();
       // Walk up from the e2e test binary
       // (target/<profile>/deps/e2e-<hash>.exe) to find the workspace
       // target directory: deps/ → debug/ or release/ → target/.
@@ -220,6 +259,41 @@ mod governance_fixtures {
       TEMPLATE_DUMP.get_or_try_init(load_or_build).await
     }
 
+    /// Pre-flight check that the `docker` CLI is on PATH. Tier 3
+    /// shells out via `docker exec` for pg_dump/pg_restore (rather
+    /// than using the bollard API like testcontainers-rs does
+    /// elsewhere), so the binary is a hard dependency. Surface a
+    /// clear actionable error here instead of letting `Command::new`
+    /// fail with `program not found` mid-run (CR finding #1).
+    async fn check_docker_cli() -> Result<(), Box<dyn Error>> {
+      let out = Command::new("docker")
+        .arg("--version")
+        .kill_on_drop(true)
+        .output()
+        .await
+        .map_err(|e| -> Box<dyn Error> {
+          format!(
+            "Tier 3 needs `docker` on PATH for pg_dump/pg_restore via \
+             `docker exec`, but spawning failed: {e}. \
+             Either install Docker CLI, or set BREHON_E2E_NO_TEMPLATE=1 \
+             to bypass the template path entirely (legacy migration runner)."
+          )
+          .into()
+        })?;
+      if !out.status.success() {
+        return Err(
+          format!(
+            "`docker --version` exited {:?}: {}. Tier 3 needs a working \
+             docker CLI (or BREHON_E2E_NO_TEMPLATE=1).",
+            out.status.code(),
+            String::from_utf8_lossy(&out.stderr)
+          )
+          .into(),
+        );
+      }
+      Ok(())
+    }
+
     async fn load_or_build() -> Result<Vec<u8>, Box<dyn Error>> {
       let path = cache_path()?;
       // Layer 2: disk cache hit
@@ -231,14 +305,18 @@ mod governance_fixtures {
         );
         return Ok(bytes);
       }
-      // Layer 3: cold bootstrap
+      // Layer 3: cold bootstrap (preflight docker first so the error
+      // surfaces before we boot a container that we can't dump).
+      check_docker_cli().await?;
       let dump = build_template().await?;
-      // Best-effort write. Atomic via tmp + rename; race-safe: if a
-      // peer process beat us to write, our rename overwrites theirs
-      // (custom-format dumps are byte-equivalent for the same schema,
-      // so overwrite is safe). If write fails (e.g. read-only target
-      // dir), continue with the in-memory dump — this process still
-      // gets the speedup, peers will pay their own bootstrap.
+      // Best-effort write. Atomic via tmp-per-pid + rename. On race:
+      // - Linux/macOS rename atomically replaces the destination.
+      // - Windows rename FAILS with EEXIST when the destination already
+      //   exists (CR finding #4). On either OS, if a peer beat us to
+      //   write a fully-formed cache file, that file is correct and we
+      //   can simply discard our tmp and use the in-memory dump for
+      //   this process. Treating EEXIST/AlreadyExists as success keeps
+      //   the warning channel clean on Windows.
       if let Some(parent) = path.parent() {
         let _ = tokio::fs::create_dir_all(parent).await;
       }
@@ -249,20 +327,40 @@ mod governance_fixtures {
           tmp = %tmp_path.display(),
           "pg_template: tmp write failed (continuing with in-memory dump)"
         );
-      } else if let Err(e) = tokio::fs::rename(&tmp_path, &path).await {
-        tracing::warn!(
-          error = %e,
-          tmp = %tmp_path.display(),
-          path = %path.display(),
-          "pg_template: rename to cache path failed (continuing with in-memory dump)"
-        );
-        let _ = tokio::fs::remove_file(&tmp_path).await;
       } else {
-        tracing::info!(
-          bytes = dump.len(),
-          path = %path.display(),
-          "pg_template: disk cache populated"
-        );
+        match tokio::fs::rename(&tmp_path, &path).await {
+          Ok(()) => {
+            tracing::info!(
+              bytes = dump.len(),
+              path = %path.display(),
+              "pg_template: disk cache populated"
+            );
+          }
+          Err(e) if path.exists() => {
+            // Peer already populated the cache. Our tmp is redundant.
+            // Covers the Windows EEXIST case AND the rare Linux race
+            // where a peer wrote between our `tokio::fs::read` miss
+            // above and our rename here.
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            tracing::debug!(
+              error = %e,
+              path = %path.display(),
+              "pg_template: peer populated cache between our read and rename — using in-memory dump"
+            );
+          }
+          Err(e) => {
+            // Genuine rename failure (permissions, cross-device,
+            // disk full). Keep the in-memory dump for this process;
+            // peers will pay their own bootstrap.
+            tracing::warn!(
+              error = %e,
+              tmp = %tmp_path.display(),
+              path = %path.display(),
+              "pg_template: rename to cache path failed (continuing with in-memory dump)"
+            );
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+          }
+        }
       }
       Ok(dump)
     }
@@ -287,13 +385,25 @@ mod governance_fixtures {
       Ok(dump)
     }
 
+    /// Hard timeout for pg_dump bootstrap. On healthy hardware the
+    /// dump completes in under 30s; 120s gives ~4× headroom for slow
+    /// laptops / contended Docker daemons. Without this timeout a
+    /// stalled docker exec would wedge the entire e2e suite with no
+    /// bounded failure (CR finding #7).
+    const PG_DUMP_TIMEOUT_SECS: u64 = 120;
+
+    /// Hard timeout for per-test pg_restore. Restore is faster than
+    /// pg_dump (no SQL parsing, just binary command replay); 90s is
+    /// ~6× the observed worst case.
+    const PG_RESTORE_TIMEOUT_SECS: u64 = 90;
+
     /// Capture a custom-format pg_dump of `public` + `r` schemas via
     /// `docker exec`. Custom format is more compact than plain SQL and
     /// pg_restore's `--single-transaction --exit-on-error` semantics
     /// give clean failure on per-test restore.
     async fn pg_dump(container_id: &str) -> Result<Vec<u8>, Box<dyn Error>> {
       let start = std::time::Instant::now();
-      let output = Command::new("docker")
+      let dump_future = Command::new("docker")
         .args([
           "exec",
           "-u",
@@ -326,8 +436,21 @@ mod governance_fixtures {
           "pg_trgm",
           "--format=custom",
         ])
-        .output()
-        .await?;
+        .kill_on_drop(true)
+        .output();
+      let output = tokio::time::timeout(
+        std::time::Duration::from_secs(PG_DUMP_TIMEOUT_SECS),
+        dump_future,
+      )
+      .await
+      .map_err(|_| -> Box<dyn Error> {
+        format!(
+          "pg_dump timed out after {PG_DUMP_TIMEOUT_SECS}s — \
+           docker daemon may be stalled. Check `docker ps` and consider \
+           BREHON_E2E_NO_TEMPLATE=1 as a workaround."
+        )
+        .into()
+      })??;
       if !output.status.success() {
         return Err(
           format!(
@@ -382,6 +505,11 @@ mod governance_fixtures {
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
+        // kill_on_drop is essential for the timeout to actually
+        // terminate the underlying docker exec when we cancel the
+        // wait_with_output future. Without it, the OS process
+        // outlives the cancellation and ties up the docker daemon.
+        .kill_on_drop(true)
         .spawn()?;
       {
         let stdin = child
@@ -393,7 +521,28 @@ mod governance_fixtures {
       }
       // Drop stdin so pg_restore sees EOF.
       drop(child.stdin.take());
-      let output = child.wait_with_output().await?;
+      // Hard timeout (CR finding #7). On expiry, kill the child so
+      // the file descriptor is freed and the next test can proceed
+      // with a deterministic failure rather than a wedged nextest run.
+      let output = match tokio::time::timeout(
+        std::time::Duration::from_secs(PG_RESTORE_TIMEOUT_SECS),
+        child.wait_with_output(),
+      )
+      .await
+      {
+        Ok(result) => result?,
+        Err(_) => {
+          return Err(
+            format!(
+              "pg_restore timed out after {PG_RESTORE_TIMEOUT_SECS}s — \
+               docker daemon or postgres may be stalled. Container ID: \
+               {container_id}. Consider BREHON_E2E_NO_TEMPLATE=1 as a \
+               workaround."
+            )
+            .into(),
+          );
+        }
+      };
       if !output.status.success() {
         return Err(
           format!(
