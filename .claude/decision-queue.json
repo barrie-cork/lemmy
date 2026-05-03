@@ -26,24 +26,29 @@
     },
     {
       "id": 134,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-03T18:23:40Z",
-      "question": "Phase 2 e2e on phase-v1-SL-a tip after fix-impl-2 finalize-merge",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-03T19:09:13Z",
+      "question": "Phase 2 e2e on phase-v1-SL-a tip 9d4b028f0 (post-sl-a-fix-impl-2 finalize) \u2014 does the no-transaction line 1 fix close the v1_jm_a_backfill_populates_v0_snapshot regression?",
       "options": [
-        "(A) pass \u2014 e2e green including v1_jm_a_backfill_populates_v0_snapshot; migration redo round-trip succeeds with -- no-transaction on line 1",
-        "(B) fail \u2014 e2e regression; route to advisor \u00a7G4 classifier"
+        "(A) pass \u2014 full e2e green; phase1_migrations_round_trip closes; cohort B tail closed; SL-a Task 9 retro becomes next",
+        "(B) fail \u2014 e2e regression continues; routes to advisor \u00a7G4 classifier"
       ],
-      "context": "Pre-allocated for e2e after daemon finalize-merges fix-impl-2 worker branch into phase-v1-SL-a. workflow_run_id populated by advisor on next polling cycle after phase-tip move.",
+      "context": "Local laptop e2e per feedback_default_local_testing.md (user picked option (a) 2026-05-03 18:59 UTC). Phase tip 9d4b028f0 contains: workspace-check passed (DQ #133 resolved); fix-impl-2 1-line directive fix (228f74491/38a00305e) moves -- no-transaction from line 14 to line 1 of add_case_status_sponsor_liability_variants/up.sql per mirror precedent at 2026-04-19-000000-0000_add_restoration_sanction_variant/up.sql; ci-watcher mutation 9d4b028f0. Pre-flight: laptop checkout clean on phase-v1-SL-a; no orphan e2e/cargo PIDs; Docker Desktop running. Command: bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1. ETA ~5-10 min cargo cold-cache + ~10 min e2e (66 tests). On pass entry \u2192 resolved[] and cohort B tail closed.",
       "answer": null,
       "answered_by": null,
       "resolved_at": null,
       "workflow_run_id": null,
       "branch": "phase-v1-SL-a",
-      "phase_task": "1-fix-2",
+      "phase_task": "1-fix-2-e2e",
       "result": null,
       "log_slice": null,
-      "failed_jobs": null
+      "failed_jobs": null,
+      "commands": [
+        "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-SL-a-9d4b028f0.log",
+      "failed_commands": null
     }
   ],
   "resolved": [
