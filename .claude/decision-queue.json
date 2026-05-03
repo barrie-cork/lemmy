@@ -14,13 +14,15 @@
       "branch": "phase-v1-SL-a",
       "phase_task": 8,
       "local_log_path": null,
-      "result": null,
-      "log_slice": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "result": "fail",
+      "log_slice": "test v1_jm_a_backfill_populates_v0_snapshot ... FAILED\n\n---- v1_jm_a_backfill_populates_v0_snapshot stdout ----\n\n[migration revert succeeds]\n2026-05-03T17:47:14.509117Z DEBUG schema_setup: PT0.010961988S revert 2026-05-03-000100-0000_add_sponsor_liability_grace_window\n2026-05-03T17:47:14.510984Z DEBUG schema_setup: PT0.000365941S revert 2026-05-03-000000-0000_add_case_status_sponsor_liability_variants\n\n[redo run fails]\nError: Failed to run 2026-05-03-000000-0000_add_case_status_sponsor_liability_variants with: Received an empty query\n\nStack backtrace:\n   0: anyhow::kind::Boxed::new\n   1: lemmy_diesel_utils::schema_setup::convert_err\n   ...\n   4: lemmy_diesel_utils::schema_setup::run\n   5: e2e::v1_jm_a_backfill_populates_v0_snapshot::{{closure}}\n\nfailures:\n    v1_jm_a_backfill_populates_v0_snapshot\n\ntest result: FAILED. 65 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 599.41s\n##[error]Process completed with exit code 101.\n\nROOT CAUSE: migration up.sql for `add_case_status_sponsor_liability_variants` has 13 lines of header comments BEFORE the `-- no-transaction` directive on line 14. The diesel migration runner only recognises `-- no-transaction` when it is the first non-blank line (mirror precedent: migrations/2026-04-19-000000-0000_add_restoration_sanction_variant/up.sql line 1). When the directive is missed, the migration is wrapped in a transaction, but ALTER TYPE ADD VALUE cannot run in a transaction, and the resulting send-stripping behaviour causes Postgres to receive an empty query on redo. Cold-up succeeds (the migration runs once, fails the second time after revert).\n\nFIX: 1-line move \u2014 relocate `-- no-transaction` from line 14 to line 1 of migrations/2026-05-03-000000-0000_add_case_status_sponsor_liability_variants/up.sql. Mirror precedent: 2026-04-19-000000-0000_add_restoration_sanction_variant/up.sql (line 1: `-- no-transaction`, line 2 onward: ALTER TYPE).\n",
+      "answer": "E2E phase-v1-SL-a tip 9c67c0648 fails on test v1_jm_a_backfill_populates_v0_snapshot during the migration redo round-trip: 'Failed to run 2026-05-03-000000-0000_add_case_status_sponsor_liability_variants with: Received an empty query'. ROOT CAUSE: up.sql has the `-- no-transaction` directive on line 14, after 13 header-comment lines. Diesel migration runner only recognises the directive when it is the first non-blank line (mirror: 2026-04-19-000000-0000_add_restoration_sanction_variant/up.sql line 1). Fix is mechanical: move `-- no-transaction` to line 1. Single-file 1-line edit. NOT \u00a7G4 allowlist (clippy/import/deprecated only) but qualifies as mechanical-narrow-scope fix per mirror \u2014 recommend \u00a7G4 allowlist EXTENSION on retro to add 'no-transaction directive misplacement' as auto-fix class. ci-watcher #105 fired against stale EliteDesk base 560f716d8 (regression-mode merge, 9th daemon-skip), so advisor mutated this entry manually with workflow run 25285713986 failure data.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T18:14:36Z",
       "workflow_run_id": 25285713986,
-      "failed_jobs": null
+      "failed_jobs": [
+        "governance e2e"
+      ]
     }
   ],
   "resolved": [
