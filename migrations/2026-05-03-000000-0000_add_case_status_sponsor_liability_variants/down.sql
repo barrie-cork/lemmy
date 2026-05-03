@@ -3,3 +3,4 @@
 -- the three new variants stay as orphan values in case_status (per
 -- Phase 5b Restoration precedent + PRD §3.4 doc-comment).
 -- This file intentionally has no DDL.
+SELECT 1;
