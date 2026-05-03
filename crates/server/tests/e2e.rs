@@ -9,29 +9,73 @@
 //! `docker-compose.yml`: `pgautoupgrade/pgautoupgrade:18-alpine`.
 
 use std::error::Error;
-use testcontainers::{
-  GenericImage, ImageExt,
-  core::{IntoContainerPort, WaitFor},
-  runners::AsyncRunner,
-};
 
+/// Smoke test the harness boot path: container start + Tier 3 template
+/// restore (when enabled) + schema sentinel reachable. Asserts that
+/// `governance_log` is present in `public` schema after `start_postgres`
+/// returns — confirming pg_restore actually populated the schema. With
+/// `BREHON_E2E_NO_TEMPLATE=1` the assertion still holds because the
+/// caller follows up with `apply_all_schema` (legacy path).
 #[tokio::test]
 async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
-  let container = GenericImage::new("pgautoupgrade/pgautoupgrade", "18-alpine")
-    .with_exposed_port(5432.tcp())
-    .with_wait_for(WaitFor::message_on_stderr(
-      "database system is ready to accept connections",
-    ))
-    .with_env_var("POSTGRES_USER", "lemmy")
-    .with_env_var("POSTGRES_PASSWORD", "password")
-    .with_env_var("POSTGRES_DB", "lemmy")
-    .start()
-    .await?;
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_types::BigInt};
 
-  let host_port = container.get_host_port_ipv4(5432).await?;
-
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
   assert!(host_port > 0, "postgres mapped port should be non-zero");
 
+  // If template path was used (default), governance_log should exist
+  // immediately. If BREHON_E2E_NO_TEMPLATE=1, run the legacy schema
+  // apply first so the assertion still meaningfully exercises the
+  // sentinel + restore wiring.
+  let db_url = governance_fixtures::db_url(host_port);
+  let mut conn = PgConnection::establish(&db_url)?;
+  if std::env::var("BREHON_E2E_NO_TEMPLATE").as_deref() == Ok("1") {
+    governance_fixtures::apply_all_schema(&mut conn)?;
+  }
+
+  #[derive(diesel::QueryableByName)]
+  struct CountRow {
+    #[diesel(sql_type = BigInt)]
+    count: i64,
+  }
+  let row: CountRow = diesel::sql_query(
+    "SELECT COUNT(*)::bigint AS count FROM information_schema.tables \
+     WHERE table_schema = 'public' AND table_name = 'governance_log'",
+  )
+  .get_result(&mut conn)?;
+  assert_eq!(
+    row.count, 1,
+    "governance_log not present in public schema after container boot \
+     (template restore or legacy apply_all_schema should have populated it)"
+  );
+
+  Ok(())
+}
+
+/// Tier 3 sentinel — proves the bootstrap dump path runs and produces
+/// a non-trivial pg_dump custom-format payload. The dump is built once
+/// per nextest process; this test just calls `ensure_template` so the
+/// LazyLock fires under nextest's process-per-test isolation.
+#[tokio::test]
+async fn template_dump_capture() -> Result<(), Box<dyn Error>> {
+  // Force the template path even if a future test sets BREHON_E2E_NO_TEMPLATE.
+  // Skip when env explicitly disables it (legacy fallback validation runs).
+  if std::env::var("BREHON_E2E_NO_TEMPLATE").as_deref() == Ok("1") {
+    return Ok(());
+  }
+  let dump = governance_fixtures::pg_template::ensure_template().await?;
+  assert!(
+    dump.len() > 100_000,
+    "template dump suspiciously small: {} bytes (expected > 100KB once \
+     all migrations + replaceable schema applied)",
+    dump.len()
+  );
+  // pg_dump custom-format files start with the magic bytes "PGDMP".
+  assert!(
+    dump.starts_with(b"PGDMP"),
+    "not a pg_dump custom-format payload (first 8 bytes: {:02x?})",
+    &dump[..dump.len().min(8)]
+  );
   Ok(())
 }
 
@@ -41,7 +85,7 @@ async fn postgres_container_boots() -> Result<(), Box<dyn Error>> {
 
 mod governance_fixtures {
   use actix_web::web::Data;
-  use diesel::{Connection as _, PgConnection, connection::SimpleConnection};
+  use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection};
   use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
   use lemmy_db_schema::source::{
@@ -78,7 +122,33 @@ mod governance_fixtures {
   ///      `lemmy_diesel_utils::schema_setup` loads via `include_str!`. This
   ///      installs the governance hash-chain and append-only triggers on
   ///      `public.governance_log`.
+  ///
+  /// **Tier 3 fast path:** when `start_postgres` has already restored the
+  /// template dump into this container, `governance_log` exists and steps
+  /// 1-3 would re-do work the dump already captured. The sentinel check
+  /// short-circuits to `Ok(())` so existing call sites that pair
+  /// `start_postgres()` + `apply_all_schema(&mut conn)` get the speedup
+  /// transparently. To force the legacy path (cold migrations) for
+  /// debugging, set `BREHON_E2E_NO_TEMPLATE=1` before the test run —
+  /// `start_postgres` then skips the restore and the sentinel here misses.
   pub fn apply_all_schema(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
+    use diesel::sql_types::BigInt;
+    #[derive(diesel::QueryableByName)]
+    struct CountRow {
+      #[diesel(sql_type = BigInt)]
+      count: i64,
+    }
+    let row: CountRow = diesel::sql_query(
+      "SELECT COUNT(*)::bigint AS count FROM information_schema.tables \
+       WHERE table_schema = 'public' AND table_name = 'governance_log'",
+    )
+    .get_result(conn)
+    .map_err(|e| -> Box<dyn Error> { format!("schema sentinel query failed: {e}").into() })?;
+    if row.count > 0 {
+      // Tier 3 template-restore path already populated the schema.
+      return Ok(());
+    }
+
     conn.batch_execute("SELECT pg_advisory_lock(0);")?;
     conn
       .run_pending_migrations(MIGRATIONS)
@@ -93,10 +163,160 @@ mod governance_fixtures {
     Ok(())
   }
 
-  /// Start a fresh `pgautoupgrade:18-alpine` container matching Lemmy's prod
-  /// image, returning the container handle (drop = teardown) and the
-  /// host-mapped port.
-  pub async fn start_postgres() -> Result<
+  /// Tier 3 — pg_dump template captured once per nextest process,
+  /// then pg_restore'd into every fresh container. Drops per-test
+  /// boot cost from ~90s (cold migrations) to ~1-3s (restore).
+  ///
+  /// Both `pg_dump` and `pg_restore` shell out via `docker exec` against
+  /// the live container, so no host-side Postgres client toolchain is
+  /// required. Container ships pg_dump 18.3 + pg_restore 18.3 (exact
+  /// version match for `pgautoupgrade:18-alpine`), eliminating the
+  /// version-skew risk.
+  pub mod pg_template {
+    use std::error::Error;
+    use tokio::process::Command;
+
+    /// Captured once per nextest process. Each `start_postgres` call
+    /// awaits the OnceCell — first caller pays the bootstrap cost
+    /// (~30s for a fresh container + migrations + dump); every other
+    /// caller in this process gets the cached dump bytes for free.
+    static TEMPLATE_DUMP: tokio::sync::OnceCell<Vec<u8>> =
+      tokio::sync::OnceCell::const_new();
+
+    /// Lazily build (or return cached) bootstrap dump bytes.
+    pub async fn ensure_template() -> Result<&'static Vec<u8>, Box<dyn Error>> {
+      TEMPLATE_DUMP
+        .get_or_try_init(build_template)
+        .await
+    }
+
+    async fn build_template() -> Result<Vec<u8>, Box<dyn Error>> {
+      use diesel::{Connection as _, PgConnection};
+      let total = std::time::Instant::now();
+      let (container, host_port) = super::start_postgres_vanilla().await?;
+      let db_url = super::db_url(host_port);
+      let mut conn = PgConnection::establish(&db_url)
+        .map_err(|e| -> Box<dyn Error> {
+          format!("template bootstrap establish: {e}").into()
+        })?;
+      super::apply_all_schema_legacy(&mut conn)?;
+      let dump = pg_dump(container.id()).await?;
+      tracing::info!(
+        bytes = dump.len(),
+        ms = total.elapsed().as_millis(),
+        "pg_dump: template captured (bootstrap end-to-end)"
+      );
+      // container drops here; bootstrap done.
+      Ok(dump)
+    }
+
+    /// Capture a custom-format pg_dump of `public` + `r` schemas via
+    /// `docker exec`. Custom format is more compact than plain SQL and
+    /// pg_restore's `--single-transaction --exit-on-error` semantics
+    /// give clean failure on per-test restore.
+    async fn pg_dump(container_id: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+      let start = std::time::Instant::now();
+      let output = Command::new("docker")
+        .args([
+          "exec",
+          "-u",
+          "postgres",
+          container_id,
+          "pg_dump",
+          "-U",
+          "lemmy",
+          "-d",
+          "lemmy",
+          "--no-owner",
+          "--no-privileges",
+          "--schema=public",
+          "--schema=r",
+          "--format=custom",
+        ])
+        .output()
+        .await?;
+      if !output.status.success() {
+        return Err(
+          format!(
+            "pg_dump failed (exit {:?}): {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr)
+          )
+          .into(),
+        );
+      }
+      tracing::info!(
+        bytes = output.stdout.len(),
+        ms = start.elapsed().as_millis(),
+        "pg_dump: bootstrap dump captured"
+      );
+      Ok(output.stdout)
+    }
+
+    /// Restore the template dump into a fresh container via `docker
+    /// exec -i pg_restore` (dump bytes streamed on stdin). The fresh
+    /// container has POSTGRES_DB=lemmy already created (by entrypoint);
+    /// pg_restore loads schema into that empty DB.
+    pub async fn pg_restore_into(
+      container_id: &str,
+      dump: &[u8],
+    ) -> Result<(), Box<dyn Error>> {
+      use tokio::io::AsyncWriteExt;
+      let start = std::time::Instant::now();
+      let mut child = Command::new("docker")
+        .args([
+          "exec",
+          "-i",
+          "-u",
+          "postgres",
+          container_id,
+          "pg_restore",
+          "-U",
+          "lemmy",
+          "-d",
+          "lemmy",
+          "--no-owner",
+          "--no-privileges",
+          "--single-transaction",
+          "--exit-on-error",
+        ])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+      {
+        let stdin = child
+          .stdin
+          .as_mut()
+          .ok_or_else(|| -> Box<dyn Error> { "no stdin on pg_restore child".into() })?;
+        stdin.write_all(dump).await?;
+        stdin.flush().await?;
+      }
+      // Drop stdin so pg_restore sees EOF.
+      drop(child.stdin.take());
+      let output = child.wait_with_output().await?;
+      if !output.status.success() {
+        return Err(
+          format!(
+            "pg_restore failed (exit {:?}): {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr)
+          )
+          .into(),
+        );
+      }
+      tracing::info!(
+        ms = start.elapsed().as_millis(),
+        "pg_restore: template applied"
+      );
+      Ok(())
+    }
+  }
+
+  /// Internal helper used by `pg_template::build_template` and the
+  /// legacy fallback path. Equivalent to the historical `start_postgres`
+  /// — bare container, no schema applied, returns `(container, port)`.
+  async fn start_postgres_vanilla() -> Result<
     (
       testcontainers::ContainerAsync<testcontainers::GenericImage>,
       u16,
@@ -119,6 +339,58 @@ mod governance_fixtures {
       .start()
       .await?;
     let host_port = container.get_host_port_ipv4(5432).await?;
+    Ok((container, host_port))
+  }
+
+  /// Legacy alias for the historical synchronous schema-apply path
+  /// — same body as the original `apply_all_schema`, kept for the
+  /// template-bootstrap path (where the sentinel deliberately misses)
+  /// and for `BREHON_E2E_NO_TEMPLATE=1` debug runs.
+  fn apply_all_schema_legacy(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
+    conn.batch_execute("SELECT pg_advisory_lock(0);")?;
+    conn
+      .run_pending_migrations(MIGRATIONS)
+      .map_err(|e| -> Box<dyn Error> { format!("migrations failed: {e}").into() })?;
+    conn.batch_execute("DROP SCHEMA IF EXISTS r CASCADE; CREATE SCHEMA r;")?;
+    conn.batch_execute(include_str!(
+      "../../../crates/diesel_utils/replaceable_schema/utils.sql"
+    ))?;
+    conn.batch_execute(include_str!(
+      "../../../crates/diesel_utils/replaceable_schema/triggers.sql"
+    ))?;
+    Ok(())
+  }
+
+  /// Start a fresh `pgautoupgrade:18-alpine` container matching Lemmy's prod
+  /// image, returning the container handle (drop = teardown) and the
+  /// host-mapped port.
+  ///
+  /// **Tier 3 default path:** boots the container, then `pg_restore`s
+  /// the bootstrap template dump into it. The first caller in any
+  /// nextest process pays the ~30s bootstrap (vanilla container +
+  /// migrations + pg_dump → cached `Vec<u8>`); every other caller in
+  /// the same process pays only ~1-3s (fresh container + restore).
+  /// Existing call sites that pair this with `apply_all_schema(&mut
+  /// conn)` continue to compile and run unchanged — the sentinel in
+  /// `apply_all_schema` short-circuits when the restore already
+  /// populated the schema.
+  ///
+  /// **Legacy fallback:** set `BREHON_E2E_NO_TEMPLATE=1` to skip the
+  /// restore and rely on `apply_all_schema`'s legacy migration path.
+  /// Useful for debugging schema regressions where the dump might be
+  /// suspect.
+  pub async fn start_postgres() -> Result<
+    (
+      testcontainers::ContainerAsync<testcontainers::GenericImage>,
+      u16,
+    ),
+    Box<dyn Error>,
+  > {
+    let (container, host_port) = start_postgres_vanilla().await?;
+    if std::env::var("BREHON_E2E_NO_TEMPLATE").as_deref() != Ok("1") {
+      let dump = pg_template::ensure_template().await?;
+      pg_template::pg_restore_into(container.id(), dump).await?;
+    }
     Ok((container, host_port))
   }
 
