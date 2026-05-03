@@ -2,6 +2,22 @@
   "pending": [],
   "resolved": [
     {
+      "id": 117,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-03T09:20:17Z",
+      "question": "Should the advisor's cohort-pass-before-advance rule (advisor-orchestrator.md 'Stage-shape orchestration') accommodate plans that intentionally produce intermediate validate-pending fails — or should plans avoid that pattern?",
+      "options": [
+        "(A) Trust the plan as-is — accept cohort A fails, advance cohort B anyway when source-code finalize-merges land (no validate-pass wait); use the post-cohort-B push as the unified gate",
+        "(B) Amend the planner template to forbid intentional-fail cohort patterns — plans must order tasks so each cohort barrier is independently green-able",
+        "(C) Amend the advisor orchestrator rule to recognise 'expected-fail under planner-§14-Story-1' as a non-blocking validate-pending state, with a typed marker on the DQ entry"
+      ],
+      "context": "v1-SL-a plan §13 line 1240 declares cohort A = Tasks 1+2+3+6+7 (5-way [P]). Plan §14 Story 1 checkpoint = workspace-check 'conclusion: success' on Task 5's push (cohort B tail), NOT on cohort A. All 5 cohort A tasks add code that depends on cohort B (Task 4 = ModerationCase struct extension; Task 5 = exhaustive-match extension at 6 sites). Therefore every cohort A worker's `kind: validate-pending` will mutate to `result: \"fail\"` (non-allowlist failures: missing-field errors, non-exhaustive-match clippy). The advisor's 'cohort advancement waits for all Phase-1 cohort members to reach result: pass' rule (advisor-orchestrator.md Stage-shape orchestration → 'Cohort dispatch under Shape G') would deadlock cohort B forever; the §G4 classifier would catch-fire to user on every cohort A fail. Option B chosen for in-flight v1-SL-a (2026-05-03 user, this DQ): pre-mark cohort A validate-pending entries as expected-fail per plan §14 Story 1, advance cohort B on finalize-merge rather than validate-pass, use Task-5 push workspace-check as the unified gate. This is a rule-vs-plan mismatch worth retro-harvesting: the orchestrator was written for cohorts whose members are independently green-able; the v1-SL-a pattern (schema-foundation cohort A + exhaustive-match-fixup cohort B) is the first plan to diverge from that assumption.",
+      "answer": "Recommend (C) post-SL-a retro: add typed marker (e.g. `kind: \"validate-pending-cohort-fail-expected\"`, or a `cohort_fail_expected: true` flag on `kind: validate-pending`) so the orchestrator can route around the catch-fire path mechanically. Plans that intentionally produce intermediate fails should declare the marker when raising the validate-pending entry, citing the §14 Story checkpoint. Alternative (A) is acceptable as a one-off for SL-a; (B) is too restrictive — the schema-foundation-then-exhaustive-match pattern is a legitimate design that would otherwise force unnecessary serialisation. Surface at SL-a retro for design discussion + plan-template/rule co-amendment.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T09:20:17Z"
+    },
+    {
       "id": 104,
       "from": "impl",
       "kind": "validate-pending",
