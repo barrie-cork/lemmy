@@ -1,9 +1,8 @@
--- Reverse of v1-SL-a Task 1 up.sql.
---
--- Postgres enum-value drop is unsupported without full type rebuild —
--- the three new variants stay as orphan values in case_status (per
--- Phase 5b Restoration precedent + PRD §3.4 doc-comment). down.sql
--- documents this and recovers everything else.
+-- Reverse of v1-SL-a task 1 (split half 2 of 2).
+-- Reverses the backfill UPDATE, deletes 13 config seeds, drops both
+-- partial indexes, drops the two new columns. Enum-value cleanup is
+-- deferred to migration A (2026-05-03-000000-0000_add_case_status_sponsor_liability_variants);
+-- see that file's down.sql for the orphan-enum-value documentation.
 
 -- Reverse the backfill: any case still in SponsorLiabilityPending
 -- that was set by Task 1's UPDATE goes back to Decided. The
@@ -38,8 +37,3 @@ DROP INDEX IF EXISTS moderation_case_grace_expires_idx;
 
 ALTER TABLE moderation_case DROP COLUMN IF EXISTS liability_escape_reason;
 ALTER TABLE moderation_case DROP COLUMN IF EXISTS grace_expires_at;
-
--- Postgres enum values (SponsorLiabilityPending/Fired/Escaped) remain
--- as orphan variants in the case_status type — Postgres does not
--- support DROP VALUE without a full type rebuild. This matches the
--- Phase 5b Restoration variant down.sql doc-comment precedent.

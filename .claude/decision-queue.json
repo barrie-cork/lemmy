@@ -137,6 +137,48 @@
       "answer": "cargo-validate-workspace failed on clippy check: map_err(|_|...) pattern discards error at crates/api/api/src/governance/accept_jury_assignment.rs:92. Non-exhaustive match error expected per plan \u00a714 Story 1 cohort-A barrier (Tasks 4+5 not yet merged).",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-03T11:01:10.340399Z"
+    },
+    {
+      "id": 125,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T11:46:06Z",
+      "question": "workspace-check for v1-SL-a task 1 fix (migration split)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered by push to junior/role-impl-task-v1-sl-a-fix-impl-1-see-claude-prps-briefs-sl-a-fix-impl-1-md-95; expects clippy::map_err_ignore + non-exhaustive-match still failing (planner-intentional cohort A barrier per DQ #117 Option B); only the migration-check (DQ #126) is the real signal for this fix",
+      "workflow_run_id": 25278271440,
+      "branch": "junior/role-impl-task-v1-sl-a-fix-impl-1-see-claude-prps-briefs-sl-a-fix-impl-1-md-95",
+      "phase_task": "1-fix",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 126,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T11:46:06Z",
+      "question": "migration-check for v1-SL-a task 1 fix (migration split)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-migration.yml triggered by push to junior/role-impl-task-v1-sl-a-fix-impl-1-see-claude-prps-briefs-sl-a-fix-impl-1-md-95; expects pass (split fixes Postgres unsafe-use-of-new-enum-value rejection from DQ #122)",
+      "workflow_run_id": 25278271449,
+      "branch": "junior/role-impl-task-v1-sl-a-fix-impl-1-see-claude-prps-briefs-sl-a-fix-impl-1-md-95",
+      "phase_task": "1-fix",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
