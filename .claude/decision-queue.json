@@ -1742,6 +1742,37 @@
       "answer": "All e2e tests passed locally on laptop (post-CR-round-2). test result: ok. 66 passed; 0 failed; 3 ignored; finished in 1720.60s. cr-18 NOT_FOUND assertion verified (Task 5 spoof line 95 still passes); cr-9-dup-2 env restore verified (Task 3 audit-log line 100 still passes); cr-16 doc update has no runtime impact (lesson file).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-02T13:46:22.078265Z"
+    },
+    {
+      "id": 114,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-03T07:11:01Z",
+      "question": "DQ #68 carry-forward: should SL-a's plan §13 Task 0 include the migrate-roundtrip.sh stub fix, or defer to a separate sub-phase / fix-impl cycle?",
+      "options": [
+        "(A) Stub-fix as Task 0 of SL-a — same impl-task ships stub-fix + SL-a migration; closes DQ #68 atomically",
+        "(B) Spin off a one-task pre-SL-a sub-phase",
+        "(C) Plan SL-a, accept first-push failure, fix in follow-up"
+      ],
+      "context": "SL-a is the next sub-phase to author a real migration. scripts/brehon/migrate-roundtrip.sh exits non-zero on real migration triggers per its own comment block. The stub fix is mechanical (testcontainers Postgres + cargo run -p lemmy_diesel_utils round-trip). Without the fix, SL-a's first phase-branch push fails the cargo-validate-migration workflow.",
+      "answer": "Option A (per user 2026-05-03): SL-a Task 0 includes the migrate-roundtrip.sh stub fix. Same impl-task ships both the stub-fix and the SL-a migration so validation runs end-to-end on the very first push. Closes DQ #68 atomically with SL-a's ship.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-03T07:11:01Z"
+    },
+    {
+      "id": 115,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-03T07:11:01Z",
+      "question": "Are the SL-a-seeded liability.grace_window_*_hours config keys (24/72/168) micros-scaled per feedback_brehon_config_micros_scaled.md, or stored as raw integer hours?",
+      "options": [
+        "(A) Raw integer hours (NOT micros-scaled) — used as Postgres INTERVAL '<N> hours' in §8.4 backfill + scheduler",
+        "(B) Micros-scaled (× 1,000,000) for parity with reputation/threshold math"
+      ],
+      "context": "PRD §10 defaults matrix lists Type=int with values 24/72/168 (Minor/Moderate/Severe). PRD §8.4 backfill uses 'decided_at + INTERVAL ''24 hours''' which assumes raw integer storage. feedback_brehon_config_micros_scaled.md scopes itself to reputation/score formulas (× 1,000,000 weight × snapshot value, strict > comparison). Grace-window hours are wall-clock units used as INTERVAL operands, not multiplied by snapshot rows. Lesson explicitly excludes wall-clock units.",
+      "answer": "Option A: liability.grace_window_*_hours keys are stored as raw integer hours, NOT micros-scaled. Per feedback_brehon_config_micros_scaled.md the lesson scopes to reputation/score-formula math; PRD §8.4 confirms the storage shape via the 'decided_at + INTERVAL ''24 hours''' SQL backfill expression. Brief §3 adds citation to the lesson; §4.1 adds an explicit note that hour-typed wall-clock keys are NOT micros-scaled.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T07:11:01Z"
     }
   ],
   "schema_version": 2
