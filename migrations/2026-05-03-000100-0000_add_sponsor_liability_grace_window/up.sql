@@ -1,27 +1,31 @@
--- v1-SL-a task 1: combined schema + seed + backfill migration.
+-- v1-SL-a task 1 (split half 2 of 2): columns + indexes + seeds + backfill.
 -- ============================================================
 -- ADR exception trail (protected governance tables)
 -- ============================================================
--- ADDITIVE only: ADD COLUMN, CREATE INDEX, ALTER TYPE ... ADD VALUE
--- IF NOT EXISTS, INSERT ... ON CONFLICT DO NOTHING, UPDATE ...
--- (backfill only, bounded by `decided_at > now() - INTERVAL '24
--- hours'` per ADR-010 won't-disadvantage). No DROP, no ALTER on
--- existing columns, no UPDATE on already-fired cases.
+-- ADDITIVE only: ADD COLUMN, CREATE INDEX, INSERT ... ON CONFLICT DO
+-- NOTHING, UPDATE ... (backfill only, bounded by `decided_at >
+-- now() - INTERVAL '24 hours'` per ADR-010 won't-disadvantage). No
+-- DROP, no ALTER on existing columns, no UPDATE on already-fired
+-- cases. No -- no-transaction needed (no ALTER TYPE in this file).
 --
 -- Controlling ADR: ADR-010 (staged releases).
 -- Authority trail:
---   - PRD: .claude/PRPs/prds/v1-sponsor-liability.prd.md §8.1-§8.5
---   - Plan: .claude/PRPs/plans/v1-sponsor-liability-a.plan.md §10.1, Task 1
+--   - PRD: .claude/PRPs/prds/v1-sponsor-liability.prd.md §8.5
+--     (combined shape, superseded by this split).
+--   - Plan: .claude/PRPs/plans/v1-sponsor-liability-a.plan.md §10.1
+--     (combined skeleton, superseded by this split).
+--   - Fix: .claude/PRPs/briefs/sl-a-fix-impl-1.md (DQ #122 —
+--     Postgres refuses unsafe use of new enum value within the
+--     same migration that added it).
 --   - DQ #115 (advisor 2026-05-03): grace_window_*_hours stored as
 --     raw integer hours, NOT micros-scaled.
 -- ============================================================
 
--- no-transaction
--- (Required for ALTER TYPE; per Phase 5b Restoration variant precedent.)
-
-ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityPending';
-ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityFired';
-ALTER TYPE case_status ADD VALUE IF NOT EXISTS 'SponsorLiabilityEscaped';
+-- (No -- no-transaction; this migration uses normal Diesel
+-- transaction wrapping. The case_status enum values referenced in
+-- the backfill UPDATE were added by the prior migration
+-- 2026-05-03-000000-0000_add_case_status_sponsor_liability_variants,
+-- which committed before this migration begins.)
 
 ALTER TABLE moderation_case ADD COLUMN grace_expires_at TIMESTAMPTZ;
 COMMENT ON COLUMN moderation_case.grace_expires_at IS
