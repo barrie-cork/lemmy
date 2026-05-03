@@ -231,6 +231,22 @@ mod governance_fixtures {
           "--no-privileges",
           "--schema=public",
           "--schema=r",
+          // -e dumps extension definitions (CREATE EXTENSION ...).
+          // Required because pg_restore --clean --if-exists drops the
+          // default `public` schema, which cascades the extensions
+          // installed there. Without these, restore fails with
+          // `type public.ltree does not exist` when r.* functions
+          // reference ltree types. Migrations install: pgcrypto
+          // (2021-09-20-112945_jwt-secret), ltree (2022-07-07-182650
+          // _comment_ltrees), pg_trgm (2023-07-24-232635_trigram-
+          // index). If a future migration adds a fourth extension,
+          // add it to this list.
+          "-e",
+          "pgcrypto",
+          "-e",
+          "ltree",
+          "-e",
+          "pg_trgm",
           "--format=custom",
         ])
         .output()
@@ -257,6 +273,10 @@ mod governance_fixtures {
     /// exec -i pg_restore` (dump bytes streamed on stdin). The fresh
     /// container has POSTGRES_DB=lemmy already created (by entrypoint);
     /// pg_restore loads schema into that empty DB.
+    ///
+    /// `--clean --if-exists` is paired with the dump's `-e` flags
+    /// (extensions captured) so DROP+CREATE for `public` + extensions
+    /// + tables + r.* objects all replay cleanly in one transaction.
     pub async fn pg_restore_into(
       container_id: &str,
       dump: &[u8],
@@ -277,6 +297,8 @@ mod governance_fixtures {
           "lemmy",
           "--no-owner",
           "--no-privileges",
+          "--clean",
+          "--if-exists",
           "--single-transaction",
           "--exit-on-error",
         ])
