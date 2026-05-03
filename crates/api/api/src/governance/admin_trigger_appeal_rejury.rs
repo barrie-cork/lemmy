@@ -78,7 +78,12 @@ async fn process_trigger_rejury(
     | CaseStatus::Decided
     | CaseStatus::EmergencyRemove
     | CaseStatus::AdminReview
-    | CaseStatus::Closed => return Err(LemmyErrorType::NotFound.into()),
+    | CaseStatus::Closed
+    // PRD §3.3 + ADR-013: appeal rejury only valid on Appealed cases;
+    // sponsor-liability lifecycle is orthogonal to the appeal lifecycle.
+    | CaseStatus::SponsorLiabilityPending
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => return Err(LemmyErrorType::NotFound.into()),
   }
 
   // Idempotency: reject if appeal panel already seated for this case.
