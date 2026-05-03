@@ -184,6 +184,20 @@ pub const ENTRY_KIND_APPEAL_REJECTED: &str = "appeal_rejected";
 pub const ENTRY_KIND_APPEAL_WINDOW_EXPIRED: &str = "appeal_window_expired";
 pub const ENTRY_KIND_SEVERITY_TIER_FROZEN: &str = "severity_tier_frozen";
 
+// v1-SL-a additions (v1 sponsor-liability sub-phase A). All five
+// emitting call sites land in v1-SL-b/c/d + restorative-mechanics-v1
+// per the registry rule's pre-landed-const exemption. v1-SL-a writes
+// the const declarations only; actual governance_log::append calls
+// land with the handler edits in later sub-phases (b: endorsement_revoked
+// + sponsor_liability_escaped (revocation branch); c: sponsor_liability_fired
+// + sponsor_liability_escaped (scheduler escape branch); d:
+// sponsor_liability_pending; restorative-mechanics-v1: restoration_completed).
+pub const ENTRY_KIND_ENDORSEMENT_REVOKED: &str = "endorsement_revoked";
+pub const ENTRY_KIND_RESTORATION_COMPLETED: &str = "restoration_completed";
+pub const ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED: &str = "sponsor_liability_escaped";
+pub const ENTRY_KIND_SPONSOR_LIABILITY_FIRED: &str = "sponsor_liability_fired";
+pub const ENTRY_KIND_SPONSOR_LIABILITY_PENDING: &str = "sponsor_liability_pending";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
