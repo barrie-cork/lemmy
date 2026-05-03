@@ -23,6 +23,48 @@
       "failed_jobs": [
         "governance e2e"
       ]
+    },
+    {
+      "id": 133,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T18:23:40Z",
+      "question": "workspace-check on junior branch for fix-impl-2 (no-transaction line-1 fix)",
+      "options": [
+        "(A) pass \u2014 cargo-validate-workspace green; advance to e2e on phase-tip",
+        "(B) fail \u2014 workspace check fails; route to advisor \u00a7G4 classifier"
+      ],
+      "context": "fix-impl-2 pushed to junior worker branch. Workflow cargo-validate-workspace run 25287071958 dispatched on push. Single-file edit: up.sql -- no-transaction moved from line 14 to line 1.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "workflow_run_id": 25287071958,
+      "branch": "junior/role-impl-task-sl-a-fix-impl-2-dq-132-no-transaction-line-1-fix-see-claude-prps-briefs-sl-a-fix-impl-2-md-106",
+      "phase_task": "1-fix-2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null
+    },
+    {
+      "id": 134,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T18:23:40Z",
+      "question": "Phase 2 e2e on phase-v1-SL-a tip after fix-impl-2 finalize-merge",
+      "options": [
+        "(A) pass \u2014 e2e green including v1_jm_a_backfill_populates_v0_snapshot; migration redo round-trip succeeds with -- no-transaction on line 1",
+        "(B) fail \u2014 e2e regression; route to advisor \u00a7G4 classifier"
+      ],
+      "context": "Pre-allocated for e2e after daemon finalize-merges fix-impl-2 worker branch into phase-v1-SL-a. workflow_run_id populated by advisor on next polling cycle after phase-tip move.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-a",
+      "phase_task": "1-fix-2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null
     }
   ],
   "resolved": [
