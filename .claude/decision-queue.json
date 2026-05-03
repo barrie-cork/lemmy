@@ -3,26 +3,24 @@
     {
       "id": 132,
       "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
+      "kind": "validate-pending",
       "timestamp": "2026-05-03T16:49:51Z",
       "question": "Phase 2 e2e regression on phase-v1-SL-a tip 9c67c0648 (post-Task-8 finalize-merge \u2014 cohort B tail close)",
       "options": [
         "(A) pass \u2014 full e2e green; Task 8's PHASE_1_MIGRATION_COUNT bump + 8 SL-a probes execute correctly under testcontainers Postgres; cohort B tail closed",
         "(B) fail \u2014 e2e regression at phase1_migrations_round_trip OR another test; routes to advisor \u00a7G4 classifier"
       ],
-      "context": "Local e2e run on laptop per feedback_default_local_testing.md (user affirmed default-local 2026-05-03 mid-session). Command: bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1. Triggered by Task 8 finalize-merge into phase-v1-SL-a (workspace-check 25283744340 passed; DQ #131 resolved). Run started 2026-05-03 16:46:05 UTC; expected wall-clock ~25-30 min cold. testcontainers spins up Postgres per test; Docker Desktop verified running.",
-      "commands": [
-        "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
-      ],
+      "context": "Local laptop e2e run on phase-v1-SL-a tip 9c67c0648 (cargo PID 3278) failed at link stage with LNK1104: orphan stale e2e-13e14f510bbf8509.exe (PID 7512) holding the file lock per feedback_orphan_test_exe_blocks_relink.md. Compile succeeded; only the linker step crashed. User chose option (b) dispatch escape-hatch (per advisor-orchestrator.md Stage-shape \"Phase 2 (e2e ... Audit-trail / PC-unavailable escape hatch\"). Workflow run 25285713986 dispatched 2026-05-03 17:21:05 UTC. ci-watcher to mutate this entry on completion per option-2 single-entry mutation pattern.",
       "branch": "phase-v1-SL-a",
       "phase_task": 8,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-a-9c67c0648.log",
+      "local_log_path": null,
       "result": null,
       "log_slice": null,
-      "failed_commands": null,
       "answer": null,
       "answered_by": null,
-      "resolved_at": null
+      "resolved_at": null,
+      "workflow_run_id": 25285713986,
+      "failed_jobs": null
     }
   ],
   "resolved": [
