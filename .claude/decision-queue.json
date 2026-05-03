@@ -2,6 +2,22 @@
   "pending": [],
   "resolved": [
     {
+      "id": 124,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-03T10:58:32Z",
+      "question": "Should cohort dispatch under [P] parallelism pre-allocate DQ id ranges in briefs to prevent read-modify-write collisions on .claude/decision-queue.json?",
+      "options": [
+        "(A) Pre-allocate id ranges in each [P] brief — advisor computes next_free_id_block of size N before brief authoring; each cohort task brief carries explicit \"Use DQ ids X..Y\" instructions in its constraints. Mechanical, prevents the race entirely.",
+        "(B) Make Junior daemon serialize DQ writes via a server-side hook — every brief still computes max+1, but daemon detects collisions on push and renumbers. Requires daemon patch.",
+        "(C) Document and accept — the daemon already merge-and-renumbers on finalize-merge (cohort A demonstrated this works); add advisor post-merge reconciliation step to runbook. Lowest effort but loses the worker-side audit trail (commit subjects reference pre-merge ids)."
+      ],
+      "context": "v1-SL-a cohort A 5-way [P] dispatch (Tasks 1+2+3+6+7) at 2026-05-03T09:23Z hit a read-modify-write race: 4 of 5 workers (T2/T3/T6/T7) computed next_id=118 from live decision-queue.json simultaneously and each wrote DQ #118 to their independent worker branch. T1 self-corrected to clean #121+#122 (later push, transient state read). Daemon finalize-merge renumbered to T3=#118/T2=#119/T7=#120/T6=#121/T1mig=#122/T1ws=#123 (chronological by merge order), preserving all 6 workflow_run_ids. Advisor recovery commit landed at 239473e2b on phase-v1-SL-a tip.",
+      "answer": "Recommend (A) post-SL-a retro: pre-allocate id ranges. Mechanical, brief-time check, no daemon patch needed. Specifically: amend `.claude/rules/advisor-orchestrator.md` \"Cohort dispatch sequence\" step 4.5 (between YAML overlap check and budget check) with: \"Compute next_free_id_block of size N where N = sum(estimated DQ writes per cohort task). For cohort A on v1-SL-a where each task writes 1 validate-pending and Task 1 writes 2: N=6. Assign brief constraints `Use DQ ids X..Y` per task.\" Also amend impl-task-brief.template.md §4 Constraints with a \"DQ id range assignment\" sub-section the advisor fills in pre-queue. Daemon serialize (B) is too expensive for the gain; daemon-merge accept (C) loses the worker-side audit trail and creates retro friction. Surface at SL-a retro for plan-template + rule co-amendment.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T10:58:32Z"
+    },
+    {
       "id": 117,
       "from": "advisor",
       "kind": "log",
