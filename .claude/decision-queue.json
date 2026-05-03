@@ -193,15 +193,17 @@
         "fail"
       ],
       "context": "cargo-validate-workspace.yml triggered by push to junior/role-impl-task-v1-sl-a-task-4-see-claude-prps-briefs-sl-a-impl-4-md-98; extends ModerationCase + InsertForm with grace_expires_at + liability_escape_reason per plan \u00a710.4",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "Workspace check failed: 8 compile errors in lemmy_api. New CaseStatus enum variants (SponsorLiabilityPending, SponsorLiabilityFired, SponsorLiabilityEscaped) added in task 4 are not handled in exhaustive match statements across multiple governance API handlers (admin_close_case.rs, admin_trigger_appeal_rejury.rs, admin_dashboard.rs, get_case.rs). All match arms must explicitly handle the three new variants.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-03T13:42:04.304223Z",
       "workflow_run_id": 25280483421,
       "branch": "junior/role-impl-task-v1-sl-a-task-4-see-claude-prps-briefs-sl-a-impl-4-md-98",
       "phase_task": 4,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null
+      "result": "fail",
+      "log_slice": "error[E0004]: non-exhaustive patterns: `CaseStatus::SponsorLiabilityPending`, `CaseStatus::SponsorLiabilityFired` and `CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/admin_close_case.rs:65:9\n   \n   65 |   match case.status {\n      |         ^^^^^^^^^^^ patterns not covered\n\nerror[E0004]: non-exhaustive patterns in 8+ locations across:\n   - crates/api/api/src/governance/admin_close_case.rs:65\n   - crates/api/api/src/governance/admin_trigger_appeal_rejury.rs:72\n   - crates/api/api/src/governance/admin_dashboard.rs:77\n   - crates/api/api/src/governance/admin_dashboard.rs:94\n   - crates/api/api/src/governance/get_case.rs:47\n   and more...\n\nnote: `CaseStatus` enum includes:\n   416 |   SponsorLiabilityPending,\n   421 |   SponsorLiabilityFired,\n   427 |   SponsorLiabilityEscaped,\n       |   ---------------------- not covered\n\nhelp: ensure that all possible cases are being handled by adding match arms\n\nFor more information about this error, try `rustc --explain E0004`.\nerror: could not compile `lemmy_api` (lib) due to 8 previous errors\nwarning: build failed, waiting for other jobs to finish...\nProcess completed with exit code 101.",
+      "failed_jobs": [
+        "validate workspace"
+      ]
     }
   ],
   "resolved": [
