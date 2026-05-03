@@ -62,7 +62,7 @@
         "(A) pass \u2014 cohort B tail closes, advance to SL-a Task 9 retro",
         "(B) fail \u2014 surface to advisor for \u00a7G4 triage"
       ],
-      "context": "Advisor mutated to laptop-e2e form per validate-pending-laptop handler. Workspace-check passed (DQ #135 resolved). User picked local laptop e2e via Phase 2 user gate.",
+      "context": "Advisor mutated to laptop-e2e form. Workspace-check passed (DQ #135 resolved). User picked local. First run failed with stale Windows incremental-cache (false-positive E0004 on already-swept SL variants in get_case.rs/admin_dashboard.rs/etc). Cargo clean (93.7 GB removed) + rerun from cold at 23:20 UTC; ETA ~60 min.",
       "workflow_run_id": null,
       "branch": "phase-v1-SL-a",
       "phase_task": "1-fix-3",
@@ -72,7 +72,7 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-a-88436bce7.log",
+      "local_log_path": ".claude/runlog/e2e-v1-SL-a-88436bce7-clean.log",
       "commands": [
         "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
       ]
