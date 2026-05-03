@@ -119,12 +119,13 @@ prior_cohort_tasks:
       - "added 2 columns (grace_expires_at, liability_escape_reason) to moderation_case"
     notes: "schema-side mirror of Task 4 struct extension; not relevant to Task 5"
   - task: 4
-    commit: <will-be-filled-by-advisor-on-task-4-completion>
+    commit: d9f7d1ac6
     filesModified:
       - crates/db_schema/src/source/governance/moderation_case.rs
     keyDecisions:
       - "added 2 fields (grace_expires_at, liability_escape_reason) to BOTH ModerationCase + ModerationCaseInsertForm per plan §10.4"
-    notes: "your edits do not touch this file; included for context"
+      - "DQ #128 (workspace-check) mutated to fail per planner-intentional cohort B barrier — Task 5 closes it"
+    notes: "your edits do not touch this file; included for context. ci-watcher #99 confirmed E0004 errors at exactly the 6 sites you'll edit (admin_close_case.rs:65, admin_trigger_appeal_rejury.rs, accept_jury_assignment.rs, admin_assign_jury.rs, request_appeal.rs, submit_jury_vote.rs:271)."
 ```
 
 **Load-bearing context for Task 5:**
