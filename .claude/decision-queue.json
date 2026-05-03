@@ -1959,6 +1959,21 @@
       "answer": "User chose (B) proceed as one (per user 2026-05-03 via AskUserQuestion). Rationale: JM-e at score 15 shipped proceed-as-one with no operational regret per its retro; JM-a precedent at similar 11-task shape; PRD \u00a715 row 1 names the deliverable atomically as 'Schema + enum + migration'; mechanical schema work does not benefit from artificial fragmentation per feedback_principles_not_rules.md. Phase branch phase-v1-SL-a will hold all 10 tasks.",
       "answered_by": "user",
       "resolved_at": "2026-05-03T08:28:12Z"
+    },
+    {
+      "id": 127,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-03T11:42:00Z",
+      "question": "should the v1-SL-a Task 1 migration combine ALTER TYPE ADD VALUE + UPDATE-using-new-value in one directory, or split?",
+      "options": [
+        "(A) combined directory (PRD \u00a78.5 + plan \u00a710.1 prescribed)",
+        "(B) split: enum-add directory then non-enum directory (Phase 5b Restoration precedent)"
+      ],
+      "context": "DQ #122 fail (cargo-validate-migration on phase-v1-SL-a tip): Postgres rejects 'unsafe use of new value SponsorLiabilityPending of enum type case_status' because the backfill UPDATE in plan \u00a710.1 references the value added by ALTER TYPE in the same migration. PRD \u00a78.5 'Single migration file' and plan \u00a710.1 'combined SQL migration' both missed this Postgres rule. Phase 5b Restoration migration (2026-04-19) is the existing repo precedent for the split shape (enum-only -- no-transaction migration, 2 lines).",
+      "answer": "Recommend (B) for SL-a retro: amend PRD \u00a78.5 + plan template \u00a710.1 to require enum-add migrations to be SEPARATED from any migration that uses the new value (UPDATE/INSERT/index predicate). The fix-impl sl-a-fix-impl-1 implements this for SL-a. Add a planning-stage check to the planning subagent's brief template: 'when introducing new enum values, are they referenced by UPDATE/INSERT/predicate in the same migration? If yes, split.' Optional: codify as a dq-classifier rule (kind: validate-pending fail with log_slice matching 'unsafe use of new value' \u2192 \u00a7G4 allowlist for migration-split fix-impl auto-queue, similar to clippy::doc_lazy_continuation entry).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T11:42:00Z"
     }
   ],
   "schema_version": 2
