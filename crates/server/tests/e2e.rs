@@ -174,20 +174,97 @@ mod governance_fixtures {
   /// version-skew risk.
   pub mod pg_template {
     use std::error::Error;
+    use std::path::PathBuf;
     use tokio::process::Command;
 
-    /// Captured once per nextest process. Each `start_postgres` call
-    /// awaits the OnceCell — first caller pays the bootstrap cost
-    /// (~30s for a fresh container + migrations + dump); every other
-    /// caller in this process gets the cached dump bytes for free.
+    /// In-process LazyLock for the dump bytes. Saves a disk read on
+    /// the second-and-subsequent test in the SAME nextest process.
+    /// Under nextest's process-per-test isolation this rarely fires
+    /// (each test = its own process), but it's cheap insurance and
+    /// load-bearing if anyone runs `cargo test` (one-process-many-tests).
     static TEMPLATE_DUMP: tokio::sync::OnceCell<Vec<u8>> =
       tokio::sync::OnceCell::const_new();
 
-    /// Lazily build (or return cached) bootstrap dump bytes.
+    /// Compute the disk cache path. Lives under `target/tmp/` so
+    /// `cargo clean` clears it; suffixed with the test binary's mtime
+    /// so any source-or-migration change invalidates the cache (the
+    /// `embed_migrations!` macro recompiles on `migrations/` changes
+    /// → new test binary → new mtime → cache miss → rebuild).
+    fn cache_path() -> Result<PathBuf, Box<dyn Error>> {
+      let exe = std::env::current_exe()?;
+      let mtime = std::fs::metadata(&exe)?
+        .modified()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| -> Box<dyn Error> { format!("clock skew: {e}").into() })?
+        .as_secs();
+      // Walk up from the e2e test binary
+      // (target/<profile>/deps/e2e-<hash>.exe) to find the workspace
+      // target directory: deps/ → debug/ or release/ → target/.
+      let target_root = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .ok_or_else(|| -> Box<dyn Error> {
+          format!("cannot derive target root from {exe:?}").into()
+        })?;
+      Ok(target_root.join("tmp").join(format!("brehon-pg-template-{mtime}.dump")))
+    }
+
+    /// Lazily build (or return cached) bootstrap dump bytes. Cache
+    /// layers (fastest first):
+    ///   1. In-process `OnceCell` — same nextest process, second test.
+    ///   2. On-disk `target/tmp/...dump` — cross-process, keyed by test
+    ///      binary's mtime so source/migration changes invalidate.
+    ///   3. Cold bootstrap — ~30s container start + migrations + dump.
     pub async fn ensure_template() -> Result<&'static Vec<u8>, Box<dyn Error>> {
-      TEMPLATE_DUMP
-        .get_or_try_init(build_template)
-        .await
+      TEMPLATE_DUMP.get_or_try_init(load_or_build).await
+    }
+
+    async fn load_or_build() -> Result<Vec<u8>, Box<dyn Error>> {
+      let path = cache_path()?;
+      // Layer 2: disk cache hit
+      if let Ok(bytes) = tokio::fs::read(&path).await {
+        tracing::info!(
+          bytes = bytes.len(),
+          path = %path.display(),
+          "pg_template: disk cache hit (skipping bootstrap)"
+        );
+        return Ok(bytes);
+      }
+      // Layer 3: cold bootstrap
+      let dump = build_template().await?;
+      // Best-effort write. Atomic via tmp + rename; race-safe: if a
+      // peer process beat us to write, our rename overwrites theirs
+      // (custom-format dumps are byte-equivalent for the same schema,
+      // so overwrite is safe). If write fails (e.g. read-only target
+      // dir), continue with the in-memory dump — this process still
+      // gets the speedup, peers will pay their own bootstrap.
+      if let Some(parent) = path.parent() {
+        let _ = tokio::fs::create_dir_all(parent).await;
+      }
+      let tmp_path = path.with_extension(format!("dump.tmp.{}", std::process::id()));
+      if let Err(e) = tokio::fs::write(&tmp_path, &dump).await {
+        tracing::warn!(
+          error = %e,
+          tmp = %tmp_path.display(),
+          "pg_template: tmp write failed (continuing with in-memory dump)"
+        );
+      } else if let Err(e) = tokio::fs::rename(&tmp_path, &path).await {
+        tracing::warn!(
+          error = %e,
+          tmp = %tmp_path.display(),
+          path = %path.display(),
+          "pg_template: rename to cache path failed (continuing with in-memory dump)"
+        );
+        let _ = tokio::fs::remove_file(&tmp_path).await;
+      } else {
+        tracing::info!(
+          bytes = dump.len(),
+          path = %path.display(),
+          "pg_template: disk cache populated"
+        );
+      }
+      Ok(dump)
     }
 
     async fn build_template() -> Result<Vec<u8>, Box<dyn Error>> {
