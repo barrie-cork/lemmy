@@ -35,12 +35,14 @@
       "workflow_run_id": 25275426712,
       "branch": "junior/role-impl-task-v1-sl-a-task-2-see-claude-prps-briefs-sl-a-impl-2-md-85",
       "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "error[E0004]: non-exhaustive patterns: `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/admin_close_case.rs:65:9\n    |\n 65 |   match case.status {\n    |         ^^^^^^^^^^^ patterns `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n\nerror[E0004]: non-exhaustive patterns: `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/admin_trigger_appeal_rejury.rs:72:9\n\nerror[E0004]: non-exhaustive patterns: `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/admin_dashboard.rs:77:9\n\nerror[E0004]: non-exhaustive patterns: `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/admin_dashboard.rs:94:9\n\nerror[E0004]: non-exhaustive patterns: `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityPending`, `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityFired` and `lemmy_db_schema_file::enums::CaseStatus::SponsorLiabilityEscaped` not covered\n   --> crates/api/api/src/governance/get_case.rs:47:9\n\nerror[E0004]: could not compile `lemmy_api` due to 8 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Task 2 workspace-check failed on non-exhaustive match patterns for new CaseStatus variants; expected cohort A barrier per plan \u00a714 Story 1.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-03T11:01:19.617661Z"
     },
     {
       "id": 120,
