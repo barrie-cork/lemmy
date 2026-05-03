@@ -63,15 +63,17 @@ async fn template_dump_capture() -> Result<(), Box<dyn Error>> {
   // the rest of the format is the structural check (CR finding #15).
   // We previously asserted len > 100_000 here to catch silently-empty
   // dumps; that's brittle to legitimate compression / pg_dump version
-  // / schema changes. A tiny floor (>1 KB) catches the truly-empty
-  // case without flagging healthy variance.
+  // / schema changes. A tiny floor (`MIN_TEMPLATE_DUMP_BYTES` = 1 KiB)
+  // catches the truly-empty case without flagging healthy variance.
+  // Same constant is reused by `pg_template::load_or_build` to reject
+  // truncated disk-cache files (CR finding #18).
   assert!(
     dump.starts_with(b"PGDMP"),
     "not a pg_dump custom-format payload (first 8 bytes: {:02x?})",
     &dump[..dump.len().min(8)]
   );
   assert!(
-    dump.len() > 1_024,
+    dump.len() >= governance_fixtures::pg_template::MIN_TEMPLATE_DUMP_BYTES,
     "template dump implausibly small: {} bytes (header valid but body \
      near-empty — likely bootstrap container produced no schema)",
     dump.len()
@@ -230,6 +232,19 @@ mod governance_fixtures {
     /// --version` cost at most once per nextest process.
     static DOCKER_CHECKED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
+    /// Smallest plausible byte count for a healthy custom-format
+    /// pg_dump of the full Brehon schema. Used to reject:
+    /// - Truncated/half-written disk cache files in `load_or_build`
+    ///   (CR finding #18) — even a file starting with `PGDMP` could
+    ///   be corrupt and bypass the rebuild path.
+    /// - Implausibly empty bootstrap dumps in `template_dump_capture`
+    ///   (CR finding #15) — catches the "container produced no
+    ///   schema" failure mode.
+    /// 1 KiB is well below any healthy dump (real dumps are
+    /// ~400 KiB+) but well above any truncation that would still
+    /// register as "looks like a file".
+    pub const MIN_TEMPLATE_DUMP_BYTES: usize = 1_024;
+
     /// Compute the disk cache path. Lives under `target/tmp/` so
     /// `cargo clean` clears it; suffixed with the test binary's mtime
     /// (nanosecond precision) so any source-or-migration change
@@ -325,15 +340,15 @@ mod governance_fixtures {
 
     async fn load_or_build() -> Result<Vec<u8>, Box<dyn Error>> {
       let path = cache_path()?;
-      // Layer 2: disk cache hit. Validate the magic header before
-      // returning (CR finding #14): pg_dump custom-format files start
-      // with the byte string "PGDMP". A truncated, partially-written,
-      // or wrong-format file at the cache path would otherwise be
-      // returned and fail later inside pg_restore_into. Treat any
-      // non-PGDMP file as corrupt cache, delete it, and fall through
-      // to cold bootstrap — making the cache self-healing.
+      // Layer 2: disk cache hit. Validate the magic header AND the
+      // size before returning (CR findings #14 + #18). A truncated
+      // dump can still start with `PGDMP`, so the magic check alone
+      // isn't enough to prove integrity. Reuse `MIN_TEMPLATE_DUMP_BYTES`
+      // (the same floor `template_dump_capture` uses) to reject
+      // partially-written cache files. Either failure → delete +
+      // fall through to cold bootstrap (self-healing).
       if let Ok(bytes) = tokio::fs::read(&path).await {
-        if bytes.starts_with(b"PGDMP") {
+        if bytes.starts_with(b"PGDMP") && bytes.len() >= MIN_TEMPLATE_DUMP_BYTES {
           tracing::info!(
             bytes = bytes.len(),
             path = %path.display(),
@@ -343,9 +358,10 @@ mod governance_fixtures {
         }
         tracing::warn!(
           path = %path.display(),
+          bytes = bytes.len(),
           first_bytes = ?bytes.get(..bytes.len().min(8)),
-          "pg_template: invalid disk cache header (expected PGDMP), \
-           rebuilding"
+          "pg_template: invalid disk cache (header or size below \
+           MIN_TEMPLATE_DUMP_BYTES), rebuilding"
         );
         let _ = tokio::fs::remove_file(&path).await;
       }
@@ -650,10 +666,16 @@ mod governance_fixtures {
     }
   }
 
-  /// Internal helper used by `pg_template::build_template` and the
-  /// legacy fallback path. Equivalent to the historical `start_postgres`
-  /// — bare container, no schema applied, returns `(container, port)`.
-  async fn start_postgres_vanilla() -> Result<
+  /// Bare container with no schema applied. Equivalent to the
+  /// historical `start_postgres` (pre-Tier-3). Used by:
+  ///   - `pg_template::build_template` for the bootstrap dump.
+  ///   - Tests that explicitly need to exercise cold migrations
+  ///     (`phase1_migrations_round_trip`,
+  ///     `v1_jm_a_backfill_populates_v0_snapshot`) — these pair the
+  ///     vanilla container with `schema_setup::run` to test the
+  ///     migration runner itself, which would no-op against a
+  ///     template-restored DB. CR finding #19.
+  pub async fn start_postgres_vanilla() -> Result<
     (
       testcontainers::ContainerAsync<testcontainers::GenericImage>,
       u16,
@@ -1078,7 +1100,10 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
     n: i64,
   }
 
-  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  // Use the vanilla container (no Tier 3 template restore) so step 1's
+  // forward apply genuinely exercises the migration runner. The Tier 3
+  // template-restored DB would make this no-op (CR finding #19).
+  let (_container, host_port) = governance_fixtures::start_postgres_vanilla().await?;
   let db_url = governance_fixtures::db_url(host_port);
 
   // Step 1: full forward apply. The runner takes pg_advisory_lock(0),
@@ -1283,7 +1308,11 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
     n: i64,
   }
 
-  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  // Use vanilla container so step 1's forward apply genuinely
+  // exercises the migration runner. Tier 3 template restore would
+  // make step 1 no-op against an already-populated schema (CR
+  // finding #19).
+  let (_container, host_port) = governance_fixtures::start_postgres_vanilla().await?;
   let db_url = governance_fixtures::db_url(host_port);
 
   // Step 1: full forward apply.
