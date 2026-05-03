@@ -66,23 +66,36 @@ The historical `--test-threads=1` constraint on `crates/server/tests/e2e.rs` exi
 
 **Symptom to recognise:** `cargo test --no-run -p lemmy_server` spending >30s in the link phase (visible as a long pause after "Compiling lemmy_server" before tests start).
 
-## Rule 4: Pre-bake the Postgres fixtures image
+## Rule 4: pg_dump+restore template database for fast per-test boot
 
-Each e2e test currently spawns a fresh `pgautoupgrade:18-alpine` container, then runs ~40 Diesel migrations + replaceable schema setup. The migrations alone cost ~60-90s per test.
+**Status:** SHIPPED 2026-05-03 in tooling-local-validation. Wall-clock measured 12m 17s for 67/67 PASS, down from ~26 min legacy = **2.12× faster**.
 
-A pre-baked image (built once, cached by Docker, keyed on `sha256(migrations/)`) ships with the schema already applied. Per-test container startup drops to the time it takes Postgres to start accepting connections — ~5-15s.
+Each e2e test spawns a fresh `pgautoupgrade:18-alpine` container; without intervention, the harness then runs ~40 Diesel migrations + replaceable schema setup per test (~30-90s/test). Tier 3 captures the post-migration schema state ONCE per test binary into a `pg_dump` custom-format payload, then `pg_restore`s it into each fresh container — dropping the per-test cost to the pg_restore time + container start.
 
-**Why:** the pre-baked image is built **out-of-band** (e.g. via `docker build -f scripts/brehon/Dockerfile.test-pg .` or a CI step), tagged with `sha256(migrations/)`, and **consumed via plain `GenericImage`** in the test harness — pointed at the pre-baked tag rather than rebuilt per-test. Docker rebuilds only when migrations change. No drift risk. (Earlier draft of this lesson referenced `GenericBuildableImage`; corrected to match actual harness pattern per CR review on PR #107.)
+**Why this pattern over alternatives:**
+- **Multi-stage docker commit** (option 1) — initdb.d scripts re-run on every container start (when data dir is empty, which is per-container under default volume management), so the migrations would re-run per-test anyway. Brittle clean-shutdown semantics. Rejected.
+- **Shared container per nextest process + per-test schema isolation** (option 3) — fastest in theory (~10-50ms) but introduces silent regression risk if Diesel's `MigrationHarness` doesn't honor `search_path`; cross-test state leak invisible until a pool recycles a connection mid-test. Rejected.
+- **pg_dump+restore template** (option 2, this rule) — proven pattern, no schema-isolation risk, ships with the speedup measurement.
 
 **How to apply:**
-- `scripts/brehon/Dockerfile.test-pg` — builds from `pgautoupgrade:18-alpine`, runs `apply-migrations-to-image.sh` in the initdb.d phase. Built out-of-band; produces the pre-baked image tag.
-- `scripts/brehon/apply-migrations-to-image.sh` — replicates `governance_fixtures::apply_all_schema` (acquire `pg_advisory_lock(0)`, run migrations in order, rebuild `r` schema, install replaceable schema utils + triggers). Must run inside a single psql session so the lock spans the whole apply (see in-script note for the consolidated single-session pattern).
-- `governance_fixtures::start_postgres` (in `e2e.rs`) consumes the pre-baked image via `GenericImage::new("brehon-pg-fixtures", &migrations_hash())`. The function signature `(ContainerAsync<...>, u16)` is preserved.
-- `governance_fixtures::apply_all_schema` gets a fast-path probe (check for `governance_log` table existence) — skips re-running migrations on the pre-baked image. Backwards compatible with tests that build their own container.
+- `governance_fixtures::pg_template` sub-module in `crates/server/tests/e2e.rs`:
+  - `ensure_template()` returns cached dump bytes via 3-layer cache:
+    1. In-process `tokio::sync::OnceCell<Vec<u8>>` (same process, second test).
+    2. On-disk `target/tmp/brehon-pg-template-<exe-mtime>.dump` (cross-process; cache key is the test binary's mtime so any source/migration change invalidates).
+    3. Cold bootstrap (vanilla container + apply_all_schema_legacy + pg_dump). ~30s.
+  - `pg_restore_into(container_id, &dump)` streams bytes via `docker exec -i pg_restore --clean --if-exists --single-transaction --exit-on-error`.
+  - `pg_dump` runs via `docker exec` against the live container — eliminates host-side Postgres client toolchain dependency AND guarantees pg_dump version-match with the container (no skew risk).
+- **Must include `-e <ext>` for every Postgres extension migrations install** — `pg_dump` does NOT capture extensions by default. `--clean --if-exists` drops the default `public` schema (which cascades the extensions), so the dump must recreate them. As of 2026-05-03 the migrations install: `pgcrypto`, `ltree`, `pg_trgm`. If a fourth lands, append `-e <name>` to the pg_dump args. Symptom of missing extension: `pg_restore: error: type public.<name> does not exist` on first restore.
+- `governance_fixtures::apply_all_schema` gains a sentinel short-circuit: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='governance_log'` returns `Ok(())` on hit. All 21 caller sites continue to work unchanged — the sentinel makes the legacy-or-template choice transparent.
+- `governance_fixtures::start_postgres` dispatches template-by-default. `BREHON_E2E_NO_TEMPLATE=1` env var rolls back to legacy (cold migrations) — load-bearing for debugging dump suspicion or schema-change regressions.
 
-**Generalises to:** any test suite that runs identical schema setup per test against a containerised database.
+**Why nextest matters here:** nextest's process-per-test isolation means the in-process `OnceCell` rebuilds for every test (each test = its own process). The disk cache (layer 2) is therefore the load-bearing tier. Without it, the per-test bootstrap dominates and the speedup vanishes — first iteration of this rule shipped without disk cache and measured only 22% faster than legacy. With disk cache: 2.12× faster.
 
-**Symptom to recognise:** test logs showing "applying migration 2025-..." 14 times in a row before any test logic runs.
+**Why not faster:** the remaining ~15-25s/test is dominated by container start (~5s) + pg_restore (~10-20s) on the cold container. Reaching the plan's <6 min target would require option 3 (shared-container, per-test schema isolation) which carries the search_path regression risk.
+
+**Generalises to:** any test suite using testcontainers + a containerised database where schema setup is identical per test. The pattern is portable to any Diesel/Sqlx project; the Postgres-extension footgun (`-e` flag) is universal — pg_dump never captures extensions by default in custom format.
+
+**Symptom to recognise:** test logs showing "applying migration 2025-..." for every test, OR pg_restore errors of the form `schema "public" already exists` (need `--clean --if-exists`) or `type public.X does not exist` (missing `-e <ext>` flag).
 
 ## Inner-loop tooling
 
