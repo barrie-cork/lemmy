@@ -274,6 +274,12 @@ async fn process_vote(
       | CaseStatus::Appealed
       | CaseStatus::EmergencyRemove
       | CaseStatus::AdminReview
+      // PRD §3.3 row 7 + ADR-013: sponsor-liability states short-circuit same as
+      // Decided/Closed — case has progressed past vote-tally; new vote should
+      // return case_decided: true.
+      | CaseStatus::SponsorLiabilityPending
+      | CaseStatus::SponsorLiabilityFired
+      | CaseStatus::SponsorLiabilityEscaped
   ) {
     return Ok(SubmitJuryVoteResponse {
       vote_recorded: true,

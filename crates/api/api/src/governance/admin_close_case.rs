@@ -70,7 +70,12 @@ async fn process_close(
     | CaseStatus::Decided
     | CaseStatus::Appealed
     | CaseStatus::EmergencyRemove
-    | CaseStatus::AdminReview => {}
+    | CaseStatus::AdminReview
+    // PRD §3.3 + ADR-013: admins may force-close terminal liability states for
+    // ops purposes (e.g. scheduler stuck in SponsorLiabilityPending).
+    | CaseStatus::SponsorLiabilityPending
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => {}
     CaseStatus::Closed => return Err(LemmyErrorType::NotFound.into()),
   }
 

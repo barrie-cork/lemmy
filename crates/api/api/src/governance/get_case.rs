@@ -45,7 +45,14 @@ pub async fn get_case(
 /// this function to be updated, per [ADR-013].
 fn is_public_status(status: CaseStatus) -> bool {
   match status {
-    CaseStatus::Decided | CaseStatus::Closed | CaseStatus::Appealed => true,
+    CaseStatus::Decided
+    | CaseStatus::Closed
+    | CaseStatus::Appealed
+    // PRD §3.3 + ADR-013: SL states are post-Decided outcomes — publicly visible
+    // the same as Decided/Closed (unauthenticated callers may read case details).
+    | CaseStatus::SponsorLiabilityPending
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => true,
     CaseStatus::Open
     | CaseStatus::ThresholdMet
     | CaseStatus::JurySelection

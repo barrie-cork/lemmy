@@ -183,6 +183,27 @@
       "failed_jobs": [
         "validate workspace"
       ]
+    },
+    {
+      "id": 129,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T11:30:00Z",
+      "question": "workspace-check for v1-SL-a task 5 (ADR-013 enum-exhaustiveness sweep \u2014 UNIFIED GREEN-GATE per plan \u00a714 Story 1)",
+      "options": [
+        "(A) pass \u2014 cohort A barrier closed, first workspace-check green this sub-phase",
+        "(B) fail \u2014 advisor \u00a7G4 classifier triage"
+      ],
+      "context": "Task 5 extended 6 planned sites (plan \u00a710.5 rows 1-7) + 2 planner-missed sites found via R3 sweep addendum (admin_dashboard.rs is_active_status/status_key + get_case.rs is_public_status; confirmed from DQ #118 log_slice). All 9 match sites now cover SponsorLiabilityPending/Fired/Escaped. Workflow run id 25281046608 on branch junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100.",
+      "workflow_run_id": 25281046608,
+      "branch": "junior/role-impl-task-v1-sl-a-task-5-see-claude-prps-briefs-sl-a-impl-5-md-100",
+      "phase_task": 5,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
