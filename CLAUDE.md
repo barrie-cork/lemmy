@@ -47,7 +47,7 @@ Model tiering enforced by the four-role tiering patch on the EliteDesk. Patch so
 
 The advisor reads brief + plan once at session start, then runs a steady ~10-minute poll loop: `mcp__junior-brehon__list_tasks` (status only); on transition `show_task` + `git fetch` + read `.claude/decision-queue.json`; triage DQ; queue next per stage shape (planning → impl cohort(s) → bm-cut/pr → bm-poll-cr → bm-triage → bm-merge → retro).
 
-Full polling loop discipline, brief-writing pattern, DQ triage decision tree, stage-shape orchestration, cohort dispatch, Shape G two-phase validation, §G4 classifier, DoD smoke test gate, watchpoint specificity gate, forbidden execution windows, and catch-fire procedures all live in `.claude/rules/advisor-orchestrator.md` and the path-scoped sibling rules `.claude/rules/brehon-cohort-dispatch.md` + `.claude/rules/brehon-validate-stage.md`.
+Full polling loop discipline, brief-writing pattern, DQ triage decision tree, stage-shape orchestration, cohort dispatch, Shape G two-phase validation, §G4 classifier, DoD smoke test gate, watchpoint specificity gate, forbidden execution windows, and catch-fire procedures all live in `.claude/rules/advisor-orchestrator.md` (canonical, all sections inline).
 
 ## Mandatory user gates (never skip)
 

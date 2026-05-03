@@ -248,12 +248,7 @@ The user's answer goes into the plan's "Out of scope" or a new "Retrofit scope" 
 
 ## Memory and lessons (one-system principle)
 
-The advisor reads two memory paths:
-
-- **Repo lessons** (`.claude/lessons/`) — the same files Junior subagents read. Consult before queueing each new task; cite by filename in briefs.
-- **Laptop PMD** (via memory MCP) — search index over the same content, plus `project_*` files (current-state, in-flight). Use for cross-phase pattern recall when authoring retros and brief-revision questions.
-
-When a retro promotes a new lesson, the advisor copies the lesson file into `.claude/lessons/` in the same retro commit so the next Junior task has it.
+Advisor reads `.claude/lessons/` (same files Junior subagents read; cite by filename in briefs) and laptop PMD via memory MCP (search + `project_*` state). Retro-promoted lessons copy into `.claude/lessons/` in the retro commit.
 
 ## Stage-shape orchestration (the auto-decisions)
 
@@ -461,7 +456,4 @@ For each, include the catch-fire reason and the rule it violated in the surfaced
 
 ## What this rule does NOT cover
 
-- **The Junior subagents' contracts.** Those live in `.claude/agents/<name>.md`. Don't duplicate them.
-- **Branch Manager mechanics.** Live in `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md`. The advisor queues `bm-task` Junior tasks; the BM rule governs what those tasks do.
-- **Phase-specific texture.** Lives in `homeserver/.claude/advisor-context-phase-<N>.md`. Read once at session start.
-- **Decision-queue attribution rules.** Live in `.claude/rules/decision-queue.md`. Auto-loaded.
+Companion files: `.claude/agents/<name>.md` (subagent contracts), `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md` (BM mechanics), `.claude/rules/decision-queue.md` (DQ attribution, auto-loaded), `homeserver/.claude/advisor-context-phase-<N>.md` (phase-specific texture, session-start read).

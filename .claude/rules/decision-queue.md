@@ -241,28 +241,9 @@ the inconsistency impossible.
 
 ### Deprecated kinds (historical-only — do not use for new writes)
 
-- **`kind: "validate-result"`** — DEPRECATED 2026-04-28 by option 2.
-  ci-watcher MUST NOT write this kind. Reading-side: schema-v2
-  consumers handle historical entries with this kind for back-compat.
-  Two such entries exist on `governance-v0` as of 2026-04-28: DQ #74
-  (the original two-entry validate-result) and the historical
-  resolved version of DQ #73 at `30597b436` (manually migrated
-  pending → resolved during the contamination cleanup; carries
-  `kind: "validate-pending"` because it was migrated post-hoc, but
-  paired with the deprecated DQ #74).
-- **`kind: "validate-failed"`** — DEPRECATED 2026-04-28 by option 2.
-  ci-watcher MUST NOT write this kind. Reading-side: schema-v2
-  consumers handle historical entries with this kind. No such
-  entries exist on `governance-v0` as of 2026-04-28; the deprecation
-  is forward-looking only.
+`kind: "validate-result"` and `kind: "validate-failed"` are DEPRECATED 2026-04-28 by option 2 (single-entry mutation). No session writes them. Schema-v2 readers tolerate historical entries (DQ #74 on `governance-v0` carries `validate-result`; paired with manually-migrated DQ #73 at `30597b436`). See Hard refusal #7.
 
-> **Note on enum values:** GitHub's workflow `conclusion` API returns
-> `timed_out` (with underscore) for timeout state — the `result` enum
-> mirrors GitHub's exact spelling. `run_not_found` covers the case
-> where `gh run view <id>` fails with run-not-found (e.g. wrong
-> branch, run garbage-collected, GitHub-side eviction); ci-watcher's
-> pre-flight run-existence check mutates the paired entry with this
-> result and exits 0.
+> **Note on enum values:** GitHub's workflow `conclusion` API returns `timed_out` (with underscore). `run_not_found` covers garbage-collected or wrong-branch runs; ci-watcher's pre-flight check mutates the paired entry with this result and exits 0.
 
 ### Two-phase validation under Shape G (option (b), locked 2026-04-28)
 
@@ -339,17 +320,7 @@ The advisor's polling loop reads `decision-queue.json` and routes by
 - `(validate-pending, resolved)` — post-mutation success (`result ==
   "pass"`). Advisor advances the §13-task pipeline (cohort check
   / Phase-2 e2e dispatch). No mid-loop user surfacing.
-- `(validate-result | validate-failed, *)` — DEPRECATED kinds.
-  Schema-v2 readers must handle historical entries with these kinds
-  for back-compat (DQ #74 + the resolved version of DQ #73 on
-  `governance-v0`). Routing for historical entries: treat
-  `(validate-result, resolved)` as the success-pass equivalent of
-  `(validate-pending, resolved)` — the §13-task pipeline already
-  advanced when this entry was historically written. No mid-loop
-  action. Treat any other historical (kind, status) combinations
-  here as bookkeeping; the advisor never receives new entries with
-  these kinds because ci-watcher is hard-refused from writing them
-  (Hard refusal #7 below).
+- `(validate-result | validate-failed, *)` — DEPRECATED kinds, historical only. Treat `(validate-result, resolved)` as success-pass equivalent of `(validate-pending, resolved)`; no mid-loop action. Per Hard refusal #7, no session writes new entries with these kinds.
 
 ## Recipes (copy-pasteable)
 
