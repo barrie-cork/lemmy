@@ -25,27 +25,6 @@
       ]
     },
     {
-      "id": 133,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-03T18:23:40Z",
-      "question": "workspace-check on junior branch for fix-impl-2 (no-transaction line-1 fix)",
-      "options": [
-        "(A) pass \u2014 cargo-validate-workspace green; advance to e2e on phase-tip",
-        "(B) fail \u2014 workspace check fails; route to advisor \u00a7G4 classifier"
-      ],
-      "context": "fix-impl-2 pushed to junior worker branch. Workflow cargo-validate-workspace run 25287071958 dispatched on push. Single-file edit: up.sql -- no-transaction moved from line 14 to line 1.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "workflow_run_id": 25287071958,
-      "branch": "junior/role-impl-task-sl-a-fix-impl-2-dq-132-no-transaction-line-1-fix-see-claude-prps-briefs-sl-a-fix-impl-2-md-106",
-      "phase_task": "1-fix-2",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null
-    },
-    {
       "id": 134,
       "from": "impl",
       "kind": "validate-pending",
@@ -2172,6 +2151,27 @@
       "answer": "All workspace-check steps (cargo check + cargo clippy + cargo test --no-run) passed for Task 8 e2e extension. Cohort B tail closed; only Task 9 retro remains.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-03T16:17:24Z"
+    },
+    {
+      "id": 133,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-03T18:23:40Z",
+      "question": "workspace-check on junior branch for fix-impl-2 (no-transaction line-1 fix)",
+      "options": [
+        "(A) pass \u2014 cargo-validate-workspace green; advance to e2e on phase-tip",
+        "(B) fail \u2014 workspace check fails; route to advisor \u00a7G4 classifier"
+      ],
+      "context": "fix-impl-2 pushed to junior worker branch. Workflow cargo-validate-workspace run 25287071958 dispatched on push. Single-file edit: up.sql -- no-transaction moved from line 14 to line 1.",
+      "answer": "cargo-validate-workspace passed on junior branch. Daemon finalize-merge into phase-v1-SL-a proceeds.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-03T18:49:47.822410Z",
+      "workflow_run_id": 25287071958,
+      "branch": "junior/role-impl-task-sl-a-fix-impl-2-dq-132-no-transaction-line-1-fix-see-claude-prps-briefs-sl-a-fix-impl-2-md-106",
+      "phase_task": "1-fix-2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null
     }
   ],
   "schema_version": 2
