@@ -98,12 +98,14 @@
       "workflow_run_id": 25275688427,
       "branch": "junior/role-impl-task-v1-sl-a-task-1-see-claude-prps-briefs-sl-a-impl-1-md-84",
       "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "error: `map_err(|_|...` wildcard pattern discards the original error\n  --> crates/api/api/src/governance/accept_jury_assignment.rs:92:14\n   |\n92 |     .map_err(|_| LemmyErrorType::NotFound)?;\n   |              ^^^\n   |\n= help: consider storing the original error as a source in the new error, or silence this warning using an ignored identifier (`.map_err(|_foo| ...`)\n= help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#map_err_ignore\n= note: requested on the command line with `-D clippy::map-err-ignore`\n\nerror: could not compile `lemmy_api` (lib) due to 1 previous error",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "cargo-validate-workspace failed on clippy check: map_err(|_|...) pattern discards error at crates/api/api/src/governance/accept_jury_assignment.rs:92. Non-exhaustive match error expected per plan \u00a714 Story 1 cohort-A barrier (Tasks 4+5 not yet merged).",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-03T11:01:10.340399Z"
     },
     {
       "id": 122,
