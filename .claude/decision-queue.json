@@ -1,7 +1,70 @@
 {
   "pending": [
     {
-      "id": 118,
+        "id": 118,
+        "from": "impl",
+        "kind": "validate-pending",
+        "timestamp": "2026-05-03T09:25:18Z",
+        "question": "workspace-check for v1-SL-a task 3",
+        "options": [
+            "(A) pass — continue cohort A advancement",
+            "(B) fail — advisor §G4 classifier triage"
+        ],
+        "context": "workspace-check for v1-SL-a task 3: 2 columns appended to moderation_case (id) block in schema.rs. Workflow run id 25275388975 on branch junior/role-impl-task-v1-sl-a-task-3-see-claude-prps-briefs-sl-a-impl-3-md-86.",
+        "workflow_run_id": 25275388975,
+        "branch": "junior/role-impl-task-v1-sl-a-task-3-see-claude-prps-briefs-sl-a-impl-3-md-86",
+        "phase_task": 3,
+        "result": null,
+        "log_slice": null,
+        "failed_jobs": null,
+        "answer": null,
+        "answered_by": null,
+        "resolved_at": null
+    },
+    {
+        "id": 119,
+        "from": "impl",
+        "kind": "validate-pending",
+        "timestamp": "2026-05-03T10:30:00Z",
+        "question": "Should workspace-check workflow run 25275426712 for v1-SL-a task 2 pass before cohort B advances?",
+        "options": [
+            "(A) ci-watcher polls run 25275426712; result determines cohort A barrier",
+            "(B) advisor treats fail as expected-fail per plan §14 Story 1 + DQ #117 option A"
+        ],
+        "context": "workspace-check for v1-SL-a task 2",
+        "workflow_run_id": 25275426712,
+        "branch": "junior/role-impl-task-v1-sl-a-task-2-see-claude-prps-briefs-sl-a-impl-2-md-85",
+        "phase_task": 2,
+        "result": null,
+        "log_slice": null,
+        "failed_jobs": null,
+        "answer": null,
+        "answered_by": null,
+        "resolved_at": null
+    },
+    {
+        "id": 120,
+        "from": "impl",
+        "kind": "validate-pending",
+        "timestamp": "2026-05-03T00:00:00Z",
+        "question": "workspace-check for v1-SL-a task 7 ENTRY_KIND consts + registry section",
+        "options": [
+            "(A) workspace-check passes — no issues in the 3-file atomic commit",
+            "(B) workspace-check fails — advisor §G4 classifier to triage"
+        ],
+        "context": "Pushed branch junior/role-impl-task-v1-sl-a-task-7-see-claude-prps-briefs-sl-a-impl-7-md-88 after atomic 3-file commit adding 5 ENTRY_KIND consts (db_schema define + api shim re-export + registry section). Workflow run queued on push.",
+        "workflow_run_id": 25275487098,
+        "branch": "junior/role-impl-task-v1-sl-a-task-7-see-claude-prps-briefs-sl-a-impl-7-md-88",
+        "phase_task": 7,
+        "result": null,
+        "log_slice": null,
+        "failed_jobs": null,
+        "answer": null,
+        "answered_by": null,
+        "resolved_at": null
+},
+    {
+      "id": 121,
       "from": "impl",
       "kind": "validate-pending",
       "timestamp": "2026-05-03T09:38:34Z",
