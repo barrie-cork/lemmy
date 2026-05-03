@@ -104,7 +104,11 @@ if [[ "$CURRENT_BRANCH" == junior/* ]]; then
        AND created_at <= datetime('now', '+5 minutes')" \
     2>/dev/null || echo 0)
 else
-  WINDOW_MINUTES=15
+  # 60-min window for advisor / interactive sessions on governance-v0 (long
+  # polling-loop sessions don't need per-poll retros — bumped 2026-05-03 from
+  # 15 min after duplicate-retro feedback). Junior worktree branches keep
+  # the 30-min branch-scoped check above (load-bearing for Junior task eval).
+  WINDOW_MINUTES=60
   MODE="time-window (branch='${CURRENT_BRANCH:-unknown}')"
   RECENT=$(sqlite3 "$DB" \
     "SELECT COUNT(*) FROM memories
