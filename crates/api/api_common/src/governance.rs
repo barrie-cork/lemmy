@@ -304,12 +304,28 @@ pub struct CreateEndorsementResponse {
   pub surety_created: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
-/// Revoke an existing endorsement.
+/// Revoke an existing endorsement. PRD §5.1 — required reason flows
+/// through governance_log::append's scrub layer per ADR-015.
 pub struct RevokeEndorsement {
   pub endorsement_id: EndorsementId,
+  pub reason: String,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from revoking an endorsement. PRD §5.1.
+/// `liability_chain_severed_for_cases` is non-empty when the
+/// revocation severed one or more `SponsorLiabilityPending` cases'
+/// grace windows (§5.3 step 4).
+pub struct RevokeEndorsementResponse {
+  pub endorsement_id: EndorsementId,
+  pub revoked_at: DateTime<Utc>,
+  pub liability_chain_severed_for_cases: Vec<ModerationCaseId>,
 }
 
 // ── Group G: Admin Observability ──────────────────────────────────────
