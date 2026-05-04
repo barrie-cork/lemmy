@@ -51,31 +51,6 @@
       "failed_commands": [
         "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
       ]
-    },
-    {
-      "id": 136,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-03T23:00:44Z",
-      "question": "Did the local laptop e2e on phase-v1-SL-a tip 88436bce7 pass after fix-impl-3 SELECT 1; append?",
-      "options": [
-        "(A) pass \u2014 cohort B tail closes, advance to SL-a Task 9 retro",
-        "(B) fail \u2014 surface to advisor for \u00a7G4 triage"
-      ],
-      "context": "Advisor mutated to laptop-e2e form. Workspace-check passed (DQ #135 resolved). User picked local. First run failed with stale Windows incremental-cache (false-positive E0004 on already-swept SL variants in get_case.rs/admin_dashboard.rs/etc). Cargo clean (93.7 GB removed) + rerun from cold at 23:20 UTC; ETA ~60 min.",
-      "workflow_run_id": null,
-      "branch": "phase-v1-SL-a",
-      "phase_task": "1-fix-3",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-a-88436bce7-clean.log",
-      "commands": [
-        "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
-      ]
     }
   ],
   "resolved": [
@@ -2225,6 +2200,32 @@
       "answer": "All workspace-check steps (cargo check + cargo clippy + cargo test --no-run) passed for fix-impl-3 down.sql SELECT 1; append. Unblocks Phase 2 e2e dispatch on phase tip 33b284632.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-03T20:38:57.896354Z"
+    },
+    {
+      "id": 136,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-03T23:00:44Z",
+      "question": "Did the local laptop e2e on phase-v1-SL-a tip 88436bce7 pass after fix-impl-3 SELECT 1; append?",
+      "options": [
+        "(A) pass \u2014 cohort B tail closes, advance to SL-a Task 9 retro",
+        "(B) fail \u2014 surface to advisor for \u00a7G4 triage"
+      ],
+      "context": "Advisor mutated to laptop-e2e form. Workspace-check passed (DQ #135 resolved). User picked local. First run failed with stale Windows incremental-cache (false-positive E0004 on already-swept SL variants in get_case.rs/admin_dashboard.rs/etc). Cargo clean (93.7 GB removed) + rerun from cold at 23:20 UTC; ETA ~60 min.",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-a",
+      "phase_task": "1-fix-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase 2 e2e PASS on phase tip 88436bce7. test result: ok. 67 passed; 0 failed; 3 ignored (GH #42/#43/#45 pre-existing v0-polish flakes); cargo exit 0; finished in 1885.56s. Critical test v1_jm_a_backfill_populates_v0_snapshot PASSED \u2014 fix-impl-3 SELECT 1; append to comments-only down.sql worked. Cohort B tail closed. First e2e attempt was a Windows incremental-cache stale false-fail (recovered via cargo clean + cold rebuild). DQ #132 + #134 stay in pending[] as historical fail records (carry-forward to SL-a Task 9 retro). Ready for Task 9 retro.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-04T00:20:22Z",
+      "local_log_path": ".claude/runlog/e2e-v1-SL-a-88436bce7-clean.log",
+      "commands": [
+        "bash scripts/brehon/cargo-test.sh --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "failed_commands": null
     }
   ],
   "schema_version": 2
