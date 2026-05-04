@@ -51,6 +51,21 @@ esac
 echo "---"
 cd "$REPO_ROOT"
 
+# ---- BREHON_USE_NEXTEST=1 dispatch path ---------------------------------
+# When BREHON_USE_NEXTEST=1 is set, redirect through cargo-nextest. Per
+# Perplexity research 2026-05-02 + .config/nextest.toml: nextest's
+# process-per-test isolates LazyLock<Settings>, so the --test-threads=1
+# guard below is unnecessary under nextest. Concurrency caps are in
+# .config/nextest.toml (threads-required).
+if [[ "${BREHON_USE_NEXTEST:-0}" == "1" ]]; then
+  if ! cargo nextest --version >/dev/null 2>&1; then
+    echo "CARGO_NEXTEST_NOT_INSTALLED: run \`cargo install cargo-nextest\` first."
+    exit 1
+  fi
+  echo "BREHON_USE_NEXTEST: dispatching through cargo nextest run"
+  exec cargo nextest run "$@"
+fi
+
 # Reconstruct args as a single string for grep-style detection (parity with
 # the .bat sibling's findstr approach).
 ARGS_STR="$*"

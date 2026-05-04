@@ -16,8 +16,16 @@ codegen-units = 1 # Reduce parallel code generation.
 
 # This profile significantly speeds up build time. If debug info is needed you can comment the line
 # out temporarily, but make sure to leave this in the main branch.
+#
+# split-debuginfo is set explicitly to "packed" because that's the
+# only stable value on Windows MSVC as of Rust 1.65+ — `unpacked`
+# and `off` are unsupported there and cargo errors with cryptic
+# messages if a future toolchain bump silently changes the default.
+# Per Perplexity research 2026-05-02 + cargo PR #11347.
 [profile.dev]
 debug = 0
+incremental = true
+split-debuginfo = "packed"
 
 # Optimize procedural macros
 [profile.dev.build-override]

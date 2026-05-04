@@ -2,6 +2,112 @@
   "pending": [],
   "resolved": [
     {
+      "id": 124,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-03T10:58:32Z",
+      "question": "Should cohort dispatch under [P] parallelism pre-allocate DQ id ranges in briefs to prevent read-modify-write collisions on .claude/decision-queue.json?",
+      "options": [
+        "(A) Pre-allocate id ranges in each [P] brief \u2014 advisor computes next_free_id_block of size N before brief authoring; each cohort task brief carries explicit \"Use DQ ids X..Y\" instructions in its constraints. Mechanical, prevents the race entirely.",
+        "(B) Make Junior daemon serialize DQ writes via a server-side hook \u2014 every brief still computes max+1, but daemon detects collisions on push and renumbers. Requires daemon patch.",
+        "(C) Document and accept \u2014 the daemon already merge-and-renumbers on finalize-merge (cohort A demonstrated this works); add advisor post-merge reconciliation step to runbook. Lowest effort but loses the worker-side audit trail (commit subjects reference pre-merge ids)."
+      ],
+      "context": "v1-SL-a cohort A 5-way [P] dispatch (Tasks 1+2+3+6+7) at 2026-05-03T09:23Z hit a read-modify-write race: 4 of 5 workers (T2/T3/T6/T7) computed next_id=118 from live decision-queue.json simultaneously and each wrote DQ #118 to their independent worker branch. T1 self-corrected to clean #121+#122 (later push, transient state read). Daemon finalize-merge renumbered to T3=#118/T2=#119/T7=#120/T6=#121/T1mig=#122/T1ws=#123 (chronological by merge order), preserving all 6 workflow_run_ids. Advisor recovery commit landed at 239473e2b on phase-v1-SL-a tip.",
+      "answer": "Recommend (A) post-SL-a retro: pre-allocate id ranges. Mechanical, brief-time check, no daemon patch needed. Specifically: amend `.claude/rules/advisor-orchestrator.md` \"Cohort dispatch sequence\" step 4.5 (between YAML overlap check and budget check) with: \"Compute next_free_id_block of size N where N = sum(estimated DQ writes per cohort task). For cohort A on v1-SL-a where each task writes 1 validate-pending and Task 1 writes 2: N=6. Assign brief constraints `Use DQ ids X..Y` per task.\" Also amend impl-task-brief.template.md \u00a74 Constraints with a \"DQ id range assignment\" sub-section the advisor fills in pre-queue. Daemon serialize (B) is too expensive for the gain; daemon-merge accept (C) loses the worker-side audit trail and creates retro friction. Surface at SL-a retro for plan-template + rule co-amendment.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T10:58:32Z"
+    },
+    {
+      "id": 117,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-03T09:20:17Z",
+      "question": "Should the advisor's cohort-pass-before-advance rule (advisor-orchestrator.md 'Stage-shape orchestration') accommodate plans that intentionally produce intermediate validate-pending fails \u2014 or should plans avoid that pattern?",
+      "options": [
+        "(A) Trust the plan as-is \u2014 accept cohort A fails, advance cohort B anyway when source-code finalize-merges land (no validate-pass wait); use the post-cohort-B push as the unified gate",
+        "(B) Amend the planner template to forbid intentional-fail cohort patterns \u2014 plans must order tasks so each cohort barrier is independently green-able",
+        "(C) Amend the advisor orchestrator rule to recognise 'expected-fail under planner-\u00a714-Story-1' as a non-blocking validate-pending state, with a typed marker on the DQ entry"
+      ],
+      "context": "v1-SL-a plan \u00a713 line 1240 declares cohort A = Tasks 1+2+3+6+7 (5-way [P]). Plan \u00a714 Story 1 checkpoint = workspace-check 'conclusion: success' on Task 5's push (cohort B tail), NOT on cohort A. All 5 cohort A tasks add code that depends on cohort B (Task 4 = ModerationCase struct extension; Task 5 = exhaustive-match extension at 6 sites). Therefore every cohort A worker's `kind: validate-pending` will mutate to `result: \"fail\"` (non-allowlist failures: missing-field errors, non-exhaustive-match clippy). The advisor's 'cohort advancement waits for all Phase-1 cohort members to reach result: pass' rule (advisor-orchestrator.md Stage-shape orchestration \u2192 'Cohort dispatch under Shape G') would deadlock cohort B forever; the \u00a7G4 classifier would catch-fire to user on every cohort A fail. Option B chosen for in-flight v1-SL-a (2026-05-03 user, this DQ): pre-mark cohort A validate-pending entries as expected-fail per plan \u00a714 Story 1, advance cohort B on finalize-merge rather than validate-pass, use Task-5 push workspace-check as the unified gate. This is a rule-vs-plan mismatch worth retro-harvesting: the orchestrator was written for cohorts whose members are independently green-able; the v1-SL-a pattern (schema-foundation cohort A + exhaustive-match-fixup cohort B) is the first plan to diverge from that assumption.",
+      "answer": "Recommend (C) post-SL-a retro: add typed marker (e.g. `kind: \"validate-pending-cohort-fail-expected\"`, or a `cohort_fail_expected: true` flag on `kind: validate-pending`) so the orchestrator can route around the catch-fire path mechanically. Plans that intentionally produce intermediate fails should declare the marker when raising the validate-pending entry, citing the \u00a714 Story checkpoint. Alternative (A) is acceptable as a one-off for SL-a; (B) is too restrictive \u2014 the schema-foundation-then-exhaustive-match pattern is a legitimate design that would otherwise force unnecessary serialisation. Surface at SL-a retro for design discussion + plan-template/rule co-amendment.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-03T09:20:17Z"
+    },
+    {
+      "id": 104,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T14:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1 fix3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
+      "workflow_run_id": 25218399860,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
+      "phase_task": "1-fix3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run 25218399860 on junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78 completed with conclusion=success.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T15:02:10Z"
+    },
+    {
+      "id": 100,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T10:30:00Z",
+      "question": "workspace-check for v1-JM-e task 1",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
+      "workflow_run_id": 25211371998,
+      "branch": "junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
+      "phase_task": 1,
+      "result": "fail",
+      "log_slice": "error[E0599]: no method named `on` found for struct `lemmy_db_schema_file::schema::jury_assignment::table`\n   --> crates/api/api/src/governance/submit_jury_vote.rs:760:30\n    |\n760 |       jury_assignment::table.on(\n    |       ---------------------^^\n    |\nhelp: trait `JoinOnDsl` which provides `on` is implemented but not in scope; perhaps you want to import it\n    |\n42  + use diesel::JoinOnDsl;\n    |\n\nerror[E0599]: no method named `and` found for struct `diesel::expression::grouped::Grouped<T>` in the current scope\n   --> crates/api/api/src/governance/submit_jury_vote.rs:763:12\n    |\n763 |           .and(jury_assignment::person_id.eq(jury_vote::juror_id)),\n    |            ^^^ method not found in `Grouped<Eq<case_id, case_id>>`\n    |\nhelp: the following traits which provide `and` are implemented but not in scope; perhaps you want to import one of them\n    |\n42  + use diesel::BoolExpressionMethods;\n\nerror: could not compile `lemmy_api` (lib) due to 2 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Cargo compilation failed: missing trait imports (JoinOnDsl, BoolExpressionMethods) in submit_jury_vote.rs",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-01T11:02:20.806522+00:00Z"
+    },
+    {
+      "id": 87,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:00:00.000Z",
+      "workflow_run_id": 25081966699,
+      "branch": "junior/role-impl-task-issue-96-cluster2-see-claude-prps-briefs-issue-96-impl-1b-md-50",
+      "phase_task": "issue-96-cluster2",
+      "result": "run_not_found",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found \u2014 no action required.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T09:49:36Z"
+    },
+    {
+      "id": 86,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-28T23:05:00.000Z",
+      "workflow_run_id": 25081578635,
+      "branch": "junior/role-impl-task-issue-96-cluster1-see-claude-prps-briefs-issue-96-impl-1a-md-49",
+      "phase_task": "issue-96-cluster1",
+      "result": "run_not_found",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found \u2014 no action required.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-01T09:49:36Z"
+    },
+    {
       "id": 1,
       "from": "advisor",
       "timestamp": "2026-04-16T17:00:00Z",
@@ -1212,36 +1318,6 @@
       "superseded_note": "fix-4a-v3 workspace check passed (DQ #88, run 25084505547); the line-62 unused-import fix at 5bf306003 + the .clone() removal at 0198a2936 cleared the original failure root cause"
     },
     {
-      "id": 86,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-28T23:05:00.000Z",
-      "workflow_run_id": 25081578635,
-      "branch": "junior/role-impl-task-issue-96-cluster1-see-claude-prps-briefs-issue-96-impl-1a-md-49",
-      "phase_task": "issue-96-cluster1",
-      "result": "run_not_found",
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found \u2014 no action required.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-01T09:49:36Z"
-    },
-    {
-      "id": 87,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-28T23:00:00.000Z",
-      "workflow_run_id": 25081966699,
-      "branch": "junior/role-impl-task-issue-96-cluster2-see-claude-prps-briefs-issue-96-impl-1b-md-50",
-      "phase_task": "issue-96-cluster2",
-      "result": "run_not_found",
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": "Stale validate-pending from issue-96 sprint (2026-04-28). Tasks #49 and #50 are done; worker branches were cleaned up. Workflow run is >72h old and not part of any active phase branch. Closing as run_not_found \u2014 no action required.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-01T09:49:36Z"
-    },
-    {
       "id": 88,
       "from": "impl",
       "kind": "validate-pending",
@@ -1278,22 +1354,6 @@
       "answer": "All 62 e2e tests passed locally on laptop. Wall-clock 1620.91s (27.0 min), in line with GH Actions reference. Phase 2 e2e user gate cleared for v1-JM-d Task 4.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-04-29T06:41:08Z"
-    },
-    {
-      "id": 90,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-04-30T13:00:00.000Z",
-      "workflow_run_id": 25173804973,
-      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
-      "phase_task": 5,
-      "result": "superseded",
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": "Superseded by: (1) downstream clippy fix at junior/jm-d-task-5-workspace-recheck commit 3f7dfec22 (\"drop unused mut on current_geo_enabled in admin_assign_jury\"); (2) GH workspace-check run 25181904020 against 78eff0de9 surfaced the sibling unused-mut at admin_assign_jury.rs:653 that the original fix at 953a8360b unmasked by removing the dead-store on line 727; (3) Local laptop clippy clean against 3f7dfec22 \u2014 cargo clippy -p lemmy_api --features full --no-deps -- -D warnings finished 7m31s, cargo clippy --workspace --features full --no-deps -- -D warnings finished 4m12s, both warning-free; (4) Re-run workspace-check 25183284432 in_progress against 3f7dfec22 at supersede time (not awaited per advisor-laptop X1 path). JM-d retro at .claude/PRPs/reports/v1-JM-d-retro.md is the substantive evidence; retro \u00a73.5/3.6 + \u00a71.2 document the full chain. Functional Task 5 closure already evidenced by DQ #97 (e2e pass on laptop, 62/0/3, 1741.48s wall-clock).",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-04-30T20:05:00Z",
-      "renumber_note": "renumbered from id 89 due to id collision with origin resolved #89 (different entry content); merge 2026-04-30"
     },
     {
       "id": 91,
@@ -1411,6 +1471,22 @@
       "resolved_at": "2026-04-30T17:30:00.000Z"
     },
     {
+      "id": 90,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-04-30T13:00:00.000Z",
+      "workflow_run_id": 25173804973,
+      "branch": "junior/role-impl-task-v1-jm-d-task-5-see-claude-prps-briefs-jm-d-impl-5-md-54",
+      "phase_task": 5,
+      "result": "superseded",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Superseded by: (1) downstream clippy fix at junior/jm-d-task-5-workspace-recheck commit 3f7dfec22 (\"drop unused mut on current_geo_enabled in admin_assign_jury\"); (2) GH workspace-check run 25181904020 against 78eff0de9 surfaced the sibling unused-mut at admin_assign_jury.rs:653 that the original fix at 953a8360b unmasked by removing the dead-store on line 727; (3) Local laptop clippy clean against 3f7dfec22 \u2014 cargo clippy -p lemmy_api --features full --no-deps -- -D warnings finished 7m31s, cargo clippy --workspace --features full --no-deps -- -D warnings finished 4m12s, both warning-free; (4) Re-run workspace-check 25183284432 in_progress against 3f7dfec22 at supersede time (not awaited per advisor-laptop X1 path). JM-d retro at .claude/PRPs/reports/v1-JM-d-retro.md is the substantive evidence; retro \u00a73.5/3.6 + \u00a71.2 document the full chain. Functional Task 5 closure already evidenced by DQ #97 (e2e pass on laptop, 62/0/3, 1741.48s wall-clock).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-04-30T20:05:00Z",
+      "renumber_note": "renumbered from id 89 due to id collision with origin resolved #89 (different entry content); merge 2026-04-30"
+    },
+    {
       "id": 98,
       "from": "planner",
       "kind": "blocker",
@@ -1442,52 +1518,6 @@
       "resolved_at": "2026-04-30T20:35:00Z"
     },
     {
-      "id": 100,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T10:30:00Z",
-      "question": "workspace-check for v1-JM-e task 1",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
-      "workflow_run_id": 25211371998,
-      "branch": "junior/role-impl-task-v1-jm-e-task-1-see-claude-prps-briefs-jm-e-impl-1-md-68",
-      "phase_task": 1,
-      "result": "fail",
-      "log_slice": "error[E0599]: no method named `on` found for struct `lemmy_db_schema_file::schema::jury_assignment::table`\n   --> crates/api/api/src/governance/submit_jury_vote.rs:760:30\n    |\n760 |       jury_assignment::table.on(\n    |       ---------------------^^\n    |\nhelp: trait `JoinOnDsl` which provides `on` is implemented but not in scope; perhaps you want to import it\n    |\n42  + use diesel::JoinOnDsl;\n    |\n\nerror[E0599]: no method named `and` found for struct `diesel::expression::grouped::Grouped<T>` in the current scope\n   --> crates/api/api/src/governance/submit_jury_vote.rs:763:12\n    |\n763 |           .and(jury_assignment::person_id.eq(jury_vote::juror_id)),\n    |            ^^^ method not found in `Grouped<Eq<case_id, case_id>>`\n    |\nhelp: the following traits which provide `and` are implemented but not in scope; perhaps you want to import one of them\n    |\n42  + use diesel::BoolExpressionMethods;\n\nerror: could not compile `lemmy_api` (lib) due to 2 previous errors",
-      "failed_jobs": [
-        "validate workspace"
-      ],
-      "answer": "Cargo compilation failed: missing trait imports (JoinOnDsl, BoolExpressionMethods) in submit_jury_vote.rs",
-      "answered_by": "ci-watcher",
-      "resolved_at": "2026-05-01T11:02:20.806522+00:00Z"
-    },
-    {
-      "id": 101,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T11:15:09Z",
-      "question": "workspace-check for v1-JM-e task 1 fix",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
-      "workflow_run_id": 25212353950,
-      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
-      "phase_task": "1-fix",
-      "result": "fail",
-      "log_slice": "error[E0061]: this function takes 2 arguments but 1 argument was supplied\n    --> crates/server/tests/e2e.rs:3824:9\nerror[E0308]: mismatched types\n    --> crates/server/tests/e2e.rs:3823:23\nerror: could not compile `lemmy_server` (test \"e2e\") due to 4 previous errors",
-      "failed_jobs": [
-        "validate workspace"
-      ],
-      "answer": "Superseded \u2014 workspace-check failure was on junior/* worktree branch that never merged to phase-v1-JM-e. Task 1 fix landed via fix-impl-3 (commit 8cf152bcf) on a different junior/* branch; Task 2 capstone passed local e2e (DQ #107, commit 43ed59097). The compile error cited (LocalSiteInsertForm signature) is no longer reachable from phase-v1-JM-e tip.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-02T07:44:06Z"
-    },
-    {
       "id": 102,
       "from": "impl",
       "kind": "validate-pending",
@@ -1507,49 +1537,6 @@
       "answer": "All workspace validation commands passed: cargo check, clippy, and test compile all succeeded on GitHub Actions (run 25213381649, 27m14s total).",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-01T12:22:14Z"
-    },
-    {
-      "id": 103,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T13:51:48Z",
-      "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
-      "workflow_run_id": 25216808963,
-      "local_log_path": null,
-      "branch": "phase-v1-JM-e",
-      "phase_task": 1,
-      "result": "superseded",
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": "Superseded \u2014 Phase-2 e2e was raised for phase-v1-JM-e tip 3e1242d6f (Task 1 finalize-merge). Phase tip has since advanced through Task 2 capstone (commit 43ed59097) which passed local e2e via DQ #107 advisor-laptop run. The flake-check workflow run 25216808963 is stale; no ci-watcher will mutate this entry. Going forward, Phase-2 e2e for v1-JM-e runs locally on the laptop per the validate-pending-laptop handler (decision 2026-04-28 PR #105 minutes-budget audit + 2026-05-01 user choice for Task 2 capstone).",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-02T07:44:06Z"
-    },
-    {
-      "id": 104,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-01T14:30:00Z",
-      "question": "workspace-check for v1-JM-e task 1 fix3",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
-      "workflow_run_id": 25218399860,
-      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78",
-      "phase_task": "1-fix3",
-      "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": "Workflow run 25218399860 on junior/role-impl-task-v1-jm-e-fix-impl-3-see-claude-prps-briefs-jm-e-fix-impl-3-md-78 completed with conclusion=success.",
-      "answered_by": "ci-watcher",
-      "resolved_at": "2026-05-01T15:02:10Z"
     },
     {
       "id": 105,
@@ -1612,6 +1599,51 @@
       "answer": "Capstone passed after two fixes: (1) accept_jury_assignment role-dispatch landed at 360c24cb9 (Original-role accepts JurySelection|InReview, Appeal-role accepts Appealed), (2) audit-log payload assertions corrected to snake_case at 263a08f00 (JuryDecision serializes via #[serde(rename_all = \"snake_case\")]). Test result: ok. 1 passed; 0 failed; finished in 49.00s.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-01T21:06:18Z"
+    },
+    {
+      "id": 101,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T11:15:09Z",
+      "question": "workspace-check for v1-JM-e task 1 fix",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered on push to junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "workflow_run_id": 25212353950,
+      "branch": "junior/role-impl-task-v1-jm-e-fix-impl-1-see-claude-prps-briefs-jm-e-fix-impl-1-md-70",
+      "phase_task": "1-fix",
+      "result": "fail",
+      "log_slice": "error[E0061]: this function takes 2 arguments but 1 argument was supplied\n    --> crates/server/tests/e2e.rs:3824:9\nerror[E0308]: mismatched types\n    --> crates/server/tests/e2e.rs:3823:23\nerror: could not compile `lemmy_server` (test \"e2e\") due to 4 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded \u2014 workspace-check failure was on junior/* worktree branch that never merged to phase-v1-JM-e. Task 1 fix landed via fix-impl-3 (commit 8cf152bcf) on a different junior/* branch; Task 2 capstone passed local e2e (DQ #107, commit 43ed59097). The compile error cited (LocalSiteInsertForm signature) is no longer reachable from phase-v1-JM-e tip.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
+    },
+    {
+      "id": 103,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-01T13:51:48Z",
+      "question": "e2e validation for v1-JM-e Task 1 (phase-v1-JM-e tip 3e1242d6f)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-test-e2e.yml re-dispatched as flake-check (run 25215520709 had 1 failure: config_get_int_cascade; 61/62 passed)",
+      "workflow_run_id": 25216808963,
+      "local_log_path": null,
+      "branch": "phase-v1-JM-e",
+      "phase_task": 1,
+      "result": "superseded",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Superseded \u2014 Phase-2 e2e was raised for phase-v1-JM-e tip 3e1242d6f (Task 1 finalize-merge). Phase tip has since advanced through Task 2 capstone (commit 43ed59097) which passed local e2e via DQ #107 advisor-laptop run. The flake-check workflow run 25216808963 is stale; no ci-watcher will mutate this entry. Going forward, Phase-2 e2e for v1-JM-e runs locally on the laptop per the validate-pending-laptop handler (decision 2026-04-28 PR #105 minutes-budget audit + 2026-05-01 user choice for Task 2 capstone).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-02T07:44:06Z"
     },
     {
       "id": 108,
@@ -1788,38 +1820,6 @@
       "answer": "User chose (B) proceed as one (per user 2026-05-03 via AskUserQuestion). Rationale: JM-e at score 15 shipped proceed-as-one with no operational regret per its retro; JM-a precedent at similar 11-task shape; PRD \u00a715 row 1 names the deliverable atomically as 'Schema + enum + migration'; mechanical schema work does not benefit from artificial fragmentation per feedback_principles_not_rules.md. Phase branch phase-v1-SL-a will hold all 10 tasks.",
       "answered_by": "user",
       "resolved_at": "2026-05-03T08:28:12Z"
-    },
-    {
-      "id": 117,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-03T09:20:17Z",
-      "question": "Should the advisor's cohort-pass-before-advance rule (advisor-orchestrator.md 'Stage-shape orchestration') accommodate plans that intentionally produce intermediate validate-pending fails \u2014 or should plans avoid that pattern?",
-      "options": [
-        "(A) Trust the plan as-is \u2014 accept cohort A fails, advance cohort B anyway when source-code finalize-merges land (no validate-pass wait); use the post-cohort-B push as the unified gate",
-        "(B) Amend the planner template to forbid intentional-fail cohort patterns \u2014 plans must order tasks so each cohort barrier is independently green-able",
-        "(C) Amend the advisor orchestrator rule to recognise 'expected-fail under planner-\u00a714-Story-1' as a non-blocking validate-pending state, with a typed marker on the DQ entry"
-      ],
-      "context": "v1-SL-a plan \u00a713 line 1240 declares cohort A = Tasks 1+2+3+6+7 (5-way [P]). Plan \u00a714 Story 1 checkpoint = workspace-check 'conclusion: success' on Task 5's push (cohort B tail), NOT on cohort A. All 5 cohort A tasks add code that depends on cohort B (Task 4 = ModerationCase struct extension; Task 5 = exhaustive-match extension at 6 sites). Therefore every cohort A worker's `kind: validate-pending` will mutate to `result: \"fail\"` (non-allowlist failures: missing-field errors, non-exhaustive-match clippy). The advisor's 'cohort advancement waits for all Phase-1 cohort members to reach result: pass' rule (advisor-orchestrator.md Stage-shape orchestration \u2192 'Cohort dispatch under Shape G') would deadlock cohort B forever; the \u00a7G4 classifier would catch-fire to user on every cohort A fail. Option B chosen for in-flight v1-SL-a (2026-05-03 user, this DQ): pre-mark cohort A validate-pending entries as expected-fail per plan \u00a714 Story 1, advance cohort B on finalize-merge rather than validate-pass, use Task-5 push workspace-check as the unified gate. This is a rule-vs-plan mismatch worth retro-harvesting: the orchestrator was written for cohorts whose members are independently green-able; the v1-SL-a pattern (schema-foundation cohort A + exhaustive-match-fixup cohort B) is the first plan to diverge from that assumption.",
-      "answer": "Recommend (C) post-SL-a retro: add typed marker (e.g. `kind: \"validate-pending-cohort-fail-expected\"`, or a `cohort_fail_expected: true` flag on `kind: validate-pending`) so the orchestrator can route around the catch-fire path mechanically. Plans that intentionally produce intermediate fails should declare the marker when raising the validate-pending entry, citing the \u00a714 Story checkpoint. Alternative (A) is acceptable as a one-off for SL-a; (B) is too restrictive \u2014 the schema-foundation-then-exhaustive-match pattern is a legitimate design that would otherwise force unnecessary serialisation. Surface at SL-a retro for design discussion + plan-template/rule co-amendment.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-03T09:20:17Z"
-    },
-    {
-      "id": 124,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-03T10:58:32Z",
-      "question": "Should cohort dispatch under [P] parallelism pre-allocate DQ id ranges in briefs to prevent read-modify-write collisions on .claude/decision-queue.json?",
-      "options": [
-        "(A) Pre-allocate id ranges in each [P] brief \u2014 advisor computes next_free_id_block of size N before brief authoring; each cohort task brief carries explicit \"Use DQ ids X..Y\" instructions in its constraints. Mechanical, prevents the race entirely.",
-        "(B) Make Junior daemon serialize DQ writes via a server-side hook \u2014 every brief still computes max+1, but daemon detects collisions on push and renumbers. Requires daemon patch.",
-        "(C) Document and accept \u2014 the daemon already merge-and-renumbers on finalize-merge (cohort A demonstrated this works); add advisor post-merge reconciliation step to runbook. Lowest effort but loses the worker-side audit trail (commit subjects reference pre-merge ids)."
-      ],
-      "context": "v1-SL-a cohort A 5-way [P] dispatch (Tasks 1+2+3+6+7) at 2026-05-03T09:23Z hit a read-modify-write race: 4 of 5 workers (T2/T3/T6/T7) computed next_id=118 from live decision-queue.json simultaneously and each wrote DQ #118 to their independent worker branch. T1 self-corrected to clean #121+#122 (later push, transient state read). Daemon finalize-merge renumbered to T3=#118/T2=#119/T7=#120/T6=#121/T1mig=#122/T1ws=#123 (chronological by merge order), preserving all 6 workflow_run_ids. Advisor recovery commit landed at 239473e2b on phase-v1-SL-a tip.",
-      "answer": "Recommend (A) post-SL-a retro: pre-allocate id ranges. Mechanical, brief-time check, no daemon patch needed. Specifically: amend `.claude/rules/advisor-orchestrator.md` \"Cohort dispatch sequence\" step 4.5 (between YAML overlap check and budget check) with: \"Compute next_free_id_block of size N where N = sum(estimated DQ writes per cohort task). For cohort A on v1-SL-a where each task writes 1 validate-pending and Task 1 writes 2: N=6. Assign brief constraints `Use DQ ids X..Y` per task.\" Also amend impl-task-brief.template.md \u00a74 Constraints with a \"DQ id range assignment\" sub-section the advisor fills in pre-queue. Daemon serialize (B) is too expensive for the gain; daemon-merge accept (C) loses the worker-side audit trail and creates retro friction. Surface at SL-a retro for plan-template + rule co-amendment.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-03T10:58:32Z"
     },
     {
       "id": 126,
