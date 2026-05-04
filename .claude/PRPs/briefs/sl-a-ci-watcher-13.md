@@ -18,13 +18,16 @@ Poll `gh run watch 25285713986 --exit-status --repo barrie-cork/lemmy` (single l
 3. **Run-existence check:** `gh run view 25285713986 --json status`. If the run is not found, mutate the paired entry with `result: "run_not_found"`, `answer`, `answered_by`, `resolved_at`. Stays in `pending[]`. Commit + push, exit 0.
 
 4. **Long-poll with shell-side timeout:**
+
    ```bash
    timeout 3600 gh run watch 25285713986 --exit-status --repo barrie-cork/lemmy > /tmp/ci-watch.log 2>&1
    status=$?
    ```
+
    If `status == 124` → mutate the paired entry with `result: "timed_out"`, populate `answer` + `answered_by: "ci-watcher"` + `resolved_at`. Stays in `pending[]`. Commit + push, exit 0.
 
 5. **Disambiguate via conclusion (mandatory — `--exit-status` is unreliable on gh CLI 2.89.0 per the empirical exit-code table in `.claude/agents/ci-watcher.md`):**
+
    ```bash
    conclusion=$(gh run view 25285713986 --repo barrie-cork/lemmy --json conclusion --jq '.conclusion')
    ```
@@ -45,6 +48,7 @@ The paired entry is found by `workflow_run_id`, NOT by id. The entry's `id`, `fr
 When writing back the mutated `decision-queue.json`, use **`ensure_ascii=True`** (the default for `json.dump` and the project convention — see `feedback_json_dump_ensure_ascii_false.md`'s actual nuance: the lesson title was a misnomer; the v1-SL-a green-gate recovery session 2026-05-03 confirmed `ensure_ascii=True` is canonical to keep diffs minimal in this DQ file). The advisor session set the file at `chore(decision-queue): mutate DQ #132 ...` (commit e12465f89) using `ensure_ascii=True`. Do NOT flip to `ensure_ascii=False` mid-session — that produces a 400KB+ encoding-only diff.
 
 Recipe:
+
 ```python
 with open(path, "w", encoding="utf-8") as f:
     json.dump(d, f, indent=2, ensure_ascii=True)
