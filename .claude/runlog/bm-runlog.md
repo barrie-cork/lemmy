@@ -468,6 +468,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: v1-JM-a PR cut — 2026-04-24T00:25:00Z
+
 - **PR:** #92 — Phase v1-JM-a — jury-mechanics schema + enums + config keys + backfill smoke test
 - **URL:** https://github.com/barrie-cork/lemmy/pull/92
 - **base <- head:** governance-v0 (9dd35c4ab) <- phase-v1-JM-a (00baee04b)
@@ -481,6 +482,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: PR #91 merged — 2026-04-24T00:20:00Z
+
 - **PR:** #91 — Plan: v1-JM-a — jury-mechanics schema + enums + snapshot columns + backfill
 - **merge method:** rebase
 - **trunk before:** 02189988d; trunk after: 9dd35c4ab
@@ -522,6 +524,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T23:34:32Z
+
 - **PR:** #92 — Phase v1-JM-a — jury-mechanics schema + enums + config keys + backfill smoke test
 - **head SHA:** 00baee04b (poll #1 — no prior YAML; first poll, no change-detection short-circuit)
 - **CR comments seen:** 11 total (1 review / 10 inline / 1 issue/walkthrough)
@@ -568,6 +571,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: impl setup — 2026-04-23T19:50:00Z
+
 - **branch:** phase-v1-JM-a
 - **action:** cherry-pick 1bc32fcc0 (plan commit from plan/v1-JM-a) → new SHA 92705f302 on phase-v1-JM-a
 - **HEAD:** 92705f302 (plan cherry-pick) on top of 02189988d (trunk FF)
@@ -581,6 +585,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: phase branch FF — 2026-04-23T19:45:00Z
+
 - **branch:** phase-v1-JM-a
 - **from:** e61f78edf (PR #72 merge — 4 days stale, pre-AD-b/c/d/wrap-up)
 - **to:** 02189988d (current trunk HEAD; includes AD-b/c/d + wrap-up + meta-retro)
@@ -596,6 +601,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: PR opened — 2026-04-23T19:30:00Z
+
 - **PR:** #91 — Plan: v1-JM-a — jury-mechanics schema + enums + snapshot columns + backfill
 - **URL:** https://github.com/barrie-cork/lemmy/pull/91
 - **base <- head:** governance-v0 (02189988d) <- plan/v1-JM-a (1bc32fcc0)
@@ -609,6 +615,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: branch delete — 2026-04-23T19:28:00Z
+
 - **branch:** plan/v1-JM-a (stale, 850678806)
 - **scope:** local + remote
 - **reason:** superseded — prior draft (1843-line v1-jury-mechanics-a.plan.md) replaced by current 1558-line phase-v1-JM-a.plan.md per user 2026-04-23
@@ -618,6 +625,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: PR cut — 2026-04-23T19:29:00Z
+
 - **branch:** plan/v1-JM-a (fresh)
 - **cut from:** governance-v0 @ 02189988d (trunk HEAD, synced with origin)
 - **upstream:** origin/plan/v1-JM-a (pushed with -u)
@@ -626,6 +634,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: merge — 2026-04-23T18:40:24Z
+
 - **PR:** #90 (chore(v1-AD): wrap-up — DQ cleanup + meta-retro)
 - **base <- head:** governance-v0 <- chore/v1-AD-wrap-up
 - **merge sha:** 02189988d2d1ec1a8d166df092aed7af71de111c
@@ -638,6 +647,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T19:10:00Z
+
 - **branch:** chore/v1-AD-wrap-up
 - **commits pushed:** 1 (fb51cbd5b) — chore(docs): markdownlint fixes on v1-AD-meta-retro.md (cr-2, cr-3)
 - **remote ref:** origin/chore/v1-AD-wrap-up @ fb51cbd5b
@@ -647,6 +657,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: triage — 2026-04-23T18:45:00Z
+
 - **PR:** #90 — chore(v1-AD): wrap-up — DQ cleanup + meta-retro
 - **Buckets:** fix-in-pr 2 | rebut 0 | carry-forward 0 | done 0 | wont-fix 2
 - **Bucket transitions:**
@@ -662,6 +673,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T18:27:00Z
+
 - **PR:** #90
 - **head SHA:** 552414d44 (first poll — no prior SHA)
 - **CR comments seen:** 5 (1 review-summary / 3 inline / 1 issue-walkthrough)
@@ -676,6 +688,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: PR opened — 2026-04-23T17:35:00Z
+
 - **PR:** #90 — chore(v1-AD): wrap-up — DQ cleanup + meta-retro
 - **URL:** https://github.com/barrie-cork/lemmy/pull/90
 - **Base ← Head:** governance-v0 ← chore/v1-AD-wrap-up
@@ -689,6 +702,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T17:30:00Z
+
 - **branch:** chore/v1-AD-wrap-up
 - **commits pushed:** 2 (c6bdb6ea9..552414d44)
 - **remote ref:** origin/chore/v1-AD-wrap-up @ 552414d44
@@ -698,6 +712,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: branch cut — 2026-04-23T17:15:00Z
+
 - **branch:** chore/v1-AD-wrap-up
 - **off:** governance-v0 @ dbc0fecad
 - **plan:** n/a — chore branch (wrap-up for v1-AD-a..d retro + DQ cleanup)
@@ -708,6 +723,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: merge — 2026-04-23T16:51:31Z
+
 - **PR:** #87 — Phase v1-AD-d — Dashboard aggregate + SSE audit stream
 - **Base ← Head:** `governance-v0` ← `phase-v1-AD-d` @ `83e0dfdb7`
 - **Merge commit:** `092a67208cac67cfc041770e4d91082cc97babb9`
@@ -722,6 +738,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: triage (run #4) — 2026-04-23T16:15:00Z
+
 - **PR:** #87
 - **head SHA:** 83e0dfdb7
 - **Promotions (fix-in-pr → done):** cr-21 (low, `8b99a3401`), cr-22 (major, `8b99a3401`), cr-23 (major, `7ea0844cd`), cr-24 (major, `7ea0844cd`), cr-25 (low, `357dca6d4`), cr-26 (critical, `83e0dfdb7`)
@@ -738,6 +755,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr (no-op) — 2026-04-23T16:05:00Z
+
 - **PR:** #87
 - **head SHA:** 83e0dfdb7 (unchanged since poll #7 at 15:59:19Z)
 - **CR comments seen:** 31 (5 review / 25 inline / 1 issue) — totals identical to poll #7
@@ -752,6 +770,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T15:56:00Z
+
 - **PR:** #87
 - **head SHA:** 83e0dfdb7 (changed since last poll — advanced from 357dca6d4)
 - **CR comments seen:** 31 (5 review / 25 inline / 1 issue)
@@ -766,6 +785,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T15:48:00Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 1 (357dca6d4..83e0dfdb7, fast-forward)
   - 83e0dfdb7 test(admin-gate): borrow error_type in matches! (cr-26)
@@ -778,6 +798,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T15:21:45Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 1 (7ea0844cd..357dca6d4, fast-forward)
   - 357dca6d4 test(admin-dashboard): tighten status-count assertions (cr-25)
@@ -790,6 +811,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T15:31:00Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** 357dca6d4 (changed since last poll? yes — 7ea0844cd → 357dca6d4)
 - **CR comments seen:** 31 total (5 review / 25 inline / 1 issue)
@@ -804,6 +826,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T01:50:00Z
+
 - **PR:** #79 (chore/rules-housekeeping-v1-AD-b → governance-v0)
 - **CR comments seen:** 1 review summary + 3 inline + 1 issue-walkthrough
 - **Actionable findings ingested:** 4 (1 outside-diff Major + 3 inline)
@@ -817,6 +840,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T02:07:51Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 3 (cb5a245ef..e7a2ba85c)
   - cb5a245ef docs(decision-queue): log v1-AD-d retro items as DQ #42-#46
@@ -831,6 +855,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: PR opened — 2026-04-23T02:11:00Z
+
 - **PR:** #87 — Phase v1-AD-d — Dashboard aggregate + SSE audit stream
 - **URL:** https://github.com/barrie-cork/lemmy/pull/87
 - **Base ← Head:** governance-v0 ← phase-v1-AD-d
@@ -845,6 +870,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T09:04:41Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** e7a2ba85c (first poll, no prior head to compare)
 - **PR age at poll:** 7.2 min (opened 08:56:48Z)
@@ -862,6 +888,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T09:19:59Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** e7a2ba85c (unchanged since poll #1 — no impl commits or force-pushes)
 - **PR age at poll:** ~23 min (opened 08:56:48Z)
@@ -894,6 +921,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: triage — 2026-04-23T09:31:00Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **Buckets after triage:** fix-in-pr 4 | rebut 5 | carry-forward 11 | done 0 | wont-fix 0
   - fix-in-pr: cr-13 (nit, CommunityId newtype), cr-14 (major, bounded mpsc), cr-15 (major, SSE retry: field + e2e test update same commit), cr-18 (low, assert specific variant)
@@ -908,6 +936,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: triage-outbound — 2026-04-23T09:41:00Z
+
 - **PR:** #87
 - **Digest comment posted:** https://github.com/barrie-cork/lemmy/pull/87#issuecomment-4303383461
 - **Carry-forward issue filed:** https://github.com/barrie-cork/lemmy/issues/88 — "chore(bm): address CR findings cr-1..cr-11 on branch-manager tooling (from PR #87)"
@@ -919,6 +948,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T10:45:00Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 3 (0699a1ac0..546348236)
   - 0699a1ac0 fix(admin-audit-stream): bounded SSE channel + retry: field (cr-14, cr-15)
@@ -933,6 +963,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T12:16:48Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** 546348236 (advanced from e7a2ba85c since poll #2)
 - **CR comments seen:** 2 review summaries + 21 inline + 1 issue-walkthrough
@@ -949,6 +980,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: triage — 2026-04-23T12:22:00Z (run #2)
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **Head SHA at triage:** 5463482367b33f3c844422ed34fd481378e6b71f (matches poll #3 last_polled_head_sha 546348236)
 - **Bucket transitions this run:**
@@ -970,6 +1002,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T13:10:00Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 1 (546348236..8b99a3401)
   - 8b99a3401 fix(admin-dashboard): filter unsigned rows + correct SSE doc (cr-21, cr-22)
@@ -982,6 +1015,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T14:25:37Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** 8b99a3401 (changed since last poll — advanced from 546348236)
 - **CR comments seen:** 3 reviews / 23 inline / 1 issue (walkthrough)
@@ -997,6 +1031,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: push — 2026-04-23T15:01:35Z
+
 - **branch:** phase-v1-AD-d
 - **commits pushed:** 1 (8b99a3401..7ea0844cd)
   - 7ea0844cd refactor(admin-dashboard): exhaustive CaseStatus + batched cfg query (cr-23, cr-24)
@@ -1010,6 +1045,7 @@ BM stands down after this cycle. Next actor is the user — gating the merge of 
 ---
 
 ## bm: poll-cr — 2026-04-23T15:15:00Z
+
 - **PR:** #87 (phase-v1-AD-d → governance-v0)
 - **head SHA:** 7ea0844cd (changed since last poll — advanced from 8b99a3401)
 - **CR comments seen:** 4 reviews / 24 inline / 1 issue (walkthrough)
@@ -1339,6 +1375,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ---
 
 ## bm: merge gate — 2026-04-25T22:45Z (pre-merge check, no merge yet)
+
 - **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
 - **HEAD checked:** db18367ec
 - **Gate results:**
@@ -1351,6 +1388,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Action:** gate run complete; bubbled results to impl session for user confirm gate; merge NOT executed (awaiting user confirm + CI completion)
 
 ## bm: merge — 2026-04-25T22:56Z
+
 - **PR:** #98 (Phase v1-JM-c — submit_jury_vote 9-step handler)
 - **base ← head:** governance-v0 ← phase-v1-JM-c
 - **merge sha:** 2326dca77ff4f7fa727a000d1a556f2efb1af4ac
@@ -1478,6 +1516,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 
 
 ## bm: cr-trigger — 2026-05-04T11:37:32Z
+
 - **PR:** #111
 - **Action:** posted `@coderabbitai review` to wake CR from paused state.
 - **Head SHA at trigger:** bb6c7bae7
@@ -1485,6 +1524,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Next:** wait ~3-10 min, then `/bm-poll-cr 111`. If new findings → `/bm-triage`. If clean → `/bm-merge 111 gate`.
 
 ## bm: poll-cr — 2026-05-04T11:47:31Z
+
 - **PR:** #111
 - **head SHA:** bb6c7bae7 (changed since last poll: yes; from 3583759d2)
 - **CR comments seen:** 25 (5 review / 18 inline / 2 issue)
@@ -1497,8 +1537,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Notes:** CR walkthrough comment edited to "review in progress" after the @coderabbitai review trigger; CR is still processing new commits (scanner fix + governance-v0 merge). Re-poll after CR posts a new review summary.
 
 ## bm: poll-cr — 2026-05-04T11:51:05Z
+
 - **PR:** #111
-- **head SHA:** bb6c7bae7 (changed since last poll: yes; from 3583759d2 — but CR's incremental review just landed)
+- **head SHA:** bb6c7bae7 (changed since last poll: no; unchanged from 2026-05-04T11:47:31Z — CR's incremental review just landed)
 - **CR comments seen:** 66 (6 review / 58 inline / 2 issue)
 - **Actionable findings ingested:** 58
 - **New findings this poll:** 40 (cr-19..cr-58)
@@ -1509,6 +1550,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Notes:** CR's re-review focused almost entirely on the dual-harness Pi scaffolding shipped through the governance-v0 merge (.pi/* + start-pi.sh + PI_AUDIT_REPORT.md). Two critical: cr-24 (shell injection in .pi/extensions/lemmy-hooks.ts) + cr-45 (markdown fence imbalance in .pi/prompts/prp-issue-fix.md). Most majors are hardcoded developer-machine paths and stale e2e test locations across .pi/prompts. Two relevant majors on this branch's actual SL-a/scanner work: cr-21 + cr-22 (advisory note: my scanner-narrowing patch was an MVP — CR proposes stricter dependency-manifest scoping and improved EmergencyRemove arm-split detection).
 
 ## bm: triage — 2026-05-04T11:53:18Z
+
 - **PR:** #111
 - **Buckets:** fix-in-pr 5 | rebut 0 | carry-forward 35 | done 15 | wont-fix 3
 - **Comment posted?** yes (gh pr comment returned success)
@@ -1516,6 +1558,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** block
 
 ## bm: carry-forward issues filed — 2026-05-04T11:55:38Z
+
 - **PR:** #111
 - **Cohort 1 (extensions + hooks hardening, 7 findings):** https://github.com/barrie-cork/lemmy/issues/114
 - **Cohort 2 (prompts portability + policy, 18 findings):** https://github.com/barrie-cork/lemmy/issues/115
@@ -1524,6 +1567,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation unchanged:** block — 5 fix-in-pr findings still open (cr-19 cr-21 cr-22 cr-24 cr-45).
 
 ## bm: fix-impl PR-111-fix-impl-1 — 2026-05-04T12:06:25Z
+
 - **PR:** #111
 - **Findings addressed (5):**
   - cr-19 (low) registry handler-path completion → .claude/rules/governance-log-entry-kind-registry.md
@@ -1536,3 +1580,45 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - tsc --noEmit on .pi/extensions: OK
   - scanner smoke tests: real arm-split refactor (PR #111 head diff) → clean exit 0; synthetic real-handler removal under crates/ → flagged exit 1; arm-split with multi-line restoration → clean; outside crates/ removal → ignored
 - **Cohort tip rebased:** soft-reset 8 auto(pi) commits into a single commit; backup branch retained.
+
+## bm: cr-trigger — 2026-05-04T12:07:14Z
+
+- **PR:** #111
+- **Action:** posted `@coderabbitai review` after fix-impl commit 145d668a0.
+- **Head SHA at trigger:** 145d668a0
+- **Reason:** five fix-in-pr findings (cr-19, cr-21, cr-22, cr-24, cr-45) were addressed in 145d668a0; CR is in paused state and needs an explicit trigger to re-review the new commit.
+- **Next:** wait ~3-10 min, then `/bm-poll-cr 111`.
+
+## bm: poll-cr — 2026-05-04T12:19:20Z
+
+- **PR:** #111
+- **head SHA:** 145d668a0 (advanced from bb6c7bae7)
+- **CR comments seen:** 78 (8 review / 67 inline / 3 issue)
+- **Actionable findings ingested:** 67
+- **New findings this poll:** 9 (cr-59..cr-67)
+- **Findings addressed since last poll (now done):** 5 — cr-19, cr-21, cr-22, cr-24, cr-45 → 145d668a0
+- **Counters:** critical 0/2/0 | major 4/6/0 (+25 carry-forward) | medium 0/0/0 | low 5/10/0 (+10 carry-forward) | nit 0/2/0 (wont-fix: 3)
+- **Recommendation:** request-changes (no critical; 4 majors + 5 lows newly fix-in-pr)
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (109524 bytes)
+- **Notes:** CR's incremental review of 145d668a0 closed all 5 prior fix-in-pr findings + raised 9 new findings on the same fix-impl commit (regression on cr-21/cr-22 plus polish on .pi/prompts/* + lemmy-hooks scope). cr-66 critiques the ^crates/[^/]+/Cargo.toml$ regex from cr-21 fix; cr-67 wants the auto-commit limited to edited path; new low findings on .pi/prompts and bm-runlog formatting.
+
+## bm: triage — 2026-05-04T12:25:05Z
+
+- **PR:** #111
+- **Buckets:** fix-in-pr 4 | rebut 0 | carry-forward 40 | done 20 | wont-fix 3
+- **Comment posted?** yes (gh pr comment returned success)
+- **Carry-forward issues filed:** 0 new (5 findings appended to existing #115 + #116)
+- **Recommendation:** request-changes
+
+## bm: fix-impl PR-111-fix-impl-2 — 2026-05-04T12:34:16Z
+
+- **PR:** #111
+- **Findings addressed (4):**
+  - cr-66 (major) regex broadened from `^crates/[^/]+/Cargo.toml$` to `^crates/.+/Cargo.toml$` so nested workspace crate manifests (e.g. crates/api/api/Cargo.toml) are scanned.
+  - cr-67 (major) auto-commit hook scoped via `-- filePath` on both diff probe and commit args; unrelated pre-staged paths are no longer swept in.
+  - cr-64 (low) MD022 heading spacing applied to all `## bm:` runlog headings (blank line below each heading).
+  - cr-65 (low) corrected SHA-transition wording in 2026-05-04T11:51:05Z poll-cr entry (head was unchanged from prior poll, not advanced).
+- **Local validation:**
+  - bash -n adr-compliance.sh: OK; scanner clean against current head diff.
+  - cr-66 negative test (nested crate manifest with forbidden keycloak): correctly flagged.
+  - tsc --noEmit on .pi/extensions: OK.

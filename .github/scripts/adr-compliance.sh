@@ -36,7 +36,7 @@ added_dependency_surface_lines() {
   awk '
     /^\+\+\+ b\// {
       file = substr($0, 7)
-      active = (file ~ /(^Cargo\.(toml|lock)$|^crates\/[^\/]+\/Cargo\.toml$|^migrations\/|^docker\/|^docker-compose|^\.github\/workflows\/|^scripts\/|(^|\/)package(-lock)?\.json$|(^|\/)pnpm-lock\.yaml$|(^|\/)yarn\.lock$)/)
+      active = (file ~ /(^Cargo\.(toml|lock)$|^crates\/.+\/Cargo\.toml$|^migrations\/|^docker\/|^docker-compose|^\.github\/workflows\/|^scripts\/|(^|\/)package(-lock)?\.json$|(^|\/)pnpm-lock\.yaml$|(^|\/)yarn\.lock$)/)
       next
     }
     active && /^\+[^+]/ { sub(/^\+/, ""); print }

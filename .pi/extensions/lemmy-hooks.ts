@@ -10,8 +10,8 @@
  * - pre-phase audit reminder from the existing Claude hook
  * - DQ/task-hopper coordination-state injection
  * - destructive bash firewall
- * - Junior worktree guard via copied .pi/hooks/worktree-guard.sh
- * - observation shadow telemetry via copied .pi/hooks/observation-capture.sh
+ * - Junior worktree guard via copied .pi/hook-scripts/worktree-guard.sh
+ * - observation shadow telemetry via copied .pi/hook-scripts/observation-capture.sh
  * - auto-commit on successful edit/write
  * - warn-only retro nudge on shutdown
  */
@@ -22,7 +22,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-const PI_HOOKS_DIR = path.join(REPO_ROOT, ".pi", "hooks");
+const PI_HOOKS_DIR = path.join(REPO_ROOT, ".pi", "hook-scripts");
 
 const BASH_BLOCKLIST = [
   "rm -rf",
@@ -321,15 +321,28 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       const basename = path.basename(filePath);
       // Invoke git directly via argument arrays so filePath/basename are never
       // shell-interpolated. Avoids command injection through model-controlled
-      // tool inputs (cr-24 on PR #111). Each spawnSync uses the same options.
+      // tool inputs (cr-24 on PR #111). Both the diff probe and the commit are
+      // scoped to filePath so unrelated pre-staged changes are never swept into
+      // the auto-commit (cr-67 on PR #111).
       const gitOpts = { cwd: REPO_ROOT, encoding: "utf8" as const, timeout: 30_000 };
       const addRes = spawnSync("git", ["add", "--", filePath], gitOpts);
       if (addRes.status !== 0) return undefined;
-      const diffRes = spawnSync("git", ["diff", "--cached", "--quiet"], gitOpts);
+      const diffRes = spawnSync(
+        "git",
+        ["diff", "--cached", "--quiet", "--", filePath],
+        gitOpts,
+      );
       if (diffRes.status === 1) {
         spawnSync(
           "git",
-          ["commit", "-m", `auto(pi): update ${basename}`, "--no-gpg-sign"],
+          [
+            "commit",
+            "-m",
+            `auto(pi): update ${basename}`,
+            "--no-gpg-sign",
+            "--",
+            filePath,
+          ],
           gitOpts,
         );
       }
