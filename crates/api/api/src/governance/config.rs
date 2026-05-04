@@ -2653,7 +2653,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     requires_re_jury: false,
     requires_step_up: false,
     apply_at_default: ApplyAt::Immediate,
-    description: "How often (minutes) the grace-window scheduler checks for expiring windows; config changes take effect at next server restart.",
+    description: "How often (minutes) the grace-window scheduler checks for expiring windows; config changes take effect immediately (ApplyAt::Immediate).",
     doc_anchor: "v1-sponsor-liability.prd.md§10",
   },
   ConfigKeyMetadata {

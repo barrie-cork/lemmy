@@ -48,7 +48,7 @@ Read in this order before editing:
 
 1. **DQ #132 on `phase-v1-SL-a` tip** — `git show origin/phase-v1-SL-a:.claude/decision-queue.json` and locate `id: 132`. The `log_slice` contains the failing line:
 
-   ```
+   ```text
    Error: Failed to run 2026-05-03-000000-0000_add_case_status_sponsor_liability_variants
           with: Received an empty query
    ```
@@ -176,7 +176,7 @@ Per Shape G: push your worker branch and let GH Actions run cargo. Do NOT run ca
 
 1. **Workspace check** runs automatically on push to `junior/*`. Capture the workflow_run_id via `gh run list --branch <your-junior-branch> --limit 1 --json databaseId --jq '.[0].databaseId'`. Write DQ #133 with `kind: "validate-pending"`, `from: "impl"`, `workflow_run_id: <id>`, `branch: <your-junior-branch>`, `phase_task: "1-fix-2"`. Field shape per `.claude/rules/decision-queue.md` "validate-pending".
 
-2. **E2E on phase-tip** does NOT run on `junior/*` push (cohort B finalize-merge into phase-v1-SL-a is what triggers it). After Junior daemon finalize-merges your worker branch into phase-v1-SL-a, the advisor (laptop) sees the new tip on next poll and raises DQ #134 directly OR you can pre-allocate DQ #134 for the e2e workflow_run_id you anticipate. **Default behaviour:** pre-allocate DQ #134 with `workflow_run_id: null`, `result: null`, `from: "impl"`, `branch: phase-v1-SL-a`, `phase_task: "1-fix-2"`. The advisor populates `workflow_run_id` once the e2e dispatches. (Or, if the user gates Phase 2 e2e to local-laptop default per `feedback_default_local_testing.md`, the advisor mutates DQ #134 to `kind: "validate-pending-laptop-e2e"` shape on the polling cycle that detects the phase-tip move.)
+2. **E2E on phase-tip** does NOT run on `junior/*` push (cohort B finalize-merge into phase-v1-SL-a is what triggers it). **Do not pre-allocate a `kind: "validate-pending"` entry with `workflow_run_id: null`** — a Phase 2 e2e placeholder with null `workflow_run_id` violates the Shape-G validation contract. The advisor raises the Phase 2 e2e entry after detecting the new phase-branch tip on its next poll, and will prompt the user for local vs dispatch before writing the entry (per `advisor-orchestrator.md` "Phase 2 e2e — local vs dispatch" user gate).
 
 3. Per `feedback_pipes_mask_exit_codes.md`: never pipe cargo or `gh run` through tail/head/grep. Capture full output to `.claude/PRPs/debug/sl-a-fix-impl-2-*.log`.
 
@@ -184,7 +184,7 @@ If workspace-check fails: STOP and surface to advisor via DQ. Do not patch aroun
 
 ## 6. Expected output (return to advisor)
 
-```
+```text
 ## Task 1-fix-2 complete — v1-SL-a no-transaction-directive-position fix
 
 **Commit:** <sha> on <worktree-branch>
@@ -228,7 +228,7 @@ The migration file at HEAD has 17 lines per `git show` confirmation. If the file
 
 End the source-code commit-message body with a `LESSON:` line per `feedback_junior_pmd_write_convention.md`:
 
-```
+```text
 LESSON: diesel migration runner reads `-- no-transaction` ONLY when it is the first non-blank line. Header comments above the directive cause the runner to wrap ALTER TYPE ADD VALUE in a transaction (rejected by Postgres, manifests as "Received an empty query" on redo round-trip). Mirror at `2026-04-19-000000-0000_add_restoration_sanction_variant/up.sql` is the canonical pattern. Watchpoint for next migration plan: enum-only `-- no-transaction` directive must be line 1.
 ```
 
@@ -237,6 +237,7 @@ LESSON: diesel migration runner reads `-- no-transaction` ONLY when it is the fi
 When writing back the mutated `decision-queue.json`, use **`ensure_ascii=True`** (the default for `json.dump` and the project convention — see the v1-SL-a green-gate recovery session 2026-05-03 commits `e12465f89`, `f72c5f518`). Do NOT use `ensure_ascii=False` — that produces a 400KB+ encoding-only diff.
 
 Recipe:
+
 ```python
 with open(path, "w", encoding="utf-8") as f:
     json.dump(d, f, indent=2, ensure_ascii=True)

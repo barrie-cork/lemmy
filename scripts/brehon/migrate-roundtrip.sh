@@ -58,7 +58,7 @@ PG_PORT=$(shuf -i 30000-39999 -n 1)
 PG_CONTAINER=$(docker run -d --rm \
     -e POSTGRES_PASSWORD=ci-roundtrip-throwaway \
     -e POSTGRES_DB=lemmy_roundtrip \
-    -p ${PG_PORT}:5432 \
+    -p "${PG_PORT}:5432" \
     pgautoupgrade/pgautoupgrade:18-alpine)
 trap 'docker stop $PG_CONTAINER >/dev/null 2>&1 || true' EXIT
 
@@ -78,7 +78,7 @@ PG_PORT2=$(shuf -i 40000-49999 -n 1)
 PG_CONTAINER2=$(docker run -d --rm \
     -e POSTGRES_PASSWORD=ci-roundtrip-throwaway \
     -e POSTGRES_DB=lemmy_roundtrip \
-    -p ${PG_PORT2}:5432 \
+    -p "${PG_PORT2}:5432" \
     pgautoupgrade/pgautoupgrade:18-alpine)
 trap 'docker stop $PG_CONTAINER2 >/dev/null 2>&1 || true; docker stop $PG_CONTAINER >/dev/null 2>&1 || true' EXIT
 

@@ -56,7 +56,7 @@ with open(path, "w", encoding="utf-8") as f:
 
 ## Hard refusals (cite — do not duplicate body)
 
-See `.claude/agents/ci-watcher.md` "Hard refusals" sub-section. In short: never cargo, never edit code, never apply auto-fixes, never use `gh run rerun`, **never write a NEW DQ entry** (always mutate the existing `validate-pending` by `workflow_run_id`; orphan case files a blocker entry and exits non-zero), never write `kind: "validate-result" | "validate-failed"` (DEPRECATED 2026-04-28; option 2 supersedes), never write `kind: "blocker" | "log" | "clarify" | "validate-pending"` as new entries (only the orphan-blocker case writes a new entry), never write `answered_by: "advisor" | "user"` (only `"ci-watcher"`), never trust the `--exit-status` exit code.
+See `.claude/agents/ci-watcher.md` "Hard refusals" sub-section. In short: never cargo, never edit code, never apply auto-fixes, never use `gh run rerun`. Writing a new DQ entry is forbidden **except** in the orphan fallback case (step 1: `workflow_run_id` not found in `pending[]`), where exactly one `kind: "blocker"` entry is written and the task exits non-zero. Outside that orphan case, writing any new DQ entry — including `kind: "blocker"`, `"log"`, `"clarify"`, or `"validate-pending"` — is forbidden. Always mutate the existing `validate-pending` entry by matching `workflow_run_id`. Never write `kind: "validate-result" | "validate-failed"` (DEPRECATED 2026-04-28; option 2 supersedes). Never write `answered_by: "advisor" | "user"` (only `"ci-watcher"`). Never trust the `--exit-status` exit code.
 
 ## Context for this dispatch
 
