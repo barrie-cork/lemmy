@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 137,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-04T02:01:30Z",
+      "question": "Did the workspace-check workflow pass for fix-impl-4 (PR #111 CR triage) on the junior worker branch?",
+      "options": [
+        "(A) pass \u2014 ci-watcher mutates to resolved",
+        "(B) fail \u2014 advisor \u00a7G4 classifier triages"
+      ],
+      "context": "fix-impl-4 fixes cr-1 through cr-9, cr-11, cr-12, cr-13 on PR #111. Worker branch pushed; workspace-check workflow run 25297427006 triggered.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "workflow_run_id": 25297427006,
+      "branch": "junior/role-impl-task-sl-a-fix-impl-4-see-claude-prps-briefs-sl-a-fix-impl-4-md-111",
+      "phase_task": "fix-impl-4",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null
+    }
+  ],
   "resolved": [
     {
       "id": 124,
