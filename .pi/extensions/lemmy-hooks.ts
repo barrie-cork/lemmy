@@ -319,14 +319,20 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       if (typeof filePath !== "string" || shouldSkipAutoCommit(filePath)) return undefined;
 
       const basename = path.basename(filePath);
-      spawnSync(
-        "bash",
-        [
-          "-lc",
-          `git add -- ${JSON.stringify(filePath)} && (git diff --cached --quiet || git commit -m ${JSON.stringify(`auto(pi): update ${basename}`)} --no-gpg-sign)`,
-        ],
-        { cwd: REPO_ROOT, encoding: "utf8", timeout: 30_000 },
-      );
+      // Invoke git directly via argument arrays so filePath/basename are never
+      // shell-interpolated. Avoids command injection through model-controlled
+      // tool inputs (cr-24 on PR #111). Each spawnSync uses the same options.
+      const gitOpts = { cwd: REPO_ROOT, encoding: "utf8" as const, timeout: 30_000 };
+      const addRes = spawnSync("git", ["add", "--", filePath], gitOpts);
+      if (addRes.status !== 0) return undefined;
+      const diffRes = spawnSync("git", ["diff", "--cached", "--quiet"], gitOpts);
+      if (diffRes.status === 1) {
+        spawnSync(
+          "git",
+          ["commit", "-m", `auto(pi): update ${basename}`, "--no-gpg-sign"],
+          gitOpts,
+        );
+      }
 
       return undefined;
     } catch (err) {

@@ -417,7 +417,7 @@ gh pr create --base "{base-branch}" --title "Fix: {title} (#{number})" --body "$
 
 ```bash
 cargo check --workspace && cargo clippy --workspace -- -D warnings && cargo test --test e2e {pattern}
-````
+```
 
 ## Issue
 
@@ -451,7 +451,7 @@ EOF
 ```bash
 PR_URL=$(gh pr view --json url -q '.url')
 PR_NUMBER=$(gh pr view --json number -q '.number')
-````
+```
 
 **PHASE_7_CHECKPOINT:**
 

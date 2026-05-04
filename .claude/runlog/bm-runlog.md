@@ -1476,3 +1476,63 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Merge gate rerun result:** STOP — findings YAML clean, DQ clean, CR poll up to date, but GitHub still reports mergeStateStatus=UNSTABLE and CI failure: Red-flag diff scan (run 25314346695).
 - **Next:** either adjust branch protection/check requirements or explicitly choose an admin-bypass merge path; scripted /bm-merge gate cannot proceed while CI is failing.
 
+
+## bm: cr-trigger — 2026-05-04T11:37:32Z
+- **PR:** #111
+- **Action:** posted `@coderabbitai review` to wake CR from paused state.
+- **Head SHA at trigger:** bb6c7bae7
+- **Reason:** merge gate requires CR to absorb commits since last review (last review 2026-05-04T10:06:27Z; head advanced through scanner fix + governance-v0 merge).
+- **Next:** wait ~3-10 min, then `/bm-poll-cr 111`. If new findings → `/bm-triage`. If clean → `/bm-merge 111 gate`.
+
+## bm: poll-cr — 2026-05-04T11:47:31Z
+- **PR:** #111
+- **head SHA:** bb6c7bae7 (changed since last poll: yes; from 3583759d2)
+- **CR comments seen:** 25 (5 review / 18 inline / 2 issue)
+- **Actionable findings ingested:** 18 (no new since previous poll)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 0 net (poll-2 already booked the cohort to done; cr-15 also reconciled to done in earlier verification step)
+- **Counters:** critical 0/0/0 | major 0/4/0 | medium 0/0/0 | low 0/9/0 | nit 0/2/0 (wont-fix: 3)
+- **Recommendation:** approve
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (30813 bytes)
+- **Notes:** CR walkthrough comment edited to "review in progress" after the @coderabbitai review trigger; CR is still processing new commits (scanner fix + governance-v0 merge). Re-poll after CR posts a new review summary.
+
+## bm: poll-cr — 2026-05-04T11:51:05Z
+- **PR:** #111
+- **head SHA:** bb6c7bae7 (changed since last poll: yes; from 3583759d2 — but CR's incremental review just landed)
+- **CR comments seen:** 66 (6 review / 58 inline / 2 issue)
+- **Actionable findings ingested:** 58
+- **New findings this poll:** 40 (cr-19..cr-58)
+- **Findings addressed since last poll:** 0 net
+- **Counters:** critical 2/0/0 | major 27/4/0 | medium 0/0/0 | low 11/9/0 | nit 0/2/0 (wont-fix: 3)
+- **Recommendation:** block (2 critical fix-in-pr open; merge gate cannot proceed)
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (94757 bytes)
+- **Notes:** CR's re-review focused almost entirely on the dual-harness Pi scaffolding shipped through the governance-v0 merge (.pi/* + start-pi.sh + PI_AUDIT_REPORT.md). Two critical: cr-24 (shell injection in .pi/extensions/lemmy-hooks.ts) + cr-45 (markdown fence imbalance in .pi/prompts/prp-issue-fix.md). Most majors are hardcoded developer-machine paths and stale e2e test locations across .pi/prompts. Two relevant majors on this branch's actual SL-a/scanner work: cr-21 + cr-22 (advisory note: my scanner-narrowing patch was an MVP — CR proposes stricter dependency-manifest scoping and improved EmergencyRemove arm-split detection).
+
+## bm: triage — 2026-05-04T11:53:18Z
+- **PR:** #111
+- **Buckets:** fix-in-pr 5 | rebut 0 | carry-forward 35 | done 15 | wont-fix 3
+- **Comment posted?** yes (gh pr comment returned success)
+- **Carry-forward issues filed:** 0 (strategy pending user input — umbrella vs per-finding)
+- **Recommendation:** block
+
+## bm: carry-forward issues filed — 2026-05-04T11:55:38Z
+- **PR:** #111
+- **Cohort 1 (extensions + hooks hardening, 7 findings):** https://github.com/barrie-cork/lemmy/issues/114
+- **Cohort 2 (prompts portability + policy, 18 findings):** https://github.com/barrie-cork/lemmy/issues/115
+- **Cohort 3 (prompts markdownlint + low polish, 10 findings):** https://github.com/barrie-cork/lemmy/issues/116
+- **YAML:** carry-forward note URLs back-filled into all 35 finding rows.
+- **Recommendation unchanged:** block — 5 fix-in-pr findings still open (cr-19 cr-21 cr-22 cr-24 cr-45).
+
+## bm: fix-impl PR-111-fix-impl-1 — 2026-05-04T12:06:25Z
+- **PR:** #111
+- **Findings addressed (5):**
+  - cr-19 (low) registry handler-path completion → .claude/rules/governance-log-entry-kind-registry.md
+  - cr-21 (major) ADR-010 scan narrowed to dependency manifests → .github/scripts/adr-compliance.sh
+  - cr-22 (major) EmergencyRemove detector now uses per-file token-occurrence balancing scoped to crates/**/*.rs → .github/scripts/adr-compliance.sh
+  - cr-24 (critical) lemmy-hooks autocommit replaced bash -lc with direct git arg-array spawnSync → .pi/extensions/lemmy-hooks.ts
+  - cr-45 (critical) prp-issue-fix.md fence imbalance fixed (lines 421 + 454 4→3 backticks)
+- **Local validation:**
+  - bash -n adr-compliance.sh: OK
+  - tsc --noEmit on .pi/extensions: OK
+  - scanner smoke tests: real arm-split refactor (PR #111 head diff) → clean exit 0; synthetic real-handler removal under crates/ → flagged exit 1; arm-split with multi-line restoration → clean; outside crates/ removal → ignored
+- **Cohort tip rebased:** soft-reset 8 auto(pi) commits into a single commit; backup branch retained.
