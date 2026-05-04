@@ -2,18 +2,20 @@
 
 **Sub-phase:** v1-SL-a
 **Branch:** `phase-v1-SL-a` (cut from `governance-v0` @ `a876a0054`)
-**Tip at retro:** `6757b253a`
+**Tip at retro (initial):** `6757b253a` (SL-a impl + retro author commit)
+**Tip at retro (final, post-amend):** `bc548db8e` (after PR #111 CR triage fix-impl-4 + DQ #137 ci-watcher mutation + DQ cleanup)
 **Plan:** `.claude/PRPs/plans/v1-sponsor-liability-a.plan.md`
-**Tasks shipped:** 8 impl (Tasks 0–8) + 3 fix-impls (Task 1 fix, fix-2, fix-3) + Task 9 (this retro)
+**Tasks shipped:** 8 impl (Tasks 0–8) + 4 fix-impls (Task 1 fix-1/2/3 + PR #111 CR triage fix-impl-4) + Task 9 (this retro)
+**PR:** #111 `phase-v1-SL-a → governance-v0` (OPEN; CodeRabbit re-review post-fix-impl-4 in progress)
 **Started:** 2026-05-03
-**Ended:** 2026-05-04 00:24 UTC
-**Wall-clock:** ~36 hours (overnight + recovery)
+**Ended:** 2026-05-04 ~02:30 UTC (CR triage cycle ongoing)
+**Wall-clock:** ~42 hours (overnight + recovery + parallel-session CR triage)
 
 ---
 
 ## TL;DR for the next advisor
 
-**SL-a is the SponsorLiability PRD foundation. Eight impl tasks shipped but Task 1 alone needed THREE fix-impl cycles — directive position, comments-only down.sql, and original combined-migration split — each surfacing a planner-side gap on the same migration directory. Cohort B closed; SL-b/c/d unblocked.** Highlights:
+**SL-a is the SponsorLiability PRD foundation. Eight impl tasks shipped but Task 1 alone needed THREE fix-impl cycles — directive position, comments-only down.sql, and original combined-migration split — each surfacing a planner-side gap on the same migration directory. PR #111 opened post-impl with CodeRabbit auto-review; fix-impl-4 addressed 13 CR findings in a parallel session. ADR red-flag scanner posted 9× false-positives on the EmergencyRemove arm refactor (recurring class — 4th sub-phase now). Cohort B closed; SL-b/c/d unblocked pending PR #111 merge.** Highlights:
 
 - **Task 1 burned three fix-impls on the same migration shape.** fix-impl-1 split a combined migration (DQ #122 — Postgres "unsafe use of new enum value" within same migration). fix-impl-2 moved `-- no-transaction` to line 1 (DQ #132 — diesel parser reads first non-blank line only). fix-impl-3 added `SELECT 1;` to comments-only down.sql (DQ #134 — Postgres returns "Received an empty query" on revert). All three invariants live in the SAME mirror precedent at `2026-04-19-000000-0000_add_restoration_sanction_variant/` but the planner cited only one. Watch-item promoted: future migration plans cite ALL invariants from the canonical mirror (line-1 directive + trailing no-op DDL + split-by-Postgres-enum-rule).
 - **Tasks 2–7 shipped clean four-role on Junior/EliteDesk.** CaseStatus variants (Task 2), table extension (Task 3), ModerationCase + InsertForm field add (Task 4), 8-site ADR-013 enum-exhaustiveness sweep (Task 5 + R3 addendum), config consts + 13-key seed parity (Task 6), 5 ENTRY_KIND consts + registry section (Task 7). Each ≤30 min Junior runtime; one §G4 advisor-manual fix on Task 5 (clippy::map-err-ignore — `|_|` → `|_e|`).
@@ -22,9 +24,11 @@
 - **Brief-naming collision:** advisor authored sl-a-ci-watcher-12.md by picking next number from laptop-side `ls` (governance-v0 incomplete view), overwriting the prior brief at `82bbee3b5` for DQ #131. Junior #109 read the stale-on-phase brief and wasted ~2 min mutating an already-resolved DQ #131 (no harm). Recovered by restoring original + authoring as ci-watcher-15. Watch-item promoted.
 - **Windows incremental-cache stale fail on cross-cutting enum-add.** First laptop e2e (post-fix-impl-3) produced 9 false-positive E0004/E0277 errors despite source files being verified-exhaustive vs phase-tip blob via md5sum. CI Linux validated same SHA clean. Cargo clean (93.7 GB removed) + cold rebuild + e2e exit 0 — ~64 min recovery. Watch-item: pre-emptive cargo clean before phase-tip e2e on cross-cutting enum changes.
 - **Final e2e PASS:** `test result: ok. 67 passed; 0 failed; 3 ignored` (3 ignored = pre-existing v0-polish flakes GH #42/#43/#45). Critical test `v1_jm_a_backfill_populates_v0_snapshot` confirmed working post-fix-impl-3.
-- **DQ #132 + #134 stay in pending[] as historical fail records** (intentional per validate-pending-laptop handler step 3 fail-path; carry-forward to retro audit trail). Pending count 2; if archived, would be 0.
+- **PR #111 + fix-impl-4 (parallel session, CR triage cycle).** PR #111 opened off `phase-v1-SL-a` post-impl. CodeRabbit auto-reviewed; 13 actionable findings (cr-1 through cr-9, cr-11, cr-12, cr-13). fix-impl-4 (`17a63356c`, +49/-58 across 8 files) addressed all 13: 6 markdown formatting (MD031, language tags, MD022 in briefs + runlog), 1 governance-log-registry exemption-list update, 1 stale e2e instruction in fix-impl-2 brief, 2 e2e.rs assertion updates (hard-coded counts → key-presence; contradictory enum assertions removed), 1 config.rs metadata correction, 2 shell-quoting fixes in migrate-roundtrip.sh, 1 hard-refusal contradiction fix in ci-watcher-13. DQ #137 workspace-check workflow `25297427006` PASS (conclusion=success); ci-watcher mutated DQ #137 → resolved at `03eb36371`; daemon finalized at `bc548db8e`. CR re-review of fix-impl-4 commit pending.
+- **ADR red-flag scanner false-positive recurring (9× this PR; 4th sub-phase now).** github-actions ADR-013 scanner posted "Removal of `CaseStatus::EmergencyRemove` reference" 9 times since PR #111 open at 02:00 UTC. The scanner is regex-only and can't read the `is_public_status` arm refactor in `crates/api/api/src/governance/get_case.rs:48-55` which preserves EmergencyRemove explicitly. Same false-positive class as PR #107's redflag-ack precedent (`pr-107-redflag-ack.md`). Pattern is now: any arm-refactor that splits an EmergencyRemove enumeration trips the scanner. Watch-item promoted: ADR-scanner-false-positive class needs an upstream-rule fix, not per-PR ack.
+- **DQ #132 + #134 + #137 all resolved at retro-amend tip.** A parallel-session `chore(decision-queue): move stale SL-a validation entries to resolved` (`ad3e42430`) flattened the historical-fail records (#132 + #134) from `pending[]` to `resolved[]` with `result: "fail"` preserved as the audit record. DQ #137 mutated to pass + moved to resolved by ci-watcher (`03eb36371` + finalize at `bc548db8e`). **Pending=0 at amend tip `bc548db8e`.** This deviates from the validate-pending-laptop handler step-3 spec (fail records stay in pending[] for §G4 triage) — the parallel session's cleanup matches the spirit (the §G4 triage already happened via fix-impls #2 + #3) but technically violates the schema-v2 routing rule. Watch-item: codify "intentional historical-fail audit relocation post-resolution-via-fix-impl" as an allowed pattern, or revert the cleanup if the schema-v2 rule is canonical.
 
-DQ count summary (this sub-phase contribution): pending 0 → 2 (intentional historical-fail audit records); resolved +24 (#114–#136 minus pending #132/#134). Multiple §G4 catch-fire moments (3 user gates) — all resolved within the cohort.
+DQ count summary (this sub-phase contribution): pending 0 at retro-amend tip `bc548db8e` (parallel-session cleanup `ad3e42430` flattened #132 + #134 fail-records to resolved[] post-fix-impl resolution; #137 mutated pass + finalized). Resolved +25 across SL-a (#114 onward, including #132/#134/#137 with `result: fail|fail|pass`). Multiple §G4 catch-fire moments (3 user gates) — all resolved within the cohort. CR triage cycle introduced 13 additional findings via PR #111 (fix-impl-4 addressed; CR re-review pending).
 
 ---
 
@@ -37,6 +41,8 @@ Per `feedback_retro_not_report.md` canonical-header requirement.
 - **Brief-naming collision via incomplete laptop `ls`.** Authored ci-watcher-12 by counting briefs on governance-v0 (didn't have ci-watcher-13 / -14 from phase-only commits), overwrote real prior brief, Junior worker on phase branch read stale-on-phase content and worked the wrong DQ entry. Caught via `git ls-tree origin/<phase>` cross-check (added to advisor checklist). (§3.3)
 - **Incremental-cache stale-after-enum-add false-fail on cold-equivalent rebuild.** Cargo on the laptop reported 9 unhandled match arms across 8 files even though the files-on-disk md5-equalled the phase-tip blob and the same SHA workspace-check passed on Linux GH Actions runners. Diagnosis took ~5 min (md5sum + git cat-file blob compare); recovery cost ~60 min cold rebuild. (§3.4)
 - **§G4 classifier needed user-gate escalation 3× this sub-phase.** Each fix-impl was non-allowlist by current rule (test failure / migration runner failure / stale-cache fail); each was mechanical mirror-precedent comparison. Allowlist extension proposals consolidated to §5 Lessons.
+- **PR #111 CR triage cycle ran in a parallel advisor session, not this one.** PR opened post-impl on phase-v1-SL-a; CodeRabbit posted 13 actionable findings. A parallel advisor session authored `sl-a-fix-impl-4` brief (`84b9c13ca`), dispatched Junior, raised DQ #137, and merged fix-impl-4 (`17a63356c`) — all while this session was completing the retro author commit. Result: phase-tip drift (`6757b253a` → `c7908632d`) caught at retro-push time; rebased onto origin and pushed. **Surprise:** parallel-session work on the same phase branch is a real concurrency mode the role-model didn't enumerate. Watch-item: parallel-session locking (or coordination via runlog) is a real category for concurrent advisor work, not just impl-impl race.
+- **ADR red-flag scanner false-positive class recurring (4th sub-phase).** EmergencyRemove arm refactors trip the regex scanner ~every PR they appear in. PR #107 had 1× false-positive (acked via `pr-107-redflag-ack.md`); PR #111 has 9× false-positives across two distinct refactors (the `is_public_status` arm in `get_case.rs` + arms swept in Task 5). The scanner's `_ => |` regex can't see exhaustive arm enumeration. **Surprise:** the false-positive isn't an edge case; it's the modal outcome whenever a sub-phase touches EmergencyRemove arms. Per-PR maintainer-ack is high-friction; the rule needs a fix, not the PR body.
 
 ## What to change
 
@@ -47,6 +53,8 @@ Per `feedback_retro_not_report.md`. Forward-going changes the next advisor / sub
 - **Pre-emptive `cargo clean` before phase-tip e2e on cross-cutting changes.** When a sub-phase Task adds enum variants or trait impls and sweeps match sites in 5+ files, the laptop's incremental cache is unreliable. Cost is symmetric (~30 min cold rebuild now vs ~60 min stale-cache recovery later); pay it forward. Add to advisor §G4 checklist for the cross-cutting trigger.
 - **Pre-validate signal:** if local cargo errors with E0004/E0277 against new variants but file md5sums match phase-tip blob AND CI workspace-check passed on the same SHA, suspect stale incremental cache before suspecting source. The diagnostic is `git ls-tree origin/<branch> <file> | awk '{print $3}' | xargs -I {} git cat-file -p {} | md5sum` vs `md5sum <local-file>`.
 - **Three §G4 user-gate escalations in one sub-phase is a smell.** Allowlist extension review at retro time should happen routinely, not by exception. SL-a generated three concrete candidates; codify them in `§G4 classifier` of `advisor-orchestrator.md` next session.
+- **ADR red-flag scanner needs an exhaustive-match exemption rule, not per-PR ack.** The regex-only ADR-013 scanner can't read Rust `match` exhaustiveness; any arm refactor that splits an EmergencyRemove arm trips it. Fix categories: (a) make the scanner AST-aware (read Rust syntax, not regex); (b) add exemption-pattern allowlist for arm-split refactors that preserve the variant in both halves; (c) downgrade the scanner from "advisory blocking" to "informational" on PRs into governance-v0 (CR + maintainer review already covers the case). **Carry to homeserver:** queue an issue at `barrie-cork/lemmy` for ADR-scanner discipline.
+- **Parallel-session phase-branch coordination needed.** This sub-phase had two advisor sessions on `phase-v1-SL-a` simultaneously (one finishing retro, one running PR #111 CR triage). The second session opened the PR + dispatched fix-impl-4 + raised DQ #137 + merged; the first session caught up only via `git fetch + rebase`. Pre-rule: before opening a PR / dispatching a fix-impl on an active phase branch, check `.claude/agent-activity.json` (per `session-awareness.md`). Add to advisor session-start ritual + brief-author check.
 
 ## What to carry forward
 
@@ -133,9 +141,24 @@ Watch-item: future migration plans should run the `migrate-roundtrip.sh` against
 
 Junior worktree finalize-merged for all 8 impl tasks; only 1 of 13 finalize sequences pushed cleanly to origin. Manual EliteDesk push was the recovery default.
 
-### 2.4 BM signals — no formal PR cycle yet
+### 2.4 BM signals — PR #111 opened in parallel session; CR triage in progress
 
-SL-a is the SL PRD's first sub-phase; the phase branch ships via direct-to-trunk pattern when the user gate confirms. No `bm-pr` invocation yet. The eight impl commits + three fix-impl commits + retro will land via `phase-v1-SL-a → governance-v0` PR (next user-gate moment). BM session inactive this sub-phase by design — SL-a is migration + schema + handler scaffolding (no public API additions; no behavioural changes pre-SL-d). CR review surface: ~10 commits on schema + match-site sweeps; expect ≤5 findings.
+SL-a's PR #111 was opened from a parallel advisor session post-impl on `phase-v1-SL-a → governance-v0` (`feat(v1-SL-a): sponsor liability schema foundation`). CodeRabbit auto-reviewed at 02:00 UTC; posted 13 actionable findings across 3 review batches:
+
+- **Batch 1 (12 findings):** brief MD031 fence formatting, language tags missing on code blocks, MD022 heading spacing, governance-log-registry exemption-list update, e2e.rs hard-coded counts (assert_eq!(cfg.n, 101) → key-presence checks), e2e.rs contradictory enum assertions post-LIFO-14 revert, config.rs metadata accuracy (Immediate vs restart), shell-quoting in migrate-roundtrip.sh, hard-refusal contradiction in ci-watcher-13 brief.
+- **Batch 2 (1 finding):** ci-watcher-13 hard-refusal sentence rewrite.
+- **Batch 3 (1 finding):** fix-impl-2 brief — 2 optional lightweight checks suggestion.
+
+**fix-impl-4 (`17a63356c`) addressed cr-1, cr-2, cr-3, cr-4, cr-5, cr-6, cr-7, cr-8, cr-9, cr-11, cr-12, cr-13** (12 of 13 actionable; cr-10 either folded or non-actionable). +49/-58 across 8 files. Encoding: 6 markdown brief edits + 1 governance-log-registry rule + 1 runlog + 2 code files (config.rs metadata + e2e.rs assertions) + 1 shell script.
+
+**Outstanding at retro time:**
+- DQ #137 (workspace-check for fix-impl-4): workflow `25297427006` conclusion=success since 02:26 UTC; awaits ci-watcher mutation.
+- CodeRabbit re-review of fix-impl-4 commit pending.
+- 9× ADR-013 red-flag false-positives from github-actions scanner (advisory; admin bypass on; maintainer ack precedent at `pr-107-redflag-ack.md`).
+
+**No `bm-pr` slash-command was used** for PR #111 creation — the parallel session opened it manually. BM-session usage for the canonical `phase-v1-SL-a` shipping path remains untested under the standard 4-role flow.
+
+**CR review surface vs prediction:** original prediction "≤5 findings"; actual was 13 actionable + 9 false-positive scanner posts. Findings were heavy on markdown formatting (60% of batch 1) — class of finding the planner-side dogfood gate is supposed to catch. Carry-forward: extend `feedback_dogfood_slash_command_specs.md` to add a markdown-lint pass on every brief commit.
 
 ---
 
@@ -153,7 +176,15 @@ Authored sl-a-ci-watcher-12.md by next-number from laptop's `ls` of governance-v
 ### 3.4 Windows incremental-cache stale fail on cross-cutting enum-add
 First laptop e2e (post-fix-impl-3) reported 9 unhandled match arms across 8 files even though source files md5-equalled phase-tip blobs and the same SHA workspace-check passed on Linux GH Actions. **Diagnosis:** lemmy_db_schema_file rmeta rebuilt with new variants, but lemmy_api was typechecked against stale enum view from before Task 5's sweep merged. **Recovery:** cargo clean (93.7 GB removed) + cold rebuild + e2e exit 0 — ~64 min total. **Fix:** for sub-phases that add enum variants AND sweep match sites in 5+ files, pre-emptively cargo clean before phase-tip e2e on local laptop. Cost is symmetric (~30 min cold rebuild now vs ~60 min stale-cache recovery later); pay forward.
 
-### 3.5 §G4 allowlist understaffed
+### 3.5 ADR red-flag scanner false-positive recurring (4th sub-phase)
+
+The github-actions ADR-013 scanner posted "Removal of `CaseStatus::EmergencyRemove` reference" 9× on PR #111. Each post was triggered by a distinct push (fix-impl-4 + sequential CR-driven comment posts from CodeRabbit). The scanner is regex-based (`grep` for variant strings); it can't see Rust `match` exhaustiveness, so any arm-split refactor where `EmergencyRemove` moves from one arm to a sibling arm trips it. PR #107 acked once (`pr-107-redflag-ack.md`); PR #111 needs ack on `is_public_status` arm in `crates/api/api/src/governance/get_case.rs:48-55` (3 statuses → 6 statuses split, EmergencyRemove preserved in the false-arm enumeration). **Fix:** the scanner workflow needs an exemption pattern (or, ideally, an AST-based check); per-PR maintainer ack is high-friction with admin-bypass enabled. Carry-forward: queue infra issue against the ADR-scanner workflow.
+
+### 3.6 Parallel-session race on phase branch
+
+Two advisor sessions ran simultaneously on `phase-v1-SL-a` near the end of SL-a: one completing the Task 9 retro author commit (`ca2f84034`), one opening PR #111 + running CR triage + dispatching fix-impl-4 + raising DQ #137 + merging (`17a63356c`, `5af6a55f9`, `96cc2ade2`). The first session's retro push was rejected (phase-tip drift); recovery via `git pull --rebase` + push succeeded but the retro author session had no signal that another session was about to land 3 commits. The runlog `bm-runlog.md` could have surfaced this if either session had checked it pre-action; neither did at the relevant moments. **Fix:** advisor session-start ritual + pre-action coordination check should consult `.claude/agent-activity.json` (per `session-awareness.md`) on phase branches. Per-action gate: before any commit-and-push to a phase branch, `cat .claude/agent-activity.json` and surface any other session's `mode: write` claim.
+
+### 3.7 §G4 allowlist understaffed
 Three §G4 user-gate escalations this sub-phase, all mechanical (mirror-precedent comparison resolves all three):
 - DQ #122 fix: combined-migration-split → 3 files modified
 - DQ #132 fix: directive line-1 → 1 file
@@ -184,11 +215,12 @@ Per `feedback_retro_task_complexity_score.md` shape: `<files>/<commits>/<runtime
 | 6 | config consts + 13-key seed parity | 1 / 1 / ~10 min / ~2 min |
 | 7 | 5 ENTRY_KIND consts + registry section | 2 / 1 / ~10 min / ~2 min |
 | 8 | e2e PHASE_1_MIGRATION_COUNT bump + 8 probes | 1 / 1 / ~15 min author + 30 min validation / ~5 min |
-| 9 | retro (this) | 1 / 1 / ~30 min / 0 |
+| 9 | retro (this; original + amend) | 1 / 2 (`ca2f84034` + amend `<this>`) / ~50 min cumulative / 0 |
+| fix-impl-4 (parallel-session, PR #111 CR triage) | brief edits + e2e.rs assertions + config.rs metadata + shell quoting | 8 / 1 / ~25 min author + ~30 min validation pending CR re-review / ~10 min |
 
-**Total wall-clock:** ~36 hours wall-clock from cut (`ea322cd0a` 2026-05-03) to retro (`6757b253a` 2026-05-04 00:24 UTC), but only ~6 hours of advisor + Junior compute + ~64 min cargo recovery; remainder was wait/poll cycles + stale-cache diagnosis + user-gate windows.
+**Total wall-clock:** ~42 hours wall-clock from cut (`ea322cd0a` 2026-05-03) to retro amend (~02:30 UTC 2026-05-04, after PR #111 CR triage completed), but only ~7 hours of advisor + Junior compute + ~64 min cargo recovery + ~30 min parallel-session CR triage; remainder was wait/poll cycles + stale-cache diagnosis + user-gate windows + CR re-review wait.
 
-**Dominant cost:** Task 1's three fix-impls (~3h cycle time) + Windows stale-cache recovery (~64 min). Both promote to lessons; both have concrete fixes for next sub-phase.
+**Dominant cost:** Task 1's three fix-impls (~3h cycle time) + Windows stale-cache recovery (~64 min) + parallel-session PR #111 CR triage cycle (~30 min). All three promote to lessons; all three have concrete fixes for next sub-phase.
 
 **Cohort note:** Plan §13 had `[P]` on Tasks 4+5; cohort B ran serial-by-recovery (Task 5's §G4 clippy fix needed an out-of-band advisor-manual cycle). Not a planner miss — the cohort budget rule + §G4 routing handled it correctly.
 
@@ -204,23 +236,34 @@ To be committed at Task 9 retro ship (this commit + immediate follow-up):
 
 3. **`feedback_stale_incremental_cache_after_enum_add.md`** — Windows cargo target/ stale incremental cache after cross-cutting enum-add (3+ new variants × 5+ match sites). Symptom: laptop cargo errors with E0004/E0277 against new variants despite source files being verified-exhaustive vs phase-tip blob via md5sum, AND the same SHA workspace-check passing on CI Linux. Fix: pre-emptive `cargo clean` before phase-tip e2e on cross-cutting changes; cost is symmetric (~30 min cold rebuild now vs ~60 min stale-cache recovery later). Diagnostic: `git ls-tree origin/<branch> <file> | awk '{print $3}' | xargs -I {} git cat-file -p {} | md5sum` vs `md5sum <local-file>`.
 
+4. **`feedback_parallel_advisor_session_phase_branch_coordination.md`** — When two advisor sessions run on the same phase branch (one finishing impl/retro, one running PR/CR triage), per-action coordination via `.claude/agent-activity.json` is mandatory. Symptom: retro author push rejected; phase-tip drift caught only at push time. Fix: pre-commit-and-push gate that surfaces any other session's `mode: write` claim. Surfaced from PR #111 retro-vs-fix-impl-4 race. Generalises to: any concurrent advisor work on the same branch.
+
+5. **`feedback_adr_scanner_false_positive_arm_split.md`** — The github-actions ADR-013 red-flag scanner is regex-only and trips on every PR where an `EmergencyRemove` arm is split into sibling arms (even when both halves enumerate the variant exhaustively). Per-PR maintainer-ack is high-friction; advisor and parallel sessions both need an ack workflow. Fix categories: (a) AST-aware scanner, (b) exemption-pattern allowlist, (c) downgrade to informational on PRs into governance-v0. Surfaced from PR #107 (1×) + PR #111 (9×). Generalises to: any ADR-bound enum invariant where exhaustive matching is mandatory.
+
 ### Watch-items (promote-if-recurs)
 
-- §G4 allowlist extension proposals: directive-position, comments-only-down.sql, postgres-unsafe-enum-use-split (§3.5)
+- §G4 allowlist extension proposals: directive-position, comments-only-down.sql, postgres-unsafe-enum-use-split (§3.7)
 - Daemon-finalize-merge push skip — pursue upstream Junior daemon patch (§3.2; 13 instances now)
-- Pre-commit branch-pin canary (carry from JM-e §3.2; multi-session race still possible)
+- Pre-commit branch-pin canary (carry from JM-e §3.2; multi-session race confirmed in §3.6)
+- ADR-scanner exhaustive-match exemption rule (§3.5; 4th sub-phase recurrence)
+- Brief markdown-lint gate at brief-author time (per CR triage §2.4 — 60% of fix-impl-4 was MD031/MD022/language tags)
 
 ---
 
 ## 6. Confidence score
 
-**0.78** — Eight impl tasks shipped; three fix-impls all resolved with mechanical mirror-precedent comparison; e2e green-gate PASS (67/0/3) on phase tip `6757b253a`; all retro cross-cutting invariants hold (registry count = 38; 5 SL-a rows pending with downstream-plan citations; CaseStatus 12 variants; EXPECTED_SEED_COUNT_V1_SL = 13). Per `evaluation-calibration.md`, scores 0.85+ are rare and require no detected risk; 0.78 reflects:
+**0.72** — Eight impl tasks shipped; four fix-impls (Task 1 ×3 + PR #111 CR triage); e2e green-gate PASS (67/0/3) on phase tip `6757b253a`; all retro cross-cutting invariants hold (registry count = 38; 5 SL-a rows pending with downstream-plan citations; CaseStatus 12 variants; EXPECTED_SEED_COUNT_V1_SL = 13). Per `evaluation-calibration.md`, scores 0.85+ are rare and require no detected risk; 0.72 reflects:
 - Three Task 1 fix-impls (planner-side gap, all cleanly resolved but cumulative cost ~3h)
 - One brief-naming collision (ci-watcher-12 → wasted Junior run)
 - One stale-cache recovery (~64 min cold rebuild)
 - 13 daemon-finalize push skips (pattern is now empirical; recovery is mechanical)
+- 13 CR findings surfaced post-impl by PR #111 (60% markdown formatting class — would catch via brief-author markdown-lint gate)
+- 9× ADR-scanner false-positive recurrence (4th sub-phase)
+- Parallel-session phase-branch race (retro push rejected; recovery via rebase)
 
-The technical signal is strong (e2e PASS, all invariants hold). The process signal flagged five distinct watch-items, each with concrete forward-going fixes. SL-a met its scope (CaseStatus + grace-window scaffolding for SL-b/c/d) but the path was bumpier than JM-e's clean ship.
+The technical signal is strong (e2e PASS, all invariants hold). The process signal flagged seven distinct watch-items now, each with concrete forward-going fixes. SL-a met its scope (CaseStatus + grace-window scaffolding for SL-b/c/d) but the path was bumpier than JM-e's clean ship — and the CR cycle landed 13 findings the planner-side dogfood gate should have caught at brief-author time.
+
+**Score downgrade rationale (0.78 → 0.72):** the original 0.78 score covered the 8-impl + 3-fix-impl path that ended at `6757b253a`. The actual SL-a delivered through `c7908632d` includes a 4th fix-impl with 13 CR findings — surfacing a planner+advisor process gap (no markdown-lint at brief-author time) that the original scoring didn't account for. PR #111 is OPEN with CR re-review pending; SL-a is not strictly "shipped" until merge.
 
 ---
 
@@ -244,6 +287,17 @@ Per DQ #46 (one-issue-per-watch-item discipline):
 
 6. **Migration-plan canonical-mirror lint** (§3.1). Plan-author-time check: when a plan references a mirror precedent file, warn if the plan body doesn't enumerate all invariants from the mirror's full content. Possibly a `/brehon-clarify` extension. The most durable fix.
 
+7. **ADR red-flag scanner exhaustive-match exemption** (§3.5). The github-actions ADR-013 scanner's regex-only design produces false-positives every time an `EmergencyRemove` arm is split across sibling match arms. 4th sub-phase recurrence. Fix categories: (a) AST-aware scanner, (b) exemption-pattern allowlist for arm-split refactors, (c) downgrade to informational on PRs into governance-v0 (CR + maintainer review covers the case). Highest-leverage of the 9 pending follow-ups.
+
+8. **Parallel-session phase-branch coordination** (§3.6). Pre-commit-and-push gate that surfaces any other session's `mode: write` claim from `.claude/agent-activity.json`. Add to advisor session-start ritual + per-action coordination check. Surfaced from the PR #111 retro-vs-fix-impl-4 race.
+
+9. **Brief-author markdown-lint gate** (§2.4). 60% of fix-impl-4's CR findings were markdown formatting class (MD031, MD022, language tags). A pre-commit markdownlint pass on every brief commit would catch them at brief-author time. Either a brehon-fork hook (cheap; per-commit) or a planner subagent post-write check.
+
 ---
 
 **Sign-off pending — user gate.**
+
+## Amend log
+
+- **2026-05-04 ~02:30 UTC** — Original retro committed at `ca2f84034` (rebased to `c7908632d` after parallel-session push). Authored against pre-fix-impl-4 state ending at `6757b253a`.
+- **2026-05-04 ~09:35 UTC** — Amended this retro to add §3.5 (ADR red-flag scanner false-positive recurrence) + §3.6 (parallel-session race) + §2.4 (PR #111 + fix-impl-4 BM signals) + §7 follow-ups #7/#8/#9 + lessons #4/#5 + score downgrade (0.78 → 0.72) + tip update (`6757b253a` → `bc548db8e`). Per user direction (path A). Carry-forward retro now reflects actual SL-a delivery through fix-impl-4 + DQ #137 ci-watcher resolution + parallel-session DQ cleanup.
