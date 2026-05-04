@@ -1412,7 +1412,27 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Pushed to origin:** governance-v0 + phase-v1-SL-a both synced before handover.
 - **Next:** resume session polls #89-#94; on all-resolved, surfaces DQ pass/fail summary; on user gate, authors cohort B briefs (Tasks 4+5) using the new DQ id pre-allocation pattern (DQ #124).
 
+## bm: poll-cr — 2026-05-04T01:39:20Z
+
+- **PR:** #111
+- **head SHA:** e424fc47c
+- **CR comments seen:** 16 (2 review / 13 inline / 1 issue)
+- **Actionable findings ingested:** 13
+- **New findings this poll:** 13
+- **Counters:** critical 0 open | major 4 open | low 6 open | nit 3 open
+- **Recommendation:** request-changes
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml
+
+## bm: triage — 2026-05-04T01:42:11Z
+
+- **PR:** #111
+- **Buckets:** fix-in-pr 12 | rebut 0 | carry-forward 0 | done 0 | wont-fix 1
+- **Comment posted?** no — awaiting user approval gate
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
+
 ## bm: poll-cr — 2026-05-04T11:02:04Z
+
 - **PR:** #111
 - **head SHA:** 3583759d2 (changed since last poll: yes; from e424fc47c)
 - **CR comments seen:** 24 (5 review / 18 inline / 1 issue)
@@ -1425,6 +1445,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Notes:** Existing cr-10 remains wont-fix. No walkthrough/pre-merge findings emitted; latest CR review added low/nit residuals only.
 
 ## bm: triage — 2026-05-04T11:03:53Z
+
 - **PR:** #111
 - **Buckets:** fix-in-pr 1 | rebut 0 | carry-forward 0 | done 14 | wont-fix 3
 - **Comment posted?** yes (gh pr comment returned success)
@@ -1432,12 +1453,14 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** request-changes
 
 ## bm: cr-15 verification — 2026-05-04T11:05:33Z
+
 - **PR:** #111
 - **Finding:** cr-15 registry path mismatch
 - **Result:** already fixed on HEAD / 17a63356c; both sponsor-liability escaped + endorsement revoked rows use `crates/api/api_crud/src/governance/revoke_endorsement.rs`.
 - **YAML:** cr-15 marked done; recommendation now approve.
 
 ## bm: merge-gate — 2026-05-04T11:06:30Z
+
 - **PR:** #111 (feat(v1-SL-a): sponsor liability schema foundation)
 - **Result:** STOP — pre-merge gate failed; no merge confirmation requested.
 - **Findings YAML:** clean (0 fix-in-pr; recommendation approve).
@@ -1447,7 +1470,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Next:** resolve/ack the ADR red-flag scanner failure, then rerun /bm-merge 111 gate.
 
 ## bm: adr-red-flag-ack + merge-gate rerun — 2026-05-04T11:07:37Z
+
 - **PR:** #111
 - **ADR ack:** posted maintainer acknowledgement for latest 4 scanner flags (ADR-010 forbidden dependency references are constraint text; ADR-013 EmergencyRemove preserved).
 - **Merge gate rerun result:** STOP — findings YAML clean, DQ clean, CR poll up to date, but GitHub still reports mergeStateStatus=UNSTABLE and CI failure: Red-flag diff scan (run 25314346695).
 - **Next:** either adjust branch protection/check requirements or explicitly choose an admin-bypass merge path; scripted /bm-merge gate cannot proceed while CI is failing.
+
