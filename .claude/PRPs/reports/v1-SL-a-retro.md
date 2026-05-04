@@ -4,12 +4,13 @@
 **Branch:** `phase-v1-SL-a` (cut from `governance-v0` @ `a876a0054`)
 **Tip at retro (initial):** `6757b253a` (SL-a impl + retro author commit)
 **Tip at retro (final, post-amend):** `bc548db8e` (after PR #111 CR triage fix-impl-4 + DQ #137 ci-watcher mutation + DQ cleanup)
+**Tip at sign-off:** `790f6101d` (PR #111 squash-merge into `governance-v0`)
 **Plan:** `.claude/PRPs/plans/v1-sponsor-liability-a.plan.md`
 **Tasks shipped:** 8 impl (Tasks 0–8) + 4 fix-impls (Task 1 fix-1/2/3 + PR #111 CR triage fix-impl-4) + Task 9 (this retro)
-**PR:** #111 `phase-v1-SL-a → governance-v0` (OPEN; CodeRabbit re-review post-fix-impl-4 in progress)
+**PR:** #111 `phase-v1-SL-a → governance-v0` — **MERGED 2026-05-04 12:44 UTC** (squash by barrie-cork)
 **Started:** 2026-05-03
-**Ended:** 2026-05-04 ~02:30 UTC (CR triage cycle ongoing)
-**Wall-clock:** ~42 hours (overnight + recovery + parallel-session CR triage)
+**Ended:** 2026-05-04 12:44 UTC (PR #111 merged)
+**Wall-clock:** ~50 hours (overnight + recovery + parallel-session CR triage + CR re-review wait + merge)
 
 ---
 
@@ -263,7 +264,9 @@ To be committed at Task 9 retro ship (this commit + immediate follow-up):
 
 The technical signal is strong (e2e PASS, all invariants hold). The process signal flagged seven distinct watch-items now, each with concrete forward-going fixes. SL-a met its scope (CaseStatus + grace-window scaffolding for SL-b/c/d) but the path was bumpier than JM-e's clean ship — and the CR cycle landed 13 findings the planner-side dogfood gate should have caught at brief-author time.
 
-**Score downgrade rationale (0.78 → 0.72):** the original 0.78 score covered the 8-impl + 3-fix-impl path that ended at `6757b253a`. The actual SL-a delivered through `c7908632d` includes a 4th fix-impl with 13 CR findings — surfacing a planner+advisor process gap (no markdown-lint at brief-author time) that the original scoring didn't account for. PR #111 is OPEN with CR re-review pending; SL-a is not strictly "shipped" until merge.
+**Score downgrade rationale (0.78 → 0.72):** the original 0.78 score covered the 8-impl + 3-fix-impl path that ended at `6757b253a`. The actual SL-a delivered through `c7908632d` includes a 4th fix-impl with 13 CR findings — surfacing a planner+advisor process gap (no markdown-lint at brief-author time) that the original scoring didn't account for.
+
+**PR #111 merged 2026-05-04 12:44 UTC** (squash into `governance-v0` at `790f6101d`). SL-a is shipped. The 0.72 score holds — the merge confirms scope but doesn't retroactively fix the planner-side mirror-citation gap or the absent brief-markdown-lint gate, both of which remain forward-going work for v1-SL-b's plan-author + advisor session-start ritual.
 
 ---
 
@@ -295,9 +298,12 @@ Per DQ #46 (one-issue-per-watch-item discipline):
 
 ---
 
-**Sign-off pending — user gate.**
+## Sign-off
+
+**Signed off 2026-05-04 ~13:20 UTC** by advisor session (delegated by user during `/brehon-phase-transition v1-SL-a v1-SL-b`). PR #111 merged into `governance-v0` at `790f6101d`. All 9 forward-going follow-ups in §7 carry into v1-SL-b's advisor-context as carry-forward + watchlist + operational-rule additions. The 5 promoted lessons committed alongside this sign-off ride into v1-SL-b automatically via the `.claude/lessons/` glob in the polling loop's session-start ritual.
 
 ## Amend log
 
 - **2026-05-04 ~02:30 UTC** — Original retro committed at `ca2f84034` (rebased to `c7908632d` after parallel-session push). Authored against pre-fix-impl-4 state ending at `6757b253a`.
 - **2026-05-04 ~09:35 UTC** — Amended this retro to add §3.5 (ADR red-flag scanner false-positive recurrence) + §3.6 (parallel-session race) + §2.4 (PR #111 + fix-impl-4 BM signals) + §7 follow-ups #7/#8/#9 + lessons #4/#5 + score downgrade (0.78 → 0.72) + tip update (`6757b253a` → `bc548db8e`). Per user direction (path A). Carry-forward retro now reflects actual SL-a delivery through fix-impl-4 + DQ #137 ci-watcher resolution + parallel-session DQ cleanup.
+- **2026-05-04 ~13:20 UTC** — Sign-off amend (this commit). Header updated for PR #111 MERGED state (tip `790f6101d`, end timestamp 12:44 UTC, wall-clock ~50h). §6 confidence rationale updated to reflect merged state. Sign-off line flipped from "pending — user gate" to signed-by-advisor-with-user-delegation. No analytic content changed; structural amendment only.
