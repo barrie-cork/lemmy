@@ -72,8 +72,9 @@ Then run the lightweight code-repo subset:
 
 Smoke results:
 
-- T1: pending
-- T6: pending
-- T7: pending
-- T8: pending
+- T1: passed — pi launched on `trial/pi-coding` and loaded `lemmy-hooks.ts`.
+- T6: passed — bash firewall prompted for `git clean -f --dry-run`; accepted run was dry-run only.
+- T7: passed — pi edit created commit `c215cfa59 auto(pi): update MIGRATION_NOTES.md`.
+- T8: passed — `/skill:cargo-validate` was recognised and started; no `Unknown command` error.
+
 T7 auto-commit smoke passed — 2026-05-04
