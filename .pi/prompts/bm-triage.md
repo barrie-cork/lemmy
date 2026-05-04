@@ -1,6 +1,8 @@
 ---
-description: BM — re-classify findings into four buckets; draft digest comment; ASK before posting
-argument-hint: <PR#>
+description: |
+  BM — re-classify findings into four buckets; draft digest comment; ASK before posting
+argument-hint: |
+  <PR#>
 disable-model-invocation: true
 ---
 

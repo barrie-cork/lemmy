@@ -1,6 +1,8 @@
 ---
-description: Advisor-side post-impl, pre-merge spec-conformance check. Iterates plan §16a stories, confirms expected outputs exist on worktree branch, runs story checkpoints. Catches phantom completions before bm-merge.
-argument-hint: <phase-slug, e.g. v1-JM-e>
+description: |
+  Advisor-side post-impl, pre-merge spec-conformance check. Iterates plan §16a stories, confirms expected outputs exist on worktree branch, runs story checkpoints. Catches phantom completions before bm-merge.
+argument-hint: |
+  <phase-slug, e.g. v1-JM-e>
 ---
 
 <objective>

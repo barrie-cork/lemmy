@@ -1,6 +1,8 @@
 ---
-description: Execute a Brehon implementation plan with rigorous cargo-based validation loops
-argument-hint: <path/to/plan.md> [--base <branch>]
+description: |
+  Execute a Brehon implementation plan with rigorous cargo-based validation loops
+argument-hint: |
+  <path/to/plan.md> [--base <branch>]
 ---
 
 # Implement Plan (Brehon)

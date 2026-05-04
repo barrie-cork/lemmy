@@ -1,6 +1,8 @@
 ---
-description: Comprehensive PR code review for Brehon — cargo validation, ADR compliance, cross-cutting invariants, posts to GitHub
-argument-hint: <pr-number|pr-url> [--approve|--request-changes]
+description: |
+  Comprehensive PR code review for Brehon — cargo validation, ADR compliance, cross-cutting invariants, posts to GitHub
+argument-hint: |
+  <pr-number|pr-url> [--approve|--request-changes]
 ---
 
 # PR Code Review (Brehon)

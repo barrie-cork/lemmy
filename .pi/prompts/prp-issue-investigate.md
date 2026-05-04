@@ -1,6 +1,8 @@
 ---
-description: Investigate a Brehon GitHub issue — codebase analysis across crates/, design-doc cross-check, artifact for /prp-issue-fix
-argument-hint: <issue-number|url|"description">
+description: |
+  Investigate a Brehon GitHub issue — codebase analysis across crates/, design-doc cross-check, artifact for /prp-issue-fix
+argument-hint: |
+  <issue-number|url|"description">
 ---
 
 # Investigate Issue (Brehon)

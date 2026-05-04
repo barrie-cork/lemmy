@@ -1,6 +1,8 @@
 ---
-description: BM — push the current phase or plan branch to origin (auto, no prompt)
-argument-hint: [--force-with-lease] (rare; confirms)
+description: |
+  BM — push the current phase or plan branch to origin (auto, no prompt)
+argument-hint: |
+  [--force-with-lease] (rare; confirms)
 disable-model-invocation: true
 ---
 

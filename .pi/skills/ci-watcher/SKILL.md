@@ -1,10 +1,7 @@
 ---
 name: ci-watcher
-description: Polls a single GitHub Actions workflow run via `gh run watch --exit-status`, then MUTATES the existing `kind: "validate-pending"` DQ entry by matching `workflow_run_id` (per option 2, locked 2026-04-28). Use when a Junior task description starts with `[role:ci-watcher]`. Reads the named ci-watcher brief, runs the poll loop, mutates the entry, exits. Pinned to Haiku 4.5 — mechanical polling, no judgment, no fixes. Never invokes cargo, never edits crates/, never applies clippy auto-fixes (those are advisor §G4 classifier work). Never writes a NEW DQ entry.
-tools: Read, Edit, Write, Bash
-model: claude-haiku-4-5
-effort: low
-color: yellow
+description: |
+  Polls a single GitHub Actions workflow run via `gh run watch --exit-status`, then MUTATES the existing `kind: "validate-pending"` DQ entry by matching `workflow_run_id` (per option 2, locked 2026-04-28). Use when a Junior task description starts with `[role:ci-watcher]`. Reads the named ci-watcher brief, runs the poll loop, mutates the entry, exits. Pinned to Haiku 4.5 — mechanical polling, no judgment, no fixes. Never invokes cargo, never edits crates/, never applies clippy auto-fixes (those are advisor §G4 classifier work). Never writes a NEW DQ entry.
 ---
 
 > Pi migration note: this was ported from `.claude/agents/ci-watcher.md` so it can be loaded with `/skill:ci-watcher` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.

@@ -1,6 +1,8 @@
 ---
-description: Handover — write a resume brief for the next impl session
-argument-hint: <optional-slug, e.g. "task5-boundary" or "pre-pc-restart"> [--no-write]
+description: |
+  Handover — write a resume brief for the next impl session
+argument-hint: |
+  <optional-slug, e.g. "task5-boundary" or "pre-pc-restart"> [--no-write]
 disable-model-invocation: true
 ---
 

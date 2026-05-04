@@ -1,6 +1,8 @@
 ---
-description: Comprehensive PR review using specialized agents - comments, tests, errors, types, code quality, docs, and simplification
-argument-hint: "<pr-number> [aspects: comments|tests|errors|types|code|docs|simplify|all]"
+description: |
+  Comprehensive PR review using specialized agents - comments, tests, errors, types, code quality, docs, and simplification
+argument-hint: |
+  "<pr-number> [aspects: comments|tests|errors|types|code|docs|simplify|all]"
 ---
 
 # Comprehensive PR Review with Specialized Agents

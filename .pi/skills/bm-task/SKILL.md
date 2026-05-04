@@ -1,10 +1,7 @@
 ---
 name: bm-task
-description: Executes one Brehon Branch Manager verb (bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping) when dispatched by the advisor via Junior. Use when a Junior task description starts with `[role:bm-task]`. Reads the matching .claude/commands/bm/<verb>.md script and follows it step by step. Pinned to Haiku 4.5 — git/yq/gh ops, no heavy reasoning. Never authors implementation code; never writes plans; never opens PRs into main; never merges with open critical findings. Distinct from the existing `branch-manager` subagent (that one is for foreground impl-session use; this one is for Junior-dispatched advisor orchestration).
-tools: Read, Edit, Bash, Glob, Grep
-model: claude-haiku-4-5
-effort: low
-color: cyan
+description: |
+  Executes one Brehon Branch Manager verb (bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping) when dispatched by the advisor via Junior. Use when a Junior task description starts with `[role:bm-task]`. Reads the matching .claude/commands/bm/<verb>.md script and follows it step by step. Pinned to Haiku 4.5 — git/yq/gh ops, no heavy reasoning. Never authors implementation code; never writes plans; never opens PRs into main; never merges with open critical findings. Distinct from the existing `branch-manager` subagent (that one is for foreground impl-session use; this one is for Junior-dispatched advisor orchestration).
 ---
 
 > Pi migration note: this was ported from `.claude/agents/bm-task.md` so it can be loaded with `/skill:bm-task` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.

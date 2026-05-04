@@ -1,6 +1,8 @@
 ---
-description: Start a bounded autonomous Ralph loop scoped to a named slice of a Phase 5b plan (fork-local)
-argument-hint: <plan.md> <slice:A|B|C> [--max-iterations N]
+description: |
+  Start a bounded autonomous Ralph loop scoped to a named slice of a Phase 5b plan (fork-local)
+argument-hint: |
+  <plan.md> <slice:A|B|C> [--max-iterations N]
 ---
 
 # PRP Ralph Slice

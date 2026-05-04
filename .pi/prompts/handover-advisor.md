@@ -1,6 +1,8 @@
 ---
-description: Handover — write a resume brief for the next advisor session
-argument-hint: <optional-slug, e.g. "pre-pc-restart" or "pr92-merged"> [--no-write]
+description: |
+  Handover — write a resume brief for the next advisor session
+argument-hint: |
+  <optional-slug, e.g. "pre-pc-restart" or "pr92-merged"> [--no-write]
 disable-model-invocation: true
 ---
 

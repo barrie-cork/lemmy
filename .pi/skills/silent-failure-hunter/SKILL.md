@@ -1,8 +1,7 @@
 ---
 name: silent-failure-hunter
-description: Hunts for silent failures, inadequate error handling, and inappropriate fallbacks in code changes. Zero tolerance for swallowed errors. Use after implementing error handling, catch blocks, or fallback logic. Ensures errors are logged, surfaced to users, and actionable.
-model: sonnet
-color: red
+description: |
+  Hunts for silent failures, inadequate error handling, and inappropriate fallbacks in code changes. Zero tolerance for swallowed errors. Use after implementing error handling, catch blocks, or fallback logic. Ensures errors are logged, surfaced to users, and actionable.
 ---
 
 > Pi migration note: this was ported from `.claude/agents/silent-failure-hunter.md` so it can be loaded with `/skill:silent-failure-hunter` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.

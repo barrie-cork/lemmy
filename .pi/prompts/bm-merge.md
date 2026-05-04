@@ -1,6 +1,8 @@
 ---
-description: BM — final pre-merge gate; ASKS before gh pr merge --merge
-argument-hint: <PR#>
+description: |
+  BM — final pre-merge gate; ASKS before gh pr merge --merge
+argument-hint: |
+  <PR#>
 disable-model-invocation: true
 ---
 

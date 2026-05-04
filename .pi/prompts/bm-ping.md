@@ -1,6 +1,8 @@
 ---
-description: BM — send a Telegram notification ping for an allowed event (ASKS before sending)
-argument-hint: <event> [--message "<override>"]
+description: |
+  BM — send a Telegram notification ping for an allowed event (ASKS before sending)
+argument-hint: |
+  <event> [--message "<override>"]
 disable-model-invocation: true
 ---
 

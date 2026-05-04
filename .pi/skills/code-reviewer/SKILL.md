@@ -1,8 +1,7 @@
 ---
 name: code-reviewer
-description: Reviews code for project guideline compliance, bugs, and quality issues. Use after writing code, before commits, or before PRs. Specify files to review or defaults to unstaged git changes. High-confidence issues only (80+) to minimize noise.
-model: sonnet
-color: green
+description: |
+  Reviews code for project guideline compliance, bugs, and quality issues. Use after writing code, before commits, or before PRs. Specify files to review or defaults to unstaged git changes. High-confidence issues only (80+) to minimize noise.
 ---
 
 > Pi migration note: this was ported from `.claude/agents/code-reviewer.md` so it can be loaded with `/skill:code-reviewer` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.

@@ -1,6 +1,8 @@
 ---
-description: Run a structured coverage-questions pass on a draft brief BEFORE the planning task is queued. Pre-fills DQ entries (advisor-mode) or surfaces them to user (user-relay mode). Spec-kit-pattern adoption — gates the planning stage in advisor-orchestrator.md.
-argument-hint: <path/to/.claude/PRPs/briefs/<phase>-<role>-N.md> [--mode advisor|user-relay]
+description: |
+  Run a structured coverage-questions pass on a draft brief BEFORE the planning task is queued. Pre-fills DQ entries (advisor-mode) or surfaces them to user (user-relay mode). Spec-kit-pattern adoption — gates the planning stage in advisor-orchestrator.md.
+argument-hint: |
+  <path/to/.claude/PRPs/briefs/<phase>-<role>-N.md> [--mode advisor|user-relay]
 ---
 
 <objective>

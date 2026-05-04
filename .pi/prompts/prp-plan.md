@@ -1,6 +1,8 @@
 ---
-description: Create a Brehon-aware, Rust-appropriate implementation plan for a v0 phase or feature, keyed to the design docs and IMPLEMENTATION-PLAN-v0.md
-argument-hint: <phase number from IMPLEMENTATION-PLAN-v0.md §3 | feature description | path/to/prd>
+description: |
+  Create a Brehon-aware, Rust-appropriate implementation plan for a v0 phase or feature, keyed to the design docs and IMPLEMENTATION-PLAN-v0.md
+argument-hint: |
+  <phase number from IMPLEMENTATION-PLAN-v0.md §3 | feature description | path/to/prd>
 ---
 
 <objective>

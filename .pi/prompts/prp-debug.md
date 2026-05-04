@@ -1,6 +1,8 @@
 ---
-description: Deep root cause analysis for Brehon Rust bugs — finds the actual cause, not just symptoms
-argument-hint: <issue|error|stacktrace> [--quick]
+description: |
+  Deep root cause analysis for Brehon Rust bugs — finds the actual cause, not just symptoms
+argument-hint: |
+  <issue|error|stacktrace> [--quick]
 ---
 
 # Root Cause Analysis (Brehon)

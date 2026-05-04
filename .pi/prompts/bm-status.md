@@ -1,6 +1,8 @@
 ---
-description: BM — show current branch, unpushed commits, PR state, CR count, DQ pending
-argument-hint: (none)
+description: |
+  BM — show current branch, unpushed commits, PR state, CR count, DQ pending
+argument-hint: |
+  (none)
 disable-model-invocation: true
 ---
 

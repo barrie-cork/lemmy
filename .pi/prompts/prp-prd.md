@@ -1,6 +1,8 @@
 ---
-description: Generate a sub-PRD for a Brehon v0 feature or deviation that needs its own design document beyond what the numbered design docs already cover
-argument-hint: [feature/problem description] (blank = start with questions)
+description: |
+  Generate a sub-PRD for a Brehon v0 feature or deviation that needs its own design document beyond what the numbered design docs already cover
+argument-hint: |
+  [feature/problem description] (blank = start with questions)
 ---
 
 # Brehon Sub-PRD Generator

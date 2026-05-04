@@ -1,6 +1,8 @@
 ---
-description: Research Brehon codebase questions using parallel Explore agents — documents what exists, not what should change
-argument-hint: <question or topic> [--web] [--follow-up]
+description: |
+  Research Brehon codebase questions using parallel Explore agents — documents what exists, not what should change
+argument-hint: |
+  <question or topic> [--web] [--follow-up]
 ---
 
 # Codebase Research (Brehon)

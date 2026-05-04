@@ -1,6 +1,8 @@
 ---
-description: Implement a Brehon fix from investigation artifact — Rust code changes, cargo validation, PR, self-review
-argument-hint: <issue-number|artifact-path> [--base <branch>]
+description: |
+  Implement a Brehon fix from investigation artifact — Rust code changes, cargo validation, PR, self-review
+argument-hint: |
+  <issue-number|artifact-path> [--base <branch>]
 ---
 
 # Implement Issue (Brehon)

@@ -1,10 +1,7 @@
 ---
 name: impl-task
-description: Executes one implementation task from a Brehon sub-phase plan. Use when a Junior task description starts with `[role:impl-task]`. Reads the named plan task, reads MIRROR refs, makes the change, runs the per-task validation gate (cargo check / e2e / migration round-trip per the plan), and commits with `feat(scope): <title> (task N)` style. Pinned to Sonnet 4.6 — pattern-following from MIRROR refs, not heavy reasoning. Falls back to a clean DQ pending entry instead of guessing.
-effort: medium
-tools: Read, Edit, Write, Bash, Glob, Grep, LSP, mcp__ref-context__ref_read_url, mcp__ref-context__ref_search_documentation
-model: claude-sonnet-4-6
-color: green
+description: |
+  Executes one implementation task from a Brehon sub-phase plan. Use when a Junior task description starts with `[role:impl-task]`. Reads the named plan task, reads MIRROR refs, makes the change, runs the per-task validation gate (cargo check / e2e / migration round-trip per the plan), and commits with `feat(scope): <title> (task N)` style. Pinned to Sonnet 4.6 — pattern-following from MIRROR refs, not heavy reasoning. Falls back to a clean DQ pending entry instead of guessing.
 ---
 
 > Pi migration note: this was ported from `.claude/agents/impl-task.md` so it can be loaded with `/skill:impl-task` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.
