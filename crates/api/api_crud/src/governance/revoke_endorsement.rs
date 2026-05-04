@@ -298,10 +298,10 @@ async fn process_revocation(
     "reason": data.reason,
     "liability_chain_severed_for_cases": severed.iter().map(|c| c.0).collect::<Vec<_>>(),
   });
-  if bypass_recorded {
-    if let Some(obj) = payload.as_object_mut() {
-      obj.insert("rate_limit_bypassed".to_string(), json!(true));
-    }
+  if bypass_recorded
+    && let Some(obj) = payload.as_object_mut()
+  {
+    obj.insert("rate_limit_bypassed".to_string(), json!(true));
   }
   governance_log::append(
     &mut (&mut *conn).into(),
