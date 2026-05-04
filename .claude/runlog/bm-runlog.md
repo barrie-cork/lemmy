@@ -1629,3 +1629,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Action:** posted `@coderabbitai review` on head 7e4af57b2 (fix-impl-2).
 - **User note:** parallel session activity reported; pre-trigger check confirmed phase-v1-SL-a tip in sync local↔origin at 7e4af57b2 (no drift).
 - **Next:** wait ~5-15 min for CR; `/bm-poll-cr 111`.
+
+## bm: cr-trigger — 2026-05-04T12:39:46Z
+
+- **PR:** #111
+- **Action:** posted `@coderabbitai review` on head 020e613a0 (post pi dual-harness setup commits).
+- **Trigger source:** pi session (advisor-managed dual-harness work; not Junior/BM).
+- **Diff vs prior CR head 7e4af57b2:** +3 commits — db413f87c (pi dual-harness + hooks rename), 1f3f1ab2e (research doc), 020e613a0 (runlog pass-through). No code changes; docs/config only.
+- **Next:** wait ~5-15 min for CR; `/bm-poll-cr 111`.
