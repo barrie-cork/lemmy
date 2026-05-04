@@ -149,6 +149,7 @@ use lemmy_api_crud::{
     create_endorsement::create_endorsement,
     create_report::create_report,
     request_appeal::request_appeal,
+    revoke_endorsement::revoke_endorsement,
   },
   multi_community::{
     create::create_multi_community,
@@ -521,6 +522,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .wrap(rate_limit.post())
           .route("/report", post().to(create_report))
           .route("/endorsement", post().to(create_endorsement))
+          .route("/endorsement/revoke", post().to(revoke_endorsement))
           .route("/appeal", post().to(request_appeal))
           .route("/case", get().to(get_case))
           .route("/cases", get().to(list_cases))
