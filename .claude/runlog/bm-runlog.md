@@ -1637,3 +1637,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Trigger source:** pi session (advisor-managed dual-harness work; not Junior/BM).
 - **Diff vs prior CR head 7e4af57b2:** +3 commits — db413f87c (pi dual-harness + hooks rename), 1f3f1ab2e (research doc), 020e613a0 (runlog pass-through). No code changes; docs/config only.
 - **Next:** wait ~5-15 min for CR; `/bm-poll-cr 111`.
+
+## bm: poll-cr — 2026-05-04T12:41:30Z
+
+- **PR:** #111
+- **head SHA:** 8e3c1d336 (advanced from 7e4af57b2 via parallel session: db413f87c, 1f3f1ab2e, 020e613a0, 8e3c1d336 — pi/research/runlog scaffolding only; no changes to crates/migrations/policy)
+- **CR comments seen:** 80 (8 review / 67 inline / 5 issue)
+- **Actionable findings ingested:** 67 (no new since previous poll)
+- **New findings this poll:** 0
+- **Findings addressed since last poll (now done):** 4 — cr-64, cr-65, cr-66, cr-67 → 7e4af57b2
+- **Counters:** critical 0/2/0 | major 0/8/0 (+27 carry-forward) | medium 0/0/0 | low 0/12/0 (+13 carry-forward) | nit 0/2/0 (wont-fix: 3)
+- **Recommendation:** approve — zero fix-in-pr remaining
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (109552 bytes)
+- **Notes:** CR has not yet posted findings on the parallel-session commits db413f87c..8e3c1d336 (~5 min after the second @coderabbitai review trigger at 12:39Z); CR may still be processing OR may yield additional findings on the new dual-harness/research files. Re-poll before `/bm-merge` to confirm.
