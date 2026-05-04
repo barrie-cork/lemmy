@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 145,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-04T18:50:49Z",
+      "question": "Did cargo-validate-workspace pass for sl-b-impl-2 (revoke_endorsement handler)?",
+      "options": [
+        "(A) pass \u2014 advance to bm-task",
+        "(B) fail \u2014 advisor \u00a7G4 triage"
+      ],
+      "context": "Task 2 committed revoke_endorsement handler (318 lines) + mod.rs wiring and pushed to worker branch. Workspace-check workflow triggered on push.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "workflow_run_id": 25337115742,
+      "branch": "junior/role-impl-task-sl-b-impl-2-see-claude-prps-briefs-sl-b-impl-2-md-118",
+      "phase_task": "sl-b-impl-2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null
+    }
+  ],
   "resolved": [
     {
       "id": 144,
