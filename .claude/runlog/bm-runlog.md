@@ -1411,3 +1411,22 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - 6 ci-watchers running #89-#94; expected to resolve within minutes.
 - **Pushed to origin:** governance-v0 + phase-v1-SL-a both synced before handover.
 - **Next:** resume session polls #89-#94; on all-resolved, surfaces DQ pass/fail summary; on user gate, authors cohort B briefs (Tasks 4+5) using the new DQ id pre-allocation pattern (DQ #124).
+
+## bm: poll-cr — 2026-05-04T01:39:20Z
+
+- **PR:** #111
+- **head SHA:** e424fc47c
+- **CR comments seen:** 16 (2 review / 13 inline / 1 issue)
+- **Actionable findings ingested:** 13
+- **New findings this poll:** 13
+- **Counters:** critical 0 open | major 4 open | low 6 open | nit 3 open
+- **Recommendation:** request-changes
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml
+
+## bm: triage — 2026-05-04T01:42:11Z
+
+- **PR:** #111
+- **Buckets:** fix-in-pr 12 | rebut 0 | carry-forward 0 | done 0 | wont-fix 1
+- **Comment posted?** no — awaiting user approval gate
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
