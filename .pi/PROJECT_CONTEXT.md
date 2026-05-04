@@ -127,3 +127,16 @@ For test fixtures, follow the pool/conn/`LemmyResult` pattern in the
 - Do not auto-promote anything to user-scope (`~/.claude/` or `~/.pi/`).
 - Do not enable `context-workflow`, `pi-goal`, or `pi-ralph-wiggum`-style
   autonomous loops without explicit user approval per turn.
+
+## Setup decisions log (do not re-litigate)
+
+Dual-harness baseline locked in 2026-05-04. Future pi sessions: take these as
+given; surface a new ADR-style note if you genuinely need to revisit them.
+
+| Decision | Rationale | Reference |
+| :--- | :--- | :--- |
+| `AGENTS.md` is the pi entry point at repo root; `CLAUDE.md` is Claude Code's | Empirical probe confirmed pi loads `AGENTS.md` and ignores `CLAUDE.md` when both exist at the same root. Clean dual-harness isolation, no `--no-context-files` workaround needed. | Commit `db413f87c`; phd-vault `PI_QUIRKS.md §17` |
+| `.pi/hook-scripts/` (not `.pi/hooks/`) | Pi renamed hooks to extensions; a literal `.pi/hooks/` dir triggers a startup warning regardless of contents. | Commit `db413f87c` |
+| Auto-commit per edit (`auto(pi): update <basename>`) is intentional | `lemmy-hooks.ts` `tool_result` handler stages and commits each successful pi `edit`/`write` to a single file. Skip-fragments at lines 41–51; cr-24/cr-67 hardening on PR #111. To bypass for batch work, comment out the handler block. | `.pi/extensions/lemmy-hooks.ts:299-353` |
+| `raw-paste` extension enabled user-scope | Lets `/paste` arm a one-shot raw paste so multi-line Rust compiler errors stay editable. Not in repo — lives in `~/.pi/agent/settings.json`. | User-scope only |
+| Cargo work goes through `scripts/brehon/cargo-*.sh` wrappers | Uniform toolchain pinning + output capture across both harnesses; matches `.claude/rules/no-cargo-output-paste.md` discipline. | See cargo table above |
