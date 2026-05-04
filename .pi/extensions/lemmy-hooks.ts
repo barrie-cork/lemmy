@@ -1,11 +1,19 @@
 /**
  * Lemmy/Brehon project hooks for pi-coding.
  *
- * Code-repo profile: preserve Claude support, add pi-only guardrails.
- * - inject .pi/PROJECT_CONTEXT.md plus a rule-file index into the system prompt
- * - block or ask before destructive bash commands
- * - auto-commit successful edit/write tool changes only for the touched file
- * - remind after several edits without a readback
+ * Dual-harness profile: preserve Claude Code/Junior assets, but expose their
+ * useful guardrails to pi.
+ *
+ * Provides:
+ * - system-prompt context from .pi/PROJECT_CONTEXT.md
+ * - .claude/rules index injection
+ * - pre-phase audit reminder from the existing Claude hook
+ * - DQ/task-hopper coordination-state injection
+ * - destructive bash firewall
+ * - Junior worktree guard via copied .pi/hooks/worktree-guard.sh
+ * - observation shadow telemetry via copied .pi/hooks/observation-capture.sh
+ * - auto-commit on successful edit/write
+ * - warn-only retro nudge on shutdown
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -14,6 +22,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const PI_HOOKS_DIR = path.join(REPO_ROOT, ".pi", "hooks");
 
 const BASH_BLOCKLIST = [
   "rm -rf",
@@ -36,11 +45,16 @@ const AUTO_COMMIT_SKIP_FRAGMENTS = [
   "/dist/",
   "/build/",
   "/.DS_Store",
+  "/.pi/sessions/",
+  "/.pi/tmp/",
+  "/.pi/logs/",
 ];
 
 const EDIT_READBACK_THRESHOLD = 5;
 
-function safeNotify(ctx: any, msg: string, level: "info" | "warning" | "error" = "info") {
+type NotifyLevel = "info" | "warning" | "error";
+
+function safeNotify(ctx: any, msg: string, level: NotifyLevel = "info") {
   try {
     ctx?.ui?.notify?.(msg, level);
   } catch {
@@ -69,7 +83,7 @@ function readIfExists(filePath: string): string {
 }
 
 function shouldSkipAutoCommit(filePath: string): boolean {
-  const normalized = filePath.startsWith("/") ? filePath : path.join(REPO_ROOT, filePath);
+  const normalized = path.resolve(REPO_ROOT, filePath);
   const withSlashes = normalized.replaceAll(path.sep, "/");
   return AUTO_COMMIT_SKIP_FRAGMENTS.some((fragment) => withSlashes.includes(fragment));
 }
@@ -91,16 +105,125 @@ async function confirmDangerousBash(command: string, ctx: any): Promise<{ block:
   return undefined;
 }
 
+function piToolToClaudeTool(toolName: string): string {
+  const map: Record<string, string> = {
+    bash: "Bash",
+    edit: "Edit",
+    write: "Write",
+    read: "Read",
+  };
+  return map[toolName] ?? toolName;
+}
+
+function claudeCompatibleInput(event: { toolName: string; input: unknown }, cwd: string) {
+  const input = (event.input ?? {}) as Record<string, unknown>;
+  const toolInput: Record<string, unknown> = { ...input };
+
+  // Claude hooks historically use file_path; pi tools use path.
+  if (typeof input.path === "string" && typeof toolInput.file_path !== "string") {
+    toolInput.file_path = input.path;
+  }
+
+  return {
+    cwd,
+    tool_name: piToolToClaudeTool(event.toolName),
+    tool_input: toolInput,
+  };
+}
+
+function runHookScript(scriptName: string, payload?: unknown, timeout = 5_000) {
+  const scriptPath = path.join(PI_HOOKS_DIR, scriptName);
+  if (!fs.existsSync(scriptPath)) return { status: 0, stdout: "", stderr: "" };
+
+  const res = spawnSync("bash", [scriptPath], {
+    cwd: REPO_ROOT,
+    input: payload === undefined ? undefined : JSON.stringify(payload),
+    encoding: "utf8",
+    timeout,
+  });
+
+  return {
+    status: res.status ?? 0,
+    stdout: res.stdout ?? "",
+    stderr: res.stderr ?? "",
+  };
+}
+
+function parseHookJson(stdout: string): any | undefined {
+  const trimmed = stdout.trim();
+  if (!trimmed.startsWith("{")) return undefined;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
+function extractAdditionalContext(stdout: string): string {
+  const parsed = parseHookJson(stdout);
+  return parsed?.hookSpecificOutput?.additionalContext ?? "";
+}
+
+function worktreeGuardDecision(stdout: string): { block: true; reason: string } | undefined {
+  const parsed = parseHookJson(stdout);
+  const out = parsed?.hookSpecificOutput;
+  if (out?.permissionDecision === "deny") {
+    return { block: true, reason: out.permissionDecisionReason || "Blocked by worktree-guard" };
+  }
+  return undefined;
+}
+
+function coordinationStateSummary(): string {
+  const parts: string[] = [];
+  const dqPath = path.join(REPO_ROOT, ".claude", "decision-queue.json");
+  const hopperPath = path.join(REPO_ROOT, ".claude", "task-hopper.json");
+
+  try {
+    if (fs.existsSync(dqPath)) {
+      const dq = JSON.parse(fs.readFileSync(dqPath, "utf8"));
+      const pending = Array.isArray(dq.pending) ? dq.pending : [];
+      if (pending.length > 0) {
+        const ids = pending.slice(0, 3).map((p: any) => `#${p?.id ?? "?"}`).join(", ");
+        const more = pending.length <= 3 ? "" : ` (+${pending.length - 3} more)`;
+        parts.push(`DQ pending: ${pending.length} [${ids}${more}]`);
+      }
+    }
+  } catch {
+    // stay silent on malformed transient coordination files
+  }
+
+  try {
+    if (fs.existsSync(hopperPath)) {
+      const hopper = JSON.parse(fs.readFileSync(hopperPath, "utf8"));
+      const tasks = Array.isArray(hopper.tasks) ? hopper.tasks : [];
+      const inProgress = tasks.filter((t: any) => t?.status === "in_progress");
+      const escalated = tasks.filter((t: any) => t?.status === "escalated");
+      if (inProgress.length > 0) parts.push(`hopper in_progress: ${inProgress.length} [${inProgress.slice(0, 3).map((t: any) => t?.id ?? "?").join(", ")}]`);
+      if (escalated.length > 0) parts.push(`hopper escalated: ${escalated.length} [${escalated.slice(0, 3).map((t: any) => t?.id ?? "?").join(", ")}]`);
+    }
+  } catch {
+    // stay silent on malformed transient coordination files
+  }
+
+  return parts.join(" | ");
+}
+
 export default function lemmyHooks(pi: ExtensionAPI) {
   let projectContext = "";
   let ruleFiles: string[] = [];
+  let prePhaseReminder = "";
   let editsSinceRead = 0;
 
   pi.on("session_start", async (_event, ctx) => {
     try {
       projectContext = readIfExists(path.join(REPO_ROOT, ".pi", "PROJECT_CONTEXT.md"));
       ruleFiles = findMarkdownFiles(path.join(REPO_ROOT, ".claude", "rules"));
-      if (ruleFiles.length > 0) safeNotify(ctx, `Found ${ruleFiles.length} .claude/rules file(s)`, "info");
+      prePhaseReminder = extractAdditionalContext(runHookScript("pre-phase-audit.sh", undefined, 10_000).stdout);
+
+      const loaded: string[] = [];
+      if (ruleFiles.length > 0) loaded.push(`${ruleFiles.length} rule index entries`);
+      if (prePhaseReminder) loaded.push("pre-phase audit reminder");
+      if (loaded.length > 0) safeNotify(ctx, `lemmy-hooks loaded: ${loaded.join(", ")}`, "info");
     } catch (err) {
       console.error("[lemmy-hooks] session_start failed:", err);
     }
@@ -110,9 +233,11 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     try {
       const additions: string[] = [];
 
-      if (projectContext) {
-        additions.push(`## Pi Project Context\n\n${projectContext}`);
-      }
+      if (projectContext) additions.push(`## Pi Project Context\n\n${projectContext}`);
+      if (prePhaseReminder) additions.push(`## Pre-Phase Audit Reminder\n\n${prePhaseReminder}`);
+
+      const coord = coordinationStateSummary();
+      if (coord) additions.push(`## Coordination State\n\n${coord}`);
 
       if (ruleFiles.length > 0) {
         additions.push(
@@ -132,10 +257,21 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("tool_call", async (event, ctx) => {
     try {
-      if (event.toolName !== "bash") return undefined;
-      const command = (event.input as any)?.command;
-      if (typeof command !== "string") return undefined;
-      return await confirmDangerousBash(command, ctx);
+      if (event.toolName === "bash") {
+        const command = (event.input as any)?.command;
+        if (typeof command === "string") {
+          const firewall = await confirmDangerousBash(command, ctx);
+          if (firewall) return firewall;
+        }
+      }
+
+      if (event.toolName === "bash" || event.toolName === "edit" || event.toolName === "write") {
+        const guard = runHookScript("worktree-guard.sh", claudeCompatibleInput(event, ctx.cwd));
+        const decision = worktreeGuardDecision(guard.stdout);
+        if (decision) return decision;
+      }
+
+      return undefined;
     } catch (err) {
       console.error("[lemmy-hooks] tool_call failed:", err);
       return undefined;
@@ -163,6 +299,8 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   pi.on("tool_result", async (event, ctx) => {
     try {
       const tool = event.toolName;
+
+      runHookScript("observation-capture.sh", claudeCompatibleInput({ toolName: tool, input: event.input }, ctx.cwd));
 
       if (tool === "read") {
         editsSinceRead = 0;
@@ -194,6 +332,17 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     } catch (err) {
       console.error("[lemmy-hooks] tool_result failed:", err);
       return undefined;
+    }
+  });
+
+  pi.on("session_shutdown", async (_event, ctx) => {
+    try {
+      const retro = runHookScript("retro-check.sh", undefined, 10_000);
+      if (retro.status === 2 && retro.stderr.trim()) {
+        safeNotify(ctx, `Retro reminder (warn-only in pi): ${retro.stderr.trim().slice(0, 500)}`, "warning");
+      }
+    } catch (err) {
+      console.error("[lemmy-hooks] session_shutdown failed:", err);
     }
   });
 }
