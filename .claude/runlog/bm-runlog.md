@@ -1622,3 +1622,10 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - bash -n adr-compliance.sh: OK; scanner clean against current head diff.
   - cr-66 negative test (nested crate manifest with forbidden keycloak): correctly flagged.
   - tsc --noEmit on .pi/extensions: OK.
+
+## bm: cr-trigger — 2026-05-04T12:36:57Z
+
+- **PR:** #111
+- **Action:** posted `@coderabbitai review` on head 7e4af57b2 (fix-impl-2).
+- **User note:** parallel session activity reported; pre-trigger check confirmed phase-v1-SL-a tip in sync local↔origin at 7e4af57b2 (no drift).
+- **Next:** wait ~5-15 min for CR; `/bm-poll-cr 111`.
