@@ -1,0 +1,15 @@
+{
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
+  "defaultThinkingLevel": "medium",
+  "skills": [
+    "../.claude/skills"
+  ],
+  "prompts": ["./prompts"],
+  "extensions": [
+    "./extensions/lemmy-hooks.ts"
+  ],
+  "enableSkillCommands": true,
+  "compaction": { "enabled": true, "keepRecentTokens": 30000 },
+  "shellCommandPrefix": "set -o pipefail"
+}

@@ -12,6 +12,10 @@ docker/*.sql.xz
 .idea
 .vscode
 
+# macOS noise
+.DS_Store
+**/.DS_Store
+
 # local build files
 target
 env_setup.sh
@@ -82,3 +86,13 @@ migrations/.diesel_lock
 
 # Local project-memory MCP SQLite store (advisor-laptop session-only).
 .project-memory/
+
+# pi-coding per-machine/runtime state (stable .pi config is committed)
+.pi/sessions/
+.pi/tmp/
+.pi/logs/
+.pi/*.log
+.pi/settings.local.json
+.pi/extensions/*.js
+.pi/extensions/*.js.map
+.pi/extensions/*.d.ts
