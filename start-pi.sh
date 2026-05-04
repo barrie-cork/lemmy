@@ -1,5 +1,5 @@
 #!/bin/bash
-# start-pi.sh — launch pi-coding in this repo.
+# start-pi.sh — launch pi-coding in this repo. ./start-pi.sh
 # Forces cwd to repo root and adds project scripts to PATH if present.
 
 cd "$(dirname "$0")"
