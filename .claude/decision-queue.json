@@ -14,12 +14,14 @@
         "cargo clippy --workspace --features full --no-deps -- -D warnings",
         "cargo test --no-run -p lemmy_server --test e2e"
       ],
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "error: this `if` statement can be collapsed\n   --> crates/api/api_crud/src/governance/revoke_endorsement.rs:301:3\n    |\n301 |   if bypass_recorded {\n302 |   | if let Some(obj) = payload.as_object_mut() {\n303 |   | | obj.insert(\"rate_limit_bypassed\".to_string(), json!(true));\n304 |   | | }\n305 |   | }\n    | |___^\n\nhelp: collapse nested if block\n    |\n301 ~ if bypass_recorded\n302 ~   && let Some(obj) = payload.as_object_mut() {\n303 |       obj.insert(\"rate_limit_bypassed\".to_string(), json!(true));\n304 ~   }\n\nerror: could not compile `lemmy_api_crud` (lib) due to 1 previous error\n\nProcess completed with exit code 101.",
+      "failed_jobs": [
+        "cargo clippy workspace + features full"
+      ],
+      "answer": "Workflow run 25338856985 on junior/role-impl-task-sl-b-fix-impl-1-see-claude-prps-briefs-sl-b-fix-impl-1-md-120 completed with conclusion=failure. Clippy error at revoke_endorsement.rs:301 \u2014 nested if statement can be collapsed (clippy::collapsible-if). Stays in pending[] for advisor \u00a7G4 triage.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-04T19:47:26.283108+00:00"
     },
     {
       "id": 145,
