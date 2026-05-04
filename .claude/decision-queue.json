@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 149,
       "from": "advisor",
@@ -15,16 +16,14 @@
         "cargo clippy --workspace --features full --no-deps -- -D warnings",
         "cargo test --no-run -p lemmy_server --test e2e"
       ],
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "Workflow run 25346692356 on junior/advisor-sl-b-tests-4-12 completed with conclusion=success. All validation jobs passed: cargo check, cargo clippy, cargo test --no-run completed in 28m4s.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-04T22:49:16.020366+00:00",
       "context": "Advisor-direct authoring of plan §13 Tasks 4-12 (9 e2e tests for revoke_endorsement) bundled into a single commit on junior/advisor-sl-b-tests-4-12 to dodge PMD #117 (Junior workers hang on Edit calls into the now-11910-line e2e.rs). Laptop pre-validation passed all three commands (cargo check 2m03s, clippy 2m09s, test --no-run 2m37s) before push. ci-watcher poll of GH workspace-check is the canonical PR evidence."
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 144,
       "from": "impl",
