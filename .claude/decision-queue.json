@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 144,
       "from": "impl",
@@ -14,15 +15,13 @@
         "cargo clippy --workspace --features full --no-deps -- -D warnings",
         "cargo test --no-run -p lemmy_server --test e2e"
       ],
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
-  "resolved": [
+      "answer": "Workflow run 25331647761 on junior/role-impl-task-sl-b-impl-1-see-claude-prps-briefs-sl-b-impl-1-md-116 completed with conclusion=success.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-04T17:22:35.425486+00:00"
+    },
     {
       "id": 137,
       "from": "impl",
