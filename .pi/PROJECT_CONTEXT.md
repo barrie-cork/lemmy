@@ -39,3 +39,91 @@ For pi sessions:
 - Treat Claude/Junior orchestration docs as optional reference material, not mandatory foreground workflow.
 - Use `.claude/rules/*.md` only when a task clearly touches the rule's topic.
 - Do not invoke or emulate Junior subagents unless explicitly requested.
+- Do NOT read root `CLAUDE.md` unless explicitly asked. `AGENTS.md` is the pi entry point; pi prefers it over `CLAUDE.md` (verified 2026-05-04).
+
+## Pi session Rust quick-reference
+
+Pi sessions optimise for short context windows and mechanical loops. The four-role
+Junior model in `.claude/` does not apply here — but the cargo wrappers under
+`scripts/brehon/` and the lessons under `.claude/lessons/` ARE shared infrastructure
+and should be used.
+
+### Cargo commands (always via wrappers, never raw `cargo`)
+
+The wrappers under `scripts/brehon/cargo-*.sh` (mac/Linux) and `.bat` (Windows)
+print `TOOLCHAIN_OK` + version, set repo root, and pass `$@` through. They exist
+so output capture and toolchain pinning are uniform across both harnesses.
+
+| Task                          | Command                                                                  |
+| :---------------------------- | :----------------------------------------------------------------------- |
+| Fast type-check, one crate    | `scripts/brehon/cargo-check.sh -p <crate>`                               |
+| Type-check workspace + feats  | `scripts/brehon/cargo-check.sh --workspace --features full`              |
+| Clippy, one crate             | `scripts/brehon/cargo-clippy.sh -p <crate> --no-deps -- -D warnings`     |
+| Clippy, workspace             | `scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings` |
+| Unit tests, one crate         | `scripts/brehon/cargo-test.sh -p <crate> --lib`                          |
+| e2e integration tests         | `scripts/brehon/cargo-test.sh --test e2e -p lemmy_server`                |
+| Format check                  | `cargo fmt -- --check` (no wrapper yet; add only if churn justifies)     |
+
+Rules:
+
+- **Always pass scope flags** (`-p <crate>` or `--workspace`). The wrappers
+  intentionally do NOT default to `--workspace` — see
+  `.claude/lessons/feedback_wrapper_script_flag_silence.md`.
+- **Never combine `-p <crate>` with `--features full`** unless the crate
+  defines `full` itself (see `feedback_features_full_p_crate_incompatible.md`).
+- **Always `--no-deps` on clippy** to suppress external-crate noise.
+- **Prefer `cargo check` to `cargo build`** during iteration; `build` only on
+  user request or pre-PR.
+- **Heavy validation belongs on GH Actions** (Shape G) not the laptop — see
+  `.github/workflows/cargo-validate-*.yml`.
+
+### Output discipline (critical for pi context windows)
+
+Per `.claude/rules/no-cargo-output-paste.md`: do NOT paste raw cargo output
+into the conversation. The wrappers + `pi-rtk-optimizer` filter noise, but the
+real win is to redirect to a log and read only the tail:
+
+```bash
+scripts/brehon/cargo-check.sh -p lemmy_api > .pi/cargo-check-lemmy_api.log 2>&1
+# then: read tail-50, or grep for "error\[" / "warning:"
+```
+
+For deep error inspection, open the log via `/readfiles .pi/<file>.log` rather
+than echoing it to chat.
+
+### Error-handling convention
+
+Brehon code uses `LemmyResult<T>` (alias for `Result<T, LemmyError>`) end-to-end.
+New code should:
+
+- Return `LemmyResult<T>` from public fn signatures.
+- Propagate with `?`; convert foreign errors via `From` impls already in
+  `crates/utils/src/error.rs`.
+- Never `unwrap()` or `expect()` outside tests — surface via `LemmyError` so
+  the API layer renders a structured response.
+
+For test fixtures, follow the pool/conn/`LemmyResult` pattern in the
+`test-write` skill (`.claude/skills/test-write/SKILL.md`).
+
+### Pi-specific tactics for Rust pain points
+
+- **Borrow / lifetime errors**: open the full owning struct with `/readfiles
+  crates/<crate>/src/<file>.rs` BEFORE proposing a fix. Lifetime errors are
+  context-dependent; a paraphrased error site is rarely enough.
+- **Trait-bound errors**: read the trait definition AND every `impl` for the
+  concrete type. `rg "impl .* for <Type>"` first, then read the hits.
+- **Schema/migration changes**: commit and apply the Diesel migration BEFORE
+  generating Rust schema types. The two must round-trip; a half-applied
+  migration produces phantom errors.
+- **Refactors crossing crate boundaries**: stop and ask the user for a plan
+  file under `.claude/PRPs/plans/`. The "no Rust without a plan" rule applies
+  to pi sessions too — that's a Brehon hard constraint, not a Claude-only one.
+
+### What pi sessions do NOT do
+
+- Do not invoke or emulate Junior subagents, BM verbs, or advisor polling.
+- Do not write to `.claude/decision-queue.json`, `.claude/runlog/`, briefs,
+  retros, or Junior daemon state.
+- Do not auto-promote anything to user-scope (`~/.claude/` or `~/.pi/`).
+- Do not enable `context-workflow`, `pi-goal`, or `pi-ralph-wiggum`-style
+  autonomous loops without explicit user approval per turn.
