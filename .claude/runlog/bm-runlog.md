@@ -1411,3 +1411,43 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - 6 ci-watchers running #89-#94; expected to resolve within minutes.
 - **Pushed to origin:** governance-v0 + phase-v1-SL-a both synced before handover.
 - **Next:** resume session polls #89-#94; on all-resolved, surfaces DQ pass/fail summary; on user gate, authors cohort B briefs (Tasks 4+5) using the new DQ id pre-allocation pattern (DQ #124).
+
+## bm: poll-cr — 2026-05-04T11:02:04Z
+- **PR:** #111
+- **head SHA:** 3583759d2 (changed since last poll: yes; from e424fc47c)
+- **CR comments seen:** 24 (5 review / 18 inline / 1 issue)
+- **Actionable findings ingested:** 18 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 5 (cr-14..cr-18)
+- **Findings addressed since last poll:** 12 (17a63356c: cr-1..cr-9, cr-11..cr-13)
+- **Counters:** critical 0/0/0 | major 0/4/0 | medium 0/0/0 | low 3/6/0 | nit 2/2/0 (wont-fix: 1)
+- **Recommendation:** request-changes (unchanged; run /bm-triage #111 to promote residual low/nit)
+- **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (30441 bytes)
+- **Notes:** Existing cr-10 remains wont-fix. No walkthrough/pre-merge findings emitted; latest CR review added low/nit residuals only.
+
+## bm: triage — 2026-05-04T11:03:53Z
+- **PR:** #111
+- **Buckets:** fix-in-pr 1 | rebut 0 | carry-forward 0 | done 14 | wont-fix 3
+- **Comment posted?** yes (gh pr comment returned success)
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
+
+## bm: cr-15 verification — 2026-05-04T11:05:33Z
+- **PR:** #111
+- **Finding:** cr-15 registry path mismatch
+- **Result:** already fixed on HEAD / 17a63356c; both sponsor-liability escaped + endorsement revoked rows use `crates/api/api_crud/src/governance/revoke_endorsement.rs`.
+- **YAML:** cr-15 marked done; recommendation now approve.
+
+## bm: merge-gate — 2026-05-04T11:06:30Z
+- **PR:** #111 (feat(v1-SL-a): sponsor liability schema foundation)
+- **Result:** STOP — pre-merge gate failed; no merge confirmation requested.
+- **Findings YAML:** clean (0 fix-in-pr; recommendation approve).
+- **DQ pending mentioning PR:** 0.
+- **CR re-poll since last commit:** up to date (no head commits since last_poll_at).
+- **Blocking gates:** mergeStateStatus=UNSTABLE; CI failure: Red-flag diff scan (run 25314346695).
+- **Next:** resolve/ack the ADR red-flag scanner failure, then rerun /bm-merge 111 gate.
+
+## bm: adr-red-flag-ack + merge-gate rerun — 2026-05-04T11:07:37Z
+- **PR:** #111
+- **ADR ack:** posted maintainer acknowledgement for latest 4 scanner flags (ADR-010 forbidden dependency references are constraint text; ADR-013 EmergencyRemove preserved).
+- **Merge gate rerun result:** STOP — findings YAML clean, DQ clean, CR poll up to date, but GitHub still reports mergeStateStatus=UNSTABLE and CI failure: Red-flag diff scan (run 25314346695).
+- **Next:** either adjust branch protection/check requirements or explicitly choose an admin-bypass merge path; scripted /bm-merge gate cannot proceed while CI is failing.

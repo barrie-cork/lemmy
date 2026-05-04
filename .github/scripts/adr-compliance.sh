@@ -28,13 +28,28 @@ added_lines() {
   grep -E '^\+[^+]' "$DIFF" | sed 's/^+//' || true
 }
 
+# Print added lines for files where forbidden dependency references would be
+# executable/configuration scope rather than policy prose. This intentionally
+# excludes PR templates, .claude/.pi runbooks, and design docs where the same
+# terms often appear in "do not add Keycloak/OpenFGA/Vault" guardrails.
+added_dependency_surface_lines() {
+  awk '
+    /^\+\+\+ b\// {
+      file = substr($0, 7)
+      active = (file ~ /(^Cargo\.(toml|lock)$|^crates\/|^migrations\/|^docker\/|^docker-compose|^\.github\/workflows\/|^scripts\/|package(-lock)?\.json$|pnpm-lock\.yaml$|yarn\.lock$)/)
+      next
+    }
+    active && /^\+[^+]/ { sub(/^\+/, ""); print }
+  ' "$DIFF" || true
+}
+
 # 1. ADR-010: v2-scope dependencies forbidden in v0.
 # Use an identifier-boundary regex rather than \b — underscore counts as a word
 # character in ERE, so \bopenfga\b would miss `openfga_rs`, `openfga-sdk`, etc.
 # The pattern [^[:alnum:]_]|^ before and [^[:alnum:]]|$ after matches the start
-# or end of an identifier in typical code contexts.
+# or end of an identifier in typical code/config contexts.
 for term in keycloak openfga vault hsm kms; do
-  hits=$(added_lines | grep -iE "(^|[^[:alnum:]_])${term}([^[:alnum:]]|$)" || true)
+  hits=$(added_dependency_surface_lines | grep -iE "(^|[^[:alnum:]_])${term}([^[:alnum:]]|$)" || true)
   if [ -n "$hits" ]; then
     emit "Forbidden v2 dependency reference: \`${term}\`" "ADR-010 (v0 scope, v2 hardening)" "$hits"
   fi
@@ -83,7 +98,16 @@ wild=$(awk '
 if [ -n "$wild" ]; then
   emit "Possible non-exhaustive match on \`CaseStatus\` (wildcard \`_ =>\` within 40 lines of a \`match case.status\` / \`CaseStatus\`)" "ADR-013 (\`EmergencyRemove\` must be handled explicitly)" "$wild"
 fi
-removed_emergency=$(grep -E '^-[^-].*CaseStatus::EmergencyRemove' "$DIFF" || true)
+removed_emergency=$(awk '
+  function flush_file() {
+    if (removed != "" && added == 0) printf "%s", removed
+    removed = ""; added = 0
+  }
+  /^diff --git / { flush_file(); next }
+  /^-[^-].*CaseStatus::EmergencyRemove/ { removed = removed $0 "\n" }
+  /^\+[^+].*CaseStatus::EmergencyRemove/ { added = 1 }
+  END { flush_file() }
+' "$DIFF" || true)
 if [ -n "$removed_emergency" ]; then
   emit "Removal of \`CaseStatus::EmergencyRemove\` reference" "ADR-013 (variant is mandatory)" "$removed_emergency"
 fi
