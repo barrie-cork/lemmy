@@ -1,30 +1,25 @@
-# PI_AUDIT_REPORT — Lemmy/Brehon
+# Pi Best-Practices Audit Report
 
+Repository: `/Users/barrie/Developer/lemmy`
 Date: 2026-05-04
-Repo: `/Users/barrie/Developer/lemmy`
-Branch: `trial/pi-coding`
+Pi version: `0.72.1`
+Pi docs: `/opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/docs`
 
 ## Summary
 
-Audit complete: 1 low-severity finding only; no blocking `DOC_DRIFT`, `EXAMPLE_DRIFT`, or medium/high findings remain.
+- Total findings: 1
+- High severity: 0
+- Medium severity: 0
+- Low severity: 1
+- Blocking findings: 0
+
+No high- or medium-severity findings were found. Interactive review was skipped per the audit procedure.
 
 ## Findings
 
-### 1. UNDERUSE / low
+### 1. UNDERUSE — low
 
-- **Path:** `.pi/extensions/lemmy-hooks.ts`
-- **Issue:** Extension registers no commands, tools, or providers; it currently uses event handlers only.
-- **Reference:** Pi `extensions.md` documents `pi.registerCommand()`, `pi.registerTool()`, and providers for manual triggers or LLM-callable integrations.
-- **Action:** Deferred. Current migration goal is to expose existing Claude skills/commands/hooks and preserve code-repo guardrails. No manual extension command is required yet.
-
-## Validation commands run
-
-```text
-python3 -c "import json; json.load(open('.pi/settings.json'))"
-(cd .pi/extensions && tsc --noEmit)
-python3 /Users/barrie/.pi/agent/skills/pi-coding-migration/scripts/validate_skills.py .claude/skills
-python3 /Users/barrie/.pi/agent/skills/pi-coding-migration/scripts/validate_skills.py .pi/skills
-python3 /Users/barrie/.pi/agent/skills/pi-best-practices-audit/scripts/audit_settings.py .
-python3 /Users/barrie/.pi/agent/skills/pi-best-practices-audit/scripts/audit_extension.py .
-python3 /Users/barrie/.pi/agent/skills/pi-best-practices-audit/scripts/audit_skills.py .
-```
+- Path: `/Users/barrie/Developer/lemmy/.pi/extensions/lemmy-hooks.ts`
+- Issue: Extension registers no commands, tools, or providers — only event handlers. If users would benefit from a manual trigger, `pi.registerCommand()` is available (see `extensions.md` "pi.registerCommand").
+- Proposed fix: Consider adding a manual command only if there is a clear user-triggered workflow that complements the existing event handlers. No change is required.
+- Action: Not applied; advisory only.
