@@ -93,6 +93,9 @@ async fn process_appeal(
   // 2. Exhaustive match on case.status per ADR-013.
   match case.status {
     CaseStatus::Decided => {}
+    // PRD §3.3 row 1 + ADR-013: appeals during the grace window are valid;
+    // the appeal resets the case to Appealed and cancels the grace timer.
+    CaseStatus::SponsorLiabilityPending => {}
     CaseStatus::Open
     | CaseStatus::ThresholdMet
     | CaseStatus::JurySelection
@@ -100,7 +103,10 @@ async fn process_appeal(
     | CaseStatus::Appealed
     | CaseStatus::Closed
     | CaseStatus::EmergencyRemove
-    | CaseStatus::AdminReview => {
+    | CaseStatus::AdminReview
+    // PRD §3.3 row 1 + ADR-013: terminal liability states — appeal window already passed.
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => {
       return Err(LemmyErrorType::NotFound.into());
     }
   }

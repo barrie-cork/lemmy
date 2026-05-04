@@ -81,6 +81,16 @@ pub struct ModerationCase {
   /// AdvisoryLabel outcomes). NULL until JM-d is in place; pre-v1
   /// Decided cases stay NULL and reporter-rights is naturally false.
   pub winning_decision: Option<JuryDecision>,
+  /// v1-SL-a §8.1: grace-window deadline. NULL for cases not in
+  /// `SponsorLiabilityPending` state. Set by SL-d's `submit_jury_vote`
+  /// rewrite at `Decided -> SponsorLiabilityPending` transition; pre-v1
+  /// backfill sets it for v0 mid-flight cases. Locked thereafter.
+  pub grace_expires_at: Option<DateTime<Utc>>,
+  /// v1-SL-a §8.1 + OQ-V1-SL-05: structured escape-reason payload
+  /// (version: 1 from day one). NULL for non-escaped cases. Set by
+  /// SL-b (revoke_endorsement escape branch) or SL-c (scheduler escape
+  /// branch).
+  pub liability_escape_reason: Option<Value>,
 }
 
 #[derive(Clone, Default)]
@@ -120,4 +130,8 @@ pub struct ModerationCaseInsertForm {
   /// (create_report, admin_emergency_remove) which don't yet know the
   /// decision.
   pub winning_decision: Option<JuryDecision>,
+  /// v1-SL-a additions. Both `Option<_>` so v0/earlier-v1 callers
+  /// continue to compile via `..Default::default()`.
+  pub grace_expires_at: Option<DateTime<Utc>>,
+  pub liability_escape_reason: Option<Value>,
 }

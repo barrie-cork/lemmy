@@ -28,13 +28,28 @@ added_lines() {
   grep -E '^\+[^+]' "$DIFF" | sed 's/^+//' || true
 }
 
+# Print added lines for files where forbidden dependency references would be
+# executable/configuration scope rather than policy prose. This intentionally
+# excludes PR templates, .claude/.pi runbooks, and design docs where the same
+# terms often appear in "do not add Keycloak/OpenFGA/Vault" guardrails.
+added_dependency_surface_lines() {
+  awk '
+    /^\+\+\+ b\// {
+      file = substr($0, 7)
+      active = (file ~ /(^Cargo\.(toml|lock)$|^crates\/.+\/Cargo\.toml$|^migrations\/|^docker\/|^docker-compose|^\.github\/workflows\/|^scripts\/|(^|\/)package(-lock)?\.json$|(^|\/)pnpm-lock\.yaml$|(^|\/)yarn\.lock$)/)
+      next
+    }
+    active && /^\+[^+]/ { sub(/^\+/, ""); print }
+  ' "$DIFF" || true
+}
+
 # 1. ADR-010: v2-scope dependencies forbidden in v0.
 # Use an identifier-boundary regex rather than \b — underscore counts as a word
 # character in ERE, so \bopenfga\b would miss `openfga_rs`, `openfga-sdk`, etc.
 # The pattern [^[:alnum:]_]|^ before and [^[:alnum:]]|$ after matches the start
-# or end of an identifier in typical code contexts.
+# or end of an identifier in typical code/config contexts.
 for term in keycloak openfga vault hsm kms; do
-  hits=$(added_lines | grep -iE "(^|[^[:alnum:]_])${term}([^[:alnum:]]|$)" || true)
+  hits=$(added_dependency_surface_lines | grep -iE "(^|[^[:alnum:]_])${term}([^[:alnum:]]|$)" || true)
   if [ -n "$hits" ]; then
     emit "Forbidden v2 dependency reference: \`${term}\`" "ADR-010 (v0 scope, v2 hardening)" "$hits"
   fi
@@ -83,7 +98,46 @@ wild=$(awk '
 if [ -n "$wild" ]; then
   emit "Possible non-exhaustive match on \`CaseStatus\` (wildcard \`_ =>\` within 40 lines of a \`match case.status\` / \`CaseStatus\`)" "ADR-013 (\`EmergencyRemove\` must be handled explicitly)" "$wild"
 fi
-removed_emergency=$(grep -E '^-[^-].*CaseStatus::EmergencyRemove' "$DIFF" || true)
+# Per-file token-occurrence balancing — only flag if a file's `+` lines mention
+# `CaseStatus::EmergencyRemove` strictly fewer times than its `-` lines, i.e.
+# the file lost net occurrences of the variant. This handles arm-split refactors
+# (single-line | A | B | EmergencyRemove arm → multi-line arms) without false
+# positives, while still catching real removals.
+#
+# Restricted to actual Rust source under `crates/` because policy/runbook/
+# scanner files (this script, PR templates, .pi/.claude prompts, design docs)
+# often quote the arm verbatim as documentation, and "removing" such a quote
+# is not an ADR-013 violation.
+removed_emergency=$(awk '
+  function flush_file() {
+    if (active && removed_total > added_total) {
+      printf "%s", removed_lines
+    }
+    removed_total = 0
+    added_total = 0
+    removed_lines = ""
+    active = 0
+  }
+  /^diff --git / { flush_file() }
+  /^\+\+\+ b\// {
+    file = substr($0, 7)
+    active = (file ~ /^crates\/.*\.rs$/)
+    next
+  }
+  active && /^-[^-]/ {
+    n = gsub(/CaseStatus::EmergencyRemove/, "&")
+    if (n > 0) {
+      removed_total += n
+      removed_lines = removed_lines $0 "\n"
+    }
+    next
+  }
+  active && /^\+[^+]/ {
+    added_total += gsub(/CaseStatus::EmergencyRemove/, "&")
+    next
+  }
+  END { flush_file() }
+' "$DIFF" || true)
 if [ -n "$removed_emergency" ]; then
   emit "Removal of \`CaseStatus::EmergencyRemove\` reference" "ADR-013 (variant is mandatory)" "$removed_emergency"
 fi

@@ -144,7 +144,12 @@ async fn process_assignment(
     | CaseStatus::Decided
     | CaseStatus::Appealed
     | CaseStatus::Closed
-    | CaseStatus::AdminReview => return Err(LemmyErrorType::NotFound.into()),
+    | CaseStatus::AdminReview
+    // PRD §3.3 + ADR-013: jury assignment only valid on Open/ThresholdMet/EmergencyRemove;
+    // sponsor-liability lifecycle is post-decision.
+    | CaseStatus::SponsorLiabilityPending
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => return Err(LemmyErrorType::NotFound.into()),
   }
 
   // 3. Compute the status tier BEFORE any other &mut *conn borrow. The JM-a DEFAULT is Regular — if

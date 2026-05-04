@@ -80,8 +80,15 @@ fn is_active_status(status: CaseStatus) -> bool {
     | CaseStatus::JurySelection
     | CaseStatus::InReview
     | CaseStatus::Appealed
-    | CaseStatus::AdminReview => true,
-    CaseStatus::Decided | CaseStatus::Closed | CaseStatus::EmergencyRemove => false,
+    | CaseStatus::AdminReview
+    // PRD §3.3 + ADR-013: grace window is actively pending — show in dashboard.
+    | CaseStatus::SponsorLiabilityPending => true,
+    CaseStatus::Decided
+    | CaseStatus::Closed
+    | CaseStatus::EmergencyRemove
+    // PRD §3.3 + ADR-013: fired and escaped are terminal — not active dashboard cases.
+    | CaseStatus::SponsorLiabilityFired
+    | CaseStatus::SponsorLiabilityEscaped => false,
   }
 }
 
@@ -101,6 +108,10 @@ fn status_key(status: CaseStatus) -> &'static str {
     CaseStatus::Closed => "Closed",
     CaseStatus::EmergencyRemove => "EmergencyRemove",
     CaseStatus::AdminReview => "AdminReview",
+    // PRD §3.3 + ADR-013: sponsor-liability variants map to their PascalCase names.
+    CaseStatus::SponsorLiabilityPending => "SponsorLiabilityPending",
+    CaseStatus::SponsorLiabilityFired => "SponsorLiabilityFired",
+    CaseStatus::SponsorLiabilityEscaped => "SponsorLiabilityEscaped",
   }
 }
 

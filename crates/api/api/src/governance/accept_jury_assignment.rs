@@ -116,7 +116,12 @@ async fn process_accept(
       | CaseStatus::Appealed
       | CaseStatus::Closed
       | CaseStatus::EmergencyRemove
-      | CaseStatus::AdminReview => {
+      | CaseStatus::AdminReview
+      // PRD §3.3 + ADR-013: original-jury cases are pre-Decided;
+      // sponsor-liability lifecycle is post-Decided.
+      | CaseStatus::SponsorLiabilityPending
+      | CaseStatus::SponsorLiabilityFired
+      | CaseStatus::SponsorLiabilityEscaped => {
         return Err(LemmyErrorType::NotFound.into());
       }
     },
@@ -129,7 +134,12 @@ async fn process_accept(
       | CaseStatus::Decided
       | CaseStatus::Closed
       | CaseStatus::EmergencyRemove
-      | CaseStatus::AdminReview => {
+      | CaseStatus::AdminReview
+      // PRD §3.3 + ADR-013: appeal-jury seated only on Appealed cases;
+      // sponsor-liability lifecycle is post-Decided.
+      | CaseStatus::SponsorLiabilityPending
+      | CaseStatus::SponsorLiabilityFired
+      | CaseStatus::SponsorLiabilityEscaped => {
         return Err(LemmyErrorType::NotFound.into());
       }
     },

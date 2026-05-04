@@ -795,6 +795,9 @@ diesel::table! {
         threshold_count_snapshot -> Nullable<Int4>,
         appeal_window_expires_at -> Nullable<Timestamptz>,
         winning_decision -> Nullable<JuryDecision>,
+        // v1-SL-a additions:
+        grace_expires_at -> Nullable<Timestamptz>,
+        liability_escape_reason -> Nullable<Jsonb>,
     }
 }
 

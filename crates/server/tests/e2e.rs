@@ -1067,10 +1067,9 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   /// count. Counting phase-by-phase is a useful bookkeeping fiction, not a
   /// semantic invariant.
   ///
-  /// Bumped to 12 in v1-JM-a (adds 3: add_jury_mechanics_enums @
-  /// 2026-04-23-000000, add_jury_mechanics_columns @ 2026-04-23-000100,
-  /// seed_v1_jm_config_keys @ 2026-04-23-000200). Phase-by-phase breakdown
-  /// (bookkeeping, not enforced):
+  /// Bumped to 14 in v1-SL-a (adds 2: add_case_status_sponsor_liability_variants
+  /// @ 2026-05-03-000000, add_sponsor_liability_grace_window @
+  /// 2026-05-03-000100). Phase-by-phase breakdown (bookkeeping, not enforced):
   ///   - 6 Phase 1 migrations (enums, core, jury, rep+surety, pseudonym,
   ///     governance_log — the last added in Phase 4b task 8 but part of the
   ///     contiguous governance-bootstrap LIFO block)
@@ -1078,7 +1077,8 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   ///     add_person_membership_state)
   ///   - 1 Phase 5b Slice A migration (add_restoration_sanction_variant
   ///     — task 56 / OQ-003)
-  ///   - 3 v1-JM-a migrations (this bump)
+  ///   - 3 v1-JM-a migrations (bump 9 → 12)
+  ///   - 2 v1-SL-a migrations (this bump)
   ///
   /// **Uncounted drift**: v1-AD-a shipped 4 migrations (rule_set_versions,
   /// sponsor_allowlist, case_applied_config_snapshot, seed_v1_config_keys)
@@ -1091,7 +1091,7 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   // to stop LIFO-positional slot-swap silently hiding uncounted drift. See
   // GH issue #43 (existing #[ignore] reason) + the count-model GH issue
   // sketched in `.claude/PRPs/reports/phase-v1-JM-a-retro.md` §3.
-  const PHASE_1_MIGRATION_COUNT: u64 = 12;
+  const PHASE_1_MIGRATION_COUNT: u64 = 14;
 
   /// Query shape for `COUNT(*)` probes via `sql_query`.
   #[derive(diesel::QueryableByName)]
@@ -1138,6 +1138,65 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       assert_eq!(
         result.n, 0,
         "{table} should exist and be empty after forward migration"
+      );
+    }
+  }
+
+  // Post-condition probes for v1-SL-a schema effects (post-forward): columns,
+  // indexes, pg_enum values, and governance_config key presence (plan §10.8).
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // 2 new columns added to moderation_case by add_sponsor_liability_grace_window
+    for col in ["grace_expires_at", "liability_escape_reason"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'moderation_case' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "column {col} should exist in moderation_case after SL-a forward migration"
+      );
+    }
+    // 2 new indexes added by add_sponsor_liability_grace_window
+    for idx in ["moderation_case_grace_expires_idx", "surety_sponsored_id_active"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_indexes WHERE indexname = '{idx}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "index {idx} should exist after SL-a forward migration"
+      );
+    }
+    // 3 new CaseStatus enum values added by add_case_status_sponsor_liability_variants
+    for val in [
+      "SponsorLiabilityPending",
+      "SponsorLiabilityFired",
+      "SponsorLiabilityEscaped",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_enum e \
+         JOIN pg_type t ON e.enumtypid = t.oid \
+         WHERE t.typname = 'case_status' AND e.enumlabel = '{val}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "pg_enum value {val} should exist for case_status after SL-a forward migration"
+      );
+    }
+    // governance_config: check that v1-SL-a-specific keys exist after forward migration.
+    // Using key-presence checks instead of a brittle total-count assertion —
+    // the total grows with future phases; the specific keys are the invariant.
+    for key in ["job.grace_check_interval_minutes", "liability.grace_window_minimum_hours"] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 1,
+        "governance_config key {key} should exist after v1-SL-a forward migration"
       );
     }
   }
@@ -1209,6 +1268,55 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       assert_eq!(
         result.n, 0,
         "pg_type entry for {type_name} should be dropped after reverting Phase 1 migrations"
+      );
+    }
+  }
+
+  // Post-condition probes for v1-SL-a schema effects after LIFO-14 revert
+  // (plan §10.8): columns absent, indexes absent, specific governance_config
+  // keys absent. (SL-a enum label persistence not checked — see inline note.)
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // 2 SL-a columns must be absent after revert
+    for col in ["grace_expires_at", "liability_escape_reason"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'moderation_case' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "column {col} should not exist in moderation_case after reverting SL-a migrations"
+      );
+    }
+    // 2 SL-a indexes must be absent after revert
+    for idx in ["moderation_case_grace_expires_idx", "surety_sponsored_id_active"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_indexes WHERE indexname = '{idx}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "index {idx} should not exist after reverting SL-a migrations"
+      );
+    }
+    // Note: SL-a `case_status` enum labels (SponsorLiabilityPending, etc.) are not
+    // checked for persistence here. The LIFO-14 revert includes reverting the
+    // Phase 1 enum migration, which DROP TYPEs `case_status` entirely. When the type
+    // is dropped all its labels go with it — the "Postgres ALTER TYPE DROP VALUE
+    // is unsupported" caveat applies only when reverting an ADD VALUE migration
+    // without dropping the type. Asserting label persistence after a DROP TYPE
+    // would always fail.
+    // governance_config: v1-SL-a-specific keys must be absent after LIFO-14 revert.
+    // Using key-absence checks instead of a brittle (post_up_count - 67) assertion.
+    for key in ["job.grace_check_interval_minutes", "liability.grace_window_minimum_hours"] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 0,
+        "governance_config key {key} should be absent after reverting SL-a migrations"
       );
     }
   }
