@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 151,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-05T01:01:00Z",
+      "subject": "phase-v1-SL-b tip e2e validate-pending — post sl-b-fix-1 finalize",
+      "branch": "phase-v1-SL-b",
+      "phase_task": "sl-b-fix-1-finalize",
+      "workflow_run_id": 25352168003,
+      "head_sha": "e8101d661f626f1e0fac60ef3620a8ddab317105",
+      "commands": [
+        "cargo test --workspace --features full --test e2e -- --test-threads=1"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Phase 2 e2e re-run on phase tip e8101d661 (post fix-1 finalize-merge of junior/advisor-sl-b-fix-1). Prior e2e on tip 9cfbbf977 (DQ #149's implicit Phase 2) failed 6/76 — 4 surety filter Option-NULL bugs in revoke_endorsement.rs, 1 idempotency timestamp precision test bug, 1 JM-a backfill revert window stale (limit 6→8 for SL-b's 2 new migrations). Fix-1 addressed all three. Workflow run 25352168003 dispatched via workflow_dispatch (per PR #105 / feedback_e2e_local_or_dispatch_user_choice user gate, option (b) selected). Expected: 76 pass / 0 fail / 3 ignored / ~26 min."
+    }
+  ],
   "resolved": [
     {
       "id": 150,
