@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 150,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-05T00:30:00Z",
+      "subject": "sl-b-fix-1 advisor-direct workspace-check validate-pending",
+      "branch": "junior/advisor-sl-b-fix-1",
+      "phase_task": "sl-b-fix-1",
+      "workflow_run_id": 25351212142,
+      "head_sha": "4934db25d54ca7336c0d6e38337c72d28baceec8",
+      "commands": [
+        "cargo check --workspace --features full",
+        "cargo clippy --workspace --features full --no-deps -- -D warnings",
+        "cargo test --no-run -p lemmy_server --test e2e"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Advisor-direct fix for 3 bugs surfaced by Phase 2 e2e on phase tip 9cfbbf977 (70 pass / 6 fail / 1543s): (A) handler bug in revoke_endorsement.rs:189-201 — surety filter used .eq(community_id) which fails for None due to SQL-NULL semantics; fix splits Option matching across two update() branches. (B) test bug in e2e.rs:11387/11407 — idempotency assertion compared in-memory nanos to DB-truncated micros; fix uses .timestamp_micros(). (C) test fixture bug in e2e.rs:1434 — JM-a backfill revert window stale (limit 6 sized for JM-d Task 3); SL-b added 2 migrations so limit must rise to 8. Same lineage as 4875a20a7 (4→6). Single advisor-direct commit on junior/advisor-sl-b-fix-1 to dodge PMD #117 (Junior workers hang on Edit calls into 11910-line e2e.rs). Laptop pre-validation: cargo check 2m26s, clippy 2m17s, test --no-run 2m00s, all exit 0. ci-watcher poll of GH workspace-check is the canonical PR evidence."
+    }
+  ],
   "resolved": [
     {
       "id": 149,
