@@ -185,17 +185,38 @@ async fn process_revocation(
   // community_id). UPDATE no-op if not found — community-scoped vs. unscoped
   // endorsement, or cap-exceeded surety (no row inserted at create time when
   // MAX_ACTIVE_SURETIES_PER_SPONSEE was already reached).
+  //
+  // SQL-NULL semantics: `column = NULL` never matches in Postgres. For
+  // instance-scope endorsements (community_id IS NULL), use `is_null()`
+  // instead of `eq(None)`. Two branches because `update()` does not take a
+  // `.into_boxed()` filter.
   let revoking_sponsor_id = row.from_person_id;
-  update(
-    surety::table
-      .filter(surety::sponsor_id.eq(revoking_sponsor_id))
-      .filter(surety::sponsored_id.eq(row.to_person_id))
-      .filter(surety::community_id.eq(row.community_id))
-      .filter(surety::revoked_at.is_null()),
-  )
-  .set(surety::revoked_at.eq(Some(now)))
-  .execute(conn)
-  .await?;
+  match row.community_id {
+    Some(c) => {
+      update(
+        surety::table
+          .filter(surety::sponsor_id.eq(revoking_sponsor_id))
+          .filter(surety::sponsored_id.eq(row.to_person_id))
+          .filter(surety::community_id.eq(c))
+          .filter(surety::revoked_at.is_null()),
+      )
+      .set(surety::revoked_at.eq(Some(now)))
+      .execute(conn)
+      .await?;
+    }
+    None => {
+      update(
+        surety::table
+          .filter(surety::sponsor_id.eq(revoking_sponsor_id))
+          .filter(surety::sponsored_id.eq(row.to_person_id))
+          .filter(surety::community_id.is_null())
+          .filter(surety::revoked_at.is_null()),
+      )
+      .set(surety::revoked_at.eq(Some(now)))
+      .execute(conn)
+      .await?;
+    }
+  }
 
   // Steps 5 + 6: grace-window evaluation loop.
   // Query SponsorLiabilityPending cases for the sponsee still within their
