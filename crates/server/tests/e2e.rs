@@ -1426,12 +1426,15 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 6 JM-a + JM-d Task 1 migrations LIFO (4 JM-a
-  // migrations from 2026-04-23-000000 through 2026-04-23-000200, plus 2
-  // JM-d Task 1 migrations from 2026-04-27-000000 and 2026-04-27-000100).
+  // Step 2: revert the 8 JM-a + JM-d Task 1 + SL-b migrations LIFO:
+  //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
+  //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
+  //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
-  // not fire.
-  schema_setup::run(Options::default().revert().limit(6), &db_url)?;
+  // not fire. Limit must rise with each new phase that adds migrations
+  // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
+  // here for SL-b).
+  schema_setup::run(Options::default().revert().limit(8), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -11384,9 +11387,14 @@ mod v1_sl_b_fixtures {
     .into_inner();
 
     assert_eq!(resp2.endorsement_id, endorsement_id);
+    // Compare at microsecond precision: the first call returns the in-memory
+    // `Utc::now()` (nanosecond precision), the second call returns the value
+    // round-tripped through Postgres `timestamptz` (truncated to microseconds).
+    // Same instant, different precision — strict `==` would fail spuriously.
     assert_eq!(
-      resp2.revoked_at, t1,
-      "second response.revoked_at == first (idempotency)",
+      resp2.revoked_at.timestamp_micros(),
+      t1.timestamp_micros(),
+      "second response.revoked_at == first (idempotency, micros precision)",
     );
     assert!(
       resp2.liability_chain_severed_for_cases.is_empty(),
@@ -11400,7 +11408,13 @@ mod v1_sl_b_fixtures {
       "no new log entry on re-revoke",
     );
     let final_revoked_at = read_endorsement_revoked_at(&mut conn, endorsement_id).await?;
-    assert_eq!(final_revoked_at, Some(t1), "endorsement.revoked_at unchanged");
+    // Same precision rationale as the resp2.revoked_at assertion above:
+    // `final_revoked_at` is DB-round-tripped (micros); `t1` is in-memory (nanos).
+    assert_eq!(
+      final_revoked_at.map(|t| t.timestamp_micros()),
+      Some(t1.timestamp_micros()),
+      "endorsement.revoked_at unchanged (micros precision)",
+    );
 
     Ok(())
   }
