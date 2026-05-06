@@ -213,6 +213,26 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   let ruleFiles: string[] = [];
   let prePhaseReminder = "";
   let editsSinceRead = 0;
+  // When true, the tool_result handler skips its auto-commit-per-edit
+  // step. Toggled by `/ci-debug-mode`. Reason: speculative edits during
+  // CI debugging push commits that re-fire push-trigger workflows; if
+  // the agent is operating on a wrong premise, each iteration creates
+  // a fresh failure to react to and the loop accelerates rather than
+  // converges. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
+  let ciDebugMode = false;
+
+  pi.registerCommand("ci-debug-mode", {
+    description:
+      "Toggle CI-debug mode. When ON, the auto-commit-per-edit hook is suppressed so iterating on .github/workflows/*.yml or .github/scripts/*.sh doesn't spam commits + retrigger CI on each save. Run again to turn back OFF when the fix is real.",
+    handler: async (_args, ctx) => {
+      ciDebugMode = !ciDebugMode;
+      const state = ciDebugMode ? "ON" : "OFF";
+      const detail = ciDebugMode
+        ? "Auto-commit suppressed. Manual git add/commit when ready."
+        : "Auto-commit re-enabled (per-edit auto(pi): commits resume).";
+      safeNotify(ctx, `ci-debug-mode: ${state}. ${detail}`, "info");
+    },
+  });
 
   pi.on("session_start", async (_event, ctx) => {
     try {
@@ -314,6 +334,10 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
       if (tool !== "edit" && tool !== "write") return undefined;
       if (event.isError) return undefined;
+      // ci-debug-mode suppresses auto-commit so iteration on workflow
+      // files / CI scripts doesn't spam commits + retrigger workflows
+      // on each save. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
+      if (ciDebugMode) return undefined;
 
       const filePath = (event.input as any)?.path;
       if (typeof filePath !== "string" || shouldSkipAutoCommit(filePath)) return undefined;
