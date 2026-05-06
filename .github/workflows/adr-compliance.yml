@@ -43,7 +43,7 @@ jobs:
           GITHUB_ACKNOWLEDGE: true
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OWNER_ID: ${{ secrets.GITHUB_OWNER_ID }}
+          OWNER_ID: '15565016'
         run: |
           set +e
           bash .github/scripts/adr-compliance.sh /tmp/pr.diff > /tmp/findings.md
