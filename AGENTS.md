@@ -18,3 +18,14 @@ This is a **dual-harness repo**:
 5. **Do not modify `.claude/`** as part of pi work unless the user explicitly asks. The Claude Code team owns it.
 
 The substantive pi context (Brehon constraints, Rust commands, error conventions) lives in `.pi/PROJECT_CONTEXT.md` and is injected automatically.
+
+## Subagents (delegate, don't load)
+
+For GitHub Actions / CI work and Brehon Branch Manager verbs, prefer
+delegating to a project-scope subagent rather than loading the full
+detail into your own context. `.pi/agents/ci-debug.md` and
+`.pi/agents/bm-pi.md` are the two harnesses; they auto-load focused
+context (`.claude/lessons/feedback_gha_pi_loop_postmortem.md` for
+ci-debug; `.pi/skills/bm-task/SKILL.md` + `.claude/rules/branch-manager.md`
+for bm-pi). Invoke with `agentScope: "both"`. Full setup + rationale
+in `.pi/PROJECT_CONTEXT.md` §"Project subagents — delegate, don't load".

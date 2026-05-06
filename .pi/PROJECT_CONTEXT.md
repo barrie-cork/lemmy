@@ -128,6 +128,58 @@ For test fixtures, follow the pool/conn/`LemmyResult` pattern in the
 - Do not enable `context-workflow`, `pi-goal`, or `pi-ralph-wiggum`-style
   autonomous loops without explicit user approval per turn.
 
+## Project subagents — delegate, don't load
+
+The main pi session is intentionally slim on GitHub Actions detail and
+BM verb mechanics. Two project-scope subagents live in `.pi/agents/`
+with focused harnesses:
+
+| Agent | When to delegate |
+|---|---|
+| `ci-debug` | Any work on `.github/workflows/*.yml` or `.github/scripts/*.sh`; debugging a failing workflow run; designing a new gate. The agent reads `.claude/lessons/feedback_gha_pi_loop_postmortem.md` first — six load-bearing GH Actions facts the main session does not need. |
+| `bm-pi` | Any Brehon Branch Manager verb (bm-cut, bm-pr, bm-poll-cr, bm-merge, etc.). The agent reads `.pi/skills/bm-task/SKILL.md` + `.claude/rules/branch-manager.md` first — the BM contract is large, slim main-session context stays clean. |
+
+**Invocation convention:** call the `subagent` tool with
+`agentScope: "both"` so project-local agents in `.pi/agents/` are
+discovered alongside user-level agents:
+
+```
+subagent({ agent: "ci-debug", task: "<one-line task>", agentScope: "both" })
+```
+
+Without `agentScope: "both"` the call defaults to user-scope only and
+the project agents above are invisible. The first interactive
+invocation per session prompts the user to confirm project-agent use
+(`confirmProjectAgents`); subsequent calls in the same session reuse
+the confirmation.
+
+**Pre-requisite (one-time, user-scope):** the `subagent` tool itself
+is loaded by an extension that lives at user scope:
+
+```
+mkdir -p ~/.pi/agent/extensions/subagent
+ln -sf /opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/examples/extensions/subagent/index.ts ~/.pi/agent/extensions/subagent/index.ts
+ln -sf /opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/examples/extensions/subagent/agents.ts ~/.pi/agent/extensions/subagent/agents.ts
+mkdir -p ~/.pi/agent/agents
+for f in /opt/homebrew/lib/node_modules/@mariozechner/pi-coding-agent/examples/extensions/subagent/agents/*.md; do
+  ln -sf "$f" ~/.pi/agent/agents/$(basename "$f")
+done
+```
+
+Without this install the project agents in `.pi/agents/` exist as
+ready-to-use definitions but cannot be dispatched. Install once per
+machine.
+
+**Why this shape:** previous CI-debug iterations on this repo loaded
+GitHub Actions detail directly into the main pi session, where it
+lived for the whole session window without ever being needed for the
+80% of work that isn't CI. The 2026-05-06 adr-compliance loop also
+showed a failure mode where the main session anchored on a wrong
+premise (`GITHUB_EVENT_NUMBER`) and self-authored a memory note
+making it canonical for future sessions. A subagent gets a fresh
+window with the lesson loaded as ground truth and exits when done —
+no premise leaks into the main session's memory.
+
 ## Setup decisions log (do not re-litigate)
 
 Dual-harness baseline locked in 2026-05-04. Future pi sessions: take these as
