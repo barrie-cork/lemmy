@@ -29,7 +29,7 @@ on:
         default: 'governance-v0'
       head_sha:
         description: 'Head commit SHA to scan (default: current branch HEAD)'
-n        required: false
+        required: false
         default: ''
 
 permissions:
