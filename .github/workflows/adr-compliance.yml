@@ -128,7 +128,13 @@ jobs:
             });
 
       - name: Fail the job if red flags present
-        if: steps.scan.outputs.violations == 'true'
+        # Gate on the script's actual exit code, not the presence of
+        # findings. The script exits 0 when findings are advisory-only
+        # (push / workflow_dispatch with no PR context, or PR with a
+        # maintainer "acknowledge" comment) and exits 1 only when the
+        # PR-event gate is unsatisfied. Gating on `violations == true`
+        # made the bypass / advisory paths unreachable.
+        if: steps.scan.outputs.scan_status != '0'
         run: |
           echo "::error::ADR red flags detected. See job summary for details."
           cat /tmp/findings.md
