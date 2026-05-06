@@ -159,7 +159,19 @@ if [ -n "$hits" ]; then
 fi
 
 # 6. v0 scope creep: new routes in governance router modules (advisory).
-hits=$(grep -nE '^\+.*\.route\(' "$DIFF" | grep -iE 'governance' || true)
+# File-scoped to actual route registration files under crates/api/routes/.
+# An unscoped grep for `\.route(` + `governance` false-positives on Markdown
+# briefs that quote `.route(...)` as prose, and false-negatives on real route
+# additions where `governance` is in the surrounding `scope("/governance")`
+# wrapper rather than on the same line as `.route(`.
+hits=$(awk '
+  /^\+\+\+ b\// {
+    file = substr($0, 7)
+    active = (file ~ /^crates\/api\/routes\/.*\.rs$/)
+    next
+  }
+  active && /^\+.*\.route\(/ { print }
+' "$DIFF" || true)
 if [ -n "$hits" ]; then
   emit "New governance route added — verify it maps to one of the 11 v0 endpoints" "ADR-010 / 05-mvp-and-delivery-plan.md §2 (advisory)" "$hits"
 fi
@@ -193,16 +205,24 @@ if [ "$violations" -eq 0 ]; then
   exit 0
 fi
 
+# Push and workflow_dispatch events have no PR context — there is nothing to
+# attach an "acknowledge" comment to, so they cannot satisfy the bypass gate.
+# Treat findings on those triggers as advisory: print and exit 0. The PR-event
+# run on the eventual PR is the actual gate.
+if [ -z "${PR_NUMBER:-}" ]; then
+  printf '\n---\n_%d red flag(s) detected — advisory only (no PR context: push or workflow_dispatch). The PR for this branch is the gate; a maintainer must acknowledge each finding there before merge._\n' "$violations"
+  exit 0
+fi
+
 # Advisory-bypass: if the repo OWNER has posted a PR comment containing
 # "acknowledge" (case-insensitive), the advisory flag is deemed cleared.
 # Set GITHUB_ACKNOWLEDGE=true in the workflow env to activate this check.
 # OWNER_ID defaults to the numeric GitHub user ID of barrie-cork (15565016).
 if [ "${GITHUB_ACKNOWLEDGE:-false}" = "true" ]; then
-  pr_num="${PR_NUMBER:-${GITHUB_EVENT_NUMBER:-}}"
   repo="${GITHUB_REPOSITORY:-}"
-  if [ -n "$pr_num" ] && [ -n "$repo" ]; then
+  if [ -n "$repo" ]; then
     owner_id="${OWNER_ID:-15565016}"
-    ack_body=$(gh api "repos/$repo/issues/$pr_num/comments" \
+    ack_body=$(gh api "repos/$repo/issues/$PR_NUMBER/comments" \
       --jq ".[] | select(.user.id == $owner_id) | .body" 2>/dev/null)
     if echo "$ack_body" | grep -qi acknowledge; then
       printf '\n---\n_Bypass: advisory red-flag acknowledged by maintainer comment. Merging permitted._\n'
