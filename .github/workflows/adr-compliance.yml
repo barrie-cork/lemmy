@@ -22,6 +22,15 @@ on:
       - '.github/scripts/adr-compliance.sh'
       - '.github/workflows/adr-compliance.yml'
   workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Base branch to diff against (default: governance-v0)'
+        required: false
+        default: 'governance-v0'
+      head_sha:
+        description: 'Head commit SHA to scan'
+        required: false
+        default: ''
 
 permissions:
   contents: read
