@@ -2417,6 +2417,22 @@
       "answer": "proceed \u2014 per feedback_principles_not_rules.md, score is a signal not a hard rule. Mechanical scheduler+tests work with strong precedents (reputation_snapshot.rs::run_snapshot_batch ships in production since Phase 5a; appeal_window_expiry.rs::run_appeal_window_expiry_batch since Phase 5c; both no operational regret). Each test is anchor-Edit-friendly (single fn at file end; existing bootstrap() helper at e2e.rs:767). Per-task wall-clock under Sonnet 4.6 likely 6-8 min per test + workspace-check workflow. SL-b shipped at score 38 (heavier than SL-c at 21); SL-a at 13; JM-e at 15 \u2014 all proceed-as-one with no operational regret per their retros. Splitting fragments a logically atomic deliverable (PRD \u00a715 row 3). Recommend advisor confirms proceed-as-one at plan-approval gate; user may overturn.",
       "answered_by": "planner",
       "resolved_at": "2026-05-07T11:43:16Z"
+    },
+    {
+      "id": 149,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-07T13:55:00Z",
+      "question": "When a moderation_case transitions Decided \u2192 SponsorLiabilityPending, where does the count of sponsors-at-decision-time live so the grace-check evaluator can apply the 'majority_revocation' escape rule correctly?",
+      "options": [
+        "(A) New column on moderation_case \u2014 add baseline_sponsor_count INTEGER NOT NULL DEFAULT 0 in the SL-c migration; set during the Decided \u2192 SponsorLiabilityPending transition.",
+        "(B) Derive at evaluation time from surety rows where created_at <= decided_at AND (revoked_at IS NULL OR revoked_at > decided_at). No migration; uses existing surety columns.",
+        "(C) Defer to v1-SL-d or later \u2014 treat majority_revocation as v2 capability; SL-c default escape rule remains 'any_revocation'."
+      ],
+      "context": "Cross-phase relay adhoc-sl-c-baseline-sponsor-count (committed b5e0bac04 by laptop session 2026-05-07T12:30Z) \u2014 PR #119 (SL-b) CR finding cr-6 raised that majority_revocation cannot evaluate without a baseline count of sponsors at Decided time; relay author scoped the canonical persistence shape to SL-c clarify. SL-b ships handler-only fix + 10th sync-escape e2e and emits a `// TODO(v1-SL-c)` deferral marker. Surety table schema confirmed at crates/db_schema_file/src/schema.rs (surety has created_at + revoked_at columns) \u2014 option (B) is feasible without migration. NOTE for plan-approval gate: planner's plan \u00a714.3 (line 3303-3307) explicitly excludes 'majority_revocation' from SL-c's evaluator scope, asserting SL-b's revoke_endorsement handles multi-sponsor escape synchronously at revocation time and a case only reaches SL-c's scheduler if still Pending. This is a scope-shape conflict between the relay framing and the planner's framing that the user must adjudicate at plan-approval.",
+      "answer": "Option (B) Derive at evaluation time (per user 2026-05-07). When/if SL-c's evaluator needs a baseline-vs-revoked count for majority_revocation, derive baseline as `SELECT COUNT(*) FROM surety WHERE sponsored_id = $target AND community_id = $community AND created_at <= $decided_at AND (revoked_at IS NULL OR revoked_at > $decided_at)`. Self-contained in SL-c's evaluate_escape_conditions; zero migration; uses surety.created_at + surety.revoked_at columns confirmed present at crates/db_schema_file/src/schema.rs surety table. Scope-conflict caveat: the planner's plan \u00a714.3 currently scopes majority_revocation OUT of SL-c (asserts SL-b's sync handler covers it). User must decide at plan-approval gate whether to (i) keep planner's scope (DQ #149 records option-B as the future shape if/when added) or (ii) expand SL-c's scope to evaluate majority_revocation per the relay framing. Cross-reference: PR #119 cr-6 finding 'notes' field to be updated with this DQ #149 id once SL-c lands.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T13:55:00Z"
     }
   ],
   "schema_version": 2
