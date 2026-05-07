@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 156,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T15:10:00Z",
+      "question": "Does e2e pass on phase-v1-SL-b tip 620861f08 (cr-7 fix + ci-watcher DQ mutation)?",
+      "options": [
+        "(A) pass — advance to bm-poll-cr re-trigger + bm-merge confirm",
+        "(B) fail — §G4 triage"
+      ],
+      "context": "Phase 2 local e2e dispatched for phase-v1-SL-b tip 620861f08. cr-7 payload schema fix (revoke_endorsement.rs only). Prior tip b00ae7db2 passed 76/76.",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-b",
+      "phase_task": "sl-b-e2e-post-cr7-fix",
+      "head_sha": "620861f08",
+      "local_log_path": ".claude/runlog/e2e-phase-v1-SL-b-620861f08.log",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 155,
