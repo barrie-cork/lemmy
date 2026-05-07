@@ -317,6 +317,7 @@ async fn process_revocation(
         &mut (&mut *conn).into(),
         governance_log::ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
         json!({
+          "version": 1,
           "case_id": case.id.0,
           "escaped_at": now,
           "reason": "sponsor_revoked",
@@ -345,7 +346,9 @@ async fn process_revocation(
   let mut payload = json!({
     "version": 1,
     "endorsement_id": row.id.0,
-    "sponsor_pseudonym": caller_pseudonym,
+    "revoker_pseudonym": caller_pseudonym,
+    "revoked_at": now,
+    "sponsored_id": row.to_person_id.0,
     "target_pseudonym": target_pseudonym,
     "community_id": row.community_id.map(|c| c.0),
     "reason": data.reason,
