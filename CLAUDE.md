@@ -2,7 +2,7 @@
 
 **Fork of:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ `d1975776a` (Lemmy 1.0-beta; last rebase 2026-04-18)
 **Working branch:** `governance-v0` (v0 feature work; `main` is reserved for upstream-sync rebases)
-**Active sub-phase:** `v1-SL-c-1` (next; trunk at `425d132ff`; phase branch not yet cut). Last shipped: `v1-SL-b` PR #119 merged at `9ae4c332c` on 2026-05-07.
+**Active sub-phase:** `v1-SL-c-1` (in flight; trunk at `c93cf7e90`; phase branch `phase-v1-SL-c-1` cut at `477f0c55c` on 2026-05-07). Last shipped: `v1-SL-b` PR #119 merged at `9ae4c332c` on 2026-05-07.
 **Rust toolchain:** `1.95` · **License:** AGPL-3.0 (see `AGPL-NOTICE.md`)
 
 A governance-enabled fork of Lemmy 1.0-beta. v0 goal: 11 new API endpoints for a Brehon-style reputation + jury workflow, tamper-evident governance log, and outbound federation of governance signals — while staying compatible with vanilla-Lemmy content federation.
