@@ -85,7 +85,14 @@ migrations/.diesel_lock
 .mcp.json
 
 # Local project-memory MCP SQLite store (advisor-laptop session-only).
+# Match both basename (file/symlink) and directory — bm-task #119 once
+# committed self-referential symlinks to /srv/brehon-fork/.project-memory
+# that slipped through the dir-only pattern; see chore(advisor) cleanup
+# 2026-05-07. Same defence for .serena (Serena MCP not used on Rust repo).
+.project-memory
 .project-memory/
+.serena
+.serena/
 
 # pi-coding per-machine/runtime state (stable .pi config is committed)
 .pi/sessions/
