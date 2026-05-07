@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 152,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T13:00:08Z",
+      "subject": "sl-b-fix-impl-2 workspace-check validate-pending \u2014 PR #119 CR fixes",
+      "branch": "junior/role-impl-task-sl-b-fix-impl-2-see-claude-prps-briefs-sl-b-fix-impl-2-md-131",
+      "phase_task": "sl-b-fix-impl-2",
+      "workflow_run_id": 25497296079,
+      "head_sha": "a639d5d0d",
+      "commands": [
+        "cargo check --workspace --features full",
+        "cargo clippy --workspace --features full --no-deps -- -D warnings",
+        "cargo test --no-run -p lemmy_server --test e2e --features full"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "PR #119 CR triage fix: cr-4 (rate-limit ordering), cr-5 (authz before idempotent return \u2014 CRITICAL), cr-6 (majority_revocation deferred to v1-SL-c per adhoc-sl-c-baseline-sponsor-count.md), cr-7 (endorsement_revoked payload version+endorsement_id), cr-22 (github.sha vs git rev-parse), cr-23 (refs.outputs.pr_number consistency). Companion B2 (10th e2e test) on separate junior/advisor-sl-b-fix-impl-2-e2e branch."
+    }
+  ],
   "resolved": [
     {
       "id": 150,
