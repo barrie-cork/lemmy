@@ -25,3 +25,14 @@
 - **Recommendation:** pending (3 major fix-in-pr remain)
 - **YAML:** .claude/PRPs/reviews/pr-119-findings.yaml (230 bytes)
 - **Notes:** Fixes cr-1,cr-2,cr-3,cr-4,cr-8 addressed in commits 2c15df0–b00ae7d; 3 major findings remain open (cr-5 majority_revocation logic, cr-6 governance-log schema, cr-14 hardcoded Homebrew paths); 7 low findings (mostly markdownlint MD040/MD041)
+
+## bm: triage — 2026-05-07T19:57:05Z
+- **PR:** #119
+- **Buckets:** fix-in-pr 0 | rebut 1 | carry-forward 1 | done 6 | wont-fix 7
+- **Severity breakdown:** critical 0 open / 1 done | major 0 open / 3 done / 1 rebutted / 1 carry-forward | low 0 open / 2 done / 7 wont-fix
+- **Comment posted?** yes (https://github.com/barrie-cork/lemmy/pull/119#issuecomment-4400616726)
+- **Carry-forward issues filed:** 1 — https://github.com/barrie-cork/lemmy/issues/120 (cr-14 Homebrew paths in .pi/PROJECT_CONTEXT.md)
+- **Recommendation:** approve (no fix-in-pr open; no critical open; cr-6 done in a771c49e7; cr-5 deferred to v1-SL-c via documented TODO)
+- **YAML:** .claude/PRPs/reviews/pr-119-findings.yaml (counters recomputed; recommendation flipped pending→approve)
+- **Comment draft:** .claude/PRPs/reviews/pr-119-comment.md (52 lines, body ready to post)
+- **Notes:** poll-#2 re-numbered findings to cr-1..cr-15. cr-5 (was poll-1's `majority_revocation` finding) → rebut citing brief sl-b-fix-impl-3.md §2 deferral. cr-6 (poll-1 cr-7, governance-log schema) → done addressed_in a771c49e7. cr-14 → carry-forward (Pi config out of governance scope). cr-7,cr-9..cr-13,cr-15 → wont-fix (markdown-lint nits / Pi audit artefact).

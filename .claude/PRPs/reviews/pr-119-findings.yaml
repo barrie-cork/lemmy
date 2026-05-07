@@ -7,7 +7,7 @@ opened_at: '2026-05-06T16:43:04Z'
 last_poll_at: '2026-05-07T19:44:27Z'
 poll_count: 2
 last_polled_head_sha: 3f119ce82
-recommendation: pending
+recommendation: approve
 findings:
 - id: cr-1
   source: coderabbit
@@ -65,9 +65,9 @@ findings:
   line: 267
   summary: '`majority_revocation` only counts the current revocation'
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703214
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: 'Pre-agreed deferral to v1-SL-c per brief sl-b-fix-impl-3.md §2 "Note on cr-6"; revoke_endorsement.rs:287-297 carries TODO(v1-SL-c) comment falling through to any_revocation behaviour until v1-SL-c''s grace-check evaluator (sponsor_liability_grace.rs::evaluate_escape_conditions) lands the persisted baseline_sponsor_count column.'
   notes: null
 - id: cr-6
   source: coderabbit
@@ -77,8 +77,8 @@ findings:
   line: 330
   summary: The governance-log payloads do not match the documented v1 schema
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703216
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: a771c49e7
   rationale: null
   notes: null
 - id: cr-7
@@ -89,9 +89,9 @@ findings:
   line: 6
   summary: Avoid machine-specific absolute paths in committed audit metadata
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703217
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Pi tool audit artefact, not part of Brehon governance code; machine-specific path is the historical record of where the audit was run on the Mac.
   notes: null
 - id: cr-8
   source: coderabbit
@@ -113,9 +113,9 @@ findings:
   line: 15
   summary: Add a top-level heading to satisfy MD041
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755000
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on meta/prose file (.claude/lessons) outside governance crate scope; advisor lessons use frontmatter conventions and ship lint-imperfect by design.
   notes: null
 - id: cr-10
   source: coderabbit
@@ -125,9 +125,9 @@ findings:
   line: 75
   summary: Normalise fenced-block spacing for MD031 compliance
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755021
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on meta/prose file (.claude/lessons) outside governance crate scope.
   notes: null
 - id: cr-11
   source: coderabbit
@@ -137,9 +137,9 @@ findings:
   line: 10
   summary: Add an H1 to clear markdownlint MD041
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755024
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on Pi agent config (.pi/) outside governance crate scope; .pi/ files use frontmatter conventions, not H1 conventions.
   notes: null
 - id: cr-12
   source: coderabbit
@@ -149,9 +149,9 @@ findings:
   line: 10
   summary: Add a top-level heading after front matter
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755028
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on Pi agent config (.pi/) outside governance crate scope.
   notes: null
 - id: cr-13
   source: coderabbit
@@ -161,9 +161,9 @@ findings:
   line: 148
   summary: Add fenced-code language identifiers to satisfy MD040
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755035
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on Pi project context (.pi/PROJECT_CONTEXT.md) outside governance crate scope.
   notes: null
 - id: cr-14
   source: coderabbit
@@ -173,10 +173,10 @@ findings:
   line: 166
   summary: Avoid hard-coded Homebrew global-module paths in setup instructions
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755040
-  bucket: fix-in-pr
+  bucket: carry-forward
   addressed_in: null
-  rationale: null
-  notes: null
+  rationale: Real issue but out of v1-SL-b scope — Pi agent config file (.pi/PROJECT_CONTEXT.md) is not part of Brehon governance crate; deferred to a separate issue.
+  notes: https://github.com/barrie-cork/lemmy/issues/120
 - id: cr-15
   source: coderabbit
   severity: low
@@ -185,9 +185,9 @@ findings:
   line: 167
   summary: Specify language identifier for the fenced code block
   cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197921683
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: markdown-lint nit on advisor skill (.claude/skills/) outside governance crate scope.
   notes: null
 counters:
   critical:
@@ -197,10 +197,10 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 3
-    done: 2
-    rebutted: 0
-    carry_forward: 0
+    open: 0
+    done: 3
+    rebutted: 1
+    carry_forward: 1
     wont_fix: 0
   medium:
     open: 0
@@ -209,11 +209,11 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 7
+    open: 0
     done: 2
     rebutted: 0
     carry_forward: 0
-    wont_fix: 0
+    wont_fix: 7
   nit:
     open: 0
     done: 0
