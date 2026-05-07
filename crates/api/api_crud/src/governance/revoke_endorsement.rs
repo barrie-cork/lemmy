@@ -97,14 +97,15 @@ pub async fn revoke_endorsement(
     .flatten();
   // If already revoked, fall through to the tx (it'll re-load FOR UPDATE
   // and idempotent-return); skip the rate-limit count + bypass logic.
-  let (rate_limit_per_day, recent_count, bypass_recorded);
+  // rate_limit_per_day + recent_count are scoped to the else arm only
+  // (downstream consumes only bypass_recorded; the others are dead on
+  // the is_some() path — clippy::unused_assignments).
+  let bypass_recorded;
   if already_revoked.is_some() {
-    rate_limit_per_day = i64::MAX;
-    recent_count = 0i64;
     bypass_recorded = false;
   } else {
     // PRE-TX: rate-limit count (admin bypasses — Watch 14 / R1 i64 discipline).
-    rate_limit_per_day = config::get_int(
+    let rate_limit_per_day: i64 = config::get_int(
       &mut ConfigCache::new(),
       &mut context.pool(),
       Scope::Instance,
@@ -112,7 +113,7 @@ pub async fn revoke_endorsement(
     )
     .await?;
     let cutoff: DateTime<Utc> = Utc::now() - Duration::hours(24);
-    recent_count = endorsement::table
+    let recent_count: i64 = endorsement::table
       .filter(endorsement::from_person_id.eq(caller_id))
       .filter(endorsement::revoked_at.gt(cutoff))
       .select(count_star())
