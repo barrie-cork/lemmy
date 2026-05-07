@@ -2433,6 +2433,21 @@
       "answer": "Option (B) Derive at evaluation time (per user 2026-05-07). When/if SL-c's evaluator needs a baseline-vs-revoked count for majority_revocation, derive baseline as `SELECT COUNT(*) FROM surety WHERE sponsored_id = $target AND community_id = $community AND created_at <= $decided_at AND (revoked_at IS NULL OR revoked_at > $decided_at)`. Self-contained in SL-c's evaluate_escape_conditions; zero migration; uses surety.created_at + surety.revoked_at columns confirmed present at crates/db_schema_file/src/schema.rs surety table. Scope-conflict caveat: the planner's plan \u00a714.3 currently scopes majority_revocation OUT of SL-c (asserts SL-b's sync handler covers it). User must decide at plan-approval gate whether to (i) keep planner's scope (DQ #149 records option-B as the future shape if/when added) or (ii) expand SL-c's scope to evaluate majority_revocation per the relay framing. Cross-reference: PR #119 cr-6 finding 'notes' field to be updated with this DQ #149 id once SL-c lands.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-07T13:55:00Z"
+    },
+    {
+      "id": 150,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-07T14:10:00Z",
+      "question": "Override DQ #148 — at plan-approval gate, user chose split-into-c1-plus-c2 instead of planner's proceed-as-one lean. How is the split executed mechanically?",
+      "options": [
+        "split-c1-c2 — author v1-sponsor-liability-c-1.plan.md (Tasks 0, 1, 2, retro) + v1-sponsor-liability-c-2.plan.md (Tasks 0, 3-7, retro) consuming c-1 as merged dependency",
+        "proceed-as-one — keep planner's lean (overridden by user; recorded for traceability)"
+      ],
+      "context": "User answered AskUserQuestion at plan-approval gate 2026-05-07 with 'Override: split into c1 + c2' (transcript-traceable). Planner's lean was proceed-as-one (precedent: SL-b at score 38, SL-a at 13, JM-e at 15 all shipped without regret). User picked split. Mechanical split: c-1 ships module + scheduler wiring + retro (score ~7); c-2 cuts new phase branch off governance-v0 after c-1 merges, adds the 5 e2e tests + retro (score ~16). c-2 score remains above 8 (acknowledged by planner in §5.2) but the split addresses the user's preference for tighter PR sizing. c-2 can write tests against the merged c-1 module rather than against an unmerged module.",
+      "answer": "split-c1-c2 — execute split mechanics per next AskUserQuestion. Existing v1-sponsor-liability-c.plan.md is the trunk; the split materialises as either (a) advisor-authored chore(plan) trim of trunk to c-1 + additive c-2 plan; (b) re-dispatch planning subagent twice (once per split); (c) single planning-subagent dispatch with 'split this trunk plan' task. Plan_n inherits §1-§12 + §17-§20 from trunk; §13/§14/§15.4/§16/§16a sliced at Task-2/3 boundary. Two phase branches sequenced: phase-v1-SL-c-1 (after SL-b merges) → phase-v1-SL-c-2 (after SL-c-1 merges). Mechanics path pending advisor surfacing.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T14:10:00Z"
     }
   ],
   "schema_version": 2
