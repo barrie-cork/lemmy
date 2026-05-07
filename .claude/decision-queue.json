@@ -1,6 +1,30 @@
 {
   "pending": [
     {
+      "id": 154,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T14:45:00Z",
+      "subject": "phase-v1-SL-b tip b00ae7db2 e2e validate-pending (local, corrected command)",
+      "branch": "phase-v1-SL-b",
+      "phase_task": "sl-b-e2e-post-fix-152-retry",
+      "workflow_run_id": null,
+      "head_sha": "b00ae7db2",
+      "local_log_path": ".claude/runlog/e2e-phase-v1-SL-b-98b4b7ab9.log",
+      "commands": [
+        "cargo test --workspace --test e2e --features full -- --test-threads=1"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Retry of DQ #153 with corrected command: --workspace instead of -p lemmy_server (feedback_features_full_p_crate_incompatible). Same tip b00ae7db2. Captures to new log path."
+    }
+  ],
+  "resolved": [
+    {
       "id": 153,
       "from": "advisor",
       "kind": "validate-pending",
@@ -14,16 +38,16 @@
       "commands": [
         "cargo test -p lemmy_server --test e2e --features full -- --test-threads=1"
       ],
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "result": "fail",
+      "log_slice": "error: the package 'lemmy_server' does not contain this feature: full\nhelp: packages with the missing feature: lemmy_utils, lemmy_db_schema, ... (see full log)",
+      "failed_jobs": [
+        "command-error: -p lemmy_server --features full incompatible (feedback_features_full_p_crate_incompatible)"
+      ],
+      "answer": "Command error: -p lemmy_server --features full is incompatible. Re-ran with correct command shape (--workspace --features full --test e2e) as DQ #154.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T14:45:00Z",
       "context": "Post-fix e2e validation for phase-v1-SL-b after the unused_assignments hand-fix (commits a9719fa82 + b00ae7db2). User selected option (a) local per Phase 2 e2e user gate (CLAUDE.md gate #5). Docker confirmed running. Background cargo invocation captures to local_log_path; advisor mutates entry directly when cargo exits."
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 152,
       "from": "impl",
