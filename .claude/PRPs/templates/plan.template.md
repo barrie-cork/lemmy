@@ -35,6 +35,7 @@ The architectural shape of the change. Diagram-grain — leave file:line detail 
 
 - **Phase:** `<phase-slug>` (e.g. `v1-JM-d`)
 - **Branch:** `phase-<phase-slug>` (cut by BM-task before Task 1)
+- **Target impl-task model:** `<sonnet-4-6 | minimax-m2.7 | haiku-4-5 | ...>` — names the specific model the impl-task subagent runs under for this sub-phase. Default `sonnet-4-6`. **Used by the complexity-gate threshold below** (non-Sonnet targets get tighter thresholds).
 - **Estimated tasks:** N (pre-flight + impl + retro)
 - **Estimated cargo budget:** `<X> GB peak` (sum across cohorts; check against `feedback_resource_budget_pre_queue.md`)
 - **Forbidden-window applicability:** standard (per advisor-orchestrator.md table)
@@ -42,7 +43,12 @@ The architectural shape of the change. Diagram-grain — leave file:line detail 
 
 ### 5.1 Complexity factor breakdown
 
-Per `feedback_complexity_score_pre_split.md`. The planner computes the score mechanically and writes it before commit. If `score > 8`, the planner files a `pending` DQ entry to the advisor with `from: "planner"`, `kind: "blocker"`, asking "complexity N exceeds threshold — split into `<slug>-1` + `<slug>-2`, or proceed?" The advisor answers split-or-proceed in `--mode advisor` (citing prior similar phases) or escalates to `--mode user-relay` if judgment-heavy.
+Per `feedback_complexity_score_pre_split.md`. The planner computes the score mechanically and writes it before commit. The threshold for filing a split-DQ depends on the **Target impl-task model** field above:
+
+- **Sonnet target** (`sonnet-4-6`, `sonnet-4-6-1m`, `opus-4-7`): split-DQ if `score > 8`.
+- **Non-Sonnet target** (anything not in the Sonnet set above — e.g. `minimax-m2.7`, `haiku-4-5`, `sonnet-3.x`): split-DQ if `score > 6`. **The "proceed-as-one with prior-Sonnet-phase precedent" override is forbidden** — Sonnet precedent does not transfer to a smaller or untested model. The advisor must answer split, or user-relay (no advisor-mode override-with-precedent).
+
+If a split-DQ fires, the planner files a `pending` entry to the advisor with `from: "planner"`, `kind: "blocker"`, asking "complexity N exceeds threshold (target model: M) — split into `<slug>-1` + `<slug>-2`, or proceed?"
 
 | Factor | Weight | This plan | Notes |
 |---|---|---|---|
@@ -52,9 +58,19 @@ Per `feedback_complexity_score_pre_split.md`. The planner computes the score mec
 | `crates/lemmy_server/tests/e2e/*.rs` edits | +3 each | <count> | Per `feedback_junior_worker_e2e_edit_hang.md` (worker-hang risk on >8000 line files) |
 | New ADR-affecting decisions | +2 each | <count> | Any decision that supersedes an entry in `docs/research/brehon-law-inspired-network/99-decisions-and-open-questions.md` |
 | Cargo budget peak above 6 GB | +1 per GB | <count> | Pre-Shape-G plans only; Shape-G plans set this to 0 (cargo runs off-box) |
-| **Total** | — | **<N>** | Threshold for split-DQ: `>8` |
+| **Total** | — | **<N>** | Threshold for split-DQ: `>8` (Sonnet) / `>6` (non-Sonnet) |
 
 If the plan ships under Shape G (v1-JM-e onward, validation off-box), the cargo-budget factor is 0 and the e2e factor's threshold is unchanged (Edit-hang risk is a function of file size, not where validation runs).
+
+### 5.2 Per-task complexity ceiling (non-Sonnet target only)
+
+For non-Sonnet targets, **each individual §13 task** must satisfy:
+
+- `count(union(creates, modifies)) ≤ 3` files, AND
+- `count(distinct crates/<X>/ prefixes in union(creates, modifies)) ≤ 1`, AND
+- `crates/lemmy_server/tests/e2e/*.rs` does not appear in `modifies:` (e2e edits go in their own dedicated task — never bundled with non-test logic).
+
+A task that violates any of these is a "split-candidate" — the planner splits it into N sub-tasks where N = `ceil(file-count / 3)`, using `[P]` markers aggressively where YAML overlap is empty. The Sonnet ceiling is `≤ 4` files / `≤ 2` crates (the prior implicit norm) and is unchanged for Sonnet targets.
 
 ## 6. Relationship to other v<N>-<family> sub-phases
 

@@ -60,22 +60,50 @@ Per `.claude/PRPs/templates/plan.template.md` §5.1 + `feedback_complexity_score
 | New ADR-affecting decisions | +2 each | Count §2 Source ADR citations that *supersede* (not just reference) `99-decisions-and-open-questions.md` entries |
 | Cargo budget peak above 6 GB | +1 per GB | Pre-Shape-G plans only; Shape G plans contribute 0 |
 
-Write the breakdown into §5.1 of the plan. If `total > 8`, **before committing the plan**, file a DQ pending entry:
+**Threshold depends on the brief's `target_model` field** (or §5 Metadata's "Target impl-task model" line if the brief did not name one). Default is `sonnet-4-6`.
+
+- **Sonnet target** (`sonnet-4-6`, `sonnet-4-6-1m`, `opus-4-7`): file split-DQ if `score > 8`.
+- **Non-Sonnet target** (`minimax-m2.7`, `haiku-4-5`, `sonnet-3.x`, anything not in the Sonnet set): file split-DQ if `score > 6`. Additionally apply the §5b per-task ceiling discipline below.
+
+Write the breakdown into §5.1 of the plan. If the score exceeds the threshold for the target model, **before committing the plan**, file a DQ pending entry:
 
 ```json
 {
   "from": "planner",
   "kind": "blocker",
-  "question": "Complexity score N exceeds 8 — split <slug> into <slug>-1 + <slug>-2, or proceed?",
-  "context": "<one-line summary of which factors contributed most>",
+  "question": "Complexity score N exceeds threshold M (target model: T) — split <slug> into <slug>-1 + <slug>-2, or proceed?",
+  "context": "<one-line summary of which factors contributed most + target model>",
   "options": ["split", "proceed"],
   "answered_by": null
 }
 ```
 
-The advisor decides split-or-proceed. If split: re-plan with reduced scope per the decision (the planner re-runs after the advisor edits the brief). If proceed: the advisor self-resolves the DQ with `answered_by: "advisor"`, citing the prior phase whose complexity score was similar and whose retro showed acceptable execution.
+The advisor decides split-or-proceed:
+
+- For **Sonnet targets**, `answered_by: "advisor"` with prior-phase precedent citation is acceptable (existing pattern).
+- For **non-Sonnet targets**, the "proceed-as-one with prior Sonnet-phase precedent" override is **forbidden** — Sonnet precedent does not transfer to a smaller or untested model. The advisor must either answer "split" (with citation) or escalate to `user-relay` mode. This is the load-bearing change for model-trial sub-phases.
+
+If split: re-plan with reduced scope per the decision (the planner re-runs after the advisor edits the brief). If proceed (Sonnet only): the advisor self-resolves with `answered_by: "advisor"` citing the prior phase whose complexity score was similar.
 
 This gate runs once per plan, before the planning subagent's commit. The complexity score in §5 is permanent (not retroactively edited).
+
+## §5b Per-task ceiling (non-Sonnet targets only)
+
+Per `.claude/PRPs/templates/plan.template.md` §5.2 + the user's planning-discipline change 2026-05-07. For plans whose `target_model` is non-Sonnet, **each §13 task must satisfy** all three:
+
+1. `count(union(creates, modifies)) ≤ 3` files. (Sonnet ceiling: `≤ 4`.)
+2. `count(distinct crates/<X>/ prefixes in union(creates, modifies)) ≤ 1` crate. (Sonnet ceiling: `≤ 2`.)
+3. `crates/lemmy_server/tests/e2e/*.rs` does not appear in `modifies:` for any task that also modifies non-test crates. e2e edits get a dedicated task. (Sonnet allows bundled e2e + impl in the same task.)
+
+If a draft §13 task violates any of these, **split it before the YAML/IMPLEMENT block is finalised**. The split recipe:
+
+- Single-responsibility split: each new task touches one file (or one tightly-coupled file pair — function definition + its single test, or migration up + down). The cohesive operation that would otherwise have been one bundled task becomes N tasks where `N = ceil(original_file_count / 3)`.
+- Use `[P]` aggressively where the new tasks have empty YAML overlap. Disjoint single-file edits are the cleanest cohort case — they reclaim wall-clock without complexity cost.
+- Update §16a Stories to group the split tasks under the same story (the story's checkpoint command stays the same; only the §13 task count grew).
+
+This discipline is the *recipe* the planner uses to keep the §5 score under the non-Sonnet threshold (`> 6`). The §5 gate is the enforcement; §5b is the constructive shape that satisfies the gate without bundling.
+
+**Why this discipline exists for non-Sonnet only:** Sonnet 4.6 has a 200k context window and an empirically validated agentic-tool-use envelope (`feedback_brehon_subagent_model_effort_assignments.md`); 4-file bundled tasks routinely fit. Smaller or untested models (MiniMax M2.7, Haiku 4.5, etc.) have unknown or smaller envelopes — single-responsibility tasks reduce per-task variance and make A/B trials interpretable (the variable is the model, not the task size).
 
 ## §13 [P] parallel-task markers (load-bearing)
 

@@ -66,3 +66,31 @@ The threshold > 8 is calibrated against shipped phases:
 - `feedback_parallel_cohort_dispatch.md` — cohort budget check uses the same per-task ~6 GB cargo peak the score's cargo-budget factor uses
 - `feedback_schema_changing_spec_retrofit_question.md` — why this additive ships forward-only
 - `feedback_principles_not_rules.md` — the `> 8` threshold is calibrated, not absolute; planner judgment can override with citation
+
+## Non-Sonnet target models (added 2026-05-07)
+
+The threshold + ceiling above were calibrated against Sonnet 4.6's 200k context window and empirically validated agentic-tool-use envelope. For sub-phases that intend to run impl-tasks on a **non-Sonnet model** (e.g. MiniMax M2.7 A/B trial, Haiku 4.5 cost-test), the discipline is tightened.
+
+**Plan §5 Metadata gains a `Target impl-task model:` field** (e.g. `sonnet-4-6`, `minimax-m2.7`, `haiku-4-5`). The advisor's planning brief writes the target into §4 Constraints; the planner copies it into §5. Default is `sonnet-4-6`.
+
+**Threshold table by target model** (per `.claude/PRPs/templates/plan.template.md` §5.1 + `.claude/agents/planning.md` §5):
+
+| Target model class | Examples | Whole-plan score threshold | Per-task file ceiling | Per-task crate ceiling | e2e bundling allowed |
+|---|---|---|---|---|---|
+| Sonnet (default) | `sonnet-4-6`, `sonnet-4-6-1m`, `opus-4-7` | `> 8` | `≤ 4` files | `≤ 2` crates | yes (existing pattern) |
+| Non-Sonnet | `minimax-m2.7`, `haiku-4-5`, `sonnet-3.x`, any other | `> 6` | `≤ 3` files | `≤ 1` crate | no (e2e edits get a dedicated task) |
+
+**Why the Sonnet/non-Sonnet split:**
+
+- Sonnet 4.6 is the calibration target — the original `> 8` threshold was tuned against shipped Sonnet phases (JM-d through SL-a; see "calibrated against shipped phases" above).
+- MiniMax M2.7 has **no documented benchmark data** for agentic-coding workflows (no SWE-bench Verified score, unknown context window, unknown tokenizer, unknown tool-use reliability). The conservative response to that uncertainty is a tighter envelope — single-responsibility tasks reduce per-task variance and make trial signals interpretable (the variable is the model, not the task size).
+- Haiku 4.5 caps at 200k context (no 1M option) and is positioned by Anthropic for "sub-agent tasks" — the same conservative envelope applies.
+- Sonnet 3.x and other older Anthropic models have smaller windows and weaker tool-use; they would inherit the non-Sonnet discipline.
+
+**Forbidden override for non-Sonnet targets:** the advisor's "proceed-as-one with prior-Sonnet-phase precedent" answer (used historically for JM-e at score 15 and SL-a at score 13) is **not valid** for non-Sonnet target plans. Sonnet precedent does not transfer to a smaller or untested model — that's the whole reason for trialing a different model in the first place. Non-Sonnet plans whose score exceeds `> 6` must either be split (planner re-runs with reduced brief scope) or surfaced to user-relay mode (judgment-heavy decision).
+
+**Per-task ceiling enforcement (the §5b discipline in `planning.md`):**
+
+For non-Sonnet target plans, the planner constructs §13 tasks under the tightened ceiling rather than constructing a Sonnet-style §13 and then catching the violation at the gate. The recipe: each task touches one file (or a tightly-coupled pair — function + its single test, or migration up + down); cohesive multi-file operations split into `N = ceil(file-count / 3)` tasks; `[P]` markers go on disjoint single-file edits to reclaim wall-clock.
+
+**Calibration disclaimer:** the `> 6` and `≤ 3` numbers are educated defaults, not benchmark-derived. The first non-Sonnet sub-phase's retro re-tunes them empirically. If MiniMax stalls or watchdog-times-out on a 3-file task, the next plan tightens further (likely `≤ 2` files); if MiniMax handles 3-file tasks comfortably, the threshold can stay or relax slightly. The retro complexity-score metric (`feedback_retro_task_complexity_score.md`) is the empirical signal for tuning.
