@@ -2448,6 +2448,21 @@
       "answer": "split-c1-c2 — execute split mechanics per next AskUserQuestion. Existing v1-sponsor-liability-c.plan.md is the trunk; the split materialises as either (a) advisor-authored chore(plan) trim of trunk to c-1 + additive c-2 plan; (b) re-dispatch planning subagent twice (once per split); (c) single planning-subagent dispatch with 'split this trunk plan' task. Plan_n inherits §1-§12 + §17-§20 from trunk; §13/§14/§15.4/§16/§16a sliced at Task-2/3 boundary. Two phase branches sequenced: phase-v1-SL-c-1 (after SL-b merges) → phase-v1-SL-c-2 (after SL-c-1 merges). Mechanics path pending advisor surfacing.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-07T14:10:00Z"
+    },
+    {
+      "id": 151,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-07T15:00:00Z",
+      "question": "Complexity score 17 exceeds 8 — split v1-sponsor-liability-c-2 further (e.g. c-2-A Tasks 1-2 + c-2-B Tasks 3-5), or proceed?",
+      "options": [
+        "split-further — author v1-sponsor-liability-c-2-A.plan.md (Tasks 1-2: Tests #1-#2) + v1-sponsor-liability-c-2-B.plan.md (Tasks 3-5: Tests #3-#5) + retros",
+        "proceed — ship c-2 as one plan (5 e2e tests + retro); accept score 17 with proceed-as-one rationale citing e2e-factor analysis + DQ #150 split-level precedent"
+      ],
+      "context": "c-2 §5.1 breakdown: 0 (impl tasks above 5) + 0 (migrations) + 1 (crate: lemmy_server) + 15 (5 × +3 e2e edits) + 0 (ADR) + 0 (cargo) + 1 (adj for c-1 dependency check) = 17. Dominant factor: 5 e2e edits at +3 each = +15 of the +16 wrapped subtotal. Splitting c-2 further: c-2-A (2 tests) scores 5+0+1+6+0+0=12; c-2-B (3 tests) scores 5+0+1+9+0+0=15. Per-phase score does NOT meaningfully reduce because the +3-per-e2e weight applies to each sub-phase. Per `feedback_principles_not_rules.md`: e2e suite is anchor-Edit-friendly (each test is a single fn at file end inside `mod v1_sl_c_fixtures`; trunk plan §10.8 fixture-mod shape is well-rehearsed across SL-b's 9-10 tests + JM-e's tests). Per-task wall-clock under Sonnet 4.6 likely 6-8 min per test. SL-b shipped 9-10 e2e tests at score 38 with proceed-as-one DQ #143; JM-e at 15; SL-a at 13; trunk-SL-c at 21 with proceed-as-one DQ #148 (overridden by DQ #150 user split-c-1-c-2). c-2 at 17 within established proceed-as-one envelope for test-heavy phases.",
+      "answer": "proceed — per feedback_principles_not_rules.md, complexity score is a signal not a hard rule. The dominant factor is the 5 e2e edits (+15 of +16); further splitting yields no meaningful per-phase reduction because the +3-per-test weight applies to each sub-phase. The 5 tests are mechanically anchor-Edit-friendly per trunk plan §10.8 fixture-mod shape. Precedents: SL-b at 38 (proceed-as-one, 9-10 e2e tests) + JM-e at 15 + SL-a at 13 + trunk-SL-c at 21 all shipped proceed-as-one without operational regret. DQ #150 split-c-1-c-2 was the user-mandated split level; absent further user mandate, proceed-as-one within c-2 is the correct lean. Advisor may overturn at plan-approval time if user prefers further split — but the e2e-factor analysis suggests further splitting yields no meaningful score reduction. Filed by planner; advisor reviews at c-2 plan-approval gate.",
+      "answered_by": "planner",
+      "resolved_at": "2026-05-07T15:00:00Z"
     }
   ],
   "schema_version": 2
