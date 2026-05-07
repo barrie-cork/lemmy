@@ -315,7 +315,18 @@ with open(yaml_path, "w", encoding="utf-8") as f:
 `feedback_python_utf8_encoding_windows.md`). `allow_unicode=True`
 preserves the CR severity emoji in `notes:` if any survived parse.
 
-After successful write, optionally clean the cache:
+After successful write, force-add the findings YAML to git so it survives
+worktree cleanup. The file is gitignored by default (to avoid accidental
+commits of stale findings), but the BM worker MUST commit it so the advisor
+can retrieve it without relying on `/tmp` or worktree persistence:
+
+```bash
+git add -f .claude/PRPs/reviews/pr-{N}-findings.yaml
+git commit -m "chore(bm): poll-cr #{N} — ingest CR findings (poll #{count})"
+git push origin <current-branch>
+```
+
+Then optionally clean the cache:
 
 ```bash
 rm .claude/PRPs/reviews/.cr-cache/pr-{N}-*.{jsonl,txt}
