@@ -56,7 +56,7 @@ jobs:
           # workflow_dispatch context
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             BASE_REF="${{ github.event.inputs.base_ref }}"
-            HEAD_SHA="${INPUTS_HEAD_SHA:-$(git rev-parse HEAD)}"
+            HEAD_SHA="${INPUTS_HEAD_SHA:-${{ github.sha }}}"
             PR_NUMBER=""
           # Push context
           else
@@ -123,7 +123,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: parseInt('${{ steps.refs.outputs.pr_number }}', 10),
               body: body
             });
 

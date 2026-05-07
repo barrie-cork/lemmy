@@ -40,7 +40,7 @@
 
 use actix_web::web::{Data, Json};
 use chrono::{DateTime, Duration, Utc};
-use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, dsl::count_star, update};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper, dsl::count_star, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
@@ -81,28 +81,49 @@ pub async fn revoke_endorsement(
   // erroring on non-admin callers (self-revoke is valid for non-admins).
   let is_admin_caller = is_admin(&local_user_view).is_ok();
 
-  // PRE-TX: rate-limit count (admin bypasses — Watch 14 / R1 i64 discipline).
-  let rate_limit_per_day: i64 = config::get_int(
-    &mut ConfigCache::new(),
-    &mut context.pool(),
-    Scope::Instance,
-    "liability.revoke_rate_limit_per_day",
-  )
-  .await?;
-  let cutoff: DateTime<Utc> = Utc::now() - Duration::hours(24);
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
-  let recent_count: i64 = endorsement::table
-    .filter(endorsement::from_person_id.eq(caller_id))
-    .filter(endorsement::revoked_at.gt(cutoff))
-    .select(count_star())
-    .get_result(conn)
+
+  // PRE-TX: idempotency probe (cr-4 PR #119) — already-revoked retries
+  // skip rate-limit accounting. Cheap single-row SELECT; the tx-level
+  // FOR UPDATE re-check at Step 3 is the authoritative idempotency
+  // gate. This probe avoids 429s on retries of a successful revoke.
+  let already_revoked: Option<DateTime<Utc>> = endorsement::table
+    .filter(endorsement::id.eq(data.endorsement_id))
+    .select(endorsement::revoked_at)
+    .first::<Option<DateTime<Utc>>>(conn)
+    .await
+    .optional()?
+    .flatten();
+  // If already revoked, fall through to the tx (it'll re-load FOR UPDATE
+  // and idempotent-return); skip the rate-limit count + bypass logic.
+  let (rate_limit_per_day, recent_count, bypass_recorded);
+  if already_revoked.is_some() {
+    rate_limit_per_day = i64::MAX;
+    recent_count = 0i64;
+    bypass_recorded = false;
+  } else {
+    // PRE-TX: rate-limit count (admin bypasses — Watch 14 / R1 i64 discipline).
+    rate_limit_per_day = config::get_int(
+      &mut ConfigCache::new(),
+      &mut context.pool(),
+      Scope::Instance,
+      "liability.revoke_rate_limit_per_day",
+    )
     .await?;
-  // bypass_recorded: true only when admin AND would-have-been-rate-limited
-  // (DQ #140). Standard admin-under-threshold = false; non-admin-under-threshold = false.
-  let bypass_recorded = is_admin_caller && recent_count >= rate_limit_per_day;
-  if !is_admin_caller && recent_count >= rate_limit_per_day {
-    return Err(LemmyErrorType::TooManyRequests.into());
+    let cutoff: DateTime<Utc> = Utc::now() - Duration::hours(24);
+    recent_count = endorsement::table
+      .filter(endorsement::from_person_id.eq(caller_id))
+      .filter(endorsement::revoked_at.gt(cutoff))
+      .select(count_star())
+      .get_result(conn)
+      .await?;
+    // bypass_recorded: true only when admin AND would-have-been-rate-limited
+    // (DQ #140). Standard admin-under-threshold = false; non-admin-under-threshold = false.
+    bypass_recorded = is_admin_caller && recent_count >= rate_limit_per_day;
+    if !is_admin_caller && recent_count >= rate_limit_per_day {
+      return Err(LemmyErrorType::TooManyRequests.into());
+    }
   }
 
   // PRE-TX: reason validation (DQ #139 — mirrors admin_close_case.rs:30-32).
@@ -150,7 +171,7 @@ async fn process_revocation(
 ) -> LemmyResult<RevokeEndorsementResponse> {
   let mut config = ConfigCache::new();
 
-  // Step 1: load endorsement FOR UPDATE; idempotency check inside tx
+  // Step 1: load endorsement FOR UPDATE.
   // (TOCTOU avoidance — Watch 1 / §4.2 #1).
   let row: Endorsement = endorsement::table
     .filter(endorsement::id.eq(data.endorsement_id))
@@ -159,7 +180,15 @@ async fn process_revocation(
     .first(conn)
     .await?;
 
-  // Step 1.5: idempotency (PRD §5.4) — re-revocation is a no-op.
+  // Step 2: capability check — self-revoke or admin (cr-5 PR #119:
+  // before the idempotent early-return; otherwise unauthorised callers
+  // distinguish revoked-vs-not-found via revoked_at leak).
+  if !is_admin_caller && row.from_person_id != caller_id {
+    return Err(LemmyErrorType::NotFound.into());
+  }
+
+  // Step 3: idempotency (PRD §5.4) — re-revocation is a no-op for
+  // authorised callers (was Step 1.5 pre-cr-5).
   if let Some(existing_revoked_at) = row.revoked_at {
     return Ok(RevokeEndorsementResponse {
       endorsement_id: row.id,
@@ -168,20 +197,15 @@ async fn process_revocation(
     });
   }
 
-  // Step 2: capability check — self-revoke or admin.
-  if !is_admin_caller && row.from_person_id != caller_id {
-    return Err(LemmyErrorType::NotFound.into());
-  }
-
   let now: DateTime<Utc> = Utc::now();
 
-  // Step 3: UPDATE endorsement.revoked_at.
+  // Step 4: UPDATE endorsement.revoked_at.
   update(endorsement::table.filter(endorsement::id.eq(row.id)))
     .set(endorsement::revoked_at.eq(Some(now)))
     .execute(conn)
     .await?;
 
-  // Step 4: UPDATE matching surety row by triple (sponsor_id, sponsored_id,
+  // Step 5: UPDATE matching surety row by triple (sponsor_id, sponsored_id,
   // community_id). UPDATE no-op if not found — community-scoped vs. unscoped
   // endorsement, or cap-exceeded surety (no row inserted at create time when
   // MAX_ACTIVE_SURETIES_PER_SPONSEE was already reached).
@@ -218,7 +242,7 @@ async fn process_revocation(
     }
   }
 
-  // Steps 5 + 6: grace-window evaluation loop.
+  // Steps 6 + 7: grace-window evaluation loop.
   // Query SponsorLiabilityPending cases for the sponsee still within their
   // grace window. The Diesel filter on `status.eq(SponsorLiabilityPending)`
   // ensures SL-b never mutates Decided or Closed cases (ADR-013 / Watch 7;
@@ -248,7 +272,7 @@ async fn process_revocation(
     )
     .await?;
 
-    // Step 5: re-query active sponsors for `to_person_id` (post-step-4 state).
+    // Step 6: re-query active sponsors for `to_person_id` (post-step-5 state).
     let active_sponsor_count: i64 = surety::table
       .filter(surety::sponsored_id.eq(row.to_person_id))
       .filter(surety::revoked_at.is_null())
@@ -256,15 +280,20 @@ async fn process_revocation(
       .get_result(conn)
       .await?;
 
-    // Step 6: apply escape rule.
+    // Step 7: apply escape rule.
     let escapes = match escape_rule.as_str() {
       "all_revocation" => active_sponsor_count == 0,
-      "majority_revocation" => {
-        // pre-revoke sponsor count = active + 1 (this caller just revoked)
-        let pre_count = active_sponsor_count + 1;
-        let revoked_since_decision = pre_count - active_sponsor_count;
-        revoked_since_decision * 2 > pre_count
-      }
+      // cr-6 PR #119: the synchronous handler cannot correctly evaluate
+      // majority_revocation without a persisted baseline_sponsor_count
+      // captured at the Decided -> SponsorLiabilityPending transition.
+      // The authoritative evaluator lives in v1-SL-c's grace-check
+      // (sponsor_liability_grace.rs::evaluate_escape_conditions). Until
+      // that lands, fall through to any_revocation behaviour for cases
+      // where the operator selected "majority_revocation". See
+      // .claude/runlog/advisor-relays/adhoc-sl-c-baseline-sponsor-count.md.
+      // TODO(v1-SL-c): restore majority threshold once
+      // moderation_case.baseline_sponsor_count column lands.
+      "majority_revocation" => true,
       // "any_revocation" (default) + unknown/NULL fallback (defensive — no error)
       _ => true,
     };
@@ -300,19 +329,21 @@ async fn process_revocation(
     }
   }
 
-  // Step 7: recompute snapshots — sponsor AND sponsee inside same tx
+  // Step 8: recompute snapshots — sponsor AND sponsee inside same tx
   // (Watch 6 / §4.2 #6 — mirrors create_endorsement.rs:307-309).
   reputation_snapshot::recompute_snapshot(conn, revoking_sponsor_id, row.community_id, &mut config)
     .await?;
   reputation_snapshot::recompute_snapshot(conn, row.to_person_id, row.community_id, &mut config)
     .await?;
 
-  // Step 8: emit endorsement_revoked log entry ALWAYS (even when no severance).
+  // Step 9: emit endorsement_revoked log entry ALWAYS (even when no severance).
   // Per DQ #140: include rate_limit_bypassed ONLY when (admin AND
   // would-have-been-rate-limited); omit for standard revocations.
   let target_pseudonym =
     actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), row.to_person_id).await?;
   let mut payload = json!({
+    "version": 1,
+    "endorsement_id": row.id.0,
     "sponsor_pseudonym": caller_pseudonym,
     "target_pseudonym": target_pseudonym,
     "community_id": row.community_id.map(|c| c.0),
