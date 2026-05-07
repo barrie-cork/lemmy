@@ -39,12 +39,14 @@
       "workflow_run_id": 25525281390,
       "branch": "junior/role-impl-task-sl-c-1-impl-1-see-claude-prps-briefs-sl-c-1-impl-1-md-142",
       "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "error[E0432]: unresolved import `lemmy_db_schema::newtypes::PersonId`\n  --> crates/api/api/src/governance/sponsor_liability_grace.rs:56:45\n   |\n56 |   newtypes::{CommunityId, ModerationCaseId, PersonId},\n   |                                             ^^^^^^^^ no `PersonId` in `newtypes`\n\nerror[E0599]: no method named `run_transaction` found for mutable reference `&mut AsyncPgConnection` in the current scope\n   --> crates/api/api/src/governance/sponsor_liability_grace.rs:287:6\n    |\n286 |   conn\n287 |   |     .run_transaction(|conn| {\n    |   |_____^^^^^^^^^^^^^^^\n    |\nhelp: there is a method `transaction` with a similar name\n    |\n287 - |     .run_transaction(|conn| {\n287 + |     .transaction(|conn| {\n\nerror: could not compile `lemmy_api` (lib) due to 2 previous errors",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Two compilation errors in sponsor_liability_grace.rs: (1) PersonId not exported from newtypes, (2) run_transaction method doesn't exist (should be transaction). Non-allowlist failure; requires code fixes.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-07T22:40:52.190180Z"
     }
   ],
   "resolved": [
