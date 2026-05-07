@@ -2,7 +2,7 @@
 
 **Fork of:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ `d1975776a` (Lemmy 1.0-beta; last rebase 2026-04-18)
 **Working branch:** `governance-v0` (v0 feature work; `main` is reserved for upstream-sync rebases)
-**Active sub-phase:** `phase-v1-JM-e` (cut from `governance-v0` at `ebb34bb414`)
+**Active sub-phase:** `v1-SL-c-1` (next; trunk at `425d132ff`; phase branch not yet cut). Last shipped: `v1-SL-b` PR #119 merged at `9ae4c332c` on 2026-05-07.
 **Rust toolchain:** `1.95` · **License:** AGPL-3.0 (see `AGPL-NOTICE.md`)
 
 A governance-enabled fork of Lemmy 1.0-beta. v0 goal: 11 new API endpoints for a Brehon-style reputation + jury workflow, tamper-evident governance log, and outbound federation of governance signals — while staying compatible with vanilla-Lemmy content federation.
@@ -83,9 +83,10 @@ Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/b
 ## Canonical paths
 
 - **Brief paths (this CWD on phase branch):** `.claude/PRPs/briefs/<phase>-<role>-<n>.md`
-- **Active plan:** `.claude/PRPs/plans/v1-jury-mechanics-e.plan.md`
-- **DQ:** `.claude/decision-queue.json` (on phase branch)
-- **Runlog:** `.claude/runlog/v1-JM-e-runlog.md` (on phase branch, created by first runlog entry)
+- **Active plan:** `.claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md` (next; sibling c-2 ships after c-1 merges)
+- **Bootstrap brief for next session:** `.claude/PRPs/handovers/v1-SL-c-bootstrap.md`
+- **DQ:** `.claude/decision-queue.json` (on phase branch when cut)
+- **Runlog:** `.claude/runlog/v1-SL-c-1-runlog.md` (will be created on phase-v1-SL-c-1 by first runlog entry)
 - **Lessons (Junior reads at task-0):** `.claude/lessons/feedback_*.md` and `.claude/lessons/reference_*.md` in this repo
 - **PMD index (advisor session start):** `C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork\memory\MEMORY.md`
 - **Plans (laptop scratch):** `C:\Users\barri\.claude\plans\*.md` (do NOT auto-delete; consult before queueing)
