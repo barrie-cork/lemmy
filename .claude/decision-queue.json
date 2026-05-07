@@ -28,6 +28,21 @@
   ],
   "resolved": [
     {
+      "id": 159,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-07T21:36:19Z",
+      "question": "v1-SL-c-1 plan + brief cite DQ ids #144-#147, #148, #150 as advisor-resolved planning decisions, but those ids in the live decision-queue.json are kind:validate-pending entries from SL-b's impl runs (id collisions after the brief was authored 2026-05-07 13:30Z but before the plan was finalised 2026-05-07 21:34Z)",
+      "options": [
+        "(A) approve plan as-is and log this for the v1-SL-c-1 retro (citations describe substance correctly even though ids drift)",
+        "(B) pause plan-approval gate for a docs(plan) citation-fixup commit before bm-cut"
+      ],
+      "context": "Detected during the watchpoint-specificity gate at 22:08-22:18 UTC. Cross-checked: 25 kind:clarify entries exist in resolved[], clustering at #114-#115 (SL-a clarify) + #138-#142 (SL-b clarify) + #62-#67 (validate-agent) + #91-#96 (JM-e). NO SL-c clarify entries persisted to decision-queue.json — neither pending nor resolved. The plan/brief decisions (two-tier ConfigCache lifecycle, restoration-escape stub, staleness formula, paired mirrors, c-1/c-2 split) appear to have been made via /brehon-clarify on 2026-05-07 but the DQ artifacts were never committed (or were discarded). The substance is sound and well-argued in the plan + brief bodies; only the back-references are stale. Plan §2 + §4.2 + §7 cite these ids; the c-1/c-2 split commit 9a0909814 also has the citation drift baked in. Approving (A) per user response 'a' at the plan-approval gate.",
+      "answer": "Approve plan as-is. The v1-SL-c-1 retro author should add a §5 Lessons promotion candidate noting: (1) /brehon-clarify must commit DQ entries before the planning task is queued, not just resolve them in-session; (2) SL-c citation-drift fixup deferred — log here for transparency; (3) consider adding a planner-side rg check that every cited DQ id resolves to the expected kind/topic at plan-write time. No docs(plan) fixup commit is queued because the substance maps correctly and a renumbering edit risks introducing different drift. The c-1/c-2 split DQ commit 9a0909814 stays as-is (the rationale is in its body).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T21:36:19Z"
+    },
+    {
       "id": 158,
       "from": "advisor",
       "kind": "validate-pending",
