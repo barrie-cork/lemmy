@@ -1,9 +1,9 @@
 # ci-watcher brief — workflow run 25525281390
 
 **Workflow run id:** 25525281390
-**Branch:** junior/role-impl-task-sl-c-1-impl-1-see-claude-prps-briefs-sl-c-1-impl-1-md-142 (worker branch off phase-v1-SL-c-1)
+**Branch:** phase-v1-SL-c-1 (DQ #160 was raised on the worker branch `junior/role-impl-task-sl-c-1-impl-1-…-142` and was finalize-merged into `phase-v1-SL-c-1` at `4370d2dee` and pushed to origin 2026-05-07T22:30Z; the canonical home for the entry is now `phase-v1-SL-c-1`)
 **Phase task:** sl-c-1-impl-1 (sponsor_liability_grace module + module wiring; plan §13 Task 1)
-**Paired DQ entry:** #160 (kind: "validate-pending", in pending[] on the worker branch — the paired entry was raised by the impl-task subagent on the worker branch, not on governance-v0; locate via `git show <worker-branch>:.claude/decision-queue.json`)
+**Paired DQ entry:** #160 (kind: "validate-pending", in pending[] on `phase-v1-SL-c-1`)
 
 ## Action
 
@@ -11,7 +11,7 @@ Per option 2 (PMD #156, locked 2026-04-28): MUTATE the existing `validate-pendin
 
 Poll `gh run watch 25525281390 --exit-status --repo barrie-cork/lemmy` (single long-poll, wrapped in `timeout 3600` for the 60-min cap). On return:
 
-1. **Locate the paired entry:** find the entry in `.claude/decision-queue.json` `pending[]` whose `workflow_run_id` matches `25525281390`. The paired entry lives on the worker branch — checkout that branch first (the worker branch is the worktree's HEAD by default for a Junior ci-watcher dispatch). If absent, file a `kind: "blocker"` DQ entry from `from: "ci-watcher"` (the advisor's dispatch contract was violated) and exit non-zero. Do NOT write a new `validate-pending` entry.
+1. **Locate the paired entry:** find the entry in `.claude/decision-queue.json` `pending[]` whose `workflow_run_id` matches `25525281390`. The Junior daemon will worktree-cut from `phase-v1-SL-c-1` for this ci-watcher dispatch; DQ #160 is on that base branch already. Read the file directly. If absent, file a `kind: "blocker"` DQ entry from `from: "ci-watcher"` (the advisor's dispatch contract was violated) and exit non-zero. Do NOT write a new `validate-pending` entry.
 
 2. **Pre-flight:** `gh auth status`. If unauthorised, mutate the paired entry with `result: "gh_unauth"`, `answer: "<one-liner>"`, `answered_by: "ci-watcher"`, `resolved_at`. Stays in `pending[]`. Commit + push, exit 0.
 
