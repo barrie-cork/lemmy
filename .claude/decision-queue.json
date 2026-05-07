@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 154,
       "from": "advisor",
@@ -14,16 +15,14 @@
       "commands": [
         "cargo test --workspace --test e2e --features full -- --test-threads=1"
       ],
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "e2e PASS: 76 passed; 0 failed; 3 ignored; finished in 1542.13s. All v1_sl_b_fixtures::revoke_endorsement_* tests ok.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T15:26:00Z",
       "context": "Retry of DQ #153 with corrected command: --workspace instead of -p lemmy_server (feedback_features_full_p_crate_incompatible). Same tip b00ae7db2. Captures to new log path."
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 153,
       "from": "advisor",
