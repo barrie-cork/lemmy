@@ -1,6 +1,17 @@
 {
   "effortLevel": "max",
   "skillListingBudgetFraction": 0.005,
+  "permissions": {
+    "allow": [
+      "Edit(.claude/runlog/**)",
+      "Write(.claude/runlog/**)",
+      "Bash(cat >> .claude/runlog/**)",
+      "Edit(.claude/PRPs/reviews/**)",
+      "Write(.claude/PRPs/reviews/**)",
+      "Edit(.claude/decision-queue.json)",
+      "Write(.claude/decision-queue.json)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
