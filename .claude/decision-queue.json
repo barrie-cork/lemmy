@@ -1,6 +1,29 @@
 {
   "pending": [
     {
+      "id": 158,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T17:25:00Z",
+      "question": "Does e2e pass on phase-v1-SL-b tip c87179af4 (revoker_pseudonym assertion fix)?",
+      "options": [
+        "(A) pass — advance to bm-poll-cr re-trigger + bm-merge confirm",
+        "(B) fail — §G4 triage"
+      ],
+      "context": "Phase 2 local e2e dispatched for tip c87179af4. fix-impl-4 renamed sponsor_pseudonym→revoker_pseudonym in e2e.rs:11253+3336. Prior tip 620861f08 had 1 fail on that exact assertion.",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-b",
+      "phase_task": "sl-b-e2e-post-fix-impl-4",
+      "head_sha": "c87179af4",
+      "local_log_path": ".claude/runlog/e2e-phase-v1-SL-b-c87179af4.log",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
       "id": 156,
       "from": "advisor",
       "kind": "validate-pending",
