@@ -24,27 +24,6 @@
       "answer": "e2e FAIL: 1 test failed \u2014 revoke_endorsement_self_succeeds_updates_surety_and_recomputes_snapshots panicked at e2e.rs:11253 (payload[\"sponsor_pseudonym\"] key missing \u2014 cr-7b renamed it to revoker_pseudonym but e2e assertions not updated). 75 passed.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-07T15:39:48Z"
-    },
-    {
-      "id": 157,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-07T15:43:30Z",
-      "question": "Does cargo-validate-workspace pass on sl-b-fix-impl-4 e2e assertion rename (revoker_pseudonym)?",
-      "options": [
-        "(A) pass \u2014 advance to phase-v1-SL-b e2e re-run",
-        "(B) fail \u2014 advisor \u00a7G4 triage"
-      ],
-      "context": "Pushed fix(v1-SL-b): update e2e assertions for revoker_pseudonym rename (cr-7b) (commit 925024b21) to junior/role-impl-task-sl-b-fix-impl-4. cargo-validate-workspace run triggered on push.",
-      "workflow_run_id": 25506250427,
-      "branch": "junior/role-impl-task-sl-b-fix-impl-4-see-claude-prps-briefs-sl-b-fix-impl-4-md-135",
-      "phase_task": "sl-b-fix-impl-4",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -2655,6 +2634,27 @@
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-06T16:21:45.617333Z",
       "context": "Phase 2 e2e re-run on phase tip e8101d661 (post fix-1 finalize-merge of junior/advisor-sl-b-fix-1). Prior e2e on tip 9cfbbf977 (DQ #149's implicit Phase 2) failed 6/76 \u2014 4 surety filter Option-NULL bugs in revoke_endorsement.rs, 1 idempotency timestamp precision test bug, 1 JM-a backfill revert window stale (limit 6\u21928 for SL-b's 2 new migrations). Fix-1 addressed all three. Workflow run 25352168003 dispatched via workflow_dispatch (per PR #105 / feedback_e2e_local_or_dispatch_user_choice user gate, option (b) selected). Expected: 76 pass / 0 fail / 3 ignored / ~26 min."
+    },
+    {
+      "id": 157,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T15:43:30Z",
+      "question": "Does cargo-validate-workspace pass on sl-b-fix-impl-4 e2e assertion rename (revoker_pseudonym)?",
+      "options": [
+        "(A) pass \u2014 advance to phase-v1-SL-b e2e re-run",
+        "(B) fail \u2014 advisor \u00a7G4 triage"
+      ],
+      "context": "Pushed fix(v1-SL-b): update e2e assertions for revoker_pseudonym rename (cr-7b) (commit 925024b21) to junior/role-impl-task-sl-b-fix-impl-4. cargo-validate-workspace run triggered on push.",
+      "workflow_run_id": 25506250427,
+      "branch": "junior/role-impl-task-sl-b-fix-impl-4-see-claude-prps-briefs-sl-b-fix-impl-4-md-135",
+      "phase_task": "sl-b-fix-impl-4",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "cargo-validate-workspace passed: commit 925024b21 on sl-b-fix-impl-4 (revoker_pseudonym e2e assertion rename) validated successfully.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-07T17:19:47Z"
     }
   ],
   "schema_version": 2
