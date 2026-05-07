@@ -1,0 +1,230 @@
+schema_version: 1
+pr: 119
+title: v1-SL-b — revoke_endorsement handler + DTO + route + 9 tests
+head: phase-v1-SL-b
+base: governance-v0
+opened_at: '2026-05-06T16:43:04Z'
+last_poll_at: '2026-05-07T19:44:27Z'
+poll_count: 2
+last_polled_head_sha: 3f119ce82
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T18:44:36Z'
+  file: .project-memory
+  line: null
+  summary: Remove machine-local path artefact from version control
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703196
+  bucket: done
+  addressed_in: 2c15df0
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T18:44:36Z'
+  file: .serena
+  line: null
+  summary: Do not commit local absolute-path marker files
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703201
+  bucket: done
+  addressed_in: 2c15df0
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-06T18:44:36Z'
+  file: crates/api/api_crud/src/governance/revoke_endorsement.rs
+  line: 106
+  summary: Idempotent retries can be throttled as fresh revocations
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703205
+  bucket: done
+  addressed_in: 2c15df0
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-05-06T18:44:36Z'
+  file: crates/api/api_crud/src/governance/revoke_endorsement.rs
+  line: 174
+  summary: Check authorisation before the idempotent early return
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703213
+  bucket: done
+  addressed_in: 2c15df0
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-06T18:44:36Z'
+  file: crates/api/api_crud/src/governance/revoke_endorsement.rs
+  line: 267
+  summary: '`majority_revocation` only counts the current revocation'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703214
+  bucket: rebut
+  addressed_in: null
+  rationale: 'Pre-agreed deferral to v1-SL-c per brief sl-b-fix-impl-3.md §2 "Note on cr-6"; revoke_endorsement.rs:287-297 carries TODO(v1-SL-c) comment falling through to any_revocation behaviour until v1-SL-c''s grace-check evaluator (sponsor_liability_grace.rs::evaluate_escape_conditions) lands the persisted baseline_sponsor_count column.'
+  notes: null
+- id: cr-6
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-06T18:44:36Z'
+  file: crates/api/api_crud/src/governance/revoke_endorsement.rs
+  line: 330
+  summary: The governance-log payloads do not match the documented v1 schema
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703216
+  bucket: done
+  addressed_in: a771c49e7
+  rationale: null
+  notes: null
+- id: cr-7
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T18:44:36Z'
+  file: PI_AUDIT_REPORT.md
+  line: 6
+  summary: Avoid machine-specific absolute paths in committed audit metadata
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3196703217
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Pi tool audit artefact, not part of Brehon governance code; machine-specific path is the historical record of where the audit was run on the Mac.
+  notes: null
+- id: cr-8
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-06T21:38:11Z'
+  file: .github/workflows/adr-compliance.yml
+  line: 60
+  summary: '`git rev-parse HEAD` will fail before checkout'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197657533
+  bucket: done
+  addressed_in: 2c15df0
+  rationale: null
+  notes: null
+- id: cr-9
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .claude/lessons/feedback_gha_pi_loop_postmortem.md
+  line: 15
+  summary: Add a top-level heading to satisfy MD041
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755000
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on meta/prose file (.claude/lessons) outside governance crate scope; advisor lessons use frontmatter conventions and ship lint-imperfect by design.
+  notes: null
+- id: cr-10
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .claude/lessons/feedback_gha_pi_loop_postmortem.md
+  line: 75
+  summary: Normalise fenced-block spacing for MD031 compliance
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755021
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on meta/prose file (.claude/lessons) outside governance crate scope.
+  notes: null
+- id: cr-11
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .pi/agents/bm-pi.md
+  line: 10
+  summary: Add an H1 to clear markdownlint MD041
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755024
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on Pi agent config (.pi/) outside governance crate scope; .pi/ files use frontmatter conventions, not H1 conventions.
+  notes: null
+- id: cr-12
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .pi/agents/ci-debug.md
+  line: 10
+  summary: Add a top-level heading after front matter
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755028
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on Pi agent config (.pi/) outside governance crate scope.
+  notes: null
+- id: cr-13
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .pi/PROJECT_CONTEXT.md
+  line: 148
+  summary: Add fenced-code language identifiers to satisfy MD040
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755035
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on Pi project context (.pi/PROJECT_CONTEXT.md) outside governance crate scope.
+  notes: null
+- id: cr-14
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-06T21:58:33Z'
+  file: .pi/PROJECT_CONTEXT.md
+  line: 166
+  summary: Avoid hard-coded Homebrew global-module paths in setup instructions
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197755040
+  bucket: carry-forward
+  addressed_in: null
+  rationale: Real issue but out of v1-SL-b scope — Pi agent config file (.pi/PROJECT_CONTEXT.md) is not part of Brehon governance crate; deferred to a separate issue.
+  notes: https://github.com/barrie-cork/lemmy/issues/120
+- id: cr-15
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-06T22:33:08Z'
+  file: .claude/skills/session-retro/SKILL.md
+  line: 167
+  summary: Specify language identifier for the fenced code block
+  cr_url: https://github.com/barrie-cork/lemmy/pull/119#discussion_r3197921683
+  bucket: wont-fix
+  addressed_in: null
+  rationale: markdown-lint nit on advisor skill (.claude/skills/) outside governance crate scope.
+  notes: null
+counters:
+  critical:
+    open: 0
+    done: 1
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 3
+    rebutted: 1
+    carry_forward: 1
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 2
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 7
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 15
+    claude: 0
+    user: 0
+  total: 15
+merged_at: null
+merge_commit: null
+final_recommendation: null

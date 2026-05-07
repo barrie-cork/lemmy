@@ -1426,12 +1426,15 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 6 JM-a + JM-d Task 1 migrations LIFO (4 JM-a
-  // migrations from 2026-04-23-000000 through 2026-04-23-000200, plus 2
-  // JM-d Task 1 migrations from 2026-04-27-000000 and 2026-04-27-000100).
+  // Step 2: revert the 8 JM-a + JM-d Task 1 + SL-b migrations LIFO:
+  //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
+  //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
+  //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
-  // not fire.
-  schema_setup::run(Options::default().revert().limit(6), &db_url)?;
+  // not fire. Limit must rise with each new phase that adds migrations
+  // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
+  // here for SL-b).
+  schema_setup::run(Options::default().revert().limit(8), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -3326,14 +3329,14 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
       "governance_log payload leaked a raw integer identifier: {s}"
     );
   }
-  // Positive assertion: at least one payload mentions sponsor_pseudonym so
+  // Positive assertion: at least one payload mentions revoker_pseudonym so
   // the grep isn't vacuously passing on an empty log.
   let saw_pseudonym = payloads
     .iter()
-    .any(|p| serde_json::to_string(p).map(|s| s.contains("\"sponsor_pseudonym\"")).unwrap_or(false));
+    .any(|p| serde_json::to_string(p).map(|s| s.contains("\"revoker_pseudonym\"")).unwrap_or(false));
   assert!(
     saw_pseudonym,
-    "expected at least one governance_log payload with sponsor_pseudonym"
+    "expected at least one governance_log payload with revoker_pseudonym"
   );
 
   Ok(())
@@ -10974,3 +10977,949 @@ async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spo
   Ok(())
 }
 
+mod v1_sl_b_fixtures {
+  use super::*;
+  use actix_web::web::Json;
+  use chrono::{DateTime, Duration, Utc};
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_common::governance::RevokeEndorsement;
+  use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement;
+  use lemmy_db_schema::{
+    newtypes::{CommunityId, EndorsementId, ModerationCaseId},
+    source::governance::{
+      endorsement::EndorsementInsertForm,
+      moderation_case::ModerationCaseInsertForm,
+      surety::SuretyInsertForm,
+    },
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, SeverityTier},
+    schema::{endorsement, governance_log, moderation_case, reputation_snapshot, surety},
+  };
+  use lemmy_utils::error::LemmyResult;
+  use serde_json::Value;
+
+  /// Seed an active (non-revoked) endorsement from `sponsor` to `sponsee`.
+  /// Mirror of §10.3 helper shape.
+  async fn seed_endorsement_active(
+    conn: &mut AsyncPgConnection,
+    sponsor: PersonId,
+    sponsee: PersonId,
+  ) -> LemmyResult<EndorsementId> {
+    let form = EndorsementInsertForm {
+      from_person_id: sponsor,
+      to_person_id: sponsee,
+      community_id: None,
+    };
+    let id: EndorsementId = diesel::insert_into(endorsement::table)
+      .values(&form)
+      .returning(endorsement::id)
+      .get_result(conn)
+      .await?;
+    Ok(id)
+  }
+
+  /// Seed a `SponsorLiabilityPending` moderation_case for `sponsee`.
+  /// `community` may be None (instance scope). `grace_hours` controls
+  /// the grace_expires_at offset from now (positive = future deadline).
+  async fn seed_pending_case(
+    conn: &mut AsyncPgConnection,
+    sponsee: PersonId,
+    community: Option<CommunityId>,
+    grace_hours: i64,
+  ) -> LemmyResult<ModerationCaseId> {
+    let form = ModerationCaseInsertForm {
+      community_id: community,
+      creator_id: None,
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(sponsee),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "sponsor_liability_pending_test_seed".to_string(),
+      severity: CaseSeverity::Medium,
+      status: CaseStatus::SponsorLiabilityPending,
+      threshold_score: 0,
+      applied_config_snapshot: None,
+      rule_set_version_id: None,
+      severity_tier: Some(SeverityTier::Minor),
+      status_tier: Some(CaseStatusTier::Regular),
+      panel_size_snapshot: None,
+      quorum_snapshot: None,
+      threshold_count_snapshot: None,
+      appeal_window_expires_at: None,
+      winning_decision: None,
+      grace_expires_at: Some(Utc::now() + Duration::hours(grace_hours)),
+      liability_escape_reason: None,
+    };
+    let id: ModerationCaseId = diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .returning(moderation_case::id)
+      .get_result(conn)
+      .await?;
+    Ok(id)
+  }
+
+  /// Read endorsement row's revoked_at by id.
+  async fn read_endorsement_revoked_at(
+    conn: &mut AsyncPgConnection,
+    eid: EndorsementId,
+  ) -> LemmyResult<Option<DateTime<Utc>>> {
+    let v: Option<DateTime<Utc>> = endorsement::table
+      .filter(endorsement::id.eq(eid))
+      .select(endorsement::revoked_at)
+      .first(conn)
+      .await?;
+    Ok(v)
+  }
+
+  /// Read surety row's revoked_at for a (sponsor, sponsee, community) triple.
+  async fn read_surety_revoked_at(
+    conn: &mut AsyncPgConnection,
+    sponsor: PersonId,
+    sponsee: PersonId,
+    community: Option<CommunityId>,
+  ) -> LemmyResult<Option<DateTime<Utc>>> {
+    let mut q = surety::table
+      .filter(surety::sponsor_id.eq(sponsor))
+      .filter(surety::sponsored_id.eq(sponsee))
+      .into_boxed();
+    q = match community {
+      Some(c) => q.filter(surety::community_id.eq(c)),
+      None => q.filter(surety::community_id.is_null()),
+    };
+    let v: Option<DateTime<Utc>> = q.select(surety::revoked_at).first(conn).await?;
+    Ok(v)
+  }
+
+  /// Read the moderation_case row.
+  async fn read_case_status_and_escape(
+    conn: &mut AsyncPgConnection,
+    case_id: ModerationCaseId,
+  ) -> LemmyResult<(CaseStatus, Option<Value>)> {
+    let row: (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::liability_escape_reason))
+      .first(conn)
+      .await?;
+    Ok(row)
+  }
+
+  /// Count governance_log entries of a given kind.
+  async fn count_log_entries(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<i64> {
+    let n: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .count()
+      .get_result(conn)
+      .await?;
+    Ok(n)
+  }
+
+  /// Read the most recent payload of a given kind.
+  async fn read_log_payload(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<Option<Value>> {
+    let payloads: Vec<Value> = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .order(governance_log::id.desc())
+      .select(governance_log::payload)
+      .limit(1)
+      .load(conn)
+      .await?;
+    Ok(payloads.into_iter().next())
+  }
+
+  /// Read reputation_snapshot.calculated_at for (person, community=None).
+  async fn read_snapshot_calculated_at(
+    conn: &mut AsyncPgConnection,
+    person: PersonId,
+  ) -> LemmyResult<Option<DateTime<Utc>>> {
+    let rows: Vec<DateTime<Utc>> = reputation_snapshot::table
+      .filter(reputation_snapshot::person_id.eq(person))
+      .filter(reputation_snapshot::community_id.is_null())
+      .select(reputation_snapshot::calculated_at)
+      .load(conn)
+      .await?;
+    Ok(rows.into_iter().next())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 1 (plan §13 Task 4): self-revoke success path.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_self_succeeds_updates_surety_and_recomputes_snapshots()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb1", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb1", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // Pre-call: revoked_at IS NULL on both rows.
+    assert!(
+      read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_none(),
+      "pre-call: endorsement.revoked_at IS NULL",
+    );
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor, sponsee, None).await?.is_none(),
+      "pre-call: surety.revoked_at IS NULL",
+    );
+
+    let test_start = Utc::now();
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "self-revoke test".to_string(),
+      }),
+      context.clone(),
+      sponsor_view,
+    )
+    .await?
+    .into_inner();
+
+    assert_eq!(resp.endorsement_id, endorsement_id, "response endorsement_id matches");
+    assert!(
+      (Utc::now() - resp.revoked_at).num_seconds() < 5,
+      "response.revoked_at recent (within 5s)",
+    );
+    assert!(
+      resp.liability_chain_severed_for_cases.is_empty(),
+      "no pending case → severed empty",
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(
+      read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_some(),
+      "post-call: endorsement.revoked_at populated",
+    );
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor, sponsee, None).await?.is_some(),
+      "post-call: surety.revoked_at populated",
+    );
+
+    // Snapshots: both sponsor + sponsee recomputed (calculated_at >= test_start).
+    let sponsor_calc = read_snapshot_calculated_at(&mut conn, sponsor).await?
+      .expect("sponsor snapshot exists post-recompute");
+    assert!(
+      sponsor_calc >= test_start,
+      "sponsor snapshot recomputed: calculated_at {:?} >= test_start {:?}",
+      sponsor_calc,
+      test_start,
+    );
+    let sponsee_calc = read_snapshot_calculated_at(&mut conn, sponsee).await?
+      .expect("sponsee snapshot exists post-recompute");
+    assert!(
+      sponsee_calc >= test_start,
+      "sponsee snapshot recomputed: calculated_at {:?} >= test_start {:?}",
+      sponsee_calc,
+      test_start,
+    );
+
+    // governance_log: 1 endorsement_revoked, 0 sponsor_liability_escaped.
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+      "exactly one endorsement_revoked entry",
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "no sponsor_liability_escaped entry (no pending case)",
+    );
+
+    let payload = read_log_payload(&mut conn, "endorsement_revoked").await?
+      .expect("endorsement_revoked payload exists");
+    assert!(payload["revoker_pseudonym"].is_string(), "revoker_pseudonym is a string");
+    assert!(payload["target_pseudonym"].is_string(), "target_pseudonym is a string");
+    assert_eq!(
+      payload["reason"],
+      Value::String("self-revoke test".to_string()),
+      "reason matches",
+    );
+    assert!(
+      payload.get("rate_limit_bypassed").is_none(),
+      "rate_limit_bypassed field absent under threshold",
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 2 (plan §13 Task 5): admin-revoke success path under threshold.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_admin_succeeds_under_threshold() -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, _sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb2", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb2", false).await?;
+    let (_admin, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "admin_slb2", true).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "admin policy intervention".to_string(),
+      }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+
+    assert_eq!(resp.endorsement_id, endorsement_id);
+    assert!(
+      (Utc::now() - resp.revoked_at).num_seconds() < 5,
+      "revoked_at recent",
+    );
+    assert!(resp.liability_chain_severed_for_cases.is_empty());
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_some());
+    assert!(read_surety_revoked_at(&mut conn, sponsor, sponsee, None).await?.is_some());
+
+    // governance_log entry: caller is admin, target is sponsee. rate_limit_bypassed
+    // ABSENT because admin was under threshold (DQ #141 separation).
+    let payload = read_log_payload(&mut conn, "endorsement_revoked").await?
+      .expect("payload exists");
+    assert!(
+      payload.get("rate_limit_bypassed").is_none(),
+      "rate_limit_bypassed absent for admin under threshold",
+    );
+    assert_eq!(
+      payload["reason"],
+      Value::String("admin policy intervention".to_string()),
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 3 (plan §13 Task 6): re-revoke idempotency — second call returns
+  // existing revoked_at, emits no new log, severs no chain.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_re_revoke_returns_existing_revoked_at_no_log_no_severance()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb3", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb3", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // First call.
+    let resp1 = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "first attempt".to_string(),
+      }),
+      context.clone(),
+      sponsor_view.clone(),
+    )
+    .await?
+    .into_inner();
+    let t1 = resp1.revoked_at;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let count_after_first = count_log_entries(&mut conn, "endorsement_revoked").await?;
+    assert_eq!(count_after_first, 1, "one log entry after first call");
+
+    // Second call (same endorsement, different reason).
+    let resp2 = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "second attempt".to_string(),
+      }),
+      context.clone(),
+      sponsor_view,
+    )
+    .await?
+    .into_inner();
+
+    assert_eq!(resp2.endorsement_id, endorsement_id);
+    // Compare at microsecond precision: the first call returns the in-memory
+    // `Utc::now()` (nanosecond precision), the second call returns the value
+    // round-tripped through Postgres `timestamptz` (truncated to microseconds).
+    // Same instant, different precision — strict `==` would fail spuriously.
+    assert_eq!(
+      resp2.revoked_at.timestamp_micros(),
+      t1.timestamp_micros(),
+      "second response.revoked_at == first (idempotency, micros precision)",
+    );
+    assert!(
+      resp2.liability_chain_severed_for_cases.is_empty(),
+      "second-call severance empty",
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let count_after_second = count_log_entries(&mut conn, "endorsement_revoked").await?;
+    assert_eq!(
+      count_after_second, count_after_first,
+      "no new log entry on re-revoke",
+    );
+    let final_revoked_at = read_endorsement_revoked_at(&mut conn, endorsement_id).await?;
+    // Same precision rationale as the resp2.revoked_at assertion above:
+    // `final_revoked_at` is DB-round-tripped (micros); `t1` is in-memory (nanos).
+    assert_eq!(
+      final_revoked_at.map(|t| t.timestamp_micros()),
+      Some(t1.timestamp_micros()),
+      "endorsement.revoked_at unchanged (micros precision)",
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 4 (plan §13 Task 7): non-sponsor non-admin caller rejected with
+  // NotFound (PRD §5.2 — do NOT leak existence as Unauthorized).
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_non_sponsor_non_admin_rejects_with_not_found()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, _sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb4", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb4", false).await?;
+    let (_third, third_view) =
+      governance_fixtures::seed_user(&context, instance.id, "third_slb4", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    let logs_before = count_log_entries(&mut conn, "endorsement_revoked").await?;
+
+    let result = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "impersonation attempt".to_string(),
+      }),
+      context.clone(),
+      third_view,
+    )
+    .await;
+
+    let err = result.expect_err("third-party caller must be rejected");
+    assert!(
+      matches!(err.error_type, lemmy_utils::error::LemmyErrorType::NotFound),
+      "expected NotFound, got {:?}",
+      err.error_type,
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(
+      read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_none(),
+      "endorsement.revoked_at unchanged on rejection",
+    );
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor, sponsee, None).await?.is_none(),
+      "surety.revoked_at unchanged on rejection",
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      logs_before,
+      "no log entry on rejection",
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 5 (plan §13 Task 8): empty / whitespace-only reason rejected.
+  // Three sub-cases (single test fn) per DQ #139 resolution.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_empty_reason_rejects() -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb5", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb5", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    for bad_reason in ["", "   ", "\t\n  "] {
+      let result = revoke_endorsement(
+        Json(RevokeEndorsement {
+          endorsement_id,
+          reason: bad_reason.to_string(),
+        }),
+        context.clone(),
+        sponsor_view.clone(),
+      )
+      .await;
+      let err = result.expect_err("empty/whitespace reason must reject");
+      let matched = matches!(
+        &err.error_type,
+        lemmy_utils::error::LemmyErrorType::Unknown(msg)
+          if msg == "revoke-endorsement reason required",
+      );
+      assert!(
+        matched,
+        "expected Unknown(\"revoke-endorsement reason required\") for reason {:?}, got {:?}",
+        bad_reason, err.error_type,
+      );
+    }
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(
+      read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_none(),
+      "no successful revocation across all three rejection sub-cases",
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 6 (plan §13 Task 9): rate-limit enforces unless admin bypasses.
+  // Combined positive (regular caller at threshold rejected) + negative
+  // (admin caller at threshold succeeds with rate_limit_bypassed: true).
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_rate_limit_enforces_unless_admin_bypasses()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (regular_caller, regular_view) =
+      governance_fixtures::seed_user(&context, instance.id, "regular_slb6", false).await?;
+    let (admin_caller, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "admin_slb6", true).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Helper: seed N revoked endorsements for `caller` to push to threshold.
+    async fn seed_prior_revocations(
+      conn: &mut AsyncPgConnection,
+      ctx: &lemmy_api_utils::context::LemmyContext,
+      instance_id: lemmy_db_schema_file::InstanceId,
+      caller: PersonId,
+      caller_label: &str,
+      count: usize,
+    ) -> LemmyResult<()> {
+      let recent = Utc::now() - Duration::hours(1);
+      for i in 0..count {
+        let name = format!("{caller_label}_revoked_{i:02}");
+        let (target, _) = governance_fixtures::seed_user(ctx, instance_id, &name, false).await?;
+        let eid: EndorsementId = diesel::insert_into(endorsement::table)
+          .values(&EndorsementInsertForm {
+            from_person_id: caller,
+            to_person_id: target,
+            community_id: None,
+          })
+          .returning(endorsement::id)
+          .get_result(conn)
+          .await?;
+        diesel::update(endorsement::table.filter(endorsement::id.eq(eid)))
+          .set(endorsement::revoked_at.eq(recent))
+          .execute(conn)
+          .await?;
+      }
+      Ok(())
+    }
+
+    seed_prior_revocations(&mut conn, &context, instance.id, regular_caller, "regular", 5).await?;
+    let (sponsee_regular, _) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_regular_slb6", false).await?;
+    let regular_active_eid =
+      seed_endorsement_active(&mut conn, regular_caller, sponsee_regular).await?;
+
+    // Regular caller at threshold (5 prior + 6th attempt) — should reject.
+    let result = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id: regular_active_eid,
+        reason: "6th attempt".to_string(),
+      }),
+      context.clone(),
+      regular_view,
+    )
+    .await;
+    let err = result.expect_err("regular caller at threshold must reject");
+    assert!(
+      matches!(err.error_type, lemmy_utils::error::LemmyErrorType::TooManyRequests),
+      "expected TooManyRequests at threshold, got {:?}",
+      err.error_type,
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(
+      read_endorsement_revoked_at(&mut conn, regular_active_eid).await?.is_none(),
+      "regular caller's active endorsement remains untouched after rate-limit reject",
+    );
+
+    // Admin at threshold — bypasses, succeeds, log includes rate_limit_bypassed: true.
+    seed_prior_revocations(&mut conn, &context, instance.id, admin_caller, "admin", 5).await?;
+    let (sponsee_admin, _) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_admin_slb6", false).await?;
+    let admin_active_eid =
+      seed_endorsement_active(&mut conn, admin_caller, sponsee_admin).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: admin_caller,
+        sponsored_id: sponsee_admin,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id: admin_active_eid,
+        reason: "admin override".to_string(),
+      }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(resp.endorsement_id, admin_active_eid);
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let payload = read_log_payload(&mut conn, "endorsement_revoked").await?
+      .expect("admin bypass log payload exists");
+    assert_eq!(
+      payload["rate_limit_bypassed"],
+      Value::Bool(true),
+      "admin bypass log carries rate_limit_bypassed: true",
+    );
+    assert_eq!(
+      payload["reason"],
+      Value::String("admin override".to_string()),
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 7 (plan §13 Task 10): single-sponsor grace-window severance.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_severs_grace_window_single_sponsor_case()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb7", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb7", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+    let case_id = seed_pending_case(&mut conn, sponsee, None, 24).await?;
+
+    // Pre-call.
+    let (status_before, escape_before) =
+      read_case_status_and_escape(&mut conn, case_id).await?;
+    assert_eq!(status_before, CaseStatus::SponsorLiabilityPending, "pre-call: pending");
+    assert!(escape_before.is_none(), "pre-call: liability_escape_reason NULL");
+
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "prudent withdrawal".to_string(),
+      }),
+      context.clone(),
+      sponsor_view,
+    )
+    .await?
+    .into_inner();
+
+    assert_eq!(
+      resp.liability_chain_severed_for_cases,
+      vec![case_id],
+      "severed contains exactly the seeded case",
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (status_after, escape_after) =
+      read_case_status_and_escape(&mut conn, case_id).await?;
+    assert_eq!(
+      status_after,
+      CaseStatus::SponsorLiabilityEscaped,
+      "case status flipped to escaped",
+    );
+    let escape_json = escape_after.expect("escape_reason JSONB populated");
+    assert_eq!(escape_json["version"], Value::Number(1.into()), "version: 1");
+    assert_eq!(
+      escape_json["reason"],
+      Value::String("sponsor_revoked".to_string()),
+      "reason: sponsor_revoked",
+    );
+    assert!(
+      escape_json["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string",
+    );
+    let actor_pseud = escape_json["actor_pseudonym"].as_str().expect("string");
+    let raw_id_str = format!("{}", sponsor.0);
+    assert_ne!(
+      actor_pseud, raw_id_str,
+      "ADR-015: actor_pseudonym must not equal raw caller_id",
+    );
+    assert_eq!(
+      escape_json["endorsement_id"],
+      Value::Number(endorsement_id.0.into()),
+      "endorsement_id matches",
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+      "1 endorsement_revoked entry",
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      1,
+      "1 sponsor_liability_escaped entry",
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 8 (plan §13 Task 11): multi-sponsor any_revocation rule (default)
+  // severs chain; only revoking sponsor's surety flips.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_multi_sponsor_any_revocation_severs_chain()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb8", false).await?;
+    let (sponsor_a, sponsor_a_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_a_slb8", false).await?;
+    let (sponsor_b, _sponsor_b_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_b_slb8", false).await?;
+    let (sponsor_c, _sponsor_c_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_c_slb8", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_a = seed_endorsement_active(&mut conn, sponsor_a, sponsee).await?;
+    let _endorsement_b = seed_endorsement_active(&mut conn, sponsor_b, sponsee).await?;
+    let _endorsement_c = seed_endorsement_active(&mut conn, sponsor_c, sponsee).await?;
+    for sponsor in [sponsor_a, sponsor_b, sponsor_c] {
+      diesel::insert_into(surety::table)
+        .values(&SuretyInsertForm {
+          sponsor_id: sponsor,
+          sponsored_id: sponsee,
+          community_id: None,
+        })
+        .execute(&mut conn)
+        .await?;
+    }
+    let case_id = seed_pending_case(&mut conn, sponsee, None, 24).await?;
+
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id: endorsement_a,
+        reason: "any-rev test".to_string(),
+      }),
+      context.clone(),
+      sponsor_a_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(
+      resp.liability_chain_severed_for_cases,
+      vec![case_id],
+      "any_revocation default severs chain on first revoke",
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (status_after, _) = read_case_status_and_escape(&mut conn, case_id).await?;
+    assert_eq!(status_after, CaseStatus::SponsorLiabilityEscaped);
+
+    // Only sponsor_a's surety flipped.
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor_a, sponsee, None).await?.is_some(),
+      "sponsor_a's surety revoked",
+    );
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor_b, sponsee, None).await?.is_none(),
+      "sponsor_b's surety untouched",
+    );
+    assert!(
+      read_surety_revoked_at(&mut conn, sponsor_c, sponsee, None).await?.is_none(),
+      "sponsor_c's surety untouched",
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      1,
+    );
+
+    Ok(())
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Test 9 (plan §13 Task 12): no pending case → no severance, only
+  // endorsement_revoked log.
+  // ─────────────────────────────────────────────────────────────────
+  #[tokio::test]
+  async fn revoke_endorsement_no_pending_case_no_severance_only_revoked_log()
+  -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance =
+      lemmy_db_schema::source::instance::Instance::read_or_create(&mut context.pool(), "test.invalid")
+        .await?;
+    let (sponsor, sponsor_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsor_slb9", false).await?;
+    let (sponsee, _sponsee_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sponsee_slb9", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let endorsement_id = seed_endorsement_active(&mut conn, sponsor, sponsee).await?;
+    diesel::insert_into(surety::table)
+      .values(&SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+    // NO seed_pending_case call.
+
+    let resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id,
+        reason: "standard withdrawal".to_string(),
+      }),
+      context.clone(),
+      sponsor_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(resp.endorsement_id, endorsement_id);
+    assert!(
+      (Utc::now() - resp.revoked_at).num_seconds() < 5,
+      "revoked_at recent",
+    );
+    assert!(
+      resp.liability_chain_severed_for_cases.is_empty(),
+      "no pending case → severed empty",
+    );
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    assert!(read_endorsement_revoked_at(&mut conn, endorsement_id).await?.is_some());
+    assert!(read_surety_revoked_at(&mut conn, sponsor, sponsee, None).await?.is_some());
+
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+      "1 endorsement_revoked entry",
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "no sponsor_liability_escaped (no pending case)",
+    );
+
+    let payload = read_log_payload(&mut conn, "endorsement_revoked").await?
+      .expect("payload exists");
+    assert_eq!(
+      payload["liability_chain_severed_for_cases"],
+      Value::Array(vec![]),
+      "severed array serializes as []",
+    );
+
+    // Defensive: no moderation_case rows for this sponsee.
+    let case_count: i64 = moderation_case::table
+      .filter(moderation_case::target_person_id.eq(sponsee))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(case_count, 0, "no moderation_case rows for sponsee");
+
+    Ok(())
+  }
+}

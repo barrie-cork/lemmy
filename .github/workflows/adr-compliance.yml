@@ -4,17 +4,40 @@ on:
   pull_request:
     branches:
       - governance-v0
+    types:
+      - opened
+      - synchronize
+      - reopened
     paths:
       - 'crates/**'
       - 'migrations/**'
       - 'docs/brehon-law-inspired-network/99-decisions-and-open-questions.md'
+  push:
+    branches:
+      - phase-v1-SL-b
+      - phase-v1-SL-a
+    paths:
+      - 'crates/**'
+      - 'migrations/**'
+      - '.github/scripts/adr-compliance.sh'
+      - '.github/workflows/adr-compliance.yml'
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Base branch to diff against (default: governance-v0)'
+        required: false
+        default: 'governance-v0'
+      head_sha:
+        description: 'Head commit SHA to scan (default: current branch HEAD)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
   pull-requests: write
 
 concurrency:
-  group: adr-compliance-${{ github.event.pull_request.number }}
+  group: adr-compliance-${{ github.event.pull_request.number || github.event.inputs.base_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -22,23 +45,54 @@ jobs:
     name: Red-flag diff scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head with base history
+      - name: Determine base and head refs
+        id: refs
+        run: |
+          # Pull-request context
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          # workflow_dispatch context
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_REF="${{ github.event.inputs.base_ref }}"
+            HEAD_SHA="${INPUTS_HEAD_SHA:-${{ github.sha }}}"
+            PR_NUMBER=""
+          # Push context
+          else
+            BASE_REF="governance-v0"
+            HEAD_SHA="${{ github.sha }}"
+            PR_NUMBER=""
+          fi
+          echo "base_ref=$BASE_REF" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUMBER:-}" >> "$GITHUB_OUTPUT"
+        env:
+          INPUTS_HEAD_SHA: ${{ github.event.inputs.head_sha }}
+
+      - name: Checkout at head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.refs.outputs.head_sha }}
 
       - name: Compute diff against base
         id: diff
         run: |
-          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=50
-          BASE_SHA=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
+          git fetch origin "${{ steps.refs.outputs.base_ref }}" --depth=50
+          BASE_SHA=$(git merge-base "origin/${{ steps.refs.outputs.base_ref }}" HEAD)
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$BASE_SHA" > /tmp/base_ref.txt
           git diff --unified=0 "$BASE_SHA"...HEAD > /tmp/pr.diff
-          wc -l /tmp/pr.diff
+          echo "Diff lines: $(wc -l < /tmp/pr.diff)"
 
       - name: Run ADR red-flag scanner
         id: scan
+        env:
+          GITHUB_ACKNOWLEDGE: true
+          PR_NUMBER: ${{ steps.refs.outputs.pr_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OWNER_ID: '15565016'
         run: |
           set +e
           bash .github/scripts/adr-compliance.sh /tmp/pr.diff > /tmp/findings.md
@@ -50,9 +104,10 @@ jobs:
             echo "violations=false" >> "$GITHUB_OUTPUT"
           fi
           echo "scan_status=$scan_status" >> "$GITHUB_OUTPUT"
+          echo "=== findings begin ===" && cat /tmp/findings.md && echo "=== findings end ==="
 
       - name: Comment findings on PR
-        if: steps.scan.outputs.violations == 'true'
+        if: steps.scan.outputs.violations == 'true' && steps.refs.outputs.pr_number != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -68,12 +123,19 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: parseInt('${{ steps.refs.outputs.pr_number }}', 10),
               body: body
             });
 
       - name: Fail the job if red flags present
-        if: steps.scan.outputs.violations == 'true'
+        # Gate on the script's actual exit code, not the presence of
+        # findings. The script exits 0 when findings are advisory-only
+        # (push / workflow_dispatch with no PR context, or PR with a
+        # maintainer "acknowledge" comment) and exits 1 only when the
+        # PR-event gate is unsatisfied. Gating on `violations == true`
+        # made the bypass / advisory paths unreachable.
+        if: steps.scan.outputs.scan_status != '0'
         run: |
-          echo "::error::ADR red flags detected. See PR comment for details."
+          echo "::error::ADR red flags detected. See job summary for details."
+          cat /tmp/findings.md
           exit 1

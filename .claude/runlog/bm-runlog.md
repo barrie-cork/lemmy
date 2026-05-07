@@ -1650,3 +1650,26 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** approve — zero fix-in-pr remaining
 - **YAML:** .claude/PRPs/reviews/pr-111-findings.yaml (109552 bytes)
 - **Notes:** CR has not yet posted findings on the parallel-session commits db413f87c..8e3c1d336 (~5 min after the second @coderabbitai review trigger at 12:39Z); CR may still be processing OR may yield additional findings on the new dual-harness/research files. Re-poll before `/bm-merge` to confirm.
+
+## bm: poll-cr — 2026-05-07T11:20:00Z
+- **PR:** #119 — v1-SL-b — revoke_endorsement handler + DTO + route + 9 tests
+- **head SHA:** 5683e3dff (first poll on this PR — prior poll Junior task #129 saw 1 comment / 0 actionable)
+- **CR comments seen:** 20 (4 review / 15 inline / 1 issue/walkthrough)
+- **Actionable findings ingested:** 30 (15 inline + 15 outside-diff from review #1+#2; walkthrough 5/5 pre-merge passed → no findings emitted)
+- **New findings this poll:** 30 (first substantive poll; CR did its full pass between Junior task #129 and now)
+- **Findings addressed since last poll:** 0 (no addressed_in commits scanned; first poll baseline)
+- **Counters:** critical 1/0/0 | major 19/0/0 | medium 0/0/0 | low 9/0/0 | nit 1/0/0
+- **Recommendation:** block (cr-5 critical: authz check before idempotent early return on revoke_endorsement.rs:174)
+- **YAML:** .claude/PRPs/reviews/pr-119-findings.yaml (15299 bytes)
+- **Notes:** 13 of the 19 majors are CR ownership-rule complaints about `.claude/` files being included in this PR (cr-8..cr-20) — the workflow `.coderabbit.yaml` has a pre-pr exception list per ADR-013/governance scope; flagged in each finding's `notes:` as "rebut candidate". 4 substantive code findings on revoke_endorsement.rs: cr-4 (idempotency drift, line 106), cr-5 (CRITICAL — authz before idempotent return, line 174), cr-6 (majority_revocation baseline; CR's recommendation implies the e2e gap — sponsor-A-then-sponsor-B revoke within grace window not exercised, line 267), cr-7 (governance-log payload schema drift, line 330). 2 workflow findings: cr-21 (advisory bypass still fails workflow, adr-compliance.yml:101), cr-22 (rev-parse before checkout, adr-compliance.yml:60). Walkthrough: 5/5 pre-merge checks passed; review effort estimate "🎯 4 (Complex) | ⏱️ ~45 minutes". Outside-diff annotation: none — all finding files appear in PR diff. YAML is gitignored runtime artifact; not staged.
+
+## bm: triage — 2026-05-07T11:50:00Z
+- **PR:** #119
+- **Buckets:** fix-in-pr 6 | rebut 14 | carry-forward 0 | done 0 | wont-fix 10
+- **fix-in-pr:** cr-4, cr-5, cr-6, cr-7 (revoke_endorsement.rs handler bugs) + cr-22, cr-23 (adr-compliance.yml workflow polish bundled)
+- **rebut:** cr-21 (workflow bypass — CR recommendation already implemented at workflow line 137; cr-21 stale) + cr-8..cr-20 (13 .claude/ ownership-rule complaints, mixed-diff PR policy at .claude/rules/phase-branch.md authorises advisor briefs/runlog to ride along)
+- **wont-fix:** cr-1, cr-2 (functional MCP marker files at /srv/brehon-fork) + cr-3, cr-27 (PI_AUDIT_REPORT.md historical machine-path content, editing falsifies audit record) + cr-24..cr-26, cr-28..cr-30 (advisor/pi prose markdownlint-exempt per fork policy)
+- **Comment posted?** dry-run (digest drafted at .claude/PRPs/reviews/pr-119-comment.md; awaiting user confirm before `gh pr comment`)
+- **Carry-forward issues filed:** 0 (no carry-forward bucket assignments)
+- **Recommendation:** block (cr-5 critical fix-in-pr open)
+- **Notes:** cr-21 rebut rationale was initially mis-cited as "ADR-010 advisory-bypass design" — corrected post-verify (ADR-010 is staged-releases policy, unrelated). Actual rationale: workflow line 137 already gates on `scan_status != '0'` per CR's own recommendation, with bypass paths in adr-compliance.sh exiting 0 with non-empty findings file; cr-21 is stale. cr-6 fix-in-pr scope decision: SL-b handler-only narrow fix (correct the obviously-wrong derivation, add 10th e2e for synchronous escape path); the authoritative `baseline_sponsor_count` persistence mechanic is deferred to v1-SL-c grace-check evaluator (currently in /brehon-clarify on Mac), where ENTRY_KIND_SPONSOR_LIABILITY_FIRED + _ESCAPED batch path lives per registry SL-a section. SL-c clarify-DQ surfaces the column/derivation question for plan-author resolution.
