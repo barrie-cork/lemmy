@@ -3329,14 +3329,14 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
       "governance_log payload leaked a raw integer identifier: {s}"
     );
   }
-  // Positive assertion: at least one payload mentions sponsor_pseudonym so
+  // Positive assertion: at least one payload mentions revoker_pseudonym so
   // the grep isn't vacuously passing on an empty log.
   let saw_pseudonym = payloads
     .iter()
-    .any(|p| serde_json::to_string(p).map(|s| s.contains("\"sponsor_pseudonym\"")).unwrap_or(false));
+    .any(|p| serde_json::to_string(p).map(|s| s.contains("\"revoker_pseudonym\"")).unwrap_or(false));
   assert!(
     saw_pseudonym,
-    "expected at least one governance_log payload with sponsor_pseudonym"
+    "expected at least one governance_log payload with revoker_pseudonym"
   );
 
   Ok(())
@@ -11250,7 +11250,7 @@ mod v1_sl_b_fixtures {
 
     let payload = read_log_payload(&mut conn, "endorsement_revoked").await?
       .expect("endorsement_revoked payload exists");
-    assert!(payload["sponsor_pseudonym"].is_string(), "sponsor_pseudonym is a string");
+    assert!(payload["revoker_pseudonym"].is_string(), "revoker_pseudonym is a string");
     assert!(payload["target_pseudonym"].is_string(), "target_pseudonym is a string");
     assert_eq!(
       payload["reason"],
