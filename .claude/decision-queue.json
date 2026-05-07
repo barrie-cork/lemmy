@@ -1,5 +1,28 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 153,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-07T13:33:25Z",
+      "subject": "phase-v1-SL-b tip b00ae7db2 e2e validate-pending (local)",
+      "branch": "phase-v1-SL-b",
+      "phase_task": "sl-b-e2e-post-fix-152",
+      "workflow_run_id": null,
+      "head_sha": "b00ae7db2",
+      "local_log_path": ".claude/runlog/e2e-phase-v1-SL-b-b00ae7db2.log",
+      "commands": [
+        "cargo test -p lemmy_server --test e2e --features full -- --test-threads=1"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Post-fix e2e validation for phase-v1-SL-b after the unused_assignments hand-fix (commits a9719fa82 + b00ae7db2). User selected option (a) local per Phase 2 e2e user gate (CLAUDE.md gate #5). Docker confirmed running. Background cargo invocation captures to local_log_path; advisor mutates entry directly when cargo exits."
+    }
+  ],
   "resolved": [
     {
       "id": 152,
