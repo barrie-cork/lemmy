@@ -2341,6 +2341,67 @@
       "answer": "(B) Proceed as one plan. Splitting yields b1=26 + b2=10; b2 still trips the >8 threshold so the split does not meaningfully reduce per-sub-phase risk. Dominant factor is e2e edit multiplicity (+27 of +38), which is mechanical and anchor-Edit-friendly per feedback_junior_worker_e2e_edit_hang.md (one test per §13 task = 9 isolated anchor inserts). Strong canonical mirror at create_endorsement.rs:1-361 (handler shape) and SL-a Tasks 4-12 (per-test e2e edit discipline). PRD §15 row 2 names the deliverable as one atomic phase (handler + DTO + route + integration tests). Precedent: SL-a (score 13) + JM-e (score 15) both shipped proceed-as-one without operational regret per their retros. Per feedback_principles_not_rules.md: the score is a signal, not a hard rule; in this case the signal traces to mechanical multiplicity, not architectural complexity. Proceed-as-one approved.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-04T16:18:02Z"
+    },
+    {
+      "id": 144,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-07T10:47:12Z",
+      "question": "Brief §2.1.a + §2.2 step 4 — what ConfigCache lifetime should run_grace_check_batch use? The reputation_snapshot precedent at reputation_snapshot.rs:363+389 uses a two-tier pattern (outer cache for batch-level reads + per-chunk cache inside the loop).",
+      "options": [
+        "(A) Single cache instance threaded across all per-case transactions in one batch",
+        "(B) Two-tier — outer ConfigCache for batch-level reads (e.g. batch_size); per-case ConfigCache::new() inside fire_or_escape_case"
+      ],
+      "context": "reputation_snapshot.rs:363 declares `let mut cache = ConfigCache::new();` outside the chunk loop for one read (job.snapshot_batch_chunk_size); reputation_snapshot.rs:389 declares `let mut chunk_cache = ConfigCache::new();` inside the chunk loop. SL-b's DQ #142 is non-applicable here because SL-b's revoke_endorsement runs ONE outer transaction with N severance evaluations inside; SL-c runs N independent per-case transactions. Brief at .claude/PRPs/briefs/sl-c-planning-1.md.",
+      "answer": "(B) Two-tier — outer ConfigCache for batch-level reads (job.grace_check_batch_size, the staleness multiplier); per-case ConfigCache::new() created inside fire_or_escape_case at the top of the per-case body, threaded into apply_sponsor_liability(... &mut cache). Mirrors reputation_snapshot.rs:363/389 verbatim. Per-case caches are isolated by transaction boundary; sharing a cache across distinct run_transaction closures is fiddly with &mut and provides no win since cases rarely share community-scoped reads in the same batch. Plan §13 task that authors run_grace_check_batch must adopt the two-tier shape; the &mut ConfigCache parameter on apply_sponsor_liability is satisfied by the per-case cache. Cited: reputation_snapshot.rs:363,389.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T10:47:12Z"
+    },
+    {
+      "id": 145,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-07T10:47:12Z",
+      "question": "Brief §2.1.d test #7 + §2.2 step 4 second bullet — should SL-c wire the restoration-completed escape branch (read governance_log for restoration_completed entries) or stub-only?",
+      "options": [
+        "(A) Wire detection — query governance_log for restoration_completed entries with subject_pseudonym == target's pseudonym AND timestamp between case.decided_at and now; ship test #7",
+        "(B) Stub-only — EscapeStatus::Escape{reason: 'restoration_completed', ...} variant exists in the enum but evaluate_escape_conditions never returns it in v1-SL-c; producer-side wiring deferred to restorative-mechanics-v1 PRD"
+      ],
+      "context": "PRD §6.2 step 3 second bullet lists restoration as an escape condition. PRD §7 says the restoration completion endpoint lives in restorative-mechanics-v1 PRD which has not been drafted yet. ENTRY_KIND_RESTORATION_COMPLETED exists at governance_log.rs:68 (SL-a-shipped) but has zero emit-sites in the codebase today. Brief masthead pre-locks this lean. Brief at .claude/PRPs/briefs/sl-c-planning-1.md.",
+      "answer": "(B) Stub-only. Per feedback_build_what_tests_exercise.md, SL-c must not pre-implement detection for a producer that doesn't yet emit. The EscapeStatus enum carries an Escape{reason: 'restoration_completed'} constructor for ADR-013-style enum-exhaustiveness completeness, but evaluate_escape_conditions's restoration check returns Fire (i.e. the branch never fires in v1-SL-c). When restorative-mechanics-v1 PRD lands and ships the restoration_completed endpoint, that PRD's plan adds the read-side query to evaluate_escape_conditions and the matching e2e test. Plan §19 Notes must document the stub-and-future-wire path explicitly so the next planner finds the breadcrumb. Cited: PRD §6.2 step 3 + §7; ENTRY_KIND_RESTORATION_COMPLETED at governance_log.rs:68; feedback_build_what_tests_exercise.md (PMD #14).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T10:47:12Z"
+    },
+    {
+      "id": 146,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-07T10:47:12Z",
+      "question": "Brief §2.1.b staleness pass — what timestamp basis and threshold formula does check_grace_staleness use? PRD §6.3 says 'past 2× max grace window (i.e. >60 days)' but doesn't pin which timestamp column or which multiplier source.",
+      "options": [
+        "(A) Threshold = liability.grace_window_maximum_hours × job.grace_check_staleness_alert_multiplier; per-case test: now - decided_at > threshold_hours; emit tracing::error! per stuck case",
+        "(B) Threshold = liability.grace_window_maximum_hours × 2 (hardcoded); per-case test: now - grace_expires_at > threshold_hours",
+        "(C) Some other formula"
+      ],
+      "context": "PRD §10 defaults: liability.grace_window_maximum_hours = 720 (30d). job.grace_check_staleness_alert_multiplier = 2.0 (config.rs:2672 verified). 720 × 2.0 = 1440h = 60d, matching PRD §6.3's parenthetical '>60 days'. SL-a-seeded both keys. Brief at .claude/PRPs/briefs/sl-c-planning-1.md.",
+      "answer": "(A) Threshold formula: threshold_hours = liability.grace_window_maximum_hours × job.grace_check_staleness_alert_multiplier; for each pending case, test now - decided_at > threshold_hours and emit tracing::error! when true. Read both keys via lemmy_api::governance::config::get_int (for grace_window_maximum_hours) + ::get_float (for staleness_alert_multiplier) at instance scope inside check_grace_staleness, BEFORE the per-case loop. Defaults give 1440h ≈ 60d matching PRD §6.3. Measure from decided_at (NOT grace_expires_at) — the semantic is 'this case has been pending so long it's escaped notice', and decided_at is the canonical case-age anchor. The function is pure observability — no DB writes, no governance_log entries — mirroring reputation_snapshot::check_snapshot_staleness at reputation_snapshot.rs:423. Cited: PRD §6.3 + §10; config.rs:2672 (the seed); reputation_snapshot.rs:423 (canonical staleness mirror).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T10:47:12Z"
+    },
+    {
+      "id": 147,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-07T10:47:12Z",
+      "question": "Brief §3 Required reading missing canonical-mirror citation — `crates/api/api/src/governance/appeal_window_expiry.rs` (the second batch-runner sibling next to reputation_snapshot.rs) is not cited as a paired canonical mirror. Should the brief be edited to add it?",
+      "options": [
+        "(A) Edit brief §3 to pair appeal_window_expiry.rs with reputation_snapshot.rs as the two canonical batch-runner mirrors — citing both gives the planner pattern-triangulation",
+        "(B) Single-mirror citation suffices — reputation_snapshot.rs alone covers run_<verb>_batch + check_<verb>_staleness shape"
+      ],
+      "context": "appeal_window_expiry.rs::run_appeal_window_expiry_batch is dispatched from scheduled_tasks.rs:269 (verified at brief-write time on governance-v0 HEAD 2a2649d88). It's the third governance-scheduler sibling, structurally identical to reputation_snapshot::run_snapshot_batch but with appeal-specific semantics. Per feedback_read_canonical_before_writing_spec.md the gate is 'read 1-2 canonical instances'; one is the floor, two is better for triangulation. Brief at .claude/PRPs/briefs/sl-c-planning-1.md.",
+      "answer": "(A) Edit brief §3 to pair appeal_window_expiry.rs with reputation_snapshot.rs as the two canonical batch-runner mirrors. Both are sibling modules under crates/api/api/src/governance/, both expose pub async fn run_<verb>_batch(context: &LemmyContext) -> LemmyResult<()>, both are dispatched via clokwerk from scheduled_tasks.rs::setup with sibling AtomicBool + Drop guard pairs. Per feedback_read_canonical_before_writing_spec.md — pair the citations so the planner can triangulate the variation envelope (snapshot's per-chunk loop vs appeal's per-row pattern) and pick the closest fit for SL-c's per-case shape. Edit lands in this same commit. Cited: scheduled_tasks.rs:269 (dispatch); appeal_window_expiry.rs file existence; feedback_read_canonical_before_writing_spec.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-07T10:47:12Z"
     }
   ],
   "schema_version": 2
