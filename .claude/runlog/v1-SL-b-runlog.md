@@ -36,3 +36,12 @@
 - **YAML:** .claude/PRPs/reviews/pr-119-findings.yaml (counters recomputed; recommendation flipped pending→approve)
 - **Comment draft:** .claude/PRPs/reviews/pr-119-comment.md (52 lines, body ready to post)
 - **Notes:** poll-#2 re-numbered findings to cr-1..cr-15. cr-5 (was poll-1's `majority_revocation` finding) → rebut citing brief sl-b-fix-impl-3.md §2 deferral. cr-6 (poll-1 cr-7, governance-log schema) → done addressed_in a771c49e7. cr-14 → carry-forward (Pi config out of governance scope). cr-7,cr-9..cr-13,cr-15 → wont-fix (markdown-lint nits / Pi audit artefact).
+
+## bm: merge — 2026-05-07T20:42:04Z
+- **PR:** #119 (v1-SL-b — revoke_endorsement handler + DTO + route + 9 tests)
+- **base ← head:** governance-v0 ← phase-v1-SL-b
+- **merge sha:** 9ae4c332cf15f64a14737f13c7e2ffc4db52889e
+- **remote branch deleted?** yes (--delete-branch)
+- **trunk position:** 9ae4c332c — Merge pull request #119 from barrie-cork/phase-v1-SL-b
+- **findings YAML archived:** .claude/PRPs/reviews/pr-119-findings.yaml
+- **adr-compliance note:** advisory red-flag on revoke_endorsement route (known v0 endpoint per ADR-010 §v1); ack comment posted; merged per user instruction

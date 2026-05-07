@@ -8,6 +8,9 @@ last_poll_at: '2026-05-07T19:44:27Z'
 poll_count: 2
 last_polled_head_sha: 3f119ce82
 recommendation: approve
+merged_at: '2026-05-07T20:42:04Z'
+merge_commit: 9ae4c332cf15f64a14737f13c7e2ffc4db52889e
+final_recommendation: approve
 findings:
 - id: cr-1
   source: coderabbit
