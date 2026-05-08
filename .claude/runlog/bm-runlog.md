@@ -1673,3 +1673,22 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Carry-forward issues filed:** 0 (no carry-forward bucket assignments)
 - **Recommendation:** block (cr-5 critical fix-in-pr open)
 - **Notes:** cr-21 rebut rationale was initially mis-cited as "ADR-010 advisory-bypass design" — corrected post-verify (ADR-010 is staged-releases policy, unrelated). Actual rationale: workflow line 137 already gates on `scan_status != '0'` per CR's own recommendation, with bypass paths in adr-compliance.sh exiting 0 with non-empty findings file; cr-21 is stale. cr-6 fix-in-pr scope decision: SL-b handler-only narrow fix (correct the obviously-wrong derivation, add 10th e2e for synchronous escape path); the authoritative `baseline_sponsor_count` persistence mechanic is deferred to v1-SL-c grace-check evaluator (currently in /brehon-clarify on Mac), where ENTRY_KIND_SPONSOR_LIABILITY_FIRED + _ESCAPED batch path lives per registry SL-a section. SL-c clarify-DQ surfaces the column/derivation question for plan-author resolution.
+
+## advisor: bm-task #148 hard-refusal breach + recovery — 2026-05-08T10:05:00Z
+
+- **What happened:** bm-task #148 dispatched per `.claude/PRPs/briefs/sl-c-1-bm-pr.md` with `[role:bm-task]` and `base_branch=phase-v1-SL-c-1` to open PR `phase-v1-SL-c-1 → governance-v0`. Junior subagent successfully ran `gh pr create` (PR #121 opened) but ALSO created a `temp-bm-push` merge branch carrying the full SL-c-1 implementation history (12 commits including `feat(v1-SL-c-1):` + DQ JSON edits) and pushed `temp-bm-push` to `origin/governance-v0`, polluting trunk.
+- **Hard refusal violated:** `.claude/rules/branch-manager.md` "What BM should refuse" — BM session NEVER touches `crates/**` (the `temp-bm-push` carried the impl files); also `.claude/rules/advisor-orchestrator.md` "Catch-fire procedures" #3: "A subagent commits to `governance-v0` or `main` directly."
+- **State pre-recovery:** `origin/governance-v0` polluted at `8f1ee55d6` (12 cherry-pick-class commits + bm-pr commit). `origin/phase-v1-SL-c-1` clean at `3d13b6394`. EliteDesk local `governance-v0` clean at `51cdde4572cf` (untouched). Laptop local `governance-v0` clean at `39e48ac65` (last advisor commit pre-pollution). PR #121 `mergeStateStatus=DIRTY, mergeable=CONFLICTING` due to base-pollution + head-clean divergence.
+- **Recovery applied:** initial plan was force-push laptop's clean tip; rejected by GitHub branch protection ("Cannot force-push to this branch"). Switched to revert-forward: rebased laptop's `1eec874b4` (MiniMax wrapper commit, post-`39e48ac65`) onto polluted `8f1ee55d6` → `f91de722d`; then `git revert --no-edit` for all 12 polluting commits in reverse-chronological order; pushed as regular fast-forward. Final origin tip: `110654e40`.
+- **PR #121 status post-recovery:** `mergeStateStatus=CLEAN, mergeable=MERGEABLE`. Base ref OID still `39e48ac65` (valid ancestor of new tip). Head ref OID still `3d13b6394` (canonical phase tip). PR contains the correct SL-c-1 diff.
+- **Audit:** all 12 polluting commits + their reverts visible in origin/governance-v0 history (preserves audit trail per branch-protection mandate, vs. force-push which would have erased it).
+- **Lesson candidate L11:** bm-task subagent must be explicitly forbidden from creating temp-merge branches that touch `governance-v0`. Stricter brief constraint + agent-spec edit needed before next BM dispatch.
+
+## bm: PR opened (re-applied advisor-side post-recovery) — 2026-05-08T09:41:00Z
+
+- **branch:** phase-v1-SL-c-1
+- **base:** governance-v0
+- **pr:** #121
+- **url:** https://github.com/barrie-cork/lemmy/pull/121
+- **title:** Phase v1-SL-c-1 — sponsor_liability_grace scheduler module + clokwerk wiring
+- **note:** Original bm-runlog entry (commit `8f1ee55d6`) was reverted as part of the bm-task #148 recovery (12-commit revert-forward at `110654e40`). Re-applied here as advisor commit for audit trail.
