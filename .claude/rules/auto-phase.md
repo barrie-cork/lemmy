@@ -179,19 +179,109 @@ wall-clock evidence (per
 
 ## Resume semantics
 
-Auto-state JSON is per-phase. On `/auto-phase v1-SL-c-2` invocation:
+Auto-state JSON is per-phase and survives session boundaries (Claude
+Code compaction, `/clear`, deliberate session restart, laptop reboot).
+A sub-phase typically runs ~3-4 hours — longer than any single
+conversation lifetime — so resume MUST work as a first-class path,
+not as an exceptional case.
+
+### Invocation paths
+
+On `/auto-phase v1-SL-c-2` invocation:
 
 1. If `.claude/auto-state/v1-SL-c-2.json` does NOT exist → fresh init,
    stage = `init`, run Phase 0 prerequisites.
 2. If file exists with `stage = done` → refuse: "phase already complete;
-   re-running would re-trigger /brehon-phase-transition". Suggest the
-   user delete the state file or run a new phase.
-3. If file exists with `stage = catch-fire` → surface the catch-fire
-   dump path; refuse to auto-resume; require explicit user instruction
-   ("/auto-phase v1-SL-c-2 --start-from <stage>" after fixing the
-   underlying issue).
-4. Otherwise → resume from current stage. Print resume summary; route
-   to current stage's tick handler.
+   delete state file or run new phase".
+3. If file exists with `stage = catch-fire` → refuse auto-resume;
+   surface the catch-fire dump path; require explicit
+   `--start-from <stage>` after the user has addressed the underlying
+   cause.
+4. Otherwise → run **Phase 0.5 — Session resume** (skill body). Phase
+   0.5 reconciles the persisted state with current world state (Junior
+   task statuses, DQ delta, phase tip drift, daemon health) and prints
+   a resume report. **Wait for user 'continue' reply** before any
+   state-changing action.
+
+### Hard invariants
+
+A. **The same `/auto-phase <phase>` invocation handles fresh start AND
+   resume.** No flag is needed for the common case. Discoverability
+   from a fresh session: the user types the same command they used at
+   phase start; the skill detects the state file and routes to Phase
+   0.5 automatically. This invariant is load-bearing — losing it
+   would mean the user must remember a flag across days of elapsed
+   session time, which defeats the skill's purpose.
+
+B. **Phase 0.5 is read-only until user 'continue'.** The reconciliation
+   loop calls `mcp__junior-brehon__list_tasks`, `git fetch`, and reads
+   `.claude/decision-queue.json` — but does NOT queue Junior tasks,
+   write DQ entries, or fire `gh pr merge`. The cost of one extra user
+   touch on resume is much smaller than the cost of an unwanted resume
+   action (e.g. re-queueing a Junior task that's still alive on the
+   daemon, double-running cargo bg processes, racing against a peer
+   advisor session).
+
+C. **`session_id` rotates on every resume.** The skill writes a new
+   random 12-char hex on every Phase 0.5 entry. The previous
+   `session_id` is preserved in `last_session_ended_at`'s nearby
+   metadata so retros can identify session-boundary points. High
+   `resume_count` (>3) on a single phase is a retro signal worth
+   investigating.
+
+D. **Phase tip drift is a normal advance signal, not a catch-fire.**
+   If `last_known_phase_tip` lags `phase-<phase>` HEAD on resume, the
+   Junior daemon finalize-merged a worker branch while the session
+   was down. Phase 0.5 Step D detects this and advances state-machine
+   forward; the skill does not catch-fire on phase-tip-ahead-of-state.
+
+E. **No automatic Junior task re-queue on resume.** If a Junior task
+   that was `running` at session-end is now `failed` or `cancelled`
+   or missing from the daemon DB, surface the outcome to user; never
+   auto-retry. The user decides whether the prior failure is real
+   (root cause to fix) or transient (re-queue acceptable). This
+   matches the standard `failed`/`cancelled` handling in Phase 5
+   "Failure modes" of the skill body.
+
+F. **AskUserQuestion gates persist across session boundaries.** If a
+   session ended with stage = `*-pending-user`, the next session's
+   Phase 0.5 re-fires the gate from the persisted question state.
+   The user does not lose their place; they answer the same question
+   they were asked before the session ended.
+
+### What survives across session boundaries
+
+The state file's authoritative fields (each must be enough to resume
+without conversation context):
+
+- `phase` — sub-phase name (e.g. `v1-SL-c-2`).
+- `stage` — current state-machine state.
+- `current_cohort` — for `impl-cohort-N-running` and friends, the
+  cohort members' Junior task ids + their `validate-pending` DQ ids.
+- `phase_2_e2e_mode` — cached choice from gate 4 ("local" / "dispatch")
+  so resume doesn't re-ask.
+- `junior_tasks` — map of stage to most-recent Junior task id, so
+  `list_tasks` reconciliation can compare recorded vs current.
+- `last_known_phase_tip` — phase branch SHA at last tick, for drift
+  detection.
+- `last_dq_pending_count` + `last_dq_pending_ids` — for delta scan in
+  Step C.
+- `user_gate_history` — what the user has decided so far this phase
+  (used by retro author).
+
+### What does NOT survive (deliberately)
+
+- Conversation context — the new session has no memory of the prior
+  session's reasoning. Phase 0.5's resume report must be self-
+  contained ("here's what was happening; here's what you decided;
+  here's the next action").
+- Background processes — if a session ended with `cargo test --features
+  full ... > .claude/runlog/e2e-...log 2>&1` running in the parent's
+  bash session, that process may have died with the session OR may be
+  orphaned. Phase 0.5 Step B for `phase-2-e2e-N-running` checks the
+  log file's mtime + the OS process table to disambiguate.
+- Subagent context — any Explore / general-purpose agents the prior
+  session spawned are gone. Re-spawn if needed.
 
 ## What this rule does NOT cover
 
