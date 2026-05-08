@@ -90,20 +90,6 @@ impl Drop for AppealWindowExpiryRunningGuard {
   }
 }
 
-// Concurrency guard for the 5-minute Brehon sponsor-liability
-// grace-check tick. Mirrors REPUTATION_SNAPSHOT_RUNNING +
-// RunningGuard (lines 71-79) and APPEAL_WINDOW_EXPIRY_RUNNING +
-// AppealWindowExpiryRunningGuard (lines 83-91).
-static SPONSOR_LIABILITY_GRACE_RUNNING: AtomicBool = AtomicBool::new(false);
-
-struct GraceCheckRunningGuard;
-
-impl Drop for GraceCheckRunningGuard {
-  fn drop(&mut self) {
-    SPONSOR_LIABILITY_GRACE_RUNNING.store(false, Ordering::Release);
-  }
-}
-
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // https://github.com/mdsherry/clokwerk/issues/38
@@ -284,98 +270,6 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         .await
         .inspect_err(|e| warn!("Failed to run appeal_window_expiry batch: {e}"))
         .ok();
-    }
-  });
-
-  // Brehon governance v1: sponsor-liability grace-check tick.
-  // Interval is read from `job.grace_check_interval_minutes` at
-  // scheduler setup (default 5). Find SponsorLiabilityPending cases
-  // past their grace_expires_at and transition them to Fired or
-  // Escaped per PRD §6.1 + §6.2.
-  //
-  // Restart-required tunability: clokwerk schedules pin at
-  // registration. Flipping `job.grace_check_interval_minutes` via
-  // POST /admin/config takes effect at next server restart.
-  // Mirrors v0 reputation-snapshot precedent (15-min interval
-  // hardcoded at scheduler setup).
-  //
-  // Disabled in tests via BREHON_DISABLE_GRACE_CHECK_JOB=1
-  // (mirrors BREHON_DISABLE_SNAPSHOT_JOB pattern at line 197).
-  //
-  // Concurrency guard mirrors REPUTATION_SNAPSHOT_RUNNING /
-  // APPEAL_WINDOW_EXPIRY_RUNNING. After the batch tick, a sibling
-  // staleness pass emits tracing::error! per stuck case (PRD §6.3).
-  let context_grace = context.reset_request_count();
-  let grace_pool = &mut context.pool();
-  let grace_interval_minutes_i64: i64 = lemmy_api::governance::config::get_int(
-    &mut lemmy_api::governance::config::ConfigCache::new(),
-    grace_pool,
-    lemmy_api::governance::config::Scope::Instance,
-    "job.grace_check_interval_minutes",
-  )
-  .await
-  .unwrap_or(5);
-  let grace_interval_minutes: u32 =
-    u32::try_from(grace_interval_minutes_i64).unwrap_or(5);
-  scheduler.every(CTimeUnits::minutes(grace_interval_minutes)).run(move || {
-    let context = context_grace.reset_request_count();
-    async move {
-      // Watchpoint #9: env-var check FIRST in closure body. Reversing
-      // means tests that set BREHON_DISABLE_GRACE_CHECK_JOB still
-      // consume an atomic-bool slot, leaking guards.
-      if std::env::var("BREHON_DISABLE_GRACE_CHECK_JOB").as_deref() == Ok("1") {
-        return;
-      }
-      if SPONSOR_LIABILITY_GRACE_RUNNING
-        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-        .is_err()
-      {
-        warn!("sponsor_liability_grace: previous batch still running, skipping this tick");
-        return;
-      }
-      let _guard = GraceCheckRunningGuard;
-      lemmy_api::governance::sponsor_liability_grace::run_grace_check_batch(&context)
-        .await
-        .inspect_err(|e| warn!("Failed to run grace_check batch: {e}"))
-        .ok();
-
-      // Staleness pass after the batch (per PRD §6.3 + DQ #146).
-      // Mirrors snapshot pattern at scheduled_tasks.rs:213-244.
-      let staleness_pool = &mut context.pool();
-      let mut staleness_cache =
-        lemmy_api::governance::config::ConfigCache::new();
-      let max_grace_hours = lemmy_api::governance::config::get_int(
-        &mut staleness_cache,
-        staleness_pool,
-        lemmy_api::governance::config::Scope::Instance,
-        "liability.grace_window_maximum_hours",
-      )
-      .await
-      .unwrap_or(720);
-      let multiplier = lemmy_api::governance::config::get_float(
-        &mut staleness_cache,
-        staleness_pool,
-        lemmy_api::governance::config::Scope::Instance,
-        "job.grace_check_staleness_alert_multiplier",
-      )
-      .await
-      .unwrap_or(2.0);
-      match get_conn(staleness_pool).await {
-        Ok(mut conn) => {
-          if let Err(e) =
-            lemmy_api::governance::sponsor_liability_grace::check_grace_staleness(
-              &mut conn,
-              max_grace_hours,
-              multiplier,
-              Utc::now(),
-            )
-            .await
-          {
-            warn!("grace staleness check failed: {e}");
-          }
-        }
-        Err(e) => warn!("grace staleness check: get_conn failed: {e}"),
-      }
     }
   });
 
