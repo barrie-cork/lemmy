@@ -1692,3 +1692,18 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **url:** https://github.com/barrie-cork/lemmy/pull/121
 - **title:** Phase v1-SL-c-1 — sponsor_liability_grace scheduler module + clokwerk wiring
 - **note:** Original bm-runlog entry (commit `8f1ee55d6`) was reverted as part of the bm-task #148 recovery (12-commit revert-forward at `110654e40`). Re-applied here as advisor commit for audit trail.
+
+## bm: merge (re-applied advisor-side post-BM-omission) — 2026-05-08T18:41:57Z
+
+- **PR:** #121 (Phase v1-SL-c-1 — sponsor_liability_grace scheduler module + clokwerk wiring)
+- **base ← head:** governance-v0 ← phase-v1-SL-c-1
+- **merge sha:** `8bfc085dc`
+- **merge command executed:** `gh pr merge 121 --repo barrie-cork/lemmy --merge --delete-branch` (in Junior bm-task #150)
+- **trunk position:** `8bfc085dc` (Merge pull request #121 from barrie-cork/phase-v1-SL-c-1)
+- **remote branch deleted?** yes — but BM dispatch did not delete via `--delete-branch` automatically; deletion completed advisor-side via `gh api -X DELETE repos/barrie-cork/lemmy/git/refs/heads/phase-v1-SL-c-1` after BM exited. Net: deletion succeeded, audit trail clean.
+- **stricter constraints honored?** yes — Junior bm-task #150 followed `sl-c-1-bm-merge-2-execute.md` §0; no temp branches, no governance-v0 push other than implied via `gh pr merge`, `--merge` only.
+- **gate ran in:** task #149 (`sl-c-1-bm-merge-1`); execute ran in: task #150 (`sl-c-1-bm-merge-2-execute`).
+- **findings YAML archived:** N/A (zero CR findings — clean merge).
+- **BM omissions caught + corrected:** (1) Junior #150 wrote the runlog Edit on its worktree but never `git add`/`commit`/`push` — runlog block lost on worktree teardown. (2) Junior #150 did not run `gh api ... -X DELETE` for `phase-v1-SL-c-1` (the `gh pr merge --delete-branch` flag did not delete the branch on this run, possibly due to head-branch protection rules). Both corrected advisor-side as part of this re-applied entry.
+- **lesson candidate L14:** bm-merge BM Junior must `git add .claude/runlog/bm-runlog.md && git commit -m 'chore(bm): bm-merge merged PR #N' && git push origin governance-v0` BEFORE running post-merge `git checkout governance-v0 && git pull --ff-only` — checkout-then-pull discards uncommitted Edits on the worktree (or moves them out of branch context). Brief should sequence: Edit runlog → git add → git commit → git push → ONLY THEN fetch/checkout/pull verification. Currently L14-and-counting after L11 (temp-branch breach), L13 (hook-policy mid-session); L11+L13+L14 all share the root cause "BM agent improvises file/git workflow when brief is silent on sequencing".
+- **lesson candidate L15:** the gate-then-execute split (#149 + #150) duplicated 80% of context boot for a single `gh pr merge` call. Per the user's "duplication of work is a flag" observation: gate phases of bm-verbs whose only output is a yes/no should run from the advisor session (read-only `gh` calls), not be queued as a separate Junior task. Junior should be queued only for the post-confirm execute step.
