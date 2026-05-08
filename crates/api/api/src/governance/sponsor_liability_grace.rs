@@ -53,15 +53,14 @@ use diesel_async::{
 };
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::{
-  newtypes::{CommunityId, ModerationCaseId},
+  newtypes::{CommunityId, ModerationCaseId, PersonId},
   source::governance::moderation_case::ModerationCase,
 };
 use lemmy_db_schema_file::{
-  PersonId,
   enums::{CaseStatus, SanctionAction, SanctionScope},
   schema::{endorsement, moderation_case, sanction, surety},
 };
-use lemmy_diesel_utils::connection::{DbConn, get_conn};
+use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
 use tracing::{info, warn};
@@ -278,7 +277,7 @@ pub async fn evaluate_escape_conditions(
 /// use `run_grace_check_batch` which has access to the sanction-action
 /// context needed by the Fire branch.
 pub async fn fire_or_escape_case(
-  conn: &mut DbConn<'_>,
+  conn: &mut AsyncPgConnection,
   case: ModerationCase,
   status: EscapeStatus,
   _cache: &mut ConfigCache,
