@@ -345,6 +345,12 @@ pub async fn fire_or_escape_case(
 /// `max_grace_hours × multiplier` (per PRD §6.3 + DQ #146).
 ///
 /// Pure observability — no DB writes, no governance_log entries.
+#[expect(
+  clippy::as_conversions,
+  clippy::cast_precision_loss,
+  clippy::cast_possible_truncation,
+  reason = "max_grace_hours is a config (hours), bounded to ≤8760 in practice (1 year); multiplier is a small float (2.0 default per PRD §6.3); product fits i64 with no precision loss for the realistic range. Truncation of round() bounded by the same."
+)]
 pub async fn check_grace_staleness(
   conn: &mut AsyncPgConnection,
   max_grace_hours: i64,
