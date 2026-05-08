@@ -31,8 +31,9 @@ Did each `state X → state Y` transition fire on the right trigger? Did any tra
 - Confirm the trigger condition was satisfied at the recorded `last_action_at` timestamp
 - Confirm no earlier opportunity to fire was missed
 - Confirm cohort barriers held (no advance to N+1 with cohort N members in non-pass state)
+- **Read every `user_gate_history[].notes` field** — gates capture durable findings the user shared at decision time (e.g. "DoD smoke 10/11 pass; e2e.rs LOC 11925 higher than planner expected"). These are first-class retro inputs, not freeform decoration. Surface non-empty `notes` as findings in §1 even if the gate decision itself was clean. The notes field is the cross-session communication channel between live `/auto-phase` ticks and retro-time review.
 
-**Symptom of failure.** Cohort barrier crossed early (a non-pass member's failure was masked); a `*-pending-user` gate skipped (advisor inferred the answer instead of asking); a transition deadlocked (state stuck in `*-running` after Junior task completed but advisor missed the status change).
+**Symptom of failure.** Cohort barrier crossed early (a non-pass member's failure was masked); a `*-pending-user` gate skipped (advisor inferred the answer instead of asking); a transition deadlocked (state stuck in `*-running` after Junior task completed but advisor missed the status change); a non-empty `user_gate_history[].notes` field that the retro author skipped reading (silent loss of the durable finding).
 
 ### 2. Cadence calibration
 

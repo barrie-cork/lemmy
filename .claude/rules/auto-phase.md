@@ -43,9 +43,25 @@ are auto-recoverable; user input is required.
    `.claude/PRPs/plans/<phase>*.plan.md`; refuse if zero or >1 match.
 4. **Sub-phase already merged** (PR closed-merged). Refuse and point at
    `/brehon-phase-transition`.
-5. **Concurrent advisor session** writing the same phase (per
-   `.claude/agent-activity.json` `mode: write`). Refuse — user must
-   close the other session.
+5. **Concurrent advisor session** writing the same phase. Refuse —
+   user must close the other session.
+
+   Detection: `.claude/agent-activity.json` shows another active
+   session with `mode: write` AND `phase: <same-phase>` AND
+   `role: advisor`. Both `phase` and `role` must match before
+   refusing — a `governance-v0` meta-editor session (writing skill
+   bodies, rules, lesson files, templates) is NOT a concurrent
+   advisor under this rule. Meta-editor commit subjects match
+   `^(feat|chore|docs)\((advisor|rules|lessons|templates)\)` AND
+   the session writes only files outside `phase-<phase>` worktree
+   ownership; advisor commits write briefs + auto-state JSON +
+   dispatch Junior tasks scoped to the phase.
+
+   In short: refuse only when two sessions are racing on the same
+   `phase-<phase>` topology. A meta-editor improving the skill
+   while a separate advisor session runs `/auto-phase` is the
+   normal cross-session-improvement pattern (per session retro
+   2026-05-08 — first observed during c-2 first-run).
 6. **`--start-from <stage>`** with non-canonical stage name. Refuse and
    list valid stages from the auto-state schema enum.
 7. **`--no-bm-cut`** without a matching `phase-<phase>` branch in the
@@ -221,6 +237,17 @@ B. **Phase 0.5 is read-only until user 'continue'.** The reconciliation
    action (e.g. re-queueing a Junior task that's still alive on the
    daemon, double-running cargo bg processes, racing against a peer
    advisor session).
+
+   **Reconciliation Steps B-D delegate to a `general-purpose` subagent
+   by default**, returning a single ~1 KB synthesis instead of ~12 KB
+   of raw probe outputs to the parent. Justified by token efficiency
+   on resume (parent context post-compaction is cold; reasoning
+   headroom is the scarcest resource). The subagent's prompt is
+   self-contained and explicitly forbids: Junior task dispatch, DQ
+   writes, gh pr merge, auto-state JSON mutation. Step A (state read +
+   schema upgrade) and Step E (resume report + user 'continue' gate)
+   stay inline in the parent — they're load-bearing for routing
+   decisions and surface-to-user respectively.
 
 C. **`session_id` rotates on every resume.** The skill writes a new
    random 12-char hex on every Phase 0.5 entry. The previous
