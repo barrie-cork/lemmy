@@ -91,6 +91,88 @@ One line per item.>
 
 ---
 
+## Auto-phase reliability (only if `.claude/auto-state/<phase>.json` or `*-archived-*.json` or `*-catchfire-*.md` exists)
+
+<Per `.claude/lessons/feedback_auto_phase_retro_signals.md`. Skip
+this whole section if no auto-phase artifacts exist for this session.
+
+If artifacts DO exist, fill the 10 categories below. "Nothing
+surprising" is a valid empty answer — the structure makes absences
+visible. Vague findings are not valid. Each category that goes wrong
+must have a concrete proposed fix.>
+
+### 1. Stage-transition correctness
+<Did each `state X → state Y` fire on the right trigger? Premature
+fires? Missed fires? Cohort barriers held?>
+
+### 2. Cadence calibration
+<Wasted-poll count per stage. Detection-lag on state changes. Any
+300s sleeps? Specific pairs of (delay → next state-change-time).>
+
+### 3. Auto-state integrity
+<Final `resume_count`. `session_id` rotations. `last_known_phase_tip`
+accuracy. Any hand-edits to recover.>
+
+### 4. User-touchpoint count vs target
+<Total count. Six mandatory gates all fired? Any false-positive
+AskUserQuestions? Push grants counted separately.>
+
+### 5. Catch-fire FP / FN rate
+<Each catch-fire dump classified: real-issue or routine-friction.
+Any silent advances past should-have-been-catch-fire? **Zero is the
+target — even one is retro red-flag.**>
+
+### 6. §G4 classifier accuracy
+<For each `result: fail` mutation: was allowlist/non-allowlist
+classification correct? False-positive (auto-fix-impl shipped wrong
+code)? False-negative (catch-fire on existing allowlist pattern)?>
+
+### 7. L14 / L15 / L16 fixes still holding
+<L14: BM commits runlog before merge? L15: gate-side checks ran
+inline (no pre-confirm Junior dispatch)? L16: post-merge
+`git ls-remote` showed branch deleted, or fallback fired silently?>
+
+### 8. Subagent offload effectiveness (when used)
+<For each Agent invocation under /auto-phase: synthesis usable on
+first read? Net-positive context conservation? Token cost vs inline?
+If never used, note "deferred per Phase 0.6" and skip.>
+
+### 9. Plan §13 fidelity vs cohort dispatch
+<For each cohort dispatched: were `[P]` markers actually file-
+disjoint? Any YAML-overlap-check degrades-to-serial? Any budget-
+check degrades?>
+
+### 10. Resume-cycle pain points
+<For each `resume_count` increment: Phase 0.5 found discrepancies
+needing user input, or was 'continue' prompt noise? Any
+`--start-from` overrides? **First c-2 phase: keep the friction.
+c-3+: if zero discrepancies across N phases, propose auto-continue.**>
+
+### Aggregate auto-phase reliability score
+
+| Category | Status | Recurrence |
+|---|---|---|
+| 1. Stage-transition correctness | ✓ / ⚠ / ✗ | 1× this phase, 0× prior |
+| 2. Cadence calibration | ✓ / ⚠ / ✗ | ... |
+| 3. Auto-state integrity | ✓ / ⚠ / ✗ | ... |
+| 4. Touchpoint count | ✓ / ⚠ / ✗ | ... |
+| 5. Catch-fire FP/FN | ✓ / ⚠ / ✗ | ... |
+| 6. §G4 classifier | ✓ / ⚠ / ✗ | ... |
+| 7. L14/L15/L16 holding | ✓ / ⚠ / ✗ | ... |
+| 8. Subagent offload | ✓ / ⚠ / ✗ / N/A | ... |
+| 9. Plan §13 fidelity | ✓ / ⚠ / ✗ | ... |
+| 10. Resume cycles | ✓ / ⚠ / ✗ | ... |
+
+Any ⚠ or ✗ MUST appear as a concrete proposal in §"What to change"
+above. Aggregate trend across phases (track in successive retros):
+- All ✓ on N consecutive phases = automation is reliable; consider
+  loosening some manual gates (e.g. auto-continue resume).
+- ⚠/✗ recurring on the same category across 2 phases = promote to
+  a new lesson (`feedback_<specific-topic>.md`); add a stronger
+  preventative measure to the skill body.
+
+---
+
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
 For each item from "What to change" that meets the threshold, the

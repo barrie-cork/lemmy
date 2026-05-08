@@ -41,6 +41,45 @@ If any of those files is missing, surface that as the first finding
 and stop — your context is incomplete and the retro will repeat
 past mistakes.
 
+## Step 0.5 — Detect /auto-phase artifacts (load 4th lesson if present)
+
+Before Step 1 inventory, check whether the session involved a
+`/auto-phase` skill invocation. Run:
+
+```bash
+ls .claude/auto-state/*.json 2>/dev/null
+ls .claude/auto-state/*-archived-*.json 2>/dev/null
+ls .claude/auto-state/*-catchfire-*.md 2>/dev/null
+```
+
+If ANY of these return a file, OR the session transcript shows an
+explicit `/auto-phase` invocation:
+
+4. **Also read `.claude/lessons/feedback_auto_phase_retro_signals.md`**
+   — 10-category automation-reliability discipline. The canonical
+   3-lesson stack (above) captures friction in *manual* sessions; it
+   does NOT capture failure modes specific to *automated*
+   orchestration (stage-transition correctness, cadence calibration,
+   catch-fire FP/FN, §G4 classifier accuracy, etc).
+
+If this lesson exists and any auto-state artifact is present, the
+retro template's optional **Auto-phase reliability** section
+(`.claude/skills/session-retro/template.md`) MUST be filled. The 10
+categories cover: stage-transition correctness, cadence calibration,
+auto-state integrity, touchpoint count vs target, catch-fire FP/FN
+rate, §G4 classifier accuracy, L14/L15/L16 fixes still holding,
+subagent offload effectiveness, plan §13 fidelity vs cohort dispatch,
+resume-cycle pain points.
+
+Per the user's framing 2026-05-08: *"reliability and accuracy is more
+important than speed, especially when the system offers automation"*.
+Skipping this section under an `/auto-phase` retro is the same class
+of failure as omitting "What to change" — the retro becomes a report.
+
+If no auto-state artifacts and no `/auto-phase` invocation in the
+transcript, this 4th lesson is dormant. Skip it; the section in the
+template should be omitted entirely from the final retro file.
+
 ## Step 1 — Inventory the session
 
 Don't trust memory; pull from authoritative sources. Run these in
@@ -61,12 +100,27 @@ gh run list --repo <repo> --limit 10 --json databaseId,workflowName,status,concl
 
 # What's left in flight
 git status --short
+
+# /auto-phase artifacts (only if Step 0.5 detected them)
+cat .claude/auto-state/<phase>.json 2>/dev/null      # final state file
+ls .claude/auto-state/*-catchfire-*.md 2>/dev/null   # catch-fire dumps
+git log --oneline --grep "auto-phase\|chore(advisor)" --since="<session-start>"
 ```
 
 Build a compact session timeline: ordered list of "what the user
 asked → what was done → what surfaced." Skip noise (file reads,
 tool acks); keep the inflection points (decisions, branch switches,
 failed attempts, course corrections).
+
+**Under `/auto-phase`:** the auto-state JSON is the authoritative
+timeline source. Read its `user_gate_history`, `junior_tasks`,
+`resume_count`, `last_known_phase_tip` history; cross-reference
+against the git log of advisor commits. The advisor commits (matching
+`^chore\(advisor\):` per attribution-integrity) are the durable
+record of every state-machine transition; the JSON is the
+machine-readable form. Disagreement between the two is itself a
+finding (auto-state JSON drifted from git reality — surface as
+category §3 "Auto-state integrity" issue).
 
 ## Step 2 — Score every skill / agent / command invocation
 
