@@ -11923,3 +11923,225 @@ mod v1_sl_b_fixtures {
     Ok(())
   }
 }
+
+mod v1_sl_c_fixtures {
+  use super::*;
+  use chrono::{Duration, Utc};
+  use diesel::{ExpressionMethods, QueryDsl, insert_into, update};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::sponsor_liability_grace::run_grace_check_batch;
+  use lemmy_db_schema::{
+    newtypes::{ModerationCaseId, SuretyId},
+    source::governance::{
+      moderation_case::ModerationCaseInsertForm,
+      sanction::SanctionInsertForm,
+      surety::SuretyInsertForm,
+    },
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{
+      CaseSeverity,
+      CaseStatus,
+      CaseTargetType,
+      SanctionAction,
+      SanctionScope,
+    },
+    schema::{governance_log, moderation_case, reputation_event, sanction, surety},
+  };
+  use serde_json::Value;
+
+  async fn count_log_entries(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> Result<i64, Box<dyn Error>> {
+    let n: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .count()
+      .get_result(conn)
+      .await?;
+    Ok(n)
+  }
+
+  async fn read_log_payload(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> Result<Option<Value>, Box<dyn Error>> {
+    let payloads: Vec<Value> = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .order(governance_log::id.desc())
+      .select(governance_log::payload)
+      .limit(1)
+      .load(conn)
+      .await?;
+    Ok(payloads.into_iter().next())
+  }
+
+  async fn seed_pending_case(
+    conn: &mut AsyncPgConnection,
+    sponsee: PersonId,
+    grace_offset: Duration,
+    sanction_action: Option<SanctionAction>,
+  ) -> Result<ModerationCaseId, Box<dyn Error>> {
+    let now = Utc::now();
+    let decided_at = now - Duration::hours(24);
+    let grace_expires_at = now + grace_offset;
+    let case_id = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_c_test".to_string(),
+        severity: CaseSeverity::Medium,
+        status: CaseStatus::SponsorLiabilityPending,
+        threshold_score: 100,
+        grace_expires_at: Some(grace_expires_at),
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(conn)
+      .await?;
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::decided_at.eq(Some(decided_at)))
+      .execute(conn)
+      .await?;
+    if let Some(action) = sanction_action {
+      insert_into(sanction::table)
+        .values(SanctionInsertForm {
+          case_id,
+          scope: SanctionScope::Community,
+          action,
+          target_person_id: Some(sponsee),
+          ends_at: None,
+          active: Some(true),
+          ..Default::default()
+        })
+        .execute(conn)
+        .await?;
+    }
+    Ok(case_id)
+  }
+
+  async fn seed_active_surety(
+    conn: &mut AsyncPgConnection,
+    sponsor: PersonId,
+    sponsee: PersonId,
+  ) -> Result<SuretyId, Box<dyn Error>> {
+    insert_into(surety::table)
+      .values(SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .returning(surety::id)
+      .get_result::<SuretyId>(conn)
+      .await
+      .map_err(|e| e.into())
+  }
+
+  #[tokio::test]
+  async fn grace_check_fires_expired_case_emits_per_sponsor_and_summary_entries(
+  ) -> Result<(), Box<dyn Error>> {
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let (sponsee, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc1_sponsee", false).await?;
+    let (sponsor1, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc1_sponsor1", false).await?;
+    let (sponsor2, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc1_sponsor2", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let case_id = seed_pending_case(
+      &mut conn,
+      sponsee,
+      Duration::minutes(-1),
+      Some(SanctionAction::ContentRemoval),
+    )
+    .await?;
+    seed_active_surety(&mut conn, sponsor1, sponsee).await?;
+    seed_active_surety(&mut conn, sponsor2, sponsee).await?;
+
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (case_status, escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityFired,
+      "case transitioned to SponsorLiabilityFired"
+    );
+    assert!(
+      escape_reason.is_none(),
+      "fire branch: liability_escape_reason IS NULL"
+    );
+
+    let rep_event_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_event_count, 2, "2 reputation_event rows (1 per sponsor)");
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 fired summary"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      2,
+      "2 applied entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 escaped entries"
+    );
+
+    let fired_payload = read_log_payload(&mut conn, "sponsor_liability_fired")
+      .await?
+      .expect("fired payload exists");
+    assert!(
+      fired_payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_eq!(
+      fired_payload["sponsor_count"].as_u64(),
+      Some(2),
+      "sponsor_count == 2"
+    );
+    assert_eq!(
+      fired_payload["case_id"].as_i64(),
+      Some(i64::from(case_id.0)),
+      "case_id matches"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+    Ok(())
+  }
+}
