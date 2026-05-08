@@ -76,9 +76,7 @@
       "answer": "Compile errors cleared (PersonId + DbConn fixes worked); next-stage clippy then fired clippy::as_conversions at sponsor_liability_grace.rs:356-357 in check_grace_staleness. The lint is workspace-deny per Cargo.toml:109. Plan §13 Task 1 IMPLEMENT block prescribed the bare `as` casts. Non-allowlist (allowlist names doc_lazy_continuation / E0432 / deprecated API; not as_conversions). User authorised hand-fix per file-ownership boundary override 2026-05-07: advisor-laptop adds #[expect(clippy::as_conversions, clippy::cast_precision_loss, clippy::cast_possible_truncation, reason = ...)] block matching the canonical fork pattern at admin_assign_jury.rs:1049-1053 with reason capturing safety bounds.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-07T23:25:00Z"
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 162,
       "from": "advisor",
@@ -99,13 +97,15 @@
         "cargo clippy --workspace --features full --no-deps -- -D warnings",
         "cargo test --no-run -p lemmy_server --test e2e"
       ],
-      "result": "pass",
+      "result": null,
       "log_slice": null,
       "failed_jobs": null,
-      "answer": "Workflow 25529116907 conclusion=success on junior fix-impl-1 worker branch tip b6f1c761b: cargo check --workspace --features full + cargo clippy --workspace --features full --no-deps -- -D warnings + cargo test --no-run -p lemmy_server --test e2e all green. The advisor-laptop hand-fix at 827d932d5 (#[expect(clippy::as_conversions, ...)] block on check_grace_staleness) closes the green-gate for sl-c-1 task 1 + fix-impl-1. Advance to Task 2 (scheduler block in crates/routes/src/utils/scheduled_tasks.rs).\\n\\nNOTE on attribution: ci-watcher Junior task #145 (dispatched per brief sl-c-1-ci-watcher-2.md) breached Hard refusals #2 + #7 of decision-queue.md by writing a NEW kind:validate-pending entry from:ci-watcher with id:162 (collision with this advisor-canonical entry) instead of mutating this entry in place. The ci-watcher's bad commits 795c2edc9 + 84aa58379 + ee08b860e were dropped from the audit trail via reset --hard on EliteDesk's local (the ci-watcher worker branch origin/junior/role-ci-watcher-...-145 keeps the breach commits for retro evidence). The substantive workflow result stands; this advisor mutation is the canonical record per option-2 (PMD #156). v1-SL-c-1 retro §5 Lessons: ci-watcher subagent reliability issue (eval 112).",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-08T01:25:00Z"
-    },
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
+  "resolved": [
     {
       "id": 159,
       "from": "advisor",
