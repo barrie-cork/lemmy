@@ -49,6 +49,8 @@ The advisor reads brief + plan once at session start, then runs a steady ~10-min
 
 Full polling loop discipline, brief-writing pattern, DQ triage decision tree, stage-shape orchestration, cohort dispatch, Shape G two-phase validation, §G4 classifier, DoD smoke test gate, watchpoint specificity gate, forbidden execution windows, and catch-fire procedures all live in `.claude/rules/advisor-orchestrator.md` (canonical, all sections inline).
 
+**End-to-end mode:** `/auto-phase <phase>` (e.g. `/auto-phase v1-SL-c-2`) drives `bm-cut → planning → impl cohorts → ci-watcher cycles → bm-pr → bm-poll-cr → bm-triage → bm-merge → retro` end-to-end, stopping only at the six mandatory user gates (plan approval, judgment-heavy DQ, CR triage, Phase 2 e2e local-vs-dispatch, merge confirm, retro sign-off). It compiles `advisor-orchestrator.md` into a state machine with calibrated `ScheduleWakeup` cadences and survives session restart via `.claude/auto-state/<phase>.json` (gitignored). State-machine rule lives at `.claude/rules/auto-phase.md`. Use the manual polling loop above when you need granular per-tick control or you're not running a full sub-phase end-to-end.
+
 ## Mandatory user gates (never skip)
 
 1. **Plan approval** — after planning task ships, advisor runs DoD smoke test (every §15 command literally) + watchpoint-specificity gate → surface to user → wait.

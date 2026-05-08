@@ -66,6 +66,9 @@ migrations/.diesel_lock
 .claude/PRPs/reviews/pr-*-cf-issue-body.md
 .claude/PRPs/reviews/.cr-cache/
 
+# /auto-phase skill runtime state (per-phase JSON + catch-fire dumps)
+.claude/auto-state/
+
 # Per-task validation logs (the rca-*.md notes ARE committed)
 .claude/PRPs/debug/*.log
 

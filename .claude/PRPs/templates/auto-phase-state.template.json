@@ -1,0 +1,79 @@
+{
+  "_schema_note": "Runtime state for /auto-phase skill. File written to .claude/auto-state/<phase>.json (gitignored). Updated every tick. Read at session resume to route to current stage handler.",
+  "schema_version": 1,
+  "phase": "v1-SL-c-2",
+  "started_at": "2026-05-07T14:00:00Z",
+  "stage": "init",
+  "_stage_enum": [
+    "init",
+    "bm-cut-running",
+    "bm-cut-done",
+    "planning-running",
+    "planning-revise",
+    "planning-approved-pending-user",
+    "impl-cohort-N",
+    "impl-cohort-N-running",
+    "impl-cohort-N-validating",
+    "impl-fix-N-running",
+    "phase-2-e2e-N",
+    "phase-2-e2e-N-running",
+    "bm-pr-pending",
+    "bm-pr-running",
+    "cr-wait",
+    "bm-poll-cr-running",
+    "bm-triage-running",
+    "cr-triage-pending-user",
+    "fix-in-pr-cohort-N",
+    "fix-in-pr-cohort-N-running",
+    "verify-running",
+    "merge-pending-user",
+    "merge-executing",
+    "retro-author",
+    "retro-pending-user",
+    "phase-transition",
+    "done",
+    "catch-fire"
+  ],
+  "current_cohort": null,
+  "_current_cohort_shape": {
+    "n": 1,
+    "members": [
+      {"task_id": 1, "junior_id": null, "brief_path": null, "validate_pending_dq_id": null, "ci_watcher_junior_id": null, "result": null}
+    ],
+    "started_at": "2026-05-07T14:30:00Z"
+  },
+  "phase_2_e2e_mode": null,
+  "_phase_2_e2e_mode_enum": ["local", "dispatch", null],
+  "phase_2_e2e_mode_chosen_at": null,
+  "junior_tasks": {
+    "_note": "Map of stage → most recent Junior task id we dispatched for it",
+    "bm-cut": null,
+    "planning": null,
+    "bm-pr": null,
+    "bm-poll-cr": null,
+    "bm-triage": null
+  },
+  "last_action": null,
+  "last_action_at": null,
+  "last_poll_at": null,
+  "last_fetch_at": null,
+  "last_dq_pending_count": 0,
+  "last_dq_pending_ids": [],
+  "user_gate_history": [
+    {
+      "_example": true,
+      "gate": "plan-approval",
+      "decided_at": "2026-05-07T15:30:00Z",
+      "decision": "approve",
+      "notes": null
+    }
+  ],
+  "push_grants_used": 0,
+  "catch_fire": null,
+  "_catch_fire_shape": {
+    "stage_when_fired": "impl-cohort-3-validating",
+    "reason": "non-allowlist §G4 fail",
+    "log_slice_path": ".claude/auto-state/v1-SL-c-2-catchfire-20260507-1830.md",
+    "fired_at": "2026-05-07T18:30:00Z"
+  }
+}
