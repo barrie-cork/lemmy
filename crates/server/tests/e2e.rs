@@ -12149,7 +12149,7 @@ mod v1_sl_c_fixtures {
 
   #[tokio::test]
   async fn grace_check_escapes_case_when_sponsor_revoked_after_decided_at(
-  ) -> Result<(), Box<dyn Error>> {
+  ) -> LemmyResult<()> {
     // Per Test #2 (PRD §6.2 step 4 escape branch — "any sponsor
     // revoked since decided_at").
     //
