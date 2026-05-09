@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 173,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T22:43:36Z",
+      "question": "Does cargo-validate-workspace pass for sl-c-2 Task 4 (per-case isolation test)?",
+      "options": [
+        "(A) pass — advance to Task 5",
+        "(B) fail — §G4 triage"
+      ],
+      "context": "Task 4 grace_check_per_case_isolation_skips_bad_case_processes_good_case written using LemmyResult<()> Case A. Workspace-check run 25613695291 on junior branch.",
+      "workflow_run_id": 25613695291,
+      "branch": "junior/role-impl-task-sl-c-2-impl-4-e2e-test-4-per-case-isolation-one-bad-case-doesn-t-block-batch-see-claude-prps-br-172",
+      "phase_task": "4",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 168,
