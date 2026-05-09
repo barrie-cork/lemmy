@@ -1,3 +1,10 @@
+---
+paths:
+  - "crates/**"
+  - ".github/workflows/**"
+  - "scripts/brehon/**"
+---
+
 # Pre-phase harness audit
 
 Before the first task of any new Brehon phase, run this audit. It's

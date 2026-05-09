@@ -1,3 +1,9 @@
+---
+paths:
+  - ".claude/PRPs/reports/**"
+  - ".claude/skills/**"
+---
+
 # Evaluation Calibration — Anti-Inflation Guard
 
 Complements post-task-retro and `/reflect` scored evals with calibration guidance to prevent score drift. Does not replace or override the scoring rubric — it adds boundary checks.

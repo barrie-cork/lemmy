@@ -45,11 +45,7 @@ Model tiering enforced by the four-role tiering patch on the EliteDesk. Patch so
 
 ## Polling loop
 
-The advisor reads brief + plan once at session start, then runs a steady ~10-minute poll loop: `mcp__junior-brehon__list_tasks` (status only); on transition `show_task` + `git fetch` + read `.claude/decision-queue.json`; triage DQ; queue next per stage shape (planning → impl cohort(s) → bm-cut/pr → bm-poll-cr → bm-triage → bm-merge → retro).
-
-Full polling loop discipline, brief-writing pattern, DQ triage decision tree, stage-shape orchestration, cohort dispatch, Shape G two-phase validation, §G4 classifier, DoD smoke test gate, watchpoint specificity gate, forbidden execution windows, and catch-fire procedures all live in `.claude/rules/advisor-orchestrator.md` (canonical, all sections inline).
-
-**End-to-end mode:** `/auto-phase <phase>` (e.g. `/auto-phase v1-SL-c-2`) drives `bm-cut → planning → impl cohorts → ci-watcher cycles → bm-pr → bm-poll-cr → bm-triage → bm-merge → retro` end-to-end, stopping only at the six mandatory user gates (plan approval, judgment-heavy DQ, CR triage, Phase 2 e2e local-vs-dispatch, merge confirm, retro sign-off). It compiles `advisor-orchestrator.md` into a state machine with calibrated `ScheduleWakeup` cadences and survives session restart via `.claude/auto-state/<phase>.json` (gitignored). State-machine rule lives at `.claude/rules/auto-phase.md`. Use the manual polling loop above when you need granular per-tick control or you're not running a full sub-phase end-to-end.
+~10-min `list_tasks` cadence → on transition `show_task + git fetch + read DQ` → triage → queue next. End-to-end: `/auto-phase <phase>`. Full discipline: `.claude/rules/advisor-orchestrator.md`. State machine: `.claude/rules/auto-phase.md`.
 
 ## Mandatory user gates (never skip)
 
@@ -62,11 +58,11 @@ Full polling loop discipline, brief-writing pattern, DQ triage decision tree, st
 
 ## Branch Manager (BM) verbs
 
-BM dispatched as a Junior task with `[role:bm-task]`; the brief names exactly one verb. Advisor never authors BM verbs; advisor queues them. Verb catalog, file-ownership, autonomy, hard refusals: `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md`.
+BM dispatched as `[role:bm-task]`; advisor queues, never authors. Verb catalog + file-ownership: `.claude/rules/branch-manager.md`.
 
 ## Shape G — GH-Actions-side cargo validation
 
-Heavy cargo work runs on GH Actions (workflows under `.github/workflows/cargo-validate-*.yml` + `cargo-test-e2e.yml`), not on the EliteDesk. Option (b) workflow flip + option 2 ci-watcher single-entry-mutation shipped 2026-04-29. Pre-Shape-G plans (≤v1-JM-d) run cargo on the laptop via the validate-pending-laptop handler in `.claude/rules/advisor-orchestrator.md`. JM-e onward = pure Shape G.
+Cargo runs on GH Actions (not EliteDesk). JM-e onward = pure Shape G. Pre-Shape-G (≤v1-JM-d) runs on laptop via validate-pending-laptop handler. Details: `.claude/rules/advisor-orchestrator.md`.
 
 ## Pre-queue git pre-flight (mandatory)
 
@@ -74,13 +70,7 @@ Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/b
 
 ## Resume / state-recovery
 
-`/start-brehon` (optional `$ARGUMENTS` like `v1-JM-e`) — read-only; pulls live state from git, gh PRs, decision-queue, runlog, briefs/plans/retros, and the Junior daemon over SSH; synthesises a one-screen status report.
-
-`/start-brehon --fast <N>` — 5-probe variant for mid-task focused polling. If DQ pending > 0, escalate to `/check-dq` for full triage.
-
-## MCPs available in this CWD
-
-`junior-brehon` (Junior CLI shim → EliteDesk daemon), `project-memory` (local SQLite PMD; PROJECT_NAME=brehon-fork → writes to `…\C--Users-barri-Developer-brehon-fork\memory\`), `ref-context` (user-scope; public docs lookup), `tavily` (user-scope; web search).
+`/start-brehon [phase]` — synthesises live state from git/gh/DQ/Junior into one-screen report. `--fast <N>` for mid-task polling. DQ pending > 0 → `/check-dq`.
 
 ## Canonical paths
 
@@ -93,11 +83,6 @@ Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/b
 - **PMD index (advisor session start):** `C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork\memory\MEMORY.md`
 - **Plans (laptop scratch):** `C:\Users\barri\.claude\plans\*.md` (do NOT auto-delete; consult before queueing)
 - **Promoted commands/skills (user scope):** `~/.claude/commands/{precheck,start-brehon,advisor-checkpoint}.md` and `~/.claude/skills/{check-dq,brehon-phase-transition}/`
-
-## Sensitive files
-
-- `.env` (repo root) — API keys, never commit
-- `.mcp.json` (repo root) — gitignored (.gitignore line 81); contains junior-brehon + project-memory server configs
 
 ## Where to look next
 

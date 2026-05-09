@@ -1,3 +1,10 @@
+---
+paths:
+  - "crates/**"
+  - "scripts/brehon/**"
+  - ".github/workflows/**"
+---
+
 # No cargo output paste into conversation
 
 Companion rule to `cargo-output-capture.md`. That rule is about exit-code

@@ -1,3 +1,8 @@
+---
+paths:
+  - ".claude/PRPs/handovers/**"
+---
+
 # Handover — shared invariants for `/handover-*` commands
 
 This rule is referenced by `.claude/commands/handover/handover-advisor.md`

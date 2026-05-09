@@ -1,3 +1,10 @@
+---
+paths:
+  - "crates/**"
+  - "scripts/brehon/**"
+  - ".github/workflows/**"
+---
+
 # Cargo output capture
 
 Never pipe cargo output through `tail`, `head`, `grep`, `sed`, or any other

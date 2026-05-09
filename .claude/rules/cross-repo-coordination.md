@@ -1,3 +1,9 @@
+---
+paths:
+  - "scripts/**"
+  - ".github/**"
+---
+
 # Cross-Repo Coordination
 
 When your task changes something that affects other repos, proactively queue a follow-up task on the affected repo rather than relying on a human to notice.
