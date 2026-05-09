@@ -85,19 +85,21 @@ OUT_PATH="${TMPDIR_NATIVE}/dq-canonical-${PHASE}.json"
 
 # Collect junior_ids from auto-state, if present.
 #
-# Windows note: python.exe on Windows writes \r\n line endings by default;
-# command substitution preserves embedded \r, leaving each id as e.g.
-# "162\r" downstream. That breaks the later `grep -E "[-]${jid}$"` step
-# because the regex anchors `$` before the literal \r. Two-layer fix:
-#   1. Force Python's stdout to use raw LF via sys.stdout.reconfigure
-#      (root cause — also preserves UTF-8).
-#   2. Pipe the substitution through `tr -d '\r'` (defensive — protects
-#      against any other heredoc that might leak \r in future).
+# Note: the Python heredoc emits ids one per line. On Windows MSYS Bash,
+# Python's `print()` defaults to text mode → trailing \r\n. The bash
+# `while IFS= read -r jid` loop downstream treats \r as part of the
+# value, which corrupts the grep pattern `[-]<jid>$` (becomes
+# `[-]162\r$` and never matches the \r-free input). Force LF-only via
+# `sys.stdout.reconfigure(newline='\n')` so the read loop sees clean ids.
+# Defence in depth: `tr -d '\r'` after the heredoc strips any stragglers
+# (e.g. if PYTHONIOENCODING is overridden or the Python is older). Caught
+# 2026-05-09 during c-2 cohort-2 resume; canonical resolver was reporting
+# sources=['phase-branch'] only despite worker-branch entries existing.
 JUNIOR_IDS=""
 if [ -f "${STATE_FILE}" ]; then
   JUNIOR_IDS="$(python3 - "${STATE_FILE}" <<'PY' | tr -d '\r'
 import io, json, sys
-sys.stdout.reconfigure(encoding='utf-8', newline='\n')
+sys.stdout.reconfigure(newline='\n')
 path = sys.argv[1]
 with io.open(path, encoding='utf-8') as f:
     state = json.load(f)
