@@ -11,8 +11,8 @@
         "(B) fail — advisor applies §G4 classifier on e2e output"
       ],
       "context": "Phase branch tip df1d419ef: Task 1 fire path (LemmyResult Case A), Task 2 escape path (LemmyResult Case A fix). Both workspace-checks passed (DQ #167 + DQ #170 result=pass). Phase-2 e2e pending.",
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-c-2-df1d419ef.log",
+      "workflow_run_id": 25611232282,
+      "local_log_path": null,
       "branch": "phase-v1-SL-c-2",
       "phase_task": 2,
       "result": null,
