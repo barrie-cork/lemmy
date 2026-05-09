@@ -262,53 +262,25 @@ Per 2026-04-28 task #47 incident: `cargo check --workspace --features full` ran 
 
 ### 5.2 validate-pending-laptop handler
 
-When a `kind: "validate-pending-laptop"` entry appears in `pending[]`:
+When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `pending[]`, the advisor (laptop session) runs the §15 commands locally. Mutation shape, log-slice rules, kind enum, and §G4 fail handling: see `.claude/rules/decision-queue.md` §"ci-watcher mutation pattern" + §"Two-phase validation under Shape G" (mutation is identical; only the runner identity differs — `answered_by: "advisor-laptop"` instead of `"ci-watcher"`).
 
-**0. Pre-flight checks (mandatory, before fetch):**
+**Pre-flight (mandatory, before fetch):**
 
-- **Clean working tree:** `git -C C:/Users/barri/Developer/brehon-fork status --short` must be empty. Dirty → surface to user: "laptop checkout is dirty (<files>); commit or stash before validate-pending-laptop runs". Do NOT auto-stash.
-- **Log directory exists:** `mkdir -p C:/Users/barri/.claude/logs/` (idempotent).
-- **Concurrent-cargo serialization:** if another `validate-pending-laptop` is in-progress (commonly because a `[P]` cohort fanned out simultaneously), serialize: process this entry behind it. Two cargos against the same `target/` = lock contention + thrash. Process in DQ entry-id order.
-- **Docker Desktop check (e2e only):** if `commands[]` includes `cargo test ... --features full` or `cargo test ... e2e` (testcontainers), check `docker ps` returns 0. Not running → surface: "Docker Desktop is not running on laptop; start it before continuing, or pick GH dispatch via the Phase 2 e2e user gate". `cargo check` / `cargo clippy` / `cargo test --no-run` don't need Docker — proceed without the check.
+- Clean working tree (`git -C C:/Users/barri/Developer/brehon-fork status --short` empty); dirty → surface to user, do NOT auto-stash.
+- `mkdir -p C:/Users/barri/.claude/logs/` (idempotent).
+- Concurrent-cargo serialization: if another `validate-pending-laptop` is in-flight (`[P]` cohort fan-out), process this one behind it in DQ id order — two cargos on the same `target/` = lock + thrash.
+- Docker Desktop check (e2e only): if `commands[]` includes `--features full` testcontainers paths, `docker ps` must return 0; not running → surface "start Docker Desktop or pick GH dispatch via Phase 2 e2e user gate". `cargo check`/`clippy`/`test --no-run` skip the check.
 
-**1. Fetch the worker branch:**
+**Sequence:**
 
-```
-git -C C:/Users/barri/Developer/brehon-fork fetch origin <entry.branch>
-git -C C:/Users/barri/Developer/brehon-fork checkout origin/<entry.branch>
-```
+1. `git fetch origin <entry.branch>` then `git checkout origin/<entry.branch>` (detached-HEAD; no edits, just cargo source).
+2. Run each command in `entry.commands[]` sequentially. `Bash` `run_in_background: true` for runs >5 min (`cargo-check.sh` ~8 min cold / 3-5 min warm; e2e ~26 min). Capture to `C:\Users\barri\.claude\logs\validate-laptop-<entry.id>-cmd-<n>.log`. Non-zero exit → stop chain.
+3. Mutate the DQ entry in place per the canonical mutation shape (see decision-queue.md ref above). Failure stays in `pending[]` for §G4 triage; pass moves to `resolved[]`.
+4. Commit + push to `governance-v0`. Subject: `chore(decision-queue): advisor-laptop mutated DQ #<id> — <pass|fail> validate-pending-laptop`.
+5. On fail, run §G4 classifier (§5.3): allowlist → narrow fix-impl-task; non-allowlist → catch-fire.
+6. `git checkout governance-v0 && git pull --ff-only origin governance-v0` (skip only if user wants laptop kept on worker branch for hand-debug).
 
-Detached-HEAD on the worker branch — no local edits, just for cargo to read canonical source.
-
-**2. Run each command in `entry.commands[]` sequentially.** Use `Bash` with `run_in_background: true` for cargo runs >5 min (cargo-check.sh ~8 min, e2e ~26 min). Capture stdout+stderr to `C:\Users\barri\.claude\logs\validate-laptop-<entry.id>-cmd-<n>.log`.
-
-- Record exit code + log path per command.
-- Non-zero exit → stop the chain; do not run subsequent commands.
-- All zero → entry passes.
-
-**3. Mutate the DQ entry in place:**
-
-- All-pass: `result: "pass"`, `log_slice: null`, `failed_commands: null`, `answer: "All <N> validation commands passed locally on laptop."`, `answered_by: "advisor-laptop"`, `resolved_at: <now>`. Move `pending[] → resolved[]`.
-- Any-fail: `result: "fail"`, `log_slice: <last 100 lines of failing command's log>`, `failed_commands: [<command-string>]`, `answer: <one-line summary>`, `answered_by: "advisor-laptop"`, `resolved_at: <now>`. Stays in `pending[]` for §5.3 triage.
-
-**4. Commit + push** to `governance-v0`. Subject: `chore(decision-queue): advisor-laptop mutated DQ #<id> — <pass|fail> validate-pending-laptop`.
-
-**5. §G4 classifier on fail** (§5.3). Allowlist match → narrow fix-impl-task. Non-allowlist → catch-fire to user.
-
-**6. Return to governance-v0:**
-
-```
-git -C C:/Users/barri/Developer/brehon-fork checkout governance-v0
-git -C C:/Users/barri/Developer/brehon-fork pull --ff-only origin governance-v0
-```
-
-Skip step 6 only if user explicitly wants the laptop kept on the worker branch (rare; hand-debugging).
-
-**Wall-clock:** laptop has more RAM than EliteDesk's daemon cgroup, no NAS/web-archive contention. `cargo check --workspace --features full` ~8-12 min cold, ~3-5 min warm; e2e ~26 min single-threaded. Use `run_in_background: true`; do NOT block.
-
-**E2E follows the same flow** — same shape (or `kind: "validate-pending-laptop-e2e"` if e2e-only), same mutation, same §5.3 triage on fail.
-
-**Phase 2 e2e (advisor-driven, off-Actions default):** advisor raises the entry up front (`from: "advisor"`, `workflow_run_id: null`, `local_log_path: ".claude/runlog/e2e-<phase>-<sha>.log"`, `branch: "phase-v1-<phase>"`, `phase_task: <N>`, `result: null`). Subject: `chore(advisor): raise local e2e validate-pending for phase-v1-<phase> tip <sha>`. Do NOT queue ci-watcher (no GH-Actions run to poll). On next poll, advisor checks bg cargo status; on exit, advisor mutates directly: `result: "pass" | "fail"`, `log_slice` from runlog tail (~150 lines failures block), `answered_by: "advisor"`, `resolved_at`. **Audit-trail / PC-unavailable escape hatch:** if user wants GH-Actions log surface, `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>` — entry shape reverts to pre-2026-04-28 (`workflow_run_id: <id>`, `local_log_path: null`); ci-watcher queued as for Phase 1. Reserved for explicit user request — default is local.
+**Phase 2 e2e (advisor-driven, off-Actions default — 2026-04-28 minutes-budget audit):** advisor raises the entry up front (`from: "advisor"`, `workflow_run_id: null`, `local_log_path: ".claude/runlog/e2e-<phase>-<sha>.log"`, `branch: "phase-v1-<phase>"`, `phase_task: <N>`, `result: null`). Subject: `chore(advisor): raise local e2e validate-pending for phase-v1-<phase> tip <sha>`. No ci-watcher dispatch (nothing on GH to poll). On bg cargo exit, advisor mutates directly: `answered_by: "advisor"`, `resolved_at`, `log_slice` from runlog tail (~150 lines failures block). **Escape hatch (explicit user request only):** `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>` — entry reverts to pre-2026-04-28 shape (`workflow_run_id: <id>`, `local_log_path: null`); ci-watcher queued as for Phase 1.
 
 ### 5.3 §G4 classifier
 
