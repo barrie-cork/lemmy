@@ -12447,4 +12447,134 @@ mod v1_sl_c_fixtures {
     }
     Ok(())
   }
+
+  #[tokio::test]
+  async fn grace_check_per_case_isolation_skips_bad_case_processes_good_case(
+  ) -> LemmyResult<()> {
+    // Per Test #4 (PRD §6.3 + §4 watchpoint #8 — per-case isolation
+    // invariant).
+    //
+    // case_b (malformed: zero sanction rows, grace_expires_at = -2 min) is
+    // ordered FIRST by the batch query's ORDER BY grace_expires_at ASC.
+    // case_a (well-formed: one sanction, grace_expires_at = -1 min) is second.
+    // case_b's error-skip MUST NOT block case_a from firing (strong assertion).
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let (sponsee_a, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc4_isol_sponsee_a", false).await?;
+    let (sponsee_b, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc4_isol_sponsee_b", false).await?;
+    let (sponsor, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc4_isol_sponsor", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // case_b: earlier grace_expires_at (-2 min) — processed FIRST; no sanction → skipped.
+    let case_b_id = seed_pending_case(&mut conn, sponsee_b, Duration::minutes(-2), None).await?;
+    // case_a: later grace_expires_at (-1 min) — processed SECOND; has sanction → fires.
+    let case_a_id = seed_pending_case(
+      &mut conn,
+      sponsee_a,
+      Duration::minutes(-1),
+      Some(SanctionAction::ContentRemoval),
+    )
+    .await?;
+    // Seed surety for sponsor → sponsee_a only (sponsee_b has no active sponsor).
+    seed_active_surety(&mut conn, sponsor, sponsee_a).await?;
+
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome.cases_processed,
+      2,
+      "2 cases processed (case_b first, case_a second)"
+    );
+    assert_eq!(outcome.fired, 1, "1 case fired (case_a)");
+    assert_eq!(
+      outcome.skipped,
+      1,
+      "1 case skipped (case_b — zero sanction rows)"
+    );
+    assert_eq!(outcome.escaped, 0, "0 cases escaped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (case_a_status, _): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_a_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_a_status,
+      CaseStatus::SponsorLiabilityFired,
+      "case_a transitioned to SponsorLiabilityFired"
+    );
+
+    let (case_b_status, case_b_escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_b_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_b_status,
+      CaseStatus::SponsorLiabilityPending,
+      "case_b STILL SponsorLiabilityPending (silently skipped)"
+    );
+    assert!(
+      case_b_escape_reason.is_none(),
+      "case_b.liability_escape_reason STILL NULL"
+    );
+
+    // 1 reputation_event for case_a's sponsor; 0 for case_b.
+    let rep_a_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_a_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_a_count, 1, "1 reputation_event row for case_a's sponsor");
+
+    let rep_b_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_b_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_b_count, 0, "0 reputation_event rows for case_b (skipped)");
+
+    // Governance log: 1 fired (case_a only), 1 applied (case_a's sponsor), 0 escaped.
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 fired log entry (case_a)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      1,
+      "1 applied log entry (case_a's sponsor)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 escaped log entries"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+    Ok(())
+  }
 }
