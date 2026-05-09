@@ -2,16 +2,13 @@
 
 ```yaml
 project:
-  fork_of: "LemmyNet/lemmy@d1975776a"  # Lemmy 1.0-beta; last rebase 2026-04-18
-  working_branch: "governance-v0"       # main = upstream-sync rebases only
-  active_sub_phase: "v1-SL-c-1"
-  phase_branch: "phase-v1-SL-c-1"      # cut at 477f0c55c on 2026-05-07
-  trunk_sha: "c93cf7e90"
-  last_shipped: "v1-SL-b PR#119 @ 9ae4c332c on 2026-05-07"
+  fork_of: "LemmyNet/lemmy"            # Lemmy 1.0-beta base; rebase SHA in git log
+  working_branch: "governance-v0"      # main = upstream-sync rebases only
   rust_toolchain: "1.95"
   license: "AGPL-3.0"
   cwd_role: "persistent advisor session"
   non_brehon_ops_cwd: "C:/Users/barri/Developer/homeserver"
+# active_sub_phase / phase_branch / trunk_sha / last_shipped: derive from git, do not hardcode here
 ```
 
 ## Hard constraints (do NOT re-litigate)
@@ -83,16 +80,18 @@ Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/b
 
 ```yaml
 paths:
-  briefs:       ".claude/PRPs/briefs/<phase>-<role>-<n>.md"
-  active_plan:  ".claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md"
-  bootstrap:    ".claude/PRPs/handovers/v1-SL-c-bootstrap.md"
-  dq:           ".claude/decision-queue.json"
-  runlog:       ".claude/runlog/v1-SL-c-1-runlog.md"
-  lessons:      ".claude/lessons/{feedback,reference}_*.md"
-  pmd_index:    "C:/Users/barri/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md"
-  scratch_plans: "C:/Users/barri/.claude/plans/*.md"  # do NOT auto-delete
+  # patterns — phase name is a variable, derive current value from git branch
+  briefs:        ".claude/PRPs/briefs/<phase>-<role>-<n>.md"
+  active_plan:   ".claude/PRPs/plans/<phase>.plan.md"       # glob for current phase
+  bootstrap:     ".claude/PRPs/handovers/<phase>-bootstrap.md"
+  dq:            ".claude/decision-queue.json"
+  runlog:        ".claude/runlog/<phase>-runlog.md"
+  # stable paths — never change
+  lessons:       ".claude/lessons/{feedback,reference}_*.md"
+  pmd_index:     "C:/Users/barri/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md"
+  scratch_plans: "C:/Users/barri/.claude/plans/*.md"        # do NOT auto-delete
   user_commands: "~/.claude/commands/{precheck,start-brehon,advisor-checkpoint}.md"
-  user_skills:  "~/.claude/skills/{check-dq,brehon-phase-transition}/"
+  user_skills:   "~/.claude/skills/{check-dq,brehon-phase-transition}/"
 ```
 
 ## Where to look next
