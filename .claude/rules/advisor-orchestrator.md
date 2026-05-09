@@ -47,6 +47,37 @@ When the next pending §13 task is cargo-class (Brehon `[role:impl-task]` whose 
 
 This is mechanical: read score, read top factor, add citation. No additional DQ, no escalation. The complexity score is the planner's pre-impl signal; the advisor's job here is to make sure the lesson corpus consulted at brief-write time matches the score's top factor.
 
+### Mandatory file-class lesson injection (mechanical)
+
+The §5 complexity-score awareness check above triggers from the **plan's dominant factor** — a per-plan signal. That misses the case where a single task in the plan touches a file class that has a known footgun, even if that file class isn't the plan's overall dominant factor. (Empirical: the 2026-05-09 §G4 catch-fire on `error[E0277]: LemmyError` in a Task 1 e2e edit, where the plan's top factor flagged Tasks 1-5 e2e edits but the Junior worker's first edit hit the LemmyError `?` propagation pattern that has a documented mechanical fix in PMD; the brief omitted the lesson.)
+
+To prevent recurrence: when authoring an `impl-task` brief, walk the §13 task's file list (the IMPLEMENT files plus any helper-creation files) against this table and inject every matching lesson into §3 Required reading. **No judgment call** — the table is canonical; if the file pattern matches, the lesson goes in.
+
+| File pattern (in §13 IMPLEMENT or task creates new file matching) | Mandatory lesson(s) for §3 Required reading |
+|---|---|
+| `crates/server/tests/e2e.rs` (any edit, regardless of size) | `feedback_lemmy_error_no_std_error.md`, `feedback_async_pool_test_pattern.md` |
+| `crates/server/tests/e2e.rs` (≥2 edits in this task or its cohort) | + `feedback_junior_worker_e2e_edit_hang.md` |
+| `crates/db_schema/migrations/**` (any new migration) | `feedback_lemmy_migration_runner.md`, `feedback_postgres_jsonb_canonicalization.md` (if migration touches JSONB) |
+| Any new test file under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
+| Any handler under `crates/api/**/src/**` doing 2+ DB writes | `feedback_multi_write_handlers_need_transactions.md` |
+| Any code adding `#[cfg(feature = "full")]` gates | `feedback_features_full_workspace_only.md`, `feedback_features_full_p_crate_incompatible.md` |
+| Any code calling `pg_advisory_xact_lock` or void PG function | `feedback_pg_advisory_xact_lock_void_decode.md` |
+| Any newtype addition under `crates/db_schema/src/newtypes/` | `feedback_newtype_locations_lemmy_db_schema_vs_file.md` |
+| Any clippy fix that involves `-D warnings` + new code | `feedback_clippy_test_style.md`, `feedback_clippy_rerun_after_fix.md` |
+| Any wrapper-script (`scripts/brehon/cargo-*.bat|sh`) edit | `feedback_wrapper_script_flag_silence.md`, `feedback_pq_sys_wrapper_env_propagation.md` |
+| Any `.gitignore` / `.git/info/exclude` / hook addition | `feedback_settings_local_json_worktree_bootstrap.md` |
+
+The `memory_search_hybrid` call from "Pre-queue lesson check" still runs (catches lessons not in the table). This file-class table is the **belt-and-braces backstop** for the well-known mechanical-fix patterns where missing the lesson costs an entire impl-task + ci-watcher cycle.
+
+**How to apply when writing a brief:**
+
+1. Read the §13 task's IMPLEMENT files list + any "creates" helper files.
+2. For each file, walk the table top-to-bottom; inject every matching lesson path into §3 Required reading (deduplicated).
+3. The brief commit body lists which mandatory lessons fired and why (one line each — keeps the audit trail).
+4. The `memory_search_hybrid` call (per "Pre-queue lesson check") still runs after the table check; it catches non-mechanical / cross-cutting lessons.
+
+**Maintenance:** when a new mechanical-fix pattern enters the §G4 allowlist (per "§G4 classifier" sub-section), check whether the failure correlates with a file class. If yes, add a row here so future briefs avoid the trip-up rather than recovering from it. The §G4 allowlist is reactive (auto-fix on failure); this table is preventative (don't fail in the first place). They share the same lesson corpus and grow together.
+
 ## Junior task description template
 
 The task description (the string passed to `mcp__junior-brehon__create_task`) is intentionally minimal — under 100 chars per `feedback_branch_manager_pm_split` and the homeserver Junior best-practice rules:
@@ -393,6 +424,11 @@ applies the classifier:
 | `clippy::doc_lazy_continuation` warning | reword + mid-paragraph "and" | `feedback_clippy_doc_lazy_continuation_in_doc_comments.md` |
 | `error[E0432]: unresolved import` | add the missing `use` per the suggestion | n/a (mechanical) |
 | `warning: use of deprecated <api>` | replace with the suggested replacement | n/a (mechanical) |
+| `error[E0277]: ?` couldn't convert `LemmyError` (or `LemmyResult<T>`) to `Box<dyn Error>` at a `?` propagation site | wrap the call with `.map_err(\|e\| format!("{e}").into())` per the lesson; verify the test fn signature is `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
+| `error[E0277]: trait bound \`<T>: <Trait>\` not satisfied` where the lesson corpus has a citation | apply the recipe per the cited lesson | search `.claude/lessons/` for the failing trait + type before classifying |
+| `clippy::map_err_ignore` (E0277-adjacent) | rename `\|_\|` → `\|_e\|` per `feedback_clippy_map_err_ignore_pattern_rename.md` (when authored) | mechanical |
+| `error: cannot find macro \`<name>\` in this scope` | add the missing `use` from the macro's home crate | n/a (mechanical) |
+| `error[E0599]: no method named \`<name>\`` (when method is on a re-exported trait) | add the missing `use` for the trait | n/a (mechanical, but verify the trait isn't intentionally hidden) |
 
 For an allowlist match, the advisor authors a narrow fix-impl-task
 brief at `.claude/PRPs/briefs/<phase>-fix-impl-<n>.md` containing:
