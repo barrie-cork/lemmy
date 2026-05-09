@@ -104,7 +104,7 @@ Six gates, never skipped (goal #3: slow-OK):
 1. **Plan approval** — after planning ships and §3.4 DoD smoke test passes.
 2. **Judgment-heavy DQ** — ADR-affecting / scope-changing / visible-to-others impact. Use `answered_by: "user"` after relay.
 3. **CR triage approval** — after `bm-poll-cr` + `bm-triage` draft. Surface four-bucket counts.
-4. **Phase 2 e2e — local vs dispatch** — never auto-pick after PR #105. Options: (a) local — `cargo test --workspace --test e2e --features full -- --test-threads=1` in `run_in_background`, ~26 min, zero billed; (b) dispatch — `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>`, ~26 min billed, public log, ci-watcher polls.
+4. **Phase 2 e2e — local vs dispatch** — never auto-pick after PR #105. Options: (a) local — `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1 && echo E2E_EXIT_0 >> <log> || echo E2E_EXIT_NONZERO >> <log>"` with `run_in_background: true`, ~26 min, zero billed. **Never bare `cargo test` on Windows** (libpq.dll missing — bat wrapper sets vcpkg PATH); **never `-p lemmy_server --features full`** (lemmy_server has no `full` feature; use `--workspace`). See `feedback_windows_e2e_requires_bat_wrapper.md`. (b) dispatch — `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>`, ~26 min billed, public log, ci-watcher polls.
 5. **Merge confirm** — before `bm-merge`.
 6. **Retro sign-off** — author retro per `feedback_retro_not_report`, `feedback_four_role_retro_signals`, `feedback_retro_task_complexity_score` (per-task `<files>/<commits>/<runtime-min>/<max-log-silence-min>`, aggregated in §5).
 
@@ -281,6 +281,8 @@ When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `p
 6. `git checkout governance-v0 && git pull --ff-only origin governance-v0` (skip only if user wants laptop kept on worker branch for hand-debug).
 
 **Phase 2 e2e (advisor-driven, off-Actions default — 2026-04-28 minutes-budget audit):** advisor raises the entry up front (`from: "advisor"`, `workflow_run_id: null`, `local_log_path: ".claude/runlog/e2e-<phase>-<sha>.log"`, `branch: "phase-v1-<phase>"`, `phase_task: <N>`, `result: null`). Subject: `chore(advisor): raise local e2e validate-pending for phase-v1-<phase> tip <sha>`. No ci-watcher dispatch (nothing on GH to poll). On bg cargo exit, advisor mutates directly: `answered_by: "advisor"`, `resolved_at`, `log_slice` from runlog tail (~150 lines failures block). **Escape hatch (explicit user request only):** `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>` — entry reverts to pre-2026-04-28 shape (`workflow_run_id: <id>`, `local_log_path: null`); ci-watcher queued as for Phase 1.
+
+**Windows invocation (mandatory — 2026-05-09 RCA):** use `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1 && echo E2E_EXIT_0 >> <log> || echo E2E_EXIT_NONZERO >> <log>"` with `run_in_background: true`. Never bare `cargo test` on Windows — libpq.dll requires the bat wrapper's vcpkg PATH setup; bash PATH export does not propagate to the Windows PE DLL loader. Never `-p lemmy_server --features full` — `lemmy_server` has no `full` feature; use `--workspace`. See `feedback_windows_e2e_requires_bat_wrapper.md` and RCA at `.claude/PRPs/reports/rca-phase2-e2e-invocation-failure-2026-05-09.md`.
 
 ### 5.3 §G4 classifier
 
