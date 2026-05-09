@@ -8,7 +8,12 @@ Read `decision-queue.json` → check `pending` → if your blocking entry has `a
 
 ## When to write a pending entry
 
-Only when **all** are true: you cannot answer it from the codebase / plan / rules; the plan is genuinely ambiguous OR you found something unexpected; you have ≥2 concrete options. Routine status, info you can grep, plan-covered questions → not the queue.
+Write only when **all** hold:
+- cannot answer from codebase / plan / rules
+- plan is genuinely ambiguous OR something unexpected found
+- have ≥2 concrete options
+
+Do NOT queue: routine status, greppable info, plan-covered questions.
 
 ## Pending entry shape
 
@@ -50,10 +55,12 @@ Foreground sessions: commit at the next natural break, no special push.
 
 ## After writing — keep moving
 
-If task N+1 is independent of the answer, do it. Note in progress log: "Task N blocked on DQ #M, continuing with N+1." Only stop the loop if fully blocked.
-
-**Never guess the answer** while waiting. If you're tempted, the question wasn't worth queuing — answer with evidence and self-resolve, or wait properly.
+Continue with independent tasks. Log: "Task N blocked on DQ #M, continuing with N+1." Stop only if fully blocked. Never guess — self-resolve with evidence or wait.
 
 ## Advisor commit subjects (detection guard)
 
-Advisor-session DQ writes MUST match `^(chore|docs)\((advisor|decision-queue)\)`. Any other subject introducing `answered_by: "advisor"` is a process breach, fixed via a `docs(attribution):` follow-up.
+```yaml
+dq_write_commit_subject_pattern: "^(chore|docs)\\((advisor|decision-queue)\\)"
+violation_remedy: "docs(attribution): follow-up commit"
+# Any commit introducing answered_by:"advisor" must match the pattern above
+```
