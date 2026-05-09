@@ -1,5 +1,29 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 168,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T17:29:00Z",
+      "subject": "v1-SL-c-2 Phase-2 e2e validate-pending — local laptop path",
+      "question": "Does cargo test --workspace --features full --test e2e -- --test-threads=1 pass on phase-v1-SL-c-2 tip 3e1911509?",
+      "options": [
+        "(A) pass — advance to next cohort or bm-pr",
+        "(B) fail — §G4 triage or catch-fire"
+      ],
+      "context": "Phase 1 workspace check DQ #167 result=pass (workflow 25605783542). Replan Task 1 LemmyResult<T> Case A shape merged to phase tip 3e1911509. User selected local laptop path for Phase 2 e2e.",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-c-2-3e1911509.log",
+      "branch": "phase-v1-SL-c-2",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 166,
