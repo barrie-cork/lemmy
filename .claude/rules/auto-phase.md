@@ -29,6 +29,7 @@ any advisor session that resumes a `/auto-phase` invocation.
 | `.claude/rules/advisor-orchestrator.md` | Canonical stage-shape source (read-only — `/auto-phase` does NOT supersede it) |
 | `.claude/rules/branch-manager.md` | File-ownership boundaries the skill must respect |
 | `.claude/commands/bm/bm-merge.md` | Split gate (advisor inline) from execute (Junior) per L15 |
+| `scripts/brehon/resolve-dq-canonical.sh` | Canonical DQ resolver (phase-branch ⋃ worker-branches, dedup by id, worker wins on collision) — used by Phase 0.5 Step C |
 
 ## Hard refusals
 
@@ -231,12 +232,48 @@ A. **The same `/auto-phase <phase>` invocation handles fresh start AND
 
 B. **Phase 0.5 is read-only until user 'continue'.** The reconciliation
    loop calls `mcp__junior-brehon__list_tasks`, `git fetch`, and reads
-   `.claude/decision-queue.json` — but does NOT queue Junior tasks,
+   the canonical DQ resolver — but does NOT queue Junior tasks,
    write DQ entries, or fire `gh pr merge`. The cost of one extra user
    touch on resume is much smaller than the cost of an unwanted resume
    action (e.g. re-queueing a Junior task that's still alive on the
    daemon, double-running cargo bg processes, racing against a peer
    advisor session).
+
+   **DQ scan MUST use the canonical resolver** at
+   `scripts/brehon/resolve-dq-canonical.sh <phase>`. The resolver
+   unions phase-branch DQ with all open worker-branch DQs (per
+   `auto-state.current_cohort.members[].junior_id` + `fix_attempts`)
+   and dedupes by entry id (worker-branch wins on collision = most
+   recent state). Reading only `.claude/decision-queue.json` from
+   the laptop checkout misses entries on active worker branches that
+   the EliteDesk daemon has pulled but not yet finalize-merged — the
+   2026-05-09 c-2 resume incident: laptop saw pending=0 while live
+   advisor saw pending=2 (DQ #164+#165 on worker-159). Same bug
+   pattern would re-fire on every cohort with an in-flight ci-watcher.
+   The resolver makes the canonical view explicit and reproducible,
+   and the synthesis surfaces the contributing source labels
+   (`phase-branch`, `worker-N`) so retro can audit which refs were
+   in play.
+
+   **Resume report is COMPACT (≤15 lines, ≤500 tokens).** Step E's
+   surface-to-user output packs the world reconciliation onto one
+   line per category; verbose probe output goes to a gitignored
+   debug file the user requests with 'debug' (path:
+   `.claude/auto-state/<phase>-resume-debug-<UTC-iso>.md`). Per
+   2026-05-09 retro: the prior ~80-line verbose report cost ~3-5k
+   parent tokens on every resume; with `resume_count: 2` already on
+   c-2, that's ~10k tokens displaced from reasoning headroom for
+   no signal-vs-noise gain.
+
+   **Lazy-load discipline.** Phase 0.5 MUST NOT preload rule tables,
+   lesson corpora, or §G4 classifiers at resume time. They get read
+   just-in-time when a routing decision actually needs them
+   (file-class table → at impl-cohort-N action; §G4 allowlist → at
+   validate-pending fail handling; retro template → at retro-author
+   entry). Per 2026-05-09 c-2 resume anti-pattern: live advisor
+   preloaded the file-class table for "Tasks 2-5 dispatch later" —
+   those tasks were ≥30 min away; ~5-8k tokens burned on never-used
+   data.
 
    **Reconciliation Steps B-D delegate to a `general-purpose` subagent
    by default**, returning a single ~1 KB synthesis instead of ~12 KB
