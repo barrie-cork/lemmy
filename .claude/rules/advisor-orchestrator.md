@@ -104,6 +104,7 @@ The polling loop must stay lean to satisfy goal #4 (model-efficient):
 - `show_task` only on status transition (queued→running, running→complete/review/failed).
 - Read the plan file once after the planning subagent completes — not on every poll.
 - Read `.claude/decision-queue.json` on every poll only if `git fetch origin` reports new commits.
+- **When the DQ to read lives on a non-trunk branch** (Junior worker branch, ci-watcher base branch), do NOT use `git show <branch-with-slashes>:<path>` — PowerShell underneath the Bash tool mangles the colon to a semicolon. Use `scripts/brehon/git-show-json.sh <ref> <path>` (resolves to a SHA first, captures to `$LOCALAPPDATA/Temp` on Windows / `/tmp` on Linux, and emits the path). Then read with `python -c "import io, json; d = json.load(io.open(r'<path>', encoding='utf-8')); ..."` — explicit `encoding='utf-8'` is mandatory because Python 3.14 default codec on Windows is cp1252. Per `feedback_windows_bash_python_git_show_tmp_traps.md`.
 - Memory injection (Glob `.claude/lessons/`, search PMD) happens at session start, not per poll.
 - During a single-task poll loop, prefer `/start-brehon --fast <N>` (5 probes incl. DQ pending count) over the full 9-probe spec. If DQ pending > 0, escalate to `/check-dq` for full triage; otherwise dispatch on task status per the fast-mode heuristic table.
 
