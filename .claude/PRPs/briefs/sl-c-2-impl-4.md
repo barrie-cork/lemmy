@@ -150,3 +150,24 @@ After committing and pushing:
 - **DQ mid-task push:** commit + push DQ immediately after writing it.
 - **Anchor discipline:** insert AFTER Task 3's fn closing `}`, BEFORE mod closing `}`.
 - **Handover trailer:** include `HANDOVER:` YAML in commit body.
+
+## 5. Prior task handover
+
+```yaml
+prior_tasks:
+  - task: 3
+    commit: 842d9b66e
+    filesCreated: []
+    filesModified:
+      - crates/server/tests/e2e.rs
+    keyDecisions:
+      - Case A (LemmyResult<()>) used throughout — plan stub Box<dyn Error> overridden
+      - Workspace-check DQ #172 result=pass (wrid 25612657137)
+    notes: >
+      Test #3 no-op: SponsorLiabilityPending case with grace_expires_at in the future
+      (now()+24h) — batch leaves it unchanged, emits no governance_log entries.
+      Phase tip after merge: c3c719822.
+```
+
+Confirm `grace_check_no_op_when_grace_expires_at_in_future` exists in the mod and
+uses `LemmyResult<()>` before writing Task 4 (canonical-schema-first gate).
