@@ -289,7 +289,10 @@ the file.
 ### Polling-loop routing per kind
 
 The advisor's polling loop reads `decision-queue.json` and routes by
-`(kind, status)` pair:
+`(kind, status)` pair. Per-kind routing matrix is canonical here; the
+advisor-side commit-subject pattern + the surfacing rule
+(advisor-answer / catch-fire / user-relay decision tree) lives in
+`.claude/rules/advisor-orchestrator.md` §5.4 "DQ triage decision tree".
 
 - `(blocker, pending)` — surface to user via the DQ triage decision
   tree (advisor-answer / catch-fire / user-relay). The Junior task
