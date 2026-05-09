@@ -1,28 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 171,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-09T20:52:00Z",
-      "question": "Does the Phase-2 e2e pass on phase-v1-SL-c-2 tip df1d419ef (Tasks 1+2 complete, Case A uniform)?",
-      "options": [
-        "(A) pass — all 76 e2e tests pass; advance to Tasks 3-5",
-        "(B) fail — advisor applies §G4 classifier on e2e output"
-      ],
-      "context": "Phase branch tip df1d419ef: Task 1 fire path (LemmyResult Case A), Task 2 escape path (LemmyResult Case A fix). Both workspace-checks passed (DQ #167 + DQ #170 result=pass). Phase-2 e2e pending.",
-      "workflow_run_id": 25611232282,
-      "local_log_path": null,
-      "branch": "phase-v1-SL-c-2",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 168,
@@ -2978,6 +2955,28 @@
       "answer": "Workspace-check validation passed: cargo check, cargo clippy, and cargo test compile (no-run) all succeeded.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-09T20:20:31Z"
+    },
+    {
+      "id": 171,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T20:52:00Z",
+      "question": "Does the Phase-2 e2e pass on phase-v1-SL-c-2 tip df1d419ef (Tasks 1+2 complete, Case A uniform)?",
+      "options": [
+        "(A) pass — all 76 e2e tests pass; advance to Tasks 3-5",
+        "(B) fail — advisor applies §G4 classifier on e2e output"
+      ],
+      "context": "Phase branch tip df1d419ef: Task 1 fire path (LemmyResult Case A), Task 2 escape path (LemmyResult Case A fix). Both workspace-checks passed (DQ #167 + DQ #170 result=pass). Phase-2 e2e pending.",
+      "workflow_run_id": 25611232282,
+      "local_log_path": null,
+      "branch": "phase-v1-SL-c-2",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase-2 e2e passed: cargo-test-e2e workflow run 25611232282 conclusion=success, completed 2026-05-09T21:01:58Z. All governance e2e tests passed on phase-v1-SL-c-2 tip df1d419ef.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T21:10:00Z"
     }
   ],
   "schema_version": 2
