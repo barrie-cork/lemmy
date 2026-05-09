@@ -108,10 +108,10 @@ After committing and pushing:
    gh run list --repo barrie-cork/lemmy --branch <your-branch> \
      --workflow cargo-validate-workspace.yml --limit 1 --json databaseId
    ```
-2. Next safe DQ id = **171** (max across governance-v0 live file + archives
-   is 170 after fix-impl-3 writes its entry). Verify by reading
+2. Next safe DQ id = **172** (max across governance-v0 live file + archives
+   is 171 after Phase-2 e2e DQ #171 resolved). Verify by reading
    `.claude/decision-queue.json` and archives — use `max(all ids) + 1`.
-3. Write `kind: "validate-pending"`, `from: "impl"`, `id: 171` to
+3. Write `kind: "validate-pending"`, `from: "impl"`, `id: 172` to
    `.claude/decision-queue.json`.
 4. Commit + push immediately:
    ```
@@ -146,10 +146,37 @@ After committing and pushing:
   BEFORE the mod's closing `}`. Do not disturb prior fn bodies.
 - **Handover trailer:** include `HANDOVER:` YAML in commit body.
 
-## 5. Prior cohort handover
+## 5. Prior task handover
 
-Tasks 1+2+fix established `mod v1_sl_c_fixtures` with two test fns (fire path
-and escape path), all Case A (`LemmyResult<()>` throughout). Phase branch tip
-will be updated with those merges before Task 3 is dispatched. Confirm the
-last fn in the mod uses `LemmyResult<()>` before writing — this is the
-canonical-schema-first gate.
+```yaml
+prior_tasks:
+  - task: 1
+    commit: 3e1911509
+    filesCreated: []
+    filesModified:
+      - crates/server/tests/e2e.rs
+    keyDecisions:
+      - Task 1 replan established Case A (LemmyResult<T> uniform) for all v1_sl_c_fixtures helpers
+    notes: Fire path test + mod shell established; Case A shape canonical for the mod
+  - task: 2
+    commit: d4578b415
+    filesCreated: []
+    filesModified:
+      - crates/server/tests/e2e.rs
+    keyDecisions:
+      - Used Result<(), Box<dyn Error>> initially; fix-impl-3 restored Case A
+      - Added EndorsementInsertForm import; seeded endorsement before surety
+    notes: Escape path test; surety.revoked_at after decided_at triggers EscapeStatus::Escape
+  - task: 2-fix
+    commit: df1d419ef
+    filesCreated: []
+    filesModified:
+      - crates/server/tests/e2e.rs
+    keyDecisions:
+      - Cherry-pick onto replan tip; only 1 sig remained Box<dyn Error>; restored to LemmyResult<()>
+    notes: All v1_sl_c_fixtures signatures now uniformly Case A; phase-v1-SL-c-2 tip df1d419ef
+```
+
+Phase-2 e2e (DQ #171, run 25611232282) passed on tip df1d419ef. Task 3 appends the
+no-op test after Task 2's fix fn. Confirm last fn in mod uses `LemmyResult<()>`
+(canonical-schema-first gate) before writing.
