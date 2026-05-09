@@ -2,6 +2,90 @@
   "pending": [],
   "resolved": [
     {
+      "id": 166,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T14:44:55Z",
+      "subject": "sl-c-2 fix-impl-2 workspace-check validate-pending [SUPERSEDED BY REPLAN]",
+      "question": "Does cargo-validate-workspace pass on sl-c-2 fix-impl-2 (§G4 canonical recipe — bare .map_err bridges)?",
+      "options": [
+        "(A) pass",
+        "(B) fail"
+      ],
+      "context": "fix-impl-2 brief reverted outer to Result<(), Box<dyn Error>> + applied bare `.map_err(|e| format!(\"{e}\").into())?` bridges per §G4 row 4 verbatim. Workflow 25603848858 produced 1× E0283 (abstract trait object outer defeats Into<_> inference). Superseded by replan adopting Case A. Canonical full record on origin/junior/role-impl-task-sl-c-2-fix-impl-2-...-md-160 + origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-...-md-161.",
+      "branch": "junior/role-impl-task-sl-c-2-fix-impl-2-see-claude-prps-briefs-sl-c-2-fix-impl-2-md-160",
+      "phase_task": "sl-c-2-fix-impl-2",
+      "workflow_run_id": 25603848858,
+      "result": "fail",
+      "log_slice": null,
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded by replan to Case A (uniform LemmyResult<T> throughout). The §G4 row 4 recipe was insufficient for abstract Box<dyn Error> outer — need annotated closure return type (Case B) or uniform LemmyResult (Case A). Lesson amended 2026-05-09 with case enumeration; §G4 row 4 split into 4a/4b/4c. See .claude/PRPs/briefs/sl-c-2-impl-1-replan.md + .claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T15:30:00Z",
+      "superseded_by_replan": true,
+      "supersession_brief": ".claude/PRPs/briefs/sl-c-2-impl-1-replan.md",
+      "supersession_rca": ".claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md",
+      "canonical_record_ref": "origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-see-claude-prps-briefs-sl-c-2-ci-watcher-3-md-161"
+    },
+    {
+      "id": 165,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T07:55:00Z",
+      "subject": "sl-c-2 fix-impl-1 workspace-check validate-pending [SUPERSEDED BY REPLAN]",
+      "question": "Does cargo-validate-workspace pass on sl-c-2 fix-impl-1 (LemmyResult<()> outer flip, helpers untouched)?",
+      "options": [
+        "(A) pass",
+        "(B) fail"
+      ],
+      "context": "fix-impl-1 brief flipped test fn signature to LemmyResult<()> while forbidding helper updates — Case C (mixed shapes) per amended lesson. Workflow 25595869651 produced 11× E0277 (Send/Sync/Sized cascade). Superseded by replan to Case A (uniform LemmyResult<T>). Canonical full record on origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-...-md-161.",
+      "branch": "junior/role-impl-task-sl-c-2-impl-1-see-claude-prps-briefs-sl-c-2-impl-1-md-154",
+      "phase_task": "sl-c-2-fix-impl-1",
+      "workflow_run_id": 25595869651,
+      "result": "fail",
+      "log_slice": null,
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded by replan to Case A (uniform LemmyResult<T> throughout) mirroring v1-SL-b canonical sibling. The fix-impl-1 approach (LemmyResult<()> outer + Box<dyn Error> helpers) was Case C — hard refusal per amended lesson. See .claude/PRPs/briefs/sl-c-2-impl-1-replan.md + .claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T15:30:00Z",
+      "superseded_by_replan": true,
+      "supersession_brief": ".claude/PRPs/briefs/sl-c-2-impl-1-replan.md",
+      "supersession_rca": ".claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md",
+      "canonical_record_ref": "origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-see-claude-prps-briefs-sl-c-2-ci-watcher-3-md-161"
+    },
+    {
+      "id": 164,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-08T22:26:30Z",
+      "subject": "sl-c-2 Task 1 (impl-1) workspace-check validate-pending [SUPERSEDED BY REPLAN]",
+      "question": "Does cargo-validate-workspace pass on sl-c-2 Task 1 (impl-1)?",
+      "options": [
+        "(A) pass",
+        "(B) fail"
+      ],
+      "context": "Original Task 1 commit c2761b284 prescribed Result<(), Box<dyn Error>> outer + Result<T, Box<dyn Error>> helpers per plan §13 stub. Workflow 25582548670. Superseded by replan adopting Case A (uniform LemmyResult<T>) per .claude/PRPs/briefs/sl-c-2-impl-1-replan.md. Canonical full record on worker branch tip origin/junior/role-impl-task-sl-c-2-impl-1-...-md-154 (now hard-reset to c2761b284) and origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-...-md-161.",
+      "branch": "junior/role-impl-task-sl-c-2-impl-1-see-claude-prps-briefs-sl-c-2-impl-1-md-154",
+      "phase_task": "v1-SL-c-2-task-1",
+      "workflow_run_id": 25582548670,
+      "result": "fail",
+      "log_slice": null,
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Superseded by replan to Case A (uniform LemmyResult<T> throughout) mirroring v1-SL-b canonical sibling at e2e.rs:11001-11924. See .claude/PRPs/briefs/sl-c-2-impl-1-replan.md + .claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md. Canonical full record on worker branch md-161 (ci-watcher-3 tip).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T15:30:00Z",
+      "superseded_by_replan": true,
+      "supersession_brief": ".claude/PRPs/briefs/sl-c-2-impl-1-replan.md",
+      "supersession_rca": ".claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md",
+      "canonical_record_ref": "origin/junior/role-ci-watcher-sl-c-2-ci-watcher-3-see-claude-prps-briefs-sl-c-2-ci-watcher-3-md-161"
+    },
+    {
       "id": 162,
       "from": "advisor",
       "kind": "validate-pending",
