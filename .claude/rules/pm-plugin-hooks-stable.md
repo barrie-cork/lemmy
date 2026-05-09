@@ -1,3 +1,11 @@
+---
+paths:
+  - "crates/api/api_crud/src/private_message/**/*.rs"
+  - "crates/apub/objects/src/objects/private_message.rs"
+  - "crates/api/api_utils/src/notify.rs"
+  - "crates/api/api_utils/src/plugins.rs"
+---
+
 # PM plugin hooks — stability guarantee
 
 Seven Extism plugin-hook call sites in the private-message path are
@@ -7,7 +15,7 @@ not delete them, rename them, or remove either the `_before_*` or
 `_after_*` half of any pair without writing a new ADR that supersedes
 ADR-012.
 
-This rule loads at session start (along with the rest of `.claude/rules/`). Every ralph loop touching PM code reads it at first iteration.
+This rule auto-loads only when a session Reads one of the PM-handler files in the `paths:` frontmatter above (per `feedback`/`reference_claude_code_rules_loading.md`). Sessions touching PM code start by Read-ing the handler, so the rule loads before any Edit. Sessions doing meta-work or non-PM crate work do not load it.
 
 ## The hook names and their call sites
 
