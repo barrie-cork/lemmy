@@ -57,7 +57,12 @@ This is mechanical: read score, read top factor, add citation. No additional DQ,
 
 The §5 complexity-score awareness check above triggers from the **plan's dominant factor** — a per-plan signal. That misses the case where a single task in the plan touches a file class that has a known footgun, even if that file class isn't the plan's overall dominant factor. (Empirical: the 2026-05-09 §G4 catch-fire on `error[E0277]: LemmyError` in a Task 1 e2e edit, where the plan's top factor flagged Tasks 1-5 e2e edits but the Junior worker's first edit hit the LemmyError `?` propagation pattern that has a documented mechanical fix in PMD; the brief omitted the lesson.)
 
-To prevent recurrence: when authoring an `impl-task` brief, walk the §13 task's file list (the IMPLEMENT files plus any helper-creation files) against this table and inject every matching lesson into §3 Required reading. **No judgment call** — the table is canonical; if the file pattern matches, the lesson goes in.
+To prevent recurrence: when authoring an `impl-task` OR `fix-impl-task` brief, walk the relevant file list against this table and inject every matching lesson into §3 Required reading. **No judgment call** — the table is canonical; if the file pattern matches, the lesson goes in.
+
+- For an **`impl-task` brief**: the file list is the §13 task's IMPLEMENT files plus any helper-creation files.
+- For a **`fix-impl-task` brief**: the file list is every file:line citation in the failing workflow's log slice (the same log the §G4 classifier reads). If the failing log cites `crates/server/tests/e2e.rs:NNNN`, walk the table for `crates/server/tests/e2e.rs`. If it cites a migration path, walk the table for `crates/db_schema/migrations/**`. Etc. The same mechanical rule applies: every matching lesson goes into §3 of the fix-impl brief.
+
+The 2026-05-09 c-2 fix-impl-1 lapse (cycle-2 catch-fire on the same E0277 LemmyError class as cycle-1) was the empirical reason for the fix-impl half of this rule. The original impl-task half landed 9 minutes after the wrong fix-impl-1 brief was already committed — fix-impl was implicitly out-of-scope and the lapse propagated. This rule closes that gap.
 
 | File pattern (in §13 IMPLEMENT or task creates new file matching) | Mandatory lesson(s) for §3 Required reading |
 |---|---|
@@ -77,7 +82,9 @@ The `memory_search_hybrid` call from "Pre-queue lesson check" still runs (catche
 
 **How to apply when writing a brief:**
 
-1. Read the §13 task's IMPLEMENT files list + any "creates" helper files.
+1. Identify the file list:
+   - **`impl-task` brief**: §13 task's IMPLEMENT files + any "creates" helper files.
+   - **`fix-impl-task` brief**: every file:line citation in the failing workflow's log slice (parse `--> path:line` lines from `gh run view <id> --log-failed`).
 2. For each file, walk the table top-to-bottom; inject every matching lesson path into §3 Required reading (deduplicated).
 3. The brief commit body lists which mandatory lessons fired and why (one line each — keeps the audit trail).
 4. The `memory_search_hybrid` call (per "Pre-queue lesson check") still runs after the table check; it catches non-mechanical / cross-cutting lessons.
@@ -446,6 +453,58 @@ mechanical replacement), and a hard cap "≤3 file edits". The brief
 is dispatched as a normal `[role:impl-task]` Junior task; the
 resulting commit lands on the phase branch and re-triggers the
 workflow.
+
+### Mandatory verbatim §G4 row in fix-impl briefs (anti-paraphrase gate)
+
+When the advisor authors a fix-impl-task brief whose triggering DQ
+failure matches an allowlist row above, the brief's §2 Scope MUST
+contain a **verbatim block-quote of the matched row text — both
+columns (Failure signature + Auto-fix recipe + Source lesson) —
+copy-pasted as a markdown blockquote (`> ...`) BEFORE any file:line
+context.** The canonical recipe text is the contract; a paraphrase
+in the brief's own words is a process miss even if the meaning is
+preserved.
+
+The blockquote shape (matches the table row literally):
+
+```markdown
+## 2. Scope
+
+### 2.1 §G4 CANONICAL RECIPE (verbatim from `.claude/rules/advisor-orchestrator.md` §G4 classifier table)
+
+> | Failure signature | Auto-fix | Source lesson |
+> | <row text 1> | <row text 2> | <row text 3> |
+```
+
+After the blockquote, the brief MAY add file:line context, line-by-
+line diff targets, and acceptance criteria — but the recipe text
+above is the contract Junior implements against. If the rest of the
+brief contradicts the blockquote, the blockquote wins (Junior's hard
+refusal: stop and raise a `kind: "blocker"` DQ citing this gate).
+
+**Why this gate exists:** the 2026-05-09 c-2 cycle-2 catch-fire was
+caused by a fix-impl-1 brief that *cited* the canonical lesson in §3
+Required reading but *paraphrased* the recipe in §2 Scope, inverting
+its meaning (signature flip + forbid `.map_err`, instead of canonical
+"signature stays Box<dyn Error> + add `.map_err`"). Junior #158
+followed the brief literally. Cost: one fix-impl + one ci-watcher
+cycle (~12 min GH-Actions wall-clock + ~5 min advisor reasoning).
+Verbatim copy-paste makes "I read the row but prescribed something
+different" structurally impossible — the row text is in the brief
+unaltered, so any divergence is visible at brief-review time.
+
+**Detection:** an advisor commit that adds a `.claude/PRPs/briefs/*-fix-impl-*.md`
+matching an allowlist row, but whose §2 Scope lacks the verbatim
+blockquote of the row, is a process miss. The retro should flag it.
+A future PostToolUse hook on brief Write/Edit can scan §2 for the
+literal blockquote and exit non-zero on miss; not yet implemented
+(belongs in `.claude/hooks/`), tracked here as a hardening watchpoint.
+
+**When this gate does NOT apply:** fix-impl briefs whose triggering
+failure is non-allowlist (catch-fire to user with a hand-authored
+recipe). Those briefs are by definition outside the §G4 mechanical
+path — the gate's purpose is to prevent paraphrase drift on
+mechanical recipes, not to constrain user-driven fixes.
 
 **Non-allowlist (catch-fire to user):**
 
