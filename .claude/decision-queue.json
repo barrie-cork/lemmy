@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 169,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T19:03:48Z",
+      "question": "Did cargo-validate-workspace.yml pass for sl-c-2 task-2 (escape path e2e test)?",
+      "options": [
+        "(A) pass — advance to Phase 2 e2e",
+        "(B) fail — advisor applies §G4 classifier"
+      ],
+      "context": "impl-task pushed e2e test #2 (grace_check_escapes_case_when_sponsor_revoked_after_decided_at) to junior worktree branch; workspace-check workflow triggered on push.",
+      "workflow_run_id": 25609315819,
+      "branch": "junior/role-impl-task-sl-c-2-impl-2-e2e-test-2-escape-path-see-claude-prps-briefs-sl-c-2-impl-2-md-164",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 168,
