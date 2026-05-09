@@ -84,10 +84,20 @@ mkdir -p "${TMPDIR_NATIVE}"
 OUT_PATH="${TMPDIR_NATIVE}/dq-canonical-${PHASE}.json"
 
 # Collect junior_ids from auto-state, if present.
+#
+# Windows note: python.exe on Windows writes \r\n line endings by default;
+# command substitution preserves embedded \r, leaving each id as e.g.
+# "162\r" downstream. That breaks the later `grep -E "[-]${jid}$"` step
+# because the regex anchors `$` before the literal \r. Two-layer fix:
+#   1. Force Python's stdout to use raw LF via sys.stdout.reconfigure
+#      (root cause — also preserves UTF-8).
+#   2. Pipe the substitution through `tr -d '\r'` (defensive — protects
+#      against any other heredoc that might leak \r in future).
 JUNIOR_IDS=""
 if [ -f "${STATE_FILE}" ]; then
-  JUNIOR_IDS="$(python3 - "${STATE_FILE}" <<'PY'
+  JUNIOR_IDS="$(python3 - "${STATE_FILE}" <<'PY' | tr -d '\r'
 import io, json, sys
+sys.stdout.reconfigure(encoding='utf-8', newline='\n')
 path = sys.argv[1]
 with io.open(path, encoding='utf-8') as f:
     state = json.load(f)
