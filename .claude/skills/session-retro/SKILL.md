@@ -52,8 +52,25 @@ ls .claude/auto-state/*-archived-*.json 2>/dev/null
 ls .claude/auto-state/*-catchfire-*.md 2>/dev/null
 ```
 
-If ANY of these return a file, OR the session transcript shows an
-explicit `/auto-phase` invocation:
+**Trigger condition (revised 2026-05-09):** Auto-phase reliability
+section is required ONLY when the **session actively interacted**
+with `/auto-phase` — either invoked it directly OR mutated
+`.claude/auto-state/<phase>.json` during the session. A leftover
+JSON from a prior session does NOT trigger the section by itself.
+
+To decide:
+
+1. Did the transcript contain an explicit `/auto-phase <args>`
+   invocation? → **trigger fires**.
+2. Did the session edit, write, or `Bash` mutate any
+   `.claude/auto-state/*.json` file? → **trigger fires**.
+3. Did the session author a brief, run a Junior task, mutate a
+   `validate-pending` DQ, or otherwise advance the state machine
+   for the phase whose JSON exists? → **trigger fires**.
+4. None of the above; JSON is on disk only because a prior session
+   left it → **trigger does NOT fire; skip the 10-category section**.
+
+When the trigger fires:
 
 4. **Also read `.claude/lessons/feedback_auto_phase_retro_signals.md`**
    — 10-category automation-reliability discipline. The canonical
