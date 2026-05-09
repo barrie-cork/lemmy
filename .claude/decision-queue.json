@@ -1,27 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 172,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-09T21:49:32Z",
-      "question": "Does cargo-validate-workspace pass on the sl-c-2-impl-3 worker branch (Test #3 no-op future grace_expires_at)?",
-      "options": [
-        "(A) pass — green-gate close; advance to Task 4",
-        "(B) fail — §G4 triage"
-      ],
-      "context": "Task 3 appended grace_check_no_op_when_grace_expires_at_in_future test fn inside mod v1_sl_c_fixtures (109 lines added, 1 file). Pushed to junior branch. workflow_run_id 25612657137.",
-      "branch": "junior/role-impl-task-sl-c-2-impl-3-e2e-test-3-no-op-future-grace-expires-at-see-claude-prps-briefs-sl-c-2-impl-3-md-170",
-      "phase_task": "3",
-      "workflow_run_id": 25612657137,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 168,
@@ -2999,6 +2977,27 @@
       "answer": "Phase-2 e2e passed: cargo-test-e2e workflow run 25611232282 conclusion=success, completed 2026-05-09T21:01:58Z. All governance e2e tests passed on phase-v1-SL-c-2 tip df1d419ef.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-09T21:10:00Z"
+    },
+    {
+      "id": 172,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T21:49:32Z",
+      "question": "Does cargo-validate-workspace pass on the sl-c-2-impl-3 worker branch (Test #3 no-op future grace_expires_at)?",
+      "options": [
+        "(A) pass — green-gate close; advance to Task 4",
+        "(B) fail — §G4 triage"
+      ],
+      "context": "Task 3 appended grace_check_no_op_when_grace_expires_at_in_future test fn inside mod v1_sl_c_fixtures (109 lines added, 1 file). Pushed to junior branch. workflow_run_id 25612657137.",
+      "branch": "junior/role-impl-task-sl-c-2-impl-3-e2e-test-3-no-op-future-grace-expires-at-see-claude-prps-briefs-sl-c-2-impl-3-md-170",
+      "phase_task": "3",
+      "workflow_run_id": 25612657137,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workspace-check passed: cargo-validate-workspace run 25612657137 conclusion=success, completed 2026-05-09T22:16:19Z.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T22:20:00Z"
     }
   ],
   "schema_version": 2
