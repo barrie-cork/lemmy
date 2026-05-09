@@ -12338,4 +12338,113 @@ mod v1_sl_c_fixtures {
     }
     Ok(())
   }
+
+  #[tokio::test]
+  async fn grace_check_no_op_when_grace_expires_at_in_future() -> LemmyResult<()> {
+    // Per Test #3 (PRD §6.1 batch-query filter — only cases past
+    // grace_expires_at).
+    //
+    // Setup: BREHON_DISABLE_GRACE_CHECK_JOB=1.
+    //   1 sponsee + 1 sponsor. Active surety.
+    //   ModerationCase status=SponsorLiabilityPending,
+    //     grace_expires_at = now() + 2 hours (NOT YET EXPIRED),
+    //     decided_at = now() - 24h.
+    //   sanction row.
+    //
+    // Drive: run_grace_check_batch(&context).await.
+    //
+    // Assert:
+    //   - outcome.cases_processed == 0 (case not selected by batch query).
+    //   - outcome.fired == 0, outcome.escaped == 0.
+    //   - case.status STILL == SponsorLiabilityPending (unchanged).
+    //   - case.liability_escape_reason IS STILL NULL.
+    //   - 0 reputation_event rows for the case.
+    //   - 0 governance_log rows of any SL kind.
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let (sponsee, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc3_noop_sponsee", false).await?;
+    let (sponsor, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc3_noop_sponsor", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // grace_expires_at = now() + 2 hours — NOT yet expired;
+    // the batch query filters .le(Some(now)) so this case is skipped.
+    let case_id = seed_pending_case(
+      &mut conn,
+      sponsee,
+      Duration::hours(2),
+      Some(SanctionAction::ContentRemoval),
+    )
+    .await?;
+    seed_active_surety(&mut conn, sponsor, sponsee).await?;
+
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome.cases_processed,
+      0,
+      "no-op: future grace_expires_at case not selected by batch query"
+    );
+    assert_eq!(outcome.fired, 0, "no-op: 0 cases fired");
+    assert_eq!(outcome.escaped, 0, "no-op: 0 cases escaped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (case_status, escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityPending,
+      "no-op: case status STILL SponsorLiabilityPending (unchanged)"
+    );
+    assert!(
+      escape_reason.is_none(),
+      "no-op: liability_escape_reason STILL NULL"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "no-op: 0 reputation_event rows");
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no-op: 0 fired log entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "no-op: 0 escaped log entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no-op: 0 applied log entries"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+    Ok(())
+  }
 }
