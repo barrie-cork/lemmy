@@ -1,27 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 169,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-09T19:03:48Z",
-      "question": "Did cargo-validate-workspace.yml pass for sl-c-2 task-2 (escape path e2e test)?",
-      "options": [
-        "(A) pass — advance to Phase 2 e2e",
-        "(B) fail — advisor applies §G4 classifier"
-      ],
-      "context": "impl-task pushed e2e test #2 (grace_check_escapes_case_when_sponsor_revoked_after_decided_at) to junior worktree branch; workspace-check workflow triggered on push.",
-      "workflow_run_id": 25609315819,
-      "branch": "junior/role-impl-task-sl-c-2-impl-2-e2e-test-2-escape-path-see-claude-prps-briefs-sl-c-2-impl-2-md-164",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 168,
@@ -2933,6 +2911,50 @@
       "resolved_at": "2026-05-08T19:42:38Z",
       "superseded_by": 163,
       "superseded_by_advisor_at": "2026-05-08T19:44:10Z"
+    },
+    {
+      "id": 169,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T19:03:48Z",
+      "question": "Did cargo-validate-workspace.yml pass for sl-c-2 task-2 (escape path e2e test)?",
+      "options": [
+        "(A) pass — advance to Phase 2 e2e",
+        "(B) fail — advisor applies §G4 classifier"
+      ],
+      "context": "impl-task pushed e2e test #2 (grace_check_escapes_case_when_sponsor_revoked_after_decided_at) to junior worktree branch; workspace-check workflow triggered on push.",
+      "workflow_run_id": 25609315819,
+      "branch": "junior/role-impl-task-sl-c-2-impl-2-e2e-test-2-escape-path-see-claude-prps-briefs-sl-c-2-impl-2-md-164",
+      "phase_task": 2,
+      "result": "fail",
+      "log_slice": "workflow_run_id=25609315819 conclusion=failure job=validate workspace — E0277 LemmyResult/Box<dyn Error> type mismatch in v1_sl_c_fixtures; §G4 row 4b match.",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Workspace-check FAILED. §G4 classifier: E0277 Case A/B match. Fix dispatched as fix-impl-3 (task #166 done, DQ #170 result=pass). Task 2 test + Case A shape cherry-picked onto phase-v1-SL-c-2.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-09T20:45:00Z"
+    },
+    {
+      "id": 170,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T19:20:00Z",
+      "question": "Did cargo-validate-workspace.yml pass for sl-c-2 fix-impl-3 (Case A LemmyResult<T> type-shape restore)?",
+      "options": [
+        "(A) pass — green-gate; advisor advances fix-impl-3 to merge",
+        "(B) fail — advisor applies §G4 classifier"
+      ],
+      "context": "Restored LemmyResult<T> shape in all v1_sl_c_fixtures helpers; pushed to fix-impl-3 worker branch; workspace-check workflow triggered on push.",
+      "workflow_run_id": 25610290969,
+      "branch": "junior/role-impl-task-sl-c-2-fix-impl-3-case-a-type-shape-fix-for-task-2-see-claude-prps-briefs-sl-c-2-fix-impl-3-md-166",
+      "phase_task": "v1-SL-c-2-fix-impl-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workspace-check validation passed: cargo check, cargo clippy, and cargo test compile (no-run) all succeeded.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-09T20:20:31Z"
     }
   ],
   "schema_version": 2
