@@ -1,5 +1,28 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 171,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T20:52:00Z",
+      "question": "Does the Phase-2 e2e pass on phase-v1-SL-c-2 tip df1d419ef (Tasks 1+2 complete, Case A uniform)?",
+      "options": [
+        "(A) pass — all 76 e2e tests pass; advance to Tasks 3-5",
+        "(B) fail — advisor applies §G4 classifier on e2e output"
+      ],
+      "context": "Phase branch tip df1d419ef: Task 1 fire path (LemmyResult Case A), Task 2 escape path (LemmyResult Case A fix). Both workspace-checks passed (DQ #167 + DQ #170 result=pass). Phase-2 e2e pending.",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-c-2-df1d419ef.log",
+      "branch": "phase-v1-SL-c-2",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 168,
