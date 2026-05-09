@@ -3,15 +3,10 @@ name: harness-audit
 description: >
   Evidence-based audit of the Claude Code harness's startup token load.
   Inventories auto-loaded rules, scores compression candidates, emits a ranked
-  recommendation report at `.claude/PRPs/reports/harness-audit-<date>.md`.
-  Read-only — never edits source. Pi Coding is out of scope (sibling skill in
-  `.pi/skills/` if needed).
-  DO use when: user says "audit the harness", "review startup tokens", "what's
-  loading at session start", or after a major rule/lesson restructure to
-  verify the trim landed.
-  Do NOT use for: applying the recommendations (separate trim pass), Pi-Coding
-  audit, MCP tool schema audit (handled by ToolSearch), or one-shot file-size
-  checks (use Bash + wc -l directly).
+  report at `.claude/PRPs/reports/harness-audit-<date>.md`. Read-only.
+  DO use: "audit the harness", "review startup tokens", "what's loading at
+  session start", or after a major rule/lesson restructure.
+  Do NOT use: applying recommendations, Pi/MCP audits, or one-shot wc -l checks.
 user-invocable: true
 ---
 
@@ -29,6 +24,7 @@ Evidence-based audit of what loads at Claude Code session start in this repo. Pr
 2. **Read `.claude/settings.json`.** Capture `skillListingBudgetFraction` (the per-turn skill catalogue cost cap; current minimum sane value is `0.005`). Note the value in the report so a future audit can detect regressions.
 3. **Read `.mcp.json`.** Capture the list of configured MCP servers (just names, not configs). The report notes which are loaded at startup.
 4. **Print one-line snapshot:** `env: claude-code | settings.skillListingBudgetFraction=<v> | mcp=<server1,server2,…> | pi=<present|absent>`.
+5. **Concurrent-session check.** Run `git log governance-v0..HEAD --oneline --since="60 minutes ago"` (or `git log governance-v0 --oneline --since="60 minutes ago"` if already on governance-v0). If any commits appear that are not yours (author ≠ current git user), surface them in the env snapshot line: `⚠ concurrent-session activity: <N> commits in last 60 min (<sha-short> <subject>, …)`. This is observation only — do NOT stop the audit. Recurrence ≥3× (per `feedback_parallel_agents_one_worktree_per_agent`, `feedback_parallel_agent_diff_collision_detection`, 2026-05-09 empirical b8225be3e..479408a98) justifies the standing probe.
 
 ## Phase 1: Inventory auto-load (delegated to Explore subagent)
 
