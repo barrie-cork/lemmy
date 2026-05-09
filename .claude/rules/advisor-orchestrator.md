@@ -29,13 +29,19 @@ Briefs are tracked in git. They are the audit trail of what the advisor asked fo
 
 ## Pre-queue lesson check (consult-only)
 
-Before writing a brief for a Junior task, the advisor must `memory_search_hybrid` the homeserver PMD for lessons relevant to the task's scope. Query with 2-3 keywords drawn from the task slug or the system being modified (e.g. `query: "diesel migration"` for a JM-d-task touching `crates/db_schema/migrations/`, `query: "cargo features full"` for a workspace-wide build task).
+Before writing a brief for a Junior task, the advisor must `memory_search_hybrid` the brehon-fork PMD (at `.project-memory/memory.db`) for lessons relevant to the task's scope. Query with 2-3 keywords drawn from the task slug or the system being modified (e.g. `query: "diesel migration"` for a JM-d-task touching `crates/db_schema/migrations/`, `query: "cargo features full"` for a workspace-wide build task).
 
 This is **consult-only** — the advisor reads the hits, internalises them, and lets them shape the brief's Constraints section or Required reading paths. The brief does **not** need to cite the PMD search itself (no audit overhead), but if a hit is directly load-bearing (e.g. a known footgun the task will hit), surface it explicitly in §4 Constraints.
 
 **Cost discipline (goal #4):** one `memory_search_hybrid` call per brief, `limit: 5`, total round-trip <2s. If the search returns nothing relevant, that's a one-line decision: nothing applies, move on. Do not chain multiple searches per brief.
 
 This subsumes the "Memory injection happens at session start" line in the polling loop — session-start glob over `.claude/lessons/` is still required, but pre-queue search adds the fresh lookup right before the brief is written.
+
+**Lesson corpus is indexed in PMD as of 2026-05-09** (commit landing this rule update). All 98 `.claude/lessons/feedback_*.md` files are imported as `memory_type: "pattern"` with `tags: "lesson,feedback"` via `scripts/sync-lessons-to-pmd.sh`. The hybrid search now returns lesson hits directly, not just adjacent eval/decision context.
+
+**Re-sync after authoring a new lesson.** The import script is idempotent and additive — re-running it skips lessons whose title already exists. After committing a new lesson at `.claude/lessons/feedback_*.md`, run `bash scripts/sync-lessons-to-pmd.sh` to make it searchable. To force re-import after editing an existing lesson body: `sqlite3 .project-memory/memory.db "DELETE FROM memories WHERE title = '<frontmatter-name>';"` then re-run the script. (No automated hook is wired by design — the manual cadence matches lesson authorship cadence, ~1-2 per phase. A retro-watch signal is in place: if the next 2 phases show a "PMD missed lesson X because not yet synced" finding, build a `PostToolUse` hook on `.claude/lessons/feedback_*.md` Write/Edit.)
+
+**Search mode (FTS5-only on the laptop until embeddings wired).** The brehon-fork PMD has the `memory_vectors` table provisioned but empty — the laptop's project-memory MCP server cannot reach Ollama at the EliteDesk. `memory_search_hybrid` auto-falls-back to FTS5 only. Practical implication: **prefer single distinctive keywords over multi-word natural-language queries**. `LemmyError`, `jsonb`, `e2e`, `migration` all return the right hits; `LemmyError doesn't implement std::error::Error in tests` returns nothing because FTS5 token-matches against common terms dilute the signal. When embeddings are wired (a future follow-up), multi-word queries will work via semantic recall — but the file-class injection table (sub-section below) is the deterministic backstop that doesn't depend on either FTS5 or embedding recall.
 
 ### Plan §5 complexity-score awareness (cargo-heavy threshold)
 
