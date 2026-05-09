@@ -1,13 +1,18 @@
 # CLAUDE.md — Brehon Fork (advisor CWD)
 
-**Fork of:** [LemmyNet/lemmy](https://github.com/LemmyNet/lemmy) @ `d1975776a` (Lemmy 1.0-beta; last rebase 2026-04-18)
-**Working branch:** `governance-v0` (v0 feature work; `main` is reserved for upstream-sync rebases)
-**Active sub-phase:** `v1-SL-c-1` (in flight; trunk at `c93cf7e90`; phase branch `phase-v1-SL-c-1` cut at `477f0c55c` on 2026-05-07). Last shipped: `v1-SL-b` PR #119 merged at `9ae4c332c` on 2026-05-07.
-**Rust toolchain:** `1.95` · **License:** AGPL-3.0 (see `AGPL-NOTICE.md`)
-
-A governance-enabled fork of Lemmy 1.0-beta. v0 goal: 11 new API endpoints for a Brehon-style reputation + jury workflow, tamper-evident governance log, and outbound federation of governance signals — while staying compatible with vanilla-Lemmy content federation.
-
-This CWD is the **persistent advisor session** for Brehon governance work. Non-Brehon ops (Docker stacks, agent-grey, midleton-market, web-archive, weekly review, NAS backups, n8n, infra) live in `C:\Users\barri\Developer\homeserver`.
+```yaml
+project:
+  fork_of: "LemmyNet/lemmy@d1975776a"  # Lemmy 1.0-beta; last rebase 2026-04-18
+  working_branch: "governance-v0"       # main = upstream-sync rebases only
+  active_sub_phase: "v1-SL-c-1"
+  phase_branch: "phase-v1-SL-c-1"      # cut at 477f0c55c on 2026-05-07
+  trunk_sha: "c93cf7e90"
+  last_shipped: "v1-SL-b PR#119 @ 9ae4c332c on 2026-05-07"
+  rust_toolchain: "1.95"
+  license: "AGPL-3.0"
+  cwd_role: "persistent advisor session"
+  non_brehon_ops_cwd: "C:/Users/barri/Developer/homeserver"
+```
 
 ## Hard constraints (do NOT re-litigate)
 
@@ -29,19 +34,21 @@ If a plan contradicts any of these, STOP and surface to the user. Do not silentl
 
 ## Four-role model
 
-The advisor session here drives one Brehon sub-phase end-to-end via four Junior subagents. The advisor is the fourth role — meta-oversight, never authors content.
+Advisor = meta-oversight only, never authors content. Junior workers run on EliteDesk (`ssh homeserver`, daemon `junior@brehon-fork`, repo at `/srv/brehon-fork`).
 
-| Role | Where it runs | Model | Triggered by |
-|---|---|---|---|
-| **Advisor** | This persistent CC session (laptop, brehon-fork CWD) | Opus 4.7 (1M) — set in `.claude/settings.json` | User opens session |
-| **Planning** | Junior worker on EliteDesk | Opus 4.7 (1M) | `[role:planning]` task prefix |
-| **Impl** | Junior worker on EliteDesk | Sonnet 4.6 | `[role:impl-task]` task prefix |
-| **BM** | Junior worker on EliteDesk | Haiku 4.5 | `[role:bm-task]` task prefix |
-| **ci-watcher** | Junior worker on EliteDesk (ad-hoc) | Haiku 4.5 | `[role:ci-watcher]` task prefix |
-
-EliteDesk = Tailscale alias `homeserver`, headless Ubuntu Server 24.04 LTS; reach via `ssh homeserver`. Junior daemon: `junior@brehon-fork`. Brehon fork at `/srv/brehon-fork` on EliteDesk; this CWD on the laptop.
-
-Model tiering enforced by the four-role tiering patch on the EliteDesk. Patch source mirrored at `homeserver/scripts/junior-server-patches/`; restore via `bash C:/Users/barri/Developer/homeserver/scripts/restore-junior-server-patches.sh` after upstream junior-src updates.
+```yaml
+roles:
+  advisor:  { runs_on: "laptop (this session)", model: "opus-4-7",  task_prefix: null,            authors_content: false }
+  planning: { runs_on: "EliteDesk/Junior",      model: "opus-4-7",  task_prefix: "[role:planning]"  }
+  impl:     { runs_on: "EliteDesk/Junior",      model: "sonnet-4-6", task_prefix: "[role:impl-task]" }
+  bm:       { runs_on: "EliteDesk/Junior",      model: "haiku-4-5", task_prefix: "[role:bm-task]"   }
+  ci_watcher: { runs_on: "EliteDesk/Junior",    model: "haiku-4-5", task_prefix: "[role:ci-watcher]" }
+infra:
+  elitedesk_alias: "homeserver"
+  junior_daemon: "junior@brehon-fork"
+  brehon_repo_path: "/srv/brehon-fork"
+  tiering_patch_restore: "bash C:/Users/barri/Developer/homeserver/scripts/restore-junior-server-patches.sh"
+```
 
 ## Polling loop
 
@@ -74,15 +81,19 @@ Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/b
 
 ## Canonical paths
 
-- **Brief paths (this CWD on phase branch):** `.claude/PRPs/briefs/<phase>-<role>-<n>.md`
-- **Active plan:** `.claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md` (next; sibling c-2 ships after c-1 merges)
-- **Bootstrap brief for next session:** `.claude/PRPs/handovers/v1-SL-c-bootstrap.md`
-- **DQ:** `.claude/decision-queue.json` (on phase branch when cut)
-- **Runlog:** `.claude/runlog/v1-SL-c-1-runlog.md` (will be created on phase-v1-SL-c-1 by first runlog entry)
-- **Lessons (Junior reads at task-0):** `.claude/lessons/feedback_*.md` and `.claude/lessons/reference_*.md` in this repo
-- **PMD index (advisor session start):** `C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork\memory\MEMORY.md`
-- **Plans (laptop scratch):** `C:\Users\barri\.claude\plans\*.md` (do NOT auto-delete; consult before queueing)
-- **Promoted commands/skills (user scope):** `~/.claude/commands/{precheck,start-brehon,advisor-checkpoint}.md` and `~/.claude/skills/{check-dq,brehon-phase-transition}/`
+```yaml
+paths:
+  briefs:       ".claude/PRPs/briefs/<phase>-<role>-<n>.md"
+  active_plan:  ".claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md"
+  bootstrap:    ".claude/PRPs/handovers/v1-SL-c-bootstrap.md"
+  dq:           ".claude/decision-queue.json"
+  runlog:       ".claude/runlog/v1-SL-c-1-runlog.md"
+  lessons:      ".claude/lessons/{feedback,reference}_*.md"
+  pmd_index:    "C:/Users/barri/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md"
+  scratch_plans: "C:/Users/barri/.claude/plans/*.md"  # do NOT auto-delete
+  user_commands: "~/.claude/commands/{precheck,start-brehon,advisor-checkpoint}.md"
+  user_skills:  "~/.claude/skills/{check-dq,brehon-phase-transition}/"
+```
 
 ## Where to look next
 
