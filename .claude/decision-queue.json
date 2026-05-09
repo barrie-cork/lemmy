@@ -1,5 +1,27 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 173,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-09T22:44:02Z",
+      "question": "Does cargo-validate-workspace pass on the sl-c-2-impl-4 worker branch (Test #4 per-case isolation)?",
+      "options": [
+        "(A) pass — green-gate close; advance to Task 5",
+        "(B) fail — §G4 triage"
+      ],
+      "context": "Task 4 appended grace_check_per_case_isolation_skips_bad_case_processes_good_case test fn inside mod v1_sl_c_fixtures (130 lines added, 1 file). Pushed to junior branch. workflow_run_id 25613695291.",
+      "branch": "junior/role-impl-task-sl-c-2-impl-4-e2e-test-4-per-case-isolation-one-bad-case-doesn-t-block-batch-see-claude-prps-br-172",
+      "phase_task": "4",
+      "workflow_run_id": 25613695291,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 162,
