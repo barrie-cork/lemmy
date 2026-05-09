@@ -314,6 +314,10 @@ Skip step 6 only if user explicitly wants the laptop kept on the worker branch (
 
 Per `.claude/PRPs/plans/v1-validate-agent.plan.md` §4 watchpoint #7 + §10.9. When a `validate-pending` entry is mutated to `result: "fail" | "cancelled" | "timed_out"` and remains in `pending[]`, advisor reads `result`, `log_slice`, `failed_jobs`, applies the classifier.
 
+**Cycle-count meta-rule (above the allowlist).** Per `feedback_plan_stub_uniformity_with_canonical_sibling.md`: count of prior fails with same `(error_class, file_basename)` for this cohort member ≥3 → **HARD REFUSAL, catch-fire regardless of allowlist match**. Cycles 1+2 classify normally below. Mechanism (parse log slice, append history entry, count tuples) lives in `~/.claude/commands/auto-phase.md` Phase 2 routing; durable record in `current_cohort.members[].error_class_history[]` per template at `.claude/PRPs/templates/auto-phase-state.template.json`.
+
+// 2026-05-09 c-2 cycle-3 catchfire: 3 cycles same `(E0277, e2e.rs)` cost ~123 min before user-prompted re-plan; root cause was §13 stub shape, not recipe. Per session-retro-2026-05-09-cycle-3-catchfire-replan.md proposal #1.
+
 **Allowlist (auto-queue narrow fix-impl-task, ≤3 file edits):**
 
 | Failure signature | Auto-fix | Source lesson |

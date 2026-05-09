@@ -44,10 +44,11 @@
   "_current_cohort_shape": {
     "n": 1,
     "members": [
-      {"task_id": 1, "junior_id": null, "brief_path": null, "validate_pending_dq_id": null, "ci_watcher_junior_id": null, "result": null}
+      {"task_id": 1, "junior_id": null, "brief_path": null, "validate_pending_dq_id": null, "ci_watcher_junior_id": null, "result": null, "error_class_history": []}
     ],
     "started_at": "2026-05-07T14:30:00Z"
   },
+  "_error_class_history_note": "Per advisor-orchestrator.md §5.3 cycle-count meta-rule. Each entry: {workflow_run_id, error_class, file, ts}. Appended on every result: fail; count ≥3 same (error_class, file) → catch-fire (no fix-impl). File = basename only (line numbers drift). Phase 0.5 Step A backfills [] on resume against older state files.",
   "phase_2_e2e_mode": null,
   "_phase_2_e2e_mode_enum": ["local", "dispatch", null],
   "phase_2_e2e_mode_chosen_at": null,
