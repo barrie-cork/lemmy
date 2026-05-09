@@ -3,6 +3,12 @@
   "schema_version": 1,
   "phase": "v1-SL-c-2",
   "started_at": "2026-05-07T14:00:00Z",
+  "session_id": "a3f9c1e2b740",
+  "last_session_ended_at": null,
+  "resume_count": 0,
+  "_resume_fields_note": "session_id is a random 12-char hex assigned per advisor session. last_session_ended_at is set when a session detects clean shutdown signals (rare); usually null because compaction/restart is abrupt. resume_count increments on every Phase 0.5 reconciliation pass — high values (>3) suggest the user is restarting often, possibly indicating a stage-routing bug worth investigating at retro time.",
+  "last_known_phase_tip": null,
+  "_last_known_phase_tip_note": "Updated on every state-changing tick to the SHA of the phase branch tip the skill last observed. Used in Phase 0.5 Step D to detect mid-session daemon-side finalize-merges that completed while the advisor session was down.",
   "stage": "init",
   "_stage_enum": [
     "init",
