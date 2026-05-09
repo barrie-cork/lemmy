@@ -11949,12 +11949,13 @@ mod v1_sl_c_fixtures {
     },
     schema::{governance_log, moderation_case, reputation_event, sanction, surety},
   };
+  use lemmy_utils::error::LemmyResult;
   use serde_json::Value;
 
   async fn count_log_entries(
     conn: &mut AsyncPgConnection,
     kind: &str,
-  ) -> Result<i64, Box<dyn Error>> {
+  ) -> LemmyResult<i64> {
     let n: i64 = governance_log::table
       .filter(governance_log::entry_kind.eq(kind))
       .count()
@@ -11966,7 +11967,7 @@ mod v1_sl_c_fixtures {
   async fn read_log_payload(
     conn: &mut AsyncPgConnection,
     kind: &str,
-  ) -> Result<Option<Value>, Box<dyn Error>> {
+  ) -> LemmyResult<Option<Value>> {
     let payloads: Vec<Value> = governance_log::table
       .filter(governance_log::entry_kind.eq(kind))
       .order(governance_log::id.desc())
@@ -11982,7 +11983,7 @@ mod v1_sl_c_fixtures {
     sponsee: PersonId,
     grace_offset: Duration,
     sanction_action: Option<SanctionAction>,
-  ) -> Result<ModerationCaseId, Box<dyn Error>> {
+  ) -> LemmyResult<ModerationCaseId> {
     let now = Utc::now();
     let decided_at = now - Duration::hours(24);
     let grace_expires_at = now + grace_offset;
@@ -12025,7 +12026,7 @@ mod v1_sl_c_fixtures {
     conn: &mut AsyncPgConnection,
     sponsor: PersonId,
     sponsee: PersonId,
-  ) -> Result<SuretyId, Box<dyn Error>> {
+  ) -> LemmyResult<SuretyId> {
     insert_into(surety::table)
       .values(SuretyInsertForm {
         sponsor_id: sponsor,
@@ -12035,12 +12036,12 @@ mod v1_sl_c_fixtures {
       .returning(surety::id)
       .get_result::<SuretyId>(conn)
       .await
-      .map_err(|e| e.into())
+      .map_err(Into::into)
   }
 
   #[tokio::test]
   async fn grace_check_fires_expired_case_emits_per_sponsor_and_summary_entries(
-  ) -> Result<(), Box<dyn Error>> {
+  ) -> LemmyResult<()> {
     let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
     unsafe {
       std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
