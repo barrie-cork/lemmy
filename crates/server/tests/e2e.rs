@@ -11933,6 +11933,7 @@ mod v1_sl_c_fixtures {
   use lemmy_db_schema::{
     newtypes::{ModerationCaseId, SuretyId},
     source::governance::{
+      endorsement::EndorsementInsertForm,
       moderation_case::ModerationCaseInsertForm,
       sanction::SanctionInsertForm,
       surety::SuretyInsertForm,
@@ -11947,7 +11948,7 @@ mod v1_sl_c_fixtures {
       SanctionAction,
       SanctionScope,
     },
-    schema::{governance_log, moderation_case, reputation_event, sanction, surety},
+    schema::{endorsement, governance_log, moderation_case, reputation_event, sanction, surety},
   };
   use lemmy_utils::error::LemmyResult;
   use serde_json::Value;
@@ -12135,6 +12136,198 @@ mod v1_sl_c_fixtures {
       fired_payload["case_id"].as_i64(),
       Some(i64::from(case_id.0)),
       "case_id matches"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn grace_check_escapes_case_when_sponsor_revoked_after_decided_at(
+  ) -> Result<(), Box<dyn Error>> {
+    // Per Test #2 (PRD §6.2 step 4 escape branch — "any sponsor
+    // revoked since decided_at").
+    //
+    // Setup: BREHON_DISABLE_GRACE_CHECK_JOB=1.
+    //   1 sponsee + 1 sponsor. Endorsement seeded sponsor→sponsee.
+    //   ModerationCase status=SponsorLiabilityPending,
+    //     grace_expires_at = now() - 1 minute (expired),
+    //     decided_at = now() - 24h.
+    //   Sanction row seeded.
+    //   Surety seeded then revoked_at = now() - 1h
+    //     (revoked AFTER decided_at, BEFORE now()).
+    //
+    // Drive: run_grace_check_batch(&context).await.
+    //
+    // Assert:
+    //   - outcome.escaped == 1, outcome.fired == 0.
+    //   - case.status == SponsorLiabilityEscaped.
+    //   - case.liability_escape_reason IS Some(json) with expected shape.
+    //   - 0 reputation_event rows (escape branch skips apply_sponsor_liability).
+    //   - 1 governance_log "sponsor_liability_escaped".
+    //   - 0 governance_log "sponsor_liability_fired".
+    //   - 0 governance_log "sponsor_liability_applied".
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let (sponsee, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc2_escape_sponsee", false).await?;
+    let (sponsor, _) =
+      governance_fixtures::seed_user(&context, instance.id, "slc2_escape_sponsor", false).await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let now = Utc::now();
+    let decided_at = now - Duration::hours(24);
+    let grace_exp = now - Duration::minutes(1);
+
+    // Seed endorsement (sponsor → sponsee) before surety so
+    // evaluate_escape_conditions' endorsement-id lookup finds a row.
+    insert_into(endorsement::table)
+      .values(EndorsementInsertForm {
+        from_person_id: sponsor,
+        to_person_id: sponsee,
+        community_id: None,
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // Seed expired pending case.
+    let case_id = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_c2_escape_test".to_string(),
+        severity: CaseSeverity::Medium,
+        status: CaseStatus::SponsorLiabilityPending,
+        threshold_score: 100,
+        grace_expires_at: Some(grace_exp),
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::decided_at.eq(Some(decided_at)))
+      .execute(&mut conn)
+      .await?;
+
+    // Sanction row required — fire_or_escape_case_inner skips cases without one.
+    insert_into(sanction::table)
+      .values(SanctionInsertForm {
+        case_id,
+        scope: SanctionScope::Community,
+        action: SanctionAction::ContentRemoval,
+        target_person_id: Some(sponsee),
+        ends_at: None,
+        active: Some(true),
+        ..Default::default()
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // Seed surety then set revoked_at = now - 1h (after decided_at = now-24h,
+    // before now()) so evaluate_escape_conditions returns EscapeStatus::Escape.
+    let surety_id = insert_into(surety::table)
+      .values(SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsee,
+        community_id: None,
+      })
+      .returning(surety::id)
+      .get_result::<SuretyId>(&mut conn)
+      .await?;
+    update(surety::table.filter(surety::id.eq(surety_id)))
+      .set(surety::revoked_at.eq(Some(now - Duration::hours(1))))
+      .execute(&mut conn)
+      .await?;
+
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.escaped, 1, "escape branch: 1 case escaped");
+    assert_eq!(outcome.fired, 0, "escape branch: 0 cases fired");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let (case_status, escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityEscaped,
+      "case transitioned to SponsorLiabilityEscaped"
+    );
+
+    let json = escape_reason.expect("liability_escape_reason IS Some(json)");
+    assert_eq!(json["version"].as_i64(), Some(1), "version == 1");
+    assert_eq!(
+      json["reason"].as_str(),
+      Some("sponsor_revoked"),
+      "reason == sponsor_revoked"
+    );
+    assert!(
+      json["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string"
+    );
+    // ADR-015: actor_pseudonym must NOT equal raw sponsor PersonId.
+    assert_ne!(
+      json["actor_pseudonym"].as_str().unwrap_or(""),
+      &format!("{}", sponsor.0),
+      "actor_pseudonym is NOT raw sponsor PersonId (ADR-015)"
+    );
+    assert!(
+      json["endorsement_id"].as_i64().is_some(),
+      "endorsement_id present in JSONB"
+    );
+    assert!(
+      json["endorsement_id"].as_i64().unwrap_or(-1) >= 0,
+      "endorsement_id >= 0 (endorsement row was seeded)"
+    );
+
+    // Escape branch does NOT call apply_sponsor_liability — 0 reputation_event rows.
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "0 reputation_event rows (escape branch)");
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      1,
+      "1 escaped log entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "0 fired log entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "0 applied log entries"
+    );
+
+    let escaped_payload = read_log_payload(&mut conn, "sponsor_liability_escaped")
+      .await?
+      .expect("escaped payload exists");
+    assert!(
+      escaped_payload["actor_pseudonym"].is_string(),
+      "log payload actor_pseudonym is a string"
     );
 
     unsafe {
