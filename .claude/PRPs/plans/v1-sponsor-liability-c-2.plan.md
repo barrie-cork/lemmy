@@ -2510,6 +2510,53 @@ recommendations.
 
 ---
 
+## 19a. Task 1 replan — error-shape uniformity carry-forward (added 2026-05-09)
+
+After this plan shipped, v1-SL-c-2 Task 1 catch-fired three §G4
+mechanical-fix cycles on the same e2e.rs site (workflow runs
+`25582548670`, `25595869651`, `25603848858`). Root cause documented at
+`.claude/PRPs/debug/rca-sl-c-2-3-cycle-error-shape.md`. Resolution: a
+single-shot Task 1 replan via brief
+`.claude/PRPs/briefs/sl-c-2-impl-1-replan.md` adopting **uniform
+`LemmyResult<T>` throughout** (Case A per the amended
+`feedback_lemmy_error_no_std_error.md` lesson), mirroring the v1-SL-b
+canonical sibling at `crates/server/tests/e2e.rs:11001-11924`.
+
+**The §13 stub for Task 1 was wrong-shaped from the start.** It
+prescribed `Result<(), Box<dyn Error>>` for the test fn AND
+`Result<T, Box<dyn Error>>` for the 4 helpers, contradicting the c-1
+plan's §9.2 hand-off ("the fixture-mod section is non-binding for
+c-1 since c-1 ships no test code; it remains as documentation for
+c-2"). The planner-side miss introduced a 3-cycle impedance mismatch
+that no mechanical recipe could resolve.
+
+**Carry-forward to v1-SL-c-2 retro:**
+
+1. Tasks 2-5 §13 stubs already use `LemmyResult<()>` per the c-1
+   §9.2 hand-off; no edits needed for forward tasks. Verify at retro
+   time by grepping plan §13 Tasks 2-5 stubs for `LemmyResult<()>`
+   (expected: 4 hits) vs `Result<(), Box<dyn Error>>` (expected: 0).
+2. The plan-approval gate (DoD smoke + watchpoint specificity) does
+   not include "stub-shape uniformity check across sibling fixtures
+   modules" as a watchpoint. Recommend adding to
+   `feedback_advisor_watchpoint_specificity.md` or new lesson
+   `feedback_plan_stub_uniformity_with_canonical_sibling.md`.
+3. The §G4 row 4 split (4a/4b/4c per the lesson amendment) is in
+   place at `.claude/rules/advisor-orchestrator.md` §5.3. Future
+   E0277 LemmyError catch-fires will route per case enumeration; the
+   3-cycle pattern of this sub-phase will not reproduce.
+4. Per-task complexity score for Task 1 in retro should reflect
+   max-cycle-count × per-cycle wall-clock, NOT effective LOC delta —
+   the LOC delta is small but the wall-clock cost was ~17 min × 3
+   cycles + brief authoring overhead. Per
+   `feedback_retro_task_complexity_score.md`.
+
+**No changes to plan task count, ordering, DoD commands, or
+acceptance criteria.** This carry-forward is documentary only — the
+replan is in the brief, not the plan.
+
+---
+
 ## 20. Confidence score
 
 - **Plan correctness:** 9/10 — patterns mirror
