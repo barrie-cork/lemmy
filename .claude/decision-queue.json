@@ -1,5 +1,28 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 189,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T20:45:54Z",
+      "question": "Does Phase 2 e2e pass for v1-SL-d phase branch tip 78771349e?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "All 7 impl tasks workspace-checked (DQ #195-#199 pass on phase branch). Phase 2 local e2e run on laptop via cargo-test.bat. Branch: phase-v1-SL-d tip 78771349e.",
+      "branch": "phase-v1-SL-d",
+      "phase_task": 7,
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-d-78771349e.log",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 186,
