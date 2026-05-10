@@ -1,0 +1,53 @@
+schema_version: 1
+pr: 123
+title: 'feat(v1-SL-d): sponsor-liability compute/fire split + submit_jury_vote pending transition + e2e tests'
+head: phase-v1-SL-d
+base: governance-v0
+opened_at: 2026-05-10T22:00:10Z
+last_poll_at: 2026-05-10T22:05:18Z
+poll_count: 1
+last_polled_head_sha: 2600531dc65e1710be8696318143b1f6401b90bf
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings: []
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 0
+    claude: 0
+    user: 0
+  total: 0
+merged_at: null
+merge_commit: null
+final_recommendation: null
+notes: 'CodeRabbit review in progress (posted in-progress notice at 2026-05-10T22:04:21Z). No actionable findings ingested yet.'
