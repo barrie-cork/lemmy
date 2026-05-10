@@ -67,7 +67,7 @@
       ],
       "answer": "cargo clippy failed: #[expect(dead_code)] expectation is unfulfilled on line 164 of sponsor_liability.rs \u2014 the helper is actually being used, so the expectation does not match reality",
       "answered_by": "ci-watcher",
-      "resolved_at": "2026-05-10T12:37:23.711206Z"
+      "resolved_at": "2026-05-10T12:38:31.293134Z"
     }
   ],
   "resolved": [
