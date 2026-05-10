@@ -41,48 +41,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 195,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T22:00:00Z",
-      "workflow_run_id": 25636769989,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
-      "phase_task": 4,
-      "question": "cargo-validate-workspace workflow for v1-RT-r1 task 4 branch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "impl-task pushed task 4 seed migration (26 rows) to worker branch. cargo-validate-workspace.yml queued (run id 25636769989). Awaiting ci-watcher mutation.",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 196,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T22:00:00Z",
-      "workflow_run_id": 25636769981,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
-      "phase_task": 4,
-      "question": "cargo-validate-migration workflow for v1-RT-r1 task 4 branch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "impl-task pushed task 4 seed migration (26 rows) to worker branch. cargo-validate-migration.yml queued (run id 25636769981). Awaiting ci-watcher mutation.",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3433,6 +3391,48 @@
       "answer": "Workflow run completed successfully.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T19:31:44.941980Z"
+    },
+    {
+      "id": 195,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T22:00:00Z",
+      "workflow_run_id": 25636769989,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
+      "phase_task": 4,
+      "question": "cargo-validate-workspace workflow for v1-RT-r1 task 4 branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-task pushed task 4 seed migration (26 rows) to worker branch. cargo-validate-workspace.yml queued (run id 25636769989). Awaiting ci-watcher mutation.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow completed successfully",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:30:33.682077Z"
+    },
+    {
+      "id": 196,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T22:00:00Z",
+      "workflow_run_id": 25636769981,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
+      "phase_task": 4,
+      "question": "cargo-validate-migration workflow for v1-RT-r1 task 4 branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-task pushed task 4 seed migration (26 rows) to worker branch. cargo-validate-migration.yml queued (run id 25636769981). Awaiting ci-watcher mutation.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow completed successfully",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:30:33.682077Z"
     }
   ],
   "schema_version": 2
