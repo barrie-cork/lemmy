@@ -161,7 +161,6 @@ fn severity_for_action(action: SanctionAction) -> LiabilitySeverity {
 /// `_ =>` wildcard per ADR-013. Both `High` and `Critical` map to `Severe`
 /// (the longest grace window, 168 h by default) so the harshest sanctions
 /// always give sponsors the most time to revoke.
-#[expect(dead_code)]
 fn liability_severity_from_case_severity(severity: CaseSeverity) -> LiabilitySeverity {
   match severity {
     CaseSeverity::Low => LiabilitySeverity::Minor,
