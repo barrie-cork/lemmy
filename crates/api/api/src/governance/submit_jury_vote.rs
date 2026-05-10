@@ -502,7 +502,7 @@ async fn process_vote(
   // 8.9. Flip case status. Pending path sets SponsorLiabilityPending + grace_expires_at;
   // Decided path sets Decided. Step 9 (appeal_window_expires_at) fires on both paths.
   if path_kind == SLDPathKind::Pending {
-    let grace_expires_at = sld_grace_expires_at.expect("set in 8.5 Pending branch");
+    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into()))?;
     update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
       .set((
         moderation_case::status.eq(CaseStatus::SponsorLiabilityPending),
@@ -690,8 +690,8 @@ async fn process_vote(
   // 9b. Sponsor-liability-pending log entry (Pending path only).
   if path_kind == SLDPathKind::Pending {
     let (target_pseudonym, severity_str, sponsors_pseudonyms) =
-      sld_log_data.expect("set in 8.5 Pending branch");
-    let grace_expires_at = sld_grace_expires_at.expect("set in 8.5 Pending branch");
+      sld_log_data.ok_or_else(|| LemmyErrorType::Unknown("sld_log_data missing on Pending path".into()))?;
+    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into()))?;
     governance_log::append(
       &mut conn.into(),
       ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
