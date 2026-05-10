@@ -117,27 +117,6 @@
       "failed_jobs": [
         "validate workspace"
       ]
-    },
-    {
-      "id": 199,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T19:10:09Z",
-      "question": "Does cargo-validate-workspace pass for sl-d task 7 (unit tests) on junior branch?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 7 appended #[cfg(test)] mod tests block with 2 #[tokio::test] fns to sponsor_liability.rs. Uses diesel_async::AsyncPgConnection + DATABASE_URL (no testcontainers); skips gracefully when DATABASE_URL absent. workflow_run_id=25637289127.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "workflow_run_id": 25637289127,
-      "branch": "junior/role-impl-task-v1-sl-d-task-7-unit-tests-compute-idempotency-grace-window-severity-mapping-see-claude-prps-briefs-s-213",
-      "phase_task": 7,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null
     }
   ],
   "resolved": [
@@ -3530,6 +3509,27 @@
       "answer": "workspace validation passed",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T18:53:32.064529Z"
+    },
+    {
+      "id": 199,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:10:09Z",
+      "question": "Does cargo-validate-workspace pass for sl-d task 7 (unit tests) on junior branch?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 appended #[cfg(test)] mod tests block with 2 #[tokio::test] fns to sponsor_liability.rs. Uses diesel_async::AsyncPgConnection + DATABASE_URL (no testcontainers); skips gracefully when DATABASE_URL absent. workflow_run_id=25637289127.",
+      "answer": "Workflow run 25637289127 passed all checks: cargo check, cargo clippy, cargo test compile",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:46:30.842673Z",
+      "workflow_run_id": 25637289127,
+      "branch": "junior/role-impl-task-v1-sl-d-task-7-unit-tests-compute-idempotency-grace-window-severity-mapping-see-claude-prps-briefs-s-213",
+      "phase_task": 7,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null
     }
   ],
   "schema_version": 2
