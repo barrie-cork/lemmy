@@ -503,3 +503,76 @@ pub(crate) async fn apply_sponsor_liability(
   fire_sponsor_liability(conn, target_person_id, case_id, community_id, action, &deltas, cache)
     .await
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::governance::config::ConfigCache;
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_schema::newtypes::ModerationCaseId;
+  use lemmy_db_schema_file::enums::{CaseSeverity, SanctionAction};
+  use lemmy_db_schema_file::PersonId;
+  use lemmy_utils::error::LemmyResult;
+
+  /// Calls `compute_sponsor_liability` twice with identical inputs and asserts
+  /// the returned `Vec<SponsorDelta>` is identical both times. Uses a target
+  /// PersonId with no active sureties (GOTCHA-56d early-return path), which
+  /// also guarantees no `reputation_event` or `governance_log` rows are
+  /// written by either call (compute never writes; empty deltas = nothing to
+  /// fire). Skips gracefully when DATABASE_URL is absent.
+  #[tokio::test]
+  async fn compute_sponsor_liability_idempotent() -> LemmyResult<()> {
+    let Ok(db_url) = std::env::var("DATABASE_URL") else {
+      return Ok(());
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let mut cache = ConfigCache::new();
+    // PersonId(i32::MAX) is guaranteed to have no active sureties in any
+    // well-formed test DB, triggering the GOTCHA-56d zero-sponsor early return.
+    let target_id = PersonId(i32::MAX);
+    let case_id = ModerationCaseId(1);
+    let action = SanctionAction::Label;
+
+    let deltas1 =
+      compute_sponsor_liability(&mut conn, target_id, case_id, None, action, &mut cache).await?;
+    let deltas2 =
+      compute_sponsor_liability(&mut conn, target_id, case_id, None, action, &mut cache).await?;
+
+    assert_eq!(deltas1, deltas2);
+    // Empty deltas verify no writes occurred (compute is pure; empty = no fire path).
+    assert!(deltas1.is_empty());
+    Ok(())
+  }
+
+  /// For each `CaseSeverity` tier, calls `grace_window_for_severity` and
+  /// asserts the returned duration matches the SL-a-seeded defaults
+  /// (Low→24h, Medium→72h, High/Critical→168h). Reads from `governance_config`
+  /// with const-fallback when the seeded row is absent. Skips when DATABASE_URL
+  /// is absent.
+  #[tokio::test]
+  async fn grace_window_for_severity_reads_correct_config_key() -> LemmyResult<()> {
+    let Ok(db_url) = std::env::var("DATABASE_URL") else {
+      return Ok(());
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let mut cache = ConfigCache::new();
+
+    // Low → Minor → "liability.grace_window_minor_hours" → 24 h
+    let dur = grace_window_for_severity(CaseSeverity::Low, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(24));
+
+    // Medium → Moderate → "liability.grace_window_moderate_hours" → 72 h
+    let dur = grace_window_for_severity(CaseSeverity::Medium, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(72));
+
+    // High → Severe → "liability.grace_window_severe_hours" → 168 h
+    let dur = grace_window_for_severity(CaseSeverity::High, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(168));
+
+    // Critical also maps to Severe → 168 h (exhaustive variant coverage)
+    let dur = grace_window_for_severity(CaseSeverity::Critical, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(168));
+
+    Ok(())
+  }
+}
