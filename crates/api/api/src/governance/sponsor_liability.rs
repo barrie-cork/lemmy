@@ -161,6 +161,7 @@ fn severity_for_action(action: SanctionAction) -> LiabilitySeverity {
 /// `_ =>` wildcard per ADR-013. Both `High` and `Critical` map to `Severe`
 /// (the longest grace window, 168 h by default) so the harshest sanctions
 /// always give sponsors the most time to revoke.
+#[allow(dead_code)]
 fn liability_severity_from_case_severity(severity: CaseSeverity) -> LiabilitySeverity {
   match severity {
     CaseSeverity::Low => LiabilitySeverity::Minor,
@@ -179,6 +180,7 @@ fn liability_severity_from_case_severity(severity: CaseSeverity) -> LiabilitySev
 /// Pure read; idempotent. Severity snapshot semantics: the caller passes
 /// `case_row.severity` (snapshotted at jury-assemble time per ADR-010 — not
 /// re-derived from config at grace-window computation time).
+#[allow(dead_code)]
 pub(crate) async fn grace_window_for_severity(
   severity: CaseSeverity,
   cache: &mut ConfigCache,
