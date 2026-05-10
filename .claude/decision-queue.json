@@ -1,5 +1,174 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 189,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 1 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 pushed migration to worker branch. Workflow run id: 25636750748. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636750748,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 190,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 1 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 pushed migration to worker branch. Workflow run id: 25636750747. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636750747,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 191,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 2 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 pushed migration to worker branch. Workflow run id: 25636745850. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636745850,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 192,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 2 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 pushed migration to worker branch. Workflow run id: 25636745854. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636745854,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 193,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 3 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 pushed migration to worker branch. Workflow run id: 25636774572. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636774572,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-3-backfill-reputation-event-source-event-type-per-dq-184-see-claude-prps-briefs-rt-r1-210",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 194,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 3 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 pushed migration to worker branch. Workflow run id: 25636774556. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636774556,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-3-backfill-reputation-event-source-event-type-per-dq-184-see-claude-prps-briefs-rt-r1-210",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 195,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 4 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 pushed migration to worker branch. Workflow run id: 25636769989. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636769989,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 196,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T19:00:00Z",
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 4 — await ci-watcher result (renumbered from collision)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 pushed migration to worker branch. Workflow run id: 25636769981. Renumbered from 4-way DQ collision (all 4 cohort members wrote #189+#190 simultaneously per advisor race-recovery 2026-05-10).",
+      "workflow_run_id": 25636769981,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-4-seed-26-net-new-reputation-tuning-config-keys-per-dq-187-see-claude-prps-briefs-rt-211",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 186,
