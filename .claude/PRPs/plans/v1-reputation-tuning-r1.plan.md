@@ -7,7 +7,7 @@ v1-RT-r1 is the **schema + seed foundation** of the v1 reputation-tuning lane (P
 1. **One column-add migration** on `reputation_event` — new `dedupe_key TEXT` nullable (with partial unique index `WHERE dedupe_key IS NOT NULL`) + new `source_event_type` Postgres enum + matching `reputation_event.source_event_type` column NOT NULL DEFAULT `'Endorsement'`.
 2. **One ALTER migration** on the existing `sponsor_allowlist` table (shipped pre-v1-AD-a per DQ #181 — RT-r1 EXTENDS, does NOT create): drop `community_id NOT NULL`, add `added_by_admin_id INTEGER NOT NULL REFERENCES person(id)`, add `note TEXT`. Existing `created_at` stays; existing `UNIQUE (community_id, person_id)` stays.
 3. **One backfill migration** on existing `reputation_event` rows: populate `source_event_type` from a `reason` ILIKE precedence chain per DQ #184 (sponsor_liability% -> SponsorLiability; jury_reliability% -> JuryVote; founder_seed% -> FounderSeed; otherwise default `Endorsement` from the column DEFAULT).
-4. **One seed migration** with **26 net-new** `governance_config` rows (per planner DQ #186 below: 29 PRD §8 rows minus 3 already-shipped under v1-AD-a — `deltas.participation_weekly_active`, `participation.dormancy_window_days`, `deltas.participation_dormant`).
+4. **One seed migration** with **26 net-new** `governance_config` rows (per planner DQ #187 below: 29 PRD §8 rows minus 3 already-shipped under v1-AD-a — `deltas.participation_weekly_active`, `participation.dormancy_window_days`, `deltas.participation_dormant`).
 5. **`EXPECTED_SEED_COUNT_V1_RT: usize = 26`** parametric const + parity-test extension at `crates/api/api/src/governance/config.rs:2692-2707`. Cumulative invariant: `34 + 27 + 27 + 13 + 26 = 127`.
 6. **One Diesel-backed Rust enum** (`ReputationEventSourceType`, 9 variants per PRD §7) in `crates/db_schema_file/src/enums.rs` mirroring `ReputationDimension`'s `verbatim` `DbValueStyle`.
 7. **`schema.rs` extensions**: new `sql_types::ReputationEventSourceType` struct; `reputation_event` table block extended with `dedupe_key + source_event_type`; `sponsor_allowlist` table block extended with `community_id` made nullable + `added_by_admin_id + note`.
@@ -106,7 +106,7 @@ Per PRD §9 backwards-compat: v0 single-half-life decay path keeps reading `deca
 
 ### 4.1 Rejected alternatives
 
-- **Seed all 29 PRD §8 rows including the 3 v1-AD-a duplicates.** Rejected per planner DQ #186: parity test would fail.
+- **Seed all 29 PRD §8 rows including the 3 v1-AD-a duplicates.** Rejected per planner DQ #187: parity test would fail.
 - **CREATE a fresh `sponsor_allowlist` table.** Rejected per DQ #181: r1 ALTERs.
 - **Migration-SQL seed pattern at `crates/db_schema/migrations/`.** Rejected: actual migration directory is repo-root `migrations/`.
 - **Pure-Rust seed-utils module at `crates/db_schema/src/utils/v1_rt_config_seed.rs`.** Rejected per DQ #183.
@@ -284,7 +284,7 @@ The implementation agent MUST read these at first iteration before any file edit
 | Priority | File | Lines | Why |
 |---|---|---|---|
 | P0 | `.claude/PRPs/prds/v1-reputation-tuning.prd.md` | §5.3, §5.4, §7, §8, §9.1, §15 row 1 | Canonical schema, defaults matrix, scope boundary |
-| P0 | `.claude/decision-queue.json` resolved entries #181-#186 | full | Pre-planning clarify resolutions + planner DQ #186 |
+| P0 | `.claude/decision-queue.json` resolved entries #181-#186 | full | Pre-planning clarify resolutions + planner DQ #187 |
 | P0 | `.claude/PRPs/plans/phase-v1-JM-a.plan.md` | §13 task list, §15 DoD, §10.7-§10.10, Task 7-10 | Closest-shape precedent. Mirror byte-for-byte. |
 | P0 | `.claude/PRPs/plans/v1-sponsor-liability-a.plan.md` | §13 Task 1, §10.6, §15.6 | Shape-G plan precedent + parametric pattern + per-task `[P]` cohort markers |
 | P0 | `.claude/rules/governance-log-entry-kind-registry.md` | full | Registry invariants + dual-file rule + reservation section to populate |
@@ -514,7 +514,7 @@ WHERE source_event_type IN ('SponsorLiability', 'JuryVote', 'FounderSeed');
 -- v1-RT-r1 task 4: seed 26 reputation-tuning-owned governance_config rows.
 -- ============================================================
 -- Authoritative scope: PRD section 8 (29 rows) MINUS 3 v1-AD-a-shipped
--- per planner DQ #186:
+-- per planner DQ #187:
 --   - deltas.participation_weekly_active
 --   - participation.dormancy_window_days
 --   - deltas.participation_dormant
@@ -528,7 +528,7 @@ WHERE source_event_type IN ('SponsorLiability', 'JuryVote', 'FounderSeed');
 --   - PRD: section 8 Defaults Matrix
 --   - Plan: section 10.4, Task 4
 --   - DQ #185 (advisor): conceptual count is 29
---   - DQ #186 (planner): net-new is 26
+--   - DQ #187 (planner): net-new is 26
 -- ============================================================
 
 INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text) VALUES
@@ -838,7 +838,7 @@ pub struct SponsorAllowlistInsertForm {
 // -- v1-RT-r1 additions (reputation-tuning sub-phase r1) -------------
 //
 // 26 net-new keys per PRD section 8 minus 3 v1-AD-a-shipped duplicates
-// per planner DQ #186. Their DEFAULT_* consts + SEEDED_KEYS_WITH_CONSTS
+// per planner DQ #187. Their DEFAULT_* consts + SEEDED_KEYS_WITH_CONSTS
 // + CONFIG_KEY_METADATA entries are owned by v1-AD-a and stay there.
 
 // 8 decay.<dimension>.<direction>_half_life_days (i64):
@@ -895,7 +895,7 @@ pub const DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED: bool = false;
 // v1-SL-a block (alphabetised within the new block by key):
 
   // v1-RT-r1 additions (26 net-new keys per PRD section 8 minus 3
-  // v1-AD-a-shipped duplicates per DQ #186).
+  // v1-AD-a-shipped duplicates per DQ #187).
   ("bounds.endorsement_strength.ceiling",                       "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING",                       "int"),
   ("bounds.endorsement_strength.floor",                         "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR",                         "int"),
   ("bounds.jury_reliability.ceiling",                           "DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING",                           "int"),
@@ -928,7 +928,7 @@ pub const DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED: bool = false;
 /// v1-RT-r1 adds 26 reputation-tuning-owned keys to
 /// SEEDED_KEYS_WITH_CONSTS. Parametric per advisor directive 2026-04-19 #4.
 /// Net-new: PRD section 8 lists 29 conceptual rows; 3 already shipped
-/// under v1-AD-a per planner DQ #186 — those count under V1_AD's 27.
+/// under v1-AD-a per planner DQ #187 — those count under V1_AD's 27.
 /// Cumulative: 34 + 27 + 27 + 13 + 26 = 127.
 pub const EXPECTED_SEED_COUNT_V1_RT: usize = 26;
 
@@ -1124,7 +1124,7 @@ Update "Confirmed exempt" enumeration to include the 7 RT-r1 consts and downstre
 - **Negative-band-with-reintegration** — out per OQ-021.
 - **Cross-instance reputation portability** — federation-v2/v3.
 - **Backfill smoke test as a NEW e2e test fn** — defers (Task 10 extends existing test only).
-- **Seeding the 3 v1-AD-a duplicates a second time** — out per planner DQ #186.
+- **Seeding the 3 v1-AD-a duplicates a second time** — out per planner DQ #187.
 - **Editing v1-AD-a's `SEEDED_KEYS_WITH_CONSTS` to migrate ownership** — would break locked V1_AD = 27.
 
 ## 13. Step-by-step tasks
@@ -1188,7 +1188,7 @@ for eid in [181, 182, 183, 184, 185, 186]:
 # Probe 6 — Pre-existing v1-AD-a 3 duplicate keys present
 grep -E "deltas.participation_weekly_active|participation.dormancy_window_days|deltas.participation_dormant" \
   migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql | wc -l
-# EXPECT: 3 (per planner DQ #186)
+# EXPECT: 3 (per planner DQ #187)
 
 # Probe 7 — concurrent-PR check
 gh pr list --repo barrie-cork/lemmy --state open --json number,title,headRefName,files \
@@ -1343,14 +1343,14 @@ diff \
 # Negative check: no key in up.sql is one of the 3 v1-AD-a duplicates
 grep -E "deltas.participation_weekly_active|participation.dormancy_window_days|deltas.participation_dormant" \
   migrations/2026-05-10-000300-0000_seed_v1_rt_config_keys/up.sql
-# Expected: empty (RT-r1 must NOT re-seed v1-AD-a-shipped duplicates per DQ #186)
+# Expected: empty (RT-r1 must NOT re-seed v1-AD-a-shipped duplicates per DQ #187)
 ```
 
 If any check fails, DO NOT commit.
 
 **MIRROR:** §10.4; `migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql`.
 
-**GOTCHA (per DQ #186):** the 3 duplicates are NOT in this migration.
+**GOTCHA (per DQ #187):** the 3 duplicates are NOT in this migration.
 
 **GOTCHA:** value_type discriminator: 24 rows are 'int', 2 rows are 'bool', 0 rows are 'float', 0 rows are 'text'.
 
@@ -1485,7 +1485,7 @@ If any count disagrees, DO NOT commit.
 
 **GOTCHA (R11):** parametric pattern mandatory. Do NOT bump locked counts.
 
-**GOTCHA (per DQ #186):** the 3 v1-AD-a duplicates NOT in v1-RT-r1 SEEDED_KEYS block.
+**GOTCHA (per DQ #187):** the 3 v1-AD-a duplicates NOT in v1-RT-r1 SEEDED_KEYS block.
 
 **GOTCHA (per `feedback_features_full_p_crate_incompatible.md`):** `--workspace --features full`, never `-p`.
 
@@ -1567,7 +1567,7 @@ modifies: []
 
 **IMPLEMENT:** mirror `.claude/PRPs/reports/v1-SL-c-2-retro.md`. Document specifically:
 
-- The **planner DQ #186 discovery** — was the brief author's PRD-mechanical V1_RT count of 29 a planner-time miss or advisor-time miss? Recommend a `feedback_*` lesson if pattern reproduces.
+- The **planner DQ #187 discovery** — was the brief author's PRD-mechanical V1_RT count of 29 a planner-time miss or advisor-time miss? Recommend a `feedback_*` lesson if pattern reproduces.
 - Whether all `[P]` cohorts parallelised cleanly on the EliteDesk daemon.
 - Whether §13 task ordering minimised the number of barriers.
 - Phase 2 e2e wall-clock under Shape G (local vs dispatch).
@@ -1749,7 +1749,7 @@ Plan-side DoD: e2e exit code 0; failure path -> §G4 classifier on log slice.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Plan-count drift: 26 estimated, actual count differs | LOW | LOW | Task 4 + Task 8 reconciliation gates MANDATORY pre-commit. |
-| The 3 v1-AD-a duplicates re-enter v1-RT-r1 SEEDED_KEYS block | LOW | MED | Task 4 negative grep + Task 8 reconciliation both fail-loud. Plan §10.4/§10.6/§10.8 cite DQ #186 explicitly. |
+| The 3 v1-AD-a duplicates re-enter v1-RT-r1 SEEDED_KEYS block | LOW | MED | Task 4 negative grep + Task 8 reconciliation both fail-loud. Plan §10.4/§10.6/§10.8 cite DQ #187 explicitly. |
 | Backfill UPDATE misclassifies a row (reason doesn't match expected pattern) | LOW | LOW | Heuristic best-effort per PRD §7. r3 emitters write source_event_type explicitly going forward. |
 | Dual-file ENTRY_KIND edit lands asymmetrically | LOW | MED | Task 9 single-commit-three-files; CI count check catches asymmetry. |
 | `sponsor_allowlist` ALTER (community_id DROP NOT NULL) fails on pre-populated table | NONE | n/a | v1-AD-a doc-comment confirms table empty. Task 0 Probe 4 confirms. |
@@ -1764,14 +1764,14 @@ Plan-side DoD: e2e exit code 0; failure path -> §G4 classifier on log slice.
 
 ## 19. Notes
 
-- **Planner DQ #186 (filed in this plan-write commit).** During planning §13 Task 4 enumeration, the planner discovered that 3 of the 29 PRD §8 rows are already shipped under v1-AD-a's seed migration (`migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39`):
+- **Planner DQ #187 (filed in this plan-write commit).** During planning §13 Task 4 enumeration, the planner discovered that 3 of the 29 PRD §8 rows are already shipped under v1-AD-a's seed migration (`migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39`):
   - `deltas.participation_weekly_active` (default 1 — matches PRD §8 row 17)
   - `participation.dormancy_window_days` (default 30 — matches PRD §8 row 21)
   - `deltas.participation_dormant` (default -2 — matches PRD §8 row 20)
 
   Re-seeding via RT-r1 migration would attempt 3 redundant `INSERT INTO governance_config` calls (`ON CONFLICT DO NOTHING` swallows them), but adding their entries to `SEEDED_KEYS_WITH_CONSTS` v1-RT-r1 block AND to `CONFIG_KEY_METADATA` would break the parity test (`every_seeded_key_has_metadata` enforces 1-to-1 length match between the two arrays; duplicate keys are fatal).
 
-  Resolution (planner-self-resolved per `decision-queue.md` Recipe 3): RT-r1 seed migration ships **26 net-new rows**. `EXPECTED_SEED_COUNT_V1_RT = 26`. Cumulative: 34 + 27 + 27 + 13 + 26 = 127. The 3 duplicates remain owned by V1_AD's count — they conceptually belong to RT-tuning, but count-bookkeeping reflects ship history. The DQ #185 advisor answer (V1_RT = 29) is treated as "logical count per PRD §8 verbatim"; the planner's count revision (V1_RT = 26) reflects ship-history accuracy. The advisor will see this DQ #186 entry on the next polling tick and may reject (forcing different resolution like ownership migration); default behaviour is acceptance.
+  Resolution (planner-self-resolved per `decision-queue.md` Recipe 3): RT-r1 seed migration ships **26 net-new rows**. `EXPECTED_SEED_COUNT_V1_RT = 26`. Cumulative: 34 + 27 + 27 + 13 + 26 = 127. The 3 duplicates remain owned by V1_AD's count — they conceptually belong to RT-tuning, but count-bookkeeping reflects ship history. The DQ #185 advisor answer (V1_RT = 29) is treated as "logical count per PRD §8 verbatim"; the planner's count revision (V1_RT = 26) reflects ship-history accuracy. The advisor will see this DQ #187 entry on the next polling tick and may reject (forcing different resolution like ownership migration); default behaviour is acceptance.
 
 - **Advisor directive #4 (parametric pattern).** Per `crates/api/api/src/governance/config.rs:1395-1401`: each v1 sub-PRD adds its own `EXPECTED_SEED_COUNT_V1_*` without churning others. RT-r1 honours.
 
@@ -1793,7 +1793,7 @@ Plan-side DoD: e2e exit code 0; failure path -> §G4 classifier on log slice.
 **Rationale:**
 
 - **Plus**: Every task mirrors a specific JM-a / SL-a task byte-for-byte. Pattern is fresh and reproducible. Task 4 + Task 8 reconciliation gates catch the only realistic count-drift class. Migration set is mechanical; no business logic. The 7 ENTRY_KIND consts are declared-only. Diesel struct extensions follow `feedback_insertform_default_propagation.md` precisely.
-- **Minus**: Planner DQ #186 (the 3-duplicate revision) is a planner-time discovery; if the advisor disagrees and forces V1_RT = 29 with ownership-migration, the plan needs §10.4 + §10.6 + §10.8 + §13 Task 4 + Task 8 revisions. Task 7's `SponsorAllowlistInsertForm.added_by_admin_id` change may break a hypothetical v1-AD-a-era caller (verified zero callers at plan-write). Cohort A 4-way [P] is one beyond the 3-way SL-a precedent.
+- **Minus**: Planner DQ #187 (the 3-duplicate revision) is a planner-time discovery; if the advisor disagrees and forces V1_RT = 29 with ownership-migration, the plan needs §10.4 + §10.6 + §10.8 + §13 Task 4 + Task 8 revisions. Task 7's `SponsorAllowlistInsertForm.added_by_admin_id` change may break a hypothetical v1-AD-a-era caller (verified zero callers at plan-write). Cohort A 4-way [P] is one beyond the 3-way SL-a precedent.
 - **Risk floor**: `cargo check --workspace --features full` + `cargo clippy --no-deps -- -D warnings` are early-fail signals.
 
 **Next step:** advisor approves plan after §15 DoD smoke test + §3.5 watchpoint specificity gate. On approval, queue `bm-cut` for `phase-v1-RT-r1`, then Task 0 + Cohort A.
