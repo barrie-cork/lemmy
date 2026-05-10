@@ -1,5 +1,6 @@
 {
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": 173,
       "from": "impl",
@@ -14,15 +15,13 @@
       "workflow_run_id": 25613695291,
       "branch": "junior/role-impl-task-sl-c-2-impl-4-e2e-test-4-per-case-isolation-one-bad-case-doesn-t-block-batch-see-claude-prps-br-172",
       "phase_task": "4",
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
-  "resolved": [
+      "answer": "Pass. cargo-validate-workspace succeeded (conclusion=success, wrid=25613695291). Task 4 per-case isolation test compiles cleanly. Advance to Task 5 dispatch.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-09T23:12:36Z"
+    },
     {
       "id": 168,
       "from": "advisor",
