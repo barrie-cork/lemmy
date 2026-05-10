@@ -1,48 +1,6 @@
 {
   "pending": [
     {
-      "id": 189,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T00:00:00Z",
-      "workflow_run_id": 25636745850,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
-      "phase_task": 2,
-      "question": "cargo-validate-workspace run for task 2 (extend sponsor_allowlist migration)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 commit b71781fb6 pushed to worker branch. cargo-validate-workspace workflow run 25636745850 in progress.",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 190,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T00:00:00Z",
-      "workflow_run_id": 25636745854,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
-      "phase_task": 2,
-      "question": "cargo-validate-migration run for task 2 (extend sponsor_allowlist migration)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 commit b71781fb6 pushed to worker branch. cargo-validate-migration workflow run 25636745854 in progress.",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
       "id": 191,
       "from": "impl",
       "kind": "validate-pending",
@@ -50,7 +8,7 @@
       "workflow_run_id": 25636750748,
       "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
       "phase_task": 1,
-      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 1 migration — await ci-watcher result",
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
       "options": [
         "pass",
         "fail"
@@ -71,7 +29,7 @@
       "workflow_run_id": 25636750747,
       "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
       "phase_task": 1,
-      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 1 migration — await ci-watcher result",
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
       "options": [
         "pass",
         "fail"
@@ -119,7 +77,6 @@
       "workflow_run_id": 25636774556,
       "branch": "junior/role-impl-task-v1-rt-r1-task-3-backfill-reputation-event-source-event-type-per-dq-184-see-claude-prps-briefs-rt-r1-210",
       "phase_task": 3,
-
       "result": null,
       "log_slice": null,
       "failed_jobs": null,
@@ -3434,6 +3391,48 @@
       "answer": "(a) dual-const + doc-comment. Reasoning: option (b) loses auditability \u2014 future PRD section 8 reader sees \"29 knobs in PRD\" but \"26 in code parametric\", and the 3-overlap rationale lives only in DQ #187 archive. Option (c) is rejected (churns ship-history). Option (a) preserves V1_AD = 27 ship-count, adds V1_RT_NETNEW = 26 (parity-test active), V1_RT_LOGICAL = 29 (audit-only), with a 3-line doc-comment naming the 3 v1-AD-a-overlap keys. Plan revisions: section 10.8 (parity test extension) keeps EXPECTED_SEED_COUNT_V1_RT_NETNEW = 26 in cumulative invariant 34+27+27+13+26=127; ADD EXPECTED_SEED_COUNT_V1_RT_LOGICAL = 29 with doc-comment \"PRD section 8 conceptual count; 3 of these (deltas.participation_weekly_active, participation.dormancy_window_days, deltas.participation_dormant) are owned by V1_AD ship-count per migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39\"; NO assertion uses _LOGICAL. Plan section 13 Task 8 IMPLEMENT files unchanged (same file: config.rs); Task 8 commit body lists both consts. Per user directive 2026-05-10 supersedes planner DQ #187 framing only on documentation surface; ship-history accuracy preserved.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-10T15:30:00Z"
+    },
+    {
+      "id": 189,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T00:00:00Z",
+      "workflow_run_id": 25636745850,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
+      "phase_task": 2,
+      "question": "cargo-validate-workspace run for task 2 (extend sponsor_allowlist migration)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 commit b71781fb6 pushed to worker branch. cargo-validate-workspace workflow run 25636745850 in progress.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run completed successfully",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:30:31.221784Z"
+    },
+    {
+      "id": 190,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T00:00:00Z",
+      "workflow_run_id": 25636745854,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-2-extend-sponsor-allowlist-for-r4-admin-readers-see-claude-prps-briefs-rt-r1-impl-2-md-209",
+      "phase_task": 2,
+      "question": "cargo-validate-migration run for task 2 (extend sponsor_allowlist migration)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 commit b71781fb6 pushed to worker branch. cargo-validate-migration workflow run 25636745854 in progress.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run completed successfully",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:30:31.221798Z"
     }
   ],
   "schema_version": 2
