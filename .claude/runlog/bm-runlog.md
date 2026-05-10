@@ -1736,3 +1736,5 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **title:** Phase v1-SL-c-2 — 5 grace_check e2e tests + registry marker retro
 - **body source:** interim retro + plan + commits
 
+
+## 2026-05-10T05:45:00Z advisor: cherry-pick-merge phase-v1-SL-c-2 onto governance-v0 (PR #122 closed — DQ conflict prevented gh pr merge; 6 Rust test commits cherry-picked directly; phase branch deleted)
