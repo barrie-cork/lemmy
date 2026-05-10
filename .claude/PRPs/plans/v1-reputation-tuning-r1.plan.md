@@ -8,7 +8,7 @@ v1-RT-r1 is the **schema + seed foundation** of the v1 reputation-tuning lane (P
 2. **One ALTER migration** on the existing `sponsor_allowlist` table (shipped pre-v1-AD-a per DQ #181 — RT-r1 EXTENDS, does NOT create): drop `community_id NOT NULL`, add `added_by_admin_id INTEGER NOT NULL REFERENCES person(id)`, add `note TEXT`. Existing `created_at` stays; existing `UNIQUE (community_id, person_id)` stays.
 3. **One backfill migration** on existing `reputation_event` rows: populate `source_event_type` from a `reason` ILIKE precedence chain per DQ #184 (sponsor_liability% -> SponsorLiability; jury_reliability% -> JuryVote; founder_seed% -> FounderSeed; otherwise default `Endorsement` from the column DEFAULT).
 4. **One seed migration** with **26 net-new** `governance_config` rows (per planner DQ #187 below: 29 PRD §8 rows minus 3 already-shipped under v1-AD-a — `deltas.participation_weekly_active`, `participation.dormancy_window_days`, `deltas.participation_dormant`).
-5. **`EXPECTED_SEED_COUNT_V1_RT: usize = 26`** parametric const + parity-test extension at `crates/api/api/src/governance/config.rs:2692-2707`. Cumulative invariant: `34 + 27 + 27 + 13 + 26 = 127`.
+5. **`EXPECTED_SEED_COUNT_V1_RT_NETNEW: usize = 26`** + **`EXPECTED_SEED_COUNT_V1_RT_LOGICAL: usize = 29`** dual-const audit surface (per advisor DQ #188 directive 2026-05-10) + back-compat alias `EXPECTED_SEED_COUNT_V1_RT = EXPECTED_SEED_COUNT_V1_RT_NETNEW` + parity-test extension at `crates/api/api/src/governance/config.rs:2692-2707`. Cumulative invariant: `34 + 27 + 27 + 13 + 26 = 127` (parity test uses NETNEW; LOGICAL is audit-only with compile-time `assert_eq!(LOGICAL, NETNEW + 3)`).
 6. **One Diesel-backed Rust enum** (`ReputationEventSourceType`, 9 variants per PRD §7) in `crates/db_schema_file/src/enums.rs` mirroring `ReputationDimension`'s `verbatim` `DbValueStyle`.
 7. **`schema.rs` extensions**: new `sql_types::ReputationEventSourceType` struct; `reputation_event` table block extended with `dedupe_key + source_event_type`; `sponsor_allowlist` table block extended with `community_id` made nullable + `added_by_admin_id + note`.
 8. **Diesel struct extensions**: `ReputationEvent` + `ReputationEventInsertForm` get the 2 new fields; `SponsorAllowlist` + `SponsorAllowlistInsertForm` get the 3 ALTER fields. Newtypes unchanged (per DQ #181).
@@ -932,10 +932,37 @@ pub const DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED: bool = false;
 /// Cumulative: 34 + 27 + 27 + 13 + 26 = 127.
 pub const EXPECTED_SEED_COUNT_V1_RT: usize = 26;
 
+// Sub-edit 4b — dual-const audit surface (per advisor DQ #188 directive
+// 2026-05-10). Adds BOTH ship-count + logical-count consts so PRD
+// section 8 conceptual ownership is auditable from code.
+
+/// Net-new keys shipped by RT-r1's seed migration. Used by the parity
+/// test. Excludes the 3 PRD-section-8 keys already shipped under v1-AD-a
+/// (`deltas.participation_weekly_active`, `participation.dormancy_window_days`,
+/// `deltas.participation_dormant`) — those remain owned by V1_AD ship-count
+/// per `migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39`.
+pub const EXPECTED_SEED_COUNT_V1_RT_NETNEW: usize = 26;
+
+/// PRD section 8 conceptual count: 28 RT-tuning knobs + 1 feature flag.
+/// Audit-surface only — NOT used by parity tests; documents the
+/// conceptual scope claimed by the reputation-tuning lane. The 3-key
+/// overlap with V1_AD (see `EXPECTED_SEED_COUNT_V1_RT_NETNEW` doc) means
+/// `EXPECTED_SEED_COUNT_V1_RT_LOGICAL == EXPECTED_SEED_COUNT_V1_RT_NETNEW + 3`.
+/// Per advisor DQ #188 (2026-05-10).
+pub const EXPECTED_SEED_COUNT_V1_RT_LOGICAL: usize = 29;
+
+// Backwards-compat alias for code that referenced the original name
+// from the planner-DQ-#187-resolution wave (single-const). Stays bound
+// to the NETNEW value for parity-test correctness.
+pub const EXPECTED_SEED_COUNT_V1_RT: usize = EXPECTED_SEED_COUNT_V1_RT_NETNEW;
+
 // Sub-edit 5 — extend parity test at line 2692-2710. The expected
-// sum becomes EXPECTED_SEED_COUNT + V1_AD + V1_JM + V1_SL + V1_RT
+// sum becomes EXPECTED_SEED_COUNT + V1_AD + V1_JM + V1_SL + V1_RT_NETNEW
 // = 34 + 27 + 27 + 13 + 26 = 127. Update format-string to include
-// V1_RT alongside the existing 4 names.
+// V1_RT_NETNEW alongside the existing 4 names. Compile-time
+// `assert_eq!(EXPECTED_SEED_COUNT_V1_RT_LOGICAL, EXPECTED_SEED_COUNT_V1_RT_NETNEW + 3, ...)`
+// goes inside the parity-test fn body to keep the documented invariant
+// surfaced to compile-time (no runtime cost).
 
 // Sub-edit 6 — append 26 new CONFIG_KEY_METADATA entries before
 // closing `];` of the array.
@@ -1774,6 +1801,8 @@ Plan-side DoD: e2e exit code 0; failure path -> §G4 classifier on log slice.
   Resolution (planner-self-resolved per `decision-queue.md` Recipe 3): RT-r1 seed migration ships **26 net-new rows**. `EXPECTED_SEED_COUNT_V1_RT = 26`. Cumulative: 34 + 27 + 27 + 13 + 26 = 127. The 3 duplicates remain owned by V1_AD's count — they conceptually belong to RT-tuning, but count-bookkeeping reflects ship history. The DQ #185 advisor answer (V1_RT = 29) is treated as "logical count per PRD §8 verbatim"; the planner's count revision (V1_RT = 26) reflects ship-history accuracy. The advisor will see this DQ #187 entry on the next polling tick and may reject (forcing different resolution like ownership migration); default behaviour is acceptance.
 
 - **Advisor directive #4 (parametric pattern).** Per `crates/api/api/src/governance/config.rs:1395-1401`: each v1 sub-PRD adds its own `EXPECTED_SEED_COUNT_V1_*` without churning others. RT-r1 honours.
+
+- **Advisor DQ #188 (2026-05-10) — dual-const audit surface.** Plan §10.8 + §1 amended post-planner-write to expose BOTH `EXPECTED_SEED_COUNT_V1_RT_NETNEW = 26` (ship-count, parity-test active) AND `EXPECTED_SEED_COUNT_V1_RT_LOGICAL = 29` (PRD §8 conceptual count, audit-only) per user directive. The 3-key overlap with V1_AD remains owned by V1_AD ship-count (no migration churn). Compile-time `assert_eq!(LOGICAL, NETNEW + 3)` keeps the invariant green. Plan §10.4 / §10.6 / §13 Task 4 unchanged (still 26 INSERT rows in the seed migration). Plan §13 Task 8 IMPLEMENT files unchanged (single file: config.rs); commit body lists both consts. Compatibility: code referencing `EXPECTED_SEED_COUNT_V1_RT` (e.g. test asserts written before this revision) still compiles via the back-compat alias.
 
 - **Why r1 ships 7 entry-kind consts when only 1 (`DECAY_KNOB_CHANGED`) fires before r3.** Per registry pre-landed-const exemption (used by JM-a + SL-a precedent): pre-landing in r1 prevents future plans from shipping consts piecemeal across r2/r3/r4/r5.
 
