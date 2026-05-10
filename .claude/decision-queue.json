@@ -22,6 +22,48 @@
       "answer": "Migration validation failed: column \"source_event_type\" does not exist",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T19:30:44.148775+00:00"
+    },
+    {
+      "id": 200,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T21:45:00Z",
+      "question": "cargo-validate-workspace.yml run for bundled RT-r1 phase tip (Tasks 1-4 all migrations present) — await ci-watcher result",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Re-validation after Cohort A parallel-dispatch dependency bug: each Task 1-4 worker branch only contained its own migration, so cargo-validate-migration on Task 3 FAILED with \"column source_event_type does not exist\" (Task 1 creates the column; Task 3 references it). This new run on junior/revalidate-rt-r1-bundle (forked from phase-v1-RT-r1 with all 4 migrations) validates the bundled migration set. Per advisor recovery 2026-05-10.",
+      "workflow_run_id": 25640324087,
+      "branch": "junior/revalidate-rt-r1-bundle",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 201,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T21:45:00Z",
+      "question": "cargo-validate-migration.yml run for bundled RT-r1 phase tip — await ci-watcher result (supersedes DQ #194 design-flaw FAIL)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Re-validation after Cohort A parallel-dispatch dependency bug. DQ #194 (workflow run 25636774556) returned conclusion=failure because Task 3 worker branch did not include Task 1's column-add migration. This new run validates all 4 RT-r1 migrations in order on a single branch with all migrations present. DQ #194 preserved as historical evidence of the design flaw; this entry is the canonical migration pass signal for cohort barrier. Per advisor recovery 2026-05-10.",
+      "workflow_run_id": 25640324089,
+      "branch": "junior/revalidate-rt-r1-bundle",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
