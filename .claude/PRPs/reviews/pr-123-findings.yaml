@@ -1,16 +1,78 @@
 schema_version: 1
 pr: 123
-title: 'feat(v1-SL-d): sponsor-liability compute/fire split + submit_jury_vote pending transition + e2e tests'
+title: 'feat(v1-SL-d): sponsor-liability compute/fire split + submit_jury_vote pending
+  transition + e2e tests'
 head: phase-v1-SL-d
 base: governance-v0
-opened_at: 2026-05-10T22:00:10Z
-last_poll_at: 2026-05-10T22:05:18Z
-poll_count: 1
+opened_at: '2026-05-10T22:00:10Z'
+last_poll_at: '2026-05-10T22:20:00Z'
+poll_count: 2
 last_polled_head_sha: 2600531dc65e1710be8696318143b1f6401b90bf
 last_claude_run_at: null
 claude_run_count: 0
 recommendation: pending
-findings: []
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/api/api/src/governance/sponsor_liability.rs
+  line: 543
+  summary: Avoid a sentinel PersonId in this DB-backed test
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596738
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/api/api/src/governance/sponsor_liability.rs
+  line: 575
+  summary: Make the grace-window test independent of seeded defaults
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596739
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/server/tests/e2e.rs
+  line: 13128
+  summary: Exercise post-quorum idempotency on the Pending path
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596740
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/server/tests/e2e.rs
+  line: 13490
+  summary: Assert the sanction table stays empty for NoAction
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596742
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:00:24Z'
+  file: null
+  line: null
+  summary: 'CR pre-merge-check: Description check — template sections incomplete'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#issuecomment-4416456489#walkthrough
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'Resolution: Complete the ADR impact matrix, fill in validation command exit
+    codes, specify rollback strategy, and confirm AI review acknowledgements.'
 counters:
   critical:
     open: 0
@@ -19,7 +81,7 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 0
+    open: 2
     done: 0
     rebutted: 0
     carry_forward: 0
@@ -31,7 +93,7 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 0
+    open: 3
     done: 0
     rebutted: 0
     carry_forward: 0
@@ -43,11 +105,10 @@ counters:
     carry_forward: 0
     wont_fix: 0
   by_source:
-    coderabbit: 0
+    coderabbit: 5
     claude: 0
     user: 0
-  total: 0
+  total: 5
 merged_at: null
 merge_commit: null
 final_recommendation: null
-notes: 'CodeRabbit review in progress (posted in-progress notice at 2026-05-10T22:04:21Z). No actionable findings ingested yet.'
