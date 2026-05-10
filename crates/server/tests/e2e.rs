@@ -12577,4 +12577,243 @@ mod v1_sl_c_fixtures {
     }
     Ok(())
   }
+
+  #[tokio::test]
+  async fn grace_check_batch_size_config_caps_iteration() -> LemmyResult<()> {
+    // Per Test #5 (PRD §6.4 + §4.1 batch_size config).
+    //
+    // Setup: BREHON_DISABLE_GRACE_CHECK_JOB=1.
+    //   INSERT governance_config row "job.grace_check_batch_size" = 2
+    //     (instance scope). Default is 100; we override to 2.
+    //   5 sponsees + 5 sponsors (1 surety each). All 5 cases:
+    //     status=SponsorLiabilityPending, grace_expires_at expired,
+    //     sanction inserted. Distinct grace_expires_at via
+    //     now() - Duration::minutes(N) for N in 5..1 (ASC = order of
+    //     processing per the batch query's ORDER BY grace_expires_at ASC).
+    //
+    // Drive (first invocation): run_grace_check_batch(&context).await.
+    //
+    // Assert (first invocation):
+    //   - outcome.cases_processed == 2 (batch_size cap honoured).
+    //   - outcome.fired == 2.
+    //   - 2 cases transitioned to SponsorLiabilityFired.
+    //   - 3 cases STILL == SponsorLiabilityPending.
+    //
+    // Drive (second invocation): run_grace_check_batch(&context).await.
+    //
+    // Assert (second invocation):
+    //   - outcome.cases_processed == 2 (next 2 picked up).
+    //   - outcome.fired == 2.
+    //   - 4 cases now SponsorLiabilityFired total.
+    //   - 1 case STILL == SponsorLiabilityPending.
+    //
+    // Drive (third invocation): run_grace_check_batch(&context).await.
+    //
+    // Assert (third invocation):
+    //   - outcome.cases_processed == 1 (last remaining).
+    //   - outcome.fired == 1.
+    //   - all 5 cases now SponsorLiabilityFired.
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    // Seed 5 sponsees + 5 sponsors.
+    let mut sponsee_ids = Vec::with_capacity(5);
+    let mut sponsor_ids = Vec::with_capacity(5);
+    for i in 0..5usize {
+      let (sponsee, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("slc5_batch_sponsee_{i}"),
+        false,
+      )
+      .await?;
+      let (sponsor, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("slc5_batch_sponsor_{i}"),
+        false,
+      )
+      .await?;
+      sponsee_ids.push(sponsee);
+      sponsor_ids.push(sponsor);
+    }
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Override batch_size to 2. The seeded default is 100. Use append-only
+    // INSERT (governance_config is not upserted — new row with later
+    // valid_from wins per ORDER BY valid_from DESC in fetch_value_at_scope).
+    diesel::sql_query(
+      "INSERT INTO governance_config (scope, key, value_type, value_int, valid_from) \
+       VALUES ('instance', 'job.grace_check_batch_size', 'int', 2, now())",
+    )
+    .execute(&mut conn)
+    .await?;
+
+    // Seed 5 cases with DISTINCT grace_expires_at so ORDER BY grace_expires_at
+    // ASC is deterministic. Offsets: -5, -4, -3, -2, -1 minutes.
+    // Index 0 → earliest (processed first); index 4 → latest (processed last).
+    for i in 0..5usize {
+      let offset_minutes = 5 - i as i64;
+      seed_pending_case(
+        &mut conn,
+        sponsee_ids[i],
+        Duration::minutes(-offset_minutes),
+        Some(SanctionAction::ContentRemoval),
+      )
+      .await?;
+      seed_active_surety(&mut conn, sponsor_ids[i], sponsee_ids[i]).await?;
+    }
+
+    // --- First invocation: batch_size=2 → processes cases[0] and cases[1] ---
+    let outcome1 = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome1.cases_processed,
+      2,
+      "invocation 1: 2 cases processed (batch_size cap)"
+    );
+    assert_eq!(outcome1.fired, 2, "invocation 1: 2 cases fired");
+    assert_eq!(outcome1.escaped, 0, "invocation 1: 0 cases escaped");
+    assert_eq!(outcome1.skipped, 0, "invocation 1: 0 cases skipped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let fired_after_1: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityFired))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      fired_after_1,
+      2,
+      "invocation 1: 2 cases total SponsorLiabilityFired"
+    );
+    let pending_after_1: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityPending))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      pending_after_1,
+      3,
+      "invocation 1: 3 cases STILL SponsorLiabilityPending"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      2,
+      "invocation 1: 2 fired log entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      2,
+      "invocation 1: 2 applied log entries (1 per sponsor)"
+    );
+
+    // --- Second invocation: picks up cases[2] and cases[3] ---
+    let outcome2 = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome2.cases_processed,
+      2,
+      "invocation 2: 2 cases processed"
+    );
+    assert_eq!(outcome2.fired, 2, "invocation 2: 2 cases fired");
+    assert_eq!(outcome2.escaped, 0, "invocation 2: 0 cases escaped");
+    assert_eq!(outcome2.skipped, 0, "invocation 2: 0 cases skipped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let fired_after_2: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityFired))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      fired_after_2,
+      4,
+      "invocation 2: 4 cases total SponsorLiabilityFired"
+    );
+    let pending_after_2: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityPending))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      pending_after_2,
+      1,
+      "invocation 2: 1 case STILL SponsorLiabilityPending"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      4,
+      "invocation 2: 4 fired log entries total"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      4,
+      "invocation 2: 4 applied log entries total"
+    );
+
+    // --- Third invocation: picks up cases[4] (last remaining) ---
+    let outcome3 = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome3.cases_processed,
+      1,
+      "invocation 3: 1 case processed (last remaining)"
+    );
+    assert_eq!(outcome3.fired, 1, "invocation 3: 1 case fired");
+    assert_eq!(outcome3.escaped, 0, "invocation 3: 0 cases escaped");
+    assert_eq!(outcome3.skipped, 0, "invocation 3: 0 cases skipped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let fired_after_3: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityFired))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      fired_after_3,
+      5,
+      "invocation 3: all 5 cases SponsorLiabilityFired"
+    );
+    let pending_after_3: i64 = moderation_case::table
+      .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityPending))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      pending_after_3,
+      0,
+      "invocation 3: 0 cases STILL SponsorLiabilityPending"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      5,
+      "invocation 3: 5 fired log entries total"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      5,
+      "invocation 3: 5 applied log entries total (1 per sponsor per case)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "invocation 3: 0 escaped log entries"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+    Ok(())
+  }
 }
