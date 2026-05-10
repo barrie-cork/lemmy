@@ -13328,4 +13328,199 @@ mod v1_sl_d_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test]
+  async fn submit_jury_vote_no_action_skips_liability_machinery() -> LemmyResult<()> {
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let federation_config = FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let federation_context = federation_config.to_request_data();
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Target (sponsee) with 2 active sureties — liability machinery would fire on a
+    // liability-bearing decision; NoAction → map_decision_to_sanction returns None →
+    // the entire if-let block at submit_jury_vote.rs:434 is skipped →
+    // compute_sponsor_liability is never called.
+    let (sponsee, sponsor_ids) =
+      seed_target_with_sureties(&context, instance.id, &mut conn, 2, "sld3").await?;
+    let (reporter_id, _) =
+      governance_fixtures::seed_user(&context, instance.id, "sld3_reporter", false).await?;
+
+    let mut juror_ids = Vec::with_capacity(5);
+    for i in 0..5_usize {
+      let (id, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("sld3_juror{i}"),
+        false,
+      )
+      .await?;
+      juror_ids.push(id);
+    }
+    let (_, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sld3_admin", true).await?;
+
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &juror_ids).await?;
+
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        creator_id: Some(reporter_id),
+        reason_code: "v1_sl_d_test3".to_string(),
+        severity: CaseSeverity::High,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Open,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+    assert_eq!(
+      assign_resp.assigned_person_ids.len(),
+      5,
+      "Minor panel = 5 jurors"
+    );
+
+    for &juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    // Votes 1–2: below quorum (threshold_count = 3 for Minor panel) → not decided.
+    for &juror_id in &assign_resp.assigned_person_ids[..2] {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      let resp = submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::NoAction,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?
+      .into_inner();
+      assert!(!resp.case_decided, "votes 1-2: not yet at quorum");
+    }
+
+    // Vote 3: quorum reached (NoAction × 3 ≥ threshold_count for Minor panel).
+    // NoAction → map_decision_to_sanction returns None → if-let block skipped →
+    // compute_sponsor_liability never called → case → Decided (not SponsorLiabilityPending).
+    let juror_view_2 =
+      LocalUserView::read_person(&mut context.pool(), assign_resp.assigned_person_ids[2])
+        .await?;
+    let resp = submit_jury_vote(
+      Json(SubmitJuryVote {
+        case_id,
+        decision: JuryDecision::NoAction,
+        rationale: None,
+      }),
+      federation_context.reset_request_count(),
+      juror_view_2,
+    )
+    .await?
+    .into_inner();
+
+    assert!(resp.case_decided, "3rd vote decides the case");
+    assert_eq!(
+      resp.decision,
+      Some(JuryDecision::NoAction),
+      "winning decision = NoAction"
+    );
+
+    // --- DB assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (status, grace_expires_at): (CaseStatus, Option<DateTime<Utc>>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::grace_expires_at))
+      .first(&mut conn)
+      .await?;
+
+    assert!(
+      matches!(status, CaseStatus::Decided),
+      "NoAction path: case must be Decided (no liability), got {status:?}"
+    );
+    assert!(
+      grace_expires_at.is_none(),
+      "grace_expires_at must be NULL on NoAction path (no Pending transition)"
+    );
+
+    // Liability machinery skipped entirely: 0 sponsor_liability_pending entries.
+    let slt_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("sponsor_liability_pending"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(slt_count, 0, "0 sponsor_liability_pending log entries on NoAction path");
+
+    // NoAction → map_decision_to_sanction returns None → no sanction row → 0 sanction_created.
+    let sanction_log_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("sanction_created"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(sanction_log_count, 0, "0 sanction_created log entries on NoAction path");
+
+    // case_decided fires unconditionally (path-agnostic, submit_jury_vote.rs:678-688).
+    let decided_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("case_decided"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(decided_count, 1, "1 case_decided log entry");
+
+    // Sponsors have 0 reputation_event rows: compute_sponsor_liability never called.
+    let sponsor_rep_count: i64 = reputation_event::table
+      .filter(reputation_event::person_id.eq_any(&sponsor_ids))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      sponsor_rep_count,
+      0,
+      "0 reputation_event rows for sponsors on NoAction path"
+    );
+
+    // Juror events fire for the 3 who voted; reporter event fires (1 row).
+    // Total = 3 juror + 1 reporter = 4.
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_count,
+      4,
+      "3 juror + 1 reporter reputation events fire on NoAction Decided path"
+    );
+
+    Ok(())
+  }
 }
