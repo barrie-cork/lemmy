@@ -1,17 +1,39 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 188,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T18:00:00Z",
+      "question": "Does cargo-validate-workspace pass for sl-d task 1 on junior branch?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (compute/fire split + grace_window_for_severity) pushed on worker branch. cargo-validate-workspace.yml workflow run triggered on push.",
+      "branch": "junior/role-impl-task-v1-sl-d-task-1-apply-sponsor-liability-split-grace-helper-see-claude-prps-briefs-sl-d-impl-1-md-185",
+      "phase_task": 1,
+      "workflow_run_id": 25627516058,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 186,
       "from": "planner",
       "kind": "blocker",
       "timestamp": "2026-05-10T10:10:00Z",
-      "question": "v1-sponsor-liability-d complexity score 16 exceeds threshold 8 — split further (e.g. v1-SL-d-1 split + grace-helper [Tasks 1-2] + v1-SL-d-2 mutation + tests [Tasks 3-7]), or proceed?",
+      "question": "v1-sponsor-liability-d complexity score 16 exceeds threshold 8 \u2014 split further (e.g. v1-SL-d-1 split + grace-helper [Tasks 1-2] + v1-SL-d-2 mutation + tests [Tasks 3-7]), or proceed?",
       "options": [
         "split: split into v1-SL-d-1 (split + grace-helper) + v1-SL-d-2 (mutation + 4 e2e + 1 unit + retro)",
         "proceed: ship as one sub-phase per SL-c-2/SL-b/JM-e proceed-as-one precedents"
       ],
-      "context": "Complexity factor breakdown per feedback_complexity_score_pre_split.md: §13 impl tasks above 5 (+2), migrations (0), crates touched (+2), e2e edits (4 × +3 = +12), ADR-affecting (0), cargo budget (0; Shape G). Total = 16. Dominant factor is the 4 e2e edits (+12 of +16). Splitting yields SL-d-1 score 1 (below threshold) + SL-d-2 score 14 (still above by +6); further splitting does not bring per-phase score below 8 because e2e factor weights +3 per test. SL-b shipped at 38, SL-c-2 at 17, JM-e at 15, SL-a at 13 all proceed-as-one without operational regret. Per feedback_principles_not_rules.md the score is a signal, not a hard rule. Plan-write computed next_id = 186 against the latest DQ-touching commit on advisor tip (72ad06e72; rt-r1-planning-1 clarify reserved 181-185); avoiding the DQ #50 collision pattern.",
+      "context": "Complexity factor breakdown per feedback_complexity_score_pre_split.md: \u00a713 impl tasks above 5 (+2), migrations (0), crates touched (+2), e2e edits (4 \u00d7 +3 = +12), ADR-affecting (0), cargo budget (0; Shape G). Total = 16. Dominant factor is the 4 e2e edits (+12 of +16). Splitting yields SL-d-1 score 1 (below threshold) + SL-d-2 score 14 (still above by +6); further splitting does not bring per-phase score below 8 because e2e factor weights +3 per test. SL-b shipped at 38, SL-c-2 at 17, JM-e at 15, SL-a at 13 all proceed-as-one without operational regret. Per feedback_principles_not_rules.md the score is a signal, not a hard rule. Plan-write computed next_id = 186 against the latest DQ-touching commit on advisor tip (72ad06e72; rt-r1-planning-1 clarify reserved 181-185); avoiding the DQ #50 collision pattern.",
       "answer": "proceed. e2e factor dominates +12 of +16 total; further splitting yields no meaningful per-phase score reduction (SL-d-2 would still score 14). SL-c-2 (17), JM-e (15), SL-b (38), SL-a (13) are all proceed-as-one precedents. The 4 e2e tests are mechanically anchor-Edit-friendly per SL-b's mod v1_sl_b_fixtures pattern; the canonical Case A error-shape discipline (post-SL-c-2 amendment to feedback_lemmy_error_no_std_error.md) prevents the 3-cycle catch-fire that motivated the threshold. Plan ships under proceed-within-SL-d assumption; advisor may overturn at plan-approval time.",
       "answered_by": "planner",
       "resolved_at": "2026-05-10T10:10:00Z"
