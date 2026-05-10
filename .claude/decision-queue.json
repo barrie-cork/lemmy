@@ -3139,6 +3139,84 @@
       "answer": "All workspace validation steps passed: cargo check, cargo clippy, cargo test compile.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T03:59:33.567391+00:00Z"
+    },
+    {
+      "id": 181,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T20:00:00Z",
+      "question": "rt-r1-planning-1 brief 2.1b asks planner to author a new sponsor_allowlist migration + diesel struct + SponsorAllowlistId newtype. All three already exist (shipped in v1-AD-a). Should planner SKIP creation tasks and only ALTER the existing table?",
+      "options": [
+        "(a) skip + alter: omit creation tasks; add ALTER TABLE migration to relax community_id NOT NULL + add added_by_admin_id, added_at (or rename created_at), note",
+        "(b) skip + defer: mark schema-extension as out-of-scope for r1; defer ALTER to r4 when admin endpoints land",
+        "(c) keep as-is + reject: refuse the brief; require advisor to rewrite scope before queueing"
+      ],
+      "context": "Existing shipped state (v1-AD-a, 2026-04-22): migrations/2026-04-22-000100-0000_add_sponsor_allowlist/up.sql; crates/db_schema/src/source/governance/sponsor_allowlist.rs (struct: id, community_id NOT NULL, person_id, created_at); crates/db_schema/src/newtypes.rs:331 (SponsorAllowlistId(pub i32)); schema.rs:1338-1343. PRD .claude/PRPs/prds/v1-reputation-tuning.prd.md line 181 expects (id, community_id NULL, person_id, added_by_admin_id, added_at, note). Mismatch: NULL community_id, +added_by_admin_id, +note. The PRD treats sponsor_allowlist as a NEW table; reality has v1-AD-a shipped a stub version with the doc-comment \"Reserved in v1-AD-a; no read-path callers yet (they land in v1-AD-b alongside the onboarding.sponsor_allowlist_table_name resolver).\"",
+      "answer": "Lean (a) skip + alter. Sub-case 1: SponsorAllowlistId newtype + source struct + initial migration are SHIPPED; planner removes those creation tasks. Sub-case 2: r1 ships an ALTER TABLE migration that (i) drops community_id NOT NULL, (ii) adds added_by_admin_id INTEGER NOT NULL REFERENCES person(id), (iii) adds added_at if needed (created_at present per schema.rs:1342 — reuse OR rename per planner judgment), (iv) adds note TEXT, (v) UNIQUE (community_id, person_id) constraint addition if not present. Diesel struct in sponsor_allowlist.rs gets the new fields. Newtype unchanged. Per v1-AD-a sponsor_allowlist.rs doc-comment: RT is the lane that activates the table; this is the canonical extension point per PRD lane assignment. Brief edit required: §2.1b rewritten to ALTER (not CREATE); §3.3 file list updated to migrations/{ts}_extend_sponsor_allowlist_for_r1/ + modify (not create) sponsor_allowlist.rs.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T20:00:00Z"
+    },
+    {
+      "id": 182,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T20:00:00Z",
+      "question": "rt-r1-planning-1 brief 3.3 file list cites crates/db_schema/src/source/reputation_event.rs and .../source/governance_log.rs. Neither path exists. Correct paths use governance/ subdirectory: crates/db_schema/src/source/governance/reputation_event.rs and .../source/governance/governance_log.rs. Which path set should planner use?",
+      "options": [
+        "(a) governance subdir: use crates/db_schema/src/source/governance/{reputation_event,governance_log}.rs (verified existing; matches v1-JM-a + v1-AD-a precedent)",
+        "(b) refuse: brief is too stale; require rewrite"
+      ],
+      "context": "Verified via Bash glob: crates/db_schema/src/source/governance/reputation_event.rs EXISTS (28 lines; struct ReputationEvent has 10 fields); crates/db_schema/src/source/governance/governance_log.rs EXISTS (canonical home for ENTRY_KIND_* consts per v1-JM-a + DQ-6.6). The non-governance paths crates/db_schema/src/source/reputation_event.rs and crates/db_schema/src/source/governance_log.rs do NOT exist. Brief 3.3 was a typo / partial-recall error.",
+      "answer": "(a) governance subdir. Mechanical substitution: every brief 3.3 path of form crates/db_schema/src/source/<X>.rs where X is reputation_event, governance_log, or sponsor_allowlist is rewritten as crates/db_schema/src/source/governance/<X>.rs. Per v1-JM-a plan §13 task 7 (entry-kind consts in db_schema/src/source/governance/governance_log.rs + re-export shim crates/api/api/src/governance/governance_log.rs). Per shipped sponsor_allowlist.rs already at the governance/ subdir. Brief edit required: §3.3 file list paths corrected.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T20:00:00Z"
+    },
+    {
+      "id": 183,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T20:00:00Z",
+      "question": "rt-r1-planning-1 brief 2.1d names crates/db_schema/src/utils/v1_rt_config_seed.rs as the seed function location. v1-AD-a + v1-JM-a + v1-SL-a precedent ships seeding via SQL in a migration directory at repo-root migrations/, NOT a Rust utils module. Brief also says \"crates/db_schema/migrations/\" but actual migrations live at \"migrations/\". Which pattern should planner adopt?",
+      "options": [
+        "(a) migration-SQL at migrations/: ship as migrations/{ts}_seed_v1_rt_config_keys/up.sql (mirrors v1-AD-a + v1-JM-a + v1-SL-a verbatim; correct repo-root path)",
+        "(b) rust-utils: create new pattern crates/db_schema/src/utils/v1_rt_config_seed.rs (deviates from precedent; rejected)"
+      ],
+      "context": "Verified via grep: crates/api/api/src/governance/config.rs line 815 references migration 2026-04-22-000300-0000_seed_v1_config_keys (v1-AD-a); line 852 references 2026-04-23-000200-0000_seed_v1_jm_config_keys (v1-JM-a). Both are migration-SQL pattern at repo-root migrations/. e2e.rs line 2654 + 3769 + 5167 reference the JM-a seed migration up.sql by relative path. No crates/db_schema/src/utils/v1_*_config_seed.rs exists. Migrations directory verified at repo root via find: ./migrations (NOT crates/db_schema/migrations/).",
+      "answer": "(a) migration-SQL at migrations/. Mechanical: planner names the seed deliverable as migrations/{ts}_seed_v1_rt_config_keys/ at repo root (timestamp ordering after the schema-add migrations + ALTER for sponsor_allowlist). up.sql contains 28 INSERT INTO governance_config rows + 1 feature flag row; down.sql has the corresponding DELETEs. EXPECTED_SEED_COUNT_V1_RT const lives in crates/api/api/src/governance/config.rs alongside the existing EXPECTED_SEED_COUNT, EXPECTED_SEED_COUNT_V1_AD, EXPECTED_SEED_COUNT_V1_JM, EXPECTED_SEED_COUNT_V1_SL. Per pattern_spec_schema_co_commit.md (verbatim from canonical sibling migrations). Brief edit required: §2.1d rewrite the location (drop crates/db_schema/src/utils/v1_rt_config_seed.rs reference; replace with migration); ALL \"crates/db_schema/migrations/\" path references in the brief corrected to \"migrations/\" at repo root; §3.3 file list updated.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T20:00:00Z"
+    },
+    {
+      "id": 184,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T20:00:00Z",
+      "question": "rt-r1-planning-1 brief 2.1c proposes backfill heuristics referencing endorsement_id and jury_vote_id columns on reputation_event. Schema.rs:1218-1229 shows reputation_event has only source_case_id and source_report_id (no endorsement_id, no jury_vote_id). Which columns should planner use as backfill discriminators?",
+      "options": [
+        "(a) reason-string-only: heuristics scan reason TEXT for substring matches (endorsement / jury_vote / sponsor_liability / founder_seed); fallback ManualSeed",
+        "(b) source_case_id + reason: source_case_id IS NOT NULL implies a moderation_case-driven event (JuryVote or SponsorLiability); reason scan disambiguates the two; remaining default to ManualSeed; Endorsement default for source_case_id IS NULL AND source_report_id IS NULL",
+        "(c) defer-backfill: ship migration with default = Endorsement only; backfill is best-effort; r3 emitter writes new rows with correct source_event_type going forward"
+      ],
+      "context": "Verified via Read crates/db_schema/src/source/governance/reputation_event.rs:17-28 — fields are id, person_id, community_id, dimension, delta, source_case_id, source_report_id, reason, created_at, expires_at. No endorsement_id, no jury_vote_id. Brief 2.1c heuristics are based on incorrect column assumption. PRD line 251 says \"source_event_type default-mapped from existing reason/source columns\" — vague. PRD does not specify the precise heuristic logic.",
+      "answer": "(b) source_case_id + reason. Reasoning: (i) reason column is free-text and unstructured; pure substring matches are fragile (lemma drift across phases). (ii) Per Phase 5b shipped emitters, sponsor-liability writes a reason starting with sponsor_liability_; jury-mechanics writes jury_reliability_; endorsements have NULL source_case_id; founder-seeds have NULL source_case_id but a known reason marker. Heuristic precedence: 1) reason ILIKE \"sponsor_liability%\" -> SponsorLiability; 2) reason ILIKE \"jury_reliability%\" OR similar jury-vote markers -> JuryVote; 3) reason ILIKE \"founder_seed%\" -> FounderSeed; 4) source_case_id IS NULL AND source_report_id IS NULL AND no reason match -> Endorsement (dominant v0 source); 5) fallback -> ManualSeed. Plan §13 backfill task includes a smoke check post-migration (SELECT source_event_type, COUNT(*) FROM reputation_event GROUP BY 1 — at least Endorsement non-zero on a seeded DB). Brief edit required: §2.1c rewrite heuristic columns + ordering.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T20:00:00Z"
+    },
+    {
+      "id": 185,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T20:00:00Z",
+      "question": "rt-r1-planning-1 brief 2.1d asserts EXPECTED_SEED_COUNT_V1_RT = 29 (28 knobs + 1 feature flag). Confirm value AND extend the parity test invariant. Current state per config.rs:1391+: EXPECTED_SEED_COUNT=34, V1_AD=27, V1_JM=27, V1_SL=13. What is the post-r1 cumulative invariant?",
+      "options": [
+        "(a) 29 + cumulative-extension: V1_RT = 29; SEEDED_KEYS_WITH_CONSTS.len() must equal 34 + 27 + 27 + 13 + 29 = 130",
+        "(b) recount: planner counts §8 rows independently; brief assertion is the planner starting hypothesis only",
+        "(c) 28-not-29: feature flag is not in §8 Defaults Matrix proper; brief miscount"
+      ],
+      "context": "Verified via grep crates/api/api/src/governance/config.rs:1391 EXPECTED_SEED_COUNT=34, line 1400 V1_AD=27, line 1409 V1_JM=27, line 1422 V1_SL=13. Current cumulative = 101. PRD §8 line 290 explicit cite: \"Total new knobs: 28 (plus extension of existing onboarding.sponsor_gate_strategy enum range to add three new string values).\" The 28 EXCLUDES the feature flag row. Feature flag (feature.reputation_v1_decay_enabled, PRD §8 row 28 in the enumerated table — line 288) is the 29th seeded key. Sponsor_gate_strategy enum extension is NOT a seeded key (it modifies the enum range of an existing key — counted as 0 in V1_RT).",
+      "answer": "(a) 29 + cumulative-extension. Reasoning: PRD §8 explicit total of 28 knobs is exclusive of the feature flag row (per line 290 PRD note). Feature flag is the 29th seeded key. Sponsor_gate_strategy enum extension is NOT a seeded key. Therefore V1_RT = 29. Cumulative invariant: 34 + 27 + 27 + 13 + 29 = 130. Plan §13 task d adds EXPECTED_SEED_COUNT_V1_RT: usize = 29 to crates/api/api/src/governance/config.rs alongside existing V1_* consts; updates the assertion at config.rs:2692-2707 to add + EXPECTED_SEED_COUNT_V1_RT and revise the panic message string. Per pattern at config.rs:1413-1422. Per v1-AD-a §15.5 cumulative rule. Brief edit not required (brief 2.1d assertion is correct; this DQ resolves the planner verification step + binds the cumulative-invariant update).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T20:00:00Z"
     }
   ],
   "schema_version": 2

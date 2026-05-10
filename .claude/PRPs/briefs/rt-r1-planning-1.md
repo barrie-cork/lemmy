@@ -8,14 +8,14 @@
 
 **Authority anchor**: `v1-reputation-tuning.prd.md` §15 row 1 (`v1.r1 — schema & feature flag`) + §7 (Cross-Cutting Impact: schema additions + backfill) + §8 (Defaults Matrix — 28 new knobs + 1 feature flag) + §10 (feature flag semantics — flagged in §7 carry-forward as `feature.reputation_v1_decay_enabled`). PRD §15 row 1 dependency: **OQ-018 endpoint (admin config write)** — verified shipped in v1-AD-b PR #76 merge (commit `f03ed1cba`); dependency satisfied.
 
-**Parallel-safety to SL-d (concurrent planning)**: SL-d touches `crates/api/api/src/governance/sponsor_liability.rs` + `crates/api/api/src/governance/submit_jury_vote.rs` + new tests in `crates/server/tests/e2e.rs` (anchor-Edits at file end). RT-r1 touches `crates/db_schema/migrations/**` (new migrations) + `crates/db_schema/src/source/reputation_event.rs` (column adds) + new `sponsor_allowlist.rs` source file + 28 new `DEFAULT_*` consts in `crates/api/api/src/governance/config.rs` + 7 new `ENTRY_KIND_*` consts in `crates/db_schema/src/source/governance/governance_log.rs` (re-exported in `crates/api/api/src/governance/governance_log.rs`). **Zero handler-file overlap with SL-d**; zero overlap with `submit_jury_vote.rs` (RT-r1 is schema + seed + feature-flag-only — no handler edits). Anchor-Edit collisions on `e2e.rs` are the only theoretical risk and are addressable by appending RT-r1's tests below SL-d's anchors per `feedback_junior_worker_e2e_edit_hang.md` cohort discipline.
+**Parallel-safety to SL-d (concurrent planning)**: SL-d touches `crates/api/api/src/governance/sponsor_liability.rs` + `crates/api/api/src/governance/submit_jury_vote.rs` + new tests in `crates/server/tests/e2e.rs` (anchor-Edits at file end). RT-r1 touches `migrations/**` (4 new migrations at repo root, NOT `crates/db_schema/migrations/`) + `crates/db_schema/src/source/governance/reputation_event.rs` (column adds) + `crates/db_schema/src/source/governance/sponsor_allowlist.rs` (modify, NOT create) + 28+1 new entries in `crates/api/api/src/governance/config.rs` (cumulative-count const + `DEFAULT_*` consts if pattern requires) + 7 new `ENTRY_KIND_*` consts in `crates/db_schema/src/source/governance/governance_log.rs` (re-exported in `crates/api/api/src/governance/governance_log.rs`). **Zero handler-file overlap with SL-d**; zero overlap with `submit_jury_vote.rs` (RT-r1 is schema + seed + feature-flag-only — no handler edits). One shared file with SL-d is `e2e.rs` (post-clarify scope: RT-r1 only extends `phase1_migrations_round_trip` parametric matcher, NOT new test fns) — anchor-Edit collisions are the only theoretical risk and are addressable per `feedback_junior_worker_e2e_edit_hang.md` cohort discipline. **Brief shape post-clarify (DQ #181-#185 resolved 2026-05-10)** — see DQs for the path corrections + table-extend (vs create) decisions.
 
-**Scope (locked)**: RT-r1 is the schema-and-seed layer for the entire reputation-tuning v1 lane. Three deliverable halves (per PRD §15 row 1):
+**Scope (locked, post-clarify)**: RT-r1 is the schema-and-seed layer for the entire reputation-tuning v1 lane. Three deliverable halves (per PRD §15 row 1):
 
-1. **Schema additions** — three additions per PRD §7 row "Schema changes":
+1. **Schema additions** — three migration sets per PRD §7 row "Schema changes":
    - new `dedupe_key TEXT` nullable column on `reputation_event` with **partial unique index** (`WHERE dedupe_key IS NOT NULL`)
    - new `source_event_type` enum column on `reputation_event` (PG enum, 9 variants — `Endorsement | JuryVote | SponsorLiability | FounderSeed | ParticipationCron | DormancyCron | VoteOutcome | EvidenceQuality | ManualSeed`); default `Endorsement` for backfill, populated by emitters going forward
-   - new `sponsor_allowlist` table (`id`, `community_id` NULL, `person_id`, `added_by_admin_id`, `added_at`, `note`)
+   - **EXTEND existing `sponsor_allowlist` table** (NOT create — table was shipped in v1-AD-a per `migrations/2026-04-22-000100-0000_add_sponsor_allowlist/`; current shape: `(id, community_id NOT NULL, person_id, created_at)`). RT-r1 ALTERs to: drop `community_id NOT NULL`, add `added_by_admin_id` (FK person), add `note TEXT`, ensure `UNIQUE (community_id, person_id)`. The `created_at` column may be reused as `added_at` (planner judgment) or kept; `SponsorAllowlistId` newtype already in `crates/db_schema/src/newtypes.rs:331` — no new newtype. **Per DQ #181 (clarify) 2026-05-10.**
 
 2. **Seed v1 config rows** — 28 new keys per PRD §8 Defaults Matrix + 1 feature flag (`feature.reputation_v1_decay_enabled`, default `false`). Seed via `EXPECTED_SEED_COUNT_V1_RT` parametric const (follows v1-AD-a + v1-JM-a precedent). Plus 7 new `ENTRY_KIND_*` consts (per PRD §7 hash-chain row): `ENTRY_KIND_PARTICIPATION_CRON_TICK`, `ENTRY_KIND_VOTE_OUTCOME_RECORDED`, `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED`, `ENTRY_KIND_ROLLUP_RECOMPUTED`, `ENTRY_KIND_DECAY_KNOB_CHANGED`, `ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED`, `ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED`. Dual-file edit per v1-AD-a §10.8 pattern: define in `db_schema`, re-export in `api` shim. Append reputation-tuning-v1 section to `.claude/rules/governance-log-entry-kind-registry.md`.
 
@@ -45,7 +45,7 @@ Produce **one plan file** at `.claude/PRPs/plans/v1-reputation-tuning-r1.plan.md
 
 The plan's §13 task list MUST cover all five:
 
-a. **Migration: `dedupe_key` + `source_event_type` on `reputation_event`.** New migration directory under `crates/db_schema/migrations/{ts}_add_reputation_event_v1_columns/`. `up.sql` adds:
+a. **Migration: `dedupe_key` + `source_event_type` on `reputation_event`.** New migration directory under `migrations/{ts}_add_reputation_event_v1_columns/` (repo-root `migrations/`, NOT `crates/db_schema/migrations/` — per DQ #183). `up.sql` adds:
    - `ALTER TABLE reputation_event ADD COLUMN dedupe_key TEXT`
    - `CREATE UNIQUE INDEX reputation_event_dedupe_key_partial_idx ON reputation_event (dedupe_key) WHERE dedupe_key IS NOT NULL`
    - PG enum type creation: `CREATE TYPE reputation_event_source_type AS ENUM ('Endorsement', 'JuryVote', 'SponsorLiability', 'FounderSeed', 'ParticipationCron', 'DormancyCron', 'VoteOutcome', 'EvidenceQuality', 'ManualSeed')`
@@ -53,36 +53,34 @@ a. **Migration: `dedupe_key` + `source_event_type` on `reputation_event`.** New 
 
    `down.sql` reverses in inverse order (drop column → drop index → drop column → drop type). Plan §13 task includes round-trip e2e gate (`phase1_migrations_round_trip` extended to cover the new migration; v1-JM-a precedent — `EXPECTED_SEED_COUNT_V1_RT` const + parametric matcher).
 
-   Diesel `schema.rs` regen + `crates/db_schema/src/source/reputation_event.rs` struct update (new fields). Per `feedback_lemmy_migration_runner.md`: `cargo run -p lemmy_diesel_utils --features full -- migration run` for local apply; `forbid_diesel_cli`; `cargo run --bin lemmy_print_schema_with_pg_features --features full` for `schema.rs`. Per `feedback_postgres_jsonb_canonicalization.md` if any JSONB ends up here (none expected; flag for planner).
+   Diesel `schema.rs` regen + `crates/db_schema/src/source/governance/reputation_event.rs` struct update (new fields — note `governance/` subdirectory per DQ #182). Per `feedback_lemmy_migration_runner.md`: `cargo run -p lemmy_diesel_utils --features full -- migration run` for local apply; `forbid_diesel_cli`; `cargo run --bin lemmy_print_schema_with_pg_features --features full` for `schema.rs` regen. Per `feedback_postgres_jsonb_canonicalization.md` if any JSONB ends up here (none expected; flag for planner).
 
-b. **Migration: `sponsor_allowlist` table.** Separate migration directory `crates/db_schema/migrations/{ts}_create_sponsor_allowlist/`. `up.sql`:
+b. **Migration: EXTEND `sponsor_allowlist` table** (NOT create — already shipped in v1-AD-a per DQ #181). New migration directory `migrations/{ts}_extend_sponsor_allowlist_for_r1/`. `up.sql` ALTERs the existing table:
    ```sql
-   CREATE TABLE sponsor_allowlist (
-     id SERIAL PRIMARY KEY,
-     community_id INTEGER REFERENCES community(id) ON DELETE CASCADE,  -- NULL for instance-wide
-     person_id INTEGER NOT NULL REFERENCES person(id) ON DELETE CASCADE,
-     added_by_admin_id INTEGER NOT NULL REFERENCES person(id),
-     added_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-     note TEXT,
-     UNIQUE (community_id, person_id)  -- one row per (community-or-instance, person)
-   );
+   -- existing v1-AD-a shape: (id, community_id NOT NULL, person_id, created_at)
+   ALTER TABLE sponsor_allowlist ALTER COLUMN community_id DROP NOT NULL;
+   ALTER TABLE sponsor_allowlist ADD COLUMN added_by_admin_id INTEGER NOT NULL REFERENCES person(id);
+   ALTER TABLE sponsor_allowlist ADD COLUMN note TEXT;
+   -- created_at may stay as-is or be aliased/renamed (planner judgment based on schema.rs:1342)
+   -- UNIQUE (community_id, person_id) constraint addition iff not already present
    ```
-   `down.sql` `DROP TABLE sponsor_allowlist`. New diesel struct in `crates/db_schema/src/source/sponsor_allowlist.rs`. Newtype check: `SponsorAllowlistId` newtype lives in `crates/db_schema/src/newtypes.rs` per `feedback_newtype_locations_lemmy_db_schema_vs_file.md` — verify pattern; planner authors only the `_id` newtype, not the `Id` newtype (subtype confusion footgun).
+   `down.sql` reverses (drop columns; restore NOT NULL with a synthesized default if existing rows would block — planner addresses). Diesel struct at `crates/db_schema/src/source/governance/sponsor_allowlist.rs` (already exists per v1-AD-a) MODIFIED to add the new fields. **No new newtype** — `SponsorAllowlistId` already in `crates/db_schema/src/newtypes.rs:269` (verified). **Skip CREATE; ALTER only.**
 
-c. **Backfill migration for existing `reputation_event` rows.** Separate migration `{ts}_backfill_reputation_event_source_type/`. `up.sql` populates `source_event_type` from existing column heuristics:
-   - Rows where `endorsement_id IS NOT NULL` → `'Endorsement'`
-   - Rows where `jury_vote_id IS NOT NULL` → `'JuryVote'`
-   - Rows where `case_id IS NOT NULL AND reason ILIKE '%sponsor_liability%'` → `'SponsorLiability'`
-   - Rows where `reason ILIKE '%founder_seed%'` → `'FounderSeed'`
-   - Default fallback for unmatched → `'ManualSeed'`
+c. **Backfill migration for existing `reputation_event` rows.** Separate migration `{ts}_backfill_reputation_event_source_type/`. `up.sql` populates `source_event_type` from existing columns. The schema's `reputation_event` has only `source_case_id` + `source_report_id` (no `endorsement_id`, no `jury_vote_id`); per DQ #184, the heuristic uses `source_case_id` + `reason` ILIKE patterns:
+   - **Precedence (apply in order):**
+     1. `reason ILIKE 'sponsor_liability%'` → `'SponsorLiability'`
+     2. `reason ILIKE 'jury_reliability%'` OR similar jury-vote markers → `'JuryVote'`
+     3. `reason ILIKE 'founder_seed%'` → `'FounderSeed'`
+     4. `source_case_id IS NULL AND source_report_id IS NULL AND no reason match` → `'Endorsement'` (dominant v0 source)
+     5. fallback → `'ManualSeed'`
 
-   Heuristic mapping is best-effort. Planner DQ if PRD §7 row "Backfill" doesn't enumerate the heuristic patterns precisely (it doesn't — the brief's heuristics above are the planner's starting point, NOT a contract). Plan §13 task includes a smoke check: post-migration, `SELECT source_event_type, COUNT(*) FROM reputation_event GROUP BY 1` shows non-zero counts for at least `Endorsement` (the dominant v0 source).
+   Heuristic mapping is best-effort. PRD line 251 says "default-mapped from existing reason/source columns" without specifying — the precedence above is the resolved planner contract. Plan §13 task includes a smoke check: post-migration, `SELECT source_event_type, COUNT(*) FROM reputation_event GROUP BY 1` shows non-zero counts for at least `Endorsement` (the dominant v0 source).
 
-d. **Seed 28 new config keys + 1 feature flag in `seed_v1_rt_config_keys`.** Pattern mirrors v1-AD-a `seed_v1_config_keys` and v1-JM-a `seed_v1_jm_config_keys`. Located in `crates/db_schema/src/utils/v1_rt_config_seed.rs` (or planner-chosen sibling location). Each key seeded with the default value from PRD §8 Defaults Matrix (full table copied verbatim into plan §13 — 28 rows + 1 feature flag row). Per-key writer uses the existing `governance_config::INSERT_INTO` helper. Parametric const `EXPECTED_SEED_COUNT_V1_RT = 29` (28 knobs + 1 feature flag). Parity test extended: `SEEDED_KEYS_WITH_CONSTS.len() == EXPECTED_SEED_COUNT + EXPECTED_SEED_COUNT_V1_AD + EXPECTED_SEED_COUNT_V1_JM + EXPECTED_SEED_COUNT_V1_RT` (mirrors v1-AD-a §19 cumulative invariant; planner confirms current cumulative count from v1-JM-a + v1-SL-a additions before authoring).
+d. **Seed 28 new config keys + 1 feature flag via `migrations/{ts}_seed_v1_rt_config_keys/up.sql`.** Pattern mirrors v1-AD-a `migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql` and v1-JM-a `migrations/2026-04-23-000200-0000_seed_v1_jm_config_keys/up.sql` — **migration-SQL pattern at repo-root `migrations/` (NOT a Rust utils module — per DQ #183).** Each key seeded with the default value from PRD §8 Defaults Matrix (full table copied verbatim into plan §13 — 28 rows + 1 feature flag row). Per-row `INSERT INTO governance_config (...) VALUES (...);` SQL. Parametric const `EXPECTED_SEED_COUNT_V1_RT: usize = 29` (28 knobs + 1 feature flag) added to `crates/api/api/src/governance/config.rs` alongside existing V1_* consts; parity assertion at `config.rs:2692-2707` extended with `+ EXPECTED_SEED_COUNT_V1_RT`. Cumulative invariant becomes `SEEDED_KEYS_WITH_CONSTS.len() == 34 + 27 + 27 + 13 + 29 = 130` (per DQ #185 confirmation: 34 v0 + 27 V1_AD + 27 V1_JM + 13 V1_SL + 29 V1_RT).
 
    28 `DEFAULT_*` consts added to `crates/api/api/src/governance/config.rs` (one per knob; type per PRD §8 column 3). The `feature.reputation_v1_decay_enabled` flag follows the existing `feature.*` namespace pattern (per `crates/api/api/src/governance/feature_flags.rs` if it exists — planner check).
 
-e. **7 new `ENTRY_KIND_*` consts (zero migration; `governance_log.entry_kind` is TEXT).** Dual-file edit per v1-AD-a §10.8 pattern:
+e. **7 new `ENTRY_KIND_*` consts (zero migration; `governance_log.entry_kind` is TEXT).** Dual-file edit per v1-AD-a §10.8 pattern (paths verified per DQ #182):
    - Define in `crates/db_schema/src/source/governance/governance_log.rs`: 7 `pub const ENTRY_KIND_*: &str = "...";` lines with snake_case string values matching the const name.
    - Re-export in `crates/api/api/src/governance/governance_log.rs` (the api shim) via `pub use crate::source::governance::governance_log::{ENTRY_KIND_PARTICIPATION_CRON_TICK, ...};`.
    - Append a new section to `.claude/rules/governance-log-entry-kind-registry.md` titled `## reputation-tuning-v1 (v1.r1 schema layer)` enumerating the 7 kinds + which RT sub-phase each one fires from (r1 declares; r3/r4/r5 fire). Pattern mirrors the jury-mechanics-v1 section appended in v1-JM-a.
@@ -152,19 +150,18 @@ Plan file at `.claude/PRPs/plans/v1-reputation-tuning-r1.plan.md` follows `.clau
 
 RT-r1 file list (IMPLEMENT files per §2.1 deliverables):
 
-- `crates/db_schema/migrations/{ts}_add_reputation_event_v1_columns/up.sql` + `down.sql`
-- `crates/db_schema/migrations/{ts}_create_sponsor_allowlist/up.sql` + `down.sql`
-- `crates/db_schema/migrations/{ts}_backfill_reputation_event_source_type/up.sql` + `down.sql`
-- `crates/db_schema/src/source/reputation_event.rs` (modify)
-- `crates/db_schema/src/source/sponsor_allowlist.rs` (create)
+- `migrations/{ts}_add_reputation_event_v1_columns/up.sql` + `down.sql` (repo-root `migrations/` per DQ #183)
+- `migrations/{ts}_extend_sponsor_allowlist_for_r1/up.sql` + `down.sql` (ALTER existing v1-AD-a table per DQ #181 — NOT create)
+- `migrations/{ts}_backfill_reputation_event_source_type/up.sql` + `down.sql`
+- `migrations/{ts}_seed_v1_rt_config_keys/up.sql` + `down.sql` (migration-SQL pattern per DQ #183 — NOT a Rust utils module)
+- `crates/db_schema/src/source/governance/reputation_event.rs` (modify — 2 new fields per DQ #182 path correction)
+- `crates/db_schema/src/source/governance/sponsor_allowlist.rs` (modify — already exists per v1-AD-a; add new fields per DQ #181)
 - `crates/db_schema/src/source/governance/governance_log.rs` (modify — 7 new const lines)
 - `crates/api/api/src/governance/governance_log.rs` (modify — re-export shim)
-- `crates/api/api/src/governance/config.rs` (modify — 28 new `DEFAULT_*` consts)
-- `crates/db_schema/src/utils/v1_rt_config_seed.rs` (create)
-- `crates/db_schema/src/newtypes.rs` (modify — `SponsorAllowlistId` newtype)
-- `crates/db_schema/src/schema.rs` (regenerated)
+- `crates/api/api/src/governance/config.rs` (modify — `EXPECTED_SEED_COUNT_V1_RT` const + parity assertion at lines 2692-2707 per DQ #185)
+- `crates/db_schema_file/src/schema.rs` (regenerated — note `db_schema_file` crate, NOT `db_schema`; verified path)
 - `.claude/rules/governance-log-entry-kind-registry.md` (modify — append RT section)
-- `crates/server/tests/e2e.rs` (modify — extend `phase1_migrations_round_trip` parametric matcher; per-test anchor-Edit at file end if a separate parity test is added; e2e.rs is **12,819 lines** post-SL-c-2 — anchor-Edit discipline mandatory per `feedback_junior_worker_e2e_edit_hang.md`).
+- `crates/server/tests/e2e.rs` (modify — extend `phase1_migrations_round_trip` parametric matcher only; e2e.rs is **12,819 lines** post-SL-c-2 — anchor-Edit discipline mandatory per `feedback_junior_worker_e2e_edit_hang.md`).
 
 Per the §2.4 file-class table:
 
@@ -235,16 +232,15 @@ Planner does NOT write:
 
 Plan §13 task ordering must respect schema-first dependency chain:
 
-1. Migration up.sql + down.sql authored
-2. Diesel `schema.rs` regenerated
-3. `crates/db_schema/src/source/reputation_event.rs` struct field additions
-4. `crates/db_schema/src/source/sponsor_allowlist.rs` new file
-5. Seed function (`seed_v1_rt_config_keys`) authored — depends on `DEFAULT_*` consts
-6. `DEFAULT_*` consts in `config.rs`
-7. Entry-kind consts in `governance_log.rs` (db_schema source) + re-export in api shim
-8. Round-trip migration test extension in `e2e.rs`
+1. Migrations authored (`up.sql` + `down.sql`): r-event columns; sponsor_allowlist ALTER; backfill; seed
+2. Diesel `crates/db_schema_file/src/schema.rs` regenerated (note `db_schema_file` crate per actual path)
+3. `crates/db_schema/src/source/governance/reputation_event.rs` struct field additions (governance/ subdir per DQ #182)
+4. `crates/db_schema/src/source/governance/sponsor_allowlist.rs` field additions (existing struct, NOT create — per DQ #181)
+5. `EXPECTED_SEED_COUNT_V1_RT` const + parity assertion update in `config.rs` (per DQ #185)
+6. Entry-kind consts in `crates/db_schema/src/source/governance/governance_log.rs` + re-export in api shim
+7. Round-trip migration test extension in `e2e.rs`
 
-(Strict ordering not required across all tasks — `[P]` parallelism marks where YAML file arrays prove non-overlap. Migrations 1, 2, 3 are independent files — `[P]`-able. Steps 5–8 share `config.rs` / `governance_log.rs` / `e2e.rs` and are NOT `[P]`.)
+(Strict ordering not required across all tasks — `[P]` parallelism marks where YAML file arrays prove non-overlap. The 4 migrations (r-event-cols, sponsor_allowlist ALTER, backfill, seed) are independent files — `[P]`-able. Steps 5–7 share `config.rs` / `governance_log.rs` / `e2e.rs` and are NOT `[P]`.)
 
 ### 4.5 Cross-cutting from PMD-promoted patterns
 
@@ -288,9 +284,16 @@ Brief is queueable when:
 - DQ pending count = 0 OR all pending entries are non-blocking for RT-r1 planning
 - SL-d planning task status is **observable** (still running, complete, or failed) — RT-r1 planning may run concurrently; advisor handles the cohort mechanics at dispatch time
 - Forbidden-window check at dispatch time per advisor-orchestrator.md §5.1
-- Clarify gate completed per advisor-orchestrator.md §3.3 (this brief is the PRE-clarify input; `/brehon-clarify .claude/PRPs/briefs/rt-r1-planning-1.md` runs next)
+- ✅ **Clarify gate completed** per advisor-orchestrator.md §3.3 — DQ #181-#185 resolved 2026-05-10 (advisor-mode, all 5 self-answered with citations). Planner reads each DQ resolved entry verbatim before authoring corresponding plan §13 tasks.
+
+**Clarify resolutions (2026-05-10) — load-bearing for plan authoring:**
+- **DQ #181** (sponsor_allowlist already shipped) → ALTER existing table, do NOT create. Newtype + struct + initial migration unchanged.
+- **DQ #182** (path errors) → all `crates/db_schema/src/source/<X>.rs` paths use `governance/` subdirectory.
+- **DQ #183** (seed location) → `migrations/{ts}_seed_v1_rt_config_keys/` at repo-root; NO Rust utils module.
+- **DQ #184** (backfill heuristics) → use `source_case_id` + `reason ILIKE` precedence chain (5 steps) — `endorsement_id` / `jury_vote_id` columns do not exist.
+- **DQ #185** (cumulative invariant) → `EXPECTED_SEED_COUNT_V1_RT = 29`; cumulative `34+27+27+13+29 = 130`; assertion update at `config.rs:2692-2707`.
 
 Brief is committed to `governance-v0` with subject:
 ```
-chore(advisor): rt-r1-planning brief — schema + seed + backfill (parallel-safe to SL-d)
+chore(advisor): clarify rt-r1-planning-1 — see DQ #181-#185
 ```
