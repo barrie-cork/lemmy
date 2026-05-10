@@ -13523,4 +13523,171 @@ mod v1_sl_d_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test]
+  async fn apply_sponsor_liability_wrapper_preserves_v0_outputs() -> LemmyResult<()> {
+    use lemmy_api::governance::sponsor_liability_grace::run_grace_check_batch;
+    use diesel::update;
+    use lemmy_db_schema::source::governance::sanction::SanctionInsertForm;
+    use lemmy_db_schema_file::enums::{ReputationDimension, SanctionAction, SanctionScope};
+    use lemmy_db_schema_file::schema::sanction;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Seed sponsee + 2 sponsors with active sureties.
+    let (sponsee, sponsor_ids) =
+      seed_target_with_sureties(&context, instance.id, &mut conn, 2, "sld4").await?;
+
+    // Seed reputation_snapshot rows for sponsors (endorsement_strength = 100) so the
+    // floor clamp (floor = 0) does not engage on the computed -25 per-sponsor delta.
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &sponsor_ids).await?;
+
+    let now = Utc::now();
+
+    // Seed moderation_case in SponsorLiabilityPending with expired grace.
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_d_test4".to_string(),
+        severity: CaseSeverity::Medium,
+        status: CaseStatus::SponsorLiabilityPending,
+        threshold_score: 0,
+        grace_expires_at: Some(now - Duration::minutes(1)),
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // fire_or_escape_case_inner skips cases with NULL decided_at — set it explicitly.
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::decided_at.eq(Some(now - Duration::hours(24))))
+      .execute(&mut conn)
+      .await?;
+
+    // Sanction row required — ContentRemoval → Moderate severity → raw_delta = -50.
+    // fire_or_escape_case_inner skips cases with no sanction row.
+    insert_into(sanction::table)
+      .values(SanctionInsertForm {
+        case_id,
+        scope: SanctionScope::Community,
+        action: SanctionAction::ContentRemoval,
+        target_person_id: Some(sponsee),
+        ends_at: None,
+        active: Some(true),
+        ..Default::default()
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // Drive: run_grace_check_batch fires apply_sponsor_liability (thin wrapper) internally
+    // at sponsor_liability_grace.rs:510 (fire branch of fire_or_escape_case_inner).
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // case.status == SponsorLiabilityFired (set by fire branch after wrapper returns).
+    let case_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityFired,
+      "case transitioned to SponsorLiabilityFired"
+    );
+
+    // --- reputation_event assertions ---
+    // Expected per-sponsor delta: raw_delta = DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE
+    // = -50; sponsor_count = 2; per_sponsor_base = -25; remainder = 0 (no bump);
+    // regular_multiplier = 1.0 (non-founder); post_multiplier_delta = -25;
+    // current_endorsement_strength = 100 (seeded); 100 + (-25) = 75 >= floor 0 => no clamp;
+    // final_delta = -25.  BYTE-IDENTICAL to v0 single-pass body output for these seeds.
+    let rep_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::dimension.eq(ReputationDimension::EndorsementStrength))
+      .filter(reputation_event::reason.eq("sponsor_liability_applied"))
+      .filter(reputation_event::delta.eq(-25_i32))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_count,
+      2,
+      "2 reputation_event rows: dimension=EndorsementStrength, reason=sponsor_liability_applied, delta=-25"
+    );
+
+    // --- governance_log assertions for sponsor_liability_applied ---
+    // 2 entries (one per sponsor); payload BYTE-IDENTICAL to v0 payload shape at
+    // sponsor_liability.rs:438-448.
+    let applied_payloads: Vec<Value> = governance_log::table
+      .filter(governance_log::entry_kind.eq("sponsor_liability_applied"))
+      .order_by(governance_log::id.asc())
+      .select(governance_log::payload)
+      .load(&mut conn)
+      .await?;
+    assert_eq!(applied_payloads.len(), 2, "2 sponsor_liability_applied log entries");
+    for payload in &applied_payloads {
+      assert!(
+        payload["sponsor_pseudonym"].is_string(),
+        "sponsor_pseudonym is a string (ADR-015)"
+      );
+      assert_eq!(
+        payload["severity"],
+        serde_json::json!("moderate"),
+        "severity = moderate (ContentRemoval => Moderate)"
+      );
+      assert_eq!(
+        payload["pre_multiplier_delta"].as_i64(),
+        Some(-25),
+        "pre_multiplier_delta = -25"
+      );
+      assert_eq!(
+        payload["multiplier"].as_f64(),
+        Some(1.0),
+        "multiplier = 1.0 (regular_multiplier, non-founder)"
+      );
+      assert_eq!(
+        payload["post_multiplier_delta"].as_i64(),
+        Some(-25),
+        "post_multiplier_delta = -25"
+      );
+      assert_eq!(
+        payload["final_delta"].as_i64(),
+        Some(-25),
+        "final_delta = -25 (no clamp: 100 + (-25) = 75 >= floor 0)"
+      );
+    }
+
+    // 0 governance_log rows with entry_kind == "sponsor_liability_clamped" (no clamp).
+    let clamped_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("sponsor_liability_clamped"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(clamped_count, 0, "0 sponsor_liability_clamped entries (no clamp engaged)");
+
+    // 1 governance_log row with entry_kind == "sponsor_liability_fired" (SL-c summary).
+    let fired_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("sponsor_liability_fired"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(fired_count, 1, "1 sponsor_liability_fired summary entry");
+
+    Ok(())
+  }
 }
