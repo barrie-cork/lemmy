@@ -1726,3 +1726,13 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Lesson candidate L18:** advisor-orchestrator.md §3.1 ci-watcher dispatch must include pre-queue `ssh homeserver 'git -C /srv/brehon-fork fetch origin +refs/heads/junior/...md-<id>:refs/heads/junior/...md-<id>'` for any base_branch matching `junior/*`. Promote to hard precondition.
 - **Lesson candidate L19:** `scripts/brehon/resolve-dq-canonical.sh` on Windows MSYS Bash trims `\r` incorrectly in heredoc-fed read loop, causing `grep -E '[-]<jid>$'` to miss-match. Workaround: pipe through `tr -d '\r'` or set `IFS=$'\r\n'` on the read.
 - **Phase-1 cohort-2 result:** PASS. Awaiting daemon finalize-merge of worker md-162 → phase-v1-SL-c-2; on phase-tip drift, raise Phase-2 e2e validate-pending per stage-shape §3.1.
+
+## bm: PR opened — 2026-05-10T04:59Z
+
+- **branch:** phase-v1-SL-c-2
+- **base:** governance-v0
+- **pr:** #122
+- **url:** https://github.com/barrie-cork/lemmy/pull/122
+- **title:** Phase v1-SL-c-2 — 5 grace_check e2e tests + registry marker retro
+- **body source:** interim retro + plan + commits
+
