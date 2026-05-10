@@ -1,48 +1,6 @@
 {
   "pending": [
     {
-      "id": 191,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T18:45:07Z",
-      "workflow_run_id": 25636750748,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
-      "phase_task": 1,
-      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 pushed migration 2026-05-10-000000-0000_add_reputation_event_v1_columns to worker branch. Workflow run id: 25636750748",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 192,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T18:45:07Z",
-      "workflow_run_id": 25636750747,
-      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
-      "phase_task": 1,
-      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 pushed migration 2026-05-10-000000-0000_add_reputation_event_v1_columns to worker branch. Workflow run id: 25636750747",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
       "id": 193,
       "from": "impl",
       "kind": "validate-pending",
@@ -3433,6 +3391,48 @@
       "answer": "Workflow run completed successfully",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T19:30:31.221798Z"
+    },
+    {
+      "id": 192,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T18:45:07Z",
+      "workflow_run_id": 25636750747,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
+      "phase_task": 1,
+      "question": "cargo-validate-migration.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 pushed migration 2026-05-10-000000-0000_add_reputation_event_v1_columns to worker branch. Workflow run id: 25636750747",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run completed successfully.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:31:44.941980Z"
+    },
+    {
+      "id": 191,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T18:45:07Z",
+      "workflow_run_id": 25636750748,
+      "branch": "junior/role-impl-task-v1-rt-r1-task-1-add-reputation-event-v1-columns-source-event-type-enum-see-claude-prps-briefs-rt-r-208",
+      "phase_task": 1,
+      "question": "cargo-validate-workspace.yml run for v1-RT-r1 task 1 migration \u2014 await ci-watcher result",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 pushed migration 2026-05-10-000000-0000_add_reputation_event_v1_columns to worker branch. Workflow run id: 25636750748",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Workflow run completed successfully.",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-10T19:31:44.941980Z"
     }
   ],
   "schema_version": 2
