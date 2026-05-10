@@ -42,7 +42,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK},
+  governance_log::{self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK, ENTRY_KIND_SPONSOR_LIABILITY_PENDING},
   redaction,
   sponsor_liability,
 };
@@ -68,6 +68,7 @@ use lemmy_db_schema_file::{
   PersonId,
   enums::{
     AppealStatus,
+    CaseSeverity,
     CaseStatus,
     JuryAssignmentRole,
     JuryAssignmentStatus,
@@ -112,6 +113,12 @@ const ALL_JURY_DECISIONS: [JuryDecision; 8] = [
   JuryDecision::SuspendCommunityMember,
   JuryDecision::RecommendFederationAction,
 ];
+
+#[derive(PartialEq)]
+enum SLDPathKind {
+  Pending,
+  Decided,
+}
 
 pub async fn submit_jury_vote(
   Json(data): Json<SubmitJuryVote>,
@@ -419,6 +426,10 @@ async fn process_vote(
     .filter_map(Option::clone)
     .collect();
 
+  let mut path_kind = SLDPathKind::Decided;
+  let mut sld_grace_expires_at: Option<DateTime<Utc>> = None;
+  let mut sld_log_data: Option<(String, &'static str, Vec<String>)> = None;
+
   // 8. Emit sanction (for everything except NoAction).
   if let Some((scope, action)) = map_decision_to_sanction(winning_decision) {
     let sanction_form = SanctionInsertForm {
@@ -449,26 +460,11 @@ async fn process_vote(
     )
     .await?;
 
-    // 8.5. Sponsor-liability deltas (OQ-022 multiplier, OQ-024 floor clamp).
-    // Only Person-target cases reach here with sponsors; Post/Comment-target
-    // cases have `target_person_id = None` per GOTCHA-56h and skip silently.
-    //
-    // SOURCE: NEW in JM-c — load-bearing TODO at the SL-d graft point
-    //
-    // TODO(v1-sponsor-liability-d): replace this v0 apply_sponsor_liability call with the
-    // compute/fire split per .claude/PRPs/prds/v1-sponsor-liability.prd.md §9.1 + §9.3:
-    //   - compute_sponsor_liability(...) returns deltas (no event rows yet)
-    //   - flip case.status = CaseStatus::SponsorLiabilityPending
-    //   - set case.grace_expires_at = now + grace_window_for_severity(severity)
-    //   - emit governance_log entry sponsor_liability_pending
-    //   - notify_sponsor_of_pending_liability(...) for each delta
-    //   - DEFER public_case_log + juror reputation_events to scheduler fire/escape time
-    //
-    // The current v0 apply_sponsor_liability stays in place for JM-c — SL-d is the rewrite.
-    // JM-c's appeal_window_expires_at write at step 9 fires on BOTH this v0 path AND the
-    // (future) sponsor-liability path; SL-d must preserve that semantic.
+    // 8.5. Sponsor-liability path-kind branch (v1-SL-d).
+    // Only Person-target cases can have active sureties; Post/Comment-target
+    // cases have `target_person_id = None` (GOTCHA-56h) and skip silently.
     if let Some(target_id) = case_row.target_person_id {
-      sponsor_liability::apply_sponsor_liability(
+      let deltas = sponsor_liability::compute_sponsor_liability(
         conn,
         target_id,
         data.case_id,
@@ -477,133 +473,166 @@ async fn process_vote(
         &mut cache,
       )
       .await?;
+      if !deltas.is_empty() {
+        let grace_dur =
+          sponsor_liability::grace_window_for_severity(case_row.severity, &mut cache, conn)
+            .await?;
+        let grace_expires = now + grace_dur;
+        let target_pseudonym =
+          actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), target_id).await?;
+        let mut sponsors_pseudonyms: Vec<String> = Vec::with_capacity(deltas.len());
+        for delta in &deltas {
+          let psn =
+            actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), delta.sponsor_id)
+              .await?;
+          sponsors_pseudonyms.push(psn);
+        }
+        let severity_str: &'static str = match case_row.severity {
+          CaseSeverity::Low => "minor",
+          CaseSeverity::Medium => "moderate",
+          CaseSeverity::High | CaseSeverity::Critical => "severe",
+        };
+        path_kind = SLDPathKind::Pending;
+        sld_grace_expires_at = Some(grace_expires);
+        sld_log_data = Some((target_pseudonym, severity_str, sponsors_pseudonyms));
+      }
     }
   }
 
-  // 8.9. Flip case → Decided. Step 9 (appeal_window_expires_at write) lands
-  // AFTER the step-10/11/12 writes below — keeping it as a separate UPDATE
-  // makes SL-d's graft cleaner per PRD §9.1 cross-references (SL-d will set
-  // `case.status = SponsorLiabilityPending` here instead of Decided, and the
-  // appeal_window write must fire on BOTH paths). `closed_at` is no longer
-  // written by submit_jury_vote — it becomes a JM-d concern (the
-  // appeal-window-expiry background job will set `closed_at = now()` when
-  // transitioning Decided → Closed).
-  update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
-    .set((
-      moderation_case::status.eq(CaseStatus::Decided),
-      moderation_case::decided_at.eq(Some(now)),
-      moderation_case::winning_decision.eq(Some(winning_decision)),
-    ))
-    .execute(conn)
-    .await?;
-
-  // 10. Publish redacted summary to public_case_log.
-  let summary = redaction::scrub(&build_summary(&case_row, winning_decision));
-  let rationale_redacted = if winning_rationales.is_empty() {
-    None
+  // 8.9. Flip case status. Pending path sets SponsorLiabilityPending + grace_expires_at;
+  // Decided path sets Decided. Step 9 (appeal_window_expires_at) fires on both paths.
+  if path_kind == SLDPathKind::Pending {
+    let grace_expires_at = sld_grace_expires_at.expect("set in 8.5 Pending branch");
+    update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+      .set((
+        moderation_case::status.eq(CaseStatus::SponsorLiabilityPending),
+        moderation_case::decided_at.eq(Some(now)),
+        moderation_case::winning_decision.eq(Some(winning_decision)),
+        moderation_case::grace_expires_at.eq(Some(grace_expires_at)),
+      ))
+      .execute(conn)
+      .await?;
   } else {
-    Some(redaction::scrub(&winning_rationales.join("\n")))
-  };
-  let pcl_form = PublicCaseLogInsertForm {
-    case_id: data.case_id,
-    community_id: case_row.community_id,
-    summary,
-    rationale_redacted,
-  };
-  insert_into(public_case_log::table)
-    .values(&pcl_form)
-    .execute(conn)
-    .await?;
-  governance_log::append(
-    &mut conn.into(),
-    "public_log_published",
-    json!({
-      "case_id": data.case_id.0,
-      "decision": winning_decision,
-    }),
-    None,
-  )
-  .await?;
-
-  // 11. Juror reputation events: aligned / outlier deltas via config.
-  let juror_aligned_delta_i64 = config::get_int(
-    &mut cache,
-    &mut (&mut *conn).into(),
-    Scope::Instance,
-    "deltas.juror_aligned",
-  )
-  .await?;
-  let juror_outlier_delta_i64 = config::get_int(
-    &mut cache,
-    &mut (&mut *conn).into(),
-    Scope::Instance,
-    "deltas.juror_outlier",
-  )
-  .await?;
-  let juror_aligned_delta = i32::try_from(juror_aligned_delta_i64).map_err(|_e| {
-    LemmyErrorType::Unknown(format!(
-      "deltas.juror_aligned ({juror_aligned_delta_i64}) overflows i32"
-    ))
-  })?;
-  let juror_outlier_delta = i32::try_from(juror_outlier_delta_i64).map_err(|_e| {
-    LemmyErrorType::Unknown(format!(
-      "deltas.juror_outlier ({juror_outlier_delta_i64}) overflows i32"
-    ))
-  })?;
-
-  let juror_decisions: Vec<(PersonId, JuryDecision)> = jury_vote::table
-    .filter(jury_vote::case_id.eq(data.case_id))
-    .select((jury_vote::juror_id, jury_vote::decision))
-    .load::<(PersonId, JuryDecision)>(conn)
-    .await?;
-  for (other_juror_id, juror_decision) in juror_decisions {
-    let delta = if juror_decision == winning_decision {
-      juror_aligned_delta
-    } else {
-      juror_outlier_delta
-    };
-    emit_reputation_event(
-      conn,
-      other_juror_id,
-      case_row.community_id,
-      ReputationDimension::JuryReliability,
-      delta,
-      data.case_id,
-      if delta > 0 {
-        "aligned_with_majority"
-      } else {
-        "outlier_vote"
-      },
-    )
-    .await?;
+    update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
+      .set((
+        moderation_case::status.eq(CaseStatus::Decided),
+        moderation_case::decided_at.eq(Some(now)),
+        moderation_case::winning_decision.eq(Some(winning_decision)),
+      ))
+      .execute(conn)
+      .await?;
   }
 
-  // 12. Reporter reputation event — only when the case has a creator.
-  if let Some(reporter_id) = case_row.creator_id {
-    let key = if matches!(winning_decision, JuryDecision::NoAction) {
-      "deltas.reporter_dismissed"
+  // Steps 10–12 are deferred on the Pending path; the scheduler handles them at fire/escape time.
+  if path_kind == SLDPathKind::Decided {
+    // 10. Publish redacted summary to public_case_log.
+    let summary = redaction::scrub(&build_summary(&case_row, winning_decision));
+    let rationale_redacted = if winning_rationales.is_empty() {
+      None
     } else {
-      "deltas.reporter_upheld"
+      Some(redaction::scrub(&winning_rationales.join("\n")))
     };
-    let delta_i64 =
-      config::get_int(&mut cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
-    let delta = i32::try_from(delta_i64)
-      .map_err(|_e| LemmyErrorType::Unknown(format!("{key} ({delta_i64}) overflows i32")))?;
-    let reason = if matches!(winning_decision, JuryDecision::NoAction) {
-      "report_dismissed"
-    } else {
-      "report_upheld"
+    let pcl_form = PublicCaseLogInsertForm {
+      case_id: data.case_id,
+      community_id: case_row.community_id,
+      summary,
+      rationale_redacted,
     };
-    emit_reputation_event(
-      conn,
-      reporter_id,
-      case_row.community_id,
-      ReputationDimension::ReportingAccuracy,
-      delta,
-      data.case_id,
-      reason,
+    insert_into(public_case_log::table)
+      .values(&pcl_form)
+      .execute(conn)
+      .await?;
+    governance_log::append(
+      &mut conn.into(),
+      "public_log_published",
+      json!({
+        "case_id": data.case_id.0,
+        "decision": winning_decision,
+      }),
+      None,
     )
     .await?;
+
+    // 11. Juror reputation events: aligned / outlier deltas via config.
+    let juror_aligned_delta_i64 = config::get_int(
+      &mut cache,
+      &mut (&mut *conn).into(),
+      Scope::Instance,
+      "deltas.juror_aligned",
+    )
+    .await?;
+    let juror_outlier_delta_i64 = config::get_int(
+      &mut cache,
+      &mut (&mut *conn).into(),
+      Scope::Instance,
+      "deltas.juror_outlier",
+    )
+    .await?;
+    let juror_aligned_delta = i32::try_from(juror_aligned_delta_i64).map_err(|_e| {
+      LemmyErrorType::Unknown(format!(
+        "deltas.juror_aligned ({juror_aligned_delta_i64}) overflows i32"
+      ))
+    })?;
+    let juror_outlier_delta = i32::try_from(juror_outlier_delta_i64).map_err(|_e| {
+      LemmyErrorType::Unknown(format!(
+        "deltas.juror_outlier ({juror_outlier_delta_i64}) overflows i32"
+      ))
+    })?;
+
+    let juror_decisions: Vec<(PersonId, JuryDecision)> = jury_vote::table
+      .filter(jury_vote::case_id.eq(data.case_id))
+      .select((jury_vote::juror_id, jury_vote::decision))
+      .load::<(PersonId, JuryDecision)>(conn)
+      .await?;
+    for (other_juror_id, juror_decision) in juror_decisions {
+      let delta = if juror_decision == winning_decision {
+        juror_aligned_delta
+      } else {
+        juror_outlier_delta
+      };
+      emit_reputation_event(
+        conn,
+        other_juror_id,
+        case_row.community_id,
+        ReputationDimension::JuryReliability,
+        delta,
+        data.case_id,
+        if delta > 0 {
+          "aligned_with_majority"
+        } else {
+          "outlier_vote"
+        },
+      )
+      .await?;
+    }
+
+    // 12. Reporter reputation event — only when the case has a creator.
+    if let Some(reporter_id) = case_row.creator_id {
+      let key = if matches!(winning_decision, JuryDecision::NoAction) {
+        "deltas.reporter_dismissed"
+      } else {
+        "deltas.reporter_upheld"
+      };
+      let delta_i64 =
+        config::get_int(&mut cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
+      let delta = i32::try_from(delta_i64)
+        .map_err(|_e| LemmyErrorType::Unknown(format!("{key} ({delta_i64}) overflows i32")))?;
+      let reason = if matches!(winning_decision, JuryDecision::NoAction) {
+        "report_dismissed"
+      } else {
+        "report_upheld"
+      };
+      emit_reputation_event(
+        conn,
+        reporter_id,
+        case_row.community_id,
+        ReputationDimension::ReportingAccuracy,
+        delta,
+        data.case_id,
+        reason,
+      )
+      .await?;
+    }
   }
 
   // 12.5. Phase 6 task 76 — federated recommendation outbound publish.
@@ -658,10 +687,32 @@ async fn process_vote(
   )
   .await?;
 
-  if matches!(
-    map_decision_to_sanction(winning_decision),
-    Some((SanctionScope::FederatedRecommendation, _)),
-  ) {
+  // 9b. Sponsor-liability-pending log entry (Pending path only).
+  if path_kind == SLDPathKind::Pending {
+    let (target_pseudonym, severity_str, sponsors_pseudonyms) =
+      sld_log_data.expect("set in 8.5 Pending branch");
+    let grace_expires_at = sld_grace_expires_at.expect("set in 8.5 Pending branch");
+    governance_log::append(
+      &mut conn.into(),
+      ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
+      json!({
+        "case_id": data.case_id.0,
+        "target_pseudonym": target_pseudonym,
+        "severity": severity_str,
+        "grace_expires_at": grace_expires_at,
+        "sponsors_pseudonyms": sponsors_pseudonyms,
+      }),
+      None,
+    )
+    .await?;
+  }
+
+  if path_kind == SLDPathKind::Decided
+    && matches!(
+      map_decision_to_sanction(winning_decision),
+      Some((SanctionScope::FederatedRecommendation, _)),
+    )
+  {
     crate::governance::federation_outbox::send_local_sanction_notice(data.case_id, conn, context)
       .await?;
   }
