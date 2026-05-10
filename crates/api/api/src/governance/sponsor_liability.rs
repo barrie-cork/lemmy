@@ -179,7 +179,6 @@ fn liability_severity_from_case_severity(severity: CaseSeverity) -> LiabilitySev
 /// Pure read; idempotent. Severity snapshot semantics: the caller passes
 /// `case_row.severity` (snapshotted at jury-assemble time per ADR-010 — not
 /// re-derived from config at grace-window computation time).
-#[expect(dead_code)]
 pub(crate) async fn grace_window_for_severity(
   severity: CaseSeverity,
   cache: &mut ConfigCache,
