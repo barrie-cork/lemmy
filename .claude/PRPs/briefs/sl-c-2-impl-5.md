@@ -164,3 +164,24 @@ After committing and pushing:
 - **Anchor discipline:** insert AFTER Task 4's fn closing `}`, before the mod's
   closing `}`. The mod closes after this test — do not add another `}` after `Ok(())`.
 - **Handover trailer:** include `HANDOVER:` YAML in commit body.
+
+## 5. Prior task handover
+
+```yaml
+prior_tasks:
+  - task: 4
+    commit: 31096f61f
+    filesCreated: []
+    filesModified:
+      - crates/server/tests/e2e.rs
+    keyDecisions:
+      - Case A (LemmyResult<()>) used throughout — plan stub Box<dyn Error> overridden
+      - Workspace-check DQ #173 result=pass (wrid 25613695291)
+    notes: >
+      Test #4 per-case isolation: grace_check_per_case_isolation_skips_bad_case_processes_good_case.
+      Batch continues past a malformed case (missing sanction) and fires the well-formed case.
+      Phase tip after merge: a9b3639f6.
+```
+
+Confirm `grace_check_per_case_isolation_skips_bad_case_processes_good_case` exists in the mod and
+uses `LemmyResult<()>` before writing Task 5 (canonical-schema-first gate).
