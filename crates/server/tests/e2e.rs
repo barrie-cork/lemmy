@@ -12824,7 +12824,7 @@ mod v1_sl_d_fixtures {
   use actix_web::web::{Data, Json};
   use chrono::{DateTime, Duration, Utc};
   use diesel::{ExpressionMethods, QueryDsl, insert_into};
-  use diesel_async::{AsyncPgConnection, RunQueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
     accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
