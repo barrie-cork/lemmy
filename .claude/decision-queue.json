@@ -148,6 +148,21 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 197,
+      "from": "ci-watcher",
+      "kind": "blocker",
+      "timestamp": "2026-05-10T21:37:21.302176Z",
+      "question": "ci-watcher dispatch violated: no validate-pending DQ entries found for workflow_run_ids 25640324087 + 25640324089. Entries must be created by advisor before ci-watcher queuing.",
+      "options": [
+        "advisor creates DQ entries for these workflow runs",
+        "advisor provides brief file at .claude/PRPs/briefs/rt-r1-ci-watcher-revalidate.md with entry details"
+      ],
+      "context": "Task dispatch names workflow_run_ids explicitly but no paired validate-pending entries exist in DQ. ci-watcher cannot create new entries (hard refusal); entries must pre-exist.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
