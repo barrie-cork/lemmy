@@ -1,28 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 189,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T20:45:54Z",
-      "question": "Does Phase 2 e2e pass for v1-SL-d phase branch tip 78771349e?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "All 7 impl tasks workspace-checked (DQ #195-#199 pass on phase branch). Phase 2 local e2e run on laptop via cargo-test.bat. Branch: phase-v1-SL-d tip 78771349e.",
-      "branch": "phase-v1-SL-d",
-      "phase_task": 7,
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-d-78771349e.log",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 186,
@@ -3287,6 +3264,28 @@
       "answer": "(a) dual-const + doc-comment. Reasoning: option (b) loses auditability — future PRD section 8 reader sees \"29 knobs in PRD\" but \"26 in code parametric\", and the 3-overlap rationale lives only in DQ #187 archive. Option (c) is rejected (churns ship-history). Option (a) preserves V1_AD = 27 ship-count, adds V1_RT_NETNEW = 26 (parity-test active), V1_RT_LOGICAL = 29 (audit-only), with a 3-line doc-comment naming the 3 v1-AD-a-overlap keys. Plan revisions: section 10.8 (parity test extension) keeps EXPECTED_SEED_COUNT_V1_RT_NETNEW = 26 in cumulative invariant 34+27+27+13+26=127; ADD EXPECTED_SEED_COUNT_V1_RT_LOGICAL = 29 with doc-comment \"PRD section 8 conceptual count; 3 of these (deltas.participation_weekly_active, participation.dormancy_window_days, deltas.participation_dormant) are owned by V1_AD ship-count per migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39\"; NO assertion uses _LOGICAL. Plan section 13 Task 8 IMPLEMENT files unchanged (same file: config.rs); Task 8 commit body lists both consts. Per user directive 2026-05-10 supersedes planner DQ #187 framing only on documentation surface; ship-history accuracy preserved.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-10T15:30:00Z"
+    },
+    {
+      "id": 189,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T20:45:54Z",
+      "question": "Does Phase 2 e2e pass for v1-SL-d phase branch tip 78771349e?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "All 7 impl tasks workspace-checked (DQ #195-#199 pass on phase branch). Phase 2 local e2e run on laptop via cargo-test.bat. Branch: phase-v1-SL-d tip 78771349e.",
+      "branch": "phase-v1-SL-d",
+      "phase_task": 7,
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-d-78771349e.log",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase 2 e2e passed — 85 passed, 0 failed, 3 ignored. All 4 v1_sl_d_fixtures tests ok. Log: .claude/runlog/e2e-v1-SL-d-78771349e-run2.log",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T21:57:45Z"
     }
   ],
   "schema_version": 2
