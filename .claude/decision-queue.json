@@ -2,6 +2,83 @@
   "pending": [],
   "resolved": [
     {
+      "id": 176,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T12:00:00Z",
+      "question": "sl-d-planning-1: notify_sponsor_of_pending_liability is in TODO comment at submit_jury_vote.rs:464 and PRD row 4 says sponsor notifications, but NotificationType enum has no governance variant and OQ-V1-SL-03 is unresolved. Is notification sending in scope for v1-SL-d?",
+      "options": [
+        "(a) skip-notifications: governance_log entry sponsor_liability_pending suffices; planner omits notify_sponsor_of_pending_liability from plan",
+        "(b) stub-notifications: stub function using NotificationType::ModAction as approximation",
+        "(c) out-of-scope: PRD 9.3 three-item list does not include notifications; TODO was aspirational"
+      ],
+      "context": "PRD 9.3 lines 535-537 list exactly 3 SL-d contributions (status transition, grace-window, deferred write set) with no notification step. OQ-V1-SL-03 lines 674-684 is unresolved. NotificationType enum enums.rs:327-335 has only Mention/Reply/Subscribed/PrivateMessage/ModAction. notify_sponsor_of_pending_liability does not exist in codebase.",
+      "answer": "(c) out-of-scope. PRD 9.3 enumerates exactly 3 SL-d contributions and notifications are not among them. OQ-V1-SL-03 is an open question not a resolved requirement. governance_log sponsor_liability_pending entry (watchpoint 9) provides auditor visibility without a new NotificationType variant. SL-d planner omits notify_sponsor_of_pending_liability from plan 13. Per PRD 9.3 strict reading + OQ-V1-SL-03 unresolved status.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T12:00:00Z"
+    },
+    {
+      "id": 177,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T12:00:00Z",
+      "question": "sl-d-planning-1: How should compute_sponsor_liability output be passed to fire_sponsor_liability? Brief lean (b) says recompute at fire-time.",
+      "options": [
+        "(a) recompute-at-fire: fire_sponsor_liability calls compute_sponsor_liability internally; zero new columns; idempotent",
+        "(b) snapshot-deltas: new computed_deltas JSONB column (violates no-new-migration constraint)",
+        "(c) pass-through: intermediate table or deferred-write column"
+      ],
+      "context": "No computed_deltas column in schema.rs confirmed by grep 2026-05-10. PRD 9.3 does not specify persistence mechanism. Brief 2.3 forbids new migrations for SL-d.",
+      "answer": "(a) recompute-at-fire. apply_sponsor_liability wrapper = compute + fire inline. fire_sponsor_liability calls compute_sponsor_liability then writes. Migration-free. Consistent with brief 2.3 no-new-migration constraint. PRD 9.3 silent on mechanism; lean (a) is simplest correct solution. Per brief 4.2 + schema.rs grep 2026-05-10.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T12:00:00Z"
+    },
+    {
+      "id": 178,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T12:00:00Z",
+      "question": "sl-d-planning-1: Should grace_window_for_severity read instance-scope only or community-cascade for liability.grace_window_*_hours?",
+      "options": [
+        "(a) instance-only: Scope::Instance matching SL-c scheduler pattern",
+        "(b) community-cascade: Scope::Community first then Scope::Instance fallback per PRD 10 Per-community=Yes"
+      ],
+      "context": "config.rs lines 1019-1021 show keys at instance scope. PRD 10 marks Per-community=Yes. SL-c scheduler reads instance-scope at tick-time. Brief says instance-only matching scheduler.",
+      "answer": "(a) instance-only for v1-SL-d. Matching Scope::Instance ensures consistency with SL-c scheduler. PRD 10 Per-community=Yes is a v2 capability reservation. Per SL-c brief masthead + config.rs lines 1019-1021.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T12:00:00Z"
+    },
+    {
+      "id": 179,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T12:00:00Z",
+      "question": "sl-d-planning-1 watchpoint 9: Should ENTRY_KIND_SPONSOR_LIABILITY_PENDING be emitted at the Decided->SponsorLiabilityPending transition, or deferred to fire/escape time?",
+      "options": [
+        "(a) emit-at-transition: write sponsor_liability_pending governance_log at transition; auditors see the decision event immediately",
+        "(b) defer-all: defer to fire/escape time; only case_decided written at transition"
+      ],
+      "context": "PRD 9.3 deferred-write set lists public_case_log and juror reputation_events only. governance_log NOT in deferred set. Registry rule governance-log-entry-kind-registry.md SL-a section assigns ENTRY_KIND_SPONSOR_LIABILITY_PENDING to submit_jury_vote.rs process_vote at Decided->SponsorLiabilityPending transition.",
+      "answer": "(a) emit-at-transition. Registry rule explicitly assigns the emitting handler to submit_jury_vote.rs::process_vote at the transition. PRD 11.4 deferred-write set enumerates public_case_log and juror reputation_events only. Per governance-log-entry-kind-registry.md v1-SL-a section + PRD 9.3.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T12:00:00Z"
+    },
+    {
+      "id": 180,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-10T12:00:00Z",
+      "question": "sl-d-planning-1: e2e.rs actual line count is 12,819 (brief estimated 10,500-10,700). Should all 6 tests be anchor-Edit in e2e.rs, or split 4 e2e + 2 unit tests in sponsor_liability.rs?",
+      "options": [
+        "(a) split-modules: 4 e2e anchor-Edit in e2e.rs + 2 unit tests in sponsor_liability.rs::tests; plan 13 = 4 e2e tasks + 1 unit task",
+        "(b) all-e2e: all 6 tests in e2e.rs; 6 plan tasks"
+      ],
+      "context": "e2e.rs is 12,819 lines post-SL-c-2. Compute idempotency and grace-window mapping are pure-function tests needing no testcontainers. SL-c pattern was 5 anchor-Edit tasks each ~100-200 lines.",
+      "answer": "(a) split-modules. Pure-function unit tests (compute idempotency, grace-window mapping) belong in sponsor_liability.rs::tests. 4 e2e tests in mod v1_sl_d_fixtures via anchor-Edit per task. Plan 13: 4 e2e-impl tasks + 1 combined unit-impl task. Per feedback_junior_worker_e2e_edit_hang.md anchor-Edit discipline.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-10T12:00:00Z"
+    },
+    {
       "id": 175,
       "from": "advisor",
       "kind": "validate-pending",
