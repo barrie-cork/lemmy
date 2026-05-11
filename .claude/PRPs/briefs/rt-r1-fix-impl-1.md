@@ -4,7 +4,7 @@ role: impl-task
 task: fix-1
 brief_n: 1
 authored: 2026-05-11
-parent_worker_branch: junior/role-impl-task-v1-rt-r1-tasks-6-7-bundled-schema-rs-diesel-struct-extensions-see-claude-prps-briefs-rt-r1-impl-225
+parent_phase_tip: c689da153
 parent_dq: 204
 ---
 
@@ -75,25 +75,25 @@ gh run list --repo barrie-cork/lemmy --branch <branch> --limit 1 --json database
 
 ## §3a Handover from prior task
 
-- **Parent task (Junior #225):** `[role:impl-task] v1-RT-r1 tasks 6+7 BUNDLED`. Brief: `.claude/PRPs/briefs/rt-r1-impl-6-7-bundle.md`. Status: Junior **succeeded**; commits `03f6c670e` (schema.rs) + `05cf5ae1d` (Diesel structs) landed on worker branch `junior/role-impl-task-v1-rt-r1-tasks-6-7-bundled-...-225`.
+- **Parent task (Junior #225):** `[role:impl-task] v1-RT-r1 tasks 6+7 BUNDLED`. Brief: `.claude/PRPs/briefs/rt-r1-impl-6-7-bundle.md`. Status: Junior **succeeded**; commits `03f6c670e` (schema.rs) + `05cf5ae1d` (Diesel structs) were FAST-FORWARDED onto `phase-v1-RT-r1` tip `c689da153` by the advisor — bundle is on phase, not stuck on a worker branch.
 - **Workflow result:** `cargo-validate-workspace` run `25669550114` **failed** (workspace compile error E0063 — two call-site literals missing the new fields). Workflow run logs surface the two file:line pointers verbatim.
-- **DQ #204:** raised by impl post-push at commit `832e373d2`; advisor mutated to `result: fail` with the workspace log slice at commit `cd7f8dd52` (worker branch tip). Stays in `pending[]` per option-2 failure semantics.
-- **Parent worker branch is NOT finalize-merged to `phase-v1-RT-r1` yet** — the fix-impl commit lands on the SAME worker branch (`junior/role-impl-task-v1-rt-r1-tasks-6-7-bundled-...-225`) so the daemon's finalize-merge carries both the bundled tasks 6+7 commits AND this fix into the phase branch atomically. Do NOT cut a new junior branch off the worker branch; do NOT cut off `phase-v1-RT-r1` (would orphan the bundled commits).
+- **DQ #204:** raised by impl at commit `832e373d2`; advisor mutated to `result: fail` with the workspace log slice at commit `cd7f8dd52`. Now sits on `phase-v1-RT-r1` as `pending` per option-2 failure semantics. The fix-impl push raises a NEW `validate-pending` entry (next_id 205+) — not a re-mutation of #204.
+- **Branch strategy:** standard Junior flow. The daemon cuts a fresh worker branch off `phase-v1-RT-r1` tip `c689da153`. Fix-impl is a normal Shape-G impl-task — push the worker branch, raise validate-pending DQ, ci-watcher mutates, daemon finalize-merges back into phase.
+- **Why the bundle was FF'd onto phase** (audit trail): the original worker branch `junior/...-225` carried the bundle + DQ #204 + DQ #204 mutation. Because the workflow failed, the daemon did not auto-finalize-merge. The advisor manually FF'd (clean — phase tip was the worker branch's merge-base; +0 phase-only commits) then added an encoding-normalize commit (DQ JSON had drifted to `\u`-escaped form on the worker; phase uses decoded UTF-8). Net result: phase tip moved `9f0e2c36f → c689da153` with all 4 worker commits + 1 normalize = 5 commits. No CI re-trigger (path filters).
 
 ## §4 Constraints
 
 - **Files:** only `crates/api/api/src/governance/sponsor_liability.rs` and `crates/api/api/src/governance/submit_jury_vote.rs`. No other files.
 - **Edits:** exactly 4 lines added (2 per file). No deletes, no reorders, no comment changes.
-- **Branch:** check out the parent worker branch FIRST. Do not branch off:
+- **Branch:** standard Junior daemon flow — the daemon cuts the worker branch off `phase-v1-RT-r1` tip `c689da153`. Do NOT manually checkout any other branch. Confirm at task-0:
 
   ```
-  git fetch origin
-  git checkout junior/role-impl-task-v1-rt-r1-tasks-6-7-bundled-schema-rs-diesel-struct-extensions-see-claude-prps-briefs-rt-r1-impl-225
+  git rev-parse HEAD              # should already be c689da153 or descendant on the daemon-cut worker branch
+  git log -1 --format=%s          # most recent ancestor commit on phase: "advisor normalized DQ encoding..."
+  git rev-parse phase-v1-RT-r1    # should resolve to c689da153
   ```
 
-  Commit directly on top of `cd7f8dd52`.
-
-- **Shape G:** after committing, push the worker branch; capture the resulting `cargo-validate-workspace` workflow_run_id; write a `kind: "validate-pending"` DQ entry per `decision-queue.md` Recipe 1. Compute `next_id` including `decision-queue-archive-*.json` files (per c-2 retro watch-item #4).
+- **Shape G:** after committing, push the worker branch; capture the resulting `cargo-validate-workspace` workflow_run_id; write a `kind: "validate-pending"` DQ entry per `decision-queue.md` Recipe 1. **Compute `next_id` including `decision-queue-archive-*.json` files** (per c-2 retro watch-item #4 — same lesson keeps catching workers). Write the DQ entry with `ensure_ascii=False` to match phase-v1-RT-r1's encoding convention (per c-2 retro §3 lesson 1 and the normalize commit `c689da153`); do NOT let Python default to `ensure_ascii=True`.
 - **DQ mid-task push:** if you hit a DQ blocker (e.g. the struct literal you reach does not match this brief's description — different fields, different name, different file:line), commit + push immediately per `decision-queue.md` "Mid-task visibility".
 - **COMMIT MESSAGE:** `fix(v1-RT-r1): pad ReputationEventInsertForm literals with dedupe_key + source_event_type (fix-impl-1)`
 
