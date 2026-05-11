@@ -179,9 +179,14 @@ creates:
 modifies:
   - <existing-file-1>   # what changes (one line)
   - <existing-file-2>   # what changes (one line)
+requires:               # optional — declare cross-task validation dependencies
+  - task: <N>           # this task's validation cannot pass without task <N>'s changes also being present
+    reason: <one-line>  # what specifically is needed (e.g. "Task 1 creates source_event_type column referenced in this UPDATE")
 ```
 
 > **Discipline:** the planner asserts that `union(creates, modifies)` exactly equals the set of files named in the **IMPLEMENT (file N of M)** lines below. Drift between the YAML and the IMPLEMENT lines is a planner-side miss — file a DQ pending entry asking the planner to fix before any impl runs. The cohort-dispatch logic in `.claude/rules/advisor-orchestrator.md` "Cohort dispatch" intersects `union(creates, modifies)` across `[P]`-cohort peers and refuses to dispatch a cohort with overlap. `/brehon-verify` consumes `creates:` for the phantom-presence check (each `creates:` entry must exist + non-empty on the worktree branch).
+>
+> **`requires:` discipline (new — per `feedback_cohort_validation_dependency_check.md` 2026-05-11):** `[P]` marks worktree-write disjointness; `requires:` marks validation-time dependence. The two are independent. A task may be `[P]` (no file overlap with cohort peers) AND have `requires:` entries (its workflow validation references symbols/columns/types created by a non-cohort-peer task). Examples: a backfill SQL migration `requires:` the column-add migration that created the column; a Rust enum with `ExistingTypePath = "crate::schema::sql_types::Foo"` `requires:` the schema.rs task that creates `sql_types::Foo`. Advisor cohort-dispatch refuses to start a cohort whose `[P]` member has unsatisfied `requires:`. Tasks with unsatisfied `requires:` either (a) wait for the required task's phase-branch merge, or (b) bundle with the required task into a single Junior dispatch. **Empty / missing `requires:` = no cross-task dependency** (back-compat: pre-2026-05-11 plans assumed all `[P]` tasks were validation-independent).
 
 **IMPLEMENT (file 1 of N):** in `<file>`, `<edit description>`. Use the verbatim doc-comment from §10.X.
 
