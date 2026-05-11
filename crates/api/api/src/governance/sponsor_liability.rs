@@ -310,6 +310,8 @@ pub(crate) async fn apply_sponsor_liability(
       source_report_id: None,
       reason: "sponsor_liability_applied".to_string(),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: None,
     };
     insert_into(reputation_event::table)
       .values(&form)
