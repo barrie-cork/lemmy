@@ -22,48 +22,6 @@
       "answer": "Migration validation failed: column \"source_event_type\" does not exist",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-10T19:30:44.148775+00:00"
-    },
-    {
-      "id": 200,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T21:45:00Z",
-      "question": "cargo-validate-workspace.yml run for bundled RT-r1 phase tip (Tasks 1-4 all migrations present) — await ci-watcher result",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Re-validation after Cohort A parallel-dispatch dependency bug: each Task 1-4 worker branch only contained its own migration, so cargo-validate-migration on Task 3 FAILED with \"column source_event_type does not exist\" (Task 1 creates the column; Task 3 references it). This new run on junior/revalidate-rt-r1-bundle (forked from phase-v1-RT-r1 with all 4 migrations) validates the bundled migration set. Per advisor recovery 2026-05-10.",
-      "workflow_run_id": 25640324087,
-      "branch": "junior/revalidate-rt-r1-bundle",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 201,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-10T21:45:00Z",
-      "question": "cargo-validate-migration.yml run for bundled RT-r1 phase tip — await ci-watcher result (supersedes DQ #194 design-flaw FAIL)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Re-validation after Cohort A parallel-dispatch dependency bug. DQ #194 (workflow run 25636774556) returned conclusion=failure because Task 3 worker branch did not include Task 1's column-add migration. This new run validates all 4 RT-r1 migrations in order on a single branch with all migrations present. DQ #194 preserved as historical evidence of the design flaw; this entry is the canonical migration pass signal for cohort barrier. Per advisor recovery 2026-05-10.",
-      "workflow_run_id": 25640324089,
-      "branch": "junior/revalidate-rt-r1-bundle",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3477,6 +3435,63 @@
       "answer": "cargo-validate-migration.yml run 25636769981 for v1-RT-r1 task 4: conclusion=success. Original ci-watcher mutation at commit 8b58d96ae was lost during sequential finalize-merge (parallel ci-watchers had stale pre-mutation phase-branch DQ snapshot; merge auto-resolution re-introduced pending state). Advisor recovery 2026-05-10.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-10T20:30:00Z"
+    },
+    {
+      "id": 200,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T21:45:00Z",
+      "question": "cargo-validate-workspace.yml run for bundled RT-r1 phase tip (Tasks 1-4 all migrations present) — await ci-watcher result",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Re-validation after Cohort A parallel-dispatch dependency bug: each Task 1-4 worker branch only contained its own migration, so cargo-validate-migration on Task 3 FAILED with \"column source_event_type does not exist\" (Task 1 creates the column; Task 3 references it). This new run on junior/revalidate-rt-r1-bundle (forked from phase-v1-RT-r1 with all 4 migrations) validates the bundled migration set. Per advisor recovery 2026-05-10.",
+      "workflow_run_id": 25640324087,
+      "branch": "junior/revalidate-rt-r1-bundle",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "cargo-validate-workspace.yml run 25640324087 on junior/revalidate-rt-r1-bundle: conclusion=success. Bundled RT-r1 migration set (all 4 migrations present on phase tip) validates clean. Advisor inline-mutated because ci-watcher #219 worker branch forked BEFORE the advisor DQ raise commit 13b1d3339 (timing race; Junior task queued 2026-05-10T21:35:41Z but DQ raise pushed ~21:45). ci-watcher filed DQ #197 contract-violation; this advisor mutation completes the cohort barrier with workflow-success evidence. Cohort A barrier LIFTS.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-11T05:00:00Z"
+    },
+    {
+      "id": 201,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-10T21:45:00Z",
+      "question": "cargo-validate-migration.yml run for bundled RT-r1 phase tip — await ci-watcher result (supersedes DQ #194 design-flaw FAIL)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Re-validation after Cohort A parallel-dispatch dependency bug. DQ #194 (workflow run 25636774556) returned conclusion=failure because Task 3 worker branch did not include Task 1's column-add migration. This new run validates all 4 RT-r1 migrations in order on a single branch with all migrations present. DQ #194 preserved as historical evidence of the design flaw; this entry is the canonical migration pass signal for cohort barrier. Per advisor recovery 2026-05-10.",
+      "workflow_run_id": 25640324089,
+      "branch": "junior/revalidate-rt-r1-bundle",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "cargo-validate-migration.yml run 25640324089 on junior/revalidate-rt-r1-bundle: conclusion=success. Bundled RT-r1 migration set (all 4 migrations present on phase tip) validates clean. Advisor inline-mutated because ci-watcher #219 worker branch forked BEFORE the advisor DQ raise commit 13b1d3339 (timing race; Junior task queued 2026-05-10T21:35:41Z but DQ raise pushed ~21:45). ci-watcher filed DQ #197 contract-violation; this advisor mutation completes the cohort barrier with workflow-success evidence. Cohort A barrier LIFTS.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-11T05:00:00Z"
+    },
+    {
+      "id": 202,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-11T05:00:00Z",
+      "question": "ci-watcher #219 filed contract-violation: paired validate-pending entries for workflow runs 25640324087 + 25640324089 not found on its worker branch. Why?",
+      "options": [
+        "timing-race",
+        "genuine-orphan"
+      ],
+      "context": "Junior task #219 created 2026-05-10T21:35:41Z; its worker branch forked from origin/phase-v1-RT-r1 at that moment, when phase tip was c7ea59de3 (DQ #189-#192+#195-#196 recovery commit). Advisor DQ #200+#201 raise was pushed at 13b1d3339 ~21:45Z, AFTER the Junior worker branch forked. ci-watcher saw the older snapshot without DQ #200/#201 and correctly filed contract-violation per its hard-refusal #5 (decision-queue.md). Daemon finalize-merged the contract-violation commit (cef9c6886) into daemon-local phase tip 2cf862923, but advisor recovery 2026-05-11T05:00Z resolved inline on origin tip 13b1d3339 with workflow-success evidence (both gh run view returned conclusion=success). Daemon-local commits are now orphaned; origin-trunk-via-phase-branch is canonical.",
+      "answer": "(a) timing-race. Root cause: advisor DQ raise + ci-watcher Junior task queuing must be atomic w.r.t. the worker branch fork point. Mitigation: write DQ entries BEFORE queueing ci-watcher tasks, OR pass workflow_run_ids inline in the ci-watcher brief description instead of relying on DQ lookup. Capture as retro lesson in v1-RT-r1-retro.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-11T05:00:00Z"
     }
   ],
   "schema_version": 2
