@@ -56,7 +56,7 @@ use lemmy_db_schema::source::governance::{
   reputation_snapshot::{ReputationSnapshot, ReputationSnapshotInsertForm},
 };
 use lemmy_db_schema_file::PersonId;
-use lemmy_db_schema_file::enums::ReputationDimension;
+use lemmy_db_schema_file::enums::{ReputationDimension, ReputationEventSourceType};
 use lemmy_db_schema_file::schema::{person, reputation_event, reputation_snapshot, sanction};
 use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
@@ -871,6 +871,8 @@ mod tests {
       reason: "test".to_string(),
       created_at: now - Duration::days(180),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: ReputationEventSourceType::Endorsement,
     };
     // Organic event past half-life — halved.
     assert_eq!(compute_applied_delta(&old_organic, now, half_life), 50);
