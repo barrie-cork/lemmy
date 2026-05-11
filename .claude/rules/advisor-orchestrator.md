@@ -4,6 +4,7 @@ The advisor session orchestrates one Brehon sub-phase end-to-end via Junior suba
 
 ## 1. Polling loop
 
+- **Session-start CWD check** (per `.claude/rules/multi-lane-worktree.md` 2026-05-11): run `pwd && git branch --show-current && git worktree list` at session start. If another active worktree exists on a different `phase-v1-*` branch, verify this session's CWD matches the intended lane. Lane-dedicated worktrees live at `C:/Users/barri/Developer/brehon-fork-<lane>`; the canonical `brehon-fork` checkout is reserved for `governance-v0` meta-edits (rules / lessons / templates / briefs on trunk). Lane-dedicated sessions write phase-branch DQ entries; canonical sessions do not.
 - Cadence: every ~10 min call `mcp__junior-brehon__list_tasks` (status only).
 - On status transition: `show_task` for the changed task; `git fetch origin`; read `.claude/decision-queue.json`; triage new pending entries; queue next per stage shape (§3.1).
 - Read the plan once after planning ships. Read DQ on every poll only if `git fetch` returns new commits. Memory injection (Glob `.claude/lessons/`, PMD search) at session start, not per poll.
