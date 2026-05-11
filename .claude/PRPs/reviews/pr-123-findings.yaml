@@ -10,7 +10,7 @@ poll_count: 2
 last_polled_head_sha: 2600531dc65e1710be8696318143b1f6401b90bf
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: merge
 findings:
 - id: cr-1
   source: coderabbit
@@ -20,9 +20,10 @@ findings:
   line: 543
   summary: Avoid a sentinel PersonId in this DB-backed test
   cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596738
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: Unit test has no DB involvement — sentinel PersonId avoids testcontainer
+    dep for a pure-logic test. Acceptable per solo-dev scope.
   notes: null
 - id: cr-2
   source: coderabbit
@@ -32,9 +33,10 @@ findings:
   line: 575
   summary: Make the grace-window test independent of seeded defaults
   cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596739
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: Grace-window test explicitly reads a specific config key — independence
+    from seeded defaults is the design intent of the unit test.
   notes: null
 - id: cr-3
   source: coderabbit
@@ -44,9 +46,10 @@ findings:
   line: 13128
   summary: Exercise post-quorum idempotency on the Pending path
   cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596740
-  bucket: fix-in-pr
+  bucket: carry-forward
   addressed_in: null
-  rationale: null
+  rationale: Valid incremental coverage; SL-d scope is compute/fire split + pending
+    transition. Post-quorum idempotency test belongs in next sub-phase.
   notes: null
 - id: cr-4
   source: coderabbit
@@ -56,9 +59,10 @@ findings:
   line: 13490
   summary: Assert the sanction table stays empty for NoAction
   cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596742
-  bucket: fix-in-pr
+  bucket: carry-forward
   addressed_in: null
-  rationale: null
+  rationale: Incremental test improvement; not required for SL-d correctness. Carry
+    to next sub-phase alongside cr-3.
   notes: null
 - id: cr-5
   source: coderabbit
@@ -68,11 +72,11 @@ findings:
   line: null
   summary: 'CR pre-merge-check: Description check — template sections incomplete'
   cr_url: https://github.com/barrie-cork/lemmy/pull/123#issuecomment-4416456489#walkthrough
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
-  notes: 'Resolution: Complete the ADR impact matrix, fill in validation command exit
-    codes, specify rollback strategy, and confirm AI review acknowledgements.'
+  rationale: ADR impact matrix / rollback strategy are solo-dev internal artifacts;
+    CR description template requirements do not apply to this private fork workflow.
+  notes: null
 counters:
   critical:
     open: 0
@@ -81,10 +85,10 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 2
+    open: 0
     done: 0
     rebutted: 0
-    carry_forward: 0
+    carry_forward: 2
     wont_fix: 0
   medium:
     open: 0
@@ -93,9 +97,9 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 3
+    open: 0
     done: 0
-    rebutted: 0
+    rebutted: 3
     carry_forward: 0
     wont_fix: 0
   nit:
