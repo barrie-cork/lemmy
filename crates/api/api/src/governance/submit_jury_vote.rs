@@ -941,6 +941,8 @@ async fn emit_reputation_event(
     source_report_id: None,
     reason: reason.to_string(),
     expires_at: None,
+    dedupe_key: None,
+    source_event_type: None,
   };
   insert_into(reputation_event::table)
     .values(&form)
