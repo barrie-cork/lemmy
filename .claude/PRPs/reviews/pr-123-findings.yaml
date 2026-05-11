@@ -10,7 +10,7 @@ poll_count: 2
 last_polled_head_sha: 2600531dc65e1710be8696318143b1f6401b90bf
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: merge
+recommendation: approve
 findings:
 - id: cr-1
   source: coderabbit
