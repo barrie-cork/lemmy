@@ -1067,9 +1067,11 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   /// count. Counting phase-by-phase is a useful bookkeeping fiction, not a
   /// semantic invariant.
   ///
-  /// Bumped to 14 in v1-SL-a (adds 2: add_case_status_sponsor_liability_variants
-  /// @ 2026-05-03-000000, add_sponsor_liability_grace_window @
-  /// 2026-05-03-000100). Phase-by-phase breakdown (bookkeeping, not enforced):
+  /// Bumped to 18 in v1-RT-r1 (adds 4: add_reputation_event_v1_columns
+  /// @ 2026-05-10-000000, extend_sponsor_allowlist_for_r1 @
+  /// 2026-05-10-000100, backfill_reputation_event_source_type @
+  /// 2026-05-10-000200, seed_v1_rt_config_keys @ 2026-05-10-000300).
+  /// Phase-by-phase breakdown (bookkeeping, not enforced):
   ///   - 6 Phase 1 migrations (enums, core, jury, rep+surety, pseudonym,
   ///     governance_log — the last added in Phase 4b task 8 but part of the
   ///     contiguous governance-bootstrap LIFO block)
@@ -1078,7 +1080,8 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   ///   - 1 Phase 5b Slice A migration (add_restoration_sanction_variant
   ///     — task 56 / OQ-003)
   ///   - 3 v1-JM-a migrations (bump 9 → 12)
-  ///   - 2 v1-SL-a migrations (this bump)
+  ///   - 2 v1-SL-a migrations (bump 12 → 14)
+  ///   - 4 v1-RT-r1 migrations (this bump)
   ///
   /// **Uncounted drift**: v1-AD-a shipped 4 migrations (rule_set_versions,
   /// sponsor_allowlist, case_applied_config_snapshot, seed_v1_config_keys)
@@ -1091,7 +1094,7 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
   // to stop LIFO-positional slot-swap silently hiding uncounted drift. See
   // GH issue #43 (existing #[ignore] reason) + the count-model GH issue
   // sketched in `.claude/PRPs/reports/phase-v1-JM-a-retro.md` §3.
-  const PHASE_1_MIGRATION_COUNT: u64 = 14;
+  const PHASE_1_MIGRATION_COUNT: u64 = 18;
 
   /// Query shape for `COUNT(*)` probes via `sql_query`.
   #[derive(diesel::QueryableByName)]
@@ -1197,6 +1200,81 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       assert_eq!(
         kc.n, 1,
         "governance_config key {key} should exist after v1-SL-a forward migration"
+      );
+    }
+  }
+
+  // Post-condition probes for v1-RT-r1 schema effects (post-forward): columns,
+  // indexes, pg_type, and governance_config key count delta (plan §10.10).
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // 2 new columns added to reputation_event by add_reputation_event_v1_columns
+    for col in ["dedupe_key", "source_event_type"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'reputation_event' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "column {col} should exist in reputation_event after RT-r1 forward migration"
+      );
+    }
+    // 2 new columns added to sponsor_allowlist by extend_sponsor_allowlist_for_r1
+    for col in ["added_by_admin_id", "note"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'sponsor_allowlist' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "column {col} should exist in sponsor_allowlist after RT-r1 forward migration"
+      );
+    }
+    // community_id should now be nullable in sponsor_allowlist
+    let nullable_result: Count = sql_query(
+      "SELECT count(*) AS n FROM information_schema.columns \
+       WHERE table_name = 'sponsor_allowlist' AND column_name = 'community_id' \
+       AND is_nullable = 'YES'"
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      nullable_result.n, 1,
+      "community_id should be nullable in sponsor_allowlist after RT-r1 forward migration"
+    );
+    // partial unique index added by add_reputation_event_v1_columns
+    let idx_result: Count = sql_query(
+      "SELECT count(*) AS n FROM pg_indexes \
+       WHERE indexname = 'reputation_event_dedupe_key_partial_idx'"
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      idx_result.n, 1,
+      "index reputation_event_dedupe_key_partial_idx should exist after RT-r1 forward migration"
+    );
+    // pg_type for the new enum
+    let type_result: Count = sql_query(
+      "SELECT count(*) AS n FROM pg_type WHERE typname = 'reputation_event_source_type'"
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      type_result.n, 1,
+      "pg_type reputation_event_source_type should exist after RT-r1 forward migration"
+    );
+    // governance_config row count delta: +26 from seed_v1_rt_config_keys
+    for key in [
+      "feature.reputation_v1_decay_enabled",
+      "decay.reporting_accuracy.positive_half_life_days",
+      "bounds.endorsement_strength.ceiling",
+    ] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 1,
+        "governance_config key {key} should exist after v1-RT-r1 forward migration"
       );
     }
   }
@@ -1317,6 +1395,76 @@ async fn phase1_migrations_round_trip() -> Result<(), Box<dyn Error>> {
       assert_eq!(
         kc.n, 0,
         "governance_config key {key} should be absent after reverting SL-a migrations"
+      );
+    }
+  }
+
+  // Post-condition probes for v1-RT-r1 schema effects after LIFO-18 revert
+  // (plan §10.10): columns absent, index absent, pg_type absent, and
+  // governance_config keys absent.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // RT-r1 columns must be absent from reputation_event after revert.
+    // (The table itself is dropped by Phase 1 revert in LIFO order after
+    // RT-r1 down.sql removes the columns — this probe guards LIFO correctness.)
+    for col in ["dedupe_key", "source_event_type"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'reputation_event' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "column {col} should not exist in reputation_event after reverting RT-r1 migrations"
+      );
+    }
+    // RT-r1 columns must be absent from sponsor_allowlist after revert.
+    for col in ["added_by_admin_id", "note"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'sponsor_allowlist' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "column {col} should not exist in sponsor_allowlist after reverting RT-r1 migrations"
+      );
+    }
+    // Partial unique index must be absent after revert.
+    let idx_result: Count = sql_query(
+      "SELECT count(*) AS n FROM pg_indexes \
+       WHERE indexname = 'reputation_event_dedupe_key_partial_idx'",
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      idx_result.n, 0,
+      "index reputation_event_dedupe_key_partial_idx should not exist after reverting RT-r1 migrations"
+    );
+    // GOTCHA (plan §10.10): CREATE TYPE / DROP TYPE cycle must be clean.
+    // If down.sql omits DROP TYPE, the type persists in pg_type even after
+    // the table is dropped, and Step 3 re-apply fails with "type already
+    // exists". This probe catches that before the re-apply.
+    let type_result: Count = sql_query(
+      "SELECT count(*) AS n FROM pg_type WHERE typname = 'reputation_event_source_type'",
+    )
+    .get_result(&mut conn)?;
+    assert_eq!(
+      type_result.n, 0,
+      "pg_type reputation_event_source_type should not exist after reverting RT-r1 migrations"
+    );
+    // governance_config: v1-RT-r1-specific keys must be absent after LIFO-18 revert.
+    for key in [
+      "feature.reputation_v1_decay_enabled",
+      "decay.reporting_accuracy.positive_half_life_days",
+      "bounds.endorsement_strength.ceiling",
+    ] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 0,
+        "governance_config key {key} should be absent after reverting RT-r1 migrations"
       );
     }
   }
