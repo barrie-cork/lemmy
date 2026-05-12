@@ -14432,4 +14432,279 @@ mod v1_sl_e_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test]
+  async fn backfill_of_mid_flight_v0_to_v1_deploy() -> LemmyResult<()> {
+    use diesel::sql_query;
+    use lemmy_db_schema::source::governance::sanction::SanctionInsertForm;
+    use lemmy_db_schema_file::{
+      enums::{SanctionAction, SanctionScope},
+      schema::sanction,
+    };
+
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Seed sponsee + 1 sponsor (single-sponsor minimal seed for backfill scenario).
+    let (sponsee, sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      1,
+      "sle3",
+    )
+    .await?;
+    let (sponsor, _endo) = sponsors[0];
+
+    // Insert pre-deploy Decided case (simulating v0 mid-flight at v1 deploy time).
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_backfill".to_string(),
+        severity: CaseSeverity::Medium,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Decided,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Set decided_at via UPDATE post-insert (not in InsertForm — mirror SL-c-2 pattern).
+    // decided_at = now - 23h30m → grace_expires_at = now + 30m post-backfill (future).
+    let decided_at = Utc::now() - Duration::hours(23) - Duration::minutes(30);
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::decided_at.eq(Some(decided_at)))
+      .execute(&mut conn)
+      .await?;
+
+    // Insert sanction (§8.4 WHERE clause requirement: NOT EXISTS guard on reputation_event).
+    insert_into(sanction::table)
+      .values(SanctionInsertForm {
+        case_id,
+        scope: SanctionScope::Community,
+        action: SanctionAction::ContentRemoval,
+        target_person_id: Some(sponsee),
+        active: Some(true),
+        ..Default::default()
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // --- Pre-backfill assertions: verify seed satisfies §8.4 WHERE clause ---
+    let (pre_status, pre_decided_at, pre_target_pid): (
+      CaseStatus,
+      Option<DateTime<Utc>>,
+      Option<PersonId>,
+    ) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::decided_at,
+        moderation_case::target_person_id,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(pre_status, CaseStatus::Decided, "pre-backfill: status is Decided");
+    assert!(pre_decided_at.is_some(), "pre-backfill: decided_at is Some");
+    assert!(
+      pre_decided_at.unwrap() > Utc::now() - Duration::hours(24),
+      "pre-backfill: decided_at within 24h window"
+    );
+    assert_eq!(
+      pre_target_pid,
+      Some(sponsee),
+      "pre-backfill: target_person_id is sponsee"
+    );
+
+    let surety_count: i64 = surety::table
+      .filter(surety::sponsored_id.eq(sponsee))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(surety_count, 1, "pre-backfill: 1 active surety for sponsee");
+
+    let sanction_count: i64 = sanction::table
+      .filter(sanction::case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(sanction_count, 1, "pre-backfill: 1 sanction row for case");
+
+    let rep_guard_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::reason.eq("sponsor_liability_applied"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_guard_count,
+      0,
+      "pre-backfill: 0 reputation_events (§8.4 NOT EXISTS guard satisfied)"
+    );
+
+    // --- Drive #1: PRD §8.4 backfill UPDATE (verbatim SQL) ---
+    // Per PRD §8.4 — verbatim. Comment cites the source location.
+    let _affected = sql_query(
+      "UPDATE moderation_case
+       SET status = 'SponsorLiabilityPending',
+           grace_expires_at = decided_at + INTERVAL '24 hours'
+       WHERE status = 'Decided'
+         AND decided_at IS NOT NULL
+         AND decided_at > now() - INTERVAL '24 hours'
+         AND target_person_id IS NOT NULL
+         AND id IN (
+           SELECT mc.id
+           FROM moderation_case mc
+           WHERE EXISTS (
+             SELECT 1 FROM surety s
+             WHERE s.sponsored_id = mc.target_person_id
+               AND s.revoked_at IS NULL
+           )
+           AND EXISTS (
+             SELECT 1 FROM sanction sa
+             WHERE sa.case_id = mc.id
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM reputation_event re
+             WHERE re.source_case_id = mc.id
+               AND re.reason = 'sponsor_liability_applied'
+           )
+         )",
+    )
+    .execute(&mut conn)
+    .await?;
+
+    // --- Post-backfill assertions (Phase A: backfill set Pending + future grace) ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (post_backfill_status, post_grace): (CaseStatus, Option<DateTime<Utc>>) =
+      moderation_case::table
+        .filter(moderation_case::id.eq(case_id))
+        .select((
+          moderation_case::status,
+          moderation_case::grace_expires_at,
+        ))
+        .first(&mut conn)
+        .await?;
+    assert_eq!(
+      post_backfill_status,
+      CaseStatus::SponsorLiabilityPending,
+      "post-backfill: status == SponsorLiabilityPending"
+    );
+    let expected_grace = decided_at + Duration::hours(24);
+    let actual_grace = post_grace.expect("grace_expires_at is Some");
+    let diff_ms = (actual_grace - expected_grace).num_milliseconds().abs();
+    assert!(
+      diff_ms < 1000,
+      "post-backfill: grace_expires_at == decided_at + 24h (within 1s, diff={diff_ms}ms)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      0,
+      "post-backfill: 0 governance_log entries (backfill UPDATE writes no logs)"
+    );
+    let rep_after_backfill: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_after_backfill,
+      0,
+      "post-backfill: 0 reputation_event rows (no scheduler fire yet)"
+    );
+
+    // --- Drive #2: force-rewind grace_expires_at to past ---
+    // Test artifact per PRD §8.4 timing note: decided_at + 24h = now + 30m is in
+    // the future; rewind so the scheduler picks up the case immediately.
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::grace_expires_at.eq(Some(Utc::now() - Duration::minutes(1))))
+      .execute(&mut conn)
+      .await?;
+
+    // --- Drive #3: scheduler tick (SL-c fires the backfilled case) ---
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    // --- Post-fire assertions (Phase B: scheduler resolves backfilled case) ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let post_fire_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      post_fire_status,
+      CaseStatus::SponsorLiabilityFired,
+      "post-fire: case transitioned to SponsorLiabilityFired"
+    );
+
+    let rep_event_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_event_count, 1, "1 reputation_event row (1 sponsor)");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "fire path does not write public_case_log");
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      1,
+      "1 sponsor_liability_applied entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 sponsor_liability_fired summary"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 sponsor_liability_escaped entries"
+    );
+
+    // ADR-015 pseudonym discipline on sponsor_liability_applied payload.
+    let applied_payload = read_log_payload(&mut conn, "sponsor_liability_applied")
+      .await?
+      .expect("sponsor_liability_applied payload exists");
+    assert!(
+      applied_payload["sponsor_pseudonym"].is_string(),
+      "sponsor_pseudonym is a string"
+    );
+    assert_ne!(
+      applied_payload["sponsor_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsor.0).as_str(),
+      "sponsor_pseudonym != raw person_id (ADR-015)"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+
+    Ok(())
+  }
 }
