@@ -3286,6 +3286,51 @@
       "answer": "Phase 2 e2e passed — 85 passed, 0 failed, 3 ignored. All 4 v1_sl_d_fixtures tests ok. Log: .claude/runlog/e2e-v1-SL-d-78771349e-run2.log",
       "answered_by": "advisor",
       "resolved_at": "2026-05-10T21:57:45Z"
+    },
+    {
+      "id": 190,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-12T10:39:09Z",
+      "question": "sl-e-planning-1 watchpoint #4: brief says Real-HTTP for revocation in test #1 and HTTP-call test pattern — does this mean the direct revoke_endorsement(Json(..), context, caller_view) call pattern used in SL-b (e2e.rs:11190), or a reqwest HTTP client call through actix_web::test?",
+      "options": [
+        "(a) direct-handler: call revoke_endorsement(Json(..), context.clone(), sponsor_view) directly, same as SL-b fixtures at e2e.rs:11190 — this is the established governance e2e test pattern",
+        "(b) reqwest-http: spin up actix_web::test::init_service and issue a real HTTP request via TestRequest — different from all prior SL/JM tests"
+      ],
+      "context": "SL-b tests at e2e.rs:10987 import revoke_endorsement directly via use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement; and call revoke_endorsement(Json(RevokeEndorsement {...}), context.clone(), sponsor_view).await at e2e.rs:11190. All SL/JM governance e2e tests use this direct-handler pattern. The route-sweep test at e2e.rs:3638 tests the HTTP wire but uses an actix test harness only for 200/400/401 smoke. Brief watchpoint #4 says Real-HTTP but cites SL-b fixtures as the reference pattern — the SL-b pattern is direct handler, not reqwest.",
+      "answer": "(a) direct-handler. The existing SL-b revoke_endorsement test at e2e.rs:11190 uses use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement; and calls the function directly with (Json(RevokeEndorsement {endorsement_id, reason}), context.clone(), sponsor_view). This IS the established HTTP-call test pattern for governance e2e tests — it exercises the full handler transaction including liability-chain-severance. No reqwest needed. Brief watchpoint #4 means exercise the revoke_endorsement code path (not direct DB-write), citing SL-b fixtures as the canonical mirror. Planner: mirror SL-b e2e.rs:11190 call shape exactly for test #1 revocation step.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T10:39:09Z"
+    },
+    {
+      "id": 191,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-12T10:39:09Z",
+      "question": "sl-e-planning-1: SL-d retro §5 carry-forwards cr-3 (e2e.rs:13128 — post-quorum idempotency on Pending path) and cr-4 (e2e.rs:13490 — sanction table stays empty for NoAction) as brief anchors for next SL sub-phase. Should SL-e plan include dedicated §13 tasks for these, or should they fold into assertion blocks within the existing three test tasks?",
+      "options": [
+        "(a) fold-into-assertions: cr-3 idempotency assertion added to test #1 (lane-wide revocation test) assertion block after the Pending transition; cr-4 sanction-empty assertion confirmed already covered by SL-d Test #3 (submit_jury_vote_no_action_skips_liability_machinery at e2e.rs:13333) — no new SL-e task needed for cr-4",
+        "(b) dedicated-tasks: add two new §13 tasks (one for cr-3, one for cr-4) as standalone tests in mod v1_sl_e_fixtures"
+      ],
+      "context": "cr-3: post-quorum idempotency on Pending path — if submit_jury_vote is called twice on the same case after quorum (duplicate vote or scheduler race), the second call should be idempotent (no duplicate Pending transition, no duplicate log entries). SL-e test #1 already exercises the Pending transition; adding an idempotency assertion (call submit_jury_vote a second time, assert case.status unchanged, assert no duplicate log entries) is a natural extension of the same test function. cr-4: sanction table stays empty for NoAction — SL-d Task 5 (e2e.rs:13333) already asserts sanction_created count == 0 and 0 sponsor_liability_pending log entries on NoAction path. The carry-forward is a reminder that SL-e should NOT regress this; it is already covered. No new task needed.",
+      "answer": "(a) fold-into-assertions. cr-3 idempotency assertion folds into SL-e test #1 (revocation-during-window-escapes): after the first Pending transition + revocation, planner adds a block that calls submit_jury_vote a second time on the now-Escaped case and asserts status unchanged (idempotency). cr-4 is already covered by SL-d Test #3 at e2e.rs:13333 which asserts sanction count == 0 for NoAction — SL-e preserves that test unchanged (no regression). Neither requires a dedicated SL-e §13 task. Brief §4 watchpoints should note cr-3 as an assertion clause within test #1.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T10:39:09Z"
+    },
+    {
+      "id": 192,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-12T10:39:09Z",
+      "question": "sl-e-planning-1 §3 item 4 / §2.3 test #3: brief says planner should invoke the SL-a backfill UPDATE programmatically via Diesel UPDATE matching the migration WHERE clause — but §3 Required reading does not cite the migration file path. Which file should planner read to get the exact WHERE clause and UPDATE shape?",
+      "options": [
+        "(a) migration-file: migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql lines 86-110 — the canonical backfill UPDATE shape",
+        "(b) prd-section: v1-sponsor-liability.prd.md §8.4 — the prose description of the backfill logic (may not have exact SQL)"
+      ],
+      "context": "The SL-a migration file at migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql lines 86-110 contains the exact backfill UPDATE: UPDATE moderation_case SET status = SponsorLiabilityPending, grace_expires_at = decided_at + INTERVAL 24 hours WHERE status = Decided AND decided_at IS NOT NULL AND decided_at > now() - INTERVAL 24 hours AND target_person_id IS NOT NULL AND id IN (SELECT mc.id ... EXISTS (surety active) AND EXISTS (sanction) AND NOT EXISTS (reputation_event sponsor_liability_applied)). The PRD §8.4 may contain prose. For the programmatic Diesel UPDATE in test #3, the planner needs the exact WHERE clause. §3 does not currently cite the migration file.",
+      "answer": "(a) migration-file. Add migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql lines 86-110 to brief §3 Required reading (after item 4). The exact backfill UPDATE with all WHERE conditions is the contract for test #3 programmatic invocation. Diesel UPDATE in test #3 should mirror this shape exactly: status = SponsorLiabilityPending, grace_expires_at = decided_at + 24h, WHERE status = Decided AND decided_at IS NOT NULL AND decided_at > now() - 24h AND target_person_id IS NOT NULL AND id IN (SELECT mc.id WHERE active surety EXISTS AND sanction EXISTS AND no sponsor_liability_applied reputation_event). Brief §3 needs this citation before the planner reads it.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T10:39:09Z"
     }
   ],
   "schema_version": 2
