@@ -13697,7 +13697,7 @@ mod v1_sl_e_fixtures {
   use activitypub_federation::config::FederationConfig;
   use actix_web::web::{Data, Json};
   use chrono::{DateTime, Duration, Utc};
-  use diesel::{ExpressionMethods, QueryDsl, insert_into};
+  use diesel::{ExpressionMethods, QueryDsl, insert_into, update};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
     accept_jury_assignment::accept_jury_assignment,
@@ -14182,6 +14182,245 @@ mod v1_sl_e_fixtures {
       count_log_entries(&mut conn, "sponsor_liability_fired").await?,
       0,
       "no sponsor_liability_fired after scheduler tick"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn window_expiry_fires_full_lane() -> LemmyResult<()> {
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let federation_config = FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let federation_context = federation_config.to_request_data();
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (sponsee, _sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      2,
+      "sle2",
+    )
+    .await?;
+
+    let mut juror_ids = Vec::with_capacity(5);
+    for i in 0..5_usize {
+      let (id, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("sle2_juror{i}"),
+        false,
+      )
+      .await?;
+      juror_ids.push(id);
+    }
+    let (_, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sle2_admin", true).await?;
+
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &juror_ids).await?;
+
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_expiry".to_string(),
+        severity: CaseSeverity::Low,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Open,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Drive jury to quorum → SponsorLiabilityPending.
+    drive_jury_to_quorum(
+      &context,
+      &federation_context,
+      admin_view,
+      case_id,
+      JuryDecision::SuspendCommunityMember,
+    )
+    .await?;
+
+    // --- Mid-window assertions: Pending state ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityPending),
+      "case must be SponsorLiabilityPending, got {status:?}"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "1 sponsor_liability_pending entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied yet"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events deferred on Pending path");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log deferred on Pending path");
+
+    // ADR-015 pseudonym check on sponsor_liability_pending payload.
+    let payload: Value = read_log_payload(&mut conn, "sponsor_liability_pending")
+      .await?
+      .expect("sponsor_liability_pending payload present");
+    let target_psn = payload["target_pseudonym"]
+      .as_str()
+      .expect("target_pseudonym is a string");
+    assert!(
+      payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      target_psn,
+      format!("{}", sponsee.0),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+
+    // Force-rewind grace_expires_at to past so the scheduler picks up the case.
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::grace_expires_at.eq(Some(Utc::now() - Duration::minutes(1))))
+      .execute(&mut conn)
+      .await?;
+
+    // Fire the scheduler — grace window has expired, no revocation occurred.
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    // --- Post-fire assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (case_status, escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityFired,
+      "case transitioned to SponsorLiabilityFired"
+    );
+    assert!(
+      escape_reason.is_none(),
+      "fire branch: liability_escape_reason IS NULL"
+    );
+
+    let rep_event_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_event_count, 2, "2 reputation_event rows (1 per sponsor)");
+
+    let plog_count_after: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      plog_count_after,
+      0,
+      "fire path does not write public_case_log"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 sponsor_liability_fired summary"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      2,
+      "2 sponsor_liability_applied entries (1 per sponsor)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 sponsor_liability_escaped entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "sponsor_liability_pending unchanged at 1"
+    );
+
+    // ADR-015 pseudonym checks on sponsor_liability_fired payload.
+    let fired_payload = read_log_payload(&mut conn, "sponsor_liability_fired")
+      .await?
+      .expect("fired payload exists");
+    assert!(
+      fired_payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      fired_payload["target_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsee.0).as_str(),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+    assert_eq!(
+      fired_payload["sponsor_count"].as_u64(),
+      Some(2),
+      "sponsor_count == 2"
+    );
+    assert_eq!(
+      fired_payload["case_id"].as_i64(),
+      Some(i64::from(case_id.0)),
+      "case_id matches"
     );
 
     unsafe {
