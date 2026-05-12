@@ -109,27 +109,6 @@
       "answer": "cargo clippy --workspace --features full failed with unused-imports error in crates/api/api/src/governance/reputation_snapshot.rs:59 (ReputationEventSourceType). This is a fixable lint issue that was missed in fix-impl-2.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-12T11:06:56.789303Z"
-    },
-    {
-      "id": 208,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T11:47:19Z",
-      "question": "Does cargo-validate-workspace pass for fix-impl-3 (remove unused ReputationEventSourceType import)?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-3 moved ReputationEventSourceType import from top-level into mod tests in reputation_snapshot.rs. Pushed to worker branch; workflow 25732366460 triggered.",
-      "workflow_run_id": 25732366460,
-      "branch": "junior/role-impl-task-v1-rt-r1-fix-impl-3-remove-unused-import-reputationeventsourcetype-from-reputation-snapshot-rs-see-230",
-      "phase_task": "fix-impl-3",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3630,6 +3609,27 @@
       "answer": "Superseded by advisor DQ #202 (origin side: 58e887d64). ci-watcher #219 filed this contract violation because its worker branch forked BEFORE the advisor DQ #200+#201 raise was pushed (timing race). Advisor inline-mutated DQ #200+#201 to result=pass using gh run view evidence; bundled re-validate workflows 25640324087 + 25640324089 both succeeded. ci-watcher contract was sound; dispatch order needs the lesson captured in retro: write validate-pending entries BEFORE queueing ci-watcher tasks.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-11T13:00:00Z"
+    },
+    {
+      "id": 208,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T11:47:19Z",
+      "question": "Does cargo-validate-workspace pass for fix-impl-3 (remove unused ReputationEventSourceType import)?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 moved ReputationEventSourceType import from top-level into mod tests in reputation_snapshot.rs. Pushed to worker branch; workflow 25732366460 triggered.",
+      "workflow_run_id": 25732366460,
+      "branch": "junior/role-impl-task-v1-rt-r1-fix-impl-3-remove-unused-import-reputationeventsourcetype-from-reputation-snapshot-rs-see-230",
+      "phase_task": "fix-impl-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "cargo-validate-workspace passed all checks: cargo check, clippy, test compile",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-12T12:12:48.513930Z"
     }
   ]
 }
