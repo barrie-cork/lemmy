@@ -15,9 +15,7 @@ COMMENT ON COLUMN sponsor_allowlist.community_id IS
 
 ALTER TABLE sponsor_allowlist
     ADD COLUMN added_by_admin_id INTEGER NOT NULL
-        REFERENCES person(id) DEFAULT 1;
-ALTER TABLE sponsor_allowlist
-    ALTER COLUMN added_by_admin_id DROP DEFAULT;
+        REFERENCES person(id);
 COMMENT ON COLUMN sponsor_allowlist.added_by_admin_id IS
     'Per PRD section 5.4: admin who added the row (audit trail).
      Required non-null. r4 endpoints set from caller person_id.';
