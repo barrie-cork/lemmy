@@ -56,7 +56,7 @@ use lemmy_db_schema::source::governance::{
   reputation_snapshot::{ReputationSnapshot, ReputationSnapshotInsertForm},
 };
 use lemmy_db_schema_file::PersonId;
-use lemmy_db_schema_file::enums::{ReputationDimension, ReputationEventSourceType};
+use lemmy_db_schema_file::enums::ReputationDimension;
 use lemmy_db_schema_file::schema::{person, reputation_event, reputation_snapshot, sanction};
 use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
@@ -801,6 +801,7 @@ async fn acquire_advisory_xact_lock(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use lemmy_db_schema_file::enums::ReputationEventSourceType;
 
   fn make_snapshot(
     jury_eligible: bool,
