@@ -1,27 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 196,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T16:25:00Z",
-      "question": "workspace-check for v1-SL-e task 2 (window_expiry_fires_full_lane e2e test)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "cargo-validate-workspace.yml triggered by push of c6078a962 to worker branch. Test added: window_expiry_fires_full_lane inside mod v1_sl_e_fixtures. diesel update import also added.",
-      "workflow_run_id": 25747542491,
-      "branch": "junior/role-impl-task-v1-sl-e-task-2-e2e-test-2-window-expiry-fires-anchor-insert-inside-mod-v1-sl-e-fixtures-see-cla-242",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 195,
@@ -3411,6 +3389,27 @@
       "answer": "Local e2e passed: 85 passed, 0 failed, 3 ignored. Exit 0. revocation_during_window_escapes_full_lane ok.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-12T14:30:38.648324+00:00"
+    },
+    {
+      "id": 196,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T16:25:00Z",
+      "question": "workspace-check for v1-SL-e task 2 (window_expiry_fires_full_lane e2e test)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-workspace.yml triggered by push of c6078a962 to worker branch. Test added: window_expiry_fires_full_lane inside mod v1_sl_e_fixtures. diesel update import also added.",
+      "workflow_run_id": 25747542491,
+      "branch": "junior/role-impl-task-v1-sl-e-task-2-e2e-test-2-window-expiry-fires-anchor-insert-inside-mod-v1-sl-e-fixtures-see-cla-242",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "workspace-check passed",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-12T20:02:33.228193Z"
     }
   ],
   "schema_version": 2
