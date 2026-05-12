@@ -124,6 +124,21 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 212,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T14:13:04Z",
+      "workflow_run_id": 25740166139,
+      "branch": "junior/role-impl-task-rt-r1-fix-impl-5-set-source-event-type-for-jury-vote-events-in-submit-jury-vote-rs-see-claude-prps-240",
+      "phase_task": "fix-impl-5",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
