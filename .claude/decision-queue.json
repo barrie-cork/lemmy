@@ -109,21 +109,6 @@
       "answer": "cargo clippy --workspace --features full failed with unused-imports error in crates/api/api/src/governance/reputation_snapshot.rs:59 (ReputationEventSourceType). This is a fixable lint issue that was missed in fix-impl-2.",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-12T11:06:56.789303Z"
-    },
-    {
-      "id": 212,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T14:13:04Z",
-      "workflow_run_id": 25740166139,
-      "branch": "junior/role-impl-task-rt-r1-fix-impl-5-set-source-event-type-for-jury-vote-events-in-submit-jury-vote-rs-see-claude-prps-240",
-      "phase_task": "fix-impl-5",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3723,6 +3708,21 @@
       "answer": "Workflow 25740789485 passed: cargo-validate-workspace completed successfully on branch junior/role-impl-task-rt-r1-fix-impl-4",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-12T19:58:25.966619+00:00"
+    },
+    {
+      "id": 212,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T14:13:04Z",
+      "workflow_run_id": 25740166139,
+      "branch": "junior/role-impl-task-rt-r1-fix-impl-5-set-source-event-type-for-jury-vote-events-in-submit-jury-vote-rs-see-claude-prps-240",
+      "phase_task": "fix-impl-5",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "workflow run 25740166139 passed: validate workspace job completed successfully",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-12T20:02:20.445575Z"
     }
   ]
 }
