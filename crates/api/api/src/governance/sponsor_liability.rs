@@ -8,6 +8,18 @@
 //! floor, writes `reputation_event`, and emits `sponsor_liability_applied` (plus
 //! `sponsor_liability_clamped` if the floor clamp fired) to `governance_log`.
 //!
+//! ## v1-SL-d split
+//!
+//! `apply_sponsor_liability` is a thin wrapper around two pub(crate) helpers:
+//!
+//! - `compute_sponsor_liability` — pure read; returns `Vec<SponsorDelta>`.
+//! - `fire_sponsor_liability` — DB writes only; iterates `SponsorDelta` slice.
+//!
+//! This split lets the v1 `submit_jury_vote` rewrite call
+//! `compute_sponsor_liability` at vote-tally time (to know whether active
+//! sureties exist) without writing anything, then defer the actual writes to
+//! SL-c's scheduler at grace-window expiry.
+//!
 //! ## Watch 10 — PII discipline
 //!
 //! Governance-log payloads carry `sponsor_pseudonym` (UUID string), never raw
@@ -20,6 +32,9 @@
 //! wildcard, so adding a new variant forces a compile-time decision about its
 //! severity bucket.
 //!
+//! `liability_severity_from_case_severity` enumerates every `CaseSeverity`
+//! variant; NO `_ =>` wildcard per ADR-013.
+//!
 //! ## GOTCHAs (from plan §11.1)
 //!
 //! - **56a** (severity for `Restoration` → Minor): restorative sanctions imply
@@ -29,8 +44,9 @@
 //! - **56c** (integer-math drift): `round_ties_even` is banker's rounding on
 //!   stable Rust 1.77+; avoids the `as i64` truncate-toward-zero bias across
 //!   many sponsors.
-//! - **56d** (zero-sponsor early return): returns `Ok(0)` without any writes so
-//!   Phase 4's golden-path test (target with no sureties) remains unchanged.
+//! - **56d** (zero-sponsor early return): returns `Ok(vec![])` from compute
+//!   (empty vec) so the wrapper returns `Ok(0)` without any writes, preserving
+//!   Phase 4's golden-path test (target with no sureties) unchanged.
 //! - **56e** (transaction scope): the `conn` is the outer `run_transaction`
 //!   connection. DO NOT nest `run_transaction`. Reads see pre-write state of
 //!   `reputation_snapshot` + `reputation_event`; snapshot refresh is the 15-min
@@ -57,7 +73,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId};
 use lemmy_db_schema::source::governance::reputation_event::ReputationEventInsertForm;
 use lemmy_db_schema_file::PersonId;
-use lemmy_db_schema_file::enums::{ReputationDimension, SanctionAction};
+use lemmy_db_schema_file::enums::{CaseSeverity, ReputationDimension, SanctionAction};
 use lemmy_db_schema_file::schema::{reputation_event, reputation_snapshot, surety};
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
@@ -86,6 +102,24 @@ impl LiabilitySeverity {
       Self::Severe => "severe",
     }
   }
+}
+
+/// Per-sponsor liability delta computed by `compute_sponsor_liability`.
+///
+/// Field names mirror the v0 closure-locals so `fire_sponsor_liability` can
+/// re-emit byte-identical `governance_log` payloads without recomputing.
+/// `PartialEq` (not `Eq`) because `f64` does not implement `Eq`.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct SponsorDelta {
+  pub(crate) sponsor_id: PersonId,
+  pub(crate) pre_multiplier_delta: i64,
+  pub(crate) multiplier: f64,
+  pub(crate) post_multiplier_delta: i64,
+  pub(crate) final_delta: i64,
+  /// `Some(uncapped)` when the floor clamp fired; `None` otherwise.
+  pub(crate) clamped_from: Option<i64>,
+  pub(crate) is_founder: bool,
+  pub(crate) current_endorsement_strength: i64,
 }
 
 /// Integer-safe multiply + banker's rounding (GOTCHA-56c).
@@ -123,30 +157,65 @@ fn severity_for_action(action: SanctionAction) -> LiabilitySeverity {
   }
 }
 
-/// Apply sponsor-liability deltas to all active sponsors of `target_person_id`.
+/// Map a `CaseSeverity` to its liability severity bucket. Exhaustive — no
+/// `_ =>` wildcard per ADR-013. Both `High` and `Critical` map to `Severe`
+/// (the longest grace window, 168 h by default) so the harshest sanctions
+/// always give sponsors the most time to revoke.
+fn liability_severity_from_case_severity(severity: CaseSeverity) -> LiabilitySeverity {
+  match severity {
+    CaseSeverity::Low => LiabilitySeverity::Minor,
+    CaseSeverity::Medium => LiabilitySeverity::Moderate,
+    CaseSeverity::High => LiabilitySeverity::Severe,
+    CaseSeverity::Critical => LiabilitySeverity::Severe,
+  }
+}
+
+/// Read the grace-window duration for a case severity tier.
 ///
-/// # Ordering (Watch 3)
+/// Reads `liability.grace_window_<bucket>_hours` at `Scope::Instance` per
+/// DQ #178 (LOCKED — instance-only; no community cascade). Returns
+/// `chrono::Duration::hours(value)`.
 ///
-/// For each sponsor, in `sponsor_id ASC` order:
-///   raw_delta (from config, negative)
-///   → /sponsor_count (trunc-toward-zero)
-///   → first `|remainder|` sponsors receive one extra unit toward `raw_delta`'s sign
-///   → ×multiplier (`founder_multiplier` if sponsor has unexpired founder event, else `regular_multiplier`)
-///   → round half-to-even back to i64
-///   → clamp against `liability.sponsor_liability_floor` and current endorsement_strength
+/// Pure read; idempotent. Severity snapshot semantics: the caller passes
+/// `case_row.severity` (snapshotted at jury-assemble time per ADR-010 — not
+/// re-derived from config at grace-window computation time).
+pub(crate) async fn grace_window_for_severity(
+  severity: CaseSeverity,
+  cache: &mut ConfigCache,
+  conn: &mut AsyncPgConnection,
+) -> LemmyResult<chrono::Duration> {
+  let liability_sev = liability_severity_from_case_severity(severity);
+  let key = match liability_sev {
+    LiabilitySeverity::Minor => "liability.grace_window_minor_hours",
+    LiabilitySeverity::Moderate => "liability.grace_window_moderate_hours",
+    LiabilitySeverity::Severe => "liability.grace_window_severe_hours",
+  };
+  let hours: i64 =
+    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
+  Ok(chrono::Duration::hours(hours))
+}
+
+/// Pure-read phase of sponsor-liability computation.
 ///
-/// # Returns
+/// Queries `surety` for active sponsors, reads config keys (severity bucket
+/// delta + floor + founder/regular multipliers), looks up
+/// `reputation_snapshot.endorsement_strength` per sponsor for clamp math,
+/// computes per-sponsor base + remainder + multiplier + clamp arithmetic.
 ///
-/// Count of sponsors processed (== number of `reputation_event` rows and
-/// `sponsor_liability_applied` log entries written).
-pub(crate) async fn apply_sponsor_liability(
+/// Returns an empty `Vec` when `target_person_id` has no active sureties
+/// (GOTCHA-56d — zero-sponsor early return; wrapper then returns `Ok(0)`).
+///
+/// **NO `reputation_event` INSERT, NO `governance_log::append`, NO UPDATE.**
+pub(crate) async fn compute_sponsor_liability(
   conn: &mut AsyncPgConnection,
   target_person_id: PersonId,
   case_id: ModerationCaseId,
   community_id: Option<CommunityId>,
   action: SanctionAction,
   cache: &mut ConfigCache,
-) -> LemmyResult<usize> {
+) -> LemmyResult<Vec<SponsorDelta>> {
+  let _ = case_id; // not used by compute; preserved for signature symmetry with fire
+
   let severity = severity_for_action(action);
   let raw_delta: i64 = config::get_int(
     cache,
@@ -166,7 +235,7 @@ pub(crate) async fn apply_sponsor_liability(
 
   let sponsor_count = sponsor_ids.len();
   if sponsor_count == 0 {
-    return Ok(0);
+    return Ok(vec![]);
   }
 
   let sponsor_count_i64 = i64::try_from(sponsor_count).map_err(|_e| {
@@ -199,6 +268,8 @@ pub(crate) async fn apply_sponsor_liability(
     "liability.regular_multiplier",
   )
   .await?;
+
+  let mut deltas = Vec::with_capacity(sponsor_count);
 
   for (i, sponsor_id) in sponsor_ids.iter().copied().enumerate() {
     let i_u64 = u64::try_from(i).map_err(|_e| {
@@ -287,14 +358,56 @@ pub(crate) async fn apply_sponsor_liability(
       final_delta = floor - current_endorsement_strength;
     }
 
-    let final_delta_i32: i32 = i32::try_from(final_delta).map_err(|_e| {
+    deltas.push(SponsorDelta {
+      sponsor_id,
+      pre_multiplier_delta,
+      multiplier,
+      post_multiplier_delta,
+      final_delta,
+      clamped_from,
+      is_founder,
+      current_endorsement_strength,
+    });
+  }
+
+  Ok(deltas)
+}
+
+/// Write phase of sponsor-liability application.
+///
+/// Iterates a pre-computed `deltas` slice (from `compute_sponsor_liability`)
+/// and for each entry: INSERTs a `reputation_event` row, appends a
+/// `sponsor_liability_applied` governance-log entry, and optionally appends
+/// `sponsor_liability_clamped` when the floor clamp fired.
+///
+/// Returns the number of sponsors processed (== `deltas.len()`).
+///
+/// # Transaction discipline (GOTCHA-56e)
+///
+/// `conn` is the outer `run_transaction` connection from `process_vote` or
+/// from SL-c's per-case `run_transaction`. DO NOT call `run_transaction`
+/// inside this function.
+pub(crate) async fn fire_sponsor_liability(
+  conn: &mut AsyncPgConnection,
+  _target_person_id: PersonId,
+  case_id: ModerationCaseId,
+  _community_id: Option<CommunityId>,
+  action: SanctionAction,
+  deltas: &[SponsorDelta],
+  _cache: &mut ConfigCache,
+) -> LemmyResult<usize> {
+  let severity = severity_for_action(action);
+
+  for delta in deltas {
+    let final_delta_i32: i32 = i32::try_from(delta.final_delta).map_err(|_e| {
       LemmyErrorType::Unknown(format!(
-        "sponsor-liability delta {final_delta} overflows i32"
+        "sponsor-liability delta {} overflows i32",
+        delta.final_delta
       ))
     })?;
 
     let form = ReputationEventInsertForm {
-      person_id: sponsor_id,
+      person_id: delta.sponsor_id,
       // Split-plane fix (decision-queue #16): write instance-scoped.
       // The clamp read above unions `community_id IS NULL OR = cid`
       // so it always sees instance-scoped rows (including founder seeds,
@@ -319,7 +432,7 @@ pub(crate) async fn apply_sponsor_liability(
       .await?;
 
     let sponsor_pseudonym =
-      actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), sponsor_id).await?;
+      actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), delta.sponsor_id).await?;
 
     governance_log::append(
       &mut (&mut *conn).into(),
@@ -328,17 +441,20 @@ pub(crate) async fn apply_sponsor_liability(
         "case_id": case_id.0,
         "sponsor_pseudonym": sponsor_pseudonym,
         "severity": severity.as_str(),
-        "pre_multiplier_delta": pre_multiplier_delta,
-        "multiplier": multiplier,
-        "post_multiplier_delta": post_multiplier_delta,
-        "final_delta": final_delta,
-        "is_founder": is_founder,
+        "pre_multiplier_delta": delta.pre_multiplier_delta,
+        "multiplier": delta.multiplier,
+        "post_multiplier_delta": delta.post_multiplier_delta,
+        "final_delta": delta.final_delta,
+        "is_founder": delta.is_founder,
       }),
       Some(sponsor_pseudonym.clone()),
     )
     .await?;
 
-    if let Some(uncapped) = clamped_from {
+    if let Some(uncapped) = delta.clamped_from {
+      // Reconstruct floor from clamped delta math: final_delta = floor - current_endorsement_strength
+      // therefore floor = final_delta + current_endorsement_strength.
+      let floor = delta.final_delta + delta.current_endorsement_strength;
       governance_log::append(
         &mut (&mut *conn).into(),
         governance_log::ENTRY_KIND_SPONSOR_LIABILITY_CLAMPED,
@@ -346,9 +462,9 @@ pub(crate) async fn apply_sponsor_liability(
           "case_id": case_id.0,
           "sponsor_pseudonym": sponsor_pseudonym,
           "uncapped_delta": uncapped,
-          "clamped_delta": final_delta,
+          "clamped_delta": delta.final_delta,
           "floor": floor,
-          "current_endorsement_strength": current_endorsement_strength,
+          "current_endorsement_strength": delta.current_endorsement_strength,
         }),
         Some(sponsor_pseudonym),
       )
@@ -356,5 +472,109 @@ pub(crate) async fn apply_sponsor_liability(
     }
   }
 
-  Ok(sponsor_count)
+  Ok(deltas.len())
+}
+
+/// Apply sponsor-liability deltas to all active sponsors of `target_person_id`.
+///
+/// # Ordering (Watch 3)
+///
+/// For each sponsor, in `sponsor_id ASC` order:
+///   raw_delta (from config, negative)
+///   → /sponsor_count (trunc-toward-zero)
+///   → first `|remainder|` sponsors receive one extra unit toward `raw_delta`'s sign
+///   → ×multiplier (`founder_multiplier` if sponsor has unexpired founder event, else `regular_multiplier`)
+///   → round half-to-even back to i64
+///   → clamp against `liability.sponsor_liability_floor` and current endorsement_strength
+///
+/// # Returns
+///
+/// Count of sponsors processed (== number of `reputation_event` rows and
+/// `sponsor_liability_applied` log entries written).
+pub(crate) async fn apply_sponsor_liability(
+  conn: &mut AsyncPgConnection,
+  target_person_id: PersonId,
+  case_id: ModerationCaseId,
+  community_id: Option<CommunityId>,
+  action: SanctionAction,
+  cache: &mut ConfigCache,
+) -> LemmyResult<usize> {
+  let deltas =
+    compute_sponsor_liability(conn, target_person_id, case_id, community_id, action, cache)
+      .await?;
+  fire_sponsor_liability(conn, target_person_id, case_id, community_id, action, &deltas, cache)
+    .await
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::governance::config::ConfigCache;
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_db_schema::newtypes::ModerationCaseId;
+  use lemmy_db_schema_file::enums::{CaseSeverity, SanctionAction};
+  use lemmy_db_schema_file::PersonId;
+  use lemmy_utils::error::LemmyResult;
+
+  /// Calls `compute_sponsor_liability` twice with identical inputs and asserts
+  /// the returned `Vec<SponsorDelta>` is identical both times. Uses a target
+  /// PersonId with no active sureties (GOTCHA-56d early-return path), which
+  /// also guarantees no `reputation_event` or `governance_log` rows are
+  /// written by either call (compute never writes; empty deltas = nothing to
+  /// fire). Skips gracefully when DATABASE_URL is absent.
+  #[tokio::test]
+  async fn compute_sponsor_liability_idempotent() -> LemmyResult<()> {
+    let Ok(db_url) = std::env::var("DATABASE_URL") else {
+      return Ok(());
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let mut cache = ConfigCache::new();
+    // PersonId(i32::MAX) is guaranteed to have no active sureties in any
+    // well-formed test DB, triggering the GOTCHA-56d zero-sponsor early return.
+    let target_id = PersonId(i32::MAX);
+    let case_id = ModerationCaseId(1);
+    let action = SanctionAction::Label;
+
+    let deltas1 =
+      compute_sponsor_liability(&mut conn, target_id, case_id, None, action, &mut cache).await?;
+    let deltas2 =
+      compute_sponsor_liability(&mut conn, target_id, case_id, None, action, &mut cache).await?;
+
+    assert_eq!(deltas1, deltas2);
+    // Empty deltas verify no writes occurred (compute is pure; empty = no fire path).
+    assert!(deltas1.is_empty());
+    Ok(())
+  }
+
+  /// For each `CaseSeverity` tier, calls `grace_window_for_severity` and
+  /// asserts the returned duration matches the SL-a-seeded defaults
+  /// (Low→24h, Medium→72h, High/Critical→168h). Reads from `governance_config`
+  /// with const-fallback when the seeded row is absent. Skips when DATABASE_URL
+  /// is absent.
+  #[tokio::test]
+  async fn grace_window_for_severity_reads_correct_config_key() -> LemmyResult<()> {
+    let Ok(db_url) = std::env::var("DATABASE_URL") else {
+      return Ok(());
+    };
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let mut cache = ConfigCache::new();
+
+    // Low → Minor → "liability.grace_window_minor_hours" → 24 h
+    let dur = grace_window_for_severity(CaseSeverity::Low, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(24));
+
+    // Medium → Moderate → "liability.grace_window_moderate_hours" → 72 h
+    let dur = grace_window_for_severity(CaseSeverity::Medium, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(72));
+
+    // High → Severe → "liability.grace_window_severe_hours" → 168 h
+    let dur = grace_window_for_severity(CaseSeverity::High, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(168));
+
+    // Critical also maps to Severe → 168 h (exhaustive variant coverage)
+    let dur = grace_window_for_severity(CaseSeverity::Critical, &mut cache, &mut conn).await?;
+    assert_eq!(dur, chrono::Duration::hours(168));
+
+    Ok(())
+  }
 }

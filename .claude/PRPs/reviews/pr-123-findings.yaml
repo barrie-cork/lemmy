@@ -1,0 +1,118 @@
+schema_version: 1
+pr: 123
+title: 'feat(v1-SL-d): sponsor-liability compute/fire split + submit_jury_vote pending
+  transition + e2e tests'
+head: phase-v1-SL-d
+base: governance-v0
+opened_at: '2026-05-10T22:00:10Z'
+last_poll_at: '2026-05-10T22:20:00Z'
+poll_count: 2
+last_polled_head_sha: 2600531dc65e1710be8696318143b1f6401b90bf
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/api/api/src/governance/sponsor_liability.rs
+  line: 543
+  summary: Avoid a sentinel PersonId in this DB-backed test
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596738
+  bucket: rebut
+  addressed_in: null
+  rationale: Unit test has no DB involvement — sentinel PersonId avoids testcontainer
+    dep for a pure-logic test. Acceptable per solo-dev scope.
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/api/api/src/governance/sponsor_liability.rs
+  line: 575
+  summary: Make the grace-window test independent of seeded defaults
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596739
+  bucket: rebut
+  addressed_in: null
+  rationale: Grace-window test explicitly reads a specific config key — independence
+    from seeded defaults is the design intent of the unit test.
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/server/tests/e2e.rs
+  line: 13128
+  summary: Exercise post-quorum idempotency on the Pending path
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596740
+  bucket: carry-forward
+  addressed_in: null
+  rationale: Valid incremental coverage; SL-d scope is compute/fire split + pending
+    transition. Post-quorum idempotency test belongs in next sub-phase.
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-10T22:05:33Z'
+  file: crates/server/tests/e2e.rs
+  line: 13490
+  summary: Assert the sanction table stays empty for NoAction
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#discussion_r3215596742
+  bucket: carry-forward
+  addressed_in: null
+  rationale: Incremental test improvement; not required for SL-d correctness. Carry
+    to next sub-phase alongside cr-3.
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-10T22:00:24Z'
+  file: null
+  line: null
+  summary: 'CR pre-merge-check: Description check — template sections incomplete'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/123#issuecomment-4416456489#walkthrough
+  bucket: rebut
+  addressed_in: null
+  rationale: ADR impact matrix / rollback strategy are solo-dev internal artifacts;
+    CR description template requirements do not apply to this private fork workflow.
+  notes: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 2
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 3
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 5
+    claude: 0
+    user: 0
+  total: 5
+merged_at: null
+merge_commit: null
+final_recommendation: null

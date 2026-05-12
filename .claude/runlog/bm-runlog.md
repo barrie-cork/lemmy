@@ -1738,3 +1738,17 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 
 
 ## 2026-05-10T05:45:00Z advisor: cherry-pick-merge phase-v1-SL-c-2 onto governance-v0 (PR #122 closed — DQ conflict prevented gh pr merge; 6 Rust test commits cherry-picked directly; phase branch deleted)
+
+## bm: poll-cr — 2026-05-10T22:05:18Z
+
+- **PR:** #123
+- **head SHA:** 2600531dc (unchanged since first poll)
+- **CR comments seen:** 1 (0 review / 0 inline / 1 issue — review-in-progress notice)
+- **Actionable findings ingested:** 0
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 0/0/0 | nit 0/0/0
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-123-findings.yaml (53 bytes)
+- **Notes:** CodeRabbit review in progress (posted "review in progress" notice at 2026-05-10T22:04:21Z). No actionable findings yet; CR still analyzing code. Re-run bm-poll-cr when review completes.
+

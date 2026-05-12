@@ -221,6 +221,7 @@ next step (e.g. "filed DQ #N for impl to weigh in").
 
 At the start of every BM session, run, in order:
 
+0. **Multi-lane CWD check** (per `.claude/rules/multi-lane-worktree.md` 2026-05-11): `pwd && git worktree list`. If another worktree is active on a different `phase-v1-*` branch, verify this BM session's CWD is the intended lane-dedicated worktree (`brehon-fork-<lane>`) — NOT the canonical `brehon-fork` checkout when phase-branch BM work is the goal.
 1. `git fetch origin` — pick up any new trunk commits or PR pushes.
 2. `git status --short` + `git branch --show-current` — establish state.
 3. Read `.claude/decision-queue.json` — note any pending entries.

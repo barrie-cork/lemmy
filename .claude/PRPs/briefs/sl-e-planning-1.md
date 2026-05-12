@@ -1,6 +1,7 @@
 # SL-e planning brief
 
 **Written**: 2026-05-07 by advisor session (this Mac, brehon-fork CWD `/Users/barrie/Developer/lemmy-advisor-sl-c` — sibling worktree on `governance-v0`).
+**Updated**: 2026-05-12 — refreshed e2e.rs line count to 13,693 (SL-d merged 2026-05-11, PR #123). No scope changes.
 **Subagent target**: `planning` (Opus 4.7, color purple — see `.claude/agents/planning.md`).
 **Worktree**: Junior cuts `junior/sl-e-planning-1` from `governance-v0` (or local sibling worktree if Junior daemon unavailable). Plan file commits and pushes back to `governance-v0` at finalize.
 **Authority anchor**: `v1-sponsor-liability.prd.md` §15 row 5 (`v1-SL-e — e2e test suite`). Per PRD §15 explicitly **depends on Phases 1-4 (SL-a + SL-b + SL-c + SL-d)** — this is the lane-closer. PRD §15 row description: "Three+ branches: revocation-during-window-escapes; restoration-during-window-escapes; window-expiry-fires; backfill-of-mid-flight". The restoration branch is **out of scope** in v1-SL-e per SL-c DQ #145 (restoration producer doesn't ship until restorative-mechanics-v1 PRD lands). SL-e ships the **other three** branches as full-lane e2e tests.
@@ -29,7 +30,7 @@ Produce **one plan file** at `.claude/PRPs/plans/v1-sponsor-liability-e.plan.md`
 
 ### 2.1 Three concrete e2e test branches (per PRD §15 row 5 minus restoration)
 
-The plan's §13 task list MUST cover all three. Each test = one §13 task with anchor-pattern Edit at file end (per `feedback_junior_worker_e2e_edit_hang.md` — `e2e.rs` is now ~10,500-10,800+ lines post-SL-d).
+The plan's §13 task list MUST cover all three. Each test = one §13 task with anchor-pattern Edit at file end (per `feedback_junior_worker_e2e_edit_hang.md` — `e2e.rs` is now ~13,693 lines post-SL-d merge 2026-05-11).
 
 a. **Revocation-during-window-escapes (full lane)** — exercises SL-d (producer) → SL-c (consumer-escape branch) → SL-b (revocation-side severance). Test flow:
   1. **Producer side (SL-d)**: trigger a jury vote (via `submit_jury_vote` API call) on a case with target having 1+ active sureties. Verify case transitions to `SponsorLiabilityPending` (NOT `Decided`); `grace_expires_at` set; `sponsor_liability_pending` log emitted; deferred-write set respected (no juror reputation events yet).
@@ -107,7 +108,8 @@ c. **Backfill-of-mid-flight (v0→v1 deployment scenario)** — exercises SL-a (
    - `.claude/PRPs/plans/v1-sponsor-liability-b.plan.md` — revoke_endorsement (SL-e test #1 exercises this handler end-to-end via real HTTP, not direct DB-write).
    - `.claude/PRPs/plans/v1-sponsor-liability-c.plan.md` — scheduler (SL-e tests #1, #2, #3 drive `run_grace_check_batch`).
    - `.claude/PRPs/plans/v1-sponsor-liability-d.plan.md` — producer mutation (SL-e tests #1 + #2 exercise the Decided→Pending transition).
-5. **`crates/server/tests/e2e.rs`** — locate (~10,500-10,800+ lines post-SL-d). Read:
+4a. **`migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql` lines 86-110** — the canonical backfill UPDATE shape (DQ #192). Read before designing §13 test #3. The exact Diesel UPDATE for the programmatic backfill in test #3 MUST mirror this WHERE clause verbatim (`status = 'Decided' AND decided_at IS NOT NULL AND decided_at > now() - INTERVAL '24 hours' AND target_person_id IS NOT NULL AND id IN (active surety EXISTS AND sanction EXISTS AND no sponsor_liability_applied reputation_event)`).
+5. **`crates/server/tests/e2e.rs`** — locate (~13,693 lines post-SL-d merge 2026-05-11). Read:
    - First 100 lines (test-setup helpers — `setup_e2e_pool`, fixture builders).
    - Most-recent SL-d tests (Decided→Pending transition test patterns).
    - Most-recent SL-c tests (scheduler-driven test patterns; specifically how `BREHON_DISABLE_GRACE_CHECK_JOB=1` is set in fixtures).
@@ -146,11 +148,12 @@ c. **Backfill-of-mid-flight (v0→v1 deployment scenario)** — exercises SL-a (
    1. **Three independent test branches.** Each test in §13 is its own §13 task with anchor-Edit at file end. No bundling. Per `feedback_junior_worker_e2e_edit_hang.md`.
    2. **Time-handling discipline.** Tests #2 and #3 require `now() > grace_expires_at` semantics. Plan §13 task that authors test #2 MUST specify which approach: (a) `tokio::time::sleep` (real wall-clock), (b) seed a case with `decided_at` already in the past so `grace_expires_at` is already past at test-start. **(b) is preferred** — no real-time delay, deterministic, fast.
    3. **`BREHON_DISABLE_GRACE_CHECK_JOB=1` env var set in tests #1, #2, #3.** Otherwise the cron tick races the test's manual `run_grace_check_batch` invocation. Plan §13 must verify this is set in `setup_e2e_pool` or per-test fixture.
-   4. **Real-HTTP for revocation in test #1.** SL-e exercises SL-b's HTTP handler — not direct DB-write. Plan §13 test #1 task must use the HTTP-call test pattern (verify against existing `revoke_endorsement` test fixtures from SL-b's plan).
+   4. **Direct-handler call for revocation in test #1 (not reqwest).** SL-e exercises SL-b's `revoke_endorsement` handler — not direct DB-write. The established governance e2e pattern is `revoke_endorsement(Json(RevokeEndorsement {endorsement_id, reason}), context.clone(), sponsor_view).await` (from `use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement;`), same as SL-b `e2e.rs:11190`. Plan §13 test #1 task must mirror this exact call shape — no `reqwest` / `actix_web::test::init_service` needed. (DQ #190 resolved by advisor.)
    5. **Pseudonym discipline assertions.** SL-e tests assert that every emitted governance_log payload uses `*_pseudonym` strings, never raw `*_id`. Plan §13 must specify the assertion shape (e.g. `assert!(payload.get("target_pseudonym").is_some()); assert!(payload.get("target_person_id").is_none());`).
-   6. **Backfill-test programmatic invocation in test #3.** SL-e test #3 cannot wait for v1-deploy migration; instead, it programmatically invokes the SL-a backfill UPDATE via Diesel. Plan §13 must specify the exact UPDATE shape (mirror PRD §8.4 SQL).
+   6. **Backfill-test programmatic invocation in test #3.** SL-e test #3 cannot wait for v1-deploy migration; instead, it programmatically invokes the SL-a backfill UPDATE via Diesel UPDATE matching the exact WHERE clause at `migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql` lines 86-110 (DQ #192). Plan §13 must specify the UPDATE shape (`diesel::update(moderation_case::table.filter(...)).set(...)`) mirroring that file's exact WHERE conditions.
    7. **No new ENTRY_KIND consts; no new schema; no new module.** Plan §13 must produce zero new files outside `crates/server/tests/e2e.rs`. `git diff governance-v0..phase-v1-SL-e` at plan-approval time should show only `crates/server/tests/e2e.rs` (and `.claude/PRPs/plans/v1-sponsor-liability-e.plan.md`) modified.
-   8. **e2e Edit-per-task discipline** per `feedback_junior_worker_e2e_edit_hang.md`. e2e.rs is now ~10,500-10,800+ lines (post-SL-d).
+   8. **e2e Edit-per-task discipline** per `feedback_junior_worker_e2e_edit_hang.md`. e2e.rs is now ~13,693 lines (post-SL-d merge 2026-05-11).
+   9. **cr-3 idempotency assertion clause in test #1 (carry-forward from SL-d retro).** Per PR #123 cr-3 (carry-forward, `e2e.rs:13128`): after the Pending transition and revocation in test #1, plan §13 must add a post-revocation block: call `submit_jury_vote` a second time on the now-`SponsorLiabilityEscaped` case and assert `case.status` unchanged (idempotency — second call is a no-op on an already-terminal case). This is NOT a separate §13 task — it is an assertion clause appended to test #1's assertion block. (DQ #191 resolved by advisor.) cr-4 ("sanction table stays empty for NoAction") is already covered by SL-d Test #3 at `e2e.rs:13333` and preserved unchanged.
 
 - **§5 complexity score breakdown table mandatory.** Pre-estimate 3-5.
 - **e2e edit discipline** per `feedback_junior_worker_e2e_edit_hang.md` + `feedback_e2e_filter_assumes_naming.md`.
