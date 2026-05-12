@@ -1,27 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 193,
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T14:30:00Z",
-      "workflow_run_id": 25737219926,
-      "branch": "junior/role-impl-task-v1-sl-e-task-1-e2e-test-1-revocation-during-window-escapes-open-mod-v1-sl-e-fixtures-see-claude-236",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "question": "cargo-validate-workspace run 25737219926 on branch junior/role-impl-task-v1-sl-e-task-1-e2e-test-1-revocation-during-window-escapes-open-mod-v1-sl-e-fixtures-see-claude-236 \u2014 pass or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Workspace check triggered by impl push for v1-SL-e Task 1: e2e test #1 revocation-during-window-escapes + mod v1_sl_e_fixtures shell. Commit 5b1898051.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 186,
@@ -3353,6 +3331,27 @@
       "answer": "(a) migration-file. Add migrations/2026-05-03-000100-0000_add_sponsor_liability_grace_window/up.sql lines 86-110 to brief \u00a73 Required reading (after item 4). The exact backfill UPDATE with all WHERE conditions is the contract for test #3 programmatic invocation. Diesel UPDATE in test #3 should mirror this shape exactly: status = SponsorLiabilityPending, grace_expires_at = decided_at + 24h, WHERE status = Decided AND decided_at IS NOT NULL AND decided_at > now() - 24h AND target_person_id IS NOT NULL AND id IN (SELECT mc.id WHERE active surety EXISTS AND sanction EXISTS AND no sponsor_liability_applied reputation_event). Brief \u00a73 needs this citation before the planner reads it.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-12T10:39:09Z"
+    },
+    {
+      "id": 193,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T14:30:00Z",
+      "workflow_run_id": 25737219926,
+      "branch": "junior/role-impl-task-v1-sl-e-task-1-e2e-test-1-revocation-during-window-escapes-open-mod-v1-sl-e-fixtures-see-claude-236",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "question": "cargo-validate-workspace run 25737219926 on branch junior/role-impl-task-v1-sl-e-task-1-e2e-test-1-revocation-during-window-escapes-open-mod-v1-sl-e-fixtures-see-claude-236 \u2014 pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Workspace check triggered by impl push for v1-SL-e Task 1: e2e test #1 revocation-during-window-escapes + mod v1_sl_e_fixtures shell. Commit 5b1898051.",
+      "answer": "cargo-validate-workspace run 25737219926 passed all checks (cargo check, cargo clippy, cargo test --no-run)",
+      "answered_by": "ci-watcher",
+      "resolved_at": "2026-05-12T13:48:09.735263+00:00"
     }
   ],
   "schema_version": 2
