@@ -1,28 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 194,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T13:56:13Z",
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-SL-e-b0e67392d.log",
-      "branch": "phase-v1-SL-e",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "question": "Phase 2 e2e on phase-v1-SL-e tip b0e67392d — pass or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Local e2e run for SL-e Task 1 phase-branch tip. cargo-test.bat --workspace --test e2e --features full. Advisor-driven per user gate 4 (local).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 186,
@@ -3375,6 +3352,28 @@
       "answer": "cargo-validate-workspace run 25737219926 passed all checks (cargo check, cargo clippy, cargo test --no-run)",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-12T13:48:09.735263+00:00"
+    },
+    {
+      "id": 194,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T13:56:13Z",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-SL-e-b0e67392d.log",
+      "branch": "phase-v1-SL-e",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": "test result: ok. 85 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1784.68s",
+      "failed_jobs": null,
+      "question": "Phase 2 e2e on phase-v1-SL-e tip b0e67392d — pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Local e2e run for SL-e Task 1 phase-branch tip. cargo-test.bat --workspace --test e2e --features full. Advisor-driven per user gate 4 (local).",
+      "answer": "Local e2e passed: 85 passed, 0 failed, 3 ignored. Exit 0. revocation_during_window_escapes_full_lane ok.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T14:30:38.648324+00:00"
     }
   ],
   "schema_version": 2
