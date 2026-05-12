@@ -65,21 +65,6 @@
       "resolved_at": "2026-05-11T13:00:00Z"
     },
     {
-      "id": 205,
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-11T21:20:26Z",
-      "question": "Should fix-impl-2 pad the remaining ReputationEventInsertForm literals in create_endorsement.rs (2 sites), seed_founders/main.rs (1 site), and e2e.rs (5 sites)?",
-      "options": [
-        "option-a: queue fix-impl-2 to patch all 8 remaining sites (create_endorsement.rs x2, seed_founders/main.rs x1, e2e.rs x5) with dedupe_key: None + source_event_type: None — workspace check will then pass",
-        "option-b: accept that workspace check will fail again on these sites after fix-impl-1; queue further fix-impl tasks per file group"
-      ],
-      "context": "Brief §5 says 'if rg shows other call sites, file a DQ pending entry'. rg found 8 more sites missing the Task-7 fields: crates/api/api_crud/src/governance/create_endorsement.rs:278 + :291 (depends on lemmy_api so was not caught in workflow run 25669550114); crates/tools/seed_founders/src/main.rs:173; crates/server/tests/e2e.rs:2902 + :2925 + :3935 + :5345 + :7986. Brief §4 forbids editing outside crates/api/api/src/governance/ so fix-impl-1 is bounded to the 2 compile-error sites. Workspace check will still fail after this push.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
       "id": 206,
       "from": "impl",
       "kind": "validate-pending",
@@ -93,15 +78,32 @@
       "workflow_run_id": 25698028473,
       "branch": "junior/role-impl-task-rt-r1-fix-impl-1-pad-two-reputationeventinsertform-literals-see-claude-prps-briefs-rt-r1-fix-impl-226",
       "phase_task": "fix-impl-1",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "2026-05-11T21:32:35Z error[E0063]: missing fields `dedupe_key` and `source_event_type` in initializer of `ReputationEventInsertForm`\n  --> crates/api/api_crud/src/governance/create_endorsement.rs:278 + :291\n  --> crates/tools/seed_founders/src/main.rs:173\n  --> crates/server/tests/e2e.rs:2902, 2925, 3935, 5345, 7986\n8 sites total. Workflow run 25698028473 conclusion=failure at 12m15s.\nRoot cause: DQ #205 — fix-impl-1 patched only the 2 sites named in the failing compile log; 8 more callers in dependent crates compile-failed once fix-impl-1 unblocked their compile.\nSee DQ #205 resolution for the fix-impl-2 plan.",
+      "failed_jobs": [
+        "validate workspace"
+      ],
+      "answer": "Workspace check failed as expected. Root cause = the 8 callers DQ #205 enumerates. Advisor-mutated (skipping ci-watcher round-trip) because cause is already characterised in DQ #205. Stays in pending[] per option-2 failure semantics — the fix-impl-2 push will raise a fresh validate-pending entry (DQ #207+); this entry is not retried.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T09:35:34Z"
     }
   ],
   "resolved": [
+    {
+      "id": 205,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-11T21:20:26Z",
+      "question": "Should fix-impl-2 pad the remaining ReputationEventInsertForm literals in create_endorsement.rs (2 sites), seed_founders/main.rs (1 site), and e2e.rs (5 sites)?",
+      "options": [
+        "option-a: queue fix-impl-2 to patch all 8 remaining sites (create_endorsement.rs x2, seed_founders/main.rs x1, e2e.rs x5) with dedupe_key: None + source_event_type: None — workspace check will then pass",
+        "option-b: accept that workspace check will fail again on these sites after fix-impl-1; queue further fix-impl tasks per file group"
+      ],
+      "context": "Brief §5 says 'if rg shows other call sites, file a DQ pending entry'. rg found 8 more sites missing the Task-7 fields: crates/api/api_crud/src/governance/create_endorsement.rs:278 + :291 (depends on lemmy_api so was not caught in workflow run 25669550114); crates/tools/seed_founders/src/main.rs:173; crates/server/tests/e2e.rs:2902 + :2925 + :3935 + :5345 + :7986. Brief §4 forbids editing outside crates/api/api/src/governance/ so fix-impl-1 is bounded to the 2 compile-error sites. Workspace check will still fail after this push.",
+      "answer": "option-a — queue fix-impl-2 to patch all 8 remaining ReputationEventInsertForm call sites in one task. Mechanical recipe (same as fix-impl-1): pad each literal with `dedupe_key: None, source_event_type: None,`. Sites: create_endorsement.rs:278 + :291; seed_founders/main.rs:173; e2e.rs:2902, 2925, 3935, 5345, 7986. Bundling avoids N more workflow-fail/fix-impl cycles (c-2 retro 'death-by-1000-cuts' anti-pattern). e2e.rs's 5 sites use a single Python in-place script (not 5 Edits) per feedback_junior_worker_e2e_edit_hang.md; lines 3935+5345 are identical struct literals and would break Edit-tool unique-match — only a script handles them cleanly.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-12T09:35:34Z"
+    },
     {
       "id": 186,
       "from": "planner",
