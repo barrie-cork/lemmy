@@ -2908,6 +2908,8 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
         source_report_id: None,
         reason: "founder_seed".to_string(),
         expires_at: Some(expiry),
+        dedupe_key: None,
+        source_event_type: None,
       };
       diesel::insert_into(reputation_event::table)
         .values(&form)
@@ -2931,6 +2933,8 @@ async fn sponsor_liability_with_founder_multiplier() -> Result<(), Box<dyn Error
       source_report_id: None,
       reason: "test_seed".to_string(),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: None,
     };
     diesel::insert_into(reputation_event::table)
       .values(&form)
@@ -3941,6 +3945,8 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> Result<(), Box<dyn Error
         source_report_id: None,
         reason: "founder_seed".to_string(),
         expires_at: Some(Utc::now() + Duration::days(30)),
+        dedupe_key: None,
+        source_event_type: None,
       };
       diesel::insert_into(reputation_event::table)
         .values(&form)
@@ -5351,6 +5357,8 @@ async fn declining_juror_not_picked_as_own_replacement() -> Result<(), Box<dyn E
         source_report_id: None,
         reason: "founder_seed".to_string(),
         expires_at: Some(Utc::now() + Duration::days(30)),
+        dedupe_key: None,
+        source_event_type: None,
       };
       diesel::insert_into(reputation_event::table)
         .values(&form)
@@ -7992,6 +8000,8 @@ mod v1_jm_b_fixtures {
       source_report_id: None,
       reason: "founder_seed".to_string(),
       expires_at: Some(expiry),
+      dedupe_key: None,
+      source_event_type: None,
     };
     diesel::insert_into(reputation_event::table)
       .values(&form)

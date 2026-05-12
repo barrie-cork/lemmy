@@ -284,6 +284,8 @@ async fn process_endorsement(
       source_report_id: None,
       reason: "endorsement_created_sponsor".to_string(),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: None,
     })
     .execute(conn)
     .await?;
@@ -297,6 +299,8 @@ async fn process_endorsement(
       source_report_id: None,
       reason: "endorsement_created_sponsee".to_string(),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: None,
     })
     .execute(conn)
     .await?;
