@@ -1,22 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 197,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T20:06:00Z",
-      "workflow_run_id": null,
-      "branch": "phase-v1-SL-e",
-      "phase_task": "phase-2-e2e",
-      "local_log_path": ".claude/runlog/e2e-v1-SL-e-0e28a49ce.log",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 195,
@@ -3427,6 +3410,22 @@
       "answer": "workspace-check passed",
       "answered_by": "ci-watcher",
       "resolved_at": "2026-05-12T20:02:33.228193Z"
+    },
+    {
+      "id": 197,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T20:06:00Z",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-e",
+      "phase_task": "phase-2-e2e",
+      "local_log_path": ".claude/runlog/e2e-v1-SL-e-0e28a49ce.log",
+      "result": "pass",
+      "log_slice": "test result: ok. 85 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1795.39s",
+      "failed_jobs": null,
+      "answer": "Phase 2 e2e: 85 passed, 0 failed, 3 ignored in 1795.39s (30 min). E2E_EXIT_0 confirmed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-12T20:36:30Z"
     }
   ],
   "schema_version": 2
