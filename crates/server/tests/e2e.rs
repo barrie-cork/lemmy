@@ -13691,3 +13691,506 @@ mod v1_sl_d_fixtures {
     Ok(())
   }
 }
+
+mod v1_sl_e_fixtures {
+  use super::*;
+  use activitypub_federation::config::FederationConfig;
+  use actix_web::web::{Data, Json};
+  use chrono::{DateTime, Duration, Utc};
+  use diesel::{ExpressionMethods, QueryDsl, insert_into};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    sponsor_liability_grace::run_grace_check_batch,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
+    AdminAssignJury,
+    RevokeEndorsement,
+    SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement;
+  use lemmy_api_utils::context::LemmyContext;
+  use lemmy_db_schema::{
+    newtypes::{EndorsementId, ModerationCaseId},
+    source::governance::{
+      endorsement::EndorsementInsertForm,
+      moderation_case::ModerationCaseInsertForm,
+      surety::SuretyInsertForm,
+    },
+  };
+  use lemmy_db_schema_file::{
+    InstanceId,
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryDecision, SeverityTier},
+    schema::{endorsement, governance_log, moderation_case, public_case_log, reputation_event, surety},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_utils::error::LemmyResult;
+  use serde_json::Value;
+
+  /// Seed a sponsee + `sponsor_count` sponsors, each with an endorsement + surety row.
+  /// Returns (sponsee_id, Vec<(sponsor_id, endorsement_id)>).
+  async fn seed_target_with_sureties_and_endorsements(
+    context: &Data<LemmyContext>,
+    instance_id: InstanceId,
+    conn: &mut AsyncPgConnection,
+    sponsor_count: usize,
+    prefix: &str,
+  ) -> LemmyResult<(PersonId, Vec<(PersonId, EndorsementId)>)> {
+    let (sponsee, _) = governance_fixtures::seed_user(
+      context,
+      instance_id,
+      &format!("{prefix}_sponsee"),
+      false,
+    )
+    .await?;
+    let mut sponsors = Vec::with_capacity(sponsor_count);
+    for i in 0..sponsor_count {
+      let (sponsor, _) = governance_fixtures::seed_user(
+        context,
+        instance_id,
+        &format!("{prefix}_sp{i}"),
+        false,
+      )
+      .await?;
+      let endo_id: EndorsementId = insert_into(endorsement::table)
+        .values(EndorsementInsertForm {
+          from_person_id: sponsor,
+          to_person_id: sponsee,
+          community_id: None,
+        })
+        .returning(endorsement::id)
+        .get_result::<EndorsementId>(conn)
+        .await?;
+      insert_into(surety::table)
+        .values(SuretyInsertForm {
+          sponsor_id: sponsor,
+          sponsored_id: sponsee,
+          community_id: None,
+        })
+        .execute(conn)
+        .await?;
+      sponsors.push((sponsor, endo_id));
+    }
+    Ok((sponsee, sponsors))
+  }
+
+  async fn count_log_entries(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<i64> {
+    let n: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .count()
+      .get_result(conn)
+      .await?;
+    Ok(n)
+  }
+
+  async fn read_log_payload(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<Option<Value>> {
+    let payloads: Vec<Value> = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .order(governance_log::id.desc())
+      .select(governance_log::payload)
+      .limit(1)
+      .load(conn)
+      .await?;
+    Ok(payloads.into_iter().next())
+  }
+
+  async fn drive_jury_to_quorum(
+    context: &Data<LemmyContext>,
+    federation_context: &activitypub_federation::config::Data<LemmyContext>,
+    admin_view: LocalUserView,
+    case_id: ModerationCaseId,
+    decision: JuryDecision,
+  ) -> LemmyResult<()> {
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+
+    for &juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    for &juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      let resp = submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?
+      .into_inner();
+      if resp.case_decided {
+        break;
+      }
+    }
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn revocation_during_window_escapes_full_lane() -> LemmyResult<()> {
+    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+    unsafe {
+      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
+    }
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let federation_config = FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let federation_context = federation_config.to_request_data();
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (sponsee, sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      2,
+      "sle1",
+    )
+    .await?;
+    let (sponsor1, endo1) = sponsors[1];
+
+    let mut juror_ids = Vec::with_capacity(5);
+    for i in 0..5_usize {
+      let (id, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("sle1_juror{i}"),
+        false,
+      )
+      .await?;
+      juror_ids.push(id);
+    }
+    let (_, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sle1_admin", true).await?;
+
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &juror_ids).await?;
+
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_revocation".to_string(),
+        severity: CaseSeverity::High,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Open,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Drive #1: jury vote to quorum → SponsorLiabilityPending.
+    let before_decisive = Utc::now();
+    drive_jury_to_quorum(
+      &context,
+      &federation_context,
+      admin_view,
+      case_id,
+      JuryDecision::SuspendCommunityMember,
+    )
+    .await?;
+
+    // --- Mid-window assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (status, grace_expires_at): (CaseStatus, Option<DateTime<Utc>>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::grace_expires_at))
+      .first(&mut conn)
+      .await?;
+
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityPending),
+      "case must be SponsorLiabilityPending, got {status:?}"
+    );
+    let grace = grace_expires_at.expect("grace_expires_at set on Pending path");
+    let expected_grace = before_decisive + Duration::hours(168);
+    assert!(
+      (grace - expected_grace).num_seconds().abs() < 5,
+      "grace_expires_at ≈ now + 168h (within 5s), got {grace:?}"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "1 sponsor_liability_pending entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "case_decided").await?,
+      1,
+      "1 case_decided entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sanction_created").await?,
+      1,
+      "1 sanction_created entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      0,
+      "no endorsement_revoked yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "no sponsor_liability_escaped yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied yet"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events deferred on Pending path");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log deferred on Pending path");
+
+    // ADR-015 pseudonym checks on sponsor_liability_pending payload.
+    let payload: Value = read_log_payload(&mut conn, "sponsor_liability_pending")
+      .await?
+      .expect("sponsor_liability_pending payload present");
+    assert_eq!(
+      payload["case_id"],
+      serde_json::json!(case_id.0),
+      "payload.case_id matches"
+    );
+    let target_psn = payload["target_pseudonym"]
+      .as_str()
+      .expect("target_pseudonym is a string");
+    assert!(
+      payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      target_psn,
+      format!("{}", sponsee.0),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+    let sponsors_psns = payload["sponsors_pseudonyms"]
+      .as_array()
+      .expect("sponsors_pseudonyms is an array");
+    assert_eq!(sponsors_psns.len(), 2, "2 sponsors in payload");
+
+    // Drive #2: revoke sponsor1's endorsement during the grace window → escape.
+    let sponsor1_view = LocalUserView::read_person(&mut context.pool(), sponsor1).await?;
+    let revoke_resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id: endo1,
+        reason: "sl-e test revocation".to_string(),
+      }),
+      context.clone(),
+      sponsor1_view,
+    )
+    .await?
+    .into_inner();
+
+    assert_eq!(
+      revoke_resp.endorsement_id,
+      endo1,
+      "revoke response endorsement_id matches"
+    );
+    assert!(
+      revoke_resp.revoked_at < Utc::now() + Duration::seconds(1),
+      "revoked_at is recent"
+    );
+    assert!(
+      revoke_resp.liability_chain_severed_for_cases.contains(&case_id),
+      "case_id in liability_chain_severed_for_cases"
+    );
+
+    // --- Post-revocation assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (status, liability_escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityEscaped),
+      "case must be SponsorLiabilityEscaped, got {status:?}"
+    );
+    let escape_reason =
+      liability_escape_reason.expect("liability_escape_reason set on escape path");
+    assert_eq!(
+      escape_reason["version"],
+      serde_json::json!(1),
+      "escape_reason.version == 1"
+    );
+    assert_eq!(
+      escape_reason["reason"],
+      serde_json::json!("sponsor_revoked"),
+      "escape_reason.reason == sponsor_revoked"
+    );
+    assert!(
+      escape_reason["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string"
+    );
+    assert_eq!(
+      escape_reason["endorsement_id"],
+      serde_json::json!(endo1.0),
+      "escape_reason.endorsement_id matches"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+      "1 endorsement_revoked entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      1,
+      "1 sponsor_liability_escaped entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "sponsor_liability_pending unchanged at 1"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events still 0 after escape");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log still 0 after escape");
+
+    // ADR-015 pseudonym checks on endorsement_revoked payload.
+    let endo_payload: Value = read_log_payload(&mut conn, "endorsement_revoked")
+      .await?
+      .expect("endorsement_revoked payload present");
+    assert!(
+      endo_payload["revoker_pseudonym"].is_string(),
+      "revoker_pseudonym is a string"
+    );
+    assert_ne!(
+      endo_payload["revoker_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsor1.0).as_str(),
+      "revoker_pseudonym != raw sponsor_id (ADR-015)"
+    );
+    assert!(
+      endo_payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string in endorsement_revoked"
+    );
+
+    // ADR-015 pseudonym checks on sponsor_liability_escaped payload.
+    let escaped_payload: Value = read_log_payload(&mut conn, "sponsor_liability_escaped")
+      .await?
+      .expect("sponsor_liability_escaped payload present");
+    assert!(
+      escaped_payload["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string in sponsor_liability_escaped"
+    );
+    assert_eq!(
+      escaped_payload["reason"].as_str().unwrap(),
+      "sponsor_revoked",
+      "escaped payload reason == sponsor_revoked"
+    );
+
+    // Drive #3: scheduler tick — case is already SponsorLiabilityEscaped → batch skips.
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome.cases_processed,
+      0_usize,
+      "scheduler skips already-escaped case"
+    );
+    assert_eq!(outcome.fired, 0_usize, "no fires");
+    assert_eq!(outcome.escaped, 0_usize, "no escapes from scheduler");
+    assert_eq!(outcome.skipped, 0_usize, "no skips");
+
+    // Final state unchanged.
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let final_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert!(
+      matches!(final_status, CaseStatus::SponsorLiabilityEscaped),
+      "final status still SponsorLiabilityEscaped, got {final_status:?}"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired after scheduler tick"
+    );
+
+    unsafe {
+      match prev_disable {
+        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+      }
+    }
+
+    Ok(())
+  }
+}
