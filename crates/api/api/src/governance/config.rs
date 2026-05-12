@@ -86,12 +86,14 @@ pub enum ConfigScope {
 /// When a config change takes effect. `Immediate` is a cache invalidation;
 /// `NextJuryCycle` means in-flight juries keep the old value via
 /// `moderation_case.applied_config_snapshot`; `NextSnapshotJob` defers to the
-/// next reputation snapshot tick.
+/// next reputation snapshot tick; `OnRestart` means the running scheduler
+/// keeps its current interval until the server restarts and re-reads the key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApplyAt {
   Immediate,
   NextJuryCycle,
   NextSnapshotJob,
+  OnRestart,
 }
 
 /// Static inclusive numeric range. Used for `valid_range` bounds on `Int` and
@@ -944,6 +946,58 @@ pub const DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES: i64 = 5;
 pub const DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE: i64 = 100;
 pub const DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER: f64 = 2.0;
 
+// -- v1-RT-r1 additions (reputation-tuning sub-phase r1) -------------
+//
+// 26 net-new keys per PRD section 8 minus 3 v1-AD-a-shipped duplicates
+// per planner DQ #187. Their DEFAULT_* consts + SEEDED_KEYS_WITH_CONSTS
+// + CONFIG_KEY_METADATA entries are owned by v1-AD-a and stay there.
+
+// 8 decay.<dimension>.<direction>_half_life_days (i64):
+pub const DEFAULT_DECAY_REPORTING_ACCURACY_POSITIVE_HALF_LIFE_DAYS: i64 = 90;
+pub const DEFAULT_DECAY_REPORTING_ACCURACY_NEGATIVE_HALF_LIFE_DAYS: i64 = 180;
+pub const DEFAULT_DECAY_JURY_RELIABILITY_POSITIVE_HALF_LIFE_DAYS: i64 = 90;
+pub const DEFAULT_DECAY_JURY_RELIABILITY_NEGATIVE_HALF_LIFE_DAYS: i64 = 180;
+pub const DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_POSITIVE_HALF_LIFE_DAYS: i64 = 60;
+pub const DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_NEGATIVE_HALF_LIFE_DAYS: i64 = 60;
+pub const DEFAULT_DECAY_ENDORSEMENT_STRENGTH_POSITIVE_HALF_LIFE_DAYS: i64 = 90;
+pub const DEFAULT_DECAY_ENDORSEMENT_STRENGTH_NEGATIVE_HALF_LIFE_DAYS: i64 = 180;
+
+// 8 bounds.<dimension>.<floor|ceiling> (i64):
+pub const DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR: i64 = -100;
+pub const DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING: i64 = 100;
+pub const DEFAULT_BOUNDS_JURY_RELIABILITY_FLOOR: i64 = -100;
+pub const DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING: i64 = 100;
+pub const DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_FLOOR: i64 = -100;
+pub const DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_CEILING: i64 = 100;
+pub const DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR: i64 = 0;
+pub const DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING: i64 = 200;
+
+// 1 deltas.participation_juror_aligned (i64):
+pub const DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED: i64 = 1;
+
+// 2 participation.* context knobs:
+pub const DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS: i64 = 1;
+pub const DEFAULT_PARTICIPATION_LOOKBACK_DAYS: i64 = 7;
+
+// 2 deltas.evidence_*:
+pub const DEFAULT_DELTAS_EVIDENCE_CITED: i64 = 1;
+pub const DEFAULT_DELTAS_EVIDENCE_BAD_FAITH: i64 = -1;
+
+// 1 participation.evidence_cited_rationale_threshold_chars:
+pub const DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS: i64 = 256;
+
+// 2 job.* cadence knobs:
+pub const DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS: i64 = 7;
+pub const DEFAULT_JOB_ROLLUP_INTERVAL_DAYS: i64 = 7;
+
+// 1 job.rollup_equal_weights (bool):
+pub const DEFAULT_JOB_ROLLUP_EQUAL_WEIGHTS: bool = true;
+
+// 1 feature flag (bool):
+pub const DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED: bool = false;
+
+// Total: 8 + 8 + 1 + 2 + 2 + 1 + 2 + 1 + 1 = 26 net-new consts.
+
 pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
@@ -1030,6 +1084,55 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "liability.revoke_rate_limit_per_day" => Some(DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY),
     "job.grace_check_interval_minutes" => Some(DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES),
     "job.grace_check_batch_size" => Some(DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE),
+    // v1-RT-r1 additions
+    "decay.reporting_accuracy.positive_half_life_days" => {
+      Some(DEFAULT_DECAY_REPORTING_ACCURACY_POSITIVE_HALF_LIFE_DAYS)
+    }
+    "decay.reporting_accuracy.negative_half_life_days" => {
+      Some(DEFAULT_DECAY_REPORTING_ACCURACY_NEGATIVE_HALF_LIFE_DAYS)
+    }
+    "decay.jury_reliability.positive_half_life_days" => {
+      Some(DEFAULT_DECAY_JURY_RELIABILITY_POSITIVE_HALF_LIFE_DAYS)
+    }
+    "decay.jury_reliability.negative_half_life_days" => {
+      Some(DEFAULT_DECAY_JURY_RELIABILITY_NEGATIVE_HALF_LIFE_DAYS)
+    }
+    "decay.participation_consistency.positive_half_life_days" => {
+      Some(DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_POSITIVE_HALF_LIFE_DAYS)
+    }
+    "decay.participation_consistency.negative_half_life_days" => {
+      Some(DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_NEGATIVE_HALF_LIFE_DAYS)
+    }
+    "decay.endorsement_strength.positive_half_life_days" => {
+      Some(DEFAULT_DECAY_ENDORSEMENT_STRENGTH_POSITIVE_HALF_LIFE_DAYS)
+    }
+    "decay.endorsement_strength.negative_half_life_days" => {
+      Some(DEFAULT_DECAY_ENDORSEMENT_STRENGTH_NEGATIVE_HALF_LIFE_DAYS)
+    }
+    "bounds.reporting_accuracy.floor" => Some(DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR),
+    "bounds.reporting_accuracy.ceiling" => Some(DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING),
+    "bounds.jury_reliability.floor" => Some(DEFAULT_BOUNDS_JURY_RELIABILITY_FLOOR),
+    "bounds.jury_reliability.ceiling" => Some(DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING),
+    "bounds.participation_consistency.floor" => {
+      Some(DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_FLOOR)
+    }
+    "bounds.participation_consistency.ceiling" => {
+      Some(DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_CEILING)
+    }
+    "bounds.endorsement_strength.floor" => Some(DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR),
+    "bounds.endorsement_strength.ceiling" => Some(DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING),
+    "deltas.participation_juror_aligned" => Some(DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED),
+    "participation.activity_threshold_comments" => {
+      Some(DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS)
+    }
+    "participation.lookback_days" => Some(DEFAULT_PARTICIPATION_LOOKBACK_DAYS),
+    "deltas.evidence_cited" => Some(DEFAULT_DELTAS_EVIDENCE_CITED),
+    "deltas.evidence_bad_faith" => Some(DEFAULT_DELTAS_EVIDENCE_BAD_FAITH),
+    "participation.evidence_cited_rationale_threshold_chars" => {
+      Some(DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS)
+    }
+    "job.participation_interval_days" => Some(DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS),
+    "job.rollup_interval_days" => Some(DEFAULT_JOB_ROLLUP_INTERVAL_DAYS),
     _ => None,
   }
 }
@@ -1097,6 +1200,9 @@ pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
     "liability.restoration_escapes_liability" => {
       Some(DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY)
     }
+    // v1-RT-r1 additions
+    "job.rollup_equal_weights" => Some(DEFAULT_JOB_ROLLUP_EQUAL_WEIGHTS),
+    "feature.reputation_v1_decay_enabled" => Some(DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED),
     _ => None,
   }
 }
@@ -1383,6 +1489,34 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
   ("liability.restoration_escapes_liability", "DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY", "bool"),
   ("liability.restoration_severity_reduction_steps", "DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS", "int"),
   ("liability.revoke_rate_limit_per_day", "DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY", "int"),
+  // v1-RT-r1 additions (26 net-new keys per PRD section 8 minus 3
+  // v1-AD-a-shipped duplicates per DQ #187).
+  ("bounds.endorsement_strength.ceiling",                       "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING",                       "int"),
+  ("bounds.endorsement_strength.floor",                         "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR",                         "int"),
+  ("bounds.jury_reliability.ceiling",                           "DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING",                           "int"),
+  ("bounds.jury_reliability.floor",                             "DEFAULT_BOUNDS_JURY_RELIABILITY_FLOOR",                             "int"),
+  ("bounds.participation_consistency.ceiling",                  "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_CEILING",                  "int"),
+  ("bounds.participation_consistency.floor",                    "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_FLOOR",                    "int"),
+  ("bounds.reporting_accuracy.ceiling",                         "DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING",                         "int"),
+  ("bounds.reporting_accuracy.floor",                           "DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR",                           "int"),
+  ("decay.endorsement_strength.negative_half_life_days",        "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_NEGATIVE_HALF_LIFE_DAYS",        "int"),
+  ("decay.endorsement_strength.positive_half_life_days",        "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_POSITIVE_HALF_LIFE_DAYS",        "int"),
+  ("decay.jury_reliability.negative_half_life_days",            "DEFAULT_DECAY_JURY_RELIABILITY_NEGATIVE_HALF_LIFE_DAYS",            "int"),
+  ("decay.jury_reliability.positive_half_life_days",            "DEFAULT_DECAY_JURY_RELIABILITY_POSITIVE_HALF_LIFE_DAYS",            "int"),
+  ("decay.participation_consistency.negative_half_life_days",   "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_NEGATIVE_HALF_LIFE_DAYS",   "int"),
+  ("decay.participation_consistency.positive_half_life_days",   "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_POSITIVE_HALF_LIFE_DAYS",   "int"),
+  ("decay.reporting_accuracy.negative_half_life_days",          "DEFAULT_DECAY_REPORTING_ACCURACY_NEGATIVE_HALF_LIFE_DAYS",          "int"),
+  ("decay.reporting_accuracy.positive_half_life_days",          "DEFAULT_DECAY_REPORTING_ACCURACY_POSITIVE_HALF_LIFE_DAYS",          "int"),
+  ("deltas.evidence_bad_faith",                                 "DEFAULT_DELTAS_EVIDENCE_BAD_FAITH",                                 "int"),
+  ("deltas.evidence_cited",                                     "DEFAULT_DELTAS_EVIDENCE_CITED",                                     "int"),
+  ("deltas.participation_juror_aligned",                        "DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED",                        "int"),
+  ("feature.reputation_v1_decay_enabled",                       "DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED",                       "bool"),
+  ("job.participation_interval_days",                           "DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS",                           "int"),
+  ("job.rollup_equal_weights",                                  "DEFAULT_JOB_ROLLUP_EQUAL_WEIGHTS",                                  "bool"),
+  ("job.rollup_interval_days",                                  "DEFAULT_JOB_ROLLUP_INTERVAL_DAYS",                                  "int"),
+  ("participation.activity_threshold_comments",                 "DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS",                 "int"),
+  ("participation.evidence_cited_rationale_threshold_chars",    "DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS",    "int"),
+  ("participation.lookback_days",                               "DEFAULT_PARTICIPATION_LOOKBACK_DAYS",                               "int"),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -1420,6 +1554,26 @@ pub const EXPECTED_SEED_COUNT_V1_JM: usize = 27;
 /// `feedback_brehon_config_micros_scaled.md` scopes to reputation/score-
 /// formula math, not wall-clock INTERVAL operands.
 pub const EXPECTED_SEED_COUNT_V1_SL: usize = 13;
+
+/// Net-new keys shipped by RT-r1's seed migration. Used by the parity
+/// test. Excludes the 3 PRD-section-8 keys already shipped under v1-AD-a
+/// (`deltas.participation_weekly_active`, `participation.dormancy_window_days`,
+/// `deltas.participation_dormant`) — those remain owned by V1_AD ship-count
+/// per `migrations/2026-04-22-000300-0000_seed_v1_config_keys/up.sql:37-39`.
+/// Cumulative: 34 + 27 + 27 + 13 + 26 = 127.
+pub const EXPECTED_SEED_COUNT_V1_RT_NETNEW: usize = 26;
+
+/// PRD section 8 conceptual count: 28 RT-tuning knobs + 1 feature flag.
+/// Audit-surface only — NOT used by parity tests; documents the
+/// conceptual scope claimed by the reputation-tuning lane. The 3-key
+/// overlap with V1_AD (see `EXPECTED_SEED_COUNT_V1_RT_NETNEW` doc) means
+/// `EXPECTED_SEED_COUNT_V1_RT_LOGICAL == EXPECTED_SEED_COUNT_V1_RT_NETNEW + 3`.
+/// Per advisor DQ #188 (2026-05-10).
+pub const EXPECTED_SEED_COUNT_V1_RT_LOGICAL: usize = 29;
+
+/// Backwards-compat alias — stays bound to the NETNEW value for
+/// parity-test correctness. Parametric per advisor directive 2026-04-19 #4.
+pub const EXPECTED_SEED_COUNT_V1_RT: usize = EXPECTED_SEED_COUNT_V1_RT_NETNEW;
 
 /// Enum variants for `federation.quarantine_recommendation_severity_floor`.
 const ENUM_SEVERITY_FLOOR: &[&str] = &["minor", "moderate", "severe"];
@@ -2680,6 +2834,325 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     description: "Multiplier of interval_minutes before a stale grace-check run triggers a staleness alert.",
     doc_anchor: "v1-sponsor-liability.prd.md§10",
   },
+  // ---- v1-RT-r1 additions (26) -------------------------------------------
+  // decay.* — 8 per-dimension per-direction half-life keys (int, Both)
+  ConfigKeyMetadata {
+    key: "decay.reporting_accuracy.positive_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for positive reporting_accuracy decay; mirrors v0 default.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.reporting_accuracy.negative_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for negative reporting_accuracy decay; OQ-V1-03 lean.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.jury_reliability.positive_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for positive jury_reliability decay.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.jury_reliability.negative_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for negative jury_reliability decay.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.participation_consistency.positive_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for positive participation_consistency decay; faster — current behaviour focus.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.participation_consistency.negative_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for negative participation_consistency decay; symmetric.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.endorsement_strength.positive_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for positive endorsement_strength decay.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "decay.endorsement_strength.negative_half_life_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::NextSnapshotJob,
+    description: "Half-life (days) for negative endorsement_strength decay; honour-price principle.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  // bounds.* — 8 per-dimension floor/ceiling keys (int, Both)
+  ConfigKeyMetadata {
+    key: "bounds.reporting_accuracy.floor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Lower bound for reporting_accuracy dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.reporting_accuracy.ceiling",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Upper bound for reporting_accuracy dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.jury_reliability.floor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Lower bound for jury_reliability dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.jury_reliability.ceiling",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Upper bound for jury_reliability dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.participation_consistency.floor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Lower bound for participation_consistency dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.participation_consistency.ceiling",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Upper bound for participation_consistency dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.endorsement_strength.floor",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Lower bound for endorsement_strength dimension score; OQ-024 floor preserved.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "bounds.endorsement_strength.ceiling",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Upper bound for endorsement_strength dimension score.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  // deltas.* — 3 keys (int, Both)
+  ConfigKeyMetadata {
+    key: "deltas.participation_juror_aligned",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Delta applied to participation_consistency when a juror votes with the majority.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.evidence_cited",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Delta applied to reporting_accuracy when a reporter cites evidence.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "deltas.evidence_bad_faith",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: -100.0, max: 0.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Delta applied to reporting_accuracy when an admin flags a report as bad faith.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  // participation.* context knobs — 3 keys (int, Both)
+  ConfigKeyMetadata {
+    key: "participation.activity_threshold_comments",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Minimum comments in the lookback window to count as weekly-active.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "participation.lookback_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 90.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Rolling window (days) for the weekly-active participation check.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "participation.evidence_cited_rationale_threshold_chars",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 32.0, max: 4096.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Both,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Minimum rationale length (chars) for a report to count as evidence-cited.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  // job.* cadence knobs — 2 int + 1 bool (Instance)
+  ConfigKeyMetadata {
+    key: "job.participation_interval_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::OnRestart,
+    description: "How often (days) the participation-cron job runs; takes effect at next server restart.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "job.rollup_interval_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::OnRestart,
+    description: "How often (days) the instance-wide rollup cron runs; takes effect at next server restart.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  ConfigKeyMetadata {
+    key: "job.rollup_equal_weights",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "When true, rollup uses equal weights across dimensions; false enables weighted average.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
+  // feature flag (bool, Instance)
+  ConfigKeyMetadata {
+    key: "feature.reputation_v1_decay_enabled",
+    value_type: ValueType::Bool,
+    valid_range: None,
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Gate for the v1 per-dimension chained-halving decay calculator; false keeps v0 decay path.",
+    doc_anchor: "v1-reputation-tuning.prd.md section 8",
+  },
 ];
 
 
@@ -2689,22 +3162,30 @@ mod parity {
 
   #[test]
   fn seeded_keys_count_matches_const_count() {
+    // Compile-time audit: LOGICAL must equal NETNEW + 3 (the 3 PRD §8 rows
+    // already shipped under v1-AD-a per planner DQ #187).
+    const _: () = assert!(
+      EXPECTED_SEED_COUNT_V1_RT_LOGICAL == EXPECTED_SEED_COUNT_V1_RT_NETNEW + 3,
+      "EXPECTED_SEED_COUNT_V1_RT_LOGICAL must equal EXPECTED_SEED_COUNT_V1_RT_NETNEW + 3"
+    );
     let expected = EXPECTED_SEED_COUNT
       + EXPECTED_SEED_COUNT_V1_AD
       + EXPECTED_SEED_COUNT_V1_JM
-      + EXPECTED_SEED_COUNT_V1_SL;
+      + EXPECTED_SEED_COUNT_V1_SL
+      + EXPECTED_SEED_COUNT_V1_RT_NETNEW;
     assert_eq!(
       SEEDED_KEYS_WITH_CONSTS.len(),
       expected,
       "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) + \
        EXPECTED_SEED_COUNT_V1_AD ({}) + EXPECTED_SEED_COUNT_V1_JM ({}) + \
-       EXPECTED_SEED_COUNT_V1_SL ({}) = {} — add/remove keys in both places \
-       when changing the seed list",
+       EXPECTED_SEED_COUNT_V1_SL ({}) + EXPECTED_SEED_COUNT_V1_RT_NETNEW ({}) = {} \
+       — add/remove keys in both places when changing the seed list",
       SEEDED_KEYS_WITH_CONSTS.len(),
       EXPECTED_SEED_COUNT,
       EXPECTED_SEED_COUNT_V1_AD,
       EXPECTED_SEED_COUNT_V1_JM,
       EXPECTED_SEED_COUNT_V1_SL,
+      EXPECTED_SEED_COUNT_V1_RT_NETNEW,
       expected,
     );
   }

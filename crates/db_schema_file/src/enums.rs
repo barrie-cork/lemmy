@@ -619,6 +619,33 @@ pub enum ReputationDimension {
 #[cfg_attr(feature = "full", derive(DbEnum))]
 #[cfg_attr(
   feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::ReputationEventSourceType"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Per-event source classification for `reputation_event` rows. Per
+/// PRD section 5.3 + 7. v0 rows receive Endorsement via column DEFAULT;
+/// 2026-05-10-000200-0000 backfill revises by reason ILIKE per DQ #184.
+/// r3 emitters write the matching variant explicitly going forward.
+pub enum ReputationEventSourceType {
+  #[default]
+  Endorsement,
+  JuryVote,
+  SponsorLiability,
+  FounderSeed,
+  ParticipationCron,
+  DormancyCron,
+  VoteOutcome,
+  EvidenceQuality,
+  ManualSeed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
   ExistingTypePath = "crate::schema::sql_types::AttestationType"
 )]
 #[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
