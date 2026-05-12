@@ -86,6 +86,27 @@
       "answer": "Workspace check failed as expected. Root cause = the 8 callers DQ #205 enumerates. Advisor-mutated (skipping ci-watcher round-trip) because cause is already characterised in DQ #205. Stays in pending[] per option-2 failure semantics — the fix-impl-2 push will raise a fresh validate-pending entry (DQ #207+); this entry is not retried.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-12T09:35:34Z"
+    },
+    {
+      "id": 207,
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T10:50:45Z",
+      "question": "ci-watcher: poll cargo-validate-workspace run 25729693838 on branch fix-impl-2",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix(v1-RT-r1): pad 8 remaining ReputationEventInsertForm literals in create_endorsement.rs (2 sites), seed_founders/main.rs (1 site), e2e.rs (5 sites) with dedupe_key: None + source_event_type: None (fix-impl-2). cargo-validate-workspace.yml triggered on junior worker branch. workflow_run_id=25729693838.",
+      "workflow_run_id": 25729693838,
+      "branch": "junior/role-impl-task-v1-rt-r1-fix-impl-2-pad-8-remaining-reputationeventinsertform-literals-see-claude-prps-briefs-rt-r-227",
+      "phase_task": "fix-impl-2",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
