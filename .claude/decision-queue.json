@@ -9,12 +9,14 @@
       "branch": "phase-v1-SL-e",
       "phase_task": "phase-2-e2e",
       "local_log_path": ".claude/runlog/e2e-v1-SL-e-81fc60770.log",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "thread \"v1_jm_a_backfill_populates_v0_snapshot\" (22660) panicked at crates\\server\tests\\e2e.rs:1599:5:\nassertion `left == right` failed: severity_tier column should be absent between revert and re-apply\n  left: 1\n right: 0\n\nfailures:\n    v1_jm_a_backfill_populates_v0_snapshot\n\ntest result: FAILED. 84 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1759.72s",
+      "failed_jobs": [
+        "v1_jm_a_backfill_populates_v0_snapshot"
+      ],
+      "answer": "FAIL: migration round-trip assertion at e2e.rs:1599 — severity_tier column count was 1 (expected 0) between revert and re-apply. NON-ALLOWLIST per §G4 classifier — surfaced to user for triage.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-12T22:55:00Z"
     }
   ],
   "resolved": [
