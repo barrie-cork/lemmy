@@ -86,12 +86,14 @@ pub enum ConfigScope {
 /// When a config change takes effect. `Immediate` is a cache invalidation;
 /// `NextJuryCycle` means in-flight juries keep the old value via
 /// `moderation_case.applied_config_snapshot`; `NextSnapshotJob` defers to the
-/// next reputation snapshot tick.
+/// next reputation snapshot tick; `OnRestart` means the running scheduler
+/// keeps its current interval until the server restarts and re-reads the key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApplyAt {
   Immediate,
   NextJuryCycle,
   NextSnapshotJob,
+  OnRestart,
 }
 
 /// Static inclusive numeric range. Used for `valid_range` bounds on `Int` and
@@ -2842,7 +2844,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for positive reporting_accuracy decay; mirrors v0 default.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2854,7 +2856,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for negative reporting_accuracy decay; OQ-V1-03 lean.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2866,7 +2868,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for positive jury_reliability decay.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2878,7 +2880,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for negative jury_reliability decay.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2890,7 +2892,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for positive participation_consistency decay; faster — current behaviour focus.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2902,7 +2904,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for negative participation_consistency decay; symmetric.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2914,7 +2916,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for positive endorsement_strength decay.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -2926,7 +2928,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Both,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::NextSnapshotJob,
     description: "Half-life (days) for negative endorsement_strength decay; honour-price principle.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -3110,7 +3112,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Instance,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::OnRestart,
     description: "How often (days) the participation-cron job runs; takes effect at next server restart.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
@@ -3122,7 +3124,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     scope: ConfigScope::Instance,
     requires_re_jury: false,
     requires_step_up: false,
-    apply_at_default: ApplyAt::Immediate,
+    apply_at_default: ApplyAt::OnRestart,
     description: "How often (days) the instance-wide rollup cron runs; takes effect at next server restart.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
