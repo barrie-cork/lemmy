@@ -198,6 +198,25 @@ pub const ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED: &str = "sponsor_liability_escape
 pub const ENTRY_KIND_SPONSOR_LIABILITY_FIRED: &str = "sponsor_liability_fired";
 pub const ENTRY_KIND_SPONSOR_LIABILITY_PENDING: &str = "sponsor_liability_pending";
 
+// v1-RT-r1 additions (v1 reputation-tuning sub-phase r1). All seven
+// emitting call sites land in r2/r3/r4/r5 per PRD §7 + pre-landed-const
+// exemption.
+//   - PARTICIPATION_CRON_TICK -> r3 scheduled_tasks.rs (pending).
+//   - VOTE_OUTCOME_RECORDED -> r3 submit_jury_vote.rs (pending).
+//   - EVIDENCE_QUALITY_RECORDED -> r3 submit_jury_vote.rs + r3 admin
+//     flag-bad-faith endpoint (pending).
+//   - ROLLUP_RECOMPUTED -> r5 reputation_rollup_cron (pending).
+//   - DECAY_KNOB_CHANGED -> r2 admin_config.rs (pending).
+//   - SPONSOR_ALLOWLIST_ADDED -> r4 add endpoint (pending).
+//   - SPONSOR_ALLOWLIST_REMOVED -> r4 remove endpoint (pending).
+pub const ENTRY_KIND_PARTICIPATION_CRON_TICK: &str = "participation_cron_tick";
+pub const ENTRY_KIND_VOTE_OUTCOME_RECORDED: &str = "vote_outcome_recorded";
+pub const ENTRY_KIND_EVIDENCE_QUALITY_RECORDED: &str = "evidence_quality_recorded";
+pub const ENTRY_KIND_ROLLUP_RECOMPUTED: &str = "rollup_recomputed";
+pub const ENTRY_KIND_DECAY_KNOB_CHANGED: &str = "decay_knob_changed";
+pub const ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED: &str = "sponsor_allowlist_added";
+pub const ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED: &str = "sponsor_allowlist_removed";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
