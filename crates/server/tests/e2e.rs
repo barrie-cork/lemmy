@@ -1574,15 +1574,16 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 8 JM-a + JM-d Task 1 + SL-b migrations LIFO:
+  // Step 2: revert the 12 JM-a + JM-d Task 1 + SL-b + RT-r1 migrations LIFO:
+  //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
   //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
   //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
   //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
   // not fire. Limit must rise with each new phase that adds migrations
   // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // here for SL-b).
-  schema_setup::run(Options::default().revert().limit(8), &db_url)?;
+  // for SL-b; 8→12 here for RT-r1).
+  schema_setup::run(Options::default().revert().limit(12), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
