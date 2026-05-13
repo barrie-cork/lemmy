@@ -17,6 +17,22 @@
       "answer": "FAIL: migration round-trip assertion at e2e.rs:1599 — severity_tier column count was 1 (expected 0) between revert and re-apply. NON-ALLOWLIST per §G4 classifier — surfaced to user for triage.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-12T22:55:00Z"
+    },
+    {
+      "id": 200,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-13T00:35:00Z",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-e",
+      "phase_task": "phase-2-e2e-retry-post-RT-r1-merge",
+      "local_log_path": ".claude/runlog/e2e-v1-SL-e-2df0afd8f.log",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
