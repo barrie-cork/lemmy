@@ -1,0 +1,184 @@
+# Multi-lane worktree discipline
+
+When multiple Brehon sub-phases (`phase-v1-*`) are concurrently active, each
+phase MUST have its own git worktree on the human side. This rule loads at
+session start.
+
+## Why this rule exists
+
+Per `.claude/PRPs/reports/v1-RT-r1-halt-retro.md` (commit `ffa2876e3`) L4 + user
+decision 2026-05-11 (option a — worktree-per-lane). When two advisor sessions
+operate on the same on-disk checkout (e.g. `C:/Users/barri/Developer/brehon-fork`)
+and both write `.claude/decision-queue.json` on different phase branches, the
+shared file path produces:
+
+- Working-tree races (checkout of phase-A modifies the file; checkout of
+  phase-B sees stale state).
+- Merge conflicts on every phase-branch reconcile cycle (3 cycles in
+  v1-RT-r1 alone, ~4 hours wallclock overhead).
+- Cross-lane DQ id collisions (each session computes `next_id` against its
+  own working-tree view).
+- Reflog HEAD-move surprises across sessions sharing the same `.git/`.
+
+Per-worktree isolation removes the root cause: `.claude/decision-queue.json`
+becomes a per-worktree file path, and each phase branch has exactly one
+human-side writer.
+
+## Layout
+
+```
+C:/Users/barri/Developer/
+├── brehon-fork                 ← canonical checkout; tracks governance-v0; meta-edits only (rules, lessons, templates, briefs landed on trunk)
+├── brehon-fork-tooling         ← existing worktree (tooling-local-validation branch)
+├── brehon-fork-<lane>          ← per-lane worktree, one per active phase-v1-<lane>
+└── …
+```
+
+The canonical `brehon-fork` checkout is reserved for `governance-v0` work:
+authoring briefs (committed to trunk), plan files (after planner Junior
+finalize-merges), rule edits, lesson edits, template edits, retro authorship.
+**The canonical checkout MUST NOT be used to mutate phase-branch DQ entries.**
+
+Each active sub-phase (`phase-v1-SL-d`, `phase-v1-RT-r1`, `phase-v1-RT-r2`,
+`phase-v1-JM-f`, …) gets its own worktree.
+
+## Lifecycle
+
+### 1. After bm-cut creates a new phase branch
+
+When the BM Junior task creates `phase-v1-<lane>`, the advisor (or user)
+runs ONCE on the laptop:
+
+```bash
+cd C:/Users/barri/Developer/brehon-fork
+git fetch origin phase-v1-<lane>
+git worktree add ../brehon-fork-<lane> phase-v1-<lane>
+```
+
+A new Claude Code session opens with CWD = `C:/Users/barri/Developer/brehon-fork-<lane>`.
+That session is the **dedicated advisor for the lane** until phase ship.
+
+### 2. During the phase
+
+The lane-dedicated advisor session:
+
+- Writes DQ entries (validate-pending raises, advisor mutations, clarify
+  entries) to the worktree's `.claude/decision-queue.json` — which is a
+  **separate working-tree file from `brehon-fork`'s copy**, but lives at the
+  same logical path within `phase-v1-<lane>`.
+- Commits + pushes to `origin/phase-v1-<lane>`.
+- Dispatches Junior tasks with `base_branch=phase-v1-<lane>`.
+- Polls + reconciles its own lane only.
+
+The canonical `brehon-fork` session continues to:
+
+- Author briefs (committed to `governance-v0`).
+- Edit rules/lessons/templates (committed to `governance-v0`).
+- Pull recent governance-v0 commits to stay current.
+- Do NOT mutate phase-branch DQ entries.
+
+### 3. At phase ship + merge
+
+When `bm-merge` completes (PR merged into governance-v0, phase branch
+deleted from origin), the user removes the worktree:
+
+```bash
+cd C:/Users/barri/Developer/brehon-fork
+git worktree remove ../brehon-fork-<lane>
+git branch -d phase-v1-<lane>   # delete local tracking
+```
+
+The lane-dedicated Claude Code session ends (or transitions to the next
+phase by opening a fresh worktree).
+
+## Session-start ritual
+
+At Claude Code session start (governance-v0 lane OR phase-v1-<lane>), run:
+
+```bash
+pwd                                              # confirm CWD
+git branch --show-current                        # confirm branch
+git worktree list                                # see ALL active worktrees
+```
+
+If `git worktree list` shows another active worktree on a `phase-v1-*`
+branch, the current session MUST verify:
+
+- Its CWD matches the intended lane (or governance-v0 for the canonical
+  meta-edit lane).
+- It will NOT write `.claude/decision-queue.json` outside that lane.
+
+If the session was opened in the wrong CWD (e.g. user opened Claude Code
+in `brehon-fork` intending to drive RT-r1), surface to user and ask whether
+to (a) switch CWD by closing + reopening Claude Code in
+`brehon-fork-rt-r1`, or (b) proceed in `brehon-fork` for meta-edits only.
+
+## Hard refusals
+
+1. **Never run `git checkout phase-v1-*` inside `brehon-fork`** — that's a
+   destructive cross-lane operation. Use the dedicated worktree.
+
+2. **Never write `.claude/decision-queue.json` from `brehon-fork`** for an
+   entry that belongs on a phase branch. The DQ on `governance-v0` only
+   holds entries authored at plan/brief time (advisor planning DQs,
+   clarify entries), not validate-pending or ci-watcher mutations.
+
+3. **Never run `git push --force` against another lane's branch** from
+   any worktree. Per `.claude/rules/no-destructive-defaults.md`.
+
+4. **Never delete a worktree directory directly with `rm -rf`** — use
+   `git worktree remove <path>` so `.git/worktrees/<name>/` admin state
+   gets cleaned.
+
+5. **Never share Claude Code sessions across worktrees** — one session,
+   one CWD, one lane. To switch lanes: close session, open a new one in
+   the target worktree.
+
+## Worktree-aware DQ id discipline
+
+Per `.claude/rules/decision-queue.md` "Archive policy" + "Mid-task visibility"
++ next-id cross-archive rule: when computing `next_id` for a new DQ entry,
+walk:
+
+```
+- .claude/decision-queue.json (current worktree's view)
+- .claude/decision-queue-archive-*.json (current worktree's view)
+- bash scripts/brehon/git-show-json.sh origin/<other-active-lane> .claude/decision-queue.json (per other active worktree)
+```
+
+This widens the cross-archive rule to include cross-worktree refs.
+Implementation: `scripts/brehon/resolve-dq-canonical.sh` already supports
+spanning phase-branch + active worker branches; extend it to also walk
+`git worktree list` output and compute `next_id` across all visible refs.
+**Future scope** — for now, advisor sessions manually check the largest id
+across `origin/phase-v1-*` refs before picking next_id.
+
+## Daemon side (EliteDesk)
+
+The daemon at `/srv/brehon-fork` uses `git worktree add` per Junior task
+(`feedback_parallel_agents_one_worktree_per_agent.md`). That mechanism is
+unchanged. The lane-isolation rule applies to the HUMAN-SIDE laptop checkout
+only.
+
+## Migration plan (existing topology → multi-lane)
+
+For the current state where `brehon-fork` is the shared checkout:
+
+1. **Phase v1-RT-r1 (paused at `37a62f9b4`):** after L4 ship, before resuming,
+   cut `brehon-fork-rt-r1` worktree off `phase-v1-RT-r1`:
+   ```bash
+   git worktree add ../brehon-fork-rt-r1 phase-v1-RT-r1
+   ```
+2. **Phase v1-SL-d (shipped 2026-05-11):** no new worktree needed; merged.
+3. **Future phases:** worktree at bm-cut time per §"Lifecycle" above.
+
+## See also
+
+- `.claude/rules/branch-manager.md` "Session-start ritual" — BM-side ritual.
+- `.claude/rules/advisor-orchestrator.md` §1 "Polling loop" — adds CWD check
+  to the polling tick.
+- `.claude/rules/decision-queue.md` "Mid-task visibility" — push discipline
+  unchanged across worktrees.
+- `.claude/rules/no-destructive-defaults.md` — never `rm -rf` a worktree.
+- `feedback_multi_lane_worktree_discipline.md` — companion lesson with retro
+  evidence + practical session-flow examples.
