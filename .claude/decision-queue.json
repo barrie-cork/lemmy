@@ -1,24 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 199,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-12T21:27:00Z",
-      "workflow_run_id": null,
-      "branch": "phase-v1-SL-e",
-      "phase_task": "phase-2-e2e",
-      "local_log_path": ".claude/runlog/e2e-v1-SL-e-81fc60770.log",
-      "result": "fail",
-      "log_slice": "thread \"v1_jm_a_backfill_populates_v0_snapshot\" (22660) panicked at crates\\server\tests\\e2e.rs:1599:5:\nassertion `left == right` failed: severity_tier column should be absent between revert and re-apply\n  left: 1\n right: 0\n\nfailures:\n    v1_jm_a_backfill_populates_v0_snapshot\n\ntest result: FAILED. 84 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1759.72s",
-      "failed_jobs": [
-        "v1_jm_a_backfill_populates_v0_snapshot"
-      ],
-      "answer": "FAIL: migration round-trip assertion at e2e.rs:1599 — severity_tier column count was 1 (expected 0) between revert and re-apply. NON-ALLOWLIST per §G4 classifier — surfaced to user for triage.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-12T22:55:00Z"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 195,
@@ -3476,6 +3457,24 @@
       "answer": "Phase 2 e2e retry post RT-r1 merge: 88 passed, 0 failed, 3 ignored in 1859.01s. limit(12) fix worked — v1_jm_a_backfill_populates_v0_snapshot passes. All 3 SL-e test fns (backfill_of_mid_flight, revocation_during_window_escapes, window_expiry_fires) pass.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-13T01:10:00Z"
+    },
+    {
+      "id": 199,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-12T21:27:00Z",
+      "workflow_run_id": null,
+      "branch": "phase-v1-SL-e",
+      "phase_task": "phase-2-e2e",
+      "local_log_path": ".claude/runlog/e2e-v1-SL-e-81fc60770.log",
+      "result": "fail",
+      "log_slice": "thread \"v1_jm_a_backfill_populates_v0_snapshot\" (22660) panicked at crates\\server\tests\\e2e.rs:1599:5:\nassertion `left == right` failed: severity_tier column should be absent between revert and re-apply\n  left: 1\n right: 0\n\nfailures:\n    v1_jm_a_backfill_populates_v0_snapshot\n\ntest result: FAILED. 84 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1759.72s",
+      "failed_jobs": [
+        "v1_jm_a_backfill_populates_v0_snapshot"
+      ],
+      "answer": "FAIL: migration round-trip assertion at e2e.rs:1599 — severity_tier column count was 1 (expected 0) between revert and re-apply. NON-ALLOWLIST per §G4 classifier — surfaced to user for triage. | SUPERSEDED by DQ #200 (post-RT-r1-merge + limit(12) fix; 88 passed 0 failed on tip 2df0afd8f). Root cause: advisor-side workflow bug — laptop checked out governance-v0 between e2e kickoff and cargo compile, causing embed_migrations!() to bake post-RT-r1 migrations into binary while test source said limit(8). Not an SL-e regression. See feedback_local_e2e_stay_detached_through_compile (TODO author).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-13T01:25:00Z"
     }
   ],
   "schema_version": 2
