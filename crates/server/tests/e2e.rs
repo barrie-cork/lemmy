@@ -14009,12 +14009,34 @@ mod v1_sl_e_fixtures {
     Ok(())
   }
 
+  // RAII guard for BREHON_DISABLE_GRACE_CHECK_JOB. Restores prior value on Drop,
+  // covering Ok / Err / panic exit paths. Per CR cr-5 + Copilot copilot-1 on PR #127.
+  struct GraceCheckDisableGuard {
+    prev: Option<std::ffi::OsString>,
+  }
+
+  impl GraceCheckDisableGuard {
+    fn set(value: &str) -> Self {
+      let prev = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+      unsafe { std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", value); }
+      Self { prev }
+    }
+  }
+
+  impl Drop for GraceCheckDisableGuard {
+    fn drop(&mut self) {
+      unsafe {
+        match self.prev.take() {
+          Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+          None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+        }
+      }
+    }
+  }
+
   #[tokio::test]
   async fn revocation_during_window_escapes_full_lane() -> LemmyResult<()> {
-    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
-    unsafe {
-      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
-    }
+    let _guard = GraceCheckDisableGuard::set("1");
 
     let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
     let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
@@ -14042,7 +14064,7 @@ mod v1_sl_e_fixtures {
       "sle1",
     )
     .await?;
-    let (sponsor1, endo1) = sponsors[1];
+    let (sponsor2, endo2) = sponsors[1];
 
     let mut juror_ids = Vec::with_capacity(5);
     for i in 0..5_usize {
@@ -14085,6 +14107,7 @@ mod v1_sl_e_fixtures {
       JuryDecision::SuspendCommunityMember,
     )
     .await?;
+    let after_decisive = Utc::now();
 
     // --- Mid-window assertions ---
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
@@ -14100,10 +14123,11 @@ mod v1_sl_e_fixtures {
       "case must be SponsorLiabilityPending, got {status:?}"
     );
     let grace = grace_expires_at.expect("grace_expires_at set on Pending path");
-    let expected_grace = before_decisive + Duration::hours(168);
+    let grace_lower = before_decisive + Duration::hours(168);
+    let grace_upper = after_decisive + Duration::hours(168) + Duration::seconds(1);
     assert!(
-      (grace - expected_grace).num_seconds().abs() < 5,
-      "grace_expires_at ≈ now + 168h (within 5s), got {grace:?}"
+      grace >= grace_lower && grace <= grace_upper,
+      "grace_expires_at in [before_decisive + 168h, after_decisive + 168h + 1s], got {grace:?}"
     );
 
     assert_eq!(
@@ -14180,27 +14204,31 @@ mod v1_sl_e_fixtures {
       .expect("sponsors_pseudonyms is an array");
     assert_eq!(sponsors_psns.len(), 2, "2 sponsors in payload");
 
-    // Drive #2: revoke sponsor1's endorsement during the grace window → escape.
-    let sponsor1_view = LocalUserView::read_person(&mut context.pool(), sponsor1).await?;
+    // Drive #2: revoke sponsor2's endorsement during the grace window → escape.
+    let sponsor2_view = LocalUserView::read_person(&mut context.pool(), sponsor2).await?;
+    let t_revoke_start = Utc::now();
     let revoke_resp = revoke_endorsement(
       Json(RevokeEndorsement {
-        endorsement_id: endo1,
+        endorsement_id: endo2,
         reason: "sl-e test revocation".to_string(),
       }),
       context.clone(),
-      sponsor1_view,
+      sponsor2_view,
     )
     .await?
     .into_inner();
+    let t_revoke_end = Utc::now();
 
     assert_eq!(
       revoke_resp.endorsement_id,
-      endo1,
+      endo2,
       "revoke response endorsement_id matches"
     );
     assert!(
-      revoke_resp.revoked_at < Utc::now() + Duration::seconds(1),
-      "revoked_at is recent"
+      revoke_resp.revoked_at >= t_revoke_start
+        && revoke_resp.revoked_at <= t_revoke_end + Duration::seconds(1),
+      "revoked_at in [t_revoke_start, now+1s], got {:?}",
+      revoke_resp.revoked_at
     );
     assert!(
       revoke_resp.liability_chain_severed_for_cases.contains(&case_id),
@@ -14241,7 +14269,7 @@ mod v1_sl_e_fixtures {
     );
     assert_eq!(
       escape_reason["endorsement_id"],
-      serde_json::json!(endo1.0),
+      serde_json::json!(endo2.0),
       "escape_reason.endorsement_id matches"
     );
 
@@ -14293,7 +14321,7 @@ mod v1_sl_e_fixtures {
     );
     assert_ne!(
       endo_payload["revoker_pseudonym"].as_str().unwrap(),
-      format!("{}", sponsor1.0).as_str(),
+      format!("{}", sponsor2.0).as_str(),
       "revoker_pseudonym != raw sponsor_id (ADR-015)"
     );
     assert!(
@@ -14343,22 +14371,12 @@ mod v1_sl_e_fixtures {
       "no sponsor_liability_fired after scheduler tick"
     );
 
-    unsafe {
-      match prev_disable {
-        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
-        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
-      }
-    }
-
     Ok(())
   }
 
   #[tokio::test]
   async fn window_expiry_fires_full_lane() -> LemmyResult<()> {
-    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
-    unsafe {
-      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
-    }
+    let _guard = GraceCheckDisableGuard::set("1");
 
     let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
     let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
@@ -14582,13 +14600,6 @@ mod v1_sl_e_fixtures {
       "case_id matches"
     );
 
-    unsafe {
-      match prev_disable {
-        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
-        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
-      }
-    }
-
     Ok(())
   }
 
@@ -14601,10 +14612,7 @@ mod v1_sl_e_fixtures {
       schema::sanction,
     };
 
-    let prev_disable = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
-    unsafe {
-      std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", "1");
-    }
+    let _guard = GraceCheckDisableGuard::set("1");
 
     let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
     let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
@@ -14856,13 +14864,6 @@ mod v1_sl_e_fixtures {
       format!("{}", sponsor.0).as_str(),
       "sponsor_pseudonym != raw person_id (ADR-015)"
     );
-
-    unsafe {
-      match prev_disable {
-        Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
-        None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
-      }
-    }
 
     Ok(())
   }

@@ -76,8 +76,8 @@ findings:
   summary: Restore BREHON_DISABLE_GRACE_CHECK_JOB on failure paths
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442365
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 9871151f5
   rationale: null
   notes: null
 - id: copilot-1
@@ -90,8 +90,8 @@ findings:
     panic mid-test leaves it set, affecting subsequent tests. Suggest RAII guard.
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440863
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 9871151f5
   rationale: null
   notes: null
 - id: copilot-2
@@ -104,8 +104,8 @@ findings:
     to `sponsor2` or use `sponsors[0]`.'
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440874
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 9871151f5
   rationale: null
   notes: null
 - id: copilot-3
@@ -118,8 +118,8 @@ findings:
     captured before full drive_jury_to_quorum flow.
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440837
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 9871151f5
   rationale: null
   notes: null
 - id: copilot-4
@@ -132,8 +132,8 @@ findings:
     very old timestamp. Use bounded window (t_start..Utc::now()).'
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440894
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 9871151f5
   rationale: null
   notes: null
 merged_at: null
@@ -147,14 +147,14 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 3
-    done: 0
+    open: 2
+    done: 1
     rebutted: 1
     carry_forward: 0
     wont_fix: 0
   medium:
-    open: 4
-    done: 0
+    open: 0
+    done: 4
     rebutted: 0
     carry_forward: 0
     wont_fix: 0
