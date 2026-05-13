@@ -17,3 +17,19 @@
 - **Recommendation:** pending (major findings in fix-in-pr)
 - **YAML:** .claude/PRPs/reviews/pr-127-findings.yaml
 - **Notes:** First poll; no prior YAML existed. All 5 CR findings in fix-in-pr bucket pending triage.
+
+## bm: triage — 2026-05-13T04:52:00Z
+- **PR:** #127
+- **Findings reviewed:** 9 (5 CodeRabbit + 4 Copilot)
+- **Four-bucket triage applied:**
+  - **fix-in-pr:** 7 (3 major + 4 medium) — real issues requiring fixes
+  - **rebut:** 2 (1 major + 1 nit) — preventive guidance + style preference
+  - **carry-forward:** 0
+  - **done:** 0
+  - **wont-fix:** 0
+- **Recommendation:** request-changes (3 major findings in fix-in-pr)
+- **Rationales:**
+  - cr-1 (major): DQ id immutability is best practice; current PR does not violate this
+  - cr-4 (nit): Markdown formatting in gitignored runtime artifact; cosmetic only
+- **Comment drafted:** .claude/PRPs/reviews/pr-127-comment.md (ready for user review)
+- **Next:** user gate 3 — confirm triage + post comment
