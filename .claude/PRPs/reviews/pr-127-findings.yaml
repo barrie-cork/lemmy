@@ -1,0 +1,117 @@
+schema_version: 1
+pr: 127
+title: 'feat(v1-SL-e): lane-wide e2e suite (revocation + window-expiry + backfill)'
+head: phase-v1-SL-e
+base: governance-v0
+opened_at: '2026-05-13T04:06:10Z'
+last_poll_at: '2026-05-13T04:36:08.786506Z'
+poll_count: 1
+last_polled_head_sha: e475436ed
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 17
+  summary: Keep DQ ids immutable once they are referenced elsewhere
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442347
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 3333
+  summary: Surface these scope decisions to the user before resolving them
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442349
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 3369
+  summary: 'Fix the impossible chronology in DQ #193'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442352
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 4
+  summary: Insert a blank line after the heading at Line 3 (MD022)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442353
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:31Z'
+  file: crates/server/tests/e2e.rs
+  line: 14017
+  summary: Restore BREHON_DISABLE_GRACE_CHECK_JOB on failure paths
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442365
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+merged_at: null
+merge_commit: null
+final_recommendation: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 4
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 1
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 5
+    claude: 0
+    user: 0
+  total: 5
