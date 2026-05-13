@@ -1574,15 +1574,16 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> Result<(), Box<dyn Error>> 
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 8 JM-a + JM-d Task 1 + SL-b migrations LIFO:
+  // Step 2: revert the 12 JM-a + JM-d Task 1 + SL-b + RT-r1 migrations LIFO:
+  //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
   //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
   //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
   //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
   // not fire. Limit must rise with each new phase that adds migrations
   // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // here for SL-b).
-  schema_setup::run(Options::default().revert().limit(8), &db_url)?;
+  // for SL-b; 8→12 here for RT-r1).
+  schema_setup::run(Options::default().revert().limit(12), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -13845,6 +13846,1024 @@ mod v1_sl_d_fixtures {
       .get_result(&mut conn)
       .await?;
     assert_eq!(fired_count, 1, "1 sponsor_liability_fired summary entry");
+
+    Ok(())
+  }
+}
+
+mod v1_sl_e_fixtures {
+  use super::*;
+  use activitypub_federation::config::FederationConfig;
+  use actix_web::web::{Data, Json};
+  use chrono::{DateTime, Duration, Utc};
+  use diesel::{ExpressionMethods, QueryDsl, insert_into, update};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    sponsor_liability_grace::run_grace_check_batch,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
+    AdminAssignJury,
+    RevokeEndorsement,
+    SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::revoke_endorsement::revoke_endorsement;
+  use lemmy_api_utils::context::LemmyContext;
+  use lemmy_db_schema::{
+    newtypes::{EndorsementId, ModerationCaseId},
+    source::governance::{
+      endorsement::EndorsementInsertForm,
+      moderation_case::ModerationCaseInsertForm,
+      surety::SuretyInsertForm,
+    },
+  };
+  use lemmy_db_schema_file::{
+    InstanceId,
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryDecision, SeverityTier},
+    schema::{endorsement, governance_log, moderation_case, public_case_log, reputation_event, surety},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_utils::error::LemmyResult;
+  use serde_json::Value;
+
+  /// Seed a sponsee + `sponsor_count` sponsors, each with an endorsement + surety row.
+  /// Returns (sponsee_id, Vec<(sponsor_id, endorsement_id)>).
+  async fn seed_target_with_sureties_and_endorsements(
+    context: &Data<LemmyContext>,
+    instance_id: InstanceId,
+    conn: &mut AsyncPgConnection,
+    sponsor_count: usize,
+    prefix: &str,
+  ) -> LemmyResult<(PersonId, Vec<(PersonId, EndorsementId)>)> {
+    let (sponsee, _) = governance_fixtures::seed_user(
+      context,
+      instance_id,
+      &format!("{prefix}_sponsee"),
+      false,
+    )
+    .await?;
+    let mut sponsors = Vec::with_capacity(sponsor_count);
+    for i in 0..sponsor_count {
+      let (sponsor, _) = governance_fixtures::seed_user(
+        context,
+        instance_id,
+        &format!("{prefix}_sp{i}"),
+        false,
+      )
+      .await?;
+      let endo_id: EndorsementId = insert_into(endorsement::table)
+        .values(EndorsementInsertForm {
+          from_person_id: sponsor,
+          to_person_id: sponsee,
+          community_id: None,
+        })
+        .returning(endorsement::id)
+        .get_result::<EndorsementId>(conn)
+        .await?;
+      insert_into(surety::table)
+        .values(SuretyInsertForm {
+          sponsor_id: sponsor,
+          sponsored_id: sponsee,
+          community_id: None,
+        })
+        .execute(conn)
+        .await?;
+      sponsors.push((sponsor, endo_id));
+    }
+    Ok((sponsee, sponsors))
+  }
+
+  async fn count_log_entries(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<i64> {
+    let n: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .count()
+      .get_result(conn)
+      .await?;
+    Ok(n)
+  }
+
+  async fn read_log_payload(
+    conn: &mut AsyncPgConnection,
+    kind: &str,
+  ) -> LemmyResult<Option<Value>> {
+    let payloads: Vec<Value> = governance_log::table
+      .filter(governance_log::entry_kind.eq(kind))
+      .order(governance_log::id.desc())
+      .select(governance_log::payload)
+      .limit(1)
+      .load(conn)
+      .await?;
+    Ok(payloads.into_iter().next())
+  }
+
+  async fn drive_jury_to_quorum(
+    context: &Data<LemmyContext>,
+    federation_context: &activitypub_federation::config::Data<LemmyContext>,
+    admin_view: LocalUserView,
+    case_id: ModerationCaseId,
+    decision: JuryDecision,
+  ) -> LemmyResult<()> {
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+
+    for &juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    for &juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), juror_id).await?;
+      let resp = submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?
+      .into_inner();
+      if resp.case_decided {
+        break;
+      }
+    }
+
+    Ok(())
+  }
+
+  // RAII guard for BREHON_DISABLE_GRACE_CHECK_JOB. Restores prior value on Drop,
+  // covering Ok / Err / panic exit paths. Per CR cr-5 + Copilot copilot-1 on PR #127.
+  struct GraceCheckDisableGuard {
+    prev: Option<std::ffi::OsString>,
+  }
+
+  impl GraceCheckDisableGuard {
+    fn set(value: &str) -> Self {
+      let prev = std::env::var_os("BREHON_DISABLE_GRACE_CHECK_JOB");
+      unsafe { std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", value); }
+      Self { prev }
+    }
+  }
+
+  impl Drop for GraceCheckDisableGuard {
+    fn drop(&mut self) {
+      unsafe {
+        match self.prev.take() {
+          Some(val) => std::env::set_var("BREHON_DISABLE_GRACE_CHECK_JOB", val),
+          None => std::env::remove_var("BREHON_DISABLE_GRACE_CHECK_JOB"),
+        }
+      }
+    }
+  }
+
+  #[tokio::test]
+  async fn revocation_during_window_escapes_full_lane() -> LemmyResult<()> {
+    let _guard = GraceCheckDisableGuard::set("1");
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let federation_config = FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let federation_context = federation_config.to_request_data();
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (sponsee, sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      2,
+      "sle1",
+    )
+    .await?;
+    let (sponsor2, endo2) = sponsors[1];
+
+    let mut juror_ids = Vec::with_capacity(5);
+    for i in 0..5_usize {
+      let (id, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("sle1_juror{i}"),
+        false,
+      )
+      .await?;
+      juror_ids.push(id);
+    }
+    let (_, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sle1_admin", true).await?;
+
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &juror_ids).await?;
+
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_revocation".to_string(),
+        severity: CaseSeverity::High,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Open,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Drive #1: jury vote to quorum → SponsorLiabilityPending.
+    let before_decisive = Utc::now();
+    drive_jury_to_quorum(
+      &context,
+      &federation_context,
+      admin_view,
+      case_id,
+      JuryDecision::SuspendCommunityMember,
+    )
+    .await?;
+    let after_decisive = Utc::now();
+
+    // --- Mid-window assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (status, grace_expires_at): (CaseStatus, Option<DateTime<Utc>>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((moderation_case::status, moderation_case::grace_expires_at))
+      .first(&mut conn)
+      .await?;
+
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityPending),
+      "case must be SponsorLiabilityPending, got {status:?}"
+    );
+    let grace = grace_expires_at.expect("grace_expires_at set on Pending path");
+    let grace_lower = before_decisive + Duration::hours(168);
+    let grace_upper = after_decisive + Duration::hours(168) + Duration::seconds(1);
+    assert!(
+      grace >= grace_lower && grace <= grace_upper,
+      "grace_expires_at in [before_decisive + 168h, after_decisive + 168h + 1s], got {grace:?}"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "1 sponsor_liability_pending entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "case_decided").await?,
+      1,
+      "1 case_decided entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sanction_created").await?,
+      1,
+      "1 sanction_created entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      0,
+      "no endorsement_revoked yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "no sponsor_liability_escaped yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied yet"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events deferred on Pending path");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log deferred on Pending path");
+
+    // ADR-015 pseudonym checks on sponsor_liability_pending payload.
+    let payload: Value = read_log_payload(&mut conn, "sponsor_liability_pending")
+      .await?
+      .expect("sponsor_liability_pending payload present");
+    assert_eq!(
+      payload["case_id"],
+      serde_json::json!(case_id.0),
+      "payload.case_id matches"
+    );
+    let target_psn = payload["target_pseudonym"]
+      .as_str()
+      .expect("target_pseudonym is a string");
+    assert!(
+      payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      target_psn,
+      format!("{}", sponsee.0),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+    let sponsors_psns = payload["sponsors_pseudonyms"]
+      .as_array()
+      .expect("sponsors_pseudonyms is an array");
+    assert_eq!(sponsors_psns.len(), 2, "2 sponsors in payload");
+
+    // Drive #2: revoke sponsor2's endorsement during the grace window → escape.
+    let sponsor2_view = LocalUserView::read_person(&mut context.pool(), sponsor2).await?;
+    let t_revoke_start = Utc::now();
+    let revoke_resp = revoke_endorsement(
+      Json(RevokeEndorsement {
+        endorsement_id: endo2,
+        reason: "sl-e test revocation".to_string(),
+      }),
+      context.clone(),
+      sponsor2_view,
+    )
+    .await?
+    .into_inner();
+    let t_revoke_end = Utc::now();
+
+    assert_eq!(
+      revoke_resp.endorsement_id,
+      endo2,
+      "revoke response endorsement_id matches"
+    );
+    assert!(
+      revoke_resp.revoked_at >= t_revoke_start
+        && revoke_resp.revoked_at <= t_revoke_end + Duration::seconds(1),
+      "revoked_at in [t_revoke_start, now+1s], got {:?}",
+      revoke_resp.revoked_at
+    );
+    assert!(
+      revoke_resp.liability_chain_severed_for_cases.contains(&case_id),
+      "case_id in liability_chain_severed_for_cases"
+    );
+
+    // --- Post-revocation assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (status, liability_escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityEscaped),
+      "case must be SponsorLiabilityEscaped, got {status:?}"
+    );
+    let escape_reason =
+      liability_escape_reason.expect("liability_escape_reason set on escape path");
+    assert_eq!(
+      escape_reason["version"],
+      serde_json::json!(1),
+      "escape_reason.version == 1"
+    );
+    assert_eq!(
+      escape_reason["reason"],
+      serde_json::json!("sponsor_revoked"),
+      "escape_reason.reason == sponsor_revoked"
+    );
+    assert!(
+      escape_reason["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string"
+    );
+    assert_eq!(
+      escape_reason["endorsement_id"],
+      serde_json::json!(endo2.0),
+      "escape_reason.endorsement_id matches"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "endorsement_revoked").await?,
+      1,
+      "1 endorsement_revoked entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      1,
+      "1 sponsor_liability_escaped entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "sponsor_liability_pending unchanged at 1"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events still 0 after escape");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log still 0 after escape");
+
+    // ADR-015 pseudonym checks on endorsement_revoked payload.
+    let endo_payload: Value = read_log_payload(&mut conn, "endorsement_revoked")
+      .await?
+      .expect("endorsement_revoked payload present");
+    assert!(
+      endo_payload["revoker_pseudonym"].is_string(),
+      "revoker_pseudonym is a string"
+    );
+    assert_ne!(
+      endo_payload["revoker_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsor2.0).as_str(),
+      "revoker_pseudonym != raw sponsor_id (ADR-015)"
+    );
+    assert!(
+      endo_payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string in endorsement_revoked"
+    );
+
+    // ADR-015 pseudonym checks on sponsor_liability_escaped payload.
+    let escaped_payload: Value = read_log_payload(&mut conn, "sponsor_liability_escaped")
+      .await?
+      .expect("sponsor_liability_escaped payload present");
+    assert!(
+      escaped_payload["actor_pseudonym"].is_string(),
+      "actor_pseudonym is a string in sponsor_liability_escaped"
+    );
+    assert_eq!(
+      escaped_payload["reason"].as_str().unwrap(),
+      "sponsor_revoked",
+      "escaped payload reason == sponsor_revoked"
+    );
+
+    // Drive #3: scheduler tick — case is already SponsorLiabilityEscaped → batch skips.
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(
+      outcome.cases_processed,
+      0_usize,
+      "scheduler skips already-escaped case"
+    );
+    assert_eq!(outcome.fired, 0_usize, "no fires");
+    assert_eq!(outcome.escaped, 0_usize, "no escapes from scheduler");
+    assert_eq!(outcome.skipped, 0_usize, "no skips");
+
+    // Final state unchanged.
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let final_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert!(
+      matches!(final_status, CaseStatus::SponsorLiabilityEscaped),
+      "final status still SponsorLiabilityEscaped, got {final_status:?}"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired after scheduler tick"
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn window_expiry_fires_full_lane() -> LemmyResult<()> {
+    let _guard = GraceCheckDisableGuard::set("1");
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+
+    let federation_config = FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let federation_context = federation_config.to_request_data();
+
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (sponsee, _sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      2,
+      "sle2",
+    )
+    .await?;
+
+    let mut juror_ids = Vec::with_capacity(5);
+    for i in 0..5_usize {
+      let (id, _) = governance_fixtures::seed_user(
+        &context,
+        instance.id,
+        &format!("sle2_juror{i}"),
+        false,
+      )
+      .await?;
+      juror_ids.push(id);
+    }
+    let (_, admin_view) =
+      governance_fixtures::seed_user(&context, instance.id, "sle2_admin", true).await?;
+
+    super::v1_jm_b_fixtures::seed_jury_eligible_snapshots(&mut conn, &juror_ids).await?;
+
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_expiry".to_string(),
+        severity: CaseSeverity::Low,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Open,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Drive jury to quorum → SponsorLiabilityPending.
+    drive_jury_to_quorum(
+      &context,
+      &federation_context,
+      admin_view,
+      case_id,
+      JuryDecision::SuspendCommunityMember,
+    )
+    .await?;
+
+    // --- Mid-window assertions: Pending state ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert!(
+      matches!(status, CaseStatus::SponsorLiabilityPending),
+      "case must be SponsorLiabilityPending, got {status:?}"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "1 sponsor_liability_pending entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      0,
+      "no sponsor_liability_fired yet"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      0,
+      "no sponsor_liability_applied yet"
+    );
+
+    let rep_count: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_count, 0, "reputation_events deferred on Pending path");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "public_case_log deferred on Pending path");
+
+    // ADR-015 pseudonym check on sponsor_liability_pending payload.
+    let payload: Value = read_log_payload(&mut conn, "sponsor_liability_pending")
+      .await?
+      .expect("sponsor_liability_pending payload present");
+    let target_psn = payload["target_pseudonym"]
+      .as_str()
+      .expect("target_pseudonym is a string");
+    assert!(
+      payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      target_psn,
+      format!("{}", sponsee.0),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+
+    // Force-rewind grace_expires_at to past so the scheduler picks up the case.
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::grace_expires_at.eq(Some(Utc::now() - Duration::minutes(1))))
+      .execute(&mut conn)
+      .await?;
+
+    // Fire the scheduler — grace window has expired, no revocation occurred.
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    // --- Post-fire assertions ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (case_status, escape_reason): (CaseStatus, Option<Value>) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::liability_escape_reason,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      case_status,
+      CaseStatus::SponsorLiabilityFired,
+      "case transitioned to SponsorLiabilityFired"
+    );
+    assert!(
+      escape_reason.is_none(),
+      "fire branch: liability_escape_reason IS NULL"
+    );
+
+    let rep_event_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_event_count, 2, "2 reputation_event rows (1 per sponsor)");
+
+    let plog_count_after: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      plog_count_after,
+      0,
+      "fire path does not write public_case_log"
+    );
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 sponsor_liability_fired summary"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      2,
+      "2 sponsor_liability_applied entries (1 per sponsor)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 sponsor_liability_escaped entries"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      1,
+      "sponsor_liability_pending unchanged at 1"
+    );
+
+    // ADR-015 pseudonym checks on sponsor_liability_fired payload.
+    let fired_payload = read_log_payload(&mut conn, "sponsor_liability_fired")
+      .await?
+      .expect("fired payload exists");
+    assert!(
+      fired_payload["target_pseudonym"].is_string(),
+      "target_pseudonym is a string"
+    );
+    assert_ne!(
+      fired_payload["target_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsee.0).as_str(),
+      "target_pseudonym != raw person_id (ADR-015)"
+    );
+    assert_eq!(
+      fired_payload["sponsor_count"].as_u64(),
+      Some(2),
+      "sponsor_count == 2"
+    );
+    assert_eq!(
+      fired_payload["case_id"].as_i64(),
+      Some(i64::from(case_id.0)),
+      "case_id matches"
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn backfill_of_mid_flight_v0_to_v1_deploy() -> LemmyResult<()> {
+    use diesel::sql_query;
+    use lemmy_db_schema::source::governance::sanction::SanctionInsertForm;
+    use lemmy_db_schema_file::{
+      enums::{SanctionAction, SanctionScope},
+      schema::sanction,
+    };
+
+    let _guard = GraceCheckDisableGuard::set("1");
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = lemmy_db_schema::source::instance::Instance::read_or_create(
+      &mut context.pool(),
+      "test.invalid",
+    )
+    .await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    // Seed sponsee + 1 sponsor (single-sponsor minimal seed for backfill scenario).
+    let (sponsee, sponsors) = seed_target_with_sureties_and_endorsements(
+      &context,
+      instance.id,
+      &mut conn,
+      1,
+      "sle3",
+    )
+    .await?;
+    let (sponsor, _endo) = sponsors[0];
+
+    // Insert pre-deploy Decided case (simulating v0 mid-flight at v1 deploy time).
+    let case_id: ModerationCaseId = insert_into(moderation_case::table)
+      .values(ModerationCaseInsertForm {
+        target_type: CaseTargetType::Person,
+        target_person_id: Some(sponsee),
+        reason_code: "v1_sl_e_test_backfill".to_string(),
+        severity: CaseSeverity::Medium,
+        severity_tier: Some(SeverityTier::Minor),
+        status: CaseStatus::Decided,
+        threshold_score: 1,
+        ..Default::default()
+      })
+      .returning(moderation_case::id)
+      .get_result::<ModerationCaseId>(&mut conn)
+      .await?;
+
+    // Set decided_at via UPDATE post-insert (not in InsertForm — mirror SL-c-2 pattern).
+    // decided_at = now - 23h30m → grace_expires_at = now + 30m post-backfill (future).
+    let decided_at = Utc::now() - Duration::hours(23) - Duration::minutes(30);
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::decided_at.eq(Some(decided_at)))
+      .execute(&mut conn)
+      .await?;
+
+    // Insert sanction (§8.4 WHERE clause requirement: NOT EXISTS guard on reputation_event).
+    insert_into(sanction::table)
+      .values(SanctionInsertForm {
+        case_id,
+        scope: SanctionScope::Community,
+        action: SanctionAction::ContentRemoval,
+        target_person_id: Some(sponsee),
+        active: Some(true),
+        ..Default::default()
+      })
+      .execute(&mut conn)
+      .await?;
+
+    // --- Pre-backfill assertions: verify seed satisfies §8.4 WHERE clause ---
+    let (pre_status, pre_decided_at, pre_target_pid): (
+      CaseStatus,
+      Option<DateTime<Utc>>,
+      Option<PersonId>,
+    ) = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select((
+        moderation_case::status,
+        moderation_case::decided_at,
+        moderation_case::target_person_id,
+      ))
+      .first(&mut conn)
+      .await?;
+    assert_eq!(pre_status, CaseStatus::Decided, "pre-backfill: status is Decided");
+    assert!(pre_decided_at.is_some(), "pre-backfill: decided_at is Some");
+    assert!(
+      pre_decided_at.unwrap() > Utc::now() - Duration::hours(24),
+      "pre-backfill: decided_at within 24h window"
+    );
+    assert_eq!(
+      pre_target_pid,
+      Some(sponsee),
+      "pre-backfill: target_person_id is sponsee"
+    );
+
+    let surety_count: i64 = surety::table
+      .filter(surety::sponsored_id.eq(sponsee))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(surety_count, 1, "pre-backfill: 1 active surety for sponsee");
+
+    let sanction_count: i64 = sanction::table
+      .filter(sanction::case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(sanction_count, 1, "pre-backfill: 1 sanction row for case");
+
+    let rep_guard_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .filter(reputation_event::reason.eq("sponsor_liability_applied"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_guard_count,
+      0,
+      "pre-backfill: 0 reputation_events (§8.4 NOT EXISTS guard satisfied)"
+    );
+
+    // --- Drive #1: PRD §8.4 backfill UPDATE (verbatim SQL) ---
+    // Per PRD §8.4 — verbatim. Comment cites the source location.
+    let _affected = sql_query(
+      "UPDATE moderation_case
+       SET status = 'SponsorLiabilityPending',
+           grace_expires_at = decided_at + INTERVAL '24 hours'
+       WHERE status = 'Decided'
+         AND decided_at IS NOT NULL
+         AND decided_at > now() - INTERVAL '24 hours'
+         AND target_person_id IS NOT NULL
+         AND id IN (
+           SELECT mc.id
+           FROM moderation_case mc
+           WHERE EXISTS (
+             SELECT 1 FROM surety s
+             WHERE s.sponsored_id = mc.target_person_id
+               AND s.revoked_at IS NULL
+           )
+           AND EXISTS (
+             SELECT 1 FROM sanction sa
+             WHERE sa.case_id = mc.id
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM reputation_event re
+             WHERE re.source_case_id = mc.id
+               AND re.reason = 'sponsor_liability_applied'
+           )
+         )",
+    )
+    .execute(&mut conn)
+    .await?;
+
+    // --- Post-backfill assertions (Phase A: backfill set Pending + future grace) ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let (post_backfill_status, post_grace): (CaseStatus, Option<DateTime<Utc>>) =
+      moderation_case::table
+        .filter(moderation_case::id.eq(case_id))
+        .select((
+          moderation_case::status,
+          moderation_case::grace_expires_at,
+        ))
+        .first(&mut conn)
+        .await?;
+    assert_eq!(
+      post_backfill_status,
+      CaseStatus::SponsorLiabilityPending,
+      "post-backfill: status == SponsorLiabilityPending"
+    );
+    let expected_grace = decided_at + Duration::hours(24);
+    let actual_grace = post_grace.expect("grace_expires_at is Some");
+    let diff_ms = (actual_grace - expected_grace).num_milliseconds().abs();
+    assert!(
+      diff_ms < 1000,
+      "post-backfill: grace_expires_at == decided_at + 24h (within 1s, diff={diff_ms}ms)"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_pending").await?,
+      0,
+      "post-backfill: 0 governance_log entries (backfill UPDATE writes no logs)"
+    );
+    let rep_after_backfill: i64 = reputation_event::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(
+      rep_after_backfill,
+      0,
+      "post-backfill: 0 reputation_event rows (no scheduler fire yet)"
+    );
+
+    // --- Drive #2: force-rewind grace_expires_at to past ---
+    // Test artifact per PRD §8.4 timing note: decided_at + 24h = now + 30m is in
+    // the future; rewind so the scheduler picks up the case immediately.
+    update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set(moderation_case::grace_expires_at.eq(Some(Utc::now() - Duration::minutes(1))))
+      .execute(&mut conn)
+      .await?;
+
+    // --- Drive #3: scheduler tick (SL-c fires the backfilled case) ---
+    let outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(outcome.cases_processed, 1, "1 case processed");
+    assert_eq!(outcome.fired, 1, "fire branch: 1 case fired");
+    assert_eq!(outcome.escaped, 0, "fire branch: 0 escaped");
+    assert_eq!(outcome.skipped, 0, "fire branch: 0 skipped");
+
+    // --- Post-fire assertions (Phase B: scheduler resolves backfilled case) ---
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let post_fire_status: CaseStatus = moderation_case::table
+      .filter(moderation_case::id.eq(case_id))
+      .select(moderation_case::status)
+      .first(&mut conn)
+      .await?;
+    assert_eq!(
+      post_fire_status,
+      CaseStatus::SponsorLiabilityFired,
+      "post-fire: case transitioned to SponsorLiabilityFired"
+    );
+
+    let rep_event_count: i64 = reputation_event::table
+      .filter(reputation_event::source_case_id.eq(case_id))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rep_event_count, 1, "1 reputation_event row (1 sponsor)");
+
+    let plog_count: i64 = public_case_log::table
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(plog_count, 0, "fire path does not write public_case_log");
+
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_applied").await?,
+      1,
+      "1 sponsor_liability_applied entry"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_fired").await?,
+      1,
+      "1 sponsor_liability_fired summary"
+    );
+    assert_eq!(
+      count_log_entries(&mut conn, "sponsor_liability_escaped").await?,
+      0,
+      "0 sponsor_liability_escaped entries"
+    );
+
+    // ADR-015 pseudonym discipline on sponsor_liability_applied payload.
+    let applied_payload = read_log_payload(&mut conn, "sponsor_liability_applied")
+      .await?
+      .expect("sponsor_liability_applied payload exists");
+    assert!(
+      applied_payload["sponsor_pseudonym"].is_string(),
+      "sponsor_pseudonym is a string"
+    );
+    assert_ne!(
+      applied_payload["sponsor_pseudonym"].as_str().unwrap(),
+      format!("{}", sponsor.0).as_str(),
+      "sponsor_pseudonym != raw person_id (ADR-015)"
+    );
 
     Ok(())
   }

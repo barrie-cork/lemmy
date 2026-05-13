@@ -1,0 +1,272 @@
+schema_version: 1
+pr: 127
+title: 'feat(v1-SL-e): lane-wide e2e suite (revocation + window-expiry + backfill)'
+head: phase-v1-SL-e
+base: governance-v0
+opened_at: '2026-05-13T04:06:10Z'
+last_poll_at: '2026-05-13T06:17:09.319593Z'
+poll_count: 2
+last_polled_head_sha: 4d724dcb2
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 17
+  summary: Keep DQ ids immutable once they are referenced elsewhere
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442347
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: CodeRabbit cautions about DQ id immutability as best practice. Current PR does not violate this rule — all DQ
+    ids in the submission are unique and sequential. This is preventive guidance for future phases, not a defect in the current
+    submission.
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 3333
+  summary: Surface these scope decisions to the user before resolving them
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442349
+  adr: null
+  bucket: done
+  addressed_in: 2182f05428f3ddb81df77d10523b3a8eb95f2880
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/decision-queue.json
+  line: 3369
+  summary: 'Fix the impossible chronology in DQ #193'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442352
+  adr: null
+  bucket: done
+  addressed_in: 2182f05428f3ddb81df77d10523b3a8eb95f2880
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-13T04:10:30Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 4
+  summary: Insert a blank line after the heading at Line 3 (MD022)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442353
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: Markdown formatting (MD022 blank-line rule) is a style preference in a gitignored runtime artifact (runlog).
+    The runlog serves as a durable audit trail; blank-line spacing does not affect readability or functionality of the log
+    entries.
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T04:10:31Z'
+  file: crates/server/tests/e2e.rs
+  line: 14017
+  summary: Restore BREHON_DISABLE_GRACE_CHECK_JOB on failure paths
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442365
+  adr: null
+  bucket: done
+  addressed_in: 9871151f5
+  rationale: null
+  notes: null
+- id: copilot-1
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14014
+  summary: Env var BREHON_DISABLE_GRACE_CHECK_JOB restored only at end of test; assertion panic mid-test leaves it set, affecting
+    subsequent tests. Suggest RAII guard.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440863
+  adr: null
+  bucket: done
+  addressed_in: 9871151f5
+  rationale: null
+  notes: null
+- id: copilot-2
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14045
+  summary: '`sponsor1` is taken from `sponsors[1]` (second sponsor); misleading. Rename to `sponsor2` or use `sponsors[0]`.'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440874
+  adr: null
+  bucket: done
+  addressed_in: 9871151f5
+  rationale: null
+  notes: null
+- id: copilot-3
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14106
+  summary: 5s tolerance for `expected_grace` may be flaky under slow CI; `before_decisive` captured before full drive_jury_to_quorum
+    flow.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440837
+  adr: null
+  bucket: done
+  addressed_in: 9871151f5
+  rationale: null
+  notes: null
+- id: copilot-4
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14204
+  summary: '`recent` check on revoked_at only asserts not-in-future; would pass for very old timestamp. Use bounded window
+    (t_start..Utc::now()).'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440894
+  adr: null
+  bucket: done
+  addressed_in: 9871151f5
+  rationale: null
+  notes: null
+- id: cr-6
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-13T04:52:44Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 10
+  summary: Insert a blank line after this heading to satisfy MD022.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231580553
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: Runlog file is gitignored runtime artifact (audit trail). MD022/style/arithmetic-precision preferences don't
+    affect audit-trail readability; format kept consistent with prior phase runlogs (v1-SL-d-runlog.md, v1-JM-d-runlog.md).
+    Per user gate 2026-05-13. See pr-127-comment.md rebut block.
+  notes: null
+- id: cr-7
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-13T04:52:44Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 12
+  summary: Correct the comment-count arithmetic in this runlog entry.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231580560
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: Runlog file is gitignored runtime artifact (audit trail). MD022/style/arithmetic-precision preferences don't
+    affect audit-trail readability; format kept consistent with prior phase runlogs (v1-SL-d-runlog.md, v1-JM-d-runlog.md).
+    Per user gate 2026-05-13. See pr-127-comment.md rebut block. Arithmetic catch is valid (count set before Copilot inline
+    comments landed) — the findings YAML is the source-of-truth machine-parsed document; runlog headline count is human-readable
+    not aggregator-parsed.
+  notes: null
+- id: cr-8
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-13T05:06:20Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 22
+  summary: Add a blank line after the triage heading (MD022).
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231624521
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: Runlog file is gitignored runtime artifact (audit trail). MD022/style/arithmetic-precision preferences don't
+    affect audit-trail readability; format kept consistent with prior phase runlogs (v1-SL-d-runlog.md, v1-JM-d-runlog.md).
+    Per user gate 2026-05-13. See pr-127-comment.md rebut block.
+  notes: null
+- id: cr-9
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-13T05:06:20Z'
+  file: .claude/runlog/v1-SL-e-runlog.md
+  line: 29
+  summary: Bucket-count label is inconsistent with the listed categories.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231624532
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: Runlog file is gitignored runtime artifact (audit trail). MD022/style/arithmetic-precision preferences don't
+    affect audit-trail readability; format kept consistent with prior phase runlogs (v1-SL-d-runlog.md, v1-JM-d-runlog.md).
+    Per user gate 2026-05-13. See pr-127-comment.md rebut block. 'Four-bucket triage' is the canonical phrase per .claude/refs/pr-review-triage.md
+    (fix-in-pr / rebut / carry-forward / wont-fix). 'done' is the lifecycle terminus of fix-in-pr, not a fifth bucket. Terminology
+    kept; documented for retro.
+  notes: null
+- id: cr-10
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T06:11:56Z'
+  file: .claude/PRPs/reviews/pr-127-findings.yaml
+  line: 12
+  summary: '`recommendation` conflicts with the finding state totals.'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231902866
+  adr: null
+  bucket: done
+  addressed_in: self
+  rationale: 'Self-fixed by this commit: recommendation flipped from request-changes to approve (all open counters now 0).
+    Stable reference; commit subject identifies the fix.'
+  notes: null
+- id: cr-11
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-13T06:11:56Z'
+  file: .claude/PRPs/reviews/pr-127-findings.yaml
+  line: 23
+  summary: Use one canonical rebuttal status token across the document.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231902875
+  adr: null
+  bucket: rebut
+  addressed_in: null
+  rationale: 'Schema-by-design per .claude/PRPs/reviews/SCHEMA.md lines 58 + 94: ''bucket: rebut'' is the entry-level verb
+    (active form); ''counters.<sev>.rebutted'' is the count noun (past-participle aggregate). The token asymmetry is structural,
+    not drift — same pattern for ''done'' (entry) vs ''done'' (counter) coincidentally shares spelling; ''rebut/rebutted''
+    makes the verb-vs-noun distinction explicit. Updating the counter token would require schema-wide migration with no semantic
+    gain. Keeping as canonical schema.'
+  notes: null
+merged_at: null
+merge_commit: null
+final_recommendation: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 4
+    rebutted: 2
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 4
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 4
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 1
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 11
+    claude: 0
+    copilot: 4
+    user: 0
+  total: 15
