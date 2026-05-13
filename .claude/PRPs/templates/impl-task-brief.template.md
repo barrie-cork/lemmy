@@ -149,3 +149,50 @@ Document any overrides:
 2. **<Other override>** — <reason + DQ ref>.
 
 Delete this section if the brief is a clean execution of the plan with no overrides.
+
+## 8. Bundling (when consolidating multiple plan §13 tasks into one Junior dispatch)
+
+Per `feedback_bundle_means_one_worker_branch_not_one_commit.md`. When a brief consolidates N plan §13 tasks into one Junior task (typical reason: shared workspace-check workflow, cross-task validation dependency, or post-halt-retro recovery), the **canonical pattern is**:
+
+- **One worker branch** (the daemon cuts a single `junior/...` branch).
+- **One workspace-check workflow** validates the combined tip.
+- **One ci-watcher cycle** mutates the resulting `validate-pending` DQ entry.
+- **N commits**, ONE per plan §13 task, each with the per-task subject pattern `feat(<phase>): <title> (task <N>)`.
+
+A bundle brief MUST NOT instruct Junior to produce "one commit covering all N tasks". Junior's hard contract (`.claude/agents/impl-task.md` line 231: "One feature commit per plan task") and plan §13's commit rule both outrank brief overrides. Briefs asking for a single commit are a brief-authoring miss; Junior correctly defaults to N commits.
+
+**Brief filename convention:** `<phase>-impl-<N>+<M>-bundle.md` (e.g. `rt-r1-impl-8-9-10-bundle.md`). Single-task dispatches use `<phase>-impl-<N>.md` without "bundle" in the name.
+
+**§2 Scope shape for a bundle brief:**
+
+```markdown
+## 2. Scope — bundled (Tasks N+M+... in one Junior task)
+
+**Why bundled:** ONE worker branch, ONE workspace-check workflow, ONE ci-watcher cycle. Each task in this bundle ships as its own `feat(<phase>): <title> (task <X>)` commit per the impl-task subagent contract.
+
+### 2.1 Task <N> scope (<file or feature>)
+<sub-edits + IMPLEMENT details per plan §X.Y>
+
+### 2.2 Task <M> scope (<file or feature>)
+<sub-edits + IMPLEMENT details per plan §X.Z>
+
+(... per bundled task)
+```
+
+**§6 commit-message shape for a bundle brief:**
+
+```markdown
+## 6. COMMIT MESSAGES (one per plan task, in dependency order)
+
+1. `feat(<phase>): <title for task N> (task N)`
+2. `feat(<phase>): <title for task M> (task M)`
+N. (... one per bundled plan task)
+
+The worker branch tip after all N commits is what the workspace-check workflow validates.
+```
+
+**Compile-success between bundled commits:** order commits so each intermediate tip is compile-clean (helps CR `git bisect` review). If intermediate commits would not compile in isolation (e.g. Task A adds a struct field, Task B pads the callers), document the ordering rationale in §2 and accept the CR reviewer note.
+
+**Out-of-bundle scope:** if a §13 task has a `requires:` dependency on a task NOT in this bundle, file a DQ pending entry — the planner-side cohort design needs revision before bundling.
+
+Delete this section if the brief dispatches a single plan task (no bundling).

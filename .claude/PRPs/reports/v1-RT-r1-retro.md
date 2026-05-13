@@ -147,7 +147,7 @@
 ## §5 Watch-items for next phase
 
 - [ ] **Plan §11 callsite enumeration discipline** — when a planning task adds a field to a public struct, plan §11 lists all `rg`-discoverable callers in `modifies:` arrays. Author `feedback_planner_enumerate_struct_callsites_for_addfield.md`.
-- [ ] **Bundle-instruction enforcement** — verify whether `impl-task` subagent prompt supports multi-objective bundling. If not, plans should pre-author splits OR plans should add a `bundled: true` frontmatter that changes the brief shape.
+- [x] **Bundle-instruction enforcement** — RESOLVED 2026-05-13 via `feedback_bundle_means_one_worker_branch_not_one_commit.md` + impl-task brief template §8 Bundling appendix. Investigation finding: "bundle" canonical pattern is ONE worker branch + ONE workflow + N per-task commits. Junior's hard contract (impl-task.md L231 "one feature commit per plan task") outranks brief overrides. RT-r1 + earlier Tasks 6+7 bundle both produced per-task commits; brief asking for "one commit" was the outlier. No subagent prompt change needed.
 - [ ] **Phase 2 e2e auto-dispatch verification** — confirm `cargo-test-e2e.yml` triggers on `phase-v1-*` push post-finalize-merge for RT-class phases. If intentionally carved out, document.
 - [ ] **Phase retro gate enforcement** — add pre-bm-pr file existence + mtime check on `.claude/PRPs/reports/<phase>-retro.md`. Author `feedback_phase_retro_gate_enforcement.md`.
 - [ ] **DQ historical-fail sweep at bm-pr** — bm-pr brief instruction: resolve all `kind: validate-pending` entries with `result: fail` from the phase branch by adding `answer: "superseded by PR merge"`, `answered_by: "advisor"`, `resolved_at: <iso>`, move to `resolved[]`. Per SL-c-2 retro §3.1 + this retro §3.5.
