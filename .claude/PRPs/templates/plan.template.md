@@ -125,6 +125,14 @@ Bulleted list, grouped by crate. Each entry: path + one-line purpose + which §1
 - `migrations/<id>__<name>/up.sql` + `down.sql` — <purpose> (Task <N>)
 - `crates/lemmy_server/tests/e2e/<file>.rs` — <purpose> (Task <N>, <M>)
 
+### Struct-field add: enumerate all callsites (mandatory)
+
+Per `feedback_planner_enumerate_struct_callsites_for_addfield.md`. When any task in §13 adds a field to a **public** struct (or any struct exported beyond a single file), the planner MUST run `rg "<StructName>" crates/ tests/` at plan-authoring time and enumerate every constructor-site file (every `<Type> { ... }` literal) in §11 under the task that adds the field. Tag the section "Caller crates (compiles-only-after-Task-N)" so the dependency is visible. List each caller crate explicitly so §13 FILES YAML `modifies:` arrays carry the right set.
+
+Skip enumeration ONLY when the type has `Default` impl AND every existing caller uses `<Type> { ..Default::default() }` shape (verify by reading each caller).
+
+Retroactive cost of skipping: 1-N fix-impl cycles. Plan-time cost: ~30s of `rg`. Always do the enumeration upfront.
+
 ## 12. NOT building in <phase-slug>
 
 Out-of-scope items, with rationale. Each entry pairs a "tempting addition" with a deferral-to-later-sub-phase pointer. Prevents scope creep mid-impl.

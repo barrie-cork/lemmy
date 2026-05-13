@@ -53,7 +53,87 @@ gh pr list --repo barrie-cork/lemmy --head $(git branch --show-current) --json n
 | Local ahead of remote | **STOP**: "Push pending — `/bm-push` first." |
 | Working tree dirty | **STOP**: "Uncommitted changes — impl must commit first." |
 | No commits ahead of `governance-v0` | **STOP**: "No commits to PR." |
+| Plan names retro as pre-bm-pr barrier AND retro missing | **STOP**: "Plan §13 names retro as pre-bm-pr barrier; missing at `.claude/PRPs/reports/<phase>-retro.md`. Author + commit retro first." Per `feedback_phase_retro_gate_enforcement.md`. |
+| Pre-bm-pr retro exists but mtime ≤ halt-retro mtime | **STOP**: "Halt-retro is mid-phase artifact, not phase-close retro. Author Task N phase-close retro before bm-pr." |
 | PR already exists for this branch | **EDIT** existing body via `gh pr edit` (skip to Phase 4) |
+
+**Retro gate (mandatory inline check before authoring PR body; plan-aware):**
+
+```bash
+PHASE_SLUG=$(git branch --show-current | sed 's/^phase-//')
+PLAN_FILE=".claude/PRPs/plans/${PHASE_SLUG}.plan.md"
+RETRO_FILE=".claude/PRPs/reports/${PHASE_SLUG}-retro.md"
+HALT_RETRO_FILE=".claude/PRPs/reports/${PHASE_SLUG}-halt-retro.md"
+
+# Detect whether the plan names retro as a pre-bm-pr barrier
+RETRO_PRE_PR=0
+if [ -f "$PLAN_FILE" ] && grep -qiE "retro.*(before|prior to).*(pr|bm-pr)" "$PLAN_FILE"; then
+  RETRO_PRE_PR=1
+fi
+
+if [ "$RETRO_PRE_PR" = "1" ]; then
+  if [ ! -f "$RETRO_FILE" ]; then
+    echo "STOP: plan names retro as pre-bm-pr barrier; retro missing at $RETRO_FILE"
+    exit 1
+  fi
+  if [ -f "$HALT_RETRO_FILE" ]; then
+    RETRO_MTIME=$(stat -c %Y "$RETRO_FILE" 2>/dev/null || stat -f %m "$RETRO_FILE")
+    HALT_MTIME=$(stat -c %Y "$HALT_RETRO_FILE" 2>/dev/null || stat -f %m "$HALT_RETRO_FILE")
+    if [ "$RETRO_MTIME" -le "$HALT_MTIME" ]; then
+      echo "STOP: phase retro $RETRO_FILE is older than halt-retro"
+      exit 1
+    fi
+  fi
+else
+  echo "INFO: plan defers retro to post-merge — no pre-bm-pr retro gate (user gate 6 still required post-merge)."
+fi
+```
+
+Per `feedback_phase_retro_gate_enforcement.md`. The gate is plan-aware: when a phase plan explicitly defers retro to post-merge (most phases), the gate is silent and CLAUDE.md user gate 6 handles retro at the post-merge step.
+
+---
+
+## Phase 1b — DQ historical-fail sweep (mandatory)
+
+Per `feedback_dq_historical_fail_sweep_at_bm_pr.md`. Before authoring the PR body, sweep `kind: "validate-pending"` entries from `pending[]` whose `result` is in the failure enum (`fail | cancelled | timed_out | gh_unauth | run_not_found`). These entries document workflow failures already corrected by fix-impl-N commits on the phase branch; leaving them in `pending[]` causes bm-merge to require a pre-reconcile commit (per SL-c-2 + RT-r1 retros).
+
+```bash
+PHASE_BRANCH=$(git branch --show-current)
+PHASE_SLUG=$(echo "$PHASE_BRANCH" | sed 's/^phase-//')
+
+python <<'PYEOF'
+import json, io
+from datetime import datetime, timezone
+path = '.claude/decision-queue.json'
+d = json.load(io.open(path, encoding='utf-8'))
+sweep = []
+keep = []
+for e in d.get('pending', []):
+    if e.get('kind') == 'validate-pending' and e.get('result') in ('fail', 'cancelled', 'timed_out', 'gh_unauth', 'run_not_found'):
+        e['answer'] = 'superseded by PR merge — workflow failure was corrected by subsequent fix-impl-N landing on phase branch before bm-pr'
+        e['answered_by'] = 'advisor'
+        e['resolved_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+        sweep.append(e)
+    else:
+        keep.append(e)
+d['pending'] = keep
+d['resolved'] = d.get('resolved', []) + sweep
+if sweep:
+    with io.open(path, 'w', encoding='utf-8') as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+print(f'swept {len(sweep)} historical-fail entries to resolved[]')
+print('ids:', [e['id'] for e in sweep])
+PYEOF
+
+# Commit + push only if the file changed
+if ! git diff --quiet -- .claude/decision-queue.json; then
+  git add .claude/decision-queue.json
+  git commit -m "chore(decision-queue): advisor swept historical-fail validate-pending entries for ${PHASE_SLUG} bm-pr"
+  git push origin "$PHASE_BRANCH"
+fi
+```
+
+Commit subject matches `^(chore|docs)\((advisor|decision-queue)\)` per attribution-integrity rule. No-op when no historical-fails exist (typical for short phases).
 
 ---
 
