@@ -1752,3 +1752,13 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **YAML:** .claude/PRPs/reviews/pr-123-findings.yaml (53 bytes)
 - **Notes:** CodeRabbit review in progress (posted "review in progress" notice at 2026-05-10T22:04:21Z). No actionable findings yet; CR still analyzing code. Re-run bm-poll-cr when review completes.
 
+
+## bm: PR opened — 2026-05-13T11:00:00Z
+
+- **branch:** phase-v1-SL-e
+- **base:** governance-v0
+- **pr:** #127
+- **url:** https://github.com/barrie-cork/lemmy/pull/127
+- **title:** feat(v1-SL-e): lane-wide e2e suite (revocation + window-expiry + backfill)
+- **body source:** retro + plan + commits
+- **next:** wait ~5-10 min for CR; then `/bm-poll-cr 127`
