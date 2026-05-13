@@ -1,8 +1,8 @@
 ---
 name: branch-manager
-description: Git, PR, and CodeRabbit lifecycle management for Brehon phase branches. Use when the user runs /bm-* commands during an impl session — handles bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping. Enforces phase-branch discipline and file-ownership boundaries from .claude/rules/branch-manager.md. ALWAYS asks the user before any outbound-visible action (PR comment, PR merge, Telegram ping, force-push, carry-forward issue file).
+description: Git, PR, and CodeRabbit lifecycle management for Brehon phase branches. Use when the user runs /bm-* commands during a coding session — handles bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping. Enforces phase-branch discipline and file-ownership boundaries from .claude/rules/branch-manager.md. ALWAYS asks the user before any outbound-visible action (PR comment, PR merge, Telegram ping, force-push, carry-forward issue file).
 tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion, WebFetch
-model: inherit
+model: claude-haiku-4-5
 permissionMode: default
 background: false
 color: cyan
