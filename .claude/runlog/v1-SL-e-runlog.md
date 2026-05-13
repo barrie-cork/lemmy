@@ -33,3 +33,12 @@
   - cr-4 (nit): Markdown formatting in gitignored runtime artifact; cosmetic only
 - **Comment drafted:** .claude/PRPs/reviews/pr-127-comment.md (ready for user review)
 - **Next:** user gate 3 — confirm triage + post comment
+
+## bm: merge — 2026-05-13T06:35:00Z
+
+- **PR:** `#127`
+- **Action:** merged phase-v1-SL-e → governance-v0
+- **Merge commit:** `b76419bbab1f0179710854d9e7000e7490040e4f`
+- **Comment posted:** yes (pr-127-comment.md final digest)
+- **Counters:** 0 open / 8 done / 7 rebut
+- **Branch deleted:** yes
