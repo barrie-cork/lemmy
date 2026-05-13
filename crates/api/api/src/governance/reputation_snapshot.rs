@@ -801,6 +801,7 @@ async fn acquire_advisory_xact_lock(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use lemmy_db_schema_file::enums::ReputationEventSourceType;
 
   fn make_snapshot(
     jury_eligible: bool,
@@ -871,6 +872,8 @@ mod tests {
       reason: "test".to_string(),
       created_at: now - Duration::days(180),
       expires_at: None,
+      dedupe_key: None,
+      source_event_type: ReputationEventSourceType::Endorsement,
     };
     // Organic event past half-life — halved.
     assert_eq!(compute_applied_delta(&old_organic, now, half_life), 50);

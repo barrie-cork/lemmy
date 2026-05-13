@@ -118,6 +118,10 @@ pub mod sql_types {
   pub struct ReputationDimension;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "reputation_event_source_type"))]
+  pub struct ReputationEventSourceType;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "sanction_action"))]
   pub struct SanctionAction;
 
@@ -1214,6 +1218,7 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::ReputationDimension;
+    use super::sql_types::ReputationEventSourceType;
 
     reputation_event (id) {
         id -> Int4,
@@ -1226,6 +1231,9 @@ diesel::table! {
         reason -> Text,
         created_at -> Timestamptz,
         expires_at -> Nullable<Timestamptz>,
+        // v1-RT-r1 additions:
+        dedupe_key -> Nullable<Text>,
+        source_event_type -> ReputationEventSourceType,
     }
 }
 
@@ -1337,9 +1345,12 @@ diesel::table! {
 diesel::table! {
     sponsor_allowlist (id) {
         id -> Int4,
-        community_id -> Int4,
+        community_id -> Nullable<Int4>,            // v1-RT-r1: was Int4 (NOT NULL); now nullable
         person_id -> Int4,
         created_at -> Timestamptz,
+        // v1-RT-r1 additions:
+        added_by_admin_id -> Int4,
+        note -> Nullable<Text>,
     }
 }
 

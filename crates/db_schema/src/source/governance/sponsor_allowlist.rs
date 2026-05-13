@@ -13,16 +13,18 @@ use serde_with::skip_serializing_none;
 #[cfg_attr(feature = "full", diesel(check_for_backend(diesel::pg::Pg)))]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
-/// A community-scoped allowlist row for sponsor eligibility. Reserved in
-/// v1-AD-a; no read-path callers yet (they land in v1-AD-b alongside the
-/// `onboarding.sponsor_allowlist_table_name` resolver). UNIQUE
-/// (community_id, person_id) is the conflict target for idempotent
-/// inserts.
+/// Per-community sponsor-eligibility allowlist row. NULL community_id
+/// means instance-wide.
 pub struct SponsorAllowlist {
   pub id: SponsorAllowlistId,
-  pub community_id: CommunityId,
+  /// v1-RT-r1: relaxed from NOT NULL to nullable.
+  pub community_id: Option<CommunityId>,
   pub person_id: PersonId,
   pub created_at: DateTime<Utc>,
+  /// v1-RT-r1: admin who added the row (audit trail).
+  pub added_by_admin_id: PersonId,
+  /// v1-RT-r1: admin-supplied free-text rationale.
+  pub note: Option<String>,
 }
 
 /// Insert form for `sponsor_allowlist`. No `AsChangeset` — rows are
@@ -31,6 +33,11 @@ pub struct SponsorAllowlist {
 #[cfg_attr(feature = "full", derive(Insertable))]
 #[cfg_attr(feature = "full", diesel(table_name = sponsor_allowlist))]
 pub struct SponsorAllowlistInsertForm {
-  pub community_id: CommunityId,
+  /// v1-RT-r1: relaxed from required to optional.
+  pub community_id: Option<CommunityId>,
   pub person_id: PersonId,
+  /// v1-RT-r1: required at insert time. r4 endpoints set explicitly.
+  pub added_by_admin_id: PersonId,
+  /// v1-RT-r1: optional admin note.
+  pub note: Option<String>,
 }

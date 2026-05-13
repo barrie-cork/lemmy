@@ -1,6 +1,9 @@
 use crate::newtypes::{CommunityId, ModerationCaseId, ReputationEventId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{PersonId, enums::ReputationDimension};
+use lemmy_db_schema_file::{
+  PersonId,
+  enums::{ReputationDimension, ReputationEventSourceType},   // v1-RT-r1: add ReputationEventSourceType
+};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::reputation_event;
 use serde::{Deserialize, Serialize};
@@ -25,6 +28,10 @@ pub struct ReputationEvent {
   pub reason: String,
   pub created_at: DateTime<Utc>,
   pub expires_at: Option<DateTime<Utc>>,
+  /// v1-RT-r1 section 5.3 source 1: idempotency key for cron events.
+  pub dedupe_key: Option<String>,
+  /// v1-RT-r1 section 5.3 + 7: per-event source classification.
+  pub source_event_type: ReputationEventSourceType,
 }
 
 #[derive(Clone, Default)]
@@ -39,4 +46,7 @@ pub struct ReputationEventInsertForm {
   pub source_report_id: Option<i32>,
   pub reason: String,
   pub expires_at: Option<DateTime<Utc>>,
+  /// v1-RT-r1: optional. Column DEFAULT covers callers that omit.
+  pub dedupe_key: Option<String>,
+  pub source_event_type: Option<ReputationEventSourceType>,
 }

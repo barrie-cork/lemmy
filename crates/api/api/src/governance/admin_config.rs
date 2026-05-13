@@ -1273,12 +1273,13 @@ fn config_scope_label(cs: ConfigScope) -> &'static str {
 }
 
 /// Wire label for `ApplyAt`. Matches `AdminSetConfig.apply_at` accepted
-/// values (`"immediate"`, `"next_jury_cycle"`, `"next_snapshot_job"`).
+/// values (`"immediate"`, `"next_jury_cycle"`, `"next_snapshot_job"`, `"on_restart"`).
 fn apply_at_label(apply_at: ApplyAt) -> &'static str {
   match apply_at {
     ApplyAt::Immediate => "immediate",
     ApplyAt::NextJuryCycle => "next_jury_cycle",
     ApplyAt::NextSnapshotJob => "next_snapshot_job",
+    ApplyAt::OnRestart => "on_restart",
   }
 }
 

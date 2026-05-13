@@ -179,6 +179,8 @@ async fn seed_one_founder(
         source_report_id: None,
         reason: "founder_seed".to_string(),
         expires_at: Some(expires_at),
+        dedupe_key: None,
+        source_event_type: None,
       };
       diesel::insert_into(reputation_event::table)
         .values(&form)
