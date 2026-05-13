@@ -9,7 +9,7 @@ poll_count: 1
 last_polled_head_sha: e475436ed
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: request-changes
 findings:
 - id: cr-1
   source: coderabbit
@@ -20,9 +20,11 @@ findings:
   summary: Keep DQ ids immutable once they are referenced elsewhere
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442347
   adr: null
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: CodeRabbit cautions about DQ id immutability as best practice. Current
+    PR does not violate this rule — all DQ ids in the submission are unique and sequential.
+    This is preventive guidance for future phases, not a defect in the current submission.
   notes: null
 - id: cr-2
   source: coderabbit
@@ -59,9 +61,11 @@ findings:
   summary: Insert a blank line after the heading at Line 3 (MD022)
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442353
   adr: null
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: Markdown formatting (MD022 blank-line rule) is a style preference in
+    a gitignored runtime artifact (runlog). The runlog serves as a durable audit trail;
+    blank-line spacing does not affect readability or functionality of the log entries.
   notes: null
 - id: cr-5
   source: coderabbit
@@ -143,9 +147,9 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 4
+    open: 3
     done: 0
-    rebutted: 0
+    rebutted: 1
     carry_forward: 0
     wont_fix: 0
   medium:
@@ -161,13 +165,14 @@ counters:
     carry_forward: 0
     wont_fix: 0
   nit:
-    open: 1
+    open: 0
     done: 0
-    rebutted: 0
+    rebutted: 1
     carry_forward: 0
     wont_fix: 0
   by_source:
     coderabbit: 5
     claude: 0
+    copilot: 4
     user: 0
-  total: 5
+  total: 9
