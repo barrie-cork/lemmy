@@ -1,14 +1,14 @@
 ---
-description: Advisor-side post-impl, pre-merge spec-conformance check. Iterates plan §16a stories, confirms expected outputs exist on worktree branch, runs story checkpoints. Catches phantom completions before bm-merge.
+description: Post-impl, pre-merge spec-conformance check. Iterates plan §16a stories, confirms expected outputs exist on phase branch, runs story checkpoints. Catches phantom completions before bm-merge.
 argument-hint: <phase-slug, e.g. v1-JM-e>
 ---
 
 <objective>
 The `/brehon-verify` command runs after every `[P]`-cohort + barrier task in §13 has shipped commits, and before `bm-merge` is queued. It cross-checks the plan §16a stories against the actual worktree branch state, catching phantom completions (task marked done but expected output absent or empty) earlier than CR triage.
 
-This is a spec-kit-derived pattern (see `feedback_brehon_verify_pre_merge.md`). It runs **only in the advisor session**.
+This is a spec-kit-derived pattern (see `feedback_brehon_verify_pre_merge.md`). It runs **only in the main session**.
 
-**Hard precondition (per advisor-orchestrator.md "Stage-shape orchestration"):** every plan §13 task must have a commit on `phase-<phase>` (or its successor PR-targeted branch). The command refuses if any §13 task has no commit yet.
+**Hard precondition:** every plan §13 task must have a commit on `phase-<phase>` (or its successor PR-targeted branch). The command refuses if any §13 task has no commit yet.
 </objective>
 
 <usage>
@@ -39,9 +39,9 @@ If any input is missing, refuse with the missing-input message and the path atte
 Refuse to verify if:
 
 - **Any §13 task has no commit on `origin/phase-<phase>`.** Check by `git log origin/phase-<phase> --oneline | grep -E '\(task <N>\)'`. If a task is missing its commit, the impl run is incomplete — do not phantom-check yet.
-- **A Junior task is currently running on the phase.** Per `mcp__junior-brehon__list_tasks`. Wait or cancel before verify.
+- **An `impl` subagent is currently dispatched on the phase.** Wait for it to return or cancel before verify.
 - **Plan has no §16a stories block.** This is a plan written before the spec-kit-pattern adoption — file a DQ pending entry asking for retrofit and skip verify (manual reconciliation only).
-- **The phase branch has uncommitted state on the impl daemon's worktree.** Junior's finalize push should have flushed it; if it hasn't, surface as catch-fire per advisor-orchestrator.md catch-fire procedures.
+- **The phase branch has uncommitted state on the impl subagent's worktree.** If the subagent's commit-and-push didn't land, surface as catch-fire and ask the user to investigate.
 
 ### Step 3: Read plan §16a stories
 
@@ -91,7 +91,7 @@ The check has two layers:
 
 #### Step 4b: Checkpoint command execution
 
-Run the story's checkpoint command literally — the same way Junior would:
+Run the story's checkpoint command literally:
 
 ```bash
 cmd //c "scripts\\brehon\\cargo-test.bat --test e2e -p lemmy_server <test_fn_name> > .claude/PRPs/debug/<phase>-verify-story-<N>.log 2>&1"
@@ -101,7 +101,7 @@ tail -40 .claude/PRPs/debug/<phase>-verify-story-<N>.log
 
 Capture exit code separately (per `feedback_pipes_mask_exit_codes.md`). Any non-zero exit = ✗ for the story.
 
-**Forbidden-window check:** if the checkpoint command is cargo-class and current UTC is in a forbidden window, defer verify to the next safe minute and log the deferral. Verify is not impl-task — it doesn't carry an `impl-task` task-0 pre-flight — but it consumes the same EliteDesk resources, so the same window discipline applies.
+Cargo-class checkpoints run inline via `scripts/brehon/cargo-*` wrappers; capture full log per `cargo-output-capture.md` and read tail-20 only.
 
 #### Step 4c: Story outcome
 
@@ -143,9 +143,9 @@ Path: `.claude/PRPs/reports/<phase>-verify.md`. Format:
 
 (Filled in only if outcome is not all-✓:)
 
-- **Phantoms:** Story <N> requires <action — typically queue a fix-in-PR impl-task targeting the missing output>
-- **Regressions:** Story <M> checkpoint failed at <log-path>; surface to user via catch-fire per advisor-orchestrator.md
-- **Malformed:** Story <K> §16a entry under-specified; queue a planner retrofit task
+- **Phantoms:** Story <N> requires <action — typically dispatch a fix-in-PR `impl` subagent targeting the missing output>
+- **Regressions:** Story <M> checkpoint failed at <log-path>; surface to user via catch-fire
+- **Malformed:** Story <K> §16a entry under-specified; dispatch a `planning` subagent for retrofit
 ```
 
 ### Step 6: Commit + outcome routing
@@ -155,27 +155,27 @@ Path: `.claude/PRPs/reports/<phase>-verify.md`. Format:
 Commit the report:
 
 ```
-docs(advisor): brehon-verify <phase> — all stories ✓
+docs(meta): brehon-verify <phase> — all stories ✓
 ```
 
-Then advance the orchestrator stage to merge-confirm user gate.
+Then surface the merge-confirm gate to the user.
 
 #### Any phantom or regression
 
 Commit the report:
 
 ```
-docs(advisor): brehon-verify <phase> — <X> phantom, <Y> regression
+docs(meta): brehon-verify <phase> — <X> phantom, <Y> regression
 ```
 
-Surface to user via catch-fire per `.claude/rules/advisor-orchestrator.md` "Catch-fire procedures". Do not queue bm-merge.
+Surface to user via catch-fire. Do not invoke `/bm-merge`.
 
 #### Any malformed
 
 Commit the report:
 
 ```
-docs(advisor): brehon-verify <phase> — <X> malformed §16a entries
+docs(meta): brehon-verify <phase> — <X> malformed §16a entries
 ```
 
 File a DQ pending entry asking the planner to retrofit. The verify pass is incomplete until the planner ships a corrective commit.
@@ -199,17 +199,15 @@ File a DQ pending entry asking the planner to retrofit. The verify pass is incom
 
 <hard-refusals>
 
-1. **Never queue `bm-merge`** while `/brehon-verify` shows any phantom or regression. The verify gate is mandatory before bm-merge confirm. Per advisor-orchestrator.md.
+1. **Never invoke `/bm-merge`** while `/brehon-verify` shows any phantom or regression. The verify gate is mandatory before bm-merge confirm.
 
-2. **Never modify `<file>` on the phase branch** to "fix" a phantom. The advisor never authors content. If a phantom needs fixing, file a DQ pending entry and queue a fix-in-PR impl-task.
+2. **Never modify `<file>` on the phase branch** to "fix" a phantom from inside `/brehon-verify`. The verify pass is read-only. If a phantom needs fixing, file a DQ pending entry and dispatch a fix-in-PR `impl` subagent.
 
-3. **Never run `/brehon-verify` in parallel with a Junior impl-task on the same phase.** The phase branch is moving — verify would race. Refuse and tell the advisor to wait.
+3. **Never run `/brehon-verify` in parallel with an `impl` subagent on the same phase.** The phase branch is moving — verify would race. Refuse and wait for the subagent to return.
 
 4. **Never silently skip a `[malformed]` story.** Every §16a entry that can't be mechanically parsed is a planner-side miss; surfacing it via DQ is the corrective signal.
 
-5. **Never write the verify report to `.claude/PRPs/debug/`** (that directory is for Junior subagent capture). Reports go to `.claude/PRPs/reports/`.
-
-6. **Never run cargo-class checkpoints during a forbidden window.** Defer the entire verify pass — partial verify is worse than deferred verify (a partial-pass report is misleading).
+5. **Never write the verify report to `.claude/PRPs/debug/`** (that directory is for subagent log capture). Reports go to `.claude/PRPs/reports/`.
 
 </hard-refusals>
 

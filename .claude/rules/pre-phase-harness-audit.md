@@ -17,43 +17,23 @@ validation.
 
 This rule loads at session start (along with the rest of `.claude/rules/`). Every ralph loop reads it at its first iteration.
 
-## OS-aware wrapper invocation
+## Wrapper invocation
 
-The audit was written for Windows (the laptop dev box) and uses
-`cmd //c "scripts\\brehon\\cargo-*.bat ..."` invocation. Brehon now
-also runs under Junior on the EliteDesk (Ubuntu Server). The
-**probe semantics are identical** — the only difference is which
-wrapper script gets called.
+The audit runs on the laptop (Windows) via the bat-wrapper invocation
+`cmd //c "scripts\\brehon\\cargo-<verb>.bat <args>"`. Linux/macOS
+equivalents exist at `./scripts/brehon/cargo-<verb>.sh <args>` for
+portability but Brehon's primary runner is Windows-laptop.
 
-| Platform | Wrapper invocation                                            |
-|----------|---------------------------------------------------------------|
-| Windows  | `cmd //c "scripts\\brehon\\cargo-<verb>.bat <args>"`          |
-| Linux/macOS | `./scripts/brehon/cargo-<verb>.sh <args>`                  |
-
-Pick the row that matches your runtime. The probe expectations
-(non-zero exit on bogus feature, scope-limited compile, etc) are the
-same on both. The probe blocks below are written in the Windows
-form for historical reasons; substitute the Linux form when running
-on the EliteDesk Junior daemon.
-
-The wrappers must satisfy the same contract on both OSes:
+The wrapper must:
 
 - Accept `$@` / `%*` and pass it through to cargo (no flag-silent
   hardcoding of `--workspace`, `-p <crate>`, etc — see
   `feedback_wrapper_script_flag_silence.md`).
-- Propagate cargo's exit code (`exec cargo …` on Linux, `exit /b
-  !errorlevel!` on Windows). The negative probe (Probe 4) catches
-  exit-code masking on either OS.
-- Set up libpq discovery before invoking cargo (vcpkg on Windows,
-  apt-installed `libpq-dev` on Linux — discovered automatically by
-  `pkg-config`).
-
-**On Linux specifically:** Lemmy's build needs `libpq-dev`,
-`libssl-dev`, `pkg-config`, `protobuf-compiler`, `build-essential`,
-`postgresql-client`. Junior@brehon-fork's first-time setup script
-installs these via apt; if a probe fails with a missing-header
-error (`fatal error: libpq-fe.h: No such file or directory`), check
-`dpkg -l libpq-dev` first.
+- Propagate cargo's exit code (`exit /b !errorlevel!` on Windows).
+  The negative probe (Probe 4) catches exit-code masking.
+- Set up libpq discovery before invoking cargo (vcpkg on Windows
+  with the PATH/lib variables; apt-installed `libpq-dev` on Linux
+  discovered automatically by `pkg-config`).
 
 ## What to audit
 
