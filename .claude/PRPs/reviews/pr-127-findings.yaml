@@ -76,6 +76,62 @@ findings:
   addressed_in: null
   rationale: null
   notes: null
+- id: copilot-1
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14014
+  summary: Env var BREHON_DISABLE_GRACE_CHECK_JOB restored only at end of test; assertion
+    panic mid-test leaves it set, affecting subsequent tests. Suggest RAII guard.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440863
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: copilot-2
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14045
+  summary: '`sponsor1` is taken from `sponsors[1]` (second sponsor); misleading. Rename
+    to `sponsor2` or use `sponsors[0]`.'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440874
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: copilot-3
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14106
+  summary: 5s tolerance for `expected_grace` may be flaky under slow CI; `before_decisive`
+    captured before full drive_jury_to_quorum flow.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440837
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: copilot-4
+  source: copilot
+  severity: medium
+  posted_at: '2026-05-13T04:10:30Z'
+  file: crates/server/tests/e2e.rs
+  line: 14204
+  summary: '`recent` check on revoked_at only asserts not-in-future; would pass for
+    very old timestamp. Use bounded window (t_start..Utc::now()).'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231440894
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
 merged_at: null
 merge_commit: null
 final_recommendation: null
@@ -93,7 +149,7 @@ counters:
     carry_forward: 0
     wont_fix: 0
   medium:
-    open: 0
+    open: 4
     done: 0
     rebutted: 0
     carry_forward: 0
