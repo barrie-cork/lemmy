@@ -99,19 +99,19 @@ The auto/manual line tracks: anything visible to others (PR comments,
 reviews, Telegram pings, merges) needs confirmation; anything local
 or local-state-changing is auto.
 
-The "gate-only" row encodes the L15 fix from
+The "advisor-side gate-only" row encodes the L15 fix from
 `.claude/PRPs/reports/v1-SL-c-1-retro.md`: the merge-gate's read-only
 checks (`gh pr view --json mergeStateStatus,mergeable,statusCheckRollup`,
 findings YAML scan, DQ scan, CR re-poll-since) and the bm-triage's
-user-relay step run **inline in the main session**, NOT as a BM
-subagent dispatch. Splitting gate-then-execute across two subagent
-invocations duplicates context boot for a single decision; consolidating
-gate-side checks into the main session (which already has plan + brief
-context loaded) eliminates the duplication. The BM subagent is invoked
-only post-confirm for the mutating action (the actual `gh pr merge`, the
-actual fix-in-PR commit). The autonomy class generalises: any read-only
-pre-condition check that the main session can run inline is auto, no
-subagent dispatch needed.
+user-relay step run **inline in the advisor session**, NOT as a Junior
+task. Splitting gate-then-execute across two Junior tasks duplicates ~80%
+of context boot for a single decision; consolidating gate-side checks
+into the advisor session (which already has plan + brief context loaded)
+eliminates the duplication. Junior is queued only post-confirm for the
+mutating action (the actual `gh pr merge`, the actual fix-in-PR commit).
+This applies under the `/auto-phase` skill specifically, but the autonomy
+class generalises: any read-only pre-condition check that the advisor can
+run inline is auto, no Junior dispatch needed.
 
 ## Phase-branch discipline (enforces `phase-branch.md`)
 
@@ -221,6 +221,7 @@ next step (e.g. "filed DQ #N for impl to weigh in").
 
 At the start of every BM session, run, in order:
 
+0. **Multi-lane CWD check** (per `.claude/rules/multi-lane-worktree.md` 2026-05-11): `pwd && git worktree list`. If another worktree is active on a different `phase-v1-*` branch, verify this BM session's CWD is the intended lane-dedicated worktree (`brehon-fork-<lane>`) — NOT the canonical `brehon-fork` checkout when phase-branch BM work is the goal.
 1. `git fetch origin` — pick up any new trunk commits or PR pushes.
 2. `git status --short` + `git branch --show-current` — establish state.
 3. Read `.claude/decision-queue.json` — note any pending entries.

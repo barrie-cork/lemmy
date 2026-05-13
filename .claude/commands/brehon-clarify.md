@@ -6,9 +6,9 @@ argument-hint: <path/to/.claude/PRPs/briefs/<phase>-<role>-N.md> [--mode advisor
 <objective>
 The `/brehon-clarify` command runs structured coverage questions over a draft brief and produces DQ entries that gate the planning subagent. The intent is to **collapse round-trips** that today happen post-planning (plan revision after-the-fact when ambiguity in the brief surfaces during impl).
 
-This is a spec-kit-derived pattern (see plan adoption rationale in `.claude/lessons/feedback_clarify_before_plan.md`). It runs **only in the main session** — never as a dispatched subagent, never autonomously.
+This is a spec-kit-derived pattern (see plan adoption rationale in `.claude/lessons/feedback_clarify_before_plan.md`). It runs **only in the advisor session** — never as a Junior task, never autonomously.
 
-**Hard precondition:** the `planning` subagent for `<phase>` is NOT dispatched until every clarify-DQ entry on the brief is resolved.
+**Hard precondition (per advisor-orchestrator.md "Stage-shape orchestration"):** the planning task for `<phase>` is NOT queued until every clarify-DQ entry on the brief is resolved.
 </objective>
 
 <usage>
@@ -27,7 +27,7 @@ If `$ARGUMENTS` is empty, refuse: "specify a brief path".
 
 ### Step 1: Read the brief
 
-Read the entire file at the brief path. Confirm it conforms to `.claude/PRPs/templates/impl-task-brief.template.md` shape. If sections are missing (no §2 Scope, no §3 Required reading, no §4 Constraints), the brief is too underspecified for clarify — refuse and surface to the user to extend the brief first.
+Read the entire file at the brief path. Confirm it conforms to `.claude/PRPs/templates/impl-task-brief.template.md` shape. If sections are missing (no §2 Scope, no §3 Required reading, no §4 Constraints), the brief is too underspecified for clarify — refuse and tell the advisor to extend the brief first.
 
 ### Step 2: Read referenced documents
 
@@ -120,7 +120,7 @@ chore(decision-queue): advisor clarify pass on <phase>-<role>-N
 
 3. **Never write `kind: "log"`** for clarify entries. Clarify questions either gate planning (`kind: "clarify"` ≈ blocker but pre-planning) or don't exist. A clarify entry that doesn't gate is a question you should have answered yourself.
 
-4. **Never run while a planning subagent is dispatched on the same brief.** If `Agent({subagent_type: "planning", ...})` was just invoked for this phase, the brief is in flight — clarify pass would race. Refuse and surface to the user to wait for the planning subagent to complete (or cancel it).
+4. **Never run during a Junior task on the same brief.** If a Junior task is currently `running` against `<phase>` (per `mcp__junior-brehon__list_tasks`), the brief is committed and live — clarify pass would race. Refuse and tell the advisor to wait or cancel.
 
 5. **Never commit to `governance-v0` if the brief is on a phase branch.** Match the brief's branch — clarify-DQ entries push wherever the brief lives.
 
@@ -139,7 +139,7 @@ Pre-planning ambiguity in briefs surfaces as plan revision rounds during impl. R
 - Reuses the existing decision-queue v2 schema (just adds `kind: "clarify"`).
 - Reuses the existing attribution-integrity rules (advisor-only labels).
 - Plugs into the existing advisor-orchestrator stage-shape (between brief-author and planning-task-queue).
-- Single-session DQ writes: mode=advisor commits + pushes from the laptop directly (no worktree isolation since this runs in the main session).
+- Stays aware of mid-task DQ visibility (mode=advisor commits + pushes from the laptop directly; no Junior worktree involved).
 
 ### Why not generate questions exhaustively
 
@@ -147,12 +147,12 @@ Coverage-question generation is bounded by the axes table in Step 3. Generating 
 
 ### Why advisor-mode default
 
-The lessons corpus + resolved DQ + prior plans answer most clarify questions trivially — the main session has all of them in working context. User-relay is for the residual judgment-heavy questions (ADR-affecting, scope-changing, visible-to-others impact).
+The lessons corpus + resolved DQ + prior plans answer most clarify questions trivially — the advisor session has all of them in working context. User-relay is for the residual judgment-heavy questions (ADR-affecting, scope-changing, visible-to-others impact).
 
 ### When to skip /brehon-clarify entirely
 
-- Re-dispatching the `impl` subagent on a brief whose plan already shipped (no plan = no ambiguity to disambiguate).
-- BM dispatch prompts (BM verbs are mechanical; clarify isn't useful — see `.claude/commands/bm/<verb>.md`).
+- Re-running impl-task on a brief whose plan already shipped (no plan = no ambiguity to disambiguate).
+- BM-task briefs (BM verbs are mechanical; clarify isn't useful — see `.claude/commands/bm/<verb>.md`).
 - Retro briefs (retros are reflective, not forward-looking).
 
 For planning briefs (the load-bearing case): always run `/brehon-clarify` first. Skipping is a process breach the advisor must justify in the planning task's commit body.

@@ -13,29 +13,33 @@ execution to the `branch-manager` subagent, which runs in its own
 isolated context window. The subagent reads the operational script
 below and follows it step by step.
 
-## Execution shape
+## Two execution modes (per L15 from v1-SL-c-1 retro)
 
-The merge gate runs in two halves within a single session:
+The merge gate is split into two halves:
 
 - **Gate-side (Phases 1-4 below)** — read-only pre-merge checks,
-  pre-merge summary, AskUserQuestion confirm. Runs **inline in the
-  main session** without dispatching a subagent; the main session
-  already has plan + brief context loaded, so a subagent invocation
-  would duplicate context boot for a single decision.
+  pre-merge summary, AskUserQuestion confirm. Under `/auto-phase`
+  these run **inline in the advisor session** (no Junior dispatch);
+  the advisor already has plan + brief context loaded, so a Junior
+  duplicates ~80% of context boot for a single decision. Manual
+  `/bm-merge` invocation outside `/auto-phase` still dispatches the
+  full script to the BM subagent (gate + execute) — the dispatch line
+  below covers that path.
 - **Execute-side (Phases 5-9 below)** — actual `gh pr merge`, runlog
-  commit, post-merge bookkeeping. Dispatched to the `branch-manager`
-  subagent (Haiku 4.5) so the mutating action runs in an isolated
-  context. The dispatch prompt MUST explicitly order the git sequence
-  per the L14 fix below.
+  commit, post-merge bookkeeping. Always runs on the Junior side
+  (mutating actions stay in BM territory). Under `/auto-phase`, the
+  advisor session queues a single bm-task brief carrying ONLY Phases
+  5-9 (the brief MUST explicitly order the BM Junior's git sequence
+  per the L14 fix below — see "Phase 5 — Execute merge" header).
 
 This split is canonical from 2026-05-07 onward (post v1-SL-c-1 retro).
-Anything that re-introduces a pre-confirm subagent dispatch is a
-process regression and must be surfaced.
+Anything that re-introduces a pre-confirm Junior dispatch is a process
+regression and must be surfaced.
 
-## L14 fix — explicit git sequence in the BM dispatch prompt
+## L14 fix — explicit git sequence in the BM brief
 
-The `branch-manager` subagent dispatch prompt that carries Phases 5-9
-MUST contain an explicit, numbered git sequence:
+Under `/auto-phase`, the bm-task brief that carries Phases 5-9 MUST
+contain an explicit, numbered git sequence in §4 Constraints:
 
 ```
 1. Edit .claude/runlog/bm-runlog.md — append the bm: merge entry per Phase 8 template.
@@ -48,11 +52,11 @@ MUST contain an explicit, numbered git sequence:
 
 The runlog commit lands BEFORE the merge so that the audit trail is
 durable even if the merge itself encounters an error mid-flight.
-Without explicit ordering, the BM subagent has been observed (c-1
+Without explicit ordering, the BM Junior has been observed (c-1
 session 2026-05-06) to checkout-before-commit — losing the runlog
-Edit. The L14 fix names the sequence in the dispatch prompt; the L14
-belt-and-braces fallback in the main session's post-merge check
-re-applies via `docs(meta):` if the BM still skipped it.
+Edit. The L14 fix names the sequence in the brief; the L14 belt-and-
+braces fallback in advisor-side post-merge tick re-applies via
+`docs(advisor):` if the BM still skipped it.
 
 Invoke:
 
