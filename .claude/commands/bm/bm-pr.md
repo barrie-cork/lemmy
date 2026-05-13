@@ -137,6 +137,54 @@ Commit subject matches `^(chore|docs)\((advisor|decision-queue)\)` per attributi
 
 ---
 
+## Phase 1c — Phase 2 e2e gate (plan-aware)
+
+Per `feedback_phase_2_e2e_gate_enforcement.md`. Phase 2 e2e is **advisor-driven** (`cargo-test-e2e.yml` is `workflow_dispatch`-only since 2026-04-28 minutes-budget audit). User gate 4 (Phase 2 e2e — local vs dispatch) must clear before bm-pr. RT-r1 + SL-e both shipped without it — this gate prevents recurrence.
+
+The gate is plan-aware: fires only when the plan body touches `crates/server/tests/e2e.rs` or names an e2e task. Plans without e2e (rare for v1 lane work) skip the gate.
+
+```bash
+PHASE_SLUG=$(git branch --show-current | sed 's/^phase-//')
+PLAN_FILE=".claude/PRPs/plans/${PHASE_SLUG}.plan.md"
+
+# Detect whether the plan touches e2e
+E2E_PLAN=0
+if [ -f "$PLAN_FILE" ] && grep -qE "crates/server/tests/e2e\.rs|cargo-test-e2e\.yml|phase1_migrations_round_trip|e2e (test|suite|task)" "$PLAN_FILE"; then
+  E2E_PLAN=1
+fi
+
+if [ "$E2E_PLAN" = "1" ]; then
+  python <<PYEOF
+import json, io, sys
+d = json.load(io.open('.claude/decision-queue.json', encoding='utf-8'))
+phase = "phase-${PHASE_SLUG}"
+ok = False
+for e in d.get('resolved', []):
+    if e.get('kind') in ('validate-pending', 'validate-pending-laptop', 'validate-pending-laptop-e2e') \
+       and e.get('result') == 'pass' \
+       and (
+           (e.get('branch') or '').startswith(phase)
+           or 'e2e' in (e.get('phase_task') or '').lower()
+           or 'e2e' in (e.get('local_log_path') or '').lower()
+       ):
+        ok = True
+        break
+if not ok:
+    print(f"STOP: Phase 2 e2e gate — no validate-pending with result=pass for {phase} e2e found in resolved[]")
+    print("User gate 4 (Phase 2 e2e — local vs dispatch) must run before bm-pr.")
+    print("Options: (a) local cargo test via scripts/brehon/cargo-test.bat (~26 min, zero billed),")
+    print("         (b) gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref $phase.")
+    sys.exit(1)
+PYEOF
+else
+  echo "INFO: plan does not touch crates/server/tests/e2e.rs — Phase 2 e2e gate skipped."
+fi
+```
+
+When the gate fires, surface user gate 4 (the local-vs-dispatch choice per `.claude/rules/advisor-orchestrator.md` §3.2). On pass-result lands → re-run this Phase 1c → proceed to Phase 2.
+
+---
+
 ## Phase 2 — Resolve PR title
 
 Branch-name → title pattern:
