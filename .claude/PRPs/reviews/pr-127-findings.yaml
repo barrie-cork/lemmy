@@ -35,8 +35,8 @@ findings:
   summary: Surface these scope decisions to the user before resolving them
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442349
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 2182f05428f3ddb81df77d10523b3a8eb95f2880
   rationale: null
   notes: null
 - id: cr-3
@@ -48,8 +48,8 @@ findings:
   summary: 'Fix the impossible chronology in DQ #193'
   cr_url: https://github.com/barrie-cork/lemmy/pull/127#discussion_r3231442352
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: 2182f05428f3ddb81df77d10523b3a8eb95f2880
   rationale: null
   notes: null
 - id: cr-4
@@ -147,8 +147,8 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 2
-    done: 1
+    open: 0
+    done: 3
     rebutted: 1
     carry_forward: 0
     wont_fix: 0
