@@ -15,9 +15,28 @@ user_decisions:
 
 - **Audit shipped:** `.claude/PRPs/reports/v1-code-quality-audit-2026-05-14.md` (governance-v0 tip)
 - **Audit findings:** 64 distinct (3 critical + 10 major + 22 medium + 15 minor + 4 positive)
-- **fix-before-next-phase tier:** 8 findings collapsed into 6 PRs per audit §4
+- **fix-before-next-phase tier:** ~~8 findings collapsed into 6 PRs~~ → **7 findings collapsed into 5 PRs** after DQ #214 reject-finding (see §"Updates" below)
 - **Parked work:** v1-ship-1 plan in parallel advisor session, awaiting approval gate
-- **Strict gate:** all 6 refactor PRs must merge to `governance-v0` before any v1 PRD planning resumes
+- **Strict gate:** all ~~6~~ **5** refactor PRs must merge to `governance-v0` before any v1 PRD planning resumes
+
+## Updates
+
+### 2026-05-14 — PR-3 dropped (audit-base error)
+
+DQ #214 on `chore/refactor-eq-derive` (impl-raised, user-relayed via canonical advisor session):
+
+Audit finding 3.C.1 prescribed adding `#[derive(Eq)]` to `GovernanceConfig`. The struct has `Option<f64> value_float` (intentional per schema CHECK constraint allowing one of int/float/bool/text non-NULL), which makes `Eq` structurally underivable (E0277: `f64: Eq` not satisfied). The audit treated `GovernanceConfig` as a parity outlier vs sibling governance models without validating that the prescribed one-line fix would compile.
+
+**Decision:** reject the finding. Abandon `chore/refactor-eq-derive` (no commits to lose; branch was at trunk tip). Document audit-base error.
+
+**Sibling outlier note:** impl pre-flight also found `crates/db_schema/src/source/governance/redaction.rs` missing `Eq` (cohort grep found 20, expected 21). Both outliers deserve **next-audit-cycle re-evaluation**, not action now.
+
+**Cleanup:**
+- Lane session deletes worktree `brehon-fork-refactor-eq-derive` and branch `chore/refactor-eq-derive`
+- This canonical session removes PR-3 from the strict-gate list (now 5 PRs)
+- `.claude/PRPs/briefs/refactor-eq-derive-*.md` files (bootstrap, bm-cut, impl) remain on trunk as audit-trail; do NOT delete
+
+**Lesson candidate:** audit findings prescribing trait-derive additions should be validated against the struct's field types before promotion to `fix-before-next-phase` tier. Watchlist for next audit cycle.
 
 ## PR-to-finding map
 
@@ -25,7 +44,7 @@ user_decisions:
 |---|---|---|---|---|---|
 | PR-1 | 1, 2, 7, 8 | Case C error-type unification + 4-module fixture dedup + round-trip test split + named-migration revert | L (full day) | `crates/server/tests/e2e.rs` (single file, ~1500 lines edited) | Dedicated session, advisor-driven; mechanical sweep + structural reshape |
 | PR-2 | 3 | TOCTOU race in `create_report.rs` (wrap SELECT-then-write in `run_transaction`) | M (half-day) | `crates/api/api_crud/src/governance/create_report.rs` | Dedicated session, advisor-driven; isolated single-file fix |
-| PR-3 | 11 | Add `Eq` derive to `governance_config` | XS (<30 min) | `crates/db_schema/src/source/governance/governance_config.rs:10` | **Parallel-lane** worktree; one-line change |
+| ~~PR-3~~ | ~~11~~ | ~~Add `Eq` derive to `governance_config`~~ | **DROPPED** | n/a | **Rejected** via DQ #214 — audit-base error (f64 can't derive Eq); see §Updates |
 | PR-4 | 6 | Pin `valid_from` on v0 + v1-AD-a seed migrations | S (30-120 min) | 2 migration files | **Parallel-lane** worktree |
 | PR-5 | 13 | Propagate Diesel errors in `admin_audit_stream.rs:227,234` | S | `crates/api/api/src/governance/admin_audit_stream.rs` | **Parallel-lane** worktree |
 | PR-6 | 17 | Add unit tests for `seed_founders::parse_founder_spec` | S | `crates/tools/seed_founders/src/main.rs` (add `#[cfg(test)] mod tests`) | **Parallel-lane** worktree |
@@ -44,7 +63,7 @@ Per `.claude/rules/multi-lane-worktree.md` to prevent the PMD #302 concurrent-se
 |---|---|---|---|
 | `brehon-fork-refactor-e2e` | `chore/refactor-e2e-error-types` | Dedicated advisor for PR-1 | Solo until PR-1 merges |
 | `brehon-fork-refactor-toctou` | `chore/refactor-toctou` | Dedicated advisor for PR-2 | Solo until PR-2 merges |
-| `brehon-fork-refactor-eq-derive` | `chore/refactor-eq-derive` | Dedicated advisor for PR-3 | Parallel with PR-4/5/6 |
+| ~~`brehon-fork-refactor-eq-derive`~~ | ~~`chore/refactor-eq-derive`~~ | **DROPPED** (DQ #214 reject-finding) | n/a |
 | `brehon-fork-refactor-valid-from` | `chore/refactor-valid-from` | Dedicated advisor for PR-4 | Parallel with PR-3/5/6 |
 | `brehon-fork-refactor-diesel-errors` | `chore/refactor-diesel-errors` | Dedicated advisor for PR-5 | Parallel with PR-3/4/6 |
 | `brehon-fork-refactor-seed-tests` | `chore/refactor-seed-tests` | Dedicated advisor for PR-6 | Parallel with PR-3/4/5 |
@@ -62,20 +81,21 @@ Phase 2 (sequence-and-parallel):
   Step 2a (serial, ~1 day):  PR-1 e2e refactor in dedicated session
   Step 2b (serial, ~half day): PR-2 TOCTOU fix in dedicated session
                               (can start before PR-1 lands if no file overlap; verified: no overlap)
-  Step 2c (parallel, ~half day): PRs 3, 4, 5, 6 — 4 dedicated sessions, 4 worktrees, all running concurrently
-Phase 3 (this session): All 6 PRs merged → trigger v1 PRD resumption per strict gate
+  Step 2c (parallel, ~half day): PRs 4, 5, 6 — 3 dedicated sessions, 3 worktrees, all running concurrently
+                                  (PR-3 dropped via DQ #214 reject-finding)
+Phase 3 (this session): All 5 PRs merged → trigger v1 PRD resumption per strict gate
 ```
 
 PR-2 has zero file overlap with PR-1 (`create_report.rs` is in api_crud; PR-1 touches only `e2e.rs`). So PR-1 and PR-2 can ALSO run in parallel as 2 more worktrees. Doing this conservatively serial first to keep blast-radius small.
 
-## Dependency analysis (verified no overlap across the 4 parallel lanes)
+## Dependency analysis (verified no overlap across the parallel lanes)
 
-- PR-3: `crates/db_schema/src/source/governance/governance_config.rs` only
+- ~~PR-3: `crates/db_schema/src/source/governance/governance_config.rs` only~~ **DROPPED**
 - PR-4: `migrations/2026-04-22-000300-0000_seed_v1_config_keys/` + `migrations/2026-04-18-000000-0000_add_governance_config/`
 - PR-5: `crates/api/api/src/governance/admin_audit_stream.rs` only
 - PR-6: `crates/tools/seed_founders/src/main.rs` only (adds `#[cfg(test)] mod tests`)
 
-Zero file-path intersection across all 4. Safe to run in parallel.
+Zero file-path intersection across PR-4/5/6. Safe to run in parallel.
 
 ## Validation per refactor PR
 
