@@ -42,12 +42,12 @@ Per `.claude/rules/multi-lane-worktree.md` to prevent the PMD #302 concurrent-se
 
 | Worktree path | Phase branch | Session | Concurrency |
 |---|---|---|---|
-| `brehon-fork-refactor-e2e` | `phase-v1-refactor-e2e` | Dedicated advisor for PR-1 | Solo until PR-1 merges |
-| `brehon-fork-refactor-toctou` | `phase-v1-refactor-toctou` | Dedicated advisor for PR-2 | Solo until PR-2 merges |
-| `brehon-fork-refactor-eq-derive` | `phase-v1-refactor-eq-derive` | Dedicated advisor for PR-3 | Parallel with PR-4/5/6 |
-| `brehon-fork-refactor-valid-from` | `phase-v1-refactor-valid-from` | Dedicated advisor for PR-4 | Parallel with PR-3/5/6 |
-| `brehon-fork-refactor-diesel-errors` | `phase-v1-refactor-diesel-errors` | Dedicated advisor for PR-5 | Parallel with PR-3/4/6 |
-| `brehon-fork-refactor-seed-tests` | `phase-v1-refactor-seed-tests` | Dedicated advisor for PR-6 | Parallel with PR-3/4/5 |
+| `brehon-fork-refactor-e2e` | `chore/refactor-e2e-error-types` | Dedicated advisor for PR-1 | Solo until PR-1 merges |
+| `brehon-fork-refactor-toctou` | `chore/refactor-toctou` | Dedicated advisor for PR-2 | Solo until PR-2 merges |
+| `brehon-fork-refactor-eq-derive` | `chore/refactor-eq-derive` | Dedicated advisor for PR-3 | Parallel with PR-4/5/6 |
+| `brehon-fork-refactor-valid-from` | `chore/refactor-valid-from` | Dedicated advisor for PR-4 | Parallel with PR-3/5/6 |
+| `brehon-fork-refactor-diesel-errors` | `chore/refactor-diesel-errors` | Dedicated advisor for PR-5 | Parallel with PR-3/4/6 |
+| `brehon-fork-refactor-seed-tests` | `chore/refactor-seed-tests` | Dedicated advisor for PR-6 | Parallel with PR-3/4/5 |
 
 **Concurrent-session rules** (recap from PMD #302):
 - One Claude Code session per worktree; never `cd` between worktrees in a single session.
