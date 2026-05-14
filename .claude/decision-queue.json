@@ -2,6 +2,22 @@
   "pending": [],
   "resolved": [
     {
+      "id": 214,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-14T11:11:00Z",
+      "question": "Audit finding 3.C.1 prescribes adding Eq to GovernanceConfig derive, but the struct has Option<f64> value_float (line 27) which makes Eq structurally underivable (f64 cannot derive Eq because NaN != NaN). Pre-push cargo-check failed with E0277 on the prescribed one-line fix. How should this refactor lane proceed?",
+      "options": [
+        "reject-finding: drop audit finding 3.C.1; abandon chore/refactor-eq-derive branch; document audit-base error for next audit cycle",
+        "extend-scope: remove value_float field from GovernanceConfig + migrate consumers (large refactor, far outside one-line XS scope)",
+        "wrapper-field: wrap value_float in an ordered-float type (e.g. ordered_float::OrderedFloat<f64>) that implements Eq + migrate insert form + DB shape (medium scope; new dependency)"
+      ],
+      "context": "Lane impl on chore/refactor-eq-derive (since deleted post-resolution). Phase 3 pre-push cargo-check failed: error[E0277]: the trait bound `f64: Eq` is not satisfied at crates/db_schema/src/source/governance/governance_config.rs:27 (pub value_float: Option<f64>). Audit (.claude/PRPs/reports/v1-code-quality-audit-2026-05-14.md §3.C.1) treated GovernanceConfig as a parity outlier in the governance directory without validating the prescribed fix would compile. Sibling models in the directory don't have float fields, which is why they all derive Eq cleanly. Pre-flight surfaced two adjacent issues (not blockers): submodule crates/email/translations was uninitialized in the new worktree (recovered via git submodule update --init); brief §2.4 cohort grep expected 21 but found 20 because crates/db_schema/src/source/governance/redaction.rs is a second outlier missing Eq.",
+      "answer": "reject-finding (user-relayed, advisor session, gate 2). Audit finding 3.C.1 is dropped from the fix-before-next-phase tier. GovernanceConfig retains its current derive (PartialEq only) — Eq cannot be added because the struct contains Option<f64> value_float (NaN != NaN; E0277 verified by pre-push cargo check on chore/refactor-eq-derive). The audit treated GovernanceConfig as a parity outlier without validating the prescribed fix would compile against the struct's field types. Cleanup actions (per advisor commit dfd02cd961): (a) execution plan updated: 5 PRs in strict gate (was 6); PR-3 row marked DROPPED; 3 parallel lanes (was 4); Step 2c parallels PRs 4+5+6. (b) chore/refactor-eq-derive branch + brehon-fork-refactor-eq-derive worktree torn down by lane session (worktree force-removed because submodule registration blocked plain remove; branch deleted local + remote; DQ resolution committed to chore branch as 176f87f82 before deletion). (c) redaction.rs sibling outlier (missing Eq) noted as watchlist for next audit cycle — not actioned here. Lesson candidate (per advisor commit): audit findings prescribing trait-derive additions should be validated against the struct's field types before promotion to fix-before-next-phase tier. This entry was appended to governance-v0 post-teardown so next_id computation against trunk remains monotone after the chore branch was deleted (preserves audit trail durability beyond reflog expiry).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-14T11:59:26Z"
+    },
+    {
       "id": 195,
       "from": "impl",
       "kind": "blocker",
