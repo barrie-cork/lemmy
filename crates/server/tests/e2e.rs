@@ -33,6 +33,10 @@
   clippy::unreachable,
   reason = "integration test assertions"
 )]
+#![expect(
+  clippy::get_first,
+  reason = "Vec::first() conflicts with Diesel RunQueryDsl::first() (serde_json::Value / enum-tuple rows engage the blanket LimitDsl impl → E0275/E0277, verified on PR #132); use .get(0) to avoid trait ambiguity"
+)]
 
 /// Smoke test the harness boot path: container start + Tier 3 template
 /// restore (when enabled) + schema sentinel reachable. Asserts that
@@ -8454,7 +8458,7 @@ async fn admin_assign_jury_emits_severity_tier_frozen_governance_log()
     "exactly one severity_tier_frozen entry per assign-jury"
   );
   let payload = rows
-    .first()
+    .get(0)
     .ok_or_else(|| anyhow::anyhow!("no severity_tier_frozen row"))?;
   assert_eq!(
     payload["severity_tier"], Value::String("minor".to_string()),
@@ -8693,7 +8697,7 @@ async fn admin_assign_jury_small_pool_triggers_r1_relaxation()
     "exactly one jury_constraint_violation_log row written for the R1 event"
   );
   let row = jcvl_rows
-    .first()
+    .get(0)
     .ok_or_else(|| anyhow::anyhow!("no jury_constraint_violation_log row"))?;
   assert_eq!(row.0, "no_recent_juror_repeat", "constraint_name matches");
   assert_eq!(
@@ -8903,7 +8907,7 @@ async fn admin_emergency_remove_seats_severe_panel_with_constraint_record()
     "exactly one panel_assembled entry per emergency-remove"
   );
   let payload = panel_payloads
-    .first()
+    .get(0)
     .ok_or_else(|| anyhow::anyhow!("no panel_assembled payload"))?;
   assert_eq!(payload["juror_count"], Value::from(7));
   assert_eq!(payload["severity_tier"], Value::String("severe".to_string()));
