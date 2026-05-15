@@ -92,3 +92,26 @@ sequential.
   user gate 3 → user gate 5 → merge → strict-gate 4/5 → surface PR-1
   for explicit user go-ahead (do NOT auto-start the highest-risk
   e2e.rs lane).
+
+## bm: PR opened — 2026-05-15
+
+- **bm-pr run INLINE by advisor** (L3/L15 — Junior bm-task
+  `base_branch=chore/*` fails on daemon worktree-ref resolution;
+  proven PR-4 #264 + PR-5 #265 + PR-6 #130). Brief read from canonical
+  governance-v0 `.claude/PRPs/briefs/refactor-toctou-bm-pr.md` (L5 —
+  NOT cherry-picked onto this branch).
+- **PR #131 opened**: `fix(api_crud): wrap create_report
+  SELECT-then-write in run_transaction (audit 3.B.1 CRIT)` →
+  base `governance-v0`, head `chore/refactor-toctou`, NOT draft,
+  `--repo barrie-cork/lemmy`.
+  URL: https://github.com/barrie-cork/lemmy/pull/131
+- Commits in PR (base `09db10847`): `653174f03` + `be0d1eda5` (lane
+  runlog prep + dispatch), `e57c20e9e` (`fix(api_crud)` code commit
+  cherry-picked from worker #267 `511640ae9`), `c8449d340` (DQ #219
+  advisor-laptop validate-pending pass + runlog).
+- No PR comment posted, no review submitted (Manual/ask per autonomy
+  table — triage digest is the separate user-gate-3 step).
+- Awaiting CodeRabbit final review → findings YAML → user gate 3
+  (CR triage) → user gate 5 (merge confirm) → squash-merge →
+  strict-gate 4/5 → surface PR-1 (LAST, highest-risk) for explicit
+  user go-ahead.
