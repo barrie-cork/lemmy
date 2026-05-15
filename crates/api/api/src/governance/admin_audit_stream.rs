@@ -225,14 +225,21 @@ pub async fn admin_audit_stream(
 
           let mut pool = context_for_stream.pool();
           let Ok(mut conn) = get_conn(&mut pool).await else { continue };
-          let row: Option<GovernanceLog> = governance_log_schema::table
+          let row: Option<GovernanceLog> = match governance_log_schema::table
             .filter(governance_log_schema::id.eq(GovernanceLogId(entry_id)))
             .select(GovernanceLog::as_select())
             .first(&mut conn)
             .await
             .optional()
-            .ok()
-            .flatten();
+          {
+            Ok(opt) => opt,
+            Err(e) => {
+              tracing::warn!(
+                "admin_audit_stream: error hydrating governance_log entry {entry_id}: {e}"
+              );
+              continue;
+            }
+          };
           let Some(row) = row else { continue };
 
           let entry = project_to_audit_entry(row);
