@@ -80,3 +80,59 @@ sign-off).
   suite locally, not just compile) → bm-pr inline (L3) → CR → user
   gate 3 → user gate 5 → merge → **strict-gate 5/5 → STOP → 4-role
   retro → user sign-off**.
+
+---
+
+## advisor: #268 partial + blockers → continuation #269 dispatched — 2026-05-15
+
+- **Junior #268 finished `done` (succeeded, 17:21:36Z)** — NOT a hang.
+  Worker delivered Passes 1+3+4 + 1-line incidental create_report.rs
+  fix, then correctly raised TWO blocker DQs and exited (no
+  `#[allow]`-spam, no `#[ignore]` — exactly brief-designed behavior).
+  Worker tip `5861aac24`; code commit `7076a4fbd` (parent
+  `1fed06e16` = PR-2 squash → **L1 daemon-base fix confirmed working
+  a 2nd time**: worker branched off the correct base).
+- **DQ #221 (blocker)** — Gate 2 (clippy -D warnings) FAILED on ~20
+  PRE-EXISTING e2e.rs lints (verified on governance-v0 HEAD; not
+  introduced by the refactor; brief's Gate 2 was a defect — never
+  green on this file). Gate 1 PASSED. Worker's own 2 introduced
+  `as u64` casts already fixed (try_from).
+- **DQ #222 (blocker)** — Pass 2 (audit 3.E.2 CRIT, fixtures dedup)
+  NOT done; a prior #268 session misread Pass 1 as subsuming it. The
+  4 fixtures modules (~4000 lines, ~70% dup) unchanged.
+- **DQ #220 (log, self-resolved by worker)** — incidental
+  create_report.rs:168 `#[allow]`→`#[expect]` (1 line) to unblock
+  workspace clippy on that file (lint pre-existed from PR-2 #131).
+- **Surfaced both to user (judgment-heavy: scope-vs-policy on the
+  highest-risk LAST lane + compounding-risk coupling). User
+  decisions 2026-05-15:**
+  - DQ #221 → **fix-all-e2e-lints** (continuation fixes all
+    pre-existing e2e.rs lints so Gate 2 genuinely passes;
+    reputation_snapshot.rs:856 out of scope; no `#[allow]`-spam).
+  - DQ #222 → **defer-pass2-separate-task** (3.E.2 → dedicated
+    post-gate lane = advisor task #8; non-blocking for v1 PRD).
+  - create_report.rs deviation → **accept** the 1-line fix.
+  - Strict-gate → **PR-1 = 5th/final item** (gate stays 5 PRs; PR-1
+    ships 3.E.1+3.E.3+3.E.4; 3.E.2 tracked follow-up).
+- **Lane prepared:** `chore/refactor-e2e-error-types` cut off
+  governance-v0 + worktree `brehon-fork-e2e-error-types` (submodule
+  init, L6). #268 code commit cherry-picked (no-commit, dropped
+  decision-queue.json churn) → re-committed as `f258824b5`
+  (`chore(test): unify e2e error-type to LemmyResult + split
+  phase1_migrations_round_trip (audit 3.E.1+3.E.3+3.E.4; 3.E.2
+  deferred)`; diff = ONLY e2e.rs 776 lines + create_report.rs 2
+  lines; HANDOVER trailer; test count 69→71 verified). DQ #221+#222
+  recorded advisor-answered (user-relayed) on chore →
+  `091b83a86`. Chore pushed.
+- **Continuation Junior #269 dispatched** `base_branch=governance-v0`
+  (L3 — daemon can't resolve chore refs), brief
+  `.claude/PRPs/briefs/refactor-e2e-error-types-impl-2.md` (cherry-pick
+  f258824b5 first, fix ~20 pre-existing e2e.rs lints, P2 OUT,
+  3 gates incl load-bearing full e2e). L1 daemon re-synced to
+  `0f83af6c9` + chore branch pre-fetched (f258824b5 reachable in
+  daemon object store). Daemon healthy PID 258450, 0/0.
+- Awaiting #269 → cherry-pick its code commit onto chore → §5.2
+  advisor-laptop validate (FULL e2e, load-bearing) → bm-pr inline →
+  CR → user gate 3 → user gate 5 → merge → **strict-gate 5/5 →
+  STOP → 4-role FINAL retro (MUST call out deferred 3.E.2 / task #8
+  as explicit carry-forward) → user sign-off**.
