@@ -36,23 +36,42 @@ a DQ-backfill commit + this bm-pr brief.
 - Chore branch — no `.plan.md`. bm-pr retro gate + Phase 1c e2e
   gate correctly skip for chore branches (plan-aware script).
 - Phase 1b historical-fail sweep: no-op if validate-pending passed
-  cleanly (expected — pure 2-line Rust refactor).
+  cleanly (expected — small Rust refactor, one expression site).
+
+> **Post-implementation accuracy note (added after Junior #265, per
+> PR #129 copilot-2):** the original brief below anticipated "2 sites"
+> + a `.map_err(...).ok().flatten()` fallback variant. The audit's
+> "2 sites" was an over-count — only **one** `.optional().ok().flatten()`
+> chain exists in `admin_audit_stream.rs`. Junior #265 implemented a
+> cleaner pattern than anticipated: a `match` on the `.optional()`
+> `Result` — `Ok(opt) => opt`, `Err(e) => { tracing::warn!("…entry
+> {entry_id}: {e}"); continue }` — preserving the SSE stream-on-error
+> semantic while surfacing the DB error to `tracing`. This is better
+> than the anticipated `.map_err(...).ok().flatten()` (idiomatic, no
+> double-negative). The PR body + DQ #217 reflect the ACTUAL pattern;
+> the anticipated-variant text below is retained as the original
+> brief-of-record but is superseded by this note.
 
 **Title** (chore → `chore(<scope>): <prose>`): `chore(refactor): propagate Diesel errors in admin_audit_stream (audit 3.A.5)`
 
 **PR body** — per bm-pr Phase 3. No completion report, no plan. Body
 MUST include:
 
-- `## Summary` — Replaces the `.optional().ok().flatten()` chain at
-  2 sites in `crates/api/api/src/governance/admin_audit_stream.rs`
-  (~lines 227, 234) with proper error propagation. The `.ok()`
-  between `.optional()` and `.flatten()` silently reduced a DB query
-  failure (pool exhaustion / syntax / connection) to `None`,
-  indistinguishable from a legitimate empty result, in an
-  observability-critical streaming handler. Fixed per audit §3.A.5
-  recommendation (`.optional()?` if enclosing returns `LemmyResult`,
-  else the `.map_err(|e| { tracing::warn!(...); e }).ok().flatten()`
-  logging variant).
+- `## Summary` — Replaces the single `.optional().ok().flatten()`
+  chain in `crates/api/api/src/governance/admin_audit_stream.rs`
+  (~line 228, inside the SSE per-entry hydration loop) with a `match`
+  on the `.optional()` `Result`: `Ok(opt) => opt`, `Err(e) => {
+  tracing::warn!("admin_audit_stream: error hydrating governance_log
+  entry {entry_id}: {e}"); continue }`. The old `.ok()` between
+  `.optional()` and `.flatten()` silently reduced a DB query failure
+  (pool exhaustion / syntax / connection) to `None`, indistinguishable
+  from a legitimate empty result, in an observability-critical
+  streaming handler. The new code surfaces the error to `tracing` and
+  continues the SSE loop (the enclosing scope is a stream body with no
+  `Result` outer, so `?` is not applicable; the `match`+`continue` is
+  the idiomatic shape — cleaner than the originally-anticipated
+  `.map_err(...).ok().flatten()`). One site, not two (audit §3.A.5's
+  "2 sites" was an over-count).
 - `## Plan reference` — `Ad-hoc — no plan file (chore branch;
   audit-driven refactor-tier PR-5 of 5 per
   .claude/PRPs/handovers/refactor-execution-plan-2026-05-14.md)`
