@@ -43,3 +43,52 @@ sequential.
   0 active / 0 queued). Awaiting worker completion → Shape-G validate
   (or §5.2 advisor-laptop fallback if stuck-runner recurs per L2) →
   bm-pr inline (L3) → CR → user gate 3 → user gate 5 → merge.
+
+## advisor: validated — 2026-05-15
+
+- **Junior #267 done** (run #1 succeeded, 14:42→15:00Z ~17min). Worker
+  raised DQ #219 (`from:impl`) CLEANLY off the L1-fixed base — NO id
+  collision (contrast PR-6 #266 stale-base collision DQ #214). **The
+  proactive L1 daemon-base root fix worked** — empirically confirmed
+  the retro diagnosis. Worker code commit `511640ae9`:
+  - touches ONLY `crates/api/api_crud/src/governance/create_report.rs`
+    (+65/-11); subject `fix(api_crud): wrap create_report
+    SELECT-then-write in run_transaction (audit 3.B.1 CRIT)`.
+  - extracts `process_report` helper mirroring
+    `create_endorsement::process_endorsement`
+    (`#[allow(clippy::too_many_arguments)]`, returns
+    `LemmyResult<CreateGovernanceReportResponse>`).
+  - wraps the SELECT-then-UPDATE/INSERT block in
+    `conn.run_transaction(|conn| async move {…}.scope_boxed())` —
+    CRITICAL TOCTOU race closed.
+  - hoists pseudonym fetch PRE-tx (mirrors `create_endorsement.rs` per
+    ADR-015); rewires `governance_log::append` from pre-tx `pool_ref`
+    to in-tx `&mut (&mut *conn).into()` (substantive: log appends now
+    atomic with the case write). Zero behavior change.
+- Cherry-picked ONLY `511640ae9` → `e57c20e9e` on chore (NOT the
+  worker's GH-Shape-G-referencing DQ commit). `git diff --stat
+  origin/governance-v0...HEAD` = ONLY `create_report.rs` + this runlog
+  + DQ — no scope creep.
+- Pushed `chore/refactor-toctou` (`be0d1eda5..e57c20e9e`).
+  `cargo-validate-workspace.yml` triggers on `junior/*` ONLY (not
+  `chore/*`); worker #267 `junior/*` push triggered run `25924783575`
+  = **5th persistent stuck-runner** (PR-4 ×2 + PR-5 ×1 + PR-6 ×1 +
+  PR-2 ×1 — frozen `in_progress`, zero job progress). Cancelled per
+  advisor-orchestrator.md §5.2 (advisor-laptop fallback,
+  user-authorised "Go with C" + overnight autonomy + sequential lane).
+- **§5.2 advisor-laptop validation — PASS:** local
+  `cargo-check.bat --workspace --features full` → `CHECK_EXIT_0`
+  (12m14s, `lemmy_api_crud` clean); local `cargo-test.bat --workspace
+  --features full --no-run` → `TESTCOMPILE_EXIT_0` (all test targets
+  incl `e2e.rs` compiled clean). Logs at
+  `C:/Users/barri/.claude/logs/pr2-check.log` +
+  `pr2-testcompile.log`. Authoritative entry: **DQ #219**
+  (`from:advisor`, `kind:validate-pending`, `result:pass`,
+  `answered_by:advisor-laptop`). L6 submodule was init'd pre-emptively
+  — no `lemmy_email build.rs` failure recurred.
+- Next: bm-pr INLINE (L3/L15) per
+  `.claude/PRPs/briefs/refactor-toctou-bm-pr.md` (authored on
+  governance-v0 `a998ecc03` — L5: NOT cherry-picked here) → CR →
+  user gate 3 → user gate 5 → merge → strict-gate 4/5 → surface PR-1
+  for explicit user go-ahead (do NOT auto-start the highest-risk
+  e2e.rs lane).
