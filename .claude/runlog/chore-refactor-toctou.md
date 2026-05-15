@@ -37,5 +37,9 @@ sequential.
   worktree (checked out `a3f9e466`) — re-pointed worktrees don't
   auto-init submodules; this prevents the PR-6 cargo-check
   `lemmy_email build.rs read_dir` failure before it can happen.
-- Next: dispatch impl-task Junior with `base_branch=governance-v0`
+- Dispatched impl-task **Junior #267** with `base_branch=governance-v0`
   (NOT `chore/*` — L3) per `.claude/PRPs/briefs/refactor-toctou-impl.md`.
+  Daemon health confirmed pre-dispatch (PID 258450, uptime 195h,
+  0 active / 0 queued). Awaiting worker completion → Shape-G validate
+  (or §5.2 advisor-laptop fallback if stuck-runner recurs per L2) →
+  bm-pr inline (L3) → CR → user gate 3 → user gate 5 → merge.
