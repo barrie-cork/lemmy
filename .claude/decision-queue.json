@@ -3598,6 +3598,27 @@
       "log_slice": null,
       "failed_jobs": null,
       "resolved_at": "2026-05-15T12:57:21Z"
+    },
+    {
+      "id": 219,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T15:42:13Z",
+      "question": "PR-2 create_report.rs run_transaction TOCTOU fix (audit 3.B.1 CRIT) — workspace check + test-target compile",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Shape-G cargo-validate-workspace triggers on junior/* pushes ONLY (not chore/*). Worker #267's junior/* push triggered run 25924783575, which was the 5TH PERSISTENT stuck-runner (PR-4 x2 + PR-5 x1 + PR-6 x1 + PR-2 x1) — status=in_progress, updatedAt frozen at 14:58:58Z since creation 14:58:52Z (~70min stale, job 'validate workspace' zero progress); CANCELLED per advisor-orchestrator.md §5.2 (advisor-laptop fallback, user-authorised 'Go with C' 2026-05-15 + overnight autonomy + sequential lane processing — covers PR-2). L1 daemon-base ROOT FIX was applied PRE-DISPATCH: the daemon /srv/brehon-fork governance-v0 was STALE at ac52534e3d (not on the merged lineage — exact root cause of PR-6 #266's colliding DQ #214); reset to origin/governance-v0 09db10847, so worker #267 branched from the correct base and raised its own DQ #219 (from:impl) CLEANLY off that base with no id collision (the L1 fix worked — 'raised-clean' mode, contrast PR-6 #266 stale-collision). The advisor cherry-picked ONLY the code commit 511640ae9 (-> e57c20e9e on chore) onto chore/refactor-toctou, NOT the worker's GH-Shape-G-referencing DQ commit; this advisor-laptop entry is the authoritative validation record (id 219 is free on the chore branch since the worker DQ commit was not cherry-picked). L6 submodule fix applied pre-emptively (crates/email/translations init'd) so no lemmy_email build.rs read_dir failure recurred. The cargo-test wrapper applies --workspace; --no-run means it COMPILES all test targets (incl e2e.rs) but executes nothing — pure compile-gate, correct for a structural refactor.",
+      "answer": "pass — PR-2 is validated. Local cargo-check.bat --workspace --features full -> CHECK_EXIT_0 (Finished dev profile in 12m14s; full workspace incl lemmy_api_crud — the crate containing create_report.rs — compiled clean, zero error[/could-not-compile/unused-import). Local cargo-test.bat --workspace --features full --no-run -> TESTCOMPILE_EXIT_0 (all test targets incl tests/e2e.rs + test_errors_used.rs compiled clean). The refactor (extract process_report helper mirroring create_endorsement::process_endorsement; wrap SELECT-then-UPDATE/INSERT block in conn.run_transaction; hoist pseudonym fetch pre-tx per ADR-015; rewire governance_log::append from pre-tx pool_ref to in-tx &mut (&mut *conn).into() so log appends are atomic with the case write) compiles with zero behavior change. Logs: C:/Users/barri/.claude/logs/pr2-check.log + C:/Users/barri/.claude/logs/pr2-testcompile.log. NOTE: no concurrency test added (out of scope per impl brief §5); pre-tx reason_code validation intentionally left pre-tx per audit §3.B.6 positive exemplar. This is the same compile-only Shape-G fallback gate PR-4 (#128) + PR-5 (#129) + PR-6 (#130) shipped on (laptop has no Postgres so DB-dependent tests can't execute); user reviewed + confirmed this validation model and authorised §5.2 advisor-laptop fallback + overnight autonomy + sequential lane (2026-05-15) — covers PR-2 (refactor-tier PR-2 of 5; PR-3 dropped via DQ #214; PR-1 is the LAST and is user-gated explicitly before dispatch).",
+      "answered_by": "advisor-laptop",
+      "branch": "chore/refactor-toctou",
+      "phase_task": "PR-2",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-15T15:42:13Z"
     }
   ],
   "schema_version": 2

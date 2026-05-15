@@ -34,7 +34,7 @@ use diesel::{
   insert_into,
   update,
 };
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   case_open_snapshot,
@@ -89,8 +89,12 @@ pub async fn create_report(
     target_remote_url,
   } = resolve_target(&context, data.target_type, data.target_id).await?;
 
-  let pool_ref = &mut context.pool();
-  let conn = &mut get_conn(pool_ref).await?;
+  // PRE-TX: fetch pseudonym before acquiring the transaction connection
+  // (mirrors create_endorsement.rs pattern per ADR-015).
+  let pseudonym = actor_pseudonym_helper::get_or_create(&mut context.pool(), reporter_id).await?;
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
 
   // Phase 5b task 58: compute the OQ-006 weight from config + reporter
   // snapshot. ConfigCache lives for the whole handler invocation.
@@ -127,6 +131,57 @@ pub async fn create_report(
   let recency_factor = (-hours_old / half_life_hours).exp();
   let weight_micros = compute_weight_micros(base_weight, reporter_reputation, recency_factor);
 
+  let data_for_tx = data;
+  let pseudonym_for_tx = pseudonym;
+
+  let outcome = conn
+    .run_transaction(|conn| {
+      async move {
+        process_report(
+          conn,
+          reporter_id,
+          pseudonym_for_tx,
+          data_for_tx,
+          weight_micros,
+          threshold_micros,
+          reporter_reputation,
+          target_post_id,
+          target_comment_id,
+          target_person_id,
+          target_community_id,
+          target_remote_url,
+          reason_code,
+          cache,
+        )
+        .await
+      }
+      .scope_boxed()
+    })
+    .await?;
+
+  Ok(Json(outcome))
+}
+
+/// Body of the `run_transaction` closure. Named helper so the outer
+/// future stays under the workspace `large_futures` lint threshold
+/// (mirror of `create_endorsement::process_endorsement`).
+#[allow(clippy::too_many_arguments)]
+async fn process_report(
+  conn: &mut AsyncPgConnection,
+  reporter_id: PersonId,
+  pseudonym: String,
+  data: CreateGovernanceReport,
+  weight_micros: i64,
+  threshold_micros: i64,
+  reporter_reputation: f64,
+  target_post_id: Option<PostId>,
+  target_comment_id: Option<CommentId>,
+  target_person_id: Option<PersonId>,
+  target_community_id: Option<CommunityId>,
+  target_remote_url: Option<String>,
+  reason_code: String,
+  mut cache: ConfigCache,
+) -> LemmyResult<CreateGovernanceReportResponse> {
   let existing: Option<(ModerationCaseId, i64, CaseStatus)> = moderation_case::table
     .filter(moderation_case::target_type.eq(data.target_type))
     .filter(
@@ -189,10 +244,11 @@ pub async fn create_report(
         None => Scope::Instance,
       };
       let applied_config_snapshot =
-        case_open_snapshot::build_applied_config_snapshot(&mut conn.into(), case_scope).await?;
+        case_open_snapshot::build_applied_config_snapshot(&mut (&mut *conn).into(), case_scope)
+          .await?;
       let active_version_i64 = config::get_int_opt(
         &mut cache,
-        &mut conn.into(),
+        &mut (&mut *conn).into(),
         case_scope,
         "rule_set.active_version_id",
       )
@@ -231,10 +287,8 @@ pub async fn create_report(
     }
   };
 
-  let pseudonym = actor_pseudonym_helper::get_or_create(pool_ref, reporter_id).await?;
-
   governance_log::append(
-    pool_ref,
+    &mut (&mut *conn).into(),
     "report_created",
     json!({
       "case_id": case_id.0,
@@ -249,7 +303,7 @@ pub async fn create_report(
 
   if just_met_threshold {
     governance_log::append(
-      pool_ref,
+      &mut (&mut *conn).into(),
       "threshold_met",
       json!({
         "case_id": case_id.0,
@@ -260,10 +314,10 @@ pub async fn create_report(
     .await?;
   }
 
-  Ok(Json(CreateGovernanceReportResponse {
+  Ok(CreateGovernanceReportResponse {
     case_id: Some(case_id),
     threshold_met: just_met_threshold,
-  }))
+  })
 }
 
 /// Pure OQ-006 weight computation in micros.
