@@ -165,7 +165,7 @@ pub async fn create_report(
 /// Body of the `run_transaction` closure. Named helper so the outer
 /// future stays under the workspace `large_futures` lint threshold
 /// (mirror of `create_endorsement::process_endorsement`).
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 async fn process_report(
   conn: &mut AsyncPgConnection,
   reporter_id: PersonId,
