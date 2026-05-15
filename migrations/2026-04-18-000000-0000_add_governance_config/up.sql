@@ -73,41 +73,46 @@ CREATE UNIQUE INDEX reputation_snapshot_person_null_community
 -- Seed 34 instance-scoped config rows. ON CONFLICT DO NOTHING on
 -- (scope, key, valid_from) makes this idempotent — reruns after manual
 -- admin edits preserve the admin edits (the unique index on
--- (scope, key, valid_from) distinguishes valid_from=now() from the seed's
--- valid_from=seed-time).
-INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text) VALUES
-    ('instance', 'thresholds.jury_reliability',           'int',  50,         NULL,    NULL, NULL),
-    ('instance', 'thresholds.reporting_accuracy',         'int',  50,         NULL,    NULL, NULL),
-    ('instance', 'thresholds.endorsement_strength',       'int',  25,         NULL,    NULL, NULL),
-    ('instance', 'jury.panel_size',                       'int',  5,          NULL,    NULL, NULL),
-    ('instance', 'jury.quorum',                           'int',  3,          NULL,    NULL, NULL),
-    ('instance', 'jury.age_requirement_days',             'int',  60,         NULL,    NULL, NULL),
-    ('instance', 'jury.max_concurrent_assignments',       'int',  3,          NULL,    NULL, NULL),
-    ('instance', 'jury.fallback_on_small_pool',           'bool', NULL,       NULL,    true, NULL),
-    ('instance', 'deltas.juror_aligned',                  'int',  10,         NULL,    NULL, NULL),
-    ('instance', 'deltas.juror_outlier',                  'int',  -5,         NULL,    NULL, NULL),
-    ('instance', 'deltas.reporter_upheld',                'int',  10,         NULL,    NULL, NULL),
-    ('instance', 'deltas.reporter_dismissed',             'int',  -5,         NULL,    NULL, NULL),
-    ('instance', 'deltas.endorsement_created_sponsor',    'int',  5,          NULL,    NULL, NULL),
-    ('instance', 'deltas.endorsement_created_sponsee',    'int',  5,          NULL,    NULL, NULL),
-    ('instance', 'deltas.sponsor_liability_minor',        'int',  -10,        NULL,    NULL, NULL),
-    ('instance', 'deltas.sponsor_liability_moderate',     'int',  -50,        NULL,    NULL, NULL),
-    ('instance', 'deltas.sponsor_liability_severe',       'int',  -200,       NULL,    NULL, NULL),
-    ('instance', 'liability.founder_multiplier',          'float', NULL,      2.0,     NULL, NULL),
-    ('instance', 'liability.regular_multiplier',          'float', NULL,      1.0,     NULL, NULL),
-    ('instance', 'liability.sponsor_liability_floor',     'int',  0,          NULL,    NULL, NULL),
-    ('instance', 'report.base_weight',                    'float', NULL,      1.0,     NULL, NULL),
-    ('instance', 'report.clamp_min',                      'float', NULL,      0.1,     NULL, NULL),
-    ('instance', 'report.clamp_max',                      'float', NULL,      2.0,     NULL, NULL),
-    ('instance', 'report.recency_half_life_hours',        'float', NULL,      168.0,   NULL, NULL),
-    ('instance', 'report.case_threshold_micros',          'int',  3000000,    NULL,    NULL, NULL),
-    ('instance', 'decay.positive_half_life_days',         'int',  90,         NULL,    NULL, NULL),
-    ('instance', 'onboarding.default_membership_state',   'text', NULL,       NULL,    NULL, 'member'),
-    ('instance', 'onboarding.sponsor_gate_strategy',      'text', NULL,       NULL,    NULL, 'age'),
-    ('instance', 'onboarding.sponsor_min_account_age_days','int', 30,         NULL,    NULL, NULL),
-    ('instance', 'founder.max_founders_active',           'int',  20,         NULL,    NULL, NULL),
-    ('instance', 'founder.max_expires_days',              'int',  365,        NULL,    NULL, NULL),
-    ('instance', 'founder.max_seed_delta',                'int',  200,        NULL,    NULL, NULL),
-    ('instance', 'job.snapshot_interval_seconds',         'int',  900,        NULL,    NULL, NULL),
-    ('instance', 'job.snapshot_batch_chunk_size',         'int',  500,        NULL,    NULL, NULL)
+-- (scope, key, valid_from) distinguishes the seed's pinned literal from
+-- admin edits at valid_from = now()). Every row pins valid_from to the
+-- stable literal '2026-04-18T00:00:00Z' so reruns hit the same row under
+-- the unique index and ON CONFLICT DO NOTHING is a true no-op. Without
+-- the literal, valid_from defaults to now() and each rerun inserts a
+-- duplicate active row (same class as JM-a cr-10, fixed here retroactively
+-- per audit §3.D.6).
+INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text, valid_from) VALUES
+    ('instance', 'thresholds.jury_reliability',           'int',  50,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'thresholds.reporting_accuracy',         'int',  50,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'thresholds.endorsement_strength',       'int',  25,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'jury.panel_size',                       'int',  5,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'jury.quorum',                           'int',  3,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'jury.age_requirement_days',             'int',  60,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'jury.max_concurrent_assignments',       'int',  3,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'jury.fallback_on_small_pool',           'bool', NULL,       NULL,    true, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.juror_aligned',                  'int',  10,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.juror_outlier',                  'int',  -5,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.reporter_upheld',                'int',  10,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.reporter_dismissed',             'int',  -5,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.endorsement_created_sponsor',    'int',  5,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.endorsement_created_sponsee',    'int',  5,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.sponsor_liability_minor',        'int',  -10,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.sponsor_liability_moderate',     'int',  -50,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'deltas.sponsor_liability_severe',       'int',  -200,       NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'liability.founder_multiplier',          'float', NULL,      2.0,     NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'liability.regular_multiplier',          'float', NULL,      1.0,     NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'liability.sponsor_liability_floor',     'int',  0,          NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'report.base_weight',                    'float', NULL,      1.0,     NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'report.clamp_min',                      'float', NULL,      0.1,     NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'report.clamp_max',                      'float', NULL,      2.0,     NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'report.recency_half_life_hours',        'float', NULL,      168.0,   NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'report.case_threshold_micros',          'int',  3000000,    NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'decay.positive_half_life_days',         'int',  90,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'onboarding.default_membership_state',   'text', NULL,       NULL,    NULL, 'member',  '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'onboarding.sponsor_gate_strategy',      'text', NULL,       NULL,    NULL, 'age',     '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'onboarding.sponsor_min_account_age_days','int', 30,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'founder.max_founders_active',           'int',  20,         NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'founder.max_expires_days',              'int',  365,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'founder.max_seed_delta',                'int',  200,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'job.snapshot_interval_seconds',         'int',  900,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz),
+    ('instance', 'job.snapshot_batch_chunk_size',         'int',  500,        NULL,    NULL, NULL,      '2026-04-18T00:00:00Z'::timestamptz)
 ON CONFLICT (scope, key, valid_from) DO NOTHING;
