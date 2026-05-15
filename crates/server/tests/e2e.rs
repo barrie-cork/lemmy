@@ -8,6 +8,36 @@
 //! so the image coordinates exactly match Lemmy's production
 //! `docker-compose.yml`: `pgautoupgrade/pgautoupgrade:18-alpine`.
 
+// Cargo integration test files use top-level test functions by convention;
+// test helpers are defined inline after test setup for readability.
+// These are file-wide #![expect] for patterns that are appropriate in this
+// integration test binary context.
+#![expect(
+  clippy::tests_outside_test_module,
+  reason = "integration test binary; Cargo integration tests are top-level by convention"
+)]
+#![expect(
+  clippy::items_after_statements,
+  reason = "integration test helpers defined inline after test setup for readability"
+)]
+#![expect(
+  clippy::expect_used,
+  clippy::unwrap_used,
+  reason = "integration test assertions; panics signal test failures"
+)]
+#![expect(
+  clippy::indexing_slicing,
+  reason = "integration test assertions; index bounds are enforced by prior length assertions"
+)]
+#![expect(
+  clippy::unreachable,
+  reason = "integration test assertions"
+)]
+#![expect(
+  clippy::get_first,
+  reason = "Vec::first() conflicts with Diesel RunQueryDsl::first(); use .get(0) to avoid trait ambiguity"
+)]
+
 /// Smoke test the harness boot path: container start + Tier 3 template
 /// restore (when enabled) + schema sentinel reachable. Asserts that
 /// `governance_log` is present in `public` schema after `start_postgres`
@@ -240,6 +270,7 @@ mod governance_fixtures {
     /// - Implausibly empty bootstrap dumps in `template_dump_capture`
     ///   (CR finding #15) — catches the "container produced no
     ///   schema" failure mode.
+    ///
     /// 1 KiB is well below any healthy dump (real dumps are
     /// ~400 KiB+) but well above any truncation that would still
     /// register as "looks like a file".
@@ -536,7 +567,7 @@ mod governance_fixtures {
         dump_future,
       )
       .await
-      .map_err(|_| -> Box<dyn Error> {
+      .map_err(|_e| -> Box<dyn Error> {
         format!(
           "pg_dump timed out after {PG_DUMP_TIMEOUT_SECS}s — \
            docker daemon may be stalled. Check `docker ps` and consider \
@@ -836,7 +867,7 @@ mod governance_fixtures {
       "Test Community".to_string(),
       "comm-pubkey".to_string(),
     );
-    Ok(Community::create(&mut ctx.pool(), &community_form).await?)
+    Community::create(&mut ctx.pool(), &community_form).await
   }
 
   /// Seed `count` jurors and return their PersonIds in insertion order.
@@ -1587,7 +1618,7 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   /// (using explicit `::text` in the SELECT avoids a Diesel type-binding
   /// issue for the new enum sql_types).
   #[derive(diesel::QueryableByName, Debug)]
-  #[allow(dead_code)]
+  #[expect(dead_code, reason = "struct fields accessed via Diesel QueryableByName reflection")]
   struct BackfilledRow {
     #[diesel(sql_type = Int4)]
     id: i32,
@@ -2142,7 +2173,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     sql_types::{Bytea, Int8, Text},
   };
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-  use ed25519_dalek::{Signature, SigningKey, Verifier, VerifyingKey};
+  use ed25519_dalek::{Signature, SigningKey, Verifier};
   use lemmy_api::governance::{
     accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
@@ -2427,11 +2458,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   // sponsor liability, public_case_log append, federation publish, nor
   // governance_log case_decided/sanction_created/public_log_published).
   // See CodeRabbit PR #46 finding #15.
-  let voting_jurors: Vec<PersonId> = assign_resp
-    .assigned_person_ids
-    .iter()
-    .copied()
-    .collect();
+  let voting_jurors: Vec<PersonId> = assign_resp.assigned_person_ids.clone();
 
   // Embed every category the redaction layer scrubs so the public-log
   // assertions below exercise mention, email, and profile-URL stripping.
@@ -2683,9 +2710,9 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   let seed_arr: [u8; 32] = signing_seed
     .as_slice()
     .try_into()
-    .map_err(|_| anyhow::anyhow!("signing seed must be 32 bytes"))?;
+    .map_err(|_e| anyhow::anyhow!("signing seed must be 32 bytes"))?;
   let signing_key = SigningKey::from_bytes(&seed_arr);
-  let verifying_key: VerifyingKey = signing_key.verifying_key();
+  let verifying_key = signing_key.verifying_key();
 
   let mut prev: Vec<u8> = vec![0u8; 32];
   for row in &rows {
@@ -2713,7 +2740,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     let sig_arr: [u8; 64] = sig_bytes
       .as_slice()
       .try_into()
-      .map_err(|_| anyhow::anyhow!("row {} signature wrong length", row.id))?;
+      .map_err(|_e| anyhow::anyhow!("row {} signature wrong length", row.id))?;
     let sig = Signature::from_bytes(&sig_arr);
     verifying_key
       .verify(&row.entry_hash, &sig)
@@ -2816,7 +2843,7 @@ async fn v1_jm_a_seed_migration_is_idempotent() -> lemmy_utils::error::LemmyResu
   let mut conn = PgConnection::establish(&db_url)?;
   governance_fixtures::apply_all_schema(&mut conn)?;
 
-  let expected = EXPECTED_SEED_COUNT_V1_JM as i64;
+  let expected = i64::try_from(EXPECTED_SEED_COUNT_V1_JM).expect("count fits i64");
 
   // Count rows at the stable seed valid_from.
   let q = "SELECT count(*) AS n FROM governance_config \
@@ -3139,6 +3166,10 @@ async fn sponsor_liability_with_founder_multiplier() -> lemmy_utils::error::Lemm
   // `submit_jury_vote` switched to the federation Data (it hands it to
   // `federation_outbox::send_local_sanction_notice`) while every other
   // governance handler still uses the actix Data.
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "integration test helper orchestrates a full sanction round; all parameters are required"
+  )]
   async fn run_sanction_scenario(
     context: &Data<LemmyContext>,
     federation_context: &activitypub_federation::config::Data<LemmyContext>,
@@ -4374,7 +4405,7 @@ async fn governance_events_notify_fires() -> lemmy_utils::error::LemmyResult<()>
   // 5. Await notification with timeout.
   let notif = tokio::time::timeout(StdDuration::from_secs(2), rx.recv())
     .await
-    .map_err(|_| anyhow::anyhow!("notification timed out after 2s"))?
+    .map_err(|_e| anyhow::anyhow!("notification timed out after 2s"))?
     .ok_or_else(|| anyhow::anyhow!("notification channel closed"))?;
 
   // 6. Assert channel + payload shape.
@@ -5623,7 +5654,7 @@ mod admin_config_fixtures {
   /// Read the first instance (auto-created by migrations as
   /// `local_site.site_id = 1`) or create a fresh `test.invalid` one.
   pub async fn bootstrap_instance(ctx: &LemmyContext) -> LemmyResult<Instance> {
-    Ok(Instance::read_or_create(&mut ctx.pool(), "test.invalid").await?)
+    Instance::read_or_create(&mut ctx.pool(), "test.invalid").await
   }
 
   /// v1-AD-c task 8 helper: seed a non-admin user AND register them as a
@@ -6760,7 +6791,7 @@ async fn admin_create_rule_set_duplicate_version_rejected()
     Ok(_) => unreachable!("UniqueViolation asserted at step above"),
   };
   match mapped.error_type {
-    LemmyErrorType::Unknown(ref msg) => assert!(
+    LemmyErrorType::Unknown(msg) => assert!(
       msg.contains("rule_set_version already exists"),
       "handler maps UniqueViolation to a retry-shaped Unknown error carrying the rule_set collision message; got {msg:?}",
     ),
@@ -7747,7 +7778,7 @@ async fn admin_audit_stream_emits_frame_on_config_change()
     Pin::new(&mut body).poll_next(cx)
   }))
   .await
-  .map_err(|_| anyhow::anyhow!("timed out waiting for initial retry frame"))?
+  .map_err(|_e| anyhow::anyhow!("timed out waiting for initial retry frame"))?
   .ok_or_else(|| anyhow::anyhow!("body ended before retry frame"))?
   .map_err(|e| anyhow::anyhow!("body error on retry frame: {e}"))?;
   let retry_str = std::str::from_utf8(&retry_frame)
@@ -7797,7 +7828,7 @@ async fn admin_audit_stream_emits_frame_on_config_change()
     }
   })
   .await
-  .map_err(|_| anyhow::anyhow!("timed out waiting for admin_config_changed frame"))??;
+  .map_err(|_e| anyhow::anyhow!("timed out waiting for admin_config_changed frame"))??;
 
   // SSE framing: `event: admin_config_changed\ndata: {json}\n\n`.
   assert!(
@@ -7908,6 +7939,10 @@ mod v1_jm_b_fixtures {
   /// NULL (instance-scope) so the eligibility query's
   /// `rs.community_id IS NOT DISTINCT FROM $1` matches any snapshot (or,
   /// under the small-pool fallback, ignores community scope entirely).
+  #[expect(
+    clippy::unused_async,
+    reason = "callers .await this; body uses sync Diesel but signature must be async for call-site consistency"
+  )]
   pub async fn seed_case(
     db_url: &str,
     target: PersonId,
@@ -9094,6 +9129,10 @@ async fn submit_jury_vote_deadlock_flips_to_admin_review()
   assert!(final_resp.decision.is_none(), "deadlock has no winning decision");
 
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  #[expect(
+    clippy::type_complexity,
+    reason = "Diesel tuple query; local variable type annotation required for inference"
+  )]
   let (status, decided_at, appeal_expires, closed_at): (
     CaseStatus,
     Option<chrono::DateTime<chrono::Utc>>,
@@ -9283,6 +9322,10 @@ async fn submit_jury_vote_writes_appeal_window_default()
   }
 
   let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  #[expect(
+    clippy::type_complexity,
+    reason = "Diesel tuple query; local variable type annotation required for inference"
+  )]
   let (status, decided_at, closed_at, appeal_expires): (
     CaseStatus,
     Option<chrono::DateTime<chrono::Utc>>,
@@ -9970,6 +10013,10 @@ mod v1_jm_e_fixtures {
   /// which would break the 5-juror accept loop.
   ///
   /// Returns the same shape as [`seed_appealed_case_with_panel`].
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "integration test fixture requires all caller-side inputs; no natural grouping"
+  )]
   pub async fn seed_appealed_case_with_panel_via_report(
     context: &actix_web::web::Data<LemmyContext>,
     db_url: &str,
@@ -10508,7 +10555,7 @@ async fn governance_log_sequence_matches_prd_state_machine()
   let mut seen: HashSet<&str> = HashSet::new();
   let mut sequence: Vec<&str> = Vec::new();
   for (kind, payload) in &all_entries {
-    let row_case_id = payload.get("case_id").and_then(|v| v.as_i64());
+    let row_case_id = payload.get("case_id").and_then(serde_json::Value::as_i64);
     if row_case_id != Some(case_id_i64) {
       continue;
     }
@@ -12680,7 +12727,7 @@ mod v1_sl_c_fixtures {
     // ASC is deterministic. Offsets: -5, -4, -3, -2, -1 minutes.
     // Index 0 → earliest (processed first); index 4 → latest (processed last).
     for i in 0..5usize {
-      let offset_minutes = 5 - i as i64;
+      let offset_minutes = 5 - i64::try_from(i).expect("loop index fits i64");
       seed_pending_case(
         &mut conn,
         sponsee_ids[i],
