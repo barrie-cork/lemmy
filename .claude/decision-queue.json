@@ -3556,6 +3556,27 @@
       "answer": "PASS — GH cargo-validate-migration run 25891289464 conclusion=success (23:21Z, same push as the stuck workspace run). Migration round-trip green on GH-hosted runner; only the workspace job stuck. Backfilled to preserve Shape-G two-phase audit trail. USER-APPROVAL: user explicitly authorised option (c) advisor-laptop fallback validation on 2026-05-15 ('Go with C', in response to the workspace-check stuck-runner x2 catch-fire). §5.2 validate-pending-laptop is a mechanical validation runner (not an ADR/scope/visible-impact decision per gate-2); this reference is added for audit self-containment per CR finding cr-1 on PR #128.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-15T08:48:00Z"
+    },
+    {
+      "id": 217,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T09:25:08Z",
+      "question": "PR-5 (diesel-errors) workspace check — backfilled by advisor-laptop after Junior #265 omitted Recipe-1 DQ write and GH cargo-validate-workspace stuck-runner (3rd instance)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Junior #265 succeeded + pushed worker commit (admin_audit_stream.rs +10/-3, .map_err logging variant) but did NOT raise the brief-mandated validate-pending entry (2/2 impl-task process miss — #263+#265). GH cargo-validate-workspace run 25909954720 froze (frozen-updatedAt 12s after create) — 3rd identical-pathology instance (PR-4 x2 + this); cancelled, tripped early per confirmed-pattern judgment. Advisor-laptop fallback per advisor-orchestrator.md §5.2: cargo-check.bat --workspace --features full on worker tip e19ad8e4d detached HEAD = CHECK_EXIT_0, 'Finished dev profile in 2m 02s', zero errors. Log: C:/Users/barri/.claude/logs/validate-laptop-pr5-workspace.log. PR-5 is Rust-only — no migration check (no paired entry).",
+      "workflow_run_id": null,
+      "branch": "chore/refactor-diesel-errors",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS — local cargo-check --workspace --features full exited 0 (2m02s warm, zero errors) on worker tip e19ad8e4d (rebased to c1b3978c0 onto chore/refactor-diesel-errors; clean — admin_audit_stream.rs untouched between merge-base and chore tip, PR-4 migration commit auto-dropped as already-upstream via #128 squash). GH-side workspace check abandoned after 3rd stuck-runner instance (confirmed persistent GH cargo-validate-workspace runner problem; cargo-validate-migration on prior pushes ran fine). Equivalent validation per §5.2 validate-pending-laptop handler. USER-APPROVAL: user explicitly authorised option (c) advisor-laptop fallback validation on 2026-05-15 ('Go with C', in response to the PR-4 workspace-check stuck-runner catch-fire); same authorised mechanism reused for PR-5's 3rd-instance recurrence. §5.2 validate-pending-laptop is a mechanical validation runner (not an ADR/scope/visible-impact decision per gate-2).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-15T09:25:08Z"
     }
   ],
   "schema_version": 2
