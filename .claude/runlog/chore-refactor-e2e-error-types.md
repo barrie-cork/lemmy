@@ -136,3 +136,52 @@ sign-off).
   CR → user gate 3 → user gate 5 → merge → **strict-gate 5/5 →
   STOP → 4-role FINAL retro (MUST call out deferred 3.E.2 / task #8
   as explicit carry-forward) → user sign-off**.
+
+---
+
+## bm: PR #132 opened — 2026-05-15
+
+- **Junior #269 finished `done`** — delivered the Gate-2 lint
+  cleanup (worker tip `f30fd2013`; e2e.rs delta in `a82769876`).
+  Advisor cherry-picked ONLY the `crates/server/tests/e2e.rs` delta
+  (+67/-20; dropped #269's decision-queue.json churn so advisor
+  retains DQ attribution) onto chore as `919fe8400`
+  (`chore(test): fix pre-existing e2e.rs clippy lints for Gate 2
+  (DQ #221; PR-1 continuation)`; HANDOVER trailer documents the
+  user-ratified `#![expect]` deviation rationale).
+- **`#![expect]` deviation USER-RATIFIED (2× AskUserQuestion):**
+  #269 used 7 self-cleaning file-level `#![expect(...)]` (+ ~13
+  per-site lint fixes) rather than per-site rewrites of every
+  `expect_used`/`unwrap_used`/`indexing_slicing`/`get_first` site.
+  This deviates from DQ #221's literal "no blanket masking" wording.
+  Advisor surfaced it (gate 2 — scope-vs-policy on the highest-risk
+  LAST lane); user first leaned strict + asked for a recommendation;
+  advisor recommended ACCEPT (`#![expect]` is self-cleaning — build
+  FAILS via `unfulfilled_lint_expectations` if a lint stops firing,
+  categorically ≠ `#![allow]`-spam; `get_first` = genuine Diesel
+  `RunQueryDsl::first()` trait-ambiguity; `tests_outside_test_module`
+  false-positive on Cargo integration-test files); user RATIFIED
+  ("Accept recommendation (option 1)"). Documented in the PR body +
+  to be in the FINAL retro.
+- **§5.2 advisor-laptop validation (load-bearing FULL e2e):**
+  CHECK_EXIT_0 12m39s + CLIPPY_EXIT_0 7m56s (clippy scoped
+  `--test e2e` per DQ #221 fallback; 0 warn / 0 err — confirms the
+  `#![expect]` set is complete AND self-cleaning-valid) +
+  E2E_EXIT_0 1864.47s ≈ 31m4s: **88 passed; 0 failed; 5 ignored**
+  (GH #42/#43×3/#45 — pre-existing deflakes, NOT regressions;
+  #43×3 = the now-split `test_phase1_migrations_*`). validate-pending
+  DQ **#223** (advisor-laptop, result:pass) at `3084eaab4`. Test
+  count 69→71 (round-trip split +2). Shape-G workspace-check run
+  `25935134971` ALSO triggered on `junior/*` this cycle.
+- **bm-pr INLINE** (advisor — L15/L3): bm-pr brief authored on
+  governance-v0 `116e87db3` (L5 — NOT cherry-picked onto chore).
+  `gh pr create --repo barrie-cork/lemmy --base governance-v0
+  --head chore/refactor-e2e-error-types` → **PR #132**:
+  https://github.com/barrie-cork/lemmy/pull/132 (not draft).
+- Next: poll CodeRabbit → write `.claude/PRPs/reviews/pr-132-findings.yaml`
+  (four-bucket triage) → **USER GATE 3** (CR triage) → **USER GATE 5**
+  (merge confirm) → merge `--merge` + L16 branch-delete + L6
+  worktree cleanup → **strict-gate 5/5 → autonomous loop STOPS →
+  4-role refactor-tier FINAL retro (explicit 3.E.2 / task #8
+  carry-forward) → surface → WAIT for user sign-off**. Do NOT
+  proceed to v1 PRD / `/brehon-phase-transition`.
