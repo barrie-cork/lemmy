@@ -315,3 +315,78 @@ async fn main() -> LemmyResult<()> {
   let args = Args::parse();
   run(args).await
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn assert_unknown_err(result: LemmyResult<FounderSpec>, substr: &str) -> LemmyResult<()> {
+    match result {
+      Ok(_) => Err(LemmyErrorType::Unknown(format!("expected Err containing '{substr}'")).into()),
+      Err(e) => match &e.error_type {
+        LemmyErrorType::Unknown(msg) => {
+          assert!(msg.contains(substr), "error missing '{substr}'; got: {msg}");
+          Ok(())
+        }
+        _ => Err(
+          LemmyErrorType::Unknown(format!("unexpected error variant: {}", e.error_type)).into(),
+        ),
+      },
+    }
+  }
+
+  #[test]
+  fn parse_founder_spec_valid() -> LemmyResult<()> {
+    let spec = parse_founder_spec("42:5:10:15", 100)?;
+    assert_eq!(spec.person_id.0, 42);
+    assert_eq!(spec.jury_reliability, 5);
+    assert_eq!(spec.reporting_accuracy, 10);
+    assert_eq!(spec.endorsement_strength, 15);
+    Ok(())
+  }
+
+  #[test]
+  fn parse_founder_spec_negative_delta() -> LemmyResult<()> {
+    assert_unknown_err(parse_founder_spec("1:0:5:5", 100), "jury_reliability must be > 0")?;
+    assert_unknown_err(
+      parse_founder_spec("1:5:-3:5", 100),
+      "reporting_accuracy must be > 0",
+    )?;
+    Ok(())
+  }
+
+  #[test]
+  fn parse_founder_spec_exceeds_max() -> LemmyResult<()> {
+    assert_unknown_err(
+      parse_founder_spec("1:101:5:5", 100),
+      "jury_reliability=101 exceeds founder.max_seed_delta=100",
+    )?;
+    Ok(())
+  }
+
+  #[test]
+  fn parse_founder_spec_wrong_segment_count() -> LemmyResult<()> {
+    assert_unknown_err(
+      parse_founder_spec("1:5:5", 100),
+      "must be PERSON_ID:JUR:RPT:END",
+    )?;
+    assert_unknown_err(
+      parse_founder_spec("1:5:5:5:5", 100),
+      "must be PERSON_ID:JUR:RPT:END",
+    )?;
+    Ok(())
+  }
+
+  #[test]
+  fn parse_founder_spec_non_numeric() -> LemmyResult<()> {
+    assert_unknown_err(
+      parse_founder_spec("not_a_num:5:5:5", 100),
+      "person-id not a valid i32",
+    )?;
+    assert_unknown_err(
+      parse_founder_spec("1:abc:5:5", 100),
+      "jury_reliability not a valid i32",
+    )?;
+    Ok(())
+  }
+}
