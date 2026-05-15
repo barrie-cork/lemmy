@@ -3532,7 +3532,7 @@
       "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": "PASS — local cargo-check --workspace --features full exited 0 (7m23s, zero errors) on worker tip 2a14893d5 (rebased to a2aa023ed onto chore/refactor-valid-from; only unrelated .claude/briefs prose differs between bases, SQL identical). GH-side workspace check abandoned after 2x stuck-runner. Equivalent validation per §5.2 validate-pending-laptop handler.",
+      "answer": "PASS — local cargo-check --workspace --features full exited 0 (7m23s, zero errors) on worker tip 2a14893d5 (rebased to a2aa023ed onto chore/refactor-valid-from; only unrelated .claude/briefs prose differs between bases, SQL identical). GH-side workspace check abandoned after 2x stuck-runner. Equivalent validation per §5.2 validate-pending-laptop handler. USER-APPROVAL: user explicitly authorised option (c) advisor-laptop fallback validation on 2026-05-15 ('Go with C', in response to the workspace-check stuck-runner x2 catch-fire). §5.2 validate-pending-laptop is a mechanical validation runner (not an ADR/scope/visible-impact decision per gate-2); this reference is added for audit self-containment per CR finding cr-1 on PR #128.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-15T08:48:00Z"
     },
@@ -3553,7 +3553,7 @@
       "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
-      "answer": "PASS — GH cargo-validate-migration run 25891289464 conclusion=success (23:21Z, same push as the stuck workspace run). Migration round-trip green on GH-hosted runner; only the workspace job stuck. Backfilled to preserve Shape-G two-phase audit trail.",
+      "answer": "PASS — GH cargo-validate-migration run 25891289464 conclusion=success (23:21Z, same push as the stuck workspace run). Migration round-trip green on GH-hosted runner; only the workspace job stuck. Backfilled to preserve Shape-G two-phase audit trail. USER-APPROVAL: user explicitly authorised option (c) advisor-laptop fallback validation on 2026-05-15 ('Go with C', in response to the workspace-check stuck-runner x2 catch-fire). §5.2 validate-pending-laptop is a mechanical validation runner (not an ADR/scope/visible-impact decision per gate-2); this reference is added for audit self-containment per CR finding cr-1 on PR #128.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-15T08:48:00Z"
     }
