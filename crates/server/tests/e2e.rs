@@ -1142,11 +1142,11 @@ fn assert_revert_list_matches_disk() {
     })
     .filter_map(|entry| {
       let entry = entry.expect("readable migrations dir entry");
-      if entry.file_type().expect("entry file_type").is_dir() {
-        Some(entry.file_name().to_string_lossy().into_owned())
-      } else {
-        None
-      }
+      entry
+        .file_type()
+        .expect("entry file_type")
+        .is_dir()
+        .then(|| entry.file_name().to_string_lossy().into_owned())
     })
     .collect();
   // Migration directory names are `YYYY-MM-DD-HHMMSS-NNNN_slug`, so
