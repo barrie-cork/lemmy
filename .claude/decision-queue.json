@@ -3577,6 +3577,27 @@
       "answer": "PASS — local cargo-check --workspace --features full exited 0 (2m02s warm, zero errors) on worker tip e19ad8e4d (rebased to c1b3978c0 onto chore/refactor-diesel-errors; clean — admin_audit_stream.rs untouched between merge-base and chore tip, PR-4 migration commit auto-dropped as already-upstream via #128 squash). The merged code uses a `match` on the .optional() Result with `continue` on the Err arm (NOT a .map_err(...).ok().flatten() chain — the bm-pr brief's anticipated variant; the worker chose a cleaner idiomatic match). GH-side workspace check abandoned after 3rd stuck-runner instance (confirmed persistent GH cargo-validate-workspace runner problem; cargo-validate-migration on prior pushes ran fine). Equivalent validation per §5.2 validate-pending-laptop handler. USER-APPROVAL (per-instance, PR-5): user explicitly authorised option (c) advisor-laptop fallback validation on 2026-05-15 ('Go with C', responding to the PR-4 workspace stuck-runner catch-fire) AND granted overnight autonomous operation ('guide this overnight autonomously', 2026-05-15) AND confirmed sequential lane processing ('I prefer to do seqnetially', 2026-05-15) — the authorisation explicitly covers reuse of the §5.2 advisor-laptop fallback mechanism for each refactor lane including this PR-5 instance. Approval evidence: this entry's own timestamp + answered_by:advisor-laptop, cross-referenced to the 2026-05-15 transcript authorisations above (per-instance pointer per CR #129 cr-1). §5.2 validate-pending-laptop is a mechanical validation runner (not an ADR/scope/visible-impact decision per gate-2).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-15T09:25:08Z"
+    },
+    {
+      "id": 218,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T12:57:21Z",
+      "question": "PR-6 seed_founders parse_founder_spec unit tests — workspace check + 5-test local run",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Shape-G cargo-validate-workspace run 25917190542 was the 4th persistent stuck-runner (PR-4 x2 + PR-5 x1 + PR-6 x1) — frozen updatedAt since creation, zero job progress; cancelled per advisor-orchestrator.md §5.2 (advisor-laptop fallback, user-authorised 'Go with C' 2026-05-15). cargo-check attempt-1 failed on an uninitialized lemmy_email translations git submodule (crates/email/translations, lemmy-translations.git) in the re-pointed worktree — a worktree-bootstrap defect fixed via `git submodule update --init crates/email/translations`, NOT a code defect. cargo-test attempt-1 failed on a wrong -p selector (impl brief §2.5/§4 said `-p seed_founders` but the crate name is `brehon_seed_founders` — directory name ≠ crate name), corrected to `-p brehon_seed_founders`. Junior worker #266 raised a colliding DQ #214 off a stale daemon governance-v0 base (branched f0c2b75af carrying already-merged PR-4/PR-5 commits) — that entry was DISCARDED; this is the correctly re-authored entry. The cargo-test wrapper applies --workspace (overriding -p), so it executed the full workspace test suite, not only the seed_founders binary.",
+      "answer": "pass — PR-6 is validated. Local cargo-check.bat --workspace --features full → CHECK_EXIT_0 (attempt 2, 6m21s, post submodule-init; full workspace incl brehon_seed_founders compiles clean). The 5 new parse_founder_spec tests ALL PASS: seed_founders test binary reported 'test result: ok. 5 passed; 0 failed; 0 ignored' (parse_founder_spec_valid / _exceeds_max / _negative_delta / _non_numeric / _wrong_segment_count all ... ok). HONEST validation caveat: because the wrapper forces --workspace, the run also executed lemmy_api's lib tests, of which 8 FAILED with 'LazyLock instance has previously been poisoned' originating at crates/utils/src/settings/mod.rs:27 (the SETTINGS LazyLock cannot initialize without Postgres on the laptop; one init failure poisons the process-wide lock and cascades to 7 more). These 8 failures are PRE-EXISTING, DB-environment-dependent tests in a DIFFERENT crate (lemmy_api --lib), entirely UNTOUCHED by PR-6 — PR-6 only appends a #[cfg(test)] mod tests block to crates/tools/seed_founders/src/main.rs, with zero production-code change and no Cargo.toml change. This is the identical laptop-has-no-DB limitation that made PR-4 (#128) and PR-5 (#129) use compile-only (cargo-check) as the Shape-G fallback gate; they shipped on that basis. User reviewed this exact split and confirmed 'Validated — proceed' (2026-05-15). User also authorised the advisor-laptop fallback ('Go with C', 2026-05-15) + overnight autonomy + sequential lane processing — these cover PR-6, the LAST refactor lane (PR-6 of 5; PR-3 dropped via DQ #214).",
+      "answered_by": "advisor-laptop",
+      "branch": "chore/refactor-seed-tests",
+      "phase_task": "PR-6",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-15T12:57:21Z"
     }
   ],
   "schema_version": 2
