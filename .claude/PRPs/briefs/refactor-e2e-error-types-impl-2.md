@@ -187,12 +187,32 @@ not assume the list above is exhaustive or the line numbers current.
 ## §4 Constraints
 
 - **Branch / base:** dispatched `base_branch=governance-v0`. **FIRST
-  ACTION:** `git cherry-pick f258824b5` (the chore-branch code
-  commit with Passes 1+3+4 + the accepted create_report.rs fix). Its
-  parent is `governance-v0` HEAD so it applies cleanly. Verify
-  `git diff --stat <base>...HEAD` after the cherry-pick = ONLY
-  `crates/server/tests/e2e.rs` + `crates/api/api_crud/src/governance/
-  create_report.rs`. THEN do the lint fixes on top.
+  ACTION (run these EXACT commands before anything else):**
+
+  ```bash
+  git fetch origin chore/refactor-e2e-error-types
+  git cherry-pick f258824b5
+  # f258824b5 = the chore-branch code commit: Passes 1+3+4 + the
+  # accepted 1-line create_report.rs fix. Its parent is governance-v0
+  # HEAD (ef393c7bd) so the pick applies cleanly with NO conflicts.
+  # If git reports the commit object is missing, run:
+  #   git fetch origin 'refs/heads/chore/refactor-e2e-error-types:refs/remotes/origin/chore/refactor-e2e-error-types'
+  # then retry the cherry-pick by SHA.
+  ```
+
+  Then verify the baseline BEFORE touching any lint:
+
+  ```bash
+  git diff --stat $(git merge-base HEAD origin/governance-v0)...HEAD
+  # MUST show ONLY:
+  #   crates/api/api_crud/src/governance/create_report.rs   |  2 +-
+  #   crates/server/tests/e2e.rs                             | ... 
+  grep -c '^async fn ' crates/server/tests/e2e.rs   # MUST be 71
+  ```
+
+  If the diff shows any other file or the count is not 71, **STOP
+  and raise a `kind: "blocker"` DQ** — the cherry-pick is wrong; do
+  not proceed. THEN do the lint fixes on top.
 - **Files:** ONLY `crates/server/tests/e2e.rs` for the lint work.
   The `create_report.rs` change is inherited from the cherry-pick —
   do NOT modify it further. NO other files.
