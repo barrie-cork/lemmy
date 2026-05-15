@@ -33,10 +33,6 @@
   clippy::unreachable,
   reason = "integration test assertions"
 )]
-#![expect(
-  clippy::get_first,
-  reason = "Vec::first() conflicts with Diesel RunQueryDsl::first(); use .get(0) to avoid trait ambiguity"
-)]
 
 /// Smoke test the harness boot path: container start + Tier 3 template
 /// restore (when enabled) + schema sentinel reachable. Asserts that
@@ -1066,31 +1062,28 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
   Ok(())
 }
 
-/// LIFO-positional count of migrations to revert in the Phase-1 round-trip
-/// tests. Each governance sub-phase adds migrations; this must be bumped
-/// manually when new migrations are added.
+/// Explicit, newest-first list of migration directory basenames the
+/// Phase-1 round-trip tests revert. The list itself is authoritative:
+/// per-group counts and bump ranges are documented inline beside each
+/// group below (the previous hand-maintained phase-by-phase tally is
+/// gone — it had drifted out of sync with the entries, the exact failure
+/// mode audit 3.E.4 set out to remove).
 ///
-/// **Bookkeeping fiction**: any new migration silently takes the next LIFO
-/// slot without renaming this constant — the revert and re-apply tests only
-/// assert what happens to be in the LIFO window at this count.
-/// Phase-by-phase breakdown (not enforced, informational only):
-///   - 6 Phase 1 migrations (enums, core, jury, rep+surety, pseudonym, governance_log)
-///   - 2 Phase 5a migrations (add_governance_config + add_person_membership_state)
-///   - 1 Phase 5b Slice A migration (add_restoration_sanction_variant — OQ-003)
-///   - 3 v1-JM-a migrations (bump 9 → 12)
-///   - 2 v1-SL-a migrations (bump 12 → 14)
-///   - 4 v1-RT-r1 migrations (this bump, 14 → 18)
+/// The migration runner (`lemmy_diesel_utils::schema_setup::Options::limit`)
+/// supports only count-based revert, not named revert, so the runner is
+/// driven by `MIGRATIONS_TO_REVERT_PHASE_1.len()`. Because `.len()` alone
+/// would let a stale / typo'd / mis-ordered basename pass silently (the
+/// names being inert decoration was itself an audit-3.E.4 gap CR flagged
+/// on PR #132), each round-trip test runs `assert_revert_list_matches_disk`
+/// as a pre-flight: it derives the actual newest-N migration directory
+/// basenames from disk and asserts they equal this slice, so the list is
+/// now executable, not merely documentary.
 ///
-/// **Uncounted drift**: v1-AD-a shipped 4 migrations (rule_set_versions,
-/// sponsor_allowlist, case_applied_config_snapshot, seed_v1_config_keys) but
-/// was not reflected here. The test is `#[ignore]` pending GH issue #43;
-/// a follow-up commit must reconcile when un-ignoring.
-// Named list of migration directory basenames to revert, newest-first.
-// The migration runner (`lemmy_diesel_utils::schema_setup::Options::limit`)
-// only supports count-based revert, NOT named revert — bookkeeping fiction
-// until the runner gains a named-revert API.  We define the list here as
-// documentation + derive the count from its length so that adding an entry
-// automatically increments the limit rather than requiring a manual bump.
+/// **Known uncounted drift**: v1-AD-a shipped 4 migrations
+/// (rule_set_versions, sponsor_allowlist, case_applied_config_snapshot,
+/// seed_v1_config_keys) that predate this list's introduction. The
+/// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
+/// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   // v1-RT-r1 (4 migrations, bump 14 → 18)
   "2026-05-10-000300-0000_seed_v1_rt_config_keys",
@@ -1119,6 +1112,68 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   "2026-04-21-000000-0000_add_federation_attestations",
 ];
 
+/// Pre-flight for the Phase-1 round-trip tests: assert that
+/// `MIGRATIONS_TO_REVERT_PHASE_1` actually matches the newest-N migration
+/// directories on disk, newest-first.
+///
+/// The revert/reapply runners only consume `MIGRATIONS_TO_REVERT_PHASE_1`
+/// via `.len()`, so without this check a stale, typo'd, or mis-ordered
+/// basename would change nothing observable — the named list would be
+/// inert decoration and audit 3.E.4's drift-resistance goal would not be
+/// met (CR flagged exactly this on PR #132). Reading the real directory
+/// names and asserting equality makes the list executable: any future
+/// migration that lands without updating this list (or any reordering /
+/// rename) fails the round-trip tests with a precise diff instead of
+/// silently reverting the wrong window.
+///
+/// `migrations/` is the same repo-root directory the harness embeds via
+/// `embed_migrations!("../../migrations")`; resolved here at runtime
+/// relative to this crate's `CARGO_MANIFEST_DIR` (`crates/server`).
+fn assert_revert_list_matches_disk() {
+  let migrations_dir =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations");
+  let mut dirs: Vec<String> = std::fs::read_dir(migrations_dir)
+    .unwrap_or_else(|e| {
+      panic!("cannot read migrations dir {migrations_dir}: {e}")
+    })
+    .filter_map(|entry| {
+      let entry = entry.expect("readable migrations dir entry");
+      if entry.file_type().expect("entry file_type").is_dir() {
+        Some(entry.file_name().to_string_lossy().into_owned())
+      } else {
+        None
+      }
+    })
+    .collect();
+  // Migration directory names are `YYYY-MM-DD-HHMMSS-NNNN_slug`, so
+  // lexicographic descending order == chronological newest-first, matching
+  // the LIFO order the runner reverts in.
+  dirs.sort_unstable();
+  dirs.reverse();
+
+  let n = MIGRATIONS_TO_REVERT_PHASE_1.len();
+  let newest_n: Vec<&str> =
+    dirs.iter().take(n).map(String::as_str).collect();
+
+  assert_eq!(
+    newest_n.len(),
+    n,
+    "migrations/ has only {} directories but \
+     MIGRATIONS_TO_REVERT_PHASE_1 expects at least {n} \
+     (newest-first list drifted from disk)",
+    newest_n.len()
+  );
+  assert_eq!(
+    newest_n,
+    MIGRATIONS_TO_REVERT_PHASE_1,
+    "MIGRATIONS_TO_REVERT_PHASE_1 is out of sync with the newest {n} \
+     migration directories on disk (newest-first). The named revert list \
+     must equal the actual disk window or the runner reverts the wrong \
+     migrations — update MIGRATIONS_TO_REVERT_PHASE_1 to match (audit \
+     3.E.4 drift-resistance)."
+  );
+}
+
 /// Step 1 of the Phase-1 round-trip: apply all migrations, assert
 /// post-forward schema invariants (Phase-1 tables, SL-a columns/indexes,
 /// RT-r1 columns/indexes/types). Kept separate from the revert and
@@ -1128,6 +1183,11 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
 async fn test_phase1_migrations_forward() -> lemmy_utils::error::LemmyResult<()> {
   use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
   use lemmy_diesel_utils::schema_setup::{self, Options};
+
+  // Pre-flight: the named revert list must match the newest-N migration
+  // directories on disk before any runner consumes its `.len()` (audit
+  // 3.E.4 drift-resistance — see `assert_revert_list_matches_disk`).
+  assert_revert_list_matches_disk();
 
   #[derive(diesel::QueryableByName)]
   struct Count {
@@ -1324,6 +1384,11 @@ async fn test_phase1_migrations_forward() -> lemmy_utils::error::LemmyResult<()>
 async fn test_phase1_migrations_revert() -> lemmy_utils::error::LemmyResult<()> {
   use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
   use lemmy_diesel_utils::schema_setup::{self, Options};
+
+  // Pre-flight: the named revert list must match the newest-N migration
+  // directories on disk before `.limit(MIGRATIONS_TO_REVERT_PHASE_1.len())`
+  // reverts a window (audit 3.E.4 — see `assert_revert_list_matches_disk`).
+  assert_revert_list_matches_disk();
 
   #[derive(diesel::QueryableByName)]
   struct Count {
@@ -1540,6 +1605,11 @@ async fn test_phase1_migrations_revert() -> lemmy_utils::error::LemmyResult<()> 
 async fn test_phase1_migrations_reapply() -> lemmy_utils::error::LemmyResult<()> {
   use diesel::{Connection as _, PgConnection, RunQueryDsl, sql_query};
   use lemmy_diesel_utils::schema_setup::{self, Options};
+
+  // Pre-flight: the named revert list must match the newest-N migration
+  // directories on disk before the revert→reapply window is computed from
+  // its `.len()` (audit 3.E.4 — see `assert_revert_list_matches_disk`).
+  assert_revert_list_matches_disk();
 
   #[derive(diesel::QueryableByName)]
   struct Count {
@@ -8384,7 +8454,7 @@ async fn admin_assign_jury_emits_severity_tier_frozen_governance_log()
     "exactly one severity_tier_frozen entry per assign-jury"
   );
   let payload = rows
-    .get(0)
+    .first()
     .ok_or_else(|| anyhow::anyhow!("no severity_tier_frozen row"))?;
   assert_eq!(
     payload["severity_tier"], Value::String("minor".to_string()),
@@ -8623,7 +8693,7 @@ async fn admin_assign_jury_small_pool_triggers_r1_relaxation()
     "exactly one jury_constraint_violation_log row written for the R1 event"
   );
   let row = jcvl_rows
-    .get(0)
+    .first()
     .ok_or_else(|| anyhow::anyhow!("no jury_constraint_violation_log row"))?;
   assert_eq!(row.0, "no_recent_juror_repeat", "constraint_name matches");
   assert_eq!(
@@ -8833,7 +8903,7 @@ async fn admin_emergency_remove_seats_severe_panel_with_constraint_record()
     "exactly one panel_assembled entry per emergency-remove"
   );
   let payload = panel_payloads
-    .get(0)
+    .first()
     .ok_or_else(|| anyhow::anyhow!("no panel_assembled payload"))?;
   assert_eq!(payload["juror_count"], Value::from(7));
   assert_eq!(payload["severity_tier"], Value::String("severe".to_string()));
