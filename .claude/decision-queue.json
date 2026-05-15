@@ -3514,6 +3514,48 @@
       "result": "pass",
       "log_slice": null,
       "failed_jobs": null
+    },
+    {
+      "id": 215,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T08:48:00Z",
+      "question": "PR-4 (valid-from) workspace check — backfilled by advisor-laptop after Junior #263 omitted Recipe-1 DQ write and GH cargo-validate-workspace stuck-runner x2",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Junior #263 succeeded + pushed worker commit (3 SQL files) but did NOT raise the brief-mandated validate-pending entries. GH cargo-validate-workspace run 25891289465 froze >100min twice (frozen-updatedAt). Advisor-laptop fallback per advisor-orchestrator.md §5.2: cargo-check.sh --workspace --features full on worker tip detached HEAD = CHECK_EXIT_0, 'Finished dev profile in 7m 23s', zero errors. Log: C:/Users/barri/.claude/logs/validate-laptop-pr4-workspace.log",
+      "workflow_run_id": null,
+      "branch": "chore/refactor-valid-from",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS — local cargo-check --workspace --features full exited 0 (7m23s, zero errors) on worker tip 2a14893d5 (rebased to a2aa023ed onto chore/refactor-valid-from; only unrelated .claude/briefs prose differs between bases, SQL identical). GH-side workspace check abandoned after 2x stuck-runner. Equivalent validation per §5.2 validate-pending-laptop handler.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-15T08:48:00Z"
+    },
+    {
+      "id": 216,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T08:48:00Z",
+      "question": "PR-4 (valid-from) migration check — backfilled by advisor-laptop (GH cargo-validate-migration run 25891289464 already passed; Junior #263 omitted Recipe-1 DQ write)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo-validate-migration run 25891289464 on worker push (same push as the stuck workspace run) completed with conclusion=success at 2026-05-14T23:21Z. Junior #263 did not raise the paired validate-pending DQ entry; advisor-laptop backfills the already-green result.",
+      "workflow_run_id": 25891289464,
+      "branch": "chore/refactor-valid-from",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS — GH cargo-validate-migration run 25891289464 conclusion=success (23:21Z, same push as the stuck workspace run). Migration round-trip green on GH-hosted runner; only the workspace job stuck. Backfilled to preserve Shape-G two-phase audit trail.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-15T08:48:00Z"
     }
   ],
   "schema_version": 2
