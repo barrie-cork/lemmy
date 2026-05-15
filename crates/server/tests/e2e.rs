@@ -1178,6 +1178,19 @@ fn assert_revert_list_matches_disk() {
   );
 }
 
+/// Standalone, non-`#[ignore]`d guard so the audit-3.E.4 revert-list
+/// parity check actually runs in the default e2e suite. The three
+/// round-trip tests below also call `assert_revert_list_matches_disk()`
+/// as a pre-flight, but they are all `#[ignore]`d pending GH issue #43,
+/// so without this wrapper a stale/misordered `MIGRATIONS_TO_REVERT_PHASE_1`
+/// would drift unnoticed in normal CI. The helper is pure `std::fs` +
+/// `assert_eq!` (no DB / tokio / testcontainer), so a plain `#[test]`
+/// runs it in milliseconds by default.
+#[test]
+fn phase1_revert_list_matches_disk() {
+  assert_revert_list_matches_disk();
+}
+
 /// Step 1 of the Phase-1 round-trip: apply all migrations, assert
 /// post-forward schema invariants (Phase-1 tables, SL-a columns/indexes,
 /// RT-r1 columns/indexes/types). Kept separate from the revert and
