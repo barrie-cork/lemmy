@@ -3779,6 +3779,54 @@
       "answer": "Suspended. impl-task.md + impl-task-brief.template.md updated to validate-pending-laptop. Advisor §5.2 handler active.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T09:30:00Z"
+    },
+    {
+      "id": 230,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-16T08:42:00Z",
+      "question": "Where do v1-federation-inbound-a's pure-DB trust-state read/update helpers (federation_inbox_check_peer_trust + the federation_peer write helper, brief section 2.1 item 4) live, given Phase 6 proved the PRD section 9.1 crate placement unreachable?",
+      "options": [
+        "lemmy_db_schema query module colocated with the data layer (pure DB reads/writes, no AP-framework dependency)",
+        "lemmy_apub_activities alongside Phase 6 receive_remote_* (PRD section 9.1 assumed crates/apub/apub location)",
+        "a new lemmy_api governance helper module"
+      ],
+      "context": "Brief section 2.1 item 4 defers the module home to planner discovery. Ground truth from crates/apub/activities/src/governance/inbox.rs doc-comment (cites resolved DQ id 37 / DQ-6.6-inbound): Phase 6's receivers MUST live in lemmy_apub_activities ONLY because Activity::receive is invoked by the AP framework at that dep-graph layer with no orchestrator crate above; the original crates/apub/apub/src/governance/inbox.rs target (which PRD section 9.1 assumes for -b's wrapper) was UNREACHABLE for that reason. -a's helpers have NO such constraint: they are called by -b's wrapper (a future sub-phase), not by Activity::receive directly. No existing crates/db_schema/src/source/governance/*.rs model carries a query helper (they are pure model defs), so a sibling QUERY module is the clean home. DB-access pattern is lemmy_diesel_utils::connection::get_conn(pool) -> AsyncPgConnection (inbox.rs:71,157).",
+      "answer": "Option 1 - lemmy_db_schema query module. RESOLUTION (advisor, evidence-based): the -a trust-state helpers are pure DB read/write fns with no ActivityPub-framework dependency, so the Phase-6 crate-placement constraint (DQ id 37: receivers forced into lemmy_apub_activities because Activity::receive is invoked there) does NOT apply to -a. The planner places federation_inbox_check_peer_trust + the federation_peer trust write helper in a query module in the lemmy_db_schema crate (e.g. crates/db_schema/src/source/governance/federation_peer.rs alongside the model, OR a sibling query/impls module - planner picks per the crate's existing query-fn convention; note no existing governance model file carries query helpers, so if the crate has a separate query/impls location prefer that). The PRD section 9.1 'extending crates/apub/apub/src/governance/' language describes -b's WRAPPER (which IS AP-framework-adjacent and inherits Phase 6's lemmy_apub_activities reality per inbox.rs doc-comment / DQ id 37) - NOT -a's pure-DB helpers. The plan section 10 MUST cite the inbox.rs:1-30 doc-comment + resolved DQ id 37 as the precedent for why -b's future wrapper lives in lemmy_apub_activities (not crates/apub/apub), and section 6 must note this so -b's planner inherits the corrected placement. -a ships the helper signatures + the get_conn(pool)->AsyncPgConnection access pattern (mirror inbox.rs:157); -a does NOT wire them into any HTTP/receive path.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T08:42:00Z"
+    },
+    {
+      "id": 231,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-16T08:42:00Z",
+      "question": "v1-federation-inbound-a ships under validate-pending-laptop mode (Shape G suspended, PRECON-3), but the PRECON-4 structural mirror v1-sponsor-liability-a.plan.md uses the Shape-G section 15 shape (cargo-validate-workspace.yml / kind:validate-pending). What concrete section 15 DoD shape does the -a plan author?",
+      "options": [
+        "Translate SL-a Shape-G section 15 into validate-pending-laptop (verbatim cargo cmds; impl-task raises kind:validate-pending-laptop; advisor laptop runs; NO workflows section 15.6)",
+        "Copy SL-a Shape-G section 15 verbatim (workflow YAML refs + kind:validate-pending)",
+        "Author a hybrid naming both workflow YAMLs AND laptop commands"
+      ],
+      "context": "Brief PRECON-3 + section 2.4 say use the pre-Shape-G validate-pending-laptop shape and mirror a PRE-Shape-G plan section 15. But SL-a (the PRECON-4 mirror) is itself a Shape-G plan: grep confirms .claude/PRPs/plans/v1-sponsor-liability-a.plan.md section 15 references cargo-validate-workspace.yml + cargo-validate-migration.yml + kind:'validate-pending' (lines 21,50,235,237,1246-1248). So the planner cannot copy SL-a section 15 - it must TRANSLATE. Shape G is suspended until 2026-06-01 per governance-v0 086cfa5d4/821cbe718 + PMD project_shape_g_suspended_2026_05_16 + DQ #229. The canonical laptop-mode handler is .claude/rules/advisor-orchestrator.md section 5.2 (validate-pending-laptop handler) + .claude/rules/decision-queue.md kind:'validate-pending-laptop'.",
+      "answer": "Option 1 - TRANSLATE, do not copy. RESOLUTION (advisor): the -a plan section 15 uses the validate-pending-laptop shape per PRECON-3. Concrete authoring rule for the planner: (a) section 15 names the DoD commands VERBATIM with scope flags: bash scripts/brehon/cargo-check.sh --workspace --features full (or the .bat on the Windows laptop), the migration round-trip command (mirror SL-a's cargo run -p lemmy_diesel_utils --features full -- migration run / migration revert round-trip + scripts/brehon/migrate-roundtrip.sh - SL-a plan lines 61-63,1164), and the e2e test-name filter for the phase1_migrations_round_trip + trust-state foundation test. (b) section 15 states: impl-task raises kind:\"validate-pending-laptop\" post-push naming these commands verbatim; advisor laptop session runs them sequentially per .claude/rules/advisor-orchestrator.md section 5.2 and mutates the DQ entry. (c) NO .github/workflows/*.yml section 15.6 - that Shape-G section is DORMANT until 2026-06-01 (DQ #229). (d) The plan adds a section 15 note: Shape G suspended 2026-05-16..2026-06-01 per DQ #229; this plan ships laptop-mode; if this sub-phase impl is still in flight after 2026-06-01 the advisor MAY switch the open validate-pending-laptop entries to Shape-G validate-pending - but the PLAN ships laptop-shape. The planner reads .claude/rules/advisor-orchestrator.md section 5.2 + .claude/rules/decision-queue.md kind:'validate-pending-laptop' for the exact entry shape. SL-a is the mirror for section 13/5/16a structure ONLY; its section 15 is Shape-G and is explicitly NOT mirrored - translated per this rule.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T08:42:00Z"
+    },
+    {
+      "id": 232,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-16T08:42:00Z",
+      "question": "v1-federation-inbound-a edits shared files (config.rs, governance_log.rs, schema.rs, .claude/rules/governance-log-entry-kind-registry.md, e2e.rs) while v1-ship + v1-AD-e run in parallel and v1-RT-r1 recently mutated the same files. How must -a's shared-file edits be designed to avoid cross-lane merge collisions?",
+      "options": [
+        "Strictly additive / append-only (new isolated const block, new registry SECTION, appended SEEDED_KEYS, schema.rs ADD-only, e2e one anchor-Edit) - collision-isolated by construction",
+        "Edit shared files freely; resolve collisions at merge time",
+        "Serialize -a behind the other lanes (block until v1-ship + v1-AD-e + v1-RT-r1 ship)"
+      ],
+      "context": "Three CC advisor sessions run concurrently (v1-federation-inbound-a [this], v1-ship, v1-AD-e). git log governance-v0 shows v1-RT-r1 VERY recently touched the exact shared files -a will edit: schema.rs (03f6c670e), config.rs + EXPECTED_SEED_COUNT_V1_RT + SEEDED_KEYS parity (198ab6d06), governance_log.rs ENTRY_KIND + registry (f2f9202b7), with pending RT-r1 fix-impl commits (03f519f37). Per .claude/rules/multi-lane-worktree.md the lanes get isolated worktrees (decision-queue.json is per-worktree) but shared CODE files (config.rs/governance_log.rs/schema.rs/registry/e2e.rs) are NOT isolated - they collide at phase-branch reconcile + final merge. SL-a/RT-r1 precedent shows the established pattern: each lane appends its OWN const block + its OWN registry section + its OWN EXPECTED_SEED_COUNT_V1_<LANE> + its OWN SEEDED_KEYS entries (additive), and the parity test is per-lane. e2e.rs uses per-task anchor-Edit at file end (feedback_junior_worker_e2e_edit_hang).",
+      "answer": "Option 1 - strictly additive / collision-isolated by construction. RESOLUTION (advisor, evidence + established SL-a/RT-r1 precedent): the -a plan section 4 watchpoints + section 13 task design MUST enforce additive-only shared-file edits: (1) config.rs - add a NEW federation.inbound const block (do NOT reformat the existing SL/RT/AD const blocks), a NEW EXPECTED_SEED_COUNT_V1_FED_IN constant (do NOT touch EXPECTED_SEED_COUNT_V1_SL/RT/AD), append the 11 new keys to SEEDED_KEYS as new lines (never reorder/reformat the array), a NEW per-lane parity test (do not modify sibling-lane parity tests). Mirror exactly how SL-a (7cfb18b8f) and RT-r1 (198ab6d06) each added their own EXPECTED_SEED_COUNT_V1_<LANE> + SEEDED_KEYS entries side-by-side without collision. (2) governance_log.rs - add the ~9 new federation_* ENTRY_KIND consts as a NEW const group + their match arms appended (do not reorder existing arms); the db_schema-define + api-shim-re-export split mirrors SL-a 8b11841b9 / RT-r1 f2f9202b7. (3) .claude/rules/governance-log-entry-kind-registry.md - append a NEW '## v1-federation-inbound-a' SECTION at the end (never edit the v1-SL-a / v1-RT-r1 sections); non-collision parity test asserts the new strings are unique vs ALL existing (v0 + every sibling lane). (4) schema.rs - only ADD the 4 new table blocks + ADD the ALTER-introduced columns to the existing remote_sanction_notice/federation_attestation blocks (do not reorder/reformat the diesel-managed block beyond the regenerated additions). (5) e2e.rs - ONE anchor-Edit appending the new test block at file end (per feedback_junior_worker_e2e_edit_hang; e2e.rs ~14,862 lines). The plan section 4 MUST carry an explicit watchpoint: Concurrent lanes (v1-ship, v1-AD-e, v1-RT-r1) touch the same shared files; ALL -a shared-file edits are append-only/additive - a reformat or array-reorder of an existing sibling-lane block is a process breach that guarantees a reconcile-time merge conflict. NOT option 3 - serializing discards the parallelism the multi-lane model exists to enable; the additive pattern is precisely how SL-a + RT-r1 already coexist on trunk.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T08:42:00Z"
     }
   ],
   "schema_version": 2
