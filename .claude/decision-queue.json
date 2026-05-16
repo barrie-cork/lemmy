@@ -1,5 +1,37 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 237,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T19:48:00Z",
+      "question": "v1-AD-e ships Dashboard + Audit HTML pages only (the 2 with shipped read paths); Config-editor / Single-key-editor / Rule-set-manager defer to v1-AD-f (each needs net-new read-path Rust). Confirm the cut line.",
+      "options": [
+        "a) Dashboard + Audit only — recommended (true pure-presentation, smallest CR surface; the 3 deferred pages are read-path+template work)",
+        "b) all 5 pages now (larger, contradicts the pure-templating framing, adds read-path Rust this plan deliberately excludes)",
+        "c) Dashboard + Audit now AND adopt the literal PRD /admin/governance/* URL spelling as a separate top-level scope (URL-shape variant of a)"
+      ],
+      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #1. v1-AD keystone: a/b/c/d/wrap-up all SHIPPED (PRs #72/#76/#81/#87/#90). v1-AD-e is the final page-layer sub-phase. Planner-recommended (a). Judgment-heavy / scope-affecting → user-relay. Task 0 Probe 6 gates on this being in resolved[].",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 238,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T19:48:00Z",
+      "question": "v1-AD-e is the first server-rendered HTML in the workspace. Pick the template engine (OQ-V1-AD-01 re-resolution 2026-05-16 delegated this here).",
+      "options": [
+        "a) maud — recommended (1 dep, 0 new files, native actix Responder, matches the inline-Rust codebase idiom)",
+        "b) askama (2 deps incl. the askama_web actix-4 shim, fresh templates/ dir, compile-time external-file template checking)"
+      ],
+      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #2 + evidence table §5.2. First server-rendered HTML in the workspace. Both options keep React/SPA as v2 per ADR-010 (unchanged). Planner-recommended (a). Judgment-heavy → user-relay. Task 0 Probe 5 gates on this being in resolved[] with an engine answer.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
