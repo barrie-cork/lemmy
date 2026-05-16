@@ -14,21 +14,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 233,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-16T10:22:53Z",
-      "question": "Complexity score 13 exceeds Sonnet threshold 8 — split v1-federation-inbound-a into v1-federation-inbound-a-1 (Tasks 1-5: migration + schema + config + entry-kind + newtypes) + v1-federation-inbound-a-2 (Tasks 6-9: Diesel models + trust helpers + Phase-6 extensions + e2e) + retro, or proceed as one plan?",
-      "options": [
-        "split",
-        "proceed"
-      ],
-      "context": "Mechanical schema-foundation work mirroring SL-a (which shipped at score 13 proceed-as-one with no operational regret per the SL-a retro). Brief section 0 names -a as one atomic deliverable. Split would race worker branches on shared files (schema.rs, config.rs, governance_log.rs, registry md, e2e.rs) — precisely the collision class DQ #232 binds -a to avoid. Dominant factors: 9 impl tasks (+4), 4 crates (+4), e2e edit (+3), migration (+2). Transcribed by advisor from Junior #271 ESCALATION_NOTE.md section 5 (harness gap: Junior workers cannot write .claude/** — see .claude/PRPs/reports/junior-271-escalation-harness-gap.md).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3857,6 +3842,37 @@
       "answer": "Reuse InstanceId. No FederationPeerId newtype shipped in -a. Rationale: federation_blocklist precedent + PRD section 8.4 'only if Diesel benefits' + no diesel benefit here. The federation_peer.instance_id field carries InstanceId in both the struct and InsertForm; the planner's plan body and the in-worktree model file in the plan section 10.4 are written to this decision. (planner-self-resolved; advisor transcribed verbatim from Junior #271 escalation note — attribution preserved as planner-self-resolved per decision-queue.md, NOT relabelled advisor.)",
       "answered_by": "planner-self-resolved",
       "resolved_at": "2026-05-16T10:22:53Z"
+    },
+    {
+      "id": 233,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T10:22:53Z",
+      "question": "Complexity score 13 exceeds Sonnet threshold 8 — split v1-federation-inbound-a into v1-federation-inbound-a-1 (Tasks 1-5: migration + schema + config + entry-kind + newtypes) + v1-federation-inbound-a-2 (Tasks 6-9: Diesel models + trust helpers + Phase-6 extensions + e2e) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "Mechanical schema-foundation work mirroring SL-a (which shipped at score 13 proceed-as-one with no operational regret per the SL-a retro). Brief section 0 names -a as one atomic deliverable. Split would race worker branches on shared files (schema.rs, config.rs, governance_log.rs, registry md, e2e.rs) — precisely the collision class DQ #232 binds -a to avoid. Dominant factors: 9 impl tasks (+4), 4 crates (+4), e2e edit (+3), migration (+2). Transcribed by advisor from Junior #271 ESCALATION_NOTE.md section 5 (harness gap: Junior workers cannot write .claude/** — see .claude/PRPs/reports/junior-271-escalation-harness-gap.md).",
+      "answer": "PROCEED as one plan (per user 2026-05-16, mandatory user gate 1+2). Ship v1-federation-inbound-a as one atomic sub-phase, NOT split. Rationale (user-ratified, matches planner context): SL-a shipped at the SAME complexity score 13 proceed-as-one with no operational regret per the SL-a retro; the brief section 0 carve names -a as one atomic deliverable; splitting would race worker branches on shared files (schema.rs, config.rs, governance_log.rs, registry md, e2e.rs) — exactly the collision class DQ #232 binds -a to avoid. Complexity is front-loaded into one coherent schema migration; fragmenting it is the wrong cut. The §5.2 split-or-proceed DQ is hereby resolved PROCEED; the plan ships as authored (11 tasks, Cohort A 5-way [P] + Cohort B 3-way [P]).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-16T10:26:00Z"
+    },
+    {
+      "id": 235,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T10:26:00Z",
+      "question": "Junior workers cannot write .claude/** (Claude Code built-in sensitive-file gate overrides settings.json permissions.allow; confirmed via 5 tested approaches in Junior #271). The four-role model assumes the planning Junior can write plan files + DQ entries — currently FALSE. Recurs on every planning-Junior dispatch. Fix approach?",
+      "options": [
+        "fix-daemon (wire --dangerously-skip-permissions through to Junior subagent spawns, or neutralise .claude/** gate for Junior workers)",
+        "run-planning-on-laptop (planning role runs in advisor session, not as Junior)",
+        "keep-escalation-and-transcribe (planner writes worktree-root deliverables + escalation note; advisor transcribes each time)"
+      ],
+      "context": "Junior #271 (planning, v1-federation-inbound-a) hit this gap. Planner correctly escalated per escalation.md (the escalation note IS the deliverable); plan content was complete and was transcribed by the advisor laptop session. Full incident + 5 tested write approaches + 3 suggested fixes documented at .claude/PRPs/reports/junior-271-escalation-harness-gap.md. The worktree-guard.sh PMD #998 hook correctly permits in-worktree paths; the sensitive-file gate is UPSTREAM of the hook (Claude Code built-in, not a settings.json rule). impl/bm/ci-watcher Juniors are unaffected (they write crates/, migrations/, tests/ — not .claude/**).",
+      "answer": "FIX THE DAEMON (per user 2026-05-16). Proper long-term fix: patch the homeserver Junior daemon to wire --dangerously-skip-permissions through to Junior subagent spawns (or otherwise neutralise the .claude/** sensitive-file gate for Junior-worker sessions, scoped to the worktree blast-radius the worktree-guard.sh PMD #998 hook already enforces). This is homeserver-repo work (CWD C:/Users/barri/Developer/homeserver, scripts/junior-server-patches/) — a SEPARATE task, NOT brehon-fork scope; tracked here for the audit trail + retro. Until the daemon patch ships, the planning role stays escalation-and-transcribe (planner writes worktree-root PLAN_DELIVERABLE.md + ESCALATION_NOTE.md; advisor laptop transcribes to canonical .claude/** paths per escalation.md). v1-federation-inbound-a is UNBLOCKED — its plan is already transcribed + landed (commit d6cd09fee); this decision governs FUTURE planning dispatches, not this lane's progress. Marked blocker/resolved (not log) because it gates the four-role model's planning-Junior contract until the homeserver patch lands.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-16T10:26:00Z"
     }
   ],
   "schema_version": 2
