@@ -28,6 +28,17 @@ The `crates/db_views/site/src/api.rs` and `crates/api/api_crud/src/site/read.rs`
 
 ---
 
+## 0.1 Clarify-pass resolutions (READ BEFORE §1 — these RESOLVE two §0 ambiguities)
+
+The advisor ran `/brehon-clarify` on this brief (2026-05-16). Two clarify-DQ entries are RESOLVED and are **binding inputs to the plan** — they pre-empt two round-trips the §0 drift table flagged:
+
+- **DQ #226 (RESOLVED, advisor):** the dual-`bootstrap()` ambiguity is **decided** — the new AGPL-surface e2e test uses **`governance_fixtures::bootstrap()` at `crates/server/tests/e2e.rs:801`** (signature lines 801-805). NOT a blocker. `mod admin_config_fixtures` (e2e.rs:5643, its bootstrap @ 5665) is the wrong sibling and out of scope. The planner still cites the chosen bootstrap with its current line+signature in §10 and adds the §4 watchpoint (per §2.2 step 3 / §4.1 watchpoint 1) — but the *choice* is made; do NOT file a blocker for it.
+- **DQ #227 (RESOLVED, advisor):** the `GetSiteResponse` constructor enumeration is **established** — there is exactly **ONE constructor to update: `crates/api/api_crud/src/site/read.rs:57`** (current line; the parked plan's `read.rs:64-71` is the stale drift). There is ALSO a **NON-BREAKING destructure at `crates/api/routes_v3/src/handlers.rs:249-258`** that uses a rest-pattern (`..` at handlers.rs:257) so the field-add does NOT break it. The plan's §11 R9 enumeration MUST list all three: the struct def `crates/db_views/site/src/api.rs:337`, the one constructor `read.rs:57`, and the `handlers.rs:249` destructure **noted explicitly as NON-BREAKING (no change required)**. The field-add is back-compat-clean — no blocker.
+
+These two resolutions supersede the corresponding "the planner must discover…" language in §0 / §2.2 step 3 / §2.2 step 5 / §4.1 watchpoints 1+3: the discovery is DONE; the planner *applies* these findings (cites the current lines, writes the watchpoints) rather than re-deriving them. All other MIRROR refs in §2.2 remain to be re-derived by the planner against HEAD as the brief specifies.
+
+---
+
 ## 1. Role + dispatch line
 
 `[role:planning] v1-ship-1-r1 re-plan — AGPL §13 surface, refresh MIRROR refs post-refactor-tier`

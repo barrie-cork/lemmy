@@ -3719,6 +3719,38 @@
       "log_slice": null,
       "failed_jobs": null,
       "resolved_at": "2026-05-16T00:21:25Z"
+    },
+    {
+      "id": 226,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-16T02:17:59Z",
+      "question": "v1-ship-1-r1 brief: the new AGPL-surface e2e test must call ONE bootstrap(); e2e.rs now has TWO identical-signature pub-async-fn-bootstrap (governance_fixtures L801 vs admin_config_fixtures L5665). Which module, and is this a planner blocker?",
+      "options": [
+        "governance_fixtures::bootstrap (governance/site concern)",
+        "admin_config_fixtures::bootstrap",
+        "file blocker DQ - genuinely ambiguous"
+      ],
+      "context": "Recon at HEAD ba94510ee: both bootstraps return LemmyResult<(ContainerAsync<GenericImage>, Data<LemmyContext>, String)> - byte-identical signatures. mod governance_fixtures at e2e.rs:118 (bootstrap at 801); mod admin_config_fixtures at e2e.rs:5643 (bootstrap at 5665). The AGPL section-13 source-disclosure surface is a governance/site concern; the v1-ship-1 plan mirrors report_to_modlog_golden_path plus governance_fixtures (all governance-side). admin_config_fixtures is for admin-config tests only.",
+      "answer": "RESOLVED advisor-mode: use governance_fixtures::bootstrap() at crates/server/tests/e2e.rs:801 (signature at crates/server/tests/e2e.rs lines 801-805: returns LemmyResult<(testcontainers::ContainerAsync<GenericImage>, Data<LemmyContext>, String)>). NOT a planner blocker - the choice is unambiguous on module-purpose grounds: the AGPL section-13 disclosure is a governance/site surface; mod governance_fixtures (e2e.rs:118) is the governance test-fixtures module and is what the v1-ship-1 plan section 10.5/10.6 mirrors (report_to_modlog_golden_path at e2e.rs:2251 and all_mvp_endpoints_return_non_404 at e2e.rs:3780 are governance-side and use this fixtures module). mod admin_config_fixtures (e2e.rs:5643, its bootstrap at e2e.rs:5665) is admin-config specific and out of scope for v1-ship-1. The planner MUST still (a) cite governance_fixtures::bootstrap() with its CURRENT line plus full signature verbatim in plan section 10, and (b) add a section-4 watchpoint naming mod governance_fixtures plus the current bootstrap line so the impl-task cannot pick the L5665 admin_config_fixtures sibling. The brief's 'file a blocker DQ if genuinely ambiguous' fallback does NOT fire - this clarify resolves the choice.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T02:17:59Z"
+    },
+    {
+      "id": 227,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-16T02:17:59Z",
+      "question": "v1-ship-1-r1 brief section 0 / section 2.2 step 5 / section 4.1 watchpoint 3 says the parked plan claimed ONE GetSiteResponse constructor (read.rs:64-71) and asks the planner to find any NEW construction site. What is the actual current enumeration, and does any site break on a field-add?",
+      "options": [
+        "one constructor (read.rs) plus non-breaking destructures",
+        "multiple constructors needing the new field",
+        "blocker - field-add breaks a consumer"
+      ],
+      "context": "Recon at HEAD ba94510ee: grep -rn for the GetSiteResponse struct literal across crates/ returns exactly two sites: (1) crates/api/api_crud/src/site/read.rs:57 = the SOLE constructor (an Ok-wrapped GetSiteResponse struct literal returned from read_site); (2) crates/api/routes_v3/src/handlers.rs:249 = a DESTRUCTURE binding site_view, admins, version, all_languages, discussion_languages, tagline, blocked_urls and then a rest-pattern (the two-dot rest token at handlers.rs:257) so it binds 8 named fields and ignores the rest. The struct definition itself is crates/db_views/site/src/api.rs:337.",
+      "answer": "RESOLVED advisor-mode: ONE constructor site to update - crates/api/api_crud/src/site/read.rs:57 (the Ok-wrapped GetSiteResponse struct literal returned from read_site; this is what the field-add plus source_disclosure population task targets; its line drifted from the parked plan's stale read.rs:64-71 to the current read.rs:57). The brief's claim that the 2026-05-14 plan 'claimed exactly one constructor' is CORRECT in count, but its stale line range (64-71) is wrong - the current constructor line is read.rs:57. There is ALSO a NON-BREAKING destructure at crates/api/routes_v3/src/handlers.rs lines 249-258 which uses a rest-pattern (the two-dot rest token at handlers.rs:257): a field-add to GetSiteResponse does NOT break it because the rest-pattern absorbs the new source_disclosure field, and handlers.rs reads 8 named fields none of which are removed. The plan's section-11 R9 enumeration (per feedback_planner_enumerate_struct_callsites_for_addfield.md) MUST list: (a) the struct definition at crates/db_views/site/src/api.rs:337 where source_disclosure plus the new SourceDisclosure struct plus GetSourceResponse are added; (b) the one constructor at crates/api/api_crud/src/site/read.rs:57 which the population task extends; and (c) the crates/api/routes_v3/src/handlers.rs:249 destructure noted EXPLICITLY as NON-BREAKING (uses the rest-pattern; requires NO change) so the impl-task neither misses it nor wrongly edits it. No blocker - the field-add is back-compat-clean.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T02:17:59Z"
     }
   ],
   "schema_version": 2
