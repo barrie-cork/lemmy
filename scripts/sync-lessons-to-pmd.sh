@@ -113,7 +113,7 @@ imported=0
 skipped=0
 errors=0
 
-for lesson in "$LESSONS_DIR"/feedback_*.md; do
+for lesson in "$LESSONS_DIR"/feedback_*.md "$LESSONS_DIR"/reference_*.md; do
   [ -e "$lesson" ] || continue
   parsed_json="$(parse_lesson "$lesson")"
 
