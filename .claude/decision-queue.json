@@ -3619,6 +3619,106 @@
       "log_slice": null,
       "failed_jobs": null,
       "resolved_at": "2026-05-15T15:42:13Z"
+    },
+    {
+      "id": 221,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-15T17:17:00Z",
+      "question": "Gate 2 (workspace clippy -D warnings) fails on ~20 PRE-EXISTING e2e.rs lints not introduced by this refactor (verified present on governance-v0 HEAD before the worktree was cut). Brief says all 3 gates must exit 0. How should the worker proceed?",
+      "options": [
+        "fix-all-e2e-lints: expand scope to fix all pre-existing clippy issues in e2e.rs",
+        "skip-gate2-proceed-to-gate3: treat Gate 2 as pre-broken debt, proceed to load-bearing Gate 3"
+      ],
+      "context": "Raised by Junior #268 (worker branch, commit 7076a4fbd). Gate 1 (cargo-check --workspace --features full) PASSED. Gate 2 (scripts/brehon/cargo-clippy.sh --workspace --features full --tests --no-deps -- -D warnings) FAILED on ~20 pre-existing e2e.rs lints (tests_outside_test_module structural, as_conversions, allow_attributes, ref_patterns, items_after_statements, map_err_ignore, needless_ok_wrapping, indexing_slicing, clippy::expect_used, doc lints). Worker's own 2 introduced `as u64` casts already fixed via try_from. All flagged lints pre-exist on governance-v0 HEAD; Gate 2 as specified in the brief was never green on e2e.rs (brief defect, not a worker regression). Brief §2.7 states the load-bearing signal is Gate 3 (e2e tests). Also clippy::indexing_slicing in reputation_snapshot.rs:856 is a DIFFERENT crate, out of scope for this e2e.rs lane.",
+      "answer": "fix-all-e2e-lints (USER DECISION 2026-05-15, relayed by advisor via AskUserQuestion; surfaced as judgment-heavy because it is a scope-vs-policy tradeoff on the highest-risk CRIT-tier LAST lane that interacts with the brief's hard no-#[allow]/#[ignore] constraint). A continuation impl-task (the worker #268 has exited `done`) will fix ALL pre-existing clippy issues in crates/server/tests/e2e.rs so Gate 2 genuinely exits 0 — including the structural tests_outside_test_module (wrap in #[cfg(test)] mod where required), as_conversions (TryFrom/try_into, never `as`), allow_attributes (#[allow] -> #[expect] with a reason ONLY where the lint is genuinely intended; otherwise remove the allow and fix the underlying lint), ref_patterns, items_after_statements, map_err_ignore (|_| -> |_e|), needless_ok_wrapping, indexing_slicing (.get()/.first() + ? or expect-with-message), clippy::expect_used, and the doc lints. NO blanket module/crate-level #![allow] masking (that is the #[allow]-spam anti-pattern the brief forbids — fix each lint properly). The clippy::indexing_slicing in reputation_snapshot.rs:856 is OUT OF SCOPE (different crate); if it blocks the --workspace clippy run, scope the clippy invocation to the e2e test target (e.g. --test e2e) or raise a follow-up DQ noting it pre-exists and is unrelated — do NOT touch that file. ZERO behavior change in any test (no removed assertions, no changed seed data, no #[ignore]). After Gate 2 is genuinely green, run Gate 3 (the load-bearing full e2e suite per brief §2.7). This is a user-authorised deliberate scope expansion (Gate 2 was specified in the brief and must hold for the LAST refactor lane) — NOT scope creep; it closes pre-existing lint debt in the exact file this PR already rewrites. See DQ #222 (Pass 2) — answered separately: P2 is DEFERRED and is explicitly OUT of this continuation's scope.",
+      "answered_by": "user",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "resolved_at": "2026-05-15T18:01:51Z"
+    },
+    {
+      "id": 222,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-15T17:21:00Z",
+      "question": "Pass 2 (audit §3.E.2 CRIT — fixtures dedup into governance_test_helpers) was not completed; a prior #268 session misread Pass 1 (error-type conversion) as subsuming it. The 4 fixtures modules (~4000 lines, ~70% duplication) are unchanged. Attempt Pass 2 now or defer to a separate task?",
+      "options": [
+        "do-pass2-now: attempt the ~4000-line fixtures dedup now (large, risky given complex session state)",
+        "defer-pass2-separate-task: ship Passes 1+3+4 (3.E.1+3.E.3+3.E.4); advisor opens a separate lane for 3.E.2"
+      ],
+      "context": "Raised by Junior #268 (worker branch, commit 5861aac24). Brief §3.E.2 (CRIT) requires consolidating ~70% duplication across v1_jm_b_fixtures, v1_jm_e_fixtures, v1_sl_b_fixtures, v1_sl_c_fixtures into a shared governance_test_helpers module. Current file state: all 4 modules unchanged — no dedup done. Prior session 2 summary noted P2 as 'effectively handled by error-type conversion' which was a misinterpretation (Pass 1 changed return types only; it did not restructure the modules). Coupled with DQ #221 (Gate 2 lint debt) — both blockers gate the final commit.",
+      "answer": "defer-pass2-separate-task (USER DECISION 2026-05-15, relayed by advisor via AskUserQuestion; surfaced because it is a second judgment-heavy decision coupled to the #221 scope expansion — doing both in one continuation task on the highest-risk lane is a compounding-risk call only the user should make). Pass 2 / audit 3.E.2 is DEFERRED to its own dedicated lane (tracked as advisor task #8, a POST-GATE follow-up). PR-1 ships covering audit 3.E.1 + 3.E.3 + 3.E.4 (ranks 1/7/8 — 1 CRIT + 2 MAJ) plus the #221 lint cleanup. The continuation impl-task does NOT attempt P2 — the 4 fixtures modules stay as-is on this branch. Strict-gate decision (user, same prompt): PR-1 counts as the 5th/final gate item; 3.E.2 is a tracked follow-up that does NOT block v1 PRD planning (gate stays 5 PRs, not 6). The deferred 3.E.2 must be called out as an explicit carry-forward in the refactor-tier FINAL retro.",
+      "answered_by": "user",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "resolved_at": "2026-05-15T18:01:51Z"
+    },
+    {
+      "id": 223,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T21:46:30Z",
+      "question": "advisor-laptop §5.2 full validation for chore/refactor-e2e-error-types (PR-1, refactor-tier LAST lane)",
+      "options": [
+        "pass-proceed-to-bm-pr",
+        "fail-catch-fire"
+      ],
+      "context": "CHECK_EXIT_0 12m39s + CLIPPY_EXIT_0 7m56s (clippy scoped to --test e2e per the DQ #221 user-authorised fallback; 0 warnings / 0 errors — confirms the 7 user-ratified file-level #![expect] set is complete AND self-cleaning-valid) + E2E_EXIT_0 finished in 1864.47s (~31m4s): 88 passed; 0 failed; 5 ignored (GH #42/#43x3/#45 — pre-existing deflakes, NOT regressions; #43x3 = the now-split test_phase1_migrations_{forward,reapply,revert} which correctly show as 3 independent fns). Shape-G workspace-check run 25935134971 ALSO triggered on the junior/* branch this cycle. Chore tip 919fe8400. Test count 71 = pre-refactor 69 + 2 (phase1_migrations_round_trip split into 3 adds +2 fns).",
+      "answer": "pass — all 3 gates exit 0; the LOAD-BEARING full e2e suite is green on the refactored Case-C->Case-A LemmyResult corpus (88 passed, 0 failed; the 5 ignored are pre-existing GH-tracked deflakes unchanged by this refactor). Zero behavior change. Proceed to bm-pr (STEP F/G).",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "local_log_path": "C:/Users/barri/.claude/logs/pr1-gate3-e2e.log",
+      "workflow_run_id": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-15T21:46:30Z"
+    },
+    {
+      "id": 224,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-15T23:14:45Z",
+      "question": "advisor-laptop §5.2 RE-validation #3 of chore/refactor-e2e-error-types (PR #132 CR-fix + cr-2 revert + cr-5-helper clippy fix; chore tip 072f623e9)",
+      "options": [
+        "pass-proceed-to-merge",
+        "fail-catch-fire"
+      ],
+      "context": "cr-2 reverted (Copilot disproved 9x E0275/E0277; .get(0)+#![expect(get_first)] restored); cr-3/4/5 retained; cr-5-helper if_then_some_else_none fixed. Re-run: CHECK_EXIT_0 1m17s (f02378f13) + CLIPPY_EXIT_0 1m55s (072f623e9; --test e2e per DQ#221; all 7 #![expect] incl get_first fire, 0 warn/0 err, 0 unfulfilled) + E2E_EXIT_0 1894.26s 88 passed/0 failed/5 ignored (UNCHANGED from pre-CR-fix baseline). cr-1+cr-2 rebutted; cr-3/4/5 fixed-in-pr.",
+      "answer": "pass — re-validated post cr-2 revert + cr-5-helper clippy fix; 3 gates exit 0; green suite unchanged 88/0/5; proceed to USER GATE 5",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "local_log_path": "C:/Users/barri/.claude/logs/pr1-cr-fix-r3-gate3-e2e.log",
+      "workflow_run_id": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-15T23:14:45Z"
+    },
+    {
+      "id": 225,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-16T00:21:25Z",
+      "question": "advisor-laptop §5.2 RE-validation #4 of chore/refactor-e2e-error-types (PR #132 cr-6 fix: non-ignored phase1_revert_list_matches_disk guard; chore tip 69f88ee8f)",
+      "options": [
+        "pass-proceed-to-merge",
+        "fail-catch-fire"
+      ],
+      "context": "cr-6 (CR follow-up on cr-5: assert was inside #[ignore]d round-trip fns -> never ran; re-validation #3 Gate 3 log empirically confirmed) fixed: added standalone non-ignored #[test] phase1_revert_list_matches_disk calling the existing sync helper assert_revert_list_matches_disk; 3 in-fn pre-flight calls kept. Re-run on tip 69f88ee8f: CHECK_EXIT_0 7m57s + CLIPPY_EXIT_0 2.31s (Gate 2-b, DQ-#221-canonical scope --features full --test e2e NO --tests; first Gate-2 failed on advisor invocation error pulling out-of-scope lemmy_api lib-test debt that DQ #221 excluded, self-corrected, no code change) + E2E_EXIT_0 1883.44s 89 passed/0 failed/5 ignored. EXPECTED +1 vs prior 88: phase1_revert_list_matches_disk ran + passed (list matches disk, no drift); 3 round-trip fns stay #[ignore]d for GH #43. NOT a regression - the +1 is the intended cr-6 effect. cr-1+cr-2 rebutted; cr-3/4/5/6 fixed-in-pr.",
+      "answer": "pass - cr-6 closes audit-3.E.4 for real (parity guard runs by default + passed); all 3 gates exit 0 on cr-6 tip; green suite 88->89 is the intended cr-6 effect; proceed to USER GATE 5 (merge confirm)",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "local_log_path": "C:/Users/barri/.claude/logs/pr1-cr6-gate3-e2e.log",
+      "workflow_run_id": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-16T00:21:25Z"
     }
   ],
   "schema_version": 2
