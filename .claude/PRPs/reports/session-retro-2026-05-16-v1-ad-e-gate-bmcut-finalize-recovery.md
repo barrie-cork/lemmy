@@ -72,12 +72,14 @@ No task exceeded any watchdog threshold (>55min / >40min silence / >8 files). Th
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] #1 finalize-merges-bm-cut-branch: promote to `.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md` (cross-harness lesson; sibling to `feedback_junior_finalize_skips_when_worker_pre_pushes.md`)
-- [ ] #2 bm-cut brief FINALIZE sentinel: update bm-cut brief template / `.claude/commands/bm/bm-cut.md` §"Refusal cases" + add a finalize-skip note
-- [ ] #3 CC v2.1.119 gate: promote to `.claude/lessons/feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md` (currently only inline in briefs — not PMD-searchable)
-- [ ] #4 canonical-checkout concurrent-DQ-writer guard: update `multi-lane-worktree.md` OR add `.claude/settings.local.json` PreToolUse guard
-- [ ] #5 multi-arg rev-parse Windows note: augment existing `feedback_windows_bash_python_git_show_tmp_traps.md` (no new file)
-- [ ] PMD eval write (if `PROJECT_MEMORY_DB` exported): "Session retro: Junior finalize agent merges bm-cut branches into trunk — distinct from finalize-skip; recover via update-ref"
+**User approved all candidates 2026-05-16 ("Go for it"). All executed this session:**
+
+- [x] #1 finalize-merges-bm-cut-branch → `.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md` CREATED (sibling to `feedback_junior_finalize_skips_when_worker_pre_pushes.md`, cited per schema-first gate)
+- [x] #2 bm-cut finalize hazard → `.claude/commands/bm/bm-cut.md` "Phase 6 — Finalize hazard" section + refusal-case line + See-also links ADDED
+- [x] #3 CC v2.1.119 gate → `.claude/lessons/feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md` CREATED (now PMD-searchable via `sync-lessons-to-pmd.sh`)
+- [x] #4 canonical-checkout concurrent-DQ-writer guard → `.claude/rules/multi-lane-worktree.md` Hard refusal #6 (atomic read-mutate-commit protocol) ADDED
+- [x] #5 multi-arg rev-parse Windows note → `feedback_windows_bash_python_git_show_tmp_traps.md` Trap 4 + symptom row ADDED (augment, no new file)
+- [x] PMD eval written: ID 349 ("Session retro: Junior finalize agent merges bm-cut branches into trunk (distinct from finalize-skip)")
 
 ---
 
