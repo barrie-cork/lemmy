@@ -1,0 +1,51 @@
+{
+  "skill_name": "retro-harvest",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We've got a pile of session retros in .claude/PRPs/reports/ and I'm pretty sure half the proposals in them never got actioned. Can you go through them and tell me what's actually still open vs already done? I don't want to re-read 50 files myself.",
+      "expected_output": "A ranked harvest report at .claude/PRPs/reports/retro-harvest-<date>.md that extracts unprocessed proposals, triages each STALE/LIVE/SUPERSEDED with citable evidence checked against HEAD, groups into 3 tiers, plus an Unverified-STALE section and ordered action sequence. No rules/lessons/code edited; no source-retro checkbox ticked.",
+      "files": [],
+      "assertions": [
+        "Harvest report written at .claude/PRPs/reports/retro-harvest-<date>.md",
+        "Report contains Tier 1, Tier 2, Tier 3 sections",
+        "Scope line states session-retro + phase-retro counts and date window",
+        "Tier-1/2 rows carry negative-evidence (still-LIVE proof)",
+        "Tier-3 rows carry positive-evidence (STALE/SUPERSEDED proof)",
+        "Has an 'Unverified STALE claims' section",
+        "Has an ordered 'Suggested action sequence'",
+        "No tracked rule/lesson/code/script modified",
+        "No source-retro checkbox ticked"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "harvest the retro backlog from the last week — just the recent ones, not the whole history. I want to know the top 2-3 things worth doing now.",
+      "expected_output": "Harvest report scoped to ~7 days with Tier-1 surfacing 2-3 highest-leverage LIVE proposals, each with recurrence + negative-evidence. Scope line states the effective window. Read-only.",
+      "files": [],
+      "assertions": [
+        "Harvest report written at canonical path",
+        "Scope line states ~7-day window, not the 21-day default",
+        "Tier 1 surfaces ~2-3 items (answers 'top 2-3')",
+        "Each Tier-1 item has recurrence + negative-evidence",
+        "Highest-leverage single item called out explicitly",
+        "No tracked file modified; no checkbox ticked"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Before I start the next phase I want to make sure we're not about to re-walk into something a past retro already flagged. Check the retro proposals for anything unimplemented that's high-recurrence — stuff that came up in more than one retro.",
+      "expected_output": "Harvest report emphasising recurrence >=2 LIVE proposals with evidence each is still unimplemented at HEAD, an explicit already-implemented set, and unverified-STALE downgraded to LIVE. Does not auto-implement anything.",
+      "files": [],
+      "assertions": [
+        "Harvest report written at canonical path",
+        "Recurrence computed as count of distinct retro files, >=2 threshold applied",
+        "Tier 1 emphasises high-recurrence LIVE proposals",
+        "Each high-recurrence LIVE item has negative-evidence",
+        "Explicit 'already implemented, do NOT re-propose' STALE set",
+        "Unverified STALE downgraded to LIVE and listed separately",
+        "No tracked file modified; no checkbox ticked; no Tier-1 auto-implemented"
+      ]
+    }
+  ]
+}

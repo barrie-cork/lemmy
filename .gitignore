@@ -69,6 +69,9 @@ migrations/.diesel_lock
 # /auto-phase skill runtime state (per-phase JSON + catch-fire dumps)
 .claude/auto-state/
 
+# skill-creator eval iteration journals (runtime artifacts, not deliverables)
+.claude/skills/*-workspace/
+
 # Per-task validation logs (the rca-*.md notes ARE committed)
 .claude/PRPs/debug/*.log
 
