@@ -1,21 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 229,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-16T09:30:00Z",
-      "question": "Re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets.",
-      "options": [
-        "re-enable all three workflows: gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{262402017,267337786,267337787}/enable",
-        "extend suspension if minutes still low at June 1"
-      ],
-      "context": "adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) disabled 2026-05-16 to conserve Actions minutes (2800/3000 consumed). Revert impl-task.md + impl-task-brief.template.md suspension notices and restore validate-pending (Shape G) DQ write instruction. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -3779,6 +3763,21 @@
       "answer": "Suspended. impl-task.md + impl-task-brief.template.md updated to validate-pending-laptop. Advisor §5.2 handler active.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T09:30:00Z"
+    },
+    {
+      "id": 229,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T09:30:00Z",
+      "question": "Re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets.",
+      "options": [
+        "re-enable all three workflows: gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{262402017,267337786,267337787}/enable",
+        "extend suspension if minutes still low at June 1"
+      ],
+      "context": "adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) disabled 2026-05-16 to conserve Actions minutes (2800/3000 consumed). Revert impl-task.md + impl-task-brief.template.md suspension notices and restore validate-pending (Shape G) DQ write instruction. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
+      "answer": "Scheduled reminder: on 2026-06-01, re-enable workflows 262402017+267337786+267337787 via gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{id}/enable; revert suspension notices in impl-task.md + impl-task-brief.template.md; restore Shape G validate-pending DQ write instruction. Advisor self-resolved as a timed reminder — no decision needed now.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T08:24:09Z"
     }
   ],
   "schema_version": 2
