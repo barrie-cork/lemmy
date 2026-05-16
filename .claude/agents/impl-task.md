@@ -55,6 +55,8 @@ The advisor authorises forbidden-window runs via DQ override only — see `.clau
 
 The plan's task body cites MIRROR refs — file:line ranges in existing Lemmy code that demonstrate the pattern to follow. Read each MIRROR ref with the Read tool before editing. The plan tasks are pattern-following exercises by design — when you start improvising past the MIRROR, you are usually about to make a mistake. If the MIRROR doesn't actually demonstrate what the plan claims, queue a DQ entry rather than guess.
 
+<!-- SHAPE-G-SUSPENDED until 2026-06-01: ALL plans use validate-pending-laptop, not validate-pending. GH Actions minutes exhausted 2026-05-15. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md. -->
+
 ## Per-task validation gate (out-of-band)
 
 Validation runs out-of-band — never on the EliteDesk worker. Two
@@ -62,16 +64,24 @@ modes by plan shape:
 
 - **Shape-G plans (v1-validate-agent onward):** validation on GitHub
   Actions, polled by ci-watcher. See "Shape-G push procedure" below.
+  **⚠ SUSPENDED until 2026-06-01 — use `validate-pending-laptop` instead (see below).**
 - **Pre-Shape-G plans (v1-JM-d and earlier):** validation delegated
   to the laptop advisor session via `validate-pending-laptop` DQ
   entry. See "Pre-Shape-G plans" sub-section further down.
+
+**Shape-G suspended until 2026-06-01.** All impl-task dispatches
+regardless of plan shape MUST use the `validate-pending-laptop`
+path below. Do NOT capture a `workflow_run_id`; do NOT write
+`kind: "validate-pending"`. GH Actions workflows
+`cargo-validate-workspace` and `cargo-validate-migration` are
+disabled. The advisor laptop session runs cargo locally.
 
 In both modes: after committing your work, push to your worktree
 branch and exit. **Do NOT run cargo locally on the EliteDesk worker
 under any circumstances** — the box is memory-constrained and cargo
 thrashes it for >1 hour (incident 2026-04-28 task #47).
 
-### Shape-G push procedure
+### Shape-G push procedure (SUSPENDED — skip to Pre-Shape-G section)
 
 After `git push`:
 
@@ -282,7 +292,7 @@ When the plan task touches diesel, actix-web, serde, activitypub-federation, or 
 
 On completion (success):
 1. **Validation mode** depends on the plan shape:
-   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): the feature commit is pushed, the `workflow_run_id` is captured via `gh run list`, and one `kind: "validate-pending"` DQ entry (with nullable `result`/`log_slice`/`failed_jobs` initialised to null) is committed + pushed. Local cargo MUST NOT be invoked. ci-watcher polls async and **mutates this entry in place** (option 2; entry's `kind` stays `"validate-pending"`; `result` populated; entry moves `pending[]` → `resolved[]` on pass, stays in `pending[]` on fail/cancelled/timed_out for advisor triage). The impl-task subagent is done once the validate-pending entry is on the remote.
+   - **Shape-G plans** (v1-validate-agent onward; workflow-driven validation per §"Per-task validation gate"): **SUSPENDED until 2026-06-01 — treat all Shape-G plans as Pre-Shape-G for validation purposes.** Use `validate-pending-laptop` (see below) regardless of plan shape. Do NOT capture `workflow_run_id`; do NOT write `kind: "validate-pending"`.
    - **Pre-Shape-G plans** (v1-JM-d and earlier): the per-task validation gates named by the plan are delegated to the laptop advisor session via `kind: "validate-pending-laptop"` DQ entry (per "Per-task validation gate → Pre-Shape-G plans" above). The impl-task pushes the feature commit AND the validate-pending-laptop DQ commit before exiting (manual push is mandatory — finalize is too late for the advisor to pick it up promptly). Local cargo MUST NOT run on the EliteDesk worker. The advisor mutates the entry on pass/fail same as Shape-G ci-watcher mutation.
 2. Commit chain is one feature commit + at most one `chore(lint):` follow-up.
 3. Pushing:

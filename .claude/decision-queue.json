@@ -1,5 +1,21 @@
 {
-  "pending": [],
+  "pending": [
+    {
+      "id": 229,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T09:30:00Z",
+      "question": "Re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets.",
+      "options": [
+        "re-enable all three workflows: gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{262402017,267337786,267337787}/enable",
+        "extend suspension if minutes still low at June 1"
+      ],
+      "context": "adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) disabled 2026-05-16 to conserve Actions minutes (2800/3000 consumed). Revert impl-task.md + impl-task-brief.template.md suspension notices and restore validate-pending (Shape G) DQ write instruction. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
@@ -3751,6 +3767,18 @@
       "answer": "RESOLVED advisor-mode: ONE constructor site to update - crates/api/api_crud/src/site/read.rs:57 (the Ok-wrapped GetSiteResponse struct literal returned from read_site; this is what the field-add plus source_disclosure population task targets; its line drifted from the parked plan's stale read.rs:64-71 to the current read.rs:57). The brief's claim that the 2026-05-14 plan 'claimed exactly one constructor' is CORRECT in count, but its stale line range (64-71) is wrong - the current constructor line is read.rs:57. There is ALSO a NON-BREAKING destructure at crates/api/routes_v3/src/handlers.rs lines 249-258 which uses a rest-pattern (the two-dot rest token at handlers.rs:257): a field-add to GetSiteResponse does NOT break it because the rest-pattern absorbs the new source_disclosure field, and handlers.rs reads 8 named fields none of which are removed. The plan's section-11 R9 enumeration (per feedback_planner_enumerate_struct_callsites_for_addfield.md) MUST list: (a) the struct definition at crates/db_views/site/src/api.rs:337 where source_disclosure plus the new SourceDisclosure struct plus GetSourceResponse are added; (b) the one constructor at crates/api/api_crud/src/site/read.rs:57 which the population task extends; and (c) the crates/api/routes_v3/src/handlers.rs:249 destructure noted EXPLICITLY as NON-BREAKING (uses the rest-pattern; requires NO change) so the impl-task neither misses it nor wrongly edits it. No blocker - the field-add is back-compat-clean.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T02:17:59Z"
+    },
+    {
+      "id": 228,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T09:30:00Z",
+      "question": "Shape G suspended until 2026-06-01 — GH Actions minutes exhausted",
+      "options": [],
+      "context": "2800/3000 free minutes consumed 2026-05-15. Workflows disabled: adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787). Laptop validate-pending-laptop pattern active. Re-enable June 1. See .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
+      "answer": "Suspended. impl-task.md + impl-task-brief.template.md updated to validate-pending-laptop. Advisor §5.2 handler active.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T09:30:00Z"
     }
   ],
   "schema_version": 2
