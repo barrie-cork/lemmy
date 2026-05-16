@@ -3873,6 +3873,21 @@
       "answer": "FIX THE DAEMON (per user 2026-05-16). Proper long-term fix: patch the homeserver Junior daemon to wire --dangerously-skip-permissions through to Junior subagent spawns (or otherwise neutralise the .claude/** sensitive-file gate for Junior-worker sessions, scoped to the worktree blast-radius the worktree-guard.sh PMD #998 hook already enforces). This is homeserver-repo work (CWD C:/Users/barri/Developer/homeserver, scripts/junior-server-patches/) — a SEPARATE task, NOT brehon-fork scope; tracked here for the audit trail + retro. Until the daemon patch ships, the planning role stays escalation-and-transcribe (planner writes worktree-root PLAN_DELIVERABLE.md + ESCALATION_NOTE.md; advisor laptop transcribes to canonical .claude/** paths per escalation.md). v1-federation-inbound-a is UNBLOCKED — its plan is already transcribed + landed (commit d6cd09fee); this decision governs FUTURE planning dispatches, not this lane's progress. Marked blocker/resolved (not log) because it gates the four-role model's planning-Junior contract until the homeserver patch lands.",
       "answered_by": "user",
       "resolved_at": "2026-05-16T10:26:00Z"
+    },
+    {
+      "id": 236,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T19:44:23Z",
+      "question": "Lane-worktree `git worktree add` does NOT init submodules — crates/email/translations missing broke pre-phase audit Probe 3.",
+      "options": [
+        "promote-to-lesson",
+        "leave-as-retro-note"
+      ],
+      "context": "v1-ship-1 pre-phase harness audit Probe 3 (cargo-test --test e2e --no-run -p lemmy_server) FAILED with `lemmy_email build script: Os code 3 NotFound` because crates/email/translations (a git submodule per .gitmodules -> lemmy-translations.git) was UNINITIALIZED in the brehon-fork-ship-1 lane worktree. `git submodule status` showed leading '-' (uninit). The canonical brehon-fork checkout had it (47 backend JSON files), which is why the plan-approval DoD smoke test passed there but the lane worktree failed. Fixed via `git submodule update --init crates/email/translations` (one-time per worktree; safe, local, reversible — populates a submodule dir only). Wrapper exit-code propagation was CORRECT (exit 101 surfaced). This is the 3rd data point in the multi-lane worktree-races class (MEMORY.md tracks as emerging-2x). Recommendation: add a submodule-init step to the multi-lane-worktree.md §Lifecycle 'After bm-cut creates a new phase branch' block (`git worktree add ... && cd <wt> && git submodule update --init --recursive`), and a pre-phase-harness-audit.md Probe checking `git submodule status` shows no leading '-'. Existing lesson feedback_worktree_submodules_not_auto_init.md already covers the general case; the gap is it's not wired into the lane-bootstrap runbook.",
+      "answer": "Self-resolved (advisor): fixed in-session via `git submodule update --init crates/email/translations`; audit Probe 3 re-run after fix. Harvest at v1-ship-1 retro (Task 5) — promote to a multi-lane-worktree.md §Lifecycle runbook step + a new pre-phase-harness-audit.md submodule probe. Non-blocking for v1-ship-1 (audit completed after the one-time fix).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T19:44:23Z"
     }
   ],
   "schema_version": 2
