@@ -14,6 +14,21 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 233,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T10:22:53Z",
+      "question": "Complexity score 13 exceeds Sonnet threshold 8 — split v1-federation-inbound-a into v1-federation-inbound-a-1 (Tasks 1-5: migration + schema + config + entry-kind + newtypes) + v1-federation-inbound-a-2 (Tasks 6-9: Diesel models + trust helpers + Phase-6 extensions + e2e) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "Mechanical schema-foundation work mirroring SL-a (which shipped at score 13 proceed-as-one with no operational regret per the SL-a retro). Brief section 0 names -a as one atomic deliverable. Split would race worker branches on shared files (schema.rs, config.rs, governance_log.rs, registry md, e2e.rs) — precisely the collision class DQ #232 binds -a to avoid. Dominant factors: 9 impl tasks (+4), 4 crates (+4), e2e edit (+3), migration (+2). Transcribed by advisor from Junior #271 ESCALATION_NOTE.md section 5 (harness gap: Junior workers cannot write .claude/** — see .claude/PRPs/reports/junior-271-escalation-harness-gap.md).",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3827,6 +3842,21 @@
       "answer": "Option 1 - strictly additive / collision-isolated by construction. RESOLUTION (advisor, evidence + established SL-a/RT-r1 precedent): the -a plan section 4 watchpoints + section 13 task design MUST enforce additive-only shared-file edits: (1) config.rs - add a NEW federation.inbound const block (do NOT reformat the existing SL/RT/AD const blocks), a NEW EXPECTED_SEED_COUNT_V1_FED_IN constant (do NOT touch EXPECTED_SEED_COUNT_V1_SL/RT/AD), append the 11 new keys to SEEDED_KEYS as new lines (never reorder/reformat the array), a NEW per-lane parity test (do not modify sibling-lane parity tests). Mirror exactly how SL-a (7cfb18b8f) and RT-r1 (198ab6d06) each added their own EXPECTED_SEED_COUNT_V1_<LANE> + SEEDED_KEYS entries side-by-side without collision. (2) governance_log.rs - add the ~9 new federation_* ENTRY_KIND consts as a NEW const group + their match arms appended (do not reorder existing arms); the db_schema-define + api-shim-re-export split mirrors SL-a 8b11841b9 / RT-r1 f2f9202b7. (3) .claude/rules/governance-log-entry-kind-registry.md - append a NEW '## v1-federation-inbound-a' SECTION at the end (never edit the v1-SL-a / v1-RT-r1 sections); non-collision parity test asserts the new strings are unique vs ALL existing (v0 + every sibling lane). (4) schema.rs - only ADD the 4 new table blocks + ADD the ALTER-introduced columns to the existing remote_sanction_notice/federation_attestation blocks (do not reorder/reformat the diesel-managed block beyond the regenerated additions). (5) e2e.rs - ONE anchor-Edit appending the new test block at file end (per feedback_junior_worker_e2e_edit_hang; e2e.rs ~14,862 lines). The plan section 4 MUST carry an explicit watchpoint: Concurrent lanes (v1-ship, v1-AD-e, v1-RT-r1) touch the same shared files; ALL -a shared-file edits are append-only/additive - a reformat or array-reorder of an existing sibling-lane block is a process breach that guarantees a reconcile-time merge conflict. NOT option 3 - serializing discards the parallelism the multi-lane model exists to enable; the additive pattern is precisely how SL-a + RT-r1 already coexist on trunk.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T08:42:00Z"
+    },
+    {
+      "id": 234,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-16T10:22:53Z",
+      "question": "Should v1-federation-inbound-a create a FederationPeerId(pub i32) newtype in crates/db_schema/src/newtypes.rs, or reuse Lemmy's existing InstanceId for federation_peer.instance_id?",
+      "options": [
+        "create-newtype",
+        "reuse-InstanceId"
+      ],
+      "context": "PRD section 8.4 says 'create newtype only if Diesel benefits'. federation_peer.instance_id is Int4 PRIMARY KEY REFERENCES instance(id) — same shape as federation_blocklist which reuses InstanceId. The model file federation_peer.rs (Task 6 section 10.4) uses InstanceId directly. No Diesel benefit to creating a separate type. Transcribed by advisor from Junior #271 ESCALATION_NOTE.md section 5.",
+      "answer": "Reuse InstanceId. No FederationPeerId newtype shipped in -a. Rationale: federation_blocklist precedent + PRD section 8.4 'only if Diesel benefits' + no diesel benefit here. The federation_peer.instance_id field carries InstanceId in both the struct and InsertForm; the planner's plan body and the in-worktree model file in the plan section 10.4 are written to this decision. (planner-self-resolved; advisor transcribed verbatim from Junior #271 escalation note — attribution preserved as planner-self-resolved per decision-queue.md, NOT relabelled advisor.)",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-16T10:22:53Z"
     }
   ],
   "schema_version": 2
