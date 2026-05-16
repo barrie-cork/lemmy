@@ -3888,6 +3888,21 @@
       "answer": "Self-resolved (advisor): fixed in-session via `git submodule update --init crates/email/translations`; audit Probe 3 re-run after fix. Harvest at v1-ship-1 retro (Task 5) — promote to a multi-lane-worktree.md §Lifecycle runbook step + a new pre-phase-harness-audit.md submodule probe. Non-blocking for v1-ship-1 (audit completed after the one-time fix).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T19:44:23Z"
+    },
+    {
+      "id": 237,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T22:23:15Z",
+      "question": "Lane-worktree lacks gitignored .mcp.json -> junior-brehon MCP server absent -> NO Junior dispatch possible until session restart.",
+      "options": [
+        "promote-to-lesson",
+        "leave-as-retro-note"
+      ],
+      "context": "v1-ship-1 lane session (brehon-fork-ship-1) had NO junior-brehon MCP tools: `git worktree add` does not propagate the canonical brehon-fork checkout's gitignored .mcp.json (servers: project-memory, junior-brehon, ref-context, tavily). The bootstrap assumed MCP was wired. Same root-cause class as DQ #236 (uninit submodule) and feedback_settings_local_json_worktree_bootstrap.md: gitignored runtime config/state does not survive `git worktree add`. Fix: recreated .mcp.json in the lane worktree mirroring canonical (PROJECT_ROOT adjusted to the lane path; junior-brehon + ref-context + tavily are path-agnostic). .mcp.json is gitignored (no commit). Claude Code requires a SESSION RESTART to load a newly-added project MCP server (cannot hot-load), and prompts for project MCP-server approval on restart. User chose 'write .mcp.json, I restart'. This is the 4th data point in the multi-lane worktree-bootstrap gap class (submodule + .mcp.json + .project-memory db + settings.local.json all fail to propagate). The Junior daemon itself was healthy throughout.",
+      "answer": "Self-resolved (advisor): wrote gitignored .mcp.json in brehon-fork-ship-1; user restarts Claude Code in that dir + approves project MCP servers; session resumes at Task 0 dispatch (pre-phase audit already complete, flag set, briefs + DQ #236 pushed @ bf7baa562). Harvest at v1-ship-1 retro (Task 5) jointly with DQ #236: add a single lane-bootstrap step to multi-lane-worktree.md §Lifecycle 'After bm-cut creates a new phase branch' -> after `git worktree add`, run `git submodule update --init --recursive` AND `cp <canonical>/.mcp.json <lane>/.mcp.json` (fix PROJECT_ROOT) AND copy .claude/settings.local.json if present; note the mandatory Claude Code restart for MCP pickup. Non-blocking once the restart completes.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T22:23:15Z"
     }
   ],
   "schema_version": 2
