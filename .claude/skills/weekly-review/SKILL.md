@@ -20,6 +20,50 @@ Primary pattern detection now happens in post-task-retro (auto-promotion on 3+ c
 2. Call `memory_prune` (NOT dry_run) — delete expired and superseded memories
 3. Log what was pruned
 
+### 1b. PMD embedding backfill (safety net for unembedded rows)
+
+**Why:** the PMD MCP server has NO write-time embedding (verified by
+source inspection — `dist/index.js` has zero embed/ollama refs).
+Every `memory_write` / `memory_write_eval` from `post-task-retro`
+(Junior-side) and every `sync-lessons-to-pmd.sh` run inserts
+**text-only rows**. `memory_search_hybrid` silently degrades to FTS5
+for unembedded rows — the +62.7% semantic-recall advantage is absent
+until `backfill.js` embeds them. `post-task-retro` CANNOT run the
+backfill inline (its `memory_write_eval` must be the absolute final
+action before exit per its Stop-hook contract; a post-eval backfill
+would violate that + risk the Junior watchdog). So weekly-review is
+the enforcement point for the Junior-side DB. Per
+`.claude/lessons/feedback_pmd_backfill_after_write.md`.
+
+This runs as a Junior task on the EliteDesk daemon — use daemon-side
+paths (the MCP install location differs from the laptop's; locate
+`backfill.js` dynamically) and localhost Ollama. Non-fatal on
+failure (log + continue; this is a safety-net sweep, not a gate):
+
+```bash
+DB="/srv/brehon-fork/.project-memory/memory.db"
+# Locate backfill.js on the daemon (install path is not fixed):
+BF="$(find /srv /home /usr/local/lib -maxdepth 6 -name backfill.js -path '*project-memory*' 2>/dev/null | head -1)"
+MISS="$(python3 -c "import sqlite3;c=sqlite3.connect('$DB');print(c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()" 2>/dev/null || echo ERR)"
+echo "PMD unembedded rows: $MISS"
+if [ -n "$BF" ] && [ "$MISS" != "0" ] && [ "$MISS" != "ERR" ]; then
+  if curl -s -m5 http://localhost:11434/api/tags >/dev/null 2>&1; then
+    OLLAMA_URL=http://localhost:11434 PROJECT_MEMORY_DB="$DB" PROJECT_ROOT=/srv/brehon-fork \
+      node "$BF" --verbose 2>&1 | tail -5
+    # Verify:
+    python3 -c "import sqlite3;c=sqlite3.connect('$DB');print('MISSING after backfill:',c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()"
+  else
+    echo "WARN: daemon Ollama unreachable — $MISS rows stay FTS5-only; log + continue (non-fatal)"
+  fi
+elif [ -z "$BF" ]; then
+  echo "WARN: backfill.js not found on daemon — cannot embed; surface in weekly-review report"
+fi
+```
+
+Log the before/after missing-count in the weekly-review report. If
+`backfill.js` can't be located or Ollama is down, that is itself a
+finding to surface (semantic search is degrading week-over-week).
+
 ### 2. Promote candidates (backup sweep)
 
 For each promotion candidate from step 1 (tags/files in 3+ memories):
