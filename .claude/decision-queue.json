@@ -14,27 +14,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 238,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-16T22:43:18Z",
-      "question": "v1-ship-1 task 1 DTOs — laptop cargo validation pending",
-      "branch": "junior/role-impl-task-v1-ship-1-task-1-see-claude-prps-briefs-v1-ship-1-impl-1-md-285",
-      "phase_task": 1,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "context": "Task 1 added 3 DTO structs to crates/db_views/site/src/api.rs; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -3924,6 +3903,27 @@
       "answer": "Self-resolved (advisor): wrote gitignored .mcp.json in brehon-fork-ship-1; user restarts Claude Code in that dir + approves project MCP servers; session resumes at Task 0 dispatch (pre-phase audit already complete, flag set, briefs + DQ #236 pushed @ bf7baa562). Harvest at v1-ship-1 retro (Task 5) jointly with DQ #236: add a single lane-bootstrap step to multi-lane-worktree.md §Lifecycle 'After bm-cut creates a new phase branch' -> after `git worktree add`, run `git submodule update --init --recursive` AND `cp <canonical>/.mcp.json <lane>/.mcp.json` (fix PROJECT_ROOT) AND copy .claude/settings.local.json if present; note the mandatory Claude Code restart for MCP pickup. Non-blocking once the restart completes.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T22:23:15Z"
+    },
+    {
+      "id": 238,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-16T22:43:18Z",
+      "question": "v1-ship-1 task 1 DTOs — laptop cargo validation pending",
+      "branch": "junior/role-impl-task-v1-ship-1-task-1-see-claude-prps-briefs-v1-ship-1-impl-1-md-285",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "context": "Task 1 added 3 DTO structs to crates/db_views/site/src/api.rs; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 3 §5.2 validate-pending-laptop commands PASS against phase-v1-ship-1 tip 7f58e6cf6 (post Task-1 finalize-merge 97850b363). cargo-check --workspace --features full: PASS 8m07s, 0 errors. cargo-clippy --workspace --features full --no-deps -- -D warnings: PASS 5m36s, 0 warnings 0 errors. cargo-test --no-run -p lemmy_server --test e2e: PASS 8m07s, e2e-6c3527550c4cf788.exe built, 0 errors. Shape G suspended repo-wide (DQ #229) so validation ran locally via scripts/brehon/cargo-*.bat per advisor-orchestrator.md §5.2. DTOs (SourceDisclosure/GetSource/GetSourceResponse) compile + lint clean. Logs: C:/Users/barri/.claude/logs/validate-laptop-238-cmd{1,2,3}.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-16T23:19:22Z"
     }
   ],
   "schema_version": 2

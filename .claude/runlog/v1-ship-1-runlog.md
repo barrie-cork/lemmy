@@ -137,3 +137,19 @@ lemmy_server --test e2e`) dispatched bg `bauk7u7j7` — compiles e2e
 binary only, no Docker/testcontainers. On `CMD3_EXIT_0` → all 3 §5.2
 commands pass → mutate DQ #238 `answered_by:"advisor-laptop"`
 `result:"pass"` → resolved → daemon-sync → Cohort A.
+
+## advisor: §5.2 ALL PASS, DQ #238 resolved, Cohort A next 2026-05-17
+
+cargo-test --no-run (bg `bauk7u7j7`) PASS — EVIDENCE: `CMD3_EXIT_0`,
+`Finished test profile in 8m07s`, `Executable tests\e2e.rs
+(target\debug\deps\e2e-6c3527550c4cf788.exe)` built, 0 errors.
+**ALL 3 §5.2 commands PASS** (check 8m07s/0err · clippy 5m36s/0warn·err
+· test-no-run 8m07s/e2e-exe-built). Task 1 DTOs fully validated vs
+phase tip 7f58e6cf6. DQ #238 mutated `pending→resolved`
+(`result:"pass"`, `answered_by:"advisor-laptop"`, resolved_at
+2026-05-16T23:19:22Z) via Temp script + `python <file>` (Windows
+inline-python trap avoided). Pending now `[229]` only (expected
+Shape-G-reenable log). **Task 1 (solo DTO barrier) COMPLETE.** Next:
+daemon-local-trunk-sync → author + dispatch Cohort A (Tasks 2+3,
+file-disjoint `[P]`, parallel `create_task` single message; verify
+§11 + FILES YAML overlap + `requires:`Task1-on-phase-branch first).
