@@ -1,21 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 229,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-16T09:30:00Z",
-      "question": "Re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets.",
-      "options": [
-        "re-enable all three workflows: gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{262402017,267337786,267337787}/enable",
-        "extend suspension if minutes still low at June 1"
-      ],
-      "context": "adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) disabled 2026-05-16 to conserve Actions minutes (2800/3000 consumed). Revert impl-task.md + impl-task-brief.template.md suspension notices and restore validate-pending (Shape G) DQ write instruction. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -3873,6 +3857,21 @@
       "answer": "FIX THE DAEMON (per user 2026-05-16). Proper long-term fix: patch the homeserver Junior daemon to wire --dangerously-skip-permissions through to Junior subagent spawns (or otherwise neutralise the .claude/** sensitive-file gate for Junior-worker sessions, scoped to the worktree blast-radius the worktree-guard.sh PMD #998 hook already enforces). This is homeserver-repo work (CWD C:/Users/barri/Developer/homeserver, scripts/junior-server-patches/) — a SEPARATE task, NOT brehon-fork scope; tracked here for the audit trail + retro. Until the daemon patch ships, the planning role stays escalation-and-transcribe (planner writes worktree-root PLAN_DELIVERABLE.md + ESCALATION_NOTE.md; advisor laptop transcribes to canonical .claude/** paths per escalation.md). v1-federation-inbound-a is UNBLOCKED — its plan is already transcribed + landed (commit d6cd09fee); this decision governs FUTURE planning dispatches, not this lane's progress. Marked blocker/resolved (not log) because it gates the four-role model's planning-Junior contract until the homeserver patch lands.",
       "answered_by": "user",
       "resolved_at": "2026-05-16T10:26:00Z"
+    },
+    {
+      "id": 229,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T09:30:00Z",
+      "question": "Re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets.",
+      "options": [
+        "re-enable all three workflows: gh api --method PUT repos/barrie-cork/lemmy/actions/workflows/{262402017,267337786,267337787}/enable",
+        "extend suspension if minutes still low at June 1"
+      ],
+      "context": "adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) disabled 2026-05-16 to conserve Actions minutes (2800/3000 consumed). Revert impl-task.md + impl-task-brief.template.md suspension notices and restore validate-pending (Shape G) DQ write instruction. See DQ #228 + .claude/PRPs/reports/gh-actions-minutes-audit-2026-05-15.md.",
+      "answer": "Deferred reminder: re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets. Options recorded in question field. log-kind moved to resolved[] per schema-v2 rule (log entries never sit in pending[]).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T20:16:17Z"
     }
   ],
   "schema_version": 2
