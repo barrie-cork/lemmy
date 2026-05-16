@@ -3697,6 +3697,28 @@
       "log_slice": null,
       "failed_jobs": null,
       "resolved_at": "2026-05-15T23:14:45Z"
+    },
+    {
+      "id": 225,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-16T00:21:25Z",
+      "question": "advisor-laptop §5.2 RE-validation #4 of chore/refactor-e2e-error-types (PR #132 cr-6 fix: non-ignored phase1_revert_list_matches_disk guard; chore tip 69f88ee8f)",
+      "options": [
+        "pass-proceed-to-merge",
+        "fail-catch-fire"
+      ],
+      "context": "cr-6 (CR follow-up on cr-5: assert was inside #[ignore]d round-trip fns -> never ran; re-validation #3 Gate 3 log empirically confirmed) fixed: added standalone non-ignored #[test] phase1_revert_list_matches_disk calling the existing sync helper assert_revert_list_matches_disk; 3 in-fn pre-flight calls kept. Re-run on tip 69f88ee8f: CHECK_EXIT_0 7m57s + CLIPPY_EXIT_0 2.31s (Gate 2-b, DQ-#221-canonical scope --features full --test e2e NO --tests; first Gate-2 failed on advisor invocation error pulling out-of-scope lemmy_api lib-test debt that DQ #221 excluded, self-corrected, no code change) + E2E_EXIT_0 1883.44s 89 passed/0 failed/5 ignored. EXPECTED +1 vs prior 88: phase1_revert_list_matches_disk ran + passed (list matches disk, no drift); 3 round-trip fns stay #[ignore]d for GH #43. NOT a regression - the +1 is the intended cr-6 effect. cr-1+cr-2 rebutted; cr-3/4/5/6 fixed-in-pr.",
+      "answer": "pass - cr-6 closes audit-3.E.4 for real (parity guard runs by default + passed); all 3 gates exit 0 on cr-6 tip; green suite 88->89 is the intended cr-6 effect; proceed to USER GATE 5 (merge confirm)",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "branch": "chore/refactor-e2e-error-types",
+      "phase_task": "PR-1",
+      "local_log_path": "C:/Users/barri/.claude/logs/pr1-cr6-gate3-e2e.log",
+      "workflow_run_id": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "resolved_at": "2026-05-16T00:21:25Z"
     }
   ],
   "schema_version": 2
