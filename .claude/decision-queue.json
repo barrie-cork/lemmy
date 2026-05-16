@@ -1,37 +1,5 @@
 {
-  "pending": [
-    {
-      "id": 237,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-16T19:48:00Z",
-      "question": "v1-AD-e ships Dashboard + Audit HTML pages only (the 2 with shipped read paths); Config-editor / Single-key-editor / Rule-set-manager defer to v1-AD-f (each needs net-new read-path Rust). Confirm the cut line.",
-      "options": [
-        "a) Dashboard + Audit only — recommended (true pure-presentation, smallest CR surface; the 3 deferred pages are read-path+template work)",
-        "b) all 5 pages now (larger, contradicts the pure-templating framing, adds read-path Rust this plan deliberately excludes)",
-        "c) Dashboard + Audit now AND adopt the literal PRD /admin/governance/* URL spelling as a separate top-level scope (URL-shape variant of a)"
-      ],
-      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #1. v1-AD keystone: a/b/c/d/wrap-up all SHIPPED (PRs #72/#76/#81/#87/#90). v1-AD-e is the final page-layer sub-phase. Planner-recommended (a). Judgment-heavy / scope-affecting → user-relay. Task 0 Probe 6 gates on this being in resolved[].",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 238,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-16T19:48:00Z",
-      "question": "v1-AD-e is the first server-rendered HTML in the workspace. Pick the template engine (OQ-V1-AD-01 re-resolution 2026-05-16 delegated this here).",
-      "options": [
-        "a) maud — recommended (1 dep, 0 new files, native actix Responder, matches the inline-Rust codebase idiom)",
-        "b) askama (2 deps incl. the askama_web actix-4 shim, fresh templates/ dir, compile-time external-file template checking)"
-      ],
-      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #2 + evidence table §5.2. First server-rendered HTML in the workspace. Both options keep React/SPA as v2 per ADR-010 (unchanged). Planner-recommended (a). Judgment-heavy → user-relay. Task 0 Probe 5 gates on this being in resolved[] with an engine answer.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -3919,6 +3887,37 @@
       "answer": "CORRECTED SCOPE (durable): deferred work = audit 3.E.2 ONLY (consolidate ~70% duplication across v1_jm_b_fixtures / v1_jm_e_fixtures / v1_sl_b_fixtures / v1_sl_c_fixtures, ~4000 lines, into a shared governance_test_helpers module; phase-specific modules become thin wrappers) + the 3.E.5 fold-in (move the local seed_person helper in report_to_modlog_golden_path to call the canonical module-level seed_user). 3.E.1 + 3.E.3 + 3.E.4 are ALREADY SHIPPED in PR-1 (#132, merged c4b09b65e) — they are NOT part of the deferred bundle; the advisor's 2026-05-16 '3.E.1+3.E.2+3.E.3+3.E.5' verbal framing is superseded by this entry. RE-SURFACE TRIP-WIRE: this carry-forward BLOCKS NOTHING but MUST be re-surfaced at the v1-PRD-resume planning gate (i.e. once v1-ship-1 + v1-federation-inbound-a + v1-AD-e have shipped and the user is deciding what resumes the v1 PRD). At that point: open a NEW dedicated lane (brief -> /brehon-clarify -> planning Junior -> phase-v1-<lane> worktree -> impl -> PR) for 3.E.2+3.E.5 only, on explicit user instruction. Until then it stays as advisor task #8 + this DQ entry + the final-retro carry-forward. /retro-harvest and /start-brehon will pick this up via the resolved[] log + the retro carry-forward. Cross-refs: DQ #222 (user defer decision), .claude/PRPs/reports/refactor-tier-final-retro.md (durable carry-forward), .claude/PRPs/reports/v1-code-quality-audit-2026-05-14.md §3.E (audit findings 3.E.2 + 3.E.5).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T20:52:37Z"
+    },
+    {
+      "id": 237,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T19:48:00Z",
+      "question": "v1-AD-e ships Dashboard + Audit HTML pages only (the 2 with shipped read paths); Config-editor / Single-key-editor / Rule-set-manager defer to v1-AD-f (each needs net-new read-path Rust). Confirm the cut line.",
+      "options": [
+        "a) Dashboard + Audit only — recommended (true pure-presentation, smallest CR surface; the 3 deferred pages are read-path+template work)",
+        "b) all 5 pages now (larger, contradicts the pure-templating framing, adds read-path Rust this plan deliberately excludes)",
+        "c) Dashboard + Audit now AND adopt the literal PRD /admin/governance/* URL spelling as a separate top-level scope (URL-shape variant of a)"
+      ],
+      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #1. v1-AD keystone: a/b/c/d/wrap-up all SHIPPED (PRs #72/#76/#81/#87/#90). v1-AD-e is the final page-layer sub-phase. Planner-recommended (a). Judgment-heavy / scope-affecting → user-relay. Task 0 Probe 6 gates on this being in resolved[].",
+      "answer": "a) Dashboard + Audit only — user confirmed the cut line. Config-editor / Single-key-editor / Rule-set-manager defer to a new v1-AD-f (each needs net-new read-path Rust). Plan keeps its zero-new-read-path / pure-presentation framing.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-16T22:10:00Z"
+    },
+    {
+      "id": 238,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-16T19:48:00Z",
+      "question": "v1-AD-e is the first server-rendered HTML in the workspace. Pick the template engine (OQ-V1-AD-01 re-resolution 2026-05-16 delegated this here).",
+      "options": [
+        "a) maud — recommended (1 dep, 0 new files, native actix Responder, matches the inline-Rust codebase idiom)",
+        "b) askama (2 deps incl. the askama_web actix-4 shim, fresh templates/ dir, compile-time external-file template checking)"
+      ],
+      "context": "Plan v1-admin-dashboard-e.plan.md §19 DQ #2 + evidence table §5.2. First server-rendered HTML in the workspace. Both options keep React/SPA as v2 per ADR-010 (unchanged). Planner-recommended (a). Judgment-heavy → user-relay. Task 0 Probe 5 gates on this being in resolved[] with an engine answer.",
+      "answer": "a) maud — user picked maud over askama (planner recommendation, evidence table plan §5.2). 1 dep, 0 new files (inline html!{} macros), native actix Responder, matches the inline-Rust codebase idiom. askama NOT chosen. Task 1 installs maud only; no templates/ dir.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-16T22:10:00Z"
     }
   ],
   "schema_version": 2
