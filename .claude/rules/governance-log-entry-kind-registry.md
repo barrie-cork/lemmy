@@ -190,22 +190,36 @@ registry rule pre-landed-const exemption.
 | `ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED` | `sponsor_allowlist_added` | v1-RT-r1 const; v1-RT-r4 call site | v1-RT-r4 `admin_sponsor_allowlist.rs::add` (handler name TBD; pending) | New `sponsor_allowlist` row inserted by admin. Payload: `{allowlist_id, community_id?, person_pseudonym, added_by_admin_pseudonym, note?, added_at}`. Per PRD §5.4 third strategy. |
 | `ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED` | `sponsor_allowlist_removed` | v1-RT-r1 const; v1-RT-r4 call site | v1-RT-r4 `admin_sponsor_allowlist.rs::remove` (pending) | `sponsor_allowlist` row deleted by admin. Payload: `{allowlist_id, community_id?, person_pseudonym, removed_by_admin_pseudonym, removed_at}`. Per PRD §5.4. |
 
-### federation-inbound-v1 (reserved — §§5.3/6.2/6.3/8.2 of PRD enumerate 11 new kinds)
+## v1-federation-inbound-a entry kinds (9, this sub-phase)
 
-_To be populated by `v1-federation-inbound.plan.md`:_
-`federation_label_received`, `federation_inbound_blocked`,
-`federation_inbound_dropped_oversize`,
-`federation_inbound_dropped_schema`,
-`federation_inbound_dropped_rate_limit`,
-`federation_inbound_dropped_actor_rate_limit`,
-`federation_inbound_persist_failed`,
-`federation_inbound_cross_linked`, `federation_inbound_dismissed`,
-`federation_peer_trust_changed`,
-`federation_inbound_storage_cap_evicted`.
+Landed alongside task 4's dual-file edit. v1-federation-inbound-a
+writes the const declarations only; emitting call sites land in
+v1-federation-inbound-b's wrapper + handler patches per the registry
+rule's pre-landed-const exemption.
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_FEDERATION_INBOUND_BLOCKED` | `federation_inbound_blocked` | -a const; -b call site | -b `inbox.rs::wrap_governance_inbound` peer-trust Blocklisted branch (pending) | Inbound from Blocklisted peer rejected; HTTP 403. Per PRD §3.2 + §5.3. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE` | `federation_inbound_dropped_oversize` | -a const; -b call site | -b `wrap_governance_inbound` size-check (pending) | Payload exceeded cap; HTTP 413. Per PRD §3.3 + §7.4. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_SCHEMA` | `federation_inbound_dropped_schema` | -a const; -b call site | -b `wrap_governance_inbound` schema-check (pending) | Strict-deserialisation rejected; HTTP 400. Per PRD §3.3 + §7.4. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER` | `federation_inbound_dropped_rate_limit_peer` | -a const; -b call site | -b `wrap_governance_inbound` per-peer-rate (pending) | Per-peer rate exceeded; HTTP 429. Per PRD §7.1. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR` | `federation_inbound_dropped_rate_limit_actor` | -a const; -b call site | -b `wrap_governance_inbound` per-actor-rate (pending) | Per-actor rate exceeded; HTTP 429. Per PRD §7.2. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY` | `federation_inbound_dropped_replay` | -a const; -b call site | -b `wrap_governance_inbound` replay-check (pending) | Activity ID seen within window; HTTP 409. Per PRD §7.5. |
+| `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED` | `federation_inbound_dropped_storage_cap_evicted` | -a const; -b call site | -b `wrap_governance_inbound` storage-cap (pending) | Storage cap reached; oldest row evicted. Per PRD §7.3. |
+| `ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED` | `federation_peer_trust_changed` | -a const; -c call site | -c admin POST .../peers/{instance_id}/trust handler (pending — owned by -c) | Admin flipped a peer's trust state. Per PRD §4.3 + §12.5. |
+| `ENTRY_KIND_FEDERATION_LABEL_RECEIVED` | `federation_label_received` | -a const; -b call site | -b `inbox.rs::receive_remote_moderation_label` (pending — fills Phase 6 stub) | Inbound moderation label persisted. Per PRD §3.2 + §9.4. |
+
+**Deferred (NOT shipped in `-a`):**
+
+- `federation_inbound_persist_failed` (PRD §5.3 row 7) — `-b`.
+- `federation_inbound_cross_linked` (PRD §6.2) — `-c`.
+- `federation_inbound_dismissed` (PRD §6.3) — `-c`.
+
+_Authored by the advisor session on `phase-v1-federation-inbound-a` (not the Task 4 Junior): `.claude/rules/**` is advisor-owned meta-work per `branch-manager.md` file-ownership + the harness gap DQ #235 blocks Junior workers from writing `.claude/**`. Task 4's Junior writes ONLY the 2 `crates/` `governance_log.rs` files (consts + shim re-exports); this registry section is its pre-landed counterpart per the pre-landed-const exemption below._
 
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**45** at v1-RT-r1 end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**54** at v1-federation-inbound-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (downstream call sites: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`; `_APPEAL_DECIDED` → v1-JM-e `submit_jury_vote.rs::process_appeal_vote`, **flipped active 2026-05-02**), and v1-SL-a's five consts (downstream call sites: `_SPONSOR_LIABILITY_PENDING` → v1-SL-d `submit_jury_vote.rs`; `_SPONSOR_LIABILITY_FIRED` → v1-SL-c `sponsor_liability_grace.rs`; `_SPONSOR_LIABILITY_ESCAPED` → v1-SL-b `revoke_endorsement.rs` + v1-SL-c `sponsor_liability_grace.rs`; `_ENDORSEMENT_REVOKED` → v1-SL-b `revoke_endorsement.rs`; `_RESTORATION_COMPLETED` → restorative-mechanics-v1 `restoration_complete.rs`), and v1-RT-r1's seven consts (downstream call sites: `_PARTICIPATION_CRON_TICK` → v1-RT-r3 `scheduled_tasks.rs`; `_VOTE_OUTCOME_RECORDED` → v1-RT-r3 `submit_jury_vote.rs`; `_EVIDENCE_QUALITY_RECORDED` → v1-RT-r3 `submit_jury_vote.rs` + `admin_emergency_remove.rs`; `_ROLLUP_RECOMPUTED` → v1-RT-r5 `scheduled_tasks.rs`; `_DECAY_KNOB_CHANGED` → v1-RT-r2 `admin_config.rs`; `_SPONSOR_ALLOWLIST_ADDED` → v1-RT-r4 `admin_sponsor_allowlist.rs`; `_SPONSOR_ALLOWLIST_REMOVED` → v1-RT-r4 `admin_sponsor_allowlist.rs`). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.
