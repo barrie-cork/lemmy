@@ -14,6 +14,30 @@
    "answer": null,
    "answered_by": null,
    "resolved_at": null
+  },
+  {
+   "id": 241,
+   "from": "impl",
+   "kind": "validate-pending-laptop",
+   "timestamp": "2026-05-16T21:36:00Z",
+   "question": "Run cargo-check + migrate-roundtrip for Task 1 migration (Shape G suspended, validate-pending-laptop mode).",
+   "options": [
+    "pass: both commands exit 0 — advance Cohort A barrier",
+    "fail: one or both commands exit non-zero — advisor §G4 triage"
+   ],
+   "context": "Task 1 commit on worktree branch junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283. Creates migrations/2026-05-17-000000-0000_add_federation_inbound_v1/{up,down}.sql. Shape G suspended until 2026-06-01 per DQ #229/#231/#235.",
+   "phase_task": 1,
+   "branch": "junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283",
+   "commands": [
+    "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task1-check.log 2>&1\"",
+    "bash scripts/brehon/migrate-roundtrip.sh > .claude/PRPs/debug/fed-in-a-task1-migrate.log 2>&1"
+   ],
+   "result": null,
+   "log_slice": null,
+   "failed_commands": null,
+   "answer": null,
+   "answered_by": null,
+   "resolved_at": null
   }
  ],
  "resolved": [
@@ -3911,6 +3935,21 @@
    "answer": "Recorded for retro harvest (advisor-self-resolved as kind:log). Recommended action: add to the v1-federation-inbound-a phase retro a proposal to extend /precheck (or advisor-orchestrator.md §5.2 validate-pending-laptop pre-flight) with a git-submodule-status gate: before the first cargo run in a lane worktree, run  a3f9e4669b53f041b92fbbe6bdd80c8db0619c20 crates/email/translations (remotes/origin/lemmy-ml-registration-message-1458-ga3f9e46) and auto-init any entry with a leading - (uninitialized). Cost of the check ~1s; cost avoided ~8min cold cargo run + a confusing false-negative. Companion to the resolved pass on DQ #236. Pattern feedback_worktree_submodules_not_auto_init already in MEMORY.md; this DQ adds the concrete advisor-orchestrator pre-flight wiring recommendation.",
    "answered_by": "advisor-laptop",
    "resolved_at": "2026-05-16T21:24:00Z"
+  },
+  {
+   "id": 240,
+   "from": "impl",
+   "kind": "log",
+   "timestamp": "2026-05-16T21:36:00Z",
+   "question": "Plan §10.1 pre-condition checks used wrong Phase-6 enum type names (with _enum suffix); corrected to bare names.",
+   "options": [
+    "fix-enum-names-in-preconditions: change attestation_type_enum->attestation_type, sanction_action_enum->sanction_action, sanction_scope_enum->sanction_scope",
+    "use-verbatim-plan: leave incorrect names, causing RAISE EXCEPTION on migrate-roundtrip"
+   ],
+   "context": "Phase 6 migration 2026-04-15-100000-0000_add_governance_enums/up.sql creates bare types (attestation_type, sanction_action, sanction_scope). The federation_attestations migration comment explicitly notes 'NOT attestation_type_enum'. Plan §10.1 DO$$ pre-condition checks used _enum suffix; left verbatim, migration would RAISE EXCEPTION immediately. Fix is mechanical: bare type names in pre-condition checks only; actual CREATE TYPE/ALTER TABLE DDL is unchanged.",
+   "answer": "Fixed in up.sql: pre-condition checks use bare type names matching actual Phase-6 enums. DDL body unchanged from §10.1. Evidence: grep attestation_type migrations/2026-04-15-100000-0000_add_governance_enums/up.sql. Promote to lesson: 'Phase-6 governance enums have bare names (no _enum suffix); future plans should use bare names in pre-condition checks.'",
+   "answered_by": "impl-self-resolved",
+   "resolved_at": "2026-05-16T21:36:00Z"
   }
  ],
  "schema_version": 2
