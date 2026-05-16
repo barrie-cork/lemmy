@@ -126,3 +126,14 @@ DTOs compile clean. cmd2 (cargo-clippy `--workspace --features full
 --no-deps -- -D warnings`) dispatched bg `bvhmvth60` (same corrected
 one-cmd//c+call pattern; target/ warm). Awaiting CMD2 EXIT marker;
 cmd3 (test --no-run) chains only on CMD2_EXIT_0.
+
+## advisor: §5.2 cmd2 (clippy) PASS, cmd3 (test --no-run) running 2026-05-17
+
+cargo-clippy (bg `bvhmvth60`) PASS — EVIDENCE: `CMD2_EXIT_0` marker,
+`Finished dev profile in 5m 36s` (clean through lemmy_server), **0
+warnings 0 errors** (no `-D warnings` denials). DTOs clippy-clean
+(verbatim §10.1 bodies as expected). cmd3 (cargo-test `--no-run -p
+lemmy_server --test e2e`) dispatched bg `bauk7u7j7` — compiles e2e
+binary only, no Docker/testcontainers. On `CMD3_EXIT_0` → all 3 §5.2
+commands pass → mutate DQ #238 `answered_by:"advisor-laptop"`
+`result:"pass"` → resolved → daemon-sync → Cohort A.
