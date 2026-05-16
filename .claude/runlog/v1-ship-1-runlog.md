@@ -22,3 +22,14 @@ Lane-dedicated advisor session resumed from
 `C:/Users/barri/Developer/brehon-fork-ship-1`, branch =
 `phase-v1-ship-1`. Pre-phase harness audit (4 wrapper probes) running.
 Next: Task 0 pre-flight brief dispatch per plan §13.
+
+## advisor: daemon-local ref synced + Task 0 dispatched 2026-05-16
+
+Daemon-local `phase-v1-ship-1` was STALE (`bf7baa562`; daemon checkout
+on `phase-v1-federation-inbound-a`). Lane-safe refspec-fetch
+`git fetch origin phase-v1-ship-1:phase-v1-ship-1` → SYNC at
+`3d098d5f2`; daemon checkout unchanged (federation-inbound-a lane
+undisturbed) per the #273 lesson + `.claude/rules/multi-lane-worktree.md`.
+Task 0 dispatched as Junior **#284**
+(`[role:impl-task]`, `base_branch=phase-v1-ship-1` @ `3d098d5f2`).
+Non-`[P]`, verification-only (12 probes, no commit). Awaiting complete.
