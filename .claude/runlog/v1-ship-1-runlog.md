@@ -116,3 +116,13 @@ EXIT_NONZERO>>log"` — one cmd//c per command, explicit `call`, explicit
 (test-no-run) chained sequentially only AFTER reading each prior log's
 EXIT marker (not trusting the bg-completion summary). → candidate for a
 new lesson `feedback_win_bat_chain_needs_call_per_cmd` at retro.
+
+## advisor: §5.2 cmd1 PASS, cmd2 (clippy) running 2026-05-17
+
+cargo-check (bg `bdwymbji2`) PASS — verified by EVIDENCE not bg-summary
+(trap discipline): `CMD1_EXIT_0` marker present, `Finished dev profile
+in 8m 07s` (clean through lemmy_server), 0 `error[E*]`/`error:` lines.
+DTOs compile clean. cmd2 (cargo-clippy `--workspace --features full
+--no-deps -- -D warnings`) dispatched bg `bvhmvth60` (same corrected
+one-cmd//c+call pattern; target/ warm). Awaiting CMD2 EXIT marker;
+cmd3 (test --no-run) chains only on CMD2_EXIT_0.
