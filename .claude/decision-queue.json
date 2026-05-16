@@ -3904,6 +3904,21 @@
       "answer": "Deferred reminder: re-enable Shape G workflows on 2026-06-01 when Actions billing cycle resets. Options recorded in question field. log-kind moved to resolved[] per schema-v2 rule (log entries never sit in pending[]).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-16T20:16:17Z"
+    },
+    {
+      "id": 240,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-16T20:52:37Z",
+      "question": "Scope correction + re-surface trip-wire for the deferred audit-3.E.2 fixtures-dedup carry-forward (originally deferred by user DQ #222).",
+      "options": [
+        "record corrected scope: PR-1 (#132, merged) already shipped 3.E.1+3.E.3+3.E.4; the DEFERRED bundle is ONLY 3.E.2 (4 fixtures modules ~70% dup -> shared governance_test_helpers) + the 3.E.5 fold-in (local seed_person -> canonical module-level seed_user). NOT a 3.E.1+3.E.2+3.E.3+3.E.5 bundle.",
+        "no-op (leave the verbal framing only — rejected: it was scope-wrong and had no durable trip-wire)"
+      ],
+      "context": "Advisor 2026-05-16 verbally framed the deferred 3.E.2 follow-up as 'a single e2e.rs refactor sub-phase bundling 3.E.1 + 3.E.2 + 3.E.3 + 3.E.5'. That framing was NOT recorded durably and is SCOPE-WRONG: per DQ #222 (answered_by:user, 2026-05-15) + .claude/PRPs/reports/refactor-tier-final-retro.md (committed ae52dc0cd), PR-1 / chore/refactor-e2e-error-types (PR #132, merged at c4b09b65e) ALREADY shipped audit 3.E.1 + 3.E.3 + 3.E.4 (Junior #268 commit f258824b5). 3.E.1/3.E.3 are DONE, not pending. The only un-done work is 3.E.2 (the ~4000-line / 4-module fixtures dedup into governance_test_helpers) plus its 3.E.5 fold-in (the audit explicitly says 3.E.5 'will fold into 3.E.2 refactor'). DQ #222 ruled this is a POST-GATE follow-up that does NOT block v1 PRD planning (strict gate stayed 5 PRs; PR-1 was the 5th/final item), tracked as advisor task #8, to be re-planned as its own brief + dedicated lane AFTER the refactor-tier final retro + v1 PRD work, on explicit user instruction. The deferral itself is durably anchored (DQ #222 + the final retro lines 32-33/116-119/323); this entry adds (a) the corrected bundle scope and (b) an explicit re-surface trip-wire so a future v1-PRD-resume planning session does not inherit the wrong 4-finding framing or silently skip the carry-forward.",
+      "answer": "CORRECTED SCOPE (durable): deferred work = audit 3.E.2 ONLY (consolidate ~70% duplication across v1_jm_b_fixtures / v1_jm_e_fixtures / v1_sl_b_fixtures / v1_sl_c_fixtures, ~4000 lines, into a shared governance_test_helpers module; phase-specific modules become thin wrappers) + the 3.E.5 fold-in (move the local seed_person helper in report_to_modlog_golden_path to call the canonical module-level seed_user). 3.E.1 + 3.E.3 + 3.E.4 are ALREADY SHIPPED in PR-1 (#132, merged c4b09b65e) — they are NOT part of the deferred bundle; the advisor's 2026-05-16 '3.E.1+3.E.2+3.E.3+3.E.5' verbal framing is superseded by this entry. RE-SURFACE TRIP-WIRE: this carry-forward BLOCKS NOTHING but MUST be re-surfaced at the v1-PRD-resume planning gate (i.e. once v1-ship-1 + v1-federation-inbound-a + v1-AD-e have shipped and the user is deciding what resumes the v1 PRD). At that point: open a NEW dedicated lane (brief -> /brehon-clarify -> planning Junior -> phase-v1-<lane> worktree -> impl -> PR) for 3.E.2+3.E.5 only, on explicit user instruction. Until then it stays as advisor task #8 + this DQ entry + the final-retro carry-forward. /retro-harvest and /start-brehon will pick this up via the resolved[] log + the retro carry-forward. Cross-refs: DQ #222 (user defer decision), .claude/PRPs/reports/refactor-tier-final-retro.md (durable carry-forward), .claude/PRPs/reports/v1-code-quality-audit-2026-05-14.md §3.E (audit findings 3.E.2 + 3.E.5).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-16T20:52:37Z"
     }
   ],
   "schema_version": 2
