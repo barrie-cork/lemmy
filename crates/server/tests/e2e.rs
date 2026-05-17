@@ -14860,3 +14860,200 @@ mod v1_sl_e_fixtures {
     Ok(())
   }
 }
+
+// ============================================================================
+// v1-AD-e — server-rendered HTML admin pages (Dashboard + Audit)
+//
+// Mirrored from v1-AD-d admin_dashboard tests at e2e.rs:7296-7343 (Case A:
+// uniform LemmyResult<()>, all bare ?, per feedback_lemmy_error_no_std_error
+// §"Case A"). Four tests:
+//   - `admin_dashboard_html_returns_html_for_admin`  — 200 text/html + heading
+//   - `admin_dashboard_html_forbidden_for_non_admin` — capability gate
+//   - `admin_html_pages_flag_off_returns_404`        — html_pages_enabled=false
+//   - `admin_audit_html_returns_html_for_admin`      — 200 text/html + EventSource
+//   - `admin_audit_html_forbidden_for_non_admin`     — capability gate (audit)
+//
+// Handlers invoked directly (no in-process actix server needed; the handler
+// returns LemmyResult<HttpResponse> and the response body is a buffered
+// BoxBody accessible via try_into_bytes()).
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_html_returns_html_for_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{body::MessageBody, http::StatusCode};
+  use lemmy_api::governance::admin_dashboard_html::admin_dashboard_html;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_dash_admin", true).await?;
+
+  let resp = admin_dashboard_html(context.clone(), admin_view).await?;
+  assert_eq!(resp.status(), StatusCode::OK, "admin gets 200 from /dashboard/view");
+  assert!(
+    resp
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default()
+      .contains("text/html"),
+    "Content-Type must contain text/html",
+  );
+  let body_str = String::from_utf8(
+    resp.into_body().try_into_bytes().unwrap_or_default().to_vec(),
+  )?;
+  assert!(
+    body_str.contains("Governance Admin Dashboard"),
+    "body must contain the stable dashboard page heading",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_html_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard_html::admin_dashboard_html;
+  use lemmy_utils::error::LemmyErrorType;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_dash_nonadmin", false).await?;
+
+  let result = admin_dashboard_html(context.clone(), user_view).await;
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
+
+  Ok(())
+}
+
+/// R-html-3: when `governance.dashboard.html_pages_enabled` is set to `false`
+/// at instance scope, both the dashboard and audit HTML routes return 404
+/// (feature-off semantics — not 403, which would indicate an auth failure).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_html_pages_flag_off_returns_404()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{http::StatusCode, web::Json};
+  use lemmy_api::governance::{
+    admin_config::admin_set_config,
+    admin_dashboard_html::{admin_audit_html, admin_dashboard_html},
+  };
+  use lemmy_api_common::governance::AdminSetConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_flagoff_admin", true).await?;
+
+  // Disable HTML pages via the existing config-write path (R-html-3: do not
+  // raw-INSERT; use the handler that mirrors how the gate reads the key).
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "governance.dashboard.html_pages_enabled".to_string(),
+      value_type: "bool".to_string(),
+      value: serde_json::json!(false),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "disable HTML pages for 404 test".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // Both routes must return 404 when the feature flag is off (R-html-3).
+  let resp_dash = admin_dashboard_html(context.clone(), admin_view.clone()).await?;
+  assert_eq!(
+    resp_dash.status(),
+    StatusCode::NOT_FOUND,
+    "/dashboard/view must return 404 when html_pages_enabled=false",
+  );
+
+  let resp_audit = admin_audit_html(context.clone(), admin_view).await?;
+  assert_eq!(
+    resp_audit.status(),
+    StatusCode::NOT_FOUND,
+    "/audit/view must return 404 when html_pages_enabled=false",
+  );
+
+  Ok(())
+}
+
+/// Story 2 structural check: the audit HTML page includes an EventSource
+/// pointing at /audit/stream and wires both named-event listeners per the
+/// admin_audit_stream.rs frame contract (plan §13 Task 4 GOTCHA — onmessage
+/// fires only on unnamed events; addEventListener required for named events).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_html_returns_html_for_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{body::MessageBody, http::StatusCode};
+  use lemmy_api::governance::admin_dashboard_html::admin_audit_html;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_audit_admin", true).await?;
+
+  let resp = admin_audit_html(context.clone(), admin_view).await?;
+  assert_eq!(resp.status(), StatusCode::OK, "admin gets 200 from /audit/view");
+  assert!(
+    resp
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default()
+      .contains("text/html"),
+    "Content-Type must contain text/html",
+  );
+  let body_str = String::from_utf8(
+    resp.into_body().try_into_bytes().unwrap_or_default().to_vec(),
+  )?;
+  assert!(
+    body_str.contains("Governance Config Audit"),
+    "body must contain the stable audit page heading",
+  );
+  // EventSource wiring: named-event listeners for both governance event kinds.
+  assert!(
+    body_str.contains("EventSource("),
+    "audit page must instantiate an EventSource",
+  );
+  assert!(
+    body_str.contains("admin_config_changed"),
+    "audit page must wire the admin_config_changed event listener",
+  );
+  assert!(
+    body_str.contains("admin_config_change_denied"),
+    "audit page must wire the admin_config_change_denied event listener",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_html_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard_html::admin_audit_html;
+  use lemmy_utils::error::LemmyErrorType;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_audit_nonadmin", false).await?;
+
+  let result = admin_audit_html(context.clone(), user_view).await;
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
+
+  Ok(())
+}

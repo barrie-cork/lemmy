@@ -69,6 +69,7 @@ url = { workspace = true }
 regex = { workspace = true }
 sitemap-rs = "0.4.0"
 totp-rs = { version = "5.7.1", features = ["gen_secret", "otpauth"] }
+maud = { version = "0.27.0", features = ["actix-web"] }
 diesel-async = { workspace = true, features = ["deadpool", "postgres"] }
 either = { workspace = true }
 futures = { workspace = true }
