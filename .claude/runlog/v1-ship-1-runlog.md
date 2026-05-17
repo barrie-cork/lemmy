@@ -392,3 +392,41 @@ verify compile + clippy (compiler-verified, NOT assumed: route
 `.to()` sync-handler acceptance to be CONFIRMED by the green clippy run,
 not by assertion) → mutate BOTH #239 + #240 result:pass → cohort
 barrier clears → Task 4 (e2e).
+
+## advisor: de-async REVERTED — actix Handler requires async (#[expect] applied) 2026-05-17
+
+§5.2 re-run cmd1 on f18308092 FAILED: `error[E0277]: the trait bound
+{get_source}: Handler<_> is not satisfied --> crates/api/routes/src/
+lib.rs:233` (`could not compile lemmy_api_routes`). ADVISOR ERROR
+ACKNOWLEDGED: the prior de-async fix (f18308092) was WRONG — I asserted
+"actix .to() accepts sync handlers" WITHOUT compiler verification
+(violates `feedback_verify_automated_reviewer_claims_against_compiler`
+— applies to advisor's own framework claims, not just CR/Copilot).
+actix-web's `Handler<Args>` is implemented ONLY for handlers returning
+a `Future`; the `async` on `get_source` is STRUCTURALLY REQUIRED by the
+route registration even though the body has no `.await`. Junior #294's
+original `async fn` was CORRECT; `clippy::unused_async` is a
+false-positive in this actix-handler context.
+
+Corrected fix (user-authorized continuation of the one-time deviation,
+AskUserQuestion 2026-05-17 "Authorize me: revert + apply #[expect]"):
+restored `pub async fn get_source` (= Junior c4e5dcdf6 original) +
+added canonical `#[expect(clippy::unused_async, reason="actix-web
+Handler trait ... structurally required ... E0277 without it")]`.
+CANONICAL PRECEDENT followed: `crates/server/tests/e2e.rs:8025`
+`seed_case` uses the identical `#[expect(clippy::unused_async,
+reason=...)]` shape (per `feedback_read_canonical_before_writing_spec`
+— read sibling instance first). `unused_async = "deny"` is a
+`[workspace.lints.clippy]` entry (Cargo.toml:106), so `#[expect]` is
+the correct workspace-consistent suppression. Diff vs c4e5dcdf6 = ONLY
+the #[expect] block (async restored, nothing else). Next: re-run §5.2
+full chain on the new tip — COMPILER-verified this time (cmd1 must
+pass E0277-clean; cmd2 clippy must pass with #[expect] consuming the
+lint; cmd3 test --no-run) → mutate BOTH #239 + #240 result:pass.
+
+RETRO CARRY (Task 5 §5): advisor committed an unverified framework
+assumption (de-async) → 1 wasted §5.2 cycle (~5 min warm) + 1 extra
+commit + classifier-block. Lesson: framework-trait claims (actix
+Handler, Diesel DSL, etc.) are hypotheses — compile-verify on the lane
+BEFORE commit, never assert-then-commit. Ties to PR #132 cr-2 precedent
+in `feedback_verify_automated_reviewer_claims_against_compiler`.
