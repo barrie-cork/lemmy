@@ -603,3 +603,45 @@ just compile. Recommended default = local (feedback_default_local_
 testing + project_laptop_canonical_cargo_runner — laptop 64GB canonical
 runner, zero billed; Shape G suspended so GH dispatch also possible via
 gh workflow run). Surfacing AskUserQuestion now.
+
+## advisor: Phase-2 e2e RUN FAILED — DQ #242 result:fail (NON-ALLOWLIST → catch-fire)
+
+bg `bfkex0oe1` on canonical checkout detached@`dab15ec56`
+(cargo-test.bat --workspace --test e2e --features full, testcontainers
+Postgres) finished in 1957.28s. Marker = `E2E_EXIT_NONZERO` (the bg
+task-notification's "exit 0" was the bg-wrapper's own exit, NOT
+cargo's — `feedback_background_task_notification_lies` again; the log
+EXIT marker is authoritative).
+
+`test result: FAILED. 89 passed; 1 failed; 5 ignored`. **ONLY the new
+test failed — NO pre-existing e2e regression** (89 passed = full prior
+suite green). Failure:
+
+```
+thread 'agpl_source_disclosure_surface_returns_notice' panicked at
+crates\server\tests\e2e.rs:14883:3:
+assertion `left == right` failed: /api/v4/site must return 200
+  left: 500
+ right: 200
+```
+
+The panic is on the test's FIRST assertion (`GET /api/v4/site` == 200),
+BEFORE `/api/v4/source` is exercised. `/api/v4/site` is a PRE-EXISTING
+endpoint that Task 2 modified (added `source_disclosure:
+SourceDisclosure` to GetSiteResponse + populated it in
+`crates/api/api_crud/src/site/read.rs`). HTTP 500 (not 404, not a
+deserialize panic) ⇒ the read.rs handler errors at request time
+constructing/serializing the new field. Most likely
+`env!("BREHON_FORK_COMMIT")` unresolved at runtime (build.rs in
+`crates/api/api_crud/` not emitting `cargo:rustc-env`, or env! in the
+wrong crate), or a panic/Err in the source_disclosure build path.
+
+This is an **IMPL bug in Task 2's Story-1 wiring** (not a test bug, not
+a flake). §G4: runtime assertion / HTTP 500 = **NON-ALLOWLIST** (not
+E0432/deprecated/clippy-doc). No auto-fix, no auto-retry.
+
+DQ #242 mutated `result:fail`, **STAYS in pending[]** (pending = [#229,
+#242]); log_slice = full failures: block + root-cause hypothesis.
+Catch-fired to user — needs judgment: fix-impl on read.rs/build.rs
+(Task 2 surface) vs re-plan. **Blocks bm-pr until resolved.** Full run
+log: `.claude/runlog/e2e-v1-ship-1-dab15ec56.log` lines 150-167.

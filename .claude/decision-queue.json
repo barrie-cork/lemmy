@@ -34,12 +34,14 @@
       "phase_task": 4,
       "local_log_path": ".claude/runlog/e2e-v1-ship-1-dab15ec56.log",
       "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "Phase-2 e2e local RUN on phase-v1-ship-1 tip dab15ec56 (canonical checkout detached, cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres). FAILED.\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1957.28s\nONLY the new test failed — NO pre-existing e2e test regressed (89 passed = full pre-existing suite green).\n\nfailures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (37564) panicked at crates\\server\\tests\\e2e.rs:14883:3:\nassertion `left == right` failed: /api/v4/site must return 200\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n\nROOT-CAUSE HYPOTHESIS (advisor, NOT auto-fixed — catch-fired to user): the panic is on the test's FIRST assertion (the GET /api/v4/site == 200 check at e2e.rs:14883), BEFORE /api/v4/source is ever exercised. /api/v4/site is a PRE-EXISTING endpoint that Task 2 modified by adding `source_disclosure: SourceDisclosure` to GetSiteResponse + populating it in crates/api/api_crud/src/site/read.rs. A 500 (not 404, not a deserialize panic) means the read.rs handler itself errors at request time when constructing/serializing the new field — most likely `env!(\"BREHON_FORK_COMMIT\")` is unresolved at runtime (build.rs in crates/api/api_crud/ not emitting cargo:rustc-env, OR env! evaluated in the wrong crate), OR a panic/Err in the source_disclosure construction path. This is an IMPL bug in Task 2's Story-1 wiring (NOT a test bug, NOT a flake). /brehon-verify §16a Story 1 would also have flagged the wiring if it checks runtime, but the structural greps pass — so this is a runtime-only defect the static verify cannot catch. Needs user judgment: fix-impl on read.rs/build.rs (Task 2 surface) vs re-plan. Logs: full run at .claude/runlog/e2e-v1-ship-1-dab15ec56.log lines 150-167.",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "FAIL. /api/v4/site returned HTTP 500 (expected 200) at the test's first assertion (e2e.rs:14883); /api/v4/source never reached. 89 pre-existing tests passed (no regression), 1 failed = only the new agpl test. NON-ALLOWLIST §G4 (runtime assertion / 500, not a mechanical compile/clippy class) → catch-fired to user; no auto-fix, no auto-retry. Root-cause hypothesis: Task 2 read.rs handler errors constructing source_disclosure (likely BREHON_FORK_COMMIT env! unresolved at runtime via build.rs, or a panic/Err in the field build path). Stays in pending[] until user decides fix-impl vs re-plan. Blocks bm-pr.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T18:27:59Z"
     }
   ],
   "resolved": [
