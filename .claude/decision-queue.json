@@ -1,29 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 245,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T11:34:48Z",
-      "question": "v1-AD-e fix-impl-1 (PR #133 CR fix-in-PR: cr-4/cr-5/cr-6/cr-1) on phase-v1-AD-e tip 5d742a323 — run DoD (incl full e2e) on laptop",
-      "branch": "phase-v1-AD-e",
-      "phase_task": "fix-impl-1",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fiximpl1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fiximpl1-testnorun.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-e2e.log 2>&1\""
-      ],
-      "context": "PR #133 CR fix-in-PR (user gate-3 approved). Junior impl-task #297 did the work correctly (commit 835681ff5: 3 files) but EXITED WITHOUT PUSHING (process error: assumed finalize would push; daemon finalize skips on no-prepush per feedback_junior_finalize_skips_when_worker_pre_pushes). Advisor recovered via daemon recovery ref + cherry-pick onto live phase tip = 5d742a323 (zero advisor-file deletions; #292-pattern sidestepped). Worker DQ #245 (d1084600c) NOT taken (referenced stale-base SHA); this entry reconstructed by advisor pointing at the real on-branch SHA. cr-4: is_admin? moved after flag-check both handlers. cr-5: PARTIAL — canonical crate::governance::redaction::scrub applied to reason+denial_reason ONLY (brief listed more fields incl scrub_json for Value payloads; worker took narrower interpretation, no blocker filed — flagged for user at gate 5). cr-6: admin_audit_html_forbidden_for_non_admin appended, Case-A, NotAnAdmin. cr-1: #242/#243/#244 timestamps made monotonic (worker hit stale-base #s vs brief #237/#238; intent met). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229). Handler behaviour changed (cr-4) so FULL e2e required (Docker).",
-      "answer": null,
-      "answered_by": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -4023,6 +4000,28 @@
       "log_slice": "cargo-test --workspace --test e2e --features full: test result: ok. 93 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1906.55s; E2E_EXIT_0. New v1-AD-e tests: admin_audit_html_returns_html_for_admin ok; admin_dashboard_html_forbidden_for_non_admin ok; admin_dashboard_html_returns_html_for_admin ok; admin_html_pages_flag_off_returns_404 ok. check 1m24s + clippy 1m43s + test--no-run 1m41s all exit 0.",
       "failed_commands": null,
       "resolved_at": "2026-05-17T03:48:10Z"
+    },
+    {
+      "id": 245,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T11:34:48Z",
+      "question": "v1-AD-e fix-impl-1 (PR #133 CR fix-in-PR: cr-4/cr-5/cr-6/cr-1) on phase-v1-AD-e tip 5d742a323 — run DoD (incl full e2e) on laptop",
+      "branch": "phase-v1-AD-e",
+      "phase_task": "fix-impl-1",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fiximpl1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fiximpl1-testnorun.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-e2e.log 2>&1\""
+      ],
+      "context": "PR #133 CR fix-in-PR (user gate-3 approved). Junior impl-task #297 did the work correctly (commit 835681ff5: 3 files) but EXITED WITHOUT PUSHING (process error: assumed finalize would push; daemon finalize skips on no-prepush per feedback_junior_finalize_skips_when_worker_pre_pushes). Advisor recovered via daemon recovery ref + cherry-pick onto live phase tip = 5d742a323 (zero advisor-file deletions; #292-pattern sidestepped). Worker DQ #245 (d1084600c) NOT taken (referenced stale-base SHA); this entry reconstructed by advisor pointing at the real on-branch SHA. cr-4: is_admin? moved after flag-check both handlers. cr-5: PARTIAL — canonical crate::governance::redaction::scrub applied to reason+denial_reason ONLY (brief listed more fields incl scrub_json for Value payloads; worker took narrower interpretation, no blocker filed — flagged for user at gate 5). cr-6: admin_audit_html_forbidden_for_non_admin appended, Case-A, NotAnAdmin. cr-1: #242/#243/#244 timestamps made monotonic (worker hit stale-base #s vs brief #237/#238; intent met). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229). Handler behaviour changed (cr-4) so FULL e2e required (Docker).",
+      "answer": "All 4 DoD commands PASS on advisor-laptop (phase-v1-AD-e tip 6983bbe48, fix 5d742a323): cargo-check --workspace --features full exit0 2m05s; cargo-clippy --workspace --features full --no-deps -D warnings exit0 2m04s 0 warnings; cargo-test --no-run -p lemmy_server --test e2e exit0 (new cr-6 test compiles Case-A clean); FULL e2e cargo-test --workspace --test e2e --features full exit0 — test result: ok. 94 passed; 0 failed; 5 ignored; finished in 1925.48s. All 5 v1-AD-e tests ok incl the NEW admin_audit_html_forbidden_for_non_admin (cr-6) AND admin_html_pages_flag_off_returns_404 (proves cr-4 is_admin?-after-flag-check reorder did NOT regress the flag-off-404 path). +1 net test vs prior 93. No FAILED/panic anywhere.",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": "2026-05-17T12:20:09Z"
     }
   ]
 }
