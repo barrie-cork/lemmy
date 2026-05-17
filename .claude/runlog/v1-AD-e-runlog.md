@@ -7,6 +7,52 @@ entry).
 
 ---
 
+## advisor: Task 1 dispatched — 2026-05-17T01:25:00Z
+
+- **action:** queued Junior impl-task **#287** —
+  `[role:impl-task] v1-AD-e task 1 — see .claude/PRPs/briefs/v1-AD-e-impl-1.md`
+- **base_branch:** `phase-v1-AD-e` (lane worktree tip c835d808c)
+- **brief:** `.claude/PRPs/briefs/v1-AD-e-impl-1.md` (committed a01bed152)
+- **scope:** add maud HTML engine dep (DQ #238=maud) to
+  `crates/api/api/Cargo.toml` + regenerate `Cargo.lock`; ONE commit
+  `feat(api): add maud HTML engine dependency (task 1)`
+- **validation:** Shape-G SUSPENDED → worker writes
+  `kind: "validate-pending-laptop"` DQ entry (cargo-check --workspace
+  --features full + cargo-clippy -p lemmy_api --no-deps -D warnings);
+  advisor-laptop runs the two DoD commands + mutates the entry
+- **pre-flight:** outside forbidden windows (next 02:55Z, ~90min away);
+  brief carries submodule-init guard (Task 0 hit this — PMD #216)
+- **next:** poll #287 → on validate-pending-laptop entry, run §15 DoD
+  on laptop; on result=pass queue Task 2 (gather_dashboard + dashboard
+  HTML handler + route)
+
+## advisor: Task 0 complete — PASS — 2026-05-17T00:22:00Z
+
+- **task:** Junior impl-task #286 (run #1 succeeded 00:14:55→00:21:48Z)
+- **result:** **PASS** — all 11 probes green:
+  - Probe 0: WRONG BRANCH *(technical only)* — Junior worktree uses
+    `junior/` prefix; substrate SHA == phase-v1-AD-e @ a01bed152.
+    Known naming artifact, NOT a genuine wrong-branch condition.
+  - Probes 1–4: AD-d substrate intact (AdminDashboardResponse DTO,
+    admin_dashboard handler, html_pages_enabled key, /dashboard route
+    anchor — all OK)
+  - Probe 5: ENGINE DQ #238 RESOLVED (maud) · Probe 6: SCOPE DQ #237
+    RESOLVED (Dashboard+Audit only)
+  - Probe 7: clippy baseline `lemmy_api` exit 0 CLEAN
+  - Probe 8: NEG OK (exit-code propagation works) · Probe 9: DOCKER OK
+  - Probe 10: empty = OK (no concurrent-PR collision on v1-AD-e files)
+- **commit:** none (read-only Task 0 — correct)
+- **operational caveats (benign, pre-documented):**
+  1. `crates/email/translations` submodule needed
+     `git submodule update --init` (first clippy exited 101; recovered;
+     re-run clean). PMD #216 `feedback_worktree_submodules_not_auto_init`.
+  2. `.claude/PRPs/debug/` log write blocked by CC v2.1.119 gate;
+     clippy log relocated to worktree root (exit code is the signal).
+  3. Probe 0 `git branch --show-current` always returns `junior/`
+     prefix in Junior worktrees — probe-as-written always fails there;
+     substrate verification is the real check.
+- **DQ raised:** none (no STOP condition)
+
 ## advisor: Task 0 dispatched — 2026-05-17T00:12:00Z
 
 - **action:** queued Junior impl-task **#286** —
