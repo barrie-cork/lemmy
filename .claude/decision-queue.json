@@ -14,6 +14,27 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 239,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T00:00:00Z",
+      "question": "v1-ship-1 task 2 source_disclosure field+build.rs — laptop cargo validation pending",
+      "branch": "junior/role-impl-task-v1-ship-1-task-2-see-claude-prps-briefs-v1-ship-1-impl-2-md-293",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "context": "Task 2 added source_disclosure field to GetSiteResponse + populated in read_site + created crates/api/api_crud/build.rs; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
