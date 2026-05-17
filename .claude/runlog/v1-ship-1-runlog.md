@@ -937,3 +937,54 @@ mutate #245 pass → §5.2 Phase-2 e2e (local, gate-4 cached) → on agpl `... o
 90/0/5 → mutate #242+#244 pass → /brehon-verify → bm-pr → CR → gates 3/5/6 →
 bm-merge → Task 5 retro → /brehon-phase-transition. 3rd same-surface fail =
 re-plan catch-fire (Part A now makes panic body the literal LemmyError).
+
+## advisor: Phase-2 e2e FAILED 3rd consecutive — §G4 HARD REFUSAL re-plan catch-fire 2026-05-17
+
+§5.2 Phase-2 e2e on fix-impl-6 #302 finalize-merged tip `c2a7ed971`
+(bg b77roo7kj, `cmd //c cargo-test.bat --workspace --test e2e --features
+full`, 1881.93s): **E2E_EXIT_NONZERO**. `test result: FAILED. 89 passed;
+1 failed; 5 ignored` — ONLY `agpl_source_disclosure_surface_returns_notice`
+failed (prior 89 ALL pass, ignored=5 unchanged: NO regression). **3rd
+CONSECUTIVE same-surface fail** (DQ#242 original / DQ#244 fix-impl-5 / this
+fix-impl-6 #302).
+
+**fix-impl-6 Part A SUCCEEDED** — the `/api/v4/site` 500 response body is
+now LEGIBLE (panic at e2e.rs:14919:3):
+`"/api/v4/site must return 200 — body: Requested application data is not
+configured correctly. View/enable debug logs for more details."`
+
+**fix-impl-6 Part B (complete SiteInsertForm mirroring setup_local_site)
+was correctly applied but addressed the WRONG cause** and did NOT resolve
+the 500.
+
+**ROOT-CAUSE OVERTURN.** The legible body is actix-web's built-in
+`ErrorInternalServerError` from `web::Data<T>::from_request` when type `T`
+is NOT registered on the App — NOT the `"Failed to construct site
+response: {e}"` string from read.rs:32. The request fails at actix
+EXTRACTION time and never enters `read_site`. So this is NOT a DB /
+seed-row / Site-deserialization / moka-cache / `SiteView::read_local`
+problem at all. The entire incomplete-site-row hypothesis (4 analysis
+passes + fix-impl-5 + fix-impl-6 Part B) is **OVERTURNED** by the legible
+body. Evidence: agpl test App (e2e.rs:14907-14910) registers
+`.app_data(Data::new(context.clone()))` [LemmyContext IS present] +
+`.configure(lemmy_api_routes::config(cfg, &rate_limit))`; `get_site`
+(read.rs:24-27) extracts only `Data<LemmyContext>` + `Option<LocalUserView>`.
+So the missing `Data<T>` is NOT LemmyContext itself but ANOTHER
+`web::Data<T>` that `lemmy_api_routes::config` wires into the
+`/api/v4/site` route chain (middleware/extractor) which the real server
+App builder registers but this minimal test App does not.
+
+**§G4 cycle-count meta-rule: 3rd CONSECUTIVE same-surface fail = HARD
+REFUSAL re-plan** (NOT auto fix-impl-7, NOT auto-retry, NOT an improvised
+advisor code change). DQ #244 + #246 mutated → result:fail (both STAY in
+pending; full verbatim failures: block + classification in DQ #244.answer).
+#242 unchanged (fail-pending, original plan-defect record). #243 + #245
+still pass-resolved. bm-pr BLOCKED.
+
+**Recommended next:** planner Junior re-plan of §13 Task 4 + §10.6/§10.7
+fixture strategy — read `lemmy_api_routes::config` + the real server App
+builder, identify the EXACT missing `app_data`, register it (or use the
+real server bootstrap) in the agpl test App. Surfaced to user as re-plan
+signal; awaiting user decision (authorize planner re-plan / advisor
+hand-investigation of the exact missing Data<T> first / user takes it).
+NEXT advisor action: STOP + WAIT for user.
