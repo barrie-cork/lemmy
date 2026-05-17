@@ -450,3 +450,42 @@ entry).
 - **Recommendation:** pending (4 major findings open)
 - **YAML:** .claude/PRPs/reviews/pr-133-findings.yaml
 - **Notes:** All findings are inside the PR diff. 4 major findings require triage.
+
+## 2026-05-17 advisor: bm-poll-cr #295 rescued (#292-pattern) + bm-triage dispatched #296
+
+- **#295 outcome:** done/succeeded. Worker pre-pushed to its own branch
+  `junior/...-295` (no finalize-merge). Worker branched from STALE base
+  `c5622ec57` (merge-base), NOT current phase tip `0608f9929`. Its
+  diff-stat `0608f9929 → worker-295` showed the **#292 reversion
+  signature**: would DELETE 766 lines across 13 advisor/governance files
+  (briefs, handovers, retro reports, lessons, rules, skills) while adding
+  only the 125-line findings YAML.
+- **Rescue (within autonomy mandate — abandon worker lineage):** did NOT
+  finalize-merge worker-295. Cherry-picked ONLY its two clean
+  `chore(bm)` commits onto the phase tip: `56bdcad05` (findings YAML,
+  pure +125) → `a5c89cedb`; `b8f614217` (runlog +12) → `cf8c7bbdd`
+  (runlog conflict on stale base resolved as a **union** — kept the
+  424-line phase superset + my 2 advisor entries AND appended the
+  worker's `## bm: poll-cr 09:39:20Z` Phase-7 entry; no info lost).
+  Final diff-stat `0608f9929 → cf8c7bbdd` = **+125 findings.yaml,
+  +12 runlog, 137 insertions, ZERO deletions**. The 766-line reversion
+  was fully sidestepped. Pushed `cf8c7bbdd`; PR #133 → **MERGEABLE**.
+- **Findings reconciled:** 6 ingested = CR's stated 6 ✓. 0 critical /
+  **4 major** / 1 low / 1 nit, all `source: coderabbit` (Copilot
+  correctly filtered out). cr-4/5/6 = substantive code findings
+  (flag-before-auth 404-semantics / audit-string scrub / non-admin
+  /audit/view test). cr-1/2 = DQ-immutability nuance. cr-3 = runlog nit.
+- **poll-cr process miss (for retro, not a blocker):** worker wrote
+  `bucket: fix-in-pr` on all 6 despite brief saying leave blank.
+  Harmless — bm-triage re-derives all buckets from scratch (brief §2a
+  explicitly overrides the pre-set values).
+- **bm-triage dispatched:** brief `.claude/PRPs/briefs/v1-AD-e-bm-triage-1.md`
+  committed `bb89922ed`, pushed. Task #296 `[role:bm-task]`,
+  `base_branch=phase-v1-AD-e` (tip `bb89922ed` has findings YAML +
+  brief). Brief: re-derive all 6 buckets w/ revert test + rationale;
+  STOP after Phase 4 (no comment post / issue create — advisor gate 3);
+  commit triage YAML + comment draft atomically + push.
+- **Next:** poll #296 → on complete read triage YAML + comment draft off
+  phase branch (via blob-SHA, NOT git show ref:path on Windows) →
+  **surface user gate 3 (CR triage four-bucket counts)** — STOP for
+  user decision before any fix-in-PR / comment post / merge.
