@@ -15,7 +15,7 @@
 use crate::governance::{
   admin_dashboard::{gather_dashboard, list_recent_config_changes},
   config::{ConfigCache, Scope, get_bool},
-  redaction::scrub,
+  redaction::{scrub, scrub_json},
 };
 use actix_web::{HttpResponse, web::Data};
 use lemmy_api_common::governance::{AdminConfigAuditEntry, AdminDashboardResponse};
@@ -313,16 +313,16 @@ fn audit_entry_row(e: &AdminConfigAuditEntry) -> maud::Markup {
     tr {
       td { (e.id) }
       td { (e.created_at.format("%Y-%m-%d %H:%M:%S")) }
-      td { (e.entry_kind) }
-      td { (e.scope) }
-      td { (e.key) }
+      td { (scrub(&e.entry_kind)) }
+      td { (scrub(&e.scope)) }
+      td { (scrub(&e.key)) }
       td {
-        @if let Some(v) = &e.previous_value { (v.to_string()) } @else { "" }
+        @if let Some(v) = &e.previous_value { (scrub_json(v).to_string()) } @else { "" }
       }
-      td { (e.new_value.to_string()) }
+      td { (scrub_json(&e.new_value).to_string()) }
       td { (scrub(&e.reason)) }
       td {
-        @if let Some(p) = &e.actor_pseudonym { (p) } @else { "" }
+        @if let Some(p) = &e.actor_pseudonym { (scrub(p)) } @else { "" }
       }
       td {
         @if e.signature.is_some() { "yes" } @else { "no" }
