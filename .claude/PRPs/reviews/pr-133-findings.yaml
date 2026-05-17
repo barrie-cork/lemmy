@@ -1,7 +1,7 @@
 schema_version: 1
 pr: 133
-title: Phase v1-AD-e — Server-rendered admin dashboard HTML pages (Dashboard + Audit,
-  pure-templating over shipped v1-AD-d)
+title: Phase v1-AD-e — Server-rendered admin dashboard HTML pages (Dashboard + Audit, pure-templating
+  over shipped v1-AD-d)
 head: phase-v1-AD-e
 base: governance-v0
 opened_at: '2026-05-17T08:15:24Z'
@@ -10,7 +10,7 @@ poll_count: 1
 last_polled_head_sha: 0608f99
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: request-changes
+recommendation: approve
 findings:
 - id: cr-1
   source: coderabbit
@@ -21,7 +21,7 @@ findings:
   summary: Fix timestamp chronology in newly added DQ entries.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269050
   bucket: fix-in-pr
-  addressed_in: null
+  addressed_in: 5d742a323
   rationale: null
   notes: null
 - id: cr-2
@@ -34,9 +34,8 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269053
   bucket: rebut
   addressed_in: null
-  rationale: 'Task 4 scope decision already explicitly approved and recorded in DQ
-    #237 (governance-v0); this is a semantic-neutral preventive suggestion rather
-    than a defect.'
+  rationale: 'Task 4 scope decision already explicitly approved and recorded in DQ #237 (governance-v0);
+    this is a semantic-neutral preventive suggestion rather than a defect.'
   notes: null
 - id: cr-3
   source: coderabbit
@@ -48,9 +47,8 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269056
   bucket: wont-fix
   addressed_in: null
-  rationale: Runlog append-only convention is documented in `.claude/rules/branch-manager.md`
-    and established across all v1 phases; nit-level suggestion does not warrant docstring
-    addition.
+  rationale: Runlog append-only convention is documented in `.claude/rules/branch-manager.md` and established
+    across all v1 phases; nit-level suggestion does not warrant docstring addition.
   notes: null
 - id: cr-4
   source: coderabbit
@@ -61,7 +59,7 @@ findings:
   summary: Check the feature flag before admin authorisation to preserve 404-off semantics.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269058
   bucket: fix-in-pr
-  addressed_in: null
+  addressed_in: 5d742a323
   rationale: null
   notes: null
 - id: cr-5
@@ -73,9 +71,12 @@ findings:
   summary: Apply scrub/redaction on user-visible audit strings before rendering.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269060
   bucket: fix-in-pr
-  addressed_in: null
+  addressed_in: 5d742a323
   rationale: null
-  notes: null
+  notes: 'PARTIAL: canonical crate::governance::redaction::scrub applied to e.reason + e.denial_reason
+    only (admin_dashboard_html.rs:323,331). Brief listed more ADR-015 fields (scope/key/entry_kind/actor_pseudonym)
+    + scrub_json for previous_value/new_value. Narrower-interpretation by recovered #297; ADR-015-sufficiency
+    is a user gate-5 decision.'
 - id: cr-6
   source: coderabbit
   severity: major
@@ -85,7 +86,7 @@ findings:
   summary: Add a non-admin rejection test for `/api/v4/governance/admin/audit/view`.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269063
   bucket: fix-in-pr
-  addressed_in: null
+  addressed_in: 5d742a323
   rationale: null
   notes: null
 merged_at: null
@@ -99,8 +100,8 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 3
-    done: 0
+    open: 0
+    done: 3
     rebutted: 1
     carry_forward: 0
     wont_fix: 0
@@ -111,8 +112,8 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 1
-    done: 0
+    open: 0
+    done: 1
     rebutted: 0
     carry_forward: 0
     wont_fix: 0
@@ -124,6 +125,4 @@ counters:
     wont_fix: 1
   by_source:
     coderabbit: 6
-    claude: 0
-    user: 0
   total: 6
