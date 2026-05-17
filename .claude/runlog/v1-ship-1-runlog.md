@@ -1041,3 +1041,40 @@ finalize-merge → post-merge DQ-resurrection re-assert → §5.2 Phase-1 (DQ
 90/0/5 → mutate #242+#244+#246 pass → /brehon-verify → bm-pr → CR → gates
 3/5/6 → bm-merge → Task 5 retro → /brehon-phase-transition. 4th
 same-surface fail = §G4 re-plan hard-refusal.
+
+## advisor: fix-impl-7 #303 verified + finalize-merged 2026-05-18
+
+Junior #303 `[role:impl-task]` DONE (run #1 succeeded ~3min,
+23:19:21→23:22:20Z). **Verify-before-trust CLEAN:** worker diff = exactly
+2 files — `crates/server/tests/e2e.rs` (**+2/-0, additive-only**) +
+`.claude/decision-queue.json` (worker DQ #248 validate-pending-laptop). NO
+production code. The 2 e2e.rs lines, both insertions:
+- `+ use lemmy_routes::middleware::session::SessionMiddleware;` (line
+  ~14877, mirrors passing sibling e2e.rs:3809 byte-for-byte)
+- `+ .wrap(SessionMiddleware::new(context.clone()))` (line ~14911,
+  inserted exactly between `.app_data(Data::new(context.clone()))` and
+  `.configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit))`, mirrors
+  e2e.rs:3860 byte-for-byte).
+fix-impl-6 Part A (body-on-failure asserts) + Part B (complete
+SiteInsertForm) confirmed byte-identical (ZERO deletions touching them).
+Commit body documents root cause (actix "application data not configured"
+= unregistered web::Data, request fails at extraction BEFORE read_site;
+fix-impl-6 Part A made it legible) + explicit Part A/B preservation. Case
+A intact, single fn, no new test. Commit msg verbatim per brief.
+
+**Finalize-merge:** worker base `29aa0d342` behind origin `9ddc37f7f`
+(runlog commit landed post-#303-dispatch) → true `git merge --no-ff` (NO
+--hard, NO force), ort, 0 conflicts. **Post-finalize-merge
+DQ-resurrection re-assert: CLEAN** — #242/#244/#246 stay fail-pending,
+#243/#245 pass-resolved, #247 resolved (user override survived ort-merge),
+#248 new validate-pending-laptop in pending, resolved=226, all ids unique.
+NO re-apply. Pushed `9ddc37f7f..382abee2e` phase-v1-ship-1.
+
+NEXT: §5.2 Phase-1 on merged tip `382abee2e` (canonical checkout, detached)
+— DQ #248 3 cmds serialized (check → clippy → test --no-run) → all 3
+EXIT_0 → mutate #248 pass → §5.2 Phase-2 e2e (local, gate-4 cached) → on
+agpl `... ok` + 90/0/5 → mutate #242+#244+#246 pass → /brehon-verify →
+bm-pr → CR → gates 3/5/6 → bm-merge → Task 5 retro →
+/brehon-phase-transition. 4th SAME-surface fail = §G4 re-plan
+hard-refusal (override DQ#247 scoped to fix-impl-7 only); DIFFERENT-surface
+fail = surface new legible body + WAIT user.
