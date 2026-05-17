@@ -10,7 +10,7 @@ poll_count: 1
 last_polled_head_sha: 0608f99
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: request-changes
 findings:
 - id: cr-1
   source: coderabbit
@@ -32,9 +32,11 @@ findings:
   line: 3998
   summary: Record explicit user approval for the Task 4 scope decision.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269053
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: 'Task 4 scope decision already explicitly approved and recorded in DQ
+    #237 (governance-v0); this is a semantic-neutral preventive suggestion rather
+    than a defect.'
   notes: null
 - id: cr-3
   source: coderabbit
@@ -44,9 +46,11 @@ findings:
   line: 424
   summary: Clarify the append-only ordering convention.
   cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269056
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Runlog append-only convention is documented in `.claude/rules/branch-manager.md`
+    and established across all v1 phases; nit-level suggestion does not warrant docstring
+    addition.
   notes: null
 - id: cr-4
   source: coderabbit
@@ -95,9 +99,9 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 4
+    open: 3
     done: 0
-    rebutted: 0
+    rebutted: 1
     carry_forward: 0
     wont_fix: 0
   medium:
@@ -113,11 +117,11 @@ counters:
     carry_forward: 0
     wont_fix: 0
   nit:
-    open: 1
+    open: 0
     done: 0
     rebutted: 0
     carry_forward: 0
-    wont_fix: 0
+    wont_fix: 1
   by_source:
     coderabbit: 6
     claude: 0

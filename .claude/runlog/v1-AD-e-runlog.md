@@ -489,3 +489,20 @@ entry).
   phase branch (via blob-SHA, NOT git show ref:path on Windows) →
   **surface user gate 3 (CR triage four-bucket counts)** — STOP for
   user decision before any fix-in-PR / comment post / merge.
+
+## bm: triage PR #133 — 2026-05-17T10:10:00Z
+
+- **action:** `/bm-triage 133` Junior task #296 (draft four-bucket triage)
+- **findings triaged:** 6 findings reviewed and classified into buckets
+  - **fix-in-pr:** 4 findings require fixes before merge
+    - cr-4 | major: feature flag check BEFORE admin authz (preserve 404-off semantics)
+    - cr-5 | major: scrub/redact audit event strings before rendering
+    - cr-6 | major: add non-admin rejection test for /audit/view endpoint
+    - cr-1 | low: fix timestamp chronology in DQ entries
+  - **rebut:** 1 finding
+    - cr-2 | major: scope decision already approved and explicitly recorded in DQ #237 on governance-v0 (preventive suggestion, not a defect)
+  - **wont-fix:** 1 finding
+    - cr-3 | nit: append-only runlog convention already documented in `.claude/rules/branch-manager.md`
+- **recommendation:** `request-changes` (due to 3 major + 1 low open in fix-in-pr)
+- **digest comment:** drafted at `.claude/PRPs/reviews/pr-133-comment.md` (gitignored, awaiting user-gate confirmation)
+- **next:** advisor gate 3 (CR triage) — surface triage buckets + recommendation to user for confirmation. Advisor will relay user decision and post comment via `gh pr comment` if approved.
