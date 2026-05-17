@@ -414,3 +414,11 @@ entry).
   harness audit, non-[P] barrier, no commit) → Task 1 (add maud
   dep, isolated commit). Strictly serial — no cohort parallelism
   (Tasks 2→3→4→5 are a hard dependency chain per plan §13).
+
+## 2026-05-17 advisor: bm-pr dispatched — Junior #292
+
+- **Gate 5 (merge-confirm) opening leg:** user approved "Proceed — queue bm-pr".
+- **Brief:** `.claude/PRPs/briefs/v1-AD-e-bm-pr-1.md` committed `eddc8ab5d`, pushed to `phase-v1-AD-e`.
+- **Task:** #292 `[role:bm-task]` — open PR `phase-v1-AD-e` (tip `efc0d72e1`) → `governance-v0`, `--repo barrie-cork/lemmy`.
+- **Pre-conditions verified by advisor before dispatch:** clean tree; synced w/ origin; no running/queued Junior tasks; DQ pending=0; `/brehon-verify` 3/3 ✓; retro gate silent (plan defers retro post-merge); Phase 1c e2e gate satisfied (DQ #244 `validate-pending-laptop-e2e` result=pass, branch `phase-v1-AD-e`, 93/0/5).
+- **Next:** poll #292 → on complete read PR# + URL → wait ~5–10 min for CR → queue `bm-poll-cr` → `bm-triage` → **user gate 3 (CR triage)**.
