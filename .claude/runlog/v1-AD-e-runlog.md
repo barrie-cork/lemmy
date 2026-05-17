@@ -430,3 +430,11 @@ entry).
 - **Resolution:** runlog `add/add` resolved to `--ours` (phase-v1-AD-e, 424-line superset). The gov-v0 side (22-line blob `d10fbc08`) is an earlier subset of the same file — its 3 entries (bm-cut #282 / PARKED / RESUME-CLEARED) are already present verbatim within the 424-line phase version. No information lost.
 - **Merge commit:** `--no-ff` (preserves topology; non-destructive, fully reversible; no history rewrite). Worker branch `junior/...-292` ABANDONED (its self-merge against a stale old base would have reverted advisor work — only its side effect, PR #133 + the `chore(bm)` entry, was needed; PR points at the correct phase tip `c5622ec57`, not the worker branch).
 - **Next:** push phase-v1-AD-e → PR #133 becomes mergeable → wait ~5-10 min for CodeRabbit → `bm-poll-cr` → `bm-triage` → **user gate 3 (CR triage)**.
+
+## 2026-05-17 advisor: bm-poll-cr dispatched — Junior #295
+
+- **CR posted:** review @ 2026-05-17T08:18:47Z — `**Actionable comments posted: 6**` (the authoritative review). Also on PR: a stale "no actionable comments" notice @ 08:15:37Z (pre-merge tip, superseded) + a Copilot review @ 08:17:19Z (OUT OF SCOPE for poll-cr — flagged for triage step).
+- **Brief:** `.claude/PRPs/briefs/v1-AD-e-bm-poll-cr-1.md` committed `31b9839d6`, pushed.
+- **Task:** #295 `[role:bm-task]` — ingest 6 CR findings on PR #133 → `.claude/PRPs/reviews/pr-133-findings.yaml` (force-add+commit+push). `bucket: ""` left blank (triage is separate). `--repo barrie-cork/lemmy`.
+- **Key brief flags:** (a) 3-source disambiguation (filter `coderabbitai[bot]` — auto-excludes Copilot); (b) head-SHA-vs-finding-timestamp skew is benign — the governance-v0 merge `856d4f444` added ZERO code changes so all 6 findings still apply at the same file:line; (c) reconcile parsed count vs CR's stated "6" — warn if mismatch.
+- **Next:** poll #295 → on complete read `pr-133-findings.yaml` off phase branch → queue `bm-triage` → **user gate 3 (CR triage four-bucket counts)**.
