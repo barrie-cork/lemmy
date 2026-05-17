@@ -1,6 +1,28 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 243,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T08:10:00Z",
+      "question": "v1-AD-e Task 3 (audit HTML route + import) pushed on junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289 — run §15 DoD on laptop",
+      "branch": "junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task3-testnorun.log 2>&1\""
+      ],
+      "context": "lib.rs extended: admin_dashboard_html import now includes admin_audit_html; GET /audit/view route wired inside scope('/audit'); commit 5afe5b378. Three validation gates passed on EliteDesk (cargo-check exit 0, clippy exit 0, test --no-run exit 0). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
+      "answer": null,
+      "answered_by": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
