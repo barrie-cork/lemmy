@@ -14908,7 +14908,7 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   let app = test::init_service(
     App::new()
       .app_data(Data::new(context.clone()))
-      .wrap(SessionMiddleware::new(context.clone()))
+      .wrap(SessionMiddleware::new((**context).clone()))
       .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
   )
   .await;
