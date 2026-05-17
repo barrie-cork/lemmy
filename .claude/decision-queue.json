@@ -69,6 +69,31 @@
       "answer": "Phase-2 e2e re-run after fix-impl-5 STILL FAILS — agpl_source_disclosure_surface_returns_notice FAILED a SECOND consecutive time on the same surface. IDENTICAL panic to the original DQ #242 fail: e2e.rs:14909:3 `assertion left==right failed: /api/v4/site must return 200  left:500 right:200`. CLASSIFICATION (a) SAME /api/v4/site 500: fix-impl-5 (#300, commit 50f06a7ab — seed instance+Site+LocalSite+LocalSiteRateLimit before the /api/v4/site request, mirroring precedent e2e.rs:4751-4761) was INEFFECTIVE; SiteView::read_local needs MORE than those 4 rows OR the mirrored precedent never actually exercises /api/v4/site at runtime so the seed scaffold is wrong. Full suite: test result FAILED, 89 passed 1 failed 5 ignored — ONLY agpl failed, NO pre-existing regression (rules out classification (c) side-effect; rules out (b) deeper-assert since the FIRST assertion /api/v4/site==200 still fails). §G4 cycle-count meta-rule: 2nd consecutive Phase-2 e2e fail same agpl surface, same panic = HARD REFUSAL. No auto fix-impl-6. Surfaced to user as RE-PLAN signal (planner Junior re-plan §13 Task 4 + §10.6/§10.7 fixture strategy + a precedent that ACTUALLY hits /api/v4/site). Blocks bm-pr until user decides re-plan vs deeper-fix.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-17T20:01:54Z"
+    },
+    {
+      "id": 246,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T21:50:25Z",
+      "question": "Phase-2 e2e (local) on the fix-impl-6 #302 finalize-merged tip c2a7ed971 — does agpl_source_disclosure_surface_returns_notice pass with the complete-site seed + body-on-failure asserts, with no pre-existing regression?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Deeper-fix for the persistent /api/v4/site HTTP 500 in the agpl e2e test (DQ #242 original, DQ #244 fix-impl-5). Root cause: plan §10.7 mirrored an internal-only precedent (governance_outbox_, never HTTP-calls /api/v4/site) so the bare SiteInsertForm::new produced a site row with None ap_id/inbox_url/public_key/private_key/last_refreshed_at that the handler path (SiteView::read_local .first().optional()?) cannot materialise into the non-Option Site struct -> 500. fix-impl-6 #302 (commit 38267a76e, finalize-merged into phase-v1-ship-1) Part B replaces bare SiteInsertForm::new with a complete form (ap_id/last_refreshed_at/inbox_url/private_key/public_key = Some(...) via generate_actor_keypair()? + url::Url::parse(...)?.into() + chrono::Utc::now(), ..SiteInsertForm::new) mirroring setup_local_site.rs:88-95; Part A makes both /api/v4/site and /api/v4/source asserts read the response body first and fold it into the panic message (so a 3rd same-surface fail would name the literal LemmyError). §5.2 Phase-1 ALL 3 PASS (check 2m43s / clippy 1m51s / test --no-run 2m00s; DQ #245 resolved). User gate-4 = local (cached, not re-asked). Run: cmd //c cd /d C:\\Users\\barri\\Developer\\brehon-fork && git checkout -q c2a7ed971 && call scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full. §G4 cycle-count: a 3rd consecutive same-surface fail = HARD REFUSAL re-plan (NOT auto fix-impl-7).",
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-c2a7ed971.log",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
