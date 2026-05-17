@@ -578,3 +578,28 @@ Phase-2 user-gate-4 (AskUserQuestion local vs dispatch) → on green
 /brehon-verify §16a Story 3 → bm-pr → CR → bm-triage (gate 3) →
 /brehon-verify ✓ → gate 5 → bm-merge → Task 5 retro (gate 6) →
 /brehon-phase-transition.
+
+## advisor: §5.2 Task 4 ALL 3 PASS — DQ #241 resolved, e2e RUN gate next 2026-05-17
+
+Task 4 Phase-1 workspace validation on ecba04523 (canonical detached):
+- cmd1 cargo-check --workspace --features full: PASS 2m07s, 0 err.
+- cmd2 cargo-clippy --workspace --features full --no-deps -- -D
+  warnings: PASS 1m47s, 0 warnings (new e2e test = no clippy debt).
+- cmd3 cargo-test --no-run -p lemmy_server --test e2e: PASS 1m58s,
+  e2e-aebb6c76db6b1818.exe built — agpl_source_disclosure_surface_
+  returns_notice COMPILES clean (Case A, governance_fixtures::bootstrap
+  resolves, both endpoint imports resolve).
+
+DQ #241 mutated → result:pass, answered_by:advisor-laptop, resolved[].
+Pushed `363a3424e`. pending=[#229] only (Shape-G reminder, not a
+blocker). All 6 plan tasks' CODE now delivered + Phase-1-validated
+(Task 0 audit, Task 1 DTOs, Cohort A Tasks 2+3, Task 4 e2e; Task 5
+retro is the closer).
+
+NEXT: **Phase-2 e2e RUN = USER GATE 4** (local vs dispatch — never
+auto-pick post-PR-#105 per feedback_e2e_local_or_dispatch_user_choice).
+This runs the ACTUAL e2e test (testcontainers Postgres + Docker), not
+just compile. Recommended default = local (feedback_default_local_
+testing + project_laptop_canonical_cargo_runner — laptop 64GB canonical
+runner, zero billed; Shape G suspended so GH dispatch also possible via
+gh workflow run). Surfacing AskUserQuestion now.
