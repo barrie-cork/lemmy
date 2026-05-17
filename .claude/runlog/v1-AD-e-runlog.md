@@ -7,6 +7,92 @@ entry).
 
 ---
 
+## advisor: implementation COMPLETE — awaiting user merge-gate (gate 5) — 2026-05-17T04:10:00Z
+
+- **v1-AD-e implementation complete.** Tasks 0–5 done (Task 0
+  read-only pre-flight; Task 4 pre-satisfied by Task-2 scope-bleed —
+  no separate commit). All DoD + e2e validated; `/brehon-verify`
+  all 3 stories ✓.
+- **phase-v1-AD-e tip:** `02b584aba` (+ verify report commit next).
+  DQ pending=0; DQ #241/#242/#243/#244 all resolved=pass.
+- **BLOCKED on user gate 5 (merge confirm).** Per
+  advisor-orchestrator §3.2 + §3.9: `/brehon-verify` clear → surface
+  to user → wait. Advisor does NOT auto-proceed to bm-pr / CR cycle
+  (gate 3 CR triage + gate 5 merge confirm are mandatory). Next on
+  user 'proceed': BM session `bm-pr` (PR phase-v1-AD-e → governance-v0,
+  `--repo barrie-cork/lemmy`) → CodeRabbit → bm-poll-cr → bm-triage →
+  user gate 3 → fix-in-PR if any → user gate 5 → bm-merge → retro.
+
+## advisor: /brehon-verify v1-AD-e — all 3 stories ✓ — 2026-05-17T04:05:00Z
+
+- **command:** `/brehon-verify v1-AD-e` (advisor-orchestrator §3.9
+  verify gate, post-impl pre-merge)
+- **inputs:** plan `v1-admin-dashboard-e.plan.md` (Phase v1-AD-e),
+  branch `origin/phase-v1-AD-e` @ 02b584aba, §16a = 3 stories
+- **§13 task-commit reconciliation:** Task 0 (no commit — read-only
+  pre-flight, plan design) + Task 4 (no commit — pre-satisfied, code
+  in ade904851) are documented dispositions, NOT phantoms; pre-flight
+  refusal correctly does not fire. Tasks 1/2/3/5 each have their commit.
+- **Story 1** (dashboard web page): 4/4 Brief-Scope outputs ✓
+  (admin_dashboard_html.rs+admin_dashboard_html, gather_dashboard,
+  mod decl, /dashboard/view route). Checkpoint ✓ (e2e: dashboard
+  200/403 tests ok, v1-AD-d JSON test in passing set). **✓**
+- **Story 2** (watch config live): 5/5 ✓ (admin_audit_html,
+  EventSource(, addEventListener 'admin_config_changed':55 +
+  'admin_config_change_denied':58 [named events, NOT onmessage —
+  §18 SSE-footgun closed], /audit/view route). Checkpoint ✓
+  (admin_audit_html_returns_html_for_admin ok). **✓**
+- **Story 3** (pages disable-able): 2/2 ✓ (reads html_pages_enabled
+  key; NotFound() ×2 = both handlers gate identically, R-html-3
+  404-not-403). Checkpoint ✓ (admin_html_pages_flag_off_returns_404
+  ok). **✓**
+- **checkpoint reuse:** all 3 stories share the e2e binary; reused
+  the Task-5 DoD gate-4 run (advisor-laptop, Docker, 1906.55s,
+  93 passed / 0 failed / 5 ignored, 4 new v1-AD-e tests all ok) —
+  not re-run.
+- **outcome:** 3✓ 0 phantom 0 regression 0 malformed → merge-confirm
+  gate CLEAR. Report `.claude/PRPs/reports/v1-AD-e-verify.md`.
+
+## advisor: Task 5 complete — PASS (e2e 93/0/5) — 2026-05-17T03:55:00Z
+
+- **task:** Junior impl-task #290 (run #1 succeeded; ~14 min)
+- **deliverable:** `feat(e2e): v1-AD-e HTML page tests — admin
+  200/403/404 (task 5)` commit `460214d5e` — **1 file**,
+  `crates/server/tests/e2e.rs` +174 append-only (14862→15036).
+  Four tests, Case A `LemmyResult<()>` mirrored from v1-AD-d sibling
+  (mandatory `feedback_lemmy_error_no_std_error` injection worked —
+  test --no-run compiled clean first try):
+  `admin_dashboard_html_returns_html_for_admin` (200+text/html+heading),
+  `admin_dashboard_html_forbidden_for_non_admin` (NotAnAdmin/403),
+  `admin_html_pages_flag_off_returns_404` (R-html-3),
+  `admin_audit_html_returns_html_for_admin` (200+EventSource).
+  **NO scope-bleed** — clean single append-only edit. Direct-handler
+  invocation, body via `try_into_bytes`.
+- **DQ id collision:** worker raised its validate-pending entry as
+  **#243** (already used by Task 3, resolved) — its stale old-base
+  self-merge view didn't see #243/#244. Advisor renumbered to **#244**
+  during finalize-merge DQ-conflict resolution (DQ #50-class
+  collision; renumber + reconstruct: #241/#242/#243 stay resolved,
+  #244 = the only new pending). Worker used `kind:
+  "validate-pending-laptop-e2e"` with 1 command (the e2e run).
+- **worker pre-pushed**; daemon finalize skipped → advisor manual
+  finalize-merge `git merge --no-ff origin/junior-290` → `cf9a5c6b1`
+  (DQ conflict resolved as above; e2e.rs merged clean).
+- **DQ #244 (validate-pending-laptop-e2e):** advisor-laptop ran the
+  FULL 4-command DoD (Docker up) on `brehon-fork-ad-e` worktree, ALL
+  PASS:
+  - `cargo-check --workspace --features full`: exit 0, **1m24s**
+  - `cargo-clippy --workspace --features full --no-deps -D warnings`:
+    exit 0, **1m43s**, 0 warnings
+  - `cargo-test --no-run -p lemmy_server --test e2e`: exit 0,
+    **1m41s** (the 4 new tests compile — Case A correct)
+  - `cargo-test --workspace --test e2e --features full`: exit 0,
+    **1906.55s** (~31.8min) — `test result: ok. 93 passed; 0 failed;
+    5 ignored`. **All 4 new v1-AD-e tests `ok`**, zero failures.
+- **DQ #244 mutated** → result=pass, answered_by=advisor-laptop,
+  resolved_at, pending[]→resolved[] at `02b584aba`. DQ pending=0.
+- **DQ raised:** none
+
 ## advisor: Task 5 dispatched — 2026-05-17T03:25:00Z
 
 - **action:** queued Junior impl-task **#290** —
