@@ -8,7 +8,7 @@ const AGPL_NOTICE: &str = include_str!("../../../../../AGPL-NOTICE.md");
 ///
 /// Public endpoint; no auth required. Read-only; no DB access.
 /// Surfaces the AGPL §13 source-disclosure requirement to any connecting client.
-pub async fn get_source() -> LemmyResult<Json<GetSourceResponse>> {
+pub fn get_source() -> LemmyResult<Json<GetSourceResponse>> {
   Ok(Json(GetSourceResponse {
     notice: AGPL_NOTICE.to_string(),
     license: "AGPL-3.0".to_string(),
