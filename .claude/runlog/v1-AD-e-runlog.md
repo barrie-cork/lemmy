@@ -422,3 +422,15 @@ entry).
 - **Task:** #292 `[role:bm-task]` — open PR `phase-v1-AD-e` (tip `efc0d72e1`) → `governance-v0`, `--repo barrie-cork/lemmy`.
 - **Pre-conditions verified by advisor before dispatch:** clean tree; synced w/ origin; no running/queued Junior tasks; DQ pending=0; `/brehon-verify` 3/3 ✓; retro gate silent (plan defers retro post-merge); Phase 1c e2e gate satisfied (DQ #244 `validate-pending-laptop-e2e` result=pass, branch `phase-v1-AD-e`, 93/0/5).
 - **Next:** poll #292 → on complete read PR# + URL → wait ~5–10 min for CR → queue `bm-poll-cr` → `bm-triage` → **user gate 3 (CR triage)**.
+
+## bm: poll-cr — 2026-05-17T09:39:20Z
+- **PR:** #133
+- **head SHA:** 0608f99 (unchanged since PR creation)
+- **CR comments seen:** 8 (1 review / 6 inline / 1 issue)
+- **Actionable findings ingested:** 6 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 6 (poll #1)
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 4/0/0 | medium 0/0/0 | low 1/0/0 | nit 1/0/0
+- **Recommendation:** pending (4 major findings open)
+- **YAML:** .claude/PRPs/reviews/pr-133-findings.yaml
+- **Notes:** All findings are inside the PR diff. 4 major findings require triage.

@@ -1,0 +1,125 @@
+schema_version: 1
+pr: 133
+title: Phase v1-AD-e — Server-rendered admin dashboard HTML pages (Dashboard + Audit,
+  pure-templating over shipped v1-AD-d)
+head: phase-v1-AD-e
+base: governance-v0
+opened_at: '2026-05-17T08:15:24Z'
+last_poll_at: '2026-05-17T09:38:59.397396Z'
+poll_count: 1
+last_polled_head_sha: 0608f99
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/decision-queue.json
+  line: 3962
+  summary: Fix timestamp chronology in newly added DQ entries.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269050
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/decision-queue.json
+  line: 3998
+  summary: Record explicit user approval for the Task 4 scope decision.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269053
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/runlog/v1-AD-e-runlog.md
+  line: 424
+  summary: Clarify the append-only ordering convention.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269056
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/api/api/src/governance/admin_dashboard_html.rs
+  line: 77
+  summary: Check the feature flag before admin authorisation to preserve 404-off semantics.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269058
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/api/api/src/governance/admin_dashboard_html.rs
+  line: 331
+  summary: Apply scrub/redaction on user-visible audit strings before rendering.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269060
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-6
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/server/tests/e2e.rs
+  line: 15036
+  summary: Add a non-admin rejection test for `/api/v4/governance/admin/audit/view`.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269063
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: null
+merged_at: null
+merge_commit: null
+final_recommendation: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 4
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 1
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 1
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 6
+    claude: 0
+    user: 0
+  total: 6
