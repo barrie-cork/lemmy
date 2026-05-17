@@ -15,6 +15,31 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 242,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T17:40:39Z",
+      "question": "v1-ship-1 Phase-2 e2e RUN — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip dab15ec56 (local, testcontainers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 Phase-1 workspace validation ALL 3 PASS (DQ #241 resolved). User gate 4 = LOCAL e2e run (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@dab15ec56. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres, harness-serialized. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll). Expected: agpl_source_disclosure_surface_returns_notice passed + pre-existing e2e suite pass count unchanged.",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-dab15ec56.log",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
