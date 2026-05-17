@@ -122,6 +122,7 @@ use lemmy_api::{
       get::get_registration_application,
       list::list_registration_applications,
     },
+    source::get_source,
   },
 };
 use lemmy_api_crud::{
@@ -228,6 +229,8 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .route("/banner", post().to(upload_site_banner))
           .route("/banner", delete().to(delete_site_banner)),
       )
+      // AGPL §13 source disclosure — public, no auth, no DB
+      .route("/source", get().to(get_source))
       .route("/modlog", get().to(get_mod_log))
       .service(
         resource("/search")
