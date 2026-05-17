@@ -352,6 +352,8 @@ pub struct GetSiteResponse {
   /// Useful for estimating when your application will be approved.
   pub last_application_duration_seconds: Option<i64>,
   pub captcha_enabled: bool,
+  /// AGPL §13 source-disclosure surface; see [`SourceDisclosure`].
+  pub source_disclosure: SourceDisclosure,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
