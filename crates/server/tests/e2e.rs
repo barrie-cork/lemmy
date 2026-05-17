@@ -14860,3 +14860,66 @@ mod v1_sl_e_fixtures {
     Ok(())
   }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{App, test, web::Data};
+  use lemmy_db_views_site::api::{GetSiteResponse, GetSourceResponse};
+  use lemmy_utils::rate_limit::RateLimit;
+
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+
+  let rate_limit = RateLimit::with_debug_config();
+  let app = test::init_service(
+    App::new()
+      .app_data(Data::new(context.clone()))
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+  )
+  .await;
+
+  // --- 1. GET /api/v4/site returns source_disclosure block. ---
+  let site_req = test::TestRequest::get().uri("/api/v4/site").to_request();
+  let site_resp = test::call_service(&app, site_req).await;
+  assert_eq!(site_resp.status().as_u16(), 200, "/api/v4/site must return 200");
+
+  let site_body_bytes = test::read_body(site_resp).await;
+  let site_body: GetSiteResponse = serde_json::from_slice(&site_body_bytes)?;
+
+  assert_eq!(
+    site_body.source_disclosure.license, "AGPL-3.0",
+    "source_disclosure.license must be 'AGPL-3.0' per ADR-011"
+  );
+  assert_eq!(
+    site_body.source_disclosure.disclosure_url, "/api/v4/source",
+    "source_disclosure.disclosure_url must point to /api/v4/source"
+  );
+  assert!(
+    !site_body.source_disclosure.repo_url.is_empty(),
+    "source_disclosure.repo_url must be non-empty"
+  );
+  assert!(
+    !site_body.source_disclosure.fork_commit.is_empty(),
+    "source_disclosure.fork_commit must be non-empty (build.rs default 'unknown' is acceptable)"
+  );
+
+  // --- 2. GET /api/v4/source returns the AGPL notice body. ---
+  let source_req = test::TestRequest::get().uri("/api/v4/source").to_request();
+  let source_resp = test::call_service(&app, source_req).await;
+  assert_eq!(source_resp.status().as_u16(), 200, "/api/v4/source must return 200");
+
+  let source_body_bytes = test::read_body(source_resp).await;
+  let source_body: GetSourceResponse = serde_json::from_slice(&source_body_bytes)?;
+
+  assert_eq!(source_body.license, "AGPL-3.0");
+  assert!(
+    source_body.notice.contains("GNU Affero General Public License"),
+    "AGPL-NOTICE.md body must contain the canonical license name"
+  );
+  assert!(
+    source_body.notice.len() > 100,
+    "notice body must be substantive (got {} bytes)",
+    source_body.notice.len()
+  );
+
+  Ok(())
+}
