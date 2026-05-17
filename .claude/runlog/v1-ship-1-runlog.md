@@ -459,3 +459,49 @@ A/B per canonical-schema-first gate) → §2.3 PMD presearch → dispatch
 via safe anti-TOCTOU first). Then §5.2 validate Task 4 (e2e RUN — needs
 Docker; testcontainers) → /brehon-verify → bm-pr → CR → triage → merge
 → Task 5 retro.
+
+## advisor: Task 4 dispatch DEFERRED — daemon busy on AD-e #297 (cross-lane serialization) 2026-05-17
+
+Task 4 brief authored + pushed (`123b75c05`, .claude/PRPs/briefs/
+v1-ship-1-impl-4.md). Pre-dispatch SAFE anti-TOCTOU daemon-local check
+revealed TWO blockers for an immediate dispatch:
+
+1. **Daemon-local `phase-v1-ship-1` diverged (behind 3 / ahead 11 vs
+   origin).** The "ahead 3" = STALE daemon finalize-merge commits
+   `08363bf2c`(task2 fm) / `f5d0c2639`(merge) / `9082b08d3`(task3 fm),
+   merge-base `e134c6d9d`. These are the daemon's OWN finalize-merge of
+   Tasks 2+3, created daemon-local but NEVER pushed (origin doesn't
+   have them) — a DEAD PARALLEL PATH superseded by the advisor reconcile
+   (origin `123b75c05` already has Tasks 2+3 code: verified `get_source`
+   ×2 in source.rs, `BREHON_FORK_COMMIT` ×3 in build.rs — PLUS the
+   clippy de-async fix, DQ #239→#240 reconcile, pass mutations, Task 4
+   brief, all of which the stale commits LACK). This is the
+   daemon-local-trunk-stale pattern (`feedback_daemon_local_trunk_stale_
+   multi_lane` / lesson #273), NOT the AD-e TOCTOU corruption class.
+   Discarding the 3 stale commits loses nothing on origin.
+
+2. **Daemon is RUNNING task #297** = `[role:impl-task] v1-AD-e
+   fix-impl-1` (PR #133 CR fix-in-PR, the OTHER lane, baseBranch=
+   phase-v1-AD-e). Daemon checkout is on phase-v1-AD-e; AD-e
+   daemon-local ahead of origin because #297 is actively building.
+
+DECISION: **DEFER Task 4 dispatch until #297 completes + daemon idle.**
+Rationale: (a) a force `git update-ref` on daemon-local ship-1 while a
+peer worker (#297) is live on the shared /srv/brehon-fork/.git is the
+exact TOCTOU race that corrupted AD-e (2026-05-17 incident) — must NOT
+repeat; (b) pausing the daemon would kill #297 (peer lane's live CR
+fix) — unacceptable cross-lane interference; (c) dispatching now would
+branch the Task-4 worker from STALE `9082b08d3` (missing the Task 4
+brief itself + clippy fix + DQ reconcile) → guaranteed-broken worker.
+This is NORMAL cross-lane serialization (two lanes, one daemon
+checkout — ref ops serialize behind the active lane's worker), NOT a
+catch-fire. Poll #297; when done + daemon Active=0: re-run the SAFE
+anti-TOCTOU check, CAS-guarded `update-ref` daemon-local ship-1 →
+origin/phase-v1-ship-1 (guarded from 9082b08d3; daemon idle so no
+concurrent rotation), THEN dispatch Task 4. NO reset --hard. NO daemon
+pause. RETRO CARRY (Task 5 §5): daemon-side multi-lane ref-isolation
+gap — two lanes sharing one /srv/brehon-fork checkout forces this
+serialization + makes every cross-lane daemon-local sync a TOCTOU
+hazard; candidate structural fix = per-lane daemon checkout (mirror of
+the human-side worktree-per-lane rule). Ties to the 2026-05-17 AD-e
+incident lessons already carried.
