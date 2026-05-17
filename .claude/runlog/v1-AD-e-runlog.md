@@ -9,7 +9,7 @@ entry).
 
 ## advisor: Task 5 dispatched — 2026-05-17T03:25:00Z
 
-- **action:** queued Junior impl-task **#<N>** —
+- **action:** queued Junior impl-task **#290** —
   `[role:impl-task] v1-AD-e task 5 — see .claude/PRPs/briefs/v1-AD-e-impl-5.md`
 - **base_branch:** `phase-v1-AD-e` (tip — Task 1+2+3 merged, Task 4
   pre-satisfied, DQ #241/#242/#243 resolved=pass)
@@ -27,9 +27,9 @@ entry).
   `kind: "validate-pending-laptop"`; commands[] includes the REAL e2e
   run (`cargo-test --workspace --test e2e --features full`, ~26 min,
   Docker required) — advisor-laptop runs it. next-id=244.
-- **next:** poll #<N> → validate-pending-laptop → advisor-laptop runs
-  check+clippy+e2e on laptop (Docker up) → on pass finalize-merge →
-  /brehon-verify → CR/PR cycle → merge → retro
+- **next:** poll #290 → validate-pending-laptop → advisor-laptop runs
+  check+clippy+test--no-run+FULL e2e on laptop (Docker up, ~26min) →
+  on pass finalize-merge → /brehon-verify → CR/PR cycle → merge → retro
 
 ## advisor: Task 4 — PRE-SATISFIED (no Junior dispatch) — 2026-05-17T03:20:00Z
 
