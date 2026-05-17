@@ -655,3 +655,70 @@ entry).
   mutates the DQ entry) → on pass finalize-merge + advisor updates
   triage YAML `addressed_in` for cr-1/4/5/6 → re-run `/brehon-verify`
   → **user gate 5 (merge confirm)** → bm-merge → retro → gate 6.
+
+## 2026-05-17 advisor: fix-impl-1 #297 RECOVERED (worker-exited-without-push) + DQ #245 reconstructed
+
+- **#297 outcome:** done/succeeded per daemon — but **NO worker
+  branch on origin, no fix commit on origin, phase tip unchanged**.
+  Forensic log analysis (subagent, full 1.45M-char log read):
+  worker did ALL the work CORRECTLY (commit `835681ff5`: exactly 3
+  files +31/-7; commit `d1084600c`: DQ #245) but committed a fatal
+  process error — it reasoned "I should `git push origin HEAD`",
+  got distracted by the Stop-hook retro scoring, and **exited
+  without ever running the push**. Wrongly assumed Junior finalize
+  would push (finalize SKIPS on no-prepush per
+  `feedback_junior_finalize_skips_when_worker_pre_pushes`). NOT a
+  blocker/escalation; NO cr-5 scrub-escalation (found canonical
+  `redaction::scrub`).
+- **Recovery path:** job-297 daemon worktree GC'd, BUT the daemon's
+  finalize DID merge #297 into daemon-LOCAL `phase-v1-AD-e`
+  (`94915e07c`, reflog-confirmed) — never pushed (daemon-local-
+  stale, `feedback_daemon_local_trunk_stale_multi_lane`). Both
+  commits reachable in daemon object store. Had daemon push
+  `94915e07c` → origin `recovery/fix-impl-1-297` (exposes existing
+  objects only; moves no daemon ref). Confirmed `94915e07c` carries
+  the **#292 reversion** (1496 deletions vs origin tip) — so
+  cherry-picked the CLEAN commit `835681ff5` ONLY onto live phase
+  tip `1a50e216d` → `5d742a323`. Diff-stat `1a50e216d → 5d742a323`
+  = **exactly 3 fix files, +31/-7, ZERO advisor-file deletions**.
+  Did NOT take `d1084600c` (its DQ #245 referenced the stale-base
+  SHA).
+- **Fix verified (advisor spot-check off phase tip via blob-SHA):**
+  - **cr-4 ✓** — `is_admin?` removed from top of BOTH handlers
+    (`admin_dashboard_html` L68, `admin_audit_html` L242); now after
+    the `if !enabled { NotFound }` flag-check. R-html-3 satisfied.
+  - **cr-5 ⚠ PARTIAL** — canonical `use crate::governance::redaction::scrub`
+    applied to `e.reason` (L323) + `denial_reason` (L331) ONLY.
+    Brief §2.2 also listed scope/key/entry_kind/actor_pseudonym +
+    `scrub_json` for `previous_value`/`new_value`. Worker took the
+    narrower interpretation (the 2 highest-PII free-text fields), no
+    `scrub_json`, NO blocker filed. NOT wrong but not the full
+    ADR-015 surface specified. **FLAGGED for user at gate 5** —
+    whether the narrower scrub is ADR-015-sufficient is a user
+    judgment call, not silently accepted/expanded by advisor.
+  - **cr-6 ✓** — `admin_audit_html_forbidden_for_non_admin` appended
+    inside `mod v1_sl_e_fixtures`, Case-A `LemmyResult<()>` (no
+    `.map_err`), `seed_user(...,false)`, direct `admin_audit_html`
+    call, asserts `LemmyErrorType::NotAnAdmin`. Mirrors dashboard
+    sibling verbatim.
+  - **cr-1 ✓** — 3 `timestamp` fields made monotonic
+    (01:00→01:50→02:25). Worker corrected #242/#243/#244 (its
+    stale-base view) not the brief-named #237/#238 — base-drift
+    artifact; the chronology intent IS met against the real file.
+    Zero other DQ field touched.
+- **DQ #245 reconstructed by advisor** — worker's `d1084600c`
+  pointed at stale-base SHA; advisor wrote a fresh
+  `validate-pending-laptop` (id 245, `from: impl`, `branch:
+  phase-v1-AD-e`, `phase_task: fix-impl-1`, 4 commands incl FULL
+  e2e) pointing at the REAL on-branch SHA `5d742a323`, context
+  documenting the recovery + the cr-5 partial. Commit subject
+  `chore(advisor):` (advisor authored the recovery commit).
+- **Next:** push (cherry-pick fix + DQ #245 + this runlog) →
+  advisor-laptop processes DQ #245 (Docker check; run 4 commands
+  sequentially; mutate entry) → on pass: finalize-merge already
+  effectively done via cherry-pick (no daemon merge to take —
+  `94915e07c` is contaminated; the cherry-pick IS the merge),
+  advisor updates triage YAML `addressed_in` cr-1/4/5/6 + recompute
+  recommendation → re-run `/brehon-verify` → **user gate 5 (merge
+  confirm)** — surface the cr-5-partial there for the user's call —
+  → bm-merge → retro → gate 6.

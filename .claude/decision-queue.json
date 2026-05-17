@@ -1,6 +1,29 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 245,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T11:34:48Z",
+      "question": "v1-AD-e fix-impl-1 (PR #133 CR fix-in-PR: cr-4/cr-5/cr-6/cr-1) on phase-v1-AD-e tip 5d742a323 — run DoD (incl full e2e) on laptop",
+      "branch": "phase-v1-AD-e",
+      "phase_task": "fix-impl-1",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fiximpl1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fiximpl1-testnorun.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-e2e.log 2>&1\""
+      ],
+      "context": "PR #133 CR fix-in-PR (user gate-3 approved). Junior impl-task #297 did the work correctly (commit 835681ff5: 3 files) but EXITED WITHOUT PUSHING (process error: assumed finalize would push; daemon finalize skips on no-prepush per feedback_junior_finalize_skips_when_worker_pre_pushes). Advisor recovered via daemon recovery ref + cherry-pick onto live phase tip = 5d742a323 (zero advisor-file deletions; #292-pattern sidestepped). Worker DQ #245 (d1084600c) NOT taken (referenced stale-base SHA); this entry reconstructed by advisor pointing at the real on-branch SHA. cr-4: is_admin? moved after flag-check both handlers. cr-5: PARTIAL — canonical crate::governance::redaction::scrub applied to reason+denial_reason ONLY (brief listed more fields incl scrub_json for Value payloads; worker took narrower interpretation, no blocker filed — flagged for user at gate 5). cr-6: admin_audit_html_forbidden_for_non_admin appended, Case-A, NotAnAdmin. cr-1: #242/#243/#244 timestamps made monotonic (worker hit stale-base #s vs brief #237/#238; intent met). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229). Handler behaviour changed (cr-4) so FULL e2e required (Docker).",
+      "answer": null,
+      "answered_by": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
