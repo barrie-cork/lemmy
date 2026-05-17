@@ -14885,7 +14885,15 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
   {
     let pool = &mut context.pool();
-    let site_form = SiteInsertForm::new("agpl test site".to_string(), instance.id);
+    let site_key_pair = activitypub_federation::http_signatures::generate_actor_keypair()?;
+    let site_form = SiteInsertForm {
+      ap_id: Some(url::Url::parse("https://test.invalid")?.into()),
+      last_refreshed_at: Some(chrono::Utc::now()),
+      inbox_url: Some(url::Url::parse("https://test.invalid/inbox")?.into()),
+      private_key: Some(site_key_pair.private_key),
+      public_key: Some(site_key_pair.public_key),
+      ..SiteInsertForm::new("agpl test site".to_string(), instance.id)
+    };
     let site = Site::create(pool, &site_form).await?;
     // System account: throwaway Person — LocalSite needs a non-null FK.
     let sysacct_form = PersonInsertForm::test_form(instance.id, "agpl_sysacct");
@@ -14906,9 +14914,13 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   // --- 1. GET /api/v4/site returns source_disclosure block. ---
   let site_req = test::TestRequest::get().uri("/api/v4/site").to_request();
   let site_resp = test::call_service(&app, site_req).await;
-  assert_eq!(site_resp.status().as_u16(), 200, "/api/v4/site must return 200");
-
+  let site_status = site_resp.status().as_u16();
   let site_body_bytes = test::read_body(site_resp).await;
+  assert_eq!(
+    site_status, 200,
+    "/api/v4/site must return 200 — body: {}",
+    String::from_utf8_lossy(&site_body_bytes)
+  );
   let site_body: GetSiteResponse = serde_json::from_slice(&site_body_bytes)?;
 
   assert_eq!(
@@ -14931,9 +14943,13 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   // --- 2. GET /api/v4/source returns the AGPL notice body. ---
   let source_req = test::TestRequest::get().uri("/api/v4/source").to_request();
   let source_resp = test::call_service(&app, source_req).await;
-  assert_eq!(source_resp.status().as_u16(), 200, "/api/v4/source must return 200");
-
+  let source_status = source_resp.status().as_u16();
   let source_body_bytes = test::read_body(source_resp).await;
+  assert_eq!(
+    source_status, 200,
+    "/api/v4/source must return 200 — body: {}",
+    String::from_utf8_lossy(&source_body_bytes)
+  );
   let source_body: GetSourceResponse = serde_json::from_slice(&source_body_bytes)?;
 
   assert_eq!(source_body.license, "AGPL-3.0");
