@@ -7,6 +7,56 @@ entry).
 
 ---
 
+## advisor: Task 2 dispatched — 2026-05-17T02:05:00Z
+
+- **action:** queued Junior impl-task **#288** —
+  `[role:impl-task] v1-AD-e task 2 — see .claude/PRPs/briefs/v1-AD-e-impl-2.md`
+- **base_branch:** `phase-v1-AD-e` (tip a0f886e3a — maud + DQ #241 resolved)
+- **brief:** `.claude/PRPs/briefs/v1-AD-e-impl-2.md` (authored this session)
+- **scope:** extract `gather_dashboard` (behaviour-preserving) +
+  create `admin_dashboard_html.rs` (maud `render_dashboard`) + `mod.rs`
+  decl + `lib.rs` `/dashboard/view` route. 4 files, ONE commit.
+  Import ONLY `admin_dashboard_html` (NOT `admin_audit_html` — Task 3).
+- **file-class lessons:** none mandatory (no e2e/migration/newtype/
+  multi-write); standard cargo lessons injected (pipes-mask-exit,
+  clippy-test-style, library-add-after-shipping for the maud consumer).
+- **validation:** Shape-G SUSPENDED → worker writes
+  `kind: "validate-pending-laptop"` (3 cmds: check --workspace +
+  clippy --workspace --no-deps -D warnings + test --no-run -p
+  lemmy_server --test e2e [R7 behaviour-preservation proof]);
+  advisor-laptop runs + mutates.
+- **pre-flight:** outside forbidden windows at dispatch
+- **next:** poll #288 → validate-pending-laptop → run §13-Task-2 DoD
+  on laptop → on pass finalize-merge + queue Task 3 (audit HTML
+  handler + route)
+
+## advisor: Task 1 complete — PASS — 2026-05-17T01:55:00Z
+
+- **task:** Junior impl-task #287 (run #1 succeeded 00:25:20→00:31:45Z)
+- **deliverable:** `feat(api): add maud HTML engine dependency (task 1)`
+  commit 55c373016 — maud 0.27.0 at `crates/api/api/Cargo.toml:72`
+  (inline single-consumer form mirroring sitemap-rs/totp-rs:70-71);
+  `Cargo.lock` regenerated. No `templates/` dir, no askama (DQ #238=maud).
+- **worker pushed own branch** (`junior/role-impl-task-...-287`); daemon
+  finalize skipped per `feedback_junior_finalize_skips_when_worker_pre_pushes`
+  → advisor manually finalize-merged.
+- **DQ #241 (validate-pending-laptop, from=impl):** advisor-laptop ran
+  the two §15 DoD commands on `brehon-fork-ad-e` worktree (detached on
+  worker tip), both PASS:
+  - `cargo-check --workspace --features full`: exit 0, **7m30s**
+  - `cargo-clippy -p lemmy_api --features full --no-deps -D warnings`:
+    exit 0, **6m38s**, 0 warnings — **no transitive lint cascade**
+    (per `feedback_library_add_after_shipping` the post-add clippy is
+    the detector; clean = maud integrates cleanly)
+- **finalize-merge:** `git merge --no-ff origin/junior-287` →
+  `bcade7d94` on phase-v1-AD-e (clean; runlog preserved via 909b4f0a2
+  ancestry; DQ semantic-diff confirmed worker only added #241, no
+  reformat damage)
+- **DQ #241 mutated** → result=pass, answered_by=advisor-laptop,
+  resolved_at, moved pending[]→resolved[] at `a0f886e3a`. Also fixed
+  cp1252 mojibake in the worker-written question field. DQ pending=0.
+- **DQ raised:** none
+
 ## advisor: Task 1 dispatched — 2026-05-17T01:25:00Z
 
 - **action:** queued Junior impl-task **#287** —
