@@ -14866,8 +14866,34 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   use actix_web::{App, test, web::Data};
   use lemmy_db_views_site::api::{GetSiteResponse, GetSourceResponse};
   use lemmy_utils::rate_limit::RateLimit;
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_site::{LocalSite, LocalSiteInsertForm},
+    local_site_rate_limit::{LocalSiteRateLimit, LocalSiteRateLimitInsertForm},
+    person::{Person, PersonInsertForm},
+    site::{Site, SiteInsertForm},
+  };
+  use lemmy_diesel_utils::traits::Crud;
 
   let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+
+  // Seed instance + Site + LocalSite + LocalSiteRateLimit so
+  // `SiteView::read_local` (called by `read_site` for GET /api/v4/site)
+  // returns a row instead of LocalSiteNotSetup → HTTP 500.
+  // Mirrors the canonical scaffold at e2e.rs:4751-4761
+  // (governance_outbox_emits_remote_sanction_notice_on_local_sanction).
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  {
+    let pool = &mut context.pool();
+    let site_form = SiteInsertForm::new("agpl test site".to_string(), instance.id);
+    let site = Site::create(pool, &site_form).await?;
+    // System account: throwaway Person — LocalSite needs a non-null FK.
+    let sysacct_form = PersonInsertForm::test_form(instance.id, "agpl_sysacct");
+    let sysacct = Person::create(pool, &sysacct_form).await?;
+    let local_site_form = LocalSiteInsertForm::new(site.id, sysacct.id);
+    let local_site = LocalSite::create(pool, &local_site_form).await?;
+    LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site.id)).await?;
+  }
 
   let rate_limit = RateLimit::with_debug_config();
   let app = test::init_service(
