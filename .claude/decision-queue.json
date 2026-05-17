@@ -1,6 +1,32 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 246,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T17:55:00Z",
+      "question": "v1-AD-e fix-impl-2 (cr-5 complete ADR-015 scrub in audit_entry_row) cherry-picked onto phase tip 5805ab27f — run §15 DoD on advisor-laptop",
+      "options": [
+        "advisor-laptop runs the 4 §15 commands sequentially and mutates result=pass|fail"
+      ],
+      "context": "Advisor-reconstructed (worker DQ #246 referenced its stale-base branch + had only 3 commands). Points at the real on-branch cherry-picked SHA 5805ab27f (clean, 1 file admin_dashboard_html.rs, #292 stale-base merge sidestepped). Shape G suspended (DQ #229) — laptop is the runner.",
+      "branch": "phase-v1-AD-e",
+      "phase_task": "fix-impl-2",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fix-impl-2-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fix-impl-2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fix-impl-2-testnorun.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fix-impl-2-e2e.log 2>&1\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
