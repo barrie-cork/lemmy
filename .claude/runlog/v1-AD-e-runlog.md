@@ -438,3 +438,15 @@ entry).
 - **Task:** #295 `[role:bm-task]` — ingest 6 CR findings on PR #133 → `.claude/PRPs/reviews/pr-133-findings.yaml` (force-add+commit+push). `bucket: ""` left blank (triage is separate). `--repo barrie-cork/lemmy`.
 - **Key brief flags:** (a) 3-source disambiguation (filter `coderabbitai[bot]` — auto-excludes Copilot); (b) head-SHA-vs-finding-timestamp skew is benign — the governance-v0 merge `856d4f444` added ZERO code changes so all 6 findings still apply at the same file:line; (c) reconcile parsed count vs CR's stated "6" — warn if mismatch.
 - **Next:** poll #295 → on complete read `pr-133-findings.yaml` off phase branch → queue `bm-triage` → **user gate 3 (CR triage four-bucket counts)**.
+
+## bm: poll-cr — 2026-05-17T09:39:20Z
+- **PR:** #133
+- **head SHA:** 0608f99 (unchanged since PR creation)
+- **CR comments seen:** 8 (1 review / 6 inline / 1 issue)
+- **Actionable findings ingested:** 6 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 6 (poll #1)
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 4/0/0 | medium 0/0/0 | low 1/0/0 | nit 1/0/0
+- **Recommendation:** pending (4 major findings open)
+- **YAML:** .claude/PRPs/reviews/pr-133-findings.yaml
+- **Notes:** All findings are inside the PR diff. 4 major findings require triage.
