@@ -774,3 +774,33 @@ mutate #243 pass → advisor RE-RUN Phase-2 e2e local on b7286ac8e tip
 (user already chose LOCAL gate-4; do NOT re-ask). On agpl test `ok` +
 no regression → mutate #242 pass (supersede the original fail) →
 /brehon-verify → bm-pr → CR → gates 3/5/6 → ship.
+
+## advisor: fix-impl-5 §5.2 Phase-1 ALL 3 PASS — DQ #243 resolved
+
+§5.2 validate-pending-laptop on fix-impl-5 merged tip `8e1bb57bb`
+(canonical checkout detached; Shape G suspended DQ #229 → local per
+advisor-orchestrator.md §5.2):
+
+- cmd1 `cargo-check --workspace --features full`: PASS, Finished 1m35s,
+  0 err. (EXIT marker read from log, NOT bg summary —
+  feedback_background_task_notification_lies.)
+- cmd2 `cargo-clippy --workspace --features full --no-deps -- -D warnings`:
+  PASS, Finished 2m25s, **0 warnings** — fix-impl-5 imports block +
+  Instance/Site/LocalSite/LocalSiteRateLimit seeding block are
+  clippy-clean (mirrors clean canonical precedent e2e.rs:4751-4761).
+- cmd3 `cargo-test --no-run -p lemmy_server --test e2e`: PASS, Finished
+  2m14s, `Executable e2e-aebb6c76db6b1818.exe` built, 0 err.
+
+DQ #243 mutated → resolved (result:pass, answered_by:advisor-laptop).
+Pending now [#229, #242]. #242 (original e2e fail) stays fail-pending
+until the Phase-2 e2e re-run on `8e1bb57bb` confirms the agpl test now
+passes, at which point #242 is superseded-resolved alongside #244.
+
+NEXT: advisor RE-RUN Phase-2 e2e LOCAL on `8e1bb57bb` (user gate-4
+already = local, NOT re-asked per auto-phase invariant 4). Atomic
+raise DQ #244 (validate-pending-laptop-e2e, from:advisor) BEFORE
+launch, then `cargo-test.bat --workspace --test e2e --features full`
+bg. On agpl `... ok` + suite 90/0 + no regression → mutate #242+#244
+pass → /brehon-verify v1-ship-1 → bm-pr → CR → gates 3/5/6 → ship.
+Second consecutive e2e fail = §G4 cycle-count HARD REFUSAL re-plan
+signal (no auto fix-impl-6).
