@@ -1,28 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 242,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T05:15:00Z",
-      "question": "v1-AD-e Task 2 (extract gather_dashboard + dashboard HTML handler + /dashboard/view route) pushed — run §15 DoD on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288",
-      "phase_task": 2,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task2-testnorun.log 2>&1\""
-      ],
-      "context": "admin_dashboard_html.rs created; gather_dashboard extracted as pub(crate); /dashboard/view route wired; commit ade904851. R7 (--no-run) applies after Task 2 (gather_dashboard changes fn call surface). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": null,
-      "answered_by": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -3961,6 +3939,27 @@
       "log_slice": "cargo-check --workspace --features full: Finished dev profile in 7m 30s; CHECK_EXIT_0 (no error[E*], no warnings). cargo-clippy -p lemmy_api --features full --no-deps -D warnings: Finished dev profile in 6m 38s; CLIPPY_EXIT_0 (0 warnings, no cascade per feedback_library_add_after_shipping).",
       "failed_commands": null,
       "resolved_at": "2026-05-17T00:56:07Z"
+    },
+    {
+      "id": 242,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T05:15:00Z",
+      "question": "v1-AD-e Task 2 (extract gather_dashboard + dashboard HTML handler + /dashboard/view route) pushed on junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288 — run §13-Task-2 DoD on laptop",
+      "branch": "junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288",
+      "phase_task": 2,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task2-testnorun.log 2>&1\""
+      ],
+      "context": "admin_dashboard_html.rs created; gather_dashboard extracted as pub(crate); /dashboard/view route wired; commit ade904851. R7 (--no-run) applies after Task 2 (gather_dashboard changes fn call surface). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
+      "answer": "All 3 DoD gates PASS on advisor-laptop (brehon-fork-ad-e worktree, detached on junior-288 tip 2558eba9b). cargo-check --workspace --features full: exit 0 (1m47s). cargo-clippy --workspace --features full --no-deps -D warnings: exit 0 (5m35s). cargo-test --no-run -p lemmy_server --test e2e: exit 0 (10m44s) — R7 behaviour-preservation confirmed (e2e binary links; gather_dashboard extraction did not break the JSON handler or v1-AD-d e2e). Finalize-merged junior-288 into phase-v1-AD-e at a0a19637d (DQ conflict resolved: #242 new-pending, #241 stays resolved=pass). Advance to Task 3.",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "log_slice": "cargo-check --workspace --features full: Finished dev profile in 1m 47s; CHECK_EXIT_0 (no error[E*]). cargo-clippy --workspace --features full --no-deps -D warnings: Finished dev profile in 5m 35s; CLIPPY_EXIT_0 (0 warnings). cargo-test --no-run -p lemmy_server --test e2e: Finished test profile in 10m 44s; Executable tests/e2e.rs (e2e-20ec6875d92fa217.exe); TESTNORUN_EXIT_0 — R7 link OK.",
+      "failed_commands": null,
+      "resolved_at": "2026-05-17T01:48:33Z"
     }
   ]
 }
