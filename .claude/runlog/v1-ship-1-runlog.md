@@ -430,3 +430,32 @@ commit + classifier-block. Lesson: framework-trait claims (actix
 Handler, Diesel DSL, etc.) are hypotheses — compile-verify on the lane
 BEFORE commit, never assert-then-commit. Ties to PR #132 cr-2 precedent
 in `feedback_verify_automated_reviewer_claims_against_compiler`.
+
+## advisor: §5.2 r3 ALL 3 PASS — Cohort A barrier CLEAR 2026-05-17
+
+Corrected tip `48435569d` fully validated (compiler+clippy+e2e-compile,
+all EXIT markers authoritative, not bg summaries):
+- cmd1 cargo-check --workspace --features full: PASS 1m29s, E0277 gone.
+- cmd2 cargo-clippy --workspace --features full --no-deps -- -D
+  warnings: PASS 2m31s, 0 warnings (#[expect(clippy::unused_async)]
+  consumed lint, no unfulfilled_lint_expectations).
+- cmd3 cargo-test --no-run -p lemmy_server --test e2e: PASS 9m24s,
+  e2e-aebb6c76db6b1818.exe built, 0 err.
+
+DQ #239 (Task 2) + #240 (Task 3) both mutated → result:pass,
+answered_by:advisor-laptop, moved to resolved[]; #239's stale
+blocked-by-cohort context annotation stripped (now genuinely pass).
+Committed+pushed `cbe0fa779`. pending[] now only [#229] (Shape-G
+reenable reminder — not a blocker). **Cohort A barrier CLEAR** —
+Tasks 2+3 delivered + validated on the merged+fixed phase tip.
+
+NEXT: Task 4 (e2e test, plan §13; `requires:` tasks 2+3 — both now on
+phase branch). Author brief .claude/PRPs/briefs/v1-ship-1-impl-4.md
+(§2.4 MANDATORY e2e.rs lessons: feedback_lemmy_error_no_std_error +
+feedback_async_pool_test_pattern; +feedback_junior_worker_e2e_edit_hang
+if ≥2 edits; mirror v1-SL/v1-JM sibling fixtures error-shape case
+A/B per canonical-schema-first gate) → §2.3 PMD presearch → dispatch
+[role:impl-task] Junior base_branch=phase-v1-ship-1 (daemon-local sync
+via safe anti-TOCTOU first). Then §5.2 validate Task 4 (e2e RUN — needs
+Docker; testcontainers) → /brehon-verify → bm-pr → CR → triage → merge
+→ Task 5 retro.
