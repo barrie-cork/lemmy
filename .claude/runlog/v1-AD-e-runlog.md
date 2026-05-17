@@ -780,3 +780,44 @@ entry).
   e2e, ~32min) → on pass mutate + triage YAML re-confirm
   `addressed_in` cr-5 → re-run `/brehon-verify` → **re-surface user
   gate 5** → bm-merge → retro → gate 6.
+
+## 2026-05-17 advisor: fix-impl-2 dispatched — Junior #299 (cr-5 completion)
+
+- **Brief:** `.claude/PRPs/briefs/v1-AD-e-fix-impl-2.md` committed
+  `317a0a1c0`, pushed (with gate-5-resolved runlog entry).
+- **Task:** #299 `[role:impl-task]` (Sonnet, EliteDesk),
+  `base_branch=phase-v1-AD-e` (tip `317a0a1c0` has the brief; phase
+  tip has #297's `5d742a323` partial cr-5 + DQ #245 pass + triage
+  approve + verify 3/3).
+- **Forbidden-window check:** 17:42 UTC Sunday — CLEAR (next window
+  Sun 01:55 UTC, ~8h out).
+- **Scope (ONE commit, 1 file, ~7 lines):**
+  `admin_dashboard_html.rs` `audit_entry_row` only — extend the
+  canonical `crate::governance::redaction::{scrub,scrub_json}` to
+  the fields #297 left raw: `scrub(&e.entry_kind/scope/key)`,
+  `scrub(p)` in the actor_pseudonym Some-arm, `scrub_json(v/&e.new_value)
+  .to_string()` for previous_value/new_value. Widen the existing
+  `redaction::scrub` import to `{scrub,scrub_json}`. Leave
+  reason/denial_reason (already scrubbed by #297) + id/created_at/
+  signature (non-PII) untouched. Field→fn mapping verified against
+  `AdminConfigAuditEntry` at api_common/src/governance.rs:555-573.
+- **No mandatory file-class lessons fire** (no e2e.rs edit, no
+  migration, no new test, no cfg-gate — pure in-file scrub-pattern
+  extension mirroring the already-present `scrub(&e.reason)` line).
+- **Validation:** Shape-G SUSPENDED → worker writes
+  `kind:"validate-pending-laptop"` (next-id 246), commands[]=4
+  (check/clippy/test--no-run/FULL e2e). Handler-render change to the
+  audit page the e2e exercises → full e2e mandatory (a scrub_json
+  `.to_string()` shape bug only surfaces at render). advisor-laptop
+  runs it (Docker, ~32min).
+- **Expect the recurring infra:** #292 stale-base-self-merge (4× on
+  this phase) + possible worker-exited-without-push (#297 pattern) —
+  same recover recipe: inspect worker branch / daemon reflog +
+  object store, cherry-pick ONLY the clean fix commit onto the live
+  tip, verify zero advisor-file deletions, reconstruct the
+  validate-pending-laptop DQ pointing at the real on-branch SHA.
+- **Next:** poll #299 → recover if #292/no-push → process DQ #246
+  (advisor-laptop 4-cmd DoD, ~32min e2e) → on pass mutate + re-confirm
+  triage YAML cr-5 `addressed_in` (now FULL ADR-015) → re-run
+  `/brehon-verify` (reuse the #246 e2e) → **re-surface user gate 5
+  (merge confirm)** → on confirm bm-merge → retro → gate 6.
