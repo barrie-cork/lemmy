@@ -292,3 +292,41 @@ correct worktree branches). Await BOTH → finalize-merge each (daemon
 may skip if pre-pushed) → §5.2 validate-pending-laptop ×2 SERIALLY
 (shared `target/`) → cohort barrier clears on both pass → Task 4 →
 Task 5.
+
+## advisor: Cohort A reconciled (#293+#294 merged, DQ collision fixed) 2026-05-17
+
+Both Cohort A workers `done` (single run each, succeeded): #293 task2
+(`62cf0344a feat(api_crud): wire source_disclosure into GetSiteResponse
++ build.rs`), #294 task3 (`c4e5dcdf6 feat(api): add get_source handler
++ /api/v4/source route`). Daemon did NOT auto-finalize-merge (Active=0,
+phase tip stayed `6e169f4d4`) — advisor-side reconcile per
+`feedback_junior_finalize_skips_when_worker_pre_pushes` (workers did not
+pre-push either; pure advisor merge). **Verify-before-trust:** fetched
+both worker branches, `git diff --stat` confirmed each matches its brief
+EXACTLY (T2={build.rs,read.rs,api.rs} +29/-1; T3={mod.rs,source.rs,
+lib.rs} +20); zero file overlap (cohort disjointness held).
+
+**DQ id collision (parallel-cohort, DQ #50 class):** both workers
+independently computed `next_id` against their own worktree view (each
+forked from `c13e5a35b`, max id #238) → BOTH raised `id: 239`. Resolved
+during merge: Task 2's validate-pending-laptop KEPT #239 (lower task
+no. wins, deterministic); Task 3's RENUMBERED to #240. Merge sequence on
+THIS lane worktree (`brehon-fork-ship-1`, `phase-v1-ship-1`):
+`--no-ff origin/...task-2...` → clean (`e9a6a3864`); `--no-ff
+origin/...task-3...` → conflict ONLY on `.claude/decision-queue.json`
+(code files disjoint, auto-merged clean) → resolved via stage-2/stage-3
+Python merge (ours-base + theirs' task3 entry renumbered 239→240;
+asserted resolved[] identical across stages, asserted final id-
+uniqueness) → committed `6ceb7683a`. Pushed `6e169f4d4..6ceb7683a`
+(local==origin). Merged tree verified: all 6 code files present,
+combined code diff = exactly 6 files +49/-1, DQ pending=[229,239,240]
+no dup ids across full 220+ id space.
+
+NEXT: §5.2 validate-pending-laptop. Both #239+#240 carry IDENTICAL
+commands (cargo-check / cargo-clippy / cargo-test --no-run -p
+lemmy_server --test e2e) and validate the SAME merged tip `6ceb7683a`
+→ run §5.2 cargo chain ONCE on the combined tip, apply result to BOTH
+DQ entries (avoids redundant ~22-min second run on identical tree;
+§5.2 serial-cargo constraint satisfied trivially since it's one run).
+Then cohort barrier clears on both pass → Task 4 (e2e, requires 2+3) →
+Task 5 retro.
