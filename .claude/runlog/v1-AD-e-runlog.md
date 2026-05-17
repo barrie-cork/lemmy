@@ -722,3 +722,61 @@ entry).
   recommendation → re-run `/brehon-verify` → **user gate 5 (merge
   confirm)** — surface the cr-5-partial there for the user's call —
   → bm-merge → retro → gate 6.
+
+## 2026-05-17 advisor: DQ #245 PASS + triage→approve + verify 3/3 ✓ + GATE 5 RESOLVED (complete cr-5 first)
+
+- **DQ #245 (validate-pending-laptop) → result=pass** (advisor-laptop,
+  4/4 DoD): cargo-check `--workspace --features full` exit0 2m05s;
+  clippy `--no-deps -D warnings` exit0 2m04s 0-warn; test `--no-run`
+  exit0 (cr-6 compiles Case-A clean); **FULL e2e exit0 — `test
+  result: ok. 94 passed; 0 failed; 5 ignored` 1925.48s**. All 5
+  v1-AD-e tests `ok` incl new `admin_audit_html_forbidden_for_non_admin`
+  (cr-6) + `admin_html_pages_flag_off_returns_404` (proves cr-4
+  is_admin?-after-flag-check reorder did NOT regress flag-off-404).
+  +1 net test vs 93. Mutated in place + pushed (`1e23cf27e`); origin
+  survival verified (pending=0).
+- **Triage YAML → recommendation=approve** (`9f10b0178`):
+  cr-1/cr-4/cr-5/cr-6 `addressed_in=5d742a323`; cr-5 carries a
+  `notes:` recording the PARTIAL scrub scope; counters recomputed
+  (major 3 done + 1 rebutted, low 1 done, nit 1 wont-fix); 0 open
+  fix-in-pr critical/major.
+- **/brehon-verify v1-AD-e → 3/3 ✓** (`7de5bfe45`, report
+  `.claude/PRPs/reports/v1-AD-e-verify.md`). cr-4 reorder
+  regression-free (flag-off-404 + both non-admin tests pass, +1 from
+  cr-6). S2.5 `/audit/view` is present as the idiomatic nested
+  `scope("/audit").route("/view",...)` (lib.rs:559-561) — plan
+  grep-literal imprecision, NOT a phantom (same disposition as
+  pre-fix verify; e2e-proven). Merge-confirm gate CLEAR.
+- **PR #133:** MERGEABLE / mergeStateStatus=CLEAN, CodeRabbit check
+  SUCCESS, head `7de5bfe45`, 45 commits governance-v0..phase-v1-AD-e.
+- **GATE 5 (merge confirm) SURFACED + RESOLVED:** user chose
+  **"Complete cr-5 first, then merge"** (recorded `answered_by:
+  user`). Rationale (user-stated): ADR-015 = EVERY user-visible
+  string; `previous_value`/`new_value` carry arbitrary admin-entered
+  config content — the real ADR-015 exposure the narrower #297 fix
+  left open. NOT merging yet; full ADR-015 compliance first.
+- **cr-5-completion scope (advisor spec'd from reading the actual
+  post-#297 `audit_entry_row` + `AdminConfigAuditEntry` field
+  types — api_common/src/governance.rs:555-573):** 1 file,
+  `admin_dashboard_html.rs` `audit_entry_row` (~L311-335) ONLY.
+  Already scrubbed by #297: `reason` (L323), `denial_reason` (L331).
+  fix-impl-2 adds: `scrub(&e.entry_kind)` (L316), `scrub(&e.scope)`
+  (L317), `scrub(&e.key)` (L318), `scrub(p)` in the
+  `actor_pseudonym` Some-arm (L325), and `scrub_json` for the JSON
+  payloads — `previous_value` Some-arm `scrub_json(v).to_string()`
+  (L320) + `new_value` `scrub_json(&e.new_value).to_string()`
+  (L322). Field types verified: entry_kind/scope/key=`String`,
+  actor_pseudonym=`Option<String>` → `scrub`; previous_value=
+  `Option<serde_json::Value>`, new_value=`serde_json::Value` →
+  `scrub_json`. Leave: `id` (i64), `created_at` (timestamp),
+  `signature` (bool display). Import already
+  `use crate::governance::{ ... redaction::scrub }` → extend to
+  `redaction::{scrub, scrub_json}`.
+- **Next:** author + commit + push
+  `.claude/PRPs/briefs/v1-AD-e-fix-impl-2.md` → dispatch
+  `[role:impl-task]` Junior `base_branch=phase-v1-AD-e` (expect the
+  recurring #292 stale-base + possible worker-no-push — same recover
+  recipe) → DQ #246 validate-pending-laptop (4-cmd DoD incl FULL
+  e2e, ~32min) → on pass mutate + triage YAML re-confirm
+  `addressed_in` cr-5 → re-run `/brehon-verify` → **re-surface user
+  gate 5** → bm-merge → retro → gate 6.
