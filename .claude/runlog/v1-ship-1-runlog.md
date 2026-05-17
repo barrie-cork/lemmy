@@ -1078,3 +1078,52 @@ bm-pr → CR → gates 3/5/6 → bm-merge → Task 5 retro →
 /brehon-phase-transition. 4th SAME-surface fail = §G4 re-plan
 hard-refusal (override DQ#247 scoped to fix-impl-7 only); DIFFERENT-surface
 fail = surface new legible body + WAIT user.
+
+## advisor: fix-impl-7 §5.2 Phase-1 cmd3 E0308 — brief byte-for-byte-mirror defect, catch-fire 2026-05-18
+
+§5.2 Phase-1 on fix-impl-7 #303 merged tip `f9214f2f8` (canonical
+checkout): cmd1 cargo-check PASS (1m48s, CMD1_EXIT_0), cmd2 clippy PASS
+(3m01s, CMD2_EXIT_0, no -D warnings), **cmd3 cargo-test --no-run FAIL**
+(CMD3_EXIT_NONZERO):
+
+```
+error[E0308]: mismatched types
+  --> crates\server\tests\e2e.rs:14911:36
+14911 |       .wrap(SessionMiddleware::new(context.clone()))
+   |             expected `LemmyContext`, found `Data<LemmyContext>`
+note: associated function defined here
+  --> crates\routes\src\middleware\session.rs:22:10
+   | 22 |   pub fn new(context: LemmyContext) -> Self {
+```
+
+**ROOT CAUSE = BRIEF DEFECT (not a Junior breach, not a §G4 cycle).**
+`SessionMiddleware::new` takes `LemmyContext` (session.rs:22). In the
+agpl test, `context` is `Data<LemmyContext>` — it comes from
+`governance_fixtures::bootstrap()` which returns `Data<LemmyContext>`
+(e2e.rs:803). The fix-impl-7 brief instructed a BYTE-FOR-BYTE mirror of
+the PASSING sibling `all_mvp_endpoints_return_non_404`
+(e2e.rs:3860 `.wrap(SessionMiddleware::new(context.clone()))`) — but
+that sibling's `context` is a BARE `LemmyContext` (it does
+`let context = LemmyContext::create(...)` directly at e2e.rs:3849, NOT
+via `bootstrap()`). The byte-for-byte mirror is a TYPE ERROR in the
+agpl test because the two tests obtain `context` differently. Junior
+#303 followed the brief literally + correctly (additive diff exactly
++1 use +1 .wrap, Part A/B preserved byte-identical — verify-before-trust
+was clean). The defect is in the BRIEF's mandate, which I authored.
+
+**FIX = ONE-TOKEN deref:** `SessionMiddleware::new((*context).clone())`
+or `SessionMiddleware::new(context.get_ref().clone())` (Data<T> derefs
+to T; .get_ref() → &T). cmd1+cmd2 already PASS so the rest of fix-impl-7
+is correct; only the argument type needs the deref.
+
+**§G4 classification:** E0308 is NON-allowlist → catch-fire. Cycle-count
+= 1st `(E0308, e2e.rs)` occurrence — NOT a cycle-3 hard-refusal (the 3x
+same-surface rule was the /api/v4/site 500 RUNTIME class, now overturned;
+this is a fresh COMPILE class on the new fix-impl-7 lines). The fix is
+unambiguous + one-token + squarely within the spirit of the
+already-authorized fix-impl-7 (user §G4 override DQ #247 = "wire
+SessionMiddleware"; this just makes that same wiring type-check). DQ
+#248 → fail (stays pending). bm-pr BLOCKED until Phase-1 green.
+Surfaced to user: recommend a narrow fix-impl-7b (deref the Data) — ask
+whether it falls under the existing DQ #247 override or needs a fresh
+nod. STOP + WAIT user.
