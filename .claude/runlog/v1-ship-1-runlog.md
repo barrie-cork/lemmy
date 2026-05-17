@@ -1127,3 +1127,47 @@ SessionMiddleware"; this just makes that same wiring type-check). DQ
 Surfaced to user: recommend a narrow fix-impl-7b (deref the Data) — ask
 whether it falls under the existing DQ #247 override or needs a fresh
 nod. STOP + WAIT user.
+
+## advisor: fix-impl-7b dispatched (user DQ#247-override scope) 2026-05-18
+
+User decision (DQ #249, answered_by:user, AskUserQuestion 2026-05-18):
+"fix-impl-7b under DQ#247 override" — the one-token deref COMPLETES the
+already-authorized fix-impl-7 (DQ #247 = wire SessionMiddleware); same
+authorized change, corrected; no fresh override needed.
+
+**fix-impl-7b brief** (`.claude/PRPs/briefs/v1-ship-1-fix-impl-7b.md`,
+committed f6fe6202e): change `SessionMiddleware::new(context.clone())`
+→ `SessionMiddleware::new((**context).clone())` on the ONE line
+fix-impl-7 added (e2e.rs:~14911). Cause: SessionMiddleware::new takes
+bare LemmyContext (session.rs:22); agpl `context` is Data<LemmyContext>
+(bootstrap() returns Data<LemmyContext>, e2e.rs:803); fix-impl-7's
+byte-for-byte mirror of sibling all_mvp (whose context is a bare
+LemmyContext from LemmyContext::create @e2e.rs:3849) was a brief defect.
+Fix mirrors the proven 16-site in-file idiom `.app_data((**context).clone())`
+(canonical e2e.rs:2363). EXACTLY 1 line changed, 1 Edit; fix-impl-6
+Part A/B + fix-impl-7's use + the .app_data line + the sibling test all
+preserved byte-identical. cmd1+cmd2 already PASS so only the arg type
+needs the deref.
+
+**Daemon ref sync (lane-safe, anti-TOCTOU):** daemon-local was
+`2c58bf8bf` (daemon's OWN redundant fix-impl-7 finalize-merge — the
+recurring multi-lane ref-isolation gap, content already in origin
+history, NOT data loss), diverged from origin `f6fe6202e`.
+daemon_status 0-active/0-queued rechecked TWICE. `git fetch origin
+phase-v1-ship-1` → `git checkout -B phase-v1-ship-1
+origin/phase-v1-ship-1` (NO --hard, NO force). VERIFIED: daemon-local
+== origin == f6fe6202e, fix-impl-7b brief present, no tracked mods.
+
+**Junior #304** `[role:impl-task]` `base_branch=phase-v1-ship-1`
+RUNNING (worker branch ...-fix-impl-7b-...-304). DQ pending
+[#229,#242(fail),#244(fail),#246(fail),#248(fail)]; #247+#249 resolved
+(user); #243/#245 pass-resolved. NEXT: poll #304 → verify-before-trust
+(EXACTLY 1 line: context.clone()→(**context).clone() in the .wrap line;
+NOT the .app_data line; Part A/B + use + sibling preserved; no
+production code) → finalize-merge → post-merge DQ-resurrection re-assert
+→ §5.2 Phase-1 (DQ#249→ actually worker raises #250 validate-pending-laptop;
+3 cmds) → §5.2 Phase-2 e2e (local, gate-4 cached) → on agpl ok+90/0/5 →
+mutate #242+#244+#246 pass → /brehon-verify → bm-pr → CR → gates 3/5/6
+→ bm-merge → Task 5 retro → /brehon-phase-transition. New-surface fail
+after fix-impl-7b = surface + WAIT user; repeat (E0308,e2e.rs) cycle
+2/3, cycle 3 = §G4 hard-refusal re-plan.
