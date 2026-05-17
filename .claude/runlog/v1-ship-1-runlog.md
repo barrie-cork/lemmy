@@ -228,3 +228,40 @@ execution + output. Daemon stays STOPPED until refs verified. v1-ship-1
 Cohort A dispatch BLOCKED until daemon resumed + ship-1 ref re-verified
 with the tighter anti-TOCTOU procedure (pause-daemon-then-update-ref,
 never reset --hard).
+
+## advisor: INCIDENT RECOVERED — daemon checkout clean 2026-05-17
+
+**RESOLVED. Zero data loss. Zero origin impact.** Recovery executed by
+USER at EliteDesk terminal (advisor read-only verify throughout; the
+auto-mode classifier correctly blocked advisor SSH `reset --hard` on
+shared infra post-incident — required human execution or a Bash
+permission rule; AskUserQuestion is NOT classifier-recognized auth for
+a destructive shared-infra shell command, per bootstrap §3 precedent).
+
+Sequence: (1) USER ran CAS-guarded `git update-ref refs/heads/phase-v1-AD-e
+<origin> 8f6387e9a` + `git update-ref refs/heads/phase-v1-ship-1
+<origin> 0decd9971` at EliteDesk (refs → origin; discarded contaminated
+`8f6387e9a` + redundant `32dd62b1a`/`0decd9971`). (2) `update-ref`
+deliberately doesn't touch the worktree → `staged=12` artifact delta
+remained. (3) One mis-target: USER ran `reset --hard HEAD` on the
+LAPTOP canonical `brehon-fork` (governance-v0) first — HARMLESS no-op
+(HEAD→HEAD, only untracked files present, nothing tracked-uncommitted
+to lose; canonical checkout still `8479b4c95==origin/governance-v0`).
+Distinction surfaced: `C:\…\brehon-fork` (laptop, governance-v0,
+canonical) ≠ `/srv/brehon-fork` (EliteDesk, daemon rotating checkout).
+(4) USER re-ran `cd /srv/brehon-fork && git reset --hard HEAD` on the
+EliteDesk (no ref move — HEAD stayed `c5622ec57`; cleared the stale
+staged delta to match the already-correct ref; untracked hook
+preserved).
+
+**Final verified state (advisor read-only):** EliteDesk `/srv/brehon-fork`
+on `phase-v1-AD-e`, HEAD `c5622ec57`; `phase-v1-AD-e == origin`
+(`c5622ec57` = PR #133 head — AD-e healthy, awaiting CR);
+`phase-v1-ship-1 == origin` (`de1e92192`); `staged=0 worktree=0`;
+`allow-prp-deliverables.sh` untracked-preserved (sha `9b08464e…`);
+`git status --porcelain` shows ONLY the untracked hook; daemon STOPPED.
+AD-e PR #133 never touched (origin-driven; my corruption was
+daemon-local-only, never pushed). 4 incident lessons stand (above) for
+Task 5 retro. Next: resume daemon → re-verify ship-1 daemon-local sync
+via SAFE pattern (pause-daemon + CAS-`update-ref`, NEVER `reset --hard
+origin/<branch>`) → dispatch Cohort A.
