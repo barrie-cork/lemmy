@@ -7,6 +7,104 @@ entry).
 
 ---
 
+## advisor: Task 5 dispatched — 2026-05-17T03:25:00Z
+
+- **action:** queued Junior impl-task **#<N>** —
+  `[role:impl-task] v1-AD-e task 5 — see .claude/PRPs/briefs/v1-AD-e-impl-5.md`
+- **base_branch:** `phase-v1-AD-e` (tip — Task 1+2+3 merged, Task 4
+  pre-satisfied, DQ #241/#242/#243 resolved=pass)
+- **brief:** `.claude/PRPs/briefs/v1-AD-e-impl-5.md` (authored this session)
+- **scope:** ONE append-only fixtures module in
+  `crates/server/tests/e2e.rs` — admin 200 / non-admin 403 / flag-off
+  404 for `/dashboard/view` (+`/audit/view`). Single task, never
+  bundled (`feedback_junior_worker_e2e_edit_hang`).
+- **MANDATORY file-class lessons injected** (per advisor-orchestrator
+  §2.4 — e2e.rs edit): `feedback_lemmy_error_no_std_error.md` +
+  `feedback_async_pool_test_pattern.md` +
+  `feedback_junior_worker_e2e_edit_hang.md`. Sibling fixtures module
+  cited for verbatim Case-A mirror.
+- **validation:** Shape-G SUSPENDED → worker writes
+  `kind: "validate-pending-laptop"`; commands[] includes the REAL e2e
+  run (`cargo-test --workspace --test e2e --features full`, ~26 min,
+  Docker required) — advisor-laptop runs it. next-id=244.
+- **next:** poll #<N> → validate-pending-laptop → advisor-laptop runs
+  check+clippy+e2e on laptop (Docker up) → on pass finalize-merge →
+  /brehon-verify → CR/PR cycle → merge → retro
+
+## advisor: Task 4 — PRE-SATISFIED (no Junior dispatch) — 2026-05-17T03:20:00Z
+
+- **disposition:** Task 4 (audit-page live-tail `<script>` — vanilla
+  EventSource) is **fully pre-implemented** by the Task 2 worker's
+  scope-bleed. `AUDIT_SCRIPT` const
+  (`crates/api/api/src/governance/admin_dashboard_html.rs:35-63`,
+  embedded via `PreEscaped(AUDIT_SCRIPT)` at render_audit:303) verified
+  on phase tip 0d2a4f710 against plan §13 Task 4 — **8/8 spec items ✓**:
+  - `EventSource('/api/v4/governance/admin/audit/stream')` — correct URL
+  - `addEventListener('admin_config_changed', …)` +
+    `addEventListener('admin_config_change_denied', …)` — both **named
+    events**, NOT `es.onmessage` (the #1 SSE-client footgun the plan
+    GOTCHA warns about — handled correctly)
+  - `insertBefore(makeRow(e), tbody.firstChild)` — prepend
+  - `es.onerror` → muted "Reconnecting…" (no custom backoff; relies on
+    server `retry:`)
+  - JS field names = serde snake_case DTO (`previous_value`,
+    `new_value`, `actor_pseudonym`, `denial_reason`, `entry_kind`,
+    `created_at`)
+  - embedded via `PreEscaped(AUDIT_SCRIPT)` in `render_audit`
+- **action taken:** NONE — no Junior impl-task, no commit to
+  `admin_dashboard_html.rs`, no validate-pending (zero code change).
+  Task 4 collapsed to this verification record. Plan §13 Task 4 is
+  satisfied as-shipped by commit `ade904851` (Task 2) + verified at
+  Task 3 (5afe5b378, no deviation) + re-verified here.
+- **retro watch-item:** Task-2 impl-task scope-bleed pre-satisfied
+  BOTH Task 3 (handler) AND Task 4 (script). Net effect: 6-task plan
+  delivered in effectively 4 Junior impl tasks (0,1,2,3) + 1 (5);
+  Task 4 = advisor verification only. Flag whether the planner should
+  have bundled Task 2+3+4 (the worker's instinct was right) — but the
+  reduced-scope recovery worked cleanly.
+
+## advisor: Task 3 complete — PASS — 2026-05-17T03:15:00Z
+
+- **task:** Junior impl-task #289 (run #1 succeeded; ~13 min)
+- **deliverable:** `feat(api): audit HTML handler route + import
+  (task 3)` commit `5afe5b378` — **1 file**, `crates/api/routes/src/lib.rs`
+  +6/-2: extend governance import to
+  `admin_dashboard_html::{admin_dashboard_html, admin_audit_html}`
+  (lib.rs:42) + add `.route("/view", get().to(admin_audit_html))`
+  inside `scope("/audit")` (lib.rs:561) so `/audit/stream` +
+  `/audit/view` are siblings. **NO scope-bleed** — worker correctly
+  honoured the reduced scope, no `admin_dashboard_html.rs`
+  modification (pre-built handler verified spec-conformant, no
+  deviation). Clean reduced-scope execution.
+- **CC v2.1.119 sensitive-file gate** blocked the worker's
+  `.claude/decision-queue.json` write → DQ #243 relocated to
+  worktree-root `v1-AD-e-task3-VALIDATE-PENDING.json` per brief §4
+  fallback (commit `c00d9ccae`; body explained the relocation
+  precisely). Worker followed the brief exactly.
+- **worker pre-pushed own branch**; daemon finalize skipped per
+  `feedback_junior_finalize_skips_when_worker_pre_pushes` → advisor
+  manual finalize-merge `git merge --no-ff origin/junior-289` →
+  `4003f6ff5` (clean — only lib.rs + the fallback file; no DQ
+  conflict because the worker's DQ write was gate-blocked so nothing
+  to conflict).
+- **DQ #243 relocation:** advisor read the gate-blocked fallback,
+  injected DQ #243 (validate-pending-laptop, phase_task=3) into
+  canonical `.claude/decision-queue.json` pending[] (id 243 verified
+  non-colliding across canonical+archives), removed the redundant
+  root file → commit `0d2a4f710`. cp1252 mojibake fixed.
+- **DQ #243 (validate-pending-laptop):** advisor-laptop ran the THREE
+  §13-Task-3 DoD commands on `brehon-fork-ad-e` worktree (detached on
+  phase tip), ALL PASS:
+  - `cargo-check --workspace --features full`: exit 0, **1m10s**
+  - `cargo-clippy --workspace --features full --no-deps -D warnings`:
+    exit 0, **2m01s**, 0 warnings
+  - `cargo-test --no-run -p lemmy_server --test e2e`: exit 0,
+    **1m54s** — R7 link OK (the route+import change did not break the
+    e2e binary link)
+- **DQ #243 mutated** → result=pass, answered_by=advisor-laptop,
+  resolved_at, pending[]→resolved[]. DQ pending=0.
+- **DQ raised:** none
+
 ## advisor: Task 3 dispatched (REDUCED scope) — 2026-05-17T02:55:00Z
 
 - **action:** queued Junior impl-task **#289** —

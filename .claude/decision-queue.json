@@ -1,28 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 243,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T08:10:00Z",
-      "question": "v1-AD-e Task 3 (audit HTML route + import) pushed on junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289 — run §15 DoD on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289",
-      "phase_task": 3,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task3-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task3-testnorun.log 2>&1\""
-      ],
-      "context": "lib.rs extended: admin_dashboard_html import now includes admin_audit_html; GET /audit/view route wired inside scope('/audit'); commit 5afe5b378. Three validation gates passed on EliteDesk (cargo-check exit 0, clippy exit 0, test --no-run exit 0). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": null,
-      "answered_by": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 214,
@@ -3982,6 +3960,27 @@
       "log_slice": "cargo-check --workspace --features full: Finished dev profile in 1m 47s; CHECK_EXIT_0 (no error[E*]). cargo-clippy --workspace --features full --no-deps -D warnings: Finished dev profile in 5m 35s; CLIPPY_EXIT_0 (0 warnings). cargo-test --no-run -p lemmy_server --test e2e: Finished test profile in 10m 44s; Executable tests/e2e.rs (e2e-20ec6875d92fa217.exe); TESTNORUN_EXIT_0 — R7 link OK.",
       "failed_commands": null,
       "resolved_at": "2026-05-17T01:48:33Z"
+    },
+    {
+      "id": 243,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T08:10:00Z",
+      "question": "v1-AD-e Task 3 (audit HTML route + import) pushed on junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289 — run §13-Task-3 DoD on laptop",
+      "branch": "junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task3-testnorun.log 2>&1\""
+      ],
+      "context": "lib.rs extended: admin_dashboard_html import now includes admin_audit_html; GET /audit/view route wired inside scope('/audit'); commit 5afe5b378. Three validation gates passed on EliteDesk (cargo-check exit 0, clippy exit 0, test --no-run exit 0). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
+      "answer": "All 3 DoD gates PASS on advisor-laptop (brehon-fork-ad-e worktree, detached on phase-v1-AD-e tip 0d2a4f710). cargo-check --workspace --features full: exit 0 (1m10s). cargo-clippy --workspace --features full --no-deps -D warnings: exit 0 (2m01s). cargo-test --no-run -p lemmy_server --test e2e: exit 0 (1m54s) — R7 link OK (/audit/view route + admin_audit_html import did not break e2e). Task 3 was reduced scope (Task 2 worker pre-built the audit handler); worker shipped a clean 1-file lib.rs change, no admin_dashboard_html.rs deviation. junior-289 already finalize-merged at 4003f6ff5. Advance to Task 4 assessment (likely pre-satisfied) then Task 5.",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "log_slice": "cargo-check --workspace --features full: Finished dev profile in 1m 10s; CHECK_EXIT_0. cargo-clippy --workspace --features full --no-deps -D warnings: Finished dev profile in 2m 01s; CLIPPY_EXIT_0 (0 warnings). cargo-test --no-run -p lemmy_server --test e2e: Finished test profile in 1m 54s; Executable tests/e2e.rs (e2e-20ec6875d92fa217.exe); TESTNORUN_EXIT_0 — R7 link OK.",
+      "failed_commands": null,
+      "resolved_at": "2026-05-17T02:21:57Z"
     }
   ]
 }
