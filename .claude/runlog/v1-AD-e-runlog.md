@@ -7,6 +7,19 @@ entry).
 
 ---
 
+## advisor: Task 0 dispatched — 2026-05-17T00:12:00Z
+
+- **action:** queued Junior impl-task **#286** —
+  `[role:impl-task] v1-AD-e task 0 — see .claude/PRPs/briefs/v1-AD-e-impl-0.md`
+- **base_branch:** `phase-v1-AD-e` (lane worktree tip a01bed152)
+- **brief:** `.claude/PRPs/briefs/v1-AD-e-impl-0.md` (committed a01bed152)
+- **pre-flight:** DQ pending=0; #237 (scope-cut=a) + #238 (engine=a maud)
+  resolved; outside all forbidden windows (next: daily 02:55–04:15Z)
+- **task shape:** 11 read-only probes (Probe 0–10), non-`[P]` barrier,
+  **no commit on happy path**; only writes = 2 clippy-baseline debug logs
+- **next:** poll #286 to complete; on EXPECT-block PASS → queue Task 1
+  (add maud engine dep, isolated commit). Strictly serial phase.
+
 ## advisor: runlog recovered — 2026-05-16T22:30:00Z
 
 - **Why:** bm-cut Junior task #282 created + pushed `phase-v1-AD-e`
