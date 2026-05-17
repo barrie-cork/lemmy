@@ -724,3 +724,53 @@ laptop the worker raises ≈ DQ #243), then advisor RE-RUNS Phase-2 e2e
 local on the new tip. On E2E_EXIT_0 + agpl test passed + no regression
 → mutate #242 pass → /brehon-verify → bm-pr. DQ #242 stays pending
 (result:fail) until the re-run passes.
+
+## advisor: fix-impl-5 (#300) verified + finalize-merged → b7286ac8e
+
+Junior #300 status:done (run #1 succeeded 19:04:37→19:07:24, ~3min).
+Worker branch `junior/role-impl-task-v1-ship-1-fix-impl-5-...-300`.
+
+**Verify-before-trust PASS** (status:done ≠ proof):
+- e2e.rs diff = +26 insertions, 0 deletions, ONLY
+  `crates/server/tests/e2e.rs` (test commit `50f06a7ab`).
+- Imports block added inside fn (`lemmy_db_schema::source::{instance,
+  local_site,local_site_rate_limit,person,site}` + `Crud`).
+- Seeding block (`Instance::read_or_create → Site → Person sysacct →
+  LocalSite → LocalSiteRateLimit`) inserted AFTER
+  `governance_fixtures::bootstrap()` (e2e.rs:14878) and BEFORE the
+  first `/api/v4/site` TestRequest (assert at 14909) — verbatim mirror
+  of canonical precedent e2e.rs:4751-4761.
+- Unique markers `"agpl test site"` / `"agpl_sysacct"` count = 1 each
+  (no duplication; single block in the agpl test only).
+- Assertions UNCHANGED (purely additive diff; 0 deletions).
+- Case A preserved (`LemmyResult<()>` outer, bare `?`, no .map_err).
+- Commit msg verbatim: `test(e2e): seed local_site so /api/v4/site
+  returns 200 in agpl disclosure test (fix-impl-5)`.
+- DQ commit `3c6549024` raised DQ #243 (validate-pending-laptop,
+  from:impl, phase_task:4, result:null, commands = §15.1-3 .sh).
+
+**Pre-merge DQ divergence analysis** (resurrection-risk check):
+worker DQ (branched from `f84e03e42`) vs phase tip (`82fc97a34`) =
+IDENTICAL except #243 (only on worker). ids-only-on-phase-tip = []
+(worker base already had every laptop-side #242-fail/#241-pass
+mutation — `f84e03e42` descends from `dd188e854`/`ccda77539`). Cleanest
+possible merge case; the +570/-544 DQ churn = json.dump key-reorder
+noise, NOT semantic divergence (id-set comparison identical-except-243).
+
+**Finalize-merge** (daemon idle 0/0 re-confirmed; worker pre-pushed so
+daemon finalize skipped → advisor manual merge): `git merge --no-ff`
+worker → `b7286ac8e`. e2e.rs diff vs pre-merge tip = exactly +26 add
+(no merge corruption). **POST-MERGE DQ-RESURRECTION RE-ASSERT
+(mandatory)**: #239/#240/#241 = RESOLVED(pass) STILL ✓, #242 =
+PENDING(fail) STILL ✓, #243 = PENDING(result:null) present ✓,
+id-unique:True, 223 resolved. No resurrection. Pushed
+`82fc97a34..b7286ac8e`.
+
+NEXT: §5.2 Phase-1 re-validate DQ #243 on CANONICAL checkout
+C:\Users\barri\Developer\brehon-fork (cargo runs there, NOT lane
+worktree): 3× §15.1-3 commands, ONE cmd //c per command,
+run_in_background, read EXIT marker not bg summary. ALL EXIT_0 →
+mutate #243 pass → advisor RE-RUN Phase-2 e2e local on b7286ac8e tip
+(user already chose LOCAL gate-4; do NOT re-ask). On agpl test `ok` +
+no regression → mutate #242 pass (supersede the original fail) →
+/brehon-verify → bm-pr → CR → gates 3/5/6 → ship.
