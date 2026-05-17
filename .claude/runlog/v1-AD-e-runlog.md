@@ -617,3 +617,41 @@ entry).
   check/clippy/test-no-run + FULL e2e (Docker, ~32min) → on pass
   finalize-merge → re-run `/brehon-verify` → **user gate 5 (merge
   confirm)** → bm-merge → retro → gate 6.
+
+## 2026-05-17 advisor: fix-impl-1 dispatched — Junior #297
+
+- **Brief:** `.claude/PRPs/briefs/v1-AD-e-fix-impl-1.md` committed
+  `23e3311a2`, pushed (with gate-3-resolved runlog entry).
+- **Task:** #297 `[role:impl-task]` (Sonnet, EliteDesk),
+  `base_branch=phase-v1-AD-e` (tip `23e3311a2` has brief + triage YAML).
+- **Forbidden-window check:** 10:50 UTC Sunday — CLEAR (next window
+  Sun 01:55 UTC, ~15h out). Safe to dispatch.
+- **Scope (ONE commit, 3 files):**
+  - `admin_dashboard_html.rs` — cr-4 (move `is_admin?` after flag-check
+    in both handlers) + cr-5 (scrub/scrub_json `audit_entry_row` fields
+    via canonical `crate::governance::redaction`, mirrored from
+    `admin_rule_sets.rs:55,329`).
+  - `crates/server/tests/e2e.rs` — cr-6 (append
+    `admin_audit_html_forbidden_for_non_admin` mirroring the dashboard
+    non-admin sibling e2e.rs:14914, Case-A `LemmyResult<()>`).
+  - `.claude/decision-queue.json` — cr-1 (#237/#238 timestamp
+    chronology ONLY, no other field/entry).
+- **Hard fallback:** cr-5 — if no canonical scrub fits a required
+  field type, worker files `kind:"blocker"` DQ (real ADR-015 gap →
+  user escalation, NOT a guess). Brief forbids inventing a scrub.
+- **Mandatory file-class lessons injected** (advisor-orchestrator §2.4,
+  e2e.rs edit): `feedback_lemmy_error_no_std_error.md` +
+  `feedback_async_pool_test_pattern.md`. (`feedback_junior_worker_e2e_edit_hang.md`
+  ABSENT from corpus — principle folded inline; cr-6 is a single small
+  test append, low hang risk.)
+- **Validation:** Shape-G SUSPENDED → worker writes
+  `kind:"validate-pending-laptop"` (next-id 245), commands[] = 4
+  (check / clippy / test--no-run / FULL e2e). Handler behaviour
+  changes (cr-4) so the full e2e is mandatory to prove 404-semantics +
+  cr-6 + no regression. advisor-laptop runs it (Docker, ~32min).
+- **Next:** poll #297 → on complete inspect for #292-pattern (cherry-
+  pick clean fix commit if stale-base-self-merge) → process the
+  `validate-pending-laptop` (advisor-laptop runs the 4 commands,
+  mutates the DQ entry) → on pass finalize-merge + advisor updates
+  triage YAML `addressed_in` for cr-1/4/5/6 → re-run `/brehon-verify`
+  → **user gate 5 (merge confirm)** → bm-merge → retro → gate 6.
