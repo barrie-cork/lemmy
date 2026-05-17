@@ -14874,6 +14874,7 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
     site::{Site, SiteInsertForm},
   };
   use lemmy_diesel_utils::traits::Crud;
+  use lemmy_routes::middleware::session::SessionMiddleware;
 
   let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
 
@@ -14907,6 +14908,7 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   let app = test::init_service(
     App::new()
       .app_data(Data::new(context.clone()))
+      .wrap(SessionMiddleware::new(context.clone()))
       .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
   )
   .await;
