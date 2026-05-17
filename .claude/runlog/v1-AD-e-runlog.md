@@ -506,3 +506,59 @@ entry).
 - **recommendation:** `request-changes` (due to 3 major + 1 low open in fix-in-pr)
 - **digest comment:** drafted at `.claude/PRPs/reviews/pr-133-comment.md` (gitignored, awaiting user-gate confirmation)
 - **next:** advisor gate 3 (CR triage) — surface triage buckets + recommendation to user for confirmation. Advisor will relay user decision and post comment via `gh pr comment` if approved.
+
+## 2026-05-17 advisor: bm-triage #296 rescued (#292-pattern) + gate 3 SURFACED
+
+- **#296 outcome:** done/succeeded (~4 min). Worker pre-pushed to
+  `junior/...-296`; branched from STALE base `c5622ec57`, then
+  self-merged the abandoned poll-cr worker-295 (`024384630`) then
+  layered triage `f0ea69a0c`. Diff-stat `eb1b2deaa → worker-296` =
+  **985-line reversion signature** (would delete the v1-AD-e-bm-triage-1
+  brief, handovers, retros, lessons, rules, skills).
+- **Rescue (same as #295, autonomy mandate):** did NOT finalize-merge.
+  Cherry-picked ONLY the clean triage commit `f0ea69a0c` (modifies
+  ONLY `pr-133-findings.yaml` +13/-9 + runlog +17 — NO advisor-file
+  deletions in that commit; the deletions were in the stale-base merge
+  `024384630` which was NOT taken). Runlog conflict resolved as a
+  **union** (phase superset + my #295-rescue entry + worker's Phase-8
+  triage entry). Result `e0b6cc540`; diff-stat `eb1b2deaa → e0b6cc540`
+  = **+findings.yaml +runlog, 30 ins / 9 del, ZERO advisor-file
+  deletions**. Pushed. PR #133 still MERGEABLE.
+- **Triage assessed (advisor sanity-check vs `feedback_coderabbit_block_merge_critical`):**
+  - cr-4/cr-5/cr-6 (the 3 substantive **code** findings) all →
+    **fix-in-pr** = the conservative, CORRECT call. No code finding
+    lazily rebutted. ✓
+  - cr-2 (major) → **rebut**. Advisor independently VERIFIED the
+    rationale: DQ #237 on governance-v0 (`from: advisor`,
+    `answered_by: user`, `kind: blocker`) explicitly records the user
+    confirming the v1-AD-e scope cut ("Dashboard + Audit only;
+    Config/Single-key/Rule-set defer to v1-AD-f"). cr-2 asked for
+    exactly this; the approval IS recorded. Rebut is well-founded. ✓
+  - cr-3 (nit) → **wont-fix**, rationale cites branch-manager.md
+    append-only convention. Defensible for a nit. ✓
+  - cr-1 (low) → fix-in-pr (timestamp chronology in DQ #237/#238
+    entries). No rationale written (acceptable for fix-in-pr).
+  - **Triage is sound.** Recommendation `request-changes` (3 major +
+    1 low open in fix-in-pr).
+- **CR text read for cr-4/5/6 (full `gh api pulls/comments`):**
+  cr-4 = real auth-order bug (`is_admin()?` at lines 71/245 runs
+  BEFORE the flag check → non-admin+flag-off leaks 403 not 404,
+  violates plan R-html-3; verify-report Story-3 e2e only covered the
+  *admin* flag-off path so it missed this). cr-5 = **ADR-015-backed**
+  (audit-row strings rendered without scrub/redaction; per command's
+  ADR special-case this could not be rebutted anyway). cr-6 =
+  legit missing symmetric `admin_audit_html_forbidden_for_non_admin`
+  test. All 3 fix-in-pr classifications confirmed correct by advisor.
+- **Brief-compliance gaps (retro notes, NOT blockers):** (1) worker
+  did NOT force-add `.claude/PRPs/reviews/pr-133-comment.md` — its
+  runlog says "drafted (gitignored, awaiting confirmation)" but the
+  file is absent from the worker tree; the digest comment will be
+  (re)generated at gate-3-approval time if the user opts to post.
+  (2) worker omitted `rationale` on the 4 fix-in-pr rows (brief asked
+  for one on every finding) — advisor supplies the fix recap from the
+  CR text above. Neither gap is a misbucketing → no cardinal-sin
+  refusal; pipeline proceeds.
+- **GATE 3 SURFACED to user** (mandatory STOP — advisor-orchestrator
+  §3.2 gate 3). Pipeline HALTED pending user decision on the
+  four-bucket triage. Nothing posts/merges/fixes without the user's
+  reply.
