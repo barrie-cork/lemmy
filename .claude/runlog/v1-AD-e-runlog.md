@@ -562,3 +562,58 @@ entry).
   §3.2 gate 3). Pipeline HALTED pending user decision on the
   four-bucket triage. Nothing posts/merges/fixes without the user's
   reply.
+
+## 2026-05-17 advisor: GATE 3 RESOLVED — "Approve triage, fix-in-PR (no comment)" + fix-impl dispatched
+
+- **User decision (gate 3):** approve all 6 bucket assignments as-is;
+  queue a fix-in-PR impl-task for the 4 fix-in-pr findings; **do NOT
+  post a CR digest comment**; proceed toward gate 5 after fixes land +
+  re-verify. Recorded `answered_by: user`.
+- **Fix scope (advisor spec'd from reading actual source via blob-SHA):**
+  - **cr-4** (major) `admin_dashboard_html.rs` — `is_admin(&local_user_view)?;`
+    is the FIRST stmt in BOTH handlers (`admin_dashboard_html` ~L71,
+    `admin_audit_html` ~L245), BEFORE the `enabled` flag check →
+    non-admin+flag-off returns 403 (leaks admin-ness) not 404, violates
+    plan R-html-3. Fix = move `is_admin()?` to AFTER the
+    `if !enabled { return NotFound }` block in both (CR's suggested
+    diff is exact + minimal).
+  - **cr-5** (major, ADR-015-backed) `admin_dashboard_html.rs`
+    `audit_entry_row` (~L310-353) renders `scope/key/reason/
+    actor_pseudonym/denial_reason/previous_value/new_value` with NO
+    scrub. Canonical util EXISTS: `crate::governance::redaction::scrub`
+    (`pub fn scrub(&str)->String`; JSON variant `scrub_json(&Value)
+    ->Value`) — already used by `admin_rule_sets.rs:55,329`
+    (`rule_text: scrub(&rsv.rule_text)`). Fix = mirror that: scrub the
+    `&str` fields, scrub_json the Value payloads. Worker MUST use the
+    canonical util (do NOT invent one); if no applicable scrub for a
+    field type, raise `kind:"blocker"` DQ (real ADR gap → user
+    escalation, not a guess).
+  - **cr-6** (major) `crates/server/tests/e2e.rs` — add
+    `admin_audit_html_forbidden_for_non_admin` mirroring the existing
+    `admin_dashboard_html_forbidden_for_non_admin` (e2e.rs:14914).
+    Single append-only test (low e2e-edit-hang risk; still: ONE
+    function, no multi-edit).
+  - **cr-1** (low) `.claude/decision-queue.json` (phase-branch copy)
+    ~L3962/3998 — fix timestamp chronology in DQ #237/#238 entries.
+    Mechanical ordering fix on already-resolved entries; same commit
+    acceptable, no semantic/attribution change (do NOT touch
+    `answered_by`/`answer`/`question`).
+- **Dispatch class = impl-task (NOT bm-task):** writes `crates/**` +
+  `tests/**` → Sonnet EliteDesk Junior, `[role:impl-task]`. Mandatory
+  file-class lesson injection (advisor-orchestrator §2.4, e2e.rs edit):
+  `feedback_lemmy_error_no_std_error.md` +
+  `feedback_async_pool_test_pattern.md` injected.
+  `feedback_junior_worker_e2e_edit_hang.md` is referenced by §2.4 but
+  the file is ABSENT from `.claude/lessons/` — its principle (never
+  bundle a large e2e.rs edit; single append-only) folded into the
+  brief §4 constraints inline instead.
+- **No CR digest comment** per user gate-3 choice — bm-triage's
+  Phase-5/6/7 (ASK/post/issue) stay un-executed; the worker's runlog
+  claim of a drafted `pr-133-comment.md` is moot (file was never
+  force-added; not regenerated since user declined posting).
+- **Next:** author + commit + push `.claude/PRPs/briefs/v1-AD-e-fix-impl-1.md`
+  → dispatch `[role:impl-task]` Junior, `base_branch=phase-v1-AD-e` →
+  validate-pending-laptop (Shape G SUSPENDED) → advisor-laptop runs
+  check/clippy/test-no-run + FULL e2e (Docker, ~32min) → on pass
+  finalize-merge → re-run `/brehon-verify` → **user gate 5 (merge
+  confirm)** → bm-merge → retro → gate 6.
