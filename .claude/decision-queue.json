@@ -15,50 +15,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 239,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T00:00:00Z",
-      "question": "v1-ship-1 task 2 source_disclosure field+build.rs — laptop cargo validation pending",
-      "branch": "junior/role-impl-task-v1-ship-1-task-2-see-claude-prps-briefs-v1-ship-1-impl-2-md-293",
-      "phase_task": 2,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "context": "Task 2 added source_disclosure field to GetSiteResponse + populated in read_site + created crates/api/api_crud/build.rs; awaiting advisor-laptop §5.2 validate-pending-laptop run. || ADVISOR NOTE 2026-05-17: cmd1 cargo-check --workspace --features full PASS on merged tip 6ceb7683a (Task 2 crates compile clean). cmd2 clippy / cmd3 test --no-run NOT reached — shared §5.2 chain on the merged tip aborted at DQ #240's clippy::unused_async (Task 3). #239 is BLOCKED-BY-COHORT, not independently failed. Re-run §5.2 on the post-fix merged tip clears BOTH #239 and #240.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 240,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T09:19:48Z",
-      "question": "v1-ship-1 task 3 get_source handler+route+mod — laptop cargo validation pending",
-      "branch": "junior/role-impl-task-v1-ship-1-task-3-see-claude-prps-briefs-v1-ship-1-impl-3-md-294",
-      "phase_task": 3,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "context": "Task 3 created crates/api/api/src/site/source.rs (get_source handler) + mod.rs decl + lib.rs route/use; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
-      "result": "fail",
-      "log_slice": "error: unused `async` for function with no await statements\n  --> crates/api/api/src/site/source.rs:11:1\n   |\n11 | / pub async fn get_source() -> LemmyResult<Json<GetSourceResponse>> {\n12 | |   Ok(Json(GetSourceResponse {\n13 | |     notice: AGPL_NOTICE.to_string(),\n14 | |     license: \"AGPL-3.0\".to_string(),\n15 | |   }))\n16 | | }\n   | |_^\n   = help: consider removing the `async` from this function\n   = note: requested on the command line with `-D clippy::unused-async`\nerror: could not compile `lemmy_api` (lib) due to 1 previous error\nCMD2_EXIT_NONZERO",
-      "failed_commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
-      ],
-      "answer": "§5.2 validate-pending-laptop on Cohort A merged tip 6ceb7683a: cmd1 cargo-check --workspace --features full PASS (4m12s, 0 err). cmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings FAIL: clippy::unused_async in crates/api/api/src/site/source.rs:11 (get_source declared `async` but has no `.await`; -D clippy::unused-async fatal). cmd3 NOT run (serial chain stopped). NON-ALLOWLIST per §G4 classifier (clippy::unused_async not in allowlist) -> catch-fire to user; no auto-fix queued. Recommended fix: remove `async` from get_source signature (clippy-suggested; route .to() accepts sync handlers so registration in crates/api/routes/src/lib.rs is unaffected). Log: C:/Users/barri/.claude/logs/validate-laptop-cohortA-cmd2.log.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T09:52:01Z"
     }
   ],
   "resolved": [
@@ -3969,6 +3925,48 @@
       "answer": "All 3 §5.2 validate-pending-laptop commands PASS against phase-v1-ship-1 tip 7f58e6cf6 (post Task-1 finalize-merge 97850b363). cargo-check --workspace --features full: PASS 8m07s, 0 errors. cargo-clippy --workspace --features full --no-deps -- -D warnings: PASS 5m36s, 0 warnings 0 errors. cargo-test --no-run -p lemmy_server --test e2e: PASS 8m07s, e2e-6c3527550c4cf788.exe built, 0 errors. Shape G suspended repo-wide (DQ #229) so validation ran locally via scripts/brehon/cargo-*.bat per advisor-orchestrator.md §5.2. DTOs (SourceDisclosure/GetSource/GetSourceResponse) compile + lint clean. Logs: C:/Users/barri/.claude/logs/validate-laptop-238-cmd{1,2,3}.log.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-16T23:19:22Z"
+    },
+    {
+      "id": 239,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T00:00:00Z",
+      "question": "v1-ship-1 task 2 source_disclosure field+build.rs — laptop cargo validation pending",
+      "branch": "junior/role-impl-task-v1-ship-1-task-2-see-claude-prps-briefs-v1-ship-1-impl-2-md-293",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "context": "Task 2 added source_disclosure field to GetSiteResponse + populated in read_site + created crates/api/api_crud/build.rs; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "§5.2 validate-pending-laptop ALL 3 PASS on Cohort A corrected tip 48435569d (canonical checkout detached). cmd1 cargo-check --workspace --features full: PASS 1m29s, 0 err (E0277 from the wrong de-async resolved — async restored). cmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings: PASS 2m31s, 0 warnings (#[expect(clippy::unused_async, reason=actix Handler requires async) consumed the lint per canonical e2e.rs:8025 precedent; no unfulfilled_lint_expectations). cmd3 cargo-test --no-run -p lemmy_server --test e2e: PASS 9m24s, e2e-aebb6c76db6b1818.exe built, 0 err. Shape G suspended repo-wide (DQ #229) so validation ran locally via scripts/brehon/cargo-*.bat per advisor-orchestrator.md §5.2. Cohort A (task2 source_disclosure+build.rs / task3 get_source+route+mod) compiles + lints + e2e-builds clean on the merged+fixed tip. NOTE: tip 48435569d includes a user-authorized one-time four-role deviation (advisor fix for clippy::unused_async after Junior #294; see runlog). Logs: C:/Users/barri/.claude/logs/validate-laptop-cohortA-r3-cmd{1,2,3}.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T10:48:00Z"
+    },
+    {
+      "id": 240,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T09:19:48Z",
+      "question": "v1-ship-1 task 3 get_source handler+route+mod — laptop cargo validation pending",
+      "branch": "junior/role-impl-task-v1-ship-1-task-3-see-claude-prps-briefs-v1-ship-1-impl-3-md-294",
+      "phase_task": 3,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "context": "Task 3 created crates/api/api/src/site/source.rs (get_source handler) + mod.rs decl + lib.rs route/use; awaiting advisor-laptop §5.2 validate-pending-laptop run.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "§5.2 validate-pending-laptop ALL 3 PASS on Cohort A corrected tip 48435569d (canonical checkout detached). cmd1 cargo-check --workspace --features full: PASS 1m29s, 0 err (E0277 from the wrong de-async resolved — async restored). cmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings: PASS 2m31s, 0 warnings (#[expect(clippy::unused_async, reason=actix Handler requires async) consumed the lint per canonical e2e.rs:8025 precedent; no unfulfilled_lint_expectations). cmd3 cargo-test --no-run -p lemmy_server --test e2e: PASS 9m24s, e2e-aebb6c76db6b1818.exe built, 0 err. Shape G suspended repo-wide (DQ #229) so validation ran locally via scripts/brehon/cargo-*.bat per advisor-orchestrator.md §5.2. Cohort A (task2 source_disclosure+build.rs / task3 get_source+route+mod) compiles + lints + e2e-builds clean on the merged+fixed tip. NOTE: tip 48435569d includes a user-authorized one-time four-role deviation (advisor fix for clippy::unused_async after Junior #294; see runlog). Logs: C:/Users/barri/.claude/logs/validate-laptop-cohortA-r3-cmd{1,2,3}.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T10:48:00Z"
     }
   ]
 }
