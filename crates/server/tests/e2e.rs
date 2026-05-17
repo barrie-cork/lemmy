@@ -14871,6 +14871,7 @@ mod v1_sl_e_fixtures {
 //   - `admin_dashboard_html_forbidden_for_non_admin` — capability gate
 //   - `admin_html_pages_flag_off_returns_404`        — html_pages_enabled=false
 //   - `admin_audit_html_returns_html_for_admin`      — 200 text/html + EventSource
+//   - `admin_audit_html_forbidden_for_non_admin`     — capability gate (audit)
 //
 // Handlers invoked directly (no in-process actix server needed; the handler
 // returns LemmyResult<HttpResponse> and the response body is a buffered
@@ -15030,6 +15031,28 @@ async fn admin_audit_html_returns_html_for_admin()
   assert!(
     body_str.contains("admin_config_change_denied"),
     "audit page must wire the admin_config_change_denied event listener",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_html_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard_html::admin_audit_html;
+  use lemmy_utils::error::LemmyErrorType;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_audit_nonadmin", false).await?;
+
+  let result = admin_audit_html(context.clone(), user_view).await;
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
   );
 
   Ok(())

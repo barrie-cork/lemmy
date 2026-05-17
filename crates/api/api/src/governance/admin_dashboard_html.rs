@@ -15,6 +15,7 @@
 use crate::governance::{
   admin_dashboard::{gather_dashboard, list_recent_config_changes},
   config::{ConfigCache, Scope, get_bool},
+  redaction::scrub,
 };
 use actix_web::{HttpResponse, web::Data};
 use lemmy_api_common::governance::{AdminConfigAuditEntry, AdminDashboardResponse};
@@ -68,13 +69,13 @@ pub async fn admin_dashboard_html(
   context: Data<LemmyContext>,
   local_user_view: LocalUserView,
 ) -> LemmyResult<HttpResponse> {
-  is_admin(&local_user_view)?;
   let mut cache = ConfigCache::new();
   let mut pool = context.pool();
   let enabled = get_bool(&mut cache, &mut pool, Scope::Instance, HTML_PAGES_KEY).await?;
   if !enabled {
     return Ok(HttpResponse::NotFound().finish());
   }
+  is_admin(&local_user_view)?;
   let conn = &mut get_conn(&mut pool).await?;
   let resp = gather_dashboard(conn, &mut cache, &context).await?;
   let html = render_dashboard(&resp);
@@ -242,13 +243,13 @@ pub async fn admin_audit_html(
   context: Data<LemmyContext>,
   local_user_view: LocalUserView,
 ) -> LemmyResult<HttpResponse> {
-  is_admin(&local_user_view)?;
   let mut cache = ConfigCache::new();
   let mut pool = context.pool();
   let enabled = get_bool(&mut cache, &mut pool, Scope::Instance, HTML_PAGES_KEY).await?;
   if !enabled {
     return Ok(HttpResponse::NotFound().finish());
   }
+  is_admin(&local_user_view)?;
   let conn = &mut get_conn(&mut pool).await?;
   let recent = list_recent_config_changes(conn).await?;
   let html_out = render_audit(&recent);
@@ -319,7 +320,7 @@ fn audit_entry_row(e: &AdminConfigAuditEntry) -> maud::Markup {
         @if let Some(v) = &e.previous_value { (v.to_string()) } @else { "" }
       }
       td { (e.new_value.to_string()) }
-      td { (e.reason) }
+      td { (scrub(&e.reason)) }
       td {
         @if let Some(p) = &e.actor_pseudonym { (p) } @else { "" }
       }
@@ -327,7 +328,7 @@ fn audit_entry_row(e: &AdminConfigAuditEntry) -> maud::Markup {
         @if e.signature.is_some() { "yes" } @else { "no" }
       }
       td {
-        @if let Some(d) = &e.denial_reason { (d) } @else { "" }
+        @if let Some(d) = &e.denial_reason { (scrub(d)) } @else { "" }
       }
     }
   }
