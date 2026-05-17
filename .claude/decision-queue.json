@@ -1,6 +1,26 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 244,
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T06:45:00Z",
+      "question": "v1-AD-e Task 5 (e2e tests: admin 200/403 + flag-off 404 for dashboard + audit HTML pages) pushed on junior/role-impl-task-v1-ad-e-task-5-see-claude-prps-briefs-v1-ad-e-impl-5-md-290 — run §15.4 e2e on laptop",
+      "branch": "junior/role-impl-task-v1-ad-e-task-5-see-claude-prps-briefs-v1-ad-e-impl-5-md-290",
+      "phase_task": 5,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-task5-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-AD-e-task5-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-AD-e-task5-e2e.log\""
+      ],
+      "context": "Four direct-handler e2e tests appended to crates/server/tests/e2e.rs: admin_dashboard_html_returns_html_for_admin (200+text/html+heading), admin_dashboard_html_forbidden_for_non_admin (NotAnAdmin), admin_html_pages_flag_off_returns_404 (R-html-3 flag guard), admin_audit_html_returns_html_for_admin (200+heading+EventSource). Case A LemmyResult<()> uniform. Commit 460214d5e. Pure e2e (testcontainers+Docker); validate-pending-laptop-e2e variant. Pre-Shape-G (Shape G suspended until 2026-06-01, DQ #229).",
+      "answer": null,
+      "answered_by": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
