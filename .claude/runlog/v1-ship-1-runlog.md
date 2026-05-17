@@ -540,3 +540,41 @@ LOCALLY — Shape G suspended DQ #229) → e2e RUN = Phase-2 user-gate-4
 (local vs dispatch) → /brehon-verify §16a Story 3 → bm-pr → CR →
 bm-triage (gate 3) → /brehon-verify ✓ → gate 5 → bm-merge → Task 5
 retro (gate 6) → /brehon-phase-transition.
+
+## advisor: Task 4 #298 done → verified → finalize-merged → §5.2 cmd1 launched 2026-05-17
+
+Task 4 = Junior #298 DONE (run succeeded 13:25:05, ~4.5 min). Branched
+correctly from synced `88148edd0` (proves CAS-sync worked — worker read
+the brief). VERIFY-BEFORE-TRUST passed: commit `3f9d53274 test(e2e):
+assert AGPL §13 disclosure surface via /api/v4/site + /api/v4/source
+(task 4)` + DQ #241 raised (`e59bf4215`); diff = ONLY
+crates/server/tests/e2e.rs +63 lines, SINGLE hunk `@@ -14860,3
++14860,66 @@` at file end (GOTCHA 3 honored — one anchor-Edit, no
+Junior hang); test at e2e.rs:14865 outer `lemmy_utils::error::
+LemmyResult<()>` (Case A ✓); `governance_fixtures::bootstrap()` NOT
+admin_config (GOTCHA 2 / DQ #226 ✓); both /api/v4/site + /api/v4/source
+GETs present; no `.map_err(` (bare ? Case A ✓); test name unique.
+DQ #241 = max+1, NO collision (single task, not cohort).
+
+Daemon did NOT finalize-merge (phase tip stayed e5ff52a9b; worker
+pre-pushed → `feedback_junior_finalize_skips_when_worker_pre_pushes`).
+ADVISOR-SIDE finalize-merge on THIS lane worktree: `git merge --no-ff
+origin/junior/...task-4...-298` → CLEAN (ecba04523, no conflict).
+CRITICAL DQ-merge verify: the ort merge unioned worker-DQ (had #241 +
+PRE-pass #239/#240 from its 88148edd0 base) with phase-tip DQ (POST-pass
+#239/#240); verified #239+#240 STILL result:pass in resolved[] (NOT
+reverted — no resurrection bug), #241 pending result:None, 224 ids no
+dups. Pushed `e5ff52a9b..ecba04523`.
+
+§5.2 validate-pending-laptop for DQ #241 (Shape G suspended DQ #229):
+canonical checkout C:/Users/barri/Developer/brehon-fork detached@
+ecba04523 (clean pre-flight, no concurrent cargo, new test present ×1).
+cmd1 cargo-check --workspace --features full bg=b3gcqkbtq launched
+(warm). NEXT serially: cmd2 cargo-clippy --workspace --features full
+--no-deps -- -D warnings; cmd3 cargo-test --no-run -p lemmy_server
+--test e2e. Read EXIT markers NOT bg summaries. ALL 3 pass → mutate
+DQ #241 result:pass answered_by:advisor-laptop → THEN e2e RUN =
+Phase-2 user-gate-4 (AskUserQuestion local vs dispatch) → on green
+/brehon-verify §16a Story 3 → bm-pr → CR → bm-triage (gate 3) →
+/brehon-verify ✓ → gate 5 → bm-merge → Task 5 retro (gate 6) →
+/brehon-phase-transition.
