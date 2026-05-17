@@ -42,6 +42,31 @@
       "answer": "FAIL. /api/v4/site returned HTTP 500 (expected 200) at the test's first assertion (e2e.rs:14883); /api/v4/source never reached. 89 pre-existing tests passed (no regression), 1 failed = only the new agpl test. NON-ALLOWLIST §G4 (runtime assertion / 500, not a mechanical compile/clippy class) → catch-fired to user; no auto-fix, no auto-retry. Root-cause hypothesis: Task 2 read.rs handler errors constructing source_disclosure (likely BREHON_FORK_COMMIT env! unresolved at runtime via build.rs, or a panic/Err in the field build path). Stays in pending[] until user decides fix-impl vs re-plan. Blocks bm-pr.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-17T18:27:59Z"
+    },
+    {
+      "id": 244,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T19:23:21Z",
+      "question": "v1-ship-1 Phase-2 e2e re-run after fix-impl-5 — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip 026189102 (local, testcontainers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-5 (#300, seed instance+Site+LocalSite+LocalSiteRateLimit before /api/v4/site) §5.2 Phase-1 ALL 3 PASS (DQ #243 resolved: check 0 err / clippy 0 warn / e2e --no-run built). Original Phase-2 e2e fail DQ #242 was a PLAN DEFECT (governance_fixtures::bootstrap seeds no local_site → /api/v4/site HTTP 500). User gate-4 = local (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@026189102. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres. Expected: agpl_source_disclosure_surface_returns_notice now PASSED + full suite 90 passed 0 failed (was 89 passed; 1 failed) — only delta is the previously-failing agpl test now passes, no pre-existing regression. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll).",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-026189102.log",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
