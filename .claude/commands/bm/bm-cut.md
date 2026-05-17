@@ -146,12 +146,53 @@ up the branch on `/bm-status` once commits land.
 
 ---
 
+## Phase 6 — Finalize hazard (READ — daemon finalize agent is NOT bm-cut-aware)
+
+bm-cut **creates divergence from trunk**. The phase branch is the
+deliverable; it must **NEVER** be merged back into `governance-v0`.
+
+The Junior daemon's generic post-job finalize agent is
+feature-branch-shaped ("commit worktree changes, merge the task's
+branch into the base branch"). On a bm-cut task it will **wrongly run
+`git merge --no-ff phase-<X>` INTO daemon-local `governance-v0`**,
+producing a spurious content-empty merge commit (e.g. `Merge
+phase-v1-AD-e into governance-v0 (bm-cut task)`). Confirmed 2× —
+v1-AD-e #282 + v1-ship-1, 2026-05-16. Full detail + recovery:
+`.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md`.
+
+**Until the daemon finalize agent reliably skips bm-cut** (structural
+fix = extend the `[role:bm-task]` finalize-skip, or a
+`FINALIZE: do-not-merge` worktree sentinel — same class as the
+planned `[role:impl-task]` skip in
+`feedback_junior_finalize_skips_when_worker_pre_pushes.md`):
+
+- **The bm-cut brief MUST carry a §6 "KNOWN harness limitation" block**
+  stating bm-cut creates divergence (NOT a feature branch to merge
+  back), the CC v2.1.119 runlog gate-block, and the advisor-relocate
+  recovery (see `feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md`).
+- **The advisor MUST verify daemon-local trunk post-bm-cut as a
+  ROUTINE step** (not an exception path):
+  `ssh homeserver 'cd /srv/<repo> && git log governance-v0 --oneline -1'`
+  — if it shows a `Merge phase-<X> into governance-v0 (bm-cut task)`
+  commit while `origin/governance-v0` is unchanged, recover with
+  `git update-ref refs/heads/governance-v0 origin/governance-v0`
+  (working-tree-safe — NOT `git reset --hard`, which switches the
+  checkout and can race concurrent lane tasks), then
+  `git push origin phase-<X>:phase-<X>`.
+
+---
+
 ## Refusal cases
 
 - Trunk dirty → STOP.
 - `governance-v0` ahead of remote with unpushed commits → STOP, ask.
 - No plan file on trunk for a phase branch → STOP, file DQ.
 - Branch name pattern mismatch → STOP, ask.
+- **Finalize agent merged the phase branch into trunk** (daemon-local
+  `governance-v0` shows `Merge phase-<X> into governance-v0 (bm-cut
+  task)`; origin unchanged) → NOT a bm-cut failure (branch was created
+  correctly); recover per Phase 6 via `git update-ref` + push the
+  phase branch; relocate the gate-blocked runlog advisor-side.
 
 ---
 
@@ -161,3 +202,5 @@ up the branch on `/bm-status` once commits land.
 - `.claude/rules/phase-branch.md` — phase-branch flow
 - `.claude/commands/bm/bm-status.md` — see current state
 - `.claude/commands/bm/bm-push.md` — push when impl has committed
+- `.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md` — Phase 6 hazard detail + recovery
+- `.claude/lessons/feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md` — runlog gate-block + advisor-relocate (§6)

@@ -422,3 +422,11 @@ entry).
 - **Task:** #292 `[role:bm-task]` — open PR `phase-v1-AD-e` (tip `efc0d72e1`) → `governance-v0`, `--repo barrie-cork/lemmy`.
 - **Pre-conditions verified by advisor before dispatch:** clean tree; synced w/ origin; no running/queued Junior tasks; DQ pending=0; `/brehon-verify` 3/3 ✓; retro gate silent (plan defers retro post-merge); Phase 1c e2e gate satisfied (DQ #244 `validate-pending-laptop-e2e` result=pass, branch `phase-v1-AD-e`, 93/0/5).
 - **Next:** poll #292 → on complete read PR# + URL → wait ~5–10 min for CR → queue `bm-poll-cr` → `bm-triage` → **user gate 3 (CR triage)**.
+
+## 2026-05-17 advisor: merged governance-v0 into phase-v1-AD-e (resolve PR #133 CONFLICTING)
+
+- **Why:** PR #133 (phase-v1-AD-e → governance-v0) opened `mergeable: CONFLICTING / DIRTY`. `governance-v0` advanced 7 meta-only commits after merge-base `09e0572cc` (canonical session: v1-AD-e retros, 3 promoted lessons, multi-lane-rule + skill updates, AD-e park/handoff docs).
+- **Conflict scope:** `git merge-tree` + real merge both confirmed **exactly ONE conflict** — `.claude/runlog/v1-AD-e-runlog.md` (add/add). **Zero code conflicts** (no crates/ migrations/ tests/). The 7 gov-v0 commits auto-merged cleanly (all additive `.claude/` meta).
+- **Resolution:** runlog `add/add` resolved to `--ours` (phase-v1-AD-e, 424-line superset). The gov-v0 side (22-line blob `d10fbc08`) is an earlier subset of the same file — its 3 entries (bm-cut #282 / PARKED / RESUME-CLEARED) are already present verbatim within the 424-line phase version. No information lost.
+- **Merge commit:** `--no-ff` (preserves topology; non-destructive, fully reversible; no history rewrite). Worker branch `junior/...-292` ABANDONED (its self-merge against a stale old base would have reverted advisor work — only its side effect, PR #133 + the `chore(bm)` entry, was needed; PR points at the correct phase tip `c5622ec57`, not the worker branch).
+- **Next:** push phase-v1-AD-e → PR #133 becomes mergeable → wait ~5-10 min for CodeRabbit → `bm-poll-cr` → `bm-triage` → **user gate 3 (CR triage)**.
