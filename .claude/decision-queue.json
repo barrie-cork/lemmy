@@ -4047,6 +4047,21 @@
       "answer": "All 4 §15 DoD commands PASS on advisor-laptop (Shape G suspended, DQ #229). cmd-1 cargo-check --workspace --features full: 0 errors (2m14s). cmd-2 cargo-clippy --workspace --features full --no-deps -- -D warnings: 0 warnings (1m51s). cmd-3 cargo-test --no-run -p lemmy_server --test e2e: e2e binary built (2m06s). cmd-4 cargo-test --workspace --test e2e --features full: test result: ok. 94 passed; 0 failed; 5 ignored (2017.49s). All 5 v1-AD-e tests ok incl admin_audit_html_returns_html_for_admin (render-path proving scrub_json().to_string() shape correct). Verified via explicit CMDn_EXIT_0 markers + grep, not bg notification.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-17T19:13:47Z"
+    },
+    {
+      "id": 247,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-17T19:28:21Z",
+      "question": "bm-merge Phase 2.5 (CR re-poll since last commit) — commits exist on phase-v1-AD-e since CR last_poll_at (09:38); does this STOP the merge gate?",
+      "options": [
+        "strict-stop: force /bm-poll-cr before merge (canonical bm-merge.md Phase 2.5 default)",
+        "user-authorized-override: user explicitly chose Confirm merge at gate 5 with the pending-CR risk surfaced verbatim"
+      ],
+      "context": "governance-v0 has NO branch protection (HTTP 404 Branch not protected) so CodeRabbit is NOT a required status check (advisory only, per phase-branch.md CR-review-value flow). mergeStateStatus settled to CLEAN. At gate 5 the user was shown \"mergeStateStatus UNSTABLE = CodeRabbit re-review PENDING on the new fix-impl-2 commits; CR is advisory, not a required check\" and chose \"Confirm merge\". The gate-5 decision IS the absorption of the 2.5 constraint — recorded here for audit per advisor-orchestrator.md \"do not silently skip a soft gate\".",
+      "answer": "user-authorized-override. User confirmed merge at gate 5 (AskUserQuestion 2026-05-17) with the pending post-fix-impl-2 CodeRabbit re-review explicitly surfaced. CR is advisory (no branch protection on governance-v0). All hard gates (critical/major open=0, all fix-in-pr carry addressed_in, mergeStateStatus CLEAN, mergeable MERGEABLE, DQ pending=0) pass. Phase 2.5 is the only soft constraint and the user knowingly authorized proceeding. Retro should note: consider a future bm-merge.md amendment distinguishing \"required-check pending\" (hard STOP) from \"advisory CR re-poll pending + user-confirmed\" (proceed-with-DQ-log).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-17T19:28:21Z"
     }
   ]
 }
