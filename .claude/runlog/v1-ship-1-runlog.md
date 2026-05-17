@@ -153,3 +153,78 @@ Shape-G-reenable log). **Task 1 (solo DTO barrier) COMPLETE.** Next:
 daemon-local-trunk-sync → author + dispatch Cohort A (Tasks 2+3,
 file-disjoint `[P]`, parallel `create_task` single message; verify
 §11 + FILES YAML overlap + `requires:`Task1-on-phase-branch first).
+
+## advisor: INCIDENT — cross-lane reset --hard via TOCTOU race 2026-05-17
+
+**Severity:** high (cross-lane corruption) / **Data loss:** ZERO /
+**Origin impact:** NONE (daemon-local only; nothing pushed).
+
+**Sequence:** Cohort-A pre-dispatch daemon-sync. Pre-flight found
+daemon `/srv/brehon-fork` checkout had DIVERGED on `phase-v1-ship-1`
+(daemon's own redundant finalize-merge `0decd9971` of #285 + untracked
+`allow-prp-deliverables.sh` bootstrap-§3 hook). Provenance investigated
++ user-authorized a `stash -u → reset --hard origin/phase-v1-ship-1 →
+stash pop`. **TOCTOU race:** between investigation and command, the
+Junior daemon ROTATED the shared checkout `phase-v1-ship-1 →
+phase-v1-AD-e` (daemon cycles lanes for concurrent processing). The
+`reset --hard origin/phase-v1-ship-1` therefore landed on the WRONG
+branch — moved `phase-v1-AD-e` ref `32dd62b1a → 6c03b9e97`. Then the
+daemon's bm-pr finalize #292 ran @08:16:56 (before the daemon stop
+took effect @08:17:47), building `8f6387e9a` (real AD-e bm-pr payload
+3587 lines) on the corrupted `6c03b9e97` base = cross-lane DQ #238
+contamination fused into AD-e local.
+
+**Containment:** AD-e is HEALTHY on origin — PR #133 OPEN
+(`headRefOid c5622ec5`, awaiting CodeRabbit), driven by
+`origin/phase-v1-AD-e=eddc8ab5d`. Corruption was DAEMON-LOCAL ONLY
+(`8f6387e9a`/`32dd62b1a` never pushed, never fed PR #133).
+`origin/AD-e` already had the task-5 work; daemon-local `32dd62b1a`
+was a redundant local finalize-merge. All objects reachable
+(`32dd62b1a`/`8f6387e9a`/`#292 branch 0a50803e5`/`origin eddc8ab5d`).
+
+**Recovery (user-authorized, user-executed at EliteDesk; advisor
+read-only verify):** daemon STOPPED (`systemctl stop
+junior@brehon-fork.service`; siblings dog-shelter/food-producer
+untouched; app exited 0/SUCCESS, "failed" = cosmetic SIGTERM).
+CAS-guarded `git update-ref` (race-free, no checkout touch):
+(a) `phase-v1-AD-e` → `origin/phase-v1-AD-e` (discard contaminated
+`8f6387e9a` + redundant `32dd62b1a`; CAS from `8f6387e9a`);
+(b) `phase-v1-ship-1` → `origin/phase-v1-ship-1` (the original sync
+goal; CAS from `0decd9971`). First CAS-guarded attempt CORRECTLY
+ABORTED (`is at 8f6387e9a but expected 6c03b9e97`) — the guard caught
+the daemon's #292 merge; re-investigated before retrying. Untracked
+hook preserved (sha256 unchanged across all ops).
+
+**LESSONS (→ Task 5 retro §5 + new lesson candidates):**
+1. `feedback_daemon_shared_checkout_toctou_race` — the daemon's
+   single rotating `/srv/brehon-fork` checkout means ANY advisor
+   `git checkout`/`reset --hard`/`merge` against a daemon-local
+   *branch* is a TOCTOU hazard: the daemon may rotate the checkout
+   between the advisor's read and write. ONLY `git update-ref
+   <ref> <new> <old-CAS>` (atomic, checkout-independent, CAS-guarded)
+   is safe against daemon-local refs. NEVER `reset --hard
+   origin/<X>` when the daemon may be on a different branch — it
+   resets whatever is checked out, not `<X>`. The lane-safe
+   refspec-fetch (`git fetch origin X:X`) is safe ONLY when `<X>` is
+   not the checked-out branch; when it might be, pause the daemon
+   first OR use update-ref.
+2. CAS-guarded `update-ref` (`git update-ref ref new old`) is the
+   mandatory primitive for ALL advisor daemon-local ref mutations —
+   it makes the TOCTOU class structurally impossible (refuses on
+   unexpected current value) where `reset --hard` blindly overwrites.
+3. Pausing the daemon (`systemctl stop junior@<repo>.service`) before
+   ANY shared-checkout git surgery is mandatory, not optional —
+   spatial isolation is insufficient against a rotating checkout;
+   temporal isolation (daemon down) is required.
+4. Multi-lane discipline gap: `.claude/rules/multi-lane-worktree.md`
+   covers the HUMAN-side worktree-per-lane but the DAEMON side still
+   uses one rotating checkout. The daemon-side analog (worktree per
+   active phase OR a hard "advisor never mutates daemon-local
+   branch refs except via paused-daemon CAS-update-ref") needs a
+   rule. → propose at retro.
+
+**Status:** recovery commands handed to user; awaiting EliteDesk
+execution + output. Daemon stays STOPPED until refs verified. v1-ship-1
+Cohort A dispatch BLOCKED until daemon resumed + ship-1 ref re-verified
+with the tighter anti-TOCTOU procedure (pause-daemon-then-update-ref,
+never reset --hard).
