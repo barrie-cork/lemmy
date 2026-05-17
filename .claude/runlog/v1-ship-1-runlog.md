@@ -988,3 +988,56 @@ real server bootstrap) in the agpl test App. Surfaced to user as re-plan
 signal; awaiting user decision (authorize planner re-plan / advisor
 hand-investigation of the exact missing Data<T> first / user takes it).
 NEXT advisor action: STOP + WAIT for user.
+
+## advisor: user §G4 override → fix-impl-7 brief authored + dispatched 2026-05-18
+
+After the 3rd consecutive same-surface Phase-2 e2e fail, advisor hand-
+investigated (read-only) and PINNED the root cause: the agpl test App
+(e2e.rs:14906-14912) builds `App::new().app_data(Data::new(context))
+.configure(lemmy_api_routes::config)` but OMITS the middleware stack the
+real server wraps (crates/server/src/lib.rs:380-382: FederationMiddleware
++ IdempotencyMiddleware + **SessionMiddleware**). The legible body Part A
+produced — "Requested application data is not configured correctly" — is
+actix's `ErrorInternalServerError` for an unregistered `web::Data<T>`; the
+request fails at extraction/middleware time and NEVER enters `read_site`.
+The incomplete-site-row hypothesis (4 passes + fix-impl-5 + fix-impl-6
+Part B) is OVERTURNED. Proven in-file canonical: the PASSING sibling
+`all_mvp_endpoints_return_non_404` (e2e.rs:3779-3862) uses the SAME
+`lemmy_api_routes::config` and wraps `.wrap(SessionMiddleware::new(
+context.clone()))` (e2e.rs:3860) + `use lemmy_routes::middleware::session::
+SessionMiddleware;` (e2e.rs:3809). The agpl test is the ONLY test that
+HTTP-drives /api/v4/site (grep-confirmed).
+
+**User §G4 override (DQ #247, answered_by:user, 2026-05-18):** user chose
+"Advisor authors a tight fix-impl brief" over a planner re-plan —
+justified by the unambiguous source-grounded cause + a proven passing
+sibling. Scoped to fix-impl-7 only; a 4th same-surface fail = §G4 re-plan
+hard-refusal (no fix-impl-8 without a fresh explicit override).
+
+**fix-impl-7 brief** (`.claude/PRPs/briefs/v1-ship-1-fix-impl-7.md`,
+committed 29aa0d342): narrow additive edit to e2e.rs — add the
+`SessionMiddleware` `use` + `.wrap(SessionMiddleware::new(context.clone()))`
+between `.app_data` and `.configure`, mirroring the passing sibling
+byte-for-byte. fix-impl-6 Part A + Part B PRESERVED unchanged. Bounded:
+NO speculative FederationMiddleware (advisor escalates separately only if
+SessionMiddleware alone is insufficient). ≤1 file (e2e.rs), ≤2 Edits.
+
+**Daemon ref sync (lane-safe, anti-TOCTOU):** daemon-local
+`phase-v1-ship-1` was `67feefddb` (daemon's OWN redundant fix-impl-6
+finalize-merge `chore(merge): finalize fix-impl-6 ... (job-302)` — same
+content as the lane finalize already in origin history; the known
+multi-lane ref-isolation gap, NOT data loss), diverged from origin
+`29aa0d342`. daemon_status rechecked 0-active/0-queued TWICE (TOCTOU
+guard). Recovery: `git fetch origin phase-v1-ship-1` →
+`git checkout -B phase-v1-ship-1 origin/phase-v1-ship-1` (NO --hard, NO
+force; mixed — untracked file preserved). VERIFIED: daemon-local ==
+origin == 29aa0d342, fix-impl-7 brief present on tip.
+
+DQ pending [#229,#242(fail),#244(fail),#246(fail)]; #247 resolved (user
+override); #243/#245 pass-resolved. NEXT: dispatch ONE Junior
+[role:impl-task] base_branch=phase-v1-ship-1 → verify-before-trust →
+finalize-merge → post-merge DQ-resurrection re-assert → §5.2 Phase-1 (DQ
+#248, 3 cmds) → §5.2 Phase-2 e2e (local, gate-4 cached) → on agpl ok +
+90/0/5 → mutate #242+#244+#246 pass → /brehon-verify → bm-pr → CR → gates
+3/5/6 → bm-merge → Task 5 retro → /brehon-phase-transition. 4th
+same-surface fail = §G4 re-plan hard-refusal.
