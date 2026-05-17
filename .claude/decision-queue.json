@@ -4118,6 +4118,22 @@
       "answer": "§5.2 Phase-1 ALL THREE PASS on the fix-impl-6 #302 finalize-merged tip 5a72fa755 (canonical checkout, detached). cmd1 `cargo-check.bat --workspace --features full` PASS (Finished dev 2m43s, CMD1_EXIT_0). cmd2 `cargo-clippy.bat --workspace --features full --no-deps -- -D warnings` PASS (Finished dev 1m51s, CMD2_EXIT_0, no -D warnings violations). cmd3 `cargo-test.bat --no-run -p lemmy_server --test e2e` PASS (Finished test 2m00s, e2e-aebb6c76db6b1818.exe built, CMD3_EXIT_0). The deeper-fix (Part A body-on-failure asserts + Part B complete SiteInsertForm mirroring setup_local_site) introduces NO compile/lint/link regression. Phase-1 green → proceed to §5.2 Phase-2 e2e (local, user gate-4 cached).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-17T21:49:19Z"
+    },
+    {
+      "id": 247,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-17T23:15:07Z",
+      "question": "Phase-2 e2e failed a 3rd consecutive time on the same surface (agpl /api/v4/site 500). §G4 cycle-count meta-rule = HARD REFUSAL re-plan (no auto fix-impl, no advisor improvised code change). The root cause is now pinned + source-grounded (test App omits the SessionMiddleware/FederationMiddleware stack the real server wraps at lib.rs:379-382 → actix 'Requested application data is not configured correctly' → 500 before read_site). Should the advisor (a) author a tight fix-impl-7 brief directly [explicit §G4 override], or (b) dispatch a planner re-plan, or (c) hold?",
+      "options": [
+        "advisor-tight-fix-impl-brief (explicit §G4 override)",
+        "planner-re-plan",
+        "hold"
+      ],
+      "context": "User chose 'Advisor authors a tight fix-impl brief' via AskUserQuestion 2026-05-18. This is an EXPLICIT, SCOPED user override of the §G4 cycle-count HARD REFUSAL (same class as the earlier 'Deeper-fix' override that produced fix-impl-6). Justification accepted: root cause is unambiguous + fully source-grounded (e2e.rs:14908-14910 test App vs crates/server/src/lib.rs:368-390 real-server App; the missing wrap is the SessionMiddleware/FederationMiddleware stack; a proven in-file sibling all_mvp_endpoints_return_non_404 at e2e.rs:3857-3862 already wires .wrap(SessionMiddleware::new(context.clone())) with the SAME lemmy_api_routes::config and passes). Override does NOT re-arm auto-fix-impl generally; it authorises THIS one fix-impl-7. A 4th same-surface fail after fix-impl-7 reverts to the §G4 re-plan hard-refusal (NO fix-impl-8 without a fresh explicit user override). fix-impl-6 Part A (body-on-failure asserts) SUCCEEDED and STAYS; fix-impl-6 Part B (complete SiteInsertForm) STAYS (necessary once the App is wired, just insufficient alone). DQ #242/#244/#246 remain fail-pending until fix-impl-7's Phase-2 e2e passes.",
+      "answer": "USER OVERRIDE (answered_by: user, 2026-05-18 in-channel AskUserQuestion): authorise the advisor to author a tight, narrow fix-impl-7 brief (NOT a planner re-plan) for the pinned cause — wire the missing actix middleware into the agpl test App mirroring the proven in-file sibling at e2e.rs:3857-3862 (.wrap(SessionMiddleware::new(context.clone())) + the `use lemmy_routes::middleware::session::SessionMiddleware;` import), with a bounded escalation to ALSO wrap FederationMiddleware (mirroring crates/server/src/lib.rs:380 + the in-file FederationConfig::builder() pattern at e2e.rs:2361/4694) ONLY if SessionMiddleware alone leaves /api/v4/site at 500. Keep fix-impl-6 Part A + Part B unchanged. ≤1 file edited (crates/server/tests/e2e.rs only). Dispatched as a normal [role:impl-task] Junior. §G4 override scoped to fix-impl-7 only; a 4th same-surface fail = §G4 re-plan hard-refusal (no fix-impl-8 without a new explicit user override).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-17T23:15:07Z"
     }
   ]
 }
