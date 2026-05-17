@@ -804,3 +804,49 @@ bg. On agpl `... ok` + suite 90/0 + no regression → mutate #242+#244
 pass → /brehon-verify v1-ship-1 → bm-pr → CR → gates 3/5/6 → ship.
 Second consecutive e2e fail = §G4 cycle-count HARD REFUSAL re-plan
 signal (no auto fix-impl-6).
+
+## advisor: Phase-2 e2e re-run after fix-impl-5 FAILED — §G4 hard-refusal catch-fire (2026-05-17)
+
+DQ #244 mutated → **result:fail** (STAYS in pending; answered_by:advisor-laptop).
+Pending now [#229, #242, #244]. #242 left as-is (original plan-defect
+record, result:fail, pending).
+
+Phase-2 e2e re-run on `phase-v1-ship-1` tip `026189102` (e2e.rs
+byte-identical to fix-impl-5 merged tip `8e1bb57bb`; canonical checkout
+`C:/Users/barri/Developer/brehon-fork` detached@`e706cdefe`). Command
+`cmd //c scripts\brehon\cargo-test.bat --workspace --test e2e --features
+full`, testcontainers Postgres. The `--workspace` build fingerprint
+differed from the prior `-p lemmy_server` cmd3 build → recompiled (new
+binary `e2e-07c133f22204027f.exe`), ran 95 tests in 1949.47s.
+
+**RESULT: `E2E_EXIT_NONZERO`. `test result: FAILED. 89 passed; 1 failed;
+5 ignored`.** ONLY `agpl_source_disclosure_surface_returns_notice`
+failed — the prior-89 ALL still passed, ignored=5 unchanged: **NO
+pre-existing regression**.
+
+Panic (e2e.rs:14909:3), IDENTICAL to the original DQ #242 fail:
+```
+assertion `left == right` failed: /api/v4/site must return 200
+  left: 500
+ right: 200
+```
+
+**Classification (a) — SAME /api/v4/site 500.** fix-impl-5 (#300,
+commit `50f06a7ab` — seed instance+Site+LocalSite+LocalSiteRateLimit
+before the /api/v4/site request, mirroring precedent e2e.rs:4751-4761)
+was **INEFFECTIVE**. The first assertion (`/api/v4/site == 200`) still
+fails with HTTP 500, so `SiteView::read_local` needs MORE than those 4
+rows, OR the mirrored precedent never actually exercises /api/v4/site
+at runtime (so the seed scaffold is wrong-shaped). Rules out (b)
+deeper-assert (the FIRST site assertion still fails — source_disclosure
+/ /api/v4/source asserts never reached). Rules out (c) cross-test
+side-effect (no pre-existing test regressed).
+
+**§G4 cycle-count meta-rule: 2nd consecutive Phase-2 e2e fail on the
+same agpl surface, SAME panic = HARD REFUSAL.** No auto fix-impl-6.
+Surfaced to user as a RE-PLAN signal. **BLOCKS bm-pr** until the user
+decides re-plan vs deeper-fix. Recommended next: planner Junior re-plan
+of §13 Task 4 + §10.6/§10.7 — the Task-4 fixture strategy and the
+"mirror precedent" that must ACTUALLY exercise /api/v4/site at runtime
+(deeper SiteView::read_local seed requirement than the current
+4-row scaffold).
