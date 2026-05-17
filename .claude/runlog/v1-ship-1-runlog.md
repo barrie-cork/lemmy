@@ -850,3 +850,54 @@ of §13 Task 4 + §10.6/§10.7 — the Task-4 fixture strategy and the
 "mirror precedent" that must ACTUALLY exercise /api/v4/site at runtime
 (deeper SiteView::read_local seed requirement than the current
 4-row scaffold).
+
+## advisor: deeper-fix authorized — fix-impl-6 dispatched (#302) (2026-05-17)
+
+User chose **Deeper-fix** (explicit §G4 override past the mechanical-fix
+threshold) + **Mirror setup_local_site** after the 2nd same-surface Phase-2
+e2e fail. Plan-mode plan approved (`idempotent-stargazing-pizza.md`).
+
+**Root cause (4 read-only Explore passes, evidence-grounded):** plan §10.7
+"mirror precedent" cited `governance_outbox_emits_remote_sanction_notice_on_local_sanction`
+(e2e.rs:4744-4761) which seeds the site rows but only calls `SiteView::read_local`
+**internally** — it NEVER HTTP-calls `/api/v4/site`. The bare
+`SiteInsertForm::new("agpl test site", instance.id)` (the canonical *db-layer*
+`TestData::create` form) leaves `ap_id`/`inbox_url`/`public_key`/`private_key`/
+`last_refreshed_at` = `None`; the `Site` struct types those non-Option; the
+HTTP handler path (`read_site` → `SiteView::read_local` `.select(Self::as_select())
+.first().optional()?`) cannot materialise the incomplete row → 500. The exact
+failing column is unconfirmed because the test asserted only `status==200` and
+**discarded the response body**. Refuted: stale-cache (moka TTL=0 disables it
+in debug), missing `language`/`site_language` (migrations seed languages;
+`Site::create` auto-populates site_language), pool isolation. `agpl_*` is the
+ONLY e2e test that HTTP-drives `/api/v4/site`.
+
+**Fix-impl-6 brief** (`9d84c33c1`, committed): ONE impl-task, ONE commit,
+TWO coupled parts into the single agpl fn — Part A (read body BEFORE the
+status assert, fold into panic message; also for `/api/v4/source`) so the
+real `LemmyError` is legible; Part B (replace bare `SiteInsertForm::new`
+with the complete form mirroring proven `setup_local_site.rs:80-96`:
+`generate_actor_keypair()` + parseable `ap_id`/`inbox_url` for `test.invalid`
++ `last_refreshed_at` + `private_key`/`public_key`). Bounded literal-fallback
+if production helpers unreachable from the test crate. §2.4 mandatory e2e
+lessons injected. next DQ id = 245.
+
+**Daemon ref recovery (lane-safe, user-approved):** daemon-local
+`phase-v1-ship-1` was `02e13d800` (daemon's redundant own fix-impl-5
+finalize-merge; same code as origin via `9d84c33c1`, different SHA — the
+known daemon multi-lane ref-isolation gap) with a LEFTOVER conflicted index
+(`UU .claude/decision-queue.json`, no MERGE_HEAD). No live Junior task
+(0 active/0 queued); no other worktrees (AD-e etc = branches only). Recovery:
+`git reset` (mixed, NO --hard) → `git checkout -- .claude/decision-queue.json`
+(discard leftover UU; origin authoritative) → `git checkout -B phase-v1-ship-1
+origin/phase-v1-ship-1`. VERIFIED: daemon-local ref == origin == HEAD ==
+`9d84c33c1`, work-tree clean, fix-impl-6 brief PRESENT on tip. No --hard,
+no force, no data loss.
+
+Dispatched **Junior #302** `[role:impl-task]` `base_branch=phase-v1-ship-1`.
+NEXT: poll → verify-before-trust (≤1 file, e2e.rs only, Part A read_body +
+Part B setup_local_site shape) → finalize-merge → post-merge DQ-resurrection
+re-assert → §5.2 Phase-1 (3 cmds) → Phase-2 e2e (local; gate-4 cached) →
+on agpl `... ok` + 90/0/5 → mutate #242+#244 pass → /brehon-verify → bm-pr →
+CR → gates 3/5/6 → merge → Task 5 retro → phase-transition. 3rd same-surface
+fail = re-plan catch-fire (NO auto fix-impl-7).
