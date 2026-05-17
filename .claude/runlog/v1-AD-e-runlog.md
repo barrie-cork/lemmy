@@ -7,6 +7,86 @@ entry).
 
 ---
 
+## advisor: Task 3 dispatched (REDUCED scope) — 2026-05-17T02:55:00Z
+
+- **action:** queued Junior impl-task **#289** —
+  `[role:impl-task] v1-AD-e task 3 — see .claude/PRPs/briefs/v1-AD-e-impl-3.md`
+- **base_branch:** `phase-v1-AD-e` (tip 371ffaac8 — Task 1+2 merged,
+  DQ #241+#242 resolved=pass)
+- **brief:** `.claude/PRPs/briefs/v1-AD-e-impl-3.md` (authored this
+  session — REDUCED scope, deviation flagged §7)
+- **REDUCED SCOPE (key):** Task 2 worker (ade904851) scope-bled the
+  ENTIRE Task 3 + Task 4 implementation into `admin_dashboard_html.rs`:
+  `admin_audit_html` handler, `render_audit`/`audit_entry_row`/
+  `render_audit_table`, AND the Task 4 `AUDIT_SCRIPT` const (embedded
+  via `PreEscaped(AUDIT_SCRIPT)`). Worker correctly stopped short of
+  the lib.rs route+import (left for Task 3). **Advisor verified the
+  pre-built code on 371ffaac8 against plan §13 Task 3+4 spec** —
+  spec-conformant (404-gate not 403; `list_recent_config_changes`
+  reuse; Option/`signature`-as-bool handling; `AUDIT_SCRIPT` uses
+  named `addEventListener` events for both kinds + correct
+  `/api/v4/governance/admin/audit/stream` URL).
+- **Task 3 actual work:** 2-line `crates/api/routes/src/lib.rs` edit
+  (import `admin_audit_html` at :42; add `.route("/view", get().to(
+  admin_audit_html))` to `scope("/audit")` at :558) + independent
+  spec-conformance re-verification (fix in same commit only if
+  worker's read disagrees).
+- **Task 4 outlook:** `AUDIT_SCRIPT` already exists+conforms+embedded
+  → Task 4 (audit live-tail script) almost certainly **pre-satisfied**;
+  advisor to assess collapsing Task 4 to verification-only after Task 3
+  DoD green. Not pre-decided; flagged in brief §6/§7.
+- **validation:** Shape-G SUSPENDED → worker writes
+  `kind: "validate-pending-laptop"` (3 cmds: check --workspace +
+  clippy --workspace --no-deps -D warnings + test --no-run -p
+  lemmy_server --test e2e); advisor-laptop runs + mutates. next-id=243.
+- **pre-flight:** DQ pending=0; outside forbidden windows at dispatch
+- **next:** poll #289 → validate-pending-laptop → §13-Task-3 DoD on
+  laptop → on pass finalize-merge + assess Task 4 (likely verify-only)
+  then Task 5 (e2e test — admin 200 / non-admin 403 / flag-off 404)
+
+## advisor: Task 2 complete — PASS (+scope-bleed note) — 2026-05-17T02:45:00Z
+
+- **task:** Junior impl-task #288 (run #1 succeeded; ~22 min)
+- **deliverable:** `feat(api): extract gather_dashboard + dashboard
+  HTML handler + route (task 2)` commit `ade904851` — 4 files, 378
+  insertions: `admin_dashboard.rs` (+gather_dashboard extract; JSON
+  handler delegates — behaviour-preserving), `admin_dashboard_html.rs`
+  (NEW +353), `mod.rs` (+pub mod — pub not pub(crate) since
+  lemmy_routes is a separate crate), `lib.rs` (+/dashboard/view route).
+  Sound key decisions: `gather_dashboard` takes `Data<LemmyContext>`
+  (DbPool lifetime borrow conflict); `AUDIT_SCRIPT` const outside
+  `html!{}` (maud raw-string parse).
+- **SCOPE-BLEED (noted, benign):** worker ALSO implemented Task 3 +
+  Task 4 code (`admin_audit_html`, `render_audit`, `audit_entry_row`,
+  `render_audit_table`, `AUDIT_SCRIPT`) into the new file — beyond its
+  Task 2 brief (which said "do NOT add admin_audit_html — Task 3").
+  Benign: handler unreachable without the route; correctly did NOT add
+  the route/import (those stay Task 3). Made `list_recent_config_changes`
+  `pub(crate)` for the reuse. Reduces Task 3 to route+import wiring.
+  Retro watch-item: impl-task scope-bleed on a multi-task module file.
+- **worker pre-pushed own branch** (`junior/...-288`, with a self-merge
+  bcbe26996 of Task 1); daemon finalize skipped per
+  `feedback_junior_finalize_skips_when_worker_pre_pushes` → advisor
+  manual finalize-merge.
+- **DQ #242 (validate-pending-laptop, from=impl):** advisor-laptop ran
+  the THREE §13-Task-2 DoD commands on `brehon-fork-ad-e` worktree
+  (detached on junior-288 tip), ALL PASS:
+  - `cargo-check --workspace --features full`: exit 0, **1m47s**
+  - `cargo-clippy --workspace --features full --no-deps -D warnings`:
+    exit 0, **5m35s**, 0 warnings
+  - `cargo-test --no-run -p lemmy_server --test e2e`: exit 0,
+    **10m44s** — **R7 behaviour-preservation CONFIRMED** (e2e binary
+    links; gather_dashboard extraction did not break JSON handler or
+    v1-AD-d e2e)
+- **finalize-merge:** `git merge --no-ff origin/junior-288` →
+  `a0a19637d`. DQ conflict on `.claude/decision-queue.json` resolved
+  (theirs had stale #241+#242 pending from worker's old-base
+  self-merge; ours had #241=resolved): reconstructed → pending=[#242],
+  resolved keeps #241=pass. 4 code files merged clean.
+- **DQ #242 mutated** → result=pass, answered_by=advisor-laptop,
+  resolved_at, pending[]→resolved[] at `371ffaac8`. DQ pending=0.
+- **DQ raised:** none
+
 ## advisor: Task 2 dispatched — 2026-05-17T02:05:00Z
 
 - **action:** queued Junior impl-task **#288** —
