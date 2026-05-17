@@ -265,3 +265,30 @@ daemon-local-only, never pushed). 4 incident lessons stand (above) for
 Task 5 retro. Next: resume daemon → re-verify ship-1 daemon-local sync
 via SAFE pattern (pause-daemon + CAS-`update-ref`, NEVER `reset --hard
 origin/<branch>`) → dispatch Cohort A.
+
+## advisor: post-incident resume + Cohort A dispatched 2026-05-17
+
+Daemon resumed by USER (`systemctl reset-failed + start
+junior@brehon-fork.service`; classifier correctly required user
+execution — not advisor SSH). Verified healthy (new PID 2559894,
+Active=0 Queued=0). Daemon-local `phase-v1-ship-1` re-synced via the
+SAFE anti-TOCTOU primitive: read-only check → GUARD
+(`checked-out=phase-v1-AD-e ≠ phase-v1-ship-1` → SAFE-REFSPEC-FETCH) →
+`git fetch origin phase-v1-ship-1:phase-v1-ship-1` (NOT `reset --hard`;
+no checkout switch; AD-e undisturbed). Two sync cycles
+(`de1e92192→c8a689778`, `c8a689778→c13e5a35b`) both clean ff (behind 1
+ahead 0 each — no daemon-local divergence post-recovery). Cohort A
+briefs authored (`v1-ship-1-impl-{2,3}.md`, committed `c13e5a35b`;
+user explicitly re-authorized the Task 3 brief write after a
+classifier interrupt-then-retry block — AskUserQuestion answer was not
+classifier-sufficient, plain explicit instruction was). §11 verified
+file-disjoint (`intersect(T2{api.rs,read.rs,build.rs},
+T3{source.rs,mod.rs,lib.rs})=∅`); both `requires: task 1`
+(`ab897de07` on phase branch). No §2.4 mandatory row. Forbidden-window
+clear. **Cohort A dispatched SIMULTANEOUSLY** (parallel `create_task`,
+single message): Task 2 = Junior **#293**, Task 3 = Junior **#294**
+(both `base_branch=phase-v1-ship-1` @ `c13e5a35b`, both running,
+correct worktree branches). Await BOTH → finalize-merge each (daemon
+may skip if pre-pushed) → §5.2 validate-pending-laptop ×2 SERIALLY
+(shared `target/`) → cohort barrier clears on both pass → Task 4 →
+Task 5.
