@@ -645,3 +645,37 @@ DQ #242 mutated `result:fail`, **STAYS in pending[]** (pending = [#229,
 Catch-fired to user — needs judgment: fix-impl on read.rs/build.rs
 (Task 2 surface) vs re-plan. **Blocks bm-pr until resolved.** Full run
 log: `.claude/runlog/e2e-v1-ship-1-dab15ec56.log` lines 150-167.
+
+## advisor: ROOT CAUSE PINNED — plan defect (governance_fixtures::bootstrap seeds no local_site)
+
+Investigated (read-only, no fix applied — catch-fire to user):
+
+- Test panics on FIRST assertion (`/api/v4/site` == 200; got 500), before
+  `/api/v4/source` is reached. So Task 3 wiring is irrelevant to this fail.
+- Task 2 impl is structurally CORRECT: `build.rs` has a sound
+  `env::var → git rev-parse → "unknown"` fallback; `env!("BREHON_FORK_COMMIT")`
+  resolves at compile time (test binary built clean in Phase-1); the
+  `SourceDisclosure { .. }` construction is plain `.to_string()` — nothing
+  that panics or Errs. The 500 is NOT in the new source_disclosure code.
+- `crates/server/tests/e2e.rs:801-836` `governance_fixtures::bootstrap()`
+  does **schema-apply ONLY** (`apply_all_schema`) — seeds ZERO rows. No
+  `instance`/`site`/`local_site`. Callers seed their own via
+  `seed_user`/`seed_community`.
+- `/api/v4/site` → `read_site` → `SiteView::read_local(&mut pool)` REQUIRES
+  a `local_site`+`site`+`instance` row. Empty schema-only DB → `read_local`
+  returns Err(NotFound) → `?` → `get_site`'s
+  `.map_err(|e| anyhow::anyhow!("Failed to construct site response"))?`
+  → **HTTP 500**.
+- The plan §10.7 precedent `all_mvp_endpoints_return_non_404`
+  (`e2e.rs:3780`) the brief told impl to mirror **never calls
+  `/api/v4/site`** — it sweeps only `/api/v4/governance/*`. NO existing
+  e2e test exercises `/api/v4/site`, so the bootstrap-data gap was
+  invisible until runtime.
+
+VERDICT: **plan/brief design defect** (the DQ #226-mandated
+`governance_fixtures::bootstrap()` cannot satisfy the test's first
+assertion — `/api/v4/site` needs site-bootstrap rows the governance
+fixture deliberately doesn't seed). NOT an impl bug (impl followed the
+brief verbatim). NOT a test-author bug (followed §10.7 + DQ #226). NOT
+§G4-auto-fixable. Needs user judgment on the fix path. Catch-fired.
+**Blocks bm-pr.** DQ #242 stays pending (result:fail).
