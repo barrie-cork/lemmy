@@ -1,5 +1,28 @@
 {
-  "pending": [],
+  "schema_version": 2,
+  "pending": [
+    {
+      "id": 242,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T05:15:00Z",
+      "question": "v1-AD-e Task 2 (extract gather_dashboard + dashboard HTML handler + /dashboard/view route) pushed — run §15 DoD on laptop",
+      "branch": "junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288",
+      "phase_task": 2,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task2-testnorun.log 2>&1\""
+      ],
+      "context": "admin_dashboard_html.rs created; gather_dashboard extracted as pub(crate); /dashboard/view route wired; commit ade904851. R7 (--no-run) applies after Task 2 (gather_dashboard changes fn call surface). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
+      "answer": null,
+      "answered_by": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 214,
@@ -3939,6 +3962,5 @@
       "failed_commands": null,
       "resolved_at": "2026-05-17T00:56:07Z"
     }
-  ],
-  "schema_version": 2
+  ]
 }
