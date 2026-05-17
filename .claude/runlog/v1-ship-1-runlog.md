@@ -679,3 +679,48 @@ fixture deliberately doesn't seed). NOT an impl bug (impl followed the
 brief verbatim). NOT a test-author bug (followed §10.7 + DQ #226). NOT
 §G4-auto-fixable. Needs user judgment on the fix path. Catch-fired.
 **Blocks bm-pr.** DQ #242 stays pending (result:fail).
+
+## advisor: fix-impl-5 dispatched (Junior #300) — plan-defect recovery
+
+User chose fix-impl path (vs re-plan) for the Phase-2 e2e fail. Authored
+`.claude/PRPs/briefs/v1-ship-1-fix-impl-5.md` (committed `f84e03e42` on
+phase-v1-ship-1): single anchor-Edit into `crates/server/tests/e2e.rs`
+adding (A) `lemmy_db_schema::source::{instance,local_site,
+local_site_rate_limit,person,site}` + `lemmy_diesel_utils::traits::Crud`
+imports inside the test fn, and (B) a `Instance::read_or_create → Site
+→ Person sysacct → LocalSite → LocalSiteRateLimit` seeding block right
+after `governance_fixtures::bootstrap()` and before the first
+`/api/v4/site` TestRequest. Mirrors the VERBATIM compile-tested
+canonical precedent at `e2e.rs:4744-4761`
+(`governance_outbox_emits_remote_sanction_notice_on_local_sanction`,
+which seeds the same scaffold for the same `SiteView::read_local`
+reason). Constructor signatures advisor-verified by reading the
+precedent + its imports (e2e.rs:4598-4608). No production-code change,
+no new fixture helper, assertions unchanged. Brief = NON-allowlist
+fix-impl (runtime assertion class) → hand-authored recipe + cited
+precedent (§G4 verbatim-row blockquote gate is allowlist-only, N/A).
+
+Daemon pre-flight (anti-TOCTOU, safe pattern): `daemon_status` =
+running, **0 active / 0 queued**, uptime 1m34s (clean restart);
+list_tasks cross-checked = zero running/queued lines. Daemon-local
+`refs/heads/phase-v1-ship-1` was divergent at `d31a84b9d` (one
+local-only commit = the daemon's OWN superseded Task-4 finalize-merge;
+origin `f84e03e42` already carries equivalent Task-4 content via the
+laptop-side lineage). Checked-out branch = `phase-v1-AD-e` (NOT ship-1
+→ working tree untouched by a ship-1 ref move). User-authorized
+**CAS-guarded `git update-ref refs/heads/phase-v1-ship-1 f84e03e42
+d31a84b9d`** (expected-old guard = anti-TOCTOU; aborts if ref moved
+since read). CAS_OK → new=`f84e03e42`, AD-e checkout still intact.
+NEVER reset --hard, NEVER paused daemon (idle anyway). Per the durable
+AD-e cross-lane TOCTOU lesson.
+
+`mcp__junior-brehon__create_task base_branch=phase-v1-ship-1` →
+**Junior #300** queued. Next: poll #300 → on done, verify-before-trust
+(fetch worker branch, diff-stat = e2e.rs only, grep the seeding block
++ assertions-unchanged), finalize-merge (with post-merge
+DQ-resurrection re-assert of #239/#240/#241 pass + #242 still
+fail-pending), §5.2 Phase-1 re-validate (the new validate-pending-
+laptop the worker raises ≈ DQ #243), then advisor RE-RUNS Phase-2 e2e
+local on the new tip. On E2E_EXIT_0 + agpl test passed + no regression
+→ mutate #242 pass → /brehon-verify → bm-pr. DQ #242 stays pending
+(result:fail) until the re-run passes.
