@@ -39,7 +39,7 @@ use lemmy_api::{
     admin_close_case::admin_close_case,
     admin_config::{admin_get_config, admin_get_config_audit, admin_set_config},
     admin_dashboard::admin_dashboard,
-    admin_dashboard_html::admin_dashboard_html,
+    admin_dashboard_html::{admin_dashboard_html, admin_audit_html},
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
@@ -555,7 +555,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
                   .route("", post().to(admin_create_rule_set))
                   .route("", get().to(admin_list_rule_sets)),
               )
-              .service(scope("/audit").route("/stream", get().to(admin_audit_stream))),
+              .service(
+                scope("/audit")
+                  .route("/stream", get().to(admin_audit_stream))
+                  .route("/view", get().to(admin_audit_html)),
+              ),
           ),
       ),
   );
