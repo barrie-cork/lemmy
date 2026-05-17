@@ -821,3 +821,55 @@ entry).
   triage YAML cr-5 `addressed_in` (now FULL ADR-015) → re-run
   `/brehon-verify` (reuse the #246 e2e) → **re-surface user gate 5
   (merge confirm)** → on confirm bm-merge → retro → gate 6.
+
+---
+
+## advisor: #299 done — #292 stale-base RESCUED (5th occurrence) + DQ #246 reconstructed — 2026-05-17T~17:55Z
+
+- **Junior #299** (impl-task fix-impl-2) `done`/succeeded
+  17:42→17:50 (~8 min, run #1).
+- **#292 stale-base-self-merge — 5th occurrence on this phase.**
+  Worker branch `junior/...-299` (`d81ba7dfe`) on origin but
+  forked from STALE daemon-local base `94915e07c`; `git merge-base
+  --is-ancestor phase-tip worker` → **NO**. Worker self-merged the
+  abandoned bm-poll-cr (`024384630`) + bm-triage (`9adbfccf5`)
+  branches; full worker→phase-tip diff = **2596 deletions** across
+  briefs / lessons / runlog / decision-queue.json / rules
+  (`v1-AD-e-bm-poll-cr-1.md`, `-bm-triage-1.md`, `-fix-impl-1.md`,
+  `-fix-impl-2.md`, `multi-lane-worktree.md`, 5 lesson files, the
+  runlog, …). NOT merged.
+- **Clean fix commit:** `d7db65f79`
+  `fix(admin-html): complete cr-5 ADR-015 scrub in audit_entry_row
+  (fix-impl-2)` — `git show --stat` = exactly **1 file**
+  `admin_dashboard_html.rs` (+7 −7).
+- **Recovery:** cherry-pick ONLY `d7db65f79` onto live phase tip
+  `ff35b64cc` → **`5805ab27f`**; no runlog conflict this cycle
+  (worker touched only the rs file). `git diff --stat
+  ff35b64cc..HEAD` = ONLY `admin_dashboard_html.rs` (+7 −7), **ZERO
+  advisor-file deletions** — #292 sidestepped. Pushed; origin
+  survival confirmed.
+- **Spot-check (blob-SHA `1465a70d9`, `audit_entry_row` L311-335):**
+  L316-318 `scrub(&e.entry_kind/scope/key)` ✓; L320
+  `scrub_json(v).to_string()` (previous_value Some-arm) ✓; L322
+  `scrub_json(&e.new_value).to_string()` ✓; L323 `scrub(&e.reason)`
+  single (NOT double — #297 already) ✓; L325 `scrub(p)`
+  (actor_pseudonym Some-arm) ✓; L331 `scrub(d)` (denial_reason)
+  single untouched ✓; id/created_at/signature raw ✓; import
+  widened `redaction::{scrub, scrub_json}` ✓; ONLY `audit_entry_row`
+  + the `use` line changed. **Exactly the brief §2.2 — no defect.**
+- **DQ #246 reconstructed.** Worker's own DQ #246 referenced its
+  stale-base branch + had only 3 commands (no full e2e). Advisor
+  wrote a FRESH #246: `from:impl`, `kind:validate-pending-laptop`,
+  `branch:phase-v1-AD-e`, `phase_task:fix-impl-2`, **4 commands
+  verbatim** (check / clippy -D warnings / test --no-run / FULL
+  e2e), `result:null`, pointing at the real on-branch SHA
+  `5805ab27f`. next-id 246 confirmed correct (live max=245; worker
+  consumed 246 only on its abandoned branch). Committed
+  `0c805db97`; origin survival verified (PRESENT, kind=
+  validate-pending-laptop, cmds=4).
+- **Next:** process DQ #246 (advisor-laptop, 4-cmd DoD sequential,
+  ~32 min e2e — render change to the audit page the e2e exercises;
+  a `scrub_json` `.to_string()` shape bug only surfaces at render) →
+  on all-green mutate #246 + update triage YAML cr-5 notes (FULL
+  ADR-015) → re-run `/brehon-verify` (REUSE #246 e2e) → **re-surface
+  user gate 5**.
