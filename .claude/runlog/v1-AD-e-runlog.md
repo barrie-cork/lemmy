@@ -873,3 +873,97 @@ entry).
   on all-green mutate #246 + update triage YAML cr-5 notes (FULL
   ADR-015) → re-run `/brehon-verify` (REUSE #246 e2e) → **re-surface
   user gate 5**.
+
+---
+
+## advisor: DQ #246 PASS → triage COMPLETE → verify 3/3 → GATE 5 CONFIRMED → bm-merge — 2026-05-17T~19:13-19:38Z
+
+- **DQ #246 (validate-pending-laptop) result=pass.** All 4 §15 DoD
+  on advisor-laptop (Shape G suspended, DQ #229): cmd-1 cargo-check
+  --workspace --features full 0 err (2m14s); cmd-2 cargo-clippy
+  --workspace --features full --no-deps -- -D warnings 0 warn
+  (1m51s); cmd-3 cargo-test --no-run -p lemmy_server --test e2e
+  built (2m06s); cmd-4 cargo-test --workspace --test e2e --features
+  full **test result: ok. 94 passed; 0 failed; 5 ignored**
+  (2017.49s). All 5 v1-AD-e tests `ok` incl
+  `admin_audit_html_returns_html_for_admin` (render-path proving
+  `scrub_json().to_string()` shape correct). Verified via explicit
+  `CMDn_EXIT_0` markers + grep, NOT bg notification
+  (cargo-output-capture). Mutated in place
+  (result=pass, answered_by=advisor-laptop) → `0309bde5b`;
+  origin-survival confirmed (RESOLVED, pending=0).
+- **Triage YAML cr-5 → COMPLETE.** `pr-133-findings.yaml` cr-5
+  `notes:` updated to document full ADR-015 coverage across two
+  commits: reason+denial_reason via `835681ff5` (fix-impl-1,
+  recovered #297) + entry_kind+scope+key+actor_pseudonym scrub() +
+  previous_value+new_value scrub_json() via `5805ab27f` (fix-impl-2,
+  recovered #299 — 5th #292 stale-base rescue). recommendation stays
+  approve. Counters unchanged (cr-5 was already done-bucketed). →
+  `477f6e549`.
+- **`/brehon-verify v1-AD-e` re-run → all 3 stories ✓.** Report
+  rewritten @ `b33fdff05` (3✓ 0✗-phantom 0✗-regression
+  0[malformed]). fix-impl-2 is render-only; reused the DQ #246 e2e
+  as the §16a checkpoint (no 2nd 32-min e2e). cr-5 is now a closed
+  finding, not a carried gate-5 caveat. S2.5 idiomatic-nested-scope
+  disposition unchanged.
+- **User GATE 5 (merge confirm) RE-SURFACED + CONFIRMED.** User
+  chose "Confirm merge" with the pending post-fix-impl-2 CodeRabbit
+  re-review explicitly surfaced (gate-5 choice "complete cr-5 first"
+  now satisfied).
+- **Merge-gate inline pre-checks (L15) — ALL GREEN advisor-side.**
+  critical/major.open=0; all fix-in-pr (cr-1/4/5/6) carry
+  addressed_in; cr-2 rebut + cr-3 wont-fix (rationale present);
+  recommendation approve; mergeStateStatus CLEAN; mergeable
+  MERGEABLE; **governance-v0 has NO branch protection (HTTP 404) →
+  CodeRabbit NOT a required check (advisory only)**; DQ pending
+  mentioning #133 = 0; Phase 2.5 (CR re-poll-since) =
+  **user-authorized override** recorded as **DQ #247**
+  (`kind: log`, `answered_by: user`) per "do not silently skip a
+  soft gate". bm-merge brief (Phases 5-9 only, NO CR comment per
+  gate 3, explicit L14 git sequence) authored `2cbb1ec95`.
+- **bm-merge Junior #301 — MERGE SUCCEEDED (daemon false-failure).**
+  #301 reported `failed` (19:33→19:37) but the failure was the
+  **daemon post-task finalize** (`git ... phase-v1-AD-e..HEAD
+  --oneline` — ambiguous revision because the merge had just
+  deleted the phase branch). The critical irreversible action
+  completed correctly: **PR #133 MERGED at 2026-05-17T19:34:55Z,
+  merge commit `486a24c68`** ("Merge pull request #133 from
+  barrie-cork/phase-v1-AD-e"), **`phase-v1-AD-e` deleted from
+  origin** (L16 post-condition satisfied by `gh pr merge --merge`
+  auto-delete), governance-v0 trunk now at `486a24c68`. `gh pr
+  merge` operates server-side so it succeeded despite the #301
+  worker's worktree also exhibiting the #292 stale-base pattern
+  (worker branch `ead09a173` carries 2819 deletions incl the
+  runlog — NOT merged; advisor authoring this re-apply instead).
+- **L14 belt-and-braces fired.** The BM Junior skipped its
+  `chore(bm): merge PR #133` runlog commit (no such commit on
+  governance-v0 — the merge built directly on the advisor's brief
+  commit `2cbb1ec95`). This `docs(advisor):` block IS the L14
+  re-apply, authored on `governance-v0` (canonical
+  advisor-orchestration tracking branch) from the lane worktree
+  after ff'ing local governance-v0 to origin `486a24c68`.
+
+## bm: merge — 2026-05-17T19:34:55Z (L14 advisor re-apply)
+
+- **PR:** `#133`
+- **Action:** merged phase-v1-AD-e → governance-v0 (`--merge`,
+  task-per-commit history preserved)
+- **Merge commit:** `486a24c68` (Merge pull request #133 from
+  barrie-cork/phase-v1-AD-e)
+- **Comment posted:** no (gate 3 = no CR digest comment)
+- **Counters:** 0 open / cr-1+cr-4+cr-5+cr-6 done / cr-2 rebut /
+  cr-3 wont-fix
+- **CR fix cycles:** fix-impl-1 `5d742a323` (cr-1/4/5-partial/6,
+  recovered #297) + fix-impl-2 `5805ab27f` (cr-5 ADR-015
+  completion, recovered #299 — 5th #292 stale-base rescue)
+- **DQ #245 + #246:** both validate-pending-laptop result=pass
+  (full e2e 94 passed / 0 failed)
+- **Branch deleted:** yes (origin `phase-v1-AD-e` gone)
+- **Runlog commit:** authored advisor-side via L14 belt-and-braces
+  (BM Junior #301 skipped it; #301 reported failed at daemon
+  finalize but the merge itself succeeded server-side)
+- **Next:** author v1-AD-e retro (per-role H2; headline = 5× #292
+  stale-base rescues + #297 worker-exited-without-push NEW failure
+  mode + cr-5 partial→gate-5→fix-impl-2 arc + daemon-local-ref
+  upstream fix) → user gate 6 (retro sign-off) →
+  `/brehon-phase-transition`.
