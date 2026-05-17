@@ -330,3 +330,45 @@ DQ entries (avoids redundant ~22-min second run on identical tree;
 §5.2 serial-cargo constraint satisfied trivially since it's one run).
 Then cohort barrier clears on both pass → Task 4 (e2e, requires 2+3) →
 Task 5 retro.
+
+## advisor: §5.2 cmd2 FAIL — clippy::unused_async (CATCH-FIRE) 2026-05-17
+
+§5.2 validate-pending-laptop on Cohort A merged tip `6ceb7683a`
+(canonical checkout detached@`5eb001512`, code identical):
+- cmd1 `cargo-check --workspace --features full`: **PASS** (4m12s, 0
+  err/warn; CMD1_EXIT_0 marker authoritative). Both Task 2 + Task 3
+  crates compile across full workspace.
+- cmd2 `cargo-clippy --workspace --features full --no-deps -- -D
+  warnings`: **FAIL** (CMD2_EXIT_NONZERO). `error: unused 'async' for
+  function with no await statements --> crates/api/api/src/site/
+  source.rs:11` — Task 3's `get_source` declared `async` but body is
+  `Ok(Json(GetSourceResponse{...}))` with an `include_str!` const, no
+  `.await`. `-D clippy::unused-async` makes it fatal; `could not
+  compile lemmy_api`.
+- cmd3 `cargo-test --no-run -p lemmy_server --test e2e`: **NOT RUN**
+  (serial `&&` chain correctly stopped at cmd2 non-zero).
+
+**§G4 classifier verdict: NON-ALLOWLIST → CATCH-FIRE.**
+`clippy::unused_async` is not in the §5.3 §G4 allowlist (allowlist =
+doc_lazy_continuation, E0432, deprecated-api, E0277 LemmyError 4a/4b/4c,
+trait-bound-with-lesson, map_err_ignore, missing-macro, E0599). Per
+"Any failure whose log slice doesn't match an allowlist row →
+Catch-fire" + "allowlist is conservative by design; grow only on retro
+evidence". NO auto-fix queued; surfaced to user.
+
+DQ mutated + pushed (`0d13a89bf`): **#240** (Task 3) `result:fail`,
+stays `pending[]` for triage, log_slice + recommended fix recorded,
+`answered_by:advisor-laptop`. **#239** (Task 2) `result:null` (NOT a
+fail — cmd1 passed for its crates; cmd2/cmd3 unreached due to #240's
+abort on the shared merged tip), `context` annotated BLOCKED-BY-COHORT.
+Re-running §5.2 on the post-fix merged tip clears BOTH #239 and #240.
+
+Recommended fix (mechanical, clippy-suggested, ≤1 file): remove `async`
+from `pub fn get_source() -> LemmyResult<Json<GetSourceResponse>>` in
+`crates/api/api/src/site/source.rs:11`. Cross-file check: route is
+`.route("/source", get().to(get_source))` in `crates/api/routes/src/
+lib.rs` — actix `.to()` accepts sync handlers, so de-async is
+registration-safe (NO change needed in lib.rs). e2e test (Task 4, not
+yet authored) would call the endpoint over HTTP — sync vs async handler
+is transparent to the client. AWAITING USER: authorize narrow
+fix-impl-task vs add clippy::unused_async to §G4 allowlist vs other.
