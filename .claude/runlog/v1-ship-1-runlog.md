@@ -901,3 +901,39 @@ re-assert → §5.2 Phase-1 (3 cmds) → Phase-2 e2e (local; gate-4 cached) →
 on agpl `... ok` + 90/0/5 → mutate #242+#244 pass → /brehon-verify → bm-pr →
 CR → gates 3/5/6 → merge → Task 5 retro → phase-transition. 3rd same-surface
 fail = re-plan catch-fire (NO auto fix-impl-7).
+
+## advisor: fix-impl-6 #302 verified + finalize-merged 2026-05-17
+
+Junior #302 `[role:impl-task]` DONE (run #1 succeeded, ~9.5 min,
+21:15:49→21:25:18Z). **Verify-before-trust CLEAN:** worker branch diff =
+exactly 2 files — `crates/server/tests/e2e.rs` (+26/-... single fn
+`agpl_source_disclosure_surface_returns_notice`) + `.claude/decision-queue.json`
+(worker-raised DQ #245 `validate-pending-laptop`). NO production code touched
+(no crates/api|db_schema|db_views|routes). Part A confirmed: both `/api/v4/site`
+and `/api/v4/source` asserts restructured to `let status=...; let body_bytes=
+test::read_body(resp).await; assert_eq!(status, 200, "... — body: {}",
+String::from_utf8_lossy(&body_bytes))` — body legible on failure. Part B
+confirmed: bare `SiteInsertForm::new` → complete form with
+`ap_id/last_refreshed_at/inbox_url/private_key/public_key = Some(...)` via
+`generate_actor_keypair()?` + `url::Url::parse(...)?.into()` + `chrono::Utc::now()`,
+`..SiteInsertForm::new("agpl test site", instance.id)` — mirrors
+`setup_local_site.rs:88-95` shape exactly. Commit body documents Part-B path =
+production-helper-mirrored (one-edit discipline; fully-qualified path to avoid
+expanding the use block). Test fn outer still `LemmyResult<()>` (Case A), bare
+`?`, single fn, no new test.
+
+**Finalize-merge:** worker base `9d84c33c1` was behind origin tip `073a9ac89`
+(runlog commit landed after #302 dispatch) → true `git merge --no-ff` (NO
+--hard, NO force), ort strategy, 0 conflicts. **Post-finalize-merge
+DQ-resurrection re-assert: CLEAN** — all 10 invariants PASS: #242==fail-pending,
+#244==fail-pending, #243==pass-resolved, #245==None-pending (worker-raised),
+#229 pending, resolved=224, all ids unique. NO re-apply needed (worker DQ base
+was consistent with lane — only the runlog commit differed, which doesn't touch
+DQ). Pushed `073a9ac89..301986758` phase-v1-ship-1.
+
+NEXT: §5.2 Phase-1 on merged tip `301986758` (canonical checkout, detached) —
+DQ #245 3 cmds serialized (check → clippy → test --no-run) → on all 3 EXIT_0
+mutate #245 pass → §5.2 Phase-2 e2e (local, gate-4 cached) → on agpl `... ok` +
+90/0/5 → mutate #242+#244 pass → /brehon-verify → bm-pr → CR → gates 3/5/6 →
+bm-merge → Task 5 retro → /brehon-phase-transition. 3rd same-surface fail =
+re-plan catch-fire (Part A now makes panic body the literal LemmyError).
