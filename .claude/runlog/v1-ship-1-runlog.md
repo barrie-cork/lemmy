@@ -505,3 +505,38 @@ serialization + makes every cross-lane daemon-local sync a TOCTOU
 hazard; candidate structural fix = per-lane daemon checkout (mirror of
 the human-side worktree-per-lane rule). Ties to the 2026-05-17 AD-e
 incident lessons already carried.
+
+## advisor: peer-lane #297 done → daemon-local ship-1 CAS-synced → Task 4 dispatched (#298) 2026-05-17
+
+Peer-lane #297 (v1-AD-e fix-impl-1) DONE (run succeeded 11:00:31).
+Daemon idle (Active=0, Queued=0). Cross-lane serialization window
+closed. FRESH SAFE anti-TOCTOU read-only check: daemon checked-out
+still phase-v1-AD-e (ship-1 not the checkout — GUARD OK);
+daemon-local ship-1 still STALE `9082b08d3` (CAS-from re-verified
+fresh, NOT carried-stale; #297 was AD-e so didn't touch ship-1 ref);
+origin ship-1 = `88148edd0` (authoritative); behind 3/ahead 12.
+
+USER-AUTHORIZED CAS-guarded `git update-ref refs/heads/phase-v1-ship-1
+<origin-sha> 9082b08d382117d89fc704ac3ec84ada3d84a2f8` (AskUserQuestion
+"Authorize me: CAS update-ref now"). EXIT=0, CAS guard passed (ref was
+exactly 9082b08d3, no concurrent move). POST: daemon-local ship-1
+`9082b08d3`→`88148edd0` = origin → SHIP-1 SYNCED OK. AD-e UNTOUCHED
+(94915e07c unchanged). checked-out still phase-v1-AD-e (NO checkout
+switch, NO reset --hard, NO daemon pause — daemon was idle so the safe
+CAS primitive sufficed). 3 stale dead-end finalize-merge commits
+orphaned (unreferenced/unpushed; content already on origin via advisor
+reconcile — zero loss).
+
+Pre-dispatch re-verify: daemon STILL idle (no race window),
+daemon-local ship-1 stable `88148edd0`, Task 4 brief + plan §13 Task 4
+both readable on daemon-local ship-1. **Task 4 DISPATCHED** = Junior
+**#298** (`base_branch=phase-v1-ship-1` @ `88148edd0`, branch
+junior/role-impl-task-v1-ship-1-task-4-...-298, status running, single
+run, picked up immediately). NEXT: await #298 → verify-before-trust
+(worker commit `test(e2e): assert AGPL §13 disclosure surface ...
+(task 4)` + validate-pending-laptop DQ on worker branch) →
+finalize-merge → §5.2 validate-pending-laptop (§15.1-3 workspace cmds
+LOCALLY — Shape G suspended DQ #229) → e2e RUN = Phase-2 user-gate-4
+(local vs dispatch) → /brehon-verify §16a Story 3 → bm-pr → CR →
+bm-triage (gate 3) → /brehon-verify ✓ → gate 5 → bm-merge → Task 5
+retro (gate 6) → /brehon-phase-transition.
