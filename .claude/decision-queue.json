@@ -141,12 +141,14 @@
       "branch": "phase-v1-ship-1",
       "phase_task": 4,
       "local_log_path": ".claude/runlog/e2e-v1-ship-1-8a2e26e37.log",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "§5.2 Phase-2 e2e on fix-impl-7b merged tip 8a2e26e37 — FAILED (E2E_EXIT_NONZERO; suite: 89 passed; 1 failed; 5 ignored; finished 1924.92s; ONLY agpl test fails — NO regression).\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14921:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n  right: 200\n\nROOT CAUSE (now legible via fix-impl-6 Part A body-on-failure assert): the body is actix-web's generic Data::<T>::from_request message for an UNREGISTERED web::Data<T> in the handler-extractor chain. fix-impl-7 wired SessionMiddleware (necessary) but it is INSUFFICIENT: the real server App (crates/server/src/lib.rs:379-382) wraps FederationMiddleware (:380) -> IdempotencyMiddleware (:381) -> SessionMiddleware (:382); the agpl test App (e2e.rs:14910-14911) wraps ONLY SessionMiddleware. FederationMiddleware::call (activitypub_federation-0.7.0-beta.10/src/actix_web/middleware.rs:57) does `req.extensions_mut().insert(self.config.clone())`; activitypub_federation's `impl FromRequest for Data<T>` (ibid) errors if the FederationConfig<T> extension is absent. With FederationMiddleware not wrapped, the handler-extractor chain's Data extraction fails -> 500 on /api/v4/site. get_site itself (read.rs:23-25) extracts only `local_user_view: Option<LocalUserView>` + `context: Data<LemmyContext>` (the latter IS registered via `.app_data(Data::new(context.clone()))` @e2e.rs:14910); the missing Data is injected by a middleware in the stack, not by get_site directly. The proven fix shape = mirror the FULL real-server middleware stack (add FederationMiddleware + IdempotencyMiddleware ahead of SessionMiddleware) — a NEW change OUTSIDE the DQ #247/#249 override scope (which is SessionMiddleware-wiring + (**context).clone() deref ONLY). SURFACED to user for a fresh §G4 decision; advisor does NOT auto-author.",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T00:50:16Z"
     }
   ],
   "resolved": [

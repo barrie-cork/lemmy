@@ -1250,3 +1250,53 @@ bm-merge → Task 5 retro → /brehon-phase-transition; SAME actix-Data 500
 = FederationMiddleware also needed = NEW change = fresh user §G4 nod;
 DIFFERENT body = next layer surfaced + WAIT; 3rd-total same surface =
 §G4 hard-refusal re-plan.
+
+## advisor: §5.2 Phase-2 e2e FAILED — actix-Data-500 (SessionMiddleware necessary-but-insufficient) → SURFACED for fresh §G4 (DQ #251 fail)
+
+Phase-2 e2e on fix-impl-7b merged tip `8a2e26e37` completed
+`E2E_EXIT_NONZERO` (suite: **89 passed; 1 failed; 5 ignored**;
+finished 1924.92s; ONLY `agpl_source_disclosure_surface_returns_notice`
+fails — NO regression). fix-impl-6 Part A's body-on-failure assert made
+the cause LEGIBLE for the first time:
+
+```
+panicked at crates\server\tests\e2e.rs:14921:3:
+/api/v4/site must return 200 — body: Requested application data is not
+configured correctly. View/enable debug logs for more details.
+  left: 500  right: 200
+```
+
+ROOT CAUSE (evidence-grounded, source-quoted): the body is actix-web's
+generic `Data::<T>::from_request` message for an UNREGISTERED
+`web::Data<T>` in the handler-extractor chain. fix-impl-7 wired
+`SessionMiddleware` (necessary) but it is INSUFFICIENT — the real
+server App (`crates/server/src/lib.rs:379-382`) wraps
+`FederationMiddleware` (:380) → `IdempotencyMiddleware` (:381) →
+`SessionMiddleware` (:382); the agpl test App (`e2e.rs:14910-14911`)
+wraps ONLY `SessionMiddleware`. `FederationMiddleware::call`
+(`activitypub_federation-0.7.0-beta.10/src/actix_web/middleware.rs:57`)
+does `req.extensions_mut().insert(self.config.clone())`;
+`activitypub_federation`'s `impl FromRequest for Data<T>` errors if the
+`FederationConfig<T>` extension is absent. `get_site` itself
+(`read.rs:23-25`) extracts only `local_user_view:
+Option<LocalUserView>` + `context: Data<LemmyContext>` (the latter IS
+registered via `.app_data(Data::new(context.clone()))` @e2e.rs:14910);
+the missing `Data` is injected by a middleware in the stack. Proven fix
+shape = mirror the FULL real-server middleware stack (add
+`FederationMiddleware` + `IdempotencyMiddleware` ahead of
+`SessionMiddleware`).
+
+§G4: this is NOT a 3rd same-tuple cycle repeat — fix-impl-7 ADVANCED
+the diagnostic (read_site-string 500 → actix-Data-string 500, a
+surface CHANGE = progress). Per DQ #249 the override explicitly
+anticipated "a NEW-surface failure after fix-impl-7b = surface + WAIT
+user (no auto-author)". Adding Federation+Idempotency middleware is a
+NEW change OUTSIDE the DQ #247/#249 override scope
+(SessionMiddleware-wiring + `(**context).clone()` deref only).
+
+`DQ #251` mutated `result: "fail"` (STAYS in pending[] for §G4 triage
+per the canonical mutation pattern — fail does NOT move to resolved[]).
+`DQ #242/#244/#246/#248` stay fail-pending. **SURFACED to user for a
+fresh §G4 decision** (authorise a fix-impl-8 wiring
+Federation+Idempotency middleware vs planner re-plan). Advisor does NOT
+auto-author. bm-pr BLOCKED until Phase-2 green.
