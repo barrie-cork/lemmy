@@ -998,6 +998,19 @@ pub const DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED: bool = false;
 
 // Total: 8 + 8 + 1 + 2 + 2 + 1 + 2 + 1 + 1 = 26 net-new consts.
 
+// v1-federation-inbound-a (11 keys per PRD §10 defaults matrix).
+pub const DEFAULT_FEDERATION_INBOUND_DEFAULT_TRUST_FOR_NEW_PEERS: &str = "unknown";
+pub const DEFAULT_FEDERATION_INBOUND_PER_PEER_RATE_PER_HOUR: i64 = 100;
+pub const DEFAULT_FEDERATION_INBOUND_PER_ACTOR_ATTESTATION_RATE_PER_HOUR: i64 = 10;
+pub const DEFAULT_FEDERATION_INBOUND_PER_PEER_STORAGE_CAP: i64 = 10_000;
+pub const DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_SANCTION_NOTICE: i64 = 65_536;
+pub const DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_TRUST_ATTESTATION: i64 = 8_192;
+pub const DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL: i64 = 8_192;
+pub const DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS: i64 = 7;
+pub const DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES: i64 = 60;
+pub const DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS: i64 = 8_000;
+pub const DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS: i64 = 7;
+
 pub(crate) fn const_default_int(key: &str) -> Option<i64> {
   match key {
     "thresholds.jury_reliability" => Some(DEFAULT_THRESHOLDS_JURY_RELIABILITY),
@@ -1133,6 +1146,37 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     }
     "job.participation_interval_days" => Some(DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS),
     "job.rollup_interval_days" => Some(DEFAULT_JOB_ROLLUP_INTERVAL_DAYS),
+    // v1-federation-inbound-a additions
+    "federation.inbound.per_peer_rate_per_hour" => {
+      Some(DEFAULT_FEDERATION_INBOUND_PER_PEER_RATE_PER_HOUR)
+    }
+    "federation.inbound.per_actor_attestation_rate_per_hour" => {
+      Some(DEFAULT_FEDERATION_INBOUND_PER_ACTOR_ATTESTATION_RATE_PER_HOUR)
+    }
+    "federation.inbound.per_peer_storage_cap" => {
+      Some(DEFAULT_FEDERATION_INBOUND_PER_PEER_STORAGE_CAP)
+    }
+    "federation.inbound.max_payload_bytes_sanction_notice" => {
+      Some(DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_SANCTION_NOTICE)
+    }
+    "federation.inbound.max_payload_bytes_trust_attestation" => {
+      Some(DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_TRUST_ATTESTATION)
+    }
+    "federation.inbound.max_payload_bytes_moderation_label" => {
+      Some(DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL)
+    }
+    "federation.inbound.replay_window_days" => {
+      Some(DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS)
+    }
+    "federation.inbound.replay_cleanup_cron_interval_minutes" => {
+      Some(DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES)
+    }
+    "federation.inbound.summary_max_chars" => {
+      Some(DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS)
+    }
+    "federation.inbound.admin_review_default_filter_days" => {
+      Some(DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS)
+    }
     _ => None,
   }
 }
@@ -1234,6 +1278,10 @@ pub(crate) fn const_default_text(key: &str) -> Option<String> {
     // v1-SL-a additions
     "liability.multi_sponsor_escape_rule" => {
       Some(DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE.to_string())
+    }
+    // v1-federation-inbound-a additions
+    "federation.inbound.default_trust_for_new_peers" => {
+      Some(DEFAULT_FEDERATION_INBOUND_DEFAULT_TRUST_FOR_NEW_PEERS.to_string())
     }
     _ => None,
   }
@@ -1517,6 +1565,19 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
   ("participation.activity_threshold_comments",                 "DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS",                 "int"),
   ("participation.evidence_cited_rationale_threshold_chars",    "DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS",    "int"),
   ("participation.lookback_days",                               "DEFAULT_PARTICIPATION_LOOKBACK_DAYS",                               "int"),
+  // v1-federation-inbound-a additions (11 federation.inbound.* keys per PRD §10).
+  // Alphabetised within this block; do NOT interleave into sibling-lane blocks.
+  ("federation.inbound.admin_review_default_filter_days",       "DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS",       "int"),
+  ("federation.inbound.default_trust_for_new_peers",            "DEFAULT_FEDERATION_INBOUND_DEFAULT_TRUST_FOR_NEW_PEERS",            "text"),
+  ("federation.inbound.max_payload_bytes_moderation_label",     "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL",     "int"),
+  ("federation.inbound.max_payload_bytes_sanction_notice",      "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_SANCTION_NOTICE",      "int"),
+  ("federation.inbound.max_payload_bytes_trust_attestation",    "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_TRUST_ATTESTATION",    "int"),
+  ("federation.inbound.per_actor_attestation_rate_per_hour",    "DEFAULT_FEDERATION_INBOUND_PER_ACTOR_ATTESTATION_RATE_PER_HOUR",    "int"),
+  ("federation.inbound.per_peer_rate_per_hour",                 "DEFAULT_FEDERATION_INBOUND_PER_PEER_RATE_PER_HOUR",                 "int"),
+  ("federation.inbound.per_peer_storage_cap",                   "DEFAULT_FEDERATION_INBOUND_PER_PEER_STORAGE_CAP",                   "int"),
+  ("federation.inbound.replay_cleanup_cron_interval_minutes",   "DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES",   "int"),
+  ("federation.inbound.replay_window_days",                     "DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS",                     "int"),
+  ("federation.inbound.summary_max_chars",                      "DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS",                      "int"),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -1575,6 +1636,11 @@ pub const EXPECTED_SEED_COUNT_V1_RT_LOGICAL: usize = 29;
 /// parity-test correctness. Parametric per advisor directive 2026-04-19 #4.
 pub const EXPECTED_SEED_COUNT_V1_RT: usize = EXPECTED_SEED_COUNT_V1_RT_NETNEW;
 
+/// v1-federation-inbound-a adds 11 federation.inbound.* keys to
+/// `SEEDED_KEYS_WITH_CONSTS`. Parametric per advisor directive 2026-04-19 #4.
+/// Parity test adds this to the running sum alongside prior `EXPECTED_SEED_COUNT_V1_*`.
+pub const EXPECTED_SEED_COUNT_V1_FED_IN: usize = 11;
+
 /// Enum variants for `federation.quarantine_recommendation_severity_floor`.
 const ENUM_SEVERITY_FLOOR: &[&str] = &["minor", "moderate", "severe"];
 
@@ -1598,6 +1664,11 @@ const ENUM_SPONSOR_GATE_STRATEGY: &[&str] = &["age", "reputation", "allowlist"];
 /// sponsor to revoke; `majority_revocation` requires >50%.
 const ENUM_MULTI_SPONSOR_ESCAPE_RULE: &[&str] =
   &["any_revocation", "all_revocation", "majority_revocation"];
+
+/// Enum variants for `federation.inbound.default_trust_for_new_peers`
+/// (v1-federation-inbound-a key). Per PRD §4.1 + §4.2 trust-state table.
+pub const ENUM_FEDERATION_PEER_TRUST: &[&str] =
+  &["unknown", "untrusted_receive", "blocklisted"];
 
 /// Compile-time metadata for every seeded `governance_config` key. Length
 /// must equal `SEEDED_KEYS_WITH_CONSTS.len()` (enforced by
@@ -3153,6 +3224,139 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     description: "Gate for the v1 per-dimension chained-halving decay calculator; false keeps v0 decay path.",
     doc_anchor: "v1-reputation-tuning.prd.md section 8",
   },
+  // ---- v1-federation-inbound-a keys (11) ------------------------------------
+  ConfigKeyMetadata {
+    key: "federation.inbound.default_trust_for_new_peers",
+    value_type: ValueType::Enum,
+    valid_range: None,
+    valid_enum: Some(ENUM_FEDERATION_PEER_TRUST),
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Default trust state assigned to newly-seen federation peers (unknown / untrusted_receive / blocklisted).",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.per_peer_rate_per_hour",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 100_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum inbound governance activities accepted from a single remote instance per hour.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.per_actor_attestation_rate_per_hour",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 10_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum trust attestation activities accepted from a single remote actor per hour.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.per_peer_storage_cap",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 100.0, max: 1_000_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum rows retained per remote instance in the inbound queue; oldest evicted when cap is reached.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.max_payload_bytes_sanction_notice",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1_024.0, max: 1_048_576.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum serialised byte size of an inbound sanction-notice AP activity; oversized payloads are dropped.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.max_payload_bytes_trust_attestation",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1_024.0, max: 65_536.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum serialised byte size of an inbound trust-attestation AP activity; oversized payloads are dropped.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.max_payload_bytes_moderation_label",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1_024.0, max: 65_536.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum serialised byte size of an inbound moderation-label AP activity; oversized payloads are dropped.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.replay_window_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Replay-protection deduplication window (days); activity IDs seen within this window are rejected.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.replay_cleanup_cron_interval_minutes",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 5.0, max: 1_440.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Interval (minutes) at which the replay-dedup cleanup cron purges expired rows; pinned at startup.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.summary_max_chars",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 256.0, max: 32_000.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Maximum character length of the `summary` field stored from an inbound governance activity.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
+  ConfigKeyMetadata {
+    key: "federation.inbound.admin_review_default_filter_days",
+    value_type: ValueType::Int,
+    valid_range: Some(NumericRange { min: 0.0, max: 365.0 }),
+    valid_enum: None,
+    scope: ConfigScope::Instance,
+    requires_re_jury: false,
+    requires_step_up: false,
+    apply_at_default: ApplyAt::Immediate,
+    description: "Default date-range filter (days) shown in the admin inbound-queue review UI.",
+    doc_anchor: "v1-federation-inbound.prd.md§10",
+  },
 ];
 
 
@@ -3172,13 +3376,15 @@ mod parity {
       + EXPECTED_SEED_COUNT_V1_AD
       + EXPECTED_SEED_COUNT_V1_JM
       + EXPECTED_SEED_COUNT_V1_SL
-      + EXPECTED_SEED_COUNT_V1_RT_NETNEW;
+      + EXPECTED_SEED_COUNT_V1_RT_NETNEW
+      + EXPECTED_SEED_COUNT_V1_FED_IN;
     assert_eq!(
       SEEDED_KEYS_WITH_CONSTS.len(),
       expected,
       "SEEDED_KEYS_WITH_CONSTS length ({}) must equal EXPECTED_SEED_COUNT ({}) + \
        EXPECTED_SEED_COUNT_V1_AD ({}) + EXPECTED_SEED_COUNT_V1_JM ({}) + \
-       EXPECTED_SEED_COUNT_V1_SL ({}) + EXPECTED_SEED_COUNT_V1_RT_NETNEW ({}) = {} \
+       EXPECTED_SEED_COUNT_V1_SL ({}) + EXPECTED_SEED_COUNT_V1_RT_NETNEW ({}) + \
+       EXPECTED_SEED_COUNT_V1_FED_IN ({}) = {} \
        — add/remove keys in both places when changing the seed list",
       SEEDED_KEYS_WITH_CONSTS.len(),
       EXPECTED_SEED_COUNT,
@@ -3186,6 +3392,7 @@ mod parity {
       EXPECTED_SEED_COUNT_V1_JM,
       EXPECTED_SEED_COUNT_V1_SL,
       EXPECTED_SEED_COUNT_V1_RT_NETNEW,
+      EXPECTED_SEED_COUNT_V1_FED_IN,
       expected,
     );
   }
