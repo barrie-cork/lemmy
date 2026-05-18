@@ -15090,17 +15090,15 @@ mod v1_sl_e_fixtures {
 
 mod v1_federation_inbound_a_fixtures {
   use super::*;
-  use diesel_async::{AsyncPgConnection, RunQueryDsl};
-  use diesel::{ExpressionMethods, QueryDsl};
-  use lemmy_db_schema::{
-    newtypes::InstanceId,
-    source::governance::federation_peer::{
-      federation_inbox_check_peer_trust,
-      FederationPeerInsertForm,
-    },
+  use diesel::ExpressionMethods;
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_db_schema::source::governance::federation_peer::{
+    federation_inbox_check_peer_trust,
+    FederationPeerInsertForm,
   };
   use lemmy_db_schema_file::enums::FederationPeerTrust;
   use lemmy_db_schema_file::schema::{federation_peer, instance};
+  use lemmy_db_schema_file::InstanceId;
   use lemmy_utils::error::LemmyResult;
 
   async fn seed_federation_peer(
@@ -15131,11 +15129,8 @@ mod v1_federation_inbound_a_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn federation_peer_trust_lookup_returns_seeded_state() -> LemmyResult<()> {
-    let (_container, host_port) = governance_fixtures::start_postgres_with_migrations()
-      .await
-      .map_err(|e| LemmyErrorType::Unknown(format!("{e}")))?;
-    let db_url = governance_fixtures::db_url(host_port);
-    let mut conn = governance_fixtures::async_conn(&db_url).await?;
+    let (_container, _context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
     let _instance_id =
       seed_federation_peer(&mut conn, "allowlisted.test", FederationPeerTrust::Allowlisted).await?;
     let trust = federation_inbox_check_peer_trust("allowlisted.test", &mut conn).await?;
@@ -15145,11 +15140,8 @@ mod v1_federation_inbound_a_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn federation_peer_trust_lookup_returns_unknown_for_first_seen() -> LemmyResult<()> {
-    let (_container, host_port) = governance_fixtures::start_postgres_with_migrations()
-      .await
-      .map_err(|e| LemmyErrorType::Unknown(format!("{e}")))?;
-    let db_url = governance_fixtures::db_url(host_port);
-    let mut conn = governance_fixtures::async_conn(&db_url).await?;
+    let (_container, _context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
     let trust = federation_inbox_check_peer_trust("unknown-peer.test", &mut conn).await?;
     assert_eq!(trust, FederationPeerTrust::Unknown);
     Ok(())
