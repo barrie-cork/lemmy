@@ -14,31 +14,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 270,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-18T21:26:27Z",
-      "question": "Laptop advisor: run workspace validation for fix-cr-1 worker branch (Shape G suspended until 2026-06-01)",
-      "options": [
-        "run-laptop-validation",
-        "skip"
-      ],
-      "context": "fix(v1-federation-inbound-a) commit df6eee91b pushed to worker branch. 7 CR/Copilot fix-in-pr findings addressed. lemmy_db_schema passes full cargo-check; lemmy_email has pre-existing build script failure unrelated to our changes.",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-check.sh --workspace",
-        "bash scripts/brehon/cargo-test.sh --workspace --test e2e --no-run --features full"
-      ],
-      "branch": "junior/role-impl-task-fed-in-a-fix-cr-1-see-claude-prps-briefs-federation-inbound-a-fix-cr-1-md-329",
-      "phase_task": "fix-cr-1",
-      "answer": null,
-      "answered_by": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -4290,6 +4265,31 @@
       "answer": "RESOLVED (advisor-self, kind:log for retro-harvest). bm-poll-cr brief §4 instructs: source: coderabbit for ALL automated-review findings; reviewer: coderabbit (CR) | copilot (Copilot); cr_url = comment html_url. ACTION FOR RETRO: amend .claude/PRPs/reviews/SCHEMA.md to document the `reviewer:` additive discriminator field + note that Copilot findings use source: coderabbit + reviewer: copilot. This is a schema-doc amendment, not a behavior change. Promote to a lesson if Copilot reviews recur across phases (likely — Copilot auto-reviews every PR).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T20:48:50.768297Z"
+    },
+    {
+      "id": 270,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T21:26:27Z",
+      "question": "Laptop advisor: run workspace validation for fix-cr-1 worker branch (Shape G suspended until 2026-06-01)",
+      "options": [
+        "run-laptop-validation",
+        "skip"
+      ],
+      "context": "fix(v1-federation-inbound-a) commit df6eee91b pushed to worker branch. 7 CR/Copilot fix-in-pr findings addressed. lemmy_db_schema passes full cargo-check; lemmy_email has pre-existing build script failure unrelated to our changes.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-check.sh --workspace",
+        "bash scripts/brehon/cargo-test.sh --workspace --test e2e --no-run --features full"
+      ],
+      "branch": "junior/role-impl-task-fed-in-a-fix-cr-1-see-claude-prps-briefs-federation-inbound-a-fix-cr-1-md-329",
+      "phase_task": "fix-cr-1",
+      "answer": "validate-pending-laptop PASS @ phase tip ea930b25e (fix-cr-1 df6eee91b). cmd0 cargo-check --workspace --features full EXIT_0; cmd1 cargo-check --workspace EXIT_0 (cfg(feature=full) gate clean); cmd2 cargo-test --test e2e --no-run --features full EXIT_0 (e2e linked, test profile 5m30s). lemmy_email compiled clean (worker's pre-existing build-script fail did not recur). Log C:/Users/barri/.claude/logs/validate-laptop-270.log markers CHAIN_ALL_PASS.",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": "2026-05-18T21:45:47.881361Z"
     }
   ],
   "schema_version": 2
