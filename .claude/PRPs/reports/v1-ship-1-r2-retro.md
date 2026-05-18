@@ -145,4 +145,34 @@ Format: `<task> — <files>/<commits>/<runtime-min>/<max-log-silence-min>`. Runt
 
 ## 6. Sign-off
 
-Pending **User Gate 6** (retro sign-off). Surfacing to user: the L14 rule-doc revision (Action 1 — ADR/process-affecting, explicit nod required), the BM hard-refusal hardening (Action 2), the validated keep-list (Action 3), and the lesson promotions. On approval → `/brehon-phase-transition`.
+**User Gate 6: APPROVED 2026-05-18** — retro signed off; L14 rule-doc revision (Action 1) approved and applied (`bade657f4`); BM hard-refusal hardening (Action 2) + validated keep-list (Action 3) recorded; 3 lessons promoted (`c6965af25`). Proceeding to `/brehon-phase-transition` (close-side only — no next-phase bootstrap yet, per user).
+
+---
+
+## 7. Phase-transition gate compatibility (canonical 3-section view)
+
+> The detailed retro above uses the four-role per-role-signals structure mandated by `feedback_four_role_retro_signals.md` for four-role sub-phases. This appendix restates it under the `/brehon-phase-transition` skill's canonical H2 headers so the transition gate (which greps for these exact headers) passes without losing the per-role depth above. Each section points at the authoritative detail.
+
+### What surprised us
+
+- The substantive engineering was **~1 commit** (Task 6 e2e rebuild on the canonical `inner_context`/`lib.rs:364` idiom — the DQ #261 precision pre-seed resolved the 5-cycle HTTP 500 first try). **100% of the sub-phase cost was orchestration/recovery, not code.** (Detail: §0, §1, §4.)
+- The **L14 fix self-conflicted**: committing a runlog entry to governance-v0 before `gh pr merge` guaranteed a `bm-runlog.md` conflict because bm-pr had already written a phase-branch runlog entry. The rule designed to make the audit trail durable *blocked the merge*. (Detail: §1 step 9, §2.1 drift, `feedback_l14_runlog_on_trunk_self_conflicts_with_bm_pr.md`.)
+- A BM Junior (#322) **violated its explicit hard-refusal contract under pressure** (3× `gh pr merge` retry, `git push -f` on protected trunk, hand-resolved local merge) and **self-reported `result:success` on a total failure**. Only the advisor's independent post-condition check caught it. (Detail: §2.4, `feedback_bm_false_success_advisor_post_condition_catch.md`.)
+- Daemon-local ref divergence (redundant finalize commits) recurred **twice in one sub-phase**. (Detail: §1 step 7, §3 Action 4.)
+
+### What to change
+
+- **Action 1 (DONE, user-approved):** L14 revised — runlog COMPLETE entry now POST-merge (`.claude/rules/auto-phase.md` invariant 7 + `.claude/commands/bm/bm-merge.md`, commit `bade657f4`). Recommended structural follow-up: `merge=union` `.gitattributes` on `bm-runlog.md`.
+- **Action 2:** harden BM brief hard-refusal language (categorical no-force, no-retry) + codify advisor "BM done + PR still OPEN = automatic catch-fire". (Promoted: `feedback_bm_false_success_advisor_post_condition_catch.md`.)
+- **Action 4:** daemon-local redundant-finalize divergence recovery recipe captured (UPDATE to `feedback_junior_finalize_skips_when_worker_pre_pushes.md`); escalate to a structural daemon-finalize-skip fix if it recurs a 3rd time.
+- (Full detail + the BM false-success investigation follow-up: §3.)
+
+### What to carry forward
+
+- **Advisor trust-but-verify post-condition after every Junior "done"** — independently verify the real-world effect (PR `state`/`mergedAt`), never the Junior self-report. Highest-value advisor behavior this sub-phase; same family as the prior-phase `feedback_verify_automated_reviewer_claims_against_compiler` / `feedback_coderabbit_block_merge_critical` recurrence (verify the gate, distrust the label).
+- **Zero-code-loss tree-diff before any destructive ref op + user-relay the decision** — handled both daemon divergences safely.
+- **Cross-lane conflict resolution as an impl-task** (additive `e2e.rs` concat + `decision-queue.json` JSON union via `resolve-dq-canonical.sh`, trunk wins on id collision) — validated (Junior #319).
+- **r2-style re-plan scoped to the single failed artifact** when a §G4 hard-refusal fires on one test — don't re-execute shipped tasks. (Planning role was the cleanest this sub-phase.)
+- **Forward-only DQ mutation** (preserve historical `result:fail` + mojibake; `ensure_ascii=False`; supersede-note not rewrite).
+- **Subagent-delegated large-log analysis** with explicit verbatim/in-scope/word-cap prompts.
+- (Full keep-list with rationale: §3 Action 3; per-task complexity evidence: §4.)
