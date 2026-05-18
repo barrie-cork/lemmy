@@ -259,7 +259,12 @@ CANON_PMD="C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db"
 # 1. (only if a new lesson was promoted) sync it into PMD first.
 #    --db <canonical> is mandatory from a lane worktree (the script's
 #    legacy fallback is lane-local and WILL strand — see 53b1a52c1).
-bash scripts/sync-lessons-to-pmd.sh --db "$CANON_PMD"
+#    --strict makes a lane-local resolution a HARD FAIL (exit 3) rather
+#    than a non-fatal WARN this automated retro step might not surface
+#    — defence-in-depth on the explicit --db (per the same incident's
+#    "What to change" #3). If this exits 3, the --db path above is
+#    wrong; fix it and re-run — do NOT proceed to backfill.
+bash scripts/sync-lessons-to-pmd.sh --db "$CANON_PMD" --strict
 
 # 2. Precondition check — Ollama reachable (silent-degrade trap):
 curl -s -m5 http://homeserver:11434/api/tags >/dev/null \

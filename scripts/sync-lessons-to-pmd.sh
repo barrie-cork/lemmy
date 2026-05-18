@@ -35,11 +35,19 @@
 #   bash scripts/sync-lessons-to-pmd.sh         # only correct from the canonical checkout
 #   bash scripts/sync-lessons-to-pmd.sh --dry-run  # show what would be imported
 #   bash scripts/sync-lessons-to-pmd.sh --verbose  # show every action
+#   bash scripts/sync-lessons-to-pmd.sh --strict   # FAIL (exit 3) instead of WARN if
+#                                                  # the resolved DB is lane-local.
+#                                                  # MANDATORY for automated callers
+#                                                  # (e.g. session-retro Step 5.5) — a
+#                                                  # non-fatal WARN can strand silently
+#                                                  # when stderr is not surfaced.
 #
 # Exit codes:
 #   0  — success (some new lessons imported, or all already present)
 #   1  — DB unreachable, lessons dir missing, or sqlite3 not on PATH
 #   2  — frontmatter parse error on at least one file (other lessons still imported)
+#   3  — --strict set AND the resolved DB is lane-local (refused to strand;
+#         re-run with --db <canonical>). Default (no --strict) WARNs and continues.
 
 set -euo pipefail
 
@@ -74,15 +82,17 @@ DB=""
 LESSONS_DIR="${REPO_ROOT}/.claude/lessons"
 DRY_RUN=0
 VERBOSE=0
+STRICT=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --verbose) VERBOSE=1 ;;
+    --strict) STRICT=1 ;;
     --db) shift; DB="${1:?--db requires a path}" ;;
     --db=*) DB="${1#--db=}" ;;
     -h|--help)
-      sed -n '1,30p' "${BASH_SOURCE[0]}"
+      sed -n '1,40p' "${BASH_SOURCE[0]}"
       exit 0
       ;;
     *)
@@ -98,16 +108,33 @@ if [ -z "$DB" ]; then
   DB="${PROJECT_MEMORY_DB:-${REPO_ROOT}/.project-memory/memory.db}"
 fi
 
-# Sanity check: warn loudly if the resolved DB is under a lane worktree
-# (brehon-fork-<something>) rather than the canonical brehon-fork checkout.
-# A lane-local DB target is the v1-ship-1-r2 stranding bug class.
+# Sanity check: the resolved DB must NOT be under a lane worktree
+# (brehon-fork-<something>) — that is the v1-ship-1-r2 stranding bug
+# class (lessons synced there are invisible to the Stop hook +
+# memory_search_hybrid, which read the canonical brehon-fork DB).
+#
+# Default (no --strict): WARN loudly and continue (back-compat — a
+# human reading stderr sees it and can re-run).
+# --strict: FAIL (exit 3) instead of WARN. Required when an AUTOMATED
+# caller invokes the sync (e.g. session-retro Step 5.5) — an automated
+# caller may not surface stderr, so a non-fatal WARN can strand
+# silently exactly as it did on 2026-05-18. A hard exit cannot be
+# ignored. Per session-retro-2026-05-18-pmd-stranding-remediation.md
+# "What to change" #3 + feedback_pmd_backfill_after_write.md ("a WARN
+# gets ignored by automation").
 case "$DB" in
   *brehon-fork-*/.project-memory/*)
     echo "WARN: resolved DB is LANE-LOCAL ($DB)." >&2
     echo "WARN: per multi-lane-worktree.md the PMD is cross-lane — lessons synced here" >&2
     echo "WARN: will be stranded (invisible to the Stop hook + memory_search_hybrid)." >&2
     echo "WARN: pass --db <canonical> or export PROJECT_MEMORY_DB to the canonical" >&2
-    echo "WARN: brehon-fork/.project-memory/memory.db. Continuing anyway (non-fatal)." >&2
+    echo "WARN: brehon-fork/.project-memory/memory.db." >&2
+    if [ "$STRICT" -eq 1 ]; then
+      echo "ERROR: --strict set and resolved DB is lane-local — refusing to strand." >&2
+      echo "ERROR: re-run with --db C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db" >&2
+      exit 3
+    fi
+    echo "WARN: Continuing anyway (non-fatal — pass --strict to make this fatal)." >&2
     ;;
 esac
 
