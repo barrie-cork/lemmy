@@ -85,6 +85,7 @@ pub async fn federation_peer_upsert_trust(
     .do_update()
     .set((
       federation_peer::trust_level.eq(trust_level),
+      federation_peer::added_by_actor.eq(added_by_actor.map(String::from)),
       federation_peer::updated_at.eq(diesel::dsl::now),
     ))
     .returning(FederationPeer::as_returning())
