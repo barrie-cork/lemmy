@@ -1333,3 +1333,50 @@ pass → /brehon-verify → bm-pr → CR → gates 3/5/6 → bm-merge → Task 5
 retro → /brehon-phase-transition. A NEW-surface failure after fix-impl-8
 = surface + WAIT user; a 2nd same actix-Data-500 = §G4 hard-refusal
 re-plan.
+
+## advisor: fix-impl-8 #306 verified+cherry-picked → tip 34e81df49; DQ #253 advisor-resolved (option b)
+
+Junior #306 `done` (run #1 00:57:18→01:04:02, ~7min). VERIFY-BEFORE-TRUST
+PASSED: worker branched from `c4f510840` (CAS-sync worked — NO multi-lane
+ref-isolation gap this dispatch). e2e.rs diff = EXACTLY brief-compliant:
+e2e.rs-only **+12** — (a) 2 imports `use
+activitypub_federation::config::FederationMiddleware;` + `use
+lemmy_routes::middleware::idempotency::{IdempotencyMiddleware,
+IdempotencySet};`; (b) `FederationConfig::builder()` byte-for-byte
+mirroring the canonical in-file idiom e2e.rs:2361-2368 (bare `?`,
+`.domain(context.settings().hostname.clone()).app_data((**context).clone())
+.debug(true).http_fetch_limit(0).build().await?`); (c) `.wrap(
+FederationMiddleware::new(federation_config.clone()))` then
+`.wrap(IdempotencyMiddleware::new(IdempotencySet::default()))` AHEAD of
+the existing `.wrap(SessionMiddleware::new((**context).clone()))` —
+exact lib.rs:380-382 order. fix-impl-6 Part A/B + fix-impl-7 use +
+.app_data line + (**context).clone() deref preserved byte-identical; no
+production/api/db_schema/other-fn change; passing sibling + canonical
+builder sites untouched. HANDOVER trailer accurate.
+
+Finalize: `git cherry-pick -x 5378453c1` (code commit ONLY) → lane tip
+**34e81df49** (e2e.rs-only +12). The worker's `cdcc3a063`
+DQ-on-stale-base + its stale-base decision-queue.json delta deliberately
+EXCLUDED — lane DQ stays canonical.
+
+DQ #253 (worker raised `kind:blocker`): worker's pre-push
+`cargo-check --workspace --features full` exit 101 — `lemmy_email`
+build.rs `read_dir('translations/backend/')` fails on the Junior
+worktree (submodule not initialized; symlink blocked by worktree-guard
+hook). Known feedback_worktree_submodules_not_auto_init /
+feedback_phase_lane_worktree_bootstrap_checklist gap. Worker correctly
+refused to #[allow]-spam or symlink-hack (brief §4 + fix_impl_pre_push_cargo_check
+escape-hatch compliance — desired behaviour). Raised lane-canonically as
+DQ #253 (lane next_id; worker's stale-base #253 never entered lane) and
+**advisor-resolved option (b)**: Shape G suspended (DQ #229) → §5.2
+Phase-1 runs on the canonical checkout (submodule initialized there;
+same path that validated DQ #250). The authoritative compile/clippy
+gate is §5.2 Phase-1 (a real cargo run, not a trust-fall). Worker's
+pre-push failure = environmental artifact, NOT a code defect; does NOT
+block the lane. post-finalize DQ-resurrection re-assert PASSED (lane
+pending [229,242,244,246,248,251]; #251 fail-pending; #252/#253 resolved;
+#250 pass). Carry-forward Task 5: Junior worktree per-task bootstrap
+needs submodule init (or pre-push gate should skip lemmy_email when its
+submodule is absent on a worktree).
+
+Next: §5.2 Phase-1 on merged tip 34e81df49 (canonical checkout).
