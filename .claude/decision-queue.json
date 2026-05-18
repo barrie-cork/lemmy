@@ -149,31 +149,6 @@
       "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-18T00:50:16Z"
-    },
-    {
-      "id": 254,
-      "from": "advisor",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-18T01:12:44Z",
-      "question": "§5.2 Phase-1 (workspace check) for fix-impl-8 merged tip 34e81df49 — the full real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App). Run the 3 §15 DoD commands on the canonical checkout (lemmy_email submodule initialized there — the authoritative gate; the worker's pre-push exit-101 was a worktree-submodule-missing artifact, DQ #253). cmd3 (cargo-test --no-run) must compile clean.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-8 cherry-picked code-only onto phase-v1-ship-1 at 34e81df49 (worker commit 5378453c1 -x; worker's stale-base DQ delta + #253-on-stale-base excluded — lane DQ canonical). verify-before-trust PASSED: e2e.rs-only +12 — (a) 2 imports (use activitypub_federation::config::FederationMiddleware; + use lemmy_routes::middleware::idempotency::{IdempotencyMiddleware, IdempotencySet};); (b) FederationConfig::builder() byte-for-byte mirroring the canonical in-file idiom e2e.rs:2361-2368 (bare ?, .domain(context.settings().hostname.clone()).app_data((**context).clone()).debug(true).http_fetch_limit(0).build().await?); (c) .wrap(FederationMiddleware::new(federation_config.clone())) then .wrap(IdempotencyMiddleware::new(IdempotencySet::default())) AHEAD of the existing .wrap(SessionMiddleware::new((**context).clone())) — exact lib.rs:380-382 order. fix-impl-6 Part A/B + fix-impl-7 use + .app_data line + (**context).clone() deref preserved byte-identical; no production/api/db_schema/other-fn change; passing sibling + canonical builder sites untouched. DQ #253 advisor-resolved option (b): §5.2 Phase-1 on the canonical checkout C:/Users/barri/Developer/brehon-fork (where crates/email/translations/backend/ EXISTS — submodule initialized at a3f9e4669; same path that validated DQ #250). Phase-1 cmds: (1) cargo-check --workspace --features full, (2) cargo-clippy --workspace --features full --no-deps -- -D warnings, (3) cargo-test --no-run -p lemmy_server --test e2e (must compile clean — the new FederationConfig builder + 2 middleware wraps must type-check; canonical idiom mirror so expected clean). On all 3 PASS -> §5.2 Phase-2 e2e (local, USER GATE 4 cached). DQ #242/#244/#246/#251 stay fail-pending until the Phase-2 e2e agpl test passes.",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-check.bat --workspace --features full",
-        "cmd //c scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings",
-        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -4285,6 +4260,31 @@
       "answer": "ADVISOR-RESOLVED (answered_by: advisor; clear evidence + defensible + no ADR/scope/visible-to-others impact — this is documented standing procedure, not judgment-heavy): option (b). Shape G is suspended repo-wide (DQ #229) until 2026-06-01, so ALL §5.2 Phase-1 validation runs on the canonical checkout C:/Users/barri/Developer/brehon-fork via the validate-pending-laptop handler — which is exactly the path that validated DQ #250 (fix-impl-7b Phase-1) and every prior Phase-1 this phase. The Junior worktree's missing lemmy_email submodule is the known feedback_worktree_submodules_not_auto_init / feedback_phase_lane_worktree_bootstrap_checklist gap; initializing it on the worker (option a) is unnecessary churn and the worktree-guard hook blocks the symlink workaround anyway; option (c) is subsumed by (b). The advisor has independently VERIFIED the fix-impl-8 code is brief-compliant and syntactically correct (cherry-picked -x as 34e81df49: e2e.rs-only +12, the 2 imports + the canonical FederationConfig builder mirroring e2e.rs:2361-2368 + the 2 .wrap lines in lib.rs:380-382 order, fix-impl-6 Part A/B + fix-impl-7 use + .app_data + (**context).clone() preserved byte-identical). The authoritative compile/clippy gate is §5.2 Phase-1 on the canonical checkout, which genuinely catches any compilation error (it is a real cargo run, not a trust-fall). Proceeding to §5.2 Phase-1 validate-pending-laptop on the merged lane tip 34e81df49 (canonical checkout). The worker's pre-push gate failure is an environmental artifact of the under-bootstrapped Junior worktree, NOT a code defect, and does NOT block the lane. Carry-forward for Task 5 retro: Junior worktrees need submodule init in the per-task bootstrap (or the pre-push cargo-check gate should skip lemmy_email when its submodule is absent on a worktree) — the worker's correct blocker-raise (no #[allow]-spam) is the desired behaviour and validates the fix_impl_pre_push_cargo_check gate's escape hatch.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T01:10:52Z"
+    },
+    {
+      "id": 254,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T01:12:44Z",
+      "question": "§5.2 Phase-1 (workspace check) for fix-impl-8 merged tip 34e81df49 — the full real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App). Run the 3 §15 DoD commands on the canonical checkout (lemmy_email submodule initialized there — the authoritative gate; the worker's pre-push exit-101 was a worktree-submodule-missing artifact, DQ #253). cmd3 (cargo-test --no-run) must compile clean.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-8 cherry-picked code-only onto phase-v1-ship-1 at 34e81df49 (worker commit 5378453c1 -x; worker's stale-base DQ delta + #253-on-stale-base excluded — lane DQ canonical). verify-before-trust PASSED: e2e.rs-only +12 — (a) 2 imports (use activitypub_federation::config::FederationMiddleware; + use lemmy_routes::middleware::idempotency::{IdempotencyMiddleware, IdempotencySet};); (b) FederationConfig::builder() byte-for-byte mirroring the canonical in-file idiom e2e.rs:2361-2368 (bare ?, .domain(context.settings().hostname.clone()).app_data((**context).clone()).debug(true).http_fetch_limit(0).build().await?); (c) .wrap(FederationMiddleware::new(federation_config.clone())) then .wrap(IdempotencyMiddleware::new(IdempotencySet::default())) AHEAD of the existing .wrap(SessionMiddleware::new((**context).clone())) — exact lib.rs:380-382 order. fix-impl-6 Part A/B + fix-impl-7 use + .app_data line + (**context).clone() deref preserved byte-identical; no production/api/db_schema/other-fn change; passing sibling + canonical builder sites untouched. DQ #253 advisor-resolved option (b): §5.2 Phase-1 on the canonical checkout C:/Users/barri/Developer/brehon-fork (where crates/email/translations/backend/ EXISTS — submodule initialized at a3f9e4669; same path that validated DQ #250). Phase-1 cmds: (1) cargo-check --workspace --features full, (2) cargo-clippy --workspace --features full --no-deps -- -D warnings, (3) cargo-test --no-run -p lemmy_server --test e2e (must compile clean — the new FederationConfig builder + 2 middleware wraps must type-check; canonical idiom mirror so expected clean). On all 3 PASS -> §5.2 Phase-2 e2e (local, USER GATE 4 cached). DQ #242/#244/#246/#251 stay fail-pending until the Phase-2 e2e agpl test passes.",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-check.bat --workspace --features full",
+        "cmd //c scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings",
+        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "result": "pass",
+      "log_slice": "§5.2 Phase-1 on fix-impl-8 merged tip 34e81df49 (canonical checkout, submodule initialized — DQ #253 option b) — ALL 3 PASS:\ncmd1 cargo-check --workspace --features full = PASS (1m27s, CMD1_EXIT_0, 0 errors/warnings, lemmy_server checked clean)\ncmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings = PASS (2m03s, CMD2_EXIT_0, 0 clippy errors/warnings)\ncmd3 cargo-test --no-run -p lemmy_server --test e2e = PASS (2m01s, CMD3_EXIT_0, 0 error[E*], 0 error[E0308], Executable tests\\e2e.rs target\\debug\\deps\\e2e-aebb6c76db6b1818.exe — e2e test binary compiled+linked). The fix-impl-8 FederationConfig builder (mirroring canonical e2e.rs:2361-2368) + the FederationMiddleware + IdempotencyMiddleware wraps + IdempotencySet::default() all type-check cleanly. The worker's pre-push exit-101 (DQ #253) was a Junior-worktree lemmy_email submodule-missing artifact, confirmed NOT a code defect — the canonical-checkout authoritative gate is green. Phase-1 green; Phase-2 e2e is the runtime test of whether the full-middleware-stack mirror resolves the agpl /api/v4/site 500.",
+      "failed_commands": null,
+      "answer": "§5.2 Phase-1 PASS for fix-impl-8 #306 merged tip 34e81df49. All 3 DoD commands clean on the canonical checkout (cargo-check 1m27s 0err / clippy -D warnings 2m03s 0err / cargo-test --no-run 2m01s 0err — e2e test binary compiled+linked, 0 E0308). The full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App, FederationConfig built via the canonical in-file idiom e2e.rs:2361-2368) type-checks. DQ #253's worktree-submodule blocker confirmed an environmental artifact (canonical checkout builds clean — the authoritative gate). Proceeding to §5.2 Phase-2 e2e (local, USER GATE 4 cached). DQ #242/#244/#246 (the prior agpl /api/v4/site-500 fails) + #251 (fix-impl-7b Phase-2 actix-Data-500) stay fail-pending until the Phase-2 e2e agpl test passes. DQ #248 (fix-impl-7 E0308) stays fail-pending (historical record).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T01:21:08Z"
     }
   ]
 }

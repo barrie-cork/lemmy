@@ -1380,3 +1380,37 @@ needs submodule init (or pre-push gate should skip lemmy_email when its
 submodule is absent on a worktree).
 
 Next: §5.2 Phase-1 on merged tip 34e81df49 (canonical checkout).
+
+## advisor: §5.2 Phase-1 ALL GREEN on fix-impl-8 tip 34e81df49 (DQ #254 pass)
+
+§5.2 Phase-1 on the canonical checkout (C:/Users/barri/Developer/
+brehon-fork, detached @ 34e81df49; lemmy_email submodule initialized —
+DQ #253 option b authoritative gate). All 3 DoD commands PASS:
+
+- **cmd1** `cargo-check --workspace --features full` = PASS (1m27s,
+  CMD1_EXIT_0, 0 errors/warnings, lemmy_server checked clean)
+- **cmd2** `cargo-clippy --workspace --features full --no-deps -- -D
+  warnings` = PASS (2m03s, CMD2_EXIT_0, 0 clippy errors/warnings)
+- **cmd3** `cargo-test --no-run -p lemmy_server --test e2e` = PASS
+  (2m01s, CMD3_EXIT_0, **0 error[E*], 0 error[E0308]**, `Executable
+  tests\e2e.rs target\debug\deps\e2e-aebb6c76db6b1818.exe` — e2e test
+  binary compiled+linked)
+
+The fix-impl-8 `FederationConfig` builder (mirroring canonical
+e2e.rs:2361-2368 byte-for-byte) + `FederationMiddleware` +
+`IdempotencyMiddleware` wraps + `IdempotencySet::default()` all
+type-check cleanly. **DQ #253's worktree-submodule blocker confirmed an
+environmental artifact** — the canonical-checkout authoritative gate is
+green; the worker's pre-push exit-101 was NOT a code defect.
+
+`DQ #254` mutated `result: "pass"` → resolved[] (answered_by=
+advisor-laptop). post-finalize DQ-resurrection re-assert PASSED: lane
+pending [229,242,244,246,248,251]; #251 fail-pending (fix-impl-7b
+Phase-2 actix-Data-500); #248/#242/#244/#246 fail-pending; #252/#253
+resolved; #243/#245/#250/#254 pass-resolved; #247/#249/#252
+answered_by=user; no dup ids.
+
+Next: §5.2 Phase-2 e2e (USER GATE 4 cached = local) — the RUNTIME test
+of whether the full-real-server-middleware-stack mirror resolves the
+agpl /api/v4/site 500. raise-before-execute a validate-pending-laptop-e2e
+DQ, then cargo-test --workspace --test e2e --features full bg.
