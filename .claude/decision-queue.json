@@ -14,6 +14,24 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 267,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T17:14:32.069925Z",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": 9,
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-8d78381d9.log",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "question": "Phase-2 e2e (advisor-driven, local off-Actions per gate-4 cached \"local\"): run full e2e suite on laptop for phase-v1-federation-inbound-a tip 8d78381d9 (Cohort B 4/4 complete, Task 9 = last impl task) and mutate this entry",
+      "context": "Shape G SUSPENDED until 2026-06-01; Phase-2 e2e runs locally per gate-4 pre-answered \"local\" (cached phase_2_e2e_mode, not re-asked per skill). All Cohort B §5.2 workspace-checks passed (DQ #248/#249/#251/#252/#266). Running cargo-test.bat --workspace --test e2e --features full in lane worktree; advisor mutates this entry directly on bg cargo exit (explicit E2E_EXIT marker, not bg notification)."
     }
   ],
   "resolved": [
