@@ -1,6 +1,6 @@
 use crate::newtypes::{ModerationCaseId, RemoteSanctionNoticeId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::enums::{SanctionAction, SanctionScope};
+use lemmy_db_schema_file::enums::{FederationInboxAdminAction, FederationPeerTrust, SanctionAction, SanctionScope};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::remote_sanction_notice;
 use serde::{Deserialize, Serialize};
@@ -31,6 +31,11 @@ pub struct RemoteSanctionNotice {
   pub signature: String,
   pub local_case_id: Option<ModerationCaseId>,
   pub received_at: DateTime<Utc>,
+  // v1-federation-inbound-a additions:
+  pub peer_trust_level_at_receipt: FederationPeerTrust,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: FederationInboxAdminAction,
+  pub dismissal_rationale: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -45,4 +50,20 @@ pub struct RemoteSanctionNoticeInsertForm {
   pub published_at: DateTime<Utc>,
   pub signature: String,
   pub local_case_id: Option<ModerationCaseId>,
+  // v1-federation-inbound-a additions (all Option<_> to preserve ..Default::default() caller compat):
+  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: Option<FederationInboxAdminAction>,
+  pub dismissal_rationale: Option<String>,
+}
+
+#[derive(Clone, Default)]
+#[cfg_attr(feature = "full", derive(AsChangeset))]
+#[cfg_attr(feature = "full", diesel(table_name = remote_sanction_notice))]
+pub struct RemoteSanctionNoticeUpdateForm {
+  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: Option<FederationInboxAdminAction>,
+  pub dismissal_rationale: Option<String>,
+  pub local_case_id: Option<Option<ModerationCaseId>>,
 }

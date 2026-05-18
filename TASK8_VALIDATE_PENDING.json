@@ -1,0 +1,25 @@
+{
+ "id": 252,
+ "from": "impl",
+ "kind": "validate-pending-laptop",
+ "timestamp": "2026-05-18T14:35:00Z",
+ "question": "Task 8 complete — validate cargo-check + cargo-clippy + cargo-test --test e2e --no-run against extended Phase-6 models.",
+ "options": [
+  "pass — all 3 commands green",
+  "fail — see log_slice + failed_commands"
+ ],
+ "context": "Task 8 extends remote_sanction_notice.rs (+4 model fields +4 InsertForm fields +NEW RemoteSanctionNoticeUpdateForm) and federation_attestation.rs (+6 fields each +NEW FederationAttestationUpdateForm) and inbox.rs (adds ..Default::default() spread at 2 R9 callsites). DQ #253 raised (blocker) re: e2e.rs:7451 callsite — see TASK8_ESCALATION.md. Advisor should resolve DQ #253 FIRST before running cmd 3 (--test e2e --no-run).",
+ "phase_task": 8,
+ "branch": "junior/role-impl-task-v1-federation-inbound-a-task-8-see-claude-prps-briefs-federation-inbound-a-impl-8-md-318",
+ "commands": [
+  "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task8-check.log 2>&1\"",
+  "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task8-clippy.log 2>&1\"",
+  "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-a-task8-test-norun.log 2>&1\""
+ ],
+ "result": null,
+ "log_slice": null,
+ "failed_commands": null,
+ "answer": null,
+ "answered_by": null,
+ "resolved_at": null
+}
