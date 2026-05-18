@@ -1,4 +1,4 @@
-DELETE FROM governance_config WHERE scope = 'instance' AND key IN (
+DELETE FROM governance_config WHERE scope = 'instance' AND valid_from = '2026-05-17T00:00:00Z'::timestamptz AND key IN (
   'federation.inbound.default_trust_for_new_peers',
   'federation.inbound.per_peer_rate_per_hour',
   'federation.inbound.per_actor_attestation_rate_per_hour',

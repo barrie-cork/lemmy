@@ -1,4 +1,6 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
+#[cfg(feature = "full")]
+use chrono::Duration;
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::federation_inbox_nonce;
 use serde::{Deserialize, Serialize};
@@ -36,6 +38,9 @@ pub async fn delete_older_than(
   window_days: i64,
   conn: &mut AsyncPgConnection,
 ) -> LemmyResult<usize> {
+  if window_days <= 0 {
+    return Ok(0);
+  }
   let cutoff = Utc::now() - Duration::days(window_days);
   let count = diesel::delete(
     federation_inbox_nonce::table.filter(federation_inbox_nonce::seen_at.lt(cutoff)),

@@ -1668,7 +1668,7 @@ const ENUM_MULTI_SPONSOR_ESCAPE_RULE: &[&str] =
 /// Enum variants for `federation.inbound.default_trust_for_new_peers`
 /// (v1-federation-inbound-a key). Per PRD §4.1 + §4.2 trust-state table.
 pub const ENUM_FEDERATION_PEER_TRUST: &[&str] =
-  &["unknown", "untrusted_receive", "blocklisted"];
+  &["unknown", "allowlisted", "untrusted_receive", "blocklisted"];
 
 /// Compile-time metadata for every seeded `governance_config` key. Length
 /// must equal `SEEDED_KEYS_WITH_CONSTS.len()` (enforced by
@@ -3234,7 +3234,7 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     requires_re_jury: false,
     requires_step_up: false,
     apply_at_default: ApplyAt::Immediate,
-    description: "Default trust state assigned to newly-seen federation peers (unknown / untrusted_receive / blocklisted).",
+    description: "Default trust state assigned to newly-seen federation peers (unknown / allowlisted / untrusted_receive / blocklisted).",
     doc_anchor: "v1-federation-inbound.prd.md§10",
   },
   ConfigKeyMetadata {

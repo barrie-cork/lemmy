@@ -122,16 +122,16 @@ ALTER TABLE federation_attestation
 CREATE INDEX idx_fa_admin_action ON federation_attestation (admin_action) WHERE admin_action = 'unreviewed';
 CREATE INDEX idx_fa_source ON federation_attestation (source_instance, received_at DESC) WHERE source_instance IS NOT NULL;
 
-INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text) VALUES
-  ('instance', 'federation.inbound.default_trust_for_new_peers',       'text',  NULL,   NULL,  NULL,  'unknown'),
-  ('instance', 'federation.inbound.per_peer_rate_per_hour',             'int',   100,    NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.per_actor_attestation_rate_per_hour','int',   10,     NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.per_peer_storage_cap',               'int',   10000,  NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.max_payload_bytes_sanction_notice',  'int',   65536,  NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.max_payload_bytes_trust_attestation','int',   8192,   NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.max_payload_bytes_moderation_label', 'int',   8192,   NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.replay_window_days',                 'int',   7,      NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.replay_cleanup_cron_interval_minutes','int',  60,     NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.summary_max_chars',                  'int',   8000,   NULL,  NULL,  NULL),
-  ('instance', 'federation.inbound.admin_review_default_filter_days',   'int',   7,      NULL,  NULL,  NULL)
+INSERT INTO governance_config (scope, key, value_type, value_int, value_float, value_bool, value_text, valid_from) VALUES
+  ('instance', 'federation.inbound.default_trust_for_new_peers',       'text',  NULL,   NULL,  NULL,  'unknown',  '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.per_peer_rate_per_hour',             'int',   100,    NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.per_actor_attestation_rate_per_hour','int',   10,     NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.per_peer_storage_cap',               'int',   10000,  NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.max_payload_bytes_sanction_notice',  'int',   65536,  NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.max_payload_bytes_trust_attestation','int',   8192,   NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.max_payload_bytes_moderation_label', 'int',   8192,   NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.replay_window_days',                 'int',   7,      NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.replay_cleanup_cron_interval_minutes','int',  60,     NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.summary_max_chars',                  'int',   8000,   NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz),
+  ('instance', 'federation.inbound.admin_review_default_filter_days',   'int',   7,      NULL,  NULL,  NULL,       '2026-05-17T00:00:00Z'::timestamptz)
 ON CONFLICT (scope, key, valid_from) DO NOTHING;

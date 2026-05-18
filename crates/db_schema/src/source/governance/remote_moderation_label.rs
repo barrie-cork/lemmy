@@ -52,5 +52,5 @@ pub struct RemoteModerationLabelUpdateForm {
   pub local_case_id: Option<Option<ModerationCaseId>>,
   pub admin_reviewed_at: Option<DateTime<Utc>>,
   pub admin_action: Option<FederationInboxAdminAction>,
-  pub dismissal_rationale: Option<String>,
+  pub dismissal_rationale: Option<Option<String>>,
 }
