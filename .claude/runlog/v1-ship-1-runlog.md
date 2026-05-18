@@ -1473,3 +1473,81 @@ harness (or production `setup_local_site` + a server-integration
 harness) instead of hand-assembling the actix App middleware-by-
 middleware. Awaiting user decision. NO auto-author; NO further fix-impl
 without a fresh user directive.
+
+---
+
+## advisor: §G4 re-plan path executed — investigation + r2 brief + pattern search — SESSION CLOSE 2026-05-18
+
+User directed (DQ #256, `answered_by: user`): "Advisor investigates
+first, then re-plan brief." Executed:
+
+1. **Read-only investigation COMPLETE** (Explore + ref-context + direct
+   `Read` verification). Root cause VERIFIED: the agpl test
+   hand-assembles an actix App whose `.app_data(Data::new(context))`
+   `Data<LemmyContext>` is a DIFFERENT object from the federation
+   request-data. The canonical fix is
+   `activitypub_federation::config::FederationConfig::to_request_data()`
+   — exposed as `LemmyContext::init_test_context()`
+   (`crates/api/api_utils/src/context.rs:65-100`), mirroring the real
+   server's composition `crates/server/src/lib.rs:241→247→364→379-382`
+   (the App's `context` is `federation_config.deref().clone()`, NOT an
+   independently-built one). Secondary site-row-deserialization theory
+   REFUTED (`setup_local_site.rs` + fix-impl-6 Part B already seed a
+   complete `Site`).
+
+2. **r2 planning re-plan brief authored** at
+   `.claude/PRPs/briefs/v1-ship-1-r2-planning-1.md` (commit
+   `6af9964ba`). Surgical scope: carry §13 Tasks 1-4 (the AGPL §13
+   surface — DTO field, `build.rs` commit, `get_source` route) as
+   MERGED + PROVEN (no re-impl); rebuild ONLY §10.5/§10.6/§10.7 + the
+   single agpl e2e §13 task on `to_request_data()`; planner resolves the
+   seed-pool reconciliation (Option a: seed into `init_test_context()`
+   pool / Option b: thread `governance_fixtures::bootstrap()` context
+   THROUGH `FederationConfig::builder().app_data(...).build()
+   .to_request_data()`) on source evidence; preserve fix-impl-6 Part A
+   (body-on-failure asserts) + Part B (complete `SiteInsertForm`); §15
+   → §5.2-laptop shape (Shape G suspended DQ #229). Plan file target:
+   `.claude/PRPs/plans/v1-ship-1-r2.plan.md` (do NOT overwrite
+   v1-ship-1.plan.md / v1-ship-1-r1.plan.md).
+
+3. **Systematic similar-issue-pattern search** (4 parallel read-only
+   Explore agents) — report at
+   `.claude/PRPs/reports/v1-ship-1-similar-pattern-search-2026-05-18.md`
+   (commit `65e93ca13`). Key: hand-assembled defect is ISOLATED — 11
+   sibling `to_request_data()` sites in e2e.rs prove the canonical idiom
+   (STRONGLY validates the r2 direction; §10.7 should cite an in-file
+   sibling). One live latent status-only anti-pattern (`e2e.rs:3897`,
+   post-ship hygiene). PRIMARY systemic root: `plan.template.md` §10
+   enforces specificity NOT runtime-path-congruence (one-instance
+   manifestation of a template gap; 27 plans audited, no others).
+   HIGHEST-VALUE: `pattern_test_against_reality_not_syntax.md` EXISTED
+   but was not applied as a harness-authoring self-check — would have
+   collapsed the 5-attempt chain to 1. Carry-forward (vii)-(xi)
+   recorded for Task 5 retro.
+
+**Lane state at session close:** tip `65e93ca13`; clean working tree;
+DQ pending `[229,242,244,246,248,251,255]`; resolved 232. #255
+fail-pending (awaiting the rebuilt e2e); #242/#244/#246/#251 stay
+fail-pending until the rebuilt agpl e2e passes; #248 fail-pending
+(historical fix-impl-7 E0308); #229 = Shape-G-reenable reminder
+2026-06-01. #252/#253 resolved; #243/#245/#250/#254 pass-resolved;
+#247/#249/#252/#256 answered_by=user.
+
+**NEXT SESSION ENTRY POINT (user-confirmed):** run
+`/brehon-clarify .claude/PRPs/briefs/v1-ship-1-r2-planning-1.md`.
+Resolve every clarify-DQ entry → CAS-sync the daemon-local
+`phase-v1-ship-1` ref to origin (anti-TOCTOU: read-only
+ancestry/data-loss check + `git update-ref <new> <old>`; recheck
+`daemon_status` 0-active; NEVER `reset --hard`; NEVER pause daemon
+with a task running) → dispatch Junior `[role:planning]`
+base_branch=phase-v1-ship-1 → on finalize, advisor DoD-smoke +
+watchpoint-specificity gates → **User Gate 1 (plan approval)** →
+bm-cut already done (phase branch exists) → impl the rebuilt e2e →
+§5.2 Phase-1 → §5.2 Phase-2 e2e → on agpl pass: mutate
+#255+#251+#242+#244+#246 pass → /brehon-verify → bm-pr →
+CodeRabbit → Gate 3 → Gate 5 → bm-merge (L14/L15/L16) → Task 5
+retro (promote the full carry-forward set + the (vii)-(xi) items to
+`.claude/lessons/` + index MEMORY.md IN THE SAME retro commit) →
+Gate 6 → /brehon-phase-transition. §G4 status: override-scope DQ
+#247/#249/#252 EXHAUSTED — the re-plan supersedes it; no auto-author
+of any further fix-impl without a fresh user directive.
