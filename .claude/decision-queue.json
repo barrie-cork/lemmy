@@ -4116,6 +4116,21 @@
     "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task6-check.log 2>&1\"",
     "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task6-clippy.log 2>&1\""
    ]
+  },
+  {
+   "id": 250,
+   "from": "impl",
+   "kind": "blocker",
+   "timestamp": "2026-05-18T13:24:49Z",
+   "question": "fix-impl-1 prescribed fix #[expect(dead_code)] will fail CMD2 clippy -D warnings with unfulfilled_lint_expectations (pub fn in library crate; dead_code lint never fires); CMD1 cargo-check also fails (lemmy_email submodule absent in worktree, pre-existing). Which option resolves the clippy allow_attributes violation correctly?",
+   "options": [
+    "option-a: Replace line 34 with just the comment // TODO(v1-federation-inbound-b): wired by replay-cleanup cron — removes #[allow] (eliminates clippy::allow_attributes violation) without adding #[expect] (avoids unfulfilled_lint_expectations); CMD1 lemmy_email submodule issue is pre-existing infrastructure and separate from this fix",
+    "option-b: Apply #[expect(dead_code)] as prescribed in brief AND accept unfulfilled_lint_expectations risk; requires workspace lint config to explicitly allow unfulfilled_lint_expectations or CMD2 must exclude it"
+   ],
+   "context": "delete_older_than is pub async fn in library crate lemmy_db_schema. Rust does not emit dead_code lint for pub items in library crates. Therefore #[expect(dead_code)] creates an unfulfilled expectation, producing rustc unfulfilled_lint_expectations warning (#[warn(unfulfilled_lint_expectations)] on by default). With -D warnings in CMD2, this becomes an error. LSP confirmed line 34:10 this lint expectation is unfulfilled. CMD1 cargo-check ALSO fails pre-existing: crates/email/translations is a git submodule not initialized in this worktree. Both issues confirmed. Code change NOT pushed per brief 4.2 (non-zero cargo-check -> do not push, file blocker DQ).",
+   "answer": "option-a (user-selected via advisor AskUserQuestion 2026-05-18 catch-fire surface). Remove the #[allow(dead_code)] attribute entirely, keeping only the line comment // TODO(v1-federation-inbound-b): wired by replay-cleanup cron. Rationale (advisor independent verification, agreed): delete_older_than is a pub async fn in library crate lemmy_db_schema; Rust does not emit the dead_code lint for pub items in a lib crate (public API surface), so NO suppression attribute is needed at all — removing #[allow] eliminates the clippy::allow_attributes violation and adding nothing avoids the unfulfilled_lint_expectations error that #[expect(dead_code)] would create. Option-b rejected: relaxing the shared [workspace.lints] config collides with the DQ #232 additive-only-shared-files constraint across 3 concurrent lanes. The CMD1 cargo-check submodule failure (crates/email/translations uninitialized) is pre-existing infra (feedback_worktree_submodules_not_auto_init, same class as Cohort-A Task-5 DQ #236) and is handled separately: the advisor runs `git submodule update --init` before the laptop §5.2 re-validation; it is NOT part of this fix. fix-impl-1 brief recipe (#[allow]->#[expect]) was an advisor authoring defect (the redaction.rs:38 precedent does not transfer — that lint fires; dead_code on a pub fn does not). fix-impl-1 #315 correctly refused to push per the §4.2 pre-push-cargo-check constraint and filed this blocker — contract working as designed. Corrected recipe carried by fix-impl-2 (brief federation-inbound-a-fix-impl-2.md).",
+   "answered_by": "user",
+   "resolved_at": "2026-05-18T13:50:00Z"
   }
  ],
  "schema_version": 2
