@@ -14,6 +14,27 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 266,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T16:20:30Z",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": 9,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task9-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task9-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-a-task9-test-norun.log 2>&1\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "question": "validate-pending-laptop: task 9 e2e.rs phase1 probes + trust-state fixtures — run 3 DoD commands on laptop and mutate this entry",
+      "context": "Task 9 impl committed 6ae091e90 on worker branch. Pre-push cargo-check exit 0. Awaiting advisor-laptop to run the 3 §15 validation commands."
     }
   ],
   "resolved": [
