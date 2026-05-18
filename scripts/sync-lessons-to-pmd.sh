@@ -11,17 +11,28 @@
 #   sqlite3 .project-memory/memory.db \
 #     "DELETE FROM memories WHERE title = 'Lesson title here';"
 #
-# Embeddings: this script writes to the `memories` table only. The
-# MCP server's `memory_vectors` table is populated when memories are
-# written via the MCP tool with Ollama reachable. As of 2026-05-09 the
-# laptop's MCP server cannot reach the EliteDesk's Ollama, so writes
-# from this script (and from MCP calls on the laptop) leave
-# memory_vectors empty. memory_search_hybrid auto-falls-back to FTS5,
-# so lessons remain searchable by keyword. Wire Ollama in a future
-# session to backfill embeddings.
+# CANONICAL DB (cross-lane): this script MUST write to the single
+# canonical PMD (brehon-fork/.project-memory/memory.db), NOT a lane
+# worktree's local copy. Per .claude/rules/multi-lane-worktree.md
+# ("PMD is cross-lane shared, NOT per-lane isolated") +
+# feedback_pmd_cross_lane_canonical_db.md. Pass --db <canonical-path>
+# or export PROJECT_MEMORY_DB (every lane's .mcp.json already pins it).
+# Running this from a lane worktree with no override strands the
+# lessons in a lane-local DB the Stop hook + memory_search_hybrid
+# never read (the v1-ship-1-r2 incident, 2026-05-18).
+#
+# Embeddings: this script writes the `memories` table only (plain
+# SQLite INSERT). The `memory_vectors` table is NOT populated here —
+# run the project-memory-mcp backfill.js afterward (Ollama at
+# homeserver:11434) to embed new rows. memory_search_hybrid
+# auto-falls-back to FTS5 for unembedded rows, so lessons are
+# keyword-searchable immediately but lack semantic recall until the
+# backfill. Per feedback_pmd_backfill_after_write.md.
 #
 # Usage:
-#   bash scripts/sync-lessons-to-pmd.sh         # import any new lessons
+#   bash scripts/sync-lessons-to-pmd.sh --db <canonical-memory.db>   # explicit (preferred from a lane)
+#   PROJECT_MEMORY_DB=<canonical> bash scripts/sync-lessons-to-pmd.sh # env form
+#   bash scripts/sync-lessons-to-pmd.sh         # only correct from the canonical checkout
 #   bash scripts/sync-lessons-to-pmd.sh --dry-run  # show what would be imported
 #   bash scripts/sync-lessons-to-pmd.sh --verbose  # show every action
 #
@@ -39,25 +50,66 @@ export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB="${REPO_ROOT}/.project-memory/memory.db"
+
+# DB target — CANONICAL, NOT lane-local (per .claude/rules/multi-lane-worktree.md
+# "PMD is cross-lane shared, NOT per-lane isolated" + feedback_pmd_cross_lane_canonical_db.md).
+#
+# The lesson FILES are correctly per-lane (git-tracked, identical across worktrees);
+# only the DB TARGET must be the single canonical store, otherwise lessons synced
+# from a lane worktree are stranded in a lane-local memory.db that the Stop hook
+# (git-common-dir → canonical) and memory_search_hybrid never read. This exact
+# stranding hit v1-ship-1-r2 (5 lessons synced to brehon-fork-ship-1/.project-memory/
+# memory.db instead of canonical) — see feedback_pmd_cross_lane_canonical_db.md.
+#
+# Resolution order:
+#   1. --db <path>            (explicit override, highest precedence)
+#   2. $PROJECT_MEMORY_DB     (the canonical absolute path; every lane's .mcp.json
+#                              already pins this per multi-lane-worktree.md)
+#   3. ${REPO_ROOT}/.project-memory/memory.db   (legacy fallback — lane-local;
+#                              ONLY correct when run from the canonical checkout)
+# When run from a lane worktree WITHOUT --db or PROJECT_MEMORY_DB, the fallback
+# is lane-local and WILL strand. The §"sanity check" below warns when the
+# resolved DB is under a brehon-fork-<lane> path.
+DB=""
 LESSONS_DIR="${REPO_ROOT}/.claude/lessons"
 DRY_RUN=0
 VERBOSE=0
 
-for arg in "$@"; do
-  case "$arg" in
+while [ $# -gt 0 ]; do
+  case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --verbose) VERBOSE=1 ;;
+    --db) shift; DB="${1:?--db requires a path}" ;;
+    --db=*) DB="${1#--db=}" ;;
     -h|--help)
       sed -n '1,30p' "${BASH_SOURCE[0]}"
       exit 0
       ;;
     *)
-      echo "unknown arg: $arg" >&2
+      echo "unknown arg: $1" >&2
       exit 1
       ;;
   esac
+  shift
 done
+
+# Resolution order 1 (--db) handled above; else 2 ($PROJECT_MEMORY_DB); else 3 (legacy).
+if [ -z "$DB" ]; then
+  DB="${PROJECT_MEMORY_DB:-${REPO_ROOT}/.project-memory/memory.db}"
+fi
+
+# Sanity check: warn loudly if the resolved DB is under a lane worktree
+# (brehon-fork-<something>) rather than the canonical brehon-fork checkout.
+# A lane-local DB target is the v1-ship-1-r2 stranding bug class.
+case "$DB" in
+  *brehon-fork-*/.project-memory/*)
+    echo "WARN: resolved DB is LANE-LOCAL ($DB)." >&2
+    echo "WARN: per multi-lane-worktree.md the PMD is cross-lane — lessons synced here" >&2
+    echo "WARN: will be stranded (invisible to the Stop hook + memory_search_hybrid)." >&2
+    echo "WARN: pass --db <canonical> or export PROJECT_MEMORY_DB to the canonical" >&2
+    echo "WARN: brehon-fork/.project-memory/memory.db. Continuing anyway (non-fatal)." >&2
+    ;;
+esac
 
 command -v sqlite3 >/dev/null 2>&1 || {
   echo "ERROR: sqlite3 not on PATH; install sqlite3 first" >&2
