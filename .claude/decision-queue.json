@@ -17,87 +17,6 @@
       "resolved_at": null
     },
     {
-      "id": 242,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-17T17:40:39Z",
-      "question": "v1-ship-1 Phase-2 e2e RUN — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip dab15ec56 (local, testcontainers)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 Phase-1 workspace validation ALL 3 PASS (DQ #241 resolved). User gate 4 = LOCAL e2e run (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@dab15ec56. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres, harness-serialized. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll). Expected: agpl_source_disclosure_surface_returns_notice passed + pre-existing e2e suite pass count unchanged.",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-dab15ec56.log",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "Phase-2 e2e local RUN on phase-v1-ship-1 tip dab15ec56 (canonical checkout detached, cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres). FAILED.\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1957.28s\nONLY the new test failed — NO pre-existing e2e test regressed (89 passed = full pre-existing suite green).\n\nfailures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (37564) panicked at crates\\server\\tests\\e2e.rs:14883:3:\nassertion `left == right` failed: /api/v4/site must return 200\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n\nROOT-CAUSE HYPOTHESIS (advisor, NOT auto-fixed — catch-fired to user): the panic is on the test's FIRST assertion (the GET /api/v4/site == 200 check at e2e.rs:14883), BEFORE /api/v4/source is ever exercised. /api/v4/site is a PRE-EXISTING endpoint that Task 2 modified by adding `source_disclosure: SourceDisclosure` to GetSiteResponse + populating it in crates/api/api_crud/src/site/read.rs. A 500 (not 404, not a deserialize panic) means the read.rs handler itself errors at request time when constructing/serializing the new field — most likely `env!(\"BREHON_FORK_COMMIT\")` is unresolved at runtime (build.rs in crates/api/api_crud/ not emitting cargo:rustc-env, OR env! evaluated in the wrong crate), OR a panic/Err in the source_disclosure construction path. This is an IMPL bug in Task 2's Story-1 wiring (NOT a test bug, NOT a flake). /brehon-verify §16a Story 1 would also have flagged the wiring if it checks runtime, but the structural greps pass — so this is a runtime-only defect the static verify cannot catch. Needs user judgment: fix-impl on read.rs/build.rs (Task 2 surface) vs re-plan. Logs: full run at .claude/runlog/e2e-v1-ship-1-dab15ec56.log lines 150-167.",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "FAIL. /api/v4/site returned HTTP 500 (expected 200) at the test's first assertion (e2e.rs:14883); /api/v4/source never reached. 89 pre-existing tests passed (no regression), 1 failed = only the new agpl test. NON-ALLOWLIST §G4 (runtime assertion / 500, not a mechanical compile/clippy class) → catch-fired to user; no auto-fix, no auto-retry. Root-cause hypothesis: Task 2 read.rs handler errors constructing source_disclosure (likely BREHON_FORK_COMMIT env! unresolved at runtime via build.rs, or a panic/Err in the field build path). Stays in pending[] until user decides fix-impl vs re-plan. Blocks bm-pr.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T18:27:59Z"
-    },
-    {
-      "id": 244,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-17T19:23:21Z",
-      "question": "v1-ship-1 Phase-2 e2e re-run after fix-impl-5 — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip 026189102 (local, testcontainers)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-5 (#300, seed instance+Site+LocalSite+LocalSiteRateLimit before /api/v4/site) §5.2 Phase-1 ALL 3 PASS (DQ #243 resolved: check 0 err / clippy 0 warn / e2e --no-run built). Original Phase-2 e2e fail DQ #242 was a PLAN DEFECT (governance_fixtures::bootstrap seeds no local_site → /api/v4/site HTTP 500). User gate-4 = local (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@026189102. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres. Expected: agpl_source_disclosure_surface_returns_notice now PASSED + full suite 90 passed 0 failed (was 89 passed; 1 failed) — only delta is the previously-failing agpl test now passes, no pre-existing regression. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll).",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-026189102.log",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "failures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (14180) panicked at crates\\server\\tests\\e2e.rs:14919:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1881.93s\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n(ONLY agpl failed — prior 89 ALL pass, ignored=5 unchanged: NO pre-existing regression. 3rd CONSECUTIVE same-surface fail: DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6 #302.)",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "Phase-2 e2e after fix-impl-6 #302 deeper-fix STILL FAILS — 3rd CONSECUTIVE same-surface fail (DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6). fix-impl-6 Part A (body-on-failure asserts) SUCCEEDED: the /api/v4/site 500 response body is now LEGIBLE = \"Requested application data is not configured correctly. View/enable debug logs for more details.\" fix-impl-6 Part B (complete SiteInsertForm mirroring setup_local_site:88-95) was correctly applied but addressed the WRONG cause and did NOT resolve the 500. ROOT-CAUSE OVERTURN: the legible body is actix-web's built-in ErrorInternalServerError from web::Data<T>::from_request when type T is NOT registered on the App — NOT the \"Failed to construct site response: {e}\" string from read.rs:32. The request fails at actix EXTRACTION TIME and never enters read_site — so this is NOT a DB / seed-row / Site-deserialization / moka-cache / SiteView::read_local problem at all. The entire incomplete-site-row hypothesis (4 analysis passes + fix-impl-5 + fix-impl-6 Part B) is OVERTURNED by the legible body. Evidence: the agpl test App (e2e.rs:14907-14910) registers .app_data(Data::new(context.clone())) [LemmyContext IS present] + .configure(lemmy_api_routes::config(cfg, &rate_limit)). get_site (read.rs:24-27) extracts only Data<LemmyContext> + Option<LocalUserView> — so the missing Data<T> is NOT LemmyContext itself but ANOTHER web::Data<T> that lemmy_api_routes::config wires into the /api/v4/site route chain (middleware/extractor) which the real server App builder registers but this minimal test App does not (candidates to be identified by re-plan: a rate-limit Data, Data<DbPool>, Data<ClientWithMiddleware>, Data<SecretsConfig>, OAuth/plugin Data, or a SessionMiddleware/identity layer). §G4 cycle-count meta-rule: 3rd CONSECUTIVE same-surface fail = HARD REFUSAL re-plan (NOT auto fix-impl-7, NOT auto-retry). Recommended: planner Junior re-plan §13 Task 4 + §10.6/§10.7 — read lemmy_api_routes::config + the real server App builder, identify the exact missing app_data, and register it (or use the real server bootstrap) in the agpl test App. Surfaced to user as re-plan signal. BLOCKS bm-pr.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T22:26:28Z"
-    },
-    {
-      "id": 246,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-17T21:50:25Z",
-      "question": "Phase-2 e2e (local) on the fix-impl-6 #302 finalize-merged tip c2a7ed971 — does agpl_source_disclosure_surface_returns_notice pass with the complete-site seed + body-on-failure asserts, with no pre-existing regression?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Deeper-fix for the persistent /api/v4/site HTTP 500 in the agpl e2e test (DQ #242 original, DQ #244 fix-impl-5). Root cause: plan §10.7 mirrored an internal-only precedent (governance_outbox_, never HTTP-calls /api/v4/site) so the bare SiteInsertForm::new produced a site row with None ap_id/inbox_url/public_key/private_key/last_refreshed_at that the handler path (SiteView::read_local .first().optional()?) cannot materialise into the non-Option Site struct -> 500. fix-impl-6 #302 (commit 38267a76e, finalize-merged into phase-v1-ship-1) Part B replaces bare SiteInsertForm::new with a complete form (ap_id/last_refreshed_at/inbox_url/private_key/public_key = Some(...) via generate_actor_keypair()? + url::Url::parse(...)?.into() + chrono::Utc::now(), ..SiteInsertForm::new) mirroring setup_local_site.rs:88-95; Part A makes both /api/v4/site and /api/v4/source asserts read the response body first and fold it into the panic message (so a 3rd same-surface fail would name the literal LemmyError). §5.2 Phase-1 ALL 3 PASS (check 2m43s / clippy 1m51s / test --no-run 2m00s; DQ #245 resolved). User gate-4 = local (cached, not re-asked). Run: cmd //c cd /d C:\\Users\\barri\\Developer\\brehon-fork && git checkout -q c2a7ed971 && call scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full. §G4 cycle-count: a 3rd consecutive same-surface fail = HARD REFUSAL re-plan (NOT auto fix-impl-7).",
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-c2a7ed971.log",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "failures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (14180) panicked at crates\\server\\tests\\e2e.rs:14919:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1881.93s\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n(ONLY agpl failed — prior 89 ALL pass, ignored=5 unchanged: NO pre-existing regression. 3rd CONSECUTIVE same-surface fail: DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6 #302.)",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "Phase-2 e2e validate-pending-laptop-e2e for fix-impl-6 finalize-merged tip c2a7ed971 = FAIL. 3rd consecutive same-surface agpl fail. Part A made the body legible: \"Requested application data is not configured correctly\" = actix web::Data<T> not registered on the test App (NOT a DB/seed/deserialization cause — incomplete-site-row hypothesis OVERTURNED). See DQ #244 for the full classification + the verbatim failures: block. §G4 cycle-count HARD REFUSAL: 3rd same-surface = re-plan (NOT auto fix-impl-7). BLOCKS bm-pr. Surfaced to user as re-plan signal.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T22:26:28Z"
-    },
-    {
       "id": 248,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -123,83 +42,6 @@
       "failed_commands": [
         "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
       ]
-    },
-    {
-      "id": 251,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-18T00:12:34Z",
-      "question": "§5.2 Phase-2 e2e for fix-impl-7b merged tip 8a2e26e37 — the runtime test of whether SessionMiddleware-wired + (**context).clone()-derefed resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "§5.2 Phase-1 ALL GREEN on 8a2e26e37 (DQ #250 pass: cmd1 cargo-check 1m27s + cmd2 clippy -D warnings 1m52s 0err + cmd3 cargo-test --no-run 1m44s — e2e binary compiled+linked, 0 E0308; the E0308 at e2e.rs:14911 fix-impl-7 hit is CLEARED by fix-impl-7b's (**context).clone() deref). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-7 wired SessionMiddleware into the agpl test App (.wrap(SessionMiddleware::new((**context).clone())) @e2e.rs:14911) mirroring the passing sibling all_mvp_endpoints_return_non_404 + the real server (crates/server/src/lib.rs:382); fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site row. The prior 3 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6) were the RUNTIME actix-web::Data-not-configured class (now-overturned incomplete-site hypothesis; the true cause was the test App omitting SessionMiddleware). DQ #242/#244/#246 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-8a2e26e37.log",
-      "result": "fail",
-      "log_slice": "§5.2 Phase-2 e2e on fix-impl-7b merged tip 8a2e26e37 — FAILED (E2E_EXIT_NONZERO; suite: 89 passed; 1 failed; 5 ignored; finished 1924.92s; ONLY agpl test fails — NO regression).\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14921:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n  right: 200\n\nROOT CAUSE (now legible via fix-impl-6 Part A body-on-failure assert): the body is actix-web's generic Data::<T>::from_request message for an UNREGISTERED web::Data<T> in the handler-extractor chain. fix-impl-7 wired SessionMiddleware (necessary) but it is INSUFFICIENT: the real server App (crates/server/src/lib.rs:379-382) wraps FederationMiddleware (:380) -> IdempotencyMiddleware (:381) -> SessionMiddleware (:382); the agpl test App (e2e.rs:14910-14911) wraps ONLY SessionMiddleware. FederationMiddleware::call (activitypub_federation-0.7.0-beta.10/src/actix_web/middleware.rs:57) does `req.extensions_mut().insert(self.config.clone())`; activitypub_federation's `impl FromRequest for Data<T>` (ibid) errors if the FederationConfig<T> extension is absent. With FederationMiddleware not wrapped, the handler-extractor chain's Data extraction fails -> 500 on /api/v4/site. get_site itself (read.rs:23-25) extracts only `local_user_view: Option<LocalUserView>` + `context: Data<LemmyContext>` (the latter IS registered via `.app_data(Data::new(context.clone()))` @e2e.rs:14910); the missing Data is injected by a middleware in the stack, not by get_site directly. The proven fix shape = mirror the FULL real-server middleware stack (add FederationMiddleware + IdempotencyMiddleware ahead of SessionMiddleware) — a NEW change OUTSIDE the DQ #247/#249 override scope (which is SessionMiddleware-wiring + (**context).clone() deref ONLY). SURFACED to user for a fresh §G4 decision; advisor does NOT auto-author.",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]).",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-18T00:50:16Z"
-    },
-    {
-      "id": 255,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-18T01:22:41Z",
-      "question": "§5.2 Phase-2 e2e for fix-impl-8 merged tip 34e81df49 — the RUNTIME test of whether the full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App) resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "§5.2 Phase-1 ALL GREEN on 34e81df49 (DQ #254 pass: cmd1 cargo-check 1m27s 0err + cmd2 clippy -D warnings 2m03s 0err + cmd3 cargo-test --no-run 2m01s 0err — e2e binary compiled+linked, 0 E0308; the FederationConfig builder + Federation/Idempotency middleware wraps + IdempotencySet::default() type-check). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-8 mirrors the FULL real-server middleware stack — agpl test App now wraps .app_data(Data::new(context.clone())) -> .wrap(FederationMiddleware::new(federation_config.clone())) -> .wrap(IdempotencyMiddleware::new(IdempotencySet::default())) -> .wrap(SessionMiddleware::new((**context).clone())), exactly mirroring crates/server/src/lib.rs:379-382; federation_config built via the canonical in-file idiom e2e.rs:2361-2368. fix-impl-7 wired SessionMiddleware (necessary but insufficient); fix-impl-7b derefed Data<LemmyContext>; fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site. The prior 4 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6, #251 post-fix-impl-7b) were the actix-web::Data-not-configured class — root-caused via fix-impl-6 Part A's legible body as the test App omitting the real-server middleware stack. DQ #242/#244/#246/#251 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-34e81df49.log",
-      "result": "fail",
-      "log_slice": "§5.2 Phase-2 e2e on fix-impl-8 merged tip 34e81df49 — FAILED (E2E_EXIT_NONZERO; suite `test result: FAILED. 89 passed; 1 failed; 5 ignored; finished in 1894.24s`; agpl is the SOLE failure — `failures:` block lists only agpl_source_disclosure_surface_returns_notice; 89 passed = NO regression). fix-impl-6 Part A's body-on-failure assert made the cause legible at crates\\server\\tests\\e2e.rs:14933:3:\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14933:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500  right: 200\nThis is the SAME actix-web 'Requested application data is not configured correctly' 500 — byte-identical to the fix-impl-7b Phase-2 failure (DQ #251). 2nd consecutive same-tuple (actix-Data-500, e2e.rs) failure AFTER fix-impl-8's full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware, FederationConfig built via the canonical in-file idiom e2e.rs:2361-2368; §5.2 Phase-1 ALL GREEN on this tip — the mirror type-checks). §G4 cycle-count meta-rule (2 same-tuple post-fix-impl-8) fires + §G4 override-scope ceiling reached (DQ #247/#249/#252 spanned fix-impl-7/7b/8 — exhausted). The hand-assembled-actix-App test-harness approach is wrong-shaped: wrapping FederationMiddleware does NOT register the FederationConfig<LemmyContext> extension the get_site extractor needs at request time the way the real lemmy_server App does. HARD-REFUSAL — NO auto-author fix-impl-9; planner re-plan required (drive a REAL lemmy_server App-builder / test-server integration harness, not hand-assembled actix middleware).",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "§5.2 Phase-2 e2e FAILED for fix-impl-8 #306 merged tip 34e81df49. agpl_source_disclosure_surface_returns_notice is the SOLE failure (89 passed / 1 failed / 5 ignored — NO regression). The legible body (fix-impl-6 Part A) at e2e.rs:14933:3 is the SAME actix 'Requested application data is not configured correctly' 500 as the fix-impl-7b Phase-2 failure (DQ #251) — 2nd consecutive same-tuple (actix-Data-500, e2e.rs) AFTER the fix-impl-8 full-real-server-middleware-stack mirror. §G4 cycle-count meta-rule fires (2 same-tuple post-fix-impl-8) and the §G4 override-scope ceiling (DQ #247/#249/#252 spanned fix-impl-7/7b/8) is exhausted. HARD-REFUSAL: NOT auto-queuing a fix-impl-9. Surfaced to user with a planner-re-plan recommendation — the hand-assembled-actix-App test harness is wrong-shaped (wrapping FederationMiddleware in test::init_service does not reproduce the real lemmy_server App's request-time FederationConfig<LemmyContext> extension registration that get_site's extractor chain depends on). DQ #242/#244/#246/#251 STAY fail-pending (the agpl /api/v4/site 500 is still unresolved across all 5 attempts). DQ #248 stays fail-pending (historical fix-impl-7 E0308 record). DQ #255 STAYS in pending[] per §G4 fail-handling (a fail entry is not resolved until the underlying issue is fixed). Awaiting user decision: planner re-plan vs alternative directive.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-18T01:57:58Z"
-    },
-    {
-      "id": 263,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-18T13:07:12Z",
-      "question": "v1-ship-1-r2 Phase-2 e2e (local) on phase-v1-ship-1 tip 6a2d50803 (Task 6 code 38af8b866) — does agpl_source_disclosure_surface_returns_notice return HTTP 200 (verified-correct inner_context/lib.rs:364 App) instead of the 5-cycle HTTP 500? Full suite, no-regression.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Phase-1 PASSED clean (DQ #262: check 1m09s/0err, clippy 2m19s/0lint, e2e-binary linked). Shape G suspended (DQ #229) -> local-only per user gate 4 (user chose Run local now 2026-05-18). cmd: cmd //c cargo-test.bat --workspace --test e2e --features full. The decisive runtime test of the r2 re-plan fix.",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log\""
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 6,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log",
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -4452,6 +4294,164 @@
       "answer": "PASS. §5.2-laptop Phase-1 on phase-v1-ship-1 tip 247308c61: (1) cargo-check.bat --workspace --features full = exit 0, Finished dev 1m09s, 0 err/warn, lemmy_server checked; (2) cargo-clippy.bat --workspace --features full --no-deps -- -D warnings = exit 0, Finished dev 2m19s, 0 lint, -D warnings held; (3) cargo-test.bat --no-run -p lemmy_server --test e2e = exit 0, Finished test 2m35s, e2e binary linked (e2e-aebb6c76db6b1818.exe). Task 6 commit 38af8b866 compiles+lints clean. Phase-2 e2e runtime test follows (advisor-driven).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-18T13:03:41Z"
+    },
+    {
+      "id": 242,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T17:40:39Z",
+      "question": "v1-ship-1 Phase-2 e2e RUN — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip dab15ec56 (local, testcontainers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 Phase-1 workspace validation ALL 3 PASS (DQ #241 resolved). User gate 4 = LOCAL e2e run (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@dab15ec56. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres, harness-serialized. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll). Expected: agpl_source_disclosure_surface_returns_notice passed + pre-existing e2e suite pass count unchanged.",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-dab15ec56.log",
+      "workflow_run_id": null,
+      "result": "fail",
+      "log_slice": "Phase-2 e2e local RUN on phase-v1-ship-1 tip dab15ec56 (canonical checkout detached, cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres). FAILED.\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1957.28s\nONLY the new test failed — NO pre-existing e2e test regressed (89 passed = full pre-existing suite green).\n\nfailures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (37564) panicked at crates\\server\\tests\\e2e.rs:14883:3:\nassertion `left == right` failed: /api/v4/site must return 200\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n\nROOT-CAUSE HYPOTHESIS (advisor, NOT auto-fixed — catch-fired to user): the panic is on the test's FIRST assertion (the GET /api/v4/site == 200 check at e2e.rs:14883), BEFORE /api/v4/source is ever exercised. /api/v4/site is a PRE-EXISTING endpoint that Task 2 modified by adding `source_disclosure: SourceDisclosure` to GetSiteResponse + populating it in crates/api/api_crud/src/site/read.rs. A 500 (not 404, not a deserialize panic) means the read.rs handler itself errors at request time when constructing/serializing the new field — most likely `env!(\"BREHON_FORK_COMMIT\")` is unresolved at runtime (build.rs in crates/api/api_crud/ not emitting cargo:rustc-env, OR env! evaluated in the wrong crate), OR a panic/Err in the source_disclosure construction path. This is an IMPL bug in Task 2's Story-1 wiring (NOT a test bug, NOT a flake). /brehon-verify §16a Story 1 would also have flagged the wiring if it checks runtime, but the structural greps pass — so this is a runtime-only defect the static verify cannot catch. Needs user judgment: fix-impl on read.rs/build.rs (Task 2 surface) vs re-plan. Logs: full run at .claude/runlog/e2e-v1-ship-1-dab15ec56.log lines 150-167.",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "FAIL. /api/v4/site returned HTTP 500 (expected 200) at the test's first assertion (e2e.rs:14883); /api/v4/source never reached. 89 pre-existing tests passed (no regression), 1 failed = only the new agpl test. NON-ALLOWLIST §G4 (runtime assertion / 500, not a mechanical compile/clippy class) → catch-fired to user; no auto-fix, no auto-retry. Root-cause hypothesis: Task 2 read.rs handler errors constructing source_disclosure (likely BREHON_FORK_COMMIT env! unresolved at runtime via build.rs, or a panic/Err in the field build path). Stays in pending[] until user decides fix-impl vs re-plan. Blocks bm-pr. [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T18:27:59Z"
+    },
+    {
+      "id": 244,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T19:23:21Z",
+      "question": "v1-ship-1 Phase-2 e2e re-run after fix-impl-5 — full suite incl agpl_source_disclosure_surface_returns_notice on phase-v1-ship-1 tip 026189102 (local, testcontainers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-5 (#300, seed instance+Site+LocalSite+LocalSiteRateLimit before /api/v4/site) §5.2 Phase-1 ALL 3 PASS (DQ #243 resolved: check 0 err / clippy 0 warn / e2e --no-run built). Original Phase-2 e2e fail DQ #242 was a PLAN DEFECT (governance_fixtures::bootstrap seeds no local_site → /api/v4/site HTTP 500). User gate-4 = local (feedback_default_local_testing; Shape G suspended DQ #229). Canonical checkout C:/Users/barri/Developer/brehon-fork detached@026189102. cargo-test.bat --workspace --test e2e --features full, testcontainers Postgres. Expected: agpl_source_disclosure_surface_returns_notice now PASSED + full suite 90 passed 0 failed (was 89 passed; 1 failed) — only delta is the previously-failing agpl test now passes, no pre-existing regression. Advisor raises up front + mutates directly on E2E_EXIT marker (no ci-watcher; nothing on GH to poll).",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-026189102.log",
+      "workflow_run_id": null,
+      "result": "fail",
+      "log_slice": "failures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (14180) panicked at crates\\server\\tests\\e2e.rs:14919:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1881.93s\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n(ONLY agpl failed — prior 89 ALL pass, ignored=5 unchanged: NO pre-existing regression. 3rd CONSECUTIVE same-surface fail: DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6 #302.)",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "Phase-2 e2e after fix-impl-6 #302 deeper-fix STILL FAILS — 3rd CONSECUTIVE same-surface fail (DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6). fix-impl-6 Part A (body-on-failure asserts) SUCCEEDED: the /api/v4/site 500 response body is now LEGIBLE = \"Requested application data is not configured correctly. View/enable debug logs for more details.\" fix-impl-6 Part B (complete SiteInsertForm mirroring setup_local_site:88-95) was correctly applied but addressed the WRONG cause and did NOT resolve the 500. ROOT-CAUSE OVERTURN: the legible body is actix-web's built-in ErrorInternalServerError from web::Data<T>::from_request when type T is NOT registered on the App — NOT the \"Failed to construct site response: {e}\" string from read.rs:32. The request fails at actix EXTRACTION TIME and never enters read_site — so this is NOT a DB / seed-row / Site-deserialization / moka-cache / SiteView::read_local problem at all. The entire incomplete-site-row hypothesis (4 analysis passes + fix-impl-5 + fix-impl-6 Part B) is OVERTURNED by the legible body. Evidence: the agpl test App (e2e.rs:14907-14910) registers .app_data(Data::new(context.clone())) [LemmyContext IS present] + .configure(lemmy_api_routes::config(cfg, &rate_limit)). get_site (read.rs:24-27) extracts only Data<LemmyContext> + Option<LocalUserView> — so the missing Data<T> is NOT LemmyContext itself but ANOTHER web::Data<T> that lemmy_api_routes::config wires into the /api/v4/site route chain (middleware/extractor) which the real server App builder registers but this minimal test App does not (candidates to be identified by re-plan: a rate-limit Data, Data<DbPool>, Data<ClientWithMiddleware>, Data<SecretsConfig>, OAuth/plugin Data, or a SessionMiddleware/identity layer). §G4 cycle-count meta-rule: 3rd CONSECUTIVE same-surface fail = HARD REFUSAL re-plan (NOT auto fix-impl-7, NOT auto-retry). Recommended: planner Junior re-plan §13 Task 4 + §10.6/§10.7 — read lemmy_api_routes::config + the real server App builder, identify the exact missing app_data, and register it (or use the real server bootstrap) in the agpl test App. Surfaced to user as re-plan signal. BLOCKS bm-pr. [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T22:26:28Z"
+    },
+    {
+      "id": 246,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-17T21:50:25Z",
+      "question": "Phase-2 e2e (local) on the fix-impl-6 #302 finalize-merged tip c2a7ed971 — does agpl_source_disclosure_surface_returns_notice pass with the complete-site seed + body-on-failure asserts, with no pre-existing regression?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Deeper-fix for the persistent /api/v4/site HTTP 500 in the agpl e2e test (DQ #242 original, DQ #244 fix-impl-5). Root cause: plan §10.7 mirrored an internal-only precedent (governance_outbox_, never HTTP-calls /api/v4/site) so the bare SiteInsertForm::new produced a site row with None ap_id/inbox_url/public_key/private_key/last_refreshed_at that the handler path (SiteView::read_local .first().optional()?) cannot materialise into the non-Option Site struct -> 500. fix-impl-6 #302 (commit 38267a76e, finalize-merged into phase-v1-ship-1) Part B replaces bare SiteInsertForm::new with a complete form (ap_id/last_refreshed_at/inbox_url/private_key/public_key = Some(...) via generate_actor_keypair()? + url::Url::parse(...)?.into() + chrono::Utc::now(), ..SiteInsertForm::new) mirroring setup_local_site.rs:88-95; Part A makes both /api/v4/site and /api/v4/source asserts read the response body first and fold it into the panic message (so a 3rd same-surface fail would name the literal LemmyError). §5.2 Phase-1 ALL 3 PASS (check 2m43s / clippy 1m51s / test --no-run 2m00s; DQ #245 resolved). User gate-4 = local (cached, not re-asked). Run: cmd //c cd /d C:\\Users\\barri\\Developer\\brehon-fork && git checkout -q c2a7ed971 && call scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full. §G4 cycle-count: a 3rd consecutive same-surface fail = HARD REFUSAL re-plan (NOT auto fix-impl-7).",
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-c2a7ed971.log",
+      "workflow_run_id": null,
+      "result": "fail",
+      "log_slice": "failures:\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\n\nthread 'agpl_source_disclosure_surface_returns_notice' (14180) panicked at crates\\server\\tests\\e2e.rs:14919:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n right: 200\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    agpl_source_disclosure_surface_returns_notice\n\ntest result: FAILED. 89 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1881.93s\nerror: test failed, to rerun pass `-p lemmy_server --test e2e`\nE2E_EXIT_NONZERO\n(ONLY agpl failed — prior 89 ALL pass, ignored=5 unchanged: NO pre-existing regression. 3rd CONSECUTIVE same-surface fail: DQ#242 original / DQ#244 fix-impl-5 / this fix-impl-6 #302.)",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "Phase-2 e2e validate-pending-laptop-e2e for fix-impl-6 finalize-merged tip c2a7ed971 = FAIL. 3rd consecutive same-surface agpl fail. Part A made the body legible: \"Requested application data is not configured correctly\" = actix web::Data<T> not registered on the test App (NOT a DB/seed/deserialization cause — incomplete-site-row hypothesis OVERTURNED). See DQ #244 for the full classification + the verbatim failures: block. §G4 cycle-count HARD REFUSAL: 3rd same-surface = re-plan (NOT auto fix-impl-7). BLOCKS bm-pr. Surfaced to user as re-plan signal. [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T22:26:28Z"
+    },
+    {
+      "id": 251,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-18T00:12:34Z",
+      "question": "§5.2 Phase-2 e2e for fix-impl-7b merged tip 8a2e26e37 — the runtime test of whether SessionMiddleware-wired + (**context).clone()-derefed resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "§5.2 Phase-1 ALL GREEN on 8a2e26e37 (DQ #250 pass: cmd1 cargo-check 1m27s + cmd2 clippy -D warnings 1m52s 0err + cmd3 cargo-test --no-run 1m44s — e2e binary compiled+linked, 0 E0308; the E0308 at e2e.rs:14911 fix-impl-7 hit is CLEARED by fix-impl-7b's (**context).clone() deref). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-7 wired SessionMiddleware into the agpl test App (.wrap(SessionMiddleware::new((**context).clone())) @e2e.rs:14911) mirroring the passing sibling all_mvp_endpoints_return_non_404 + the real server (crates/server/src/lib.rs:382); fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site row. The prior 3 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6) were the RUNTIME actix-web::Data-not-configured class (now-overturned incomplete-site hypothesis; the true cause was the test App omitting SessionMiddleware). DQ #242/#244/#246 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-8a2e26e37.log",
+      "result": "fail",
+      "log_slice": "§5.2 Phase-2 e2e on fix-impl-7b merged tip 8a2e26e37 — FAILED (E2E_EXIT_NONZERO; suite: 89 passed; 1 failed; 5 ignored; finished 1924.92s; ONLY agpl test fails — NO regression).\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14921:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n  right: 200\n\nROOT CAUSE (now legible via fix-impl-6 Part A body-on-failure assert): the body is actix-web's generic Data::<T>::from_request message for an UNREGISTERED web::Data<T> in the handler-extractor chain. fix-impl-7 wired SessionMiddleware (necessary) but it is INSUFFICIENT: the real server App (crates/server/src/lib.rs:379-382) wraps FederationMiddleware (:380) -> IdempotencyMiddleware (:381) -> SessionMiddleware (:382); the agpl test App (e2e.rs:14910-14911) wraps ONLY SessionMiddleware. FederationMiddleware::call (activitypub_federation-0.7.0-beta.10/src/actix_web/middleware.rs:57) does `req.extensions_mut().insert(self.config.clone())`; activitypub_federation's `impl FromRequest for Data<T>` (ibid) errors if the FederationConfig<T> extension is absent. With FederationMiddleware not wrapped, the handler-extractor chain's Data extraction fails -> 500 on /api/v4/site. get_site itself (read.rs:23-25) extracts only `local_user_view: Option<LocalUserView>` + `context: Data<LemmyContext>` (the latter IS registered via `.app_data(Data::new(context.clone()))` @e2e.rs:14910); the missing Data is injected by a middleware in the stack, not by get_site directly. The proven fix shape = mirror the FULL real-server middleware stack (add FederationMiddleware + IdempotencyMiddleware ahead of SessionMiddleware) — a NEW change OUTSIDE the DQ #247/#249 override scope (which is SessionMiddleware-wiring + (**context).clone() deref ONLY). SURFACED to user for a fresh §G4 decision; advisor does NOT auto-author.",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]). [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T00:50:16Z"
+    },
+    {
+      "id": 255,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-18T01:22:41Z",
+      "question": "§5.2 Phase-2 e2e for fix-impl-8 merged tip 34e81df49 — the RUNTIME test of whether the full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App) resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "§5.2 Phase-1 ALL GREEN on 34e81df49 (DQ #254 pass: cmd1 cargo-check 1m27s 0err + cmd2 clippy -D warnings 2m03s 0err + cmd3 cargo-test --no-run 2m01s 0err — e2e binary compiled+linked, 0 E0308; the FederationConfig builder + Federation/Idempotency middleware wraps + IdempotencySet::default() type-check). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-8 mirrors the FULL real-server middleware stack — agpl test App now wraps .app_data(Data::new(context.clone())) -> .wrap(FederationMiddleware::new(federation_config.clone())) -> .wrap(IdempotencyMiddleware::new(IdempotencySet::default())) -> .wrap(SessionMiddleware::new((**context).clone())), exactly mirroring crates/server/src/lib.rs:379-382; federation_config built via the canonical in-file idiom e2e.rs:2361-2368. fix-impl-7 wired SessionMiddleware (necessary but insufficient); fix-impl-7b derefed Data<LemmyContext>; fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site. The prior 4 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6, #251 post-fix-impl-7b) were the actix-web::Data-not-configured class — root-caused via fix-impl-6 Part A's legible body as the test App omitting the real-server middleware stack. DQ #242/#244/#246/#251 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-34e81df49.log",
+      "result": "fail",
+      "log_slice": "§5.2 Phase-2 e2e on fix-impl-8 merged tip 34e81df49 — FAILED (E2E_EXIT_NONZERO; suite `test result: FAILED. 89 passed; 1 failed; 5 ignored; finished in 1894.24s`; agpl is the SOLE failure — `failures:` block lists only agpl_source_disclosure_surface_returns_notice; 89 passed = NO regression). fix-impl-6 Part A's body-on-failure assert made the cause legible at crates\\server\\tests\\e2e.rs:14933:3:\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14933:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500  right: 200\nThis is the SAME actix-web 'Requested application data is not configured correctly' 500 — byte-identical to the fix-impl-7b Phase-2 failure (DQ #251). 2nd consecutive same-tuple (actix-Data-500, e2e.rs) failure AFTER fix-impl-8's full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware, FederationConfig built via the canonical in-file idiom e2e.rs:2361-2368; §5.2 Phase-1 ALL GREEN on this tip — the mirror type-checks). §G4 cycle-count meta-rule (2 same-tuple post-fix-impl-8) fires + §G4 override-scope ceiling reached (DQ #247/#249/#252 spanned fix-impl-7/7b/8 — exhausted). The hand-assembled-actix-App test-harness approach is wrong-shaped: wrapping FederationMiddleware does NOT register the FederationConfig<LemmyContext> extension the get_site extractor needs at request time the way the real lemmy_server App does. HARD-REFUSAL — NO auto-author fix-impl-9; planner re-plan required (drive a REAL lemmy_server App-builder / test-server integration harness, not hand-assembled actix middleware).",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "§5.2 Phase-2 e2e FAILED for fix-impl-8 #306 merged tip 34e81df49. agpl_source_disclosure_surface_returns_notice is the SOLE failure (89 passed / 1 failed / 5 ignored — NO regression). The legible body (fix-impl-6 Part A) at e2e.rs:14933:3 is the SAME actix 'Requested application data is not configured correctly' 500 as the fix-impl-7b Phase-2 failure (DQ #251) — 2nd consecutive same-tuple (actix-Data-500, e2e.rs) AFTER the fix-impl-8 full-real-server-middleware-stack mirror. §G4 cycle-count meta-rule fires (2 same-tuple post-fix-impl-8) and the §G4 override-scope ceiling (DQ #247/#249/#252 spanned fix-impl-7/7b/8) is exhausted. HARD-REFUSAL: NOT auto-queuing a fix-impl-9. Surfaced to user with a planner-re-plan recommendation — the hand-assembled-actix-App test harness is wrong-shaped (wrapping FederationMiddleware in test::init_service does not reproduce the real lemmy_server App's request-time FederationConfig<LemmyContext> extension registration that get_site's extractor chain depends on). DQ #242/#244/#246/#251 STAY fail-pending (the agpl /api/v4/site 500 is still unresolved across all 5 attempts). DQ #248 stays fail-pending (historical fix-impl-7 E0308 record). DQ #255 STAYS in pending[] per §G4 fail-handling (a fail entry is not resolved until the underlying issue is fixed). Awaiting user decision: planner re-plan vs alternative directive. [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T01:57:58Z"
+    },
+    {
+      "id": 263,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-18T13:07:12Z",
+      "question": "v1-ship-1-r2 Phase-2 e2e (local) on phase-v1-ship-1 tip 6a2d50803 (Task 6 code 38af8b866) — does agpl_source_disclosure_surface_returns_notice return HTTP 200 (verified-correct inner_context/lib.rs:364 App) instead of the 5-cycle HTTP 500? Full suite, no-regression.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Phase-1 PASSED clean (DQ #262: check 1m09s/0err, clippy 2m19s/0lint, e2e-binary linked). Shape G suspended (DQ #229) -> local-only per user gate 4 (user chose Run local now 2026-05-18). cmd: cmd //c cargo-test.bat --workspace --test e2e --features full. The decisive runtime test of the r2 re-plan fix.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log\""
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 6,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": "test agpl_source_disclosure_surface_returns_notice ... ok\n...\ntest v1_sl_e_fixtures::window_expiry_fires_full_lane ... ok\n\ntest result: ok. 90 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1939.35s\n\nE2E_EXIT_0",
+      "failed_commands": null,
+      "answer": "PASS. Full e2e suite green on phase-v1-ship-1 tip 6a2d50803 (Task 6 code 38af8b866). Decisive line: `test agpl_source_disclosure_surface_returns_notice ... ok`. Suite: `test result: ok. 90 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1939.35s` + E2E_EXIT_0. The 5 ignored are pre-existing v0-polish baseline deflakes (GH #42 ineligible_user_cannot_be_picked_for_jury, GH #45 sponsor_liability_with_founder_multiplier, GH #43 test_phase1_migrations_forward/reapply/revert) — NOT regressions. The R11/DQ #261 type-precision fix (inner_context: LemmyContext = federation_config.deref().clone(); .app_data(Data::new(inner_context.clone()))) resolves the 5-cycle HTTP 500 (Data<Data<LemmyContext>> double-wrap). Acceptance test now returns HTTP 200 with AGPL notice.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T13:59:25Z"
     }
   ]
 }
