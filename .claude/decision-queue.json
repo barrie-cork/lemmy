@@ -175,6 +175,31 @@
       "answer": "§5.2 Phase-2 e2e FAILED for fix-impl-8 #306 merged tip 34e81df49. agpl_source_disclosure_surface_returns_notice is the SOLE failure (89 passed / 1 failed / 5 ignored — NO regression). The legible body (fix-impl-6 Part A) at e2e.rs:14933:3 is the SAME actix 'Requested application data is not configured correctly' 500 as the fix-impl-7b Phase-2 failure (DQ #251) — 2nd consecutive same-tuple (actix-Data-500, e2e.rs) AFTER the fix-impl-8 full-real-server-middleware-stack mirror. §G4 cycle-count meta-rule fires (2 same-tuple post-fix-impl-8) and the §G4 override-scope ceiling (DQ #247/#249/#252 spanned fix-impl-7/7b/8) is exhausted. HARD-REFUSAL: NOT auto-queuing a fix-impl-9. Surfaced to user with a planner-re-plan recommendation — the hand-assembled-actix-App test harness is wrong-shaped (wrapping FederationMiddleware in test::init_service does not reproduce the real lemmy_server App's request-time FederationConfig<LemmyContext> extension registration that get_site's extractor chain depends on). DQ #242/#244/#246/#251 STAY fail-pending (the agpl /api/v4/site 500 is still unresolved across all 5 attempts). DQ #248 stays fail-pending (historical fix-impl-7 E0308 record). DQ #255 STAYS in pending[] per §G4 fail-handling (a fail entry is not resolved until the underlying issue is fixed). Awaiting user decision: planner re-plan vs alternative directive.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-18T01:57:58Z"
+    },
+    {
+      "id": 263,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-18T13:07:12Z",
+      "question": "v1-ship-1-r2 Phase-2 e2e (local) on phase-v1-ship-1 tip 6a2d50803 (Task 6 code 38af8b866) — does agpl_source_disclosure_surface_returns_notice return HTTP 200 (verified-correct inner_context/lib.rs:364 App) instead of the 5-cycle HTTP 500? Full suite, no-regression.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Phase-1 PASSED clean (DQ #262: check 1m09s/0err, clippy 2m19s/0lint, e2e-binary linked). Shape G suspended (DQ #229) -> local-only per user gate 4 (user chose Run local now 2026-05-18). cmd: cmd //c cargo-test.bat --workspace --test e2e --features full. The decisive runtime test of the r2 re-plan fix.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log\""
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 6,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-r2-6a2d50803.log",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
