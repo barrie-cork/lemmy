@@ -1300,3 +1300,36 @@ per the canonical mutation pattern — fail does NOT move to resolved[]).
 fresh §G4 decision** (authorise a fix-impl-8 wiring
 Federation+Idempotency middleware vs planner re-plan). Advisor does NOT
 auto-author. bm-pr BLOCKED until Phase-2 green.
+
+## advisor: fix-impl-8 dispatched (Junior #306, DQ #252 user §G4 override)
+
+User authorised fix-impl-8 in-channel (DQ #252, answered_by=user): mirror
+the FULL real-server middleware stack in the agpl test App. Brief
+`.claude/PRPs/briefs/v1-ship-1-fix-impl-8.md` committed `c4f510840`
+(add `FederationMiddleware` + `IdempotencyMiddleware` wraps ahead of the
+existing `SessionMiddleware` wrap, mirroring `lib.rs:380-382`; build
+`federation_config` via the proven in-file canonical idiom
+`e2e.rs:2361-2368`; e2e.rs only, single agpl test fn, one anchored
+region; commit `test(e2e): wrap FederationMiddleware + IdempotencyMiddleware
+in agpl test App ... (fix-impl-8)`). Mandatory file-class lessons fired
+(advisor-orchestrator §2.4): feedback_lemmy_error_no_std_error Case A,
+feedback_async_pool_test_pattern, feedback_junior_worker_e2e_edit_hang,
+feedback_read_canonical_before_writing_spec.
+
+Daemon ref CAS-synced lane-safe: daemon-local `phase-v1-ship-1` was at
+`4f40a0ead` (stale worker-#304 finalize lineage: 981773cf8 code [already
+in origin as 8a2e26e37 via cherry-pick] + 3bc18ce2c stale-base DQ#250 +
+4f40a0ead redundant finalize-merge — the known multi-lane ref-isolation
+gap, NO data loss). Verified merge-base = f6fe6202e, code content in
+origin. CAS-guarded `git update-ref refs/heads/phase-v1-ship-1
+c4f510840 4f40a0ead` (compare-and-swap; NEVER reset --hard; daemon
+0-active/0-queued re-confirmed before the op). daemon-local now ==
+origin == `c4f510840`.
+
+Junior **#306** queued `[role:impl-task]` base_branch=phase-v1-ship-1.
+Pipeline: poll #306 → verify-before-trust → finalize-merge → §5.2
+Phase-1 → §5.2 Phase-2 e2e → on agpl pass: mutate DQ #251+#242+#244+#246
+pass → /brehon-verify → bm-pr → CR → gates 3/5/6 → bm-merge → Task 5
+retro → /brehon-phase-transition. A NEW-surface failure after fix-impl-8
+= surface + WAIT user; a 2nd same actix-Data-500 = §G4 hard-refusal
+re-plan.
