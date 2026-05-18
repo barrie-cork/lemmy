@@ -123,6 +123,31 @@
       "failed_commands": [
         "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
       ]
+    },
+    {
+      "id": 250,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T00:01:07Z",
+      "question": "§5.2 Phase-1 (workspace check) for fix-impl-7b merged tip 8a2e26e37 — the one-token (**context).clone() deref that corrects fix-impl-7's E0308. Run the 3 §15 DoD commands locally on the canonical checkout; cmd3 (cargo-test --no-run) is decisive — it must now compile (clear the E0308 at e2e.rs:14911).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-7b cherry-picked code-only onto phase-v1-ship-1 at 8a2e26e37 (commit 981773cf8 -x). verify-before-trust PASSED: crates/ diff = exactly +1/-1 in e2e.rs (the .wrap(SessionMiddleware::new(...)) line, context.clone() -> (**context).clone(); the .app_data line untouched; no production code; session.rs untouched; Part A/B/use/sibling byte-identical). DQ #248 (fix-impl-7 E0308) stays fail-pending. Phase-1 cmds: (1) cargo-check --workspace --features full, (2) cargo-clippy --workspace --features full --no-deps -- -D warnings, (3) cargo-test --no-run -p lemmy_server --test e2e (the E0308-bearing command — MUST clear). On all 3 PASS -> §5.2 Phase-2 e2e (local, gate-4 cached). DQ #242/#244/#246 stay fail-pending until Phase-2 e2e (the agpl test) passes.",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-check.bat --workspace --features full",
+        "cmd //c scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings",
+        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [

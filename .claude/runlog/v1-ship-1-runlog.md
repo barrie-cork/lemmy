@@ -1171,3 +1171,39 @@ mutate #242+#244+#246 pass → /brehon-verify → bm-pr → CR → gates 3/5/6
 → bm-merge → Task 5 retro → /brehon-phase-transition. New-surface fail
 after fix-impl-7b = surface + WAIT user; repeat (E0308,e2e.rs) cycle
 2/3, cycle 3 = §G4 hard-refusal re-plan.
+
+## advisor: fix-impl-7b #304 verified + cherry-picked → phase tip 8a2e26e37; §5.2 Phase-1 raised (DQ #250)
+
+**Junior #304** `[role:impl-task]` DONE (succeeded, ~2m, 2026-05-17T23:44→23:46).
+verify-before-trust **PASSED**: worker code commit `981773cf8`
+(subject = exact verbatim brief string; body documents the fix-impl-7
+byte-for-byte-mirror brief defect across `Data<LemmyContext>` vs bare
+`LemmyContext` + enumerates every byte-identical-preserved element).
+`crates/` diff = **exactly +1/-1 in e2e.rs**: the
+`.wrap(SessionMiddleware::new(...))` line only, `context.clone()` →
+`(**context).clone()`; the `.app_data(Data::new(context.clone()))` line
+above UNTOUCHED; no production code; `session.rs` untouched; fix-impl-6
+Part A (14919-14953) / Part B (14888-14896) / fix-impl-7's `use` /
+sibling `all_mvp_endpoints_return_non_404`@3860 all byte-identical.
+Worker HEAD `3bc18ce2c` = `chore(decision-queue): impl raised DQ #250`
+(divergent-base artifact — worker branched daemon-local phase ref pre
+recent lane DQ/runlog pushes; recurring multi-lane ref-isolation gap;
+content in origin, NOT data loss).
+
+**Lane-safe finalize:** `git cherry-pick -x 981773cf8` (CODE COMMIT
+ONLY, exit 0, 1 file +1/-1) → phase tip `8a2e26e37`. Did NOT ort-merge
+the worker's stale DQ/runlog base. Stray untracked `C` artifact (90B,
+misdirected validate-laptop-238 redirect, 2026-05-16, not crates/) `rm`d
+before commit. **post-finalize-merge DQ-resurrection re-assert: ALL
+INVARIANTS HOLD** — #248/#242/#244/#246 stay fail-pending, #247/#249
+user-resolved, #243/#245 pass-resolved, #250 raised, #250 from worker
+correctly ABSENT from lane DQ (cherry-pick code-only — lane-canonical).
+
+**DQ #250** raised (`validate-pending-laptop`, from=advisor, tip
+`8a2e26e37`, next_id=250 across live+0-archives): §5.2 Phase-1 3 cmds
+[cargo-check / cargo-clippy -D warnings / cargo-test --no-run -p
+lemmy_server --test e2e]. **cmd3 is decisive — MUST clear the E0308**
+fix-impl-7 hit at e2e.rs:14911. On all-3-PASS → §5.2 Phase-2 e2e (local,
+gate-4 cached). DQ pending [#229,#242(fail),#244(fail),#246(fail),
+#248(fail),#250(pending)]. NEXT: push phase branch → run Phase-1 cmds
+on canonical checkout `C:/Users/barri/Developer/brehon-fork`.
