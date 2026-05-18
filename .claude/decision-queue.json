@@ -14,24 +14,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 267,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-18T17:14:32.069925Z",
-      "branch": "phase-v1-federation-inbound-a",
-      "phase_task": 9,
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-8d78381d9.log",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "question": "Phase-2 e2e (advisor-driven, local off-Actions per gate-4 cached \"local\"): run full e2e suite on laptop for phase-v1-federation-inbound-a tip 8d78381d9 (Cohort B 4/4 complete, Task 9 = last impl task) and mutate this entry",
-      "context": "Shape G SUSPENDED until 2026-06-01; Phase-2 e2e runs locally per gate-4 pre-answered \"local\" (cached phase_2_e2e_mode, not re-asked per skill). All Cohort B §5.2 workspace-checks passed (DQ #248/#249/#251/#252/#266). Running cargo-test.bat --workspace --test e2e --features full in lane worktree; advisor mutates this entry directly on bg cargo exit (explicit E2E_EXIT marker, not bg notification)."
     }
   ],
   "resolved": [
@@ -4249,6 +4231,24 @@
       "resolved_at": "2026-05-18T17:11:18.623745Z",
       "question": "validate-pending-laptop: task 9 e2e.rs phase1 probes + trust-state fixtures — run 3 DoD commands on laptop and mutate this entry",
       "context": "Task 9 impl committed 6ae091e90 on worker branch. Pre-push cargo-check exit 0. Awaiting advisor-laptop to run the 3 §15 validation commands."
+    },
+    {
+      "id": 267,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T17:14:32.069925Z",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": 9,
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-122187ebd.log",
+      "result": "pass",
+      "log_slice": "test result: ok. 91 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1960.71s\nE2E_EXIT_0\n(re-run #2 at phase tip 122187ebd after fix-impl-5; v1_jm_a_backfill_populates_v0_snapshot now PASSES; 5 ignored = known GH#42/#43/#45 deflakes; both Task 9 federation fixtures pass)",
+      "failed_jobs": null,
+      "answer": "PASS. Phase-2 e2e re-run #2 GREEN at phase tip 122187ebd (post fix-impl-5 revert().limit(12)->limit(13)). Explicit log marker E2E_EXIT_0; 91 passed / 0 failed / 5 ignored (the 5 are the known GH#42/#43/#45 deflakes). The single regression v1_jm_a_backfill_populates_v0_snapshot is resolved. Cohort B 4/4 COMPLETE (Task 9 last impl task). Advance to bm-pr-pending. (bg task-notification reported exit-0 but is non-authoritative per feedback_background_task_notification_lies; explicit E2E_EXIT_0 log marker is the trustworthy signal.)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T20:22:51.537510Z",
+      "question": "Phase-2 e2e (advisor-driven, local off-Actions per gate-4 cached \"local\"): run full e2e suite on laptop for phase-v1-federation-inbound-a tip 8d78381d9 (Cohort B 4/4 complete, Task 9 = last impl task) and mutate this entry",
+      "context": "Shape G SUSPENDED until 2026-06-01; Phase-2 e2e runs locally per gate-4 pre-answered \"local\" (cached phase_2_e2e_mode, not re-asked per skill). All Cohort B §5.2 workspace-checks passed (DQ #248/#249/#251/#252/#266). Running cargo-test.bat --workspace --test e2e --features full in lane worktree; advisor mutates this entry directly on bg cargo exit (explicit E2E_EXIT marker, not bg notification)."
     }
   ],
   "schema_version": 2
