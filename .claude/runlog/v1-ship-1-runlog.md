@@ -1207,3 +1207,46 @@ fix-impl-7 hit at e2e.rs:14911. On all-3-PASS → §5.2 Phase-2 e2e (local,
 gate-4 cached). DQ pending [#229,#242(fail),#244(fail),#246(fail),
 #248(fail),#250(pending)]. NEXT: push phase branch → run Phase-1 cmds
 on canonical checkout `C:/Users/barri/Developer/brehon-fork`.
+
+## advisor: §5.2 Phase-1 ALL GREEN for fix-impl-7b (DQ #250 → pass); E0308 CLEARED
+
+§5.2 Phase-1 on fix-impl-7b merged tip `8a2e26e37` (canonical checkout
+`C:/Users/barri/Developer/brehon-fork`, detached) — **ALL 3 cmds PASS**
+(EXIT markers read from log files, NOT bg notifications, per
+feedback_background_task_notification_lies):
+- **cmd1** `cargo-check --workspace --features full` = PASS
+  (`CMD1_EXIT_0`, 1m27s, 0 errors/warnings).
+- **cmd2** `cargo-clippy --workspace --features full --no-deps -- -D
+  warnings` = PASS (`CMD2_EXIT_0`, 1m52s, 0 clippy errors).
+- **cmd3** `cargo-test --no-run -p lemmy_server --test e2e` = PASS
+  (`CMD3_EXIT_0`, 1m44s, **0 `error[E0308]`**, `Executable
+  tests\e2e.rs target\debug\deps\e2e-aebb6c76db6b1818.exe`).
+
+**The E0308 at e2e.rs:14911 that fix-impl-7 (DQ #248) hit is CLEARED**
+by fix-impl-7b's one-token `(**context).clone()` deref (the proven
+16-site in-file `Data<LemmyContext>`→`LemmyContext` conversion idiom).
+fix-impl-7's defect was a brief-mandated byte-for-byte mirror of sibling
+`all_mvp_endpoints_return_non_404`@3860 whose `context` is a BARE
+`LemmyContext` (`LemmyContext::create`@3849); the agpl test's `context`
+is `Data<LemmyContext>` (`governance_fixtures::bootstrap`@803);
+`SessionMiddleware::new` takes `LemmyContext` by value (session.rs:22).
+
+**DQ #250** mutated → `result=pass` → moved pending→resolved
+(answered_by=advisor-laptop, 2026-05-18T00:11:13Z).
+post-finalize-merge DQ-resurrection re-assert: ALL invariants hold —
+#248/#242/#244/#246 stay fail-pending (historical/until Phase-2),
+#247/#249 user-resolved, #243/#245 pass-resolved, no dup ids.
+DQ pending [#229,#242(fail),#244(fail),#246(fail),#248(fail)].
+
+NEXT: §5.2 Phase-2 e2e (local — USER GATE 4 cached, NOT re-asked).
+Pre-flight `docker ps` (testcontainers/--features full needs Docker
+Desktop). On docker-0 → raise validate-pending-laptop-e2e DQ (#251,
+from=advisor) + commit+push lane FIRST → `cargo-test.bat --workspace
+--test e2e --features full` bg (~26-33min, recompiles on --workspace
+fingerprint) → read E2E_EXIT marker + "agpl ... ok" + "90 passed; 0
+failed; 5 ignored" in the LOG. Phase-2 routing: pass → mutate e2e DQ +
+#242+#244+#246 pass → /brehon-verify → bm-pr → CR → gates 3/5/6 →
+bm-merge → Task 5 retro → /brehon-phase-transition; SAME actix-Data 500
+= FederationMiddleware also needed = NEW change = fresh user §G4 nod;
+DIFFERENT body = next layer surfaced + WAIT; 3rd-total same surface =
+§G4 hard-refusal re-plan.
