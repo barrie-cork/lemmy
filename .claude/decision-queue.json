@@ -1,34 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 248,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T23:21:25Z",
-      "question": "v1-ship-1 fix-impl-7 workspace validation — cargo-check + cargo-clippy + cargo-test --no-run on worker branch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-7 committed 4041afda1 on branch junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303. Added SessionMiddleware wrap + its use to agpl_source_disclosure_surface_returns_notice test App. Shape G suspended (DQ #229); validate-pending-laptop per advisor-orchestrator.md §5.2. phase_task=4.",
-      "answer": "§5.2 Phase-1 for fix-impl-7 #303: cmd1 cargo-check PASS + cmd2 clippy PASS, but cmd3 cargo-test --no-run FAILS to compile with E0308 at e2e.rs:14911:36 — `SessionMiddleware::new(context.clone())` expects `LemmyContext` but the agpl test's `context` is `Data<LemmyContext>` (from governance_fixtures::bootstrap() which returns Data<LemmyContext>, NOT a bare LemmyContext). The fix-impl-7 brief instructed a BYTE-FOR-BYTE mirror of the PASSING sibling all_mvp_endpoints_return_non_404 (e2e.rs:3860 `.wrap(SessionMiddleware::new(context.clone()))`) — but that sibling's `context` is a BARE LemmyContext (it does `let context = LemmyContext::create(...)` directly at e2e.rs:3849, NOT via bootstrap()). The byte-for-byte mirror is therefore a TYPE ERROR in the agpl test because the two tests obtain `context` differently. This is a BRIEF DEFECT (the brief mandated a byte-for-byte mirror without accounting for the differing context type), NOT a Junior breach (Junior #303 followed the brief literally + correctly; the additive diff was exactly +1 use +1 .wrap, Part A/B preserved). The fix is a ONE-TOKEN deref: `SessionMiddleware::new((*context).clone())` or `SessionMiddleware::new(context.get_ref().clone())` (Data<T> derefs to T; .get_ref() returns &T). §G4: E0308 is NON-allowlist (catch-fire); cycle-count = 1st (E0308, e2e.rs) occurrence, NOT a cycle-3 hard-refusal. Surfaced to user: the fix is unambiguous + one-token + within the spirit of the already-authorized fix-impl-7 (DQ #247) — recommend a narrow fix-impl-7b (deref the Data) under the existing override OR a fresh user nod. bm-pr BLOCKED until Phase-1 green.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T23:38:10Z",
-      "phase_task": 4,
-      "branch": "junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "result": "fail",
-      "log_slice": "§5.2 Phase-1 on fix-impl-7 merged tip f9214f2f8:\ncmd1 cargo-check --workspace --features full = PASS (1m48s, CMD1_EXIT_0)\ncmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings = PASS (3m01s, CMD2_EXIT_0)\ncmd3 cargo-test --no-run -p lemmy_server --test e2e = FAIL (CMD3_EXIT_NONZERO):\n\nerror[E0308]: mismatched types\n  --> crates\\server\\tests\\e2e.rs:14911:36\n   |\n14911 |       .wrap(SessionMiddleware::new(context.clone()))\n   |             ---------------------- ^^^^^^^^^^^^^^^ expected `LemmyContext`, found `Data<LemmyContext>`\n   |             |\n   |             arguments to this function are incorrect\n   = note: expected struct `LemmyContext`\n              found struct `actix_web::web::Data<LemmyContext>`\nnote: associated function defined here\n  --> crates\\routes\\src\\middleware\\session.rs:22:10\n   | 22 |   pub fn new(context: LemmyContext) -> Self {\nerror: could not compile `lemmy_server` (test \"e2e\") due to 1 previous error\n",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
-      ]
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 1,
@@ -4442,6 +4414,34 @@
       "answer": "PASS — Phase-2 full e2e on merged tip b941f5651: 'test result: ok. 95 passed; 0 failed; 5 ignored; finished in 2240.97s', E2E_EXIT_0. agpl_source_disclosure_surface_returns_notice ... ok; admin_dashboard_html_returns_html_for_admin ... ok; admin_audit_html_returns_html_for_admin ... ok. 95 passed (90 pre-merge + 5 v1-AD-e admin-HTML — coexistence proven, no runtime harness collision). 5 ignored = pre-existing baseline GH #42/#43/#45, NOT regressions. Log: .claude/runlog/e2e-v1-ship-1-r2-merged-b941f5651.log",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T16:18:45Z"
+    },
+    {
+      "id": 248,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-17T23:21:25Z",
+      "question": "v1-ship-1 fix-impl-7 workspace validation — cargo-check + cargo-clippy + cargo-test --no-run on worker branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-7 committed 4041afda1 on branch junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303. Added SessionMiddleware wrap + its use to agpl_source_disclosure_surface_returns_notice test App. Shape G suspended (DQ #229); validate-pending-laptop per advisor-orchestrator.md §5.2. phase_task=4.",
+      "answer": "§5.2 Phase-1 for fix-impl-7 #303: cmd1 cargo-check PASS + cmd2 clippy PASS, but cmd3 cargo-test --no-run FAILS to compile with E0308 at e2e.rs:14911:36 — `SessionMiddleware::new(context.clone())` expects `LemmyContext` but the agpl test's `context` is `Data<LemmyContext>` (from governance_fixtures::bootstrap() which returns Data<LemmyContext>, NOT a bare LemmyContext). The fix-impl-7 brief instructed a BYTE-FOR-BYTE mirror of the PASSING sibling all_mvp_endpoints_return_non_404 (e2e.rs:3860 `.wrap(SessionMiddleware::new(context.clone()))`) — but that sibling's `context` is a BARE LemmyContext (it does `let context = LemmyContext::create(...)` directly at e2e.rs:3849, NOT via bootstrap()). The byte-for-byte mirror is therefore a TYPE ERROR in the agpl test because the two tests obtain `context` differently. This is a BRIEF DEFECT (the brief mandated a byte-for-byte mirror without accounting for the differing context type), NOT a Junior breach (Junior #303 followed the brief literally + correctly; the additive diff was exactly +1 use +1 .wrap, Part A/B preserved). The fix is a ONE-TOKEN deref: `SessionMiddleware::new((*context).clone())` or `SessionMiddleware::new(context.get_ref().clone())` (Data<T> derefs to T; .get_ref() returns &T). §G4: E0308 is NON-allowlist (catch-fire); cycle-count = 1st (E0308, e2e.rs) occurrence, NOT a cycle-3 hard-refusal. Surfaced to user: the fix is unambiguous + one-token + within the spirit of the already-authorized fix-impl-7 (DQ #247) — recommend a narrow fix-impl-7b (deref the Data) under the existing override OR a fresh user nod. bm-pr BLOCKED until Phase-1 green. || SUPERSEDED by v1-ship-1-r2 re-plan. This was a pre-r2 fix-impl-7 attempt (branch ...-303, commit 4041afda1, phase_task 4) that added a SessionMiddleware wrap to the agpl test App and FAILED workspace validation. The r2 re-plan abandoned this approach entirely and rebuilt the agpl e2e test on the canonical inner_context/lib.rs:364 FederationConfig idiom (Task 6, commit 38af8b866). The rebuilt test is GREEN: Phase-1+Phase-2 pre-merge (DQ #263 pass) and Phase-2 post-merge on b941f5651 (DQ #264 pass: 95 passed / 0 failed). result:'fail' is preserved as the historical audit trail per decision-queue.md v2 forward-only rule; this entry never gated PR #137 (it was a dead abandoned-branch fail kept in pending[] for §G4 triage that the re-plan rendered moot). Moved pending→resolved at merge-gate (advisor L15 inline check) so the gate is unambiguous: 0 live validate-pending, 0 pending blockers.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-17T23:38:10Z",
+      "phase_task": 4,
+      "branch": "junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "result": "fail",
+      "log_slice": "§5.2 Phase-1 on fix-impl-7 merged tip f9214f2f8:\ncmd1 cargo-check --workspace --features full = PASS (1m48s, CMD1_EXIT_0)\ncmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings = PASS (3m01s, CMD2_EXIT_0)\ncmd3 cargo-test --no-run -p lemmy_server --test e2e = FAIL (CMD3_EXIT_NONZERO):\n\nerror[E0308]: mismatched types\n  --> crates\\server\\tests\\e2e.rs:14911:36\n   |\n14911 |       .wrap(SessionMiddleware::new(context.clone()))\n   |             ---------------------- ^^^^^^^^^^^^^^^ expected `LemmyContext`, found `Data<LemmyContext>`\n   |             |\n   |             arguments to this function are incorrect\n   = note: expected struct `LemmyContext`\n              found struct `actix_web::web::Data<LemmyContext>`\nnote: associated function defined here\n  --> crates\\routes\\src\\middleware\\session.rs:22:10\n   | 22 |   pub fn new(context: LemmyContext) -> Self {\nerror: could not compile `lemmy_server` (test \"e2e\") due to 1 previous error\n",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
+      ],
+      "superseded_by": "v1-ship-1-r2 Task 6 (DQ #263, #264)"
     }
   ]
 }
