@@ -20,3 +20,5 @@ pub mod rule_set_version;
 pub mod sanction;
 pub mod sponsor_allowlist;
 pub mod surety;
+pub mod federation_inbox_dropped_log;
+pub mod federation_peer;
