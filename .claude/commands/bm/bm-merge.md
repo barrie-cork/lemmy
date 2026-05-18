@@ -73,12 +73,14 @@ if the BM Junior skips the POST-merge runlog COMPLETE commit (observed
 on `governance-v0` with the *verified real merge sha* (per
 `.claude/rules/auto-phase.md` invariant 7).
 
-**Stronger structural option (recommended follow-up, not yet shipped):**
-add a `merge=union` driver in `.gitattributes` for
-`.claude/runlog/bm-runlog.md` — it is an append-only ledger, so a
-union merge is semantically correct and makes ALL runlog cross-branch
-conflicts structurally impossible (would also have prevented this
-incident even with the old ordering). Tracked in
+**Stronger structural option (SHIPPED 2026-05-18):** a `merge=union`
+driver in `.gitattributes` for `.claude/runlog/bm-runlog.md` — it is
+an append-only ledger, so a union merge is semantically correct and
+makes ALL runlog cross-branch conflicts structurally impossible (would
+also have prevented this incident even with the old ordering). This is
+now in place on `governance-v0` (`.gitattributes` line
+`.claude/runlog/bm-runlog.md merge=union`); it is belt-and-braces
+behind the POST-merge ordering above. Tracked in
 `feedback_l14_runlog_on_trunk_self_conflicts_with_bm_pr.md`.
 
 Invoke:
