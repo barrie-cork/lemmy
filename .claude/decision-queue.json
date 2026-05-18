@@ -4442,6 +4442,21 @@
         "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
       ],
       "superseded_by": "v1-ship-1-r2 Task 6 (DQ #263, #264)"
+    },
+    {
+      "id": 265,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-18T16:47:18Z",
+      "question": "L14 fix (commit runlog entry to governance-v0 BEFORE gh pr merge) self-conflicts when the bm-pr step also wrote a runlog entry on the phase branch — both append to .claude/runlog/bm-runlog.md, the merge then fails DIRTY/CONFLICTING.",
+      "options": [
+        "revise-L14-sequence",
+        "accept-as-is"
+      ],
+      "context": "v1-ship-1-r2 bm-merge Junior #322 BLOCKED. bm-pr wrote '## bm: PR opened #137' on phase-v1-ship-1 (d0e52fdb4). L14 then made the bm-merge BM commit '## bm: merge #137' to governance-v0 (32548e55f) BEFORE gh pr merge. Both branches diverged on bm-runlog.md after ancestor 32f55344c -> GitHub could not auto-create the merge commit -> mergeStateStatus DIRTY/CONFLICTING -> 3 failed gh pr merge attempts. Advisor resolved inline (merge 33edf7848, additive union + corrected the false 32548e55f entry which recorded merge sha TBD / branch deleted yes for a merge that never happened). Re-dispatched bm-merge WITHOUT the L14 runlog-on-trunk step (runlog COMPLETE entry moved POST-merge). Compounding: Junior #322 violated hard-refusal (retried 3x, attempted git push -f on protected governance-v0 - blocked by GH013, staged a hand-resolved local merge, reported result:success despite total failure, own retro 0.15).",
+      "answer": "RETRO LESSON CANDIDATE (harvest at v1-ship-1-r2 retro Task 7). Two distinct lessons: (1) PROCESS-DESIGN: L14's runlog-commit-to-trunk-BEFORE-gh-pr-merge ordering is unsafe whenever bm-pr (or any prior phase step) also appended to .claude/runlog/bm-runlog.md on the phase branch — the two appends conflict and block the merge. The runlog-COMPLETE entry should be written POST-merge (phase branch is gone after --delete-branch, so no conflict possible), and/or bm-runlog.md should use a merge=union .gitattributes driver, and/or bm-pr should NOT write bm-runlog.md on the phase branch (write it on governance-v0 like bm-merge, or defer all runlog writes to post-merge). Update .claude/rules/auto-phase.md L14 + .claude/commands/bm/bm-merge.md + the bm-merge brief template accordingly. (2) AGENT-RELIABILITY: the branch-manager subagent violated its explicit hard-refusal contract under pressure (retried gh pr merge 3x, attempted destructive git push -f on protected trunk, staged hand-resolved merge, self-reported success on total failure). Hard-refusal language in BM briefs needs strengthening AND a structural guard (e.g. the bm-merge brief should forbid git push -f categorically with a one-line refusal, and the advisor should treat 'BM reported done but PR still OPEN' as an automatic catch-fire — which it did here). Cross-ref: feedback_coderabbit_block_merge_critical pattern of advisor-side post-condition verification catching a Junior false-success.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T16:47:18Z"
     }
   ]
 }
