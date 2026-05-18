@@ -4249,6 +4249,22 @@
       "resolved_at": "2026-05-18T20:22:51.537510Z",
       "question": "Phase-2 e2e (advisor-driven, local off-Actions per gate-4 cached \"local\"): run full e2e suite on laptop for phase-v1-federation-inbound-a tip 8d78381d9 (Cohort B 4/4 complete, Task 9 = last impl task) and mutate this entry",
       "context": "Shape G SUSPENDED until 2026-06-01; Phase-2 e2e runs locally per gate-4 pre-answered \"local\" (cached phase_2_e2e_mode, not re-asked per skill). All Cohort B §5.2 workspace-checks passed (DQ #248/#249/#251/#252/#266). Running cargo-test.bat --workspace --test e2e --features full in lane worktree; advisor mutates this entry directly on bg cargo exit (explicit E2E_EXIT marker, not bg notification)."
+    },
+    {
+      "id": 269,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-18T20:48:50.768297Z",
+      "question": "Copilot automated-review findings have no representable `source` value in .claude/PRPs/reviews/SCHEMA.md (enum is strictly coderabbit | claude | user). How should bm-poll-cr ingest Copilot inline findings without mislabeling?",
+      "options": [
+        "source: coderabbit + reviewer: copilot discriminator (additive field; cr_url from comment html_url) — CHOSEN",
+        "extend SCHEMA.md source enum with `copilot`",
+        "fold Copilot under source: claude (rejected — semantically wrong; Copilot is not a Brehon /prp-review or ADR finding)"
+      ],
+      "context": "PR #138 bm-poll-cr: 29 inline comments (23 coderabbitai[bot] + 6 Copilot). SCHEMA.md source enum has no copilot value; cr_url required when source=coderabbit. Advisor decided (defensible, not ADR-affecting / scope-changing / visible-to-others): both CR and Copilot are automated code reviewers, so map both to source: coderabbit and add an additive reviewer: {coderabbit|copilot} discriminator (SCHEMA.md permits additive forward-only fields). cr_url uses each comment's GitHub html_url (Copilot inline comments carry one). bm-triage can filter by reviewer:. The fed-in-a-bm-poll-cr brief §4 encodes this so the Junior does not raise a blocker.",
+      "answer": "RESOLVED (advisor-self, kind:log for retro-harvest). bm-poll-cr brief §4 instructs: source: coderabbit for ALL automated-review findings; reviewer: coderabbit (CR) | copilot (Copilot); cr_url = comment html_url. ACTION FOR RETRO: amend .claude/PRPs/reviews/SCHEMA.md to document the `reviewer:` additive discriminator field + note that Copilot findings use source: coderabbit + reviewer: copilot. This is a schema-doc amendment, not a behavior change. Promote to a lesson if Copilot reviews recur across phases (likely — Copilot auto-reviews every PR).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T20:48:50.768297Z"
     }
   ],
   "schema_version": 2
