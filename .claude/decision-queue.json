@@ -14,6 +14,28 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 271,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T21:47:27.053177Z",
+      "question": "Phase-2 e2e re-run #3 (local, post-fix-cr-1) for phase-v1-federation-inbound-a tip f432faa3f",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-cr-1 (df6eee91b) addressed 7 PR#138 fix-in-pr findings; DQ #270 validate-pending-laptop PASS (workspace+nonfull+e2e-no-run). Phase-2 full e2e re-run required on post-fix tip f432faa3f before merge. phase_2_e2e_mode=local (cached gate-4). Advisor runs locally; mutates this entry directly on bg cargo exit. Prior Phase-2 #267 was GREEN @ 122187ebd (91 passed; 0 failed; 5 ignored) before fix-cr-1.",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-f432faa3f.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-3",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
