@@ -134,6 +134,42 @@ to (a) switch CWD by closing + reopening Claude Code in
    one CWD, one lane. To switch lanes: close session, open a new one in
    the target worktree.
 
+6. **Atomic read-mutate-commit for any DQ write on the canonical
+   `brehon-fork` checkout.** Hard refusal #2 forbids *phase-branch* DQ
+   writes from the canonical checkout, but **legitimate `governance-v0`
+   plan-time DQ writes** (advisor planning DQs, clarify entries, gate-1
+   pre-seeds — explicitly allowed by #2's carve-out) STILL race
+   concurrent CC sessions that share the canonical `.git/` and may
+   commit `decision-queue.json` between a session's file-mutate and its
+   commit. Confirmed 2026-05-16 (v1-AD-e gate-1): a concurrent session's
+   `b114937b8` (DQ #229 move) landed between the first `#237/#238`
+   append and its commit, **silently discarding the uncommitted
+   append** — `git add` reported "nothing added" and the work was lost
+   until re-applied. The required protocol for ANY canonical-checkout DQ
+   write:
+
+   1. `git fetch origin governance-v0` immediately before the write.
+   2. Read `decision-queue.json` fresh (do NOT rely on a read from
+      earlier in the session — a concurrent session may have rewritten
+      it).
+   3. Re-compute `next_id` across all lanes per "Worktree-aware DQ id
+      discipline" below (a concurrent session may have consumed ids).
+   4. Mutate → verify the JSON (`python -c "json.load(...)"` +
+      assert the new ids present) → `git add` → `git commit` →
+      `git push` **as a single uninterrupted shell sequence**, NOT
+      across multiple tool calls. Minimise the window between
+      file-mutate and commit.
+   5. After push, verify the entry survived (`git log -1 --stat` +
+      re-read). If the commit reported "nothing added" or the entry is
+      absent post-push, a concurrent commit clobbered the working-tree
+      change between mutate and `git add` — re-run from step 1.
+
+   The structural fix (still future scope) is that gate-1 pre-seed DQ
+   writes should happen on a lane-dedicated worktree even *before*
+   bm-cut, OR a PreToolUse guard should refuse canonical-checkout DQ
+   writes when `.claude/agent-activity.json` shows another write-mode
+   session. Until then, the atomic protocol above is mandatory.
+
 ## Worktree-aware DQ id discipline
 
 Per `.claude/rules/decision-queue.md` "Archive policy" + "Mid-task visibility"

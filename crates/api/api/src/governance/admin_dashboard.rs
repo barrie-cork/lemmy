@@ -35,24 +35,20 @@ use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
 use std::collections::BTreeMap;
 
-pub async fn admin_dashboard(
-  context: Data<LemmyContext>,
-  local_user_view: LocalUserView,
-) -> LemmyResult<Json<AdminDashboardResponse>> {
-  is_admin(&local_user_view)?;
-
-  let mut cache = ConfigCache::new();
-  let mut pool = context.pool();
-  let conn = &mut get_conn(&mut pool).await?;
-
+/// Gathers the full dashboard aggregate from the DB. Extracted so both the
+/// JSON handler and the HTML handler share one data-gathering source of truth.
+pub(crate) async fn gather_dashboard(
+  conn: &mut AsyncPgConnection,
+  cache: &mut ConfigCache,
+  context: &Data<LemmyContext>,
+) -> LemmyResult<AdminDashboardResponse> {
   let active_cases = count_active_cases(conn).await?;
   let jury_queue = count_jury_queue(conn).await?;
   let recent_config_changes = list_recent_config_changes(conn).await?;
   let federation = federation_summary(conn).await?;
-  let reputation = reputation_instance_scope(conn, &mut cache, &mut context.pool()).await?;
+  let reputation = reputation_instance_scope(conn, cache, &mut context.pool()).await?;
   let rule_sets = rule_sets_summary(conn).await?;
-
-  Ok(Json(AdminDashboardResponse {
+  Ok(AdminDashboardResponse {
     active_cases,
     jury_queue,
     recent_config_changes,
@@ -60,7 +56,18 @@ pub async fn admin_dashboard(
     reputation,
     rule_sets,
     calculated_at: Utc::now(),
-  }))
+  })
+}
+
+pub async fn admin_dashboard(
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<AdminDashboardResponse>> {
+  is_admin(&local_user_view)?;
+  let mut cache = ConfigCache::new();
+  let mut pool = context.pool();
+  let conn = &mut get_conn(&mut pool).await?;
+  Ok(Json(gather_dashboard(conn, &mut cache, &context).await?))
 }
 
 /// Classifies a `CaseStatus` variant as active (counts toward
@@ -165,7 +172,7 @@ async fn count_jury_queue(conn: &mut AsyncPgConnection) -> LemmyResult<JuryQueue
   })
 }
 
-async fn list_recent_config_changes(
+pub(crate) async fn list_recent_config_changes(
   conn: &mut AsyncPgConnection,
 ) -> LemmyResult<Vec<AdminConfigAuditEntry>> {
   // Filter `signature IS NOT NULL` so rows left half-written by a failed

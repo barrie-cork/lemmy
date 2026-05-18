@@ -95,6 +95,39 @@ to a single inline script — only a consolidated recipe does. Cite this
 file when reaching for `git show <ref>:<file>` + Python in one Bash
 block.
 
+## Trap 4 (adjacent): `git rev-parse --short <refA> <refB>` multi-ref mangling
+
+`git rev-parse --short governance-v0 origin/governance-v0` (two refs
+in one invocation) is **also** mangled by the PowerShell tool layer
+on Windows — the two ref arguments get concatenated/normalised into a
+single bad token and git aborts with `fatal: Needed a single
+revision`. This is the same PowerShell-arg-rewrite family as trap 1
+(`git show <ref>:<path>`), but the reproducer is multi-arg
+`rev-parse`, not the colon.
+
+Confirmed 2026-05-16 (v1-AD-e bm-cut recovery session): the
+single-ref forms `git rev-parse governance-v0` and `git rev-parse
+origin/governance-v0` each worked fine individually; only the
+two-ref-in-one-call form failed. It aborted mid-`&&`-chain, killing
+a commit that would otherwise have run.
+
+**Fix:** never pass multiple refs to one `git rev-parse` on Windows.
+Issue separate single-ref invocations:
+
+```bash
+# WRONG (mangled on Windows):
+git rev-parse --short governance-v0 origin/governance-v0
+# RIGHT:
+git rev-parse --short governance-v0
+git rev-parse --short origin/governance-v0
+```
+
+Especially important: do NOT put a multi-ref `rev-parse` as a
+pre-flight check at the head of a `&&` chain whose tail is a commit
+or push — the mangled abort silently skips the state-changing tail.
+Either split the rev-parse out as its own command, or drop it from
+the chain entirely.
+
 ## Symptom to recognise
 
 - `fatal: ambiguous argument 'origin\<branch>;.claude\<file>'` →
@@ -103,6 +136,10 @@ block.
   shows it exists → trap 2, switch path to `$LOCALAPPDATA/Temp/<file>`.
 - `UnicodeDecodeError: 'charmap' codec can't decode byte 0x__` →
   trap 3, add `encoding='utf-8'` and read from file not stdin.
+- `fatal: Needed a single revision` from a `git rev-parse <refA>
+  <refB>` (two refs) → trap 4, split into separate single-ref
+  invocations; check it wasn't heading a `&&` chain with a
+  commit/push tail.
 
 ## Generalises to
 
