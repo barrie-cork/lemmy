@@ -153,6 +153,53 @@ spanning phase-branch + active worker branches; extend it to also walk
 **Future scope** — for now, advisor sessions manually check the largest id
 across `origin/phase-v1-*` refs before picking next_id.
 
+## PMD is cross-lane shared, NOT per-lane isolated
+
+The decision-queue is deliberately **per-lane isolated** (each worktree
+owns its own `.claude/decision-queue.json` — see §"Layout" + §"Hard
+refusals" #2). The **project-memory DB (PMD) is the exact opposite**:
+lessons, retros, and patterns are **global knowledge** that every lane
+must read and write to a **single canonical store**.
+
+The canonical PMD is **`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`**
+(the canonical checkout's `.project-memory/`, never a per-worktree copy).
+
+### Hard invariant
+
+Every worktree's `.mcp.json` (gitignored — holds API keys) MUST set the
+`project-memory` server's `PROJECT_MEMORY_DB` to the **absolute canonical
+path above** — NEVER a relative `.project-memory/memory.db` (that
+resolves against the per-worktree `PROJECT_ROOT` and strands writes in a
+lane-local DB) and NEVER a `brehon-fork-<lane>/.project-memory/...` path.
+
+The tracked `.mcp.json.example` template encodes this with a
+`_comment_pmd_cross_lane` guard key. When bootstrapping a new lane
+worktree's `.mcp.json` from the template, the absolute canonical
+`PROJECT_MEMORY_DB` carries over verbatim — only `PROJECT_ROOT` changes
+per worktree.
+
+### Why this invariant is load-bearing
+
+The Stop hook `.claude/hooks/retro-check.sh` resolves the PMD via
+`git rev-parse --git-common-dir` → which from **any** worktree points at
+the **canonical** `brehon-fork/.git`, so the hook always reads
+`brehon-fork/.project-memory/memory.db`. If a lane's MCP writes retros
+to its own lane-local DB instead, the hook can never see them: the agent
+writes genuine retros and the hook false-blocks indefinitely (observed
+on v1-ship-1: ~27+ false Stop-hook blocks across the phase; all 21
+v1-ship-1 retros stranded in `brehon-fork-ship-1/.project-memory/memory.db`,
+invisible to the canonical-DB-reading hook). Pinning every lane's MCP to
+the canonical absolute path makes MCP-writes and hook-reads converge.
+
+The hook file is **NOT** the thing to fix here — its git-common-dir
+resolution is correct (it intentionally lands on the canonical shared
+DB). The defect class is always MCP-side: a relative or per-lane
+`PROJECT_MEMORY_DB`. Never edit the hook to "fix" a stranded-retro
+symptom; fix the offending lane's `.mcp.json`.
+
+See `.claude/lessons/feedback_pmd_cross_lane_canonical_db.md` for the
+full incident + the diagnosis recipe.
+
 ## Daemon side (EliteDesk)
 
 The daemon at `/srv/brehon-fork` uses `git worktree add` per Junior task
