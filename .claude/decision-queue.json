@@ -4014,6 +4014,21 @@
    "answer": "PASS. Task 4 cargo-check.bat --workspace --features full EXIT 0 (governance_log.rs only, no migration). Brief scope honoured (registry .md untouched, advisor-owned e67e794cf). Cohort A serial barrier: Task 1+2+3+4 GREEN -> dispatch serial Task 5 (last Cohort A).",
    "answered_by": "advisor-laptop",
    "resolved_at": "2026-05-18T03:08:00Z"
+  },
+  {
+   "id": 245,
+   "from": "advisor",
+   "kind": "log",
+   "timestamp": "2026-05-18T03:17:00Z",
+   "question": "User-authorised forbidden-window override: dispatch serial Task 5 inside the Daily 02:55-04:15 UTC window.",
+   "options": [
+    "proceed: user override (real-time ~04:15 per user; machine clocks ~59min behind)",
+    "defer: machine-clock authoritative (rejected by user)"
+   ],
+   "context": "Both laptop+EliteDesk report ~03:16 UTC (agree with each other, ~59min behind user-stated 04:15). User chose Override (AskUserQuestion, this session) to dispatch serial Task 5 now per advisor-orchestrator.md 5.1 When-to-override. CAVEAT recorded: subagent task-0 forbidden-window guard reads EliteDesk date -u (~03:16, still in-window) and may FORBIDDEN_WINDOW-exit the dispatch independent of this DQ; advisor will verify task actually started post-dispatch and surface if it task-0-exits. Clock-skew also flagged as a standing retro item.",
+   "answer": "PROCEED — user-authorised forbidden-window override (real-time ~04:15 per user; machine UTC ~03:16, ~59min skew). Task 5 dispatched under this override. If subagent task-0 FORBIDDEN_WINDOW-exits (machine-clock-driven, advisor cannot override that guard), advisor re-dispatches once machine-UTC passes 04:15.",
+   "answered_by": "user",
+   "resolved_at": "2026-05-18T03:17:00Z"
   }
  ],
  "schema_version": 2
