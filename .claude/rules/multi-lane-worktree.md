@@ -134,6 +134,42 @@ to (a) switch CWD by closing + reopening Claude Code in
    one CWD, one lane. To switch lanes: close session, open a new one in
    the target worktree.
 
+6. **Atomic read-mutate-commit for any DQ write on the canonical
+   `brehon-fork` checkout.** Hard refusal #2 forbids *phase-branch* DQ
+   writes from the canonical checkout, but **legitimate `governance-v0`
+   plan-time DQ writes** (advisor planning DQs, clarify entries, gate-1
+   pre-seeds — explicitly allowed by #2's carve-out) STILL race
+   concurrent CC sessions that share the canonical `.git/` and may
+   commit `decision-queue.json` between a session's file-mutate and its
+   commit. Confirmed 2026-05-16 (v1-AD-e gate-1): a concurrent session's
+   `b114937b8` (DQ #229 move) landed between the first `#237/#238`
+   append and its commit, **silently discarding the uncommitted
+   append** — `git add` reported "nothing added" and the work was lost
+   until re-applied. The required protocol for ANY canonical-checkout DQ
+   write:
+
+   1. `git fetch origin governance-v0` immediately before the write.
+   2. Read `decision-queue.json` fresh (do NOT rely on a read from
+      earlier in the session — a concurrent session may have rewritten
+      it).
+   3. Re-compute `next_id` across all lanes per "Worktree-aware DQ id
+      discipline" below (a concurrent session may have consumed ids).
+   4. Mutate → verify the JSON (`python -c "json.load(...)"` +
+      assert the new ids present) → `git add` → `git commit` →
+      `git push` **as a single uninterrupted shell sequence**, NOT
+      across multiple tool calls. Minimise the window between
+      file-mutate and commit.
+   5. After push, verify the entry survived (`git log -1 --stat` +
+      re-read). If the commit reported "nothing added" or the entry is
+      absent post-push, a concurrent commit clobbered the working-tree
+      change between mutate and `git add` — re-run from step 1.
+
+   The structural fix (still future scope) is that gate-1 pre-seed DQ
+   writes should happen on a lane-dedicated worktree even *before*
+   bm-cut, OR a PreToolUse guard should refuse canonical-checkout DQ
+   writes when `.claude/agent-activity.json` shows another write-mode
+   session. Until then, the atomic protocol above is mandatory.
+
 ## Worktree-aware DQ id discipline
 
 Per `.claude/rules/decision-queue.md` "Archive policy" + "Mid-task visibility"
@@ -152,6 +188,53 @@ spanning phase-branch + active worker branches; extend it to also walk
 `git worktree list` output and compute `next_id` across all visible refs.
 **Future scope** — for now, advisor sessions manually check the largest id
 across `origin/phase-v1-*` refs before picking next_id.
+
+## PMD is cross-lane shared, NOT per-lane isolated
+
+The decision-queue is deliberately **per-lane isolated** (each worktree
+owns its own `.claude/decision-queue.json` — see §"Layout" + §"Hard
+refusals" #2). The **project-memory DB (PMD) is the exact opposite**:
+lessons, retros, and patterns are **global knowledge** that every lane
+must read and write to a **single canonical store**.
+
+The canonical PMD is **`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`**
+(the canonical checkout's `.project-memory/`, never a per-worktree copy).
+
+### Hard invariant
+
+Every worktree's `.mcp.json` (gitignored — holds API keys) MUST set the
+`project-memory` server's `PROJECT_MEMORY_DB` to the **absolute canonical
+path above** — NEVER a relative `.project-memory/memory.db` (that
+resolves against the per-worktree `PROJECT_ROOT` and strands writes in a
+lane-local DB) and NEVER a `brehon-fork-<lane>/.project-memory/...` path.
+
+The tracked `.mcp.json.example` template encodes this with a
+`_comment_pmd_cross_lane` guard key. When bootstrapping a new lane
+worktree's `.mcp.json` from the template, the absolute canonical
+`PROJECT_MEMORY_DB` carries over verbatim — only `PROJECT_ROOT` changes
+per worktree.
+
+### Why this invariant is load-bearing
+
+The Stop hook `.claude/hooks/retro-check.sh` resolves the PMD via
+`git rev-parse --git-common-dir` → which from **any** worktree points at
+the **canonical** `brehon-fork/.git`, so the hook always reads
+`brehon-fork/.project-memory/memory.db`. If a lane's MCP writes retros
+to its own lane-local DB instead, the hook can never see them: the agent
+writes genuine retros and the hook false-blocks indefinitely (observed
+on v1-ship-1: ~27+ false Stop-hook blocks across the phase; all 21
+v1-ship-1 retros stranded in `brehon-fork-ship-1/.project-memory/memory.db`,
+invisible to the canonical-DB-reading hook). Pinning every lane's MCP to
+the canonical absolute path makes MCP-writes and hook-reads converge.
+
+The hook file is **NOT** the thing to fix here — its git-common-dir
+resolution is correct (it intentionally lands on the canonical shared
+DB). The defect class is always MCP-side: a relative or per-lane
+`PROJECT_MEMORY_DB`. Never edit the hook to "fix" a stranded-retro
+symptom; fix the offending lane's `.mcp.json`.
+
+See `.claude/lessons/feedback_pmd_cross_lane_canonical_db.md` for the
+full incident + the diagnosis recipe.
 
 ## Daemon side (EliteDesk)
 

@@ -159,14 +159,28 @@ change:
    change that re-introduces a pre-confirm Junior dispatch is a
    process regression and must be surfaced.
 
-7. **L14 fix is belt-and-braces.** The bm-merge brief explicitly
-   orders `Edit runlog → git add → git commit -m chore(bm):...
-   → git push origin governance-v0 → THEN gh pr merge`. The skill's
-   post-merge tick scans `git log -3 governance-v0` for the
-   `chore(bm)` matching the merge timeframe; if missing, advisor
-   authors a `docs(advisor):` re-apply block. This fallback is NOT
-   auto-skipped; if the BM brief's git sequence is silent, the post-
-   merge re-apply MUST run.
+7. **L14 fix is belt-and-braces (REVISED 2026-05-18: runlog
+   POST-merge).** The bm-merge brief explicitly orders the runlog
+   COMPLETE write to happen **AFTER** `gh pr merge --delete-branch`:
+   `gh pr merge → (merge succeeds) → git checkout governance-v0 +
+   pull → Edit runlog COMPLETE entry with real merge sha → git add
+   → git commit -m chore(bm): merge PR #<N> complete → git push
+   origin governance-v0`. The prior pre-merge ordering (commit
+   runlog to governance-v0 BEFORE `gh pr merge`) was **removed**:
+   it self-conflicted with the bm-pr step's phase-branch runlog
+   entry on the append-only `.claude/runlog/bm-runlog.md`, forcing
+   the PR to DIRTY/CONFLICTING and blocking the merge (v1-ship-1-r2
+   Junior #322; see `feedback_l14_runlog_on_trunk_self_conflicts_
+   with_bm_pr.md` + DQ #265). The skill's post-merge tick scans
+   `git log -3 governance-v0` for the `chore(bm): merge PR #<N>
+   complete` matching the merge timeframe; if missing, advisor
+   authors a `docs(advisor): L14 belt-and-braces — runlog COMPLETE
+   re-apply` block with the verified real merge sha. This fallback
+   is NOT auto-skipped; if the BM brief's git sequence is silent OR
+   the BM Junior skipped the POST-merge runlog commit (observed —
+   Junior #323), the post-merge re-apply MUST run. Audit-trail
+   durability is preserved by the bm-pr "PR opened" entry (already
+   on record before any merge attempt) plus this fallback.
 
 8. **L16 fix is post-condition.** After `gh pr merge` returns, the
    skill verifies branch deletion via `git ls-remote origin

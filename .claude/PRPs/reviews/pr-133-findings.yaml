@@ -1,0 +1,136 @@
+schema_version: 1
+pr: 133
+title: Phase v1-AD-e — Server-rendered admin dashboard HTML pages (Dashboard + Audit, pure-templating
+  over shipped v1-AD-d)
+head: phase-v1-AD-e
+base: governance-v0
+opened_at: '2026-05-17T08:15:24Z'
+last_poll_at: '2026-05-17T09:38:59.397396Z'
+poll_count: 1
+last_polled_head_sha: 0608f99
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/decision-queue.json
+  line: 3962
+  summary: Fix timestamp chronology in newly added DQ entries.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269050
+  bucket: fix-in-pr
+  addressed_in: 5d742a323
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/decision-queue.json
+  line: 3998
+  summary: Record explicit user approval for the Task 4 scope decision.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269053
+  bucket: rebut
+  addressed_in: null
+  rationale: 'Task 4 scope decision already explicitly approved and recorded in DQ #237 (governance-v0);
+    this is a semantic-neutral preventive suggestion rather than a defect.'
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-17T08:18:46Z'
+  file: .claude/runlog/v1-AD-e-runlog.md
+  line: 424
+  summary: Clarify the append-only ordering convention.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269056
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Runlog append-only convention is documented in `.claude/rules/branch-manager.md` and established
+    across all v1 phases; nit-level suggestion does not warrant docstring addition.
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/api/api/src/governance/admin_dashboard_html.rs
+  line: 77
+  summary: Check the feature flag before admin authorisation to preserve 404-off semantics.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269058
+  bucket: fix-in-pr
+  addressed_in: 5d742a323
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/api/api/src/governance/admin_dashboard_html.rs
+  line: 331
+  summary: Apply scrub/redaction on user-visible audit strings before rendering.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269060
+  bucket: fix-in-pr
+  addressed_in: 5d742a323
+  rationale: null
+  notes: 'COMPLETE: full ADR-015 scrub coverage on audit_entry_row achieved across
+    two commits. (1) reason + denial_reason via canonical crate::governance::redaction::scrub
+    in 835681ff5 (fix-impl-1, recovered from #297). (2) entry_kind + scope + key +
+    actor_pseudonym via scrub(), and previous_value + new_value via scrub_json().to_string(),
+    in 5805ab27f (fix-impl-2, recovered from Junior #299 — 5th #292 stale-base rescue;
+    clean cherry-pick, zero advisor-file deletions). User gate-5 chose "complete cr-5
+    first" — the broader scope (previous_value/new_value carry arbitrary admin-entered
+    config content = the real ADR-015 exposure) is now fully redacted. Validated DQ
+    #246 result=pass: cargo-check 0 err + clippy -D warnings 0 warn + test--no-run +
+    FULL e2e 94 passed/0 failed (admin_audit_html_returns_html_for_admin render-path
+    proves scrub_json().to_string() shape correct). id/created_at/signature non-PII
+    left raw by design.'
+- id: cr-6
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-17T08:18:46Z'
+  file: crates/server/tests/e2e.rs
+  line: 15036
+  summary: Add a non-admin rejection test for `/api/v4/governance/admin/audit/view`.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/133#discussion_r3254269063
+  bucket: fix-in-pr
+  addressed_in: 5d742a323
+  rationale: null
+  notes: null
+merged_at: null
+merge_commit: null
+final_recommendation: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 3
+    rebutted: 1
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 1
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 1
+  by_source:
+    coderabbit: 6
+  total: 6

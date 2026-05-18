@@ -39,6 +39,7 @@ use lemmy_api::{
     admin_close_case::admin_close_case,
     admin_config::{admin_get_config, admin_get_config_audit, admin_set_config},
     admin_dashboard::admin_dashboard,
+    admin_dashboard_html::{admin_dashboard_html, admin_audit_html},
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
@@ -122,6 +123,7 @@ use lemmy_api::{
       get::get_registration_application,
       list::list_registration_applications,
     },
+    source::get_source,
   },
 };
 use lemmy_api_crud::{
@@ -228,6 +230,8 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .route("/banner", post().to(upload_site_banner))
           .route("/banner", delete().to(delete_site_banner)),
       )
+      // AGPL §13 source disclosure — public, no auth, no DB
+      .route("/source", get().to(get_source))
       .route("/modlog", get().to(get_mod_log))
       .service(
         resource("/search")
@@ -542,6 +546,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
               .route("/trigger-appeal-rejury", post().to(admin_trigger_appeal_rejury))
               .route("/reputation-stats", get().to(admin_reputation_stats))
               .route("/dashboard", get().to(admin_dashboard))
+              .route("/dashboard/view", get().to(admin_dashboard_html))
               .service(
                 scope("/config")
                   .route("", post().to(admin_set_config))
@@ -553,7 +558,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
                   .route("", post().to(admin_create_rule_set))
                   .route("", get().to(admin_list_rule_sets)),
               )
-              .service(scope("/audit").route("/stream", get().to(admin_audit_stream))),
+              .service(
+                scope("/audit")
+                  .route("/stream", get().to(admin_audit_stream))
+                  .route("/view", get().to(admin_audit_html)),
+              ),
           ),
       ),
   );

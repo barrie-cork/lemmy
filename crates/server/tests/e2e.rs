@@ -15149,3 +15149,334 @@ mod v1_federation_inbound_a_fixtures {
     Ok(())
   }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{App, test, web::Data};
+  use lemmy_db_views_site::api::{GetSiteResponse, GetSourceResponse};
+  use lemmy_utils::rate_limit::RateLimit;
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    local_site::{LocalSite, LocalSiteInsertForm},
+    local_site_rate_limit::{LocalSiteRateLimit, LocalSiteRateLimitInsertForm},
+    person::{Person, PersonInsertForm},
+    site::{Site, SiteInsertForm},
+  };
+  use lemmy_diesel_utils::traits::Crud;
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_routes::middleware::idempotency::{IdempotencyMiddleware, IdempotencySet};
+  use activitypub_federation::config::{FederationConfig, FederationMiddleware};
+  use lemmy_api_utils::context::LemmyContext;
+  use std::ops::Deref;
+
+  // ------------------- 1. testcontainer + AGPL surface seed (fix-impl-6 Part B PRESERVED) -------------------
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+
+  // Seed instance + Site + LocalSite + LocalSiteRateLimit so `SiteView::read_local`
+  // (called by `read_site` for GET /api/v4/site) returns a row instead of
+  // LocalSiteNotSetup -> HTTP 500. Mirrors the canonical scaffold at e2e.rs:4751-4761
+  // (governance_outbox_emits_remote_sanction_notice_on_local_sanction).
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  {
+    let pool = &mut context.pool();
+    let site_key_pair = activitypub_federation::http_signatures::generate_actor_keypair()?;
+    let site_form = SiteInsertForm {
+      ap_id: Some(url::Url::parse("https://test.invalid")?.into()),
+      last_refreshed_at: Some(chrono::Utc::now()),
+      inbox_url: Some(url::Url::parse("https://test.invalid/inbox")?.into()),
+      private_key: Some(site_key_pair.private_key),
+      public_key: Some(site_key_pair.public_key),
+      ..SiteInsertForm::new("agpl test site".to_string(), instance.id)
+    };
+    let site = Site::create(pool, &site_form).await?;
+    // System account: throwaway Person — LocalSite needs a non-null FK.
+    let sysacct_form = PersonInsertForm::test_form(instance.id, "agpl_sysacct");
+    let sysacct = Person::create(pool, &sysacct_form).await?;
+    let local_site_form = LocalSiteInsertForm::new(site.id, sysacct.id);
+    let local_site = LocalSite::create(pool, &local_site_form).await?;
+    LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site.id)).await?;
+  }
+
+  // ------------------- 2. federation_config + inner_context (mirrors lib.rs:228-241 + lib.rs:364 VERBATIM) -------------------
+  // §10.5: build FederationConfig from the bootstrap context. `(**context).clone()`
+  // derefs Data<LemmyContext> -> LemmyContext (via actix Data's Deref<Target=T>);
+  // clone gives a fresh LemmyContext whose ActualDbPool is Arc-shared with the
+  // bootstrap's pool — so the AGPL seed (written via context.pool() above) is
+  // visible to handler reads (via the inner_context.pool() below).
+  let federation_config = FederationConfig::builder()
+    .domain((**context).settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+
+  // §10.6: lib.rs:364 line-for-line mirror.
+  // `FederationConfig<T>: Deref<Target=T>` (config.rs:264-270). `.deref().clone()` gives a
+  // LemmyContext sharing the SAME pool as `federation_config.app_data`'s inner clone.
+  let inner_context: LemmyContext = federation_config.deref().clone();
+  let idempotency_set = IdempotencySet::default();
+
+  // ------------------- 3. App composition (mirrors lib.rs:379-382 VERBATIM) -------------------
+  let rate_limit = RateLimit::with_debug_config();
+  let app = test::init_service(
+    App::new()
+      .app_data(Data::new(inner_context.clone()))                                  // lib.rs:379 mirror — actix Data<LemmyContext>
+      .wrap(FederationMiddleware::new(federation_config.clone()))                  // lib.rs:380 mirror
+      .wrap(IdempotencyMiddleware::new(idempotency_set.clone()))                   // lib.rs:381 mirror
+      .wrap(SessionMiddleware::new(inner_context.clone()))                         // lib.rs:382 mirror
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+  )
+  .await;
+
+  // ------------------- 4. GET /api/v4/site — assert source_disclosure block (fix-impl-6 Part A PRESERVED) -------------------
+  let site_req = test::TestRequest::get().uri("/api/v4/site").to_request();
+  let site_resp = test::call_service(&app, site_req).await;
+  let site_status = site_resp.status().as_u16();
+  let site_body_bytes = test::read_body(site_resp).await;
+  assert_eq!(
+    site_status, 200,
+    "/api/v4/site must return 200 — body: {}",
+    String::from_utf8_lossy(&site_body_bytes)
+  );
+  let site_body: GetSiteResponse = serde_json::from_slice(&site_body_bytes)?;
+
+  assert_eq!(
+    site_body.source_disclosure.license, "AGPL-3.0",
+    "source_disclosure.license must be 'AGPL-3.0' per ADR-011"
+  );
+  assert_eq!(
+    site_body.source_disclosure.disclosure_url, "/api/v4/source",
+    "source_disclosure.disclosure_url must point to /api/v4/source"
+  );
+  assert!(
+    !site_body.source_disclosure.repo_url.is_empty(),
+    "source_disclosure.repo_url must be non-empty"
+  );
+  assert!(
+    !site_body.source_disclosure.fork_commit.is_empty(),
+    "source_disclosure.fork_commit must be non-empty (build.rs default 'unknown' is acceptable)"
+  );
+
+  // ------------------- 5. GET /api/v4/source — assert AGPL notice body (fix-impl-6 Part A PRESERVED) -------------------
+  let source_req = test::TestRequest::get().uri("/api/v4/source").to_request();
+  let source_resp = test::call_service(&app, source_req).await;
+  let source_status = source_resp.status().as_u16();
+  let source_body_bytes = test::read_body(source_resp).await;
+  assert_eq!(
+    source_status, 200,
+    "/api/v4/source must return 200 — body: {}",
+    String::from_utf8_lossy(&source_body_bytes)
+  );
+  let source_body: GetSourceResponse = serde_json::from_slice(&source_body_bytes)?;
+
+  assert_eq!(source_body.license, "AGPL-3.0");
+  assert!(
+    source_body.notice.contains("GNU Affero General Public License"),
+    "AGPL-NOTICE.md body must contain the canonical license name"
+  );
+  assert!(
+    source_body.notice.len() > 100,
+    "notice body must be substantive (got {} bytes)",
+    source_body.notice.len()
+  );
+
+  Ok(())
+}
+
+// ============================================================================
+// v1-AD-e — server-rendered HTML admin pages (Dashboard + Audit)
+//
+// Mirrored from v1-AD-d admin_dashboard tests at e2e.rs:7296-7343 (Case A:
+// uniform LemmyResult<()>, all bare ?, per feedback_lemmy_error_no_std_error
+// §"Case A"). Four tests:
+//   - `admin_dashboard_html_returns_html_for_admin`  — 200 text/html + heading
+//   - `admin_dashboard_html_forbidden_for_non_admin` — capability gate
+//   - `admin_html_pages_flag_off_returns_404`        — html_pages_enabled=false
+//   - `admin_audit_html_returns_html_for_admin`      — 200 text/html + EventSource
+//   - `admin_audit_html_forbidden_for_non_admin`     — capability gate (audit)
+//
+// Handlers invoked directly (no in-process actix server needed; the handler
+// returns LemmyResult<HttpResponse> and the response body is a buffered
+// BoxBody accessible via try_into_bytes()).
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_html_returns_html_for_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{body::MessageBody, http::StatusCode};
+  use lemmy_api::governance::admin_dashboard_html::admin_dashboard_html;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_dash_admin", true).await?;
+
+  let resp = admin_dashboard_html(context.clone(), admin_view).await?;
+  assert_eq!(resp.status(), StatusCode::OK, "admin gets 200 from /dashboard/view");
+  assert!(
+    resp
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default()
+      .contains("text/html"),
+    "Content-Type must contain text/html",
+  );
+  let body_str = String::from_utf8(
+    resp.into_body().try_into_bytes().unwrap_or_default().to_vec(),
+  )?;
+  assert!(
+    body_str.contains("Governance Admin Dashboard"),
+    "body must contain the stable dashboard page heading",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dashboard_html_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard_html::admin_dashboard_html;
+  use lemmy_utils::error::LemmyErrorType;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_dash_nonadmin", false).await?;
+
+  let result = admin_dashboard_html(context.clone(), user_view).await;
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
+
+  Ok(())
+}
+
+/// R-html-3: when `governance.dashboard.html_pages_enabled` is set to `false`
+/// at instance scope, both the dashboard and audit HTML routes return 404
+/// (feature-off semantics — not 403, which would indicate an auth failure).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_html_pages_flag_off_returns_404()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{http::StatusCode, web::Json};
+  use lemmy_api::governance::{
+    admin_config::admin_set_config,
+    admin_dashboard_html::{admin_audit_html, admin_dashboard_html},
+  };
+  use lemmy_api_common::governance::AdminSetConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_flagoff_admin", true).await?;
+
+  // Disable HTML pages via the existing config-write path (R-html-3: do not
+  // raw-INSERT; use the handler that mirrors how the gate reads the key).
+  admin_set_config(
+    Json(AdminSetConfig {
+      key: "governance.dashboard.html_pages_enabled".to_string(),
+      value_type: "bool".to_string(),
+      value: serde_json::json!(false),
+      scope: "instance".to_string(),
+      apply_at: None,
+      dry_run: None,
+      reason: "disable HTML pages for 404 test".to_string(),
+    }),
+    context.clone(),
+    admin_view.clone(),
+  )
+  .await?;
+
+  // Both routes must return 404 when the feature flag is off (R-html-3).
+  let resp_dash = admin_dashboard_html(context.clone(), admin_view.clone()).await?;
+  assert_eq!(
+    resp_dash.status(),
+    StatusCode::NOT_FOUND,
+    "/dashboard/view must return 404 when html_pages_enabled=false",
+  );
+
+  let resp_audit = admin_audit_html(context.clone(), admin_view).await?;
+  assert_eq!(
+    resp_audit.status(),
+    StatusCode::NOT_FOUND,
+    "/audit/view must return 404 when html_pages_enabled=false",
+  );
+
+  Ok(())
+}
+
+/// Story 2 structural check: the audit HTML page includes an EventSource
+/// pointing at /audit/stream and wires both named-event listeners per the
+/// admin_audit_stream.rs frame contract (plan §13 Task 4 GOTCHA — onmessage
+/// fires only on unnamed events; addEventListener required for named events).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_html_returns_html_for_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{body::MessageBody, http::StatusCode};
+  use lemmy_api::governance::admin_dashboard_html::admin_audit_html;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_audit_admin", true).await?;
+
+  let resp = admin_audit_html(context.clone(), admin_view).await?;
+  assert_eq!(resp.status(), StatusCode::OK, "admin gets 200 from /audit/view");
+  assert!(
+    resp
+      .headers()
+      .get("content-type")
+      .and_then(|v| v.to_str().ok())
+      .unwrap_or_default()
+      .contains("text/html"),
+    "Content-Type must contain text/html",
+  );
+  let body_str = String::from_utf8(
+    resp.into_body().try_into_bytes().unwrap_or_default().to_vec(),
+  )?;
+  assert!(
+    body_str.contains("Governance Config Audit"),
+    "body must contain the stable audit page heading",
+  );
+  // EventSource wiring: named-event listeners for both governance event kinds.
+  assert!(
+    body_str.contains("EventSource("),
+    "audit page must instantiate an EventSource",
+  );
+  assert!(
+    body_str.contains("admin_config_changed"),
+    "audit page must wire the admin_config_changed event listener",
+  );
+  assert!(
+    body_str.contains("admin_config_change_denied"),
+    "audit page must wire the admin_config_change_denied event listener",
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_audit_html_forbidden_for_non_admin()
+-> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::admin_dashboard_html::admin_audit_html;
+  use lemmy_utils::error::LemmyErrorType;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, user_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "ade_audit_nonadmin", false).await?;
+
+  let result = admin_audit_html(context.clone(), user_view).await;
+  let err = result.expect_err("non-admin must be rejected by is_admin()");
+  assert!(
+    matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
+    "expected NotAnAdmin, got {:?}",
+    err.error_type,
+  );
+
+  Ok(())
+}

@@ -11,3 +11,29 @@
 #
 # Force CRLF on every .bat checkout, regardless of core.autocrlf.
 *.bat text eol=crlf
+
+# bm-runlog.md is an APPEND-ONLY ledger — BM/advisor entries are only
+# ever added, never edited in place. Use the union merge driver so a
+# cross-branch divergence keeps BOTH sides' added entries instead of
+# producing a conflict. This makes the entire runlog-conflict class
+# structurally impossible.
+#
+# Incident that motivated this (v1-ship-1-r2, 2026-05-18): the bm-pr
+# step appended a "PR opened" entry on the phase branch; the (old,
+# pre-merge) L14 step appended a "bm: merge" entry on governance-v0.
+# Both diverged from the common ancestor on this file -> the PR went
+# DIRTY/CONFLICTING and `gh pr merge` could not complete (Junior #322
+# BLOCKED; DQ #265; feedback_l14_runlog_on_trunk_self_conflicts_with_
+# bm_pr.md). The L14 rule was revised to write the runlog COMPLETE
+# entry POST-merge (commit bade657f4), which prevents THAT recurrence;
+# this union driver prevents the whole class (any two appenders, any
+# branches) and would have prevented the incident even under the old
+# ordering.
+#
+# Safe here because the file is free-form append-only markdown: union
+# merge concatenates both sides with no ordering/dedup guarantee, which
+# for an independently-meaningful timestamped ledger is cosmetic at
+# worst and far preferable to a blocked merge. Do NOT generalise this
+# driver to structured files (JSON/YAML) — there a naive line union
+# corrupts the document. Scope is deliberately this one file only.
+.claude/runlog/bm-runlog.md merge=union

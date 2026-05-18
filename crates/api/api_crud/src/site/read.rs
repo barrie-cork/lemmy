@@ -13,9 +13,13 @@ use lemmy_db_schema::source::{
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_db_views_person::PersonView;
-use lemmy_db_views_site::{SiteView, api::GetSiteResponse};
+use lemmy_db_views_site::{SiteView, api::{GetSiteResponse, SourceDisclosure}};
 use lemmy_utils::{CacheLock, VERSION, build_cache, error::LemmyResult};
 use std::sync::LazyLock;
+
+const BREHON_FORK_COMMIT: &str = env!("BREHON_FORK_COMMIT");
+const BREHON_REPO_URL: &str = "https://github.com/barrie-cork/lemmy";
+const SOURCE_DISCLOSURE_URL: &str = "/api/v4/source";
 
 pub async fn get_site(
   local_user_view: Option<LocalUserView>,
@@ -67,5 +71,11 @@ async fn read_site(context: &LemmyContext) -> LemmyResult<GetSiteResponse> {
     active_plugins: plugin_metadata(),
     last_application_duration_seconds,
     captcha_enabled: is_captcha_plugin_loaded(),
+    source_disclosure: SourceDisclosure {
+      license: "AGPL-3.0".to_string(),
+      repo_url: BREHON_REPO_URL.to_string(),
+      fork_commit: BREHON_FORK_COMMIT.to_string(),
+      disclosure_url: SOURCE_DISCLOSURE_URL.to_string(),
+    },
   })
 }

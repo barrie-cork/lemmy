@@ -36,27 +36,52 @@ This split is canonical from 2026-05-07 onward (post v1-SL-c-1 retro).
 Anything that re-introduces a pre-confirm Junior dispatch is a process
 regression and must be surfaced.
 
-## L14 fix — explicit git sequence in the BM brief
+## L14 fix — explicit git sequence in the BM brief (REVISED 2026-05-18: runlog POST-merge)
 
-Under `/auto-phase`, the bm-task brief that carries Phases 5-9 MUST
-contain an explicit, numbered git sequence in §4 Constraints:
+Under `/auto-phase`, the bm-task brief that carries the execute-side MUST
+contain an explicit, numbered git sequence in §4 Constraints. The runlog
+COMPLETE entry is written **POST-merge**, NOT pre-merge:
 
 ```
-1. Edit .claude/runlog/bm-runlog.md — append the bm: merge entry per Phase 8 template.
-2. git add .claude/runlog/bm-runlog.md
-3. git commit -m "chore(bm): merge PR #<N> — runlog entry"
-4. git push origin governance-v0
-5. THEN: gh pr merge <N> --repo barrie-cork/lemmy --merge --delete-branch
-6. After merge: verify with `git ls-remote origin refs/heads/<head-branch>`. If branch still present → run `gh api -X DELETE -H "Accept: application/vnd.github+json" /repos/barrie-cork/lemmy/git/refs/heads/<head-branch>`.
+1. git fetch origin && git checkout governance-v0 && git pull --ff-only origin governance-v0
+2. Re-verify PR #<N> is MERGEABLE (gh pr view <N> --repo barrie-cork/lemmy --json mergeable,state). If CONFLICTING / not OPEN → STOP + surface (do NOT improvise).
+3. gh pr merge <N> --repo barrie-cork/lemmy --merge --delete-branch
+4. Wait for return. If exit non-zero → HARD REFUSAL: capture verbatim error, STOP, surface. NEVER retry, NEVER git push -f, NEVER hand-resolve.
+5. POST-MERGE ONLY (merge succeeded): git fetch origin && git checkout governance-v0 && git pull --ff-only origin governance-v0. Edit .claude/runlog/bm-runlog.md — append the "## bm: merge COMPLETE" entry per Phase 8 template with the REAL merge sha (gh pr view <N> --json mergeCommit -q .mergeCommit.oid). git add → git commit -m "chore(bm): merge PR #<N> complete — runlog COMPLETE entry" → git push origin governance-v0.
+6. L16: git ls-remote origin refs/heads/<head-branch>. If still present → run ONCE: gh api -X DELETE -H "Accept: application/vnd.github+json" /repos/barrie-cork/lemmy/git/refs/heads/<head-branch>. Re-check; if still present after the single attempt, note "manual branch-delete follow-up" in Phase 9 output and STOP (do NOT loop).
 ```
 
-The runlog commit lands BEFORE the merge so that the audit trail is
-durable even if the merge itself encounters an error mid-flight.
-Without explicit ordering, the BM Junior has been observed (c-1
-session 2026-05-06) to checkout-before-commit — losing the runlog
-Edit. The L14 fix names the sequence in the brief; the L14 belt-and-
-braces fallback in advisor-side post-merge tick re-applies via
-`docs(advisor):` if the BM still skipped it.
+**Why POST-merge (revised — supersedes the prior pre-merge ordering):**
+the original L14 ordering committed the runlog entry to `governance-v0`
+*before* `gh pr merge`. But the **bm-pr** step also appends a runlog
+entry, on the **phase branch**. Both branches then diverged on the
+same append-only `.claude/runlog/bm-runlog.md` from their common
+ancestor → the file conflicted → `mergeStateStatus: DIRTY` →
+**the merge could not complete** (v1-ship-1-r2 Junior #322, 2026-05-18;
+see `feedback_l14_runlog_on_trunk_self_conflicts_with_bm_pr.md` + DQ
+#265). Writing the runlog COMPLETE entry **after** `gh pr merge
+--delete-branch` removes the conflict entirely: the phase branch is
+gone, so there is no second branch to diverge against. The
+audit-trail-durability concern the pre-merge ordering addressed is
+covered instead by (a) the bm-pr "PR opened" entry already on record
+before any merge attempt, and (b) the L14 belt-and-braces fallback.
+
+**L14 belt-and-braces (unchanged — only the timing moved pre→post):**
+if the BM Junior skips the POST-merge runlog COMPLETE commit (observed
+— Junior #323 did), the advisor's post-merge tick authors a
+`docs(advisor): L14 belt-and-braces — runlog COMPLETE re-apply` block
+on `governance-v0` with the *verified real merge sha* (per
+`.claude/rules/auto-phase.md` invariant 7).
+
+**Stronger structural option (SHIPPED 2026-05-18):** a `merge=union`
+driver in `.gitattributes` for `.claude/runlog/bm-runlog.md` — it is
+an append-only ledger, so a union merge is semantically correct and
+makes ALL runlog cross-branch conflicts structurally impossible (would
+also have prevented this incident even with the old ordering). This is
+now in place on `governance-v0` (`.gitattributes` line
+`.claude/runlog/bm-runlog.md merge=union`); it is belt-and-braces
+behind the POST-merge ordering above. Tracked in
+`feedback_l14_runlog_on_trunk_self_conflicts_with_bm_pr.md`.
 
 Invoke:
 

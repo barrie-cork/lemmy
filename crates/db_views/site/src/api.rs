@@ -352,6 +352,44 @@ pub struct GetSiteResponse {
   /// Useful for estimating when your application will be approved.
   pub last_application_duration_seconds: Option<i64>,
   pub captcha_enabled: bool,
+  /// AGPL §13 source-disclosure surface; see [`SourceDisclosure`].
+  pub source_disclosure: SourceDisclosure,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// AGPL §13 source-disclosure block.
+///
+/// Returned as part of every `GetSiteResponse` so a first-touch client
+/// receives the SPDX license, the canonical repository URL, the running
+/// fork commit, and the relative URL of the disclosure body.
+pub struct SourceDisclosure {
+  /// SPDX identifier, always "AGPL-3.0".
+  pub license: String,
+  /// Canonical fork repository URL.
+  pub repo_url: String,
+  /// HEAD commit SHA of the running fork build; "unknown" if unavailable at build time.
+  pub fork_commit: String,
+  /// Relative URL the client follows for the full notice body.
+  pub disclosure_url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request for `GET /api/v4/source`. Unit struct — no input fields.
+pub struct GetSource {}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response for `GET /api/v4/source`.
+///
+/// Returns the verbatim AGPL-NOTICE.md body bundled with the SPDX license identifier.
+pub struct GetSourceResponse {
+  pub notice: String,
+  pub license: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -13,13 +13,14 @@
       ]
     },
     "project-memory": {
+      "_comment_pmd_cross_lane": "PROJECT_MEMORY_DB MUST be the ABSOLUTE path to the CANONICAL brehon-fork checkout's .project-memory/memory.db — NEVER a relative path and NEVER a per-worktree path. The PMD (lessons/retros/patterns) is cross-lane shared knowledge; every worktree's MCP must write to the one canonical DB so the Stop hook (retro-check.sh, which resolves the DB via git-common-dir → canonical) can see retros written from any lane. A relative '.project-memory/memory.db' resolves against the per-worktree PROJECT_ROOT and strands retros invisibly. See .claude/rules/multi-lane-worktree.md §PMD and .claude/lessons/feedback_pmd_cross_lane_canonical_db.md.",
       "command": "node",
       "args": [
         "/path/to/MCPs/project-memory-mcp/dist/index.js"
       ],
       "env": {
-        "PROJECT_MEMORY_DB": "/path/to/brehon-fork/.project-memory/memory.db",
-        "PROJECT_ROOT": "/path/to/brehon-fork",
+        "PROJECT_MEMORY_DB": "C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db",
+        "PROJECT_ROOT": "/path/to/brehon-fork-<lane-or-canonical>",
         "PROJECT_NAME": "brehon-fork"
       }
     },

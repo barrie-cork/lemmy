@@ -221,6 +221,73 @@ Skip this step if PMD is unset (`start-pi.sh` may not have wired it
 on pi side; `.claude/scripts/setup-memory.sh` may not have run on
 Claude Code side). Don't fabricate the path.
 
+## Step 5.5 — Backfill PMD embeddings (MANDATORY if Step 5 wrote an eval OR §3 promoted a new lesson)
+
+**The PMD MCP server has NO write-time embedding** (verified by
+source inspection of `dist/index.js` — zero embed/ollama refs). A
+`memory_write_eval` from Step 5, AND any new
+`.claude/lessons/feedback_*.md` a §3 promotion created + synced via
+`scripts/sync-lessons-to-pmd.sh`, land as **text-only rows**.
+`memory_search_hybrid` silently degrades to FTS5 for unembedded rows
+— the semantic-recall advantage (+62.7% R@10) is absent until
+`backfill.js` embeds them. This recurred 2026-05-16 (8 unembedded
+rows incl. entries from concurrent sessions that skipped the
+backfill — see `feedback_pmd_backfill_after_write.md`).
+
+If Step 5 wrote an eval, OR §3 promoted a new lesson that was synced
+to PMD, run the backfill before Step 6:
+
+> **CANONICAL DB — MANDATORY (per `feedback_pmd_cross_lane_canonical_db.md`
+> + the 2026-05-18 stranding incident).** The PMD is cross-lane shared;
+> the single canonical store is
+> `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`. A
+> **relative** `.project-memory/memory.db` resolves against the
+> per-worktree `PROJECT_ROOT`, so when this retro runs from a *lane
+> worktree* (`brehon-fork-<lane>`) the sync + backfill + verify all hit
+> a **lane-local** DB the Stop hook and `memory_search_hybrid` never
+> read — the retro discipline then *becomes* the stranding vector it
+> exists to close (this exact regression: v1-ship-1-r2, 5 lessons +
+> 21 retros stranded). Always pass the **explicit absolute canonical
+> path** below — `--db <canonical>` to the sync, `PROJECT_MEMORY_DB=
+> <canonical>` to the backfill, the canonical path to the verify —
+> NEVER the relative form, regardless of which checkout the retro runs
+> from. Set once and reuse:
+
+```bash
+CANON_PMD="C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db"
+
+# 1. (only if a new lesson was promoted) sync it into PMD first.
+#    --db <canonical> is mandatory from a lane worktree (the script's
+#    legacy fallback is lane-local and WILL strand — see 53b1a52c1).
+#    --strict makes a lane-local resolution a HARD FAIL (exit 3) rather
+#    than a non-fatal WARN this automated retro step might not surface
+#    — defence-in-depth on the explicit --db (per the same incident's
+#    "What to change" #3). If this exits 3, the --db path above is
+#    wrong; fix it and re-run — do NOT proceed to backfill.
+bash scripts/sync-lessons-to-pmd.sh --db "$CANON_PMD" --strict
+
+# 2. Precondition check — Ollama reachable (silent-degrade trap):
+curl -s -m5 http://homeserver:11434/api/tags >/dev/null \
+  && echo "ollama OK" || echo "OLLAMA UNREACHABLE — backfill will FTS5-degrade; note in §6"
+
+# 3. Backfill (idempotent on (memory_id, model) — only unembedded rows).
+#    PROJECT_MEMORY_DB MUST be the absolute canonical path, NOT relative.
+OLLAMA_URL=http://homeserver:11434 \
+PROJECT_MEMORY_DB="$CANON_PMD" \
+PROJECT_ROOT=C:/Users/barri/Developer/brehon-fork \
+  node C:/Users/barri/Developer/MCPs/project-memory-mcp/dist/scripts/backfill.js --verbose
+
+# 4. Verify 0 missing — against the CANONICAL DB (not a lane-local copy):
+python -c "import sqlite3; c=sqlite3.connect(r'C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db'); print('MISSING vectors:', c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]); c.close()"
+```
+
+Skip ONLY if Step 5 was skipped AND §3 promoted no new lesson (nothing
+new to embed). If Ollama is unreachable, the rows stay FTS5-only —
+note it in the Step 6 surface so the user knows semantic search is
+degraded until the next backfill. Per
+`.claude/lessons/feedback_pmd_backfill_after_write.md` +
+`.claude/lessons/feedback_pmd_cross_lane_canonical_db.md`.
+
 ## Step 6 — Surface to user
 
 Return a compact closing summary in the conversation:
