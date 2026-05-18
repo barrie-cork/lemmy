@@ -7454,6 +7454,7 @@ async fn admin_dashboard_aggregates_populated_data()
       attestation_type: AttestationType::TrustedReporter,
       valid_until: Some(future),
       signature: "seed-sig".to_string(),
+      ..Default::default()
     })
     .execute(&mut conn)
     .await?;
