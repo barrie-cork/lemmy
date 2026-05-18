@@ -1,14 +1,124 @@
 ---
 phase: v1-ship-1
-plan: .claude/PRPs/plans/v1-ship-1-r1.plan.md
+plan: .claude/PRPs/plans/v1-ship-1-r2.plan.md
 phase_branch: phase-v1-ship-1
 worktree: C:/Users/barri/Developer/brehon-fork-ship-1
 authored: 2026-05-16
+last_resume_update: 2026-05-18
 authored_by: advisor (canonical brehon-fork / governance-v0 session)
-purpose: Bootstrap the v1-ship-1 lane-dedicated advisor session after bm-cut. Read this end-to-end before any action.
+purpose: Bootstrap/resume the v1-ship-1 lane-dedicated advisor session. Read the "RESUME 2026-05-18" block FIRST — it supersedes the historical r1 state below.
 ---
 
-# v1-ship-1 lane bootstrap — resume here
+# ⏩ RESUME 2026-05-18 — read this block first (supersedes the r1 historical state below)
+
+**You are the lane-dedicated advisor for v1-ship-1**, CWD
+`C:/Users/barri/Developer/brehon-fork-ship-1` (worktree on
+`phase-v1-ship-1`). Session was deliberately stopped here at a clean
+boundary (no Junior task running, nothing mid-flight). Per
+`.claude/rules/multi-lane-worktree.md`: write phase-branch DQ + dispatch
+Junior for THIS lane only.
+
+## Session-start ritual (do these first)
+
+1. `pwd && git branch --show-current && git worktree list` — confirm
+   `brehon-fork-ship-1` / `phase-v1-ship-1`.
+2. `git fetch origin phase-v1-ship-1 && git rev-parse HEAD origin/phase-v1-ship-1`
+   — HEAD should be **`4634b6ed0`** (or later if a follow-up landed). If
+   behind, `git merge --ff-only origin/phase-v1-ship-1`.
+3. `git status --porcelain` — only untracked
+   `.claude/PRPs/debug/reconcile-*` artifacts expected (gitignored debug
+   class; harmless — they are the PMD-reconcile staging from the prior
+   session, safe to leave or delete).
+
+## EXACT STATE (where things stand — 2026-05-18)
+
+| Item | State |
+|---|---|
+| Plan | `.claude/PRPs/plans/v1-ship-1-r2.plan.md` (1090 lines) — **APPROVED at User Gate 1, 2026-05-18.** Confidence 9/10, complexity 5/10. |
+| Plan provenance | Junior #309 (`[role:planning]`) verbatim Opus output (four-role model preserved). Re-plan: Tasks 1-4 MERGED (carry-forward context, NOT re-executed); only the failed e2e App-construction is rebuilt. |
+| **Surface (Tasks 1-4)** | **MERGED + PROVEN** on `phase-v1-ship-1` ancestry. DTOs + `source_disclosure` field + `read_site` populate + `build.rs` env + `get_source` handler + `/api/v4/source` route. Phase-1 cargo all green at tip. **Do NOT re-impl.** |
+| Defect | The single acceptance e2e `agpl_source_disclosure_surface_returns_notice` (`e2e.rs:14865`) returns HTTP 500. 5 fix attempts failed; §G4 hard-refusal fired; this r2 plan is the source-cited rebuild. |
+| DQ #261 (planner, kind:log, RESOLVED) | The brief's literal Option(b) recipe (`to_request_data()` as `.app_data()` source) is **mechanically incompatible** — returns `activitypub_federation::config::Data<T>` ≠ the `actix_web::web::Data<T>` `get_site` extracts (DIFFERENT TypeId) → reproduces the same HTTP 500. Planner adopted `federation_config.deref().clone()` (byte-mirror of production `lib.rs:364`) — preserves brief SPIRIT, corrects the precise API. **APPROVED by user at Gate 1.** The actual fix-impl-8 bug was ONE TOKEN: `.app_data(Data::new(context.clone()))` where `context` was already `Data<LemmyContext>` → `Data<Data<LemmyContext>>` double-wrap → extractor miss → 500; fix = `context`→`inner_context`. |
+| §3.4 DoD smoke | **PASS** (ran locally on this worktree, Shape G suspended per DQ #229): §15.1 `cargo check --workspace --features full` PASS 2m40s/0err; §15.3 `cargo test --no-run -p lemmy_server --test e2e` PASS 4m36s/0err (e2e binary linked). §15.2 clippy shares §15.1 graph (low-risk, not separately run). §15.4 full-e2e is Phase-2 (advisor-driven post-finalize). |
+| §3.5 watchpoint gate | **PASS** — every §10 mirror anchor independently verified at HEAD `a1c47e4ad` (incl. the DQ #261 type-mismatch evidence: `read.rs:1` actix-Data import + `lib.rs:364/379` mirror + `e2e.rs:14865` unique failed fn). |
+| User Gate 1 (plan approval) | **CLEARED — APPROVED 2026-05-18.** |
+| bm-cut | **DONE long ago** (#274). `phase-v1-ship-1` exists; Tasks 1-4 merged. **No bm-cut for r2.** |
+| Runlog | Up to date at `.claude/runlog/v1-ship-1-runlog.md` (last entry: r2 plan approval + PMD fix @ `4634b6ed0`). |
+| PMD cross-lane gap (Task #6) | **FIXED 2026-05-18.** Both `.mcp.json` pinned `PROJECT_MEMORY_DB` → absolute canonical path (on disk, gitignored). Forward-invariant in commit `078aa501c` (multi-lane-worktree.md §PMD + `.mcp.json.example` guard + `feedback_pmd_cross_lane_canonical_db.md`). 21 stranded retros reconciled into canonical (IDs 375-395). The Stop-hook retro false-block class is structurally eliminated — retros now land where `retro-check.sh` reads them. **One cleanup TODO (low priority): prune disposable probe eval ID 374 via MCP `memory_prune`.** |
+
+## THE EXACT NEXT ACTION (resume here)
+
+Next stage per advisor-orchestrator stage-shape = **impl per cohort
+dispatch**. Plan §13: Task 0 (pre-flight, solo non-`[P]`) → Task 6 (e2e
+rebuild, single anchored Edit, solo) → Task 7 (retro). **Task 0 is the
+next dispatch.**
+
+**BLOCKER before queueing Task 0 — `/precheck` Check 3b was STALE:**
+At session-stop, daemon-local `phase-v1-ship-1` = `a1c47e4ad`, origin =
+`4634b6ed0` (the daemon checkout is parked on `phase-v1-federation-inbound-a`,
+the other active lane; its local ship-1 ref lagged). Checks 1/2/4/5
+PASSED (Tailscale+SSH ok; daemon active+patched; window OK Mon ~12:15
+UTC, secondary window 04:30–14:59; mem 10 GB free).
+
+**Resume procedure:**
+
+1. Re-run `/precheck phase-v1-ship-1` (state may have changed since stop
+   — re-confirm, do not assume STALE persisted).
+2. If Check 3b still STALE: apply the **lane-safe refspec-fetch** (the
+   ONLY correct primitive — NEVER `git checkout` on the daemon, hard
+   refusal per `multi-lane-worktree.md`):
+   ```bash
+   ssh homeserver 'cd /srv/brehon-fork && git fetch origin phase-v1-ship-1:phase-v1-ship-1'
+   ```
+   Then VERIFY lane-safety (checkout MUST stay on its current branch,
+   tree clean):
+   ```bash
+   ssh homeserver 'cd /srv/brehon-fork && git branch --show-current && git status --porcelain | head -5'
+   ```
+   Confirm daemon-local `phase-v1-ship-1` == `origin/phase-v1-ship-1`.
+3. With Check 3b SYNC + all other checks PASS → queue **Task 0** via
+   `mcp__junior-brehon__create_task`. Brief: author
+   `.claude/PRPs/briefs/v1-ship-1-impl-0.md` (pre-flight; the plan §13
+   Task 0 enumerates 16 probes — mechanical from the plan; commit on
+   `phase-v1-ship-1` before create_task). Dispatch string:
+   `[role:impl-task] v1-ship-1-r2 Task 0 pre-flight — see .claude/PRPs/briefs/v1-ship-1-impl-0.md`,
+   `base_branch=phase-v1-ship-1`.
+   **NOTE the Probe 1/3 false-blocker** (carried lesson, see r1 historical
+   §0 below + reconciled retro orig-id-1): Task 0 brief Probes 1 & 3 must
+   be reworded — Probe 1 → branch matches `^junior/.*phase-v1-ship-1` OR
+   `== phase-v1-ship-1`; Probe 3 → `git merge-base --is-ancestor
+   <recorded-bm-cut-sha 8c271285e> HEAD` (NOT moving governance-v0).
+   Without the reword the Junior worker self-downgrades them to WARN
+   (defensible but a literal-contract deviation).
+4. Then per stage-shape: Task 0 complete → Task 6 (e2e rebuild) →
+   §5.2-laptop Phase-1 (the 3 §15 cmds) → §5.2-laptop Phase-2 e2e
+   (advisor-driven post-finalize-merge) → on agpl PASS: mutate DQ
+   #255+#251+#242+#244+#246 → `/brehon-verify` → bm-pr → CodeRabbit →
+   User Gate 3 (CR triage) → User Gate 5 (merge confirm) → bm-merge
+   (L14/L15/L16) → Task 7 retro (promote carry-forward + the
+   (vii)-(xi) set to `.claude/lessons/` + index MEMORY.md IN THE SAME
+   retro commit) → User Gate 6 → `/brehon-phase-transition`.
+
+**§G4 status:** override-scope DQ #247/#249/#252 EXHAUSTED — the r2
+re-plan supersedes it. No auto-author of any further fix-impl without a
+fresh user directive. §15.6 cycle-count meta-rule: if Task 6's first
+Phase-2 attempt fails with the SAME `(actix-Data-500, e2e.rs)` tuple →
+HARD REFUSAL catch-fire (3rd cycle), surface + WAIT, do NOT auto-queue
+fix-impl-9.
+
+## DQ pending (lane view, phase-v1-ship-1)
+
+7 pending: `[#229, #242, #244, #246, #248, #251, #255]`. #229 =
+Shape-G-re-enable tracker (deferred to 2026-06-01, not gating). #242/
+#244/#246/#251/#255 = prior fix-impl/e2e fail-pending entries (the r2
+plan supersedes the work; they get mutated to pass when Task 6's
+Phase-2 e2e goes green per the stage-shape above). #248 = check at
+resume. NONE block queueing Task 0 (they are historical fail-pending,
+not active blockers).
+
+---
+
+# v1-ship-1 lane bootstrap — resume here (HISTORICAL — r1 era, 2026-05-16; superseded by the RESUME block above)
 
 You are the **lane-dedicated advisor for v1-ship-1**, running from
 `C:/Users/barri/Developer/brehon-fork-ship-1` (worktree on
