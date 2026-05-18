@@ -14875,6 +14875,8 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   };
   use lemmy_diesel_utils::traits::Crud;
   use lemmy_routes::middleware::session::SessionMiddleware;
+  use activitypub_federation::config::FederationMiddleware;
+  use lemmy_routes::middleware::idempotency::{IdempotencyMiddleware, IdempotencySet};
 
   let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
 
@@ -14904,10 +14906,20 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
     LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site.id)).await?;
   }
 
+  let federation_config = activitypub_federation::config::FederationConfig::builder()
+    .domain(context.settings().hostname.clone())
+    .app_data((**context).clone())
+    .debug(true)
+    .http_fetch_limit(0)
+    .build()
+    .await?;
+
   let rate_limit = RateLimit::with_debug_config();
   let app = test::init_service(
     App::new()
       .app_data(Data::new(context.clone()))
+      .wrap(FederationMiddleware::new(federation_config.clone()))
+      .wrap(IdempotencyMiddleware::new(IdempotencySet::default()))
       .wrap(SessionMiddleware::new((**context).clone()))
       .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
   )
