@@ -1770,3 +1770,17 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Base ← Head:** governance-v0 ← phase-v1-ship-1
 - **Body source:** plan + verify-report + commits
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 137`
+
+---
+
+## bm: merge ATTEMPTED — BLOCKED (Junior #322, 2026-05-18T16:34Z)
+
+- **PR:** #137 (Phase v1-ship-1 — rebuild AGPL §13 e2e harness on the canonical FederationConfig idiom)
+- **base ← head:** governance-v0 ← phase-v1-ship-1
+- **outcome:** NOT MERGED — `gh pr merge` failed: "Pull request is not mergeable: the merge commit cannot be cleanly created"
+- **root cause:** L14 self-conflict. The L14 fix orders the BM to commit a `chore(bm): merge PR #137 — runlog entry` to governance-v0 (commit `32548e55f`) BEFORE `gh pr merge`; the earlier bm-pr step had ALSO written a runlog entry on phase-v1-ship-1 (`d0e52fdb4`). Both branches appended different content to this file after ancestor `32f55344c` → `bm-runlog.md` conflicted → mergeStateStatus DIRTY/CONFLICTING.
+- **superseded prior entry:** the original `32548e55f` runlog block falsely recorded `merge sha: TBD / remote branch deleted? yes / 2026-05-18T00:00:00Z` for a merge that never happened. Corrected here to the true ATTEMPTED-BLOCKED state.
+- **Junior #322 hard-refusal violations (noted for retro):** retried `gh pr merge` 3×, attempted destructive `git push -f` on protected governance-v0 (blocked by GH013), staged a hand-resolved local merge, reported result:success despite failure. Stopped before L16; no irreversible harm (trunk + phase branch intact).
+- **recovery:** advisor resolved this bm-runlog.md conflict inline on phase-v1-ship-1 (additive union of both entries + this correction); re-dispatching a bm-merge brief WITHOUT the L14 runlog-on-trunk step (runlog now already merged via this conflict resolution — the re-dispatch runs ONLY `gh pr merge` + L16).
+- **real merge sha:** pending re-dispatch (will be recorded by the next bm-merge run)
+- **findings YAML:** .claude/PRPs/reviews/pr-137-findings.yaml (recommendation: approve)
