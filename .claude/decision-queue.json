@@ -14,6 +14,31 @@
    "answer": null,
    "answered_by": null,
    "resolved_at": null
+  },
+  {
+   "id": 264,
+   "from": "impl",
+   "kind": "validate-pending-laptop",
+   "timestamp": "2026-05-18T14:35:00Z",
+   "question": "Task 8 complete - validate cargo-check + cargo-clippy + cargo-test --test e2e --no-run against extended Phase-6 models.",
+   "options": [
+    "pass - all 3 commands green",
+    "fail - see log_slice + failed_commands"
+   ],
+   "context": "Task 8 extends remote_sanction_notice.rs (+4 model +4 InsertForm fields +NEW RemoteSanctionNoticeUpdateForm) and federation_attestation.rs (+6 fields each +NEW FederationAttestationUpdateForm) and inbox.rs (..Default::default() spread at 2 R9 callsites). Transcribed from worker root-file TASK8_VALIDATE_PENDING.json (worker pre-picked id 252 which COLLIDES with sibling lane v1-ship-1 DQ #252; advisor re-assigned to 264 per worktree-aware-DQ-id-discipline, global-max=263). DQ #265 (blocker, e2e.rs:7451 scope) resolved option-a by user - Task 8 authorised to add ..Default::default() at e2e.rs:7451 via a narrow fix-impl before cmd 3 is run. Advisor runs all 3 cmds on the laptop AFTER the e2e.rs:7451 fix lands; submodule-init first; verify EXPLICIT per-command markers NOT bg notification.",
+   "phase_task": 8,
+   "branch": "phase-v1-federation-inbound-a",
+   "commands": [
+    "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task8-check.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task8-clippy.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-a-task8-test-norun.log 2>&1\""
+   ],
+   "result": null,
+   "log_slice": null,
+   "failed_commands": null,
+   "answer": null,
+   "answered_by": null,
+   "resolved_at": null
   }
  ],
  "resolved": [
@@ -4155,6 +4180,21 @@
    "answer": "fix-impl-2 (#316) validation entry. Same fixed tip 4b7f51d7b, same two commands as DQ #249, same PASS result (CMD1_CARGO_CHECK_EXIT_0 2m11s + CMD2_CLIPPY_EXIT_0 5m04s, explicit markers, 0 STATUS_DLL). This entry and DQ #249 (the original Task 7 §5.2) both resolve PASS together — Task 7 §5.2 is only complete when the fixed tip passes both cmds, and it does. fix-impl-2 correctly applied option-a verbatim (commit 92511030b: #[allow(dead_code)] removed, #[cfg(feature=full)]+signature untouched). 8th finalize-merge race reconciled losslessly (lane-side --no-ff merge 4b7f51d7b, tree-identical to daemon 247d8bdbb, FF-pushed, daemon-local resynced).",
    "answered_by": "advisor-laptop",
    "resolved_at": "2026-05-18T15:20:00Z"
+  },
+  {
+   "id": 265,
+   "from": "impl",
+   "kind": "blocker",
+   "timestamp": "2026-05-18T14:35:00Z",
+   "question": "Task 8 adds 6 new Option<_> fields to FederationAttestationInsertForm. e2e.rs:7451 initializes it without ..Default::default() - will fail compilation (E0063 missing-fields). Brief prohibits editing e2e.rs from Task 8. Options: (a) authorize Task 8 fix of e2e.rs:7451 (1 line), (b) drop --test e2e --no-run from Task 8 validate and move to Task 9.",
+   "options": [
+    "option-a: authorize adding ..Default::default() to e2e.rs:7451 in a narrow Task-8 fix-impl",
+    "option-b: drop --test e2e --no-run from Task 8 validate; Task 9 handles it"
+   ],
+   "context": "Transcribed from worker root-file TASK8_ESCALATION.md (worker pre-picked id 253 which COLLIDES with sibling lane v1-ship-1 DQ #253; advisor re-assigned to 265 per worktree-aware-DQ-id-discipline). feedback_insertform_default_propagation.md documents this exact failure: Option<T> does NOT make a struct-literal field optional. The Task-8 brief asserted 'Option-able fields keep e2e.rs:7451 compiling without a Task-8 e2e edit' - false Rust premise (advisor planning error, same lesson-class as fix-impl-1's #[expect(dead_code)] defect). Worker fixed the 2 in-scope inbox.rs callsites (138, 213) with ..Default::default() per the lesson; did NOT touch out-of-scope e2e.rs; raised this blocker (contract working as designed - 2nd advisor-defect a worker caught pre-validation this phase).",
+   "answer": "option-a (user-selected via advisor AskUserQuestion 2026-05-18 catch-fire surface). Authorize a narrow fix-impl to add ..Default::default() at crates/server/tests/e2e.rs:7451 - a 1-line mechanical change (anchor-Edit only, cap 1 file). Rationale: feedback_insertform_default_propagation.md explicitly prescribes adding the ..Default::default() spread to ALL caller sites; all 6 new InsertForm fields are Option<_> with #[derive(Default)] so the spread compiles cleanly; serial dispatch means no cross-task e2e.rs collision; 1 line at a known offset so the feedback_junior_worker_e2e_edit_hang LARGE-edit hazard does NOT apply (anchor-Edit, never full-file rewrite). Keeps Task 8 self-contained and validates the full compile chain (all 3 commands) immediately. Option-b rejected: defers the e2e compile-chain proof and loads an out-of-natural-scope fix onto Task 9. The Task-8 brief's e2e.rs prohibition was an advisor planning error (asserted a Rust premise the cited mandatory lesson refutes) - retro carry-forward. Resolution: advisor authors a narrow fix-impl brief (cap 1 file, anchor-Edit e2e.rs:7451 only, pre-push cargo-check per feedback_fix_impl_pre_push_cargo_check), dispatches serial; on done reconcile + run all 3 cmds on the laptop; mutate DQ #264 result:pass.",
+   "answered_by": "user",
+   "resolved_at": "2026-05-18T14:52:00Z"
   }
  ],
  "schema_version": 2
