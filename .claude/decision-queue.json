@@ -1,6 +1,29 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 272,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T22:43:03.279960Z",
+      "question": "Phase-2 e2e #4 (post gov-v0 merge) for phase-v1-federation-inbound-a tip cec5a6556",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "origin/governance-v0 (+23 commits, v1-ship-1-r2 #137 merge + retro lessons) merged into phase-v1-federation-inbound-a (merge cec5a6556, 2 conflicts resolved advisor-inline per user Option A: e2e.rs additive union of both fixture/test blocks; decision-queue.json canonical union+dedupe). e2e.rs structurally spliced — MUST re-validate compile + full e2e. 96 files merged incl gov-v0 crate code. Prior Phase-2 #271 GREEN @ f432faa3f (91/0/5) pre-merge. phase_2_e2e_mode=local (cached).",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-cec5a6556.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-4-postmerge",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 1,
