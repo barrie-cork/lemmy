@@ -4311,6 +4311,22 @@
       "answer": "§5.2 Phase-1 PASS for fix-impl-8 #306 merged tip 34e81df49. All 3 DoD commands clean on the canonical checkout (cargo-check 1m27s 0err / clippy -D warnings 2m03s 0err / cargo-test --no-run 2m01s 0err — e2e test binary compiled+linked, 0 E0308). The full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App, FederationConfig built via the canonical in-file idiom e2e.rs:2361-2368) type-checks. DQ #253's worktree-submodule blocker confirmed an environmental artifact (canonical checkout builds clean — the authoritative gate). Proceeding to §5.2 Phase-2 e2e (local, USER GATE 4 cached). DQ #242/#244/#246 (the prior agpl /api/v4/site-500 fails) + #251 (fix-impl-7b Phase-2 actix-Data-500) stay fail-pending until the Phase-2 e2e agpl test passes. DQ #248 (fix-impl-7 E0308) stays fail-pending (historical record).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-18T01:21:08Z"
+    },
+    {
+      "id": 256,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-18T02:00:37Z",
+      "question": "§G4 hard-refusal on v1-ship-1 (2nd same actix-Data-500 after fix-impl-8's full-real-server-middleware-stack mirror; override-scope DQ #247/#249/#252 exhausted; 5 total agpl /api/v4/site 500 attempts). The hand-assembled-actix-App test::init_service harness is demonstrably wrong-shaped. How to proceed?",
+      "options": [
+        "planner re-plan (real lemmy_server App-builder / server-integration harness)",
+        "advisor investigates first (read-only), then authors the re-plan brief",
+        "other (drop e2e from scope / specific harness directive)"
+      ],
+      "context": "fix-impl-8 (full-middleware-stack mirror, user-authorised DQ #252) merged at tip 34e81df49. §5.2 Phase-1 ALL GREEN (the mirror type-checks). §5.2 Phase-2 e2e FAILED (DQ #255): suite `FAILED. 89 passed; 1 failed; 5 ignored; 1894.24s`; agpl_source_disclosure_surface_returns_notice is the SOLE failure (no regression). fix-impl-6 Part A legible body at e2e.rs:14933:3: SAME actix 'Requested application data is not configured correctly' 500 as fix-impl-7b Phase-2 (DQ #251) — 2nd consecutive same-tuple (actix-Data-500, e2e.rs) post-fix-impl-8. §G4 cycle-count meta-rule + override-scope ceiling both fire. Diagnostic: wrapping FederationMiddleware in test::init_service does NOT reproduce the real lemmy_server App's request-time FederationConfig<LemmyContext> extension registration that get_site's extractor chain needs. Plan §10.7 root defect: cited an internal-SiteView::read_local precedent for an HTTP /api/v4/site test. Surfaced to user via AskUserQuestion 2026-05-18.",
+      "answer": "USER DECISION (answered_by: user; AskUserQuestion 2026-05-18): 'Advisor investigates first, then re-plan brief.' The advisor performs a READ-ONLY deep-dive — how lemmy_server's own integration tests / test-server helpers construct the actix App with FederationConfig<LemmyContext> registered at request time, and whether a reusable test-server fixture already exists in the workspace — and reports findings to the user BEFORE authoring the planning re-plan brief, so the re-plan starts from a concrete known-good harness pattern rather than an open-ended 'find a real harness'. NO auto-author of a fix-impl-9. NO planning Junior task dispatched until the investigation findings are surfaced and the user approves the re-plan direction (then advisor authors the planning brief, runs /brehon-clarify, dispatches Junior [role:planning], and the resulting plan goes through the mandatory plan-approval gate (Gate 1)). This supersedes the §G4 override scope (DQ #247/#249/#252) — those covered fix-impl-7/7b/8 only; the path forward is now a re-plan, not another mechanical fix.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-18T02:00:37Z"
     }
   ]
 }
