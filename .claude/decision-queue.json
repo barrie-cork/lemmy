@@ -36,6 +36,21 @@
   ],
   "resolved": [
     {
+      "id": 268,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-18T18:30:00Z",
+      "question": "fix-impl-5 actual root cause: limit(12) too low (positional LIFO), not down.sql asymmetry",
+      "options": [
+        "retro-note: update brief authoring to run LIFO slot-count analysis before prescribing down.sql fix",
+        "advisor: promote feedback_phase1_migration_count_lifo prominence in fix-impl brief checklist"
+      ],
+      "context": "Brief diagnosed federation down.sql as asymmetric. Analysis found: (1) test fails at assertion line 2021, not at schema_setup::run() line 1982, proving down.sql ran without SQL error; (2) test_phase1_migrations_revert ran 38s without revert error; (3) LIFO slot analysis: federation (2026-05-17) = slot 1, RT-r1 = slots 2-5, SL-b = slots 6-7, JM-d = slots 8-9, JM-a = slots 10-13. limit(12) stops before slot 13 (add_jury_mechanics_enums, creates severity_tier) -> severity_tier not reverted -> assertion fails. Fix: limit(12)->limit(13) in e2e.rs:1982. down.sql audited as correct (all DDL reversed in proper dependency order). cargo-check passed (FI5_PRECHECK_EXIT_0). Shape G suspended (DQ #229); no Phase-1 validate-pending written. Advisor re-runs Phase-2 e2e per existing DQ #267.",
+      "answer": "Log for retro: brief over-indexed on diff_check path without first running slot-count analysis. The limit bump (feedback_phase1_migration_count_lifo) is the simpler diagnostic and should be checked first when a LIFO-revert test fails with a type-absent assertion.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-18T18:30:00Z"
+    },
+    {
       "id": 214,
       "from": "impl",
       "kind": "blocker",
