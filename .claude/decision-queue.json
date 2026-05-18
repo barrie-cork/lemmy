@@ -149,6 +149,30 @@
       "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-18T00:50:16Z"
+    },
+    {
+      "id": 255,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-18T01:22:41Z",
+      "question": "§5.2 Phase-2 e2e for fix-impl-8 merged tip 34e81df49 — the RUNTIME test of whether the full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware in the agpl test App) resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "§5.2 Phase-1 ALL GREEN on 34e81df49 (DQ #254 pass: cmd1 cargo-check 1m27s 0err + cmd2 clippy -D warnings 2m03s 0err + cmd3 cargo-test --no-run 2m01s 0err — e2e binary compiled+linked, 0 E0308; the FederationConfig builder + Federation/Idempotency middleware wraps + IdempotencySet::default() type-check). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-8 mirrors the FULL real-server middleware stack — agpl test App now wraps .app_data(Data::new(context.clone())) -> .wrap(FederationMiddleware::new(federation_config.clone())) -> .wrap(IdempotencyMiddleware::new(IdempotencySet::default())) -> .wrap(SessionMiddleware::new((**context).clone())), exactly mirroring crates/server/src/lib.rs:379-382; federation_config built via the canonical in-file idiom e2e.rs:2361-2368. fix-impl-7 wired SessionMiddleware (necessary but insufficient); fix-impl-7b derefed Data<LemmyContext>; fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site. The prior 4 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6, #251 post-fix-impl-7b) were the actix-web::Data-not-configured class — root-caused via fix-impl-6 Part A's legible body as the test App omitting the real-server middleware stack. DQ #242/#244/#246/#251 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
+      "commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "branch": "phase-v1-ship-1",
+      "phase_task": 4,
+      "local_log_path": ".claude/runlog/e2e-v1-ship-1-34e81df49.log",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
