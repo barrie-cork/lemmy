@@ -14,28 +14,6 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
-    },
-    {
-      "id": 271,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-18T21:47:27.053177Z",
-      "question": "Phase-2 e2e re-run #3 (local, post-fix-cr-1) for phase-v1-federation-inbound-a tip f432faa3f",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-cr-1 (df6eee91b) addressed 7 PR#138 fix-in-pr findings; DQ #270 validate-pending-laptop PASS (workspace+nonfull+e2e-no-run). Phase-2 full e2e re-run required on post-fix tip f432faa3f before merge. phase_2_e2e_mode=local (cached gate-4). Advisor runs locally; mutates this entry directly on bg cargo exit. Prior Phase-2 #267 was GREEN @ 122187ebd (91 passed; 0 failed; 5 ignored) before fix-cr-1.",
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-f432faa3f.log",
-      "branch": "phase-v1-federation-inbound-a",
-      "phase_task": "phase-2-e2e-3",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -4312,6 +4290,28 @@
       "log_slice": null,
       "failed_commands": null,
       "resolved_at": "2026-05-18T21:45:47.881361Z"
+    },
+    {
+      "id": 271,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T21:47:27.053177Z",
+      "question": "Phase-2 e2e re-run #3 (local, post-fix-cr-1) for phase-v1-federation-inbound-a tip f432faa3f",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-cr-1 (df6eee91b) addressed 7 PR#138 fix-in-pr findings; DQ #270 validate-pending-laptop PASS (workspace+nonfull+e2e-no-run). Phase-2 full e2e re-run required on post-fix tip f432faa3f before merge. phase_2_e2e_mode=local (cached gate-4). Advisor runs locally; mutates this entry directly on bg cargo exit. Prior Phase-2 #267 was GREEN @ 122187ebd (91 passed; 0 failed; 5 ignored) before fix-cr-1.",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-f432faa3f.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase-2 e2e #3 GREEN @ phase tip f432faa3f (post-fix-cr-1). test result: ok. 91 passed; 0 failed; 5 ignored; 0 measured; finished in 1883.14s. E2E_EXIT_0 marker confirmed (NOT bg-notification). Zero failures. Identical shape to pre-fix-cr-1 GREEN #267 (91/0/5) — fix-cr-1's 7 CR/Copilot findings (cr-21 crit enum + cr-22/23 + copilot-3/4/5/6) introduced no regression. 5 ignored = known GH#42/#43/#45 deflakes. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-f432faa3f.log.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T22:22:59.204497Z"
     }
   ],
   "schema_version": 2
