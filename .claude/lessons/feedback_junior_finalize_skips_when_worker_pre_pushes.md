@@ -53,3 +53,22 @@ The lost commits are recoverable from `git reflog` (`HEAD@{N}: merge ...`); cher
   ```
 
 **Generalises to:** any daemon-driven worker pipeline where the worker has shell access and the post-work finalize step uses a "local delta" detection. Pre-pushing from inside the worker defeats the detection. **AND**: any orchestrator workflow where the advisor `git reset --hard`s a host whose state is being asynchronously updated by another agent. The reset is destructive against in-flight work; only run it when the host is known-quiescent.
+
+## Sibling shape: multi-lane redundant-finalize divergence (daemon-local phase ref non-fast-forward)
+
+Confirmed **twice in a single sub-phase** (v1-ship-1-r2, 2026-05-18 — commits `1c75769af` then `1e933207d`). When a worker pre-pushes its conflict-resolution merge to the worker branch AND the daemon's finalize agent ALSO runs (creating a *redundant* `fix(merge): ...` commit on its local phase ref *on top of* the worker's already-pushed merge), the daemon-local `phase-v1-<lane>` ref **diverges** from `origin/phase-v1-<lane>` — it is no longer a fast-forward. The next `/precheck` Check 3b refspec-fetch (`git fetch origin <branch>:<branch>`) is **REJECTED (non-fast-forward)**, blocking the next Junior dispatch on that lane.
+
+This is the multi-lane recurrence of the pre-push gap above, with a different fix path because the daemon-local ref has *extra* commits (not just missing ones):
+
+**Detection:** `/precheck` Check 3b reports `STALE`; the refspec-fetch fails `! [rejected] ... (non-fast-forward)`. `git merge-base --is-ancestor <daemon-local> origin/<branch>` returns NON-zero (daemon-local has commits not on origin).
+
+**Recovery (MANDATORY zero-code-loss verification first, then user-gated):**
+1. Identify the divergent commit: `ssh homeserver 'cd /srv/<repo> && git log --oneline -3 <branch>'` — it is typically a redundant daemon `fix(merge):` finalize commit on top of the worker's real merge.
+2. **Prove zero code-loss:** `git diff --stat <daemon-local-sha> origin/<branch> -- crates/ migrations/ Cargo.lock Cargo.toml`. If this is **EMPTY**, the redundant finalize commit's code payload is byte-identical to origin (origin = worker's merge + advisor commits; daemon-local = same code + a redundant merge-topology commit). Only `.claude/` meta files differ (advisor commits made after the worker pushed). The reset is safe.
+3. **Surface to user** with the tree-diff evidence (this is judgment-heavy — never silently force a cross-lane ref). Options: lane-safe `update-ref` / investigate / merge-from-laptop.
+4. On user approval, **lane-safe primitive only:**
+   - If the daemon checkout is on **another lane** (`git branch --show-current` ≠ `<branch>`): `ssh homeserver 'cd /srv/<repo> && git update-ref refs/heads/<branch> origin/<branch>'` — updates the ref WITHOUT switching the checkout. Then verify `git branch --show-current` is **unchanged** and the other lane's ref is untouched.
+   - If the daemon checkout IS on `<branch>` AND it is a clean fast-forward (ancestor) AND no Junior is running: a plain `git pull --ff-only origin <branch>` on the daemon is safe and lane-appropriate (the daemon is already on this lane).
+5. **HARD REFUSAL:** NEVER `git checkout <branch>` on the daemon to fix staleness when the checkout is on another lane — that is a `.claude/rules/multi-lane-worktree.md` hard-refusal-class destructive cross-lane op. The `update-ref` (divergent) or in-place `ff-pull` (clean-ff, daemon already on lane) are the ONLY correct primitives.
+
+**Generalises further to:** any multi-lane daemon where finalize-skip (pre-push) and finalize-run (redundant merge) can BOTH happen on the same task, leaving the daemon-local ref ahead-by-redundant-topology rather than behind. The fix is never "force the ref on faith" — it is "prove the code payload is identical via tree-diff, surface the evidence, then lane-safe ref-update under user gate." Recurred 2× same sub-phase → if it recurs a 3rd time, escalate to a structural daemon-finalize fix (skip finalize for conflict-resolution impl-tasks the way `[role:bm-task]` is skipped), not just the recovery recipe.
