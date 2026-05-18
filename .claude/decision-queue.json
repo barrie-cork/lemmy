@@ -167,12 +167,14 @@
       "branch": "phase-v1-ship-1",
       "phase_task": 4,
       "local_log_path": ".claude/runlog/e2e-v1-ship-1-34e81df49.log",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
+      "result": "fail",
+      "log_slice": "§5.2 Phase-2 e2e on fix-impl-8 merged tip 34e81df49 — FAILED (E2E_EXIT_NONZERO; suite `test result: FAILED. 89 passed; 1 failed; 5 ignored; finished in 1894.24s`; agpl is the SOLE failure — `failures:` block lists only agpl_source_disclosure_surface_returns_notice; 89 passed = NO regression). fix-impl-6 Part A's body-on-failure assert made the cause legible at crates\\server\\tests\\e2e.rs:14933:3:\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14933:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500  right: 200\nThis is the SAME actix-web 'Requested application data is not configured correctly' 500 — byte-identical to the fix-impl-7b Phase-2 failure (DQ #251). 2nd consecutive same-tuple (actix-Data-500, e2e.rs) failure AFTER fix-impl-8's full-real-server-middleware-stack mirror (FederationMiddleware + IdempotencyMiddleware added ahead of SessionMiddleware, FederationConfig built via the canonical in-file idiom e2e.rs:2361-2368; §5.2 Phase-1 ALL GREEN on this tip — the mirror type-checks). §G4 cycle-count meta-rule (2 same-tuple post-fix-impl-8) fires + §G4 override-scope ceiling reached (DQ #247/#249/#252 spanned fix-impl-7/7b/8 — exhausted). The hand-assembled-actix-App test-harness approach is wrong-shaped: wrapping FederationMiddleware does NOT register the FederationConfig<LemmyContext> extension the get_site extractor needs at request time the way the real lemmy_server App does. HARD-REFUSAL — NO auto-author fix-impl-9; planner re-plan required (drive a REAL lemmy_server App-builder / test-server integration harness, not hand-assembled actix middleware).",
+      "failed_commands": [
+        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "answer": "§5.2 Phase-2 e2e FAILED for fix-impl-8 #306 merged tip 34e81df49. agpl_source_disclosure_surface_returns_notice is the SOLE failure (89 passed / 1 failed / 5 ignored — NO regression). The legible body (fix-impl-6 Part A) at e2e.rs:14933:3 is the SAME actix 'Requested application data is not configured correctly' 500 as the fix-impl-7b Phase-2 failure (DQ #251) — 2nd consecutive same-tuple (actix-Data-500, e2e.rs) AFTER the fix-impl-8 full-real-server-middleware-stack mirror. §G4 cycle-count meta-rule fires (2 same-tuple post-fix-impl-8) and the §G4 override-scope ceiling (DQ #247/#249/#252 spanned fix-impl-7/7b/8) is exhausted. HARD-REFUSAL: NOT auto-queuing a fix-impl-9. Surfaced to user with a planner-re-plan recommendation — the hand-assembled-actix-App test harness is wrong-shaped (wrapping FederationMiddleware in test::init_service does not reproduce the real lemmy_server App's request-time FederationConfig<LemmyContext> extension registration that get_site's extractor chain depends on). DQ #242/#244/#246/#251 STAY fail-pending (the agpl /api/v4/site 500 is still unresolved across all 5 attempts). DQ #248 stays fail-pending (historical fix-impl-7 E0308 record). DQ #255 STAYS in pending[] per §G4 fail-handling (a fail entry is not resolved until the underlying issue is fixed). Awaiting user decision: planner re-plan vs alternative directive.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T01:57:58Z"
     }
   ],
   "resolved": [

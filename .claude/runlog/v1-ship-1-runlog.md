@@ -1414,3 +1414,62 @@ Next: §5.2 Phase-2 e2e (USER GATE 4 cached = local) — the RUNTIME test
 of whether the full-real-server-middleware-stack mirror resolves the
 agpl /api/v4/site 500. raise-before-execute a validate-pending-laptop-e2e
 DQ, then cargo-test --workspace --test e2e --features full bg.
+
+---
+
+## advisor: §5.2 Phase-2 e2e FAILED (fix-impl-8, tip 34e81df49) — 2nd same actix-Data-500 → §G4 HARD-REFUSAL re-plan (DQ #255 fail) — 2026-05-18
+
+`bg btbav3w22` completed (exit 0 — but per `feedback_background_task_notification_lies`
+the verdict is the in-log marker, NOT the bg-notification exit). Phase-2
+e2e on the fix-impl-8 merged tip `34e81df49` (canonical checkout
+`C:/Users/barri/Developer/brehon-fork`, detached):
+
+- **`E2E_EXIT_NONZERO`**; suite `test result: FAILED. 89 passed; 1
+  failed; 5 ignored; 0 measured; finished in 1894.24s` (~31min).
+- **`agpl_source_disclosure_surface_returns_notice` is the SOLE
+  failure** — `failures:` block lists only that one test; 89 passed =
+  **NO regression** (outcome (b), not (c)).
+
+fix-impl-6 Part A's body-on-failure assert made the cause **legible** at
+`crates\server\tests\e2e.rs:14933:3`:
+
+```
+thread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\server\tests\e2e.rs:14933:3:
+assertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.
+  left: 500  right: 200
+```
+
+This is the **SAME actix-web "Requested application data is not
+configured correctly" 500** — byte-identical to the fix-impl-7b Phase-2
+failure (DQ #251). **2nd consecutive same-tuple `(actix-Data-500,
+e2e.rs)` failure AFTER fix-impl-8's full-real-server-middleware-stack
+mirror** (FederationMiddleware + IdempotencyMiddleware added ahead of
+SessionMiddleware; FederationConfig built via the canonical in-file
+idiom e2e.rs:2361-2368; **§5.2 Phase-1 ALL GREEN on this tip** — the
+mirror type-checks, so this is a runtime-shape defect, not a compile
+defect).
+
+**§G4 HARD-REFUSAL re-plan.** The §G4 cycle-count meta-rule fires (2
+same-tuple post-fix-impl-8) AND the §G4 override-scope ceiling is
+exhausted (DQ #247/#249/#252 spanned fix-impl-7/7b/8). **NO
+auto-author fix-impl-9.** The hand-assembled-actix-App test-harness
+approach is wrong-shaped: wrapping `FederationMiddleware` in
+`test::init_service` does not reproduce the real `lemmy_server` App's
+request-time `FederationConfig<LemmyContext>` extension registration
+that `get_site`'s extractor chain depends on.
+
+`DQ #255` mutated `result: "fail"` — **STAYS in pending[]** per §G4
+fail-handling (answered_by=advisor-laptop). post-mutation
+DQ-resurrection re-assert PASSED: lane pending
+`[229,242,244,246,248,251,255]`; #242/#244/#246/#251/#255 all
+fail-pending (agpl /api/v4/site 500 unresolved across all 5 attempts);
+#248 fail-pending (historical fix-impl-7 E0308); #252/#253 resolved;
+#243/#245/#250/#254 pass-resolved; #247/#249/#252 answered_by=user; no
+dup ids.
+
+**Surfaced to user** with a planner-re-plan recommendation: re-plan to
+drive a REAL `lemmy_server` App-builder / test-server integration
+harness (or production `setup_local_site` + a server-integration
+harness) instead of hand-assembling the actix App middleware-by-
+middleware. Awaiting user decision. NO auto-author; NO further fix-impl
+without a fresh user directive.
