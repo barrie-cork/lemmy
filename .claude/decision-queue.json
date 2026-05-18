@@ -14,32 +14,6 @@
    "answer": null,
    "answered_by": null,
    "resolved_at": null
-  },
-  {
-   "id": 241,
-   "from": "impl",
-   "kind": "validate-pending-laptop",
-   "timestamp": "2026-05-16T21:36:00Z",
-   "question": "Run cargo-check + migrate-roundtrip for Task 1 migration (Shape G suspended, validate-pending-laptop mode).",
-   "options": [
-    "pass: both commands exit 0 — advance Cohort A barrier",
-    "fail: one or both commands exit non-zero — advisor §G4 triage"
-   ],
-   "context": "Task 1 commit on worktree branch junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283. Creates migrations/2026-05-17-000000-0000_add_federation_inbound_v1/{up,down}.sql. Shape G suspended until 2026-06-01 per DQ #229/#231/#235.",
-   "phase_task": 1,
-   "branch": "junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283",
-   "commands": [
-    "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task1-check.log 2>&1\"",
-    "bash scripts/brehon/migrate-roundtrip.sh > .claude/PRPs/debug/fed-in-a-task1-migrate.log 2>&1"
-   ],
-   "result": "fail",
-   "log_slice": "command 2 (bash scripts/brehon/migrate-roundtrip.sh) FAILED — STATUS_DLL_NOT_FOUND.\nmigrate-roundtrip.sh: detected new migrations: 2026-05-17-000000-0000_add_federation_inbound_v1 (correct).\nPG container spun up healthy. lemmy_diesel_utils built clean: 'Finished dev profile [unoptimized] in 4m 53s'.\nThen at RUNTIME:\n  Running `target\\debug\\lemmy_diesel_utils.exe`\n  error: process didn't exit successfully: `target\\debug\\lemmy_diesel_utils.exe` (exit code: 0xc0000135, STATUS_DLL_NOT_FOUND)\n  C:/Users/barri/.cargo/bin/cargo.exe: error while loading shared libraries: ?: cannot open shared object file: No such file or directory\nROOT CAUSE (harness gap, NOT a migration defect): migrate-roundtrip.sh lines 73 + 92 call bare `cargo run -p lemmy_diesel_utils --features full` with no vcpkg PATH setup. On Windows the PE DLL loader uses Windows %PATH%; libpq.dll lives at vcpkg\\installedd-windows\bin which is only added by the .bat wrappers (cargo-check.bat lines 16-19). Bash $PATH export does NOT propagate to the Windows DLL loader. Identical root cause to the 2026-05-09 v1-SL-c-2 Phase 2 e2e incident (feedback_windows_e2e_requires_bat_wrapper.md), but in the migrate-roundtrip wrapper rather than cargo-test.bat. No migrate-roundtrip.bat exists. command 1 (cargo-check.bat --workspace --features full) PASSED clean (CARGO_CHECK_EXIT_0, 7m 55s) — the migration SQL itself is valid; only the round-trip RUNNER is broken on Windows.",
-   "failed_commands": [
-    "bash scripts/brehon/migrate-roundtrip.sh > .claude/PRPs/debug/fed-in-a-task1-migrate.log 2>&1"
-   ],
-   "answer": "HARNESS GAP (not Task 1 code defect, not a G4-allowlist code error). cargo-check (cmd 1) PASSED clean: migration SQL compiles, lemmy_diesel_utils builds. migrate-roundtrip.sh (cmd 2) failed at binary LOAD time with STATUS_DLL_NOT_FOUND because the script calls bare `cargo run -p lemmy_diesel_utils --features full` (lines 73, 92) with no vcpkg/libpq Windows %PATH% setup — same class as feedback_windows_e2e_requires_bat_wrapper.md. This would fail identically for ANY migration on the Windows canonical runner. NOT §G4-classifiable (allowlist is code-error recipes; this is a shared scripts/brehon/** wrapper defect). NOT auto-fixable by the advisor without a user decision: the fix touches scripts/brehon/migrate-roundtrip.sh (shared file, DQ #232 additive-only across 3 concurrent lanes) and changes the migration-validation harness contract for THIS phase + every future migration phase = visible-to-others + judgment-heavy. SURFACED TO USER per advisor-orchestrator.md §5.5 catch-fire. Entry stays pending[] (per §5.2 fail handling) until user directs the fix path.",
-   "answered_by": "advisor-laptop",
-   "resolved_at": "2026-05-16T23:18:00Z"
   }
  ],
  "resolved": [
@@ -3952,6 +3926,30 @@
    "answer": "Fixed in up.sql: pre-condition checks use bare type names matching actual Phase-6 enums. DDL body unchanged from §10.1. Evidence: grep attestation_type migrations/2026-04-15-100000-0000_add_governance_enums/up.sql. Promote to lesson: 'Phase-6 governance enums have bare names (no _enum suffix); future plans should use bare names in pre-condition checks.'",
    "answered_by": "impl-self-resolved",
    "resolved_at": "2026-05-16T21:36:00Z"
+  },
+  {
+   "id": 241,
+   "from": "impl",
+   "kind": "validate-pending-laptop",
+   "timestamp": "2026-05-16T21:36:00Z",
+   "question": "Run cargo-check + migrate-roundtrip for Task 1 migration (Shape G suspended, validate-pending-laptop mode).",
+   "options": [
+    "pass: both commands exit 0 — advance Cohort A barrier",
+    "fail: one or both commands exit non-zero — advisor §G4 triage"
+   ],
+   "context": "Task 1 commit on worktree branch junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283. Creates migrations/2026-05-17-000000-0000_add_federation_inbound_v1/{up,down}.sql. Shape G suspended until 2026-06-01 per DQ #229/#231/#235.",
+   "phase_task": 1,
+   "branch": "junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283",
+   "commands": [
+    "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task1-check.log 2>&1\"",
+    "bash scripts/brehon/migrate-roundtrip.sh > .claude/PRPs/debug/fed-in-a-task1-migrate.log 2>&1"
+   ],
+   "result": "pass",
+   "log_slice": "RE-VALIDATION (commit 961101fc7, post Item-1 wrapper fix). cmd1 cargo-check.bat --workspace --features full already PASSED at 2758384d3 (migration SQL unchanged 2758384d3->961101fc7; only scripts/brehon harness delta). cmd2 bash scripts/brehon/migrate-roundtrip.sh: EXIT 0. New migration 2026-05-17-000000-0000_add_federation_inbound_v1 detected; 2 pgautoupgrade containers healthy; lemmy_diesel_utils built+ran clean both passes (VCVARS_OK x2, no STATUS_DLL_NOT_FOUND); forward exit 0; re-forward exit 0 (idempotent on fresh container); round-trip complete for 1 migration. Log: .claude/PRPs/debug/fed-in-a-task1-migrate-retry.log marker MIGRATE_EXIT_0.",
+   "failed_commands": null,
+   "answer": "PASS. Both DQ #241 commands green. Prior fail was a Windows harness gap (migrate-roundtrip.sh bare cargo run -> libpq.dll STATUS_DLL_NOT_FOUND), NOT a Task 1 code defect. Fixed by commit 961101fc7 (OS-conditional run_diesel_utils() + sibling migrate-roundtrip-cargo.bat mirroring cargo-check.bat vcpkg %PATH%; Linux CI path unchanged). cmd1 cargo-check passed 2758384d3; cmd2 migrate-roundtrip re-run EXIT 0. Cohort A barrier: Task 1 GREEN -> dispatch serial Task 2.",
+   "answered_by": "advisor-laptop",
+   "resolved_at": "2026-05-18T01:35:00Z"
   }
  ],
  "schema_version": 2
