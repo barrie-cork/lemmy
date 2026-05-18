@@ -1,29 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 272,
-      "from": "advisor",
-      "kind": "validate-pending",
-      "timestamp": "2026-05-18T22:43:03.279960Z",
-      "question": "Phase-2 e2e #4 (post gov-v0 merge) for phase-v1-federation-inbound-a tip cec5a6556",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "origin/governance-v0 (+23 commits, v1-ship-1-r2 #137 merge + retro lessons) merged into phase-v1-federation-inbound-a (merge cec5a6556, 2 conflicts resolved advisor-inline per user Option A: e2e.rs additive union of both fixture/test blocks; decision-queue.json canonical union+dedupe). e2e.rs structurally spliced — MUST re-validate compile + full e2e. 96 files merged incl gov-v0 crate code. Prior Phase-2 #271 GREEN @ f432faa3f (91/0/5) pre-merge. phase_2_e2e_mode=local (cached).",
-      "workflow_run_id": null,
-      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-cec5a6556.log",
-      "branch": "phase-v1-federation-inbound-a",
-      "phase_task": "phase-2-e2e-4-postmerge",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 1,
@@ -4596,6 +4573,28 @@
       "answer": "Phase-2 e2e #3 GREEN @ phase tip f432faa3f (post-fix-cr-1). test result: ok. 91 passed; 0 failed; 5 ignored; 0 measured; finished in 1883.14s. E2E_EXIT_0 marker confirmed (NOT bg-notification). Zero failures. Identical shape to pre-fix-cr-1 GREEN #267 (91/0/5) — fix-cr-1's 7 CR/Copilot findings (cr-21 crit enum + cr-22/23 + copilot-3/4/5/6) introduced no regression. 5 ignored = known GH#42/#43/#45 deflakes. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-f432faa3f.log.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T22:22:59.204497Z"
+    },
+    {
+      "id": 272,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T22:43:03.279960Z",
+      "question": "Phase-2 e2e #4 (post gov-v0 merge) for phase-v1-federation-inbound-a tip cec5a6556",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "origin/governance-v0 (+23 commits, v1-ship-1-r2 #137 merge + retro lessons) merged into phase-v1-federation-inbound-a (merge cec5a6556, 2 conflicts resolved advisor-inline per user Option A: e2e.rs additive union of both fixture/test blocks; decision-queue.json canonical union+dedupe). e2e.rs structurally spliced — MUST re-validate compile + full e2e. 96 files merged incl gov-v0 crate code. Prior Phase-2 #271 GREEN @ f432faa3f (91/0/5) pre-merge. phase_2_e2e_mode=local (cached).",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-cec5a6556.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-4-postmerge",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase-2 e2e #4 GREEN @ post-merge tip cec5a6556 (gov-v0 merged into phase-v1-federation-inbound-a). test result: ok. 97 passed; 0 failed; 5 ignored; finished in 1975.96s. E2E_EXIT_0 + CHAIN_DONE markers confirmed (NOT bg-notification). Zero failures. 97 = 91 (pre-merge #271) + 6 gov-v0 top-level tests (agpl_source_disclosure etc) — additive e2e.rs merge resolution correct AND gov-v0 ship-1-r2 + federation work pass together. 5 ignored = known GH#42/#43/#45 deflakes. cargo-check --workspace --features full also EXIT_0 (CHECK_EXIT_0) — hand-resolved e2e.rs splice structurally sound. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-cec5a6556.log.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T23:35:03.036419Z"
     }
   ]
 }
