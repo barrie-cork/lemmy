@@ -1762,3 +1762,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **title:** feat(v1-SL-e): lane-wide e2e suite (revocation + window-expiry + backfill)
 - **body source:** retro + plan + commits
 - **next:** wait ~5-10 min for CR; then `/bm-poll-cr 127`
+
+## bm: PR opened — 2026-05-18T14:10:23Z
+
+- **PR:** #137 — Phase v1-ship-1 — rebuild AGPL §13 e2e harness on the canonical FederationConfig idiom
+- **URL:** https://github.com/barrie-cork/lemmy/pull/137
+- **Base ← Head:** governance-v0 ← phase-v1-ship-1
+- **Body source:** plan + verify-report + commits
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 137`
