@@ -14875,15 +14875,17 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
   };
   use lemmy_diesel_utils::traits::Crud;
   use lemmy_routes::middleware::session::SessionMiddleware;
-  use activitypub_federation::config::FederationMiddleware;
   use lemmy_routes::middleware::idempotency::{IdempotencyMiddleware, IdempotencySet};
+  use activitypub_federation::config::{FederationConfig, FederationMiddleware};
+  use lemmy_api_utils::context::LemmyContext;
+  use std::ops::Deref;
 
+  // ------------------- 1. testcontainer + AGPL surface seed (fix-impl-6 Part B PRESERVED) -------------------
   let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
 
-  // Seed instance + Site + LocalSite + LocalSiteRateLimit so
-  // `SiteView::read_local` (called by `read_site` for GET /api/v4/site)
-  // returns a row instead of LocalSiteNotSetup → HTTP 500.
-  // Mirrors the canonical scaffold at e2e.rs:4751-4761
+  // Seed instance + Site + LocalSite + LocalSiteRateLimit so `SiteView::read_local`
+  // (called by `read_site` for GET /api/v4/site) returns a row instead of
+  // LocalSiteNotSetup -> HTTP 500. Mirrors the canonical scaffold at e2e.rs:4751-4761
   // (governance_outbox_emits_remote_sanction_notice_on_local_sanction).
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
   {
@@ -14906,26 +14908,39 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
     LocalSiteRateLimit::create(pool, &LocalSiteRateLimitInsertForm::new(local_site.id)).await?;
   }
 
-  let federation_config = activitypub_federation::config::FederationConfig::builder()
-    .domain(context.settings().hostname.clone())
+  // ------------------- 2. federation_config + inner_context (mirrors lib.rs:228-241 + lib.rs:364 VERBATIM) -------------------
+  // §10.5: build FederationConfig from the bootstrap context. `(**context).clone()`
+  // derefs Data<LemmyContext> -> LemmyContext (via actix Data's Deref<Target=T>);
+  // clone gives a fresh LemmyContext whose ActualDbPool is Arc-shared with the
+  // bootstrap's pool — so the AGPL seed (written via context.pool() above) is
+  // visible to handler reads (via the inner_context.pool() below).
+  let federation_config = FederationConfig::builder()
+    .domain((**context).settings().hostname.clone())
     .app_data((**context).clone())
     .debug(true)
     .http_fetch_limit(0)
     .build()
     .await?;
 
+  // §10.6: lib.rs:364 line-for-line mirror.
+  // `FederationConfig<T>: Deref<Target=T>` (config.rs:264-270). `.deref().clone()` gives a
+  // LemmyContext sharing the SAME pool as `federation_config.app_data`'s inner clone.
+  let inner_context: LemmyContext = federation_config.deref().clone();
+  let idempotency_set = IdempotencySet::default();
+
+  // ------------------- 3. App composition (mirrors lib.rs:379-382 VERBATIM) -------------------
   let rate_limit = RateLimit::with_debug_config();
   let app = test::init_service(
     App::new()
-      .app_data(Data::new(context.clone()))
-      .wrap(FederationMiddleware::new(federation_config.clone()))
-      .wrap(IdempotencyMiddleware::new(IdempotencySet::default()))
-      .wrap(SessionMiddleware::new((**context).clone()))
+      .app_data(Data::new(inner_context.clone()))                                  // lib.rs:379 mirror — actix Data<LemmyContext>
+      .wrap(FederationMiddleware::new(federation_config.clone()))                  // lib.rs:380 mirror
+      .wrap(IdempotencyMiddleware::new(idempotency_set.clone()))                   // lib.rs:381 mirror
+      .wrap(SessionMiddleware::new(inner_context.clone()))                         // lib.rs:382 mirror
       .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
   )
   .await;
 
-  // --- 1. GET /api/v4/site returns source_disclosure block. ---
+  // ------------------- 4. GET /api/v4/site — assert source_disclosure block (fix-impl-6 Part A PRESERVED) -------------------
   let site_req = test::TestRequest::get().uri("/api/v4/site").to_request();
   let site_resp = test::call_service(&app, site_req).await;
   let site_status = site_resp.status().as_u16();
@@ -14954,7 +14969,7 @@ async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::
     "source_disclosure.fork_commit must be non-empty (build.rs default 'unknown' is acceptable)"
   );
 
-  // --- 2. GET /api/v4/source returns the AGPL notice body. ---
+  // ------------------- 5. GET /api/v4/source — assert AGPL notice body (fix-impl-6 Part A PRESERVED) -------------------
   let source_req = test::TestRequest::get().uri("/api/v4/source").to_request();
   let source_resp = test::call_service(&app, source_req).await;
   let source_status = source_resp.status().as_u16();
