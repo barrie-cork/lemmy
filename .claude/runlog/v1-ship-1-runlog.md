@@ -1551,3 +1551,48 @@ retro (promote the full carry-forward set + the (vii)-(xi) items to
 Gate 6 → /brehon-phase-transition. §G4 status: override-scope DQ
 #247/#249/#252 EXHAUSTED — the re-plan supersedes it; no auto-author
 of any further fix-impl without a fresh user directive.
+
+## advisor: v1-ship-1-r2 plan APPROVED (User Gate 1) + PMD cross-lane fix @ 078aa501c
+
+2026-05-18. Planning Junior #309 (v1-ship-1-r2 re-plan) succeeded
+(~37min); daemon finalize-merged plan `5c02567d0` + planner DQ #261
+`efacb234c` + merge `a1c47e4ad` onto daemon-LOCAL phase-v1-ship-1 but
+did NOT push (finalize-without-push variant). Advisor verified clean
+FF (origin 92c4cc190 ancestor of a1c47e4ad), confirmed lane-safety
+(daemon checkout stayed on federation-inbound-a pre+post), pushed
+daemon-local→origin under user confirmation.
+
+Pre-approval gates: §3.5 watchpoint-specificity PASS (every §10 mirror
+anchor verified at HEAD a1c47e4ad incl. independent confirmation of the
+DQ #261 type-mismatch evidence — read.rs:1 actix-Data import + lib.rs
+:364/:379 mirror + e2e.rs:14865 unique failed fn). §3.4 DoD smoke
+PASS (§15.1 cargo check 2m40s 0err — merged surface type-correct;
+§15.3 e2e test-compile 4m36s 0err — target compiles, failure is
+runtime HTTP 500 not compile error; §15.2 clippy shares §15.1 graph
+low-risk; §15.4 e2e is Phase-2 advisor-driven post-finalize).
+
+**User Gate 1 (plan approval): APPROVED 2026-05-18** including the
+planner's DQ #261 mechanism-precision call (the brief's literal
+Option(b) recipe `to_request_data()` is mechanically incompatible —
+returns activitypub_federation::config::Data<T> ≠ actix_web::web::
+Data<T> that get_site extracts; planner adopted federation_config
+.deref().clone() per lib.rs:364 byte-mirror, preserving brief spirit).
+
+PMD cross-lane fix (the recurring ~27+ false Stop-hook block class,
+deferred Task #6): root-caused (MCP wrote retros to per-worktree
+.project-memory/memory.db while retro-check.sh reads canonical via
+git-common-dir; 21 v1-ship-1 retros stranded). Fixed both .mcp.json
+PROJECT_MEMORY_DB → absolute canonical path (gitignored, on disk);
+persisted forward-invariant in commit 078aa501c (multi-lane-worktree.md
+§PMD + .mcp.json.example guard + feedback_pmd_cross_lane_canonical_db.md
+lesson); user ran /mcp reconnect; verified repoint (probe ID 374 in
+canonical); reconciled all 21 stranded retros into canonical via
+memory_write_eval (canonical IDs 375-395, provenance-prefixed; verbatim
+originals preserved on disk at .claude/PRPs/debug/reconcile-payloads/).
+NO bypass (no raw SQL, no created_at forge, no hook edit).
+
+NEXT: bm-cut already done (phase branch exists, Tasks 1-4 merged) →
+impl per cohort dispatch: Task 0 (pre-flight, solo non-[P]) → Task 6
+(e2e rebuild single anchored Edit, solo) → Task 7 (retro). Run
+/precheck (incl. Check 3b daemon-local-trunk-sync — multi-lane,
+daemon on federation-inbound-a) before queueing Task 0.
