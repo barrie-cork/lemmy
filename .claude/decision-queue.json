@@ -1,62 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 280,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-19T12:37:19Z",
-      "phase_task": 2,
-      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-2-see-claude-prps-briefs-v1-federation-inbound-b-impl-2-md-334",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task2-clippy.log 2>&1\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 281,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-19T12:37:32Z",
-      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-1-see-claude-prps-briefs-v1-federation-inbound-b-impl-1-md-333",
-      "phase_task": 1,
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task1-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task1-clippy.log 2>&1\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 282,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-19T12:36:00Z",
-      "phase_task": 3,
-      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-3-see-claude-prps-briefs-v1-federation-inbound-b-impl-3-md-335",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task3-clippy.log 2>&1\""
-      ],
-      "context": "Task 3 (#335) validate-pending-laptop transcribed by advisor from worktree-root TASK3_VALIDATE_PENDING.json. Junior #335 hit the .claude/** sensitive-file gate (DQ #235) so escalated via TASK3_VALIDATE_PENDING.json + TASK3_ESCALATION.md instead of writing decision-queue.json directly. Original requested id 280 collided (3-way: #333+#334 also wrote 280); advisor renumbered to 282 (next free after merged max_id 281; #280=task-2, #281=task-1). Task-3 deliverable verified on phase tip 9358d0df0: const at db_schema governance_log.rs + shim re-export at api governance_log.rs; registry edit applied advisor-side same commit per DQ #235.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1411,6 +1355,61 @@
       "answer": "relax-separation-serial-phase-policy (user-stated in-channel 2026-05-19, durable standing policy). The user committed to implementing only ONE feature/plan at a time — Brehon phases run strictly serially, never with two concurrent phase-v1-* lanes. .claude/rules/multi-lane-worktree.md's own trigger precondition is line 3: 'When multiple Brehon sub-phases (phase-v1-*) are concurrently active' — that precondition is now NEVER satisfied under the one-at-a-time policy, so the lane-dedicated-session requirement + the separate-worktree-per-lane apparatus is DORMANT (the rule is not violated; its trigger condition does not occur). BINDING CONSEQUENCES: (1) A single advisor session (the canonical C:/Users/barri/Developer/brehon-fork checkout, CWD governance-v0) MAY drive the active phase's full pipeline (planning -> impl cohorts -> ci-watcher -> bm-* -> merge -> retro) including operating on the active phase's lane worktree via explicit `git -C C:/Users/barri/Developer/brehon-fork-<lane>` per-command. (2) The hard-refusal 'never git checkout phase-v1-* in the canonical brehon-fork checkout' STILL HOLDS as a mechanical safety (use `git -C <lane-worktree>` or the worktree path directly; never switch the canonical checkout's branch) — relaxing the session-separation does NOT relax that specific destructive-op guard. (3) Phase-branch DQ writes (validate-pending-laptop raises, advisor mutations) happen in the active lane worktree's .claude/decision-queue.json via `git -C <lane-worktree>` — still per-worktree-isolated by file path, just written by the single canonical session rather than a separate lane session. (4) The mobile-access constraint (user cannot open a desktop CC session with CWD = a specific lane worktree) is the proximate trigger for invoking this policy now (v1-federation-inbound-b impl handoff), but the policy is GENERAL: it applies to every future phase as long as the one-feature-at-a-time discipline holds. (5) IF the one-at-a-time discipline is ever broken (two phase-v1-* branches concurrently active), this relaxation IMMEDIATELY lapses and the full multi-lane-worktree.md separation (lane-dedicated sessions, no cross-lane DQ writes) re-applies — a future session detecting two active phase lanes via `git worktree list` MUST revert to strict separation and surface the conflict. The multi-lane-worktree.md rule body is NOT rewritten (its concurrency-scoped framing already self-gates correctly); this DQ is the durable record that the separation is intentionally dormant under serial-phase policy. Cross-reference: feedback_multi_lane_worktree_discipline, the v1-RT-r1-halt-retro L4 (the incident that motivated the original separation — a CONCURRENT-lane DQ race, which serial-phase policy structurally prevents).",
       "answered_by": "user",
       "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 280,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-19T12:37:19Z",
+      "phase_task": 2,
+      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-2-see-claude-prps-briefs-v1-federation-inbound-b-impl-2-md-334",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task2-clippy.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.bat --workspace --features full exit 0 (0 errors) + cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (0 warnings, finished 5m32s) against merged Cohort A phase tip 5444fdd02. All 3 tasks (T1 6 LemmyErrorType variants+status_code arms §10.1, T2 deny_unknown_fields ×3 §10.2, T3 const+shim §10.3) validate clean. Run on lane worktree brehon-fork-fed-in-b per §5.2 (Shape G suspended, validate-pending-laptop).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-19T15:01:06Z"
+    },
+    {
+      "id": 281,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-19T12:37:32Z",
+      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-1-see-claude-prps-briefs-v1-federation-inbound-b-impl-1-md-333",
+      "phase_task": 1,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task1-clippy.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.bat --workspace --features full exit 0 (0 errors) + cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (0 warnings, finished 5m32s) against merged Cohort A phase tip 5444fdd02. All 3 tasks (T1 6 LemmyErrorType variants+status_code arms §10.1, T2 deny_unknown_fields ×3 §10.2, T3 const+shim §10.3) validate clean. Run on lane worktree brehon-fork-fed-in-b per §5.2 (Shape G suspended, validate-pending-laptop).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-19T15:01:06Z"
+    },
+    {
+      "id": 282,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-19T12:36:00Z",
+      "phase_task": 3,
+      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-3-see-claude-prps-briefs-v1-federation-inbound-b-impl-3-md-335",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task3-clippy.log 2>&1\""
+      ],
+      "context": "Task 3 (#335) validate-pending-laptop transcribed by advisor from worktree-root TASK3_VALIDATE_PENDING.json. Junior #335 hit the .claude/** sensitive-file gate (DQ #235) so escalated via TASK3_VALIDATE_PENDING.json + TASK3_ESCALATION.md instead of writing decision-queue.json directly. Original requested id 280 collided (3-way: #333+#334 also wrote 280); advisor renumbered to 282 (next free after merged max_id 281; #280=task-2, #281=task-1). Task-3 deliverable verified on phase tip 9358d0df0: const at db_schema governance_log.rs + shim re-export at api governance_log.rs; registry edit applied advisor-side same commit per DQ #235.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.bat --workspace --features full exit 0 (0 errors) + cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (0 warnings, finished 5m32s) against merged Cohort A phase tip 5444fdd02. All 3 tasks (T1 6 LemmyErrorType variants+status_code arms §10.1, T2 deny_unknown_fields ×3 §10.2, T3 const+shim §10.3) validate clean. Run on lane worktree brehon-fork-fed-in-b per §5.2 (Shape G suspended, validate-pending-laptop).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-19T15:01:06Z"
     }
   ]
 }
