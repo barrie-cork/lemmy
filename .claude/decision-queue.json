@@ -1,26 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 287,
-      "kind": "validate-pending-laptop",
-      "from": "impl",
-      "timestamp": "2026-05-19T23:10:09Z",
-      "phase_task": 7,
-      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-7-see-claude-prps-briefs-v1-federation-inbound-b-impl-7-md-345",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task7-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task7-clippy.log 2>&1\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "question": "validate-pending-laptop: Task 7 cargo-check + cargo-clippy pass?",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1507,6 +1487,25 @@
       "answer": "§15 R3 (post-fix-impl-5 + fix-impl-6) PASSED both cmds on tip 065a24ce7: T6R3_CHECK_EXIT_0 (cargo-check.bat --workspace --features full, 1m 15s incremental) + T6R3_CLIPPY_EXIT_0 (cargo-clippy.bat --workspace --features full --no-deps -- -D warnings, 3m 16s). Task 6 publish_trust_attestation.rs (wrap_governance_inbound + impl GovernanceInboundActivity with per-actor rate-limit override calling rate_per_actor_counts/current_hour_bucket/log_inbox_drop, cap key federation.inbound.max_payload_bytes_trust_attestation, per-actor cap key federation.inbound.per_actor_attestation_rate_per_hour) now compiles + lints cleanly. Fix chain for Task 6: R1 cmd-1 FAILED with E0283 type-annotations-needed at publish_trust_attestation.rs:155 (spurious .into() in .ok_or_else closure introduced From-target ambiguity; root cause = worker drift from canonical .map_err sibling at L148-150 in same file/fn). → fix-impl-5 (commit d32d2c3f2 + finalize-merge 7c57ca31b): 1 hunk -6/+1, drop spurious .into() + collapse closure body to single expression — §G4-allowlist canonical-sibling mirror per feedback_lemmy_error_no_std_error.md Case-B. → R2 cmd-1 PASS (3m 15s) + cmd-2 FAILED with 2 clippy errors: (a) clippy::items-after-statements at publish_trust_attestation.rs:138 (const CONFIG_KEY declared mid-fn after let-statements); (b) clippy::unfulfilled_lint_expectations at inbox.rs:470 (rate_per_actor_counts #[expect(dead_code)] unfulfilled — Task 6's per-actor override now calls it). → fix-impl-6 (commit 9656b4bc7 + finalize-merge 065a24ce7): 2-file 3-hunk +1/-2 net, hoist const CONFIG_KEY L138→L122 in publish_trust_attestation.rs + strip rate_per_actor_counts #[expect(dead_code)] in inbox.rs — both §G4-allowlist-equivalent mechanical recipes per feedback_clippy_test_style.md + fix-impl-4 strip-pattern. → R3 cmd-1 PASS (1m 15s incremental) + cmd-2 PASS (3m 16s). Task 6 §16a Story 3 second deliverable COMPLETE. (advisor-laptop, 2026-05-20)",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-20T00:07:30Z"
+    },
+    {
+      "id": 287,
+      "kind": "validate-pending-laptop",
+      "from": "impl",
+      "timestamp": "2026-05-19T23:10:09Z",
+      "phase_task": 7,
+      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-7-see-claude-prps-briefs-v1-federation-inbound-b-impl-7-md-345",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task7-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task7-clippy.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "question": "validate-pending-laptop: Task 7 cargo-check + cargo-clippy pass?",
+      "answer": "§15 PASSED both cmds first try on tip 4c18c12d9: T7R_CHECK_EXIT_0 (cargo-check.bat --workspace --features full, 1m 16s incremental) + T7R_CLIPPY_EXIT_0 (cargo-clippy.bat --workspace --features full --no-deps -- -D warnings, 2m 05s). Task 7 publish_label.rs (REPLACE Phase-6 STUB Activity::receive with one-line wrap_governance_inbound delegation to crate::governance::inbox::receive_remote_moderation_label + impl GovernanceInboundActivity for PublishLabel with trait-default rate gate, cap key federation.inbound.max_payload_bytes_moderation_label) compiles + lints cleanly first try. NO fix-impl required — cleanest Cohort-B task (small stub-fill, no E0283/HRTB/clippy regression). Worker (#345) succeeded in 3m36s; all 4 grep counts at expected values (wrap_governance_inbound=1, impl GovernanceInboundActivity for PublishLabel=1, receive_remote_moderation_label=1, cap-key=1); footgun avoided (no `_context` underscore prefix kept since wrap USES context now); NO out-of-scope edits to inbox.rs/publish_sanction_notice.rs/publish_trust_attestation.rs. Task 7 §16a Story 3 third deliverable COMPLETE. **Cohort B (Tasks 5/6/7) ALL COMPLETE** — fed-in-b §16a Story 3 (wrap-then-receive for all 3 governance activity types) closed. Pipeline now advances to Task 8 barrier (replay-cleanup cron in scheduled_tasks.rs per §16a Story 4). (advisor-laptop, 2026-05-20)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-20T00:20:30Z"
     }
   ]
 }
