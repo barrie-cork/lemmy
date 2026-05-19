@@ -101,13 +101,29 @@ impl Activity for PublishSanctionNotice {
   }
 
   async fn receive(self, context: &Data<Self::DataType>) -> LemmyResult<()> {
-    // Wired by Agent E (plan task 75) to
-    // `crate::governance::inbox::receive_remote_sanction_notice`. Inbox
-    // lives in `lemmy_apub_activities` (not `lemmy_apub`) per advisor
-    // decision DQ-6.6-inbound — see `crate::governance::inbox` module
-    // doc for the dep-graph rationale.
-    crate::governance::inbox::receive_remote_sanction_notice(self, context).await
+    crate::governance::inbox::wrap_governance_inbound(self, context, |a, c| async move {
+      crate::governance::inbox::receive_remote_sanction_notice(a, c).await
+    }).await
   }
+}
+
+#[async_trait::async_trait]
+impl crate::governance::inbox::GovernanceInboundActivity for PublishSanctionNotice {
+  fn activity_id(&self) -> &Url { &self.id }
+  fn actor_domain(&self) -> LemmyResult<String> {
+    self.actor.inner().domain()
+      .map(str::to_string)
+      .ok_or_else(|| LemmyErrorType::Unknown(
+        format!("PublishSanctionNotice actor {} has no domain", self.actor.inner())
+      ).into())
+  }
+  fn payload_size_bytes(&self) -> LemmyResult<usize> {
+    Ok(serde_json::to_vec(self)?.len())
+  }
+  fn payload_size_cap_key(&self) -> &'static str {
+    "federation.inbound.max_payload_bytes_sanction_notice"
+  }
+  // check_per_actor_rate_limit uses the trait default no-op.
 }
 
 // ===========================================================================
