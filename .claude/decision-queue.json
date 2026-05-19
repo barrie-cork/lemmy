@@ -1,6 +1,22 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 276,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -1297,6 +1313,34 @@
       "context": "Call-site ambiguity flagged in brief section 2.1 item 2 / section 2.3. Advisor-resolved in advisor-mode per brehon-clarify Step 4.",
       "answer": "option-a. Storage-cap eviction happens at INSERT time per PRD section 7.3 verbatim (at insert time, check SELECT COUNT(*) FROM remote_sanction_notice WHERE source_instance = $1 AND admin_reviewed_at IS NULL. If >= cap, drop the oldest unreviewed row for that peer with a federation_inbox_dropped_log entry + governance_log federation_inbound_storage_cap_evicted). It is NOT one of the 5 pre-inner check helpers (those are reject-gates: trust/size/rate/actor-rate/replay, PRD section 9.2 steps 1-6 - none of which mutate the advisory tables). The cap check is coupled to the WRITE, so it belongs with the Phase-6 receive_remote_* insert path. To avoid duplicating it across all 3 receive_remote_* bodies, the plan factors it into a single helper (e.g. enforce_storage_cap(peer, table_kind, conn)) invoked from the wrapper post-inner SUCCESS path (after inner() returns Ok) so the behaviour is uniform across the 3 advisory types - OR, if the planner finds the post-inner point cannot know which table inner() wrote, invoked at the head of each receive_remote_* (the planner picks based on the actual Phase-6 handler shapes read at plan time and records the choice + rationale in section 10 + a kind:log). The const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED is fed-in-a-shipped (registry fed-in-a section, marked -b call site (pending)); -b adds the emitting call site. NOTE this is distinct from the eviction being a drop that returns an HTTP error - per PRD section 7.3 oldest-drop is NON-rejecting (the new inbound is still accepted; an OLDER row is evicted), so it does NOT return a 4xx and does NOT short-circuit inner(); that is why it is post-success, not a pre-inner reject-gate. The eviction writes (the evicted-row effect + federation_inbox_dropped_log + governance_log) are part of the multi-write transaction boundary (brief watchpoint #8, feedback_multi_write_handlers_need_transactions). Sources: PRD section 7.3 (verbatim insert-time mechanism + why oldest-drop, not reject), PRD section 9.2 (the 6 pre-inner steps that storage-cap is NOT among), plan v1-federation-inbound-a.plan.md section 10.7 + .claude/rules/governance-log-entry-kind-registry.md fed-in-a section (const shipped, -b emits).",
       "answered_by": "advisor",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 277,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Rate-limit storage shape for v1-federation-inbound-b — extend crates/utils/src/rate_limit/ or co-locate as inbox.rs statics?",
+      "options": [
+        "extend-lemmy-utils-rate-limit",
+        "co-locate-inbox-statics"
+      ],
+      "answer": "Co-located in crates/apub/activities/src/governance/inbox.rs as 2 OnceLock<Mutex<HashMap<(String, i64), u32>>> statics (one per-peer, one per-actor; keyed by (key, hour_bucket); opportunistic prune). Rationale: state is small; the wrapper is the only consumer; no cross-crate dep. PRD section 7.1 'extend rather than fork' honoured in spirit (in-process counter mirroring Lemmy's pattern, no new dep), though the token-bucket shape of crates/utils BucketConfig does not fit a sliding-window-by-peer model. v2 may extract to lemmy_utils::rate_limit::federation_inbox if state grows. planner-self-resolved per .claude/agents/planning.md Output discipline; transcribed by advisor from plan section 19.2.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 278,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "GovernanceInboundActivity trait impl placement — alongside the trait def in inbox.rs, or per-type in each publish_*.rs?",
+      "options": [
+        "co-locate-in-inbox",
+        "per-type-in-publish-files"
+      ],
+      "answer": "Per-type, alongside impl Activity in each publish_{sanction_notice,trust_attestation,label}.rs (Tasks 5/6/7), NOT co-located in inbox.rs next to the trait definition. Rationale: per-type code stays with the per-type file; PublishTrustAttestation's per-actor rate-limit override reads typed protocol fields (subject URL) naturally co-located; Rust orphan rule satisfied (trait + types both in lemmy_apub_activities); the 3 patches stay disjoint so the [P] cohort dispatch is preserved. planner-self-resolved per .claude/agents/planning.md Output discipline; transcribed by advisor from plan section 19.2.",
+      "answered_by": "planner-self-resolved",
       "resolved_at": "2026-05-19T00:00:00Z"
     }
   ]
