@@ -101,6 +101,7 @@ use lemmy_db_schema_file::schema::{
   governance_config,
   remote_moderation_label,
 };
+use lemmy_diesel_utils::connection::DbConn;
 use lemmy_diesel_utils::connection::DbPool;
 
 /// Persist an inbound `PublishSanctionNotice` as an advisory record and
@@ -488,7 +489,7 @@ pub(crate) async fn wrap_governance_inbound<F, Fut, A>(
 where
   F: FnOnce(A, &Data<LemmyContext>) -> Fut,
   Fut: std::future::Future<Output = LemmyResult<()>>,
-  A: GovernanceInboundActivity,
+  A: GovernanceInboundActivity + std::marker::Sync,
 {
   let peer_domain = activity.actor_domain()?;
   let activity_id = activity.activity_id().to_string();
@@ -603,7 +604,7 @@ pub(crate) async fn log_inbox_drop(
   reason: &str,
   excerpt: Option<&str>,
   entry_kind: &'static str,
-  conn: &mut AsyncPgConnection,
+  conn: &mut DbConn<'_>,
 ) -> LemmyResult<()> {
   let form = FederationInboxDroppedLogInsertForm {
     source_instance: peer_domain.to_string(),
@@ -653,7 +654,7 @@ async fn evict_oldest_unreviewed_if_needed(
   peer_domain: &str,
   table_name: &str,
   cap: i64,
-  conn: &mut AsyncPgConnection,
+  conn: &mut DbConn<'_>,
 ) -> LemmyResult<()> {
   let count_sql = format!(
     "SELECT COUNT(*)::bigint AS count FROM {table_name} \
