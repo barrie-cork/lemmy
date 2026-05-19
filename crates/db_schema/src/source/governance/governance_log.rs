@@ -225,6 +225,7 @@ pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER: &str = "federat
 pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY: &str = "federation_inbound_dropped_replay";
 pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_SCHEMA: &str = "federation_inbound_dropped_schema";
 pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED: &str = "federation_inbound_dropped_storage_cap_evicted";
+pub const ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED: &str = "federation_inbound_persist_failed";
 pub const ENTRY_KIND_FEDERATION_LABEL_RECEIVED: &str = "federation_label_received";
 pub const ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED: &str = "federation_peer_trust_changed";
 
