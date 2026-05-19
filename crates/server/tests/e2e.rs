@@ -1089,6 +1089,8 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
+  // v1-federation-inbound-a (1 migration, bump 18 → 19)
+  "2026-05-17-000000-0000_add_federation_inbound_v1",
   // v1-RT-r1 (4 migrations, bump 14 → 18)
   "2026-05-10-000300-0000_seed_v1_rt_config_keys",
   "2026-05-10-000200-0000_backfill_reputation_event_source_type",
@@ -1390,6 +1392,112 @@ async fn test_phase1_migrations_forward() -> lemmy_utils::error::LemmyResult<()>
     }
   }
 
+  // Post-condition probes for v1-federation-inbound-a schema effects (post-forward):
+  // tables, pg_type, columns, indexes, and governance_config key presence (plan §10.8).
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // 4 new tables created by add_federation_inbound_v1
+    for tbl in [
+      "federation_peer",
+      "federation_inbox_dropped_log",
+      "federation_inbox_nonce",
+      "remote_moderation_label",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.tables \
+         WHERE table_name = '{tbl}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "table {tbl} should exist after federation-inbound-a forward migration"
+      );
+    }
+    // 2 new enum types created by add_federation_inbound_v1
+    for typname in ["federation_peer_trust_enum", "federation_inbox_admin_action_enum"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_type WHERE typname = '{typname}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "pg_type {typname} should exist after federation-inbound-a forward migration"
+      );
+    }
+    // 4 new columns added to remote_sanction_notice by add_federation_inbound_v1
+    for col in [
+      "peer_trust_level_at_receipt",
+      "admin_reviewed_at",
+      "admin_action",
+      "dismissal_rationale",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'remote_sanction_notice' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "column {col} should exist in remote_sanction_notice after federation-inbound-a forward migration"
+      );
+    }
+    // 6 new columns added to federation_attestation by add_federation_inbound_v1
+    for col in [
+      "source_instance",
+      "received_at",
+      "peer_trust_level_at_receipt",
+      "admin_reviewed_at",
+      "admin_action",
+      "dismissal_rationale",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'federation_attestation' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "column {col} should exist in federation_attestation after federation-inbound-a forward migration"
+      );
+    }
+    // 10 new indexes created by add_federation_inbound_v1
+    for idx in [
+      "idx_federation_peer_trust",
+      "idx_fil_drop_source",
+      "idx_fil_drop_reason",
+      "idx_fin_nonce_seen_at",
+      "idx_rml_target",
+      "idx_rml_source",
+      "idx_rml_admin_action",
+      "idx_rsn_admin_action",
+      "idx_fa_admin_action",
+      "idx_fa_source",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_indexes WHERE indexname = '{idx}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 1,
+        "index {idx} should exist after federation-inbound-a forward migration"
+      );
+    }
+    // governance_config: spot-check 2 of the 11 new federation-inbound-a config keys
+    for key in [
+      "federation.inbound.default_trust_for_new_peers",
+      "federation.inbound.replay_window_days",
+    ] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 1,
+        "governance_config key {key} should exist after federation-inbound-a forward migration"
+      );
+    }
+  }
+
   Ok(())
 }
 
@@ -1611,6 +1719,113 @@ async fn test_phase1_migrations_revert() -> lemmy_utils::error::LemmyResult<()> 
     }
   }
 
+  // Post-condition probes for v1-federation-inbound-a schema effects after LIFO-19 revert
+  // (plan §10.8): tables absent, types absent, columns absent, indexes absent,
+  // governance_config keys absent.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    // 4 tables must be absent after revert
+    for tbl in [
+      "federation_peer",
+      "federation_inbox_dropped_log",
+      "federation_inbox_nonce",
+      "remote_moderation_label",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.tables \
+         WHERE table_name = '{tbl}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "table {tbl} should not exist after reverting federation-inbound-a migrations"
+      );
+    }
+    // 2 enum types must be absent after revert
+    for typname in ["federation_peer_trust_enum", "federation_inbox_admin_action_enum"] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_type WHERE typname = '{typname}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "pg_type {typname} should not exist after reverting federation-inbound-a migrations"
+      );
+    }
+    // 4 columns on remote_sanction_notice must be absent after revert
+    for col in [
+      "peer_trust_level_at_receipt",
+      "admin_reviewed_at",
+      "admin_action",
+      "dismissal_rationale",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'remote_sanction_notice' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "column {col} should not exist in remote_sanction_notice after reverting federation-inbound-a migrations"
+      );
+    }
+    // 6 columns on federation_attestation must be absent after revert
+    for col in [
+      "source_instance",
+      "received_at",
+      "peer_trust_level_at_receipt",
+      "admin_reviewed_at",
+      "admin_action",
+      "dismissal_rationale",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM information_schema.columns \
+         WHERE table_name = 'federation_attestation' AND column_name = '{col}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "column {col} should not exist in federation_attestation after reverting federation-inbound-a migrations"
+      );
+    }
+    // 10 indexes must be absent after revert
+    for idx in [
+      "idx_federation_peer_trust",
+      "idx_fil_drop_source",
+      "idx_fil_drop_reason",
+      "idx_fin_nonce_seen_at",
+      "idx_rml_target",
+      "idx_rml_source",
+      "idx_rml_admin_action",
+      "idx_rsn_admin_action",
+      "idx_fa_admin_action",
+      "idx_fa_source",
+    ] {
+      let result: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM pg_indexes WHERE indexname = '{idx}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        result.n, 0,
+        "index {idx} should not exist after reverting federation-inbound-a migrations"
+      );
+    }
+    // governance_config: spot-check 2 federation-inbound-a keys absent after revert
+    for key in [
+      "federation.inbound.default_trust_for_new_peers",
+      "federation.inbound.replay_window_days",
+    ] {
+      let kc: Count = sql_query(format!(
+        "SELECT count(*) AS n FROM governance_config WHERE key = '{key}'"
+      ))
+      .get_result(&mut conn)?;
+      assert_eq!(
+        kc.n, 0,
+        "governance_config key {key} should be absent after reverting federation-inbound-a migrations"
+      );
+    }
+  }
+
   Ok(())
 }
 
@@ -1753,7 +1968,9 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 12 JM-a + JM-d Task 1 + SL-b + RT-r1 migrations LIFO:
+  // Step 2: revert the 13 JM-a + JM-d Task 1 + SL-b + RT-r1 + federation-inbound-a
+  //         migrations LIFO:
+  //   - 1 federation-inbound-a migration: 2026-05-17-000000 (newest; slot 1)
   //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
   //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
   //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
@@ -1761,8 +1978,8 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
   // not fire. Limit must rise with each new phase that adds migrations
   // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // for SL-b; 8→12 here for RT-r1).
-  schema_setup::run(Options::default().revert().limit(12), &db_url)?;
+  // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a).
+  schema_setup::run(Options::default().revert().limit(13), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -1954,6 +2171,17 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
     assert_eq!(
       row.n, 0,
       "jury_constraint_violation_log should exist and be empty after re-apply"
+    );
+  }
+
+  // federation_peer table must exist and be empty post re-apply.
+  {
+    let mut conn = PgConnection::establish(&db_url)?;
+    let row: CountRow = sql_query("SELECT count(*) AS n FROM federation_peer")
+      .get_result(&mut conn)?;
+    assert_eq!(
+      row.n, 0,
+      "federation_peer should exist and be empty after federation-inbound-a re-apply"
     );
   }
 
@@ -7454,6 +7682,7 @@ async fn admin_dashboard_aggregates_populated_data()
       attestation_type: AttestationType::TrustedReporter,
       valid_until: Some(future),
       signature: "seed-sig".to_string(),
+      ..Default::default()
     })
     .execute(&mut conn)
     .await?;
@@ -14857,6 +15086,66 @@ mod v1_sl_e_fixtures {
       "sponsor_pseudonym != raw person_id (ADR-015)"
     );
 
+    Ok(())
+  }
+}
+
+mod v1_federation_inbound_a_fixtures {
+  use super::*;
+  use diesel::ExpressionMethods;
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_db_schema::source::governance::federation_peer::{
+    federation_inbox_check_peer_trust,
+    FederationPeerInsertForm,
+  };
+  use lemmy_db_schema_file::enums::FederationPeerTrust;
+  use lemmy_db_schema_file::schema::{federation_peer, instance};
+  use lemmy_db_schema_file::InstanceId;
+  use lemmy_utils::error::LemmyResult;
+
+  async fn seed_federation_peer(
+    conn: &mut AsyncPgConnection,
+    domain: &str,
+    trust: FederationPeerTrust,
+  ) -> LemmyResult<InstanceId> {
+    let instance_id: InstanceId = diesel::insert_into(instance::table)
+      .values((
+        instance::domain.eq(domain),
+        instance::published_at.eq(diesel::dsl::now),
+      ))
+      .returning(instance::id)
+      .get_result(conn)
+      .await?;
+    let form = FederationPeerInsertForm {
+      instance_id,
+      trust_level: Some(trust),
+      added_by_actor: None,
+      notes: None,
+    };
+    diesel::insert_into(federation_peer::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(instance_id)
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn federation_peer_trust_lookup_returns_seeded_state() -> LemmyResult<()> {
+    let (_container, _context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let _instance_id =
+      seed_federation_peer(&mut conn, "allowlisted.test", FederationPeerTrust::Allowlisted).await?;
+    let trust = federation_inbox_check_peer_trust("allowlisted.test", &mut conn).await?;
+    assert_eq!(trust, FederationPeerTrust::Allowlisted);
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn federation_peer_trust_lookup_returns_unknown_for_first_seen() -> LemmyResult<()> {
+    let (_container, _context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let trust = federation_inbox_check_peer_trust("unknown-peer.test", &mut conn).await?;
+    assert_eq!(trust, FederationPeerTrust::Unknown);
     Ok(())
   }
 }

@@ -1,6 +1,6 @@
 use crate::newtypes::FederationAttestationId;
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::enums::AttestationType;
+use lemmy_db_schema_file::enums::{AttestationType, FederationInboxAdminAction, FederationPeerTrust};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::federation_attestation;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,13 @@ pub struct FederationAttestation {
   pub valid_until: Option<DateTime<Utc>>,
   pub created_at: DateTime<Utc>,
   pub signature: String,
+  // v1-federation-inbound-a additions:
+  pub source_instance: Option<String>,
+  pub received_at: Option<DateTime<Utc>>,
+  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: FederationInboxAdminAction,
+  pub dismissal_rationale: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -36,4 +43,23 @@ pub struct FederationAttestationInsertForm {
   pub attestation_type: AttestationType,
   pub valid_until: Option<DateTime<Utc>>,
   pub signature: String,
+  // v1-federation-inbound-a additions (all Option<_> to preserve ..Default::default() caller compat):
+  pub source_instance: Option<String>,
+  pub received_at: Option<DateTime<Utc>>,
+  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: Option<FederationInboxAdminAction>,
+  pub dismissal_rationale: Option<String>,
+}
+
+#[derive(Clone, Default)]
+#[cfg_attr(feature = "full", derive(AsChangeset))]
+#[cfg_attr(feature = "full", diesel(table_name = federation_attestation))]
+pub struct FederationAttestationUpdateForm {
+  pub source_instance: Option<String>,
+  pub received_at: Option<DateTime<Utc>>,
+  pub peer_trust_level_at_receipt: Option<FederationPeerTrust>,
+  pub admin_reviewed_at: Option<DateTime<Utc>>,
+  pub admin_action: Option<FederationInboxAdminAction>,
+  pub dismissal_rationale: Option<String>,
 }

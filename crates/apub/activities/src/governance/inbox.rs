@@ -144,6 +144,7 @@ pub async fn receive_remote_sanction_notice(
     published_at: object.published,
     signature: activity.id.to_string(),
     local_case_id: None,
+    ..Default::default()
   };
   let payload = json!({
     "source_instance": source_instance,
@@ -216,6 +217,7 @@ pub async fn receive_remote_trust_attestation(
     attestation_type: object.attestation_type,
     valid_until: object.valid_until,
     signature: activity.id.to_string(),
+    ..Default::default()
   };
   let payload = json!({
     "actor_url": actor_url,

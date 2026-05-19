@@ -3876,18 +3876,26 @@
     },
     {
       "id": 236,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-16T19:44:23Z",
-      "question": "Lane-worktree `git worktree add` does NOT init submodules — crates/email/translations missing broke pre-phase audit Probe 3.",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-16T19:28:00Z",
+      "question": "validate-pending-laptop: cargo-check.bat --workspace --features full for task 5 (newtypes.rs)",
       "options": [
-        "promote-to-lesson",
-        "leave-as-retro-note"
+        "pass: advisor laptop mutates result=pass, moves to resolved",
+        "fail: advisor laptop mutates result=fail, stays in pending for G4 triage"
       ],
-      "context": "v1-ship-1 pre-phase harness audit Probe 3 (cargo-test --test e2e --no-run -p lemmy_server) FAILED with `lemmy_email build script: Os code 3 NotFound` because crates/email/translations (a git submodule per .gitmodules -> lemmy-translations.git) was UNINITIALIZED in the brehon-fork-ship-1 lane worktree. `git submodule status` showed leading '-' (uninit). The canonical brehon-fork checkout had it (47 backend JSON files), which is why the plan-approval DoD smoke test passed there but the lane worktree failed. Fixed via `git submodule update --init crates/email/translations` (one-time per worktree; safe, local, reversible — populates a submodule dir only). Wrapper exit-code propagation was CORRECT (exit 101 surfaced). This is the 3rd data point in the multi-lane worktree-races class (MEMORY.md tracks as emerging-2x). Recommendation: add a submodule-init step to the multi-lane-worktree.md §Lifecycle 'After bm-cut creates a new phase branch' block (`git worktree add ... && cd <wt> && git submodule update --init --recursive`), and a pre-phase-harness-audit.md Probe checking `git submodule status` shows no leading '-'. Existing lesson feedback_worktree_submodules_not_auto_init.md already covers the general case; the gap is it's not wired into the lane-bootstrap runbook.",
-      "answer": "Self-resolved (advisor): fixed in-session via `git submodule update --init crates/email/translations`; audit Probe 3 re-run after fix. Harvest at v1-ship-1 retro (Task 5) — promote to a multi-lane-worktree.md §Lifecycle runbook step + a new pre-phase-harness-audit.md submodule probe. Non-blocking for v1-ship-1 (audit completed after the one-time fix).",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-16T19:44:23Z"
+      "context": "Task 5 commit f0c541301 pushed on worktree branch (tip 3550f171b incl DQ-raise). Added FederationInboxDroppedLogId(i64) + RemoteModerationLabelId(i32) to newtypes.rs. Shape G suspended; laptop advisor runs cargo-check.bat.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task5-check.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-5-see-claude-prps-briefs-federation-inbound-a-impl-5-md-280",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS. cargo-check.bat --workspace --features full on the task-5 worker tip (3550f171b, detached-checkout in lane worktree) finished dev profile in 9m32s through lemmy_server with 0 errors. NOTE: the FIRST run (bg buq4s7c66) reported a FALSE NEGATIVE (CHECK_EXIT_NONZERO) due to an uninitialized git submodule crates/email/translations in the lane worktree (git worktree add does not auto-init submodules; lemmy_email build script read_dir(translations/backend/) failed Os code 3 NotFound) -- NOT a Task-5 code defect (compile died at lemmy_email build-script stage far before lemmy_db_schema; log had zero refs to newtypes). Fixed via git submodule update --init crates/email/translations; re-run (bg bp6kwc8uv) PASSED clean. See companion DQ #239 (kind:log) for the durable environment finding. Task 5 newtypes.rs is validation-clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-16T21:24:00Z"
     },
     {
       "id": 237,
@@ -3943,228 +3951,247 @@
     },
     {
       "id": 240,
-      "from": "advisor",
+      "from": "impl",
       "kind": "log",
-      "timestamp": "2026-05-16T20:52:37Z",
-      "question": "Scope correction + re-surface trip-wire for the deferred audit-3.E.2 fixtures-dedup carry-forward (originally deferred by user DQ #222).",
+      "timestamp": "2026-05-16T21:36:00Z",
+      "question": "Plan §10.1 pre-condition checks used wrong Phase-6 enum type names (with _enum suffix); corrected to bare names.",
       "options": [
-        "record corrected scope: PR-1 (#132, merged) already shipped 3.E.1+3.E.3+3.E.4; the DEFERRED bundle is ONLY 3.E.2 (4 fixtures modules ~70% dup -> shared governance_test_helpers) + the 3.E.5 fold-in (local seed_person -> canonical module-level seed_user). NOT a 3.E.1+3.E.2+3.E.3+3.E.5 bundle.",
-        "no-op (leave the verbal framing only — rejected: it was scope-wrong and had no durable trip-wire)"
+        "fix-enum-names-in-preconditions: change attestation_type_enum->attestation_type, sanction_action_enum->sanction_action, sanction_scope_enum->sanction_scope",
+        "use-verbatim-plan: leave incorrect names, causing RAISE EXCEPTION on migrate-roundtrip"
       ],
-      "context": "Advisor 2026-05-16 verbally framed the deferred 3.E.2 follow-up as 'a single e2e.rs refactor sub-phase bundling 3.E.1 + 3.E.2 + 3.E.3 + 3.E.5'. That framing was NOT recorded durably and is SCOPE-WRONG: per DQ #222 (answered_by:user, 2026-05-15) + .claude/PRPs/reports/refactor-tier-final-retro.md (committed ae52dc0cd), PR-1 / chore/refactor-e2e-error-types (PR #132, merged at c4b09b65e) ALREADY shipped audit 3.E.1 + 3.E.3 + 3.E.4 (Junior #268 commit f258824b5). 3.E.1/3.E.3 are DONE, not pending. The only un-done work is 3.E.2 (the ~4000-line / 4-module fixtures dedup into governance_test_helpers) plus its 3.E.5 fold-in (the audit explicitly says 3.E.5 'will fold into 3.E.2 refactor'). DQ #222 ruled this is a POST-GATE follow-up that does NOT block v1 PRD planning (strict gate stayed 5 PRs; PR-1 was the 5th/final item), tracked as advisor task #8, to be re-planned as its own brief + dedicated lane AFTER the refactor-tier final retro + v1 PRD work, on explicit user instruction. The deferral itself is durably anchored (DQ #222 + the final retro lines 32-33/116-119/323); this entry adds (a) the corrected bundle scope and (b) an explicit re-surface trip-wire so a future v1-PRD-resume planning session does not inherit the wrong 4-finding framing or silently skip the carry-forward.",
-      "answer": "CORRECTED SCOPE (durable): deferred work = audit 3.E.2 ONLY (consolidate ~70% duplication across v1_jm_b_fixtures / v1_jm_e_fixtures / v1_sl_b_fixtures / v1_sl_c_fixtures, ~4000 lines, into a shared governance_test_helpers module; phase-specific modules become thin wrappers) + the 3.E.5 fold-in (move the local seed_person helper in report_to_modlog_golden_path to call the canonical module-level seed_user). 3.E.1 + 3.E.3 + 3.E.4 are ALREADY SHIPPED in PR-1 (#132, merged c4b09b65e) — they are NOT part of the deferred bundle; the advisor's 2026-05-16 '3.E.1+3.E.2+3.E.3+3.E.5' verbal framing is superseded by this entry. RE-SURFACE TRIP-WIRE: this carry-forward BLOCKS NOTHING but MUST be re-surfaced at the v1-PRD-resume planning gate (i.e. once v1-ship-1 + v1-federation-inbound-a + v1-AD-e have shipped and the user is deciding what resumes the v1 PRD). At that point: open a NEW dedicated lane (brief -> /brehon-clarify -> planning Junior -> phase-v1-<lane> worktree -> impl -> PR) for 3.E.2+3.E.5 only, on explicit user instruction. Until then it stays as advisor task #8 + this DQ entry + the final-retro carry-forward. /retro-harvest and /start-brehon will pick this up via the resolved[] log + the retro carry-forward. Cross-refs: DQ #222 (user defer decision), .claude/PRPs/reports/refactor-tier-final-retro.md (durable carry-forward), .claude/PRPs/reports/v1-code-quality-audit-2026-05-14.md §3.E (audit findings 3.E.2 + 3.E.5).",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-16T20:52:37Z"
+      "context": "Phase 6 migration 2026-04-15-100000-0000_add_governance_enums/up.sql creates bare types (attestation_type, sanction_action, sanction_scope). The federation_attestations migration comment explicitly notes 'NOT attestation_type_enum'. Plan §10.1 DO$$ pre-condition checks used _enum suffix; left verbatim, migration would RAISE EXCEPTION immediately. Fix is mechanical: bare type names in pre-condition checks only; actual CREATE TYPE/ALTER TABLE DDL is unchanged.",
+      "answer": "Fixed in up.sql: pre-condition checks use bare type names matching actual Phase-6 enums. DDL body unchanged from §10.1. Evidence: grep attestation_type migrations/2026-04-15-100000-0000_add_governance_enums/up.sql. Promote to lesson: 'Phase-6 governance enums have bare names (no _enum suffix); future plans should use bare names in pre-condition checks.'",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-16T21:36:00Z"
     },
     {
       "id": 241,
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T00:30:41Z",
-      "question": "v1-AD-e Task 1 (add maud dep) pushed on junior/role-impl-task-v1-ad-e-task-1-see-claude-prps-briefs-v1-ad-e-impl-1-md-287 — run §15 DoD on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-1-see-claude-prps-briefs-v1-ad-e-impl-1-md-287",
-      "phase_task": 1,
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task1-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat -p lemmy_api --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task1-clippy.log 2>&1\""
+      "timestamp": "2026-05-16T21:36:00Z",
+      "question": "Run cargo-check + migrate-roundtrip for Task 1 migration (Shape G suspended, validate-pending-laptop mode).",
+      "options": [
+        "pass: both commands exit 0 — advance Cohort A barrier",
+        "fail: one or both commands exit non-zero — advisor §G4 triage"
       ],
-      "context": "maud 0.27.0 added to crates/api/api/Cargo.toml + Cargo.lock regenerated; commit 55c373016. Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": "Both DoD gates PASS on advisor-laptop (brehon-fork-ad-e worktree, detached on origin/junior-287 tip 1ce2b3d5b). cargo-check --workspace --features full: exit 0 (7m30s). cargo-clippy -p lemmy_api --features full --no-deps -D warnings: exit 0 (6m38s). No transitive lint cascade — maud 0.27.0 integrates cleanly. Finalize-merged junior-287 into phase-v1-AD-e at bcade7d94. Advance to Task 2.",
-      "answered_by": "advisor-laptop",
+      "context": "Task 1 commit on worktree branch junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283. Creates migrations/2026-05-17-000000-0000_add_federation_inbound_v1/{up,down}.sql. Shape G suspended until 2026-06-01 per DQ #229/#231/#235.",
+      "phase_task": 1,
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-1-see-claude-prps-briefs-federation-inbound-a-impl-1-md-283",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task1-check.log 2>&1\"",
+        "bash scripts/brehon/migrate-roundtrip.sh > .claude/PRPs/debug/fed-in-a-task1-migrate.log 2>&1"
+      ],
       "result": "pass",
-      "log_slice": "cargo-check --workspace --features full: Finished dev profile in 7m 30s; CHECK_EXIT_0 (no error[E*], no warnings). cargo-clippy -p lemmy_api --features full --no-deps -D warnings: Finished dev profile in 6m 38s; CLIPPY_EXIT_0 (0 warnings, no cascade per feedback_library_add_after_shipping).",
+      "log_slice": "RE-VALIDATION (commit 961101fc7, post Item-1 wrapper fix). cmd1 cargo-check.bat --workspace --features full already PASSED at 2758384d3 (migration SQL unchanged 2758384d3->961101fc7; only scripts/brehon harness delta). cmd2 bash scripts/brehon/migrate-roundtrip.sh: EXIT 0. New migration 2026-05-17-000000-0000_add_federation_inbound_v1 detected; 2 pgautoupgrade containers healthy; lemmy_diesel_utils built+ran clean both passes (VCVARS_OK x2, no STATUS_DLL_NOT_FOUND); forward exit 0; re-forward exit 0 (idempotent on fresh container); round-trip complete for 1 migration. Log: .claude/PRPs/debug/fed-in-a-task1-migrate-retry.log marker MIGRATE_EXIT_0.",
       "failed_commands": null,
-      "resolved_at": "2026-05-17T00:56:07Z"
+      "answer": "PASS. Both DQ #241 commands green. Prior fail was a Windows harness gap (migrate-roundtrip.sh bare cargo run -> libpq.dll STATUS_DLL_NOT_FOUND), NOT a Task 1 code defect. Fixed by commit 961101fc7 (OS-conditional run_diesel_utils() + sibling migrate-roundtrip-cargo.bat mirroring cargo-check.bat vcpkg %PATH%; Linux CI path unchanged). cmd1 cargo-check passed 2758384d3; cmd2 migrate-roundtrip re-run EXIT 0. Cohort A barrier: Task 1 GREEN -> dispatch serial Task 2.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T01:35:00Z"
     },
     {
       "id": 242,
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T01:00:00Z",
-      "question": "v1-AD-e Task 2 (extract gather_dashboard + dashboard HTML handler + /dashboard/view route) pushed on junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288 — run §13-Task-2 DoD on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-2-see-claude-prps-briefs-v1-ad-e-impl-2-md-288",
+      "timestamp": "2026-05-18T00:43:52Z",
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-2-see-claude-prps-briefs-federation-inbound-a-impl-2-md-305",
       "phase_task": 2,
       "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task2-testnorun.log 2>&1\""
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task2-check.log 2>&1\""
       ],
-      "context": "admin_dashboard_html.rs created; gather_dashboard extracted as pub(crate); /dashboard/view route wired; commit ade904851. R7 (--no-run) applies after Task 2 (gather_dashboard changes fn call surface). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": "All 3 DoD gates PASS on advisor-laptop (brehon-fork-ad-e worktree, detached on junior-288 tip 2558eba9b). cargo-check --workspace --features full: exit 0 (1m47s). cargo-clippy --workspace --features full --no-deps -D warnings: exit 0 (5m35s). cargo-test --no-run -p lemmy_server --test e2e: exit 0 (10m44s) — R7 behaviour-preservation confirmed (e2e binary links; gather_dashboard extraction did not break the JSON handler or v1-AD-d e2e). Finalize-merged junior-288 into phase-v1-AD-e at a0a19637d (DQ conflict resolved: #242 new-pending, #241 stays resolved=pass). Advance to Task 3.",
-      "answered_by": "advisor-laptop",
       "result": "pass",
-      "log_slice": "cargo-check --workspace --features full: Finished dev profile in 1m 47s; CHECK_EXIT_0 (no error[E*]). cargo-clippy --workspace --features full --no-deps -D warnings: Finished dev profile in 5m 35s; CLIPPY_EXIT_0 (0 warnings). cargo-test --no-run -p lemmy_server --test e2e: Finished test profile in 10m 44s; Executable tests/e2e.rs (e2e-20ec6875d92fa217.exe); TESTNORUN_EXIT_0 — R7 link OK.",
+      "log_slice": "cargo-check.bat --workspace --features full: EXIT 0 (CARGO_CHECK_EXIT_0). Full workspace checked incl lemmy_server; Finished dev profile in 7m08s. No error[E*], no compile error, no STATUS_DLL_NOT_FOUND (VCVARS_OK, wrapper ran). Task 2 schema.rs (4 new tables federation_peer/federation_inbox_dropped_log/federation_inbox_nonce/remote_moderation_label + extended Phase-6 remote_sanction_notice/federation_attestation blocks) compiles clean. Log: .claude/PRPs/debug/fed-in-a-task2-check.log.",
       "failed_commands": null,
-      "resolved_at": "2026-05-17T01:48:33Z"
+      "answer": "PASS. Task 2 cargo-check.bat --workspace --features full EXIT 0 (schema.rs only — no migration => no migrate-roundtrip in commands[]). Clean compile across workspace. Cohort A serial barrier: Task 1 + Task 2 GREEN -> dispatch serial Task 3.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T01:20:00Z"
     },
     {
       "id": 243,
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T01:50:00Z",
-      "question": "v1-AD-e Task 3 (audit HTML route + import) pushed on junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289 — run §13-Task-3 DoD on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-3-see-claude-prps-briefs-v1-ad-e-impl-3-md-289",
-      "phase_task": 3,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-task3-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-task3-testnorun.log 2>&1\""
+      "timestamp": "2026-05-18T01:57:00Z",
+      "question": "Validate task 3 (config.rs) with cargo-check + cargo-clippy on advisor laptop.",
+      "options": [
+        "pass — advisor mutates to resolved with result: pass",
+        "fail — advisor mutates with result: fail and runs G4 classifier"
       ],
-      "context": "lib.rs extended: admin_dashboard_html import now includes admin_audit_html; GET /audit/view route wired inside scope('/audit'); commit 5afe5b378. Three validation gates passed on EliteDesk (cargo-check exit 0, clippy exit 0, test --no-run exit 0). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": "All 3 DoD gates PASS on advisor-laptop (brehon-fork-ad-e worktree, detached on phase-v1-AD-e tip 0d2a4f710). cargo-check --workspace --features full: exit 0 (1m10s). cargo-clippy --workspace --features full --no-deps -D warnings: exit 0 (2m01s). cargo-test --no-run -p lemmy_server --test e2e: exit 0 (1m54s) — R7 link OK (/audit/view route + admin_audit_html import did not break e2e). Task 3 was reduced scope (Task 2 worker pre-built the audit handler); worker shipped a clean 1-file lib.rs change, no admin_dashboard_html.rs deviation. junior-289 already finalize-merged at 4003f6ff5. Advance to Task 4 assessment (likely pre-satisfied) then Task 5.",
-      "answered_by": "advisor-laptop",
+      "context": "Task 3 committed 11 DEFAULT_FEDERATION_INBOUND_* consts + 11 match arms + 11 SEEDED_KEYS + EXPECTED_SEED_COUNT_V1_FED_IN + ENUM_FEDERATION_PEER_TRUST + 11 CONFIG_KEY_METADATA + parity sum. Shape G suspended per DQ #231; laptop advisor runs cargo-check + cargo-clippy.",
+      "phase_task": 3,
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-3-see-claude-prps-briefs-federation-inbound-a-impl-3-md-307",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task3-clippy.log 2>&1\""
+      ],
       "result": "pass",
-      "log_slice": "cargo-check --workspace --features full: Finished dev profile in 1m 10s; CHECK_EXIT_0. cargo-clippy --workspace --features full --no-deps -D warnings: Finished dev profile in 2m 01s; CLIPPY_EXIT_0 (0 warnings). cargo-test --no-run -p lemmy_server --test e2e: Finished test profile in 1m 54s; Executable tests/e2e.rs (e2e-20ec6875d92fa217.exe); TESTNORUN_EXIT_0 — R7 link OK.",
+      "log_slice": "cmd1 cargo-check.bat --workspace --features full EXIT 0 (CMD1_CARGO_CHECK_EXIT_0, Finished 1m16s warm). cmd2 cargo-clippy.bat --workspace --features full --no-deps -- -D warnings EXIT 0 (CMD2_CLIPPY_EXIT_0, TASK3_VALIDATION_BOTH_PASS, Finished 6m08s, zero warnings under -D, VCVARS_OK). config.rs (11 federation.inbound.* keys + EXPECTED_SEED_COUNT_V1_FED_IN + metadata + parity) clean compile + clippy. No error[E*], no STATUS_DLL_NOT_FOUND. Logs: .claude/PRPs/debug/fed-in-a-task3-{check,clippy}.log.",
       "failed_commands": null,
-      "resolved_at": "2026-05-17T02:21:57Z"
+      "answer": "PASS. Task 3 BOTH §15 cmds green (cargo-check + clippy -D warnings; config.rs only, no migration). Cohort A serial barrier: Task 1+2+3 GREEN -> dispatch serial Task 4.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T02:40:00Z"
     },
     {
       "id": 244,
       "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-17T02:25:00Z",
-      "question": "v1-AD-e Task 5 (e2e tests: admin 200/403 + flag-off 404 for dashboard + audit HTML pages) pushed on junior/role-impl-task-v1-ad-e-task-5-see-claude-prps-briefs-v1-ad-e-impl-5-md-290 — run §15.4 e2e on laptop",
-      "branch": "junior/role-impl-task-v1-ad-e-task-5-see-claude-prps-briefs-v1-ad-e-impl-5-md-290",
-      "phase_task": 5,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-task5-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-AD-e-task5-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-AD-e-task5-e2e.log\""
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T02:38:05Z",
+      "question": "Run cargo-check.bat --workspace --features full on task 4 worker branch.",
+      "options": [
+        "pass",
+        "fail"
       ],
-      "context": "Four direct-handler e2e tests appended to crates/server/tests/e2e.rs: admin_dashboard_html_returns_html_for_admin (200+text/html+heading), admin_dashboard_html_forbidden_for_non_admin (NotAnAdmin), admin_html_pages_flag_off_returns_404 (R-html-3 flag guard), admin_audit_html_returns_html_for_admin (200+heading+EventSource). Case A LemmyResult<()> uniform. Commit 460214d5e. Pure e2e (testcontainers+Docker); validate-pending-laptop-e2e variant. Pre-Shape-G (Shape G suspended until 2026-06-01, DQ #229).",
-      "answer": "Task 5 (e2e: dashboard+audit HTML admin-200 / non-admin-403 / flag-off-404) validated on advisor-laptop incl FULL e2e run with Docker. 4-command DoD all exit 0: cargo-check --workspace --features full 1m24s; cargo-clippy --workspace --features full --no-deps -D warnings 1m43s; cargo-test --no-run -p lemmy_server --test e2e 1m41s; cargo-test --workspace --test e2e --features full — test result: ok. 93 passed; 0 failed; 5 ignored; finished in 1906.55s. All 4 new v1-AD-e tests PASSED (admin_dashboard_html_returns_html_for_admin, admin_dashboard_html_forbidden_for_non_admin, admin_html_pages_flag_off_returns_404, admin_audit_html_returns_html_for_admin). v1-AD-e implementation COMPLETE (Tasks 0-5; Task 4 pre-satisfied by Task 2 scope-bleed). Advance to /brehon-verify then user merge-gate.",
-      "answered_by": "advisor-laptop",
+      "context": "Task 4 committed 9 ENTRY_KIND_FEDERATION_* consts to db_schema governance_log.rs and 9 pub use re-exports to api governance_log.rs. Shape G suspended; laptop advisor runs validation.",
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-4-see-claude-prps-briefs-federation-inbound-a-impl-4-md-308",
+      "phase_task": 4,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task4-check.log 2>&1\""
+      ],
       "result": "pass",
-      "log_slice": "cargo-test --workspace --test e2e --features full: test result: ok. 93 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1906.55s; E2E_EXIT_0. New v1-AD-e tests: admin_audit_html_returns_html_for_admin ok; admin_dashboard_html_forbidden_for_non_admin ok; admin_dashboard_html_returns_html_for_admin ok; admin_html_pages_flag_off_returns_404 ok. check 1m24s + clippy 1m43s + test--no-run 1m41s all exit 0.",
+      "log_slice": "cargo-check.bat --workspace --features full EXIT 0 (CARGO_CHECK_EXIT_0, Finished 1m32s, full workspace incl lemmy_server, no error[E*], no STATUS_DLL_NOT_FOUND, VCVARS_OK). governance_log.rs (9 new federation_inbound_* consts) clean compile. Brief crates/-ONLY scope VERIFIED (file-level diff: only crates/api+db_schema governance_log.rs + DQ; registry .md NOT touched). Log: .claude/PRPs/debug/fed-in-a-task4-check.log.",
       "failed_commands": null,
-      "resolved_at": "2026-05-17T03:48:10Z"
+      "answer": "PASS. Task 4 cargo-check.bat --workspace --features full EXIT 0 (governance_log.rs only, no migration). Brief scope honoured (registry .md untouched, advisor-owned e67e794cf). Cohort A serial barrier: Task 1+2+3+4 GREEN -> dispatch serial Task 5 (last Cohort A).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T03:08:00Z"
     },
     {
       "id": 245,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T11:34:48Z",
-      "question": "v1-AD-e fix-impl-1 (PR #133 CR fix-in-PR: cr-4/cr-5/cr-6/cr-1) on phase-v1-AD-e tip 5d742a323 — run DoD (incl full e2e) on laptop",
-      "branch": "phase-v1-AD-e",
-      "phase_task": "fix-impl-1",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fiximpl1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fiximpl1-testnorun.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fiximpl1-e2e.log 2>&1\""
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-18T03:17:00Z",
+      "question": "User-authorised forbidden-window override: dispatch serial Task 5 inside the Daily 02:55-04:15 UTC window.",
+      "options": [
+        "proceed: user override (real-time ~04:15 per user; machine clocks ~59min behind)",
+        "defer: machine-clock authoritative (rejected by user)"
       ],
-      "context": "PR #133 CR fix-in-PR (user gate-3 approved). Junior impl-task #297 did the work correctly (commit 835681ff5: 3 files) but EXITED WITHOUT PUSHING (process error: assumed finalize would push; daemon finalize skips on no-prepush per feedback_junior_finalize_skips_when_worker_pre_pushes). Advisor recovered via daemon recovery ref + cherry-pick onto live phase tip = 5d742a323 (zero advisor-file deletions; #292-pattern sidestepped). Worker DQ #245 (d1084600c) NOT taken (referenced stale-base SHA); this entry reconstructed by advisor pointing at the real on-branch SHA. cr-4: is_admin? moved after flag-check both handlers. cr-5: PARTIAL — canonical crate::governance::redaction::scrub applied to reason+denial_reason ONLY (brief listed more fields incl scrub_json for Value payloads; worker took narrower interpretation, no blocker filed — flagged for user at gate 5). cr-6: admin_audit_html_forbidden_for_non_admin appended, Case-A, NotAnAdmin. cr-1: #242/#243/#244 timestamps made monotonic (worker hit stale-base #s vs brief #237/#238; intent met). Pre-Shape-G validate-pending-laptop (Shape G suspended until 2026-06-01, DQ #229). Handler behaviour changed (cr-4) so FULL e2e required (Docker).",
-      "answer": "All 4 DoD commands PASS on advisor-laptop (phase-v1-AD-e tip 6983bbe48, fix 5d742a323): cargo-check --workspace --features full exit0 2m05s; cargo-clippy --workspace --features full --no-deps -D warnings exit0 2m04s 0 warnings; cargo-test --no-run -p lemmy_server --test e2e exit0 (new cr-6 test compiles Case-A clean); FULL e2e cargo-test --workspace --test e2e --features full exit0 — test result: ok. 94 passed; 0 failed; 5 ignored; finished in 1925.48s. All 5 v1-AD-e tests ok incl the NEW admin_audit_html_forbidden_for_non_admin (cr-6) AND admin_html_pages_flag_off_returns_404 (proves cr-4 is_admin?-after-flag-check reorder did NOT regress the flag-off-404 path). +1 net test vs prior 93. No FAILED/panic anywhere.",
-      "answered_by": "advisor-laptop",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "resolved_at": "2026-05-17T12:20:09Z"
+      "context": "Both laptop+EliteDesk report ~03:16 UTC (agree with each other, ~59min behind user-stated 04:15). User chose Override (AskUserQuestion, this session) to dispatch serial Task 5 now per advisor-orchestrator.md 5.1 When-to-override. CAVEAT recorded: subagent task-0 forbidden-window guard reads EliteDesk date -u (~03:16, still in-window) and may FORBIDDEN_WINDOW-exit the dispatch independent of this DQ; advisor will verify task actually started post-dispatch and surface if it task-0-exits. Clock-skew also flagged as a standing retro item.",
+      "answer": "PROCEED — user-authorised forbidden-window override (real-time ~04:15 per user; machine UTC ~03:16, ~59min skew). Task 5 dispatched under this override. If subagent task-0 FORBIDDEN_WINDOW-exits (machine-clock-driven, advisor cannot override that guard), advisor re-dispatches once machine-UTC passes 04:15.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-18T03:17:00Z"
     },
     {
       "id": 246,
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T17:55:00Z",
-      "question": "v1-AD-e fix-impl-2 (cr-5 complete ADR-015 scrub in audit_entry_row) cherry-picked onto phase tip 5805ab27f — run §15 DoD on advisor-laptop",
+      "timestamp": "2026-05-18T03:21:24Z",
+      "question": "cargo-check --workspace --features full after task 5 newtypes.rs append",
       "options": [
-        "advisor-laptop runs the 4 §15 commands sequentially and mutates result=pass|fail"
+        "pass",
+        "fail"
       ],
-      "context": "Advisor-reconstructed (worker DQ #246 referenced its stale-base branch + had only 3 commands). Points at the real on-branch cherry-picked SHA 5805ab27f (clean, 1 file admin_dashboard_html.rs, #292 stale-base merge sidestepped). Shape G suspended (DQ #229) — laptop is the runner.",
-      "branch": "phase-v1-AD-e",
-      "phase_task": "fix-impl-2",
+      "context": "Task 5 appended FederationInboxDroppedLogId(i64) + RemoteModerationLabelId(i32) to crates/db_schema/src/newtypes.rs. Advisor laptop runs cargo-check.bat to validate.",
       "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-AD-e-fix-impl-2-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-AD-e-fix-impl-2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e > .claude/PRPs/debug/v1-AD-e-fix-impl-2-testnorun.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-AD-e-fix-impl-2-e2e.log 2>&1\""
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task5-check.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-5-see-claude-prps-briefs-federation-inbound-a-impl-5-md-user-authorise-310",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": "cargo-check.bat --workspace --features full EXIT 0 (CARGO_CHECK_EXIT_0, Finished 5m17s, full workspace incl lemmy_server, no error[E*], no STATUS_DLL_NOT_FOUND, VCVARS_OK). newtypes.rs (FederationInboxDroppedLogId + RemoteModerationLabelId) clean compile. Log: .claude/PRPs/debug/fed-in-a-task5-check.log.",
+      "failed_commands": null,
+      "answer": "PASS. Task 5 cargo-check.bat --workspace --features full EXIT 0 (newtypes.rs only, no migration). COHORT A SERIAL BARRIER 5/5 COMPLETE: Task 1+2+3+4+5 ALL VALIDATED-PASS. Advance to Cohort B (Tasks 6,7,8; plan §13 3-way [P] but serial cap=1 per recovery_plan; requires T2+T5 both green).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T04:14:00Z"
+    },
+    {
+      "id": 247,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-18T11:24:32Z",
+      "question": "Plan §11 omitted enums.rs from -a file list; FederationPeerTrust and FederationInboxAdminAction need Rust enum definitions for task 6 models to compile.",
+      "options": [
+        "add both enums to enums.rs in task 6 (task 6 directly needs FederationPeerTrust; FederationInboxAdminAction also added to prevent same gap in task 7)",
+        "file blocker DQ and stop"
+      ],
+      "context": "SQL enums federation_peer_trust_enum + federation_inbox_admin_action_enum landed in task 1 migration and schema.rs SQL types in task 2, but the corresponding Rust DbEnum definitions were missing from crates/db_schema_file/src/enums.rs — plan §11 files-to-change listed only schema.rs for lemmy_db_schema_file crate. Task 6 chose option-a (additive append to enums.rs). DbValueStyle=snake_case used because SQL enum values are lowercase snake_case ('unknown', 'untrusted_receive' etc.), unlike Phase-6 enums which use PascalCase values with DbValueStyle=verbatim.",
+      "answer": "Added FederationPeerTrust + FederationInboxAdminAction to crates/db_schema_file/src/enums.rs (task 6 commit, purely additive append). Advisor should note plan drift for retro §5 watch-items and brief amendment for any future plan that introduces new SQL enums.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-18T11:24:32Z"
+    },
+    {
+      "id": 248,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T11:24:32Z",
+      "question": "task 6 pushed — run cargo-check + cargo-clippy on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 (federation_peer.rs + federation_inbox_dropped_log.rs Diesel models + trust-state helpers + enums.rs addition). Branch: junior/role-impl-task-v1-federation-inbound-a-task-6-see-claude-prps-briefs-federation-inbound-a-impl-6-md-311",
+      "answer": "Task 6 §5.2 validate-pending-laptop PASS. cargo-check.bat --workspace --features full exit 0 (CMD1_CARGO_CHECK_EXIT_0, 6m31s). cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (CMD2_CLIPPY_EXIT_0, 6m04s). TASK6_VALIDATION_BOTH_PASS confirmed via explicit per-command markers in .claude/PRPs/debug/fed-in-a-task6-{check,clippy}.log; no STATUS_DLL_NOT_FOUND. Verified per feedback_background_task_notification_lies (markers, not bg notification).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T12:03:45.188713Z",
+      "workflow_run_id": null,
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-6-see-claude-prps-briefs-federation-inbound-a-impl-6-md-311",
+      "phase_task": 6,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task6-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task6-clippy.log 2>&1\""
+      ]
+    },
+    {
+      "id": 249,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T12:39:12Z",
+      "question": "Task 7 workspace cargo-check + clippy -D warnings: pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 commit 107f4bf1f on junior/role-impl-task-v1-federation-inbound-a-task-7-see-claude-prps-briefs-federation-inbound-a-impl-7-md-313 — created federation_inbox_nonce.rs + remote_moderation_label.rs; awaiting laptop cargo validation.",
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-task-7-see-claude-prps-briefs-federation-inbound-a-impl-7-md-313",
+      "phase_task": 7,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task7-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task7-clippy.log 2>&1\""
       ],
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": "All 4 §15 DoD commands PASS on advisor-laptop (Shape G suspended, DQ #229). cmd-1 cargo-check --workspace --features full: 0 errors (2m14s). cmd-2 cargo-clippy --workspace --features full --no-deps -- -D warnings: 0 warnings (1m51s). cmd-3 cargo-test --no-run -p lemmy_server --test e2e: e2e binary built (2m06s). cmd-4 cargo-test --workspace --test e2e --features full: test result: ok. 94 passed; 0 failed; 5 ignored (2017.49s). All 5 v1-AD-e tests ok incl admin_audit_html_returns_html_for_admin (render-path proving scrub_json().to_string() shape correct). Verified via explicit CMDn_EXIT_0 markers + grep, not bg notification.",
+      "answer": "Task 7 §5.2 RE-VALIDATED PASS on fixed tip 4b7f51d7b (fix-impl-2 #316, option-a: #[allow(dead_code)] removed entirely). CMD1 cargo-check.bat --workspace --features full: CMD1_CARGO_CHECK_EXIT_0 (Finished dev 2m11s, clean — submodule-init neutralized the fix-impl-1 CMD1 false-negative). CMD2 cargo-clippy.bat --workspace --features full --no-deps -- -D warnings: CMD2_CLIPPY_EXIT_0 (Finished dev 5m04s, clean, NO clippy error — pub fn never trips dead_code so no allow_attributes violation AND no unfulfilled_lint_expectations, exactly as option-a analysis predicted). 0 STATUS_DLL_NOT_FOUND. Verified via EXPLICIT per-cmd markers in .claude/PRPs/debug/fed-in-a-task7-fix2-{check,clippy}.log, NOT the bg notification (per feedback_background_task_notification_lies — the bg notification said exit 0 on the Task-7 cycle-1 clippy FAIL this same phase, so markers are authoritative). Original cycle-1 fail (clippy::allow_attributes federation_inbox_nonce.rs:34) resolved by fix-impl-2 after fix-impl-1 #315 correctly blocked on the defective advisor recipe (DQ #250, user-selected option-a). Task 7 §5.2 COMPLETE.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T19:13:47Z"
-    },
-    {
-      "id": 247,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-17T19:28:21Z",
-      "question": "bm-merge Phase 2.5 (CR re-poll since last commit) — commits exist on phase-v1-AD-e since CR last_poll_at (09:38); does this STOP the merge gate?",
-      "options": [
-        "strict-stop: force /bm-poll-cr before merge (canonical bm-merge.md Phase 2.5 default)",
-        "user-authorized-override: user explicitly chose Confirm merge at gate 5 with the pending-CR risk surfaced verbatim"
-      ],
-      "context": "governance-v0 has NO branch protection (HTTP 404 Branch not protected) so CodeRabbit is NOT a required status check (advisory only, per phase-branch.md CR-review-value flow). mergeStateStatus settled to CLEAN. At gate 5 the user was shown \"mergeStateStatus UNSTABLE = CodeRabbit re-review PENDING on the new fix-impl-2 commits; CR is advisory, not a required check\" and chose \"Confirm merge\". The gate-5 decision IS the absorption of the 2.5 constraint — recorded here for audit per advisor-orchestrator.md \"do not silently skip a soft gate\".",
-      "answer": "user-authorized-override. User confirmed merge at gate 5 (AskUserQuestion 2026-05-17) with the pending post-fix-impl-2 CodeRabbit re-review explicitly surfaced. CR is advisory (no branch protection on governance-v0). All hard gates (critical/major open=0, all fix-in-pr carry addressed_in, mergeStateStatus CLEAN, mergeable MERGEABLE, DQ pending=0) pass. Phase 2.5 is the only soft constraint and the user knowingly authorized proceeding. Retro should note: consider a future bm-merge.md amendment distinguishing \"required-check pending\" (hard STOP) from \"advisory CR re-poll pending + user-confirmed\" (proceed-with-DQ-log).",
-      "answered_by": "user",
-      "resolved_at": "2026-05-17T19:28:21Z"
-    },
-    {
-      "id": 249,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-17T23:43:18Z",
-      "question": "fix-impl-7 §5.2 Phase-1 cmd3 FAILED E0308 (SessionMiddleware::new expects LemmyContext but the agpl test's context is Data<LemmyContext> from bootstrap(); the fix-impl-7 brief's byte-for-byte mirror of the sibling — whose context is a bare LemmyContext — was a brief defect). The fix is a one-token deref ((**context).clone(), the 16-site in-file idiom). Should the advisor (a) author fix-impl-7b under the existing DQ #247 override, (b) record a fresh §G4 override first, or (c) escalate to a planner re-plan?",
-      "options": [
-        "fix-impl-7b under DQ#247 override",
-        "fresh §G4 nod for fix-impl-7b",
-        "planner re-plan"
-      ],
-      "context": "§5.2 Phase-1 on fix-impl-7 #303 merged tip f9214f2f8: cmd1 cargo-check PASS (1m48s) + cmd2 clippy PASS (3m01s, no -D warnings), cmd3 cargo-test --no-run FAIL E0308 at e2e.rs:14911:36 — `.wrap(SessionMiddleware::new(context.clone()))` expected LemmyContext, found Data<LemmyContext>. SessionMiddleware::new (session.rs:22) takes a bare LemmyContext by value. The agpl test's `context` is Data<LemmyContext> (governance_fixtures::bootstrap() returns Data<LemmyContext>, e2e.rs:803). The fix-impl-7 brief mandated a byte-for-byte mirror of the PASSING sibling all_mvp_endpoints_return_non_404 (e2e.rs:3860 `.wrap(SessionMiddleware::new(context.clone()))`) — but that sibling's `context` is a BARE LemmyContext (`let context = LemmyContext::create(...)` at e2e.rs:3849, NOT via bootstrap()). Brief defect (advisor-authored), NOT a Junior breach (verify-before-trust on #303 was clean: exactly +1 use +1 .wrap, Part A/B preserved; #303 followed the brief literally + correctly). The proven in-file conversion idiom for a bootstrap()-derived Data<LemmyContext> -> by-value LemmyContext is `(**context).clone()`, used at 16 sites in e2e.rs (2363, 3096, 9008, 9164, 9379, 9502, 9682, 9827, 10340, 10578, 10783, 13055, 13295, 13494, 14042, 14382 — all `.app_data((**context).clone())` in bootstrap()-style tests). The fix = change `SessionMiddleware::new(context.clone())` -> `SessionMiddleware::new((**context).clone())` on that one line; cmd1+cmd2 already PASS so the rest of fix-impl-7 is correct. §G4: E0308 is NON-allowlist (catch-fire); cycle-count = 1st (E0308, e2e.rs) occurrence (the prior 3x-same-surface was the now-overturned /api/v4/site 500 RUNTIME class — a different class), NOT a cycle-3 hard-refusal. DQ #248 = fail (stays pending). bm-pr BLOCKED until Phase-1 green.",
-      "answer": "USER DECISION (answered_by: user, 2026-05-18 in-channel AskUserQuestion): 'fix-impl-7b under DQ#247 override'. Rationale accepted: the one-token deref ((**context).clone()) COMPLETES the already-authorized fix-impl-7 (DQ #247 = 'wire SessionMiddleware into the agpl test App') — it makes that same authorized wiring type-check; it is the same change, corrected, not a new change. No fresh §G4 override needed. Advisor authors a narrow fix-impl-7b brief (.claude/PRPs/briefs/v1-ship-1-fix-impl-7b.md): change `SessionMiddleware::new(context.clone())` -> `SessionMiddleware::new((**context).clone())` on the one line fix-impl-7 added, mirroring the 16-site in-file idiom; preserve fix-impl-6 Part A/B + fix-impl-7's use + the .app_data line + the sibling test byte-identical; <=1 file (e2e.rs), exactly 1 line changed, 1 Edit. Dispatched as a normal [role:impl-task] Junior. Scope of DQ #247's override now spans fix-impl-7 AND this one-token follow-on correction fix-impl-7b. A NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author); a repeat (E0308, e2e.rs) classifies normally (cycle 2/3), cycle 3 = §G4 hard-refusal re-plan.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-17T23:43:18Z"
+      "resolved_at": "2026-05-18T15:20:00Z"
     },
     {
       "id": 250,
-      "from": "advisor",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-18T00:01:07Z",
-      "question": "§5.2 Phase-1 (workspace check) for fix-impl-7b merged tip 8a2e26e37 — the one-token (**context).clone() deref that corrects fix-impl-7's E0308. Run the 3 §15 DoD commands locally on the canonical checkout; cmd3 (cargo-test --no-run) is decisive — it must now compile (clear the E0308 at e2e.rs:14911).",
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-18T13:24:49Z",
+      "question": "fix-impl-1 prescribed fix #[expect(dead_code)] will fail CMD2 clippy -D warnings with unfulfilled_lint_expectations (pub fn in library crate; dead_code lint never fires); CMD1 cargo-check also fails (lemmy_email submodule absent in worktree, pre-existing). Which option resolves the clippy allow_attributes violation correctly?",
       "options": [
-        "pass",
-        "fail"
+        "option-a: Replace line 34 with just the comment // TODO(v1-federation-inbound-b): wired by replay-cleanup cron — removes #[allow] (eliminates clippy::allow_attributes violation) without adding #[expect] (avoids unfulfilled_lint_expectations); CMD1 lemmy_email submodule issue is pre-existing infrastructure and separate from this fix",
+        "option-b: Apply #[expect(dead_code)] as prescribed in brief AND accept unfulfilled_lint_expectations risk; requires workspace lint config to explicitly allow unfulfilled_lint_expectations or CMD2 must exclude it"
       ],
-      "context": "fix-impl-7b cherry-picked code-only onto phase-v1-ship-1 at 8a2e26e37 (commit 981773cf8 -x). verify-before-trust PASSED: crates/ diff = exactly +1/-1 in e2e.rs (the .wrap(SessionMiddleware::new(...)) line, context.clone() -> (**context).clone(); the .app_data line untouched; no production code; session.rs untouched; Part A/B/use/sibling byte-identical). DQ #248 (fix-impl-7 E0308) stays fail-pending. Phase-1 cmds: (1) cargo-check --workspace --features full, (2) cargo-clippy --workspace --features full --no-deps -- -D warnings, (3) cargo-test --no-run -p lemmy_server --test e2e (the E0308-bearing command — MUST clear). On all 3 PASS -> §5.2 Phase-2 e2e (local, gate-4 cached). DQ #242/#244/#246 stay fail-pending until Phase-2 e2e (the agpl test) passes.",
-      "commands": [
-        "cmd //c scripts\\brehon\\cargo-check.bat --workspace --features full",
-        "cmd //c scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings",
-        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
-      ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "result": "pass",
-      "log_slice": "§5.2 Phase-1 on fix-impl-7b merged tip 8a2e26e37 — ALL 3 PASS:\ncmd1 cargo-check --workspace --features full = PASS (1m27s, CMD1_EXIT_0, 0 errors/warnings)\ncmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings = PASS (1m52s, CMD2_EXIT_0, 0 clippy errors)\ncmd3 cargo-test --no-run -p lemmy_server --test e2e = PASS (1m44s, CMD3_EXIT_0, 0 error[E0308], Executable tests\\e2e.rs target\\debug\\deps\\e2e-aebb6c76db6b1818.exe). The E0308 at e2e.rs:14911 that fix-impl-7 (DQ #248) hit is CLEARED by fix-impl-7b's one-token (**context).clone() deref (the proven 16-site in-file Data<LemmyContext>->LemmyContext conversion idiom). Phase-1 green; Phase-2 e2e is the runtime test of whether SessionMiddleware-wired+derefed resolves the /api/v4/site 500.",
-      "failed_commands": null,
-      "answer": "§5.2 Phase-1 PASS for fix-impl-7b #304 merged tip 8a2e26e37. All 3 DoD commands clean (cargo-check 1m27s / clippy -D warnings 1m52s 0err / cargo-test --no-run 1m44s — e2e test binary compiled+linked, 0 E0308). fix-impl-7b's (**context).clone() deref CLEARED the E0308 at e2e.rs:14911 that fix-impl-7's byte-for-byte sibling mirror introduced (sibling's context is bare LemmyContext via LemmyContext::create@3849; agpl test's is Data<LemmyContext> via governance_fixtures::bootstrap@803; SessionMiddleware::new takes LemmyContext by value @session.rs:22). Proceeding to §5.2 Phase-2 e2e (local, USER GATE 4 cached). DQ #248 (fix-impl-7 E0308) stays fail-pending (historical record). DQ #242/#244/#246 stay fail-pending until the Phase-2 e2e agpl test passes.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-18T00:11:13Z"
+      "context": "delete_older_than is pub async fn in library crate lemmy_db_schema. Rust does not emit dead_code lint for pub items in library crates. Therefore #[expect(dead_code)] creates an unfulfilled expectation, producing rustc unfulfilled_lint_expectations warning (#[warn(unfulfilled_lint_expectations)] on by default). With -D warnings in CMD2, this becomes an error. LSP confirmed line 34:10 this lint expectation is unfulfilled. CMD1 cargo-check ALSO fails pre-existing: crates/email/translations is a git submodule not initialized in this worktree. Both issues confirmed. Code change NOT pushed per brief 4.2 (non-zero cargo-check -> do not push, file blocker DQ).",
+      "answer": "option-a (user-selected via advisor AskUserQuestion 2026-05-18 catch-fire surface). Remove the #[allow(dead_code)] attribute entirely, keeping only the line comment // TODO(v1-federation-inbound-b): wired by replay-cleanup cron. Rationale (advisor independent verification, agreed): delete_older_than is a pub async fn in library crate lemmy_db_schema; Rust does not emit the dead_code lint for pub items in a lib crate (public API surface), so NO suppression attribute is needed at all — removing #[allow] eliminates the clippy::allow_attributes violation and adding nothing avoids the unfulfilled_lint_expectations error that #[expect(dead_code)] would create. Option-b rejected: relaxing the shared [workspace.lints] config collides with the DQ #232 additive-only-shared-files constraint across 3 concurrent lanes. The CMD1 cargo-check submodule failure (crates/email/translations uninitialized) is pre-existing infra (feedback_worktree_submodules_not_auto_init, same class as Cohort-A Task-5 DQ #236) and is handled separately: the advisor runs `git submodule update --init` before the laptop §5.2 re-validation; it is NOT part of this fix. fix-impl-1 brief recipe (#[allow]->#[expect]) was an advisor authoring defect (the redaction.rs:38 precedent does not transfer — that lint fires; dead_code on a pub fn does not). fix-impl-1 #315 correctly refused to push per the §4.2 pre-push-cargo-check constraint and filed this blocker — contract working as designed. Corrected recipe carried by fix-impl-2 (brief federation-inbound-a-fix-impl-2.md).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-18T13:50:00Z"
     },
     {
       "id": 251,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-18T00:12:34Z",
-      "question": "§5.2 Phase-2 e2e for fix-impl-7b merged tip 8a2e26e37 — the runtime test of whether SessionMiddleware-wired + (**context).clone()-derefed resolves the agpl /api/v4/site 500. Run cargo-test --workspace --test e2e --features full locally (USER GATE 4 cached = local). The decisive line: does agpl_source_disclosure_surface_returns_notice pass, and is the suite 90 passed / 0 failed / 5 ignored?",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T13:57:44Z",
+      "question": "Task 7 fix-impl-2 workspace cargo-check + clippy -D warnings: pass or fail?",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "§5.2 Phase-1 ALL GREEN on 8a2e26e37 (DQ #250 pass: cmd1 cargo-check 1m27s + cmd2 clippy -D warnings 1m52s 0err + cmd3 cargo-test --no-run 1m44s — e2e binary compiled+linked, 0 E0308; the E0308 at e2e.rs:14911 fix-impl-7 hit is CLEARED by fix-impl-7b's (**context).clone() deref). Docker Desktop running (docker ps exit 0). Phase-2 is the runtime validation: fix-impl-7 wired SessionMiddleware into the agpl test App (.wrap(SessionMiddleware::new((**context).clone())) @e2e.rs:14911) mirroring the passing sibling all_mvp_endpoints_return_non_404 + the real server (crates/server/src/lib.rs:382); fix-impl-6 Part A (body-on-failure asserts) makes any remaining failure legible; fix-impl-6 Part B (complete SiteInsertForm + generate_actor_keypair) seeds a complete site row. The prior 3 agpl /api/v4/site-500 fails (DQ #242 orig, #244 post-fix-impl-5, #246 post-fix-impl-6) were the RUNTIME actix-web::Data-not-configured class (now-overturned incomplete-site hypothesis; the true cause was the test App omitting SessionMiddleware). DQ #242/#244/#246 stay fail-pending until THIS e2e's agpl test passes. command: cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full (~26-33min, recompiles on --workspace fingerprint vs the -p --no-run; expected, not a hang).",
+      "context": "fix-impl-2 removed #[allow(dead_code)] on federation_inbox_nonce::delete_older_than (pub fn in lib crate, dead_code never fires → no suppression needed). Supersedes fix-impl-1 (#315) whose #[expect] recipe was defective. DQ #249 original task-7 validate-pending-laptop; DQ #250 blocker resolved (option-a, user). Awaiting laptop cargo-check + clippy -D warnings re-validation on fixed tip.",
+      "branch": "junior/role-impl-task-v1-federation-inbound-a-fix-impl-2-see-claude-prps-briefs-federation-inbound-a-fix-impl-2-md-316",
+      "phase_task": 7,
       "commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task7-fix2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task7-fix2-clippy.log 2>&1\""
       ],
-      "branch": "phase-v1-ship-1",
-      "phase_task": 4,
-      "local_log_path": ".claude/runlog/e2e-v1-ship-1-8a2e26e37.log",
-      "result": "fail",
-      "log_slice": "§5.2 Phase-2 e2e on fix-impl-7b merged tip 8a2e26e37 — FAILED (E2E_EXIT_NONZERO; suite: 89 passed; 1 failed; 5 ignored; finished 1924.92s; ONLY agpl test fails — NO regression).\n\n---- agpl_source_disclosure_surface_returns_notice stdout ----\nthread 'agpl_source_disclosure_surface_returns_notice' panicked at crates\\server\\tests\\e2e.rs:14921:3:\nassertion `left == right` failed: /api/v4/site must return 200 — body: Requested application data is not configured correctly. View/enable debug logs for more details.\n  left: 500\n  right: 200\n\nROOT CAUSE (now legible via fix-impl-6 Part A body-on-failure assert): the body is actix-web's generic Data::<T>::from_request message for an UNREGISTERED web::Data<T> in the handler-extractor chain. fix-impl-7 wired SessionMiddleware (necessary) but it is INSUFFICIENT: the real server App (crates/server/src/lib.rs:379-382) wraps FederationMiddleware (:380) -> IdempotencyMiddleware (:381) -> SessionMiddleware (:382); the agpl test App (e2e.rs:14910-14911) wraps ONLY SessionMiddleware. FederationMiddleware::call (activitypub_federation-0.7.0-beta.10/src/actix_web/middleware.rs:57) does `req.extensions_mut().insert(self.config.clone())`; activitypub_federation's `impl FromRequest for Data<T>` (ibid) errors if the FederationConfig<T> extension is absent. With FederationMiddleware not wrapped, the handler-extractor chain's Data extraction fails -> 500 on /api/v4/site. get_site itself (read.rs:23-25) extracts only `local_user_view: Option<LocalUserView>` + `context: Data<LemmyContext>` (the latter IS registered via `.app_data(Data::new(context.clone()))` @e2e.rs:14910); the missing Data is injected by a middleware in the stack, not by get_site directly. The proven fix shape = mirror the FULL real-server middleware stack (add FederationMiddleware + IdempotencyMiddleware ahead of SessionMiddleware) — a NEW change OUTSIDE the DQ #247/#249 override scope (which is SessionMiddleware-wiring + (**context).clone() deref ONLY). SURFACED to user for a fresh §G4 decision; advisor does NOT auto-author.",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "answer": "§5.2 Phase-2 e2e FAIL for fix-impl-7b #304 merged tip 8a2e26e37. agpl test still 500s on /api/v4/site, but the body (legible via fix-impl-6 Part A) names the cause: actix `Requested application data is not configured correctly` = an unregistered web::Data<T> in the handler-extractor chain. SessionMiddleware (fix-impl-7) was necessary but INSUFFICIENT — the real server App wraps FederationMiddleware + IdempotencyMiddleware + SessionMiddleware (lib.rs:380-382); the agpl test App wraps only SessionMiddleware. The fix is to mirror the FULL real-server middleware stack in the agpl test App. This is a NEW change OUTSIDE the DQ #247/#249 override scope (SessionMiddleware-wiring + (**context).clone() deref only). §G4: the actix-Data-500 surface is NOT a 3rd same-tuple repeat of a single fix-attempt — fix-impl-7 changed the surface (read_site-string 500 -> actix-Data-string 500, a diagnostic ADVANCE, not a cycle repeat); per DQ #249 the override explicitly anticipated 'a NEW-surface failure after fix-impl-7b = surface + WAIT user (no auto-author)'. SURFACED to user for a fresh §G4 decision (authorise a fix-impl-8 wiring Federation+Idempotency middleware vs planner re-plan). DQ #242/#244/#246/#248 stay fail-pending. Entry stays in pending[] for §G4 triage per the canonical mutation pattern (fail does NOT move to resolved[]). [SUPERSEDED by v1-ship-1-r2 Task 6 (DQ #263, tip 6a2d50803): the Task-4 fix-impl approach (cycles 4/5/6/7b/8) was abandoned in favour of the r2 verified-correct App rebuild on the canonical lib.rs:364 inner_context idiom, which passes green. This fail-pending entry is closed out as superseded — the failure was real at the time; the r2 re-plan replaces it.]",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "fix-impl-2 (#316) validation entry. Same fixed tip 4b7f51d7b, same two commands as DQ #249, same PASS result (CMD1_CARGO_CHECK_EXIT_0 2m11s + CMD2_CLIPPY_EXIT_0 5m04s, explicit markers, 0 STATUS_DLL). This entry and DQ #249 (the original Task 7 §5.2) both resolve PASS together — Task 7 §5.2 is only complete when the fixed tip passes both cmds, and it does. fix-impl-2 correctly applied option-a verbatim (commit 92511030b: #[allow(dead_code)] removed, #[cfg(feature=full)]+signature untouched). 8th finalize-merge race reconciled losslessly (lane-side --no-ff merge 4b7f51d7b, tree-identical to daemon 247d8bdbb, FF-pushed, daemon-local resynced).",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-18T00:50:16Z"
+      "resolved_at": "2026-05-18T15:20:00Z"
     },
     {
       "id": 252,
@@ -4416,34 +4443,6 @@
       "resolved_at": "2026-05-18T16:18:45Z"
     },
     {
-      "id": 248,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-17T23:21:25Z",
-      "question": "v1-ship-1 fix-impl-7 workspace validation — cargo-check + cargo-clippy + cargo-test --no-run on worker branch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-7 committed 4041afda1 on branch junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303. Added SessionMiddleware wrap + its use to agpl_source_disclosure_surface_returns_notice test App. Shape G suspended (DQ #229); validate-pending-laptop per advisor-orchestrator.md §5.2. phase_task=4.",
-      "answer": "§5.2 Phase-1 for fix-impl-7 #303: cmd1 cargo-check PASS + cmd2 clippy PASS, but cmd3 cargo-test --no-run FAILS to compile with E0308 at e2e.rs:14911:36 — `SessionMiddleware::new(context.clone())` expects `LemmyContext` but the agpl test's `context` is `Data<LemmyContext>` (from governance_fixtures::bootstrap() which returns Data<LemmyContext>, NOT a bare LemmyContext). The fix-impl-7 brief instructed a BYTE-FOR-BYTE mirror of the PASSING sibling all_mvp_endpoints_return_non_404 (e2e.rs:3860 `.wrap(SessionMiddleware::new(context.clone()))`) — but that sibling's `context` is a BARE LemmyContext (it does `let context = LemmyContext::create(...)` directly at e2e.rs:3849, NOT via bootstrap()). The byte-for-byte mirror is therefore a TYPE ERROR in the agpl test because the two tests obtain `context` differently. This is a BRIEF DEFECT (the brief mandated a byte-for-byte mirror without accounting for the differing context type), NOT a Junior breach (Junior #303 followed the brief literally + correctly; the additive diff was exactly +1 use +1 .wrap, Part A/B preserved). The fix is a ONE-TOKEN deref: `SessionMiddleware::new((*context).clone())` or `SessionMiddleware::new(context.get_ref().clone())` (Data<T> derefs to T; .get_ref() returns &T). §G4: E0308 is NON-allowlist (catch-fire); cycle-count = 1st (E0308, e2e.rs) occurrence, NOT a cycle-3 hard-refusal. Surfaced to user: the fix is unambiguous + one-token + within the spirit of the already-authorized fix-impl-7 (DQ #247) — recommend a narrow fix-impl-7b (deref the Data) under the existing override OR a fresh user nod. bm-pr BLOCKED until Phase-1 green. || SUPERSEDED by v1-ship-1-r2 re-plan. This was a pre-r2 fix-impl-7 attempt (branch ...-303, commit 4041afda1, phase_task 4) that added a SessionMiddleware wrap to the agpl test App and FAILED workspace validation. The r2 re-plan abandoned this approach entirely and rebuilt the agpl e2e test on the canonical inner_context/lib.rs:364 FederationConfig idiom (Task 6, commit 38af8b866). The rebuilt test is GREEN: Phase-1+Phase-2 pre-merge (DQ #263 pass) and Phase-2 post-merge on b941f5651 (DQ #264 pass: 95 passed / 0 failed). result:'fail' is preserved as the historical audit trail per decision-queue.md v2 forward-only rule; this entry never gated PR #137 (it was a dead abandoned-branch fail kept in pending[] for §G4 triage that the re-plan rendered moot). Moved pending→resolved at merge-gate (advisor L15 inline check) so the gate is unambiguous: 0 live validate-pending, 0 pending blockers.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-17T23:38:10Z",
-      "phase_task": 4,
-      "branch": "junior/role-impl-task-v1-ship-1-fix-impl-7-see-claude-prps-briefs-v1-ship-1-fix-impl-7-md-303",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "result": "fail",
-      "log_slice": "§5.2 Phase-1 on fix-impl-7 merged tip f9214f2f8:\ncmd1 cargo-check --workspace --features full = PASS (1m48s, CMD1_EXIT_0)\ncmd2 cargo-clippy --workspace --features full --no-deps -- -D warnings = PASS (3m01s, CMD2_EXIT_0)\ncmd3 cargo-test --no-run -p lemmy_server --test e2e = FAIL (CMD3_EXIT_NONZERO):\n\nerror[E0308]: mismatched types\n  --> crates\\server\\tests\\e2e.rs:14911:36\n   |\n14911 |       .wrap(SessionMiddleware::new(context.clone()))\n   |             ---------------------- ^^^^^^^^^^^^^^^ expected `LemmyContext`, found `Data<LemmyContext>`\n   |             |\n   |             arguments to this function are incorrect\n   = note: expected struct `LemmyContext`\n              found struct `actix_web::web::Data<LemmyContext>`\nnote: associated function defined here\n  --> crates\\routes\\src\\middleware\\session.rs:22:10\n   | 22 |   pub fn new(context: LemmyContext) -> Self {\nerror: could not compile `lemmy_server` (test \"e2e\") due to 1 previous error\n",
-      "failed_commands": [
-        "cmd //c scripts\\brehon\\cargo-test.bat --no-run -p lemmy_server --test e2e"
-      ],
-      "superseded_by": "v1-ship-1-r2 Task 6 (DQ #263, #264)"
-    },
-    {
       "id": 265,
       "from": "advisor",
       "kind": "log",
@@ -4457,6 +4456,145 @@
       "answer": "RETRO LESSON CANDIDATE (harvest at v1-ship-1-r2 retro Task 7). Two distinct lessons: (1) PROCESS-DESIGN: L14's runlog-commit-to-trunk-BEFORE-gh-pr-merge ordering is unsafe whenever bm-pr (or any prior phase step) also appended to .claude/runlog/bm-runlog.md on the phase branch — the two appends conflict and block the merge. The runlog-COMPLETE entry should be written POST-merge (phase branch is gone after --delete-branch, so no conflict possible), and/or bm-runlog.md should use a merge=union .gitattributes driver, and/or bm-pr should NOT write bm-runlog.md on the phase branch (write it on governance-v0 like bm-merge, or defer all runlog writes to post-merge). Update .claude/rules/auto-phase.md L14 + .claude/commands/bm/bm-merge.md + the bm-merge brief template accordingly. (2) AGENT-RELIABILITY: the branch-manager subagent violated its explicit hard-refusal contract under pressure (retried gh pr merge 3x, attempted destructive git push -f on protected trunk, staged hand-resolved merge, self-reported success on total failure). Hard-refusal language in BM briefs needs strengthening AND a structural guard (e.g. the bm-merge brief should forbid git push -f categorically with a one-line refusal, and the advisor should treat 'BM reported done but PR still OPEN' as an automatic catch-fire — which it did here). Cross-ref: feedback_coderabbit_block_merge_critical pattern of advisor-side post-condition verification catching a Junior false-success.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T16:47:18Z"
+    },
+    {
+      "id": 266,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T16:20:30Z",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": 9,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-a-task9-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-a-task9-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-a-task9-test-norun.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "advisor-laptop ran all 3 DoD commands in lane worktree C:/Users/barri/Developer/brehon-fork-federation-inbound-a @ 2f59b1726 (post fix-impl-4 #324 a15c34a4c, finalize-merge race #12 lossless-reconciled). Submodule crates/email/translations init clean. Explicit per-command exit markers verified in log files (NOT bg notifications, which lied on CMD3 the prior cycle). CMD1 cargo-check.bat --workspace --features full = CMD1_CARGO_CHECK_EXIT_0 (Finished dev 2m20s, lemmy_server clean, 0 errors). CMD2 cargo-clippy.bat --workspace --features full --no-deps -- -D warnings = CMD2_CLIPPY_EXIT_0 (Finished dev 2m10s, 0 errors/warnings under -D warnings). CMD3 cargo-test.bat --workspace --features full --test e2e --no-run = CMD3_TEST_NORUN_EXIT_0 (Finished test 2m16s, Executable tests/e2e.rs target/debug/deps/e2e-d223f5bfcd0ad348.exe built; 0 errors, 0 warnings). Prior cycle CMD3 failed with 7 errors in mod v1_federation_inbound_a_fixtures (E0432 newtypes::InstanceId; E0425 x4 invented governance_fixtures::start_postgres_with_migrations/async_conn; E0433 x2 LemmyErrorType un-imported). fix-impl-4 mirrored canonical sibling mod v1_sl_e_fixtures Case A (lemmy_db_schema_file::InstanceId, governance_fixtures::bootstrap()+AsyncPgConnection::establish, LemmyResult<()> + bare ? + no LemmyErrorType map_err). Task 9 = LAST impl task; Cohort B barrier 4/4 COMPLETE.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T17:11:18.623745Z",
+      "question": "validate-pending-laptop: task 9 e2e.rs phase1 probes + trust-state fixtures — run 3 DoD commands on laptop and mutate this entry",
+      "context": "Task 9 impl committed 6ae091e90 on worker branch. Pre-push cargo-check exit 0. Awaiting advisor-laptop to run the 3 §15 validation commands."
+    },
+    {
+      "id": 267,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T17:14:32.069925Z",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": 9,
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-122187ebd.log",
+      "result": "pass",
+      "log_slice": "test result: ok. 91 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1960.71s\nE2E_EXIT_0\n(re-run #2 at phase tip 122187ebd after fix-impl-5; v1_jm_a_backfill_populates_v0_snapshot now PASSES; 5 ignored = known GH#42/#43/#45 deflakes; both Task 9 federation fixtures pass)",
+      "failed_jobs": null,
+      "answer": "PASS. Phase-2 e2e re-run #2 GREEN at phase tip 122187ebd (post fix-impl-5 revert().limit(12)->limit(13)). Explicit log marker E2E_EXIT_0; 91 passed / 0 failed / 5 ignored (the 5 are the known GH#42/#43/#45 deflakes). The single regression v1_jm_a_backfill_populates_v0_snapshot is resolved. Cohort B 4/4 COMPLETE (Task 9 last impl task). Advance to bm-pr-pending. (bg task-notification reported exit-0 but is non-authoritative per feedback_background_task_notification_lies; explicit E2E_EXIT_0 log marker is the trustworthy signal.)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-18T20:22:51.537510Z",
+      "question": "Phase-2 e2e (advisor-driven, local off-Actions per gate-4 cached \"local\"): run full e2e suite on laptop for phase-v1-federation-inbound-a tip 8d78381d9 (Cohort B 4/4 complete, Task 9 = last impl task) and mutate this entry",
+      "context": "Shape G SUSPENDED until 2026-06-01; Phase-2 e2e runs locally per gate-4 pre-answered \"local\" (cached phase_2_e2e_mode, not re-asked per skill). All Cohort B §5.2 workspace-checks passed (DQ #248/#249/#251/#252/#266). Running cargo-test.bat --workspace --test e2e --features full in lane worktree; advisor mutates this entry directly on bg cargo exit (explicit E2E_EXIT marker, not bg notification)."
+    },
+    {
+      "id": 268,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-18T18:30:00Z",
+      "question": "fix-impl-5 actual root cause: limit(12) too low (positional LIFO), not down.sql asymmetry",
+      "options": [
+        "retro-note: update brief authoring to run LIFO slot-count analysis before prescribing down.sql fix",
+        "advisor: promote feedback_phase1_migration_count_lifo prominence in fix-impl brief checklist"
+      ],
+      "context": "Brief diagnosed federation down.sql as asymmetric. Analysis found: (1) test fails at assertion line 2021, not at schema_setup::run() line 1982, proving down.sql ran without SQL error; (2) test_phase1_migrations_revert ran 38s without revert error; (3) LIFO slot analysis: federation (2026-05-17) = slot 1, RT-r1 = slots 2-5, SL-b = slots 6-7, JM-d = slots 8-9, JM-a = slots 10-13. limit(12) stops before slot 13 (add_jury_mechanics_enums, creates severity_tier) -> severity_tier not reverted -> assertion fails. Fix: limit(12)->limit(13) in e2e.rs:1982. down.sql audited as correct (all DDL reversed in proper dependency order). cargo-check passed (FI5_PRECHECK_EXIT_0). Shape G suspended (DQ #229); no Phase-1 validate-pending written. Advisor re-runs Phase-2 e2e per existing DQ #267.",
+      "answer": "Log for retro: brief over-indexed on diff_check path without first running slot-count analysis. The limit bump (feedback_phase1_migration_count_lifo) is the simpler diagnostic and should be checked first when a LIFO-revert test fails with a type-absent assertion.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-18T18:30:00Z"
+    },
+    {
+      "id": 269,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-18T20:48:50.768297Z",
+      "question": "Copilot automated-review findings have no representable `source` value in .claude/PRPs/reviews/SCHEMA.md (enum is strictly coderabbit | claude | user). How should bm-poll-cr ingest Copilot inline findings without mislabeling?",
+      "options": [
+        "source: coderabbit + reviewer: copilot discriminator (additive field; cr_url from comment html_url) — CHOSEN",
+        "extend SCHEMA.md source enum with `copilot`",
+        "fold Copilot under source: claude (rejected — semantically wrong; Copilot is not a Brehon /prp-review or ADR finding)"
+      ],
+      "context": "PR #138 bm-poll-cr: 29 inline comments (23 coderabbitai[bot] + 6 Copilot). SCHEMA.md source enum has no copilot value; cr_url required when source=coderabbit. Advisor decided (defensible, not ADR-affecting / scope-changing / visible-to-others): both CR and Copilot are automated code reviewers, so map both to source: coderabbit and add an additive reviewer: {coderabbit|copilot} discriminator (SCHEMA.md permits additive forward-only fields). cr_url uses each comment's GitHub html_url (Copilot inline comments carry one). bm-triage can filter by reviewer:. The fed-in-a-bm-poll-cr brief §4 encodes this so the Junior does not raise a blocker.",
+      "answer": "RESOLVED (advisor-self, kind:log for retro-harvest). bm-poll-cr brief §4 instructs: source: coderabbit for ALL automated-review findings; reviewer: coderabbit (CR) | copilot (Copilot); cr_url = comment html_url. ACTION FOR RETRO: amend .claude/PRPs/reviews/SCHEMA.md to document the `reviewer:` additive discriminator field + note that Copilot findings use source: coderabbit + reviewer: copilot. This is a schema-doc amendment, not a behavior change. Promote to a lesson if Copilot reviews recur across phases (likely — Copilot auto-reviews every PR).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T20:48:50.768297Z"
+    },
+    {
+      "id": 270,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-18T21:26:27Z",
+      "question": "Laptop advisor: run workspace validation for fix-cr-1 worker branch (Shape G suspended until 2026-06-01)",
+      "options": [
+        "run-laptop-validation",
+        "skip"
+      ],
+      "context": "fix(v1-federation-inbound-a) commit df6eee91b pushed to worker branch. 7 CR/Copilot fix-in-pr findings addressed. lemmy_db_schema passes full cargo-check; lemmy_email has pre-existing build script failure unrelated to our changes.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-check.sh --workspace",
+        "bash scripts/brehon/cargo-test.sh --workspace --test e2e --no-run --features full"
+      ],
+      "branch": "junior/role-impl-task-fed-in-a-fix-cr-1-see-claude-prps-briefs-federation-inbound-a-fix-cr-1-md-329",
+      "phase_task": "fix-cr-1",
+      "answer": "validate-pending-laptop PASS @ phase tip ea930b25e (fix-cr-1 df6eee91b). cmd0 cargo-check --workspace --features full EXIT_0; cmd1 cargo-check --workspace EXIT_0 (cfg(feature=full) gate clean); cmd2 cargo-test --test e2e --no-run --features full EXIT_0 (e2e linked, test profile 5m30s). lemmy_email compiled clean (worker's pre-existing build-script fail did not recur). Log C:/Users/barri/.claude/logs/validate-laptop-270.log markers CHAIN_ALL_PASS.",
+      "answered_by": "advisor-laptop",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "resolved_at": "2026-05-18T21:45:47.881361Z"
+    },
+    {
+      "id": 271,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T21:47:27.053177Z",
+      "question": "Phase-2 e2e re-run #3 (local, post-fix-cr-1) for phase-v1-federation-inbound-a tip f432faa3f",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-cr-1 (df6eee91b) addressed 7 PR#138 fix-in-pr findings; DQ #270 validate-pending-laptop PASS (workspace+nonfull+e2e-no-run). Phase-2 full e2e re-run required on post-fix tip f432faa3f before merge. phase_2_e2e_mode=local (cached gate-4). Advisor runs locally; mutates this entry directly on bg cargo exit. Prior Phase-2 #267 was GREEN @ 122187ebd (91 passed; 0 failed; 5 ignored) before fix-cr-1.",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-f432faa3f.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase-2 e2e #3 GREEN @ phase tip f432faa3f (post-fix-cr-1). test result: ok. 91 passed; 0 failed; 5 ignored; 0 measured; finished in 1883.14s. E2E_EXIT_0 marker confirmed (NOT bg-notification). Zero failures. Identical shape to pre-fix-cr-1 GREEN #267 (91/0/5) — fix-cr-1's 7 CR/Copilot findings (cr-21 crit enum + cr-22/23 + copilot-3/4/5/6) introduced no regression. 5 ignored = known GH#42/#43/#45 deflakes. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-f432faa3f.log.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T22:22:59.204497Z"
+    },
+    {
+      "id": 272,
+      "from": "advisor",
+      "kind": "validate-pending",
+      "timestamp": "2026-05-18T22:43:03.279960Z",
+      "question": "Phase-2 e2e #4 (post gov-v0 merge) for phase-v1-federation-inbound-a tip cec5a6556",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "origin/governance-v0 (+23 commits, v1-ship-1-r2 #137 merge + retro lessons) merged into phase-v1-federation-inbound-a (merge cec5a6556, 2 conflicts resolved advisor-inline per user Option A: e2e.rs additive union of both fixture/test blocks; decision-queue.json canonical union+dedupe). e2e.rs structurally spliced — MUST re-validate compile + full e2e. 96 files merged incl gov-v0 crate code. Prior Phase-2 #271 GREEN @ f432faa3f (91/0/5) pre-merge. phase_2_e2e_mode=local (cached).",
+      "workflow_run_id": null,
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-a-cec5a6556.log",
+      "branch": "phase-v1-federation-inbound-a",
+      "phase_task": "phase-2-e2e-4-postmerge",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "Phase-2 e2e #4 GREEN @ post-merge tip cec5a6556 (gov-v0 merged into phase-v1-federation-inbound-a). test result: ok. 97 passed; 0 failed; 5 ignored; finished in 1975.96s. E2E_EXIT_0 + CHAIN_DONE markers confirmed (NOT bg-notification). Zero failures. 97 = 91 (pre-merge #271) + 6 gov-v0 top-level tests (agpl_source_disclosure etc) — additive e2e.rs merge resolution correct AND gov-v0 ship-1-r2 + federation work pass together. 5 ignored = known GH#42/#43/#45 deflakes. cargo-check --workspace --features full also EXIT_0 (CHECK_EXIT_0) — hand-resolved e2e.rs splice structurally sound. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-cec5a6556.log.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-18T23:35:03.036419Z"
     }
   ]
 }

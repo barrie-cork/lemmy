@@ -54,8 +54,16 @@ pub mod sql_types {
   pub struct EvidenceVisibility;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "federation_inbox_admin_action_enum"))]
+  pub struct FederationInboxAdminActionEnum;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "federation_mode_enum"))]
   pub struct FederationModeEnum;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "federation_peer_trust_enum"))]
+  pub struct FederationPeerTrustEnum;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "image_mode_enum"))]
@@ -425,6 +433,8 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::AttestationType;
+    use super::sql_types::FederationInboxAdminActionEnum;
+    use super::sql_types::FederationPeerTrustEnum;
 
     federation_attestation (id) {
         id -> Int4,
@@ -434,6 +444,13 @@ diesel::table! {
         valid_until -> Nullable<Timestamptz>,
         created_at -> Timestamptz,
         signature -> Text,
+        // v1-federation-inbound-a additions:
+        source_instance -> Nullable<Text>,
+        received_at -> Nullable<Timestamptz>,
+        peer_trust_level_at_receipt -> Nullable<FederationPeerTrustEnum>,
+        admin_reviewed_at -> Nullable<Timestamptz>,
+        admin_action -> FederationInboxAdminActionEnum,
+        dismissal_rationale -> Nullable<Text>,
     }
 }
 
@@ -443,6 +460,42 @@ diesel::table! {
         published_at -> Timestamptz,
         updated_at -> Nullable<Timestamptz>,
         expires_at -> Nullable<Timestamptz>,
+    }
+}
+
+// v1-federation-inbound-a additions:
+diesel::table! {
+    federation_inbox_dropped_log (id) {
+        id -> Int8,
+        source_instance -> Text,
+        activity_id -> Nullable<Text>,
+        drop_reason -> Text,
+        payload_excerpt -> Nullable<Text>,
+        dropped_at -> Timestamptz,
+    }
+}
+
+// v1-federation-inbound-a additions:
+diesel::table! {
+    federation_inbox_nonce (peer_instance, activity_id) {
+        peer_instance -> Text,
+        activity_id -> Text,
+        seen_at -> Timestamptz,
+    }
+}
+
+// v1-federation-inbound-a additions:
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::FederationPeerTrustEnum;
+
+    federation_peer (instance_id) {
+        instance_id -> Int4,
+        trust_level -> FederationPeerTrustEnum,
+        added_at -> Timestamptz,
+        added_by_actor -> Nullable<Text>,
+        notes -> Jsonb,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -1177,8 +1230,34 @@ diesel::table! {
     }
 }
 
+// v1-federation-inbound-a additions:
 diesel::table! {
     use diesel::sql_types::*;
+    use super::sql_types::FederationInboxAdminActionEnum;
+    use super::sql_types::FederationPeerTrustEnum;
+
+    remote_moderation_label (id) {
+        id -> Int4,
+        source_instance -> Text,
+        actor_url -> Text,
+        target_url -> Text,
+        label -> Text,
+        summary -> Nullable<Text>,
+        published_at -> Timestamptz,
+        signature -> Text,
+        local_case_id -> Nullable<Int4>,
+        received_at -> Timestamptz,
+        peer_trust_level_at_receipt -> FederationPeerTrustEnum,
+        admin_reviewed_at -> Nullable<Timestamptz>,
+        admin_action -> FederationInboxAdminActionEnum,
+        dismissal_rationale -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::FederationInboxAdminActionEnum;
+    use super::sql_types::FederationPeerTrustEnum;
     use super::sql_types::SanctionAction;
     use super::sql_types::SanctionScope;
 
@@ -1193,6 +1272,11 @@ diesel::table! {
         signature -> Text,
         local_case_id -> Nullable<Int4>,
         received_at -> Timestamptz,
+        // v1-federation-inbound-a additions:
+        peer_trust_level_at_receipt -> FederationPeerTrustEnum,
+        admin_reviewed_at -> Nullable<Timestamptz>,
+        admin_action -> FederationInboxAdminActionEnum,
+        dismissal_rationale -> Nullable<Text>,
     }
 }
 
@@ -1397,6 +1481,8 @@ diesel::joinable!(email_verification -> local_user (local_user_id));
 diesel::joinable!(endorsement -> community (community_id));
 diesel::joinable!(federation_allowlist -> instance (instance_id));
 diesel::joinable!(federation_blocklist -> instance (instance_id));
+// v1-federation-inbound-a additions:
+diesel::joinable!(federation_peer -> instance (instance_id));
 diesel::joinable!(federation_queue_state -> instance (instance_id));
 diesel::joinable!(governance_config -> person (updated_by));
 diesel::joinable!(instance_actions -> instance (instance_id));
@@ -1465,6 +1551,8 @@ diesel::joinable!(public_case_log -> community (community_id));
 diesel::joinable!(public_case_log -> moderation_case (case_id));
 diesel::joinable!(registration_application -> local_user (local_user_id));
 diesel::joinable!(registration_application -> person (admin_id));
+// v1-federation-inbound-a additions:
+diesel::joinable!(remote_moderation_label -> moderation_case (local_case_id));
 diesel::joinable!(remote_sanction_notice -> moderation_case (local_case_id));
 diesel::joinable!(report_combined -> comment (comment_id));
 diesel::joinable!(report_combined -> comment_report (comment_report_id));
@@ -1558,5 +1646,10 @@ diesel::allow_tables_to_appear_in_same_query!(
   surety,
   person_actions,
   image_details,
+  // v1-federation-inbound-a additions:
+  federation_inbox_dropped_log,
+  federation_inbox_nonce,
+  federation_peer,
+  remote_moderation_label,
 );
 diesel::allow_tables_to_appear_in_same_query!(custom_emoji, custom_emoji_keyword,);

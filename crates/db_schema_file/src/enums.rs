@@ -833,3 +833,44 @@ pub enum JuryConstraintRelaxationReason {
   /// panel assembly under ADR-013 EmergencyRemove pathway).
   AdminOverride,
 }
+
+// v1-federation-inbound-a enums (Task 6 — SQL values are lowercase snake_case)
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::FederationPeerTrustEnum"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "snake_case")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Per-peer trust level used by the federation inbox router.
+/// SQL enum `federation_peer_trust_enum` (lowercase snake_case values).
+pub enum FederationPeerTrust {
+  #[default]
+  Unknown,
+  Allowlisted,
+  UntrustedReceive,
+  Blocklisted,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::FederationInboxAdminActionEnum"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "snake_case")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// Admin review outcome for inbound federation objects awaiting review.
+/// SQL enum `federation_inbox_admin_action_enum` (lowercase snake_case values).
+pub enum FederationInboxAdminAction {
+  #[default]
+  Unreviewed,
+  CrossLinked,
+  Dismissed,
+}

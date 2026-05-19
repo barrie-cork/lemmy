@@ -29,6 +29,29 @@
 
 set -euo pipefail
 
+# run_diesel_utils — run the lemmy_diesel_utils migration runner against the
+# DB named by LEMMY_DATABASE_URL (caller exports it before invoking).
+#
+# OS-conditional (incident 2026-05-16, v1-federation-inbound-a Task 1, DQ
+# #241): on Linux/CI bare `cargo run` is correct (this script is invoked by
+# .github/workflows/cargo-validate-migration.yml). On Windows the binary
+# builds but crashes at load with STATUS_DLL_NOT_FOUND because libpq.dll is
+# resolved via the Windows %PATH%, which bash `export PATH` does NOT affect
+# (see .claude/lessons/feedback_windows_e2e_requires_bat_wrapper.md). The
+# Windows branch delegates to scripts/brehon/migrate-roundtrip-cargo.bat,
+# which sets the vcpkg bin dir on the Windows %PATH% (parity with
+# cargo-check.bat) before running the same cargo command.
+run_diesel_utils() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+            cmd //c "scripts\\brehon\\migrate-roundtrip-cargo.bat"
+            ;;
+        *)
+            cargo run -p lemmy_diesel_utils --features full
+            ;;
+    esac
+}
+
 # Verify the diff base ref is fetched. CI uses fetch-depth: 0 so this
 # should always pass, but fail loud if it doesn't — a missing ref would
 # silently exit 0 and defeat the guard (the original cr-1 finding on
@@ -69,8 +92,8 @@ for i in $(seq 1 30); do
 done
 
 # 1. Apply ALL migrations forward (including the new ones).
-LEMMY_DATABASE_URL="postgres://postgres:ci-roundtrip-throwaway@localhost:${PG_PORT}/lemmy_roundtrip" \
-    cargo run -p lemmy_diesel_utils --features full
+export LEMMY_DATABASE_URL="postgres://postgres:ci-roundtrip-throwaway@localhost:${PG_PORT}/lemmy_roundtrip"
+run_diesel_utils
 echo "forward exit: $?"
 
 # 2. Spin up a fresh container (replaces revert+re-run; binary has no revert sub-command).
@@ -88,8 +111,8 @@ for i in $(seq 1 30); do
 done
 
 # 3. Re-apply forward on fresh container (idempotency check: same migrations, clean DB).
-LEMMY_DATABASE_URL="postgres://postgres:ci-roundtrip-throwaway@localhost:${PG_PORT2}/lemmy_roundtrip" \
-    cargo run -p lemmy_diesel_utils --features full
+export LEMMY_DATABASE_URL="postgres://postgres:ci-roundtrip-throwaway@localhost:${PG_PORT2}/lemmy_roundtrip"
+run_diesel_utils
 echo "re-forward exit: $?"
 
 echo "migrate-roundtrip.sh: round-trip complete for $(echo "$NEW_MIGRATIONS" | wc -l) new migration(s)."

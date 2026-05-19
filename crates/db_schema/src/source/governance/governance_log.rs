@@ -217,6 +217,17 @@ pub const ENTRY_KIND_DECAY_KNOB_CHANGED: &str = "decay_knob_changed";
 pub const ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED: &str = "sponsor_allowlist_added";
 pub const ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED: &str = "sponsor_allowlist_removed";
 
+// v1-federation-inbound-a consts (9). Call sites land in -b/-c per registry.
+pub const ENTRY_KIND_FEDERATION_INBOUND_BLOCKED: &str = "federation_inbound_blocked";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE: &str = "federation_inbound_dropped_oversize";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR: &str = "federation_inbound_dropped_rate_limit_actor";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER: &str = "federation_inbound_dropped_rate_limit_peer";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY: &str = "federation_inbound_dropped_replay";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_SCHEMA: &str = "federation_inbound_dropped_schema";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED: &str = "federation_inbound_dropped_storage_cap_evicted";
+pub const ENTRY_KIND_FEDERATION_LABEL_RECEIVED: &str = "federation_label_received";
+pub const ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED: &str = "federation_peer_trust_changed";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
