@@ -1341,6 +1341,20 @@
       "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
       "answered_by": "user",
       "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 279,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Standing policy: relax the multi-lane-worktree.md lane-dedicated-session separation because Brehon impl proceeds strictly one feature/plan at a time (never concurrent phase-v1-* lanes)?",
+      "options": [
+        "relax-separation-serial-phase-policy",
+        "keep-strict-lane-dedicated-sessions"
+      ],
+      "answer": "relax-separation-serial-phase-policy (user-stated in-channel 2026-05-19, durable standing policy). The user committed to implementing only ONE feature/plan at a time — Brehon phases run strictly serially, never with two concurrent phase-v1-* lanes. .claude/rules/multi-lane-worktree.md's own trigger precondition is line 3: 'When multiple Brehon sub-phases (phase-v1-*) are concurrently active' — that precondition is now NEVER satisfied under the one-at-a-time policy, so the lane-dedicated-session requirement + the separate-worktree-per-lane apparatus is DORMANT (the rule is not violated; its trigger condition does not occur). BINDING CONSEQUENCES: (1) A single advisor session (the canonical C:/Users/barri/Developer/brehon-fork checkout, CWD governance-v0) MAY drive the active phase's full pipeline (planning -> impl cohorts -> ci-watcher -> bm-* -> merge -> retro) including operating on the active phase's lane worktree via explicit `git -C C:/Users/barri/Developer/brehon-fork-<lane>` per-command. (2) The hard-refusal 'never git checkout phase-v1-* in the canonical brehon-fork checkout' STILL HOLDS as a mechanical safety (use `git -C <lane-worktree>` or the worktree path directly; never switch the canonical checkout's branch) — relaxing the session-separation does NOT relax that specific destructive-op guard. (3) Phase-branch DQ writes (validate-pending-laptop raises, advisor mutations) happen in the active lane worktree's .claude/decision-queue.json via `git -C <lane-worktree>` — still per-worktree-isolated by file path, just written by the single canonical session rather than a separate lane session. (4) The mobile-access constraint (user cannot open a desktop CC session with CWD = a specific lane worktree) is the proximate trigger for invoking this policy now (v1-federation-inbound-b impl handoff), but the policy is GENERAL: it applies to every future phase as long as the one-feature-at-a-time discipline holds. (5) IF the one-at-a-time discipline is ever broken (two phase-v1-* branches concurrently active), this relaxation IMMEDIATELY lapses and the full multi-lane-worktree.md separation (lane-dedicated sessions, no cross-lane DQ writes) re-applies — a future session detecting two active phase lanes via `git worktree list` MUST revert to strict separation and surface the conflict. The multi-lane-worktree.md rule body is NOT rewritten (its concurrency-scoped framing already self-gates correctly); this DQ is the durable record that the separation is intentionally dormant under serial-phase policy. Cross-reference: feedback_multi_lane_worktree_discipline, the v1-RT-r1-halt-retro L4 (the incident that motivated the original separation — a CONCURRENT-lane DQ race, which serial-phase policy structurally prevents).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-19T00:00:00Z"
     }
   ]
 }
