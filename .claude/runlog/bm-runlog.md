@@ -1799,3 +1799,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **deliverable on trunk:** `crates/server/tests/e2e.rs` carries `fn agpl_source_disclosure_surface_returns_notice` (==1) AND `fn admin_dashboard_html_returns_html_for_admin` (==1) — both lanes' tests coexist on governance-v0
 - **note:** completes the "bm: merge ATTEMPTED — BLOCKED" entry above. Junior #323 succeeded at `gh pr merge` but skipped its §4-step-5 POST-merge runlog COMPLETE commit; this block is the advisor's L14 belt-and-braces re-apply (per `.claude/rules/auto-phase.md` invariant 7), authored on governance-v0 with the verified real merge sha.
 - **findings YAML:** .claude/PRPs/reviews/pr-137-findings.yaml (final_recommendation: approve)
+
+## bm: merge COMPLETE — 2026-05-19T00:33:36Z (L14 belt-and-braces re-apply by advisor)
+
+- **PR:** #138 (Phase v1-federation-inbound-a — federation-inbound foundation (peer trust + inbox nonce + remote moderation labels + Phase-6 model ext + e2e probes))
+- **base ← head:** governance-v0 ← phase-v1-federation-inbound-a
+- **outcome:** MERGED ✓
+- **merge sha:** `7af873731` ("Merge pull request #138 from barrie-cork/phase-v1-federation-inbound-a")
+- **merged at:** 2026-05-19T00:33:36Z
+- **trunk position:** `b3b10aa4f` (governance-v0 advanced through `7af873731` → `b3b10aa4f`)
+- **remote branch deleted?** yes (`phase-v1-federation-inbound-a` removed from origin post-merge; `git ls-remote` confirms empty)
+- **deliverable on trunk:** federation_peer, federation_inbox_nonce, federation_inbox_dropped_log, remote_moderation_label tables + schema + e2e probes (migration `2026-05-17-000000-0000_add_federation_inbound_v1`)
+- **note:** BM Junior ran `gh pr merge` (task #328/329); no L14 runlog-COMPLETE commit was authored on governance-v0 by the BM task. This block is the advisor's L14 belt-and-braces re-apply (per `.claude/rules/auto-phase.md` invariant 7), authored on governance-v0 post-merge.
+- **findings YAML:** .claude/PRPs/reviews/pr-138-findings.yaml (fix-cr-1 committed `df6eee91b`; final_recommendation: approve)
