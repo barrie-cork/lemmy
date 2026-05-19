@@ -31,6 +31,7 @@ pub enum TrustAttestationType {
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct TrustAttestationProtocol {
   #[serde(rename = "type")]
   pub(crate) kind: TrustAttestationType,
