@@ -55,6 +55,7 @@ use diesel::insert_into;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::protocol::governance::{
+  moderation_label::ModerationLabelProtocol,
   sanction_notice::SanctionNoticeProtocol,
   trust_attestation::TrustAttestationProtocol,
 };
@@ -72,6 +73,35 @@ use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::{Value, json};
 use tracing::info;
+// v1-federation-inbound-b Task 4 additions
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+use diesel::{ExpressionMethods, QueryDsl};
+use url::Url;
+use crate::protocol::governance::publish_label::PublishLabel;
+use lemmy_db_schema::source::governance::{
+  federation_inbox_dropped_log::FederationInboxDroppedLogInsertForm,
+  federation_inbox_nonce::FederationInboxNonceInsertForm,
+  federation_peer::federation_inbox_check_peer_trust,
+  remote_moderation_label::RemoteModerationLabelInsertForm,
+  governance_log::{
+    ENTRY_KIND_FEDERATION_INBOUND_BLOCKED,
+    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE,
+    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER,
+    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY,
+    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED,
+    ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED,
+    ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
+  },
+};
+use lemmy_db_schema_file::enums::FederationPeerTrust;
+use lemmy_db_schema_file::schema::{
+  federation_inbox_dropped_log,
+  federation_inbox_nonce,
+  governance_config,
+  remote_moderation_label,
+};
+use lemmy_diesel_utils::connection::DbPool;
 
 /// Persist an inbound `PublishSanctionNotice` as an advisory record and
 /// log the receipt to the governance hash chain.
@@ -129,6 +159,11 @@ pub async fn receive_remote_sanction_notice(
   let target_url = object.target.to_string();
   let action = object.action;
   let scope = object.scope;
+  let activity_id_str = activity.id.to_string();
+
+  // PRD §7.3 storage-cap eviction config read before the main pool borrow.
+  let evict_cap =
+    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
 
   // Steps 2+3 — write the advisory row and append the hash-chain entry
   // in one transaction so ADR-006's "exactly two rows per inbound notice"
@@ -142,7 +177,7 @@ pub async fn receive_remote_sanction_notice(
     scope,
     summary: object.summary.clone(),
     published_at: object.published,
-    signature: activity.id.to_string(),
+    signature: activity_id_str.clone(),
     local_case_id: None,
     ..Default::default()
   };
@@ -151,12 +186,15 @@ pub async fn receive_remote_sanction_notice(
     "target_url": target_url,
     "action": action,
     "scope": scope,
-    "activity_id": activity.id.to_string(),
+    "activity_id": activity_id_str,
   });
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
-  conn
+  // PRD §7.3 — evict oldest unreviewed row for this peer if cap reached.
+  evict_oldest_unreviewed_if_needed(&source_instance, "remote_sanction_notice", evict_cap, conn)
+    .await?;
+  let outcome = conn
     .run_transaction(|conn| {
       async move {
         insert_remote_sanction_notice(&form, conn).await?;
@@ -173,9 +211,24 @@ pub async fn receive_remote_sanction_notice(
       }
       .scope_boxed()
     })
-    .await?;
-
-  Ok(())
+    .await;
+  // Best-effort persist_failed emit outside the rollback — swallow any
+  // secondary failure so the original error is what surfaces to the caller.
+  if let Err(e) = &outcome {
+    let _ = governance_log::append(
+      &mut context.pool(),
+      ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED,
+      json!({
+        "peer_domain": source_instance,
+        "activity_id": activity_id_str,
+        "table": "remote_sanction_notice",
+        "error": format!("{e}"),
+      }),
+      None,
+    )
+    .await;
+  }
+  outcome
 }
 
 /// Persist an inbound `PublishTrustAttestation` and log the receipt.
@@ -204,8 +257,24 @@ pub async fn receive_remote_trust_attestation(
     activity.id, object.actor.inner(), object.subject, object.attestation_type,
   );
 
+  let peer_domain = activity
+    .actor
+    .inner()
+    .domain()
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "remote trust attestation actor {} has no domain",
+        activity.actor.inner(),
+      ))
+    })?
+    .to_string();
   let actor_url = object.actor.inner().to_string();
   let subject_url = object.subject.to_string();
+  let activity_id_str = activity.id.to_string();
+
+  // PRD §7.3 storage-cap eviction config read before the main pool borrow.
+  let evict_cap =
+    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
 
   // Steps 2+3 — write the attestation row and append the hash-chain entry
   // in one transaction so the ADR-006 "exactly two rows" invariant holds
@@ -216,7 +285,8 @@ pub async fn receive_remote_trust_attestation(
     subject_url: subject_url.clone(),
     attestation_type: object.attestation_type,
     valid_until: object.valid_until,
-    signature: activity.id.to_string(),
+    signature: activity_id_str.clone(),
+    source_instance: Some(peer_domain.clone()),
     ..Default::default()
   };
   let payload = json!({
@@ -224,12 +294,15 @@ pub async fn receive_remote_trust_attestation(
     "subject_url": subject_url,
     "attestation_type": object.attestation_type,
     "valid_until": object.valid_until,
-    "activity_id": activity.id.to_string(),
+    "activity_id": activity_id_str,
   });
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
-  conn
+  // PRD §7.3 — evict oldest unreviewed row for this peer if cap reached.
+  evict_oldest_unreviewed_if_needed(&peer_domain, "federation_attestation", evict_cap, conn)
+    .await?;
+  let outcome = conn
     .run_transaction(|conn| {
       async move {
         insert_federation_attestation(&form, conn).await?;
@@ -244,9 +317,23 @@ pub async fn receive_remote_trust_attestation(
       }
       .scope_boxed()
     })
-    .await?;
-
-  Ok(())
+    .await;
+  // Best-effort persist_failed emit outside the rollback.
+  if let Err(e) = &outcome {
+    let _ = governance_log::append(
+      &mut context.pool(),
+      ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED,
+      json!({
+        "peer_domain": peer_domain,
+        "activity_id": activity_id_str,
+        "table": "federation_attestation",
+        "error": format!("{e}"),
+      }),
+      None,
+    )
+    .await;
+  }
+  outcome
 }
 
 // ---------------------------------------------------------------------------
@@ -321,4 +408,414 @@ async fn insert_federation_attestation(
     .execute(conn)
     .await?;
   Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// v1-federation-inbound-b Task 4 — wrapper, trait, rate-limit, label handler
+// ---------------------------------------------------------------------------
+
+/// Local adapter for `governance_config` integer reads. Avoids the circular
+/// dependency `lemmy_api` → `lemmy_apub` → `lemmy_apub_activities` that would
+/// arise from calling `lemmy_api::governance::config::get_int` here.
+async fn get_inbound_config_int(pool: &mut DbPool<'_>, config_key: &str) -> LemmyResult<i64> {
+  let conn = &mut get_conn(pool).await?;
+  let val: Option<i64> = governance_config::table
+    .filter(governance_config::scope.eq("instance"))
+    .filter(governance_config::key.eq(config_key))
+    .select(governance_config::value_int)
+    .first::<Option<i64>>(conn)
+    .await
+    .map_err(|_e| {
+      LemmyErrorType::Unknown(format!("governance_config.{config_key} not seeded"))
+    })?;
+  val.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "governance_config.{config_key} has null value_int",
+    ))
+    .into()
+  })
+}
+
+/// Per-handler discriminators the inbox wrapper needs. Impls land in the
+/// `publish_{sanction_notice,trust_attestation,label}.rs` files (Tasks 5-7).
+#[async_trait::async_trait]
+pub(crate) trait GovernanceInboundActivity: Sized {
+  /// AP activity id used for the replay nonce + drop-log.
+  fn activity_id(&self) -> &Url;
+  /// Domain of the activity actor (for peer-trust + per-peer rate).
+  fn actor_domain(&self) -> LemmyResult<String>;
+  /// Serialised payload size in bytes (compared against the per-type cap).
+  fn payload_size_bytes(&self) -> LemmyResult<usize>;
+  /// `governance_config` key for this activity's size cap.
+  fn payload_size_cap_key(&self) -> &'static str;
+  /// Per-actor rate-limit check. Default is a no-op; only trust attestations
+  /// override this (Task 6).
+  async fn check_per_actor_rate_limit(
+    &self,
+    context: &Data<LemmyContext>,
+  ) -> LemmyResult<()> {
+    let _ = context;
+    Ok(())
+  }
+}
+
+/// In-memory per-peer hourly rate-limit counters. Key: (peer_domain, hour_bucket).
+pub(crate) fn rate_per_peer_counts() -> &'static Mutex<HashMap<(String, i64), u32>> {
+  static CELL: OnceLock<Mutex<HashMap<(String, i64), u32>>> = OnceLock::new();
+  CELL.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// In-memory per-actor hourly rate-limit counters. Key: (subject_url, hour_bucket).
+pub(crate) fn rate_per_actor_counts() -> &'static Mutex<HashMap<(String, i64), u32>> {
+  static CELL: OnceLock<Mutex<HashMap<(String, i64), u32>>> = OnceLock::new();
+  CELL.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Current UTC hour as an `i64` bucket identifier for rate-limit maps.
+pub(crate) fn current_hour_bucket() -> i64 {
+  chrono::Utc::now().timestamp() / 3600
+}
+
+/// Apply the five-gate inbound enforcement policy then delegate to `inner`.
+///
+/// Called from each `Activity::receive` impl (Tasks 5-7) so the gate
+/// sequence is identical across all governance activity types.
+pub(crate) async fn wrap_governance_inbound<F, Fut, A>(
+  activity: A,
+  context: &Data<LemmyContext>,
+  inner: F,
+) -> LemmyResult<()>
+where
+  F: FnOnce(A, &Data<LemmyContext>) -> Fut,
+  Fut: std::future::Future<Output = LemmyResult<()>>,
+  A: GovernanceInboundActivity,
+{
+  let peer_domain = activity.actor_domain()?;
+  let activity_id = activity.activity_id().to_string();
+
+  // Read all governance_config values BEFORE the main conn acquisition so we
+  // never re-borrow the pool while conn is live (DbPool<'_> lifetime conflict).
+  let size_cap =
+    get_inbound_config_int(&mut context.pool(), activity.payload_size_cap_key()).await?;
+  let peer_cap =
+    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_rate_per_hour")
+      .await?;
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+
+  // Gate 1 — peer trust: Blocklisted → 403.
+  let trust = federation_inbox_check_peer_trust(&peer_domain, conn).await?;
+  if trust == FederationPeerTrust::Blocklisted {
+    log_inbox_drop(
+      &peer_domain,
+      Some(&activity_id),
+      "blocklisted",
+      None,
+      ENTRY_KIND_FEDERATION_INBOUND_BLOCKED,
+      conn,
+    )
+    .await?;
+    return Err(LemmyErrorType::FederationPeerBlocklisted.into());
+  }
+
+  // Gate 2 — per-type payload size cap → 413.
+  let size = i64::try_from(activity.payload_size_bytes()?).unwrap_or(i64::MAX);
+  if size > size_cap {
+    log_inbox_drop(
+      &peer_domain,
+      Some(&activity_id),
+      "oversize",
+      None,
+      ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE,
+      conn,
+    )
+    .await?;
+    return Err(LemmyErrorType::FederationPayloadTooLarge.into());
+  }
+
+  // Gate 3 — schema strictness enforced at the serde deserialisation layer
+  // (deny_unknown_fields on protocol structs). No wrapper helper needed.
+
+  // Gate 4 — per-peer hourly rate limit → 429.
+  let bucket = current_hour_bucket();
+  let exceeded_peer = {
+    let mut counts = rate_per_peer_counts()
+      .lock()
+      .unwrap_or_else(|e| e.into_inner());
+    counts.retain(|(_, b), _| *b >= bucket - 1);
+    let entry = counts.entry((peer_domain.clone(), bucket)).or_insert(0);
+    *entry = entry.saturating_add(1);
+    i64::from(*entry) > peer_cap
+  };
+  if exceeded_peer {
+    log_inbox_drop(
+      &peer_domain,
+      Some(&activity_id),
+      "rate_limit_peer",
+      None,
+      ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER,
+      conn,
+    )
+    .await?;
+    return Err(LemmyErrorType::FederationPeerRateLimitExceeded.into());
+  }
+
+  // Gate 5 — per-actor rate limit; attestations override, other types no-op.
+  activity.check_per_actor_rate_limit(context).await?;
+
+  // Gate 6 — replay nonce: unique-violation → 409.
+  let nonce_form = FederationInboxNonceInsertForm {
+    peer_instance: peer_domain.clone(),
+    activity_id: activity_id.clone(),
+  };
+  let nonce_result = diesel::insert_into(federation_inbox_nonce::table)
+    .values(&nonce_form)
+    .execute(conn)
+    .await;
+  if let Err(diesel::result::Error::DatabaseError(
+    diesel::result::DatabaseErrorKind::UniqueViolation,
+    _,
+  )) = nonce_result
+  {
+    log_inbox_drop(
+      &peer_domain,
+      Some(&activity_id),
+      "replay",
+      None,
+      ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY,
+      conn,
+    )
+    .await?;
+    return Err(LemmyErrorType::FederationActivityReplayed.into());
+  }
+  nonce_result?;
+
+  // All gates passed — delegate to the Phase-6 (or new label) handler.
+  inner(activity, context).await
+}
+
+/// Write one `federation_inbox_dropped_log` row and one `governance_log` entry
+/// atomically. Callers return a distinct `LemmyError` after this returns `Ok`.
+pub(crate) async fn log_inbox_drop(
+  peer_domain: &str,
+  activity_id: Option<&str>,
+  reason: &str,
+  excerpt: Option<&str>,
+  entry_kind: &'static str,
+  conn: &mut AsyncPgConnection,
+) -> LemmyResult<()> {
+  let form = FederationInboxDroppedLogInsertForm {
+    source_instance: peer_domain.to_string(),
+    activity_id: activity_id.map(str::to_string),
+    drop_reason: reason.to_string(),
+    payload_excerpt: excerpt.map(str::to_string),
+  };
+  let payload = json!({
+    "peer_domain": peer_domain,
+    "activity_id": activity_id,
+    "reason": reason,
+  });
+  conn
+    .run_transaction(|conn| {
+      async move {
+        diesel::insert_into(federation_inbox_dropped_log::table)
+          .values(&form)
+          .execute(conn)
+          .await?;
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          entry_kind,
+          payload,
+          None,
+        )
+        .await?;
+        Ok(())
+      }
+      .scope_boxed()
+    })
+    .await
+}
+
+/// COUNT(*) result row type used by `evict_oldest_unreviewed_if_needed`.
+/// Module-level to satisfy `clippy::items_after_statements`.
+#[derive(diesel::QueryableByName)]
+struct CountRow {
+  #[diesel(sql_type = diesel::sql_types::BigInt)]
+  count: i64,
+}
+
+/// Evict the oldest admin-unreviewed row for `peer_domain` in `table_name`
+/// if the per-peer count reaches `cap`. Writes a drop-log row and a
+/// `governance_log` entry atomically. Uses raw SQL because Diesel's typed
+/// DSL cannot accept a runtime-determined table name.
+async fn evict_oldest_unreviewed_if_needed(
+  peer_domain: &str,
+  table_name: &str,
+  cap: i64,
+  conn: &mut AsyncPgConnection,
+) -> LemmyResult<()> {
+  let count_sql = format!(
+    "SELECT COUNT(*)::bigint AS count FROM {table_name} \
+     WHERE source_instance = $1 AND admin_reviewed_at IS NULL"
+  );
+  let count_row = diesel::sql_query(count_sql)
+    .bind::<diesel::sql_types::Text, _>(peer_domain)
+    .get_result::<CountRow>(conn)
+    .await?;
+  if count_row.count < cap {
+    return Ok(());
+  }
+  let delete_sql = format!(
+    "DELETE FROM {table_name} WHERE id = \
+     (SELECT id FROM {table_name} WHERE source_instance = $1 \
+      AND admin_reviewed_at IS NULL ORDER BY received_at ASC LIMIT 1)"
+  );
+  let form = FederationInboxDroppedLogInsertForm {
+    source_instance: peer_domain.to_string(),
+    activity_id: None,
+    drop_reason: "storage_cap_evicted".to_string(),
+    payload_excerpt: None,
+  };
+  let payload = json!({
+    "peer_domain": peer_domain,
+    "table": table_name,
+    "reason": "storage_cap_evicted",
+  });
+  let peer_str = peer_domain.to_string();
+  conn
+    .run_transaction(|conn| {
+      async move {
+        diesel::sql_query(delete_sql)
+          .bind::<diesel::sql_types::Text, _>(peer_str.as_str())
+          .execute(conn)
+          .await?;
+        diesel::insert_into(federation_inbox_dropped_log::table)
+          .values(&form)
+          .execute(conn)
+          .await?;
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED,
+          payload,
+          None,
+        )
+        .await?;
+        Ok(())
+      }
+      .scope_boxed()
+    })
+    .await
+}
+
+/// Decode the wrapper's untyped `ModerationLabelObjectStub` into the typed
+/// [`ModerationLabelProtocol`]. Mirrors [`decode_sanction_notice_object`].
+fn decode_moderation_label_object(
+  activity: &PublishLabel,
+) -> LemmyResult<ModerationLabelProtocol> {
+  let mut map = activity.object.rest.clone();
+  map.insert(
+    "type".to_string(),
+    Value::String("ModerationLabel".to_string()),
+  );
+  serde_json::from_value::<ModerationLabelProtocol>(Value::Object(map))
+    .map_err(|e| LemmyErrorType::Unknown(format!("decode ModerationLabelProtocol: {e}")).into())
+}
+
+/// Persist an inbound `PublishLabel` as an advisory record and log the receipt.
+/// Fills the Phase-6 no-op stub.
+///
+/// Per DQ #273 option-a, `peer_trust_level_at_receipt` is re-queried here
+/// rather than threaded down from the wrapper.
+pub async fn receive_remote_moderation_label(
+  activity: PublishLabel,
+  context: &Data<LemmyContext>,
+) -> LemmyResult<()> {
+  let object = decode_moderation_label_object(&activity)?;
+  let peer_domain = activity
+    .actor
+    .inner()
+    .domain()
+    .map(str::to_string)
+    .unwrap_or_default();
+  let actor_url = activity.actor.inner().to_string();
+  let target_url = object.target.to_string();
+  let label = object.label;
+  let summary = object.summary;
+  let published_at = object.published;
+  let activity_id_str = activity.id.to_string();
+
+  info!(
+    "Receiving remote moderation label {} (target={}, label={})",
+    activity_id_str, target_url, label,
+  );
+
+  // Read config before acquiring the main conn.
+  let evict_cap =
+    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
+
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+
+  // DQ #275 option-a — eviction at insert time.
+  evict_oldest_unreviewed_if_needed(&peer_domain, "remote_moderation_label", evict_cap, conn)
+    .await?;
+
+  // DQ #273 option-a — re-query peer trust inside the handler body.
+  let trust = federation_inbox_check_peer_trust(&peer_domain, conn).await?;
+
+  let form = RemoteModerationLabelInsertForm {
+    source_instance: peer_domain.clone(),
+    actor_url: actor_url.clone(),
+    target_url: target_url.clone(),
+    label: label.clone(),
+    summary: summary.clone(),
+    published_at,
+    signature: activity_id_str.clone(),
+    local_case_id: None,
+    peer_trust_level_at_receipt: Some(trust),
+  };
+  let payload = json!({
+    "source_instance": peer_domain,
+    "actor_url": actor_url,
+    "target_url": target_url,
+    "label": label,
+    "activity_id": activity_id_str,
+  });
+
+  let outcome = conn
+    .run_transaction(|conn| {
+      async move {
+        diesel::insert_into(remote_moderation_label::table)
+          .values(&form)
+          .execute(conn)
+          .await?;
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
+          payload,
+          None,
+        )
+        .await?;
+        Ok(())
+      }
+      .scope_boxed()
+    })
+    .await;
+  // Best-effort persist_failed emit outside the rollback.
+  if let Err(e) = &outcome {
+    let _ = governance_log::append(
+      &mut context.pool(),
+      ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED,
+      json!({
+        "peer_domain": peer_domain,
+        "activity_id": activity_id_str,
+        "table": "remote_moderation_label",
+        "error": format!("{e}"),
+      }),
+      None,
+    )
+    .await;
+  }
+  outcome
 }
