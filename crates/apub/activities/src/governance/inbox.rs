@@ -467,7 +467,6 @@ pub(crate) fn rate_per_peer_counts() -> &'static Mutex<HashMap<(String, i64), u3
 }
 
 /// In-memory per-actor hourly rate-limit counters. Key: (subject_url, hour_bucket).
-#[expect(dead_code, reason = "pre-landed federation-inbound enforcement infra; callers wired by Cohort B Tasks 5-7 (impl GovernanceInboundActivity + wrap_governance_inbound call sites), which declare requires: task 4 per plan §13")]
 pub(crate) fn rate_per_actor_counts() -> &'static Mutex<HashMap<(String, i64), u32>> {
   static CELL: OnceLock<Mutex<HashMap<(String, i64), u32>>> = OnceLock::new();
   CELL.get_or_init(|| Mutex::new(HashMap::new()))
