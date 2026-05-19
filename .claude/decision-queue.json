@@ -1,27 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 283,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-19T16:00:51Z",
-      "phase_task": 4,
-      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-4-see-claude-prps-briefs-v1-federation-inbound-b-impl-4-md-336",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task4-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task4-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-b-task4-test-norun.log 2>&1\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "question": "Run 3 laptop-side cargo validation commands for Task 4 (wrap_governance_inbound + GovernanceInboundActivity trait + helpers + receive_remote_moderation_label). cargo-check.bat + cargo-clippy.bat -D warnings + cargo-test --no-run.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1446,6 +1425,26 @@
       "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
       "answered_by": "advisor",
       "resolved_at": "2026-05-19T20:07:22Z"
+    },
+    {
+      "id": 283,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-19T16:00:51Z",
+      "phase_task": 4,
+      "branch": "junior/role-impl-task-v1-federation-inbound-b-task-4-see-claude-prps-briefs-v1-federation-inbound-b-impl-4-md-336",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/fed-in-b-task4-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/fed-in-b-task4-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/fed-in-b-task4-test-norun.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "question": "Run 3 laptop-side cargo validation commands for Task 4 (wrap_governance_inbound + GovernanceInboundActivity trait + helpers + receive_remote_moderation_label). cargo-check.bat + cargo-clippy.bat -D warnings + cargo-test --no-run.",
+      "answer": "All 3 laptop-side §15 cargo commands GREEN on lane fix-impl-3 tip 4a60667c9 (post fix-impl-1 Task-4 compile fix + fix-impl-2 dead_code #[expect] chain + fix-impl-3 Finding-6.1 Phase-6 Sibling-B hard-error mirror). cargo-check --workspace --features full: FI3R_CHECK_EXIT_0 (0 errors/warnings). cargo-clippy --workspace --features full --no-deps -D warnings: FI3R_CLIPPY_EXIT_0 (0 findings, no unfulfilled_lint_expectations — fix-impl-2 #[expect(dead_code)] annotations still satisfied alongside fix-impl-3). cargo-test --workspace --test e2e --features full --no-run: FI3R_TESTNORUN_EXIT_0 (Finished test profile 5m02s, e2e binary built e2e-4ed9c75189048398.exe). Task 4 (§16a Story 2 enforcement core) §15 gate fully satisfied. (advisor-laptop, 2026-05-19T20:44:53Z)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-19T20:44:53Z"
     }
   ]
 }
