@@ -211,15 +211,27 @@ rule's pre-landed-const exemption.
 
 **Deferred (NOT shipped in `-a`):**
 
-- `federation_inbound_persist_failed` (PRD §5.3 row 7) — `-b`.
 - `federation_inbound_cross_linked` (PRD §6.2) — `-c`.
 - `federation_inbound_dismissed` (PRD §6.3) — `-c`.
 
 _Authored by the advisor session on `phase-v1-federation-inbound-a` (not the Task 4 Junior): `.claude/rules/**` is advisor-owned meta-work per `branch-manager.md` file-ownership + the harness gap DQ #235 blocks Junior workers from writing `.claude/**`. Task 4's Junior writes ONLY the 2 `crates/` `governance_log.rs` files (consts + shim re-exports); this registry section is its pre-landed counterpart per the pre-landed-const exemption below._
 
+## v1-federation-inbound-b entry kinds (1, this sub-phase)
+
+Landed alongside task 3's dual-file edit. v1-federation-inbound-b
+defines the const AND ships the live emitting call site in the same
+sub-phase (best-effort emit in each `receive_remote_*`'s DB-error
+branch, per PRD §5.3 row 7 + §9.2).
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED` | `federation_inbound_persist_failed` | -b shipped | -b `inbox.rs::receive_remote_sanction_notice` + `receive_remote_trust_attestation` + `receive_remote_moderation_label` (best-effort outside tx on rollback) | Phase-6/-b `receive_remote_*` insert tx failed; HTTP 500. Per PRD §5.3 row 7. |
+
+_Authored by the advisor session on `phase-v1-federation-inbound-b` (not the Task 3 Junior): `.claude/rules/**` is advisor-owned meta-work per `branch-manager.md` file-ownership + the harness gap DQ #235 blocks Junior workers from writing `.claude/**`. Task 3's Junior wrote ONLY the 2 `crates/` `governance_log.rs` files (const + shim re-export); this registry section is its advisor-reconciled counterpart per the brief §4 DQ #235 carve-out._
+
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**54** at v1-federation-inbound-a end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**55** at v1-federation-inbound-b end: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a + 1 v1-federation-inbound-b).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (downstream call sites: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`; `_APPEAL_DECIDED` → v1-JM-e `submit_jury_vote.rs::process_appeal_vote`, **flipped active 2026-05-02**), and v1-SL-a's five consts (downstream call sites: `_SPONSOR_LIABILITY_PENDING` → v1-SL-d `submit_jury_vote.rs`; `_SPONSOR_LIABILITY_FIRED` → v1-SL-c `sponsor_liability_grace.rs`; `_SPONSOR_LIABILITY_ESCAPED` → v1-SL-b `revoke_endorsement.rs` + v1-SL-c `sponsor_liability_grace.rs`; `_ENDORSEMENT_REVOKED` → v1-SL-b `revoke_endorsement.rs`; `_RESTORATION_COMPLETED` → restorative-mechanics-v1 `restoration_complete.rs`), and v1-RT-r1's seven consts (downstream call sites: `_PARTICIPATION_CRON_TICK` → v1-RT-r3 `scheduled_tasks.rs`; `_VOTE_OUTCOME_RECORDED` → v1-RT-r3 `submit_jury_vote.rs`; `_EVIDENCE_QUALITY_RECORDED` → v1-RT-r3 `submit_jury_vote.rs` + `admin_emergency_remove.rs`; `_ROLLUP_RECOMPUTED` → v1-RT-r5 `scheduled_tasks.rs`; `_DECAY_KNOB_CHANGED` → v1-RT-r2 `admin_config.rs`; `_SPONSOR_ALLOWLIST_ADDED` → v1-RT-r4 `admin_sponsor_allowlist.rs`; `_SPONSOR_ALLOWLIST_REMOVED` → v1-RT-r4 `admin_sponsor_allowlist.rs`). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.
