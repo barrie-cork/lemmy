@@ -148,12 +148,7 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
         .map_err(|_e| {
           LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} not seeded"))
         })?;
-      val.ok_or_else(|| {
-        LemmyErrorType::Unknown(
-          format!("governance_config.{CONFIG_KEY} has null value_int"),
-        )
-        .into()
-      })?
+      val.ok_or_else(|| LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} has null value_int")))?
     };
 
     // Increment the per-actor counter. Key structure mirrors the per-peer
