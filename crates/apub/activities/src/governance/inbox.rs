@@ -739,8 +739,13 @@ pub async fn receive_remote_moderation_label(
     .actor
     .inner()
     .domain()
-    .map(str::to_string)
-    .unwrap_or_default();
+    .ok_or_else(|| {
+      LemmyErrorType::Unknown(format!(
+        "remote moderation label actor {} has no domain",
+        activity.actor.inner(),
+      ))
+    })?
+    .to_string();
   let actor_url = activity.actor.inner().to_string();
   let target_url = object.target.to_string();
   let label = object.label;
