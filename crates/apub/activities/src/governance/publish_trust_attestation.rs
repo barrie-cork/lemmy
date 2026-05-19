@@ -119,6 +119,7 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
     &self,
     context: &Data<LemmyContext>,
   ) -> LemmyResult<()> {
+    const CONFIG_KEY: &str = "federation.inbound.per_actor_attestation_rate_per_hour";
     // Extract the attested subject URL from the untyped object stub. The
     // `subject` field is carried in `rest` because TrustAttestationObjectStub
     // uses a catch-all map for non-first-class fields.
@@ -135,7 +136,6 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
     // helper in inbox.rs (private there; duplicated here to avoid requiring a
     // pub(crate) expansion of inbox.rs internals — the same circular-dep
     // constraint that caused inbox.rs to define the helper locally).
-    const CONFIG_KEY: &str = "federation.inbound.per_actor_attestation_rate_per_hour";
     let actor_cap: i64 = {
       let pool = &mut context.pool();
       let conn = &mut get_conn(pool).await?;
