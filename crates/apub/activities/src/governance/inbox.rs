@@ -482,16 +482,15 @@ pub(crate) fn current_hour_bucket() -> i64 {
 ///
 /// Called from each `Activity::receive` impl (Tasks 5-7) so the gate
 /// sequence is identical across all governance activity types.
-#[expect(dead_code, reason = "pre-landed federation-inbound enforcement infra; callers wired by Cohort B Tasks 5-7 (impl GovernanceInboundActivity + wrap_governance_inbound call sites), which declare requires: task 4 per plan §13")]
-pub(crate) async fn wrap_governance_inbound<F, Fut, A>(
+pub(crate) async fn wrap_governance_inbound<'a, F, Fut, A>(
   activity: A,
-  context: &Data<LemmyContext>,
+  context: &'a Data<LemmyContext>,
   inner: F,
 ) -> LemmyResult<()>
 where
-  F: FnOnce(A, &Data<LemmyContext>) -> Fut,
-  Fut: std::future::Future<Output = LemmyResult<()>>,
-  A: GovernanceInboundActivity + std::marker::Sync,
+  F: FnOnce(A, &'a Data<LemmyContext>) -> Fut,
+  Fut: std::future::Future<Output = LemmyResult<()>> + 'a,
+  A: GovernanceInboundActivity + std::marker::Sync + 'a,
 {
   let peer_domain = activity.actor_domain()?;
   let activity_id = activity.activity_id().to_string();
