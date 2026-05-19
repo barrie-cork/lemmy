@@ -1252,6 +1252,52 @@
       "answer": "Phase-2 e2e #4 GREEN @ post-merge tip cec5a6556 (gov-v0 merged into phase-v1-federation-inbound-a). test result: ok. 97 passed; 0 failed; 5 ignored; finished in 1975.96s. E2E_EXIT_0 + CHAIN_DONE markers confirmed (NOT bg-notification). Zero failures. 97 = 91 (pre-merge #271) + 6 gov-v0 top-level tests (agpl_source_disclosure etc) — additive e2e.rs merge resolution correct AND gov-v0 ship-1-r2 + federation work pass together. 5 ignored = known GH#42/#43/#45 deflakes. cargo-check --workspace --features full also EXIT_0 (CHECK_EXIT_0) — hand-resolved e2e.rs splice structurally sound. Log C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-a-cec5a6556.log.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-18T23:35:03.036419Z"
+    },
+    {
+      "id": 273,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "PRD section 9.4 receive_remote_moderation_label leaves peer_trust_level_at_receipt as a fill-in (from wrap_governance_inbound context). The PRD section 9.2 wrapper computes trust at step 1 but its inner closure signature is FnOnce(A, andData) -> Fut (no trust arg). How should the resolved trust be threaded into the label handler?",
+      "options": [
+        "option-1: widen the inner closure signature to FnOnce(A, andData, FederationPeerTrust) -> Fut so the wrapper passes the resolved trust; the 3 per-handler-patch closures gain an unused _trust param, only the label handler reads it (changes PRD section 9.2 signature)",
+        "option-2 (advisor-resolved default): the label handler re-queries federation_inbox_check_peer_trust(peer_domain, conn) itself inside inner (one extra indexed DB read; zero signature change; mirrors the existing fed-in-a helper exactly)",
+        "option-3: thread trust via a typed extension on context / request-scoped value (heaviest; over-engineered for a v1 advisory path)"
+      ],
+      "context": "This is the ONE genuine design decision PRD section 9 leaves open (brief section 0.2). Advisor-resolved in advisor-mode per brehon-clarify Step 4.",
+      "answer": "option-2. The label handler re-queries federation_inbox_check_peer_trust(peer_domain, conn) inside the inner closure. Rationale: (a) zero change to PRD section 9.2 wrapper signature so no churn across the 3 per-handler-patch closures (publish_sanction_notice/trust_attestation/label) which would otherwise each gain an unused _trust param; (b) the second read is a single indexed lookup on federation_peer (the fed-in-a helper documented access pattern, plan v1-federation-inbound-a.plan.md section 10.5 / DQ #230) and v1 federation-inbound is explicitly advisory-only and NOT a hot path (PRD section 1.2 + ADR-006), so the redundancy is negligible; (c) it mirrors the canonical fed-in-a helper verbatim (feedback_read_canonical_before_writing_spec). The planner records this decision + rationale in the plan section 10 and a kind:log entry. ESCAPE HATCH PRESERVED (brief section 4.2 boundary-of-judgment): if, on reading the ACTUAL Phase-6 closure types in crates/apub/activities/src/governance/inbox.rs + the 3 publish_*.rs receive impls, option-2 is genuinely untenable (e.g. the helper conn-borrow lifetime cannot satisfy the inner-closure async move), the planner MAY file a kind:blocker proposing option-1 with the concrete type-level evidence. Option-1 is the acceptable fallback (PRD section 9.2 itself says extend the mapping if needed); option-3 is rejected as over-engineered for a v1 advisory path. Sources: brief section 0.2 (the enumerated options + advisor lean), PRD section 9.2/9.4, plan v1-federation-inbound-a.plan.md section 10.5 (the get_conn(pool) access pattern + DQ #230 helper home), ADR-006 (advisory-only so not hot-path).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 274,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "PRD section 9.2 size-cap step shows activity.payload_size_cap_bytes(andcontext.settings()) (reading from Lemmy Settings), but plan v1-federation-inbound-a.plan.md section 10.6 seeded the 11 federation.inbound.* caps (incl. max_payload_bytes_sanction_notice/trust_attestation/moderation_label) as governance_config rows, NOT Lemmy Settings. Which is the wrapper source of truth for the size/rate/replay knobs?",
+      "options": [
+        "option-a (advisor-resolved): the 11 fed-in-a-seeded governance_config rows are the single source of truth; PRD section 9.2 context.settings() is illustrative pseudocode. The wrapper reads governance_config via the same config-read path the fed-in-a DEFAULT_FEDERATION_INBOUND_* consts + CONFIG_KEY_METADATA expose (plan fed-in-a section 10.6)",
+        "option-b: add the 11 keys to Lemmy Settings as well and read from context.settings() per PRD section 9.2 literal (duplicates the config surface; contradicts PRD section 10 communities change them via the dashboard / UPDATE governance_config)"
+      ],
+      "context": "MIRROR-vs-constraint seam flagged in brief section 2.1 item 2. Advisor-resolved in advisor-mode per brehon-clarify Step 4.",
+      "answer": "option-a. The 11 fed-in-a-seeded governance_config rows (scope=instance, plan v1-federation-inbound-a.plan.md section 10.6) are the single source of truth for ALL federation.inbound.* knobs the wrapper reads (size caps, per-peer rate, per-actor rate, replay window, storage cap). PRD section 9.2 activity.payload_size_cap_bytes(andcontext.settings()) is ILLUSTRATIVE pseudocode for the wrapper signature, NOT a directive to add the keys to Lemmy Settings. Decisive evidence: PRD section 10 (All knobs read from governance_config (Phase 5a typed-column config table) ... communities can change them via the dashboard once OQ-018 ships, or via direct UPDATE governance_config until then) and the defaults-matrix table whose every row Namespace is federation.inbound with Per-instance? yes - these are governance_config rows, the same surface fed-in-a seeded + exposed via DEFAULT_FEDERATION_INBOUND_* + CONFIG_KEY_METADATA (plan fed-in-a section 10.6 + the entry in the v1-AD config-key registry). Option-b is rejected: duplicating the 11 keys into Lemmy Settings creates two divergent config surfaces and directly contradicts PRD section 10 dashboard-tunable contract (OQ-018). The planner specifies in the plan section 10 the exact governance_config read helper the wrapper uses (mirror how an existing handler reads a governance_config typed value - the planner cites the canonical read-path at plan time per feedback_read_canonical_before_writing_spec) and records the seam-resolution as a kind:log entry. Sources: PRD section 10 (defaults matrix + the read from governance_config sentence), plan v1-federation-inbound-a.plan.md section 10.6 (the 11 consts + CONFIG_KEY_METADATA + the governance_config seed), PRD section 9.2 (the pseudocode signature being clarified).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": 275,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "PRD section 7.3 storage-cap eviction (per_peer_storage_cap=10000, oldest-unreviewed-row drop + ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED) - does the eviction logic live inside wrap_governance_inbound success path, or inside each Phase-6 receive_remote_* handler?",
+      "options": [
+        "option-a (advisor-resolved): at the Phase-6-handler insert path (where the advisory row is actually written), invoked uniformly so all 3 advisory tables (remote_sanction_notice / federation_attestation / remote_moderation_label) get the cap check; the wrapper post-inner success path is the uniform invocation point so the 3 receive_remote_* bodies are not each duplicated",
+        "option-b: a 4th explicit check helper inside wrap_governance_inbound BEFORE inner() runs (pre-insert reject-or-evict)"
+      ],
+      "context": "Call-site ambiguity flagged in brief section 2.1 item 2 / section 2.3. Advisor-resolved in advisor-mode per brehon-clarify Step 4.",
+      "answer": "option-a. Storage-cap eviction happens at INSERT time per PRD section 7.3 verbatim (at insert time, check SELECT COUNT(*) FROM remote_sanction_notice WHERE source_instance = $1 AND admin_reviewed_at IS NULL. If >= cap, drop the oldest unreviewed row for that peer with a federation_inbox_dropped_log entry + governance_log federation_inbound_storage_cap_evicted). It is NOT one of the 5 pre-inner check helpers (those are reject-gates: trust/size/rate/actor-rate/replay, PRD section 9.2 steps 1-6 - none of which mutate the advisory tables). The cap check is coupled to the WRITE, so it belongs with the Phase-6 receive_remote_* insert path. To avoid duplicating it across all 3 receive_remote_* bodies, the plan factors it into a single helper (e.g. enforce_storage_cap(peer, table_kind, conn)) invoked from the wrapper post-inner SUCCESS path (after inner() returns Ok) so the behaviour is uniform across the 3 advisory types - OR, if the planner finds the post-inner point cannot know which table inner() wrote, invoked at the head of each receive_remote_* (the planner picks based on the actual Phase-6 handler shapes read at plan time and records the choice + rationale in section 10 + a kind:log). The const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED is fed-in-a-shipped (registry fed-in-a section, marked -b call site (pending)); -b adds the emitting call site. NOTE this is distinct from the eviction being a drop that returns an HTTP error - per PRD section 7.3 oldest-drop is NON-rejecting (the new inbound is still accepted; an OLDER row is evicted), so it does NOT return a 4xx and does NOT short-circuit inner(); that is why it is post-success, not a pre-inner reject-gate. The eviction writes (the evicted-row effect + federation_inbox_dropped_log + governance_log) are part of the multi-write transaction boundary (brief watchpoint #8, feedback_multi_write_handlers_need_transactions). Sources: PRD section 7.3 (verbatim insert-time mechanism + why oldest-drop, not reject), PRD section 9.2 (the 6 pre-inner steps that storage-cap is NOT among), plan v1-federation-inbound-a.plan.md section 10.7 + .claude/rules/governance-log-entry-kind-registry.md fed-in-a section (const shipped, -b emits).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T00:00:00Z"
     }
   ]
 }
