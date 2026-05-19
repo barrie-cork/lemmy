@@ -112,6 +112,13 @@ pub enum LemmyErrorType {
   PostScheduleTimeMustBeInFuture,
   TooManyScheduledPosts,
   CannotCombineFederationBlocklistAndAllowlist,
+  // v1-federation-inbound-b additions (PRD §5.3 + §9.2):
+  FederationPeerBlocklisted,
+  FederationPayloadTooLarge,
+  FederationSchemaInvalid,
+  FederationPeerRateLimitExceeded,
+  FederationActorRateLimitExceeded,
+  FederationActivityReplayed,
   CouldntParsePaginationToken,
   PluginError(String),
   InvalidFetchLimit,
@@ -225,6 +232,13 @@ cfg_select! {
         match self.error_type {
           LemmyErrorType::IncorrectLogin => actix_web::http::StatusCode::UNAUTHORIZED,
           LemmyErrorType::NotFound => actix_web::http::StatusCode::NOT_FOUND,
+          // v1-federation-inbound-b additions (PRD §5.3):
+          LemmyErrorType::FederationPeerBlocklisted        => actix_web::http::StatusCode::FORBIDDEN,         // 403
+          LemmyErrorType::FederationPayloadTooLarge        => actix_web::http::StatusCode::PAYLOAD_TOO_LARGE, // 413
+          LemmyErrorType::FederationSchemaInvalid          => actix_web::http::StatusCode::BAD_REQUEST,       // 400
+          LemmyErrorType::FederationPeerRateLimitExceeded  => actix_web::http::StatusCode::TOO_MANY_REQUESTS, // 429
+          LemmyErrorType::FederationActorRateLimitExceeded => actix_web::http::StatusCode::TOO_MANY_REQUESTS, // 429
+          LemmyErrorType::FederationActivityReplayed       => actix_web::http::StatusCode::CONFLICT,          // 409
           _ => actix_web::http::StatusCode::BAD_REQUEST,
         }
       }
