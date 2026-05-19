@@ -467,6 +467,7 @@ pub(crate) fn rate_per_peer_counts() -> &'static Mutex<HashMap<(String, i64), u3
 }
 
 /// In-memory per-actor hourly rate-limit counters. Key: (subject_url, hour_bucket).
+#[expect(dead_code, reason = "pre-landed federation-inbound enforcement infra; callers wired by Cohort B Tasks 5-7 (impl GovernanceInboundActivity + wrap_governance_inbound call sites), which declare requires: task 4 per plan §13")]
 pub(crate) fn rate_per_actor_counts() -> &'static Mutex<HashMap<(String, i64), u32>> {
   static CELL: OnceLock<Mutex<HashMap<(String, i64), u32>>> = OnceLock::new();
   CELL.get_or_init(|| Mutex::new(HashMap::new()))
@@ -481,6 +482,7 @@ pub(crate) fn current_hour_bucket() -> i64 {
 ///
 /// Called from each `Activity::receive` impl (Tasks 5-7) so the gate
 /// sequence is identical across all governance activity types.
+#[expect(dead_code, reason = "pre-landed federation-inbound enforcement infra; callers wired by Cohort B Tasks 5-7 (impl GovernanceInboundActivity + wrap_governance_inbound call sites), which declare requires: task 4 per plan §13")]
 pub(crate) async fn wrap_governance_inbound<F, Fut, A>(
   activity: A,
   context: &Data<LemmyContext>,
@@ -543,7 +545,7 @@ where
   let exceeded_peer = {
     let mut counts = rate_per_peer_counts()
       .lock()
-      .unwrap_or_else(|e| e.into_inner());
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
     counts.retain(|(_, b), _| *b >= bucket - 1);
     let entry = counts.entry((peer_domain.clone(), bucket)).or_insert(0);
     *entry = entry.saturating_add(1);
