@@ -1,33 +1,5 @@
 # Plan: v1-federation-inbound-b — HTTP-path wrapper + enforcement + Phase-6 fixture update + handler e2e
 
-> **DELIVERY NOTE (planner — 2026-05-19):** this file is the plan
-> deliverable. The canonical target path
-> `.claude/PRPs/plans/v1-federation-inbound-b.plan.md` is blocked for
-> Junior worker writes by Claude Code's built-in sensitive-file
-> protection (every `.claude/**` path triggers the prompt regardless
-> of `settings.json` `permissions.allow`). The advisor laptop session
-> (which has full Write authority) MUST move this file to its canonical
-> path BEFORE plan approval:
->
-> ```
-> git mv PLAN_DELIVERABLE.md .claude/PRPs/plans/v1-federation-inbound-b.plan.md
-> ```
->
-> The plan body is unchanged — only the path changes on `mv`. Same
-> harness gap that fed-in-a's planner hit (see fed-in-a plan §
-> "DELIVERY NOTE" + the v1-federation-inbound-a.plan.md commit
-> history). The advisor's existing DQ #235 (harness gap on Junior
-> `.claude/**` writes) tracks the fix; no new DQ filed here.
->
-> **Planner DQs (#276 split-or-proceed; #277 rate-limit storage; #278
-> trait-impl placement) are ALSO blocked** — Junior workers cannot
-> write to `.claude/decision-queue.json` either, despite the path
-> being explicitly whitelisted in `settings.json`. The DQ pending +
-> resolved entries are described in §5.2 + §19 of THIS plan; the
-> advisor must transcribe them to `.claude/decision-queue.json`
-> directly when moving this file. Suggested wire shape provided in
-> §19.1 / §19.2 below.
-
 ## 1. Summary
 
 v1-federation-inbound-b ships the **HTTP-path enforcement layer** of the
