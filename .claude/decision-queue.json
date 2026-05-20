@@ -1,39 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 297,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-20T17:00:13Z",
-      "question": "Plan brehon-conformance-audit Cohort 2 has circular requires: (Task 6 requires Tasks 4 + 5, both in same cohort). Per advisor-orchestrator.md §4.1 step 4a: cohort refused. How to resolve?",
-      "options": [
-        "planner-revise-cohort-line",
-        "advisor-splits-into-2a-2b-without-plan-edit",
-        "bundle-tasks-4-5-6-into-single-junior-task"
-      ],
-      "context": "Plan §13 (line 693) declares: Cohort 2 (parallel [P]): Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML (line ~1078) requires: [4, 5]. Tasks 4 + 5 are both in Cohort 2 with [P] markers and are NOT yet on phase-brehon-conformance-audit. Per feedback_cohort_validation_dependency_check.md and v1-RT-r1 halt-retro precedent (commit ffa2876e3), circular requires within a cohort is a structural error. Advisor cannot dispatch this cohort. User decision 2026-05-20: catch-fire + plan revision (option chosen via AskUserQuestion). Recommended path: queue planning Junior task to revise plan §13 Cohort 2 line + Task 6 placement (either move Task 6 out of [P] to a new Cohort 2.5 serial step, or bundle 4+5+6 into one task). Cohort 1 (Task 1) is complete + validated; no rework needed there.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 298,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-20T17:07:24Z",
-      "question": "Planning Junior task [role:planning] brehon-conformance-audit re-plan Cohort 2 split cannot Edit .claude/PRPs/plans/brehon-conformance-audit.plan.md — Edit tool denied four times with 'sensitive file'. Junior-worker .claude/settings.json allow-list (broadened in 725984c84) covers .claude/{skills,lessons,rules,PRPs/audit-metrics,PRPs/reports,PRPs/briefs}/** but explicitly OMITS .claude/PRPs/plans/**. Brief planning-2.md §2 authorizes editing this single file (sole deliverable). How to proceed?",
-      "options": [
-        "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task",
-        "advisor-authors-the-three-edits-from-canonical-checkout-and-commits-on-phase-branch-bypassing-planner-Junior",
-        "advisor-cherry-picks-a-prepared-patch-onto-phase-branch-from-this-worker-branch"
-      ],
-      "context": "Task: '[role:planning] brehon-conformance-audit re-plan Cohort 2 split'. Brief .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md §2 Scope: 'Edit one file only: .claude/PRPs/plans/brehon-conformance-audit.plan.md.' Four consecutive Edit attempts on the plan file ALL denied: 'Claude requested permissions to edit ... which is a sensitive file.' Per circuit-breaker.md (max 2 retries, then stop) and no-destructive-defaults.md (\"fix the underlying issue rather than bypassing\"): NOT bypassing via Bash+python/sed for the plan file (plans/** is NOT on settings.json allowlist, so bypass would be unauthorized writes). Settings.json allow[] grepped: Edit/Write for runlog, PRPs/reviews, decision-queue.json, skills, lessons, rules, PRPs/audit-metrics, PRPs/reports, PRPs/briefs. NO entry covers .claude/PRPs/plans/**. (Aside: even .claude/decision-queue.json Edit was denied by same 'sensitive file' prompt despite being on allowlist; this entry filed via Bash+python3, which IS allowed and is the canonical fallback path per .claude/refs/dq-recipes.md when interactive Edit gates fail.) Planned edits ready for advisor (record verbatim so advisor can re-apply in option (b) or (c) without re-reading brief): (1) plan §13 cohort blockquote lines 691-697 — replace with new 7-cohort blockquote splitting Task 6 into new Cohort 2.5, updating Cohort 3 dep 'Cohort 2' → 'Cohort 2.5', preamble adds '+ requires:'; (2) plan §13 line 1073: '### Task 6 [P]: CREATE' → '### Task 6: CREATE' (drop [P]); (3) plan §16a line 1701: 'Tasks 2-6 are [P] per Cohort 2.' → 'Tasks 2-5 are [P] per Cohort 2; Task 6 is serial per Cohort 2.5.' Task 6 FILES YAML requires: [4, 5] STAYS unchanged. No other §13 task body content changes. §5 has no cohort-count reference (verified by grep — the brief's contingency §5 edit doesn't fire). Planner-lean: option (a) — narrow allow-list broadening + re-dispatch keeps the four-role contract intact (planning Junior writes plan files); commit subject 'chore(settings): broaden Junior-worker write permissions to .claude/PRPs/plans/** for planning role'. Option (b) breaks four-role discipline (advisor authoring content); option (c) requires the worker to have stage-able patches, which it doesn't have yet (Edits never landed). DQ #297 (advisor) remains pending until this resolves; both should resolve in one user cycle. Per decision-queue.md \"Mid-task visibility\": this entry committed + pushed immediately to junior worker branch.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1695,6 +1662,38 @@
       "answer": "cargo-check --workspace --features full passed (6m 39s, exit 0). Workspace builds cleanly on phase tip 217534a7d. SKILL.md skeleton is meta-tooling only (no Rust changed); compile is a no-op invariant check confirming no accidental breakage of trunk. Log: .claude/PRPs/debug/brehon-conformance-audit-task1-check.log",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-20T16:56:29Z"
+    },
+    {
+      "id": 297,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-20T17:00:13Z",
+      "question": "Plan brehon-conformance-audit Cohort 2 has circular requires: (Task 6 requires Tasks 4 + 5, both in same cohort). Per advisor-orchestrator.md §4.1 step 4a: cohort refused. How to resolve?",
+      "options": [
+        "planner-revise-cohort-line",
+        "advisor-splits-into-2a-2b-without-plan-edit",
+        "bundle-tasks-4-5-6-into-single-junior-task"
+      ],
+      "context": "Plan §13 (line 693) declares: Cohort 2 (parallel [P]): Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML (line ~1078) requires: [4, 5]. Tasks 4 + 5 are both in Cohort 2 with [P] markers and are NOT yet on phase-brehon-conformance-audit. Per feedback_cohort_validation_dependency_check.md and v1-RT-r1 halt-retro precedent (commit ffa2876e3), circular requires within a cohort is a structural error. Advisor cannot dispatch this cohort. User decision 2026-05-20: catch-fire + plan revision (option chosen via AskUserQuestion). Recommended path: queue planning Junior task to revise plan §13 Cohort 2 line + Task 6 placement (either move Task 6 out of [P] to a new Cohort 2.5 serial step, or bundle 4+5+6 into one task). Cohort 1 (Task 1) is complete + validated; no rework needed there.",
+      "answer": "planner-revise-cohort-line. User decision 2026-05-20 (AskUserQuestion): Catch-fire + plan revision (Fix A: split into Cohort 2 + 2.5). Brief authored at .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md (commit 8a38e07b7). Planning Junior #357 hit DQ #298 (CC sensitive-file gate on Edit for .claude/PRPs/plans/**); resolution chained via #298.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-20T17:40:11Z"
+    },
+    {
+      "id": 298,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-20T17:07:24Z",
+      "question": "Planning Junior task [role:planning] brehon-conformance-audit re-plan Cohort 2 split cannot Edit .claude/PRPs/plans/brehon-conformance-audit.plan.md — Edit tool denied four times with 'sensitive file'. Junior-worker .claude/settings.json allow-list (broadened in 725984c84) covers .claude/{skills,lessons,rules,PRPs/audit-metrics,PRPs/reports,PRPs/briefs}/** but explicitly OMITS .claude/PRPs/plans/**. Brief planning-2.md §2 authorizes editing this single file (sole deliverable). How to proceed?",
+      "options": [
+        "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task",
+        "advisor-authors-the-three-edits-from-canonical-checkout-and-commits-on-phase-branch-bypassing-planner-Junior",
+        "advisor-cherry-picks-a-prepared-patch-onto-phase-branch-from-this-worker-branch"
+      ],
+      "context": "Task: '[role:planning] brehon-conformance-audit re-plan Cohort 2 split'. Brief .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md §2 Scope: 'Edit one file only: .claude/PRPs/plans/brehon-conformance-audit.plan.md.' Four consecutive Edit attempts on the plan file ALL denied: 'Claude requested permissions to edit ... which is a sensitive file.' Per circuit-breaker.md (max 2 retries, then stop) and no-destructive-defaults.md (\"fix the underlying issue rather than bypassing\"): NOT bypassing via Bash+python/sed for the plan file (plans/** is NOT on settings.json allowlist, so bypass would be unauthorized writes). Settings.json allow[] grepped: Edit/Write for runlog, PRPs/reviews, decision-queue.json, skills, lessons, rules, PRPs/audit-metrics, PRPs/reports, PRPs/briefs. NO entry covers .claude/PRPs/plans/**. (Aside: even .claude/decision-queue.json Edit was denied by same 'sensitive file' prompt despite being on allowlist; this entry filed via Bash+python3, which IS allowed and is the canonical fallback path per .claude/refs/dq-recipes.md when interactive Edit gates fail.) Planned edits ready for advisor (record verbatim so advisor can re-apply in option (b) or (c) without re-reading brief): (1) plan §13 cohort blockquote lines 691-697 — replace with new 7-cohort blockquote splitting Task 6 into new Cohort 2.5, updating Cohort 3 dep 'Cohort 2' → 'Cohort 2.5', preamble adds '+ requires:'; (2) plan §13 line 1073: '### Task 6 [P]: CREATE' → '### Task 6: CREATE' (drop [P]); (3) plan §16a line 1701: 'Tasks 2-6 are [P] per Cohort 2.' → 'Tasks 2-5 are [P] per Cohort 2; Task 6 is serial per Cohort 2.5.' Task 6 FILES YAML requires: [4, 5] STAYS unchanged. No other §13 task body content changes. §5 has no cohort-count reference (verified by grep — the brief's contingency §5 edit doesn't fire). Planner-lean: option (a) — narrow allow-list broadening + re-dispatch keeps the four-role contract intact (planning Junior writes plan files); commit subject 'chore(settings): broaden Junior-worker write permissions to .claude/PRPs/plans/** for planning role'. Option (b) breaks four-role discipline (advisor authoring content); option (c) requires the worker to have stage-able patches, which it doesn't have yet (Edits never landed). DQ #297 (advisor) remains pending until this resolves; both should resolve in one user cycle. Per decision-queue.md \"Mid-task visibility\": this entry committed + pushed immediately to junior worker branch.",
+      "answer": "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task. User explicitly authorized 2026-05-20 via terminal-typed prompt: \"Authorize broadening .claude/settings.json to add Edit/Write for .claude/PRPs/plans/** — planning Junior needs this\". Advisor edited .claude/settings.json allow[] adding Edit(.claude/PRPs/plans/**) + Write(.claude/PRPs/plans/**). Re-dispatching the planning Junior task with same brief (planning-2.md). Defence-in-depth for plan integrity now lives in agent-def tools[] + retro audit (not CC permission gate). Carries forward observation: §19.5 of plan covered Write/Bash workaround but not Edit; future planner briefs should reference this resolution if same gate fires.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-20T17:40:11Z"
     }
   ]
 }

@@ -21,7 +21,9 @@
       "Edit(.claude/PRPs/reports/**)",
       "Write(.claude/PRPs/reports/**)",
       "Edit(.claude/PRPs/briefs/**)",
-      "Write(.claude/PRPs/briefs/**)"
+      "Write(.claude/PRPs/briefs/**)",
+      "Edit(.claude/PRPs/plans/**)",
+      "Write(.claude/PRPs/plans/**)"
     ]
   },
   "hooks": {
