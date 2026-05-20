@@ -54,6 +54,21 @@
       "answer": null,
       "answered_by": null,
       "resolved_at": null
+    },
+    {
+      "id": 303,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-20T18:06:48Z",
+      "question": "How should the 6 existing Option::unwrap_or_default violations in lemmy_utils be remediated so clippy.toml can be committed without breaking the workspace build?",
+      "options": [
+        "option-a: Insert a narrow fix-impl task before Task 9 to replace the 6 Option::unwrap_or_default() calls in crates/utils with semantically equivalent alternatives (unwrap_or(\"\"), unwrap_or(0), or pattern-match) that do not trigger the disallowed-methods lint",
+        "option-b: Add [lints.clippy] disallowed-methods = { level = \"allow\", priority = 1 } to crates/utils/Cargo.toml to exempt lemmy_utils from workspace-wide lint escalation (because workspace style = deny implies disallowed-methods = deny, defeating the planned per-module scoping)"
+      ],
+      "context": "Task 8 created clippy.toml with disallowed-methods entries and ran the probe. clippy.toml TOML syntax parsed after fixing plan \u00a710.8's multi-line inline table (TOML 1.0 incompatible). Probe exit 101: 6 violations of core::option::Option::unwrap_or_default in lemmy_utils \u2014 image_links.rs:53, image_links.rs:105, image_links.rs:113, link_rule.rs:50, validation.rs:309, validation.rs:329. Root cause: workspace.lints.clippy style={level=deny,priority=-1} already implies disallowed-methods=deny workspace-wide; plan GOTCHA assumed Task 9 per-module #![deny()] would be needed to escalate \u2014 that is incorrect for this workspace. clippy.toml was NOT committed per constraint #5.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
