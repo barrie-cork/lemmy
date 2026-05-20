@@ -5240,6 +5240,32 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // value from step 7. Activity::verify (which `verify_is_public`-checks
   // the `to`/`cc` fields) is a separate trait method; we call it
   // explicitly to mirror the framework's normal receive pipeline.
+  // v1-federation-inbound-b: Allowlist the test peer so the wrapper's
+  // peer-trust gate (Task 4) admits the activity. PRD §5.4 designed
+  // breakage — fixture-only, no `_unchecked` variant per PRD §5.4 +
+  // §11.4.
+  {
+    use lemmy_db_schema::source::governance::federation_peer::FederationPeerInsertForm;
+    use lemmy_db_schema_file::enums::FederationPeerTrust;
+    use lemmy_db_schema_file::schema::federation_peer;
+    // Phase-6 fixture creates instance-a.test only on url_a's context_a.pool().
+    // For the federation_peer.instance_id FK on url_b, we need an instance-a.test
+    // row on url_b too — Instance::read_or_create is idempotent (returns existing
+    // row if present, else inserts and returns it). Mirrors the _instance_b
+    // pattern above at line ~5225.
+    let instance_a_on_b = Instance::read_or_create(&mut context_b.pool(), "instance-a.test").await?;
+    let mut async_conn_b_fixture = AsyncPgConnection::establish(&url_b).await?;
+    let form = FederationPeerInsertForm {
+      instance_id: instance_a_on_b.id,
+      trust_level: Some(FederationPeerTrust::Allowlisted),
+      added_by_actor: None,
+      notes: None,
+    };
+    diesel::insert_into(federation_peer::table)
+      .values(&form)
+      .execute(&mut async_conn_b_fixture)
+      .await?;
+  }
   ActivityTrait::verify(&activity, &federation_context_b).await.map_err(|e| anyhow::anyhow!("{e}"))?;
   ActivityTrait::receive(activity, &federation_context_b).await.map_err(|e| anyhow::anyhow!("{e}"))?;
 
@@ -15479,4 +15505,269 @@ async fn admin_audit_html_forbidden_for_non_admin()
   );
 
   Ok(())
+}
+
+mod v1_federation_inbound_b_fixtures {
+  use super::*;
+  use activitypub_federation::traits::Activity as ActivityTrait;
+  use actix_web::error::ResponseError;
+  use actix_web::http::StatusCode;
+  use activitypub_federation::config::FederationConfig;
+  use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::context::LemmyContext;
+  use lemmy_apub_activities::protocol::governance::publish_label::PublishLabel;
+  use lemmy_apub_activities::protocol::governance::publish_sanction_notice::PublishSanctionNotice;
+  use lemmy_db_schema::source::governance::{
+    federation_inbox_nonce::FederationInboxNonceInsertForm,
+    federation_peer::FederationPeerInsertForm,
+    remote_moderation_label::RemoteModerationLabel,
+    remote_sanction_notice::RemoteSanctionNotice,
+  };
+  use lemmy_db_schema_file::enums::FederationPeerTrust;
+  use lemmy_db_schema_file::schema::{
+    federation_inbox_dropped_log,
+    federation_inbox_nonce,
+    federation_peer,
+    governance_log,
+    instance,
+    remote_moderation_label,
+    remote_sanction_notice,
+  };
+  use lemmy_db_schema_file::InstanceId;
+  use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};
+  use testcontainers::{ContainerAsync, GenericImage};
+
+  async fn bootstrap_with_peer(
+    domain: &str,
+    trust: Option<FederationPeerTrust>,
+  ) -> LemmyResult<(ContainerAsync<GenericImage>, FederationConfig<LemmyContext>, String, InstanceId)> {
+    let (container, actix_context, db_url) = governance_fixtures::bootstrap().await?;
+    let federation_config = FederationConfig::builder()
+      .domain((**actix_context).settings().hostname.clone())
+      .app_data((**actix_context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let peer_instance_id: i32 = diesel::insert_into(instance::table)
+      .values((
+        instance::domain.eq(domain),
+        instance::published_at.eq(diesel::dsl::now),
+      ))
+      .returning(instance::id)
+      .get_result(&mut conn)
+      .await?;
+    if let Some(t) = trust {
+      let form = FederationPeerInsertForm {
+        instance_id: InstanceId(peer_instance_id),
+        trust_level: Some(t),
+        added_by_actor: None,
+        notes: None,
+      };
+      diesel::insert_into(federation_peer::table)
+        .values(&form)
+        .execute(&mut conn)
+        .await?;
+    }
+    Ok((container, federation_config, db_url, InstanceId(peer_instance_id)))
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn blocklisted_peer_returns_403() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("blocked.test", Some(FederationPeerTrust::Blocklisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let activity = build_minimal_sanction_notice_activity("blocked.test")?;
+    let result = ActivityTrait::receive(activity, &context).await;
+    assert!(result.is_err(), "wrapper must reject Blocklisted peer");
+    let err: LemmyError = result.err().unwrap();
+    assert!(matches!(err.error_type, LemmyErrorType::FederationPeerBlocklisted));
+    assert_eq!(err.status_code(), StatusCode::FORBIDDEN);
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let drop_rows: i64 = federation_inbox_dropped_log::table
+      .filter(federation_inbox_dropped_log::source_instance.eq("blocked.test"))
+      .filter(federation_inbox_dropped_log::drop_reason.eq("blocklisted"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(drop_rows, 1);
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn per_peer_rate_limit_returns_429() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("rate-test.test", Some(FederationPeerTrust::Allowlisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // governance_config is append-history with UNIQUE on (scope, key, valid_from)
+    // — NOT on (scope, key). The migration 2026-05-17 already seeded this key
+    // with value_int=100; raw INSERT would create a second row and the reader
+    // (get_inbound_config_int) returns an arbitrary one. UPDATE mutates the
+    // existing seed row in place. See migration 2026-04-18 comment "Do NOT use
+    // (scope, key) as the conflict target" for the schema invariant.
+    diesel::sql_query(
+      "UPDATE governance_config SET value_int = 2 \
+       WHERE scope = 'instance' AND key = 'federation.inbound.per_peer_rate_per_hour'",
+    )
+    .execute(&mut conn)
+    .await?;
+    for i in 0..2 {
+      let activity = build_unique_sanction_notice_activity("rate-test.test", i)?;
+      ActivityTrait::receive(activity, &context).await?;
+    }
+    let activity3 = build_unique_sanction_notice_activity("rate-test.test", 2)?;
+    let result = ActivityTrait::receive(activity3, &context).await;
+    assert!(result.is_err());
+    let err = result.err().unwrap();
+    assert!(matches!(err.error_type, LemmyErrorType::FederationPeerRateLimitExceeded));
+    assert_eq!(err.status_code(), StatusCode::TOO_MANY_REQUESTS);
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn replayed_activity_returns_409() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("replay-test.test", Some(FederationPeerTrust::Allowlisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let nonce_form = FederationInboxNonceInsertForm {
+      peer_instance: "replay-test.test".to_string(),
+      activity_id: "https://replay-test.test/activities/create/1".to_string(),
+    };
+    diesel::insert_into(federation_inbox_nonce::table)
+      .values(&nonce_form)
+      .execute(&mut conn)
+      .await?;
+    let activity = build_sanction_notice_with_id(
+      "replay-test.test",
+      "https://replay-test.test/activities/create/1",
+    )?;
+    let result = ActivityTrait::receive(activity, &context).await;
+    assert!(result.is_err());
+    let err = result.err().unwrap();
+    assert!(matches!(err.error_type, LemmyErrorType::FederationActivityReplayed));
+    assert_eq!(err.status_code(), StatusCode::CONFLICT);
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn allowlisted_happy_path_persists_advisory_row() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("happy.test", Some(FederationPeerTrust::Allowlisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let activity = build_minimal_sanction_notice_activity("happy.test")?;
+    ActivityTrait::receive(activity, &context).await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let rows: i64 = remote_sanction_notice::table
+      .filter(remote_sanction_notice::source_instance.eq("happy.test"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rows, 1);
+    let advisory: RemoteSanctionNotice = remote_sanction_notice::table
+      .filter(remote_sanction_notice::source_instance.eq("happy.test"))
+      .select(RemoteSanctionNotice::as_select())
+      .first(&mut conn)
+      .await?;
+    assert!(advisory.local_case_id.is_none(), "ADR-006: local_case_id MUST be NULL");
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn moderation_label_handler_persists_and_logs() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("label.test", Some(FederationPeerTrust::Allowlisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let activity = build_minimal_publish_label_activity("label.test")?;
+    ActivityTrait::receive(activity, &context).await?;
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    let rows: i64 = remote_moderation_label::table
+      .filter(remote_moderation_label::source_instance.eq("label.test"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(rows, 1);
+    let label_row: RemoteModerationLabel = remote_moderation_label::table
+      .filter(remote_moderation_label::source_instance.eq("label.test"))
+      .select(RemoteModerationLabel::as_select())
+      .first(&mut conn)
+      .await?;
+    assert!(label_row.local_case_id.is_none(), "ADR-006: local_case_id MUST be NULL");
+    let log_count: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("federation_label_received"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(log_count, 1);
+    Ok(())
+  }
+
+  fn build_minimal_sanction_notice_activity(peer_domain: &str) -> LemmyResult<PublishSanctionNotice> {
+    build_unique_sanction_notice_activity(peer_domain, 0)
+  }
+
+  fn build_unique_sanction_notice_activity(
+    peer_domain: &str,
+    seq: u32,
+  ) -> LemmyResult<PublishSanctionNotice> {
+    build_sanction_notice_with_id(
+      peer_domain,
+      &format!("https://{peer_domain}/activities/create/{seq}"),
+    )
+  }
+
+  fn build_sanction_notice_with_id(
+    peer_domain: &str,
+    activity_id: &str,
+  ) -> LemmyResult<PublishSanctionNotice> {
+    let actor_url = format!("https://{peer_domain}/u/admin");
+    let object_id = format!("https://{peer_domain}/objects/sanction/1");
+    let target_url = format!("https://{peer_domain}/u/target");
+    let val = serde_json::json!({
+      "type": "Create",
+      "actor": actor_url,
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": [],
+      "id": activity_id,
+      "object": {
+        "type": "SanctionNotice",
+        "id": object_id,
+        "actor": actor_url,
+        "target": target_url,
+        "action": "federation_quarantine_recommendation",
+        "scope": "federated_recommendation",
+        "summary": "test sanction notice",
+        "published": "2024-01-01T00:00:00Z"
+      }
+    });
+    let activity: PublishSanctionNotice = serde_json::from_value(val)?;
+    Ok(activity)
+  }
+
+  fn build_minimal_publish_label_activity(peer_domain: &str) -> LemmyResult<PublishLabel> {
+    let actor_url = format!("https://{peer_domain}/u/admin");
+    let object_id = format!("https://{peer_domain}/objects/label/1");
+    let target_url = format!("https://{peer_domain}/u/target");
+    let activity_url = format!("https://{peer_domain}/activities/create/1");
+    let val = serde_json::json!({
+      "type": "Create",
+      "actor": actor_url,
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": [],
+      "id": activity_url,
+      "object": {
+        "type": "ModerationLabel",
+        "id": object_id,
+        "actor": actor_url,
+        "target": target_url,
+        "label": "context-warning",
+        "published": "2024-01-01T00:00:00Z"
+      }
+    });
+    let activity: PublishLabel = serde_json::from_value(val)?;
+    Ok(activity)
+  }
 }

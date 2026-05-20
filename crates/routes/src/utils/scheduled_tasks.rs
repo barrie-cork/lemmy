@@ -104,6 +104,19 @@ impl Drop for GraceCheckRunningGuard {
   }
 }
 
+// Concurrency guard for the Brehon federation-inbox-nonce replay-cleanup
+// cron tick. Mirrors APPEAL_WINDOW_EXPIRY_RUNNING /
+// SPONSOR_LIABILITY_GRACE_RUNNING.
+static FED_REPLAY_CLEANUP_RUNNING: AtomicBool = AtomicBool::new(false);
+
+struct FedReplayCleanupRunningGuard;
+
+impl Drop for FedReplayCleanupRunningGuard {
+  fn drop(&mut self) {
+    FED_REPLAY_CLEANUP_RUNNING.store(false, Ordering::Release);
+  }
+}
+
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // https://github.com/mdsherry/clokwerk/issues/38
@@ -378,6 +391,80 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
       }
     }
   });
+
+  // v1-federation-inbound-b: replay-cleanup cron tick. Delete
+  // federation_inbox_nonce rows older than
+  // `federation.inbound.replay_window_days` (default 7); interval read
+  // from `federation.inbound.replay_cleanup_cron_interval_minutes`
+  // (default 60).
+  //
+  // Disabled in tests via BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB=1.
+  let context_fed_replay = context.reset_request_count();
+  let fed_replay_pool = &mut context.pool();
+  let fed_replay_interval_minutes_i64: i64 = lemmy_api::governance::config::get_int(
+    &mut lemmy_api::governance::config::ConfigCache::new(),
+    fed_replay_pool,
+    lemmy_api::governance::config::Scope::Instance,
+    "federation.inbound.replay_cleanup_cron_interval_minutes",
+  )
+  .await
+  .unwrap_or(60);
+  let fed_replay_interval_minutes: u32 =
+    u32::try_from(fed_replay_interval_minutes_i64).unwrap_or(60);
+  scheduler
+    .every(CTimeUnits::minutes(fed_replay_interval_minutes))
+    .run(move || {
+      let context = context_fed_replay.reset_request_count();
+      async move {
+        if std::env::var("BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB").as_deref() == Ok("1") {
+          return;
+        }
+        if FED_REPLAY_CLEANUP_RUNNING
+          .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+          .is_err()
+        {
+          warn!("federation_inbox_nonce_cleanup: previous batch still running, skipping this tick");
+          return;
+        }
+        let _guard = FedReplayCleanupRunningGuard;
+        let pool = &mut context.pool();
+        let mut cache = lemmy_api::governance::config::ConfigCache::new();
+        let raw_window_days_i64 = lemmy_api::governance::config::get_int(
+          &mut cache,
+          pool,
+          lemmy_api::governance::config::Scope::Instance,
+          "federation.inbound.replay_window_days",
+        )
+        .await
+        .unwrap_or(7);
+        let window_days_i64 = raw_window_days_i64.max(1);
+        if raw_window_days_i64 < 1 {
+          warn!(
+            "federation_inbox_nonce cleanup: invalid replay_window_days={raw_window_days_i64}; clamped to 1"
+          );
+        }
+        let conn_pool = &mut context.pool();
+        let conn_result = lemmy_diesel_utils::connection::get_conn(conn_pool).await;
+        match conn_result {
+          Ok(mut conn) => {
+            let deleted =
+              lemmy_db_schema::source::governance::federation_inbox_nonce::delete_older_than(
+                window_days_i64,
+                &mut conn,
+              )
+              .await
+              .inspect_err(|e| warn!("Failed federation_inbox_nonce cleanup: {e}"))
+              .unwrap_or(0);
+            if deleted > 0 {
+              info!(
+                "federation_inbox_nonce cleanup: deleted {deleted} rows older than {window_days_i64} days"
+              );
+            }
+          }
+          Err(e) => warn!("federation_inbox_nonce cleanup: get_conn failed: {e}"),
+        }
+      }
+    });
 
   // Manually run the scheduler in an event loop
   loop {

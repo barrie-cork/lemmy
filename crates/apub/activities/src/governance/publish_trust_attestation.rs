@@ -10,20 +10,20 @@ use activitypub_federation::{
   traits::{Activity, Object},
 };
 use chrono::{DateTime, Utc};
-use diesel_async::AsyncPgConnection;
+use diesel::{ExpressionMethods, QueryDsl};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::{
   objects::person::ApubPerson,
   protocol::governance::trust_attestation::TrustAttestationProtocol,
   utils::functions::{GetActorType, verify_is_public},
 };
-use lemmy_db_schema::source::activity::{
-  ActivitySendTargets,
-  SentActivity,
-  SentActivityForm,
+use lemmy_db_schema::source::{
+  activity::{ActivitySendTargets, SentActivity, SentActivityForm},
+  governance::governance_log::ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR,
 };
-use lemmy_db_schema_file::{PersonId, enums::{ActorType, AttestationType}};
-use lemmy_diesel_utils::{connection::DbPool, dburl::DbUrl};
+use lemmy_db_schema_file::{PersonId, enums::{ActorType, AttestationType}, schema::governance_config};
+use lemmy_diesel_utils::{connection::{DbPool, get_conn}, dburl::DbUrl};
 use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};
 use serde_json::{Map, Value, json};
 use tracing::info;
@@ -84,12 +84,105 @@ impl Activity for PublishTrustAttestation {
   }
 
   async fn receive(self, context: &Data<Self::DataType>) -> LemmyResult<()> {
-    // Wired by Agent E (plan task 75) to
-    // `crate::governance::inbox::receive_remote_trust_attestation`. See
-    // `crate::governance::inbox` module doc for the dep-graph rationale
-    // that puts the inbox here in `lemmy_apub_activities` rather than
-    // `lemmy_apub` (DQ-6.6-inbound).
-    crate::governance::inbox::receive_remote_trust_attestation(self, context).await
+    crate::governance::inbox::wrap_governance_inbound(self, context, |a, c| async move {
+      crate::governance::inbox::receive_remote_trust_attestation(a, c).await
+    })
+    .await
+  }
+}
+
+// v1-federation-inbound-b Task 6 — GovernanceInboundActivity impl
+// ---------------------------------------------------------------------------
+
+#[async_trait::async_trait]
+impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttestation {
+  fn activity_id(&self) -> &Url {
+    &self.id
+  }
+  fn actor_domain(&self) -> LemmyResult<String> {
+    self.actor.inner().domain()
+      .map(str::to_string)
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown(
+          format!("PublishTrustAttestation actor {} has no domain", self.actor.inner())
+        )
+        .into()
+      })
+  }
+  fn payload_size_bytes(&self) -> LemmyResult<usize> {
+    Ok(serde_json::to_vec(self)?.len())
+  }
+  fn payload_size_cap_key(&self) -> &'static str {
+    "federation.inbound.max_payload_bytes_trust_attestation"
+  }
+  async fn check_per_actor_rate_limit(
+    &self,
+    context: &Data<LemmyContext>,
+  ) -> LemmyResult<()> {
+    const CONFIG_KEY: &str = "federation.inbound.per_actor_attestation_rate_per_hour";
+    // Extract the attested subject URL from the untyped object stub. The
+    // `subject` field is carried in `rest` because TrustAttestationObjectStub
+    // uses a catch-all map for non-first-class fields.
+    let subject_url = self
+      .object
+      .rest
+      .get("subject")
+      .and_then(serde_json::Value::as_str)
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown("TrustAttestation object missing subject field".into())
+      })?;
+
+    // Read the per-actor rate cap. Mirrors the `get_inbound_config_int`
+    // helper in inbox.rs (private there; duplicated here to avoid requiring a
+    // pub(crate) expansion of inbox.rs internals — the same circular-dep
+    // constraint that caused inbox.rs to define the helper locally).
+    let actor_cap: i64 = {
+      let pool = &mut context.pool();
+      let conn = &mut get_conn(pool).await?;
+      let val: Option<i64> = governance_config::table
+        .filter(governance_config::scope.eq("instance"))
+        .filter(governance_config::key.eq(CONFIG_KEY))
+        .select(governance_config::value_int)
+        .first::<Option<i64>>(conn)
+        .await
+        .map_err(|_e| {
+          LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} not seeded"))
+        })?;
+      val.ok_or_else(|| LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} has null value_int")))?
+    };
+
+    // Increment the per-actor counter. Key structure mirrors the per-peer
+    // counter in §10.4 wrapper step 4: (subject_url_string, hour_bucket).
+    let bucket = crate::governance::inbox::current_hour_bucket();
+    let exceeded_actor = {
+      let mut counts = crate::governance::inbox::rate_per_actor_counts()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+      // Opportunistic prune: drop buckets older than the previous hour.
+      counts.retain(|(_, b), _| *b >= bucket - 1);
+      let entry = counts.entry((subject_url.to_string(), bucket)).or_insert(0);
+      *entry = entry.saturating_add(1);
+      i64::from(*entry) > actor_cap
+    };
+
+    if exceeded_actor {
+      let peer_domain = self.actor_domain()?;
+      let activity_id_str = self.id.to_string();
+      let pool = &mut context.pool();
+      let conn = &mut get_conn(pool).await?;
+      crate::governance::inbox::log_inbox_drop(
+        &peer_domain,
+        Some(activity_id_str.as_str()),
+        "rate_limit_actor",
+        None,
+        ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR,
+        conn,
+      )
+      .await?;
+      return Err(LemmyErrorType::FederationActorRateLimitExceeded.into());
+    }
+
+    Ok(())
   }
 }
 
