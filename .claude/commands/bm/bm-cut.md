@@ -49,8 +49,21 @@ upstream tracking). Auto, no prompt (local-only action per
 | `v1-AD-e --plan` | `plan/v1-AD-e` | plan |
 | `v1-AD-e --chore lint-cleanup` | `chore/lint-cleanup` | chore |
 
-If the branch name doesn't match `^phase-v\d+-[A-Z]+-[a-z]$` (phase),
-`^plan/v\d+-[A-Z]+-[a-z]$` (plan), or `^chore/[a-z0-9-]+$` (chore),
+Valid name patterns (broadened 2026-05-20 to match production usage —
+`phase-v1-federation-inbound-b`, `phase-v1-rep-tuning-r1`, and
+`phase-brehon-conformance-audit` all break the historical narrow regex):
+
+- **Phase branch:** `^phase-[a-z0-9][a-z0-9-]*$`
+  - Examples: `phase-v1-SL-c-2`, `phase-v1-federation-inbound-b`,
+    `phase-v1-rep-tuning-r1`, `phase-brehon-conformance-audit`,
+    `phase-v1-AD-e`.
+  - Convention: `phase-v<N>-<area>-<letter>` for V1 sub-phases;
+    `phase-<slug>` for meta-tooling (audit / harness / cross-cutting).
+- **Plan branch:** `^plan/[a-z0-9][a-z0-9-]*$` (mirrors phase shape).
+- **Chore branch:** `^chore/[a-z0-9][a-z0-9-]*$` (one-shot meta-work
+  that direct-commits to trunk per `phase-branch.md`).
+
+If the branch name doesn't match one of the three patterns above,
 **STOP** and ask the user to clarify the intended name.
 
 ---
