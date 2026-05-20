@@ -1567,6 +1567,68 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "id": 291,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T13:44:13Z",
+      "question": "Does clippy.toml at repo root already exist, or does Track B Task 8 ship it as a new file?",
+      "options": [
+        "Extend existing clippy.toml",
+        "Ship as new file at repo root"
+      ],
+      "context": "Brief section-2.1 Track B Task 8 says clippy.toml at repo root or extend if one exists. Verified at HEAD 432fc2679: ls clippy.toml returns MISSING. Track B Task 8 ships clippy.toml as a NEW file with the seed disallowed-methods entries from brief section-0.1.4. Planner adds this as creates: [clippy.toml] in Task 8's FILES YAML (not modifies).",
+      "answer": "Ship as new file at repo root. Verified absent at HEAD 432fc2679 (ls clippy.toml returns MISSING). Track B Task 8's FILES YAML uses creates: [clippy.toml] (NOT modifies). Per brief section-0.1.4 the seed entries are: disallowed-methods for core::option::Option::unwrap_or_default + core::result::Result::unwrap_or_default. The planner refines exact entries against the dogfood (Task 7) per brief section-2.3 #1 lean option (a).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T13:44:13Z"
+    },
+    {
+      "id": 292,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T13:44:13Z",
+      "question": "What is the exact pre-fix-impl-3 SHA for the dogfood (Task 7) snapshot that must flag Finding 6.1 axis-4?",
+      "options": [
+        "Use 649871f7d (immediate parent of fix commit 8b04e69a6)",
+        "Use 8b04e69a6^ symbolically (resolves to 649871f7d, same SHA)"
+      ],
+      "context": "Brief section-0.1.8 + PRECON-8 require the dogfood to run against the snapshot with Finding 6.1 still latent (the .unwrap_or_default footgun on receive_remote_moderation_label). Verified via git log --grep 'Finding 6.1': 8b04e69a6 is the fix commit (fix(v1-federation-inbound-b): receive_remote_moderation_label hard-errors on domainless actor); 4a60667c9 is its finalize-merge. The parent 8b04e69a6^ = 649871f7d which is chore(advisor): author v1-federation-inbound-b fix-impl-3 brief — the brief-author commit, which leaves the federation code with Finding 6.1 still present (the fix lands one commit later). So the pre-fix-impl-3 federation source state is at SHA 649871f7d.",
+      "answer": "Use 649871f7d (resolved via git rev-parse 8b04e69a6^). The brief-author commit 649871f7d leaves receive_remote_moderation_label axis-4 footgun (.unwrap_or_default on .domain) in place; the fix commit 8b04e69a6 is the immediate child. Task 7's brief MUST pin this SHA verbatim in its body so the dogfood is reproducible across worktree reboots / branch deletions. The planner cites git rev-parse 8b04e69a6^ as the resolution method (defensive — SHA is stable in git but the citation makes intent explicit).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T13:44:13Z"
+    },
+    {
+      "id": 293,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T13:44:13Z",
+      "question": "If existing federation code violates a newly-added clippy disallowed-method (e.g. an unwrap_or_default call in crates/apub/activities/src/governance/ that isn't Finding 6.1), what is the remediation policy?",
+      "options": [
+        "Land a separate remediation task BEFORE Track B Task 9 (per-module deny attribute additions)",
+        "Document the violations as known issues; ship deny attribute anyway; remediate in fix-in-PR cycle",
+        "Ship the disallowed-method as a warn not deny until remediation lands"
+      ],
+      "context": "Brief section-4.1 Watchpoint 4 + section-2.4 section-15 commands state: Clippy disallowed_methods deny-attribute lands AFTER any existing-code remediation. If the planner's Task-8 probe surfaces existing federation-code violations, the plan section-13 inserts a remediation task BEFORE Task 9. This is consistent with feedback_clippy_rerun_after_fix.md and feedback_fix_impl_pre_push_cargo_check.md — never ship a state where cargo clippy --workspace -- -D warnings is broken mid-plan. Option 2 leaves the trunk red between Task 8 and Task 9 (unacceptable per pre-push cargo discipline). Option 3 (warn-not-deny) undermines the gate's purpose (axis-4 is the latent-footgun class; warn is silently ignored). Option 1 is the only option consistent with the brief's constraints + Brehon's pre-push discipline.",
+      "answer": "Option 1 — land a separate remediation task BEFORE Track B Task 9. Per brief section-4.1 Watchpoint 4 + feedback_clippy_rerun_after_fix.md + feedback_fix_impl_pre_push_cargo_check.md. Track B Task 8's internal probe (run cargo clippy --workspace --no-deps --features full -- -D warnings with the proposed clippy.toml + a TEMPORARY per-module deny on a single mod.rs as a probe) enumerates any violations. If zero violations: Task 9 lands the per-module deny attributes directly. If any violations: the planner inserts Task 8.5 (remediation, scope = enumerated file:line list from the probe) before Task 9; Task 9's requires: includes Task 8.5. The remediation task itself is [role:impl-task] with the fix recipe = axis-4 canonical (.ok_or_else(LemmyErrorType::*)). Per feedback_fix_impl_enumerate_all_callsites.md callsite-enumeration discipline.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T13:44:13Z"
+    },
+    {
+      "id": 294,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T13:44:13Z",
+      "question": "Does the .gitignore addition for .claude/PRPs/audit-metrics/ need user gate, or is it mechanical with the plan?",
+      "options": [
+        "Mechanical with the plan — Track A Task 4 (metrics schema) creates the directory + adds the .gitignore line atomically",
+        "Separate user-gated step",
+        "Don't add to .gitignore — track metrics files in git for full audit trail"
+      ],
+      "context": "Brief section-2.3 #3 surfaces this. The .gitignore already has .claude/PRPs/reviews/pr-*-findings.yaml (gitignored runtime journal) + .claude/PRPs/debug/*.log patterns — same shape as audit-metrics. Per the 2026-05-20 guidance section-3.2 the metrics file is gitignored runtime journal; the per-sub-phase summary lands IN the retro file (visible in git). Option 3 contradicts the guidance and bloats git history with churn. Option 2 adds a user-gate where there's no judgment call (the gitignore policy is consistent with existing patterns). Option 1 is mechanical with the plan and consistent with prior precedent.",
+      "answer": "Option 1 — mechanical with the plan. Track A Task 4 (metrics schema) creates .claude/PRPs/audit-metrics/.gitkeep (so the directory exists with a placeholder) AND adds .claude/PRPs/audit-metrics/*.json to .gitignore. The .gitkeep is excluded from the gitignore by an explicit !.claude/PRPs/audit-metrics/.gitkeep line (so the directory itself stays tracked). Per existing precedent in .gitignore for .claude/PRPs/reviews/*-findings.yaml and .claude/PRPs/debug/*.log. The per-sub-phase summary lands in the retro file at .claude/PRPs/reports/<phase>-retro.md (visible in git, per feedback_retro_not_report.md).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T13:44:13Z"
     }
   ]
 }
