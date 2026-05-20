@@ -17,7 +17,15 @@ The advisor session orchestrates one Brehon sub-phase end-to-end via Junior suba
 
 ### 2.1 Junior task description template
 
-Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`, committed on `governance-v0` before the task is created. The dispatch string is intentionally minimal (under 100 chars, no URLs, no inline code, no secrets):
+Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`, committed on the branch the Junior worker will fork from **BEFORE** the task is created. Workers fork from `base_branch`; the brief must be visible in that branch's tree at task-spawn time. Per role:
+
+- **Planning briefs** → committed on `governance-v0` (no phase branch yet).
+- **bm-cut briefs** → committed on `governance-v0` (no phase branch yet).
+- **Impl-task briefs** → committed on `phase-<X>` (the phase branch the impl worker forks from). Authoring on `governance-v0` requires a subsequent cherry-pick + forward-merge to make the brief visible to the worker; the pattern observed in fed-in-b (commit `0ea7ab4f7`) is "author briefs directly on the phase branch". Per session retro 2026-05-20 §2.8.
+- **BM-pr / bm-merge briefs** → committed on `governance-v0` (BM worker reads from trunk).
+- **ci-watcher briefs** → committed on `governance-v0` (mutation lives on whatever ref the workflow_run_id's branch was; the brief just names IDs).
+
+The dispatch string is intentionally minimal (under 100 chars, no URLs, no inline code, no secrets):
 
 ```
 [role:<role>] <slug> — see .claude/PRPs/briefs/<file>.md
