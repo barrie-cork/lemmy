@@ -1,6 +1,31 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 290,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-20T02:00:45Z",
+      "question": "Phase-2 e2e on phase-v1-federation-inbound-b @ 95ee8274f: cargo-test --workspace --test e2e --features full (includes Phase-6 sanction_notice_round_trip + 5 new v1_federation_inbound_b_fixtures tests: blocked/rate/replay/happy/label)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fed-in-b impl phase CLOSED at 95ee8274f (all 9 §13 tasks merged; DQ #285/286/287/288/289 all resolved pass per Task 5/6/7/8/9 §15 success). User-gate-4 selected LOCAL mode (AskUserQuestion 2026-05-20). Phase-2 e2e runs full e2e binary including Phase-6 sanction_notice_round_trip + 5 new handler-e2e tests asserting wrap_governance_inbound gate semantics (blocked 403, rate 429, replay 409, happy path advisory row, label handler persists+logs). Shape G suspended until 2026-06-01 per DQ #229.",
+      "phase_task": 9,
+      "branch": "phase-v1-federation-inbound-b",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-fed-in-b-95ee8274f.log 2>&1\""
+      ],
+      "local_log_path": ".claude/runlog/e2e-fed-in-b-95ee8274f.log",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
