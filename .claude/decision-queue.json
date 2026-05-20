@@ -1,6 +1,41 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 301,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the one-shot SessionStart hook wiring for `pmd-canonical-guard.sh` happen — in THIS lane's `settings.local.json` (per the brief's PRECON-9), in the canonical `brehon-fork` checkout (durable across phase ship), or in both?",
+      "options": [
+        "Wire ONLY in canonical brehon-fork — phase-v1-rls-r1 is a lane-dedicated worktree that gets removed on phase ship (per multi-lane-worktree.md §'At phase ship + merge'); wiring it in the lane has zero durable benefit. The canonical checkout is the one durable lane.",
+        "Wire in BOTH the canonical brehon-fork AND this lane (current PRECON-9) — cheap, two `settings.local.json` edits, immediate + durable benefit.",
+        "Wire ONLY in this lane (current PRECON-9 verbatim) — pure immediate benefit; canonical waits for the next bootstrap cycle per the updated checklist.",
+        "Defer one-shot wiring entirely — only ship the bootstrap-checklist lesson update; every lane wires on its next bootstrap. Cleanest spec; latest activation."
+      ],
+      "context": "Per .claude/rules/multi-lane-worktree.md §'At phase ship + merge': lane-dedicated worktrees (like phase-v1-rls-r1 / brehon-fork-rls-r1) get removed on phase ship via `git worktree remove`. A SessionStart hook wired in a removed lane has zero durable effect post-merge. The canonical brehon-fork checkout is the always-live lane that handles governance-v0 work and is the next-bootstrap-eligible checkout for every future advisor session. The brief's PRECON-9 lean was 'wire in this lane' — but the lane is ephemeral. The cost-vs-benefit balance is: option 2 (BOTH) costs ~30 seconds extra; option 1 (canonical only) loses the dogfood-from-the-lane immediate benefit; option 3 (lane only) loses durability; option 4 (no one-shot) makes ship trigger-only. Each has a reasonable rationale; the user picks per project-state preference.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 302,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the `retro_bypass` JSONL kind be registered in the design-doc tree? Track C Task 8 needs a schema-registration doc, but the existing governance-log is PG-table-backed via Postgres triggers (per project_brehon_governance_platform.md) — a hook-emitted JSONL kind is structurally different from a PG-table kind.",
+      "options": [
+        "Extend `docs/brehon-law-inspired-network/04-data-model-and-api.md` with a clear new sub-section 'Hook-emitted observability JSONL kinds' separate from the PG-backed governance-log section.",
+        "Create a new doc `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` dedicated to hook-emitted kinds; cross-link from 04-data-model-and-api.md.",
+        "Register the kind in a `.claude/`-local doc (e.g. `.claude/refs/governance-log-jsonl-kinds.md`) — keeps brehon-law-inspired-network/ unchanged; hook-emitted kinds are harness-internal, not v1 product surface.",
+        "No schema registration doc — the schema IS the JSONL field list inside the new lesson `feedback_retro_bypass_governance_log.md`; consumers read the lesson."
+      ],
+      "context": "Per project_brehon_governance_platform.md the v1 governance-log is hash-chained Postgres triggers writing to a PG `governance_log` table — that is product-surface, ADR-008-load-bearing. The `retro_bypass` kind is a HARNESS observability event emitted by `.claude/hooks/retro-check.sh` to a JSONL sidecar — that is harness-internal, not product surface. Mixing them in the same doc risks reader confusion ('does retro_bypass land in the PG table?' — no, it does NOT). Option 1 mixes product + harness in one doc with sub-sections to keep them clearly separated. Option 2 splits the docs cleanly (best for discoverability) but adds a new design-doc file (ADR-adjacent). Option 3 keeps the registration `.claude/`-local (matches the harness-internal scope) but the brief's Track C Task 8 explicitly says 'governance-log schema document' implying product-doc placement. Option 4 collapses the registration into the lesson body (lowest-cost; conflates schema with lesson; harder for future consumers to find).",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -1644,6 +1679,86 @@
       "answer": "proceed-as-one. User-gate decision 2026-05-20 via AskUserQuestion in advisor session: 'Proceed as one cohort (Recommended)' — citing fed-in-a precedent (score 13 proceed-as-one via DQ #233). Score 10's dominant factor is task count (12) + breadth (3 federation crates touched), but Track B is mechanical attribute-only (pattern-uniform) and Tracks A/C are pure meta-tooling (no crates/ writes). No migrations, no e2e, no cargo budget. Cohort dispatch handles the [P] markers within the plan (plan §13 cohorts 1-6 mechanically computed). Plan ships as-is; no split into -1/-2 sub-phases.",
       "answered_by": "user",
       "resolved_at": "2026-05-20T15:30:40Z"
+    },
+    {
+      "id": 296,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where does the new retro-harvest step land in `.claude/skills/weekly-review/SKILL.md`? Current numbering already has Steps 1, 1b, 2, 2b, 3 (Aggregate eval metrics), 4 (Git hygiene), 5 (Summary), 6 (Commit). The brief calls it 'Step 3 addition' but Step 3 is taken.",
+      "options": [
+        "Insert as new Step 2c. Retro-harvest sweep (between current 2b lesson clustering and 3 eval metrics aggregation) — keeps existing Step 3+ numbering intact.",
+        "Renumber existing Steps 3-6 to 4-7 and insert as new Step 3 — large-blast-radius cascade through SKILL.md.",
+        "Append as Step 4.5 / 5b / similar — orphan numbering."
+      ],
+      "context": "Read .claude/skills/weekly-review/SKILL.md lines 17-148. Step numbering is: 1, 1b, 2, 2b, 3, 4, 5, 6 (with the `1b PMD embedding backfill` already inserted between 1 and 2 as a sub-step). The 2b 'Lesson clustering (TH only)' step is conceptually the closest sibling to retro-harvest — both are 'promotion-candidate surfacing' operations against the lesson/retro corpus, not eval-metric aggregation. The brief's §2.1 Track B Task 4 wording ('add Step 3') is incorrect as written.",
+      "answer": "Option 1 — insert as Step 2c. Retro-harvest sweep between current Step 2b (Lesson clustering) and Step 3 (Aggregate eval metrics). Rationale: the harvest sweep is conceptually a 'promotion-candidate surfacing' operation analogous to 2b lesson clustering (semantic search-driven; outputs go to a promotion-candidates artifact, not the metrics roll-up); placing it adjacent to 2b preserves the SKILL.md's existing Steps 3-6 numbering verbatim (zero cascade). The brief is edited in place to fix the 'Step 3 addition' wording to 'Step 2c. Retro-harvest sweep'. Per .claude/skills/weekly-review/SKILL.md lines 67-93 (Steps 2 + 2b) and lines 95-117 (Step 3 + 4).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
+    },
+    {
+      "id": 297,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief's §2.3 ambiguity #4 + Track C Task 7 names `last_assistant_message_hash` as a field on `retro_bypass` JSONL entries. But `retro-check.sh` (.claude/hooks/retro-check.sh lines 17-25) only reads `CLAUDE_PROMPT` env var — the user prompt that triggered Stop. The hook does NOT receive the last assistant message text. The field name is structurally wrong.",
+      "options": [
+        "Rename to `prompt_hash` (SHA-256 of CLAUDE_PROMPT, truncated to 16 hex chars) — uses data the hook genuinely has access to.",
+        "Add a Claude-Code-hooks-API call to retrieve the last assistant message — adds complexity; may not be supported in Stop hook context.",
+        "Drop the message-trail field entirely — the (session_id, attempt_count, branch_at_fail_open) triple alone is the trail."
+      ],
+      "context": ".claude/hooks/retro-check.sh line 20 reads `PROMPT=\"${CLAUDE_PROMPT:-}\"`. There is no `CLAUDE_ASSISTANT_MESSAGE` or similar in the hook's environment. The Anthropic hook reference says Stop-hook receives a JSON input on stdin but it is not currently parsed by this hook script. Adding hook-stdin parsing for the assistant message would change the script's surface significantly and the brief's Watchpoint #7 says Track C Task 7 must be ADDITIVE only.",
+      "answer": "Option 1 — rename the field to `prompt_hash` (SHA-256 of CLAUDE_PROMPT truncated to 16 hex chars). Rationale: (a) the hook already reads CLAUDE_PROMPT at line 20; (b) the same prompt firing N consecutive Stop attempts is a STRONG suspect-loop signal — even better than the assistant-message variant for loop-detection (the user prompt is the loop input). The brief is edited in place: §2.3 ambiguity #4 closed; §2.1 Track C Task 7 field list updated to `prompt_hash` (with the SHA-256 truncation rule); Watchpoint #7's ADDITIVE-only constraint upheld. Per .claude/hooks/retro-check.sh line 20 + Anthropic hooks reference (Stop-hook event env vars).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
+    },
+    {
+      "id": 298,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief Track A Task 1's spec doc lives at `.claude/PRPs/specs/mcp-write-time-embedding.md` — a NEW directory. Does `.claude/PRPs/specs/` exist with an existing pattern (e.g. README, prior specs) the planner should mirror, or is this brand-new infrastructure the planner establishes?",
+      "options": [
+        "Directory does not exist — planner establishes it AND writes a 5-line README.md documenting purpose for future specs to mirror.",
+        "Directory exists with prior specs — planner mirrors existing pattern.",
+        "Reroute the spec doc to `docs/research/` to avoid establishing new infrastructure."
+      ],
+      "context": "Verified at HEAD 6e16ee94f via `ls -d .claude/PRPs/specs/` — NOT present. Other `.claude/PRPs/` subdirectories: briefs/, plans/, prds/, reports/, templates/, audit-metrics/, handovers/, debug/, reviews/. The `specs/` subdirectory is a logical addition (specifications-of-out-of-repo-contracts, like the MCP patch spec). The existing pattern from `.claude/PRPs/audit-metrics/` (a `.gitignore` entry + a directory with per-data-point files + a header lesson) is the closest sibling but audit-metrics is gitignored data; specs are tracked artifacts.",
+      "answer": "Option 1 — directory does not exist; planner establishes it. Track A Task 1's task body must include: (a) `mkdir .claude/PRPs/specs/` (or equivalent first-write); (b) author a 5-line `.claude/PRPs/specs/README.md` documenting the directory's purpose ('Tracked specifications for contracts that live outside brehon-fork (e.g. MCP server patches, external-repo coordination docs). Each spec names the canonical implementation target, the contract verification recipe, and the downstream-collapse claim. Authored at brehon-fork-spec time; implemented in the target repo's own PR cadence.'); (c) the spec doc as the first entry. The brief is edited in place: Track A Task 1's §2.1 body amends to add the README step. Per .claude/PRPs/templates/plan.template.md §13 task-shape conventions (new-directory tasks list directory establishment as a creates: entry).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
+    },
+    {
+      "id": 299,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief's §15 names `bash .claude/hooks/pmd-canonical-guard.sh` as a sanity probe. But the script doesn't exist at HEAD 6e16ee94f — Track B Task 3 creates it. Does §15 need an 'if-exists' guard, or does the run-at-end-of-sub-phase pattern suffice?",
+      "options": [
+        "No guard needed — §15 runs at the end of the sub-phase against the merged tip; all Track B tasks have shipped by then.",
+        "Add an `if exists` guard so §15 is executable at any intermediate tip.",
+        "Move the probe to a per-task DoD (Track B Task 3's own §15) instead of the sub-phase §15."
+      ],
+      "context": "Per .claude/rules/advisor-orchestrator.md §5.2 'validate-pending-laptop handler', §15 cargo commands run after the impl-task pushes and the daemon finalize-merges. The sub-phase §15 fires once at the END against the phase-branch tip after all tasks ship. The mirror plan .claude/PRPs/plans/v1-federation-inbound-a.plan.md §15 uses the same end-of-sub-phase pattern.",
+      "answer": "Option 1 — no guard needed. §15 runs at the end-of-sub-phase against the merged phase-branch tip; Track B Task 3 will have shipped the script by then. The brief's §15 expected-commands list is correct as written. Per .claude/PRPs/plans/v1-federation-inbound-a.plan.md §15 + .claude/rules/advisor-orchestrator.md §5.2.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
+    },
+    {
+      "id": 300,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Watchpoint #4 ('Mid-task DQ push discipline') in the brief — does this apply at planning-time (the planning Junior task itself filing DQs during plan authoring) or at impl-time (the impl-task workers filing DQs)? The brief lists it under §4.1 without distinguishing.",
+      "options": [
+        "Both — planning Junior pushes its own DQs mid-task; impl-tasks push their DQs mid-task. The watchpoint is load-bearing at both stages.",
+        "Impl-time only — clarify in §4.1 that the watchpoint applies to impl-task workers, not the planning Junior task.",
+        "Drop the watchpoint as redundant — `.claude/rules/decision-queue.md` already enforces this."
+      ],
+      "context": "Per .claude/rules/decision-queue.md 'Mid-task visibility' — the rule applies to ANY Junior subagent writing DQ entries from a worktree (planning, impl-task, bm-task, ci-watcher all subject). The planning Junior task IS a Junior subagent (per .claude/agents/planning.md). The brief's §4.2 behavioural constraints already cite this for the planning Junior ('mid-task DQ push discipline per .claude/rules/decision-queue.md — every DQ entry the planner files MUST be committed AND pushed to the worker branch immediately'). Watchpoint #4 is the same rule re-cited at §4.1.",
+      "answer": "Option 1 — applies to BOTH stages. Clarify in §4.1 Watchpoint #4 by amending the 'What to watch' column to read: 'every DQ entry the planner OR impl-task files...' (the brief's §4.1 Watchpoint #4 needs the same clarification visible at first read). The brief is edited in place to ensure §4.1 Watchpoint #4's wording matches §4.2's behavioural-constraints wording. Per .claude/rules/decision-queue.md 'Mid-task visibility' + 'Subagents and attribution'.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     }
   ]
 }
