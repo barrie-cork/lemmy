@@ -1819,3 +1819,17 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Base ← Head:** governance-v0 ← phase-v1-federation-inbound-b
 - **Body source:** plan + task table + Phase-2 e2e validation + commits + DoD summary
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 139`
+
+## bm: merge COMPLETE — 2026-05-20T21:58:30Z
+
+- **PR:** #139 (Phase v1-federation-inbound-b — HTTP-path enforcement for federated governance)
+- **base ← head:** governance-v0 ← phase-v1-federation-inbound-b
+- **outcome:** MERGED ✓
+- **merge sha:** `413ef5899ee29fa332dbd2efd6eaa9726699d216` (`413ef5899` — "Merge pull request #139 from barrie-cork/phase-v1-federation-inbound-b")
+- **merged at:** 2026-05-20T21:58:30Z
+- **trunk position:** `413ef5899` (governance-v0 advanced from `a89eddb9c` → `413ef5899`)
+- **remote branch deleted?** yes (`phase-v1-federation-inbound-b` removed from origin via `--delete-branch`)
+- **CR triage summary:** 3 fix-in-pr addressed in fix-impl-8 (commit 9e78c886a: cr-1 scheduled_tasks.rs replay_window_days clamp + cr-2 e2e.rs seed-loop bare-? + cr-3 e2e.rs assert_eq label count); 3 Copilot carry-forward (rate-map DoS-hardening family — file separate GH issue); 13 nit/wont-fix (markdownlint on archived advisor briefs/runlog, gate-3 ratified).
+- **DQs:** all fed-in-b validate-pending entries (9 §13 tasks + DQ #290 Phase-2 e2e) result:pass; pending: 0.
+- **deliverable on trunk:** v1-federation-inbound-b codebase merged; HTTP-path enforcement + related e2e + governance log updates present on governance-v0.
+- **note:** L14 REVISED post-merge ordering: runlog COMPLETE written AFTER merge succeeds (not before). Mirrors `.claude/PRPs/briefs/v1-ship-1-r2-bm-merge-2.md` (successful L14-REVISED dispatch on PR #137).
