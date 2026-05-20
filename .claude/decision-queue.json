@@ -1694,6 +1694,22 @@
       "answer": "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task. User explicitly authorized 2026-05-20 via terminal-typed prompt: \"Authorize broadening .claude/settings.json to add Edit/Write for .claude/PRPs/plans/** — planning Junior needs this\". Advisor edited .claude/settings.json allow[] adding Edit(.claude/PRPs/plans/**) + Write(.claude/PRPs/plans/**). Re-dispatching the planning Junior task with same brief (planning-2.md). Defence-in-depth for plan integrity now lives in agent-def tools[] + retro audit (not CC permission gate). Carries forward observation: §19.5 of plan covered Write/Bash workaround but not Edit; future planner briefs should reference this resolution if same gate fires.",
       "answered_by": "user",
       "resolved_at": "2026-05-20T17:40:11Z"
+    },
+    {
+      "id": 299,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-20T17:49:09Z",
+      "question": "Cohort-restructure insight: brehon-conformance-audit plan §13 Cohort 2 had circular requires: (Task 6 in cohort requires Tasks 4 + 5 also in cohort). User-approved Fix A: split into Cohort 2 + Cohort 2.5. How was this resolved structurally?",
+      "options": [
+        "split-into-cohort-2-and-2.5-with-task-6-serial",
+        "bundle-tasks-4-5-6-into-one-impl-task",
+        "advisor-side-split-without-plan-edit"
+      ],
+      "context": "Plan §13 (line 693 pre-fix) declared Cohort 2 [P] = Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML requires: [4, 5]. Per advisor-orchestrator.md §4.1 step 4a (`requires:` dependency check, (a) clause), circular requires within a cohort is a refusal trigger. DQ #297 (advisor blocker) catch-fired this 2026-05-20T17:00:13Z; user resolved at 17:40:11Z with Fix A (split). Brief authored at .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md (commit 8a38e07b7); first planning Junior #357 hit DQ #298 (sensitive-file gate on Edit for .claude/PRPs/plans/**); user broadened .claude/settings.json with Edit/Write permits for .claude/PRPs/plans/** + adjacent paths; this retry Junior (#358) implements the plan revision. Plan now declares Cohort 2 [P] = Tasks 2, 3, 4, 5, 8, 10 (Task 6 removed) and new Cohort 2.5 (serial, depends on Cohort 2) = Task 6 alone. Cohort 3 dependency updated from `depends on Cohort 2` → `depends on Cohort 2.5`. §16a Story 1 cohort annotation updated. Task 6 header dropped `[P]` marker. Task 6 FILES YAML `requires: [4, 5]` preserved verbatim — the dependency claim was correct; only cohort placement was wrong.",
+      "answer": "split-into-cohort-2-and-2.5-with-task-6-serial. Implemented in plan commit 7bb6c51bb on phase-brehon-conformance-audit worker branch. Edits: §13 cohort blockquote (lines 691-697) — Task 6 removed from Cohort 2, new Cohort 2.5 inserted, Cohort 3 dependency text updated; §13 Task 6 header (line 1074) — dropped [P] marker; §16a Story 1 composing-tasks annotation — split mention into Tasks 2-5 [P] / Task 6 serial. Plan complexity score (§5) unchanged (10/10 user-approved proceed-as-one). DQ #297 left intact (user-attributed historical record). Audit trail: this log entry + commit 7bb6c51bb + DQ #297 (resolved-by-user, with Fix A direction) + DQ #298 (resolved chain for sensitive-file gate).",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-20T17:49:09Z"
     }
   ]
 }

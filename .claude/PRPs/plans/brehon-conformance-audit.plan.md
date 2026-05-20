@@ -688,10 +688,11 @@ Execute in dependency order. One commit per task. Each task header carries a `[P
 
 > **DoD shape (per PRECON-2 + DQ #229):** Each impl-task raises `kind: "validate-pending-laptop"` post-push naming §15 DoD commands verbatim with `--workspace --features full`. Advisor laptop runs sequentially via `.bat` wrapper per `advisor-orchestrator.md` §5.2.
 >
-> **Cohort plan (computed mechanically from `union(creates, modifies)`):**
+> **Cohort plan (computed mechanically from `union(creates, modifies)` + `requires:`):**
 > - **Cohort 1 (serial):** Task 1 alone — SKILL.md skeleton must exist before axis sub-files reference its frontmatter.
-> - **Cohort 2 (parallel `[P]`):** Tasks 2, 3, 4, 5, 6, 8, 10 — file-set disjoint; all depend on Task 1 (Task 8/10 are `requires: [0]` only, but bundled into Cohort 2 for wall-clock).
-> - **Cohort 3 (serial, depends on Cohort 2):** Task 7 (dogfood) — `requires: [1, 2, 3, 4, 5, 6, 8]` (skill files must exist before dogfood runs; clippy.toml must exist so the dogfood includes the Track-B integration check).
+> - **Cohort 2 (parallel `[P]`):** Tasks 2, 3, 4, 5, 8, 10 — file-set disjoint; Tasks 2-5 depend on Task 1 (Task 8/10 are `requires: [0]` only, but bundled into Cohort 2 for wall-clock).
+> - **Cohort 2.5 (serial, depends on Cohort 2):** Task 6 — `requires: [4, 5]` (compute-metrics.sh consumes the schema in Task 4 and the formulas in Task 5; Task 6 must run after Tasks 4 + 5 finalize-merge onto phase branch).
+> - **Cohort 3 (serial, depends on Cohort 2.5):** Task 7 (dogfood) — `requires: [1, 2, 3, 4, 5, 6, 8]` (skill files must exist before dogfood runs; clippy.toml must exist so the dogfood includes the Track-B integration check).
 > - **Cohort 4 (serial, depends on Cohort 2):** Task 9 (per-module deny) — `requires: [8]`.
 > - **Cohort 5 (parallel `[P]`):** Task 11, Task 12 — disjoint files; depend on prior cohorts (Task 11 `requires: [1, 8, 9]`; Task 12 `requires: [7]`).
 > - **Cohort 6 (serial):** Task 13 retro — depends on all prior.
@@ -1070,7 +1071,7 @@ grep -l "precision per axis\|recall per axis\|lead time\|latent-footgun" .claude
 # EXPECT: both grep -l return the METRICS.md path
 ```
 
-### Task 6 [P]: CREATE `.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh`
+### Task 6: CREATE `.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh`
 
 **ACTION:** create the metrics computation script per §10.7 verbatim — reads one or more audit-metrics JSON files; computes per-axis precision/recall + lead-time + latent-footgun catch rate; writes summary to stdout. NO cargo invocation (Watchpoint #3). Python wrapper inside bash for cross-platform portability (per brief §2.3 ambiguity #4 planner-lean).
 
@@ -1698,7 +1699,7 @@ Roll-up of §15 + §16a story checkpoints.
 
 ### Story 1: Skill skeleton authored
 
-- **Composing tasks:** Task 1 (SKILL.md skeleton) + Task 2 (6 axis sub-files) + Task 3 (find-sibling.sh) + Task 4 (metrics schema) + Task 5 (METRICS.md) + Task 6 (compute-metrics.sh). Tasks 2-6 are `[P]` per Cohort 2.
+- **Composing tasks:** Task 1 (SKILL.md skeleton) + Task 2 (6 axis sub-files) + Task 3 (find-sibling.sh) + Task 4 (metrics schema) + Task 5 (METRICS.md) + Task 6 (compute-metrics.sh). Tasks 2-5 are `[P]` per Cohort 2; Task 6 is serial in Cohort 2.5 (requires Tasks 4 + 5).
 - **Checkpoint command:**
 
 ```bash
