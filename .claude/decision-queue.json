@@ -1,6 +1,23 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 297,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-20T17:00:13Z",
+      "question": "Plan brehon-conformance-audit Cohort 2 has circular requires: (Task 6 requires Tasks 4 + 5, both in same cohort). Per advisor-orchestrator.md §4.1 step 4a: cohort refused. How to resolve?",
+      "options": [
+        "planner-revise-cohort-line",
+        "advisor-splits-into-2a-2b-without-plan-edit",
+        "bundle-tasks-4-5-6-into-single-junior-task"
+      ],
+      "context": "Plan §13 (line 693) declares: Cohort 2 (parallel [P]): Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML (line ~1078) requires: [4, 5]. Tasks 4 + 5 are both in Cohort 2 with [P] markers and are NOT yet on phase-brehon-conformance-audit. Per feedback_cohort_validation_dependency_check.md and v1-RT-r1 halt-retro precedent (commit ffa2876e3), circular requires within a cohort is a structural error. Advisor cannot dispatch this cohort. User decision 2026-05-20: catch-fire + plan revision (option chosen via AskUserQuestion). Recommended path: queue planning Junior task to revise plan §13 Cohort 2 line + Task 6 placement (either move Task 6 out of [P] to a new Cohort 2.5 serial step, or bundle 4+5+6 into one task). Cohort 1 (Task 1) is complete + validated; no rework needed there.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
