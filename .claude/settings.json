@@ -9,7 +9,19 @@
       "Edit(.claude/PRPs/reviews/**)",
       "Write(.claude/PRPs/reviews/**)",
       "Edit(.claude/decision-queue.json)",
-      "Write(.claude/decision-queue.json)"
+      "Write(.claude/decision-queue.json)",
+      "Edit(.claude/skills/**)",
+      "Write(.claude/skills/**)",
+      "Edit(.claude/lessons/**)",
+      "Write(.claude/lessons/**)",
+      "Edit(.claude/rules/**)",
+      "Write(.claude/rules/**)",
+      "Edit(.claude/PRPs/audit-metrics/**)",
+      "Write(.claude/PRPs/audit-metrics/**)",
+      "Edit(.claude/PRPs/reports/**)",
+      "Write(.claude/PRPs/reports/**)",
+      "Edit(.claude/PRPs/briefs/**)",
+      "Write(.claude/PRPs/briefs/**)"
     ]
   },
   "hooks": {
