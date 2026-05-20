@@ -15616,7 +15616,7 @@ mod v1_federation_inbound_b_fixtures {
     .await?;
     for i in 0..2 {
       let activity = build_unique_sanction_notice_activity("rate-test.test", i)?;
-      let _ = ActivityTrait::receive(activity, &context).await;
+      ActivityTrait::receive(activity, &context).await?;
     }
     let activity3 = build_unique_sanction_notice_activity("rate-test.test", 2)?;
     let result = ActivityTrait::receive(activity3, &context).await;
@@ -15701,7 +15701,7 @@ mod v1_federation_inbound_b_fixtures {
       .count()
       .get_result(&mut conn)
       .await?;
-    assert!(log_count >= 1);
+    assert_eq!(log_count, 1);
     Ok(())
   }
 
