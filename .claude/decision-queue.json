@@ -1,6 +1,25 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 303,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:17:42Z",
+      "question": "validate phase-brehon-conformance-audit task 2 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-2-six-axis-sub-files-see-claude-prps-briefs-brehon-conformance-audit-359",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task2-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
