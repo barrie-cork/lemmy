@@ -429,7 +429,7 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         let _guard = FedReplayCleanupRunningGuard;
         let pool = &mut context.pool();
         let mut cache = lemmy_api::governance::config::ConfigCache::new();
-        let window_days_i64 = lemmy_api::governance::config::get_int(
+        let raw_window_days_i64 = lemmy_api::governance::config::get_int(
           &mut cache,
           pool,
           lemmy_api::governance::config::Scope::Instance,
@@ -437,6 +437,12 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         )
         .await
         .unwrap_or(7);
+        let window_days_i64 = raw_window_days_i64.max(1);
+        if raw_window_days_i64 < 1 {
+          warn!(
+            "federation_inbox_nonce cleanup: invalid replay_window_days={raw_window_days_i64}; clamped to 1"
+          );
+        }
         let conn_pool = &mut context.pool();
         let conn_result = lemmy_diesel_utils::connection::get_conn(conn_pool).await;
         match conn_result {
