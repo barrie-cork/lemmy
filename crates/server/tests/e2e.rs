@@ -5247,17 +5247,16 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   {
     use lemmy_db_schema::source::governance::federation_peer::FederationPeerInsertForm;
     use lemmy_db_schema_file::enums::FederationPeerTrust;
-    use lemmy_db_schema_file::schema::{federation_peer, instance};
-    use lemmy_db_schema_file::InstanceId;
+    use lemmy_db_schema_file::schema::federation_peer;
+    // Phase-6 fixture creates instance-a.test only on url_a's context_a.pool().
+    // For the federation_peer.instance_id FK on url_b, we need an instance-a.test
+    // row on url_b too — Instance::read_or_create is idempotent (returns existing
+    // row if present, else inserts and returns it). Mirrors the _instance_b
+    // pattern above at line ~5225.
+    let instance_a_on_b = Instance::read_or_create(&mut context_b.pool(), "instance-a.test").await?;
     let mut async_conn_b_fixture = AsyncPgConnection::establish(&url_b).await?;
-    // Look up instance-a.test by domain (created by Phase 6 fixture).
-    let peer_instance_id: i32 = instance::table
-      .filter(instance::domain.eq("instance-a.test"))
-      .select(instance::id)
-      .first::<i32>(&mut async_conn_b_fixture)
-      .await?;
     let form = FederationPeerInsertForm {
-      instance_id: InstanceId(peer_instance_id),
+      instance_id: instance_a_on_b.id,
       trust_level: Some(FederationPeerTrust::Allowlisted),
       added_by_actor: None,
       notes: None,
@@ -15603,9 +15602,15 @@ mod v1_federation_inbound_b_fixtures {
       bootstrap_with_peer("rate-test.test", Some(FederationPeerTrust::Allowlisted)).await?;
     let context = fed_cfg.to_request_data();
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // governance_config is append-history with UNIQUE on (scope, key, valid_from)
+    // — NOT on (scope, key). The migration 2026-05-17 already seeded this key
+    // with value_int=100; raw INSERT would create a second row and the reader
+    // (get_inbound_config_int) returns an arbitrary one. UPDATE mutates the
+    // existing seed row in place. See migration 2026-04-18 comment "Do NOT use
+    // (scope, key) as the conflict target" for the schema invariant.
     diesel::sql_query(
-      "INSERT INTO governance_config (scope, key, value_type, value_int) \
-       VALUES ('instance', 'federation.inbound.per_peer_rate_per_hour', 'int', 2)",
+      "UPDATE governance_config SET value_int = 2 \
+       WHERE scope = 'instance' AND key = 'federation.inbound.per_peer_rate_per_hour'",
     )
     .execute(&mut conn)
     .await?;
