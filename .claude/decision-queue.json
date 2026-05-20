@@ -1629,6 +1629,21 @@
       "answer": "Option 1 — mechanical with the plan. Track A Task 4 (metrics schema) creates .claude/PRPs/audit-metrics/.gitkeep (so the directory exists with a placeholder) AND adds .claude/PRPs/audit-metrics/*.json to .gitignore. The .gitkeep is excluded from the gitignore by an explicit !.claude/PRPs/audit-metrics/.gitkeep line (so the directory itself stays tracked). Per existing precedent in .gitignore for .claude/PRPs/reviews/*-findings.yaml and .claude/PRPs/debug/*.log. The per-sub-phase summary lands in the retro file at .claude/PRPs/reports/<phase>-retro.md (visible in git, per feedback_retro_not_report.md).",
       "answered_by": "advisor",
       "resolved_at": "2026-05-20T13:44:13Z"
+    },
+    {
+      "id": 295,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-20T14:46:43Z",
+      "question": "Complexity score 10 exceeds Sonnet threshold 8 — split brehon-conformance-audit into Track A (skill) + Track B (Clippy) + Track C (wiring+lessons+retro), or proceed?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "Dominant factors: 12 impl tasks (+7), 3 federation crates touched via mod.rs attribute additions in Task 9 (+3). NO migrations, NO e2e edits, NO ADR-affecting decisions, NO cargo budget. The 'crates touched' weight is mechanically applied to attribute-only Track B Task 9 (single line #![deny(...)] per mod.rs across 3 crates); no crate-internal logic changes. The 7-impl-task weight comes from the brief's enumerated artifact list (7 Track A + 2 Track B + 3 Track C). Brief §2.4 names the natural split SEAM (A|B|C) if split chosen. fed-in-a precedent: shipped at score 13 proceed-as-one (DQ #233). Planner lean: proceed (rationale in plan §5.2 items 1-5). NOTE: this entry replaces the planner's daemon-side DQ #291 (collided with origin's advisor clarify #291); planner-side commit was dropped via reset-and-cherry-pick on the daemon to recover origin tip. Substance verbatim from the planner.",
+      "answer": "proceed-as-one. User-gate decision 2026-05-20 via AskUserQuestion in advisor session: 'Proceed as one cohort (Recommended)' — citing fed-in-a precedent (score 13 proceed-as-one via DQ #233). Score 10's dominant factor is task count (12) + breadth (3 federation crates touched), but Track B is mechanical attribute-only (pattern-uniform) and Tracks A/C are pure meta-tooling (no crates/ writes). No migrations, no e2e, no cargo budget. Cohort dispatch handles the [P] markers within the plan (plan §13 cohorts 1-6 mechanically computed). Plan ships as-is; no split into -1/-2 sub-phases.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-20T15:30:40Z"
     }
   ]
 }
