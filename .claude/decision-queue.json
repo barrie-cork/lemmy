@@ -1,31 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 290,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-20T02:00:45Z",
-      "question": "Phase-2 e2e on phase-v1-federation-inbound-b @ 95ee8274f: cargo-test --workspace --test e2e --features full (includes Phase-6 sanction_notice_round_trip + 5 new v1_federation_inbound_b_fixtures tests: blocked/rate/replay/happy/label)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fed-in-b impl phase CLOSED at 95ee8274f (all 9 §13 tasks merged; DQ #285/286/287/288/289 all resolved pass per Task 5/6/7/8/9 §15 success). User-gate-4 selected LOCAL mode (AskUserQuestion 2026-05-20). Phase-2 e2e runs full e2e binary including Phase-6 sanction_notice_round_trip + 5 new handler-e2e tests asserting wrap_governance_inbound gate semantics (blocked 403, rate 429, replay 409, happy path advisory row, label handler persists+logs). Shape G suspended until 2026-06-01 per DQ #229.",
-      "phase_task": 9,
-      "branch": "phase-v1-federation-inbound-b",
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-fed-in-b-95ee8274f.log 2>&1\""
-      ],
-      "local_log_path": ".claude/runlog/e2e-fed-in-b-95ee8274f.log",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1568,6 +1543,30 @@
       "answer": "§15 R7 ALL 3 cmds PASSED first try on tip 1153d4b62: T9R_CHECK_EXIT_0 (cargo-check.bat --workspace --features full, 1m 14s incremental) + T9R_CLIPPY_EXIT_0 (cargo-clippy.bat --workspace --features full --no-deps -- -D warnings, 2m 03s) + T9R_TESTNORUN_EXIT_0 (cargo-test.bat --workspace --features full --test e2e --no-run, 6m 52s; executable target/debug/deps/e2e-4ed9c75189048398.exe linked). Task 9 e2e.rs (286-line diff: Phase-6 sanction_notice_round_trip fixture Allowlist insert per §10.6 + new mod v1_federation_inbound_b_fixtures per §10.7 + §13 IMPLEMENT with 5 #[tokio::test] fns blocklisted_peer_returns_403 / per_peer_rate_limit_returns_429 / replayed_activity_returns_409 / allowlisted_happy_path_persists_advisory_row / moderation_label_handler_persists_and_logs + bootstrap_with_peer helper + 4 build_*_activity helpers including 2 real impls mirroring Phase-6 e2e.rs:5050-5230 for PublishSanctionNotice + PublishLabel) compiles + lints cleanly + e2e test target links first try. NO fix-impl required — third cleanest task (after Tasks 7+8). Worker (#347) succeeded in 52m 13s (largest impl-task in -b including §2.4 worker-side pre-push 3-cmd cargo validation on cold worker target/); all 11 grep counts at expected values (mod=1, 5 test fn names=1 each, bootstrap_with_peer=6, build_sanction_notice_with_id=3, build_minimal_publish_label_activity=2, FederationPeerTrust::Allowlisted=7, ADR-006=7); 0 new .map_err in diff; 0 LemmyErrorType.into() in new block (Case A discipline preserved per feedback_lemmy_error_no_std_error.md Case A); 4 out-of-scope diffs all empty (inbox.rs / publish_sanction_notice.rs / publish_trust_attestation.rs / publish_label.rs / federation_inbox_nonce.rs / scheduled_tasks.rs). Task 9 §16a Story 5 (handler-e2e) COMPLETE. **fed-in-b IMPL PHASE CLOSED — all 9 §13 tasks done.** Impl chain summary: Tasks 1-3 (Phase-6 prerequisites — pre-existing). Task 4 (wrap_governance_inbound + GovernanceInboundActivity trait + helpers) merged via chain a3757eabe→cdff6f09d→f01a1d44e→4a60667c9, fix-impl-4 (HRTB <'a> wrap sig + strip dead_code, commit 3bd2cfa4e). Task 5 (publish_sanction_notice wrap+trait-impl, commit 92605e907, DQ #285). Task 6 (publish_trust_attestation wrap+per-actor-override, commit ec3b8643f, DQ #286) via chain fix-impl-5 (E0283 .into() drop, commit d32d2c3f2) + fix-impl-6 (clippy items-after-statements + strip rate_per_actor_counts dead_code, commit 9656b4bc7). Task 7 (publish_label stub-fill, commit fe9effd6b, DQ #287, first-try). Task 8 BARRIER (scheduled_tasks.rs replay-cleanup cron, commit 36d7bcd03, DQ #288, first-try). Task 9 BARRIER (handler-e2e, commit d2e002cb0, DQ #289, first-try). Pipeline now advances to user-gate-4 (Phase-2 e2e local vs dispatch per advisor-orchestrator.md §3.2). (advisor-laptop, 2026-05-20)",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-20T02:00:30Z"
+    },
+    {
+      "id": 290,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-20T02:00:45Z",
+      "question": "Phase-2 e2e on phase-v1-federation-inbound-b @ 95ee8274f: cargo-test --workspace --test e2e --features full (includes Phase-6 sanction_notice_round_trip + 5 new v1_federation_inbound_b_fixtures tests: blocked/rate/replay/happy/label)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fed-in-b impl phase CLOSED at 95ee8274f (all 9 §13 tasks merged; DQ #285/286/287/288/289 all resolved pass per Task 5/6/7/8/9 §15 success). User-gate-4 selected LOCAL mode (AskUserQuestion 2026-05-20). Phase-2 e2e runs full e2e binary including Phase-6 sanction_notice_round_trip + 5 new handler-e2e tests asserting wrap_governance_inbound gate semantics (blocked 403, rate 429, replay 409, happy path advisory row, label handler persists+logs). Shape G suspended until 2026-06-01 per DQ #229.",
+      "phase_task": 9,
+      "branch": "phase-v1-federation-inbound-b",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-fed-in-b-95ee8274f.log 2>&1\""
+      ],
+      "local_log_path": ".claude/runlog/e2e-fed-in-b-95ee8274f.log",
+      "answer": "Phase-2 e2e round-2 PASSED CLEAN on tip 4efce35c8 (post-fix-impl-7): E2E_EXIT_0 + `test result: ok. 102 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 2071.77s` (34m32s, ~1m18s faster than round-1's 35m50s — warm testcontainers + warm target cache). Both fix-impl-7 hunks CONFIRMED passing: sanction_notice_round_trip ... ok (Hunk-1: Instance::read_or_create(&mut context_b.pool(), 'instance-a.test') idempotently creates the instance-a.test row on url_b that Phase-6 fixture only seeded on url_a, restoring the federation_peer.instance_id FK satisfaction on receive-side DB) + v1_federation_inbound_b_fixtures::per_peer_rate_limit_returns_429 ... ok (Hunk-2: UPDATE governance_config SET value_int=2 WHERE scope='instance' AND key='federation.inbound.per_peer_rate_per_hour' mutates the migration's seed row in place instead of appending a colliding-by-key history entry, so get_inbound_config_int's first-row-pick now resolves to value=2 and the rate gate fires correctly on the 3rd activity). All 4 OTHER v1_federation_inbound_b fixtures (allowlisted_happy_path / blocklisted_peer_returns_403 / replayed_activity_returns_409 / moderation_label_handler_persists_and_logs) STILL passing. Zero ^failures: lines. Zero regression to the 100 other Phase-1+ tests. The 5 ignored are all v0-polish deflakes per GH issues #42/43/45 (unchanged from prior runs). **fed-in-b IMPL PHASE FULLY VALIDATED** — all 9 §13 tasks + 4 fix-impl chains + 2 e2e rounds clean. **Pipeline advances to user-gate-5 (merge confirm) per advisor-orchestrator.md §3.2** — options to user: (a) APPROVE bm-pr — single Junior dispatch for bm-pr opening PR phase-v1-federation-inbound-b → governance-v0 with auto-generated body from runlog + plan §13 + completion-report; (b) HOLD — surface concerns first. **Retro carry-forward (RCA-flagged 2026-05-20, NOT bundled here):** get_inbound_config_int in crates/apub/activities/src/governance/inbox.rs:421-438 AND its mirror in crates/apub/activities/src/governance/publish_trust_attestation.rs:142-152 BOTH lack `.order_by(governance_config::valid_from.desc())` — they return the first physically-inserted row, which is wrong when governance_config accumulates an admin-edit history. Migration 2026-04-18 explicitly warned 'Do NOT use (scope, key) as the conflict target' but readers don't honour the append-history semantic. Defer to fed-in-b retro / follow-on sub-phase. Symptom: any test or admin-edit-config flow that adds a 2nd row for an existing (scope, key) sees arbitrary value pick. (advisor, 2026-05-20)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T11:30:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
