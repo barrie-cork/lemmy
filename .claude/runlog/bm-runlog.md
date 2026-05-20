@@ -1812,3 +1812,10 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **deliverable on trunk:** federation_peer, federation_inbox_nonce, federation_inbox_dropped_log, remote_moderation_label tables + schema + e2e probes (migration `2026-05-17-000000-0000_add_federation_inbound_v1`)
 - **note:** BM Junior ran `gh pr merge` (task #328/329); no L14 runlog-COMPLETE commit was authored on governance-v0 by the BM task. This block is the advisor's L14 belt-and-braces re-apply (per `.claude/rules/auto-phase.md` invariant 7), authored on governance-v0 post-merge.
 - **findings YAML:** .claude/PRPs/reviews/pr-138-findings.yaml (fix-cr-1 committed `df6eee91b`; final_recommendation: approve)
+
+## bm: PR opened — 2026-05-20T21:45:00Z
+- **PR:** #139 — Phase v1-federation-inbound-b — HTTP-path enforcement for federated governance
+- **URL:** https://github.com/barrie-cork/lemmy/pull/139
+- **Base ← Head:** governance-v0 ← phase-v1-federation-inbound-b
+- **Body source:** plan + task table + Phase-2 e2e validation + commits + DoD summary
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 139`
