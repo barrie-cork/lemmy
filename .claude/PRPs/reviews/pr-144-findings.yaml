@@ -1,0 +1,37 @@
+schema_version: 1
+pr: 144
+title: Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int` + mirror
+head: phase-v1-federation-inbound-c
+base: governance-v0
+opened_at: '2026-05-21T23:39:00Z'
+last_poll_at: null
+poll_count: 0
+last_polled_head_sha: null
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: null
+findings: []
+counters:
+  total: 0
+  by_source:
+    coderabbit: 0
+    claude: 0
+    user: 0
+  by_severity:
+    critical: 0
+    major: 0
+    medium: 0
+    low: 0
+    nit: 0
+  by_bucket:
+    fix-in-pr: 0
+    rebut: 0
+    carry-forward: 0
+    done: 0
+    wont-fix: 0
+notes: |
+  Shell authored advisor-side post-BM-skip (BM Junior #404 skipped Phase 5
+  per `feedback_bm_false_success_advisor_post_condition_catch.md` — 4th
+  confirmed occurrence). Will be populated by /bm-poll-cr once CR posts
+  findings. PR currently mergeable=MERGEABLE (post-forward-merge of gov-v0
+  resolved CONFLICTING state) with CR check pending.
