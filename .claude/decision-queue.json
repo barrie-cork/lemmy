@@ -1,6 +1,24 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 313,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T08:28:14Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-6-see-claude-prps-briefs-v1-rls-r1-impl-6-md-380",
+      "phase_task": 6,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task6-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
