@@ -1758,6 +1758,66 @@
       "answer": "Option 1 (Recommended) — New file `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` (per user 2026-05-20). Clean split: product PG-table kinds stay in 04-data-model-and-api.md; harness JSONL kinds get their own doc cross-linked from 04. Best discoverability for both audiences. The brief Track C Task 8's body amends to name the new doc path verbatim.",
       "answered_by": "user",
       "resolved_at": "2026-05-21T05:34:18Z"
+    },
+    {
+      "id": 303,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": "The v1-rls-r1 brief cross-references four lesson files that are absent at HEAD 6e16ee94f on this worktree: feedback_one_system_memory_in_repo.md, feedback_lesson_mirror_check.md, feedback_advisor_watchpoint_specificity.md, feedback_phase_lane_worktree_bootstrap_checklist.md. Task 6 ships the fourth; the first three are SKIPPED as cross-link targets (per §12 NOT-building rationale).",
+      "context": "Planner Read the .claude/lessons/ directory on the junior/role-planning-v1-rls-r1-... worktree and confirmed absence. The brief may have been authored against governance-v0 (which carries them) OR they are forward-only references. Track D Task 9 + Task 12 lessons reference feedback_lesson_must_pair_with_structural_fix_when_fixable.md (verified present) instead. No blocker — proceeding.",
+      "options": [
+        "proceed",
+        "blocker"
+      ],
+      "answer": "proceed — Track D Task 9 + Task 12 cite the verified-present lesson; future v1-rls-r1 retro can re-litigate if the absent lessons become load-bearing.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
+    },
+    {
+      "id": 304,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": ".claude/harvest/ is gitignored (per PRECON-9 lean) vs tracked-with-prune-after-N-weeks?",
+      "context": "Brief §2.3 ambiguity #2 — planner picks gitignored per the .claude/PRPs/audit-metrics/ analogue from brehon-conformance-audit.plan.md. Runtime journal output; summary lands in weekly-review report; harvest files are reproducible. If retro surfaces a need for tracked-with-prune (e.g. cross-session continuity), easy follow-up: flip the .gitignore line.",
+      "options": [
+        "gitignored",
+        "tracked"
+      ],
+      "answer": "gitignored — per .claude/PRPs/audit-metrics/ analogue. Reversible if needed.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
+    },
+    {
+      "id": 305,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": ".claude/rules/pmd-invariants.md auto-loads at SessionStart (no `paths:` frontmatter scoping) vs scoped via paths frontmatter?",
+      "context": "Brief §2.3 ambiguity #3 — planner picks auto-loading. Five invariants on a single page (~150 lines max) fits the MEMORY.md startup-budget calculus. Sibling rule files (decision-queue.md, advisor-orchestrator.md, multi-lane-worktree.md) all auto-load without paths scoping; pmd-invariants.md is in the same load category.",
+      "options": [
+        "auto-load",
+        "paths-scoped"
+      ],
+      "answer": "auto-load — sibling-pattern convention.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
+    },
+    {
+      "id": 306,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": "Claude Code's built-in sensitive-file protection blocks Junior worker writes to .claude/**. Same pattern observed in v1-fed-in-a planning task; recurs in v1-rls-r1. Adding .claude/PRPs/plans/** + .claude/decision-queue.json to a Junior worker permission allowlist (or a harness-side configuration option) would close the gap. Candidate v1-rls-r2 item.",
+      "context": "Planner attempted to Write .claude/PRPs/plans/v1-rls-r1.plan.md and was prompted by the harness; the same Write to PLAN_DELIVERABLE.md succeeded. The advisor handles via git mv post-finalize. The recurrence + the cost (the deliverable lands at a non-canonical path until advisor intervention) is itself a v1-rls-r2 candidate.",
+      "options": [
+        "v1-rls-r2-candidate",
+        "no-action"
+      ],
+      "answer": "v1-rls-r2-candidate — file as a deferred item in §12 of v1-rls-r2 brief when authored.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
     }
   ]
 }
