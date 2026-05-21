@@ -73,7 +73,9 @@ def extract_fn_sigs(filepath):
     lines = content.splitlines()
     results = []
     # Anchored at ^: only matches lines where pub/async/fn starts at col 0.
-    fn_pat = re.compile(r'^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)')
+    fn_pat = re.compile(
+        r'^(?:pub(?:\([^)]*\))?\s+)?(?:const\s+)?(?:async\s+)?(?:unsafe\s+)?(?:extern\s+(?:"[^"]*"\s+)?)?fn\s+([A-Za-z_]\w*)'
+    )
     i = 0
     while i < len(lines):
         m = fn_pat.match(lines[i])

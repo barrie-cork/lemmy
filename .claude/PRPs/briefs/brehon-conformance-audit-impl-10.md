@@ -61,7 +61,7 @@ Install `rust-analyzer-mcp` via `cargo install rust-analyzer-mcp` (idempotent �
 5. **Preserve all existing `.mcp.json.example` entries** — merge `rust-analyzer` server entry, do NOT replace the file.
 6. **`_comment` field documents `rustup component add rust-analyzer` prereq** verbatim per §10.10.
 7. **NO writes to `.claude/skills/**`** in this task (skill files are Tasks 1, 2 peers).
-8. **NO cargo-check** required — `cargo install` outputs are captured separately at .claude/PRPs/debug/brehon-conformance-audit-task10-install.log.
+8. **Workspace cargo-check is required** — run bash scripts/brehon/cargo-check.sh --workspace --features full per section 5.3 before push.
 9. **On cargo-install failure** — file `kind: "blocker"` DQ to advisor; do NOT commit anything. Failed install is a prereq for Story 3 verification per plan §13 Task 10 GOTCHA (but does NOT block dogfood — Task 3 find-sibling.sh has Grep+Read fallback).
 10. **Commit subject template** — `feat(mcp): add rust-analyzer-mcp to .mcp.json.example (task 10)`.
 11. **Single commit** per plan §13 norm. Lockfile is NOT modified by this task (no Cargo.toml changes; cargo install does not touch Cargo.lock).

@@ -1305,7 +1305,7 @@ Commit body: cite DQ #311 + DQ #310 (user catch-fire) + the corrected mechanism 
 
 **GOTCHA:** per §4.1 cohort dispatch + §4.4 cohort handover, this task is SERIAL (precedes Task 8 in the cohort plan; Cohort 2.6 in the revised header). The `requires:` field references Task 0 only — Task 8a is independent of the skill-body and metrics tasks (Cohorts 1, 2, 2.5).
 
-**GOTCHA:** Workspace clippy will STILL fail (exit 101) after Task 8a lands alone — because `governance-v0` baseline at `4480a1bdb` (before any Task 8 dispatch) had no `clippy.toml`, and removing the broken Task 8 dispatch's `clippy.toml` returns the tree to that baseline state. Task 8's single-commit dispatch is the gate that lands the corrected mechanism. Worker does NOT run a `--workspace` clippy gate from clean-clippy-toml state at Task 8a; Task 8a's §15 is the simpler workspace-check (compile still succeeds — removing the toml cannot break rustc).
+**GOTCHA:** Workspace clippy is expected to return to baseline behaviour after Task 8a lands alone, because removing the broken Task 8 dispatch's `clippy.toml` restores the pre-Task-8 state. Task 8's single-commit dispatch is the gate that lands the corrected mechanism. Worker does NOT run a `--workspace` clippy gate from clean-clippy-toml state at Task 8a; Task 8a's §15 is the simpler workspace-check (compile still succeeds — removing the toml cannot break rustc).
 
 **VALIDATE (story-checkpoint, feeds §16a Story 2):**
 
