@@ -116,3 +116,6 @@ migrations/.diesel_lock
 .pi/extensions/*.js
 .pi/extensions/*.js.map
 .pi/extensions/*.d.ts
+
+# DQ schema-v3 session-id cache (per-CC-session, gitignored per v1-dq-schema-r1)
+.claude/.dq-session-id
