@@ -1,108 +1,122 @@
-# feedback: daemon finalize step hard-resets governance-v0 to a non-trunk phase branch's tip
+# feedback: lane agent `git reset --hard` against shared daemon checkout orphans whatever HEAD is currently on
+
+> **Note on title:** this lesson was originally titled *"daemon finalize step hard-resets governance-v0 to a non-trunk phase branch's tip"* — a hypothesis that was falsified on 2026-05-22 by sub-agent re-investigation (sub-agent ts 2026-05-22, transcript citation below). The daemon's finalize step is NOT the vector. The file slug is preserved for cross-reference stability; the title and body are corrected. See §"Falsified hypothesis" appendix.
 
 ## TL;DR
 
-The Junior daemon's finalize-merge step on a planning task (#399 — v1-dq-schema-r1) successfully merged the worker branch into daemon-local `governance-v0` as merge commit `2ad835aa4`, then **immediately hard-reset `governance-v0` to `origin/phase-v1-federation-inbound-c`** in the same finalize cycle. The plan-merge commit became unreachable from daemon-local refs; origin was never pushed (the reset happened before push). Recovery required cherry-pick + recovery-branch push from the daemon's reflog. **Status: ROOT CAUSE NOT YET INVESTIGATED — DQ #338 pending (2026-05-21).**
+When a lane-dedicated advisor session ssh's into the shared Junior daemon checkout (`/srv/brehon-fork`) and runs `git reset --hard origin/<phase-branch>` to "fast-forward" the daemon's phase ref, the reset operates on **whatever branch HEAD is currently checked out**, not on the target branch named on the right-hand side. If the daemon's main checkout has been transiently switched to `governance-v0` by a Junior finalize-merge subagent (STEP 3 of `buildFinalizePrompt`: `git checkout governance-v0 → git merge --ff-only origin/governance-v0 → git merge --no-ff <worker>`), the lane agent's `reset --hard origin/<phase-branch>` will move `governance-v0` (not the phase branch) to the phase branch's tip — orphaning any plan-merge commit that was just produced.
 
-## Why this mattered
+**This is a coordination defect between two laptop sessions** (the canonical session running Junior orchestration + a lane-dedicated session FF-ing its phase ref on the daemon) that share write access to a single daemon-side `/srv/brehon-fork/.git/`. The Junior daemon is the **innocent bystander** whose finalize-merge subagent transiently switches HEAD as part of its prompt; the destructive write comes from the other laptop session.
 
-The destructive sequence (daemon reflog):
+## Why this mattered (incident 2026-05-21)
+
+Daemon reflog sequence on `governance-v0`:
 
 ```
-@{1}  merge: 2ad835aa4 — daemon merged worker-399 into local governance-v0 (CORRECT)
-@{0}  reset: moving to origin/phase-v1-federation-inbound-c (WRONG REF — destructive)
+@{5}  2ad835aa4  merge junior/role-planning-...-399: Merge made by the 'ort' strategy   ← Junior finalize, CORRECT
+@{4}  7bc103421  reset: moving to origin/phase-v1-federation-inbound-c                  ← DESTRUCTIVE; orphans @{5}
+@{3}  c02dc8617  cherry-pick: docs(plan): v1-dq-schema-r1 plan written                  ← recovery
+@{2}  c3d6bbd49  reset: moving to origin/governance-v0                                  ← re-align
+@{1}  74dc2d5e7  pull --ff-only origin governance-v0                                    ← back to clean
 ```
 
-Origin/governance-v0 was protected only because the reset happened before push. If the daemon's finalize order were `merge → push → reset`, origin/governance-v0 would have been silently force-pushed to the phase branch's tip, taking the public history with it.
+Timestamp gap between @{5} (Junior finalize at `19:55:59Z`) and @{4} (destructive reset at `19:58:26Z`): **~2.5 minutes**. Long enough to rule out the Junior daemon itself (its finalize subagent had already exited successfully); short enough that a different actor — the fed-in-c lane laptop session — was issuing the reset as part of its own "FF daemon-local phase ref" routine.
 
-The bug class is: the daemon's finalize step's branch-restoration sub-step (after merge, the daemon presumably checks out trunk to push) picked the wrong ref. The active phase branch `phase-v1-federation-inbound-c` exists on the daemon (cohort 1 dispatched 2026-05-21); finalize's logic appears to read a stale "current branch" pointer or a misconfigured worktree state and reset trunk to that ref instead of to `origin/governance-v0`.
+Origin/governance-v0 was protected only because the reset was followed by recovery before any laptop push.
 
-## When to apply
+## Vector (confirmed 2026-05-22 by sub-agent forensics)
 
-This lesson and the recovery recipe apply whenever:
+A lane-dedicated laptop Claude Code session (CWD: `brehon-fork-fed-in-c`) had been running a "lossless FF" pattern 8 times that day, each time invoking:
 
-1. A planning Junior task (`[role:planning]`) finalizes while another `phase-v1-*` branch is concurrently active on the daemon (cohort dispatched, worker branches in `.junior/worktrees/`).
-2. The advisor observes the post-finalize `governance-v0` tip on origin is unchanged but the daemon's local `governance-v0` is sitting at a phase branch's tip.
-3. `mcp__junior-brehon__show_task` reports `succeeded` for the planning task but `git log origin/governance-v0 --grep '<plan>'` returns empty.
+```bash
+ssh homeserver "cd /srv/brehon-fork && git fetch origin <phase-branch> && git reset --hard origin/<phase-branch> && git rev-parse HEAD"
+```
 
-Probability of recurrence: high. Every planning task dispatched while ANY `phase-v1-*` branch is active reproduces the trigger conditions.
+**Smoking-gun transcript:** `C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork-fed-in-c\a6097edd-663b-4770-b73a-816a012b6d67.jsonl` event uuid `cf9c79f1-a709-41ea-a920-dc643a2dd0a5` ts `2026-05-21T19:58:17.028Z` (9 seconds before the daemon reflog records the destructive reset). Tool-call description: `"FF daemon-local phase ref to new merged tip 7bc103421 (lossless reset since lane is the sole writer)"`.
 
-## Recovery recipe (verified 2026-05-21 on task #399)
+Of the 8 invocations:
+- **7 were lossless** because daemon HEAD was already on the phase branch (or idle on it between finalizes). `reset --hard` on the phase branch with phase-branch target = no-op or true fast-forward.
+- **1 (this incident)** landed during the 2.5-minute window after Junior finalize had switched daemon HEAD to `governance-v0` to merge the planning task into trunk. The reset moved `governance-v0` (current branch) to `origin/phase-v1-federation-inbound-c` (target ref). Plan commit orphaned.
 
-Three-step recovery, ~25 min total:
+The flaw is **not** the use of ssh, nor the use of `--hard`, nor the "lossless when lane is sole writer" reasoning *in the steady state*. The flaw is the **absence of a HEAD precondition check** before the reset. Daemon HEAD is shared state, mutated by every Junior finalize (transiently) and by every prior advisor SSH command (persistently). A correct routine must verify HEAD matches the named target — OR avoid touching HEAD-tracked branches at all.
 
-### Step 1: SSH to EliteDesk daemon and cherry-pick from reflog
+## How to apply
+
+### Correct routine: `update-ref`, not `reset --hard`
+
+```bash
+ssh homeserver "cd /srv/brehon-fork && git fetch origin <phase-branch> && git update-ref refs/heads/<phase-branch> origin/<phase-branch>"
+```
+
+`git update-ref` operates on the **named** ref, not on HEAD. It is lane-safe and worktree-safe regardless of which branch daemon's main checkout is currently on, regardless of which Junior worker is mid-finalize. This is the recipe `feedback_planner_dq_id_via_origin_not_daemon_local.md` already recommends for the analogous "ff daemon-local trunk" case; the same recipe applies for ff-ing any daemon-local phase branch.
+
+### If you must use `git reset --hard` (don't, but if you must)
+
+Guard with an explicit HEAD-precondition check:
 
 ```bash
 ssh homeserver "cd /srv/brehon-fork && \
-    git reflog governance-v0 | head -5 && \
-    git cherry-pick <orphaned-merge-sha-from-reflog>~1..<orphaned-merge-sha-from-reflog>"
+  CURRENT=\$(git branch --show-current) && \
+  if [ \"\$CURRENT\" != \"<phase-branch>\" ]; then \
+    echo \"REFUSE: HEAD on \$CURRENT, expected <phase-branch>\" >&2; exit 1; \
+  fi && \
+  git fetch origin <phase-branch> && \
+  git reset --hard origin/<phase-branch>"
 ```
 
-Replace `<orphaned-merge-sha-from-reflog>` with the merge commit visible in the daemon reflog @{1} entry. The cherry-pick produces a new commit (`c02dc8617` in the 2026-05-21 incident) with the same tree as the original plan write.
+The guard converts the silent destructive-reset bug into a loud refusal. But `update-ref` is structurally better and should be the default.
 
-### Step 2: Push to a recovery branch (NOT trunk)
+### Hard refusals (any lane laptop session)
 
-```bash
-ssh homeserver "cd /srv/brehon-fork && \
-    git push origin HEAD:refs/heads/recovery/<phase>-plan"
-```
+1. **Never `ssh homeserver "...git reset --hard..."` against `/srv/brehon-fork` without a HEAD precondition check.** The daemon's main checkout HEAD is shared mutable state across all laptop sessions + the Junior finalize subagents; you cannot assume it's where you left it 30 seconds ago.
+2. **Never use `git reset --hard <ref>` when you mean "advance refs/heads/<branch> to <ref>".** `reset` moves HEAD's branch; `update-ref` moves the named branch. Two different operations.
+3. **Never "fast-forward" a daemon-local ref while a Junior task with that base_branch (or governance-v0) is mid-finalize.** The Junior daemon publishes task status via `mcp__junior-brehon__list_tasks`; check that no task with `status: running` and a matching base_branch is in flight.
 
-Never `git push origin governance-v0` from the daemon side post-reset — at this point daemon-local `governance-v0` is at the wrong ref (the phase branch tip); pushing it would clobber origin/governance-v0.
+## Recovery recipe (still valid — verified 2026-05-21)
 
-### Step 3: Pull-cherry-pick on laptop
+If the destructive reset has already happened and a commit is orphaned on the daemon's reflog:
 
-```bash
-git fetch origin recovery/<phase>-plan
-git cherry-pick origin/recovery/<phase>-plan
-git push origin governance-v0
-git push origin :recovery/<phase>-plan  # cleanup
-```
+1. **SSH to daemon, cherry-pick from reflog:**
+   ```bash
+   ssh homeserver "cd /srv/brehon-fork && \
+     git reflog governance-v0 | head -5 && \
+     git cherry-pick <orphaned-merge-sha>~1..<orphaned-merge-sha>"
+   ```
+2. **Push to a recovery branch (NOT trunk):**
+   ```bash
+   ssh homeserver "cd /srv/brehon-fork && \
+     git push origin HEAD:refs/heads/recovery/<phase>-plan"
+   ```
+3. **Laptop side pull-cherry-pick:**
+   ```bash
+   git fetch origin recovery/<phase>-plan
+   git cherry-pick origin/recovery/<phase>-plan
+   git push origin governance-v0
+   git push origin :recovery/<phase>-plan
+   ```
+4. **Daemon-side trunk re-alignment via `update-ref` (NOT `reset --hard`, per this lesson):**
+   ```bash
+   ssh homeserver "cd /srv/brehon-fork && \
+     git fetch origin governance-v0 && \
+     git update-ref refs/heads/governance-v0 origin/governance-v0"
+   ```
 
-The laptop's cherry-pick produces a third SHA (`f746a00b9` in 2026-05-21 incident) but the tree is byte-identical to the plan write. Origin/governance-v0 now has the plan commit; recovery branch is deleted.
+## Falsified hypothesis (preserved for cross-reference; see also `feedback_falsifiable_hypothesis_before_structural_fix.md`)
 
-### Step 4: Daemon-side trunk re-alignment
+The original DQ #338 (2026-05-21) attributed the destructive reset to "the daemon's finalize step issued an unintended `git reset --hard origin/phase-v1-federation-inbound-c` or equivalent on governance-v0." Sub-agent re-investigation 2026-05-22 confirmed:
 
-After origin/governance-v0 is current, force the daemon's local `governance-v0` back into alignment:
+- `buildFinalizePrompt` (`/opt/junior-src/src/core/claude.ts:239`) has NO `reset --hard` instruction.
+- `/opt/junior-src/src/daemon/executor.ts` + `git.ts` have ZERO `git reset` calls (grep `/opt/junior-src/src/ /opt/junior-src/dist/` clean).
+- Task #399's bash log shows clean STEP 3 finalize: `checkout → merge --ff-only → merge --no-ff`. No reset.
+- All recent Junior task logs (jobs 395-402) contain zero `reset --hard` calls.
 
-```bash
-ssh homeserver "cd /srv/brehon-fork && \
-    git fetch origin governance-v0 && \
-    git update-ref refs/heads/governance-v0 origin/governance-v0"
-```
+The daemon-finalize hypothesis is therefore false. The investigation pointer in the prior version of this lesson (`/opt/junior-src/src/daemon/executor.ts finalize-merge code path`) is invalid as an option-a target. The structural-fix recommendation in DQ #338 v1 was scoped to the wrong code surface.
 
-Use `update-ref` rather than `checkout` + `reset --hard` so the daemon's current worktree state (which may be on a phase branch for an active cohort worker) is not disturbed.
+## Companion DQ + lessons
 
-## Investigation pointers (for DQ #338 option-a resolution)
-
-- **Primary suspect:** `/opt/junior-src/src/daemon/executor.ts` finalize-merge code path. Look for any `git reset --hard <ref>` or `git checkout -B <branch> <ref>` step that uses a `<ref>` derived from worktree state rather than the task's `base_branch` field.
-- **Secondary suspect:** `/opt/junior-src/src/daemon/worktree.ts` — if the daemon reuses a worktree directory across tasks, finalize may read a stale `HEAD` from a prior cohort worker's worktree.
-- **Symptom signature for repro:** dispatch a `[role:planning]` task with `base_branch=governance-v0` while at least one `phase-v1-*` branch is active in the daemon's worktree list. Watch the daemon's `governance-v0` reflog post-finalize.
-
-A safer finalize sequence would be:
-
-```bash
-# After merge:
-git checkout governance-v0          # NOT reset; preserves any uncommitted state
-git merge --ff-only <worker-branch> # FF; aborts if non-FF (which signals the bug)
-git push origin governance-v0       # push only on confirmed FF
-```
-
-The `--ff-only` flag converts the silent destructive-reset bug into a loud merge-aborts-with-error bug.
-
-## What NOT to do
-
-1. **Never `git push origin governance-v0` from the daemon side after observing the reset.** Daemon-local `governance-v0` is at the wrong ref; pushing it overwrites the public history.
-2. **Never `git reset --hard origin/governance-v0` on the daemon-local trunk** while a phase worktree may be in-flight — this can wedge an active cohort worker if the worker reads daemon-local trunk for ff-merge purposes (per `feedback_daemon_local_trunk_stale_multi_lane.md`).
-3. **Never restart the daemon as a "fix"** — the daemon's reflog is the only source of truth for the orphaned commit; restart may garbage-collect unreachable refs (default 90d but configurable).
-
-## Companion DQ
-
-- **DQ #338** (2026-05-21, advisor) — root-cause investigation; option-a (structural fix in `executor.ts`) recommended over option-b (track-and-watch). Recurrence cost ~25 min × N planning tasks while phase branches are active.
-
-## See also
-
-- `feedback_daemon_refspec_excludes_meta_phase_branches.md` — adjacent daemon-config defect class (refspec filter), demonstrates the live-edit-then-patch-restore pattern that DQ #338's eventual fix should follow.
-- `feedback_daemon_local_trunk_stale_multi_lane.md` — why daemon-local trunk vs origin trunk diverge under multi-lane operation; relevant to recovery Step 4's `update-ref` choice.
-- `feedback_junior_finalize_skips_when_worker_pre_pushes.md` — adjacent finalize-step failure mode; in that case finalize is too passive, in this case finalize is too aggressive (overreaches into trunk-reset).
-- `feedback_junior_finalize_merge_race_lossless_reconcile.md` — BOTH-RAN reconcile pattern; complementary defense in depth.
+- **DQ #338** — original recommendation falsified; mutate the `answer` field to record correct RCA + the `update-ref`-not-`reset --hard` structural fix.
+- `feedback_falsifiable_hypothesis_before_structural_fix.md` — the meta-lesson from this investigation: verify the hypothesis behind a structural-fix DQ in ≤30 min before committing to the fix path.
+- `feedback_planner_dq_id_via_origin_not_daemon_local.md` — already recommends `git update-ref refs/heads/governance-v0 origin/governance-v0` for the trunk case; this lesson generalizes the same recipe to phase branches.
+- `feedback_daemon_local_trunk_stale_multi_lane.md` — broader pattern of daemon-local refs drifting from origin under multi-lane operation.
+- `feedback_junior_finalize_merge_race_lossless_reconcile.md` — BOTH-RAN reconcile pattern; complementary defense for the finalize-race case.
+- `project_concurrent_advisor_sessions_2026_05_21.md` — the incident-window project memory.
