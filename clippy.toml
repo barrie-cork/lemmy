@@ -5,8 +5,6 @@
 # Source: feedback_lemmy_error_no_std_error.md + project_phase6_convention_divergence_class.md axis #4.
 
 disallowed-methods = [
-  { path = "core::option::Option::unwrap_or_default",
-    reason = "Use .ok_or_else(|| LemmyErrorType::*) for required federation fields. See feedback_lemmy_error_no_std_error.md and project_phase6_convention_divergence_class.md axis #4." },
-  { path = "core::result::Result::unwrap_or_default",
-    reason = "Use ? or .map_err with explicit error type. See feedback_lemmy_error_no_std_error.md." }
+  { path = "core::option::Option::unwrap_or_default", reason = "Use .ok_or_else(|| LemmyErrorType::*) for required federation fields. See feedback_lemmy_error_no_std_error.md and project_phase6_convention_divergence_class.md axis #4." },
+  { path = "core::result::Result::unwrap_or_default", reason = "Use ? or .map_err with explicit error type. See feedback_lemmy_error_no_std_error.md." }
 ]
