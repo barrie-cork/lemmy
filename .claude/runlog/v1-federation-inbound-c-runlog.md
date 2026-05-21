@@ -26,3 +26,36 @@ the phase branch on origin lacked the runlog. Advisor re-applies the runlog
 directly from the canonical laptop checkout's lane worktree at
 `C:/Users/barri/Developer/brehon-fork-fed-in-c`. Two root causes filed as
 `kind: "log"` DQ for retro harvest.
+
+## advisor: pre-phase wrapper audit pass + submodule init recovery
+
+Per `.claude/rules/pre-phase-harness-audit.md`, ran 4 probes in lane worktree:
+
+- Probe 0 (Docker daemon): OK.
+- Probe 1 (`cargo-check.bat -p lemmy_utils`): exit 0; only `lemmy_utils`
+  compiled in 1m 58s. `-p` honored.
+- Probe 2 (`cargo-check.bat -p lemmy_db_schema --features full`): exit 0;
+  `lemmy_db_schema` + full-feature deps (diesel-async, activitypub_federation,
+  ed25519-dalek, bcrypt, diesel_migrations, doku, i-love-jesus) compiled in
+  6m 30s. Features flag honored.
+- Probe 3 (`cargo-test.bat --test e2e --no-run -p lemmy_server`): FIRST RUN
+  failed with exit 101 — `lemmy_email` build.rs `read_dir("translations/backend/")`
+  returned `Os { code: 3, kind: NotFound }`. **Root cause: `crates/email/translations`
+  is a git submodule and was uninitialized in this lane worktree.** Per
+  `feedback_phase_lane_worktree_bootstrap_checklist.md` Step 1, the lane
+  bootstrap should run `git submodule update --init --recursive` after
+  `git worktree add`; this lane's bootstrap missed it. Resolution: ran
+  `git submodule update --init --recursive crates/email/translations`
+  (a3f9e4669b53f041b92fbbe6bdd80c8db0619c20 lemmy-translations checkout).
+  Re-ran probe → exit 0; exactly one executable built
+  (`target\debug\deps\e2e-e14ea3c669383090.exe`) in 18m 07s. `-p` + `--test e2e`
+  scope honored.
+- Probe 4a/4b (bogus `--features nonexistent_xyz`): both exit 101 with
+  `error: the package 'lemmy_server' does not contain this feature: nonexistent_xyz`.
+  Wrappers propagate non-zero — no exit-code-masking bug.
+
+Flag file `.claude/audit-phase-v1-federation-inbound-c-complete.flag` touched.
+Audit logs in `.claude/audit-*.log` (gitignored). Submodule init recovery noted
+for retro harvest as evidence the lane bootstrap checklist was not applied —
+candidate for a `kind: "log"` DQ at next-id walk if user wants explicit retro
+signal beyond this runlog entry.
