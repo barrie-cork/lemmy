@@ -21,30 +21,6 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
-    },
-    {
-      "id": 339,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T20:52:29Z",
-      "question": "validate v1-federation-inbound-c Task 3 worker branch (e2e regression in mod v1_federation_inbound_b_fixtures + workaround-comment update)",
-      "branch": "junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402",
-      "phase_task": 3,
-      "commands": [
-        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task3-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-c-task3-test-norun.log 2>&1\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "options": [
-        "advisor pre-reserved stub; impl-task #N will mutate with commands[] + branch after worker commit + push"
-      ],
-      "context": "impl-task committed 9c7c43aff5d0d4a48f1cad2ef522eefcd1eb1a43 on junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402; mutated reserved stub to attach commands",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -2371,6 +2347,30 @@
       "answered_by": "advisor-self-resolved",
       "resolved_at": "2026-05-21T17:35:00Z",
       "notes": "[renumbered from #326 on merge governance-v0 -> phase-v1-federation-inbound-c due to DQ id collision: gov #326 was a different entry, renumbered from #308 earlier]"
+    },
+    {
+      "id": 339,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:52:29Z",
+      "question": "validate v1-federation-inbound-c Task 3 worker branch (e2e regression in mod v1_federation_inbound_b_fixtures + workaround-comment update)",
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-c-task3-test-norun.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "advisor pre-reserved stub; impl-task #N will mutate with commands[] + branch after worker commit + push"
+      ],
+      "context": "impl-task committed 9c7c43aff5d0d4a48f1cad2ef522eefcd1eb1a43 on junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402; mutated reserved stub to attach commands",
+      "answer": "All 3 §5 commands passed on phase tip 877bd849c (advisor-laptop): §5.1 cargo-check --workspace --features full exit 0 (1m 26s warm); §5.2 cargo-clippy --workspace --features full --no-deps -- -D warnings exit 0 (2m 34s) — no warnings, no disallowed_methods firings from federation-mod-roots deny; §5.3 cargo test --workspace --features full --test e2e --no-run exit 0 (18m 13s) — e2e binary re-linked cleanly with new appended_config_override_takes_effect_returns_429 fn. Phase 2 e2e (user gate 4) follows on post-merge tip.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T21:16:58Z"
     }
   ]
 }
