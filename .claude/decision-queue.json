@@ -2,27 +2,6 @@
   "schema_version": 2,
   "pending": [
     {
-      "id": 326,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T06:02:37Z",
-      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
-      "phase_task": 8,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
-      ],
-      "result": "fail",
-      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
-      "failed_commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
-      ],
-      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T06:08:27Z",
-      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
-    },
-    {
       "id": 338,
       "from": "advisor",
       "kind": "blocker",
@@ -33,9 +12,10 @@
         "option-b: track as recurrence-class only; file lesson; investigate when second occurrence surfaces"
       ],
       "context": "Task #399 (planning v1-dq-schema-r1) status=succeeded 2026-05-21T19:55:37Z. Worker branch finalize-merged into daemon-local governance-v0 as merge commit 2ad835aa4 (reflog @{1}). Immediately after, daemon-local governance-v0 was reset to origin/phase-v1-federation-inbound-c (reflog @{0}: 'reset: moving to origin/phase-v1-federation-inbound-c'). This destroyed the plan-merge AND set governance-v0 to a non-trunk phase branch's tip. Plan commit b1a6553b8 became unreachable; recovered via cherry-pick on EliteDesk (c02dc8617) then push to recovery/v1-dq-schema-r1-plan and pull-cherry-pick on laptop (f746a00b9). The bug class is: daemon's finalize step issued an unintended 'git reset --hard origin/phase-v1-federation-inbound-c' or equivalent on governance-v0. Worktree may have been wedged between trunk and the active phase branch; finalize's branch-restore step picked the wrong ref. RECURRENCE: this could refire on any planning task that finalizes while fed-in-c (or any future phase) is active.",
-      "answer": null,
+      "answer": "RECOMMEND option-a (structural investigation). Recovery cost ~25 min/incident (cherry-pick from daemon reflog + recovery-branch round-trip + daemon trunk re-alignment per .claude/lessons/feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md). Recurrence-class: every planning task dispatched while ANY phase-v1-* branch is active reproduces the trigger conditions. Origin/governance-v0 is currently protected only because the daemon's finalize order is merge→reset→(no push). If that order changes, origin will be force-pushed to a phase branch tip silently. Investigation surface: /opt/junior-src/src/daemon/executor.ts finalize-merge code path; suspect a `git reset --hard <ref>` or `git checkout -B <branch> <ref>` step that derives <ref> from worktree state rather than the task's base_branch field. Safer finalize sequence: `git checkout governance-v0 && git merge --ff-only <worker-branch> && git push` — converts silent destructive-reset into loud merge-aborts. Fix size estimate <50 lines TypeScript. Awaiting user decision before queueing investigation work (cannot self-resolve: structural change to harness on EliteDesk; needs user judgment on whether the investigation displaces current RT-r2 planning sequence).",
       "answered_by": null,
-      "resolved_at": null
+      "resolved_at": null,
+      "notes": " [advisor recommendation appended 2026-05-21T20:30Z; user-relay pending]"
     }
   ],
   "resolved": [
@@ -2303,6 +2283,27 @@
       "answer": "option-a: add superseded_by: v1-dq-schema-r1 note to feedback_cohort_dq_id_collision.md as part of Track B lesson updates. Same atomic commit as decision-queue.md v3 section. This prevents future sessions from following a dead workaround. Brief edit: add feedback_cohort_dq_id_collision.md to Track B lesson-update subtask.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 326,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T06:02:37Z",
+      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      ],
+      "result": "fail",
+      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
+      "failed_commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      ],
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails. [SUPERSEDED by PR #141 merge 2026-05-21T18:35:18Z (7cfc21c23); phase shipped; entry moved pending[]→resolved[] for hygiene 2026-05-21T20:30Z.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
     }
   ]
 }
