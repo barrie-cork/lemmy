@@ -19,16 +19,20 @@ The contamination instance observed in v1-rls-r1 (3× during one ~9-hour wall-cl
 ## Detection
 
 **Pre-dispatch (mandatory under concurrent lanes):**
+
 ```bash
 ssh homeserver "cd /srv/brehon-fork && git log phase-v1-<phase> --oneline -3"
 ```
+
 - Compare top commit subjects against `origin/phase-v1-<phase>`. If subjects mention a different lane (e.g. `feat(brehon-conformance-audit):`), the daemon ref is contaminated.
 - If subjects match the expected lane: OK to dispatch.
 
 **Post-dispatch (additional check):**
+
 ```bash
 ssh homeserver "cd /srv/brehon-fork/.junior/worktrees/job-<id> && git log --oneline -3"
 ```
+
 - The worker's worktree was forked from the daemon-local ref. If contaminated, the worker's base is wrong; cancel immediately before commit.
 
 ## Recovery (lane-safe FF)

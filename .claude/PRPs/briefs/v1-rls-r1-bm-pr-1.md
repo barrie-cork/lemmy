@@ -15,7 +15,7 @@ plan: .claude/PRPs/plans/v1-rls-r1.plan.md
 
 Actual create-task description (single line, <100 chars):
 
-```
+```text
 [role:bm-task] v1-rls-r1 bm-pr — see .claude/PRPs/briefs/v1-rls-r1-bm-pr-1.md
 ```
 
@@ -103,7 +103,7 @@ The PR body assembles from:
 
 ## §6 Expected output (return to advisor)
 
-```
+```text
 ## bm-pr complete — PR #<N> opened on phase-v1-rls-r1
 
 **PR URL:** https://github.com/barrie-cork/lemmy/pull/<N>

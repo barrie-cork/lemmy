@@ -374,7 +374,7 @@ When a new pending entry appears in `decision-queue.json`:
 
 Per RLS-PMD review §4.7 + autonomy-readiness criterion 5.2 + `.claude/PRPs/plans/v1-rls-r1.plan.md` Task 7. The Stop hook `.claude/hooks/retro-check.sh` fail-open path (3-attempt cap, load-bearing for true loops) emits a JSONL `retro_bypass` record to `.claude/governance-log/retro-bypass.jsonl` on every fail-open. Fields per the kind registry at `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
 
-**Consumer:** weekly-review Step 2c retro-harvest sweep scans the JSONL for the prior 7 days; surfaces in the weekly summary. **Autonomy signal:** the rate of `retro_bypass` entries per week should be monotonically decreasing. Rising rate → calibration-honesty regression; surface in the next phase retro.
+**Consumer:** the JSONL trail is consumed by future audit reads (weekly-review Step 2c is the retro-corpus sweep over `.claude/PRPs/reports/*.md`, not the JSONL; a dedicated JSONL-rate audit step would be added in a future sub-phase if a `retro_bypass` rate trend becomes load-bearing). **Autonomy signal:** the rate of `retro_bypass` entries per week should be monotonically decreasing. Rising rate → calibration-honesty regression; surface in the next phase retro.
 
 **Advisor-side action:** none required at session-start (the trail is passive). At retro time, the rate trend is part of the four-role retro signals (Advisor role) per `feedback_four_role_retro_signals.md`. See `feedback_retro_bypass_governance_log.md`.
 

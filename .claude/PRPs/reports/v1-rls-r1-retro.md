@@ -4,7 +4,7 @@
 **Plan:** `.claude/PRPs/plans/v1-rls-r1.plan.md` (committed `f61e09792`)
 **Tip:** `3efa40b23`
 **Date range:** 2026-05-20 (plan author) → 2026-05-21 (Tasks 1-13 ship)
-**Tasks shipped:** 12 of 13 (Task 13 = this retro)
+**Tasks shipped:** 13 of 13 (Task 13 = this retro itself)
 
 ## What surprised us
 

@@ -26,22 +26,45 @@ fi
 # --- Compute canonical target ---
 # Mirror retro-check.sh lines 32-41: derive from git-common-dir so the guard
 # and the Stop hook agree by construction.
-# Falls back to the script's own repo location to handle sentinel-dir probes
+#
+# Per CR cp-1 (PR #140): in a non-worktree checkout (the canonical brehon-fork
+# CWD), `git rev-parse --git-common-dir` returns the literal `.git` —
+# a relative path. The condition `GIT_COMMON != ".git"` on the original
+# Task 3 implementation prevented construction in that case, producing
+# a silent false-negative (the guard never warned in the canonical lane).
+# Fix: when --git-common-dir returns `.git`, use --show-toplevel to get
+# the repo root, then construct `${root}/.project-memory/memory.db`.
+# Falls back to the script's own repo location for sentinel-dir probes
 # (where CWD is not a git repository).
 CANONICAL=""
+MAIN_REPO=""
 GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null || true)
-if [ -z "$GIT_COMMON" ] || [ "$GIT_COMMON" = ".git" ]; then
-  # CWD is not a git worktree; try the script's own repo location.
+if [ -n "$GIT_COMMON" ]; then
+  if [ "$GIT_COMMON" = ".git" ]; then
+    # Non-worktree checkout (canonical lane). Derive repo root via --show-toplevel.
+    MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  else
+    MAIN_REPO=$(dirname "$GIT_COMMON")
+  fi
+fi
+if [ -z "$MAIN_REPO" ]; then
+  # CWD is not a git repository; try the script's own repo location (sentinel probe).
   SCRIPT_PATH="${BASH_SOURCE[0]:-}"
   if [ -n "$SCRIPT_PATH" ]; then
     SCRIPT_DIR=$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd || true)
     if [ -n "$SCRIPT_DIR" ]; then
-      GIT_COMMON=$(git -C "$SCRIPT_DIR" rev-parse --git-common-dir 2>/dev/null || true)
+      SCRIPT_COMMON=$(git -C "$SCRIPT_DIR" rev-parse --git-common-dir 2>/dev/null || true)
+      if [ -n "$SCRIPT_COMMON" ]; then
+        if [ "$SCRIPT_COMMON" = ".git" ]; then
+          MAIN_REPO=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)
+        else
+          MAIN_REPO=$(dirname "$SCRIPT_COMMON")
+        fi
+      fi
     fi
   fi
 fi
-if [ -n "$GIT_COMMON" ] && [ "$GIT_COMMON" != ".git" ]; then
-  MAIN_REPO=$(dirname "$GIT_COMMON")
+if [ -n "$MAIN_REPO" ]; then
   CANONICAL="${MAIN_REPO}/.project-memory/memory.db"
 fi
 
@@ -72,6 +95,11 @@ fi
 
 # --- Normalise paths ---
 # Resolve to absolute paths; case-fold Windows drive letter (C: vs c:).
+# Per CR cr-2 (PR #140): use os.path.abspath() so a relative PROJECT_MEMORY_DB
+# (e.g. './.project-memory/memory.db' in a lane .mcp.json) compares correctly
+# against the absolute canonical path. Without abspath, normpath alone would
+# leave the relative form and the string comparison would silently
+# false-positive a mismatch.
 normalise_path() {
   local raw="$1"
   "$PYTHON_BIN" -c "
@@ -79,7 +107,7 @@ import os, sys
 p = sys.argv[1]
 if len(p) >= 2 and p[1] == ':':
     p = p[0].lower() + p[1:]
-p = os.path.normpath(os.path.expanduser(p))
+p = os.path.abspath(os.path.normpath(os.path.expanduser(p)))
 print(p)
 " "$raw" 2>/dev/null || echo "$raw"
 }

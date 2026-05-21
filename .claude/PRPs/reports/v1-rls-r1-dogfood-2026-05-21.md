@@ -40,25 +40,26 @@ Exit 0 (WARN-not-FAIL per PRECON-1). stderr contains the WARN banner naming both
 
 ## 2. Dogfood 4.6 — weekly-review Step 2c retro-harvest sweep
 
-Step 2c body in `.claude/skills/weekly-review/SKILL.md` runs against `.claude/PRPs/reports/*.md` mtime ≤ 30 days. The dogfood walks the Step body literally:
+Step 2c body in `.claude/skills/weekly-review/SKILL.md` runs against `.claude/PRPs/reports/*.md` filtered to **mtime within last 7 days** and reads the `## What to change` + `## Decisions to revisit` sections of each retro to extract proposals not yet promoted to `.claude/lessons/`. The dogfood walks the Step body literally:
 
 ```bash
-$ find .claude/PRPs/reports -maxdepth 1 -name '*.md' -mtime -30 -printf '%f\n' | wc -l
-98
+$ find .claude/PRPs/reports -maxdepth 1 -name '*.md' -mtime -7 -printf '%f\n' | wc -l
+11
 
-$ grep -l "^## Promotion candidates" .claude/PRPs/reports/*.md | wc -l
-≥10
+$ for f in $(find .claude/PRPs/reports -maxdepth 1 -name '*.md' -mtime -7); do
+>   grep -lE "^## (What to change|Decisions to revisit)" "$f"
+> done | wc -l
+7
 ```
 
-Sample surfaces (retros mentioning `^## Promotion candidates` in the last 30 days — these are the candidates Step 2c surfaces for human review):
+Sample surfaces (retros within last 7 days carrying the Step 2c-tracked section headers — these are the candidates Step 2c surfaces for human review):
 
-- `session-retro-2026-05-09-cycle-3-catchfire-replan.md` — three-attempt cap, cycle-count refusal proposals
-- `session-retro-2026-05-09-cycle-3-followup-three-proposals.md`
-- `session-retro-2026-05-08-resume-and-retro-extensions.md`
-- `session-retro-2026-05-16-pmd-backfill-dq-hook-scope.md`
-- `session-retro-2026-05-20-fed-in-b-impl-phase-close.md`
+- `session-retro-2026-05-20-brehon-conformance-audit-bootstrap.md` — bootstrap process improvements
+- `session-retro-2026-05-20-fed-in-b-impl-phase-close.md` — phase-close lessons
+- `v1-federation-inbound-b-retro.md` — fed-in-b retro
+- (this phase's own `v1-rls-r1-retro.md` not yet committed at dogfood time; would surface next week)
 
-The cycle-count-≥3 catch-fire proposal canonical surface (per RLS-PMD review §4.6 evidence) IS now codified in `.claude/lessons/feedback_plan_stub_uniformity_with_canonical_sibling.md` (promoted previously — confirms Step 2c's role is **surfacing**, not auto-promoting; humans complete the loop). **Result: PASS — Step 2c surfaces ≥1 known candidate (and many more).**
+The cycle-count-≥3 catch-fire proposal canonical surface (per RLS-PMD review §4.6 evidence) IS already codified in `.claude/lessons/feedback_plan_stub_uniformity_with_canonical_sibling.md` (promoted previously — confirms Step 2c's role is **surfacing**, not auto-promoting; humans complete the loop). **Result: PASS — Step 2c surfaces ≥1 retro carrying the tracked sections (7 retros in the prior 7 days carrying `What to change` or `Decisions to revisit`).**
 
 ## 3. Dogfood 4.7 — synthetic 3-attempt fail-open
 
@@ -84,7 +85,7 @@ Required-field check (all 6 fields present): `timestamp` (ISO 8601 UTC ✓), `se
 
 - **Dogfood 4.1 (a):** ✓ PASS — exit 0, stderr empty (canonical match path).
 - **Dogfood 4.1 (b):** ✓ PASS — exit 0, stderr WARN with both paths + verbatim 1-line fix.
-- **Dogfood 4.6:** ✓ PASS — Step 2c surfaces ≥1 known candidate (≥10 retros with `## Promotion candidates` in the prior 30 days).
+- **Dogfood 4.6:** ✓ PASS — Step 2c surfaces ≥1 retro from the prior 7 days carrying the tracked `## What to change` / `## Decisions to revisit` sections (7 retros total in the 7-day window).
 - **Dogfood 4.7:** ✓ PASS after fix — Task 7's original function placement was unreachable (defined after `exit 2`); Task 10 caught it and applied the fix in-cycle. JSONL emits with all 6 required fields.
 
 **Regression caught:** Task 7's function-after-exit placement. The fix is a same-cycle Task 10 patch (additive comment + function-relocation; no behaviour change, no Rust impact). This is exactly the value the dogfood was designed for — without Task 10, the bug would have shipped silently and `retro_bypass.jsonl` would never have been written in production.
