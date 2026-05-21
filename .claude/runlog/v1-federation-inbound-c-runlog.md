@@ -104,3 +104,11 @@ retro to consider:
 This recurrence is exactly the kind of "principle vs. rule" gap that
 `feedback_principles_not_rules.md` warns about: the principle is clear; the
 default behaviour reasserts itself absent active checking.
+
+## bm: PR opened — 2026-05-21T23:39Z
+
+- **PR:** #144 — Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int` + mirror
+- **URL:** https://github.com/barrie-cork/lemmy/pull/144
+- **Base ← Head:** governance-v0 ← phase-v1-federation-inbound-c
+- **Body source:** retro + plan + commits
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr #144`
