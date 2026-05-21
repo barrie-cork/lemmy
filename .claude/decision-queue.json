@@ -20,24 +20,6 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
-    },
-    {
-      "id": 316,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T10:57:26Z",
-      "question": "validate phase-brehon-conformance-audit task 6 worker branch — compute-metrics.sh created",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-6-compute-metrics-sh-see-claude-prps-briefs-brehon-conformance-audit-386",
-      "phase_task": 6,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task6-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -2004,6 +1986,24 @@
       "answer": "All 3 commands exit 0 on laptop against phase-brehon-conformance-audit tip 253c8ca1c. Cmd 1 (workspace cargo-check --workspace --features full): 1m41s warm. Cmd 2 (narrow federation clippy -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings): 2m25s warm. Cmd 3 (workspace clippy --workspace --no-deps --features full -- -D warnings): 2m52s warm. Mechanism §10.8 (workspace disallowed_methods=allow + per-module #![deny] per rustc lint-precedence rule 4) is now CONFIRMED ENFORCING: cmd 2 narrow probe targets the 3 federation governance modules with #![deny] active and exits 0 (federation governance code is axis-4 clean per fed-in-b fix-impl-3 evidence). Cmd 3 workspace probe exits 0 → workspace-allow override correctly silences disallowed_methods outside the 3 federation modules. Tasks 8 + 8a + TOML fix + 9 complete. Phase 1 (mechanism implementation) done; ready to advance to Cohort 3 (Task 7 dogfood).",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T10:45:57Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T10:57:26Z",
+      "question": "validate phase-brehon-conformance-audit task 6 worker branch — compute-metrics.sh created",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-6-compute-metrics-sh-see-claude-prps-briefs-brehon-conformance-audit-386",
+      "phase_task": 6,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task6-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "compute-metrics.sh smoke test PASS on laptop against phase-brehon-conformance-audit tip 34367e3c6. Fixture: axis-4 Tier-1 prediction on inbox.rs:735 + ground_truth_runtime entry from fix-impl-3 (8b04e69a6). Script output: axis-4 precision 1.000, axis-4 recall 1.000, latent-footgun catch rate 1, lead time 15.5h median. Exit 0. Note: DQ entry's `commands` field has a wrong command (Junior worker mis-transcribed `bash scripts/brehon/cargo-check.sh --workspace --features full` from a different brief template); the brief §5.3 specified `bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh /tmp/fixture-metrics.json` which is what advisor actually ran. Audit-trail-only mis-match; functionally validated. Lesson candidate for Task 13 retro: brief-template re-use risk.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T11:02:34Z"
     }
   ]
 }
