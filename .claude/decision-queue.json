@@ -25,6 +25,25 @@
       "id": 318,
       "from": "impl",
       "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T11:34:25Z",
+      "commands": [
+        "grep -c 'Conformance-audit prevention checkpoint' .claude/rules/advisor-orchestrator.md",
+        "grep -c 'Conformance-audit detection checkpoint' .claude/rules/advisor-orchestrator.md",
+        "grep -c 'Conformance-audit Tier-1 finding' .claude/rules/advisor-orchestrator.md"
+      ],
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-11-wire-skill-clippy-gate-into-advisor-orchestrator-md-see-claude-388",
+      "phase_task": 11,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
+    },
+    {
+      "id": 319,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
       "timestamp": "2026-05-21T11:38:39Z",
       "commands": [
         "test -f .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
@@ -32,7 +51,7 @@
         "grep -F '[[feedback_lemmy_error_no_std_error]]' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
         "grep -F '[[project_phase6_convention_divergence_class]]' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
         "grep -F 'conformance-audit-v1-federation-inbound-b-dogfood' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
-        "python3 -c \"import yaml, re; files = ['.claude/lessons/feedback_mirror_phase6_convention_in_same_file.md', '.claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md']; [print(f, 'frontmatter OK:', list(yaml.safe_load(re.match(r'^---\\n(.*?)\\n---', open(f).read(), re.S).group(1)).keys())) for f in files]\""
+        "python3 -c \"import yaml, re; files = ['.claude/lessons/feedback_mirror_phase6_convention_in_same_file.md', '.claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md']; [print(f, 'frontmatter OK:', list(yaml.safe_load(re.match(r'^---\n(.*?)\n---', open(f).read(), re.S).group(1)).keys())) for f in files]\""
       ],
       "branch": "junior/role-impl-task-brehon-conformance-audit-task-12-author-two-paired-lesson-files-see-claude-prps-briefs-brehon-conf-389",
       "phase_task": 12,

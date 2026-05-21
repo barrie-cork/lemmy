@@ -50,6 +50,14 @@ Before each brief, one `memory_search_hybrid` call against the brehon-fork PMD (
 
 This subsumes the session-start `.claude/lessons/` glob — that still happens once at session start, but pre-queue search adds the fresh lookup right before the brief is written.
 
+### 3.1.1 Conformance-audit prevention checkpoint
+
+**Skill invocation — conformance-audit (per `.claude/skills/brehon-conformance-audit/`)**:
+If the brief targets a file matching `crates/apub/activities/src/governance/**.rs` OR
+`crates/api/api/src/governance/**.rs` OR `crates/db_schema/src/source/governance/**.rs`,
+invoke the skill with `target_scope = file <brief-named-file>` BEFORE `/brehon-clarify`.
+Tier-1 findings fold into brief §3 / §4 before clarify-DQ entries.
+
 ### 2.4 Mandatory file-class lesson injection
 
 When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list against the table below and inject every match into §3 Required reading. **No judgment call** — pattern matches → lesson goes in.
@@ -170,6 +178,14 @@ Per `.claude/commands/brehon-verify.md` + `feedback_brehon_verify_pre_merge.md`.
 | ✗ from checkpoint failure (output exists, command exits non-zero) | Catch-fire — "regression suspected; CR triage missed it"; file DQ pending |
 
 Verify catches **phantom completions** (advisor reconciles brief Scope + plan §13 IMPLEMENT vs worktree branch). CR triage catches **regressions and quality findings**. Both stay; neither replaces the other.
+
+### 3.9.1 Conformance-audit detection checkpoint
+
+**Conformance-audit detection** (per `.claude/skills/brehon-conformance-audit/`):
+Before queueing `bm-merge`, after `/brehon-verify` returns ✓, run the skill with
+`target_scope = phase-diff <phase-branch>`. Tier-1 findings become §3 actions in the retro.
+Update the per-phase metrics file at `.claude/PRPs/audit-metrics/<phase>.json`. Run
+`compute-metrics.sh` for per-sub-phase calibration.
 
 ## 4. Cohort dispatch
 
@@ -331,6 +347,7 @@ For an allowlist match: author a narrow fix-impl-task brief at `.claude/PRPs/bri
 | Test failures (panics, assertion fails, e2e flakes, testcontainers issues) | Catch-fire |
 | Timeout / OOM / runner death | Catch-fire |
 | Any failure whose log slice doesn't match an allowlist row | Catch-fire |
+| Conformance-audit Tier-1 finding on `crates/apub/activities/src/governance/**.rs` OR `crates/api/api/src/governance/**.rs` OR `crates/db_schema/src/source/governance/**.rs` | **HARD REFUSAL — catch-fire to user** with audit report + suggested per-axis fix. NOT auto-fix; human-in-the-loop decides. (Per `feedback_mirror_phase6_convention_in_same_file.md`.) |
 
 Surface as: "validate-failed on `<branch>` (workflow run `<id>`): non-allowlist failure. Failed jobs: `<failed_jobs>`. Log slice attached. Surfaced to user — no auto-fix attempted."
 
