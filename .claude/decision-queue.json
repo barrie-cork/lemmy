@@ -2001,6 +2001,42 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T09:00:00Z",
       "context": "Task 9 IMPL+DQ atomic; advisor-authored deliverable. Per user gate 2026-05-21 to ship Tasks 9-13 advisor-side given daemon contamination."
+    },
+    {
+      "id": 318,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:08:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 11,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 11 (rule wiring) authored advisor-side; §1 polling-loop bullet + §5.5 Retro-bypass observability sub-section (§5.5 Catch-fire renumbered to §5.6). VALIDATE: all 3 probes pass. cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:08:00Z",
+      "context": "Advisor-authored per user gate 2026-05-21."
+    },
+    {
+      "id": 319,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:08:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 12,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 12 [P] (paired closure lessons) authored advisor-side; feedback_pmd_canonical_guard_enforces_invariant.md + feedback_retro_harvest_weekly_cadence.md. Both frontmatter clean (no auto-trigger keyword stuffing). cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:08:00Z",
+      "context": "Advisor-authored per user gate 2026-05-21."
     }
   ]
 }
