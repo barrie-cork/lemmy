@@ -1833,3 +1833,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **DQs:** all fed-in-b validate-pending entries (9 §13 tasks + DQ #290 Phase-2 e2e) result:pass; pending: 0.
 - **deliverable on trunk:** v1-federation-inbound-b codebase merged; HTTP-path enforcement + related e2e + governance log updates present on governance-v0.
 - **note:** L14 REVISED post-merge ordering: runlog COMPLETE written AFTER merge succeeds (not before). Mirrors `.claude/PRPs/briefs/v1-ship-1-r2-bm-merge-2.md` (successful L14-REVISED dispatch on PR #137).
+
+## bm: merge COMPLETE — 2026-05-21T10:15:00Z
+
+- **PR:** #140
+- **merge sha:** 16ede83b62e3c5c87609e1e0924ac5ae5d225705
+- **trunk position:** 16ede83b6 (Merge pull request #140 from barrie-cork/phase-v1-rls-r1)
+- **remote branch deleted?** yes
+- **CR triage summary:** 11 fix-in-pr addressed across fix-impl-1 (commit cc1590904: pmd-canonical-guard.sh abspath+show-toplevel + 3 doc-consistency batch + dogfood alignment + retro count + markdown lint) + fix-impl-2 (commit be93c4460: cr-9 anchored-relative-path helper). 3 carry-resolution-as-PR-comment: cr-1 rebut (DQ #297 schema ratified at plan-approval gate), cr-5 + cr-6 wont-fix (briefs are historical authoring records). 0 carry-forward.
+- **DQs:** all v1-rls-r1 validate-pending entries (DQ #307-#323) result:pass; pending: 0.
