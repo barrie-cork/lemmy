@@ -143,6 +143,7 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
         .filter(governance_config::scope.eq("instance"))
         .filter(governance_config::key.eq(CONFIG_KEY))
         .select(governance_config::value_int)
+        .order_by(governance_config::valid_from.desc())
         .first::<Option<i64>>(conn)
         .await
         .map_err(|_e| {
