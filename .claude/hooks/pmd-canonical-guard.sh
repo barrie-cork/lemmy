@@ -38,13 +38,32 @@ fi
 # (where CWD is not a git repository).
 CANONICAL=""
 MAIN_REPO=""
+# Helper: anchor a possibly-relative git-common-dir to a base dir, then
+# return the absolute MAIN_REPO (dirname of the .git). Per PR #140 cr-9:
+# git rev-parse --git-common-dir can return a relative path in worktree
+# or custom GIT_DIR setups; dirname on a relative path preserves the
+# relative form, and downstream os.path.abspath() then anchors to the
+# wrong CWD. Resolve to absolute up-front.
+_resolve_main_repo() {
+  local common="$1"
+  local base_dir="$2"  # repo CWD or SCRIPT_DIR
+  # Already absolute (POSIX `/foo` or Windows `C:/foo` / `C:\foo`)?
+  case "$common" in
+    /*) echo "$(dirname "$common")"; return ;;
+    [A-Za-z]:/*|[A-Za-z]:\\*) echo "$(dirname "$common")"; return ;;
+  esac
+  # Relative path: anchor to base_dir, then dirname.
+  local resolved
+  resolved=$(cd "$base_dir/$common/.." 2>/dev/null && pwd || true)
+  echo "$resolved"
+}
 GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null || true)
 if [ -n "$GIT_COMMON" ]; then
   if [ "$GIT_COMMON" = ".git" ]; then
     # Non-worktree checkout (canonical lane). Derive repo root via --show-toplevel.
     MAIN_REPO=$(git rev-parse --show-toplevel 2>/dev/null || true)
   else
-    MAIN_REPO=$(dirname "$GIT_COMMON")
+    MAIN_REPO=$(_resolve_main_repo "$GIT_COMMON" "$(pwd)")
   fi
 fi
 if [ -z "$MAIN_REPO" ]; then
@@ -58,7 +77,7 @@ if [ -z "$MAIN_REPO" ]; then
         if [ "$SCRIPT_COMMON" = ".git" ]; then
           MAIN_REPO=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)
         else
-          MAIN_REPO=$(dirname "$SCRIPT_COMMON")
+          MAIN_REPO=$(_resolve_main_repo "$SCRIPT_COMMON" "$SCRIPT_DIR")
         fi
       fi
     fi

@@ -2091,6 +2091,24 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T09:52:00Z",
       "context": "CR PR #140 triage user-approved 2026-05-21."
+    },
+    {
+      "id": 323,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T10:05:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": null,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "fix-impl-2: addressed CR re-review cr-9 (Major). git rev-parse --git-common-dir can return a relative path in worktree or custom GIT_DIR setups; my fix-impl-1 chain (dirname of GIT_COMMON) preserved the relative form, and downstream os.path.abspath in normalise_path then anchored to script CWD instead of repo root. Fix: extract _resolve_main_repo helper that detects absolute vs relative paths (POSIX /foo or Windows C:/foo / C:\foo) and anchors relative paths to repo CWD or SCRIPT_DIR before dirname. 4 dogfood probes still PASS post-fix. cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T10:05:00Z",
+      "context": "CR re-review on fix-impl-1 push; one residual Major finding addressed advisor-side."
     }
   ]
 }
