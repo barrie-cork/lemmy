@@ -36,6 +36,24 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
 
 7. Open Claude Code in the new worktree CWD. Verify the SessionStart banner shows no `pmd-canonical-guard.sh` WARN. A WARN means the `.mcp.json` `PROJECT_MEMORY_DB` still points at a wrong path — fix it and restart the MCP before writing any retros.
 
+8. **(NEW — v1-federation-inbound-c session 2026-05-21)** Programmatic verification that step 6 actually landed. Step 7 catches `.mcp.json` mispoints (the guard fires and surfaces a WARN); it does NOT catch the case where the wiring itself is missing (no WARN appears because the guard never ran). The two failure modes are distinct: mispointed PMD = guard ran + surfaced; missing wiring = guard never ran + silence. Run from the new lane CWD:
+
+   ```bash
+   python -c "
+   import io, json
+   s = json.load(io.open('.claude/settings.local.json', encoding='utf-8'))
+   ss = s.get('hooks', {}).get('SessionStart', [])
+   wired = any(
+       'pmd-canonical-guard.sh' in h.get('command', '')
+       for entry in ss for h in entry.get('hooks', [])
+   )
+   assert wired, 'FAIL: pmd-canonical-guard.sh SessionStart wiring missing — DQ #301 dual-wire incomplete; re-apply step 6'
+   print('OK: pmd-canonical-guard.sh wired at SessionStart')
+   "
+   ```
+
+   Expected output: `OK: pmd-canonical-guard.sh wired at SessionStart`. Any other output (FAIL assertion, JSON parse error, file-not-found) means step 6 was skipped or the file was clobbered — re-apply step 6 and re-run this check before proceeding. Per `feedback_python_utf8_encoding_windows.md`, the `io.open(..., encoding='utf-8')` is mandatory on Windows — bare `json.load(open(...))` will hit the cp1252 codec on non-ASCII content (recurred during v1-federation-inbound-c session 2026-05-21 when a DQ snapshot read crashed on a non-ASCII char at byte 41041).
+
 ## DQ #301 dual-wire (v1-rls-r1 ships)
 
 Step 6's wiring MUST be applied in BOTH locations:
