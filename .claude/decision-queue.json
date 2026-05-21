@@ -21,6 +21,21 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
+    },
+    {
+      "id": 338,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-21T20:16:59Z",
+      "question": "Junior daemon reset governance-v0 to origin/phase-v1-federation-inbound-c immediately after finalize-merging task #399's plan commit — investigate root cause and harness fix.",
+      "options": [
+        "option-a: investigate /opt/junior-src/src/daemon/executor.ts finalize-merge code path to find the wrong-ref reset; file structural fix",
+        "option-b: track as recurrence-class only; file lesson; investigate when second occurrence surfaces"
+      ],
+      "context": "Task #399 (planning v1-dq-schema-r1) status=succeeded 2026-05-21T19:55:37Z. Worker branch finalize-merged into daemon-local governance-v0 as merge commit 2ad835aa4 (reflog @{1}). Immediately after, daemon-local governance-v0 was reset to origin/phase-v1-federation-inbound-c (reflog @{0}: 'reset: moving to origin/phase-v1-federation-inbound-c'). This destroyed the plan-merge AND set governance-v0 to a non-trunk phase branch's tip. Plan commit b1a6553b8 became unreachable; recovered via cherry-pick on EliteDesk (c02dc8617) then push to recovery/v1-dq-schema-r1-plan and pull-cherry-pick on laptop (f746a00b9). The bug class is: daemon's finalize step issued an unintended 'git reset --hard origin/phase-v1-federation-inbound-c' or equivalent on governance-v0. Worktree may have been wedged between trunk and the active phase branch; finalize's branch-restore step picked the wrong ref. RECURRENCE: this could refire on any planning task that finalizes while fed-in-c (or any future phase) is active.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
