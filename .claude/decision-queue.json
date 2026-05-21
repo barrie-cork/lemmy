@@ -2109,6 +2109,38 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T10:05:00Z",
       "context": "CR re-review on fix-impl-1 push; one residual Major finding addressed advisor-side."
+    },
+    {
+      "id": 324,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T11:58:00Z",
+      "question": "Going forward (post-Tasks-1+2), should new e2e tests under mod v1_federation_inbound_b_fixtures use INSERT-with-newer-valid_from or UPDATE-in-place when overriding seeded governance_config rows?",
+      "options": [
+        "insert-with-newer-valid-from-canonical",
+        "update-in-place-continued",
+        "no-preference-document-both"
+      ],
+      "context": "The existing per_peer_rate_limit_returns_429 test at e2e.rs:15605-15610 uses UPDATE-not-INSERT as a workaround for the reader-side append-history defect (cited verbatim in inline comment). Tasks 1+2 of v1-federation-inbound-c add .order_by(governance_config::valid_from.desc()) to both reader sites — after which INSERT-with-newer-valid_from becomes safe.",
+      "answer": "NEW tests use INSERT-with-newer-valid_from — this matches the append-only design contract documented at crates/db_schema/src/source/governance/governance_config.rs:34-40 (\"The table is append-only by design — admin edits INSERT a new (scope, key, valid_from) row\") and exercises the post-fix reader correctly. EXISTING tests using UPDATE (currently only per_peer_rate_limit_returns_429 at e2e.rs:15600-15628) stay unchanged — they still work post-fix (UPDATE mutates the existing seed row; reader returns the only row). The workaround comment at lines 15605-15610 gets updated per DQ #325 to reflect the post-fix landscape; new tests use INSERT going forward.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 325,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T11:58:00Z",
+      "question": "Should v1-federation-inbound-c Task 3 update or remove the misleading workaround comment at crates/server/tests/e2e.rs:15605-15610 that claims raw INSERT returns an arbitrary row (true pre-fix, obsolete post-fix)?",
+      "options": [
+        "update-comment-in-task-3",
+        "remove-comment-entirely",
+        "leave-comment-as-historical-context"
+      ],
+      "context": "Lines 15605-15610 carry an inline comment cited verbatim in the source: \"governance_config is append-history with UNIQUE on (scope, key, valid_from) — NOT on (scope, key). The migration 2026-05-17 already seeded this key with value_int=100; raw INSERT would create a second row and the reader (get_inbound_config_int) returns an arbitrary one. UPDATE mutates the existing seed row in place.\" Once Tasks 1+2 land .order_by(valid_from.desc()), the claim \"reader returns an arbitrary one\" becomes false.",
+      "answer": "Update in Task 3 (option update-comment-in-task-3). Brief amended to add Task 3 IMPLEMENT step (b): replace the existing workaround block with a one-line note explaining that UPDATE-in-place stays valid for historical continuity AND that INSERT-with-newer-valid_from is now also safe post-v1-federation-inbound-c (per DQ #324). Removing entirely (option remove-comment-entirely) loses the audit trail of WHY the existing test uses UPDATE; leaving as-is (option leave-comment-as-historical-context) misleads future test authors who read it and conclude they cannot use INSERT. The update-comment-in-task-3 path preserves both audit trail and accuracy.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T11:58:00Z"
     }
   ]
 }
