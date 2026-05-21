@@ -1983,6 +1983,24 @@
       "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ e76a37455. Worker #381 hung post-DQ-raise (same Task 6 pattern); advisor cancelled + FF-merged + ran cargo. Worker used id=315 instead of brief-assigned 314 (Task 6 worker delayed-pushed a retro log into #314 first — collision-prevention recipe needs refinement for cross-worker PMD-fallback retros). VALIDATE: 3 H2 sections, 2x retro_bypass, DIFFERENT THINGS distinction present, 04 cross-link present.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T08:53:00Z"
+    },
+    {
+      "id": 317,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:00:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 9,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task9-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 9 authored advisor-side (paired retro_bypass lesson; 36 lines; frontmatter clean; 7x cross-link refs). cargo-check exit 0 on lane worktree. Advisor authoring chosen over Junior dispatch after recurring cross-lane daemon contamination + 2 worker hangs (Tasks 6/8); user-approved 2026-05-21.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:00:00Z",
+      "context": "Task 9 IMPL+DQ atomic; advisor-authored deliverable. Per user gate 2026-05-21 to ship Tasks 9-13 advisor-side given daemon contamination."
     }
   ]
 }
