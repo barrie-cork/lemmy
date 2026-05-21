@@ -1972,6 +1972,18 @@
       "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 4b313b3c1. Worker #380 stuck post-DQ-raise (10+ min idle, no cargo invocation); advisor cancelled + FF-merged worker output + ran cargo-check on lane. Lesson body verified: 57 lines, 5x pmd-canonical-guard.sh references, 3x dual-wire path mentions, frontmatter clean.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T08:38:00Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T10:50:00Z",
+      "question": null,
+      "options": null,
+      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' \u2014 FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T10:50:00Z"
     }
   ]
 }
