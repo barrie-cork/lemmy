@@ -113,3 +113,22 @@ The first occurrence is the human-side root cause; resolve via worktree.
   is per-worktree by default.
 
 **Where codified:** `.claude/rules/multi-lane-worktree.md` (new rule, 2026-05-11).
+
+## Pre-commit hygiene in canonical checkout (post-v1-retro-followups-r1, 2026-05-22)
+
+When the canonical `brehon-fork` checkout is shared with a concurrent advisor session (the working-tree-and-index pair are shared in a non-worktree checkout), the index can contain files staged by the OTHER session that the current session is unaware of. A `git add <single-file>` does NOT clear other staged files — it adds to whatever is already staged. The next `git commit` then folds those orphan-staged files into the commit, producing a mixed-scope commit whose subject does not advertise its full contents.
+
+**Why this matters:** `git push` to `governance-v0` is irreversible without force-push (forbidden by `no-destructive-defaults.md`). A mixed-scope commit cannot be cleanly rewritten after push; the commit history reader can only know what's inside by reading the diff, not the subject. This violates commit-hygiene patterns documented in `feedback_commit_hygiene_lockfiles_and_task_labels.md`.
+
+**How to apply (mandatory before every `git add` in the canonical checkout):**
+
+1. `git status --short` — confirm the unstaged AND staged sets match the planned commit. If unexpected files appear in either column, STOP and investigate (likely concurrent-session work-in-progress).
+2. If `git status` is clean except for the file(s) the current session authored: proceed with `git add <files>` + `git commit`.
+3. If `git status` shows pre-staged files from another session: `git diff --cached` to confirm content; surface to user via the runlog or AskUserQuestion; do NOT silently fold them into an unrelated commit.
+4. Post-`git add`, post-`git commit`: `git show --stat HEAD` to verify the commit-history reader will see exactly what the commit body advertised.
+
+**Detection:** a commit whose subject names ONE artifact (e.g. "task 4 — four-role retro") but whose `--stat` shows >1 unrelated file is a process miss. Retro flags it. Future PostToolUse hook on `git commit` could scan staged-vs-subject for divergence but is heavier than the manual check.
+
+**See also:**
+- `feedback_commit_hygiene_lockfiles_and_task_labels.md` — commit-subject-matches-content discipline
+- `.claude/rules/multi-lane-worktree.md` §"Hard refusals" #6 — atomic read-mutate-commit protocol
