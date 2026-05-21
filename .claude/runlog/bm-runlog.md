@@ -1842,3 +1842,18 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remote branch deleted?** yes
 - **CR triage summary:** 11 fix-in-pr addressed across fix-impl-1 (commit cc1590904: pmd-canonical-guard.sh abspath+show-toplevel + 3 doc-consistency batch + dogfood alignment + retro count + markdown lint) + fix-impl-2 (commit be93c4460: cr-9 anchored-relative-path helper). 3 carry-resolution-as-PR-comment: cr-1 rebut (DQ #297 schema ratified at plan-approval gate), cr-5 + cr-6 wont-fix (briefs are historical authoring records). 0 carry-forward.
 - **DQs:** all v1-rls-r1 validate-pending entries (DQ #307-#323) result:pass; pending: 0.
+
+## bm: merge COMPLETE — 2026-05-21T18:35:18Z
+
+- **PR:** #141 (Phase brehon-conformance-audit — Phase-6 convention-divergence skill + Clippy gate)
+- **base ← head:** governance-v0 ← phase-brehon-conformance-audit
+- **outcome:** MERGED ✓
+- **merge sha:** `7cfc21c23ccb` (`7cfc21c23` — "Merge pull request #141 from barrie-cork/phase-brehon-conformance-audit")
+- **merged at:** 2026-05-21T18:35:18Z
+- **trunk position:** `7cfc21c23` (governance-v0 advanced from `64ab99ae6` → `7cfc21c23`)
+- **remote branch deleted?** yes (`phase-brehon-conformance-audit` removed from origin via `--delete-branch`; L16 `git ls-remote` returned empty)
+- **CR triage summary:** 23 findings — 7 fix-in-pr addressed in fix-impl-4 commit `d2c7f9550` (cr-6 cargo-check contradiction in impl-10 brief + cr-13 plan §8a GOTCHA wording + cr-16 audit-metrics schema strictness + cr-18 METRICS field-name drift + cr-19 FP attribution + cr-20 lead-time formula + cr-21 find-sibling regex broadening); 1 carry-forward (cr-1 DQ schema-v3 → issue #142 with composite-id proposal appended); 15 wont-fix (cr-2 DQ-history-rewrite v2 forward-only rule + 13 markdownlint nits on advisor meta-docs + cr-23 CR placeholder line); 0 rebut.
+- **DQs:** all brehon-conformance-audit validate-pending-laptop entries (DQ #312-#319 from §13 tasks + #327 from fix-impl-4) result:pass. One orphan pending DQ #326 (renumbered from old phase #308 — historical Task 8 probe-fail from cycle-3 catch-fire, superseded by fix-impl-2 + Task 8 v2 success) carried over to trunk; advisor-laptop will mutate post-merge.
+- **deliverable on trunk:** brehon-conformance-audit skill bundle (six-axis convention-divergence detection + Clippy structural enforcement) merged. Dogfood metrics preserved at axis-4 precision/recall 1.000, lead-time 27.5h, latent-footgun catch 1 (validated post-fix on v1-federation-inbound-b snapshots).
+- **process incidents (retro-captured):** (1) bm-poll-cr Junior #392 false-success — pushed to wrong branch; recovered via cherry-pick of unreachable commit. (2) bm-triage Junior #394 false-success — never read brief; advisor-direct re-triage required. (3) DQ #320 id collision with concurrent fed-in-c session; resolved via on-merge renumber (#308 → #326, #320 → #327). All three captured in `.claude/PRPs/reports/session-retro-2026-05-21-conformance-audit-cr-triage.md`.
+- **note:** L14 belt-and-braces fallback fired — BM Junior #396 skipped POST-merge runlog write; advisor authored this entry per `auto-phase.md` §"L14 fix".
