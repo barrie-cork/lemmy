@@ -3,17 +3,20 @@
   "pending": [
     {
       "id": 328,
-      "from": "advisor",
+      "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T18:52:19Z",
+      "timestamp": "2026-05-21T18:59:00Z",
       "question": "Reserved for v1-federation-inbound-c cohort 1 task 1",
       "options": [],
-      "context": "Pre-reserved per PRECON-7 Option 3 (.claude/lessons/feedback_cohort_dq_id_collision.md). impl-task #1 (Add .order_by(valid_from.desc()) in get_inbound_config_int) fills commands[] + branch + log_slice post-push.",
+      "context": "impl-task committed 0ed04fc7181192cf1f5e4812d4515c8088a586c0 on junior/role-impl-task-v1-fed-in-c-task-1-see-claude-prps-briefs-v1-federation-inbound-c-impl-1-md-397; mutated reserved stub to attach commands",
       "answer": "reserved for v1-federation-inbound-c cohort 1 task 1",
       "answered_by": null,
       "resolved_at": null,
-      "commands": null,
-      "branch": null,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task1-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-1-see-claude-prps-briefs-v1-federation-inbound-c-impl-1-md-397",
       "phase_task": 1,
       "result": null,
       "log_slice": null,
