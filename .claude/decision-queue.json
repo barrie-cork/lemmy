@@ -24,20 +24,24 @@
     },
     {
       "id": 339,
-      "from": "advisor",
+      "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T20:43:41Z",
+      "timestamp": "2026-05-21T20:52:29Z",
       "question": "validate v1-federation-inbound-c Task 3 worker branch (e2e regression in mod v1_federation_inbound_b_fixtures + workaround-comment update)",
-      "branch": null,
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402",
       "phase_task": 3,
-      "commands": null,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-c-task3-test-norun.log 2>&1\""
+      ],
       "result": null,
       "log_slice": null,
       "failed_commands": null,
       "options": [
         "advisor pre-reserved stub; impl-task #N will mutate with commands[] + branch after worker commit + push"
       ],
-      "context": "PRECON-7 Option 3 pre-reservation (feedback_cohort_dq_id_collision.md). Reserved for Task 3 (e2e regression test) impl-task worker. Worker pre-pushes (daemon finalize-merge wrong-ref bug per DQ #338 on gov-v0) — advisor manually finalize-merges from origin/junior/<branch>. Worker mutates this entry in place per impl-1 brief §4 Mutation discipline pattern.",
+      "context": "impl-task committed 9c7c43aff5d0d4a48f1cad2ef522eefcd1eb1a43 on junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402; mutated reserved stub to attach commands",
       "answer": null,
       "answered_by": null,
       "resolved_at": null
