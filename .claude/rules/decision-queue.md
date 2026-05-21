@@ -25,6 +25,27 @@ varied resolved-timestamp keys). When you read a v1 entry into a v2
 write context, do not backfill `kind` or `resolved_at` — leave the
 historical record untouched.
 
+## Schema (v3)
+
+v3 is an additive, forward-only extension of schema-v2. All v2 fields and semantics are preserved. Do not rewrite pre-v3 entries.
+
+Top-level keys are unchanged from v2: `pending` (array), `resolved` (array), `schema_version` (now `3`). The `dq-schema-v3-migrate.sh` migration adds two new fields to every existing entry and bumps `schema_version` to `3`.
+
+**Composite id (post-v1-dq-schema-r1, 2026-05-21).** Every new DQ entry written after v3 ships uses `id: "<session_id>-<sequence>"` where `session_id` is a per-CC-session 12-hex UUID (cached in gitignored `.claude/.dq-session-id`) and `sequence` is a per-session monotonic 3-digit counter (`001`, `002`, ...). Example: `a1b2c3d4e5f6-001`. The global `next_id = max(all_ids) + 1` recipe is abolished for new v3 entries — id namespaces are now per-session, making collisions arithmetically impossible.
+
+Pre-v3 entries keep their original integer `id` unchanged. Migration adds `id_v1: <int>` as an alias for back-compat readers. Citations like "DQ #50" continue to resolve via `id == 50` on legacy entries; new entries are cited as `DQ <prefix>-<seq>` (e.g. `DQ a1b2c3d4e5f6-001`).
+
+Generate v3 ids via `bash scripts/brehon/dq-v3-new-entry.sh`. The script reads or creates `.claude/.dq-session-id`, scans the live DQ + archives for the highest sequence in this session, and prints the next composite id.
+
+**Approval fields (post-v1-dq-schema-r1, 2026-05-21).** Every entry gains `approved_by: <user-id> | null` and `approved_at: <ISO8601> | null`. Migration adds both as `null` to all pre-v3 entries. Going forward, the advisor writes `approved_by` only after an `AskUserQuestion` user-gate relay on a judgment-heavy entry. These fields are **advisor-exclusive** — Junior subagents must never write a non-null `approved_by`.
+
+**New hard refusals (v3, all sessions except the persistent advisor session):**
+
+8. **NEVER write `approved_by` from a non-advisor session** — that field is advisor-exclusive, populated only after AskUserQuestion user-gate relay.
+9. **NEVER use the abolished `next_id = max(all_ids)+1` recipe on v3 writes** — use `bash scripts/brehon/dq-v3-new-entry.sh`.
+
+Archive files (`decision-queue-archive-*.json`) are NOT migrated to v3 — they retain schema_version 1 or 2 per PRECON-3 (forward-only; archive migration is permanently deferred).
+
 ## Archive policy
 
 The live `decision-queue.json` should hold only entries from **the

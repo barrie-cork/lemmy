@@ -92,3 +92,13 @@ You cannot invoke `Agent(...)`. If a script reads "run `/prp-review` first," tha
 ## Linux discipline (Junior runs on EliteDesk)
 
 This subagent runs on the EliteDesk. Use Linux tooling — `./scripts/brehon/cargo-*.sh` not `.bat`. Per `.claude/rules/pre-phase-harness-audit.md` (OS-aware), the wrapper scripts split by OS; pick the right one. Per `.claude/lessons/feedback_pipes_mask_exit_codes.md`, never pipe cargo through tail/grep — capture to file with `> file 2>&1`.
+
+## DQ schema-v3 (post-v1-dq-schema-r1)
+
+When writing a new DQ entry under schema-v3, follow these three rules:
+
+1. **Generate the id via `bash scripts/brehon/dq-v3-new-entry.sh`.** Never compute `max(all_ids) + 1` directly — that global-monotonic recipe is abolished for v3 writes and would produce collisions under concurrent worktrees. The script reads `.claude/.dq-session-id` (or mints one) and returns the next composite id (`<12-hex>-<seq>`).
+
+2. **Leave `approved_by: null` and `approved_at: null` on every entry you write.** HARD REFUSAL — never write a non-null `approved_by` from this subagent. That field is advisor-exclusive and is populated only after an `AskUserQuestion` user-gate relay in the persistent advisor session.
+
+3. **Continue writing `answered_by` per existing v2 attribution-integrity rules.** The `answered_by` semantics are unchanged under v3: `impl-self-resolved`, `bm-self-resolved`, `planner`, `ci-watcher`, `advisor`, `user` — same values, same attribution rules as documented in `.claude/rules/decision-queue.md` §"Attribution integrity". v3 adds `approved_by` alongside `answered_by`; it does not replace it.

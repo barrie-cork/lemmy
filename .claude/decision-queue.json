@@ -47,6 +47,35 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": 339,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:36:15Z",
+      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-2-rules-recipes-lessons-agent-contracts-v3-aware-track-b-see-claude-p-401",
+      "phase_task": 2,
+      "commands": [
+        "grep -c '^## Schema (v3)' .claude/rules/decision-queue.md",
+        "grep -c '^## Schema (v2)' .claude/rules/decision-queue.md",
+        "grep -c 'dq-v3-new-entry.sh' .claude/refs/dq-recipes.md",
+        "grep -c 'Schema-v3 (post-v1-dq-schema-r1) makes cross-lane next_id coordination' .claude/rules/multi-lane-worktree.md",
+        "grep -c '^## Status (post-v1-dq-schema-r1' .claude/lessons/feedback_cohort_dq_id_collision.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/planning.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/impl-task.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/bm-task.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/ci-watcher.md",
+        "grep -c 'never write a non-null .approved_by. from this' .claude/agents/planning.md"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "id_v1": 339,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
