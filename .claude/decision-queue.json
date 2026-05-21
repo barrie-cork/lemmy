@@ -21,6 +21,29 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
+    },
+    {
+      "id": 340,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-21T21:52:20Z",
+      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
+      "branch": "phase-v1-federation-inbound-c",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
+      ],
+      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
