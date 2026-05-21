@@ -1857,3 +1857,15 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **deliverable on trunk:** brehon-conformance-audit skill bundle (six-axis convention-divergence detection + Clippy structural enforcement) merged. Dogfood metrics preserved at axis-4 precision/recall 1.000, lead-time 27.5h, latent-footgun catch 1 (validated post-fix on v1-federation-inbound-b snapshots).
 - **process incidents (retro-captured):** (1) bm-poll-cr Junior #392 false-success — pushed to wrong branch; recovered via cherry-pick of unreachable commit. (2) bm-triage Junior #394 false-success — never read brief; advisor-direct re-triage required. (3) DQ #320 id collision with concurrent fed-in-c session; resolved via on-merge renumber (#308 → #326, #320 → #327). All three captured in `.claude/PRPs/reports/session-retro-2026-05-21-conformance-audit-cr-triage.md`.
 - **note:** L14 belt-and-braces fallback fired — BM Junior #396 skipped POST-merge runlog write; advisor authored this entry per `auto-phase.md` §"L14 fix".
+
+## bm: PR opened — 2026-05-21T23:39Z (advisor L14-style fallback — BM #404 skipped trunk-side append)
+
+- **PR:** #144 (Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int` + mirror)
+- **URL:** https://github.com/barrie-cork/lemmy/pull/144
+- **base ← head:** governance-v0 ← phase-v1-federation-inbound-c
+- **opened by:** BM Junior #404 (worker commit `c51d00ce1` 23:30Z on phase branch)
+- **opened at:** 2026-05-21T23:39:00Z
+- **mergeability:** initially CONFLICTING (`.claude/decision-queue.json` divergence between phase v2 schema + fed-in-c-specific entries vs gov-v0 v3 schema + v1-dq-schema-r1 entries). Resolved via advisor-side forward-merge `da1e49683` with union-by-id resolution: v3 schema migration applied + fed-in-c int-id #339 renumbered to v3 hex id `9ee605cdfe49-001` (collision with gov-v0 #339 v1-dq-schema-r1 Task 2 grep-audits); resulting pending=0 resolved=139. Post-merge mergeable=MERGEABLE, mergeState=UNSTABLE (CR pending).
+- **scope summary:** 4 §13 tasks (Tasks 1+2 [P] cohort reader-side `.order_by(valid_from.desc())` adds + Task 3 e2e regression `appended_config_override_takes_effect_returns_429` + Task 4 retro authoring); 0 fix-impl cycles (plan §5.1 complexity 2/10 accurate); 1 Phase-2 e2e round CLEAN (DQ #340 result:pass, 103 passed / 0 failed / 5 ignored, 36m11s LOCAL on tip `e06e918e2`); zero §G4 firings.
+- **process incident (4th BM false-success, retro candidate):** BM Junior #404 reported succeeded but advisor post-condition catches: (a) Phase 5 `.claude/PRPs/reviews/pr-144-findings.yaml` shell NOT written (advisor authored at `89addc3d6` post-merge); (b) Phase 6 trunk-side `bm-runlog.md` entry NOT written (THIS entry is the L14-style belt-and-braces fallback authored by advisor on `governance-v0` via canonical worktree `git -C` cross-worktree commit from fed-in-c lane session). Phase 6 phase-branch runlog entry DID land at `c51d00ce1`. Pattern recurrence per `feedback_bm_false_success_advisor_post_condition_catch.md` (MEMORY.md: **3× CONFIRMED**; this is the 4th).
+- **next:** bm-poll-cr after ~5-15 min for CR findings.
