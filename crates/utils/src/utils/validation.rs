@@ -306,7 +306,7 @@ fn truncate_for_db(text: &str, len: usize) -> String {
     let char_at_len = text
       .char_indices()
       .nth(len)
-      .unwrap_or(text.char_indices().last().unwrap_or_default());
+      .unwrap_or(text.char_indices().last().unwrap_or((0, '\0')));
     let graphemes: Vec<(usize, _)> = text.grapheme_indices(true).collect();
     let mut index = 0;
 
@@ -326,7 +326,7 @@ fn truncate_for_db(text: &str, len: usize) -> String {
     // Count the total chars within the selected grapheme range
     let char_sum = graphemes
       .get(0..index)
-      .unwrap_or_default()
+      .unwrap_or(&[])
       .iter()
       .map(|(_, g)| g.chars().count())
       .sum();

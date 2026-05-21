@@ -47,7 +47,7 @@ impl NodeValue for Link {
 pub fn add(md: &mut MarkdownIt) {
   full_link::add::<false>(md, |href, title| {
     Node::new(Link {
-      url: href.unwrap_or_default(),
+      url: href.unwrap_or_else(String::new),
       title,
     })
   });

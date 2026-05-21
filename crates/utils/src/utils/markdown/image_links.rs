@@ -50,7 +50,7 @@ pub fn markdown_rewrite_image_links(mut src: String) -> (String, Vec<Url>) {
 }
 
 pub fn markdown_handle_title(src: &str, start: usize, end: usize) -> (&str, Option<&str>) {
-  let content = src.get(start..end).unwrap_or_default();
+  let content = src.get(start..end).unwrap_or("");
   // necessary for custom emojis which look like `![name](url "title")`
   match content.split_once(' ') {
     Some((a, b)) => (a, Some(b)),
@@ -102,7 +102,7 @@ impl UrlAndTitle for Image {
   }
 
   fn title_len(&self) -> usize {
-    self.title.as_ref().map(|t| t.len() + 3).unwrap_or_default()
+    self.title.as_ref().map(|t| t.len() + 3).unwrap_or(0)
   }
 }
 impl UrlAndTitle for Link {
@@ -110,7 +110,7 @@ impl UrlAndTitle for Link {
     self.url.len()
   }
   fn title_len(&self) -> usize {
-    self.title.as_ref().map(|t| t.len() + 3).unwrap_or_default()
+    self.title.as_ref().map(|t| t.len() + 3).unwrap_or(0)
   }
 }
 
