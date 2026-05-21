@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "scope": "phase-diff v1-federation-inbound-b",
+  "head_sha": "649871f7d6a60d19fab57877003bd8da1c67ce86",
+  "run_at": "2026-05-21T00:00:00+00:00",
+  "skill_version": "1.0.0",
+  "predictions": [
+    {
+      "axis": "4",
+      "risk_tier": "1",
+      "target": "crates/apub/activities/src/governance/inbox.rs:743",
+      "sibling": "crates/apub/activities/src/governance/inbox.rs:153",
+      "evidence": "axis-4: inbox.rs:743 new=.unwrap_or_default() sibling=inbox.rs:153 sibling=.ok_or_else(|| LemmyErrorType::Unknown(...))?",
+      "snapshot": "pre-fix-impl-3 (649871f7d)"
+    }
+  ],
+  "ground_truth_compile_caught": [],
+  "ground_truth_runtime": [
+    {
+      "axis": "4",
+      "target": "crates/apub/activities/src/governance/inbox.rs:743",
+      "source": "fix-impl-3",
+      "evidence_commit_sha": "8b04e69a6655698305a38d4c22c300480ccbe4e6"
+    }
+  ]
+}

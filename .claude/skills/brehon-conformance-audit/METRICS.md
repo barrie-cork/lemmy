@@ -162,24 +162,74 @@ downgrading.
 
 ## Worked example
 
-_Populated by Task 7 dogfood backfill._
+**Dogfood date:** 2026-05-21 (Task 7 execution against `v1-federation-inbound-b` two snapshots)
+**Full report:** `.claude/PRPs/reports/conformance-audit-v1-federation-inbound-b-dogfood-2026-05-20.md`
+**Seed file:** `.claude/PRPs/audit-metrics/v1-federation-inbound-b.json`
 
-This section will contain the worked example from the dogfood run against
-`v1-federation-inbound-b` at the pre-fix-impl-3 SHA. The expected outcome:
+### Setup
 
-- Input: `phase-diff` on the `v1-federation-inbound-b` branch at the pre-fix-impl-3 tip.
-- Finding 6.1: axis-4 prediction, `Tier 1`, on `receive_remote_moderation_label` at
-  `crates/apub/activities/src/governance/inbox.rs:~735`.
-  Evidence: sibling four lines away hard-errors via `.domain().ok_or_else(...)`.
-  Prediction: `.unwrap_or_default()` would persist `source_instance = ''` for a
-  domainless remote actor.
-- Ground truth (post-fix-impl-3 merge): `runtime[]` entry confirming the fix at SHA
-  `8b04e69a6`.
-- Computed metric: `recall per axis 4 = 1/1 = 1.0` (skill caught the only known instance).
-  `latent-footgun catch rate = 1` (compiler passed; skill caught).
+- **Scope:** `phase-diff v1-federation-inbound-b`
+- **Snapshot 1:** `649871f7d6a60d19fab57877003bd8da1c67ce86` (pre-fix-impl-3 tip)
+- **Snapshot 2:** `4a60667c9a4938b62d3150ce8677ffcd429ca9c4` (merged tip, fix-impl-3 included)
+- **Fix commit (ground truth):** `8b04e69a6655698305a38d4c22c300480ccbe4e6` (author-date `2026-05-19T20:27:54+00:00`)
 
-**Task 7 will Edit this section to replace the above with real numbers from the actual
-dogfood run.**
+### Snapshot 1 prediction (Finding 6.1)
+
+Detection steps (per `axes/4-error-idiom.md`):
+
+1. `grep -n ".unwrap_or_default()" inbox.rs` → hit at **line 743** (`receive_remote_moderation_label`)
+2. Context: `.domain().map(str::to_string).unwrap_or_default()` — trust-boundary `Option<&str>` silent empty-string substitution
+3. Sibling at **line 153** (`receive_remote_sanction_notice`): `.domain().ok_or_else(|| LemmyErrorType::Unknown(...))?.to_string()` — enforced contract
+
+**Prediction:**
+
+```json
+{
+  "axis": "4",
+  "risk_tier": "1",
+  "target": "crates/apub/activities/src/governance/inbox.rs:743",
+  "sibling": "crates/apub/activities/src/governance/inbox.rs:153",
+  "evidence": "axis-4: inbox.rs:743 new=.unwrap_or_default() sibling=inbox.rs:153 sibling=.ok_or_else(|| LemmyErrorType::Unknown(...))?",
+  "snapshot": "pre-fix-impl-3 (649871f7d)"
+}
+```
+
+### Snapshot 2 result
+
+`grep -n ".unwrap_or_default()" inbox.rs` → **zero hits**. The axis-4 flag does not fire. ✓
+
+### Ground truth
+
+- `ground_truth_compile_caught: []` — `.unwrap_or_default()` at L743 compiled clean under `cargo check --workspace --features full`. **This is a latent footgun**: the compiler accepted the empty-string default with no error or warning.
+- `ground_truth_runtime: [{axis:"4", target:"...inbox.rs:743", source:"fix-impl-3", evidence_commit_sha:"8b04e69a6..."}]`
+
+### Computed metrics (real numbers)
+
+```
+$ bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh \
+    .claude/PRPs/audit-metrics/v1-federation-inbound-b.json
+
+Axis        TP    FP    FN  Precision   Recall
+--------------------------------------------------------
+axis-4        1     0     0      1.000    1.000
+
+axis-4 precision: 1.000
+axis-4 recall: 1.000
+
+Lead time (median): 27.5h after ground-truth event (1 data point(s))
+
+Latent-footgun catch rate (axis-4): 1
+  (axis-4 findings the skill caught but the compiler missed)
+```
+
+### Summary
+
+| Metric | Value |
+|---|---|
+| recall@axis-4 | 1/1 = 1.000 |
+| precision@axis-4 | 1/1 = 1.000 |
+| latent-footgun catch rate | 1 — compiler missed it; skill caught it |
+| Lead time | +27.5h (retrospective dogfood; production use would be negative) |
 
 ## Adding a new metric
 

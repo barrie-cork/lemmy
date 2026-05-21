@@ -72,6 +72,9 @@ migrations/.diesel_lock
 # skill-creator eval iteration journals (runtime artifacts, not deliverables)
 .claude/skills/*-workspace/
 
+# Per-run conformance-audit metrics journal files (the per-sub-phase summary in retro IS committed)
+.claude/PRPs/audit-metrics/
+
 # Per-task validation logs (the rca-*.md notes ARE committed)
 .claude/PRPs/debug/*.log
 
