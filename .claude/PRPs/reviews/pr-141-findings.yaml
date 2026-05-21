@@ -1,0 +1,919 @@
+schema_version: 1
+pr: 141
+title: Phase brehon-conformance-audit — Phase-6 convention-divergence skill + Clippy
+  gate
+head: phase-brehon-conformance-audit
+base: governance-v0
+opened_at: '2026-05-21T11:58:25Z'
+last_poll_at: 2026-05-21T17:11:19.204761+00:00Z
+poll_count: 1
+last_polled_head_sha: 425ab13c8943070cce507f272d99efacee9f491b
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:12Z'
+  bucket: carry-forward
+  addressed_in: null
+  rationale: DQ schema-v3 proposal (add approved_by/approved_at). decision-queue.md
+    v2 is forward-only; current schema has zero blocking defects (51+ live entries,
+    all readable). Schema evolution is cross-cutting -- needs ADR + retrofit migration.
+    CR raised real coverage gap on judgment-heavy DQs but the resolution is a follow-up
+    sub-phase, not a patch on this PR.
+  summary: Require explicit user approval metadata for these judgement-heavy blocker
+    resolutions.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001924
+  notes: 'Carry-forward issue filed: https://github.com/barrie-cork/lemmy/issues/142'
+  file: .claude/decision-queue.json
+  line: 1872
+- id: cr-2
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:12Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: 'DQ entry retroactive rewrite. decision-queue.md v2 forward-only rule:
+    Do not rewrite historical entries -- pre-v2 idiosyncrasies stay as the audit trail.
+    DQ #314/#316 commands arrays drift slightly from their answers; per the audit-trail
+    rule, the drift IS the historical record. Future DQ writes should be more disciplined
+    (already in retro section 5 W-5).'
+  summary: Keep `commands` aligned with what was actually executed.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001929
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/decision-queue.json around lines 1959 - 1967, The commands array in
+
+    the JSON does not match the narrative: add the missing cargo-check invocation
+
+    that was actually executed and replace the incorrect cargo-check entry with the
+
+    compute-metrics.sh invocation so the commands list mirrors the answer;
+
+    specifically update the "commands" array entries that reference the run for id:
+
+    314 (add the cargo-check step that was omitted) and id: 316 (switch the listed
+
+    cargo-check to the compute-metrics.sh command), preserving the existing
+
+    redirection/exit echo pattern and ordering so the audit trail is reproducible.
+
+    ```'
+  file: .claude/decision-queue.json
+  line: 1967
+- id: cr-3
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:12Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint nit on .claude/lessons/feedback_clippy_per_module_deny_requires_workspace_allow.md
+    prose. Advisor meta-artifact; no markdownlint enforcement in CI; would churn the
+    lesson body for zero functional gain.
+  summary: Resolve markdownlint warnings in the lesson body.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001935
+  notes: "```toml\n    [workspace.lints.clippy]\n    style = { level = \"deny\", priority\
+    \ = -1 }\n    ```\n\n```toml\n      # In root Cargo.toml [workspace.lints.clippy],\
+    \ add:\n      disallowed_methods = \"allow\"  # Federation-only enforcement: per-module\
+    \ #![deny] re-enables.\n      ```\n\n```rust\n      #![deny(clippy::disallowed_methods)]\n\
+    \      ```\n\n```\n</details>\n \n\n\nAlso applies to: 32-49\n\n<details>\n<summary>\U0001F9F0\
+    \ Tools</summary>\n\n<details>\n<summary>\U0001FA9B markdownlint-cli2 (0.22.1)</summary>\n\
+    \n[warning] 8-8: First line in a file should be a top-level heading\n\n(MD041,\
+    \ first-line-heading, first-line-h1)\n\n</details>\n\n</details>\n\n<details>\n\
+    <summary>\U0001F916 Prompt for AI Agents</summary>\n\n```"
+  file: .claude/lessons/feedback_clippy_per_module_deny_requires_workspace_allow.md
+  line: 8
+- id: cr-4
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:12Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint table-pipe escape nit on advisor meta-doc. Lesson reads
+    correctly in every renderer we use; no functional impact.
+  summary: Escape `|` characters inside the Markdown table cell.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001955
+  notes: '```
+
+    </details>
+
+
+    <!-- suggestion_start -->
+
+
+    <details>
+
+    <summary>📝 Committable suggestion</summary>
+
+
+    > ‼️ **IMPORTANT**
+
+    > Carefully review the code before committing. Ensure that it accurately replaces
+    the highlighted code, contains no missing lines, and has no issues with indentation.
+    Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+
+    ```
+
+
+    ```
+
+
+    </details>
+
+
+    <!-- suggestion_end -->
+
+
+    <details>
+
+    <summary>🧰 Tools</summary>
+
+
+    <details>
+
+    <summary>🪛 markdownlint-cli2 (0.22.1)</summary>
+
+
+    [warning] 41-41: Table column count
+
+    Expected: 4; Actual: 6; Too many cells, extra data will be missing
+
+
+    (MD056, table-column-count)
+
+
+    </details>
+
+
+    </details>
+
+
+    <details>
+
+    <summary>🤖 Prompt for AI Agents</summary>
+
+
+    ```'
+  file: .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md
+  line: 41
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:12Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint heading/fence layout nit on advisor meta-doc. Same rationale
+    as cr-3.
+  summary: Fix markdownlint heading/fence layout warnings.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001980
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In
+
+    @.claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md
+
+    at line 8, Update the markdown so the frontmatter is followed by an H1 (or
+
+    remove frontmatter if unintended) and add blank lines before and after all
+
+    fenced code blocks in
+
+    .claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md:
+
+    ensure the "## What this catches" heading follows proper heading hierarchy
+
+    relative to frontmatter (fix MD041) and insert an empty line above and below
+
+    each fenced block in the section covering the content around lines 50-61 to
+
+    satisfy MD031.
+
+    ```'
+  file: .claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md
+  line: 8
+- id: cr-6
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: 'Real contradiction in brehon-conformance-audit-impl-10.md: section 4
+    constraint #8 says NO cargo-check required but section 5.3 lists cargo-check as
+    required. One-line edit per CR diff: align #8 with section 5.3 (workspace cargo-check
+    IS required). Belongs in this PR for record clarity.'
+  summary: Resolve the cargo-check requirement contradiction.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001983
+  notes: '```
+
+    </details>
+
+
+
+    Also applies to: 103-110
+
+
+    <details>
+
+    <summary>🤖 Prompt for AI Agents</summary>
+
+
+    ```'
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-10.md
+  line: 65
+- id: cr-7
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD029 ordered-list numbering nit on advisor meta-doc. Reads
+    correctly; no churn justified.
+  summary: Fix ordered-list numbering to satisfy markdownlint MD029.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001986
+  notes: null
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-7.md
+  line: 69
+- id: cr-8
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD031/MD040 fenced-code nit on advisor meta-doc. Same rationale
+    as cr-3.
+  summary: Normalise fenced code blocks (MD031/MD040).
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001992
+  notes: "```diff\n 7. **Schema-validate the seed JSON BEFORE commit** (per plan §13\
+    \ Task 7 GOTCHA, lines 1236-1246):\n \n ```\n\n```\n+```\n\n```\n```\n\n```\n\
+    Verify each finding against current code. Fix only still-valid issues, skip the\n\
+    rest with a brief reason, keep changes minimal, and validate.\n\nIn @.claude/PRPs/briefs/brehon-conformance-audit-impl-7.md\
+    \ around lines 99 -\n107, Add missing surrounding blank line before the first\
+    \ fenced code block and\nadd an explicit language identifier to the later fenced\
+    \ block (the closing fence\nbefore the git commands) so both blocks are normalized;\
+    \ update the first\ntriple-backtick block to be preceded and followed by a blank\
+    \ line and change the\nlater fence to ```"
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-7.md
+  line: 107
+- id: cr-9
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD029 nit on advisor meta-doc. Same rationale as cr-7.
+  summary: Fix ordered-list numbering to satisfy markdownlint MD029.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002000
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md around lines
+
+    43 - 58, The markdown uses non-sequential numeric prefixes in ordered lists
+
+    (e.g., the block under heading "3.2 Lessons" and the preceding list items 4–13)
+
+    which triggers markdownlint MD029; edit the document to make each ordered-list
+
+    block use sequential numbering (or convert all ordered lists to the "1."
+
+    repeated style) so items under headings like "3.2 Lessons" and the earlier
+
+    numbered list are renumbered consecutively and MD029 is satisfied.
+
+    ```'
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md
+  line: 58
+- id: cr-10
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD040 fenced-code language-tag nit on advisor meta-doc.
+    Same rationale as cr-3.
+  summary: Add a language tag to the fenced code block.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002008
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md around lines
+
+    202 - 206, The fenced code block that begins with the git commands (the block
+
+    showing "git add .claude/decision-queue.json" / "git commit ..." / "git push
+
+    ...") is missing a language tag and triggers MD040; update the opening fence
+
+    from ```
+
+
+    ```bash so the block is marked as bash and the lint check passes.
+
+    ```'
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md
+  line: 206
+- id: cr-11
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint ordered-list prefix nit on advisor meta-doc. Same rationale
+    as cr-7.
+  summary: Normalise ordered-list prefixes for markdownlint compliance.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002011
+  notes: null
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-8.md
+  line: 54
+- id: cr-12
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD040 fenced-code language-tag nit on advisor meta-doc.
+    Same rationale as cr-3.
+  summary: Specify a language on the fenced code block.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002013
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/PRPs/briefs/brehon-conformance-audit-impl-8.md around lines 139 -
+
+    141, The fenced code block beginning with ```
+
+
+    ``` to
+
+    ```'
+  file: .claude/PRPs/briefs/brehon-conformance-audit-impl-8.md
+  line: 141
+- id: cr-13
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: Real wording bug in brehon-conformance-audit.plan.md:1308-1309 GOTCHA
+    block. Current text says workspace clippy will STILL fail (exit 101) but the same
+    paragraph says the tree returns to no-clippy.toml baseline (where workspace clippy
+    is clean). Internally contradictory. Plan stays load-bearing post-merge; future
+    readers misled. One-line edit.
+  summary: Correct Task 8a clippy expectation text.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002017
+  notes: '```
+
+    </details>
+
+
+    <details>
+
+    <summary>🤖 Prompt for AI Agents</summary>
+
+
+    ```'
+  file: .claude/PRPs/plans/brehon-conformance-audit.plan.md
+  line: 1309
+- id: cr-14
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD040 fenced-code language-tag nit on advisor meta-doc.
+    Same rationale as cr-3.
+  summary: Specify fenced-code languages for lint compliance.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002020
+  notes: "```diff\n-```\n\n```text\n axis-4 precision: 1.000\n axis-4 recall: 1.000\n\
+    \ Lead time (median): 27.5h after ground-truth event (1 data point)\n Latent-footgun\
+    \ catch rate (axis-4): 1\n   (axis-4 findings the skill caught but the compiler\
+    \ missed)\n ```\n\n```\n+```\n\n```\n```\n\n```\nVerify each finding against current\
+    \ code. Fix only still-valid issues, skip the\nrest with a brief reason, keep\
+    \ changes minimal, and validate.\n\nIn @.claude/PRPs/reports/brehon-conformance-audit-retro.md\
+    \ around lines 42 - 48,\nThe markdown fenced-code blocks in the file are missing\
+    \ language tags (MD040)\ncausing markdownlint failures; update the opening backticks\
+    \ for the two code\nblocks shown (the block starting with \"axis-4 precision:\
+    \ 1.000 ...\" and the\nother block mentioned at lines 206-211) to include a language\
+    \ tag such as \"text\"\n(e.g., change ```\n\n```text) so both fenced-code blocks\
+    \ are properly annotated\nfor linting.\n```"
+  file: .claude/PRPs/reports/brehon-conformance-audit-retro.md
+  line: 48
+- id: cr-15
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD040 fenced-code language-tag nit on advisor meta-doc.
+    Same rationale as cr-3.
+  summary: Add language identifiers to fenced code blocks.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002027
+  notes: "```diff\n-```\n\n```bash\n $ git show 649871f7d:crates/apub/activities/src/governance/inbox.rs\
+    \ | grep -n \"\\.unwrap_or_default()\"\n ```\n\n```\n+```\n\n```\n\n-```\n\n```bash\n\
+    \ $ git show 4a60667c9:crates/apub/activities/src/governance/inbox.rs | grep -n\
+    \ \"\\.unwrap_or_default()\"\n (no output)\n ```\n\n```\n+```\n\n```\n\n-```\n\
+    \n```bash\n $ bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh\
+    \ \\\n     .claude/PRPs/audit-metrics/v1-federation-inbound-b.json\n ...\n ```\n\
+    \n```\n</details>\n \n\n\nAlso applies to: 55-60, 130-133, 187-219, 255-276\n\n\
+    <details>\n<summary>\U0001F9F0 Tools</summary>\n\n<details>\n<summary>\U0001FA9B\
+    \ markdownlint-cli2 (0.22.1)</summary>\n\n[warning] 30-30: Fenced code blocks\
+    \ should have a language specified\n\n(MD040, fenced-code-language)\n\n</details>\n\
+    \n</details>\n\n<details>\n<summary>\U0001F916 Prompt for AI Agents</summary>\n\
+    \n```\n\n``` to ```\n\n```text\nfor plain text commit messages) for the blocks\
+    \ that contain lines like \"$ git\nshow 649871f7d:crates/apub/activities/src/governance/inbox.rs\
+    \ | grep -n\n\\\"\\\\.unwrap_or_default()\\\"\", the \"$ git show ... | grep -n\
+    \ \\\"\\\\.ok_or_else\\\"\"\nblock, the \"(no output)\" block, the long commit/message\
+    \ block (use ```\n\n```bash); apply the same fix to the other\nlisted ranges (55-60,\
+    \ 130-133, 187-219, 255-276) so all fenced blocks include a\nlanguage identifier.\n\
+    ```"
+  file: .claude/PRPs/reports/conformance-audit-v1-federation-inbound-b-dogfood-2026-05-20.md
+  line: 33
+- id: cr-16
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: Real schema-strictness defect in audit-metrics.schema.json. ground_truth_compile_caught[].items
+    + ground_truth_runtime[].items currently accept arbitrary objects; downstream
+    compute-metrics.sh assumes concrete fields (axis, target, error_code, source_log
+    / evidence_commit_sha). Silent malformed-data risk. CR provides full patch. Mechanical.
+  summary: Constrain metrics row objects to prevent silent malformed data
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002035
+  notes: "```shell\n#!/bin/bash\n# Verify downstream consumers assume structured ground-truth\
+    \ fields.\n# Expected: compute/report code references concrete keys (axis/target/error_code/source_log/source/evidence_commit_sha).\n\
+    \nset -euo pipefail\n\nrg -n -C3 'ground_truth_compile_caught|ground_truth_runtime|error_code|source_log|evidence_commit_sha|predictions'\
+    \ .claude/skills/brehon-conformance-audit\n```\n\n```diff\n     \"predictions\"\
+    : {\n       \"type\": \"array\",\n       \"items\": {\n         \"type\": \"object\"\
+    ,\n         \"required\": [\"axis\", \"risk_tier\", \"target\", \"sibling\", \"\
+    evidence\"],\n         \"properties\": {\n           \"axis\": { \"enum\": [\"\
+    1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n           \"risk_tier\": { \"enum\"\
+    : [\"1\", \"2\", \"3\"] },\n           \"target\": { \"type\": \"string\", \"\
+    pattern\": \"^[^:]+:[0-9]+$\", \"description\": \"file:line\" },\n           \"\
+    sibling\": { \"type\": \"string\", \"pattern\": \"^([^:]+:[0-9]+|NO_SIBLING_FOUND)$\"\
+    \ },\n           \"evidence\": { \"type\": \"string\", \"maxLength\": 120 }\n\
+    -        }\n+        },\n+        \"additionalProperties\": false\n       }\n\
+    \     },\n     \"ground_truth_compile_caught\": {\n       \"type\": \"array\"\
+    ,\n       \"description\": \"Populated post-§15. Each entry: {axis, target, error_code,\
+    \ source_log}.\",\n-      \"items\": { \"type\": \"object\" }\n+      \"items\"\
+    : {\n+        \"type\": \"object\",\n+        \"required\": [\"axis\", \"target\"\
+    , \"error_code\", \"source_log\"],\n+        \"properties\": {\n+          \"\
+    axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n+         \
+    \ \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\" },\n+  \
+    \        \"error_code\": { \"type\": \"string\" },\n+          \"source_log\"\
+    : { \"type\": \"string\" }\n+        },\n+        \"additionalProperties\": false\n\
+    +      }\n     },\n     \"ground_truth_runtime\": {\n       \"type\": \"array\"\
+    ,\n       \"description\": \"Populated post-CR-triage (severity ≥ major + sibling-conformance\
+    \ reference) AND post-merge bug fixes within 30 days. Each entry: {axis, target,\
+    \ source, evidence_commit_sha}.\",\n-      \"items\": { \"type\": \"object\" }\n\
+    +      \"items\": {\n+        \"type\": \"object\",\n+        \"required\": [\"\
+    axis\", \"target\", \"source\", \"evidence_commit_sha\"],\n+        \"properties\"\
+    : {\n+          \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"\
+    ] },\n+          \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\"\
+    \ },\n+          \"source\": { \"type\": \"string\" },\n+          \"evidence_commit_sha\"\
+    : { \"type\": \"string\", \"pattern\": \"^[0-9a-f]{7,40}$\" }\n+        },\n+\
+    \        \"additionalProperties\": false\n+      }\n     }\n```\n\n```suggestion\n\
+    \        \"type\": \"object\",\n        \"required\": [\"axis\", \"risk_tier\"\
+    , \"target\", \"sibling\", \"evidence\"],\n        \"properties\": {\n       \
+    \   \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n    \
+    \      \"risk_tier\": { \"enum\": [\"1\", \"2\", \"3\"] },\n          \"target\"\
+    : { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\", \"description\": \"\
+    file:line\" },\n          \"sibling\": { \"type\": \"string\", \"pattern\": \"\
+    ^([^:]+:[0-9]+|NO_SIBLING_FOUND)$\" },\n          \"evidence\": { \"type\": \"\
+    string\", \"maxLength\": 120 }\n        },\n        \"additionalProperties\":\
+    \ false\n      }\n    },\n    \"ground_truth_compile_caught\": {\n      \"type\"\
+    : \"array\",\n      \"description\": \"Populated post-§15. Each entry: {axis,\
+    \ target, error_code, source_log}.\",\n      \"items\": {\n        \"type\": \"\
+    object\",\n        \"required\": [\"axis\", \"target\", \"error_code\", \"source_log\"\
+    ],\n        \"properties\": {\n          \"axis\": { \"enum\": [\"1\", \"2\",\
+    \ \"3\", \"4\", \"5\", \"6\"] },\n          \"target\": { \"type\": \"string\"\
+    , \"pattern\": \"^[^:]+:[0-9]+$\" },\n          \"error_code\": { \"type\": \"\
+    string\" },\n          \"source_log\": { \"type\": \"string\" }\n        },\n\
+    \        \"additionalProperties\": false\n      }\n    },\n    \"ground_truth_runtime\"\
+    : {\n      \"type\": \"array\",\n      \"description\": \"Populated post-CR-triage\
+    \ (severity ≥ major + sibling-conformance reference) AND post-merge bug fixes\
+    \ within 30 days. Each entry: {axis, target, source, evidence_commit_sha}.\",\n\
+    \      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\"\
+    axis\", \"target\", \"source\", \"evidence_commit_sha\"],\n        \"properties\"\
+    : {\n          \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"\
+    ] },\n          \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\"\
+    \ },\n          \"source\": { \"type\": \"string\" },\n          \"evidence_commit_sha\"\
+    : { \"type\": \"string\", \"pattern\": \"^[0-9a-f]{7,40}$\" }\n        },\n  \
+    \      \"additionalProperties\": false\n      }\n    }\n```\n\n```\nVerify each\
+    \ finding against current code. Fix only still-valid issues, skip the\nrest with\
+    \ a brief reason, keep changes minimal, and validate.\n\nIn @.claude/skills/brehon-conformance-audit/audit-metrics.schema.json\
+    \ around\nlines 14 - 34, Add strict schemas for the three arrays: update\n\"predictions\"\
+    .items to include \"additionalProperties\": false and the same\nrequired properties\
+    \ as the existing prediction object (axis, risk_tier, target,\nsibling, evidence);\
+    \ for \"ground_truth_compile_caught\".items define an object\nschema with required:\
+    \ [\"axis\",\"target\",\"error_code\",\"source_log\"], set\nappropriate types/patterns\
+    \ consistent with predictions (e.g., axis enum, target\nfile:line pattern) and\
+    \ add \"additionalProperties\": false; for\n\"ground_truth_runtime\".items define\
+    \ an object schema with required:\n[\"axis\",\"target\",\"source\",\"evidence_commit_sha\"\
+    ], set types/patterns (axis enum,\ntarget pattern, source string, evidence_commit_sha\
+    \ string/sha pattern) and add\n\"additionalProperties\": false so downstream metric\
+    \ code only receives the\nexpected fields.\n```"
+  file: .claude/skills/brehon-conformance-audit/audit-metrics.schema.json
+  line: 34
+- id: cr-17
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint MD040 fenced-code language-tag nit on advisor meta-doc.
+    Same rationale as cr-3.
+  summary: Add fence languages to code blocks to satisfy markdownlint.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002050
+  notes: '```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/skills/brehon-conformance-audit/METRICS.md around lines 13 - 15,
+
+    Several fenced code blocks in METRICS.md (for example the block showing
+
+    ".claude/PRPs/audit-metrics/<scope-slug>.json" and the other blocks flagged in
+
+    the review) are missing language identifiers; update each opening ```
+
+
+    ```json for JSON snippets, ```
+
+
+    ```text when free-form text is intended) so markdownlint
+
+    passes; search for the other unlabeled fences noted in the comment (the blocks
+
+    near the other commented ranges) and add the matching language tag to each
+
+    opening fence.
+
+    ```'
+  file: .claude/skills/brehon-conformance-audit/METRICS.md
+  line: 15
+- id: cr-18
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: Real field-name drift between METRICS.md prose (compile_caught[] / runtime[])
+    and the schema/script contract (ground_truth_compile_caught[] / ground_truth_runtime[]).
+    Future audits will misname fields. One-section sed-replace. CR provides diff.
+  summary: Field names are inconsistent with the metrics payload contract.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002056
+  notes: '```
+
+    </details>
+
+
+
+    Also applies to: 37-39
+
+
+    <details>
+
+    <summary>🤖 Prompt for AI Agents</summary>
+
+
+    ```'
+  file: .claude/skills/brehon-conformance-audit/METRICS.md
+  line: 26
+- id: cr-19
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: 'Real correctness bug in compute-metrics.sh. METRICS.md Rule 4 (Attribution):
+    FP = human-confirmed false_positives[] only. Code currently infers FP from prediction
+    without GT -- inflates FP, depresses precision. Calibration defect that contradicts
+    the dogfood report (precision 1.000 was correct because v1-federation-inbound-b
+    had no false_positives[] entries -- but the next dogfood with FPs would silently
+    break). CR provides full diff.'
+  summary: False-positive attribution is implemented incorrectly.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002062
+  notes: '```diff
+
+    -    axis_fp = {a: 0 for a in VALID_AXES}  # predictions with no matching ground-truth
+
+    +    axis_fp = {a: 0 for a in VALID_AXES}  # human-confirmed false positives only
+
+    @@
+
+    -        gt_compile = data.get("ground_truth_compile_caught", [])
+
+    -        gt_runtime = data.get("ground_truth_runtime", [])
+
+    +        gt_compile = data.get("ground_truth_compile_caught", [])
+
+    +        gt_runtime = data.get("ground_truth_runtime", [])
+
+    +        false_positives = data.get("false_positives", [])
+
+    @@
+
+    -            axis_fp[axis] += len(pred_targets - gt_targets)
+
+    +            fp_targets = {e.get("target") for e in false_positives if e.get("axis")
+    == axis}
+
+    +            axis_fp[axis] += len(pred_targets & fp_targets)
+
+    ```
+
+
+    ```
+
+    Verify each finding against current code. Fix only still-valid issues, skip the
+
+    rest with a brief reason, keep changes minimal, and validate.
+
+
+    In @.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh around
+
+    lines 110 - 111, The FP counting logic is wrong: do not treat “prediction with
+
+    no matching ground-truth” as a false positive; instead compute axis_fp only from
+
+    the explicit human-confirmed false_positives collection. Replace the current
+
+    initialization and any loops that increment axis_fp when a prediction lacks GT
+
+    (symbols: axis_fp, VALID_AXES) with code that: 1) initializes axis_fp to zero
+
+    per axis, 2) iterates over the false_positives list/array and increments
+
+    axis_fp[axis_of(fp)] accordingly, and 3) removes or guard-conditions any
+
+    existing increments that were triggered by predictions-without-GT (those blocks
+
+    around where predictions are compared to GT and axis_fp is updated). Leave
+
+    axis_fn (ground-truth misses) logic intact but ensure it is not used to infer
+
+    false positives. Also update the later block mentioned (lines ~120-131) the same
+
+    way so all FP counts come solely from false_positives.
+
+    ```'
+  file: .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh
+  line: 111
+- id: cr-20
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:13Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: Real correctness bug in compute-metrics.sh lead-time loop. METRICS.md
+    says lead-time uses BOTH gt_compile + gt_runtime evidence_commit_sha; code iterates
+    gt_runtime only. Silent under-count when compile-caught events have evidence_commit_sha.
+    One-line fix per CR diff.
+  summary: Lead-time omits compile-caught events.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002076
+  notes: "```diff\n-        for gt_entry in gt_runtime:\n+        for gt_entry in\
+    \ (gt_compile + gt_runtime):\n             sha = gt_entry.get(\"evidence_commit_sha\"\
+    )\n             if sha and run_at:\n                 event_date = git_author_date(sha)\n\
+    \                 if event_date:\n                     lead_times.append((run_at\
+    \ - event_date).total_seconds())\n```\n\n```suggestion\n        for gt_entry in\
+    \ (gt_compile + gt_runtime):\n            sha = gt_entry.get(\"evidence_commit_sha\"\
+    )\n            if sha and run_at:\n                event_date = git_author_date(sha)\n\
+    \                if event_date:\n                    lead_times.append((run_at\
+    \ - event_date).total_seconds())\n```\n\n```\nVerify each finding against current\
+    \ code. Fix only still-valid issues, skip the\nrest with a brief reason, keep\
+    \ changes minimal, and validate.\n\nIn @.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh\
+    \ around\nlines 143 - 149, The lead-time calculation currently only iterates gt_runtime;\n\
+    include compile-caught evidence too by iterating both gt_runtime and gt_compile\n\
+    (or their concatenation) so commits from compile-caught events are processed the\n\
+    same way; use the same field \"evidence_commit_sha\", call git_author_date(sha)\n\
+    and append (run_at - event_date).total_seconds() to lead_times for those entries\n\
+    just like in the existing loop.\n```"
+  file: .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh
+  line: 149
+- id: cr-21
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T12:07:14Z'
+  bucket: done
+  addressed_in: d2c7f9550
+  rationale: Real regex defect in find-sibling.sh. Current pattern only matches pub
+    fn / async fn / pub async fn; misses pub(crate) fn, const fn, unsafe fn, extern
+    C fn -- all common in Lemmy codebase. Will produce false NO_SIBLING_FOUND. CR
+    provides broadened regex.
+  summary: Rust function signature matcher is too narrow and misses valid top-level
+    functions.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002095
+  notes: "```shell\n#!/bin/bash\n# Verify whether governance Rust files contain top-level\
+    \ function signatures\n# that the current regex would miss.\nrg -nP '^(pub\\([^)]*\\\
+    )\\s+|const\\s+fn|unsafe\\s+fn|extern\\s+\"[^\"]+\"\\s+fn)' --type=rust -C1\n\
+    ```\n\n```shell\n# First, let's look at the file and surrounding context\nhead\
+    \ -100 .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh | tail\
+    \ -60\n```\n\n```shell\n# Read the full script to understand scope and usage\n\
+    cat .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh | wc -l\n\
+    ```\n\n```shell\n# Get a sense of the full file\ntail -100 .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh\n\
+    ```\n\n```diff\n-    fn_pat = re.compile(r'^(?:pub\\s+)?(?:async\\s+)?fn\\s+(\\\
+    w+)')\n+    fn_pat = re.compile(\n+        r'^(?:pub(?:\\([^)]*\\))?\\s+)?(?:const\\\
+    s+)?(?:async\\s+)?(?:unsafe\\s+)?(?:extern\\s+(?:\"[^\"]*\"\\s+)?)?fn\\s+([A-Za-z_]\\\
+    w*)'\n+    )\n```\n\n```suggestion\n    # Anchored at ^: only matches lines where\
+    \ pub/async/fn starts at col 0.\n    fn_pat = re.compile(\n        r'^(?:pub(?:\\\
+    ([^)]*\\))?\\s+)?(?:const\\s+)?(?:async\\s+)?(?:unsafe\\s+)?(?:extern\\s+(?:\"\
+    [^\"]*\"\\s+)?)?fn\\s+([A-Za-z_]\\w*)'\n    )\n    i = 0\n```\n\n```\nVerify each\
+    \ finding against current code. Fix only still-valid issues, skip the\nrest with\
+    \ a brief reason, keep changes minimal, and validate.\n\nIn @.claude/skills/brehon-conformance-audit/scripts/find-sibling.sh\
+    \ around lines\n75 - 77, The current fn_pat regex (fn_pat = re.compile(...)) is\
+    \ too narrow and\nonly matches plain \"pub\", \"async\" and \"fn\" variants; update\
+    \ fn_pat to accept\noptional complex visibility (e.g., pub(crate), pub(super)),\
+    \ optional qualifiers\nlike const, unsafe, extern (with optional ABI string),\
+    \ async in any order before\nfn, and still capture the function name; in practice\
+    \ replace the pattern\nassigned to fn_pat with one that allows an optional \"\
+    pub\" with parentheses,\noptional qualifiers (const|unsafe|extern(?:\\s*\"[^\"\
+    ]*\")?), optional async, and\nthen fn\\s+(\\w+) anchored at line start so top-level\
+    \ functions like pub(crate)\nfn, const fn, unsafe async fn, extern \"C\" fn, etc.,\
+    \ are matched by the same\nvariable fn_pat.\n```"
+  file: .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh
+  line: 77
+- id: cr-22
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T12:07:14Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: Markdownlint malformed-heading nit on advisor meta-doc. Same rationale
+    as cr-3.
+  summary: Fix malformed heading-like text to satisfy markdown lint
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002116
+  notes: '```
+
+    </details>
+
+
+    <!-- suggestion_start -->
+
+
+    <details>
+
+    <summary>📝 Committable suggestion</summary>
+
+
+    > ‼️ **IMPORTANT**
+
+    > Carefully review the code before committing. Ensure that it accurately replaces
+    the highlighted code, contains no missing lines, and has no issues with indentation.
+    Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+
+    ```
+
+
+    ```
+
+
+    </details>
+
+
+    <!-- suggestion_end -->
+
+
+    <details>
+
+    <summary>🧰 Tools</summary>
+
+
+    <details>
+
+    <summary>🪛 markdownlint-cli2 (0.22.1)</summary>
+
+
+    [warning] 58-58: No space after hash on atx style heading
+
+
+    (MD018, no-missing-space-atx)
+
+
+    </details>
+
+
+    </details>
+
+
+    <details>
+
+    <summary>🤖 Prompt for AI Agents</summary>
+
+
+    ```'
+  file: .claude/skills/brehon-conformance-audit/SKILL.md
+  line: 58
+- id: cr-23
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-21T12:07:18Z'
+  bucket: wont-fix
+  addressed_in: null
+  rationale: 'CR placeholder Actionable comments posted: 22 -- not a finding, the
+    CR summary line. No action.'
+  summary: 'Actionable comments posted: 22'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/141#pullrequestreview-4336731076
+  notes: "```diff\n> -- [ ] All 14 tasks completed in dependency order.\n> +- [ ]\
+    \ All 15 tasks completed in dependency order.\n> ```\n\n```\n> Verify each finding\
+    \ against current code. Fix only still-valid issues, skip the\n> rest with a brief\
+    \ reason, keep changes minimal, and validate.\n> \n> In @.claude/PRPs/plans/brehon-conformance-audit.plan.md\
+    \ at line 1816, Update the\n> acceptance criteria checklist item that currently\
+    \ reads \"All 14 tasks completed\n> in dependency order.\" to reflect the revised\
+    \ plan task count of 15; change the\n> text to \"All 15 tasks completed in dependency\
+    \ order.\" (this refers to the\n> checklist line \"- [ ] All 14 tasks completed\
+    \ in dependency order.\" in the plan\n> document).\n> ```\n\n``` to ```\n\n```feat(clippy):\
+    \ add\nrepo-root clippy.toml with disallowed-methods seed (task 8) needs an explicit\n\
+    language token to satisfy MD040; edit that fence (the triple-backtick that opens\n\
+    the diff snippet) to include a language like \"text\" or \"bash\" (e.g., change\
+    \ ```\n\n```text) so the code block is properly annotated.\n\nIn @.claude/PRPs/plans/brehon-conformance-audit.plan.md:\n\
+    - Around line 1308-1309: Update the Task 8a paragraph to reverse the current\n\
+    expectation: instead of saying \"workspace clippy will STILL fail\" when removing\n\
+    clippy.toml, state that workspace clippy will NOT run/fail in this single-commit\n\
+    landing because the tree returns to the governance-v0 baseline (commit\n4480a1bdb)\
+    \ which had no clippy.toml; clarify that Task 8a only executes the\nsimpler §15\
+    \ workspace-check (compile) and that the full workspace clippy gate is\ngated\
+    \ by the later Task 8 dispatch. Reference Task 8a, §15, clippy.toml and\ngovernance-v0\
+    \ (4480a1bdb) in the updated sentence.\n\nIn @.claude/PRPs/reports/brehon-conformance-audit-retro.md:\n\
+    - Around line 42-48: The markdown fenced-code blocks in the file are missing\n\
+    language tags (MD040) causing markdownlint failures; update the opening\nbackticks\
+    \ for the two code blocks shown (the block starting with \"axis-4\nprecision:\
+    \ 1.000 ...\" and the other block mentioned at lines 206-211) to include\na language\
+    \ tag such as \"text\" (e.g., change ```\n\n```text) so both fenced-code\nblocks\
+    \ are properly annotated for linting.\n\nIn\n@.claude/PRPs/reports/conformance-audit-v1-federation-inbound-b-dogfood-2026-05-20.md:\n\
+    - Around line 30-33: Several fenced code blocks in the PR report are missing\n\
+    language identifiers (MD040); update each triple-backtick fence to include the\n\
+    appropriate language (e.g., change ```\n\n```bash for shell commands and ```\n\
+    \n```text), and\nthe bash script invocation block (use ```\n\n``` fence to include\
+    \ an appropriate language token (e.g., ```\n\n```bash for shell snippets, or ```"
+  file: null
+  line: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 7
+    rebutted: 0
+    carry_forward: 1
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 14
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 1
+  by_source:
+    coderabbit: 23
+    claude: 0
+    user: 0
+  total: 23
+merged_at: null
+merge_commit: null
+final_recommendation: null
+last_polled_fingerprint: 2acc660a940d73b4de08a83fcceac92b69f41620c728d10091b0109b9af9a4b6

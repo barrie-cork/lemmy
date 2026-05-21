@@ -1,6 +1,28 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 326,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T06:02:37Z",
+      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      ],
+      "result": "fail",
+      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
+      "failed_commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      ],
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -1300,6 +1322,21 @@
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
+      "id": 276,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
+      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
       "id": 277,
       "from": "planner",
       "kind": "log",
@@ -1325,21 +1362,6 @@
       ],
       "answer": "Per-type, alongside impl Activity in each publish_{sanction_notice,trust_attestation,label}.rs (Tasks 5/6/7), NOT co-located in inbox.rs next to the trait definition. Rationale: per-type code stays with the per-type file; PublishTrustAttestation's per-actor rate-limit override reads typed protocol fields (subject URL) naturally co-located; Rust orphan rule satisfied (trait + types both in lemmy_apub_activities); the 3 patches stay disjoint so the [P] cohort dispatch is preserved. planner-self-resolved per .claude/agents/planning.md Output discipline; transcribed by advisor from plan section 19.2.",
       "answered_by": "planner-self-resolved",
-      "resolved_at": "2026-05-19T00:00:00Z"
-    },
-    {
-      "id": 276,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T00:00:00Z",
-      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
-      "options": [
-        "split",
-        "proceed"
-      ],
-      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
-      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
-      "answered_by": "user",
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
@@ -1412,21 +1434,6 @@
       "resolved_at": "2026-05-19T15:01:06Z"
     },
     {
-      "id": 284,
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T19:45:00Z",
-      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
-      "options": [
-        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
-        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
-      ],
-      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
-      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-19T20:07:22Z"
-    },
-    {
       "id": 283,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1445,6 +1452,21 @@
       "answer": "All 3 laptop-side §15 cargo commands GREEN on lane fix-impl-3 tip 4a60667c9 (post fix-impl-1 Task-4 compile fix + fix-impl-2 dead_code #[expect] chain + fix-impl-3 Finding-6.1 Phase-6 Sibling-B hard-error mirror). cargo-check --workspace --features full: FI3R_CHECK_EXIT_0 (0 errors/warnings). cargo-clippy --workspace --features full --no-deps -D warnings: FI3R_CLIPPY_EXIT_0 (0 findings, no unfulfilled_lint_expectations — fix-impl-2 #[expect(dead_code)] annotations still satisfied alongside fix-impl-3). cargo-test --workspace --test e2e --features full --no-run: FI3R_TESTNORUN_EXIT_0 (Finished test profile 5m02s, e2e binary built e2e-4ed9c75189048398.exe). Task 4 (§16a Story 2 enforcement core) §15 gate fully satisfied. (advisor-laptop, 2026-05-19T20:44:53Z)",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-19T20:44:53Z"
+    },
+    {
+      "id": 284,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T19:45:00Z",
+      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
+      "options": [
+        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
+        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
+      ],
+      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
+      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T20:07:22Z"
     },
     {
       "id": 285,
@@ -1927,18 +1949,6 @@
       "resolved_at": "2026-05-21T08:19:00Z"
     },
     {
-      "id": 314,
-      "from": "impl",
-      "kind": "log",
-      "timestamp": "2026-05-21T08:30:04Z",
-      "question": null,
-      "options": null,
-      "context": "Task 6 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD. Retro content: SCORE:0.85 CONFIDENCE:0.85 Goal:yes Tests:none CleanExecution:yes. Lesson file created via Bash heredoc (Write blocked by sensitive-file gate — known brief §6 limitation). Cargo-check exit 101 = known lemmy_email daemon env trap, no Rust code modified. DQ #313 raised and pushed.",
-      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
-      "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T08:30:04Z"
-    },
-    {
       "id": 313,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1956,16 +1966,16 @@
       "resolved_at": "2026-05-21T08:38:00Z"
     },
     {
-      "id": 316,
+      "id": 314,
       "from": "impl",
       "kind": "log",
-      "timestamp": "2026-05-21T10:50:00Z",
+      "timestamp": "2026-05-21T08:30:04Z",
       "question": null,
       "options": null,
-      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
-      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "context": "Task 6 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD. Retro content: SCORE:0.85 CONFIDENCE:0.85 Goal:yes Tests:none CleanExecution:yes. Lesson file created via Bash heredoc (Write blocked by sensitive-file gate — known brief §6 limitation). Cargo-check exit 101 = known lemmy_email daemon env trap, no Rust code modified. DQ #313 raised and pushed.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
       "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T10:50:00Z"
+      "resolved_at": "2026-05-21T08:30:04Z"
     },
     {
       "id": 315,
@@ -1983,6 +1993,18 @@
       "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ e76a37455. Worker #381 hung post-DQ-raise (same Task 6 pattern); advisor cancelled + FF-merged + ran cargo. Worker used id=315 instead of brief-assigned 314 (Task 6 worker delayed-pushed a retro log into #314 first — collision-prevention recipe needs refinement for cross-worker PMD-fallback retros). VALIDATE: 3 H2 sections, 2x retro_bypass, DIFFERENT THINGS distinction present, 04 cross-link present.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T08:53:00Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T10:50:00Z",
+      "question": null,
+      "options": null,
+      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T10:50:00Z"
     },
     {
       "id": 317,
@@ -2143,20 +2165,23 @@
       "resolved_at": "2026-05-21T11:58:00Z"
     },
     {
-      "id": 326,
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-21T17:30:00Z",
-      "question": "bm-cut Junior #393 finalize-agent deleted runlog file that bm-task wrote via git-plumbing; phase branch on origin lacked the brief-mandated runlog. Two compounding root causes: (a) Junior session PostToolUse hook (likely allow-prp-deliverables.sh) blocked direct Write on .claude/runlog/** forcing bm-task to use git hash-object + update-index plumbing path which wrote to HEAD/index but not working tree; (b) Junior finalize-agent ran git status, saw runlog as deleted in working tree, and committed the deletion (c488963a0) without cross-checking the bm-task assistant message that explicitly listed runlog creation as a delivered item.",
-      "options": [
-        "document-and-defer-structural-fix",
-        "file-as-issue-track-for-immediate-fix",
-        "in-scope-the-hook-edit-now"
+      "id": 327,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:18:05Z",
+      "question": "validate phase-brehon-conformance-audit fix-impl-4 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-fix-impl-4-apply-7-cr-fix-in-pr-majors-on-pr-141-see-claude-prps-briefs-395",
+      "phase_task": "fix-impl-4",
+      "commands": [
+        "bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh .claude/PRPs/audit-metrics/v1-federation-inbound-b.json && python3 -c \"import json; json.load(open('.claude/skills/brehon-conformance-audit/audit-metrics.schema.json'))\" && bash -n .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh && bash -n .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh && grep -c 'Workspace cargo-check is required' .claude/PRPs/briefs/brehon-conformance-audit-impl-10.md && grep -c 'return to baseline behaviour after Task 8a' .claude/PRPs/plans/brehon-conformance-audit.plan.md && grep -c 'ground_truth_compile_caught' .claude/skills/brehon-conformance-audit/METRICS.md"
       ],
-      "context": "Worker commit 9df6879a6 (bm-task) created runlog via plumbing; commit c488963a0 (finalize-agent) deleted it; advisor re-applied at 21583e798 from canonical laptop checkout lane worktree at C:/Users/barri/Developer/brehon-fork-fed-in-c. Junior #393 task_logs show no error, no refusal — both bm-task and finalize-agent reported done cleanly. The defect surfaces as a contract breach: brief §2 Phase 4 required runlog; phase branch tip on origin had no runlog until advisor belt-and-braces. Similar class to L14 (post-merge runlog ordering) but different mechanism — index-vs-worktree skew + heuristic deletion.",
-      "answer": "document-and-defer-structural-fix. The fix-now options would require either (1) editing .claude/hooks/allow-prp-deliverables.sh to allow .claude/runlog/** writes (and re-running bm-cut from scratch — re-cut the phase branch), or (2) editing Junior finalize-agent prompt to cross-check assistant deliverables before committing deletions. Both are structural changes worth a dedicated retro decision, not a mid-phase fix. The advisor belt-and-braces re-apply at 21583e798 closes the immediate gap. Retro signals to track: (i) does the same hook block fire on the next bm-task in any lane? — if yes, fix the hook; (ii) does the finalize-agent heuristic produce other false-deletions on tasks with plumbing-path writes? — if yes, harden the finalize prompt. Both go into v1-federation-inbound-c-retro.md §BM signals.",
-      "answered_by": "advisor-self-resolved",
-      "resolved_at": "2026-05-21T17:35:00Z"
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "compute-metrics.sh on v1-federation-inbound-b.json: axis-4 precision 1.000, recall 1.000, lead-time 27.5h, latent-footgun catch 1. Schema strictness (cr-16), FP attribution (cr-19), lead-time formula (cr-20), fn-regex (cr-21) all applied + non-regressive. Pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T18:25:37.070964Z",
+      "notes": " [renumbered from #320 on merge due to DQ id collision with concurrent fed-in-c session: trunk #320 was a different entry]"
     },
     {
       "id": 328,
@@ -2199,6 +2224,129 @@
       "result": "pass",
       "log_slice": "=== cargo-check.bat --workspace --features full (exit 0) ===\n    Checking lemmy_db_views_report_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\report_combined)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 1m 37s\n\n=== cargo-clippy.bat --workspace --features full --no-deps -- -D warnings (exit 0) ===\n    Checking lemmy_db_views_person v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 2m 24s",
       "failed_commands": []
+    },
+    {
+      "id": 330,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Where does the per-session seq counter state persist across multiple dq-v3-new-entry.sh invocations?",
+      "options": [
+        "option-a: scan current DQ for highest seq used by this session_id and increment (stateless, no side files)",
+        "option-b: cache counter in a gitignored .claude/.dq-session-seq file"
+      ],
+      "context": "PRECON-1 abolishes next_id but the replacement seq counter needs a persistence mechanism. dq-v3-new-entry.sh is a bash script; external state needs an explicit home.",
+      "answer": "option-a: scan current DQ pending[]+resolved[] for entries where id starts with <session_id>-, take max seq, add 1. Stateless script, no extra files. Zero-pad seq to 3 digits. Evidence: mirrors the existing next_id scan approach but scoped to one session_id prefix. Source: resolve-dq-canonical.sh scan-based approach for all id operations.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 331,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "What is the primary source for the session_id prefix in dq-v3-new-entry.sh?",
+      "options": [
+        "option-a: uuidgen or python3 uuid4 at first use, cached in .claude/.dq-session-id (gitignored)",
+        "option-b: read session_id from .claude/auto-state/<phase>.json",
+        "option-c: read CC_SESSION_ID env var injected by a future hook"
+      ],
+      "context": "Brief PRECON-1 says session_id comes from agent-activity.json but that file does not exist (scripts/agent-activity.sh missing; .claude/agent-activity.json absent). auto-state/<phase>.json has session_id but only exists for /auto-phase sessions.",
+      "answer": "option-a: uuidgen (or python3 uuid4().hex[:12]) at first invocation, cached in .claude/.dq-session-id (gitignored, created once per CC session restart). Fallback: python3 -c import uuid;print(uuid.uuid4().hex[:12]). The cached file makes subsequent calls within the same session use the same prefix. Brief PRECON-1 should reference this mechanism instead of agent-activity.json.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 332,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/agents/planning.md be added to sec 3 Required reading? It is in PRECON-4 scope but absent from sec 3.",
+      "options": [
+        "option-a: yes - add to sec 3; planner needs to read its own contract before authoring plan",
+        "option-b: no - planner always reads its own agent file at task start per planning.md before-you-start"
+      ],
+      "context": "PRECON-4 names planning.md as in-scope for Track B. sec 3 lists impl-task.md, bm-task.md, ci-watcher.md but not planning.md.",
+      "answer": "option-a: add .claude/agents/planning.md to sec 3 Required reading. Track B touches all four agent files including planning.md; citing it makes scope explicit. Brief edit: add to sec 3 list.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 333,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should feedback_dq_log_shape_as_blocker.md, feedback_cohort_dq_id_collision.md, and feedback_planner_dq_id_via_origin_not_daemon_local.md be added to sec 3?",
+      "options": [
+        "option-a: yes - add all three; give planner failure-mode context for sec 4 watchpoints",
+        "option-b: brief sec 0 RCA already covers context; no need to add lesson citations"
+      ],
+      "context": "Axis: missing-required-reading. feedback_cohort_dq_id_collision.md names the pre-reservation workaround this sub-phase supersedes. feedback_planner_dq_id_via_origin_not_daemon_local.md names the daemon-local race. feedback_dq_log_shape_as_blocker.md covers the kind-misclassification the v3 rule must address.",
+      "answer": "option-a: add all three to sec 3. feedback_cohort_dq_id_collision.md is load-bearing: planner must read it to know the pre-reservation workaround is superseded by v3 and that advisor-orchestrator.md sec 4 pre-reserve-ids practice becomes dead code. Brief edit: add to sec 3 list.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 334,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/refs/dq-recipes.md be added to sec 3 and Track B scope? It contains the next_id Python recipe at lines 19 and 62.",
+      "options": [
+        "option-a: yes - add to sec 3 + Track B scope as deliverable 3b",
+        "option-b: resolve-dq-canonical.sh update (Track C) subsumes the recipe change"
+      ],
+      "context": "Grep found next_id at dq-recipes.md lines 19 and 62 (Recipe 1 + Recipe 2). Track B updates decision-queue.md which references dq-recipes.md for the canonical recipe. If dq-recipes.md is not updated the recipe stays wrong after v3 ships.",
+      "answer": "option-a: add .claude/refs/dq-recipes.md to sec 3 Required reading AND to Track B scope (new subtask: update Recipe 1 + Recipe 2 to show dq-v3-new-entry.sh invocation). Must ship atomically with decision-queue.md v3 section. Brief edit: add to sec 3 and name as explicit Task 2 subtask.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 335,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/rules/multi-lane-worktree.md be added to Track B scope? It contains next_id references at lines 155, 176, 190.",
+      "options": [
+        "option-a: yes - add to Track B; the worktree-aware next_id section becomes dead code in v3",
+        "option-b: update multi-lane-worktree.md in a follow-up; not blocking v3"
+      ],
+      "context": "PRECON-5 says every rule/lesson referencing next_id must be updated. multi-lane-worktree.md sec Worktree-aware DQ id discipline is a 14-line section about spanning cross-lane refs when computing next_id - obsolete with composite ids.",
+      "answer": "option-a: add multi-lane-worktree.md to Track B scope. The Worktree-aware DQ id discipline section should be replaced with a note that v3 composite ids make cross-lane next_id coordination obsolete. Brief edit: add .claude/rules/multi-lane-worktree.md to Track B deliverable 3 and to sec 3.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 336,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should feedback_cohort_dq_id_collision.md gain a superseded_by note as part of Track B lesson updates?",
+      "options": [
+        "option-a: yes - add superseded_by note to lesson; the pre-reservation workaround is dead code after v3",
+        "option-b: no - lesson files are advisory; superseded note is not required for v3 correctness"
+      ],
+      "context": "advisor-orchestrator.md sec 4 does not document pre-reservation explicitly (the lesson does). After v3 the workaround is obsolete. If the lesson is not updated future sessions may follow the workaround unnecessarily.",
+      "answer": "option-a: add superseded_by: v1-dq-schema-r1 note to feedback_cohort_dq_id_collision.md as part of Track B lesson updates. Same atomic commit as decision-queue.md v3 section. This prevents future sessions from following a dead workaround. Brief edit: add feedback_cohort_dq_id_collision.md to Track B lesson-update subtask.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 337,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-21T17:30:00Z",
+      "question": "bm-cut Junior #393 finalize-agent deleted runlog file that bm-task wrote via git-plumbing; phase branch on origin lacked the brief-mandated runlog. Two compounding root causes: (a) Junior session PostToolUse hook (likely allow-prp-deliverables.sh) blocked direct Write on .claude/runlog/** forcing bm-task to use git hash-object + update-index plumbing path which wrote to HEAD/index but not working tree; (b) Junior finalize-agent ran git status, saw runlog as deleted in working tree, and committed the deletion (c488963a0) without cross-checking the bm-task assistant message that explicitly listed runlog creation as a delivered item.",
+      "options": [
+        "document-and-defer-structural-fix",
+        "file-as-issue-track-for-immediate-fix",
+        "in-scope-the-hook-edit-now"
+      ],
+      "context": "Worker commit 9df6879a6 (bm-task) created runlog via plumbing; commit c488963a0 (finalize-agent) deleted it; advisor re-applied at 21583e798 from canonical laptop checkout lane worktree at C:/Users/barri/Developer/brehon-fork-fed-in-c. Junior #393 task_logs show no error, no refusal — both bm-task and finalize-agent reported done cleanly. The defect surfaces as a contract breach: brief §2 Phase 4 required runlog; phase branch tip on origin had no runlog until advisor belt-and-braces. Similar class to L14 (post-merge runlog ordering) but different mechanism — index-vs-worktree skew + heuristic deletion.",
+      "answer": "document-and-defer-structural-fix. The fix-now options would require either (1) editing .claude/hooks/allow-prp-deliverables.sh to allow .claude/runlog/** writes (and re-running bm-cut from scratch — re-cut the phase branch), or (2) editing Junior finalize-agent prompt to cross-check assistant deliverables before committing deletions. Both are structural changes worth a dedicated retro decision, not a mid-phase fix. The advisor belt-and-braces re-apply at 21583e798 closes the immediate gap. Retro signals to track: (i) does the same hook block fire on the next bm-task in any lane? — if yes, fix the hook; (ii) does the finalize-agent heuristic produce other false-deletions on tasks with plumbing-path writes? — if yes, harden the finalize prompt. Both go into v1-federation-inbound-c-retro.md §BM signals.",
+      "answered_by": "advisor-self-resolved",
+      "resolved_at": "2026-05-21T17:35:00Z",
+      "notes": "[renumbered from #326 on merge governance-v0 -> phase-v1-federation-inbound-c due to DQ id collision: gov #326 was a different entry, renumbered from #308 earlier]"
     }
   ]
 }

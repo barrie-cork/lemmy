@@ -9,6 +9,8 @@
 //! Verdict-enforcement helpers such as `sponsor_liability` live here with
 //! the workflow that invokes them — see [IMPLEMENTATION-PLAN-v0.md §4.1, §4.2].
 
+#![deny(clippy::disallowed_methods)]
+
 pub mod accept_jury_assignment;
 pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;

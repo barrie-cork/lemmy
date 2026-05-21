@@ -119,6 +119,10 @@ redundant_type_annotations = "deny"
 if_then_some_else_none = "deny"
 allow_attributes = "deny"
 unchecked_time_subtraction = "deny"
+disallowed_methods = "allow"   # Federation-only enforcement: workspace-default ALLOW;
+                               # per-module #![deny(clippy::disallowed_methods)] in three
+                               # federation mod.rs files (Task 9) re-enables enforcement
+                               # only there (rustc lint-precedence rule 4). See clippy.toml + DQ #311.
 
 [workspace.dependencies]
 lemmy_api = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/api/api" }
