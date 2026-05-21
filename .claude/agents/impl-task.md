@@ -317,3 +317,13 @@ On clean stop (DQ blocked or external constraint):
 - Never invoke cargo for build/lint/test on Shape-G plans — validation runs out-of-band on GH Actions per the validation gate above
 - Never invoke cargo for build/lint/test on Pre-Shape-G plans either — emit a `validate-pending-laptop` DQ entry; the advisor laptop session runs cargo. The EliteDesk worker is memory-constrained (15 GB RAM, 4 GB swap, contended cron workloads) and `cargo check --workspace --features full` thrashes the box for >1 hour — see `project_elitedesk_hung_2026_04_27` and the 2026-04-28 task #47 incident.
 - Never invoke `cargo test ... e2e` on the worker — testcontainers + postgres + 8945-line e2e.rs OOMs more aggressively than cargo check. Delegate to laptop via `validate-pending-laptop` (or `validate-pending-laptop-e2e`) DQ entry.
+
+## DQ schema-v3 (post-v1-dq-schema-r1)
+
+When writing a new DQ entry under schema-v3, follow these three rules:
+
+1. **Generate the id via `bash scripts/brehon/dq-v3-new-entry.sh`.** Never compute `max(all_ids) + 1` directly — that global-monotonic recipe is abolished for v3 writes and would produce collisions under concurrent worktrees. The script reads `.claude/.dq-session-id` (or mints one) and returns the next composite id (`<12-hex>-<seq>`).
+
+2. **Leave `approved_by: null` and `approved_at: null` on every entry you write.** HARD REFUSAL — never write a non-null `approved_by` from this subagent. That field is advisor-exclusive and is populated only after an `AskUserQuestion` user-gate relay in the persistent advisor session.
+
+3. **Continue writing `answered_by` per existing v2 attribution-integrity rules.** The `answered_by` semantics are unchanged under v3: `impl-self-resolved`, `bm-self-resolved`, `planner`, `ci-watcher`, `advisor`, `user` — same values, same attribution rules as documented in `.claude/rules/decision-queue.md` §"Attribution integrity". v3 adds `approved_by` alongside `answered_by`; it does not replace it.

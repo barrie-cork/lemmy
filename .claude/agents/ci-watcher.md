@@ -188,3 +188,15 @@ On completion (failure path):
 Verification post-mutation: `git diff HEAD~1 -- .claude/decision-queue.json` should show fields-of-existing-entry-changed plus position-moved (pending → resolved on pass) — no new entry inserted, no entry deleted. If the diff shows a new entry inserted, abort the push, restore the file, and file a blocker DQ entry — the mutation logic was wrong.
 
 Exit 0 in both paths. The advisor reads the DQ entry on its next polling tick; ci-watcher never blocks the worker slot beyond the long-poll itself (~10 sec model-time across 5–25 min wall-clock since `gh run watch` is a single long-poll, not repeated polling).
+
+## DQ schema-v3 (post-v1-dq-schema-r1)
+
+When writing a new DQ entry under schema-v3, follow these three rules:
+
+1. **Generate the id via `bash scripts/brehon/dq-v3-new-entry.sh`.** Never compute `max(all_ids) + 1` directly — that global-monotonic recipe is abolished for v3 writes and would produce collisions under concurrent worktrees. The script reads `.claude/.dq-session-id` (or mints one) and returns the next composite id (`<12-hex>-<seq>`).
+
+2. **Leave `approved_by: null` and `approved_at: null` on every entry you write.** HARD REFUSAL — never write a non-null `approved_by` from this subagent. That field is advisor-exclusive and is populated only after an `AskUserQuestion` user-gate relay in the persistent advisor session.
+
+3. **Continue writing `answered_by` per existing v2 attribution-integrity rules.** The `answered_by` semantics are unchanged under v3: `impl-self-resolved`, `bm-self-resolved`, `planner`, `ci-watcher`, `advisor`, `user` — same values, same attribution rules as documented in `.claude/rules/decision-queue.md` §"Attribution integrity". v3 adds `approved_by` alongside `answered_by`; it does not replace it.
+
+**ci-watcher and v3 ids.** ci-watcher never writes a new id — it MUTATES existing `validate-pending` entries by matching `workflow_run_id`. v3 affects ci-watcher only insofar as the entries it mutates may carry composite ids (e.g. `a1b2c3d4e5f6-001`). The mutation pattern is unchanged: populate `result`, `log_slice`, `failed_jobs`, `answer`, `answered_by: "ci-watcher"`, `resolved_at` on the matched entry; move from `pending[]` to `resolved[]` on pass. Never generate a new id, never run `dq-v3-new-entry.sh`.

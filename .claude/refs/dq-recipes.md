@@ -9,16 +9,9 @@ Companion: `.claude/rules/decision-queue.md` (schema, attribution, hard refusals
 Use when the question genuinely gates progress and you need an answer before continuing. If you can self-resolve with evidence, prefer Recipe 2 instead.
 
 ```bash
-# Step A: compute next safe id (no collisions). MUST span archive files too — see decision-queue.md "Archive policy".
-python3 - <<'PY'
-import json, glob
-all_ids = []
-for path in ['.claude/decision-queue.json'] + glob.glob('.claude/decision-queue-archive-*.json'):
-    data = json.load(open(path))
-    all_ids += [e['id'] for e in data.get('pending',[]) + data.get('resolved',[])]
-print(f'next_id: {max(all_ids, default=0) + 1}')
-PY
-
+# Step A: generate a v3 composite id (no more max-scan)
+NEXT_ID="$(bash scripts/brehon/dq-v3-new-entry.sh)"
+echo "next_id: $NEXT_ID"
 # Step B: edit decision-queue.json — append to "pending" array
 # Use Edit tool with the JSON literal below. Substitute <NEXT_ID>, <SLUG>, etc.
 ```
@@ -52,16 +45,9 @@ If the question gates this task and no other task can proceed, stop the loop cle
 Use when you discovered something a future task on related code would have wanted to know — a subtle constraint, a plan inaccuracy, a footgun — and you have a defensible action you took or recommend. The advisor harvests these at retro time.
 
 ```bash
-# Step A: compute next safe id (same as Recipe 1, including archive-span)
-python3 - <<'PY'
-import json, glob
-all_ids = []
-for path in ['.claude/decision-queue.json'] + glob.glob('.claude/decision-queue-archive-*.json'):
-    data = json.load(open(path))
-    all_ids += [e['id'] for e in data.get('pending',[]) + data.get('resolved',[])]
-print(f'next_id: {max(all_ids, default=0) + 1}')
-PY
-
+# Step A: generate a v3 composite id (no more max-scan)
+NEXT_ID="$(bash scripts/brehon/dq-v3-new-entry.sh)"
+echo "next_id: $NEXT_ID"
 # Step B: edit decision-queue.json — append directly to "resolved" array (NOT pending)
 ```
 
