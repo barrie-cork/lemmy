@@ -54,6 +54,42 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
 
    Expected output: `OK: pmd-canonical-guard.sh wired at SessionStart`. Any other output (FAIL assertion, JSON parse error, file-not-found) means step 6 was skipped or the file was clobbered — re-apply step 6 and re-run this check before proceeding. Per `feedback_python_utf8_encoding_windows.md`, the `io.open(..., encoding='utf-8')` is mandatory on Windows — bare `json.load(open(...))` will hit the cp1252 codec on non-ASCII content (recurred during v1-federation-inbound-c session 2026-05-21 when a DQ snapshot read crashed on a non-ASCII char at byte 41041).
 
+9. **(NEW — 2026-05-22, post-RT-r2 boundary incident)** Wire `session-start-multi-lane-check.sh` as a `SessionStart` hook in the same `.claude/settings.local.json`. Add it as a second `hooks` entry inside the existing `SessionStart` array (do NOT replace the `pmd-canonical-guard.sh` entry — both run on every session start). Order: pmd-canonical-guard first (PMD-path drift is more critical), multi-lane-check second. Final `SessionStart` array shape:
+
+   ```json
+   {
+     "hooks": {
+       "SessionStart": [
+         {
+           "matcher": ".*",
+           "hooks": [
+             {"type": "command", "command": "bash .claude/hooks/pmd-canonical-guard.sh"},
+             {"type": "command", "command": "bash .claude/hooks/session-start-multi-lane-check.sh"}
+           ]
+         }
+       ]
+     }
+   }
+   ```
+
+10. **(NEW — 2026-05-22)** Programmatic verification that step 9 actually landed (mirrors step 8's belt-and-braces for `pmd-canonical-guard.sh`). Run from the new lane CWD:
+
+    ```bash
+    python -c "
+    import io, json
+    s = json.load(io.open('.claude/settings.local.json', encoding='utf-8'))
+    ss = s.get('hooks', {}).get('SessionStart', [])
+    wired = any(
+        'session-start-multi-lane-check.sh' in h.get('command', '')
+        for entry in ss for h in entry.get('hooks', [])
+    )
+    assert wired, 'FAIL: session-start-multi-lane-check.sh SessionStart wiring missing — re-apply step 9'
+    print('OK: session-start-multi-lane-check.sh wired at SessionStart')
+    "
+    ```
+
+    Expected output: `OK: session-start-multi-lane-check.sh wired at SessionStart`. Any other output means step 9 was skipped or the file was clobbered — re-apply step 9 and re-run.
+
 ## DQ #301 dual-wire (v1-rls-r1 ships)
 
 Step 6's wiring MUST be applied in BOTH locations:
@@ -73,3 +109,4 @@ Note: both `settings.local.json` files are gitignored — this is a manual hand-
 - `.claude/rules/multi-lane-worktree.md` — lane lifecycle + hard refusals around cross-lane DQ writes and shared-checkout phase-branch ops.
 - `.claude/rules/pmd-invariants.md` (Task 2) — the five consolidated PMD meta-invariants; invariant #1 is the canonical-path rule this checklist step 5+6 enforces.
 - `.claude/hooks/pmd-canonical-guard.sh` (Task 3) — the script step 6 wires; tracks into git so the check logic is shared knowledge while the activation remains per-worktree config.
+- `.claude/hooks/session-start-multi-lane-check.sh` (2026-05-22) — the script step 9 wires; detects concurrent advisor session activity via worktree-tip-age heuristic. Companion lessons: `feedback_falsifiable_hypothesis_before_structural_fix.md` (the false-RCA pattern this hook was authored to prevent) + `project_concurrent_advisor_sessions_2026_05_21.md` (the incident).
