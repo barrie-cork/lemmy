@@ -20,6 +20,24 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
+    },
+    {
+      "id": 320,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:18:05Z",
+      "question": "validate phase-brehon-conformance-audit fix-impl-4 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-fix-impl-4-apply-7-cr-fix-in-pr-majors-on-pr-141-see-claude-prps-briefs-395",
+      "phase_task": "fix-impl-4",
+      "commands": [
+        "bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh .claude/PRPs/audit-metrics/v1-federation-inbound-b.json && python3 -c \"import json; json.load(open('.claude/skills/brehon-conformance-audit/audit-metrics.schema.json'))\" && bash -n .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh && bash -n .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh && grep -c 'Workspace cargo-check is required' .claude/PRPs/briefs/brehon-conformance-audit-impl-10.md && grep -c 'return to baseline behaviour after Task 8a' .claude/PRPs/plans/brehon-conformance-audit.plan.md && grep -c 'ground_truth_compile_caught' .claude/skills/brehon-conformance-audit/METRICS.md"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
