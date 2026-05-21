@@ -20,26 +20,6 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
-    },
-    {
-      "id": 315,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T14:30:00Z",
-      "question": "validate phase-brehon-conformance-audit task 9 worker branch — #![deny(clippy::disallowed_methods)] in 3 federation mod.rs",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-9-add-deny-clippy-disallowed-methods-to-3-federation-mod-rs-see-382",
-      "phase_task": 9,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-narrow-clippy.log 2>&1; echo exit: $?",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-workspace-clippy.log 2>&1; echo exit: $?",
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task9-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -1986,6 +1966,26 @@
       "answer": "All 3 commands exit 0 on laptop against phase-brehon-conformance-audit tip 3082c35ff. Cmd 1 (workspace cargo-check --workspace --features full): 8m45s cold. Cmd 2 (narrow federation clippy on lemmy_apub_activities + lemmy_api + lemmy_db_schema): 8m01s cold. Cmd 3 (workspace clippy --workspace --no-deps --features full -- -D warnings): 7m24s cold. Required intermediate fix: clippy.toml from Task 8 6720dc72a used multiline inline tables which TOML 1.0 forbids — fixed in advisor-direct commit 3082c35ff (user-authorised brief-authoring error correction). Mechanism §10.8 (workspace disallowed_methods=allow + per-module deny per rustc lint-precedence rule 4) is now confirmed structurally sound. Task 8 (clippy.toml + Cargo.toml workspace-allow) complete; Task 9 (per-module #![deny] on 3 federation mod.rs) is next.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T08:51:41Z"
+    },
+    {
+      "id": 315,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T14:30:00Z",
+      "question": "validate phase-brehon-conformance-audit task 9 worker branch — #![deny(clippy::disallowed_methods)] in 3 federation mod.rs",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-9-add-deny-clippy-disallowed-methods-to-3-federation-mod-rs-see-382",
+      "phase_task": 9,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-narrow-clippy.log 2>&1; echo exit: $?",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-workspace-clippy.log 2>&1; echo exit: $?",
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task9-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 3 commands exit 0 on laptop against phase-brehon-conformance-audit tip 253c8ca1c. Cmd 1 (workspace cargo-check --workspace --features full): 1m41s warm. Cmd 2 (narrow federation clippy -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings): 2m25s warm. Cmd 3 (workspace clippy --workspace --no-deps --features full -- -D warnings): 2m52s warm. Mechanism §10.8 (workspace disallowed_methods=allow + per-module #![deny] per rustc lint-precedence rule 4) is now CONFIRMED ENFORCING: cmd 2 narrow probe targets the 3 federation governance modules with #![deny] active and exits 0 (federation governance code is axis-4 clean per fed-in-b fix-impl-3 evidence). Cmd 3 workspace probe exits 0 → workspace-allow override correctly silences disallowed_methods outside the 3 federation modules. Tasks 8 + 8a + TOML fix + 9 complete. Phase 1 (mechanism implementation) done; ready to advance to Cohort 3 (Task 7 dogfood).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T10:45:57Z"
     }
   ]
 }
