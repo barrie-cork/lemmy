@@ -1,6 +1,97 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 307,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-1-see-claude-prps-briefs-v1-rls-r1-impl-1-md-372",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task1-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 307). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    },
+    {
+      "id": 308,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-2-see-claude-prps-briefs-v1-rls-r1-impl-2-md-373",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task2-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 308). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    },
+    {
+      "id": 309,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-3-see-claude-prps-briefs-v1-rls-r1-impl-3-md-374",
+      "phase_task": 3,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task3-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 309). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    },
+    {
+      "id": 310,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-4-see-claude-prps-briefs-v1-rls-r1-impl-4-md-375",
+      "phase_task": 4,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task4-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 310). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    },
+    {
+      "id": 311,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-7-see-claude-prps-briefs-v1-rls-r1-impl-7-md-376",
+      "phase_task": 7,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task7-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 311). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    }
+  ],
   "resolved": [
     {
       "id": 14,
