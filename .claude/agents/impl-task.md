@@ -327,3 +327,18 @@ When writing a new DQ entry under schema-v3, follow these three rules:
 2. **Leave `approved_by: null` and `approved_at: null` on every entry you write.** HARD REFUSAL — never write a non-null `approved_by` from this subagent. That field is advisor-exclusive and is populated only after an `AskUserQuestion` user-gate relay in the persistent advisor session.
 
 3. **Continue writing `answered_by` per existing v2 attribution-integrity rules.** The `answered_by` semantics are unchanged under v3: `impl-self-resolved`, `bm-self-resolved`, `planner`, `ci-watcher`, `advisor`, `user` — same values, same attribution rules as documented in `.claude/rules/decision-queue.md` §"Attribution integrity". v3 adds `approved_by` alongside `answered_by`; it does not replace it.
+
+## Live-state validation (post-v1-retro-followups-r1, 2026-05-22)
+
+For state-dependent logic changes — sort keys, dedupe rules, format converters, any function whose behavior depends on the shape of input data — run the new logic against the live target state BEFORE commit, NOT just against the plan's example.
+
+**Why:** the plan's example may have an empty-corpus or single-shape blind spot. v1-dq-schema-r1 Task 3 surfaced a hidden `TypeError` in `resolve-dq-canonical.sh`'s sort key when run against the live 134-entry DQ (133 int + 1 str ids); the plan's example had only int ids and would have passed silently. Without the live-state check, the resolver would have crashed on every post-migration invocation.
+
+**How to apply (add to per-task validation checklist):**
+
+For any task whose IMPLEMENT files include logic touching state shape:
+1. Identify the live target state (path, ref).
+2. Construct a minimal Python (or shell) repro of the new logic against that state.
+3. Run before `git commit`. If `TypeError` / `KeyError` / silent-degradation symptoms appear, the plan example missed a corpus shape — file `kind: blocker` DQ for advisor to extend the plan §13 with the missing case OR fix in same commit if scope permits.
+
+**Related pattern:** `pattern_test_against_reality_not_syntax.md` (promoted; this § is one application of the broader pattern).
