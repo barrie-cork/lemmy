@@ -2182,6 +2182,112 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T18:25:37.070964Z",
       "notes": " [renumbered from #320 on merge due to DQ id collision with concurrent fed-in-c session: trunk #320 was a different entry]"
+    },
+    {
+      "id": 330,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Where does the per-session seq counter state persist across multiple dq-v3-new-entry.sh invocations?",
+      "options": [
+        "option-a: scan current DQ for highest seq used by this session_id and increment (stateless, no side files)",
+        "option-b: cache counter in a gitignored .claude/.dq-session-seq file"
+      ],
+      "context": "PRECON-1 abolishes next_id but the replacement seq counter needs a persistence mechanism. dq-v3-new-entry.sh is a bash script; external state needs an explicit home.",
+      "answer": "option-a: scan current DQ pending[]+resolved[] for entries where id starts with <session_id>-, take max seq, add 1. Stateless script, no extra files. Zero-pad seq to 3 digits. Evidence: mirrors the existing next_id scan approach but scoped to one session_id prefix. Source: resolve-dq-canonical.sh scan-based approach for all id operations.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 331,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "What is the primary source for the session_id prefix in dq-v3-new-entry.sh?",
+      "options": [
+        "option-a: uuidgen or python3 uuid4 at first use, cached in .claude/.dq-session-id (gitignored)",
+        "option-b: read session_id from .claude/auto-state/<phase>.json",
+        "option-c: read CC_SESSION_ID env var injected by a future hook"
+      ],
+      "context": "Brief PRECON-1 says session_id comes from agent-activity.json but that file does not exist (scripts/agent-activity.sh missing; .claude/agent-activity.json absent). auto-state/<phase>.json has session_id but only exists for /auto-phase sessions.",
+      "answer": "option-a: uuidgen (or python3 uuid4().hex[:12]) at first invocation, cached in .claude/.dq-session-id (gitignored, created once per CC session restart). Fallback: python3 -c import uuid;print(uuid.uuid4().hex[:12]). The cached file makes subsequent calls within the same session use the same prefix. Brief PRECON-1 should reference this mechanism instead of agent-activity.json.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 332,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/agents/planning.md be added to sec 3 Required reading? It is in PRECON-4 scope but absent from sec 3.",
+      "options": [
+        "option-a: yes - add to sec 3; planner needs to read its own contract before authoring plan",
+        "option-b: no - planner always reads its own agent file at task start per planning.md before-you-start"
+      ],
+      "context": "PRECON-4 names planning.md as in-scope for Track B. sec 3 lists impl-task.md, bm-task.md, ci-watcher.md but not planning.md.",
+      "answer": "option-a: add .claude/agents/planning.md to sec 3 Required reading. Track B touches all four agent files including planning.md; citing it makes scope explicit. Brief edit: add to sec 3 list.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 333,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should feedback_dq_log_shape_as_blocker.md, feedback_cohort_dq_id_collision.md, and feedback_planner_dq_id_via_origin_not_daemon_local.md be added to sec 3?",
+      "options": [
+        "option-a: yes - add all three; give planner failure-mode context for sec 4 watchpoints",
+        "option-b: brief sec 0 RCA already covers context; no need to add lesson citations"
+      ],
+      "context": "Axis: missing-required-reading. feedback_cohort_dq_id_collision.md names the pre-reservation workaround this sub-phase supersedes. feedback_planner_dq_id_via_origin_not_daemon_local.md names the daemon-local race. feedback_dq_log_shape_as_blocker.md covers the kind-misclassification the v3 rule must address.",
+      "answer": "option-a: add all three to sec 3. feedback_cohort_dq_id_collision.md is load-bearing: planner must read it to know the pre-reservation workaround is superseded by v3 and that advisor-orchestrator.md sec 4 pre-reserve-ids practice becomes dead code. Brief edit: add to sec 3 list.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 334,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/refs/dq-recipes.md be added to sec 3 and Track B scope? It contains the next_id Python recipe at lines 19 and 62.",
+      "options": [
+        "option-a: yes - add to sec 3 + Track B scope as deliverable 3b",
+        "option-b: resolve-dq-canonical.sh update (Track C) subsumes the recipe change"
+      ],
+      "context": "Grep found next_id at dq-recipes.md lines 19 and 62 (Recipe 1 + Recipe 2). Track B updates decision-queue.md which references dq-recipes.md for the canonical recipe. If dq-recipes.md is not updated the recipe stays wrong after v3 ships.",
+      "answer": "option-a: add .claude/refs/dq-recipes.md to sec 3 Required reading AND to Track B scope (new subtask: update Recipe 1 + Recipe 2 to show dq-v3-new-entry.sh invocation). Must ship atomically with decision-queue.md v3 section. Brief edit: add to sec 3 and name as explicit Task 2 subtask.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 335,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should .claude/rules/multi-lane-worktree.md be added to Track B scope? It contains next_id references at lines 155, 176, 190.",
+      "options": [
+        "option-a: yes - add to Track B; the worktree-aware next_id section becomes dead code in v3",
+        "option-b: update multi-lane-worktree.md in a follow-up; not blocking v3"
+      ],
+      "context": "PRECON-5 says every rule/lesson referencing next_id must be updated. multi-lane-worktree.md sec Worktree-aware DQ id discipline is a 14-line section about spanning cross-lane refs when computing next_id - obsolete with composite ids.",
+      "answer": "option-a: add multi-lane-worktree.md to Track B scope. The Worktree-aware DQ id discipline section should be replaced with a note that v3 composite ids make cross-lane next_id coordination obsolete. Brief edit: add .claude/rules/multi-lane-worktree.md to Track B deliverable 3 and to sec 3.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
+    },
+    {
+      "id": 336,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T19:07:50Z",
+      "question": "Should feedback_cohort_dq_id_collision.md gain a superseded_by note as part of Track B lesson updates?",
+      "options": [
+        "option-a: yes - add superseded_by note to lesson; the pre-reservation workaround is dead code after v3",
+        "option-b: no - lesson files are advisory; superseded note is not required for v3 correctness"
+      ],
+      "context": "advisor-orchestrator.md sec 4 does not document pre-reservation explicitly (the lesson does). After v3 the workaround is obsolete. If the lesson is not updated future sessions may follow the workaround unnecessarily.",
+      "answer": "option-a: add superseded_by: v1-dq-schema-r1 note to feedback_cohort_dq_id_collision.md as part of Track B lesson updates. Same atomic commit as decision-queue.md v3 section. This prevents future sessions from following a dead workaround. Brief edit: add feedback_cohort_dq_id_collision.md to Track B lesson-update subtask.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T19:07:50Z"
     }
   ]
 }

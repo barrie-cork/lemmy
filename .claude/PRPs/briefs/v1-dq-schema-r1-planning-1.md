@@ -51,7 +51,7 @@ The changes share: one schema-version bump (`schema_version: 2` → `3`), one mi
 
 ### PRECON-1 — Composite id format: `<session_id>-<sequence>`
 
-**Decision (user comment 2026-05-21, issue #142):** use `<session_id>-<sequence>` where `session_id` is the CC session UUID from `.claude/agent-activity.json` (already tracked) and `sequence` is per-session monotonic. Alternative `<short-sha>-<sequence>` is noted as a tradeoff but the user's comment positions UUID-based as the primary proposal.
+**Decision (user comment 2026-05-21, issue #142):** use `<session_id>-<sequence>` where `session_id` is a per-session UUID and `sequence` is per-session monotonic. (Note: `.claude/agent-activity.json` cited in issue comment does not exist at task time — `scripts/agent-activity.sh` is absent. Clarify DQ #331 resolved: session_id = `uuidgen`/`python3 uuid4().hex[:12]` at first use, cached in `.claude/.dq-session-id`. Alternative `<short-sha>-<sequence>` is noted as a tradeoff; UUID-based is the primary design.) Sequence persistence: scan current DQ for highest seq used by this session_id, increment; zero-pad to 3 digits (clarify DQ #330).
 
 **Binding consequences for the plan:**
 - New entries write `id: "<session_id>-<seq>"` as the canonical reference. The old integer `id` field is kept as `id_v1: <int>` on historical entries (additive, not a rename — existing scripts parsing `id` as integer keep working on pre-v3 entries).
@@ -100,11 +100,14 @@ The plan covers exactly these deliverables (nothing more, nothing less):
 
 **Track A — Schema spec + migration (`.claude/` meta, ships direct on governance-v0):**
 1. `scripts/brehon/dq-schema-v3-migrate.sh` — idempotent migration script. Adds `id_v1` to all live entries, bumps `schema_version` to 3. Dry-run via `--dry-run` flag. Supports `--live-file-only` (skip archives). Outputs a diff summary of changed entries.
-2. `scripts/brehon/dq-v3-new-entry.sh` — helper that generates a new v3 entry id (`<session_id>-<seq>`) using the CC session UUID from `.claude/agent-activity.json` (or a fallback UUID if activity file absent/stale). Replaces the `next_id` Python one-liner referenced in `decision-queue.md`.
+2. `scripts/brehon/dq-v3-new-entry.sh` — helper that generates a new v3 entry id (`<session_id>-<seq>`). Session-id source: `uuidgen` or `python3 -c "import uuid; print(uuid.uuid4().hex[:12])"` at first invocation, cached in `.claude/.dq-session-id` (gitignored, one per CC session restart). Seq: scan current DQ for highest seq used by this session_id and increment; zero-pad to 3 digits (e.g. `a1b2c3d4e5f6-001`). Stateless scan — no external state file beyond the cached session-id. Replaces the `next_id` Python one-liner referenced in `decision-queue.md`. (Per clarify DQ #330, #331.)
 
 **Track B — Rule + agent contract updates (`.claude/` meta, ships direct on governance-v0):**
 3. `.claude/rules/decision-queue.md` — v3 schema section: composite id format spec, `id_v1` backward-compat rule, `approved_by`/`approved_at` semantics, `linked_dq_ref` shape, hard-refusal additions, `next_id` abolition + `dq-v3-new-entry.sh` recipe. Keep all v2 content intact (forward-only).
-4. `.claude/agents/impl-task.md` + `.claude/agents/bm-task.md` + `.claude/agents/planning.md` + `.claude/agents/ci-watcher.md` — add v3 id-format write rule; `approved_by` hard-refusal; updated "Recipe 1" / "Recipe 2" references.
+3b. `.claude/refs/dq-recipes.md` — update Recipe 1 + Recipe 2: replace Python `next_id` snippet with `dq-v3-new-entry.sh` invocation. Must ship atomically with item 3. (Per clarify DQ #334.)
+3c. `.claude/rules/multi-lane-worktree.md` — replace §"Worktree-aware DQ id discipline" section with a note that v3 composite ids make cross-lane next_id coordination obsolete. (Per clarify DQ #335.)
+3d. `.claude/lessons/feedback_cohort_dq_id_collision.md` — add `superseded_by: v1-dq-schema-r1` note; the pre-reservation workaround is dead code after v3 ships. (Per clarify DQ #336.)
+4. `.claude/agents/impl-task.md` + `.claude/agents/bm-task.md` + `.claude/agents/planning.md` + `.claude/agents/ci-watcher.md` — add v3 id-format write rule; `approved_by` hard-refusal; updated "Recipe 1" / "Recipe 2" references. (Per clarify DQ #332.)
 
 **Track C — `scripts/brehon/resolve-dq-canonical.sh` update:**
 5. Update `next_id` logic to v3 (remove max-scan, document the per-session UUID approach). Keep the phase-branch + worker-branch union logic unchanged (still needed for reading, not for id generation).
@@ -123,8 +126,8 @@ The plan covers exactly these deliverables (nothing more, nothing less):
 Suggested task breakdown (planner may refine):
 
 - **Task 0** — pre-flight harness audit (standard; non-`[P]`).
-- **Task 1 [P]** — `dq-schema-v3-migrate.sh` + `dq-v3-new-entry.sh` (Track A).
-- **Task 2 [P]** — `decision-queue.md` v3 section + 4 agent doc updates (Track B).
+- **Task 1 [P]** — `dq-schema-v3-migrate.sh` + `dq-v3-new-entry.sh` + `.claude/.dq-session-id` gitignore entry (Track A).
+- **Task 2 [P]** — `decision-queue.md` v3 section + `dq-recipes.md` update + `multi-lane-worktree.md` section replace + `feedback_cohort_dq_id_collision.md` superseded note + 4 agent doc updates (Track B — items 3, 3b, 3c, 3d, 4).
 - **Task 3** — `resolve-dq-canonical.sh` update (Track C; after Tasks 1+2 committed, to read v3-shaped file correctly).
 
 Tasks 1+2 are `[P]`-able (FILES YAML disjoint: Track A touches only `scripts/brehon/dq-*.sh`; Track B touches only `.claude/rules/decision-queue.md` + `.claude/agents/*.md`). Task 3 depends on both and must be serial.
@@ -137,11 +140,16 @@ No `cargo check` / `cargo clippy` / `cargo test` in the DoD — this sub-phase t
 
 - `.claude/rules/decision-queue.md` — current v2 schema (full file; the plan extends it to v3)
 - `.claude/rules/advisor-orchestrator.md` — §5.4 DQ triage decision tree (context for `approved_by` semantics)
-- `.claude/agents/impl-task.md`, `.claude/agents/bm-task.md`, `.claude/agents/ci-watcher.md` — current DQ write contracts (all four agent files)
+- `.claude/rules/multi-lane-worktree.md` — §"Worktree-aware DQ id discipline" (lines to be replaced in Track B item 3c)
+- `.claude/agents/impl-task.md`, `.claude/agents/bm-task.md`, `.claude/agents/planning.md`, `.claude/agents/ci-watcher.md` — current DQ write contracts (all four agent files; per clarify DQ #332)
 - `scripts/brehon/resolve-dq-canonical.sh` — current `next_id` logic (lines to be removed in Track C)
+- `.claude/refs/dq-recipes.md` — Recipe 1 + Recipe 2 next_id snippets (to be replaced in Track B item 3b; per clarify DQ #334)
 - `.claude/PRPs/templates/plan.template.md` — plan file shape
 - `.claude/lessons/feedback_junior_pmd_write_convention.md` — LESSON-trailer discipline
 - `.claude/lessons/feedback_parallel_cohort_dispatch.md` — `[P]` cohort rules
+- `.claude/lessons/feedback_dq_log_shape_as_blocker.md` — kind misclassification context for v3 rule shape (per clarify DQ #333)
+- `.claude/lessons/feedback_cohort_dq_id_collision.md` — pre-reservation workaround superseded by v3; read to know what to mark obsolete (per clarify DQ #333, #336)
+- `.claude/lessons/feedback_planner_dq_id_via_origin_not_daemon_local.md` — daemon-local race context (per clarify DQ #333)
 - GitHub issue #142 body + user comment (2026-05-21T18:32:13Z) — already reproduced in §0 above; no web fetch needed.
 
 **Canonical schema-first read (per §3.6):** before authoring any new `.claude/rules/` section, read 1-2 existing sections in `decision-queue.md` as the canonical sibling (the "kind: validate-pending" and "ci-watcher mutation pattern" sections are the nearest peers to the v3 composite-id section).
