@@ -1,24 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 313,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T08:28:14Z",
-      "branch": "junior/role-impl-task-v1-rls-r1-task-6-see-claude-prps-briefs-v1-rls-r1-impl-6-md-380",
-      "phase_task": 6,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task6-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1955,6 +1937,23 @@
       "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
       "answered_by": "impl-self-resolved",
       "resolved_at": "2026-05-21T08:30:04Z"
+    },
+    {
+      "id": 313,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T08:28:14Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-6-see-claude-prps-briefs-v1-rls-r1-impl-6-md-380",
+      "phase_task": 6,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task6-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 4b313b3c1. Worker #380 stuck post-DQ-raise (10+ min idle, no cargo invocation); advisor cancelled + FF-merged worker output + ran cargo-check on lane. Lesson body verified: 57 lines, 5x pmd-canonical-guard.sh references, 3x dual-wire path mentions, frontmatter clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:38:00Z"
     }
   ]
 }
