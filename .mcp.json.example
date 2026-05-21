@@ -30,6 +30,14 @@
       "headers": {
         "x-ref-api-key": "<paste your Ref API key here>"
       }
+    },
+    "rust-analyzer": {
+      "command": "rust-analyzer-mcp",
+      "args": [],
+      "env": {
+        "_comment": "Resolves to the rustup-managed rust-analyzer. Install: cargo install rust-analyzer-mcp + rustup component add rust-analyzer.",
+        "RUST_ANALYZER_BINARY": "rust-analyzer"
+      }
     }
   }
 }

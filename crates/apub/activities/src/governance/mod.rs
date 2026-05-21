@@ -19,6 +19,8 @@
 //! in `lemmy_apub`) per advisor decision DQ-6.6-inbound — see the module
 //! doc on `inbox.rs` for the dep-graph rationale.
 
+#![deny(clippy::disallowed_methods)]
+
 pub mod inbox;
 pub mod publish_label;
 pub mod publish_sanction_notice;

@@ -1,6 +1,28 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 326,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T06:02:37Z",
+      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      ],
+      "result": "fail",
+      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
+      "failed_commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      ],
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -1300,6 +1322,21 @@
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
+      "id": 276,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
+      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
       "id": 277,
       "from": "planner",
       "kind": "log",
@@ -1325,21 +1362,6 @@
       ],
       "answer": "Per-type, alongside impl Activity in each publish_{sanction_notice,trust_attestation,label}.rs (Tasks 5/6/7), NOT co-located in inbox.rs next to the trait definition. Rationale: per-type code stays with the per-type file; PublishTrustAttestation's per-actor rate-limit override reads typed protocol fields (subject URL) naturally co-located; Rust orphan rule satisfied (trait + types both in lemmy_apub_activities); the 3 patches stay disjoint so the [P] cohort dispatch is preserved. planner-self-resolved per .claude/agents/planning.md Output discipline; transcribed by advisor from plan section 19.2.",
       "answered_by": "planner-self-resolved",
-      "resolved_at": "2026-05-19T00:00:00Z"
-    },
-    {
-      "id": 276,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T00:00:00Z",
-      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
-      "options": [
-        "split",
-        "proceed"
-      ],
-      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
-      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
-      "answered_by": "user",
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
@@ -1412,21 +1434,6 @@
       "resolved_at": "2026-05-19T15:01:06Z"
     },
     {
-      "id": 284,
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T19:45:00Z",
-      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
-      "options": [
-        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
-        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
-      ],
-      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
-      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-19T20:07:22Z"
-    },
-    {
       "id": 283,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1445,6 +1452,21 @@
       "answer": "All 3 laptop-side §15 cargo commands GREEN on lane fix-impl-3 tip 4a60667c9 (post fix-impl-1 Task-4 compile fix + fix-impl-2 dead_code #[expect] chain + fix-impl-3 Finding-6.1 Phase-6 Sibling-B hard-error mirror). cargo-check --workspace --features full: FI3R_CHECK_EXIT_0 (0 errors/warnings). cargo-clippy --workspace --features full --no-deps -D warnings: FI3R_CLIPPY_EXIT_0 (0 findings, no unfulfilled_lint_expectations — fix-impl-2 #[expect(dead_code)] annotations still satisfied alongside fix-impl-3). cargo-test --workspace --test e2e --features full --no-run: FI3R_TESTNORUN_EXIT_0 (Finished test profile 5m02s, e2e binary built e2e-4ed9c75189048398.exe). Task 4 (§16a Story 2 enforcement core) §15 gate fully satisfied. (advisor-laptop, 2026-05-19T20:44:53Z)",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-19T20:44:53Z"
+    },
+    {
+      "id": 284,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T19:45:00Z",
+      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
+      "options": [
+        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
+        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
+      ],
+      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
+      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T20:07:22Z"
     },
     {
       "id": 285,
@@ -1927,18 +1949,6 @@
       "resolved_at": "2026-05-21T08:19:00Z"
     },
     {
-      "id": 314,
-      "from": "impl",
-      "kind": "log",
-      "timestamp": "2026-05-21T08:30:04Z",
-      "question": null,
-      "options": null,
-      "context": "Task 6 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD. Retro content: SCORE:0.85 CONFIDENCE:0.85 Goal:yes Tests:none CleanExecution:yes. Lesson file created via Bash heredoc (Write blocked by sensitive-file gate — known brief §6 limitation). Cargo-check exit 101 = known lemmy_email daemon env trap, no Rust code modified. DQ #313 raised and pushed.",
-      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
-      "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T08:30:04Z"
-    },
-    {
       "id": 313,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1956,16 +1966,16 @@
       "resolved_at": "2026-05-21T08:38:00Z"
     },
     {
-      "id": 316,
+      "id": 314,
       "from": "impl",
       "kind": "log",
-      "timestamp": "2026-05-21T10:50:00Z",
+      "timestamp": "2026-05-21T08:30:04Z",
       "question": null,
       "options": null,
-      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
-      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "context": "Task 6 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD. Retro content: SCORE:0.85 CONFIDENCE:0.85 Goal:yes Tests:none CleanExecution:yes. Lesson file created via Bash heredoc (Write blocked by sensitive-file gate — known brief §6 limitation). Cargo-check exit 101 = known lemmy_email daemon env trap, no Rust code modified. DQ #313 raised and pushed.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
       "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T10:50:00Z"
+      "resolved_at": "2026-05-21T08:30:04Z"
     },
     {
       "id": 315,
@@ -1983,6 +1993,18 @@
       "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ e76a37455. Worker #381 hung post-DQ-raise (same Task 6 pattern); advisor cancelled + FF-merged + ran cargo. Worker used id=315 instead of brief-assigned 314 (Task 6 worker delayed-pushed a retro log into #314 first — collision-prevention recipe needs refinement for cross-worker PMD-fallback retros). VALIDATE: 3 H2 sections, 2x retro_bypass, DIFFERENT THINGS distinction present, 04 cross-link present.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T08:53:00Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T10:50:00Z",
+      "question": null,
+      "options": null,
+      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T10:50:00Z"
     },
     {
       "id": 317,
@@ -2141,6 +2163,25 @@
       "answer": "Update in Task 3 (option update-comment-in-task-3). Brief amended to add Task 3 IMPLEMENT step (b): replace the existing workaround block with a one-line note explaining that UPDATE-in-place stays valid for historical continuity AND that INSERT-with-newer-valid_from is now also safe post-v1-federation-inbound-c (per DQ #324). Removing entirely (option remove-comment-entirely) loses the audit trail of WHY the existing test uses UPDATE; leaving as-is (option leave-comment-as-historical-context) misleads future test authors who read it and conclude they cannot use INSERT. The update-comment-in-task-3 path preserves both audit trail and accuracy.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 327,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:18:05Z",
+      "question": "validate phase-brehon-conformance-audit fix-impl-4 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-fix-impl-4-apply-7-cr-fix-in-pr-majors-on-pr-141-see-claude-prps-briefs-395",
+      "phase_task": "fix-impl-4",
+      "commands": [
+        "bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh .claude/PRPs/audit-metrics/v1-federation-inbound-b.json && python3 -c \"import json; json.load(open('.claude/skills/brehon-conformance-audit/audit-metrics.schema.json'))\" && bash -n .claude/skills/brehon-conformance-audit/scripts/find-sibling.sh && bash -n .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh && grep -c 'Workspace cargo-check is required' .claude/PRPs/briefs/brehon-conformance-audit-impl-10.md && grep -c 'return to baseline behaviour after Task 8a' .claude/PRPs/plans/brehon-conformance-audit.plan.md && grep -c 'ground_truth_compile_caught' .claude/skills/brehon-conformance-audit/METRICS.md"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "compute-metrics.sh on v1-federation-inbound-b.json: axis-4 precision 1.000, recall 1.000, lead-time 27.5h, latent-footgun catch 1. Schema strictness (cr-16), FP attribution (cr-19), lead-time formula (cr-20), fn-regex (cr-21) all applied + non-regressive. Pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T18:25:37.070964Z",
+      "notes": " [renumbered from #320 on merge due to DQ id collision with concurrent fed-in-c session: trunk #320 was a different entry]"
     }
   ]
 }
