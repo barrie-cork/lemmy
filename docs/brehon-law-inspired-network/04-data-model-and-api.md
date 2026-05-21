@@ -404,6 +404,8 @@ Rules:
 
 **Redaction service contract** (enforced at code level): before any string is appended to `public_case_log.summary`, `public_case_log.rationale_redacted`, or any governance log entry, the redaction service scrubs direct identifiers (usernames, emails, display names, addresses, phone numbers, external URLs that identify a person). This is a hard prerequisite for ADR-015 — once identifiers leak into the log, the right-to-delete strategy fails.
 
+See also `governance-log-kinds-jsonl.md` for **hook-emitted JSONL observability** — a distinct sidecar trail (e.g. `retro_bypass`) NOT routed through the hash-chained PG `governance_log` table this document describes.
+
 ## 4. Read models (db_views crates)
 
 ### 4.1 `crates/db_views/governance_case`

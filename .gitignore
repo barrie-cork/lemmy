@@ -69,6 +69,10 @@ migrations/.diesel_lock
 # /auto-phase skill runtime state (per-phase JSON + catch-fire dumps)
 .claude/auto-state/
 
+# RLS runtime journals — see .claude/PRPs/plans/v1-rls-r1.plan.md §11
+.claude/harvest/
+.claude/governance-log/
+
 # skill-creator eval iteration journals (runtime artifacts, not deliverables)
 .claude/skills/*-workspace/
 

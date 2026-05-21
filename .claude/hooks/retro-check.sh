@@ -123,6 +123,47 @@ if [ "${RECENT:-0}" -gt 0 ]; then
   exit 0
 fi
 
+# --- emit_retro_bypass_log ---
+#
+# Writes one JSONL record to .claude/governance-log/retro-bypass.jsonl
+# on every fail-open path. Per RLS-PMD review §4.7 +
+# .claude/PRPs/plans/v1-rls-r1.plan.md §13 Task 7.
+#
+# Fields (per DQ #297): timestamp, session_id, attempt_count,
+# prompt_hash, branch_at_fail_open, kind.
+#
+# Non-fatal — any error (missing dir, write race, jq absent)
+# silently exits the function. Bypass instrumentation must not
+# itself become a Stop hook failure mode.
+#
+# NOTE: function MUST be defined BEFORE the fail-open call site
+# (line ~143). Bash executes top-to-bottom; calling an undefined
+# function silently fails on most shells. Task 10 dogfood caught
+# the original Task 7 placement (function appended after `exit 2`,
+# unreachable on every code path).
+emit_retro_bypass_log() {
+  local attempts="$1"
+  local branch="$2"
+  local logdir=".claude/governance-log"
+  local logfile="${logdir}/retro-bypass.jsonl"
+  mkdir -p "$logdir" 2>/dev/null || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  local ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local prompt_hash
+  prompt_hash="$(printf '%s' "${CLAUDE_PROMPT:-}" | sha256sum 2>/dev/null | head -c 16)"
+  [ -z "$prompt_hash" ] && prompt_hash="unknown"
+  local session_id="${CLAUDE_SESSION_ID:-${PPID:-unknown}}"
+  jq -nc \
+    --arg ts "$ts" \
+    --arg sid "$session_id" \
+    --argjson att "$attempts" \
+    --arg ph "$prompt_hash" \
+    --arg br "$branch" \
+    '{timestamp:$ts, session_id:$sid, attempt_count:$att, prompt_hash:$ph, branch_at_fail_open:$br, kind:"retro_bypass"}' \
+    >> "$logfile" 2>/dev/null || true
+}
+
 # --- Retry safety: fail open after 3 blocks in the same bash lineage ---
 # Use PPID as a best-effort loop detector. If PPID is stable (which we're no
 # longer assuming for correctness), this works. If not, every invocation starts
@@ -140,6 +181,7 @@ fi
 
 if [ "$ATTEMPTS" -ge 3 ]; then
   rm -f "$SESSION_FILE"
+  emit_retro_bypass_log "$ATTEMPTS" "$CURRENT_BRANCH"
   exit 0
 fi
 

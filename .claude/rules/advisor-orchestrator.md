@@ -12,6 +12,7 @@ The advisor session orchestrates one Brehon sub-phase end-to-end via Junior suba
 - Single-task focus → prefer `/start-brehon --fast <N>` (5 probes). If DQ pending > 0, escalate to `/check-dq`.
 - DQ on a non-trunk branch → use `scripts/brehon/git-show-json.sh <ref> <path>` then `python -c "import io, json; ... io.open(r'<path>', encoding='utf-8') ..."`. Never `git show <branch-with-slashes>:<path>` directly. Per `feedback_windows_bash_python_git_show_tmp_traps.md`.
 - Reconciling DQ on an in-flight phase (session start, long-poll resume, retro audit) → use `scripts/brehon/resolve-dq-canonical.sh <phase>`. Unions phase-branch DQ with open worker-branch DQs; dedupes by id (worker-branch wins). // 2026-05-09 c-2: laptop saw pending=0 while live advisor saw pending=2 because DQ #164+#165 lived only on worker-159 tip.
+- **SessionStart canonical-PMD guard (post-v1-rls-r1):** the tracked `.claude/hooks/pmd-canonical-guard.sh` runs at every session start in lanes wired per the bootstrap checklist (`feedback_phase_lane_worktree_bootstrap_checklist.md` step 6). Surfaces as a stderr WARN on lane drift, exit 0 always — does NOT block. Per `.claude/rules/pmd-invariants.md` invariant #5.
 
 ## 2. Brief authoring
 
@@ -369,7 +370,15 @@ When a new pending entry appears in `decision-queue.json`:
 2. Decide: **advisor-answer** (clear evidence + defensible answer; write `answer` and `answered_by: "advisor"`) / **catch-fire** (ADR violation, hard-refusal, process breach; stop loop, surface DQ id + cited rule) / **user-relay** (judgment-heavy: visible-to-others, ADR-affecting, scope change; surface one-screen summary; record user reply with `answered_by: "user"` + verbatim wording in `answer`).
 3. Commit + push the answer. Subject MUST match `^(chore|docs)\((advisor|decision-queue)\)` per `.claude/rules/decision-queue.md` Attribution integrity §Detection. Narrow form: `chore(advisor|decision-queue): answer DQ #<id>`.
 
-### 5.5 Catch-fire procedures
+### 5.5 Retro-bypass observability
+
+Per RLS-PMD review §4.7 + autonomy-readiness criterion 5.2 + `.claude/PRPs/plans/v1-rls-r1.plan.md` Task 7. The Stop hook `.claude/hooks/retro-check.sh` fail-open path (3-attempt cap, load-bearing for true loops) emits a JSONL `retro_bypass` record to `.claude/governance-log/retro-bypass.jsonl` on every fail-open. Fields per the kind registry at `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
+
+**Consumer:** the JSONL trail is consumed by future audit reads (weekly-review Step 2c is the retro-corpus sweep over `.claude/PRPs/reports/*.md`, not the JSONL; a dedicated JSONL-rate audit step would be added in a future sub-phase if a `retro_bypass` rate trend becomes load-bearing). **Autonomy signal:** the rate of `retro_bypass` entries per week should be monotonically decreasing. Rising rate → calibration-honesty regression; surface in the next phase retro.
+
+**Advisor-side action:** none required at session-start (the trail is passive). At retro time, the rate trend is part of the four-role retro signals (Advisor role) per `feedback_four_role_retro_signals.md`. See `feedback_retro_bypass_governance_log.md`.
+
+### 5.6 Catch-fire procedures
 
 Stop the loop and surface to user immediately. Include catch-fire reason + cited rule in the message.
 
