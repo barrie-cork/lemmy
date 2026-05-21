@@ -90,6 +90,24 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
 
     Expected output: `OK: session-start-multi-lane-check.sh wired at SessionStart`. Any other output means step 9 was skipped or the file was clobbered — re-apply step 9 and re-run.
 
+11. **(NEW — 2026-05-22, DQ #338 option-b)** Verify the tracked `PreToolUse` hook `refuse-ssh-reset-hard-shared-checkout.sh` is registered in this lane's `.claude/settings.json`. This hook is wired in the TRACKED `settings.json` (not `settings.local.json`), so it activates automatically for every lane checking out the tracked file — but a lane that ever ran `disableAllHooks: true` in its `settings.local.json` (or pre-dates the 2026-05-22 commit `8a392f217`+) would not have the protection. Programmatic check, from the new lane CWD:
+
+    ```bash
+    python -c "
+    import io, json
+    s = json.load(io.open('.claude/settings.json', encoding='utf-8'))
+    pre = s.get('hooks', {}).get('PreToolUse', [])
+    wired = any(
+        'refuse-ssh-reset-hard-shared-checkout.sh' in h.get('command', '')
+        for entry in pre for h in entry.get('hooks', [])
+    )
+    assert wired, 'FAIL: refuse-ssh-reset-hard-shared-checkout.sh PreToolUse wiring missing — re-pull governance-v0 or re-apply commit 8a392f217+'
+    print('OK: refuse-ssh-reset-hard-shared-checkout.sh wired at PreToolUse')
+    "
+    ```
+
+    Expected output: `OK: refuse-ssh-reset-hard-shared-checkout.sh wired at PreToolUse`. Hook refuses `ssh ...homeserver "...git reset --hard origin/<phase-or-trunk>"` against `/srv/brehon-fork`; safer alternative is `git update-ref refs/heads/<branch> origin/<branch>`. Escape hatch: `BREHON_ALLOW_SSH_RESET_HARD=1`. See `.claude/lessons/feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md` for the incident + RCA.
+
 ## DQ #301 dual-wire (v1-rls-r1 ships)
 
 Step 6's wiring MUST be applied in BOTH locations:
@@ -110,3 +128,4 @@ Note: both `settings.local.json` files are gitignored — this is a manual hand-
 - `.claude/rules/pmd-invariants.md` (Task 2) — the five consolidated PMD meta-invariants; invariant #1 is the canonical-path rule this checklist step 5+6 enforces.
 - `.claude/hooks/pmd-canonical-guard.sh` (Task 3) — the script step 6 wires; tracks into git so the check logic is shared knowledge while the activation remains per-worktree config.
 - `.claude/hooks/session-start-multi-lane-check.sh` (2026-05-22) — the script step 9 wires; detects concurrent advisor session activity via worktree-tip-age heuristic. Companion lessons: `feedback_falsifiable_hypothesis_before_structural_fix.md` (the false-RCA pattern this hook was authored to prevent) + `project_concurrent_advisor_sessions_2026_05_21.md` (the incident).
+- `.claude/hooks/refuse-ssh-reset-hard-shared-checkout.sh` (2026-05-22, DQ #338 option-b) — the script step 11 verifies; refuses the bug-class invocation that orphaned plan-merge 2ad835aa4. Wired in TRACKED `settings.json` PreToolUse Bash matcher; verification step exists only to catch lanes that disabled all hooks. Companion lesson: `feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md` (post-2026-05-22 rewrite).
