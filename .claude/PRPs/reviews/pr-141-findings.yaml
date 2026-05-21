@@ -1,7 +1,7 @@
 schema_version: 1
 pr: 141
-title: Phase brehon-conformance-audit — Phase-6 convention-divergence skill + Clippy
-  gate
+title: "Phase brehon-conformance-audit \u2014 Phase-6 convention-divergence skill\
+  \ + Clippy gate"
 head: phase-brehon-conformance-audit
 base: governance-v0
 opened_at: '2026-05-21T11:58:25Z'
@@ -10,7 +10,7 @@ poll_count: 1
 last_polled_head_sha: 425ab13c8943070cce507f272d99efacee9f491b
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: request-changes
 findings:
 - id: cr-1
   source: coderabbit
@@ -114,68 +114,16 @@ findings:
   rationale: null
   summary: Escape `|` characters inside the Markdown table cell.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001955
-  notes: '```
-
-    </details>
-
-
-    <!-- suggestion_start -->
-
-
-    <details>
-
-    <summary>📝 Committable suggestion</summary>
-
-
-    > ‼️ **IMPORTANT**
-
-    > Carefully review the code before committing. Ensure that it accurately replaces
-    the highlighted code, contains no missing lines, and has no issues with indentation.
-    Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-
-    ```
-
-
-    ```
-
-
-    </details>
-
-
-    <!-- suggestion_end -->
-
-
-    <details>
-
-    <summary>🧰 Tools</summary>
-
-
-    <details>
-
-    <summary>🪛 markdownlint-cli2 (0.22.1)</summary>
-
-
-    [warning] 41-41: Table column count
-
-    Expected: 4; Actual: 6; Too many cells, extra data will be missing
-
-
-    (MD056, table-column-count)
-
-
-    </details>
-
-
-    </details>
-
-
-    <details>
-
-    <summary>🤖 Prompt for AI Agents</summary>
-
-
-    ```'
+  notes: "```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\U0001F4DD\
+    \ Committable suggestion</summary>\n\n> \u203C\uFE0F **IMPORTANT**\n> Carefully\
+    \ review the code before committing. Ensure that it accurately replaces the highlighted\
+    \ code, contains no missing lines, and has no issues with indentation. Thoroughly\
+    \ test & benchmark the code to ensure it meets the requirements.\n\n```\n\n```\n\
+    \n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\U0001F9F0 Tools</summary>\n\
+    \n<details>\n<summary>\U0001FA9B markdownlint-cli2 (0.22.1)</summary>\n\n[warning]\
+    \ 41-41: Table column count\nExpected: 4; Actual: 6; Too many cells, extra data\
+    \ will be missing\n\n(MD056, table-column-count)\n\n</details>\n\n</details>\n\
+    \n<details>\n<summary>\U0001F916 Prompt for AI Agents</summary>\n\n```"
   file: .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md
   line: 41
 - id: cr-5
@@ -226,21 +174,8 @@ findings:
   rationale: null
   summary: Resolve the cargo-check requirement contradiction.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001983
-  notes: '```
-
-    </details>
-
-
-
-    Also applies to: 103-110
-
-
-    <details>
-
-    <summary>🤖 Prompt for AI Agents</summary>
-
-
-    ```'
+  notes: "```\n</details>\n\n\nAlso applies to: 103-110\n\n<details>\n<summary>\U0001F916\
+    \ Prompt for AI Agents</summary>\n\n```"
   file: .claude/PRPs/briefs/brehon-conformance-audit-impl-10.md
   line: 65
 - id: cr-7
@@ -264,8 +199,8 @@ findings:
   rationale: null
   summary: Normalise fenced code blocks (MD031/MD040).
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281001992
-  notes: "```diff\n 7. **Schema-validate the seed JSON BEFORE commit** (per plan §13\
-    \ Task 7 GOTCHA, lines 1236-1246):\n \n ```\n\n```\n+```\n\n```\n```\n\n```\n\
+  notes: "```diff\n 7. **Schema-validate the seed JSON BEFORE commit** (per plan \xA7\
+    13 Task 7 GOTCHA, lines 1236-1246):\n \n ```\n\n```\n+```\n\n```\n```\n\n```\n\
     Verify each finding against current code. Fix only still-valid issues, skip the\n\
     rest with a brief reason, keep changes minimal, and validate.\n\nIn @.claude/PRPs/briefs/brehon-conformance-audit-impl-7.md\
     \ around lines 99 -\n107, Add missing surrounding blank line before the first\
@@ -284,28 +219,15 @@ findings:
   rationale: null
   summary: Fix ordered-list numbering to satisfy markdownlint MD029.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002000
-  notes: '```
-
-    Verify each finding against current code. Fix only still-valid issues, skip the
-
-    rest with a brief reason, keep changes minimal, and validate.
-
-
-    In @.claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md around lines
-
-    43 - 58, The markdown uses non-sequential numeric prefixes in ordered lists
-
-    (e.g., the block under heading "3.2 Lessons" and the preceding list items 4–13)
-
-    which triggers markdownlint MD029; edit the document to make each ordered-list
-
-    block use sequential numbering (or convert all ordered lists to the "1."
-
-    repeated style) so items under headings like "3.2 Lessons" and the earlier
-
-    numbered list are renumbered consecutively and MD029 is satisfied.
-
-    ```'
+  notes: "```\nVerify each finding against current code. Fix only still-valid issues,\
+    \ skip the\nrest with a brief reason, keep changes minimal, and validate.\n\n\
+    In @.claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md around lines\n\
+    43 - 58, The markdown uses non-sequential numeric prefixes in ordered lists\n\
+    (e.g., the block under heading \"3.2 Lessons\" and the preceding list items 4\u2013\
+    13)\nwhich triggers markdownlint MD029; edit the document to make each ordered-list\n\
+    block use sequential numbering (or convert all ordered lists to the \"1.\"\nrepeated\
+    \ style) so items under headings like \"3.2 Lessons\" and the earlier\nnumbered\
+    \ list are renumbered consecutively and MD029 is satisfied.\n```"
   file: .claude/PRPs/briefs/brehon-conformance-audit-impl-8-revised.md
   line: 58
 - id: cr-10
@@ -387,17 +309,8 @@ findings:
   rationale: null
   summary: Correct Task 8a clippy expectation text.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002017
-  notes: '```
-
-    </details>
-
-
-    <details>
-
-    <summary>🤖 Prompt for AI Agents</summary>
-
-
-    ```'
+  notes: "```\n</details>\n\n<details>\n<summary>\U0001F916 Prompt for AI Agents</summary>\n\
+    \n```"
   file: .claude/PRPs/plans/brehon-conformance-audit.plan.md
   line: 1309
 - id: cr-14
@@ -475,54 +388,55 @@ findings:
     \ },\n           \"evidence\": { \"type\": \"string\", \"maxLength\": 120 }\n\
     -        }\n+        },\n+        \"additionalProperties\": false\n       }\n\
     \     },\n     \"ground_truth_compile_caught\": {\n       \"type\": \"array\"\
-    ,\n       \"description\": \"Populated post-§15. Each entry: {axis, target, error_code,\
-    \ source_log}.\",\n-      \"items\": { \"type\": \"object\" }\n+      \"items\"\
-    : {\n+        \"type\": \"object\",\n+        \"required\": [\"axis\", \"target\"\
-    , \"error_code\", \"source_log\"],\n+        \"properties\": {\n+          \"\
-    axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n+         \
-    \ \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\" },\n+  \
-    \        \"error_code\": { \"type\": \"string\" },\n+          \"source_log\"\
-    : { \"type\": \"string\" }\n+        },\n+        \"additionalProperties\": false\n\
-    +      }\n     },\n     \"ground_truth_runtime\": {\n       \"type\": \"array\"\
-    ,\n       \"description\": \"Populated post-CR-triage (severity ≥ major + sibling-conformance\
-    \ reference) AND post-merge bug fixes within 30 days. Each entry: {axis, target,\
-    \ source, evidence_commit_sha}.\",\n-      \"items\": { \"type\": \"object\" }\n\
-    +      \"items\": {\n+        \"type\": \"object\",\n+        \"required\": [\"\
-    axis\", \"target\", \"source\", \"evidence_commit_sha\"],\n+        \"properties\"\
+    ,\n       \"description\": \"Populated post-\xA715. Each entry: {axis, target,\
+    \ error_code, source_log}.\",\n-      \"items\": { \"type\": \"object\" }\n+ \
+    \     \"items\": {\n+        \"type\": \"object\",\n+        \"required\": [\"\
+    axis\", \"target\", \"error_code\", \"source_log\"],\n+        \"properties\"\
     : {\n+          \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"\
     ] },\n+          \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\"\
-    \ },\n+          \"source\": { \"type\": \"string\" },\n+          \"evidence_commit_sha\"\
-    : { \"type\": \"string\", \"pattern\": \"^[0-9a-f]{7,40}$\" }\n+        },\n+\
-    \        \"additionalProperties\": false\n+      }\n     }\n```\n\n```suggestion\n\
-    \        \"type\": \"object\",\n        \"required\": [\"axis\", \"risk_tier\"\
-    , \"target\", \"sibling\", \"evidence\"],\n        \"properties\": {\n       \
-    \   \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n    \
-    \      \"risk_tier\": { \"enum\": [\"1\", \"2\", \"3\"] },\n          \"target\"\
-    : { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\", \"description\": \"\
-    file:line\" },\n          \"sibling\": { \"type\": \"string\", \"pattern\": \"\
-    ^([^:]+:[0-9]+|NO_SIBLING_FOUND)$\" },\n          \"evidence\": { \"type\": \"\
-    string\", \"maxLength\": 120 }\n        },\n        \"additionalProperties\":\
-    \ false\n      }\n    },\n    \"ground_truth_compile_caught\": {\n      \"type\"\
-    : \"array\",\n      \"description\": \"Populated post-§15. Each entry: {axis,\
-    \ target, error_code, source_log}.\",\n      \"items\": {\n        \"type\": \"\
-    object\",\n        \"required\": [\"axis\", \"target\", \"error_code\", \"source_log\"\
+    \ },\n+          \"error_code\": { \"type\": \"string\" },\n+          \"source_log\"\
+    : { \"type\": \"string\" }\n+        },\n+        \"additionalProperties\": false\n\
+    +      }\n     },\n     \"ground_truth_runtime\": {\n       \"type\": \"array\"\
+    ,\n       \"description\": \"Populated post-CR-triage (severity \u2265 major +\
+    \ sibling-conformance reference) AND post-merge bug fixes within 30 days. Each\
+    \ entry: {axis, target, source, evidence_commit_sha}.\",\n-      \"items\": {\
+    \ \"type\": \"object\" }\n+      \"items\": {\n+        \"type\": \"object\",\n\
+    +        \"required\": [\"axis\", \"target\", \"source\", \"evidence_commit_sha\"\
+    ],\n+        \"properties\": {\n+          \"axis\": { \"enum\": [\"1\", \"2\"\
+    , \"3\", \"4\", \"5\", \"6\"] },\n+          \"target\": { \"type\": \"string\"\
+    , \"pattern\": \"^[^:]+:[0-9]+$\" },\n+          \"source\": { \"type\": \"string\"\
+    \ },\n+          \"evidence_commit_sha\": { \"type\": \"string\", \"pattern\"\
+    : \"^[0-9a-f]{7,40}$\" }\n+        },\n+        \"additionalProperties\": false\n\
+    +      }\n     }\n```\n\n```suggestion\n        \"type\": \"object\",\n      \
+    \  \"required\": [\"axis\", \"risk_tier\", \"target\", \"sibling\", \"evidence\"\
+    ],\n        \"properties\": {\n          \"axis\": { \"enum\": [\"1\", \"2\",\
+    \ \"3\", \"4\", \"5\", \"6\"] },\n          \"risk_tier\": { \"enum\": [\"1\"\
+    , \"2\", \"3\"] },\n          \"target\": { \"type\": \"string\", \"pattern\"\
+    : \"^[^:]+:[0-9]+$\", \"description\": \"file:line\" },\n          \"sibling\"\
+    : { \"type\": \"string\", \"pattern\": \"^([^:]+:[0-9]+|NO_SIBLING_FOUND)$\" },\n\
+    \          \"evidence\": { \"type\": \"string\", \"maxLength\": 120 }\n      \
+    \  },\n        \"additionalProperties\": false\n      }\n    },\n    \"ground_truth_compile_caught\"\
+    : {\n      \"type\": \"array\",\n      \"description\": \"Populated post-\xA7\
+    15. Each entry: {axis, target, error_code, source_log}.\",\n      \"items\": {\n\
+    \        \"type\": \"object\",\n        \"required\": [\"axis\", \"target\", \"\
+    error_code\", \"source_log\"],\n        \"properties\": {\n          \"axis\"\
+    : { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"] },\n          \"target\"\
+    : { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\" },\n          \"error_code\"\
+    : { \"type\": \"string\" },\n          \"source_log\": { \"type\": \"string\"\
+    \ }\n        },\n        \"additionalProperties\": false\n      }\n    },\n  \
+    \  \"ground_truth_runtime\": {\n      \"type\": \"array\",\n      \"description\"\
+    : \"Populated post-CR-triage (severity \u2265 major + sibling-conformance reference)\
+    \ AND post-merge bug fixes within 30 days. Each entry: {axis, target, source,\
+    \ evidence_commit_sha}.\",\n      \"items\": {\n        \"type\": \"object\",\n\
+    \        \"required\": [\"axis\", \"target\", \"source\", \"evidence_commit_sha\"\
     ],\n        \"properties\": {\n          \"axis\": { \"enum\": [\"1\", \"2\",\
     \ \"3\", \"4\", \"5\", \"6\"] },\n          \"target\": { \"type\": \"string\"\
-    , \"pattern\": \"^[^:]+:[0-9]+$\" },\n          \"error_code\": { \"type\": \"\
-    string\" },\n          \"source_log\": { \"type\": \"string\" }\n        },\n\
-    \        \"additionalProperties\": false\n      }\n    },\n    \"ground_truth_runtime\"\
-    : {\n      \"type\": \"array\",\n      \"description\": \"Populated post-CR-triage\
-    \ (severity ≥ major + sibling-conformance reference) AND post-merge bug fixes\
-    \ within 30 days. Each entry: {axis, target, source, evidence_commit_sha}.\",\n\
-    \      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\"\
-    axis\", \"target\", \"source\", \"evidence_commit_sha\"],\n        \"properties\"\
-    : {\n          \"axis\": { \"enum\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"\
-    ] },\n          \"target\": { \"type\": \"string\", \"pattern\": \"^[^:]+:[0-9]+$\"\
-    \ },\n          \"source\": { \"type\": \"string\" },\n          \"evidence_commit_sha\"\
-    : { \"type\": \"string\", \"pattern\": \"^[0-9a-f]{7,40}$\" }\n        },\n  \
-    \      \"additionalProperties\": false\n      }\n    }\n```\n\n```\nVerify each\
-    \ finding against current code. Fix only still-valid issues, skip the\nrest with\
-    \ a brief reason, keep changes minimal, and validate.\n\nIn @.claude/skills/brehon-conformance-audit/audit-metrics.schema.json\
+    , \"pattern\": \"^[^:]+:[0-9]+$\" },\n          \"source\": { \"type\": \"string\"\
+    \ },\n          \"evidence_commit_sha\": { \"type\": \"string\", \"pattern\":\
+    \ \"^[0-9a-f]{7,40}$\" }\n        },\n        \"additionalProperties\": false\n\
+    \      }\n    }\n```\n\n```\nVerify each finding against current code. Fix only\
+    \ still-valid issues, skip the\nrest with a brief reason, keep changes minimal,\
+    \ and validate.\n\nIn @.claude/skills/brehon-conformance-audit/audit-metrics.schema.json\
     \ around\nlines 14 - 34, Add strict schemas for the three arrays: update\n\"predictions\"\
     .items to include \"additionalProperties\": false and the same\nrequired properties\
     \ as the existing prediction object (axis, risk_tier, target,\nsibling, evidence);\
@@ -584,21 +498,8 @@ findings:
   rationale: null
   summary: Field names are inconsistent with the metrics payload contract.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002056
-  notes: '```
-
-    </details>
-
-
-
-    Also applies to: 37-39
-
-
-    <details>
-
-    <summary>🤖 Prompt for AI Agents</summary>
-
-
-    ```'
+  notes: "```\n</details>\n\n\nAlso applies to: 37-39\n\n<details>\n<summary>\U0001F916\
+    \ Prompt for AI Agents</summary>\n\n```"
   file: .claude/skills/brehon-conformance-audit/METRICS.md
   line: 26
 - id: cr-19
@@ -610,70 +511,30 @@ findings:
   rationale: null
   summary: False-positive attribution is implemented incorrectly.
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002062
-  notes: '```diff
-
-    -    axis_fp = {a: 0 for a in VALID_AXES}  # predictions with no matching ground-truth
-
-    +    axis_fp = {a: 0 for a in VALID_AXES}  # human-confirmed false positives only
-
-    @@
-
-    -        gt_compile = data.get("ground_truth_compile_caught", [])
-
-    -        gt_runtime = data.get("ground_truth_runtime", [])
-
-    +        gt_compile = data.get("ground_truth_compile_caught", [])
-
-    +        gt_runtime = data.get("ground_truth_runtime", [])
-
-    +        false_positives = data.get("false_positives", [])
-
-    @@
-
-    -            axis_fp[axis] += len(pred_targets - gt_targets)
-
-    +            fp_targets = {e.get("target") for e in false_positives if e.get("axis")
-    == axis}
-
-    +            axis_fp[axis] += len(pred_targets & fp_targets)
-
-    ```
-
-
-    ```
-
-    Verify each finding against current code. Fix only still-valid issues, skip the
-
-    rest with a brief reason, keep changes minimal, and validate.
-
-
-    In @.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh around
-
-    lines 110 - 111, The FP counting logic is wrong: do not treat “prediction with
-
-    no matching ground-truth” as a false positive; instead compute axis_fp only from
-
-    the explicit human-confirmed false_positives collection. Replace the current
-
-    initialization and any loops that increment axis_fp when a prediction lacks GT
-
-    (symbols: axis_fp, VALID_AXES) with code that: 1) initializes axis_fp to zero
-
-    per axis, 2) iterates over the false_positives list/array and increments
-
-    axis_fp[axis_of(fp)] accordingly, and 3) removes or guard-conditions any
-
-    existing increments that were triggered by predictions-without-GT (those blocks
-
-    around where predictions are compared to GT and axis_fp is updated). Leave
-
-    axis_fn (ground-truth misses) logic intact but ensure it is not used to infer
-
-    false positives. Also update the later block mentioned (lines ~120-131) the same
-
-    way so all FP counts come solely from false_positives.
-
-    ```'
+  notes: "```diff\n-    axis_fp = {a: 0 for a in VALID_AXES}  # predictions with no\
+    \ matching ground-truth\n+    axis_fp = {a: 0 for a in VALID_AXES}  # human-confirmed\
+    \ false positives only\n@@\n-        gt_compile = data.get(\"ground_truth_compile_caught\"\
+    , [])\n-        gt_runtime = data.get(\"ground_truth_runtime\", [])\n+       \
+    \ gt_compile = data.get(\"ground_truth_compile_caught\", [])\n+        gt_runtime\
+    \ = data.get(\"ground_truth_runtime\", [])\n+        false_positives = data.get(\"\
+    false_positives\", [])\n@@\n-            axis_fp[axis] += len(pred_targets - gt_targets)\n\
+    +            fp_targets = {e.get(\"target\") for e in false_positives if e.get(\"\
+    axis\") == axis}\n+            axis_fp[axis] += len(pred_targets & fp_targets)\n\
+    ```\n\n```\nVerify each finding against current code. Fix only still-valid issues,\
+    \ skip the\nrest with a brief reason, keep changes minimal, and validate.\n\n\
+    In @.claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh around\n\
+    lines 110 - 111, The FP counting logic is wrong: do not treat \u201Cprediction\
+    \ with\nno matching ground-truth\u201D as a false positive; instead compute axis_fp\
+    \ only from\nthe explicit human-confirmed false_positives collection. Replace\
+    \ the current\ninitialization and any loops that increment axis_fp when a prediction\
+    \ lacks GT\n(symbols: axis_fp, VALID_AXES) with code that: 1) initializes axis_fp\
+    \ to zero\nper axis, 2) iterates over the false_positives list/array and increments\n\
+    axis_fp[axis_of(fp)] accordingly, and 3) removes or guard-conditions any\nexisting\
+    \ increments that were triggered by predictions-without-GT (those blocks\naround\
+    \ where predictions are compared to GT and axis_fp is updated). Leave\naxis_fn\
+    \ (ground-truth misses) logic intact but ensure it is not used to infer\nfalse\
+    \ positives. Also update the later block mentioned (lines ~120-131) the same\n\
+    way so all FP counts come solely from false_positives.\n```"
   file: .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh
   line: 111
 - id: cr-20
@@ -752,66 +613,16 @@ findings:
   rationale: null
   summary: Fix malformed heading-like text to satisfy markdown lint
   cr_url: https://github.com/barrie-cork/lemmy/pull/141#discussion_r3281002116
-  notes: '```
-
-    </details>
-
-
-    <!-- suggestion_start -->
-
-
-    <details>
-
-    <summary>📝 Committable suggestion</summary>
-
-
-    > ‼️ **IMPORTANT**
-
-    > Carefully review the code before committing. Ensure that it accurately replaces
-    the highlighted code, contains no missing lines, and has no issues with indentation.
-    Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-
-    ```
-
-
-    ```
-
-
-    </details>
-
-
-    <!-- suggestion_end -->
-
-
-    <details>
-
-    <summary>🧰 Tools</summary>
-
-
-    <details>
-
-    <summary>🪛 markdownlint-cli2 (0.22.1)</summary>
-
-
-    [warning] 58-58: No space after hash on atx style heading
-
-
-    (MD018, no-missing-space-atx)
-
-
-    </details>
-
-
-    </details>
-
-
-    <details>
-
-    <summary>🤖 Prompt for AI Agents</summary>
-
-
-    ```'
+  notes: "```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\U0001F4DD\
+    \ Committable suggestion</summary>\n\n> \u203C\uFE0F **IMPORTANT**\n> Carefully\
+    \ review the code before committing. Ensure that it accurately replaces the highlighted\
+    \ code, contains no missing lines, and has no issues with indentation. Thoroughly\
+    \ test & benchmark the code to ensure it meets the requirements.\n\n```\n\n```\n\
+    \n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\U0001F9F0 Tools</summary>\n\
+    \n<details>\n<summary>\U0001FA9B markdownlint-cli2 (0.22.1)</summary>\n\n[warning]\
+    \ 58-58: No space after hash on atx style heading\n\n(MD018, no-missing-space-atx)\n\
+    \n</details>\n\n</details>\n\n<details>\n<summary>\U0001F916 Prompt for AI Agents</summary>\n\
+    \n```"
   file: .claude/skills/brehon-conformance-audit/SKILL.md
   line: 58
 - id: cr-23
@@ -840,9 +651,9 @@ findings:
     expectation: instead of saying \"workspace clippy will STILL fail\" when removing\n\
     clippy.toml, state that workspace clippy will NOT run/fail in this single-commit\n\
     landing because the tree returns to the governance-v0 baseline (commit\n4480a1bdb)\
-    \ which had no clippy.toml; clarify that Task 8a only executes the\nsimpler §15\
-    \ workspace-check (compile) and that the full workspace clippy gate is\ngated\
-    \ by the later Task 8 dispatch. Reference Task 8a, §15, clippy.toml and\ngovernance-v0\
+    \ which had no clippy.toml; clarify that Task 8a only executes the\nsimpler \xA7\
+    15 workspace-check (compile) and that the full workspace clippy gate is\ngated\
+    \ by the later Task 8 dispatch. Reference Task 8a, \xA715, clippy.toml and\ngovernance-v0\
     \ (4480a1bdb) in the updated sentence.\n\nIn @.claude/PRPs/reports/brehon-conformance-audit-retro.md:\n\
     - Around line 42-48: The markdown fenced-code blocks in the file are missing\n\
     language tags (MD040) causing markdownlint failures; update the opening\nbackticks\
