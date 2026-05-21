@@ -21,29 +21,6 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
-    },
-    {
-      "id": 340,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-21T21:52:20Z",
-      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
-      "branch": "phase-v1-federation-inbound-c",
-      "phase_task": 3,
-      "commands": [
-        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
-      ],
-      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "options": [
-        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
-      ],
-      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
     }
   ],
   "resolved": [
@@ -2394,6 +2371,29 @@
       "answer": "All 3 §5 commands passed on phase tip 877bd849c (advisor-laptop): §5.1 cargo-check --workspace --features full exit 0 (1m 26s warm); §5.2 cargo-clippy --workspace --features full --no-deps -- -D warnings exit 0 (2m 34s) — no warnings, no disallowed_methods firings from federation-mod-roots deny; §5.3 cargo test --workspace --features full --test e2e --no-run exit 0 (18m 13s) — e2e binary re-linked cleanly with new appended_config_override_takes_effect_returns_429 fn. Phase 2 e2e (user gate 4) follows on post-merge tip.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T21:16:58Z"
+    },
+    {
+      "id": 340,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-21T21:52:20Z",
+      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
+      "branch": "phase-v1-federation-inbound-c",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
+      ],
+      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
+      "answer": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 passed. cargo test --workspace --features full --test e2e finished in 2171.42s (36m 11s). Test result: 103 passed; 0 failed; 5 ignored; 0 measured. All 6 fed-in-b fixtures pass including the new appended_config_override_takes_effect_returns_429 (proves Task 1's .order_by(valid_from.desc()) makes append-history INSERT-with-newer-valid_from overrides effective). 5 ignored tests are pre-existing v0-polish TODOs (GH issues #42, #43, #45) — NOT phase regressions. E2E_EXIT_0 confirmed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T22:33:17Z"
     }
   ]
 }
