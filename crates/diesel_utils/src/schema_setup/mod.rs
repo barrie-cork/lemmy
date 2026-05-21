@@ -70,7 +70,7 @@ impl MigrationHarnessWrapper<'_> {
 
     let duration = TimeDelta::from_std(start_time.elapsed())
       .map(|d| d.to_string())
-      .unwrap_or_default();
+      .unwrap_or_else(|_| String::new());
     let name = migration.name();
     self.options.print(&format!("{duration} run {name}"));
 
@@ -114,7 +114,7 @@ impl MigrationHarness<Pg> for MigrationHarnessWrapper<'_> {
 
     let duration = TimeDelta::from_std(start_time.elapsed())
       .map(|d| d.to_string())
-      .unwrap_or_default();
+      .unwrap_or_else(|_| String::new());
     let name = migration.name();
     self.options.print(&format!("{duration} revert {name}"));
 
