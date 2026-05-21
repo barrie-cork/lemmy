@@ -2,96 +2,6 @@
   "schema_version": 2,
   "pending": [
     {
-      "id": 300,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:03:29Z",
-      "question": "validate phase-brehon-conformance-audit task 10 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-10-rust-analyzer-mcp-install-mcp-json-example-see-claude-prps-bri-364",
-      "phase_task": 10,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task10-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 301,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:05:00Z",
-      "question": "validate phase-brehon-conformance-audit task 5 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-5-metrics-md-see-claude-prps-briefs-brehon-conformance-audit-impl-5-362",
-      "phase_task": 5,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task5-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 302,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:07:50Z",
-      "question": "validate phase-brehon-conformance-audit task 3 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-3-find-sibling-sh-see-claude-prps-briefs-brehon-conformance-audit-im-360",
-      "phase_task": 3,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task3-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 304,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:17:42Z",
-      "question": "validate phase-brehon-conformance-audit task 2 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-2-six-axis-sub-files-see-claude-prps-briefs-brehon-conformance-audit-359",
-      "phase_task": 2,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task2-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 305,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:21:03Z",
-      "question": "validate phase-brehon-conformance-audit task 4 worker branch (entry re-raised by advisor after parallel-cohort DQ id collision on #300)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-4-audit-metrics-schema-json-see-claude-prps-briefs-brehon-conformanc-361",
-      "phase_task": 4,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task4-check.log 2>&1; echo exit: $?"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
       "id": 306,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1835,6 +1745,96 @@
       "answer": "option-a executed per user 2026-05-20 — 6 Option::unwrap_or_default replaced in image_links.rs (3) + link_rule.rs (1) + validation.rs (2); cargo clippy --workspace --no-deps --features full -- -D warnings exit 0 confirmed zero violations. clippy.toml ready to commit on next Task 8 worker re-dispatch. Commit b00be611a on worker branch.",
       "answered_by": "impl-self-resolved",
       "resolved_at": "2026-05-21T05:47:52Z"
+    },
+    {
+      "id": 300,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:03:29Z",
+      "question": "validate phase-brehon-conformance-audit task 10 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-10-rust-analyzer-mcp-install-mcp-json-example-see-claude-prps-bri-364",
+      "phase_task": 10,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task10-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
+      "failed_commands": null,
+      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T05:50:00Z"
+    },
+    {
+      "id": 301,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:05:00Z",
+      "question": "validate phase-brehon-conformance-audit task 5 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-5-metrics-md-see-claude-prps-briefs-brehon-conformance-audit-impl-5-362",
+      "phase_task": 5,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task5-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
+      "failed_commands": null,
+      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T05:50:00Z"
+    },
+    {
+      "id": 302,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:07:50Z",
+      "question": "validate phase-brehon-conformance-audit task 3 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-3-find-sibling-sh-see-claude-prps-briefs-brehon-conformance-audit-im-360",
+      "phase_task": 3,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task3-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
+      "failed_commands": null,
+      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T05:50:00Z"
+    },
+    {
+      "id": 304,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:17:42Z",
+      "question": "validate phase-brehon-conformance-audit task 2 worker branch",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-2-six-axis-sub-files-see-claude-prps-briefs-brehon-conformance-audit-359",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task2-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
+      "failed_commands": null,
+      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T05:50:00Z"
+    },
+    {
+      "id": 305,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-20T18:21:03Z",
+      "question": "validate phase-brehon-conformance-audit task 4 worker branch (entry re-raised by advisor after parallel-cohort DQ id collision on #300)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-4-audit-metrics-schema-json-see-claude-prps-briefs-brehon-conformanc-361",
+      "phase_task": 4,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task4-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
+      "failed_commands": null,
+      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T05:50:00Z"
     }
   ]
 }
