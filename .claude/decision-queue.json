@@ -20,6 +20,25 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
+    },
+    {
+      "id": 318,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T11:34:25Z",
+      "commands": [
+        "grep -c 'Conformance-audit prevention checkpoint' .claude/rules/advisor-orchestrator.md",
+        "grep -c 'Conformance-audit detection checkpoint' .claude/rules/advisor-orchestrator.md",
+        "grep -c 'Conformance-audit Tier-1 finding' .claude/rules/advisor-orchestrator.md"
+      ],
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-11-wire-skill-clippy-gate-into-advisor-orchestrator-md-see-claude-388",
+      "phase_task": 11,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
