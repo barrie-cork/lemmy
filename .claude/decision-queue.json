@@ -20,6 +20,24 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T10:57:26Z",
+      "question": "validate phase-brehon-conformance-audit task 6 worker branch — compute-metrics.sh created",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-6-compute-metrics-sh-see-claude-prps-briefs-brehon-conformance-audit-386",
+      "phase_task": 6,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task6-check.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
