@@ -1,41 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 301,
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-20T18:41:11Z",
-      "question": "Where should the one-shot SessionStart hook wiring for `pmd-canonical-guard.sh` happen — in THIS lane's `settings.local.json` (per the brief's PRECON-9), in the canonical `brehon-fork` checkout (durable across phase ship), or in both?",
-      "options": [
-        "Wire ONLY in canonical brehon-fork — phase-v1-rls-r1 is a lane-dedicated worktree that gets removed on phase ship (per multi-lane-worktree.md §'At phase ship + merge'); wiring it in the lane has zero durable benefit. The canonical checkout is the one durable lane.",
-        "Wire in BOTH the canonical brehon-fork AND this lane (current PRECON-9) — cheap, two `settings.local.json` edits, immediate + durable benefit.",
-        "Wire ONLY in this lane (current PRECON-9 verbatim) — pure immediate benefit; canonical waits for the next bootstrap cycle per the updated checklist.",
-        "Defer one-shot wiring entirely — only ship the bootstrap-checklist lesson update; every lane wires on its next bootstrap. Cleanest spec; latest activation."
-      ],
-      "context": "Per .claude/rules/multi-lane-worktree.md §'At phase ship + merge': lane-dedicated worktrees (like phase-v1-rls-r1 / brehon-fork-rls-r1) get removed on phase ship via `git worktree remove`. A SessionStart hook wired in a removed lane has zero durable effect post-merge. The canonical brehon-fork checkout is the always-live lane that handles governance-v0 work and is the next-bootstrap-eligible checkout for every future advisor session. The brief's PRECON-9 lean was 'wire in this lane' — but the lane is ephemeral. The cost-vs-benefit balance is: option 2 (BOTH) costs ~30 seconds extra; option 1 (canonical only) loses the dogfood-from-the-lane immediate benefit; option 3 (lane only) loses durability; option 4 (no one-shot) makes ship trigger-only. Each has a reasonable rationale; the user picks per project-state preference.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    },
-    {
-      "id": 302,
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-20T18:41:11Z",
-      "question": "Where should the `retro_bypass` JSONL kind be registered in the design-doc tree? Track C Task 8 needs a schema-registration doc, but the existing governance-log is PG-table-backed via Postgres triggers (per project_brehon_governance_platform.md) — a hook-emitted JSONL kind is structurally different from a PG-table kind.",
-      "options": [
-        "Extend `docs/brehon-law-inspired-network/04-data-model-and-api.md` with a clear new sub-section 'Hook-emitted observability JSONL kinds' separate from the PG-backed governance-log section.",
-        "Create a new doc `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` dedicated to hook-emitted kinds; cross-link from 04-data-model-and-api.md.",
-        "Register the kind in a `.claude/`-local doc (e.g. `.claude/refs/governance-log-jsonl-kinds.md`) — keeps brehon-law-inspired-network/ unchanged; hook-emitted kinds are harness-internal, not v1 product surface.",
-        "No schema registration doc — the schema IS the JSONL field list inside the new lesson `feedback_retro_bypass_governance_log.md`; consumers read the lesson."
-      ],
-      "context": "Per project_brehon_governance_platform.md the v1 governance-log is hash-chained Postgres triggers writing to a PG `governance_log` table — that is product-surface, ADR-008-load-bearing. The `retro_bypass` kind is a HARNESS observability event emitted by `.claude/hooks/retro-check.sh` to a JSONL sidecar — that is harness-internal, not product surface. Mixing them in the same doc risks reader confusion ('does retro_bypass land in the PG table?' — no, it does NOT). Option 1 mixes product + harness in one doc with sub-sections to keep them clearly separated. Option 2 splits the docs cleanly (best for discoverability) but adds a new design-doc file (ADR-adjacent). Option 3 keeps the registration `.claude/`-local (matches the harness-internal scope) but the brief's Track C Task 8 explicitly says 'governance-log schema document' implying product-doc placement. Option 4 collapses the registration into the lesson body (lowest-cost; conflates schema with lesson; harder for future consumers to find).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1759,6 +1724,40 @@
       "answer": "Option 1 — applies to BOTH stages. Clarify in §4.1 Watchpoint #4 by amending the 'What to watch' column to read: 'every DQ entry the planner OR impl-task files...' (the brief's §4.1 Watchpoint #4 needs the same clarification visible at first read). The brief is edited in place to ensure §4.1 Watchpoint #4's wording matches §4.2's behavioural-constraints wording. Per .claude/rules/decision-queue.md 'Mid-task visibility' + 'Subagents and attribution'.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-20T18:41:11Z"
+    },
+    {
+      "id": 301,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the one-shot SessionStart hook wiring for `pmd-canonical-guard.sh` happen — in THIS lane's `settings.local.json` (per the brief's PRECON-9), in the canonical `brehon-fork` checkout (durable across phase ship), or in both?",
+      "options": [
+        "Wire ONLY in canonical brehon-fork — phase-v1-rls-r1 is a lane-dedicated worktree that gets removed on phase ship (per multi-lane-worktree.md §'At phase ship + merge'); wiring it in the lane has zero durable benefit. The canonical checkout is the one durable lane.",
+        "Wire in BOTH the canonical brehon-fork AND this lane (current PRECON-9) — cheap, two `settings.local.json` edits, immediate + durable benefit.",
+        "Wire ONLY in this lane (current PRECON-9 verbatim) — pure immediate benefit; canonical waits for the next bootstrap cycle per the updated checklist.",
+        "Defer one-shot wiring entirely — only ship the bootstrap-checklist lesson update; every lane wires on its next bootstrap. Cleanest spec; latest activation."
+      ],
+      "context": "Per .claude/rules/multi-lane-worktree.md §'At phase ship + merge': lane-dedicated worktrees (like phase-v1-rls-r1 / brehon-fork-rls-r1) get removed on phase ship via `git worktree remove`. A SessionStart hook wired in a removed lane has zero durable effect post-merge. The canonical brehon-fork checkout is the always-live lane that handles governance-v0 work and is the next-bootstrap-eligible checkout for every future advisor session. The brief's PRECON-9 lean was 'wire in this lane' — but the lane is ephemeral. The cost-vs-benefit balance is: option 2 (BOTH) costs ~30 seconds extra; option 1 (canonical only) loses the dogfood-from-the-lane immediate benefit; option 3 (lane only) loses durability; option 4 (no one-shot) makes ship trigger-only. Each has a reasonable rationale; the user picks per project-state preference.",
+      "answer": "Option 2 (Recommended) — Wire in BOTH canonical brehon-fork AND this lane (per user 2026-05-20). Two settings.local.json edits: (a) C:/Users/barri/Developer/brehon-fork/.claude/settings.local.json for durable effect post-phase-ship + every future canonical session, (b) C:/Users/barri/Developer/brehon-fork-rls-r1/.claude/settings.local.json for immediate r1-lane dogfood + lane-session benefit. Cost: ~30 sec extra; belt-and-braces. The brief Track B Task 6's body amends to list both wiring sites.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T05:34:18Z"
+    },
+    {
+      "id": 302,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the `retro_bypass` JSONL kind be registered in the design-doc tree? Track C Task 8 needs a schema-registration doc, but the existing governance-log is PG-table-backed via Postgres triggers (per project_brehon_governance_platform.md) — a hook-emitted JSONL kind is structurally different from a PG-table kind.",
+      "options": [
+        "Extend `docs/brehon-law-inspired-network/04-data-model-and-api.md` with a clear new sub-section 'Hook-emitted observability JSONL kinds' separate from the PG-backed governance-log section.",
+        "Create a new doc `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` dedicated to hook-emitted kinds; cross-link from 04-data-model-and-api.md.",
+        "Register the kind in a `.claude/`-local doc (e.g. `.claude/refs/governance-log-jsonl-kinds.md`) — keeps brehon-law-inspired-network/ unchanged; hook-emitted kinds are harness-internal, not v1 product surface.",
+        "No schema registration doc — the schema IS the JSONL field list inside the new lesson `feedback_retro_bypass_governance_log.md`; consumers read the lesson."
+      ],
+      "context": "Per project_brehon_governance_platform.md the v1 governance-log is hash-chained Postgres triggers writing to a PG `governance_log` table — that is product-surface, ADR-008-load-bearing. The `retro_bypass` kind is a HARNESS observability event emitted by `.claude/hooks/retro-check.sh` to a JSONL sidecar — that is harness-internal, not product surface. Mixing them in the same doc risks reader confusion ('does retro_bypass land in the PG table?' — no, it does NOT). Option 1 mixes product + harness in one doc with sub-sections to keep them clearly separated. Option 2 splits the docs cleanly (best for discoverability) but adds a new design-doc file (ADR-adjacent). Option 3 keeps the registration `.claude/`-local (matches the harness-internal scope) but the brief's Track C Task 8 explicitly says 'governance-log schema document' implying product-doc placement. Option 4 collapses the registration into the lesson body (lowest-cost; conflates schema with lesson; harder for future consumers to find).",
+      "answer": "Option 1 (Recommended) — New file `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` (per user 2026-05-20). Clean split: product PG-table kinds stay in 04-data-model-and-api.md; harness JSONL kinds get their own doc cross-linked from 04. Best discoverability for both audiences. The brief Track C Task 8's body amends to name the new doc path verbatim.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T05:34:18Z"
     }
   ]
 }
