@@ -21,6 +21,26 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
+    },
+    {
+      "id": 339,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:43:41Z",
+      "question": "validate v1-federation-inbound-c Task 3 worker branch (e2e regression in mod v1_federation_inbound_b_fixtures + workaround-comment update)",
+      "branch": null,
+      "phase_task": 3,
+      "commands": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "advisor pre-reserved stub; impl-task #N will mutate with commands[] + branch after worker commit + push"
+      ],
+      "context": "PRECON-7 Option 3 pre-reservation (feedback_cohort_dq_id_collision.md). Reserved for Task 3 (e2e regression test) impl-task worker. Worker pre-pushes (daemon finalize-merge wrong-ref bug per DQ #338 on gov-v0) — advisor manually finalize-merges from origin/junior/<branch>. Worker mutates this entry in place per impl-1 brief §4 Mutation discipline pattern.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
