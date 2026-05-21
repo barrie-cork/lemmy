@@ -1,6 +1,43 @@
 {
   "schema_version": 2,
-  "pending": [],
+  "pending": [
+    {
+      "id": 328,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:52:19Z",
+      "question": "Reserved for v1-federation-inbound-c cohort 1 task 1",
+      "options": [],
+      "context": "Pre-reserved per PRECON-7 Option 3 (.claude/lessons/feedback_cohort_dq_id_collision.md). impl-task #1 (Add .order_by(valid_from.desc()) in get_inbound_config_int) fills commands[] + branch + log_slice post-push.",
+      "answer": "reserved for v1-federation-inbound-c cohort 1 task 1",
+      "answered_by": null,
+      "resolved_at": null,
+      "commands": null,
+      "branch": null,
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": 329,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:52:19Z",
+      "question": "Reserved for v1-federation-inbound-c cohort 1 task 2",
+      "options": [],
+      "context": "Pre-reserved per PRECON-7 Option 3 (.claude/lessons/feedback_cohort_dq_id_collision.md). impl-task #2 (Add .order_by(valid_from.desc()) in publish_trust_attestation actor_cap block) fills commands[] + branch + log_slice post-push.",
+      "answer": "reserved for v1-federation-inbound-c cohort 1 task 2",
+      "answered_by": null,
+      "resolved_at": null,
+      "commands": null,
+      "branch": null,
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
