@@ -2073,6 +2073,24 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T09:25:00Z",
       "context": "Terminal retro for v1-rls-r1; phase ready for bm-pr next."
+    },
+    {
+      "id": 322,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:52:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": null,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "fix-impl-1 (commit cc1590904) consolidated cargo-check exit 0. 11 fix-in-pr findings addressed advisor-side. cr-1 rebut + cr-5/cr-6 wont-fix posted as PR comments.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:52:00Z",
+      "context": "CR PR #140 triage user-approved 2026-05-21."
     }
   ]
 }
