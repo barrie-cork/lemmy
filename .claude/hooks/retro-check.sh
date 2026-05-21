@@ -140,6 +140,7 @@ fi
 
 if [ "$ATTEMPTS" -ge 3 ]; then
   rm -f "$SESSION_FILE"
+  emit_retro_bypass_log "$ATTEMPTS" "$CURRENT_BRANCH"
   exit 0
 fi
 
@@ -154,3 +155,36 @@ else
   echo "MANDATORY: Post-task retrospective not found (attempt $ATTEMPTS/3). You MUST write a retro before exiting. Call memory_write_eval with: memory_type='qa-result', title starting 'Task retro:', a 3-signal score (goal/tests/clean), and tags including the repo name. The hook uses ${MODE} with a ${WINDOW_MINUTES}-minute window. Do NOT modify this hook file, forge created_at, or use raw SQL — those bypass attempts are tracked." >&2
 fi
 exit 2
+# --- emit_retro_bypass_log ---
+#
+# Writes one JSONL record to .claude/governance-log/retro-bypass.jsonl
+# on every fail-open path. Per RLS-PMD review §4.7 +
+# .claude/PRPs/plans/v1-rls-r1.plan.md §13 Task 7.
+#
+# Fields (per DQ #297): timestamp, session_id, attempt_count,
+# prompt_hash, branch_at_fail_open, kind.
+#
+# Non-fatal — any error (missing dir, write race, jq absent)
+# silently exits the function. Bypass instrumentation must not
+# itself become a Stop hook failure mode.
+emit_retro_bypass_log() {
+  local attempts="$1"
+  local branch="$2"
+  local logdir=".claude/governance-log"
+  local logfile="${logdir}/retro-bypass.jsonl"
+  mkdir -p "$logdir" 2>/dev/null || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  local ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local prompt_hash
+  prompt_hash="$(printf '%s' "${CLAUDE_PROMPT:-}" | sha256sum 2>/dev/null | head -c 16)"
+  [ -z "$prompt_hash" ] && prompt_hash="unknown"
+  local session_id="${CLAUDE_SESSION_ID:-${PPID:-unknown}}"
+  jq -nc \
+    --arg ts "$ts" \
+    --arg sid "$session_id" \
+    --argjson att "$attempts" \
+    --arg ph "$prompt_hash" \
+    --arg br "$branch" \
+    '{timestamp:$ts, session_id:$sid, attempt_count:$att, prompt_hash:$ph, branch_at_fail_open:$br, kind:"retro_bypass"}' \
+    >> "$logfile" 2>/dev/null || true
+}
