@@ -87,24 +87,24 @@ The reader can predict §11 from §4: `.claude/skills/brehon-conformance-audit/{
 - **Phase:** `brehon-conformance-audit`
 - **Branch:** `phase-brehon-conformance-audit` (cut by BM-task before Task 1)
 - **Target impl-task model:** `sonnet-4-6` (default per planning.md §5). Split-DQ threshold is `> 8`.
-- **Estimated tasks:** 14 (Task 0 pre-flight + Tasks 1-12 impl + Task 13 retro)
+- **Estimated tasks:** 15 (Task 0 pre-flight + Tasks 1-12 impl + new Task 8a impl + Task 13 retro) — **revised 2026-05-21 per DQ #311** (added Task 8a; prior estimate was 14).
 - **Estimated cargo budget:** 0 GB peak. The skill body invokes no cargo (PRECON-3 anti-pattern citation). The §15 cargo commands run laptop-mode per `advisor-orchestrator.md` §5.2 — sequential `validate-pending-laptop` processing; peak ~6 GB at threshold for `cargo check --workspace --features full`.
 - **Forbidden-window applicability:** non-binding for EliteDesk worker daemon (cargo runs on laptop per PRECON-2 + `project_laptop_canonical_cargo_runner.md`).
-- **Complexity score:** **10/10** — threshold-tripping; planner DQ filed (see §5.2).
+- **Complexity score:** **11/10** — threshold-tripping (revised 2026-05-21 per DQ #311; prior score 10/10; Task 8a added). DQ #291 already resolved proceed-as-one at score 10; the +1 increment from Task 8a (mechanical revert, single-file delete) does not change that judgment — Task 8a is among the cheapest possible impl tasks. See §5.2 below.
 
 ### 5.1 Complexity factor breakdown
 
-Per `feedback_complexity_score_pre_split.md`. Mechanical computation:
+Per `feedback_complexity_score_pre_split.md`. Mechanical computation. **Revised 2026-05-21 per DQ #311 — Task 8a added; the impl-task-count row recomputed; root `Cargo.toml` added to "Files touched" via the single-line `disallowed_methods = "allow"` carve-out (does NOT increment the "Crates touched" weight — `Cargo.toml` is workspace metadata, not a crate root).**
 
 | Factor | Weight | This plan | Notes |
 |---|---|---|---|
-| §13 impl tasks above 5 | +1 each | **7** | 12 impl tasks (Tasks 1-12; Task 0 + Task 13 retro excluded). `max(0, 12-5) = 7`. |
+| §13 impl tasks above 5 | +1 each | **8** | 13 impl tasks (Tasks 1-12 + new Task 8a; Task 0 pre-flight + Task 13 retro excluded). `max(0, 13-5) = 8`. **Revised 2026-05-21 per DQ #311 — prior count 12, score 7.** |
 | Migrations touched | +2 each | **0** | No schema work; skill is `.claude/skills/` only. |
-| Crates touched | +1 each | **3** | `crates/apub/`, `crates/api/`, `crates/db_schema/` (mod.rs attribute additions in Task 9). |
+| Crates touched | +1 each | **3** | `crates/apub/`, `crates/api/`, `crates/db_schema/` (mod.rs attribute additions in Task 9). Root `Cargo.toml` edit in revised Task 8 is workspace metadata, NOT a crate root — does not increment this weight. |
 | `crates/server/tests/e2e.rs` edits | +3 each | **0** | Dogfood READS history; no e2e edit. |
-| New ADR-affecting decisions | +2 each | **0** | Reference-only ADR citations (ADR-006/013/014/015); none superseded. |
+| New ADR-affecting decisions | +2 each | **0** | Reference-only ADR citations (ADR-006/013/014/015); none superseded. The DQ #311 mechanism revision adds a `Cargo.toml` workspace-lint-level carve-out documented in §10.8; not ADR-affecting. |
 | Cargo budget peak above 6 GB | +1 per GB | **0** | Skill invokes no cargo; §15 laptop-mode peak ~6 GB at threshold. |
-| **Total** | — | **10** | Threshold (Sonnet): `> 8`. **Tripped.** |
+| **Total** | — | **11** | Threshold (Sonnet): `> 8`. **Tripped (still).** Prior score 10/10; +1 from Task 8a. DQ #291 (split-or-proceed) already resolved proceed-as-one at score 10 — see §5.2. |
 
 ### 5.2 Split-or-proceed DQ
 
@@ -119,6 +119,8 @@ Per `feedback_complexity_score_pre_split.md`. Mechanical computation:
 5. **Brief §2.4 explicitly states** "Estimated score: ~7-9, comfortably below Sonnet's split threshold of 8 (border-line)". The planner computed 10 honestly; the brief author was 1-2 points optimistic. The discrepancy is small and doesn't change the structural argument.
 
 Plan ships under proceed-as-one assumption pending DQ #291 resolution. If advisor answers `split`, the plan is re-authored as `brehon-conformance-audit-1` (Track A only) + `brehon-conformance-audit-2` (Tracks B + C), with `-1` strictly preceding `-2`.
+
+**2026-05-21 update (DQ #311):** Task 8a (revert prior broken `clippy.toml`) added per the mechanism revision. Score recomputed 10 → 11. The +1 increment comes from a single mechanical-revert task (one `git rm clippy.toml` line) — among the cheapest possible impl tasks. Proceed-as-one judgement stands; no new split-DQ is filed (the original DQ #291 already resolved proceed-as-one and the marginal cost of Task 8a is well below the cognitive-load threshold).
 
 ### 5.3 Per-task complexity ceiling
 
@@ -480,14 +482,31 @@ PYEOF
 
 **GOTCHA:** python3 wrapper because brief §2.3 ambiguity #4 planner-lean named python over bash+jq for Windows-cross-platform portability. Per `feedback_python_utf8_encoding_windows.md` + `feedback_json_dump_ensure_ascii_false.md`, JSON I/O uses `json.load(open(...))` + `ensure_ascii=False` on writes.
 
-### 10.8 `clippy.toml` seed entries (Track B)
+### 10.8 `clippy.toml` seed entries + workspace-allow mechanism (Track B) — REVISED 2026-05-21 (DQ #311)
 
-**Mirror:** brief §0.1.4 PRECON-4 seed block.
+**Mirror:** brief §0.1.4 PRECON-4 seed block. Mechanism corrected per rustc `src/doc/rustc/src/lints/levels.md` "Priority of lint level sources" rule 4 (DQ #311 — see `.claude/PRPs/briefs/brehon-conformance-audit-planning-2-revise.md`).
+
+**Mechanism (CORRECTED).** Federation-only enforcement of `clippy::disallowed_methods` requires TWO coordinated edits, BOTH landed in a single commit (revised Task 8):
+
+1. `clippy.toml` at repo root — defines WHICH methods are banned. Workspace-wide configuration; not a lint LEVEL.
+2. Root `Cargo.toml` `[workspace.lints.clippy]` block — adds `disallowed_methods = "allow"` so the workspace-wide default level is ALLOW. Per-module `#![deny(clippy::disallowed_methods)]` (§10.9 + Task 9) then re-enables enforcement only inside the three federation module roots.
+
+**Why the workspace-allow is mandatory.** Root `Cargo.toml:100` declares `style = { level = "deny", priority = -1 }`. Clippy's `style` group **contains** `disallowed_methods`, so without an explicit `disallowed_methods = "allow"` override, dropping `clippy.toml` into the repo activates the lint at `deny` workspace-wide. Result on the current codebase: 100+ pre-existing `Option::unwrap_or_default` / `Result::unwrap_or_default` callsites across `db_schema`, `db_views`, `api_*`, `apub`, `routes`, `email`, `server/tests`, `utils`, `diesel_utils` immediately fail the workspace build. Verified empirically across three reactive cycles:
+
+- **DQ #303 → fix-impl-1** (`b00be611a`): 6 `lemmy_utils` sites remediated (image_links.rs ×3, link_rule.rs, validation.rs ×2). Workspace still failed clippy after.
+- **DQ #307 → fix-impl-2 / fix-impl-3** (`34f5cc567`): 4 `lemmy_diesel_utils` sites remediated. Workspace clippy STILL exited 101.
+- **DQ #309**: confirmed 100+ further pre-existing `unwrap_or_default` callsites workspace-wide; user resolved with narrow-probe gate (federation crates only).
+- **DQ #310**: narrow-probe gate STILL exited 101 — `lemmy_apub_objects` had 6+ further pre-existing violations the brief had assumed were already clean. User catch-fire 2026-05-21 → option-c mechanism revision (this revision).
+
+**Why per-module `#![deny()]` then works.** Per rustc's `src/doc/rustc/src/lints/levels.md` "Priority of lint level sources" rule 4: *"Within the source, attributes at a lower-level in the syntax tree take precedence over attributes at a higher level."* Documented example: workspace-level `#![deny(unused_variables)]` + module-level `#[allow(unused_variables)]` → **allow wins** (lower in syntax tree). Reverse direction (our case): workspace-level `disallowed_methods = "allow"` + module-level `#![deny(clippy::disallowed_methods)]` → **deny wins** inside that module subtree. Federation-only enforcement achieved; non-federation code stays at workspace-default allow.
+
+**Required `clippy.toml` content (unchanged from pre-revision):**
 
 ```toml
 # clippy.toml — repo root
-# Brehon federation trust-boundary disallowed methods. Per-module #![deny(clippy::disallowed_methods)]
-# enforces these in the three federation module roots; non-federation code is unaffected.
+# Brehon federation trust-boundary disallowed methods. Workspace-default lint level is ALLOW
+# (set in root Cargo.toml [workspace.lints.clippy]); per-module #![deny(clippy::disallowed_methods)]
+# in the three federation module roots re-enables enforcement only there (rustc lint-precedence rule 4).
 # Source: feedback_lemmy_error_no_std_error.md + project_phase6_convention_divergence_class.md axis #4.
 
 disallowed-methods = [
@@ -498,9 +517,30 @@ disallowed-methods = [
 ]
 ```
 
-**GOTCHA:** path resolution edge case (brief §2.3 ambiguity #1) — `core::option::Option::unwrap_or_default` may not catch all re-exports. Task 8's probe step is the integration test. If the probe surfaces uncovered cases, the planner-side fallback is broader path-pattern (per ambiguity #1 lean: option (a), ship seed entries; dogfood is the gate).
+**Required root `Cargo.toml` edit (NEW — single line, inside the `[workspace.lints.clippy]` block at lines 84-122):**
 
-**GOTCHA:** the seed entries are MERGED into any pre-existing `clippy.toml` (verified to not exist at HEAD `4480a1bdb`). Task 8 reads first; Edit if exists; Write if not.
+```toml
+[workspace.lints.clippy]
+# ... existing entries (cast_lossless, complexity, correctness, ...) ...
+style = { level = "deny", priority = -1 }      # existing line 100 — KEEP UNCHANGED
+# ... existing entries continue ...
+disallowed_methods = "allow"   # NEW: silence workspace-wide default (style-group activates it at deny);
+                               # per-module #![deny(clippy::disallowed_methods)] in federation mod.rs
+                               # files (Task 9) re-enables enforcement only there. Per rustc lint-
+                               # precedence rule 4 (lower-syntax-tree attribute wins).
+```
+
+Place the `disallowed_methods = "allow"` line at the end of the `[workspace.lints.clippy]` block (after `unchecked_time_subtraction = "deny"` line 121, before the `[workspace.dependencies]` heading at line 123). Hyphen vs underscore: lint NAMES use underscores (`disallowed_methods`) per `[workspace.lints.*]` Cargo schema; `clippy.toml` KEYS use hyphens (`disallowed-methods`). Both forms are intentional.
+
+**PRECONDITION-MATCH:** PRECON-4 ("3 federation module roots; non-federation code unaffected") is now mechanically backed by lint-precedence rule 4. The original §10.8 wording *"non-federation code is unaffected"* held the right INTENT but failed to specify the workspace-allow override; result was three reactive cycles (DQ #303 → #307 → #309 → #310) where pre-existing non-federation violations broke the workspace build at Task 8 probe time. The corrected mechanism makes the precondition load-bearing — workspace-allow silences the activation across all non-federation crates by default; per-module deny re-enables it inside the three governance module roots.
+
+**GOTCHA:** path resolution edge case (brief §2.3 ambiguity #1) — `core::option::Option::unwrap_or_default` may not catch all re-exports. Task 8's narrow-probe step (federation crates only via `-p` flags) is the integration test. If the probe surfaces uncovered cases, the planner-side fallback is broader path-pattern (per ambiguity #1 lean: option (a), ship seed entries; dogfood is the gate).
+
+**GOTCHA:** at phase-branch tip post-fix-impl-3 (`c78a39cb7`), `clippy.toml` IS committed (created by the prior worker dispatch of the broken Task 8 at `c3aaba47f`). Task 8a (NEW — added by this revision) reverts it; revised Task 8 then re-creates with same content as a SINGLE commit alongside the `Cargo.toml` workspace-allow edit. The combined diff is auditable as "add clippy.toml + edit Cargo.toml" — the two coordinated edits the corrected mechanism requires.
+
+**GOTCHA:** the `Cargo.toml` edit is one line inside the `[workspace.lints.clippy]` table. The general guideline "do not touch `Cargo.toml`/`Cargo.lock`/`rust-toolchain.toml`" elsewhere in Brehon scope rules is narrowly about avoiding **dependency-shape changes** + **toolchain changes** + **build-config restructuring**; a single workspace-lint-level override line is the carve-out this plan revision documents explicitly. The revised Task 8 brief MUST cite this carve-out + DQ #311 + rustc lint-precedence rule 4 to make the change rationale auditable.
+
+**GOTCHA:** fix-impl-1 (`b00be611a` — 6 `lemmy_utils` sites) + fix-impl-3 (`34f5cc567` — 4 `lemmy_diesel_utils` sites) commits already remediated 10 non-federation `unwrap_or_default` callsites with explicit fallbacks. These remediation commits **stay** — they are net-positive axis-4 cleanups (explicit fallbacks > silent `unwrap_or_default`). The corrected mechanism does NOT require them (workspace-allow silences enforcement on non-federation code), but reverting them adds work + creates a different upstream-merge surface. **Net-zero: keep both fix-impl commits as cleanup payoff from the failed mechanism cycles.**
 
 ### 10.9 Per-module deny attribute (Track B)
 
@@ -613,7 +653,8 @@ Bulleted list, grouped by location. Each entry: path + one-line purpose + which 
 
 ### Repo root
 
-- `clippy.toml` — seed `disallowed-methods` entries (Task 8). **Verified non-existent at HEAD `4480a1bdb`.**
+- `clippy.toml` — seed `disallowed-methods` entries (revised Task 8 after Task 8a's revert; the file currently exists on phase-branch tip from the prior broken Task 8 dispatch at `c3aaba47f`).
+- `Cargo.toml` — add single-line `disallowed_methods = "allow"` to `[workspace.lints.clippy]` block (revised Task 8 per DQ #311 corrected mechanism + §10.8). **Carve-out** from the general "do not touch Cargo.toml" guideline: documented in §10.8 GOTCHA + commit-body citation of DQ #311 + rustc lint-precedence rule 4.
 - `.gitignore` — add `.claude/PRPs/audit-metrics/` (Task 7's gitignore edit; per brief §2.3 ambiguity #3 lean).
 - `.mcp.json.example` — add `rust-analyzer` server entry (Task 10).
 
@@ -644,7 +685,7 @@ Bulleted list, grouped by location. Each entry: path + one-line purpose + which 
 ### Files explicitly NOT touched
 
 - `crates/**` **business logic** — only `mod.rs` attribute additions in the three federation roots.
-- `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml` — Hard refusal #9.
+- `Cargo.toml` dependency-shape changes, `Cargo.lock`, `rust-toolchain.toml` — Hard refusal #9. **EXCEPTION (DQ #311 carve-out):** revised Task 8 adds a single `disallowed_methods = "allow"` line inside `[workspace.lints.clippy]` block. This is a workspace-lint-level override, NOT a dependency/toolchain/build-config change. Documented in §10.8 + Task 8 GOTCHA.
 - `migrations/**` — no schema work.
 - `tests/**`, `crates/server/tests/**` — no test edits (dogfood READS history).
 - `docs/brehon-law-inspired-network/**` — no ADR/PRD edits; reference-only ADR citations.
@@ -688,14 +729,16 @@ Execute in dependency order. One commit per task. Each task header carries a `[P
 
 > **DoD shape (per PRECON-2 + DQ #229):** Each impl-task raises `kind: "validate-pending-laptop"` post-push naming §15 DoD commands verbatim with `--workspace --features full`. Advisor laptop runs sequentially via `.bat` wrapper per `advisor-orchestrator.md` §5.2.
 >
-> **Cohort plan (computed mechanically from `union(creates, modifies)` + `requires:`):**
+> **Cohort plan (computed mechanically from `union(creates, modifies)` + `requires:`; revised 2026-05-21 per DQ #311 — Task 8a added, Task 8 reshaped to single-commit corrected mechanism):**
 > - **Cohort 1 (serial):** Task 1 alone — SKILL.md skeleton must exist before axis sub-files reference its frontmatter.
-> - **Cohort 2 (parallel `[P]`):** Tasks 2, 3, 4, 5, 8, 10 — file-set disjoint; Tasks 2-5 depend on Task 1 (Task 8/10 are `requires: [0]` only, but bundled into Cohort 2 for wall-clock).
+> - **Cohort 2 (parallel `[P]`):** Tasks 2, 3, 4, 5, 10 — file-set disjoint; Tasks 2-5 depend on Task 1 (Task 10 is `requires: [0]` only, but bundled into Cohort 2 for wall-clock). **Task 8 was previously here; removed per DQ #311 revision — now in its own serial cohort post-Task-8a (Cohort 2.7).**
 > - **Cohort 2.5 (serial, depends on Cohort 2):** Task 6 — `requires: [4, 5]` (compute-metrics.sh consumes the schema in Task 4 and the formulas in Task 5; Task 6 must run after Tasks 4 + 5 finalize-merge onto phase branch).
-> - **Cohort 3 (serial, depends on Cohort 2.5):** Task 7 (dogfood) — `requires: [1, 2, 3, 4, 5, 6, 8]` (skill files must exist before dogfood runs; clippy.toml must exist so the dogfood includes the Track-B integration check).
-> - **Cohort 4 (serial, depends on Cohort 2):** Task 9 (per-module deny) — `requires: [8]`.
+> - **Cohort 2.6 (serial, NEW per DQ #311 revision):** Task 8a — `requires: [0]` (revert the prior broken `clippy.toml` commit `c3aaba47f` from the phase-branch tip). Independent of Cohorts 2/2.5 (file-set disjoint); scheduled after Cohort 2.5 for sequential clarity. Single delete commit.
+> - **Cohort 2.7 (serial, NEW per DQ #311 revision):** Task 8 — `requires: [8a]` (single commit creating `clippy.toml` + adding `disallowed_methods = "allow"` to root `Cargo.toml [workspace.lints.clippy]`). The corrected mechanism per §10.8 + rustc lint-precedence rule 4.
+> - **Cohort 3 (serial, depends on Cohort 2.5 + 2.7):** Task 7 (dogfood) — `requires: [1, 2, 3, 4, 5, 6, 8]` (skill files must exist before dogfood runs; the corrected clippy.toml + workspace-allow override must exist so the dogfood includes the Track-B integration check).
+> - **Cohort 4 (serial, depends on Cohort 2.7):** Task 9 (per-module deny) — `requires: [8]`.
 > - **Cohort 5 (parallel `[P]`):** Task 11, Task 12 — disjoint files; depend on prior cohorts (Task 11 `requires: [1, 8, 9]`; Task 12 `requires: [7]`).
-> - **Cohort 6 (serial):** Task 13 retro — depends on all prior.
+> - **Cohort 6 (serial):** Task 13 retro — depends on all prior (including new Task 8a).
 
 ### Task 0: Pre-flight harness audit + branch verification
 
@@ -1235,22 +1278,75 @@ echo "exit: $?"
 # EXPECT: exit 0
 ```
 
-### Task 8 [P]: CREATE `clippy.toml` at repo root + probe existing-code conformance
+### Task 8a: REVERT prior broken `clippy.toml` commit from phase-branch tip (NEW per DQ #311 revision)
 
-**ACTION:** create the repo-root `clippy.toml` with the seed `disallowed-methods` entries per §10.8 verbatim. Probe existing federation code via `cargo clippy --workspace --no-deps --features full -- -D warnings` BEFORE adding per-module deny attributes (Task 9). If the probe surfaces any existing violation, surface the enumeration to advisor; the advisor inserts a remediation task BEFORE Task 9 (per Watchpoint #4 + `feedback_clippy_rerun_after_fix.md`).
+**ACTION:** remove the `clippy.toml` file at repo root that the prior (broken) Task 8 dispatch left on the phase branch at commit `c3aaba47f`. The corrected mechanism is then re-applied as a SINGLE commit by revised Task 8 (which adds both `clippy.toml` AND the `Cargo.toml` workspace-allow override). Reverting first ensures Task 8's diff is auditable as "add clippy.toml + edit Cargo.toml" — the two coordinated edits the corrected mechanism requires (§10.8).
+
+**FILES (machine-parseable):**
+
+```yaml
+creates: []
+modifies:
+  - clippy.toml          # removal (git rm); listed under modifies since the FILES YAML schema has no formal `deletes:` key
+requires:
+  - task: 0
+    reason: "Pre-flight only; Task 8a is independent of Tasks 1-7 and 10 (file-set disjoint) but must precede Task 8 in the cohort order."
+```
+
+**IMPLEMENT (file 1 of 1):** run `git rm clippy.toml` at repo root. Single-file delete commit. Worker does NOT recreate `clippy.toml`; that is revised Task 8's job.
+
+Commit subject: `chore(brehon-conformance-audit): revert prior broken Task 8 clippy.toml — DQ #311 mechanism revision`.
+
+Commit body: cite DQ #311 + DQ #310 (user catch-fire) + the corrected mechanism per §10.8 + rustc lint-precedence rule 4. Reference the previously-broken Task 8 commit `c3aaba47f` and the cycle of fix-impls (`b00be611a` fix-impl-1, `34f5cc567` fix-impl-3).
+
+**MIRROR:** revert pattern for failed-mechanism cycles (per §10.8 PRECONDITION-MATCH discussion + brief `.claude/PRPs/briefs/brehon-conformance-audit-planning-2-revise.md` §2.3 Task 8a deliverable).
+
+**GOTCHA:** this task carries `modifies: [clippy.toml]` (file removal) rather than `deletes:`. The FILES YAML schema in `.claude/PRPs/templates/plan.template.md` has no formal `deletes:` key; advisor's §4.1 cohort dispatch parses `union(creates, modifies)` so the path appears in the disjointness check correctly. The diff is a single deletion line in the index; `git status` shows `deleted: clippy.toml`.
+
+**GOTCHA:** per §4.1 cohort dispatch + §4.4 cohort handover, this task is SERIAL (precedes Task 8 in the cohort plan; Cohort 2.6 in the revised header). The `requires:` field references Task 0 only — Task 8a is independent of the skill-body and metrics tasks (Cohorts 1, 2, 2.5).
+
+**GOTCHA:** Workspace clippy will STILL fail (exit 101) after Task 8a lands alone — because `governance-v0` baseline at `4480a1bdb` (before any Task 8 dispatch) had no `clippy.toml`, and removing the broken Task 8 dispatch's `clippy.toml` returns the tree to that baseline state. Task 8's single-commit dispatch is the gate that lands the corrected mechanism. Worker does NOT run a `--workspace` clippy gate from clean-clippy-toml state at Task 8a; Task 8a's §15 is the simpler workspace-check (compile still succeeds — removing the toml cannot break rustc).
+
+**VALIDATE (story-checkpoint, feeds §16a Story 2):**
+
+```bash
+# clippy.toml does not exist after Task 8a
+test ! -f clippy.toml
+echo "exit: $?"
+# EXPECT: exit 0
+
+# Workspace check still passes (no compile error — toml removal cannot break rustc)
+bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task8a-check.log 2>&1
+echo "exit: $?"
+tail -10 .claude/PRPs/debug/brehon-conformance-audit-task8a-check.log
+# EXPECT: exit 0
+```
+
+### Task 8: CREATE `clippy.toml` + ADD `disallowed_methods = "allow"` to root `Cargo.toml [workspace.lints.clippy]` (single commit — corrected mechanism per DQ #311)
+
+**ACTION:** re-create the repo-root `clippy.toml` (same content as the prior broken Task 8 dispatch at `c3aaba47f`) AND add the workspace-allow override line `disallowed_methods = "allow"` to root `Cargo.toml` `[workspace.lints.clippy]` block. **Both changes in ONE commit** — the diff is auditable as the two coordinated edits the corrected mechanism requires (§10.8 + rustc lint-precedence rule 4). NO `[P]` marker — this task depends on Task 8a (revert) and is serial.
 
 **FILES (machine-parseable):**
 
 ```yaml
 creates:
   - clippy.toml
-modifies: []
-requires: []
+modifies:
+  - Cargo.toml
+requires:
+  - task: 8a
+    reason: "Task 8a reverts the prior broken clippy.toml commit; the corrected single-commit dispatch lands cleanly only against a tree without the broken clippy.toml."
 ```
 
-**IMPLEMENT (file 1 of 1):** in `clippy.toml` at repo root, write the seed `disallowed-methods` entries per §10.8 verbatim:
+**IMPLEMENT (file 1 of 2):** in `clippy.toml` at repo root, write the seed `disallowed-methods` entries per §10.8 verbatim:
 
 ```toml
+# clippy.toml — repo root
+# Brehon federation trust-boundary disallowed methods. Workspace-default lint level is ALLOW
+# (set in root Cargo.toml [workspace.lints.clippy]); per-module #![deny(clippy::disallowed_methods)]
+# in the three federation module roots re-enables enforcement only there (rustc lint-precedence rule 4).
+# Source: feedback_lemmy_error_no_std_error.md + project_phase6_convention_divergence_class.md axis #4.
+
 disallowed-methods = [
   { path = "core::option::Option::unwrap_or_default",
     reason = "Use .ok_or_else(|| LemmyErrorType::*) for required federation fields. See feedback_lemmy_error_no_std_error.md and project_phase6_convention_divergence_class.md axis #4." },
@@ -1259,41 +1355,67 @@ disallowed-methods = [
 ]
 ```
 
-**Then run the probe step (NO commit until probe is clean):**
+**IMPLEMENT (file 2 of 2):** in root `Cargo.toml`, inside the `[workspace.lints.clippy]` block (lines 84-122), AFTER the existing line 121 `unchecked_time_subtraction = "deny"`, BEFORE the `[workspace.dependencies]` heading at line 123, insert exactly:
 
-```bash
-bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1
-echo "exit: $?"
+```toml
+disallowed_methods = "allow"   # Federation-only enforcement: workspace-default ALLOW;
+                               # per-module #![deny(clippy::disallowed_methods)] in three
+                               # federation mod.rs files (Task 9) re-enables enforcement
+                               # only there (rustc lint-precedence rule 4). See clippy.toml + DQ #311.
 ```
 
-- **Exit 0** → no existing federation-code violation of the new disallowed entries (BUT this proves only baseline clippy clean — disallowed-methods entries don't fire until a module opts in via `#![deny()]` per PRECON-4). The probe still confirms clippy.toml syntax parses + workspace builds against it.
-- **Non-zero** → existing violation present; **STOP and file `kind: "blocker"` DQ to advisor** with the enumerated violations. Advisor inserts a remediation task BEFORE Task 9.
+Commit subject: `feat(brehon-conformance-audit): add clippy.toml + Cargo.toml workspace-allow for disallowed_methods (Task 8 — DQ #311 corrected mechanism)`.
 
-**MIRROR:** §10.8 template; per `feedback_clippy_test_style.md` workspace clippy discipline.
+Commit body: cite §10.8 + DQ #311 + rustc lint-precedence rule 4 ("lower-syntax-tree attribute wins"). Reference Task 9 as the per-module deny step that pairs with this workspace-allow.
 
-**GOTCHA:** the disallowed-methods entries are GLOBAL but the deny LEVEL is per-module (Task 9). Without Task 9's `#![deny()]` attributes, `cargo clippy --no-deps -- -D warnings` does NOT escalate the warn to error for non-federation code. The probe primarily confirms the toml syntax parses + does not trigger warnings on `governance-v0` code.
+**MIRROR:** §10.8 corrected-mechanism block (the new content above is lifted verbatim from §10.8 "Required `clippy.toml` content" + "Required root `Cargo.toml` edit").
 
-**GOTCHA:** per `feedback_fix_impl_pre_push_cargo_check.md`, the impl worker runs the probe LOCALLY before pushing the worker branch. The probe is the §15 sanity for Task 8.
+**GOTCHA:** hyphen vs underscore — lint NAMES in `[workspace.lints.*]` use underscores (`disallowed_methods`), while `clippy.toml` KEYS use hyphens (`disallowed-methods`). Both forms are intentional Cargo/Clippy convention. Worker MUST NOT "fix" the difference.
 
-**GOTCHA:** per `feedback_clippy_rerun_after_fix.md`, if the probe surfaces violations, the remediation lands BEFORE Task 9 (the deny attribute additions). The §15 sequence holds without breaking the build mid-plan.
+**GOTCHA:** the `Cargo.toml` edit is one line inside the `[workspace.lints.clippy]` table at workspace scope. The general Brehon scope-rule guideline "do not touch `Cargo.toml`/`Cargo.lock`/`rust-toolchain.toml`" is narrowly about avoiding **dependency-shape changes** + **toolchain changes** + **build-config restructuring** — a single workspace-lint-level override line is the explicit carve-out this plan revision documents (§10.8 PRECONDITION-MATCH + DQ #311). Worker cites the DQ in the commit body.
+
+**GOTCHA:** per `feedback_fix_impl_pre_push_cargo_check.md`, the worker runs `cargo check --workspace --features full` AND the §15.2 narrow-probe clippy gate LOCALLY before pushing the worker branch. Per `feedback_fix_impl_enumerate_all_callsites.md`, if the narrow-probe gate surfaces violations, the worker enumerates ALL callsites in the federation crates `rg -- "(Option|Result)::unwrap_or_default" crates/{apub,api,db_schema}` before deciding whether to patch in-commit or file a `kind: "blocker"` DQ.
+
+**GOTCHA:** Task 9's per-module deny attributes have NOT landed yet at Task 8's success-gate time. The §15 narrow-probe gate is therefore expected to exit 0 trivially (federation crates compile + clippy clean WITHOUT enforcement; enforcement comes with Task 9). The gate proves:
+- `clippy.toml` syntax parses (toml is well-formed).
+- `Cargo.toml` `disallowed_methods = "allow"` overrides the `style`-group activation correctly (workspace-wide clippy still passes — verified separately).
+- No regression in federation-crate compile.
 
 **VALIDATE (story-checkpoint feeds §16a Story 2):**
 
 ```bash
-# Task 8 probe (laptop §15.2 equivalent)
-bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1
+# §15 SUCCESS GATE — NARROW probe target (federation crates only, per DQ #310 option-c)
+bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1
 echo "exit: $?"
 tail -30 .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log
-# EXPECT: exit 0 (or enumerated violations + DQ blocker for remediation)
+# EXPECT: exit 0 — workspace-allow silences activation across the workspace; without Task 9's per-module deny, federation modules ALSO pass.
 
-# clippy.toml syntax parses
+# clippy.toml syntax parses + contains seed entries
 python3 -c "
 content = open('clippy.toml').read()
 assert 'disallowed-methods' in content
 assert 'core::option::Option::unwrap_or_default' in content
 assert 'core::result::Result::unwrap_or_default' in content
-print('OK')
+print('clippy.toml OK')
 "
+
+# Cargo.toml carries the workspace-allow line inside [workspace.lints.clippy]
+python3 -c "
+import re
+content = open('Cargo.toml').read()
+# Find the [workspace.lints.clippy] block
+m = re.search(r'\[workspace\.lints\.clippy\](.*?)(?=^\[|\Z)', content, re.DOTALL | re.MULTILINE)
+assert m, 'workspace.lints.clippy block not found'
+block = m.group(1)
+assert 'disallowed_methods = "allow"' in block, f'disallowed_methods = allow not in workspace.lints.clippy block'
+print('Cargo.toml OK')
+"
+
+# Workspace-wide clippy (sanity — confirms workspace-allow silences activation outside federation modules)
+bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-workspace-clippy.log 2>&1
+echo "exit: $?"
+tail -10 .claude/PRPs/debug/brehon-conformance-audit-task8-workspace-clippy.log
+# EXPECT: exit 0 — workspace-allow override silences disallowed_methods across the workspace
 ```
 
 ### Task 9: ADD `#![deny(clippy::disallowed_methods)]` to three federation `mod.rs` files (Track B)
@@ -1342,10 +1464,16 @@ for f in crates/apub/activities/src/governance/mod.rs crates/api/api/src/governa
 done
 # EXPECT: all three paths echoed
 
-# Workspace clippy stays green (the new deny attributes enforce against the seed disallowed entries)
-bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-clippy.log 2>&1
+# §15 SUCCESS GATE — NARROW probe target (federation crates only — same target as Task 8 per DQ #310 option-c + DQ #311 corrected mechanism)
+bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-narrow-clippy.log 2>&1
 echo "exit: $?"
-tail -30 .claude/PRPs/debug/brehon-conformance-audit-task9-clippy.log
+tail -30 .claude/PRPs/debug/brehon-conformance-audit-task9-narrow-clippy.log
+# EXPECT: exit 0 — federation modules now have #![deny(clippy::disallowed_methods)] active (deny wins lower in syntax tree per rustc lint-precedence rule 4). Federation code in governance modules should already be axis-4 clean per fed-in-b fix-impl-3 evidence (Finding 6.1 closed `8b04e69a6`). If any federation-code violation surfaces, worker enumerates ALL callsites (`feedback_fix_impl_enumerate_all_callsites.md`) and files `kind: "blocker"` DQ — advisor inserts a federation-side remediation task.
+
+# Workspace clippy stays green (sanity — confirms workspace-allow override is still suppressing default activation outside the three federation module roots)
+bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-workspace-clippy.log 2>&1
+echo "exit: $?"
+tail -30 .claude/PRPs/debug/brehon-conformance-audit-task9-workspace-clippy.log
 # EXPECT: exit 0
 
 # Workspace check stays green
@@ -1576,11 +1704,15 @@ requires:
 - `## What to carry forward` — patterns that worked; the four-role retro signals.
 - `## Per-role signals` (per `feedback_four_role_retro_signals.md`):
   - `### Advisor` — signal: was the §3.1 / §3.9 wiring (Task 11) clean? Did the skill invocation at brief-author time (none here — this is the first sub-phase landing it) feel right?
-  - `### Planning` — signal: was the §5 complexity score (10/10) honest? Did the DQ #291 proceed-as-one hold?
-  - `### Impl` — signal: did the §5.3 soft over-ceiling on Task 2 and Task 9 prove correct? Token usage per task?
+  - `### Planning` — signal: was the §5 complexity score (11/10 post-DQ #311 revision; originally 10/10) honest? Did the DQ #291 proceed-as-one hold? **DQ #311 mechanism-misanalysis lesson:** the original §10.8 wording *"non-federation code is unaffected"* was right in INTENT but wrong in MECHANISM — `clippy.toml` activates `disallowed_methods` workspace-wide (via the `style`-group default-deny at `Cargo.toml:100`), and the plan failed to specify the `disallowed_methods = "allow"` override. Three reactive cycles (DQ #303 → #307 → #309 → #310) closed before user catch-fire 2026-05-21 forced option-c (mechanism revision). Planning-side lesson: when a plan specifies a *per-module* enforcement gate against a workspace-wide-default-active lint, the plan MUST mechanically verify (a) what the workspace-wide default level is, (b) whether the per-module attribute's direction (lower-syntax-tree wins) is the one needed, (c) whether the workspace-level override is needed to suppress activation outside the per-module scopes. Rustc lint-precedence rule 4 is the relevant citation. Promote as `feedback_clippy_per_module_deny_requires_workspace_allow.md` (Task 12 candidate or post-retro lesson).
+  - `### Impl` — signal: did the §5.3 soft over-ceiling on Task 2 and Task 9 prove correct? Token usage per task? **Task 8a + Task 8 revised dispatch lesson:** the prior broken Task 8 cycled fix-impl-1 (lemmy_utils) → fix-impl-2/3 (lemmy_diesel_utils) → narrow-probe gate (still fail on lemmy_apub_objects) → user catch-fire → option-c. ~3 cycles, ~123 min wallclock burned on the wrong mechanism. The corrected single-commit `clippy.toml` + `Cargo.toml` workspace-allow dispatch ships in one task. Lesson: when a §G4 fail-classification cycle reaches 3 with the same `(error_class, file_basename)` triple, advisor `§5.3 cycle-count meta-rule` says HARD REFUSAL re-plan — this revision IS the re-plan; carry forward into next sub-phase retros that hit the same threshold.
   - `### BM` — signal: was the PR review value clean? CR findings?
 - `## §5 watch-items + complexity scores` — per-task `<files>/<commits>/<runtime-min>/<max-log-silence-min>`. Include the dogfood metrics summary from Task 7 verbatim.
-- `## Lessons promoted` — list any new lesson files (Task 12's two files) + paste promotion command.
+- `## Lessons surfaced this sub-phase` — enumerate the durable findings produced by the DQ #311 cycle:
+  - **§10.8 mechanism mismatch** — workspace-lint-group activation vs per-module `#![deny]` enforcement direction. Promote as `feedback_clippy_per_module_deny_requires_workspace_allow.md` if not done at Task 12.
+  - **Cycle-3 catch-fire signal** — three failed mechanism cycles closed via fix-impls + narrow-probe gate + STILL failed. The §G4 cycle-count meta-rule (advisor-orchestrator.md §5.3) should fire HARD REFUSAL on 3 cycles same `(error_class, file_basename)` tuple — here `(clippy::disallowed_methods, $WORKSPACE)`. Lesson candidate: tighten the meta-rule to fire on 2 cycles when the failures are MECHANISM-level (not site-level) — same lint, same workspace-wide failure mode, just different uncovered callsites.
+  - **fix-impl-1 + fix-impl-3 net-positive cleanups** — 10 sites across `lemmy_utils` + `lemmy_diesel_utils` replaced `unwrap_or_default` with explicit fallbacks. Carry forward: explicit-fallback style is the canonical idiom even outside federation modules. Worth considering as the workspace-default eventually (after broader audit).
+- `## Lessons promoted` — list any new lesson files (Task 12's two files + DQ #311 follow-on lessons) + paste promotion command.
 
 **MIRROR:** `.claude/PRPs/reports/v1-federation-inbound-a-retro.md` for the retro shape.
 
@@ -1804,11 +1936,12 @@ test -f .claude/PRPs/reports/brehon-conformance-audit-retro.md
 ## 17. Completion checklist
 
 - [ ] Task 0 audit complete (all 11 probes confirmed).
-- [ ] Tasks 1-12 committed.
-- [ ] Task 13 retro committed.
-- [ ] §15 validation green at every cargo-relevant gate (Tasks 8, 9, 11).
+- [ ] Tasks 1-12 committed (Task 8a + revised Task 8 lands per DQ #311 corrected mechanism — see §10.8).
+- [ ] Task 13 retro committed (includes DQ #311 lessons per §13 Task 13).
+- [ ] §15 validation green at every cargo-relevant gate (Tasks 8a, 8, 9, 11). Task 8 + Task 9 §15 gates use the NARROW probe target: `cargo clippy -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings`.
 - [ ] §16a stories 1-5 all `[done]`.
 - [ ] DQ #291 (split-or-proceed) resolved by advisor at plan-approval time.
+- [ ] DQ #311 (planner-revision self-resolve) recorded in `resolved[]` with `answered_by: "planner"` + commit SHA cited.
 - [ ] PR opened by BM session against `governance-v0`.
 - [ ] CodeRabbit review complete with findings triaged per `feedback_pr_review_triage_pattern.md`.
 - [ ] `/brehon-verify` report at `.claude/PRPs/reports/brehon-conformance-audit-verify.md` shows all stories ✓.
@@ -1820,7 +1953,9 @@ test -f .claude/PRPs/reports/brehon-conformance-audit-retro.md
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Task 8 probe surfaces existing federation-code violations of new clippy.toml entries | LOW | MED | Watchpoint #4 + `feedback_clippy_rerun_after_fix.md`. Worker files `kind: "blocker"` DQ; advisor inserts remediation task BEFORE Task 9. fix-impl-3 closed Finding 6.1 — empirical: no other violations expected, but the probe is the verification. |
+| Task 8 narrow-probe gate surfaces existing federation-code violations of new `disallowed-methods` entries (i.e. an axis-4 violation INSIDE one of the three federation module roots, not yet caught by sibling-diff) | LOW | MED | Watchpoint #4 + `feedback_clippy_rerun_after_fix.md` + `feedback_fix_impl_enumerate_all_callsites.md`. Worker files `kind: "blocker"` DQ; advisor inserts a federation-side remediation task BEFORE Task 9. fix-impl-3 closed Finding 6.1 — empirical: no other federation-side violations expected, but the narrow-probe gate is the verification. **NEW post-DQ #311:** the workspace-allow override means non-federation violations are no longer a risk surface — workspace-wide they remain at allow regardless of fix-impl progress; only the three federation module roots enforce after Task 9 lands. |
+| `Cargo.toml` workspace-allow edit (revised Task 8) lands without the `clippy.toml` side (or vice versa) — partial-write breaks the mechanism | LOW | HIGH | Revised Task 8 specifies SINGLE COMMIT (both files in one commit). The worker MUST stage both changes before commit; partial-commit is a process-discipline error. §15 narrow-probe gate verifies both are present. Worker pre-commit check (per `feedback_fix_impl_pre_push_cargo_check.md`) catches the partial state. |
+| Task 8a's `git rm clippy.toml` lands but revised Task 8 never queued — phase branch left in regression state | LOW | MED | Advisor's §3.1 stage-shape orchestration queues Task 8 immediately after Task 8a's complete signal (cohort sequencing). If advisor session crashes between, the auto-state JSON (`.claude/auto-state/<phase>.json` per `.claude/rules/auto-phase.md` "Resume semantics") records the pending Task 8 dispatch; resume re-queues. |
 | Path resolution `core::option::Option::unwrap_or_default` misses re-exports | MED | LOW | Brief §2.3 ambiguity #1 + planner-lean option (a): ship seed entries; dogfood (Task 7) is integration test. If dogfood reveals miss, follow-up plan tunes paths. |
 | `find-sibling.sh` LSP fallback to Grep+Read produces false negatives on cross-crate sibling search | MED | LOW | LSP path documented as TODO for v1; per §10.4 + Task 3 GOTCHA. Dogfood validates Grep+Read sufficiency on the federation modules (small enough that in-module enumeration is fast). |
 | `rust-analyzer-mcp` install fails (network, cargo registry) | LOW | LOW | Task 10 GOTCHA: install failure does NOT block dogfood; only Story 3. Worker files `kind: "blocker"` DQ; advisor decides whether to ship v1 without LSP-MCP (fully supported by §10.4 fallback). |
@@ -1841,9 +1976,10 @@ Free-form notes the planner wants to surface to the advisor.
 
 ### 19.1 DQ pre-seeds
 
-The planner pre-seeds one DQ entry at plan-commit time:
+The planner pre-seeds one DQ entry at original plan-commit time + self-resolves one at plan-revision-commit time (this revision):
 
-- **DQ #291** (planner, `kind: "blocker"`) — Complexity score 10 split-or-proceed (see §5.2). `answered_by: null`. Advisor resolves at plan approval; planner lean: `proceed`. Committed in a SEPARATE commit alongside the plan file to keep the plan diff clean (commit subject: `chore(decision-queue): pre-seed #291 from planner — brehon-conformance-audit complexity score 10 split-or-proceed`).
+- **DQ #291** (planner, `kind: "blocker"`) — Complexity score 10 split-or-proceed (see §5.2). `answered_by: null`. Advisor resolves at plan approval; planner lean: `proceed`. Committed in a SEPARATE commit alongside the plan file to keep the plan diff clean (commit subject: `chore(decision-queue): pre-seed #291 from planner — brehon-conformance-audit complexity score 10 split-or-proceed`). **Resolved 2026-05-21 — proceed-as-one** (per advisor DQ-resolution in `resolved[]`). The revision recomputes the score to 11; proceed judgement stands (see §5.2).
+- **DQ #311** (advisor, `kind: "blocker"`) — Plan §10.8 + §13 Task 8 + §13 Task 9 mechanism revision (this brief). Self-resolved at plan-revision-commit time by the planner (`answered_by: "planner"`, `answer:` cites this plan-revision SHA + §10.8 corrected mechanism + Task 8a/8/9 revised shapes). Commit subject: `chore(decision-queue): planner self-resolve DQ #311 — brehon-conformance-audit §10.8 + Task 8/8a/9 mechanism revision` (separate commit alongside the plan-revision commit to keep the plan diff clean).
 
 ### 19.2 Open ambiguities surfaced for clarify gate
 
