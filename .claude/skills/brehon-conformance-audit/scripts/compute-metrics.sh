@@ -107,7 +107,7 @@ def compute_metrics(files):
 
     # Aggregate counts across all files
     axis_tp = {a: 0 for a in VALID_AXES}
-    axis_fp = {a: 0 for a in VALID_AXES}  # predictions with no matching ground-truth
+    axis_fp = {a: 0 for a in VALID_AXES}  # human-confirmed false positives only
     axis_fn = {a: 0 for a in VALID_AXES}  # ground-truth entries with no matching prediction
     lead_times = []   # seconds; negative = skill flagged before event (good)
     latent_footgun_count = 0
@@ -116,6 +116,7 @@ def compute_metrics(files):
         predictions = data.get("predictions", [])
         gt_compile = data.get("ground_truth_compile_caught", [])
         gt_runtime = data.get("ground_truth_runtime", [])
+        false_positives = data.get("false_positives", [])
 
         # Per-axis precision/recall counts
         for axis in VALID_AXES:
@@ -126,7 +127,8 @@ def compute_metrics(files):
                 if e.get("axis") == axis
             }
             axis_tp[axis] += len(pred_targets & gt_targets)
-            axis_fp[axis] += len(pred_targets - gt_targets)
+            fp_targets = {e.get("target") for e in false_positives if e.get("axis") == axis}
+            axis_fp[axis] += len(pred_targets & fp_targets)
             axis_fn[axis] += len(gt_targets - pred_targets)
 
         # Lead time: wall-clock between skill run_at and each runtime GT event
@@ -140,7 +142,7 @@ def compute_metrics(files):
             except ValueError:
                 pass
 
-        for gt_entry in gt_runtime:
+        for gt_entry in (gt_compile + gt_runtime):
             sha = gt_entry.get("evidence_commit_sha")
             if sha and run_at:
                 event_date = git_author_date(sha)

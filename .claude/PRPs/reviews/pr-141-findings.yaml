@@ -10,7 +10,7 @@ poll_count: 1
 last_polled_head_sha: 425ab13c8943070cce507f272d99efacee9f491b
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: block
+recommendation: approve
 findings:
 - id: cr-1
   source: coderabbit
@@ -208,8 +208,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: 'Real contradiction in brehon-conformance-audit-impl-10.md: section 4
     constraint #8 says NO cargo-check required but section 5.3 lists cargo-check as
     required. One-line edit per CR diff: align #8 with section 5.3 (workspace cargo-check
@@ -377,8 +377,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: Real wording bug in brehon-conformance-audit.plan.md:1308-1309 GOTCHA
     block. Current text says workspace clippy will STILL fail (exit 101) but the same
     paragraph says the tree returns to no-clippy.toml baseline (where workspace clippy
@@ -457,8 +457,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: Real schema-strictness defect in audit-metrics.schema.json. ground_truth_compile_caught[].items
     + ground_truth_runtime[].items currently accept arbitrary objects; downstream
     compute-metrics.sh assumes concrete fields (axis, target, error_code, source_log
@@ -584,8 +584,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: Real field-name drift between METRICS.md prose (compile_caught[] / runtime[])
     and the schema/script contract (ground_truth_compile_caught[] / ground_truth_runtime[]).
     Future audits will misname fields. One-section sed-replace. CR provides diff.
@@ -612,8 +612,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: 'Real correctness bug in compute-metrics.sh. METRICS.md Rule 4 (Attribution):
     FP = human-confirmed false_positives[] only. Code currently infers FP from prediction
     without GT -- inflates FP, depresses precision. Calibration defect that contradicts
@@ -692,8 +692,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:13Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: Real correctness bug in compute-metrics.sh lead-time loop. METRICS.md
     says lead-time uses BOTH gt_compile + gt_runtime evidence_commit_sha; code iterates
     gt_runtime only. Silent under-count when compile-caught events have evidence_commit_sha.
@@ -723,8 +723,8 @@ findings:
   source: coderabbit
   severity: major
   posted_at: '2026-05-21T12:07:14Z'
-  bucket: fix-in-pr
-  addressed_in: null
+  bucket: done
+  addressed_in: d2c7f9550
   rationale: Real regex defect in find-sibling.sh. Current pattern only matches pub
     fn / async fn / pub async fn; misses pub(crate) fn, const fn, unsafe fn, extern
     C fn -- all common in Lemmy codebase. Will produce false NO_SIBLING_FOUND. CR
@@ -885,8 +885,8 @@ counters:
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 7
-    done: 0
+    open: 0
+    done: 7
     rebutted: 0
     carry_forward: 1
     wont_fix: 0

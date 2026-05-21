@@ -22,7 +22,7 @@ The JSON schema for this file is defined at:
 
 At invocation time the skill writes `predictions[]` — one entry per flagged axis per
 function. After §15 cargo validation, CodeRabbit triage, and any post-merge bug fix, the
-corresponding `compile_caught[]` and `runtime[]` ground-truth fields are mutated by hand
+corresponding `ground_truth_compile_caught[]` and `ground_truth_runtime[]` ground-truth fields are mutated by hand
 (or by the advisor session running `compute-metrics.sh`). This two-phase write is how
 the skill accumulates precision/recall data over time without requiring live compiler
 access from within the skill body.
@@ -34,8 +34,8 @@ Key fields in the per-run record:
 | `run_at` | skill at invocation | immediately |
 | `scope` | skill at invocation | immediately |
 | `predictions[]` | skill per flagged finding | immediately |
-| `compile_caught[]` | advisor / user | after §15 cargo run |
-| `runtime[]` | advisor / user | after CR triage or post-merge fix |
+| `ground_truth_compile_caught[]` | advisor / user | after §15 cargo run |
+| `ground_truth_runtime[]` | advisor / user | after CR triage or post-merge fix |
 | `false_positives[]` | advisor / user | at retro (human verdict required — Rule 4) |
 
 ## Four ground-truth attribution rules
@@ -100,19 +100,19 @@ lead time = wall_clock(skill_run_at) - wall_clock(ground_truth_event_date)
 Negative lead time = the skill flagged the issue before the ground-truth event (good).
 Positive lead time = the skill flagged it after (audit found it late, or as a
 retrospective catch). Reported as median over the corpus. Measured using
-`git log -1 --format=%aI <evidence_commit_sha>` for `compile_caught[]` and `runtime[]`
+`git log -1 --format=%aI <evidence_commit_sha>` for `ground_truth_compile_caught[]` and `ground_truth_runtime[]`
 entries, compared against the `run_at` ISO timestamp in the metrics file.
 
 **Latent-footgun catch rate:**
 
 ```
-latent-footgun catch rate = count(axis-4 predictions where runtime[] exists AND compile_caught[] is empty)
+latent-footgun catch rate = count(axis-4 predictions where ground_truth_runtime[] exists AND ground_truth_compile_caught[] is empty)
 ```
 
 Counts axis-4 findings that the skill caught but the compiler did not. This is the
 headline metric for the skill's value: each non-zero count represents a latent footgun
 that would have survived `cargo check` and reached production. Computed at retro time
-once `compile_caught[]` and `runtime[]` fields are populated.
+once `ground_truth_compile_caught[]` and `ground_truth_runtime[]` fields are populated.
 
 ## Three calibration cadences
 
