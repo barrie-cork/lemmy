@@ -2141,6 +2141,22 @@
       "answer": "Update in Task 3 (option update-comment-in-task-3). Brief amended to add Task 3 IMPLEMENT step (b): replace the existing workaround block with a one-line note explaining that UPDATE-in-place stays valid for historical continuity AND that INSERT-with-newer-valid_from is now also safe post-v1-federation-inbound-c (per DQ #324). Removing entirely (option remove-comment-entirely) loses the audit trail of WHY the existing test uses UPDATE; leaving as-is (option leave-comment-as-historical-context) misleads future test authors who read it and conclude they cannot use INSERT. The update-comment-in-task-3 path preserves both audit trail and accuracy.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 326,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-21T17:30:00Z",
+      "question": "bm-cut Junior #393 finalize-agent deleted runlog file that bm-task wrote via git-plumbing; phase branch on origin lacked the brief-mandated runlog. Two compounding root causes: (a) Junior session PostToolUse hook (likely allow-prp-deliverables.sh) blocked direct Write on .claude/runlog/** forcing bm-task to use git hash-object + update-index plumbing path which wrote to HEAD/index but not working tree; (b) Junior finalize-agent ran git status, saw runlog as deleted in working tree, and committed the deletion (c488963a0) without cross-checking the bm-task assistant message that explicitly listed runlog creation as a delivered item.",
+      "options": [
+        "document-and-defer-structural-fix",
+        "file-as-issue-track-for-immediate-fix",
+        "in-scope-the-hook-edit-now"
+      ],
+      "context": "Worker commit 9df6879a6 (bm-task) created runlog via plumbing; commit c488963a0 (finalize-agent) deleted it; advisor re-applied at 21583e798 from canonical laptop checkout lane worktree at C:/Users/barri/Developer/brehon-fork-fed-in-c. Junior #393 task_logs show no error, no refusal — both bm-task and finalize-agent reported done cleanly. The defect surfaces as a contract breach: brief §2 Phase 4 required runlog; phase branch tip on origin had no runlog until advisor belt-and-braces. Similar class to L14 (post-merge runlog ordering) but different mechanism — index-vs-worktree skew + heuristic deletion.",
+      "answer": "document-and-defer-structural-fix. The fix-now options would require either (1) editing .claude/hooks/allow-prp-deliverables.sh to allow .claude/runlog/** writes (and re-running bm-cut from scratch — re-cut the phase branch), or (2) editing Junior finalize-agent prompt to cross-check assistant deliverables before committing deletions. Both are structural changes worth a dedicated retro decision, not a mid-phase fix. The advisor belt-and-braces re-apply at 21583e798 closes the immediate gap. Retro signals to track: (i) does the same hook block fire on the next bm-task in any lane? — if yes, fix the hook; (ii) does the finalize-agent heuristic produce other false-deletions on tasks with plumbing-path writes? — if yes, harden the finalize prompt. Both go into v1-federation-inbound-c-retro.md §BM signals.",
+      "answered_by": "advisor-self-resolved",
+      "resolved_at": "2026-05-21T17:35:00Z"
     }
   ]
 }
