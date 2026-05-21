@@ -1,5 +1,11 @@
 # Cohort DQ id collision — workers fork next_id from the same phase tip
 
+## Status (post-v1-dq-schema-r1, 2026-05-21)
+
+**Superseded.** The v3 composite-id mechanism (`bash scripts/brehon/dq-v3-new-entry.sh`, shipped in `v1-dq-schema-r1`) structurally eliminates the integer-monotonic race described in this lesson. Each CC session generates its own UUID-prefixed id namespace; collisions between `[P]` cohort workers are arithmetically impossible under v3. The advisor pre-reservation workaround (Option 3 in the Fix status block below) is dead code for any new DQ writes after `v1-dq-schema-r1` ships.
+
+See `.claude/rules/decision-queue.md` `§"Schema (v3)"` and `.claude/rules/multi-lane-worktree.md` `§"Worktree-aware DQ id discipline"` for the canonical v3 id rules.
+
 When the advisor dispatches a parallel cohort under `[P]` markers, every worker forks from the same phase-branch tip simultaneously and each computes `next_id = max(all_ids) + 1` from its **isolated worktree view**. All workers see the same max id at fork time → all workers pick the same next_id → the cohort's DQ entries land with identical ids, and the advisor must renumber on consolidation.
 
 **Why:** The cohort-dispatch protocol (`.claude/rules/advisor-orchestrator.md` §4.1) does pairwise FILES YAML disjointness check (so worker file-writes don't collide) but does NOT check the DQ id space. DQ ids are a **global cross-worker resource**, but the canonical next_id recipe (`.claude/refs/dq-recipes.md` §"Recipe 1") reads only the local worktree's view. Workers cannot see siblings' DQ writes (they haven't been pushed yet at the moment next_id is computed). The id-collision is determined the moment all workers fork.

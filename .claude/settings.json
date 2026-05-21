@@ -53,6 +53,10 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/check-cargo-pipe.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/refuse-ssh-reset-hard-shared-checkout.sh"
           }
         ]
       },

@@ -172,22 +172,13 @@ to (a) switch CWD by closing + reopening Claude Code in
 
 ## Worktree-aware DQ id discipline
 
-Per `.claude/rules/decision-queue.md` "Archive policy" + "Mid-task visibility"
-+ next-id cross-archive rule: when computing `next_id` for a new DQ entry,
-walk:
+Schema-v3 (post-v1-dq-schema-r1) makes cross-lane next_id coordination obsolete. Under schema-v3, each CC session generates its own 12-hex UUID prefix (cached in `.claude/.dq-session-id`) and a per-session monotonic 3-digit sequence counter. Because no two sessions share a UUID prefix, their id namespaces never intersect — the global-monotonic-integer race that required the cross-lane coordination described in the pre-v3 version of this section is structurally eliminated.
 
-```
-- .claude/decision-queue.json (current worktree's view)
-- .claude/decision-queue-archive-*.json (current worktree's view)
-- bash scripts/brehon/git-show-json.sh origin/<other-active-lane> .claude/decision-queue.json (per other active worktree)
-```
+To generate a new DQ entry id, run `bash scripts/brehon/dq-v3-new-entry.sh`. The script reads or creates `.claude/.dq-session-id`, scans the live DQ + archives for the highest sequence in this session, and prints the next composite id (e.g. `a1b2c3d4e5f6-001`). Cross-lane id deduplication is no longer needed for new entries — run the script in any worktree without coordination.
 
-This widens the cross-archive rule to include cross-worktree refs.
-Implementation: `scripts/brehon/resolve-dq-canonical.sh` already supports
-spanning phase-branch + active worker branches; extend it to also walk
-`git worktree list` output and compute `next_id` across all visible refs.
-**Future scope** — for now, advisor sessions manually check the largest id
-across `origin/phase-v1-*` refs before picking next_id.
+Pre-v3 entries retain their original integer `id` and gain `id_v1: <int>` as a back-compat alias added by the `dq-schema-v3-migrate.sh` migration. Citations like "DQ #50" continue to resolve via `id == 50` on legacy entries. The `resolve-dq-canonical.sh` resolver handles mixed int/string id sorts via `str(e['id'])` coercion (Task 3 of v1-dq-schema-r1).
+
+The pre-v3 workaround documented in `feedback_cohort_dq_id_collision.md` (advisor pre-reserving N DQ ids before cohort dispatch) is now superseded by the v3 composite-id mechanism. That lesson's `## Status` section marks it accordingly. Pre-reservation stubs from pre-v3 cohorts remain as historical entries; no cleanup required.
 
 ## PMD is cross-lane shared, NOT per-lane isolated
 

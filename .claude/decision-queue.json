@@ -2524,7 +2524,7 @@
       "failed_commands": [
         "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
       ],
-      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails. [SUPERSEDED by PR #141 merge 2026-05-21T18:35:18Z (7cfc21c23); phase shipped; entry moved pending[]→resolved[] for hygiene 2026-05-21T20:30Z.]",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z",
       "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]",
@@ -2750,6 +2750,80 @@
       "approved_at": null
     },
     {
+      "id": 338,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-21T20:16:59Z",
+      "question": "Junior daemon reset governance-v0 to origin/phase-v1-federation-inbound-c immediately after finalize-merging task #399's plan commit — investigate root cause and harness fix.",
+      "options": [
+        "option-a: investigate /opt/junior-src/src/daemon/executor.ts finalize-merge code path to find the wrong-ref reset; file structural fix",
+        "option-b: track as recurrence-class only; file lesson; investigate when second occurrence surfaces"
+      ],
+      "context": "Task #399 (planning v1-dq-schema-r1) status=succeeded 2026-05-21T19:55:37Z. Worker branch finalize-merged into daemon-local governance-v0 as merge commit 2ad835aa4 (reflog @{1}). Immediately after, daemon-local governance-v0 was reset to origin/phase-v1-federation-inbound-c (reflog @{0}: 'reset: moving to origin/phase-v1-federation-inbound-c'). This destroyed the plan-merge AND set governance-v0 to a non-trunk phase branch's tip. Plan commit b1a6553b8 became unreachable; recovered via cherry-pick on EliteDesk (c02dc8617) then push to recovery/v1-dq-schema-r1-plan and pull-cherry-pick on laptop (f746a00b9). The bug class is: daemon's finalize step issued an unintended 'git reset --hard origin/phase-v1-federation-inbound-c' or equivalent on governance-v0. Worktree may have been wedged between trunk and the active phase branch; finalize's branch-restore step picked the wrong ref. RECURRENCE: this could refire on any planning task that finalizes while fed-in-c (or any future phase) is active.",
+      "answer": "RESOLVED via option-b 2026-05-22. SHIPPED: PreToolUse Bash hook .claude/hooks/refuse-ssh-reset-hard-shared-checkout.sh — refuses `ssh ...homeserver \"...git reset --hard origin/<phase-or-trunk>\"` against /srv/brehon-fork (the shared daemon checkout). Exit 2 with fix-message recommending `git update-ref refs/heads/<branch> origin/<branch>` instead. Wired in tracked .claude/settings.json PreToolUse Bash matcher alongside check-cargo-pipe.sh (so it activates in every lane without per-lane configuration). Escape hatch: BREHON_ALLOW_SSH_RESET_HARD=1 for conscious opt-in. Dogfooded in 7 test cases: (1) offending pattern → exit 2 with fix message; (2) update-ref pattern → exit 0; (3) local git reset --hard (not ssh) → exit 0; (4) ssh reset to a SHA (not origin/) → exit 0; (5) ssh reset --hard origin/governance-v0 → exit 2; (6) escape hatch → exit 0; (7) ssh to a different path → exit 0. Companion deliverables: lesson feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md rewritten under correct RCA on 2026-05-22 (commit 8a392f217); feedback_phase_lane_worktree_bootstrap_checklist.md step 11 added (programmatic verification that the tracked hook is wired); .claude/hooks/README.md inventory updated. The structural defence is now in place; the silent destructive-reset bug class is converted to a loud refusal.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T23:39:23Z",
+      "notes": " [advisor recommendation appended 2026-05-21T20:30Z; user-relay pending] [RCA revised 2026-05-22T01:00Z based on sub-agent forensics — original daemon-finalize hypothesis falsified; true vector is lane-agent ssh-reset against shared daemon checkout; lesson body rewritten; awaiting user pick on a/b/c] [RESOLVED option-b 2026-05-22T23:39Z; hook + lesson + bootstrap-checklist + README shipped; commit 8a392f217 (lesson rewrite + RCA mutation) + pending commit (hook + wiring + checklist + README).]",
+      "id_v1": 338,
+      "approved_by": "user",
+      "approved_at": "2026-05-21T23:39:23Z"
+    },
+    {
+      "id": 339,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:36:15Z",
+      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-2-rules-recipes-lessons-agent-contracts-v3-aware-track-b-see-claude-p-401",
+      "phase_task": 2,
+      "commands": [
+        "grep -c '^## Schema (v3)' .claude/rules/decision-queue.md",
+        "grep -c '^## Schema (v2)' .claude/rules/decision-queue.md",
+        "grep -c 'dq-v3-new-entry.sh' .claude/refs/dq-recipes.md",
+        "grep -c 'Schema-v3 (post-v1-dq-schema-r1) makes cross-lane next_id coordination' .claude/rules/multi-lane-worktree.md",
+        "grep -c '^## Status (post-v1-dq-schema-r1' .claude/lessons/feedback_cohort_dq_id_collision.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/planning.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/impl-task.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/bm-task.md",
+        "grep -c '^## DQ schema-v3' .claude/agents/ci-watcher.md",
+        "grep -c 'never write a non-null .approved_by. from this' .claude/agents/planning.md"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 10 §15.2 grep-audit commands pass on laptop checkout (governance-v0 @ 9f7ba68bb post-cohort-merge). Schema (v3) §appended after Schema (v2) §; v2 preserved. dq-v3-new-entry.sh referenced 2x in dq-recipes.md (Recipe 1 + Recipe 2 Step A both swapped). multi-lane-worktree.md Worktree-aware DQ id discipline section replaced with v3-obsoletion text. feedback_cohort_dq_id_collision.md gained Status: superseded note. All 4 agent files (planning, impl-task, bm-task, ci-watcher) have DQ schema-v3 (post-v1-dq-schema-r1) § appended. Hard refusal text ('never write a non-null approved_by from this') present in planning.md.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T22:59:11.152522Z",
+      "id_v1": 339,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": 340,
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-21T21:52:20Z",
+      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
+      "branch": "phase-v1-federation-inbound-c",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
+      ],
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
+      ],
+      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
+      "answer": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 passed. cargo test --workspace --features full --test e2e finished in 2171.42s (36m 11s). Test result: 103 passed; 0 failed; 5 ignored; 0 measured. All 6 fed-in-b fixtures pass including the new appended_config_override_takes_effect_returns_429 (proves Task 1's .order_by(valid_from.desc()) makes append-history INSERT-with-newer-valid_from overrides effective). 5 ignored tests are pre-existing v0-polish TODOs (GH issues #42, #43, #45) — NOT phase regressions. E2E_EXIT_0 confirmed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T22:33:17Z",
+      "id_v1": 340,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": "9ee605cdfe49-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -2778,28 +2852,30 @@
       "notes": " [renumbered from int-id 339 on forward-merge gov-v0 -> phase-v1-federation-inbound-c (post-v3 migration; gov-v0 #339 = v1-dq-schema-r1 Task 2 grep-audits, this entry = fed-in-c Task 3 e2e regression validate); id_v1 set to null per design]"
     },
     {
-      "id": 340,
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-21T21:52:20Z",
-      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
-      "branch": "phase-v1-federation-inbound-c",
-      "phase_task": 3,
+      "id": "ae5ff4ec3e8c-001",
+      "id_v1": null,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:29:54Z",
+      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-1-migration-new-entry-scripts-live-dq-migration-track-a-see-claude-prps-400",
+      "phase_task": 1,
       "commands": [
-        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
+        "bash -n scripts/brehon/dq-schema-v3-migrate.sh",
+        "bash -n scripts/brehon/dq-v3-new-entry.sh",
+        "bash scripts/brehon/dq-schema-v3-migrate.sh --dry-run --file .claude/decision-queue.json",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert d['schema_version']==3; print('schema_version OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); [e['id_v1'] for e in d['pending']+d['resolved']]; print('id_v1 OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert all('approved_by' in e and 'approved_at' in e for e in d['pending']+d['resolved']); print('approved_* OK')\"",
+        "rm -f .claude/.dq-session-id && bash scripts/brehon/dq-v3-new-entry.sh",
+        "test -f .claude/.dq-session-id && grep -E '^[a-f0-9]{12}$' .claude/.dq-session-id && echo 'session-id OK'",
+        "grep -F '.claude/.dq-session-id' .gitignore"
       ],
-      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "options": [
-        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
-      ],
-      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
-      "answer": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 passed. cargo test --workspace --features full --test e2e finished in 2171.42s (36m 11s). Test result: 103 passed; 0 failed; 5 ignored; 0 measured. All 6 fed-in-b fixtures pass including the new appended_config_override_takes_effect_returns_429 (proves Task 1's .order_by(valid_from.desc()) makes append-history INSERT-with-newer-valid_from overrides effective). 5 ignored tests are pre-existing v0-polish TODOs (GH issues #42, #43, #45) — NOT phase regressions. E2E_EXIT_0 confirmed.",
+      "answer": "All 9 §15 commands pass on laptop checkout (governance-v0 @ 9f7ba68bb post-cohort-merge). bash -n both new scripts exit 0; migration --dry-run prints 'already v3 — no-op' exit 0 (idempotent); schema_version == 3; all 133 entries have id_v1 key (one v3-native ae5ff4ec3e8c-001 has id_v1=null per design); all entries have approved_by + approved_at; new-entry helper round-trip works (a3d0e9941441-001 returned, session-id cached); .gitignore entry present. Task 1 deliverables verified end-to-end.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T22:33:17Z",
-      "id_v1": 340,
+      "resolved_at": "2026-05-21T22:59:11.152522Z",
       "approved_by": null,
       "approved_at": null
     }

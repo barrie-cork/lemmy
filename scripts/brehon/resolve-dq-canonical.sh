@@ -23,6 +23,15 @@
 #   The canonical answer: phase-DQ ⋃ all open worker-DQs, deduped by
 #   entry id, worker-branch wins on collision (most recent).
 #
+# Schema-v3 note (post-v1-dq-schema-r1, 2026-05-21):
+#   Pre-v3 entry ids are integers; v3 native entries use composite
+#   `<session_id>-<seq>` strings (see .claude/rules/decision-queue.md
+#   §Schema (v3)). The dedup-by-id + sort keys below coerce via
+#   `str(e['id'])` so mixed int/str ids sort deterministically without
+#   a TypeError. Migration adds `id_v1: <int>` as a back-compat alias
+#   on pre-v3 entries; the resolver does NOT use `id_v1` for dedup —
+#   only the canonical `id` field, coerced to str.
+#
 # Usage:
 #   ./scripts/brehon/resolve-dq-canonical.sh <phase>
 #
@@ -176,8 +185,8 @@ for eid in list(existing_pending.keys()):
         del existing_pending[eid]
 
 acc['_canonical_sources_consulted'] = sorted(sources)
-acc['pending'] = sorted(existing_pending.values(), key=lambda e: e['id'])
-acc['resolved'] = sorted(existing_resolved.values(), key=lambda e: e['id'])
+acc['pending'] = sorted(existing_pending.values(), key=lambda e: str(e['id']))
+acc['resolved'] = sorted(existing_resolved.values(), key=lambda e: str(e['id']))
 acc['schema_version'] = max(
     acc.get('schema_version', 1),
     src.get('schema_version', 1),

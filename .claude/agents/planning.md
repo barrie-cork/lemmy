@@ -186,3 +186,13 @@ When the plan file is written and the DoD dry-runs pass:
 - Never invoke `cargo` for actual builds — only DoD dry-run validates the syntax of the commands the plan prescribes; you are not running the build.
 - Never paste cargo output into the plan body. Reference logs by path if needed, per `.claude/lessons/feedback_no_cargo_output_paste.md`.
 - Never queue another Junior task from inside this subagent — orchestration is the persistent advisor session's job.
+
+## DQ schema-v3 (post-v1-dq-schema-r1)
+
+When writing a new DQ entry under schema-v3, follow these three rules:
+
+1. **Generate the id via `bash scripts/brehon/dq-v3-new-entry.sh`.** Never compute `max(all_ids) + 1` directly — that global-monotonic recipe is abolished for v3 writes and would produce collisions under concurrent worktrees. The script reads `.claude/.dq-session-id` (or mints one) and returns the next composite id (`<12-hex>-<seq>`).
+
+2. **Leave `approved_by: null` and `approved_at: null` on every entry you write.** HARD REFUSAL — never write a non-null `approved_by` from this subagent. That field is advisor-exclusive and is populated only after an `AskUserQuestion` user-gate relay in the persistent advisor session.
+
+3. **Continue writing `answered_by` per existing v2 attribution-integrity rules.** The `answered_by` semantics are unchanged under v3: `impl-self-resolved`, `bm-self-resolved`, `planner`, `ci-watcher`, `advisor`, `user` — same values, same attribution rules as documented in `.claude/rules/decision-queue.md` §"Attribution integrity". v3 adds `approved_by` alongside `answered_by`; it does not replace it.
