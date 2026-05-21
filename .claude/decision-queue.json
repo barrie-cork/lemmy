@@ -1,28 +1,6 @@
 {
   "schema_version": 2,
-  "pending": [
-    {
-      "id": 326,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T06:02:37Z",
-      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
-      "phase_task": 8,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
-      ],
-      "result": "fail",
-      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
-      "failed_commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
-      ],
-      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T06:08:27Z",
-      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -2163,6 +2141,27 @@
       "answer": "Update in Task 3 (option update-comment-in-task-3). Brief amended to add Task 3 IMPLEMENT step (b): replace the existing workaround block with a one-line note explaining that UPDATE-in-place stays valid for historical continuity AND that INSERT-with-newer-valid_from is now also safe post-v1-federation-inbound-c (per DQ #324). Removing entirely (option remove-comment-entirely) loses the audit trail of WHY the existing test uses UPDATE; leaving as-is (option leave-comment-as-historical-context) misleads future test authors who read it and conclude they cannot use INSERT. The update-comment-in-task-3 path preserves both audit trail and accuracy.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 326,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T06:02:37Z",
+      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      ],
+      "result": "fail",
+      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
+      "failed_commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      ],
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
     },
     {
       "id": 327,
