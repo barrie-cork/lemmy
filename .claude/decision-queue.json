@@ -2055,6 +2055,24 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T09:15:00Z",
       "context": "Advisor-driven dogfood per plan §13 Task 10 GOTCHA (runs on laptop). Discovered + fixed Task 7 regression in-cycle."
+    },
+    {
+      "id": 321,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:25:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 13,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 13 retro authored advisor-side. 3 canonical H2 headers (What surprised us / What to change / What to carry forward), per-role signals, complexity score table for Tasks 1-13, decisions to revisit, 3 new lessons promoted (advisor_authoring_under_daemon_stress, worker_hang_post_dq_raise, cross_lane_daemon_ref_contamination). 2 harness gaps flagged for v1-rls-r2. cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:25:00Z",
+      "context": "Terminal retro for v1-rls-r1; phase ready for bm-pr next."
     }
   ]
 }
