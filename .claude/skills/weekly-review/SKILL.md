@@ -92,6 +92,20 @@ Group results by the actionable advice they describe (semantic similarity, not e
 
 Skip this step on server repos (lessons are only written on TH via /reflect).
 
+### 2c. Retro-harvest sweep
+
+**Why:** The harvest tier (`.claude/skills/retro-harvest/SKILL.md`) surfaces unchecked proposals from session retros and sub-phase retros. Before this sub-phase, the skill ran ad-hoc — leaving ~48 unchecked proposals accumulated across 52 retro files (per RLS-PMD review §4.6 evidence) and 7-day-before-loss anti-patterns. Folding it into weekly cadence guarantees the harvest tier runs at the same rhythm as backfill and sync.
+
+1. Glob `.claude/PRPs/reports/*.md` filtered to mtime within last 7 days.
+2. For each retro: Read the §"What to change" + §"Decisions to revisit" sections.
+3. Extract proposals NOT yet promoted to `.claude/lessons/` OR `CLAUDE.md` (check by grepping lesson filenames + canonical pattern text against the proposal verbatim quote).
+4. Write a single weekly artifact at `.claude/harvest/<iso-week>.md` with proposals enumerated, each as a `(retro-source: <path>, proposal-text: <verbatim quote>, ground-truth-evidence: <if any>)` triple.
+5. **SURFACING, not auto-promoting** — manual review thereafter per the RLS-PMD review §4.6 contract. Promotion to `.claude/lessons/` or `CLAUDE.md` is a human decision, not an automated step.
+
+**Output path:** `.claude/harvest/<iso-week>.md` is gitignored (per `.gitignore`; see Task 5). Runtime-journal semantics — summary lands in the weekly-review report; harvest files prune after N weeks (planner-time choice; see §19.1 pre-seed #2).
+
+**Invoke-by-reference:** `.claude/skills/retro-harvest/SKILL.md` contains the full sweep and currency-triage logic (STALE/LIVE/SUPERSEDED). This Step 2c is the cadence call point — invoke the retro-harvest skill here for the complete sweep procedure.
+
 ### 3. Aggregate eval metrics
 
 Search for eval memories from the past 7 days:

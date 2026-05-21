@@ -2,7 +2,7 @@
   "schema_version": 2,
   "pending": [
     {
-      "id": 308,
+      "id": 326,
       "from": "impl",
       "kind": "validate-pending-laptop",
       "timestamp": "2026-05-21T06:02:37Z",
@@ -19,7 +19,8 @@
       ],
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T06:08:27Z"
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]"
     }
   ],
   "resolved": [
@@ -1321,6 +1322,21 @@
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
+      "id": 276,
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T00:00:00Z",
+      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
+      "options": [
+        "split",
+        "proceed"
+      ],
+      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
+      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
+      "answered_by": "user",
+      "resolved_at": "2026-05-19T00:00:00Z"
+    },
+    {
       "id": 277,
       "from": "planner",
       "kind": "log",
@@ -1346,21 +1362,6 @@
       ],
       "answer": "Per-type, alongside impl Activity in each publish_{sanction_notice,trust_attestation,label}.rs (Tasks 5/6/7), NOT co-located in inbox.rs next to the trait definition. Rationale: per-type code stays with the per-type file; PublishTrustAttestation's per-actor rate-limit override reads typed protocol fields (subject URL) naturally co-located; Rust orphan rule satisfied (trait + types both in lemmy_apub_activities); the 3 patches stay disjoint so the [P] cohort dispatch is preserved. planner-self-resolved per .claude/agents/planning.md Output discipline; transcribed by advisor from plan section 19.2.",
       "answered_by": "planner-self-resolved",
-      "resolved_at": "2026-05-19T00:00:00Z"
-    },
-    {
-      "id": 276,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T00:00:00Z",
-      "question": "Complexity score 14 exceeds Sonnet threshold 8 — split v1-federation-inbound-b into -b-1 (Tasks 1-4) + -b-2 (Tasks 5-9) + retro, or proceed as one plan?",
-      "options": [
-        "split",
-        "proceed"
-      ],
-      "context": "First HTTP-path sub-phase in the federation-inbound v1 track. Brief section 0 names -b as one atomic deliverable (HTTP-path enforcement layer; the wrapper + its 5 check helpers are one logical chokepoint and must not be fragmented from each other per brief section 4.1). Dominant factors: 9 impl tasks (+4), 7 crates touched (+7), e2e (+3). fed-in-a precedent at score 13 shipped proceed-as-one with no operational regret. Clean split seam if mandated: -b-1 = Tasks 1-4 (error variants + mapper + protocol attrs + persist_failed const + wrapper/helpers/trait/label-handler/storage-cap in inbox.rs); -b-2 = Tasks 5-9 (per-handler patches + replay-cleanup cron + fixture update + handler-e2e). Both halves of the atomic wrapper+helpers chokepoint stay in -b-1. Planner lean: proceed.",
-      "answer": "proceed (user-selected via advisor AskUserQuestion 2026-05-19, User Gate 1 plan-approval). Proceed as ONE plan — v1-federation-inbound-b ships as a single atomic deliverable; do NOT split into -b-1/-b-2. Rationale (user-ratified, matches planner lean): fed-in-a precedent at complexity score 13 shipped proceed-as-one with zero operational regret; brief section 4.1 mandates the wrapper + 5 check helpers stay ONE atomic chokepoint that must never be fragmented; the clean split seam (Tasks 1-4 / Tasks 5-9) was offered and declined. Advisor proceeds to bm-cut (creates phase-v1-federation-inbound-b) then impl per the section-16a cohort structure (Tasks 1-3 [P] / Task 4 barrier / Tasks 5-7 [P] / Tasks 8-9).",
-      "answered_by": "user",
       "resolved_at": "2026-05-19T00:00:00Z"
     },
     {
@@ -1433,21 +1434,6 @@
       "resolved_at": "2026-05-19T15:01:06Z"
     },
     {
-      "id": 284,
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-19T19:45:00Z",
-      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
-      "options": [
-        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
-        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
-      ],
-      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
-      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-19T20:07:22Z"
-    },
-    {
       "id": 283,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -1466,6 +1452,21 @@
       "answer": "All 3 laptop-side §15 cargo commands GREEN on lane fix-impl-3 tip 4a60667c9 (post fix-impl-1 Task-4 compile fix + fix-impl-2 dead_code #[expect] chain + fix-impl-3 Finding-6.1 Phase-6 Sibling-B hard-error mirror). cargo-check --workspace --features full: FI3R_CHECK_EXIT_0 (0 errors/warnings). cargo-clippy --workspace --features full --no-deps -D warnings: FI3R_CLIPPY_EXIT_0 (0 findings, no unfulfilled_lint_expectations — fix-impl-2 #[expect(dead_code)] annotations still satisfied alongside fix-impl-3). cargo-test --workspace --test e2e --features full --no-run: FI3R_TESTNORUN_EXIT_0 (Finished test profile 5m02s, e2e binary built e2e-4ed9c75189048398.exe). Task 4 (§16a Story 2 enforcement core) §15 gate fully satisfied. (advisor-laptop, 2026-05-19T20:44:53Z)",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-19T20:44:53Z"
+    },
+    {
+      "id": 284,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-19T19:45:00Z",
+      "question": "fix-impl-2 dead_code chain-pruning: brief §2.3 specified 6 #[expect(dead_code)] but only 2 items are ROOT-dead (rate_per_actor_counts + wrap_governance_inbound, zero callers anywhere). The other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are referenced INSIDE wrap_governance_inbound's body/where-clause — Rust's dead_code lint fires only on the ROOT uncalled item, not transitive callees; once the root wrap_governance_inbound is #[expect]'d, the 4 are no longer reported so #[expect] on them = unfulfilled_lint_expectations (hard error -D warnings). workspace allow_attributes=deny blocks #[allow]. Option A: advisor re-runs §15 cargo-clippy on laptop from a COLD build — if laptop also shows only 2 dead_code (consistent with worker's correct analysis), accept the committed 3-edit fix as fix-impl-2-complete and Task 4 §15 green. Option B: laptop cold build genuinely still shows 4 extra dead_code — author fix-impl-2b with a different strategy.",
+      "options": [
+        "option-a: advisor re-runs §15 cargo-clippy from cold build on laptop lane; if laptop agrees only 2 are dead_code, accept the committed 3-edit fix as complete for fix-impl-2",
+        "option-b: laptop cold-rebuild still shows 4 extra dead_code — advisor authors fix-impl-2b with alternative approach (cfg-gate / dummy caller / reorganize callers into a live fn)"
+      ],
+      "context": "TRANSCRIBED by advisor from worktree-root FI2_BLOCKER_DQ.json (Junior #338 hit the .claude/** sensitive-file gate per DQ #235 so escalated via FI2_BLOCKER_DQ.json + FI2_ESCALATION.md at /srv/brehon-fork root). Worker pre-push gates GREEN on Linux/EliteDesk: FI2_CLIPPY_EXIT_0 + FI2_CHECK_EXIT_0 (.claude/PRPs/debug/fed-in-b-fi2-clippy-v2.log / fed-in-b-fi2-check-v2.log). Worker committed 3 edits to crates/apub/activities/src/governance/inbox.rs (f01a1d44e; daemon finalize-merge 45374097b, FF-lossless verified by advisor, FF'd into lane worktree): (1) #[expect(dead_code,reason=...)] on rate_per_actor_counts @L470 (verified zero refs in wrap_governance_inbound body — genuinely root-dead), (2) #[expect(dead_code,reason=...)] on wrap_governance_inbound @L485 (root-dead, callers=Cohort B), (3) .unwrap_or_else(std::sync::PoisonError::into_inner) @~L548 (redundant-closure fix). Advisor independently VERIFIED the worker's claim: rate_per_peer_counts@545, current_hour_bucket@543, log_inbox_drop@512/527/554/583/602, GovernanceInboundActivity@493(where-bound) ARE all inside wrap_governance_inbound's body — the worker's chain-pruning diagnosis is technically correct. ROOT CAUSE = advisor brief defect: §2.3 self-contradicted §2.2 (which correctly stated the root-only rule + applied it to exclude evict_oldest_unreviewed_if_needed, but §2.3 then listed all 6). The original reval clippy log showed 6 errors because nothing was suppressed yet (pre-suppression chain state — NOT stale cache). Brief §4.5 capped at 7 edits / 8th → STOP+blocker; worker correctly stopped at the 3 that compile-clean. lane tip 45374097b; origin/phase still 5f155307e (daemon did NOT push). Advisor §15 cold re-run is the resolution gate.",
+      "answer": "option-a CONFIRMED. Advisor re-ran §15 cargo-clippy --workspace --features full --no-deps -- -D warnings on the laptop lane worktree (tip cee6b917c) with a from-scratch recompile of lemmy_apub_activities (inbox.rs source-change invalidated the crate fingerprint → full re-lint of the crate + all reverse-deps through lemmy_server, 3m06s). Result: FI2COLD_CLIPPY_EXIT_0, ZERO findings (no error/warning/dead_code/unfulfilled_lint_expectations lines anywhere in the log). The laptop's clippy AGREES with the worker's analysis: only rate_per_actor_counts + wrap_governance_inbound are root-dead and correctly carry #[expect(dead_code)] (0 unfulfilled — the expectations ARE met); the other 4 (GovernanceInboundActivity trait, rate_per_peer_counts, current_hour_bucket, log_inbox_drop) are transitive callees of the now-suppressed root wrap_governance_inbound and are correctly NOT reported (Rust dead_code fires only on the root uncalled item). The original §15-reval 6-count (tip cdff6f09d, bg beleyxn8f) was PRE-suppression chain state — not stale cache — exactly as the worker's chain-pruning diagnosis predicted. fix-impl-2 is COMPLETE with the worker's committed 3 edits (f01a1d44e: #[expect(dead_code,reason=...)] @rate_per_actor_counts L470 + @wrap_governance_inbound L485 + .unwrap_or_else(std::sync::PoisonError::into_inner) @L548); no fix-impl-2b needed. ROOT CAUSE of this blocker = advisor brief defect (fix-impl-2 brief §2.3 listed all 6 items, self-contradicting its own §2.2 which correctly stated the root-only rule and applied it to exclude evict_oldest_unreviewed_if_needed). The worker correctly hard-refused the defective brief, applied the 2 that compile-clean + the closure fix, ran pre-push clippy+check GREEN on Linux, and raised this precise blocker rather than forcing a broken build — four-role model working as designed. Filed for retro: advisor fix-impl-brief authoring needs the same canonical-sibling/self-consistency rigor as plan §10.x stubs (compounds the §10.4-MIRROR-gap finding in project_phase6_convention_divergence_class.md). Task 4 §15 clippy gate GREEN; remaining check + e2e --no-run re-confirmed separately on cee6b917c. DQ #283 (validate-pending-laptop ptask=4) stays pending until fix-impl-3 (Finding 6.1) lands + its §15 passes — that is Task 4's LAST §15 run. (advisor, 2026-05-19)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-19T20:07:22Z"
     },
     {
       "id": 285,
@@ -1668,404 +1669,503 @@
     },
     {
       "id": 296,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T16:45:46Z",
-      "question": "validate phase-brehon-conformance-audit task 1 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-1-retry-skill-md-skeleton-see-claude-prps-briefs-brehon-conformance-356",
-      "phase_task": 1,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task1-check.log 2>&1; echo exit: $?"
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where does the new retro-harvest step land in `.claude/skills/weekly-review/SKILL.md`? Current numbering already has Steps 1, 1b, 2, 2b, 3 (Aggregate eval metrics), 4 (Git hygiene), 5 (Summary), 6 (Commit). The brief calls it 'Step 3 addition' but Step 3 is taken.",
+      "options": [
+        "Insert as new Step 2c. Retro-harvest sweep (between current 2b lesson clustering and 3 eval metrics aggregation) — keeps existing Step 3+ numbering intact.",
+        "Renumber existing Steps 3-6 to 4-7 and insert as new Step 3 — large-blast-radius cascade through SKILL.md.",
+        "Append as Step 4.5 / 5b / similar — orphan numbering."
       ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "cargo-check --workspace --features full passed (6m 39s, exit 0). Workspace builds cleanly on phase tip 217534a7d. SKILL.md skeleton is meta-tooling only (no Rust changed); compile is a no-op invariant check confirming no accidental breakage of trunk. Log: .claude/PRPs/debug/brehon-conformance-audit-task1-check.log",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-20T16:56:29Z"
+      "context": "Read .claude/skills/weekly-review/SKILL.md lines 17-148. Step numbering is: 1, 1b, 2, 2b, 3, 4, 5, 6 (with the `1b PMD embedding backfill` already inserted between 1 and 2 as a sub-step). The 2b 'Lesson clustering (TH only)' step is conceptually the closest sibling to retro-harvest — both are 'promotion-candidate surfacing' operations against the lesson/retro corpus, not eval-metric aggregation. The brief's §2.1 Track B Task 4 wording ('add Step 3') is incorrect as written.",
+      "answer": "Option 1 — insert as Step 2c. Retro-harvest sweep between current Step 2b (Lesson clustering) and Step 3 (Aggregate eval metrics). Rationale: the harvest sweep is conceptually a 'promotion-candidate surfacing' operation analogous to 2b lesson clustering (semantic search-driven; outputs go to a promotion-candidates artifact, not the metrics roll-up); placing it adjacent to 2b preserves the SKILL.md's existing Steps 3-6 numbering verbatim (zero cascade). The brief is edited in place to fix the 'Step 3 addition' wording to 'Step 2c. Retro-harvest sweep'. Per .claude/skills/weekly-review/SKILL.md lines 67-93 (Steps 2 + 2b) and lines 95-117 (Step 3 + 4).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     },
     {
       "id": 297,
       "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-20T17:00:13Z",
-      "question": "Plan brehon-conformance-audit Cohort 2 has circular requires: (Task 6 requires Tasks 4 + 5, both in same cohort). Per advisor-orchestrator.md §4.1 step 4a: cohort refused. How to resolve?",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief's §2.3 ambiguity #4 + Track C Task 7 names `last_assistant_message_hash` as a field on `retro_bypass` JSONL entries. But `retro-check.sh` (.claude/hooks/retro-check.sh lines 17-25) only reads `CLAUDE_PROMPT` env var — the user prompt that triggered Stop. The hook does NOT receive the last assistant message text. The field name is structurally wrong.",
       "options": [
-        "planner-revise-cohort-line",
-        "advisor-splits-into-2a-2b-without-plan-edit",
-        "bundle-tasks-4-5-6-into-single-junior-task"
+        "Rename to `prompt_hash` (SHA-256 of CLAUDE_PROMPT, truncated to 16 hex chars) — uses data the hook genuinely has access to.",
+        "Add a Claude-Code-hooks-API call to retrieve the last assistant message — adds complexity; may not be supported in Stop hook context.",
+        "Drop the message-trail field entirely — the (session_id, attempt_count, branch_at_fail_open) triple alone is the trail."
       ],
-      "context": "Plan §13 (line 693) declares: Cohort 2 (parallel [P]): Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML (line ~1078) requires: [4, 5]. Tasks 4 + 5 are both in Cohort 2 with [P] markers and are NOT yet on phase-brehon-conformance-audit. Per feedback_cohort_validation_dependency_check.md and v1-RT-r1 halt-retro precedent (commit ffa2876e3), circular requires within a cohort is a structural error. Advisor cannot dispatch this cohort. User decision 2026-05-20: catch-fire + plan revision (option chosen via AskUserQuestion). Recommended path: queue planning Junior task to revise plan §13 Cohort 2 line + Task 6 placement (either move Task 6 out of [P] to a new Cohort 2.5 serial step, or bundle 4+5+6 into one task). Cohort 1 (Task 1) is complete + validated; no rework needed there.",
-      "answer": "planner-revise-cohort-line. User decision 2026-05-20 (AskUserQuestion): Catch-fire + plan revision (Fix A: split into Cohort 2 + 2.5). Brief authored at .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md (commit 8a38e07b7). Planning Junior #357 hit DQ #298 (CC sensitive-file gate on Edit for .claude/PRPs/plans/**); resolution chained via #298.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-20T17:40:11Z"
+      "context": ".claude/hooks/retro-check.sh line 20 reads `PROMPT=\"${CLAUDE_PROMPT:-}\"`. There is no `CLAUDE_ASSISTANT_MESSAGE` or similar in the hook's environment. The Anthropic hook reference says Stop-hook receives a JSON input on stdin but it is not currently parsed by this hook script. Adding hook-stdin parsing for the assistant message would change the script's surface significantly and the brief's Watchpoint #7 says Track C Task 7 must be ADDITIVE only.",
+      "answer": "Option 1 — rename the field to `prompt_hash` (SHA-256 of CLAUDE_PROMPT truncated to 16 hex chars). Rationale: (a) the hook already reads CLAUDE_PROMPT at line 20; (b) the same prompt firing N consecutive Stop attempts is a STRONG suspect-loop signal — even better than the assistant-message variant for loop-detection (the user prompt is the loop input). The brief is edited in place: §2.3 ambiguity #4 closed; §2.1 Track C Task 7 field list updated to `prompt_hash` (with the SHA-256 truncation rule); Watchpoint #7's ADDITIVE-only constraint upheld. Per .claude/hooks/retro-check.sh line 20 + Anthropic hooks reference (Stop-hook event env vars).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     },
     {
       "id": 298,
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-20T17:07:24Z",
-      "question": "Planning Junior task [role:planning] brehon-conformance-audit re-plan Cohort 2 split cannot Edit .claude/PRPs/plans/brehon-conformance-audit.plan.md — Edit tool denied four times with 'sensitive file'. Junior-worker .claude/settings.json allow-list (broadened in 725984c84) covers .claude/{skills,lessons,rules,PRPs/audit-metrics,PRPs/reports,PRPs/briefs}/** but explicitly OMITS .claude/PRPs/plans/**. Brief planning-2.md §2 authorizes editing this single file (sole deliverable). How to proceed?",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief Track A Task 1's spec doc lives at `.claude/PRPs/specs/mcp-write-time-embedding.md` — a NEW directory. Does `.claude/PRPs/specs/` exist with an existing pattern (e.g. README, prior specs) the planner should mirror, or is this brand-new infrastructure the planner establishes?",
       "options": [
-        "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task",
-        "advisor-authors-the-three-edits-from-canonical-checkout-and-commits-on-phase-branch-bypassing-planner-Junior",
-        "advisor-cherry-picks-a-prepared-patch-onto-phase-branch-from-this-worker-branch"
+        "Directory does not exist — planner establishes it AND writes a 5-line README.md documenting purpose for future specs to mirror.",
+        "Directory exists with prior specs — planner mirrors existing pattern.",
+        "Reroute the spec doc to `docs/research/` to avoid establishing new infrastructure."
       ],
-      "context": "Task: '[role:planning] brehon-conformance-audit re-plan Cohort 2 split'. Brief .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md §2 Scope: 'Edit one file only: .claude/PRPs/plans/brehon-conformance-audit.plan.md.' Four consecutive Edit attempts on the plan file ALL denied: 'Claude requested permissions to edit ... which is a sensitive file.' Per circuit-breaker.md (max 2 retries, then stop) and no-destructive-defaults.md (\"fix the underlying issue rather than bypassing\"): NOT bypassing via Bash+python/sed for the plan file (plans/** is NOT on settings.json allowlist, so bypass would be unauthorized writes). Settings.json allow[] grepped: Edit/Write for runlog, PRPs/reviews, decision-queue.json, skills, lessons, rules, PRPs/audit-metrics, PRPs/reports, PRPs/briefs. NO entry covers .claude/PRPs/plans/**. (Aside: even .claude/decision-queue.json Edit was denied by same 'sensitive file' prompt despite being on allowlist; this entry filed via Bash+python3, which IS allowed and is the canonical fallback path per .claude/refs/dq-recipes.md when interactive Edit gates fail.) Planned edits ready for advisor (record verbatim so advisor can re-apply in option (b) or (c) without re-reading brief): (1) plan §13 cohort blockquote lines 691-697 — replace with new 7-cohort blockquote splitting Task 6 into new Cohort 2.5, updating Cohort 3 dep 'Cohort 2' → 'Cohort 2.5', preamble adds '+ requires:'; (2) plan §13 line 1073: '### Task 6 [P]: CREATE' → '### Task 6: CREATE' (drop [P]); (3) plan §16a line 1701: 'Tasks 2-6 are [P] per Cohort 2.' → 'Tasks 2-5 are [P] per Cohort 2; Task 6 is serial per Cohort 2.5.' Task 6 FILES YAML requires: [4, 5] STAYS unchanged. No other §13 task body content changes. §5 has no cohort-count reference (verified by grep — the brief's contingency §5 edit doesn't fire). Planner-lean: option (a) — narrow allow-list broadening + re-dispatch keeps the four-role contract intact (planning Junior writes plan files); commit subject 'chore(settings): broaden Junior-worker write permissions to .claude/PRPs/plans/** for planning role'. Option (b) breaks four-role discipline (advisor authoring content); option (c) requires the worker to have stage-able patches, which it doesn't have yet (Edits never landed). DQ #297 (advisor) remains pending until this resolves; both should resolve in one user cycle. Per decision-queue.md \"Mid-task visibility\": this entry committed + pushed immediately to junior worker branch.",
-      "answer": "advisor-broadens-settings-json-with-Edit(.claude/PRPs/plans/**)-and-redispatches-this-planner-task. User explicitly authorized 2026-05-20 via terminal-typed prompt: \"Authorize broadening .claude/settings.json to add Edit/Write for .claude/PRPs/plans/** — planning Junior needs this\". Advisor edited .claude/settings.json allow[] adding Edit(.claude/PRPs/plans/**) + Write(.claude/PRPs/plans/**). Re-dispatching the planning Junior task with same brief (planning-2.md). Defence-in-depth for plan integrity now lives in agent-def tools[] + retro audit (not CC permission gate). Carries forward observation: §19.5 of plan covered Write/Bash workaround but not Edit; future planner briefs should reference this resolution if same gate fires.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-20T17:40:11Z"
+      "context": "Verified at HEAD 6e16ee94f via `ls -d .claude/PRPs/specs/` — NOT present. Other `.claude/PRPs/` subdirectories: briefs/, plans/, prds/, reports/, templates/, audit-metrics/, handovers/, debug/, reviews/. The `specs/` subdirectory is a logical addition (specifications-of-out-of-repo-contracts, like the MCP patch spec). The existing pattern from `.claude/PRPs/audit-metrics/` (a `.gitignore` entry + a directory with per-data-point files + a header lesson) is the closest sibling but audit-metrics is gitignored data; specs are tracked artifacts.",
+      "answer": "Option 1 — directory does not exist; planner establishes it. Track A Task 1's task body must include: (a) `mkdir .claude/PRPs/specs/` (or equivalent first-write); (b) author a 5-line `.claude/PRPs/specs/README.md` documenting the directory's purpose ('Tracked specifications for contracts that live outside brehon-fork (e.g. MCP server patches, external-repo coordination docs). Each spec names the canonical implementation target, the contract verification recipe, and the downstream-collapse claim. Authored at brehon-fork-spec time; implemented in the target repo's own PR cadence.'); (c) the spec doc as the first entry. The brief is edited in place: Track A Task 1's §2.1 body amends to add the README step. Per .claude/PRPs/templates/plan.template.md §13 task-shape conventions (new-directory tasks list directory establishment as a creates: entry).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     },
     {
       "id": 299,
-      "from": "planner",
-      "kind": "log",
-      "timestamp": "2026-05-20T17:49:09Z",
-      "question": "Cohort-restructure insight: brehon-conformance-audit plan §13 Cohort 2 had circular requires: (Task 6 in cohort requires Tasks 4 + 5 also in cohort). User-approved Fix A: split into Cohort 2 + Cohort 2.5. How was this resolved structurally?",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "The brief's §15 names `bash .claude/hooks/pmd-canonical-guard.sh` as a sanity probe. But the script doesn't exist at HEAD 6e16ee94f — Track B Task 3 creates it. Does §15 need an 'if-exists' guard, or does the run-at-end-of-sub-phase pattern suffice?",
       "options": [
-        "split-into-cohort-2-and-2.5-with-task-6-serial",
-        "bundle-tasks-4-5-6-into-one-impl-task",
-        "advisor-side-split-without-plan-edit"
+        "No guard needed — §15 runs at the end of the sub-phase against the merged tip; all Track B tasks have shipped by then.",
+        "Add an `if exists` guard so §15 is executable at any intermediate tip.",
+        "Move the probe to a per-task DoD (Track B Task 3's own §15) instead of the sub-phase §15."
       ],
-      "context": "Plan §13 (line 693 pre-fix) declared Cohort 2 [P] = Tasks 2, 3, 4, 5, 6, 8, 10. Task 6 FILES YAML requires: [4, 5]. Per advisor-orchestrator.md §4.1 step 4a (`requires:` dependency check, (a) clause), circular requires within a cohort is a refusal trigger. DQ #297 (advisor blocker) catch-fired this 2026-05-20T17:00:13Z; user resolved at 17:40:11Z with Fix A (split). Brief authored at .claude/PRPs/briefs/brehon-conformance-audit-planning-2.md (commit 8a38e07b7); first planning Junior #357 hit DQ #298 (sensitive-file gate on Edit for .claude/PRPs/plans/**); user broadened .claude/settings.json with Edit/Write permits for .claude/PRPs/plans/** + adjacent paths; this retry Junior (#358) implements the plan revision. Plan now declares Cohort 2 [P] = Tasks 2, 3, 4, 5, 8, 10 (Task 6 removed) and new Cohort 2.5 (serial, depends on Cohort 2) = Task 6 alone. Cohort 3 dependency updated from `depends on Cohort 2` → `depends on Cohort 2.5`. §16a Story 1 cohort annotation updated. Task 6 header dropped `[P]` marker. Task 6 FILES YAML `requires: [4, 5]` preserved verbatim — the dependency claim was correct; only cohort placement was wrong.",
-      "answer": "split-into-cohort-2-and-2.5-with-task-6-serial. Implemented in plan commit 7bb6c51bb on phase-brehon-conformance-audit worker branch. Edits: §13 cohort blockquote (lines 691-697) — Task 6 removed from Cohort 2, new Cohort 2.5 inserted, Cohort 3 dependency text updated; §13 Task 6 header (line 1074) — dropped [P] marker; §16a Story 1 composing-tasks annotation — split mention into Tasks 2-5 [P] / Task 6 serial. Plan complexity score (§5) unchanged (10/10 user-approved proceed-as-one). DQ #297 left intact (user-attributed historical record). Audit trail: this log entry + commit 7bb6c51bb + DQ #297 (resolved-by-user, with Fix A direction) + DQ #298 (resolved chain for sensitive-file gate).",
-      "answered_by": "planner-self-resolved",
-      "resolved_at": "2026-05-20T17:49:09Z"
-    },
-    {
-      "id": 303,
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-20T18:06:48Z",
-      "question": "How should the 6 existing Option::unwrap_or_default violations in lemmy_utils be remediated so clippy.toml can be committed without breaking the workspace build?",
-      "options": [
-        "option-a: Insert a narrow fix-impl task before Task 9 to replace the 6 Option::unwrap_or_default() calls in crates/utils with semantically equivalent alternatives (unwrap_or(\"\"), unwrap_or(0), or pattern-match) that do not trigger the disallowed-methods lint",
-        "option-b: Add [lints.clippy] disallowed-methods = { level = \"allow\", priority = 1 } to crates/utils/Cargo.toml to exempt lemmy_utils from workspace-wide lint escalation (because workspace style = deny implies disallowed-methods = deny, defeating the planned per-module scoping)"
-      ],
-      "context": "Task 8 created clippy.toml with disallowed-methods entries and ran the probe. clippy.toml TOML syntax parsed after fixing plan §10.8's multi-line inline table (TOML 1.0 incompatible). Probe exit 101: 6 violations of core::option::Option::unwrap_or_default in lemmy_utils — image_links.rs:53, image_links.rs:105, image_links.rs:113, link_rule.rs:50, validation.rs:309, validation.rs:329. Root cause: workspace.lints.clippy style={level=deny,priority=-1} already implies disallowed-methods=deny workspace-wide; plan GOTCHA assumed Task 9 per-module #![deny()] would be needed to escalate — that is incorrect for this workspace. clippy.toml was NOT committed per constraint #5.",
-      "answer": "option-a executed per user 2026-05-20 — 6 Option::unwrap_or_default replaced in image_links.rs (3) + link_rule.rs (1) + validation.rs (2); cargo clippy --workspace --no-deps --features full -- -D warnings exit 0 confirmed zero violations. clippy.toml ready to commit on next Task 8 worker re-dispatch. Commit b00be611a on worker branch.",
-      "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T05:47:52Z"
+      "context": "Per .claude/rules/advisor-orchestrator.md §5.2 'validate-pending-laptop handler', §15 cargo commands run after the impl-task pushes and the daemon finalize-merges. The sub-phase §15 fires once at the END against the phase-branch tip after all tasks ship. The mirror plan .claude/PRPs/plans/v1-federation-inbound-a.plan.md §15 uses the same end-of-sub-phase pattern.",
+      "answer": "Option 1 — no guard needed. §15 runs at the end-of-sub-phase against the merged phase-branch tip; Track B Task 3 will have shipped the script by then. The brief's §15 expected-commands list is correct as written. Per .claude/PRPs/plans/v1-federation-inbound-a.plan.md §15 + .claude/rules/advisor-orchestrator.md §5.2.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     },
     {
       "id": 300,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:03:29Z",
-      "question": "validate phase-brehon-conformance-audit task 10 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-10-rust-analyzer-mcp-install-mcp-json-example-see-claude-prps-bri-364",
-      "phase_task": 10,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task10-check.log 2>&1; echo exit: $?"
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Watchpoint #4 ('Mid-task DQ push discipline') in the brief — does this apply at planning-time (the planning Junior task itself filing DQs during plan authoring) or at impl-time (the impl-task workers filing DQs)? The brief lists it under §4.1 without distinguishing.",
+      "options": [
+        "Both — planning Junior pushes its own DQs mid-task; impl-tasks push their DQs mid-task. The watchpoint is load-bearing at both stages.",
+        "Impl-time only — clarify in §4.1 that the watchpoint applies to impl-task workers, not the planning Junior task.",
+        "Drop the watchpoint as redundant — `.claude/rules/decision-queue.md` already enforces this."
       ],
-      "result": "pass",
-      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
-      "failed_commands": null,
-      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T05:50:00Z"
+      "context": "Per .claude/rules/decision-queue.md 'Mid-task visibility' — the rule applies to ANY Junior subagent writing DQ entries from a worktree (planning, impl-task, bm-task, ci-watcher all subject). The planning Junior task IS a Junior subagent (per .claude/agents/planning.md). The brief's §4.2 behavioural constraints already cite this for the planning Junior ('mid-task DQ push discipline per .claude/rules/decision-queue.md — every DQ entry the planner files MUST be committed AND pushed to the worker branch immediately'). Watchpoint #4 is the same rule re-cited at §4.1.",
+      "answer": "Option 1 — applies to BOTH stages. Clarify in §4.1 Watchpoint #4 by amending the 'What to watch' column to read: 'every DQ entry the planner OR impl-task files...' (the brief's §4.1 Watchpoint #4 needs the same clarification visible at first read). The brief is edited in place to ensure §4.1 Watchpoint #4's wording matches §4.2's behavioural-constraints wording. Per .claude/rules/decision-queue.md 'Mid-task visibility' + 'Subagents and attribution'.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-20T18:41:11Z"
     },
     {
       "id": 301,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:05:00Z",
-      "question": "validate phase-brehon-conformance-audit task 5 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-5-metrics-md-see-claude-prps-briefs-brehon-conformance-audit-impl-5-362",
-      "phase_task": 5,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task5-check.log 2>&1; echo exit: $?"
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the one-shot SessionStart hook wiring for `pmd-canonical-guard.sh` happen — in THIS lane's `settings.local.json` (per the brief's PRECON-9), in the canonical `brehon-fork` checkout (durable across phase ship), or in both?",
+      "options": [
+        "Wire ONLY in canonical brehon-fork — phase-v1-rls-r1 is a lane-dedicated worktree that gets removed on phase ship (per multi-lane-worktree.md §'At phase ship + merge'); wiring it in the lane has zero durable benefit. The canonical checkout is the one durable lane.",
+        "Wire in BOTH the canonical brehon-fork AND this lane (current PRECON-9) — cheap, two `settings.local.json` edits, immediate + durable benefit.",
+        "Wire ONLY in this lane (current PRECON-9 verbatim) — pure immediate benefit; canonical waits for the next bootstrap cycle per the updated checklist.",
+        "Defer one-shot wiring entirely — only ship the bootstrap-checklist lesson update; every lane wires on its next bootstrap. Cleanest spec; latest activation."
       ],
-      "result": "pass",
-      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
-      "failed_commands": null,
-      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T05:50:00Z"
+      "context": "Per .claude/rules/multi-lane-worktree.md §'At phase ship + merge': lane-dedicated worktrees (like phase-v1-rls-r1 / brehon-fork-rls-r1) get removed on phase ship via `git worktree remove`. A SessionStart hook wired in a removed lane has zero durable effect post-merge. The canonical brehon-fork checkout is the always-live lane that handles governance-v0 work and is the next-bootstrap-eligible checkout for every future advisor session. The brief's PRECON-9 lean was 'wire in this lane' — but the lane is ephemeral. The cost-vs-benefit balance is: option 2 (BOTH) costs ~30 seconds extra; option 1 (canonical only) loses the dogfood-from-the-lane immediate benefit; option 3 (lane only) loses durability; option 4 (no one-shot) makes ship trigger-only. Each has a reasonable rationale; the user picks per project-state preference.",
+      "answer": "Option 2 (Recommended) — Wire in BOTH canonical brehon-fork AND this lane (per user 2026-05-20). Two settings.local.json edits: (a) C:/Users/barri/Developer/brehon-fork/.claude/settings.local.json for durable effect post-phase-ship + every future canonical session, (b) C:/Users/barri/Developer/brehon-fork-rls-r1/.claude/settings.local.json for immediate r1-lane dogfood + lane-session benefit. Cost: ~30 sec extra; belt-and-braces. The brief Track B Task 6's body amends to list both wiring sites.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T05:34:18Z"
     },
     {
       "id": 302,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:07:50Z",
-      "question": "validate phase-brehon-conformance-audit task 3 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-3-find-sibling-sh-see-claude-prps-briefs-brehon-conformance-audit-im-360",
-      "phase_task": 3,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task3-check.log 2>&1; echo exit: $?"
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-20T18:41:11Z",
+      "question": "Where should the `retro_bypass` JSONL kind be registered in the design-doc tree? Track C Task 8 needs a schema-registration doc, but the existing governance-log is PG-table-backed via Postgres triggers (per project_brehon_governance_platform.md) — a hook-emitted JSONL kind is structurally different from a PG-table kind.",
+      "options": [
+        "Extend `docs/brehon-law-inspired-network/04-data-model-and-api.md` with a clear new sub-section 'Hook-emitted observability JSONL kinds' separate from the PG-backed governance-log section.",
+        "Create a new doc `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` dedicated to hook-emitted kinds; cross-link from 04-data-model-and-api.md.",
+        "Register the kind in a `.claude/`-local doc (e.g. `.claude/refs/governance-log-jsonl-kinds.md`) — keeps brehon-law-inspired-network/ unchanged; hook-emitted kinds are harness-internal, not v1 product surface.",
+        "No schema registration doc — the schema IS the JSONL field list inside the new lesson `feedback_retro_bypass_governance_log.md`; consumers read the lesson."
       ],
-      "result": "pass",
-      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
-      "failed_commands": null,
-      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T05:50:00Z"
+      "context": "Per project_brehon_governance_platform.md the v1 governance-log is hash-chained Postgres triggers writing to a PG `governance_log` table — that is product-surface, ADR-008-load-bearing. The `retro_bypass` kind is a HARNESS observability event emitted by `.claude/hooks/retro-check.sh` to a JSONL sidecar — that is harness-internal, not product surface. Mixing them in the same doc risks reader confusion ('does retro_bypass land in the PG table?' — no, it does NOT). Option 1 mixes product + harness in one doc with sub-sections to keep them clearly separated. Option 2 splits the docs cleanly (best for discoverability) but adds a new design-doc file (ADR-adjacent). Option 3 keeps the registration `.claude/`-local (matches the harness-internal scope) but the brief's Track C Task 8 explicitly says 'governance-log schema document' implying product-doc placement. Option 4 collapses the registration into the lesson body (lowest-cost; conflates schema with lesson; harder for future consumers to find).",
+      "answer": "Option 1 (Recommended) — New file `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` (per user 2026-05-20). Clean split: product PG-table kinds stay in 04-data-model-and-api.md; harness JSONL kinds get their own doc cross-linked from 04. Best discoverability for both audiences. The brief Track C Task 8's body amends to name the new doc path verbatim.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T05:34:18Z"
+    },
+    {
+      "id": 303,
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": "The v1-rls-r1 brief cross-references four lesson files that are absent at HEAD 6e16ee94f on this worktree: feedback_one_system_memory_in_repo.md, feedback_lesson_mirror_check.md, feedback_advisor_watchpoint_specificity.md, feedback_phase_lane_worktree_bootstrap_checklist.md. Task 6 ships the fourth; the first three are SKIPPED as cross-link targets (per §12 NOT-building rationale).",
+      "context": "Planner Read the .claude/lessons/ directory on the junior/role-planning-v1-rls-r1-... worktree and confirmed absence. The brief may have been authored against governance-v0 (which carries them) OR they are forward-only references. Track D Task 9 + Task 12 lessons reference feedback_lesson_must_pair_with_structural_fix_when_fixable.md (verified present) instead. No blocker — proceeding.",
+      "options": [
+        "proceed",
+        "blocker"
+      ],
+      "answer": "proceed — Track D Task 9 + Task 12 cite the verified-present lesson; future v1-rls-r1 retro can re-litigate if the absent lessons become load-bearing.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
     },
     {
       "id": 304,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:17:42Z",
-      "question": "validate phase-brehon-conformance-audit task 2 worker branch",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-2-six-axis-sub-files-see-claude-prps-briefs-brehon-conformance-audit-359",
-      "phase_task": 2,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task2-check.log 2>&1; echo exit: $?"
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": ".claude/harvest/ is gitignored (per PRECON-9 lean) vs tracked-with-prune-after-N-weeks?",
+      "context": "Brief §2.3 ambiguity #2 — planner picks gitignored per the .claude/PRPs/audit-metrics/ analogue from brehon-conformance-audit.plan.md. Runtime journal output; summary lands in weekly-review report; harvest files are reproducible. If retro surfaces a need for tracked-with-prune (e.g. cross-session continuity), easy follow-up: flip the .gitignore line.",
+      "options": [
+        "gitignored",
+        "tracked"
       ],
-      "result": "pass",
-      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
-      "failed_commands": null,
-      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T05:50:00Z"
+      "answer": "gitignored — per .claude/PRPs/audit-metrics/ analogue. Reversible if needed.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
     },
     {
       "id": 305,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-20T18:21:03Z",
-      "question": "validate phase-brehon-conformance-audit task 4 worker branch (entry re-raised by advisor after parallel-cohort DQ id collision on #300)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-4-audit-metrics-schema-json-see-claude-prps-briefs-brehon-conformanc-361",
-      "phase_task": 4,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task4-check.log 2>&1; echo exit: $?"
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": ".claude/rules/pmd-invariants.md auto-loads at SessionStart (no `paths:` frontmatter scoping) vs scoped via paths frontmatter?",
+      "context": "Brief §2.3 ambiguity #3 — planner picks auto-loading. Five invariants on a single page (~150 lines max) fits the MEMORY.md startup-budget calculus. Sibling rule files (decision-queue.md, advisor-orchestrator.md, multi-lane-worktree.md) all auto-load without paths scoping; pmd-invariants.md is in the same load category.",
+      "options": [
+        "auto-load",
+        "paths-scoped"
       ],
-      "result": "pass",
-      "log_slice": "    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-conformance-audit\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0  \n",
-      "failed_commands": null,
-      "answer": "bundled cargo-check --workspace --features full on phase tip ec5ee3624 passed (exit 0, 7m 11s). Validates cohort 2 pure-doc changes (skill files, schema, .mcp.json.example) against the post-cohort phase branch; per advisor-orchestrator section 5.2 + feedback_default_local_testing.md: bundled validate of disjoint pure-doc changes is legitimate optimization.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T05:50:00Z"
+      "answer": "auto-load — sibling-pattern convention.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
     },
     {
       "id": 306,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T05:47:52Z",
-      "question": "validate phase-brehon-conformance-audit fix-impl-1 worker branch (6 unwrap_or_default replacements)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-fix-impl-1-remediate-6-option-unwrap-or-default-in-lemmy-utils-see-claud-365",
-      "phase_task": "fix-impl-1",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-21T06:44:20Z",
+      "question": "Claude Code's built-in sensitive-file protection blocks Junior worker writes to .claude/**. Same pattern observed in v1-fed-in-a planning task; recurs in v1-rls-r1. Adding .claude/PRPs/plans/** + .claude/decision-queue.json to a Junior worker permission allowlist (or a harness-side configuration option) would close the gap. Candidate v1-rls-r2 item.",
+      "context": "Planner attempted to Write .claude/PRPs/plans/v1-rls-r1.plan.md and was prompted by the harness; the same Write to PLAN_DELIVERABLE.md succeeded. The advisor handles via git mv post-finalize. The recurrence + the cost (the deliverable lands at a non-canonical path until advisor intervention) is itself a v1-rls-r2 candidate.",
+      "options": [
+        "v1-rls-r2-candidate",
+        "no-action"
       ],
-      "result": "pass",
-      "log_slice": "cargo-check (bundled run, phase tip e647dd6f1, fix-impl-1 included as b00be611a):\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (crates/server)\n    Finished dev profile [unoptimized] target(s) in 7m 11s\nCARGO_EXIT_0\n\ncargo-clippy --workspace --no-deps --features full -- -D warnings (post fix-impl-1, tip e647dd6f1):\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (crates/api/routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (crates/server)\n    Finished dev profile [unoptimized] target(s) in 7m 26s\nCLIPPY_EXIT_0\n",
-      "failed_commands": null,
-      "answer": "cargo-check + cargo-clippy both exited 0 against phase tip e647dd6f1 (which includes fix-impl-1 commit b00be611a). 6 Option::unwrap_or_default sites in lemmy_utils replaced; no new clippy violations. Workspace lint config (style={level=deny,priority=-1}) successfully escalates disallowed-methods (added in Task 8) workspace-wide. fix-impl-1 complete.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T06:03:44Z"
+      "answer": "v1-rls-r2-candidate — file as a deferred item in §12 of v1-rls-r2 brief when authored.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-21T06:44:20Z"
     },
     {
       "id": 307,
       "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-21T06:02:37Z",
-      "question": "Task 8 probe (post fix-impl-1) found 4 disallowed-methods violations in lemmy_diesel_utils: should advisor insert a fix-impl-2 task to remediate before Task 9?",
-      "options": [
-        "option-a: insert fix-impl-2 to remediate 4 violations in lemmy_diesel_utils (pagination.rs:111, pagination.rs:274, schema_setup/mod.rs:73, schema_setup/mod.rs:117) then re-dispatch Task 8 retry again",
-        "option-b: expand clippy.toml allowlist or limit disallowed-methods to federation-only modules only (changes scope of clippy.toml)"
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-1-see-claude-prps-briefs-v1-rls-r1-impl-1-md-372",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task1-check.log 2>&1; echo exit: $?"
       ],
-      "context": "clippy probe 'cargo-clippy.sh --workspace --no-deps --features full -- -D warnings' on Task 8 worker branch returned exit 101. 4 violations in lemmy_diesel_utils (NOT lemmy_utils — fix-impl-1 remediated those). Violations: core::option::Option::unwrap_or_default at pagination.rs:111; core::result::Result::unwrap_or_default at pagination.rs:274, schema_setup/mod.rs:73, schema_setup/mod.rs:117. clippy.toml NOT committed per brief constraint #5.",
-      "answer": "option-a: insert fix-impl-2 to remediate 4 violations in lemmy_diesel_utils. Auto-mode advisor decision 2026-05-21 — matches the DQ #303 precedent (user-chosen option-a 2026-05-20 for the lemmy_utils equivalent). 4 callsites < 10-callsite/5-file cap; mechanical Option/Result fallback replacements; same pattern family as fix-impl-1. clippy.toml seed authored by worker-368 stays as-is; Task 8 will be re-dispatched a third time after fix-impl-2 lands. Plan §10.8 + PRECON-4 misanalyzed workspace.lints.clippy.style — group-deny does NOT activate clippy::disallowed_methods (a configurable lint requires clippy.toml to be enabled at all). Retro-13 lesson candidate.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-21T06:08:27Z"
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 9dd80e025 (post-cherry-pick + DQ-renumber); 3m 18s; zero errors/warnings. Cohort consolidated under one cargo invocation since FILES YAML was disjoint and outputs add zero Rust. Log at .claude/PRPs/debug/v1-rls-r1-cohort-a-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:08:00Z",
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 307). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
+    },
+    {
+      "id": 308,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-2-see-claude-prps-briefs-v1-rls-r1-impl-2-md-373",
+      "phase_task": 2,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task2-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 9dd80e025 (post-cherry-pick + DQ-renumber); 3m 18s; zero errors/warnings. Cohort consolidated under one cargo invocation since FILES YAML was disjoint and outputs add zero Rust. Log at .claude/PRPs/debug/v1-rls-r1-cohort-a-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:08:00Z",
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 308). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
     },
     {
       "id": 309,
       "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-21T06:24:14Z",
-      "question": "Workspace clippy still exits 101 after fixing 4 lemmy_diesel_utils sites: disallowed-methods in clippy.toml is globally active, exposing 100+ additional violations across the workspace. What is the correct remediation scope?",
-      "options": [
-        "option-a: scope-limit the disallowed-methods lint (remove clippy.toml entries or use crate-level #[allow] in non-federation crates) so the workspace probe passes with only federation modules enforced — per the clippy.toml comment intent",
-        "option-b: fix ALL workspace-wide unwrap_or_default callsites (100+ across lemmy_db_schema, lemmy_db_views, lemmy_api_*, lemmy_apub, lemmy_routes, lemmy_email, etc.) — large scope, multiple tasks"
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-3-see-claude-prps-briefs-v1-rls-r1-impl-3-md-374",
+      "phase_task": 3,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task3-check.log 2>&1; echo exit: $?"
       ],
-      "context": "fix-impl-2 worker-369 completed all 4 enumerated callsites in lemmy_diesel_utils (pagination.rs:111, pagination.rs:274, schema_setup/mod.rs:73, schema_setup/mod.rs:117). cargo-clippy -p lemmy_diesel_utils exits 0. But workspace probe (--workspace --no-deps --features full -- -D warnings) exits 101 on lemmy_db_schema/src/utils/mod.rs:18 (no_limit.unwrap_or_default()). Investigation: clippy.toml disallowed-methods config activates the lint globally for the whole workspace; the clippy.toml comment non-federation code is unaffected is incorrect — disallowed-methods in clippy.toml enables the lint workspace-wide, not per-module. DQ #307 enumeration was incomplete because lemmy_diesel_utils failures caused early abort before reaching other crates. Full grep shows 100+ unwrap_or_default callsites across db_schema, db_views, api_*, apub, routes, email, server/tests. After fixing diesel_utils (4 sites) + utils (6 sites via fix-impl-1), the cascade fails at db_schema next. brief constraint says DO NOT commit on non-zero probe; raising blocker per brief §5.2. Original raise on worker-369 commit 771317481 (cancelled before push); replayed by advisor on phase tip for audit-trail durability.",
-      "answer": "option-a-MODIFIED (user 2026-05-21 via AskUserQuestion): KEEP clippy.toml workspace-wide (semantics unchanged); narrow the *probe target* in Task 8/Task 9 to federation crates only (-p lemmy_apub -p lemmy_apub_activities -p lemmy_apub_objects -p lemmy_apub_send). Already-fixed lemmy_utils + lemmy_diesel_utils stay clean as bonus but are not in the new probe target. Plan §10.8 wording (per-module activation) is factually wrong and booked for Task 13 retro lesson + planner re-run for §13 Task 9 scope revision. fix-impl-3 commits the 4 lemmy_diesel_utils edits (net-positive per user) under the narrow-probe gate.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-21T06:31:29Z"
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 9dd80e025 (post-cherry-pick + DQ-renumber); 3m 18s; zero errors/warnings. Cohort consolidated under one cargo invocation since FILES YAML was disjoint and outputs add zero Rust. Log at .claude/PRPs/debug/v1-rls-r1-cohort-a-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:08:00Z",
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 309). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
     },
     {
       "id": 310,
       "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-21T06:39:09Z",
-      "question": "Narrow probe gate (§5.2) exits 101 due to 6 pre-existing violations in lemmy_apub_objects — not caused by fix-impl-3 diesel_utils edits. Brief assumed apub crates were already clean. Should advisor (option-a) expand scope to also fix the 6 apub sites in this task, or (option-b) accept that the narrow probe is not yet the gate and commit diesel_utils fixes separately?",
-      "options": [
-        "option-a: Fix 6 pre-existing violations in lemmy_apub_objects in this task (expand file-edit cap; sites enumerated in context), then commit everything.",
-        "option-b: Commit the 4 diesel_utils fixes as-is; accept narrow probe fails due to pre-existing apub debt; advisor revises the success gate or queues a separate task for apub fixes."
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-4-see-claude-prps-briefs-v1-rls-r1-impl-4-md-375",
+      "phase_task": 4,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task4-check.log 2>&1; echo exit: $?"
       ],
-      "context": "git stash confirmed: 6 violations exist on base branch without my changes. Violations in lemmy_apub_objects: comment.rs:211 (Option::unwrap_or_default), post.rs:240 (Result::unwrap_or_default), post.rs:285 (Option::unwrap_or_default), page.rs:155 (Option::unwrap_or_default), page.rs:178 (Option::unwrap_or_default), functions.rs:272 (Option::unwrap_or_default). The 4 diesel_utils edits (pagination.rs:111/274, schema_setup/mod.rs:73/117) are semantically correct and lemmy_diesel_utils compiles clean (cargo-check -p lemmy_diesel_utils exit 0). Brief §5.2 says 'Non-zero -> DO NOT commit; file blocker DQ'.",
-      "answer": "option-c (mechanism revision, user 2026-05-21 after clarifying conversation): the plan §10.8 mechanism (clippy.toml + per-module #![deny]) was CORRECT in intent but BROKEN in execution because (1) plan failed to ADD disallowed_methods = allow to [workspace.lints.clippy] in root Cargo.toml, which would have suppressed default activation across the workspace, AND (2) workspace [workspace.lints.clippy] style = deny (group-deny) escalates disallowed_methods (a style-group lint) to deny by default. Net effect: workspace-wide enforcement, federation-only intent broken. Correct mechanism per rustc docs lint levels precedence rule 4 (lower-syntax-tree attributes win): add disallowed_methods = allow to [workspace.lints.clippy], then #![deny(clippy::disallowed_methods)] on the 3 federation mod.rs files (per Task 9). Module-level deny overrides workspace-level allow for items inside the module subtree. fix-impl-3 worker-370 was correct to raise DQ #310; option-b commit (4 diesel_utils sites only) was a defensible self-resolution; net-positive cleanup stays. Plan §10.8 + Task 8 + Task 9 require revision via planner Junior — DQ #311 dispatches that re-plan. The 6 apub_objects pre-existing violations stay (governance modules will get the deny via Task 9 anyway; the rest of apub_objects is upstream-inherited code that should NOT be retrofit).",
-      "answered_by": "user",
-      "resolved_at": "2026-05-21T07:01:33Z"
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 9dd80e025 (post-cherry-pick + DQ-renumber); 3m 18s; zero errors/warnings. Cohort consolidated under one cargo invocation since FILES YAML was disjoint and outputs add zero Rust. Log at .claude/PRPs/debug/v1-rls-r1-cohort-a-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:08:00Z",
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 310). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
     },
     {
       "id": 311,
-      "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-21T07:01:33Z",
-      "question": "Plan §10.8 + §13 Task 8 + §13 Task 9 mechanism revision: rustc lint-precedence-rule-4 (lower-syntax-tree attribute wins) means the plan needs  added to  in root Cargo.toml SO THAT  on the 3 federation mod.rs files (Task 9) overrides for federation-only enforcement. Plan §10.8 mechanism was correct in INTENT (federation-only) but missing the workspace-allow step; without it, the  + workspace  group-escalation fires workspace-wide. Revise plan: (a) §10.8 wording: add explicit step to insert  into ; (b) Task 8 scope: bundle the workspace-allow edit with the existing clippy.toml seed (TWO files modified: clippy.toml CREATE + Cargo.toml MODIFY); (c) Task 9: stays as planned (3 mod.rs files get ); (d) Task 8 §15 success gate becomes the NARROW probe (4 governance module roots only); (e) post-Task-9 add a workspace-wide probe DOES NOT need to pass (intentional; non-federation upstream code retains unwrap_or_default).",
-      "options": [
-        "option-a: planner re-runs full §10.8 + Task 8 + Task 9 revision + emits a small patch plan (new task numbers added for cleanup: revert Task 8 clippy.toml commit, then re-land with workspace-allow + clippy.toml in one commit; Task 9 lands per-module deny). fix-impl-1 (lemmy_utils 6 sites) + fix-impl-3 (lemmy_diesel_utils 4 sites) stay as net-positive cleanups.",
-        "option-b: planner re-runs §10.8 + Task 8 + Task 9 revision AND also recommends reverting fix-impl-1 + fix-impl-3 commits (those 10 cleanups are unnecessary under the corrected mechanism + create upstream-rebase conflict surface). Cleaner diff against future LemmyNet/lemmy upstream rebases."
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T07:50:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-7-see-claude-prps-briefs-v1-rls-r1-impl-7-md-376",
+      "phase_task": 7,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task7-check.log 2>&1; echo exit: $?"
       ],
-      "context": "After three cycles of fix-impl cascade (lemmy_utils 6 → lemmy_diesel_utils 4 → apub_objects 6 pre-existing on workspace; 100+ more across db_schema/db_views/api_*/etc.), user clarified the plan goal: catch Phase-6 federation convention divergence (axis-4 .unwrap_or_default() in NEW federation handler code), NOT retrofit the upstream Lemmy workspace. rustc docs lint-precedence rule 4 confirms  at workspace +  at module-level gives federation-only enforcement. The plan §10.8 wording assumed that workspace-default + per-module deny would work, but the workspace  already escalates style-group lints (including disallowed_methods) to deny by default. Adding  to the same workspace lints block silences it workspace-wide; then module-level  re-enables for governance modules only. Per rustc docs lint-precedence rule 4: lower-syntax-tree attribute wins.",
-      "answer": "Plan revised in commit 96f2efd59 (worker branch — daemon finalize-merges onto phase-brehon-conformance-audit). Plan path: .claude/PRPs/plans/brehon-conformance-audit.plan.md. §10.8 mechanism corrected: workspace `disallowed_methods = \"allow\"` (root Cargo.toml [workspace.lints.clippy]) + per-module `#![deny(clippy::disallowed_methods)]` on 3 federation mod.rs files. Per rustc lint-precedence rule 4 (lower-syntax-tree attribute wins). Task 8a (NEW) reverts the prior broken clippy.toml commit c3aaba47f. Task 8 (REWRITTEN) lands corrected mechanism as a SINGLE commit (clippy.toml + Cargo.toml workspace-allow). Task 9 (UNCHANGED structurally) narrow-probe gate uses federation crates only: `cargo clippy -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings`. New task count: 15 (Task 0 + Tasks 1-12 + Task 8a + Task 13). Complexity score: 11/10 (prior 10/10; +1 from Task 8a). fix-impl-1 (b00be611a — 6 lemmy_utils sites) + fix-impl-3 (34f5cc567 — 4 lemmy_diesel_utils sites) commits stay as net-positive axis-4 cleanups. DQ #291 proceed-as-one judgement stands (Task 8a is among the cheapest possible impl tasks — single git rm clippy.toml). §13 Task 13 retro lessons-surfaced bullet enumerates the mechanism-misanalysis + cycle-3 catch-fire + cleanup signals; planner-side lesson candidate feedback_clippy_per_module_deny_requires_workspace_allow.md named for Task 12 or post-retro promotion.",
-      "answered_by": "planner",
-      "resolved_at": "2026-05-21T07:18:42Z"
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 9dd80e025 (post-cherry-pick + DQ-renumber); 3m 18s; zero errors/warnings. Cohort consolidated under one cargo invocation since FILES YAML was disjoint and outputs add zero Rust. Log at .claude/PRPs/debug/v1-rls-r1-cohort-a-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:08:00Z",
+      "context": "Cohort A renumbered from id-collision (original worker DQ raised id=307 due to next_id forking from phase tip in parallel; advisor reassigned to 311). Worker branch cherry-picked to phase-v1-rls-r1; this entry awaits cargo-check on lane worktree."
     },
     {
       "id": 312,
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T12:00:00Z",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8a-revert-prior-broken-clippy-toml-see-claude-prps-briefs-brehon-con-377",
-      "phase_task": "8a",
+      "timestamp": "2026-05-21T08:14:13Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-5-see-claude-prps-briefs-v1-rls-r1-impl-5-md-379",
+      "phase_task": 5,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task5-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ bd2cdfe6c (Task 5 post-FF). Incremental warm build. Log at .claude/PRPs/debug/v1-rls-r1-task5-check.log.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:19:00Z"
+    },
+    {
+      "id": 313,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T08:28:14Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-6-see-claude-prps-briefs-v1-rls-r1-impl-6-md-380",
+      "phase_task": 6,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task6-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ 4b313b3c1. Worker #380 stuck post-DQ-raise (10+ min idle, no cargo invocation); advisor cancelled + FF-merged worker output + ran cargo-check on lane. Lesson body verified: 57 lines, 5x pmd-canonical-guard.sh references, 3x dual-wire path mentions, frontmatter clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:38:00Z"
+    },
+    {
+      "id": 314,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T08:30:04Z",
+      "question": null,
+      "options": null,
+      "context": "Task 6 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD. Retro content: SCORE:0.85 CONFIDENCE:0.85 Goal:yes Tests:none CleanExecution:yes. Lesson file created via Bash heredoc (Write blocked by sensitive-file gate — known brief §6 limitation). Cargo-check exit 101 = known lemmy_email daemon env trap, no Rust code modified. DQ #313 raised and pushed.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.85.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T08:30:04Z"
+    },
+    {
+      "id": 315,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T10:45:00Z",
+      "branch": "junior/role-impl-task-v1-rls-r1-task-8-see-claude-prps-briefs-v1-rls-r1-impl-8-md-381",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task8-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ e76a37455. Worker #381 hung post-DQ-raise (same Task 6 pattern); advisor cancelled + FF-merged + ran cargo. Worker used id=315 instead of brief-assigned 314 (Task 6 worker delayed-pushed a retro log into #314 first — collision-prevention recipe needs refinement for cross-worker PMD-fallback retros). VALIDATE: 3 H2 sections, 2x retro_bypass, DIFFERENT THINGS distinction present, 04 cross-link present.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T08:53:00Z"
+    },
+    {
+      "id": 316,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T10:50:00Z",
+      "question": null,
+      "options": null,
+      "context": "Task 8 post-task retro: memory_write_eval failed twice with 'vtable constructor failed: memories_fts' — FTS5 vtable unavailable in daemon worktree PMD (same as Task 6 DQ #314). Retro content: SCORE:0.80 CONFIDENCE:0.88 Goal:yes Tests:none CleanExecution:yes. Both docs committed and pushed. DQ #315 raised. Brief DQ id=314 was taken (consumed by Task 6 retro log entry); used id=315 per canonical next_id recipe.",
+      "answer": "PMD write unavailable from daemon; advisor to harvest retro at retro time. Retro score 0.80.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T10:50:00Z"
+    },
+    {
+      "id": 317,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:00:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 9,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-rls-r1-task9-check.log 2>&1; echo exit: $?"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 9 authored advisor-side (paired retro_bypass lesson; 36 lines; frontmatter clean; 7x cross-link refs). cargo-check exit 0 on lane worktree. Advisor authoring chosen over Junior dispatch after recurring cross-lane daemon contamination + 2 worker hangs (Tasks 6/8); user-approved 2026-05-21.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:00:00Z",
+      "context": "Task 9 IMPL+DQ atomic; advisor-authored deliverable. Per user gate 2026-05-21 to ship Tasks 9-13 advisor-side given daemon contamination."
+    },
+    {
+      "id": 318,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:08:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 11,
       "commands": [
         "bash scripts/brehon/cargo-check.sh --workspace --features full"
       ],
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": "cargo-check --workspace --features full exit 0 (2m 05s warm) on laptop against phase-brehon-conformance-audit tip a629dca41. clippy.toml removed cleanly; workspace compiles. Task 8a complete.",
+      "answer": "Task 11 (rule wiring) authored advisor-side; §1 polling-loop bullet + §5.5 Retro-bypass observability sub-section (§5.5 Catch-fire renumbered to §5.6). VALIDATE: all 3 probes pass. cargo-check exit 0.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T07:54:32Z"
-    },
-    {
-      "id": 313,
-      "from": "impl",
-      "kind": "log",
-      "timestamp": "2026-05-21T14:00:00Z",
-      "question": "lemmy_email build script fails with 'No such file or directory' in this worktree — pre-existing environment issue",
-      "options": [
-        "self-resolve: log and proceed; validate-pending-laptop DQ delegates actual cargo validation to advisor laptop",
-        "blocker: stop and escalate"
-      ],
-      "context": "cargo-clippy.sh and cargo-check.sh both exit non-zero due to lemmy_email build script failure (Os { code: 2, kind: NotFound }) in this worktree. Verified pre-existing: same error with git stash (no clippy.toml + no Cargo.toml edit). Not caused by Task 8 changes. All federation-crate probes are blocked. Structural checks (python3 assertions) pass for both files. Validate-pending-laptop DQ #314 delegates actual laptop validation to advisor.",
-      "answer": "Log: pre-existing worktree environment issue (lemmy_email build script 'No such file or directory'). Not caused by Task 8 changes — verified via git stash. Structural checks pass. Actual cargo validation delegated to validate-pending-laptop DQ (next entry). Action: file as lesson if this is a recurring pattern; advisor to verify on laptop.",
-      "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-21T14:00:00Z"
-    },
-    {
-      "id": 314,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T14:01:00Z",
-      "question": "validate phase-brehon-conformance-audit task 8 (revised) worker branch — clippy.toml + Cargo.toml workspace-allow",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-revised-single-commit-clippy-toml-cargo-toml-workspace-allow-see-378",
-      "phase_task": 8,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-workspace-clippy.log 2>&1; echo exit: $?"
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "All 3 commands exit 0 on laptop against phase-brehon-conformance-audit tip 3082c35ff. Cmd 1 (workspace cargo-check --workspace --features full): 8m45s cold. Cmd 2 (narrow federation clippy on lemmy_apub_activities + lemmy_api + lemmy_db_schema): 8m01s cold. Cmd 3 (workspace clippy --workspace --no-deps --features full -- -D warnings): 7m24s cold. Required intermediate fix: clippy.toml from Task 8 6720dc72a used multiline inline tables which TOML 1.0 forbids — fixed in advisor-direct commit 3082c35ff (user-authorised brief-authoring error correction). Mechanism §10.8 (workspace disallowed_methods=allow + per-module deny per rustc lint-precedence rule 4) is now confirmed structurally sound. Task 8 (clippy.toml + Cargo.toml workspace-allow) complete; Task 9 (per-module #![deny] on 3 federation mod.rs) is next.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T08:51:41Z"
-    },
-    {
-      "id": 315,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T14:30:00Z",
-      "question": "validate phase-brehon-conformance-audit task 9 worker branch — #![deny(clippy::disallowed_methods)] in 3 federation mod.rs",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-9-add-deny-clippy-disallowed-methods-to-3-federation-mod-rs-see-382",
-      "phase_task": 9,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-narrow-clippy.log 2>&1; echo exit: $?",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task9-workspace-clippy.log 2>&1; echo exit: $?",
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task9-check.log 2>&1; echo exit: $?"
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "All 3 commands exit 0 on laptop against phase-brehon-conformance-audit tip 253c8ca1c. Cmd 1 (workspace cargo-check --workspace --features full): 1m41s warm. Cmd 2 (narrow federation clippy -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings): 2m25s warm. Cmd 3 (workspace clippy --workspace --no-deps --features full -- -D warnings): 2m52s warm. Mechanism §10.8 (workspace disallowed_methods=allow + per-module #![deny] per rustc lint-precedence rule 4) is now CONFIRMED ENFORCING: cmd 2 narrow probe targets the 3 federation governance modules with #![deny] active and exits 0 (federation governance code is axis-4 clean per fed-in-b fix-impl-3 evidence). Cmd 3 workspace probe exits 0 → workspace-allow override correctly silences disallowed_methods outside the 3 federation modules. Tasks 8 + 8a + TOML fix + 9 complete. Phase 1 (mechanism implementation) done; ready to advance to Cohort 3 (Task 7 dogfood).",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T10:45:57Z"
-    },
-    {
-      "id": 316,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T10:57:26Z",
-      "question": "validate phase-brehon-conformance-audit task 6 worker branch — compute-metrics.sh created",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-6-compute-metrics-sh-see-claude-prps-briefs-brehon-conformance-audit-386",
-      "phase_task": 6,
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/brehon-conformance-audit-task6-check.log 2>&1; echo exit: $?"
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "compute-metrics.sh smoke test PASS on laptop against phase-brehon-conformance-audit tip 34367e3c6. Fixture: axis-4 Tier-1 prediction on inbox.rs:735 + ground_truth_runtime entry from fix-impl-3 (8b04e69a6). Script output: axis-4 precision 1.000, axis-4 recall 1.000, latent-footgun catch rate 1, lead time 15.5h median. Exit 0. Note: DQ entry's `commands` field has a wrong command (Junior worker mis-transcribed `bash scripts/brehon/cargo-check.sh --workspace --features full` from a different brief template); the brief §5.3 specified `bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh /tmp/fixture-metrics.json` which is what advisor actually ran. Audit-trail-only mis-match; functionally validated. Lesson candidate for Task 13 retro: brief-template re-use risk.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T11:02:34Z"
-    },
-    {
-      "id": 317,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T11:17:50Z",
-      "question": "validate phase-brehon-conformance-audit task 7 dogfood seed metrics",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-7-dogfood-against-v1-federation-inbound-b-two-snapshots-see-claude-p-387",
-      "phase_task": 7,
-      "commands": [
-        "bash .claude/skills/brehon-conformance-audit/scripts/compute-metrics.sh .claude/PRPs/audit-metrics/v1-federation-inbound-b.json"
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "Task 7 dogfood smoke PASS on phase tip 39427b20a: axis-4 precision 1.000, recall 1.000, latent-footgun catch 1, lead-time 27.5h median. Calibration test confirms skill catches the v1-federation-inbound-b inbox.rs:743 latent footgun (.unwrap_or_default() vs sibling .ok_or_else()? at L153) which the compiler did not catch — fix-impl-3 (8b04e69a6) was the runtime ground-truth event.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T11:26:17Z"
-    },
-    {
-      "id": 318,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T11:34:25Z",
-      "commands": [
-        "grep -c 'Conformance-audit prevention checkpoint' .claude/rules/advisor-orchestrator.md",
-        "grep -c 'Conformance-audit detection checkpoint' .claude/rules/advisor-orchestrator.md",
-        "grep -c 'Conformance-audit Tier-1 finding' .claude/rules/advisor-orchestrator.md"
-      ],
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-11-wire-skill-clippy-gate-into-advisor-orchestrator-md-see-claude-388",
-      "phase_task": 11,
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "Task 11 advisor-orchestrator.md wiring PASS on phase tip 118394e37. All three insertions verified: §3.1.1 Conformance-audit prevention checkpoint (L53), §3.9.1 Conformance-audit detection checkpoint (L182), §G4 classifier HARD REFUSAL row (L350). All 3 greps return >=1. Markdown header count: 37 (no truncation regression).",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T11:45:13Z"
+      "resolved_at": "2026-05-21T09:08:00Z",
+      "context": "Advisor-authored per user gate 2026-05-21."
     },
     {
       "id": 319,
-      "from": "impl",
+      "from": "advisor",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T11:38:39Z",
-      "commands": [
-        "test -f .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
-        "test -f .claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md",
-        "grep -F '[[feedback_lemmy_error_no_std_error]]' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
-        "grep -F '[[project_phase6_convention_divergence_class]]' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
-        "grep -F 'conformance-audit-v1-federation-inbound-b-dogfood' .claude/lessons/feedback_mirror_phase6_convention_in_same_file.md",
-        "python3 -c \"import yaml, re; files = ['.claude/lessons/feedback_mirror_phase6_convention_in_same_file.md', '.claude/lessons/feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md']; [print(f, 'frontmatter OK:', list(yaml.safe_load(re.match(r'^---\n(.*?)\n---', open(f).read(), re.S).group(1)).keys())) for f in files]\""
-      ],
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-12-author-two-paired-lesson-files-see-claude-prps-briefs-brehon-conf-389",
+      "timestamp": "2026-05-21T09:08:00Z",
+      "branch": "phase-v1-rls-r1",
       "phase_task": 12,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": "Task 12 two lesson files PASS on phase tip 118394e37. Both lesson files exist: feedback_mirror_phase6_convention_in_same_file.md (Phase-6 convention-divergence defect class + 5 cross-links: feedback_lemmy_error_no_std_error, project_phase6_convention_divergence_class, plus 3 more; cites dogfood report conformance-audit-v1-federation-inbound-b-dogfood-2026-05-20.md) and feedback_plan_mirror_stub_must_compile_and_annotate_prelanded.md (planning-side prevention). Both frontmatters parse as valid YAML with name/description/type/originSessionId. DQ id was originally raised by Junior #389 as #318 but renumbered to #319 during daemon finalize-merge conflict resolution (clean lossless reconcile per feedback_junior_finalize_merge_race_lossless_reconcile.md).",
+      "answer": "Task 12 [P] (paired closure lessons) authored advisor-side; feedback_pmd_canonical_guard_enforces_invariant.md + feedback_retro_harvest_weekly_cadence.md. Both frontmatter clean (no auto-trigger keyword stuffing). cargo-check exit 0.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T11:45:13Z"
+      "resolved_at": "2026-05-21T09:08:00Z",
+      "context": "Advisor-authored per user gate 2026-05-21."
     },
     {
       "id": 320,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:15:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 10,
+      "commands": [
+        "advisor-driven 3-probe dogfood + cargo-check"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 10 dogfood: 4.1 (a) PASS canonical match, 4.1 (b) PASS sentinel WARN, 4.6 PASS Step 2c surfaces 10+ candidates, 4.7 PASS after fix (caught Task 7 function-after-exit unreachable placement; relocated to before fail-open call site in same commit). cargo-check exit 0. Report at .claude/PRPs/reports/v1-rls-r1-dogfood-2026-05-21.md.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:15:00Z",
+      "context": "Advisor-driven dogfood per plan §13 Task 10 GOTCHA (runs on laptop). Discovered + fixed Task 7 regression in-cycle."
+    },
+    {
+      "id": 321,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:25:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 13,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 13 retro authored advisor-side. 3 canonical H2 headers (What surprised us / What to change / What to carry forward), per-role signals, complexity score table for Tasks 1-13, decisions to revisit, 3 new lessons promoted (advisor_authoring_under_daemon_stress, worker_hang_post_dq_raise, cross_lane_daemon_ref_contamination). 2 harness gaps flagged for v1-rls-r2. cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:25:00Z",
+      "context": "Terminal retro for v1-rls-r1; phase ready for bm-pr next."
+    },
+    {
+      "id": 322,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:52:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": null,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "fix-impl-1 (commit cc1590904) consolidated cargo-check exit 0. 11 fix-in-pr findings addressed advisor-side. cr-1 rebut + cr-5/cr-6 wont-fix posted as PR comments.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:52:00Z",
+      "context": "CR PR #140 triage user-approved 2026-05-21."
+    },
+    {
+      "id": 323,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T10:05:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": null,
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "fix-impl-2: addressed CR re-review cr-9 (Major). git rev-parse --git-common-dir can return a relative path in worktree or custom GIT_DIR setups; my fix-impl-1 chain (dirname of GIT_COMMON) preserved the relative form, and downstream os.path.abspath in normalise_path then anchored to script CWD instead of repo root. Fix: extract _resolve_main_repo helper that detects absolute vs relative paths (POSIX /foo or Windows C:/foo / C:\foo) and anchors relative paths to repo CWD or SCRIPT_DIR before dirname. 4 dogfood probes still PASS post-fix. cargo-check exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T10:05:00Z",
+      "context": "CR re-review on fix-impl-1 push; one residual Major finding addressed advisor-side."
+    },
+    {
+      "id": 324,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T11:58:00Z",
+      "question": "Going forward (post-Tasks-1+2), should new e2e tests under mod v1_federation_inbound_b_fixtures use INSERT-with-newer-valid_from or UPDATE-in-place when overriding seeded governance_config rows?",
+      "options": [
+        "insert-with-newer-valid-from-canonical",
+        "update-in-place-continued",
+        "no-preference-document-both"
+      ],
+      "context": "The existing per_peer_rate_limit_returns_429 test at e2e.rs:15605-15610 uses UPDATE-not-INSERT as a workaround for the reader-side append-history defect (cited verbatim in inline comment). Tasks 1+2 of v1-federation-inbound-c add .order_by(governance_config::valid_from.desc()) to both reader sites — after which INSERT-with-newer-valid_from becomes safe.",
+      "answer": "NEW tests use INSERT-with-newer-valid_from — this matches the append-only design contract documented at crates/db_schema/src/source/governance/governance_config.rs:34-40 (\"The table is append-only by design — admin edits INSERT a new (scope, key, valid_from) row\") and exercises the post-fix reader correctly. EXISTING tests using UPDATE (currently only per_peer_rate_limit_returns_429 at e2e.rs:15600-15628) stay unchanged — they still work post-fix (UPDATE mutates the existing seed row; reader returns the only row). The workaround comment at lines 15605-15610 gets updated per DQ #325 to reflect the post-fix landscape; new tests use INSERT going forward.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 325,
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-21T11:58:00Z",
+      "question": "Should v1-federation-inbound-c Task 3 update or remove the misleading workaround comment at crates/server/tests/e2e.rs:15605-15610 that claims raw INSERT returns an arbitrary row (true pre-fix, obsolete post-fix)?",
+      "options": [
+        "update-comment-in-task-3",
+        "remove-comment-entirely",
+        "leave-comment-as-historical-context"
+      ],
+      "context": "Lines 15605-15610 carry an inline comment cited verbatim in the source: \"governance_config is append-history with UNIQUE on (scope, key, valid_from) — NOT on (scope, key). The migration 2026-05-17 already seeded this key with value_int=100; raw INSERT would create a second row and the reader (get_inbound_config_int) returns an arbitrary one. UPDATE mutates the existing seed row in place.\" Once Tasks 1+2 land .order_by(valid_from.desc()), the claim \"reader returns an arbitrary one\" becomes false.",
+      "answer": "Update in Task 3 (option update-comment-in-task-3). Brief amended to add Task 3 IMPLEMENT step (b): replace the existing workaround block with a one-line note explaining that UPDATE-in-place stays valid for historical continuity AND that INSERT-with-newer-valid_from is now also safe post-v1-federation-inbound-c (per DQ #324). Removing entirely (option remove-comment-entirely) loses the audit trail of WHY the existing test uses UPDATE; leaving as-is (option leave-comment-as-historical-context) misleads future test authors who read it and conclude they cannot use INSERT. The update-comment-in-task-3 path preserves both audit trail and accuracy.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-21T11:58:00Z"
+    },
+    {
+      "id": 327,
       "from": "impl",
       "kind": "validate-pending-laptop",
       "timestamp": "2026-05-21T18:18:05Z",
@@ -2080,7 +2180,8 @@
       "failed_commands": null,
       "answer": "compute-metrics.sh on v1-federation-inbound-b.json: axis-4 precision 1.000, recall 1.000, lead-time 27.5h, latent-footgun catch 1. Schema strictness (cr-16), FP attribution (cr-19), lead-time formula (cr-20), fn-regex (cr-21) all applied + non-regressive. Pass.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T18:25:37.070964Z"
+      "resolved_at": "2026-05-21T18:25:37.070964Z",
+      "notes": " [renumbered from #320 on merge due to DQ id collision with concurrent fed-in-c session: trunk #320 was a different entry]"
     }
   ]
 }
