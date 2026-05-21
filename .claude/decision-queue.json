@@ -42,6 +42,34 @@
       "id_v1": 338,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "ae5ff4ec3e8c-001",
+      "id_v1": null,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:29:54Z",
+      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-1-migration-new-entry-scripts-live-dq-migration-track-a-see-claude-prps-400",
+      "phase_task": 1,
+      "commands": [
+        "bash -n scripts/brehon/dq-schema-v3-migrate.sh",
+        "bash -n scripts/brehon/dq-v3-new-entry.sh",
+        "bash scripts/brehon/dq-schema-v3-migrate.sh --dry-run --file .claude/decision-queue.json",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert d['schema_version']==3; print('schema_version OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); [e['id_v1'] for e in d['pending']+d['resolved']]; print('id_v1 OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert all('approved_by' in e and 'approved_at' in e for e in d['pending']+d['resolved']); print('approved_* OK')\"",
+        "rm -f .claude/.dq-session-id && bash scripts/brehon/dq-v3-new-entry.sh",
+        "test -f .claude/.dq-session-id && grep -E '^[a-f0-9]{12}$' .claude/.dq-session-id && echo 'session-id OK'",
+        "grep -F '.claude/.dq-session-id' .gitignore"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
