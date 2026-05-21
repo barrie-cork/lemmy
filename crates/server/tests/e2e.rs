@@ -15529,6 +15529,7 @@ mod v1_federation_inbound_b_fixtures {
     federation_inbox_dropped_log,
     federation_inbox_nonce,
     federation_peer,
+    governance_config,
     governance_log,
     instance,
     remote_moderation_label,
@@ -15602,12 +15603,10 @@ mod v1_federation_inbound_b_fixtures {
       bootstrap_with_peer("rate-test.test", Some(FederationPeerTrust::Allowlisted)).await?;
     let context = fed_cfg.to_request_data();
     let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    // governance_config is append-history with UNIQUE on (scope, key, valid_from)
-    // — NOT on (scope, key). The migration 2026-05-17 already seeded this key
-    // with value_int=100; raw INSERT would create a second row and the reader
-    // (get_inbound_config_int) returns an arbitrary one. UPDATE mutates the
-    // existing seed row in place. See migration 2026-04-18 comment "Do NOT use
-    // (scope, key) as the conflict target" for the schema invariant.
+    // governance_config is append-history: UPDATE mutates the existing seed row;
+    // the post-v1-federation-inbound-c reader (.order_by(valid_from.desc())) makes
+    // INSERT-with-newer-valid_from also safe. This test uses UPDATE for historical
+    // continuity; new override tests use INSERT (see appended_config_override_takes_effect_returns_429).
     diesel::sql_query(
       "UPDATE governance_config SET value_int = 2 \
        WHERE scope = 'instance' AND key = 'federation.inbound.per_peer_rate_per_hour'",
@@ -15624,6 +15623,48 @@ mod v1_federation_inbound_b_fixtures {
     let err = result.err().unwrap();
     assert!(matches!(err.error_type, LemmyErrorType::FederationPeerRateLimitExceeded));
     assert_eq!(err.status_code(), StatusCode::TOO_MANY_REQUESTS);
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn appended_config_override_takes_effect_returns_429() -> LemmyResult<()> {
+    let (_container, fed_cfg, db_url, _peer_id) =
+      bootstrap_with_peer("override-test.test", Some(FederationPeerTrust::Allowlisted)).await?;
+    let context = fed_cfg.to_request_data();
+    let mut conn = AsyncPgConnection::establish(&db_url).await?;
+    // governance_config is append-only — INSERT a newer-valid_from row to
+    // override the seeded federation.inbound.per_peer_rate_per_hour (seed
+    // value_int = 100 per migration 2026-04-18-000000-0000_add_governance_config).
+    // Post-v1-federation-inbound-c, get_inbound_config_int reads the latest row;
+    // the override cap=2 means the 3rd activity should 429.
+    diesel::insert_into(governance_config::table)
+      .values((
+        governance_config::scope.eq("instance"),
+        governance_config::key.eq("federation.inbound.per_peer_rate_per_hour"),
+        governance_config::value_type.eq("int"),
+        governance_config::value_int.eq(Some(2_i64)),
+        governance_config::valid_from.eq(diesel::dsl::now),
+      ))
+      .execute(&mut conn)
+      .await?;
+    for i in 0..2 {
+      let activity = build_unique_sanction_notice_activity("override-test.test", i)?;
+      ActivityTrait::receive(activity, &context).await?;
+    }
+    let activity3 = build_unique_sanction_notice_activity("override-test.test", 2)?;
+    let result = ActivityTrait::receive(activity3, &context).await;
+    assert!(result.is_err(), "3rd activity must 429 against override cap=2");
+    let err = result.err().unwrap();
+    assert!(matches!(err.error_type, LemmyErrorType::FederationPeerRateLimitExceeded));
+    assert_eq!(err.status_code(), StatusCode::TOO_MANY_REQUESTS);
+    // Optional but recommended: assert the drop log row landed.
+    let drop_rows: i64 = federation_inbox_dropped_log::table
+      .filter(federation_inbox_dropped_log::source_instance.eq("override-test.test"))
+      .filter(federation_inbox_dropped_log::drop_reason.eq("rate_limit_peer"))
+      .count()
+      .get_result(&mut conn)
+      .await?;
+    assert_eq!(drop_rows, 1, "exactly one rate_limit_peer drop expected");
     Ok(())
   }
 
