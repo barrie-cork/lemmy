@@ -59,3 +59,48 @@ Audit logs in `.claude/audit-*.log` (gitignored). Submodule init recovery noted
 for retro harvest as evidence the lane bootstrap checklist was not applied —
 candidate for a `kind: "log"` DQ at next-id walk if user wants explicit retro
 signal beyond this runlog entry.
+
+## advisor: retro-candidate — `/tmp` Bash↔Python path mismatch recurred this session
+
+Per `feedback_windows_bash_python_git_show_tmp_traps.md` (written 12 days ago,
+2026-05-09), the `/tmp` Bash↔Python divergence is trap #2 of the consolidated
+recipe. The lesson exists; the recipe (use `$LOCALAPPDATA/Temp/<name>` or
+`.claude/scratch/<name>.json`, never `/tmp/`) is documented; the symptom
+(`FileNotFoundError: '/tmp/<file>'` after Bash `ls` shows it exists) is
+explicitly listed.
+
+Despite all of that, the trap fired TWICE during the gov-v0 forward-merge
+DQ reconcile in this session:
+
+1. First attempt: `tail -20 ... > /tmp/t1c.txt && tail -20 ... > /tmp/t1cl.txt`
+   then Python `io.open('/tmp/t1c.txt', ...)` → FileNotFoundError. User-visible
+   tool result; resolved by re-issuing Python with direct file reads from the
+   `.claude/PRPs/debug/` paths.
+2. Second attempt: `git show :2:... > /tmp/dq-phase.json` then Python
+   `io.open('/tmp/dq-phase.json', ...)` → FileNotFoundError. User-visible
+   tool result; resolved by re-issuing `git show` to
+   `C:/Users/barri/AppData/Local/Temp/dq-phase.json`.
+
+User flagged this in-channel: "Note this for retro: /tmp path mismatch again".
+
+**Retro signal:** the lesson exists, is canonical, has a 12-day-old `originSessionId`,
+and STILL the trap fires because the advisor session's inline-script
+authoring doesn't pre-check the trap list. Two hypotheses for the v1-fed-in-c
+retro to consider:
+
+- (a) PMD-search-pre-queue pattern (per `advisor-orchestrator.md` §2.3) is
+  designed for brief-authoring, NOT for ad-hoc inline scripts during merge
+  reconcile. The lesson is unreachable through the current
+  `memory_search_hybrid` workflow because no brief is being written. Need
+  either a `/check-tmp-paths` lint or a Bash-tool pre-execution hook that
+  flags `/tmp/...` paths and suggests `$LOCALAPPDATA/Temp` / `.claude/scratch/`.
+- (b) The advisor's "write a quick Python one-liner inline" muscle memory
+  defaults to `/tmp` because Linux Bash works that way; the Windows-specific
+  override only kicks in when the FileNotFoundError forces it. A user-scope
+  CLAUDE.md instruction "on Windows, never use /tmp for cross-process file
+  handoff; default to C:/Users/barri/AppData/Local/Temp" would shift the
+  default at brief-time, not error-time.
+
+This recurrence is exactly the kind of "principle vs. rule" gap that
+`feedback_principles_not_rules.md` warns about: the principle is clear; the
+default behaviour reasserts itself absent active checking.
