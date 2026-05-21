@@ -108,7 +108,7 @@ pub trait PaginationCursorConversion {
       };
       let mut query = PaginatedQueryBuilder::new(query, sort_direction);
 
-      if page_back.unwrap_or_default() {
+      if page_back.unwrap_or(false) {
         if recovery {
           query = query
             .before_or_equal(page_after)
@@ -271,7 +271,7 @@ where
     .transpose()
   {
     // Need to convert here because diesel takes i64 for limit while vec length is usize.
-    let limit: usize = limit.try_into().unwrap_or_default();
+    let limit: usize = limit.try_into().unwrap_or(0);
     // Hide next and back buttons when possible.
     let back = request_cursor.as_ref().map(|r| r.back);
     match (data.len() < limit, back) {
