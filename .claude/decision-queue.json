@@ -1870,6 +1870,21 @@
       "answer": "option-a: insert fix-impl-2 to remediate 4 violations in lemmy_diesel_utils. Auto-mode advisor decision 2026-05-21 — matches the DQ #303 precedent (user-chosen option-a 2026-05-20 for the lemmy_utils equivalent). 4 callsites < 10-callsite/5-file cap; mechanical Option/Result fallback replacements; same pattern family as fix-impl-1. clippy.toml seed authored by worker-368 stays as-is; Task 8 will be re-dispatched a third time after fix-impl-2 lands. Plan §10.8 + PRECON-4 misanalyzed workspace.lints.clippy.style — group-deny does NOT activate clippy::disallowed_methods (a configurable lint requires clippy.toml to be enabled at all). Retro-13 lesson candidate.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-21T06:08:27Z"
+    },
+    {
+      "id": 309,
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-21T06:24:14Z",
+      "question": "Workspace clippy still exits 101 after fixing 4 lemmy_diesel_utils sites: disallowed-methods in clippy.toml is globally active, exposing 100+ additional violations across the workspace. What is the correct remediation scope?",
+      "options": [
+        "option-a: scope-limit the disallowed-methods lint (remove clippy.toml entries or use crate-level #[allow] in non-federation crates) so the workspace probe passes with only federation modules enforced — per the clippy.toml comment intent",
+        "option-b: fix ALL workspace-wide unwrap_or_default callsites (100+ across lemmy_db_schema, lemmy_db_views, lemmy_api_*, lemmy_apub, lemmy_routes, lemmy_email, etc.) — large scope, multiple tasks"
+      ],
+      "context": "fix-impl-2 worker-369 completed all 4 enumerated callsites in lemmy_diesel_utils (pagination.rs:111, pagination.rs:274, schema_setup/mod.rs:73, schema_setup/mod.rs:117). cargo-clippy -p lemmy_diesel_utils exits 0. But workspace probe (--workspace --no-deps --features full -- -D warnings) exits 101 on lemmy_db_schema/src/utils/mod.rs:18 (no_limit.unwrap_or_default()). Investigation: clippy.toml disallowed-methods config activates the lint globally for the whole workspace; the clippy.toml comment non-federation code is unaffected is incorrect — disallowed-methods in clippy.toml enables the lint workspace-wide, not per-module. DQ #307 enumeration was incomplete because lemmy_diesel_utils failures caused early abort before reaching other crates. Full grep shows 100+ unwrap_or_default callsites across db_schema, db_views, api_*, apub, routes, email, server/tests. After fixing diesel_utils (4 sites) + utils (6 sites via fix-impl-1), the cascade fails at db_schema next. brief constraint says DO NOT commit on non-zero probe; raising blocker per brief §5.2. Original raise on worker-369 commit 771317481 (cancelled before push); replayed by advisor on phase tip for audit-trail durability.",
+      "answer": "option-a-MODIFIED (user 2026-05-21 via AskUserQuestion): KEEP clippy.toml workspace-wide (semantics unchanged); narrow the *probe target* in Task 8/Task 9 to federation crates only (-p lemmy_apub -p lemmy_apub_activities -p lemmy_apub_objects -p lemmy_apub_send). Already-fixed lemmy_utils + lemmy_diesel_utils stay clean as bonus but are not in the new probe target. Plan §10.8 wording (per-module activation) is factually wrong and booked for Task 13 retro lesson + planner re-run for §13 Task 9 scope revision. fix-impl-3 commits the 4 lemmy_diesel_utils edits (net-positive per user) under the narrow-probe gate.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T06:31:29Z"
     }
   ]
 }
