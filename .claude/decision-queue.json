@@ -2037,6 +2037,24 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T09:08:00Z",
       "context": "Advisor-authored per user gate 2026-05-21."
+    },
+    {
+      "id": 320,
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T09:15:00Z",
+      "branch": "phase-v1-rls-r1",
+      "phase_task": 10,
+      "commands": [
+        "advisor-driven 3-probe dogfood + cargo-check"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 10 dogfood: 4.1 (a) PASS canonical match, 4.1 (b) PASS sentinel WARN, 4.6 PASS Step 2c surfaces 10+ candidates, 4.7 PASS after fix (caught Task 7 function-after-exit unreachable placement; relocated to before fail-open call site in same commit). cargo-check exit 0. Report at .claude/PRPs/reports/v1-rls-r1-dogfood-2026-05-21.md.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T09:15:00Z",
+      "context": "Advisor-driven dogfood per plan §13 Task 10 GOTCHA (runs on laptop). Discovered + fixed Task 7 regression in-cycle."
     }
   ]
 }
