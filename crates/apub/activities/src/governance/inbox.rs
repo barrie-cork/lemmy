@@ -424,6 +424,7 @@ async fn get_inbound_config_int(pool: &mut DbPool<'_>, config_key: &str) -> Lemm
     .filter(governance_config::scope.eq("instance"))
     .filter(governance_config::key.eq(config_key))
     .select(governance_config::value_int)
+    .order_by(governance_config::valid_from.desc())
     .first::<Option<i64>>(conn)
     .await
     .map_err(|_e| {
