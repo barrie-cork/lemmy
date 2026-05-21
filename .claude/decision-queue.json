@@ -20,6 +20,25 @@
       "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T06:08:27Z"
+    },
+    {
+      "id": 314,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T14:01:00Z",
+      "question": "validate phase-brehon-conformance-audit task 8 (revised) worker branch \u2014 clippy.toml + Cargo.toml workspace-allow",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-revised-single-commit-clippy-toml-cargo-toml-workspace-allow-see-378",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh -p lemmy_apub_activities -p lemmy_api -p lemmy_db_schema --features full --no-deps -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-workspace-clippy.log 2>&1; echo exit: $?"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
@@ -1932,6 +1951,21 @@
       "answer": "cargo-check --workspace --features full exit 0 (2m 05s warm) on laptop against phase-brehon-conformance-audit tip a629dca41. clippy.toml removed cleanly; workspace compiles. Task 8a complete.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-21T07:54:32Z"
+    },
+    {
+      "id": 313,
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-21T14:00:00Z",
+      "question": "lemmy_email build script fails with 'No such file or directory' in this worktree \u2014 pre-existing environment issue",
+      "options": [
+        "self-resolve: log and proceed; validate-pending-laptop DQ delegates actual cargo validation to advisor laptop",
+        "blocker: stop and escalate"
+      ],
+      "context": "cargo-clippy.sh and cargo-check.sh both exit non-zero due to lemmy_email build script failure (Os { code: 2, kind: NotFound }) in this worktree. Verified pre-existing: same error with git stash (no clippy.toml + no Cargo.toml edit). Not caused by Task 8 changes. All federation-crate probes are blocked. Structural checks (python3 assertions) pass for both files. Validate-pending-laptop DQ #314 delegates actual laptop validation to advisor.",
+      "answer": "Log: pre-existing worktree environment issue (lemmy_email build script 'No such file or directory'). Not caused by Task 8 changes \u2014 verified via git stash. Structural checks pass. Actual cargo validation delegated to validate-pending-laptop DQ (next entry). Action: file as lesson if this is a recurring pattern; advisor to verify on laptop.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-21T14:00:00Z"
     }
   ]
 }
