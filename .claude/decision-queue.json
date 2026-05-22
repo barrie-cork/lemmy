@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-22T00:00:00Z",
-      "question": "Task 1 cargo validation: cargo check + clippy against worker branch 6961a915e",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "feat(fed-in-e): serialise per-peer storage-cap eviction with pg_advisory_xact_lock (task 1) — commit 6961a915e on branch junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-e-task1-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-e-task1-clippy.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "7f504f757815-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3187,6 +3160,32 @@
       "approved_by": "user",
       "approved_at": "2026-05-22T21:30:00Z",
       "id": "bcdf6ecb126c-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Task 1 cargo validation: cargo check + clippy against worker branch 6961a915e",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "feat(fed-in-e): serialise per-peer storage-cap eviction with pg_advisory_xact_lock (task 1) — commit 6961a915e on branch junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-e-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-e-task1-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: CHECK_EXIT_0. cargo clippy --workspace --features full --no-deps -D warnings: CLIPPY_EXIT_0. Both commands passed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-22T22:32:39Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "7f504f757815-001"
     }
   ]
 }
