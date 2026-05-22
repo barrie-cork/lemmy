@@ -414,11 +414,55 @@ Stop the loop and surface to user immediately. Include catch-fire reason + cited
 | Workflow run exceeds 60-min ci-watcher cap → `result: "timed_out"` | `.claude/agents/ci-watcher.md` | Surface run id + elapsed; do NOT auto-rerun |
 | ci-watcher's `gh run watch <id> --exit-status` returns exit code not in `.claude/agents/ci-watcher.md` "Empirical exit-code table" | classifier-miss | Surface exit code + run id + `gh run view` snapshot; record new pair, update table at retro |
 
+## 6. Subagent delegation (advisor-side `Agent` tool dispatch)
+
+Distinct from the four Junior subagents (planning / impl-task / bm-task / ci-watcher) — this section covers the **laptop-side** `Agent` tool the advisor invokes for in-session research, file edits, audits, or any independent deliverable that doesn't need to run on the EliteDesk. The Junior subagents are queued via `mcp__junior-brehon__create_task` and run on the daemon; the `Agent` tool subagents run in the advisor session's harness and return inline.
+
+### 6.1 Parallel dispatch for N independent deliverables (status: defer-pending-2nd-recurrence)
+
+When the advisor session has N independent deliverables to produce (retro-followups, multi-file audits, parallel lesson-authoring, parallel research probes), dispatch all N in a **single assistant message with multiple `Agent` tool blocks**. The harness parallelises them — total wall-clock is approximately `max(per-agent runtime)`, NOT `sum(per-agent runtime)`.
+
+**Demonstrated 2026-05-22:** three `general-purpose` sub-agents (rule promotion + lesson authoring + hooks audit) dispatched in one message ran concurrently; ~7 min wall-clock vs ~12-15 min serial. First-try usability on all three; ~3× speedup.
+
+**When to apply:**
+
+- The deliverables are **independent** — no agent's output is required input to another's. (Sequential pipeline → still serial.)
+- Each deliverable is **bounded** — a single file edit, a single audit report, a focused research probe. Open-ended "investigate X" tasks may need iteration; harder to parallelise reliably.
+- The advisor has the **synthesis context** — sub-agents return their work; the parent integrates. Don't delegate the integration step.
+
+**Dispatch shape:** one assistant message containing K `Agent` tool blocks (K typically 2-4). Each block carries its own self-contained prompt (sub-agents see no parent conversation; brief them as if they walked into the room cold per the `Agent` tool guidance). Use `general-purpose` subagent_type unless a specialised agent fits better; pass `model: "sonnet"` for routine work (cheaper, fast enough), `model: "opus"` for synthesis-heavy work.
+
+**Promotion status:** **defer-pending-2nd-recurrence**. The pattern worked once (2026-05-22); recurrence threshold per `feedback_principles_not_rules.md` is 2 across distinct session types. Use the pattern when it fits; record evidence in session retros; promote to formal discipline after 2nd applicable session (likely: another retro-followup batch, or a multi-file audit in a sub-phase). Per `.claude/PRPs/reports/session-retro-2026-05-22-parallel-subagent-dispatch.md` §"Promotion candidates".
+
+### 6.2 Verify-after-subagent-completes (belt-and-braces; status: record-only, single occurrence)
+
+When a sub-agent's report claims a file edit landed in a tracked file under shared `.git/` (canonical `brehon-fork` checkout OR any `brehon-fork-<lane>` worktree), the parent advisor session MUST verify the edit still exists in the working tree **before** staging or proceeding with dependent work.
+
+**Why:** sub-agent reports describe sub-agent state at exit, NOT current parent-session state. Between sub-agent exit and parent-session use of the report, concurrent writers to the shared `.git/` can invalidate the report. Race B per `feedback_cross_session_commit_attribution_collision.md`: unstaged working-tree edits silently reverted by concurrent push + local fast-forward state alignment.
+
+**How to apply:**
+
+1. Sub-agent returns claiming "edit landed at line N" or similar specific change.
+2. **Immediately run a `grep` for a distinctive string** from the sub-agent's reported diff. (Distinctive = unlikely to appear elsewhere in the file by accident — pick a phrase from the new bullet, a unique identifier, a specific section heading.)
+3. **Zero matches** → the edit has been reverted by a concurrent writer. Re-apply inline via `Edit` tool using the bullet/section text from the sub-agent's report. **Do NOT re-dispatch the sub-agent** — the report itself is the recovery source.
+4. **Match found** → stage immediately (`git add <file>`) BEFORE any other tool call. Staging converts Race B into Race A which has a known mitigation (`git status` verify between add and commit per `feedback_cross_session_commit_attribution_collision.md`).
+
+**Promotion status:** **record-only**. Single occurrence at promotion time (2026-05-22 sub-agent A clobber + inline-recovery). The mechanism is documented here; formal promotion to a hard `MUST` defers until 2nd applicable incident. In the interim, the pattern is in the corpus and reachable by any future session.
+
+### 6.3 Bounded sub-agent dispatch and report semantics
+
+Independent of §6.1/§6.2, two invariants for all `Agent` tool dispatch:
+
+- **Brief like a smart colleague who just walked into the room.** Sub-agents see no parent conversation. Include: what you're trying to accomplish, what you've ruled out, the surrounding context that lets the sub-agent make judgment calls. Terse command-style prompts produce shallow generic work.
+- **Trust but verify.** Sub-agent reports describe what they *intended* to do, not necessarily what they did. For any edit to a tracked file, verify via §6.2 grep. For any code change, run the relevant validation (`cargo check`, the test, the lint) before assuming the change is sound.
+
 ## See also
 
-- `.claude/agents/<name>.md` — subagent contracts (planning, impl-task, bm-task, ci-watcher).
+- `.claude/agents/<name>.md` — Junior subagent contracts (planning, impl-task, bm-task, ci-watcher) — distinct from §6's advisor-side `Agent` tool subagents.
 - `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md` — BM mechanics, file-ownership, autonomy bounds.
 - `.claude/rules/decision-queue.md` — DQ schema, attribution, per-kind routing.
 - `.claude/rules/auto-phase.md` — `/auto-phase` state machine that compiles §3.1 + §4.1 + §5.3.
 - `.claude/rules/pmd-search-strategy.md` — PMD search modes referenced by §2.3.
 - `homeserver/.claude/advisor-context-phase-<N>.md` — phase-specific texture (session-start read).
+- `.claude/lessons/feedback_cross_session_commit_attribution_collision.md` — Race-A + Race-B mitigations cited from §6.2.
+- `.claude/PRPs/reports/session-retro-2026-05-22-parallel-subagent-dispatch.md` — wall-clock evidence + status rationale for §6.1.
