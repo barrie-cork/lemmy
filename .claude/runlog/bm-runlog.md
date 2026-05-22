@@ -1882,3 +1882,15 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remote branch deleted?** yes (`phase-v1-federation-inbound-c` removed from origin via `--delete-branch`)
 - **deliverable on trunk:** `crates/apub/activities/src/governance/inbox.rs` and `crates/api/api/src/governance/publish_trust_attestation.rs` carry `.order_by(valid_from.desc())` ordering fixes; `crates/server/tests/e2e.rs` carries `appended_config_override_takes_effect_returns_429` e2e regression test
 - **note:** Phase v1-federation-inbound-c complete. PR #144 CodeRabbit review was paused during active development; CR auto-triggered on final push. No critical findings. DQ #338 (daemon-reset bug) is orthogonal meta-issue; does not block phase merge.
+
+## bm: poll-cr — 2026-05-22T15:50:21Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **head SHA:** 2c1b593f22 (first poll — no prior SHA)
+- **CR comments seen:** 1 total (0 review / 0 inline / 1 issue)
+- **Actionable findings ingested:** 0 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 0 (n/a — first poll)
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 0/0/0 | nit 0/0/0
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-145-findings.yaml (1357 bytes, committed 31ff47dad)
+- **Notes:** CR review FAILED mid-flight. Head SHA changed from 000c3c063e to 2c1b593f22 during the CR run (issue comment at 2026-05-22T15:41:50Z, 26 s after PR open). Zero actionable findings: no severity headers, no inline comments, no review body. PR is 9 min old at poll time (under 30-min threshold — not a stall signal). Billing warning present on CR comment (subscription payment outstanding >72 h). Re-poll after CR completes a full review pass on the stable head SHA.
