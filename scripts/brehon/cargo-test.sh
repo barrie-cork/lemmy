@@ -81,7 +81,7 @@ ARGS_STR="$*"
 if [[ "$ARGS_STR" == *"--test e2e"* ]] \
    && [[ "$ARGS_STR" != *"--no-run"* ]] \
    && [[ "$ARGS_STR" != *"--test-threads"* ]]; then
-  if [[ "$ARGS_STR" == *" -- "* ]] || [[ "$ARGS_STR" == *" --"* ]]; then
+  if [[ "$ARGS_STR" == *" -- "* ]] || [[ "$ARGS_STR" == *" --" ]]; then
     echo "BREHON_TEST_THREADS_GUARD: appending --test-threads=1 after existing --"
     exec cargo test "$@" --test-threads=1
   else
