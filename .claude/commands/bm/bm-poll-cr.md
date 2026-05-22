@@ -132,6 +132,36 @@ is per-poll scratch; safe to delete after Phase 6.
 
 ---
 
+## Phase 2.5 — CR-ready gate (fast-exit if CR hasn't posted yet)
+
+After Phase 2, before any parsing work, check whether CR has actually
+completed a review pass. CR **always** posts an issue-level walkthrough
+comment before posting any inline findings. If `.cr-cache/pr-{N}-issue.jsonl`
+is empty (zero lines), CR has not finished its review.
+
+```bash
+issue_count=$(wc -l < .claude/PRPs/reviews/.cr-cache/pr-{N}-issue.jsonl)
+```
+
+| `issue_count` | PR age | Action |
+|---|---|---|
+| `0` | any | **FAST EXIT** — print "CR review not yet complete. Re-poll in ~10 min." Clean up cache, do NOT write YAML, do NOT commit. Exit 0. |
+| `>0` but only a "billing warning" / "credits exhausted" body | any | **FAST EXIT** — print "CR blocked by billing issue. Fix billing then re-poll." Exit 0. |
+| `>0` with a walkthrough body | < 5 min old | PROCEED (CR posted fast; may still be posting inline comments, but walkthrough is the gate signal) |
+| `>0` with a walkthrough body | ≥ 5 min old | PROCEED normally |
+
+**Billing-blocked detection:** the CR issue comment body contains the
+string `"credits"` or `"upgrade"` or `"billing"` with no severity
+header → billing gate, not a real zero-findings result.
+
+**Why this gate exists:** without it, the subagent spends 300+ seconds
+running all 8 phases just to report zero findings, because CR posts
+its walkthrough *before* inline findings. The walkthrough comment is
+the reliable "CR has started" signal; its absence means "come back
+later".
+
+---
+
 ## Phase 3 — Parse severity + summary from CR body
 
 CR's actionable findings open with a header line of the form:
