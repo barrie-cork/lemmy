@@ -1,0 +1,57 @@
+schema_version: 1
+pr: 145
+title: 'quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix'
+head: phase-v1-quality-r1
+base: governance-v0
+opened_at: '2026-05-22T15:41:24Z'
+last_poll_at: '2026-05-22T15:50:50.298488Z'
+poll_count: 1
+last_polled_head_sha: 2c1b593f22
+last_polled_fingerprint: null
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+notes: 'WARN: CR review failed mid-flight (head SHA changed from 000c3c063e to 2c1b593f22
+  during CR run at 2026-05-22T15:41:50Z). Zero actionable findings at poll #1. PR
+  is 9 min old (under 30-min threshold) — re-poll after CR completes a full review
+  pass. Billing warning present on CR comment: subscription payment outstanding.'
+findings: []
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 0
+    claude: 0
+    user: 0
+  total: 0
+merged_at: null
+merge_commit: null
+final_recommendation: null
