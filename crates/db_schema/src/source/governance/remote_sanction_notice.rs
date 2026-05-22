@@ -1,6 +1,8 @@
 use crate::newtypes::{ModerationCaseId, RemoteSanctionNoticeId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::enums::{FederationInboxAdminAction, FederationPeerTrust, SanctionAction, SanctionScope};
+use lemmy_db_schema_file::enums::{
+  FederationInboxAdminAction, FederationPeerTrust, SanctionAction, SanctionScope,
+};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::remote_sanction_notice;
 use serde::{Deserialize, Serialize};

@@ -5,8 +5,7 @@ use crate::{
 };
 use chrono::Utc;
 use diesel::{
-  ExpressionMethods,
-  QueryDsl,
+  ExpressionMethods, QueryDsl,
   dsl::{insert_into, update},
 };
 use diesel_async::RunQueryDsl;

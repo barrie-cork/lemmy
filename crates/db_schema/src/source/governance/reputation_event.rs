@@ -1,11 +1,11 @@
 use crate::newtypes::{CommunityId, ModerationCaseId, ReputationEventId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{
-  PersonId,
-  enums::{ReputationDimension, ReputationEventSourceType},   // v1-RT-r1: add ReputationEventSourceType
-};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::reputation_event;
+use lemmy_db_schema_file::{
+  PersonId,
+  enums::{ReputationDimension, ReputationEventSourceType}, // v1-RT-r1: add ReputationEventSourceType
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

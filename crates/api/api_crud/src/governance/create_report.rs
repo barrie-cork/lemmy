@@ -26,21 +26,14 @@
 
 use actix_web::web::{Data, Json};
 use diesel::{
-  BoolExpressionMethods,
-  ExpressionMethods,
-  OptionalExtension,
-  QueryDsl,
-  SelectableHelper,
-  insert_into,
-  update,
+  BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper,
+  insert_into, update,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
-  actor_pseudonym_helper,
-  case_open_snapshot,
+  actor_pseudonym_helper, case_open_snapshot,
   config::{self, ConfigCache, Scope},
-  governance_log,
-  reputation_snapshot,
+  governance_log, reputation_snapshot,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::{
@@ -103,12 +96,27 @@ pub async fn create_report(
   let reporter_snapshot =
     reputation_snapshot::load_or_compute_snapshot(conn, reporter_id, data.community_id, &mut cache)
       .await?;
-  let base_weight =
-    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.base_weight").await?;
-  let clamp_min =
-    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.clamp_min").await?;
-  let clamp_max =
-    config::get_float(&mut cache, &mut conn.into(), Scope::Instance, "report.clamp_max").await?;
+  let base_weight = config::get_float(
+    &mut cache,
+    &mut conn.into(),
+    Scope::Instance,
+    "report.base_weight",
+  )
+  .await?;
+  let clamp_min = config::get_float(
+    &mut cache,
+    &mut conn.into(),
+    Scope::Instance,
+    "report.clamp_min",
+  )
+  .await?;
+  let clamp_max = config::get_float(
+    &mut cache,
+    &mut conn.into(),
+    Scope::Instance,
+    "report.clamp_max",
+  )
+  .await?;
   let half_life_hours = config::get_float(
     &mut cache,
     &mut conn.into(),
@@ -447,9 +455,9 @@ fn match_target_filter(
     CaseTargetType::Community => {
       Box::new(moderation_case::target_community_id.eq(target_community_id))
     }
-    CaseTargetType::RemoteInstance => Box::new(
-      moderation_case::target_remote_url.eq(target_remote_url.map(str::to_string)),
-    ),
+    CaseTargetType::RemoteInstance => {
+      Box::new(moderation_case::target_remote_url.eq(target_remote_url.map(str::to_string)))
+    }
   }
 }
 
@@ -468,8 +476,14 @@ mod tests {
     let reputation = 1.0_f64;
     let recency = f64::NAN;
     let weight = compute_weight_micros(base, reputation, recency);
-    assert_eq!(weight, 2_000_000, "NaN input must fall back to base × 1_000_000");
-    assert!(logs_contain("non-finite"), "error! log must fire on non-finite input");
+    assert_eq!(
+      weight, 2_000_000,
+      "NaN input must fall back to base × 1_000_000"
+    );
+    assert!(
+      logs_contain("non-finite"),
+      "error! log must fire on non-finite input"
+    );
   }
 
   #[test]

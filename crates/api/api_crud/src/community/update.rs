@@ -6,12 +6,8 @@ use lemmy_api_utils::{
   context::LemmyContext,
   send_activity::{ActivityChannel, SendActivityData},
   utils::{
-    check_community_mod_action,
-    check_local_user_valid,
-    check_nsfw_allowed,
-    get_url_blocklist,
-    process_markdown_opt,
-    slur_regex,
+    check_community_mod_action, check_local_user_valid, check_nsfw_allowed, get_url_blocklist,
+    process_markdown_opt, slur_regex,
   },
 };
 use lemmy_db_schema::source::{

@@ -219,12 +219,16 @@ pub const ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED: &str = "sponsor_allowlist_remove
 
 // v1-federation-inbound-a consts (9). Call sites land in -b/-c per registry.
 pub const ENTRY_KIND_FEDERATION_INBOUND_BLOCKED: &str = "federation_inbound_blocked";
-pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE: &str = "federation_inbound_dropped_oversize";
-pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR: &str = "federation_inbound_dropped_rate_limit_actor";
-pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER: &str = "federation_inbound_dropped_rate_limit_peer";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE: &str =
+  "federation_inbound_dropped_oversize";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR: &str =
+  "federation_inbound_dropped_rate_limit_actor";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER: &str =
+  "federation_inbound_dropped_rate_limit_peer";
 pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY: &str = "federation_inbound_dropped_replay";
 pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_SCHEMA: &str = "federation_inbound_dropped_schema";
-pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED: &str = "federation_inbound_dropped_storage_cap_evicted";
+pub const ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED: &str =
+  "federation_inbound_dropped_storage_cap_evicted";
 pub const ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED: &str = "federation_inbound_persist_failed";
 pub const ENTRY_KIND_FEDERATION_LABEL_RECEIVED: &str = "federation_label_received";
 pub const ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED: &str = "federation_peer_trust_changed";
@@ -318,11 +322,12 @@ pub async fn append(
 #[cfg(feature = "full")]
 fn load_signing_key() -> LemmyResult<SigningKey> {
   let hex_str = env::var(SIGNING_KEY_ENV).map_err(|_e| {
-    LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} not set (required for governance log)"))
+    LemmyErrorType::Unknown(format!(
+      "{SIGNING_KEY_ENV} not set (required for governance log)"
+    ))
   })?;
-  let bytes = hex::decode(hex_str.trim()).map_err(|_e| {
-    LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} is not valid hex"))
-  })?;
+  let bytes = hex::decode(hex_str.trim())
+    .map_err(|_e| LemmyErrorType::Unknown(format!("{SIGNING_KEY_ENV} is not valid hex")))?;
   let seed: [u8; 32] = bytes.as_slice().try_into().map_err(|_e| {
     LemmyErrorType::Unknown(format!(
       "{SIGNING_KEY_ENV} must decode to exactly 32 bytes (got {})",

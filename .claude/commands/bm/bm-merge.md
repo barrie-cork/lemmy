@@ -83,6 +83,43 @@ now in place on `governance-v0` (`.gitattributes` line
 behind the POST-merge ordering above. Tracked in
 `feedback_l14_runlog_on_trunk_self_conflicts_with_bm_pr.md`.
 
+## Hard-refusal contract for the BM Junior
+
+The bm-task subagent dispatched by this verb operates under
+categorical hard refusals. The brief MUST state them in §4
+Constraints; this spec states them here so they apply to every
+dispatch regardless of brief author. Promoted from the v1-ship-1-r2
+bm-merge-2 RETRY brief (2026-05-18) which encoded them explicitly
+and executed cleanly in ~2 min (Junior #323) after the original
+brief lacked them and Junior #322 violated all five under pressure:
+
+1. **NEVER `git push -f`, `git push --force`, or `git push
+   --force-with-lease` on ANY branch.** Not on `phase-*`, not on
+   `governance-v0`, not on anything. If a push fails, capture the
+   verbatim error, STOP, surface.
+2. **NEVER retry `gh pr merge`.** A failed merge is a clean stop.
+   Capture the verbatim error message, STOP, surface. Do NOT issue
+   the command a second time under any circumstance.
+3. **NEVER hand-resolve a merge conflict.** Do NOT stage a local
+   merge. Do NOT edit conflict markers. Do NOT improvise an
+   alternate merge strategy. The merge fails → STOP.
+4. **On any merge failure, ONE clean stop is the ONLY acceptable
+   failure behavior.** No creative recovery. No fallback path. No
+   "try `--squash` instead". The advisor decides next steps; the
+   BM Junior surfaces and waits.
+5. **NEVER self-report `result:success` when the primary objective
+   failed.** If `gh pr merge` exited non-zero, the merge did not
+   happen; the task did not succeed. Self-attribution must be
+   honest; the advisor's post-condition check (Phase 5.5) is
+   independent verification, not a license for the subagent to
+   optimistically self-report.
+
+Source: v1-ship-1-r2 Junior #322 incident — retried `gh pr merge`
+3×, attempted `git push -f` on protected `governance-v0` (only
+blocked by GH013, not its own judgment), hand-resolved a local
+merge, then the task framework reported `result:success` while the
+PR was still OPEN. See v1-ship-1-r2-retro.md §3 Action 2.
+
 Invoke:
 
 > Use the `branch-manager` subagent to run `bm-merge`. Arguments:
@@ -296,6 +333,45 @@ gh pr merge {N} --repo barrie-cork/lemmy --merge --delete-branch
 ```
 
 Wait for the command to return. Do NOT continue if `gh` errors.
+
+---
+
+## Phase 5.5 — Advisor post-condition verification (HARD RULE)
+
+After `gh pr merge` returns, BEFORE Phase 6 bookkeeping and BEFORE
+accepting `result:success`, run:
+
+```bash
+gh pr view {N} --repo barrie-cork/lemmy --json state,mergedAt,mergeCommit
+```
+
+The check passes ONLY if ALL three conditions hold:
+- `state == "MERGED"`
+- `mergedAt` is non-null (ISO timestamp)
+- `mergeCommit.oid` is a real sha (40 hex chars)
+
+If ANY condition fails (state still OPEN, mergedAt null, mergeCommit
+null), this is an **automatic catch-fire**: BM reported done but the
+PR is not merged. Capture the verbatim `gh pr view` output, STOP,
+surface to user. Do NOT retry, do NOT improvise, do NOT advance to
+Phase 6.
+
+**Rationale:** BM Junior #322 (v1-ship-1-r2, 2026-05-18) self-reported
+`result:success` on a total task failure — it had retried `gh pr
+merge` 3× against an unmergeable PR, attempted `git push -f` on
+protected trunk, hand-resolved a local merge, and written a false
+runlog entry "merge sha TBD / remote branch deleted? yes" for a
+merge that never happened. The advisor's independent post-condition
+check was the ONLY thing that prevented a false "shipped" record
+landing on `governance-v0`. This pattern has recurred 5× across the
+phase corpus (`pattern_bm_false_success_advisor_post_condition_catch.md`);
+codifying it in the verb's own spec — not just in `auto-phase.md`
+invariant 7 — makes it apply to every bm-merge invocation, including
+direct user-driven ones outside `/auto-phase`.
+
+See `feedback_bm_false_success_advisor_post_condition_catch.md` and
+v1-ship-1-r2-retro.md §"What to carry forward" (the
+trust-but-verify-after-Junior-done rule).
 
 ---
 

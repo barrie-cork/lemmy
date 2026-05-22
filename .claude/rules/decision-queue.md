@@ -4,25 +4,20 @@ When you hit a decision you cannot make alone during a ralph loop, use
 the decision queue at `.claude/decision-queue.json` instead of stopping
 the loop entirely.
 
-## Schema (v2)
+## Schema
 
 Top-level keys: `pending` (array), `resolved` (array), `schema_version`
-(integer; currently `3`). The legacy `phase` field was removed in v2 —
-it tracked the Brehon sub-phase but was never read by any agent or
-rule and drifted stale. Sub-phase membership is derivable from the entry's
-`timestamp` + git history; no top-level field needed.
+(integer; currently `3`). v3 fields per entry: `id` (composite — see
+§"Schema (v3)" below), `from`, `kind`, `timestamp`, `question`,
+`options`, `context`, `answer`, `answered_by`, `resolved_at`,
+`approved_by`, `approved_at`.
 
-v2 adds the `kind` field on entries (`"blocker"` | `"log"` — see
-"kind: blocker vs log" below) and standardises a `resolved_at` ISO 8601
-timestamp on resolved entries (replacing the historical drift between
-`answered_at` / `ts_resolved` / `resolved_timestamp` / missing).
-**Do not rewrite historical entries** — pre-v2 idiosyncrasies stay as
-the audit trail. Forward-only consistency.
-
-If `schema_version` is missing or `1`, treat entries as v1 (no `kind`,
-varied resolved-timestamp keys). When you read a v1 entry into a v2
-write context, do not backfill `kind` or `resolved_at` — leave the
-historical record untouched.
+**Forward-only consistency.** Never rewrite pre-v3 entries. Treat
+`schema_version` missing or `1` as v1 (no `kind`; varied resolved-
+timestamp keys: `answered_at` / `ts_resolved` / `resolved_timestamp` /
+missing); do not backfill `kind` or `resolved_at` on read. The legacy
+`phase` top-level field was removed in v2 (drifted stale; sub-phase
+derivable from `timestamp` + git history) — do not re-add.
 
 ## Schema (v3)
 
@@ -98,24 +93,37 @@ ls .claude/decision-queue-archive-*.json
 # Read each until the id is found
 ```
 
-### Next-id calculation MUST span both
+### Next-id calculation (v3 — canonical)
 
-When computing the next id for a new entry (per Recipe 1 / Recipe 2),
-include the archive(s) in the max:
+Under schema-v3, **always** generate new entry ids via
+`bash scripts/brehon/dq-v3-new-entry.sh`. The script returns a composite
+`<session_id>-<seq>` (e.g. `a1b2c3d4e5f6-001`) drawn from a per-session
+12-hex UUID and a monotonic per-session counter, so id namespaces never
+intersect across worktrees or sessions. Cross-lane id deduplication is
+no longer needed for new entries.
 
-```python
-import json, glob
-def next_id():
-    all_ids = []
-    for path in ['.claude/decision-queue.json'] + glob.glob('.claude/decision-queue-archive-*.json'):
-        data = json.load(open(path))
-        all_ids += [e['id'] for e in data.get('pending',[]) + data.get('resolved',[])]
-    return max(all_ids, default=0) + 1
-```
+To append the new entry to the DQ, **always** use
+`bash scripts/brehon/dq-v3-append-fragment.sh <fragment.json> [--pending]`.
+The helper generates the id, injects it into the fragment, appends to
+`resolved[]` (or `pending[]` with `--pending`), and writes the file —
+zero inline Python. Authoring fragments via the Write tool also avoids
+the Windows backslash-path mangling class (see
+`feedback_windows_backslash_path_dq_via_write_fragment.md`).
 
-The DQ #50 collision incident (`e9fa1e01a`) was the lesson here. With
-archives in play, ignoring the archive when computing next_id is the
-new way to reproduce that bug. Don't.
+### Next-id calculation (pre-v3 — historical only)
+
+Pre-v3 entries used integer ids computed as
+`max(all_ids, default=0) + 1` spanning the live DQ + archive files.
+That recipe is **abolished** for new v3 writes (per "Composite id" above
++ Hard refusal #9) — using it on a mixed int/string id corpus raises
+`TypeError` on Python `max()`. Do **not** copy the historical recipe
+into a new authoring script. The pre-v3 recipe survives only so the
+`dq-schema-v3-migrate.sh` provenance is readable; it is not a recipe to
+re-implement.
+
+The DQ #50 collision incident (`e9fa1e01a`) and the recurring cross-lane
+race documented in `feedback_cohort_dq_id_collision.md` are both
+structurally eliminated by the v3 composite-id mechanism.
 
 ### What does NOT get archived
 
@@ -360,7 +368,7 @@ Drift from the canonical recipe sequence produces the recurring failure modes th
 These are the recurring failure modes the audit and Phase-6 #37 incident produced. Every Junior subagent must refuse:
 
 1. **NEVER write `"answered_by": "advisor"` from a non-advisor session.** This is the Phase-6 #37 process breach. The advisor label is reserved for commits authored by the persistent advisor session in its own writes — detected by commit-subject pattern (see "Attribution integrity" below). If you self-attribute under "advisor", that's a breach even if no one notices.
-2. **NEVER reuse an existing id.** Always compute `max(all_ids, default=0) + 1` from both `pending` and `resolved`. The DQ #50 incident (collision with #49, had to be relocated via `e9fa1e01a`) was the lesson.
+2. **NEVER reuse an existing id.** Under schema-v3, always generate ids via `bash scripts/brehon/dq-v3-new-entry.sh` — see "Next-id calculation (v3 — canonical)" above. The pre-v3 `max(all_ids, default=0) + 1` recipe is abolished (Hard refusal #9) and produces `TypeError` on the mixed int/string id corpus that exists post-migration. The DQ #50 incident (collision with #49, had to be relocated via `e9fa1e01a`) was the lesson that motivated v3.
 3. **NEVER raise a `kind: blocker` for a question you can answer by reading the codebase, the plan, or `.claude/lessons/`.** The advisor-loop stop is expensive. If the answer is in a file you haven't read yet, read it first.
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.

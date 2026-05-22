@@ -1,0 +1,429 @@
+{
+  "$schema_version": 2,
+  "$schema_v2_changes": "Adds optional per-sub-phase fields { worktree, in_flight_since, done_at } populated by /roadmap-next + /auto-roadmap skill pair. Adds top-level optional field { last_updated_at } bumped on every skill-driven mutation. Pre-existing v1 entries are unchanged; absent fields are treated as null. Forward-only.",
+  "generated_at": "2026-05-22",
+  "generated_by": "advisor session (canonical brehon-fork checkout)",
+  "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
+  "trunk_branch": "governance-v0",
+  "trunk_tip_at_authoring": "e9caf8933",
+  "last_updated_at": "2026-05-22T17:30:00Z",
+  "status_legend": {
+    "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
+    "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
+    "partial": "some sub-phases merged; remaining sub-phases planned but not yet branched or in-flight",
+    "unstarted": "PRD exists; no sub-phase planned or merged",
+    "skipped": "user instructed to exclude from this roadmap (currently being implemented elsewhere)"
+  },
+  "evidence_legend": {
+    "pr": "PR number merged into governance-v0",
+    "retro": "path to sub-phase retro on trunk",
+    "verify": "path to /brehon-verify report on trunk",
+    "meta_retro": "path to lane meta-retro on trunk (strong signal lane closed)",
+    "worktree": "absolute path to lane-dedicated worktree (set by /roadmap-next; cleared on user `git worktree remove` post-merge)",
+    "in_flight_since": "ISO date when /roadmap-next flipped status unstarted -> in_flight",
+    "done_at": "ISO date when /auto-roadmap flipped status in_flight -> done"
+  },
+  "lanes": {
+    "JM": {
+      "name": "Jury Mechanics",
+      "prd": ".claude/PRPs/prds/v1-jury-mechanics.prd.md",
+      "status": "done",
+      "capstone": "v1-JM-e",
+      "lane_meta_retro": null,
+      "shipped_at": "2026-05-02",
+      "evidence_summary": "5 sub-phases shipped; capstone retro + verify on trunk; no formal lane meta-retro authored (predates the SL/AD lane-meta convention)",
+      "sub_phases": {
+        "v1-JM-a": {
+          "status": "done",
+          "scope": "schema + 27 seeded keys + 6 entry-kind consts + backfill",
+          "pr": 92,
+          "merge_commit": "e1c22c759",
+          "plan": ".claude/PRPs/plans/completed/phase-v1-JM-a.plan.md",
+          "retro": ".claude/PRPs/reports/phase-v1-JM-a-retro.md",
+          "verify": null
+        },
+        "v1-JM-b": {
+          "status": "done",
+          "scope": "admin_assign_jury cascade + diversity + snapshot writes + jury_constraint_violation_log writer",
+          "pr": 95,
+          "merge_commit": "4d2b93ed9",
+          "plan": ".claude/PRPs/plans/v1-jury-mechanics-b.plan.md",
+          "retro": ".claude/PRPs/reports/v1-JM-b-retro.md",
+          "verify": null
+        },
+        "v1-JM-c": {
+          "status": "done",
+          "scope": "submit_jury_vote 9-step rewrite + ENTRY_KIND_JURY_DEADLOCK + 6 e2e tests",
+          "pr": [
+            97,
+            98
+          ],
+          "plan": ".claude/PRPs/plans/v1-jury-mechanics-c.plan.md",
+          "retro": ".claude/PRPs/reports/v1-JM-c-retro.md",
+          "verify": null
+        },
+        "v1-JM-d": {
+          "status": "done",
+          "scope": "request_appeal rewrite + admin_trigger_appeal_rejury + appeal_window_expiry job + select_appeal_panel/seat_appeal_panel helpers + appeal.decided_at/requester_role schema; Tasks 1-5 direct-to-trunk, Tasks 6-7 collapsed into retro",
+          "pr": null,
+          "direct_to_trunk_commits": [
+            "72dd5d527",
+            "7397b8437",
+            "dfaa28906",
+            "775459505",
+            "ee7d4b1c6",
+            "7a7b0e6ad"
+          ],
+          "plan": ".claude/PRPs/plans/v1-jury-mechanics-d.plan.md",
+          "retro": ".claude/PRPs/reports/v1-JM-d-retro.md",
+          "verify": null,
+          "note": "Direct-to-trunk because Tasks 1-5 ran pre-Shape-G under the old direct-commit pattern; the JM-d retro at eeb5c5baf is the lane-closure signal"
+        },
+        "v1-JM-e": {
+          "status": "done",
+          "scope": "appeal-vote tally branch + step_up_token DTO slot + 4 e2e tests + ENTRY_KIND_APPEAL_DECIDED marker flip",
+          "pr": 107,
+          "merge_commit": "ea9e0d309",
+          "plan": ".claude/PRPs/plans/v1-jury-mechanics-e.plan.md",
+          "retro": ".claude/PRPs/reports/v1-JM-e-retro.md",
+          "verify": ".claude/PRPs/reports/v1-JM-e-verify.md"
+        }
+      },
+      "known_followups": [
+        "Sanction-override on appeal verdict (v2 candidate, per JM-e §12)",
+        "step_up_token enforcement (v2, per ADR-010)",
+        "Admin-dashboard view for jury_constraint_violation_log (admin-dashboard-v1 owns)"
+      ]
+    },
+    "SL": {
+      "name": "Sponsor Liability",
+      "prd": ".claude/PRPs/prds/v1-sponsor-liability.prd.md",
+      "status": "done",
+      "capstone": "v1-SL-e",
+      "lane_meta_retro": ".claude/PRPs/reports/v1-SL-lane-meta-retro.md",
+      "shipped_at": "2026-05-13",
+      "evidence_summary": "5 sub-phases (c split into c-1/c-2) shipped across 6 PRs; lane meta-retro on trunk at f4140f3f1",
+      "sub_phases": {
+        "v1-SL-a": {
+          "status": "done",
+          "scope": "schema + 3 enum variants + 5 ENTRY_KIND consts + ADR-013 exhaustiveness sweep + config 13-key extension + e2e round-trip",
+          "pr": 111,
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-a.plan.md",
+          "retro": ".claude/PRPs/reports/v1-SL-a-retro.md"
+        },
+        "v1-SL-b": {
+          "status": "done",
+          "scope": "revoke_endorsement handler + DTO + route + 9 e2e tests",
+          "pr": [
+            114,
+            119
+          ],
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-b.plan.md",
+          "retro": null,
+          "verify": ".claude/PRPs/reports/v1-SL-b-verify.md",
+          "note": "Retro absent; verify report present (3/3 stories ✓). PR numbering shows both #114 (initial) and #119 (re-merge after fix)"
+        },
+        "v1-SL-c-1": {
+          "status": "done",
+          "scope": "sponsor_liability_grace.rs scheduler module + clokwerk wiring + atomic concurrency guard",
+          "pr": 121,
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md",
+          "retro": ".claude/PRPs/reports/v1-SL-c-1-retro.md"
+        },
+        "v1-SL-c-2": {
+          "status": "done",
+          "scope": "5 grace_check e2e tests (fired/escaped/no-op/isolation/batch-size)",
+          "pr": 122,
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-c-2.plan.md",
+          "retro": ".claude/PRPs/reports/v1-SL-c-2-retro.md",
+          "note": "PR #122 was a cherry-pick after the c-1/c-2 split"
+        },
+        "v1-SL-d": {
+          "status": "done",
+          "scope": "apply_sponsor_liability compute/fire split + submit_jury_vote SponsorLiabilityPending transition + 4 e2e + 2 unit tests + grace_window_for_severity helper",
+          "pr": 123,
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-d.plan.md",
+          "retro": ".claude/PRPs/reports/v1-SL-d-retro.md"
+        },
+        "v1-SL-e": {
+          "status": "done",
+          "scope": "3 lane-wide capstone e2e tests (revocation-during-window, window-expiry-fires, backfill-of-mid-flight v0→v1)",
+          "pr": 127,
+          "plan": ".claude/PRPs/plans/v1-sponsor-liability-e.plan.md",
+          "retro": ".claude/PRPs/reports/v1-SL-e-retro.md"
+        }
+      },
+      "known_followups": [
+        "Restoration-during-window-escapes branch deferred to restorative-mechanics-v1 PRD (locked per SL-c DQ #145)",
+        "Registry markers for SPONSOR_LIABILITY_PENDING/FIRED/ESCAPED + ENDORSEMENT_REVOKED still say (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — documentation drift; code emits correctly. Flip recommended but not blocking."
+      ]
+    },
+    "AD": {
+      "name": "Admin Dashboard",
+      "prd": ".claude/PRPs/prds/v1-admin-dashboard.prd.md",
+      "status": "done",
+      "capstone": "v1-AD-e",
+      "lane_meta_retro": ".claude/PRPs/reports/v1-AD-meta-retro.md",
+      "shipped_at": "2026-05-17",
+      "evidence_summary": "5 sub-phases shipped; lane meta-retro on trunk; AD-e closeout at PR #133 + session retro 8d74ce30f",
+      "sub_phases": {
+        "v1-AD-a": {
+          "status": "done",
+          "scope": "schema + governance_config extensions + 2 ENTRY_KIND consts + v0 wrapper compat",
+          "pr": 72,
+          "plan": ".claude/PRPs/plans/v1-admin-dashboard-a.plan.md",
+          "retro": ".claude/PRPs/reports/v1-AD-a-retro.md",
+          "verify": ".claude/PRPs/reports/v1-AD-a-complete-report.md"
+        },
+        "v1-AD-b": {
+          "status": "done",
+          "scope": "admin_config handler + capability check + ENTRY_KIND_ADMIN_CONFIG_CHANGED/CHANGE_DENIED fire sites",
+          "pr": 76,
+          "plan": ".claude/PRPs/plans/v1-admin-dashboard-b.plan.md",
+          "retro": null
+        },
+        "v1-AD-c": {
+          "status": "done",
+          "scope": "admin_create_rule_set handler + rule_set_version + ENTRY_KIND_RULE_SET_VERSION_CREATED",
+          "pr": 81,
+          "plan": ".claude/PRPs/plans/v1-admin-dashboard-c.plan.md",
+          "retro": ".claude/PRPs/reports/v1-AD-c-complete-report.md"
+        },
+        "v1-AD-d": {
+          "status": "done",
+          "scope": "additional admin endpoints + tests",
+          "pr": 87,
+          "plan": ".claude/PRPs/plans/v1-admin-dashboard-d.plan.md",
+          "retro": ".claude/PRPs/reports/v1-admin-dashboard-d-retro.md"
+        },
+        "v1-AD-e": {
+          "status": "done",
+          "scope": "lane-closer e2e suite + meta-retro",
+          "pr": 133,
+          "plan": ".claude/PRPs/plans/v1-admin-dashboard-e.plan.md",
+          "retro": ".claude/PRPs/reports/v1-AD-e-retro.md",
+          "verify": ".claude/PRPs/reports/v1-AD-e-verify.md"
+        }
+      },
+      "known_followups": []
+    },
+    "RT": {
+      "name": "Reputation Tuning",
+      "prd": ".claude/PRPs/prds/v1-reputation-tuning.prd.md",
+      "status": "partial",
+      "capstone": null,
+      "lane_meta_retro": null,
+      "evidence_summary": "ONLY r1 shipped (PR #126). r2-r5 are pre-landed in the governance-log entry-kind registry but UNSTARTED — 4 sub-phases of planned work remain.",
+      "sub_phases": {
+        "v1-RT-r1": {
+          "status": "done",
+          "scope": "schema + 7 ENTRY_KIND consts (PARTICIPATION_CRON_TICK, VOTE_OUTCOME_RECORDED, EVIDENCE_QUALITY_RECORDED, ROLLUP_RECOMPUTED, DECAY_KNOB_CHANGED, SPONSOR_ALLOWLIST_ADDED, SPONSOR_ALLOWLIST_REMOVED) + foundation tables; HALTED mid-cycle, recovered via halt-retro, then shipped",
+          "pr": 126,
+          "plan": ".claude/PRPs/plans/v1-reputation-tuning-r1.plan.md",
+          "retro": ".claude/PRPs/reports/v1-RT-r1-retro.md",
+          "halt_retro": ".claude/PRPs/reports/v1-RT-r1-halt-retro.md",
+          "note": "Plan was halted at fix-impl-1 due to N-callsite enumeration miss (DQ #205); recovered after planner re-plan."
+        },
+        "v1-RT-r2": {
+          "status": "unstarted",
+          "scope": "v1 decay calculator goes live; admin_config emits ENTRY_KIND_DECAY_KNOB_CHANGED on first decay-key write; flips feature.reputation_v1_decay_enabled",
+          "registry_evidence": "ENTRY_KIND_DECAY_KNOB_CHANGED row in .claude/rules/governance-log-entry-kind-registry.md cites v1-RT-r2 admin_config.rs (pending)",
+          "plan": null,
+          "blocker": "no plan written yet"
+        },
+        "v1-RT-r3": {
+          "status": "unstarted",
+          "scope": "scheduled_tasks weekly-active cron + submit_jury_vote post-decision juror-aligned hook + admin_emergency_remove flag_bad_faith; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED",
+          "registry_evidence": "3 RT-r1 pre-landed consts name v1-RT-r3 as their fire site",
+          "plan": null,
+          "blocker": "no plan written yet"
+        },
+        "v1-RT-r4": {
+          "status": "unstarted",
+          "scope": "admin_sponsor_allowlist.rs add/remove handlers; fires ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED",
+          "registry_evidence": "2 RT-r1 pre-landed consts name v1-RT-r4 as their fire site",
+          "plan": null,
+          "blocker": "no plan written yet"
+        },
+        "v1-RT-r5": {
+          "status": "unstarted",
+          "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
+          "registry_evidence": "ENTRY_KIND_ROLLUP_RECOMPUTED row names v1-RT-r5 scheduled_tasks.rs (pending)",
+          "plan": null,
+          "blocker": "no plan written yet"
+        }
+      },
+      "known_followups": [
+        "Plan v1-RT-r2 through v1-RT-r5 once ship-1 (substrate→external user) + federation-inbound lane close",
+        "RT-r2 is the 'feature flag on' moment for v1 decay calculator — single sub-phase, but high-stakes (changes reputation arithmetic for every user)"
+      ]
+    },
+    "SR": {
+      "name": "Ship Readiness (a.k.a. SR / Ship)",
+      "prd": ".claude/PRPs/prds/v1-ship-readiness.prd.md",
+      "status": "partial",
+      "capstone": null,
+      "lane_meta_retro": null,
+      "evidence_summary": "Sub-PRD 'From Substrate-Complete to First External User'. Closes the v0 ship-gate via 3 sequenced sub-phases (ship-1, ship-2, ship-3 expected). ship-1 (+ r1/r2 follow-ups) shipped 2026-05-18 at PR #137. ship-2 and ship-3 unstarted.",
+      "ship_gates_identified": [
+        "AGPL §13 source-disclosure user-visible HTTP endpoint (addressed in ship-1)",
+        "Per-endpoint e2e coverage on POST /appeal, GET /modlog, GET /reputation/me, POST /endorsement (addressed in ship-1)",
+        "docker-compose.yml Postgres pin (Tier-2 polish — unknown sub-phase target)",
+        "POST /report return view instead of raw row (Tier-2 polish)",
+        "sponsor-liability 2-sponsors-lose-reputation e2e by name (Tier-2 polish)"
+      ],
+      "sub_phases": {
+        "v1-ship-1": {
+          "status": "done",
+          "scope": "AGPL §13 user-visible disclosure endpoint + per-endpoint e2e for POST /appeal, GET /modlog, GET /reputation/me, POST /endorsement",
+          "pr": 137,
+          "merge_commit": "a27812631",
+          "plan": ".claude/PRPs/plans/v1-ship-1.plan.md",
+          "retro": null,
+          "remediation_sub_phases": [
+            "v1-ship-1-r1",
+            "v1-ship-1-r2"
+          ]
+        },
+        "v1-ship-1-r1": {
+          "status": "done",
+          "scope": "remediation cycle on v1-ship-1 CR findings",
+          "pr": null,
+          "plan": ".claude/PRPs/plans/v1-ship-1-r1.plan.md",
+          "retro": null
+        },
+        "v1-ship-1-r2": {
+          "status": "done",
+          "scope": "second remediation cycle; final ship-1 closeout",
+          "pr": 139,
+          "plan": ".claude/PRPs/plans/v1-ship-1-r2.plan.md",
+          "retro": ".claude/PRPs/reports/v1-ship-1-r2-retro.md",
+          "verify": ".claude/PRPs/reports/v1-ship-1-r2-verify.md"
+        },
+        "v1-ship-2": {
+          "status": "in_flight",
+          "scope": "PRD-named second ship-gate sub-phase (specifics TBD — read PRD §2/§3 for scope)",
+          "plan": null,
+          "blocker": "no plan written; PRD says ship-readiness is 'three sequenced sub-phases'",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-ship-2",
+          "in_flight_since": "2026-05-22"
+        },
+        "v1-ship-3": {
+          "status": "unstarted",
+          "scope": "PRD-named third ship-gate sub-phase",
+          "plan": null,
+          "blocker": "no plan written"
+        }
+      },
+      "known_followups": [
+        "PRD §1.1 enumerates Tier-2 polish: docker-compose Postgres pin, POST /report view shape, sponsor-liability 2-sponsors e2e name confirmation",
+        "PRD scope statement: 'Does NOT replace any ADR; additive to numbered design docs'",
+        "Hard boundary per PRD: '11 v0 endpoints + 15 ADRs. No scope creep into v1 feature breadth (RT-r2..RT-r6 / JM-f / restorative-mechanics-v1)'"
+      ]
+    },
+    "federation_inbound": {
+      "name": "Federation Inbound",
+      "prd": ".claude/PRPs/prds/v1-federation-inbound.prd.md",
+      "status": "skipped",
+      "reason": "User instructed 2026-05-22: federation-inbound is currently being implemented; not in roadmap scope. Sub-phases a/b/c shipped (PRs #138, #139, #144); d in-flight at brehon-fork-fed-in-d worktree. Refer to fed-in-d brief + planning queue for state."
+    },
+    "quality": {
+      "name": "Quality / QA",
+      "prd": null,
+      "status": "skipped",
+      "reason": "User instructed 2026-05-22: quality-r1 is also ongoing. Branch phase-v1-quality-r1 active at brehon-fork-quality-r1 worktree. No PRD; treated as quality-pass meta-lane.",
+      "active_branch": "phase-v1-quality-r1",
+      "worktree": "C:/Users/barri/Developer/brehon-fork-quality-r1",
+      "recent_work": [
+        "test-settings: ensure_default_settings() to prevent LazyLock poisoning",
+        "fmt: workspace reformat under stable rustfmt",
+        "case-open-snapshot: pin all 27 requires_re_jury keys (ADR-010 compliance)"
+      ]
+    }
+  },
+  "meta_lanes": {
+    "v1-validate-agent": {
+      "purpose": "Shape G validation orchestration (cargo runs off-box on GH Actions)",
+      "status": "done",
+      "pr": 104,
+      "merge_commit": "ed4be2bd8",
+      "retro": ".claude/PRPs/reports/v1-validate-agent-retro.md",
+      "verify": ".claude/PRPs/reports/v1-validate-agent-verify.md"
+    },
+    "v1-rls-r1": {
+      "purpose": "Recursive learning system / PMD canonical-path enforcement (3 invariants from RLS-PMD review)",
+      "status": "done",
+      "pr": 140,
+      "plan": ".claude/PRPs/plans/v1-rls-r1.plan.md",
+      "retro": ".claude/PRPs/reports/v1-rls-r1-retro.md"
+    },
+    "v1-dq-schema-r1": {
+      "purpose": "Decision-queue schema v3: composite ids + approved_by fields",
+      "status": "done",
+      "plan": ".claude/PRPs/plans/v1-dq-schema-r1.plan.md",
+      "retro": ".claude/PRPs/reports/v1-dq-schema-r1-retro.md",
+      "note": "Shipped on a phase branch + merged; no separate PR# captured here, but four-role retro present on trunk (c858aa7ab)"
+    },
+    "v1-retro-followups-r1": {
+      "purpose": "Promote durable lessons from prior session retros (live-state validation, pre-compact handover, four-role retro)",
+      "status": "done",
+      "plan": ".claude/PRPs/plans/v1-retro-followups-r1.plan.md",
+      "retro": ".claude/PRPs/reports/v1-retro-followups-r1-retro.md"
+    },
+    "brehon-conformance-audit": {
+      "purpose": "Conformance audit skill + tooling",
+      "status": "done",
+      "pr": 141,
+      "merge_commit": "7cfc21c23"
+    }
+  },
+  "what_remains": {
+    "high_priority_unstarted": [
+      {
+        "lane": "SR (Ship Readiness)",
+        "items": [
+          "v1-ship-2",
+          "v1-ship-3"
+        ],
+        "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1 + remediation cycles shipped, ship-2/3 unstarted. Closes v0 ship-gate to 'first external user'."
+      },
+      {
+        "lane": "RT (Reputation Tuning)",
+        "items": [
+          "v1-RT-r2",
+          "v1-RT-r3",
+          "v1-RT-r4",
+          "v1-RT-r5"
+        ],
+        "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes — changes reputation arithmetic for every user)."
+      }
+    ],
+    "in_flight_outside_roadmap": [
+      {
+        "lane": "federation-inbound-d",
+        "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-d",
+        "branch": "worker-task1-fix",
+        "user_steered_out": true
+      },
+      {
+        "lane": "quality-r1",
+        "worktree": "C:/Users/barri/Developer/brehon-fork-quality-r1",
+        "branch": "phase-v1-quality-r1",
+        "user_steered_out": true
+      }
+    ],
+    "documentation_drift_followups": [
+      "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — should be flipped to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly."
+    ],
+    "v2_out_of_scope": [
+      "v2-messaging-rtc.prd.md (Matrix + LiveKit messaging)",
+      "Restorative-mechanics-v1 PRD (owns RESTORATION_COMPLETED fire site)",
+      "JM v2: sanction-override on appeal, step_up_token enforcement, appeal-panel concurrency tests"
+    ]
+  },
+  "implementation_steering": {
+    "next_logical_sub_phase": "Resolve federation-inbound-d + quality-r1 first (both in flight), then plan v1-ship-2 to continue closing the v0 ship-gate before tackling RT-r2..r5",
+    "rationale_for_ship_first": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness (named as such in the PRD's hard-boundary statement) — they add feature breadth, not ship-readiness.",
+    "rationale_for_RT_later": "RT-r2 flips reputation_v1_decay_enabled feature flag. Doing this AFTER ship-readiness closes means the flag flip lands on a system already in compliance + tested at endpoint granularity."
+  }
+}

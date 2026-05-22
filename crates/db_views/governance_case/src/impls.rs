@@ -12,7 +12,9 @@ use lemmy_db_schema::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::{AppealStatus, CaseSeverity, CaseStatus, CaseTargetType, JuryAssignmentStatus},
-  schema::{appeal, case_evidence, comment, community, jury_assignment, moderation_case, post, sanction},
+  schema::{
+    appeal, case_evidence, comment, community, jury_assignment, moderation_case, post, sanction,
+  },
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
@@ -60,9 +62,7 @@ pub async fn list_open_cases_for_community(
   ];
 
   let rows: Vec<SummaryRow> = moderation_case::table
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(moderation_case::community_id.eq(community_id))
     .filter(moderation_case::status.eq_any(open_statuses))
     .select((
@@ -99,9 +99,7 @@ pub async fn list_cases_needing_jury_selection(
   let conn = &mut get_conn(pool).await?;
 
   let rows: Vec<SummaryRow> = moderation_case::table
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(moderation_case::status.eq(CaseStatus::ThresholdMet))
     .select((
       moderation_case::id,
@@ -137,9 +135,7 @@ pub async fn list_cases_for_person(
   let conn = &mut get_conn(pool).await?;
 
   let rows: Vec<SummaryRow> = moderation_case::table
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(moderation_case::target_person_id.eq(target_person_id))
     .select((
       moderation_case::id,
@@ -202,9 +198,7 @@ pub async fn list_cases_filtered(
   let offset = page.saturating_sub(1).saturating_mul(limit);
 
   let mut query = moderation_case::table
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .select((
       moderation_case::id,
       moderation_case::status,
@@ -273,12 +267,17 @@ fn build_summary(
   row: SummaryRow,
   submitted_counts: &HashMap<ModerationCaseId, i64>,
 ) -> GovernanceCaseSummaryView {
-  let (case_id, status, severity, reason_code, opened_at, community_id, community_name, target_type) =
-    row;
-  let submitted = submitted_counts
-    .get(&case_id)
-    .copied()
-    .unwrap_or(0);
+  let (
+    case_id,
+    status,
+    severity,
+    reason_code,
+    opened_at,
+    community_id,
+    community_name,
+    target_type,
+  ) = row;
+  let submitted = submitted_counts.get(&case_id).copied().unwrap_or(0);
   GovernanceCaseSummaryView {
     case_id: case_id.0,
     status,

@@ -1,11 +1,11 @@
 use crate::newtypes::{CommentId, CommunityId, ModerationCaseId, PostId, SanctionId};
 use chrono::{DateTime, Utc};
+#[cfg(feature = "full")]
+use lemmy_db_schema_file::schema::sanction;
 use lemmy_db_schema_file::{
   PersonId,
   enums::{SanctionAction, SanctionScope},
 };
-#[cfg(feature = "full")]
-use lemmy_db_schema_file::schema::sanction;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

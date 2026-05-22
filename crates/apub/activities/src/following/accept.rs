@@ -1,6 +1,5 @@
 use crate::{
-  check_community_deleted_or_removed,
-  generate_activity_id,
+  check_community_deleted_or_removed, generate_activity_id,
   protocol::following::{accept::AcceptFollow, follow::Follow},
   send_lemmy_activity,
 };

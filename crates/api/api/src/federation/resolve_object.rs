@@ -130,6 +130,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_object_visibility() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let data = TestData::create(pool).await?;

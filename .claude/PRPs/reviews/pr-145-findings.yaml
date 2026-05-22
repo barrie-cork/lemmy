@@ -1,0 +1,81 @@
+schema_version: 1
+pr: 145
+title: 'quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix'
+head: phase-v1-quality-r1
+base: governance-v0
+opened_at: '2026-05-22T15:41:24Z'
+last_poll_at: '2026-05-22T16:01:45.480982Z'
+poll_count: 2
+last_polled_head_sha: 49da0d109
+last_polled_fingerprint: null
+last_claude_run_at: '2026-05-22T17:35:00Z'
+claude_run_count: 1
+recommendation: approve
+notes: >
+  CR billing-blocked (subscription payment outstanding >72h). BM substituted a full
+  Claude review covering ADR-010/013/014/015 compliance, rustfmt mechanical check,
+  LazyLock helper analysis, and cargo validation. cargo check exit 0; cargo clippy
+  exit 0 (clean — 8 pre-existing errors are in #[test] code, only surface with
+  --all-targets which the plan defers). cargo test --no-run pending.
+  Recommendation: approve. Single low-severity wont-fix nit (SAFETY comment wording).
+findings:
+  - id: claude-1
+    source: claude
+    severity: low
+    posted_at: '2026-05-22T17:35:00Z'
+    file: crates/utils/src/lib.rs
+    line: 148
+    summary: >-
+      SAFETY comment in ensure_default_settings() focuses on ordering ("before
+      LazyLock is first accessed") but does not explicitly mention that no concurrent
+      threads are reading env vars at call_once time — the actual unsafe invariant
+      required by Rust 1.81 set_var.
+    cr_url: null
+    adr: null
+    bucket: wont-fix
+    addressed_in: null
+    rationale: >-
+      The code is functionally correct: Once::call_once guarantees serial execution;
+      test binaries are single-process; set_var completes before any thread reads
+      SETTINGS. The comment under-specifies the concurrent-thread angle but the
+      safety invariant holds. Not worth a fix commit given the correct behaviour.
+    notes: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 1
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 0
+    claude: 1
+    user: 0
+  total: 1
+merged_at: null
+merge_commit: null
+final_recommendation: null

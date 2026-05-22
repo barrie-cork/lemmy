@@ -96,6 +96,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_mod_remove_or_restore_data() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let Data {
@@ -398,6 +399,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_bulk_parent_id_propagated() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let Data {

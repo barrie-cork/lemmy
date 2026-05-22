@@ -1,9 +1,7 @@
 use crate::{
   newtypes::{LocalUserId, RegistrationApplicationId},
   source::registration_application::{
-    RegistrationApplication,
-    RegistrationApplicationInsertForm,
-    RegistrationApplicationUpdateForm,
+    RegistrationApplication, RegistrationApplicationInsertForm, RegistrationApplicationUpdateForm,
   },
 };
 use diesel::{ExpressionMethods, QueryDsl, insert_into};

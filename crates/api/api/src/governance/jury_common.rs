@@ -5,7 +5,10 @@
 //! Phase 5c risk-reduction strategy Move 5. Both handlers need the same
 //! sponsor-cluster conflict check against the case target.
 
-use diesel::{QueryableByName, sql_query, sql_types::{Array, BigInt, Bool, Integer}};
+use diesel::{
+  QueryableByName, sql_query,
+  sql_types::{Array, BigInt, Bool, Integer},
+};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema_file::PersonId;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
@@ -87,9 +90,6 @@ pub(crate) async fn panel_has_sponsor_majority_cluster(
   })?;
 
   let majority = (person_ids.len() / 2) + 1;
-  let max_shared: usize = row
-    .max_shared
-    .try_into()
-    .unwrap_or(usize::MAX); // BigInt can't exceed panel_size in practice; saturate instead of error.
+  let max_shared: usize = row.max_shared.try_into().unwrap_or(usize::MAX); // BigInt can't exceed panel_size in practice; saturate instead of error.
   Ok(max_shared >= majority)
 }

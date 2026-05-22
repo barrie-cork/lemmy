@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brehon v1 Roadmap</title>
+<style>
+  :root {
+    --done:      #16a34a;
+    --partial:   #d97706;
+    --unstarted: #6b7280;
+    --skipped:   #7c3aed;
+    --in-flight: #2563eb;
+    --done-bg:       #f0fdf4;
+    --partial-bg:    #fffbeb;
+    --unstarted-bg:  #f9fafb;
+    --skipped-bg:    #f5f3ff;
+    --in-flight-bg:  #eff6ff;
+    --card-border: 1px solid #e5e7eb;
+    --radius: 8px;
+    --font: system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: #f1f5f9;
+    color: #1e293b;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  header {
+    max-width: 1400px;
+    margin: 0 auto 24px;
+  }
+
+  header h1 { font-size: 1.6rem; font-weight: 700; }
+  header p  { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
+
+  /* Legend */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 12px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .badge.done      { background: #dcfce7; color: var(--done); }
+  .badge.partial   { background: #fef3c7; color: var(--partial); }
+  .badge.unstarted { background: #f3f4f6; color: var(--unstarted); }
+  .badge.skipped   { background: #ede9fe; color: var(--skipped); }
+  .badge.in_flight { background: #dbeafe; color: var(--in-flight); }
+
+  /* Kanban board */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto 32px;
+  }
+
+  /* Lane card */
+  .lane {
+    background: #fff;
+    border: var(--card-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lane-header {
+    padding: 14px 16px 10px;
+    border-bottom: var(--card-border);
+  }
+
+  .lane-title {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px;
+  }
+
+  .lane-name { font-size: 1rem; font-weight: 700; }
+  .lane-key  { font-size: 0.75rem; color: #64748b; font-weight: 500; }
+  .lane-summary {
+    font-size: 0.78rem; color: #64748b; margin-top: 6px; line-height: 1.4;
+  }
+
+  /* Sub-phase list */
+  .sub-phases { padding: 8px 12px; flex: 1; }
+
+  .sp-card {
+    border: var(--card-border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .sp-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sp-header:hover { background: #f8fafc; }
+
+  .sp-id   { font-size: 0.75rem; font-weight: 700; font-family: monospace; }
+  .sp-scope { font-size: 0.75rem; color: #475569; flex: 1; line-height: 1.3; }
+
+  .sp-detail {
+    font-size: 0.75rem; color: #64748b;
+    padding: 0 10px 8px;
+    border-top: 1px solid #f1f5f9;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .sp-detail.open { display: block; }
+
+  .sp-detail a { color: #2563eb; text-decoration: none; }
+  .sp-detail a:hover { text-decoration: underline; }
+
+  .sp-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .sp-meta-tag {
+    background: #f1f5f9; border-radius: 4px;
+    padding: 1px 6px; font-size: 0.7rem; color: #475569;
+  }
+
+  /* Status-coloured left border on sp-card */
+  .sp-card.done      { border-left: 3px solid var(--done); }
+  .sp-card.partial   { border-left: 3px solid var(--partial); }
+  .sp-card.unstarted { border-left: 3px solid var(--unstarted); }
+  .sp-card.skipped   { border-left: 3px solid var(--skipped); }
+  .sp-card.in_flight { border-left: 3px solid var(--in-flight); }
+
+  /* Followups */
+  .followups {
+    padding: 8px 12px 10px;
+    border-top: var(--card-border);
+  }
+
+  .followups-title {
+    font-size: 0.7rem; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+  }
+
+  .followups ul { padding-left: 14px; }
+  .followups li { font-size: 0.72rem; color: #64748b; line-height: 1.4; margin-bottom: 2px; }
+
+  /* Section title */
+  .section-title {
+    max-width: 1400px; margin: 0 auto 12px;
+    font-size: 1rem; font-weight: 700; color: #475569;
+    border-left: 3px solid #cbd5e1; padding-left: 10px;
+  }
+
+  /* What remains panel */
+  .remains {
+    max-width: 1400px;
+    margin: 0 auto 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+
+  .remains-card {
+    background: #fff;
+    border: var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .remains-card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; }
+  .remains-card ul { padding-left: 16px; }
+  .remains-card li { font-size: 0.8rem; color: #475569; margin-bottom: 4px; line-height: 1.4; }
+
+  .remains-card.high-priority { border-left: 3px solid #ef4444; }
+  .remains-card.steering      { border-left: 3px solid #2563eb; }
+  .remains-card.inflight      { border-left: 3px solid var(--in-flight); }
+  .remains-card.docs          { border-left: 3px solid #d97706; }
+
+  .steering-block {
+    font-size: 0.8rem; color: #475569; line-height: 1.5;
+  }
+
+  .steering-block strong { color: #1e293b; }
+
+  footer {
+    text-align: center; font-size: 0.72rem; color: #94a3b8;
+    padding-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Brehon v1 Roadmap</h1>
+  <p>Generated 2026-05-22 &mdash; trunk <code>governance-v0</code> @ <code>e9caf8933</code> &mdash; click a sub-phase row to expand details</p>
+  <div class="legend">
+    <span class="badge done">done</span>
+    <span class="badge partial">partial</span>
+    <span class="badge unstarted">unstarted</span>
+    <span class="badge in_flight">in-flight</span>
+    <span class="badge skipped">skipped</span>
+  </div>
+</header>
+
+<!-- ===== MAIN LANES ===== -->
+<div class="section-title">Feature Lanes</div>
+<div class="board" id="main-board"></div>
+
+<!-- ===== META LANES ===== -->
+<div class="section-title">Meta / Infra Lanes</div>
+<div class="board" id="meta-board"></div>
+
+<!-- ===== WHAT REMAINS ===== -->
+<div class="section-title">What Remains</div>
+<div class="remains" id="remains-board"></div>
+
+<footer>Brehon fork &mdash; solo-dev, AGPL-3.0 &mdash; v1-roadmap.json viewer</footer>
+
+<script>
+// ──────────────────────────────────────────────────────────
+// DATA (inlined from v1-roadmap.json)
+// ──────────────────────────────────────────────────────────
+const ROADMAP = {
+  "lanes": {
+    "JM": {
+      "name": "Jury Mechanics", "key": "JM",
+      "prd": ".claude/PRPs/prds/v1-jury-mechanics.prd.md",
+      "status": "done", "capstone": "v1-JM-e",
+      "shipped_at": "2026-05-02",
+      "evidence_summary": "5 sub-phases shipped; capstone retro + verify on trunk; no formal lane meta-retro (predates SL/AD lane-meta convention)",
+      "sub_phases": {
+        "v1-JM-a": { "status": "done", "scope": "schema + 27 seeded keys + 6 entry-kind consts + backfill", "pr": 92, "merge_commit": "e1c22c759", "plan": ".claude/PRPs/plans/completed/phase-v1-JM-a.plan.md", "retro": ".claude/PRPs/reports/phase-v1-JM-a-retro.md" },
+        "v1-JM-b": { "status": "done", "scope": "admin_assign_jury cascade + diversity + snapshot writes + jury_constraint_violation_log writer", "pr": 95, "merge_commit": "4d2b93ed9", "plan": ".claude/PRPs/plans/v1-jury-mechanics-b.plan.md", "retro": ".claude/PRPs/reports/v1-JM-b-retro.md" },
+        "v1-JM-c": { "status": "done", "scope": "submit_jury_vote 9-step rewrite + ENTRY_KIND_JURY_DEADLOCK + 6 e2e tests", "pr": [97,98], "plan": ".claude/PRPs/plans/v1-jury-mechanics-c.plan.md", "retro": ".claude/PRPs/reports/v1-JM-c-retro.md" },
+        "v1-JM-d": { "status": "done", "scope": "request_appeal rewrite + admin_trigger_appeal_rejury + appeal_window_expiry job + select_appeal_panel/seat_appeal_panel helpers + appeal.decided_at/requester_role schema", "pr": null, "direct_to_trunk": true, "plan": ".claude/PRPs/plans/v1-jury-mechanics-d.plan.md", "retro": ".claude/PRPs/reports/v1-JM-d-retro.md", "note": "Direct-to-trunk; Tasks 1-5 ran pre-Shape-G" },
+        "v1-JM-e": { "status": "done", "scope": "appeal-vote tally branch + step_up_token DTO slot + 4 e2e tests + ENTRY_KIND_APPEAL_DECIDED marker flip", "pr": 107, "merge_commit": "ea9e0d309", "plan": ".claude/PRPs/plans/v1-jury-mechanics-e.plan.md", "retro": ".claude/PRPs/reports/v1-JM-e-retro.md", "verify": ".claude/PRPs/reports/v1-JM-e-verify.md" }
+      },
+      "known_followups": ["Sanction-override on appeal verdict (v2 candidate, per JM-e §12)", "step_up_token enforcement (v2, per ADR-010)", "Admin-dashboard view for jury_constraint_violation_log"]
+    },
+    "SL": {
+      "name": "Sponsor Liability", "key": "SL",
+      "prd": ".claude/PRPs/prds/v1-sponsor-liability.prd.md",
+      "status": "done", "capstone": "v1-SL-e",
+      "lane_meta_retro": ".claude/PRPs/reports/v1-SL-lane-meta-retro.md",
+      "shipped_at": "2026-05-13",
+      "evidence_summary": "5 sub-phases (c split into c-1/c-2) shipped across 6 PRs; lane meta-retro on trunk at f4140f3f1",
+      "sub_phases": {
+        "v1-SL-a": { "status": "done", "scope": "schema + 3 enum variants + 5 ENTRY_KIND consts + ADR-013 exhaustiveness sweep + config 13-key extension + e2e round-trip", "pr": 111, "plan": ".claude/PRPs/plans/v1-sponsor-liability-a.plan.md", "retro": ".claude/PRPs/reports/v1-SL-a-retro.md" },
+        "v1-SL-b": { "status": "done", "scope": "revoke_endorsement handler + DTO + route + 9 e2e tests", "pr": [114,119], "plan": ".claude/PRPs/plans/v1-sponsor-liability-b.plan.md", "retro": null, "verify": ".claude/PRPs/reports/v1-SL-b-verify.md", "note": "Retro absent; verify ✓. PR #114 (initial) + #119 (re-merge after fix)" },
+        "v1-SL-c-1": { "status": "done", "scope": "sponsor_liability_grace.rs scheduler module + clokwerk wiring + atomic concurrency guard", "pr": 121, "plan": ".claude/PRPs/plans/v1-sponsor-liability-c-1.plan.md", "retro": ".claude/PRPs/reports/v1-SL-c-1-retro.md" },
+        "v1-SL-c-2": { "status": "done", "scope": "5 grace_check e2e tests (fired/escaped/no-op/isolation/batch-size)", "pr": 122, "plan": ".claude/PRPs/plans/v1-sponsor-liability-c-2.plan.md", "retro": ".claude/PRPs/reports/v1-SL-c-2-retro.md", "note": "PR #122 cherry-pick after c-1/c-2 split" },
+        "v1-SL-d": { "status": "done", "scope": "apply_sponsor_liability compute/fire split + submit_jury_vote SponsorLiabilityPending transition + 4 e2e + 2 unit tests + grace_window_for_severity helper", "pr": 123, "plan": ".claude/PRPs/plans/v1-sponsor-liability-d.plan.md", "retro": ".claude/PRPs/reports/v1-SL-d-retro.md" },
+        "v1-SL-e": { "status": "done", "scope": "3 lane-wide capstone e2e tests (revocation-during-window, window-expiry-fires, backfill-of-mid-flight v0→v1)", "pr": 127, "plan": ".claude/PRPs/plans/v1-sponsor-liability-e.plan.md", "retro": ".claude/PRPs/reports/v1-SL-e-retro.md" }
+      },
+      "known_followups": ["Restoration-during-window-escapes branch deferred to restorative-mechanics-v1 PRD", "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in governance-log-entry-kind-registry.md — documentation drift; code emits correctly"]
+    },
+    "AD": {
+      "name": "Admin Dashboard", "key": "AD",
+      "prd": ".claude/PRPs/prds/v1-admin-dashboard.prd.md",
+      "status": "done", "capstone": "v1-AD-e",
+      "lane_meta_retro": ".claude/PRPs/reports/v1-AD-meta-retro.md",
+      "shipped_at": "2026-05-17",
+      "evidence_summary": "5 sub-phases shipped; lane meta-retro on trunk; AD-e closeout at PR #133 + session retro 8d74ce30f",
+      "sub_phases": {
+        "v1-AD-a": { "status": "done", "scope": "schema + governance_config extensions + 2 ENTRY_KIND consts + v0 wrapper compat", "pr": 72, "plan": ".claude/PRPs/plans/v1-admin-dashboard-a.plan.md", "retro": ".claude/PRPs/reports/v1-AD-a-retro.md", "verify": ".claude/PRPs/reports/v1-AD-a-complete-report.md" },
+        "v1-AD-b": { "status": "done", "scope": "admin_config handler + capability check + ENTRY_KIND_ADMIN_CONFIG_CHANGED/CHANGE_DENIED fire sites", "pr": 76, "plan": ".claude/PRPs/plans/v1-admin-dashboard-b.plan.md", "retro": null },
+        "v1-AD-c": { "status": "done", "scope": "admin_create_rule_set handler + rule_set_version + ENTRY_KIND_RULE_SET_VERSION_CREATED", "pr": 81, "plan": ".claude/PRPs/plans/v1-admin-dashboard-c.plan.md", "retro": ".claude/PRPs/reports/v1-AD-c-complete-report.md" },
+        "v1-AD-d": { "status": "done", "scope": "additional admin endpoints + tests", "pr": 87, "plan": ".claude/PRPs/plans/v1-admin-dashboard-d.plan.md", "retro": ".claude/PRPs/reports/v1-admin-dashboard-d-retro.md" },
+        "v1-AD-e": { "status": "done", "scope": "lane-closer e2e suite + meta-retro", "pr": 133, "plan": ".claude/PRPs/plans/v1-admin-dashboard-e.plan.md", "retro": ".claude/PRPs/reports/v1-AD-e-retro.md", "verify": ".claude/PRPs/reports/v1-AD-e-verify.md" }
+      },
+      "known_followups": []
+    },
+    "RT": {
+      "name": "Reputation Tuning", "key": "RT",
+      "prd": ".claude/PRPs/prds/v1-reputation-tuning.prd.md",
+      "status": "partial", "capstone": null,
+      "lane_meta_retro": null,
+      "evidence_summary": "ONLY r1 shipped (PR #126). r2–r5 are pre-landed consts but UNSTARTED — 4 sub-phases of planned work remain.",
+      "sub_phases": {
+        "v1-RT-r1": { "status": "done", "scope": "schema + 7 ENTRY_KIND consts + foundation tables; HALTED mid-cycle, recovered via halt-retro", "pr": 126, "plan": ".claude/PRPs/plans/v1-reputation-tuning-r1.plan.md", "retro": ".claude/PRPs/reports/v1-RT-r1-retro.md", "note": "Halted at fix-impl-1 due to N-callsite enumeration miss (DQ #205); recovered after planner re-plan" },
+        "v1-RT-r2": { "status": "unstarted", "scope": "v1 decay calculator goes live; admin_config emits ENTRY_KIND_DECAY_KNOB_CHANGED on first decay-key write; flips feature.reputation_v1_decay_enabled", "plan": null, "blocker": "no plan written yet" },
+        "v1-RT-r3": { "status": "unstarted", "scope": "scheduled_tasks weekly-active cron + submit_jury_vote post-decision juror-aligned hook + admin_emergency_remove flag_bad_faith; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED", "plan": null, "blocker": "no plan written yet" },
+        "v1-RT-r4": { "status": "unstarted", "scope": "admin_sponsor_allowlist.rs add/remove handlers; fires ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED", "plan": null, "blocker": "no plan written yet" },
+        "v1-RT-r5": { "status": "unstarted", "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED", "plan": null, "blocker": "no plan written yet" }
+      },
+      "known_followups": ["Plan v1-RT-r2 through v1-RT-r5 once ship-1 + federation-inbound lane close", "RT-r2 is the 'feature flag on' moment for v1 decay calculator — high-stakes (changes reputation arithmetic for every user)"]
+    },
+    "SR": {
+      "name": "Ship Readiness", "key": "SR",
+      "prd": ".claude/PRPs/prds/v1-ship-readiness.prd.md",
+      "status": "partial", "capstone": null,
+      "lane_meta_retro": null,
+      "evidence_summary": "ship-1 + r1/r2 remediation cycles shipped 2026-05-18 at PR #137. ship-2 and ship-3 unstarted.",
+      "sub_phases": {
+        "v1-ship-1": { "status": "done", "scope": "AGPL §13 user-visible disclosure endpoint + per-endpoint e2e for POST /appeal, GET /modlog, GET /reputation/me, POST /endorsement", "pr": 137, "merge_commit": "a27812631", "plan": ".claude/PRPs/plans/v1-ship-1.plan.md", "retro": null },
+        "v1-ship-1-r1": { "status": "done", "scope": "remediation cycle on v1-ship-1 CR findings", "pr": null, "plan": ".claude/PRPs/plans/v1-ship-1-r1.plan.md", "retro": null },
+        "v1-ship-1-r2": { "status": "done", "scope": "second remediation cycle; final ship-1 closeout", "pr": 139, "plan": ".claude/PRPs/plans/v1-ship-1-r2.plan.md", "retro": ".claude/PRPs/reports/v1-ship-1-r2-retro.md", "verify": ".claude/PRPs/reports/v1-ship-1-r2-verify.md" },
+        "v1-ship-2": { "status": "unstarted", "scope": "PRD-named second ship-gate sub-phase (specifics TBD — read PRD §2/§3 for scope)", "plan": null, "blocker": "no plan written; PRD says ship-readiness is 3 sequenced sub-phases" },
+        "v1-ship-3": { "status": "unstarted", "scope": "PRD-named third ship-gate sub-phase", "plan": null, "blocker": "no plan written" }
+      },
+      "known_followups": ["PRD §1.1: docker-compose Postgres pin, POST /report view shape, sponsor-liability 2-sponsors e2e name confirmation", "Hard boundary: '11 v0 endpoints + 15 ADRs. No scope creep into v1 feature breadth'"]
+    }
+  },
+
+  "meta_lanes": {
+    "v1-validate-agent": { "name": "Validate Agent (Shape G)", "purpose": "Shape G validation orchestration (cargo runs off-box on GH Actions)", "status": "done", "pr": 104, "merge_commit": "ed4be2bd8", "retro": ".claude/PRPs/reports/v1-validate-agent-retro.md", "verify": ".claude/PRPs/reports/v1-validate-agent-verify.md" },
+    "v1-rls-r1":         { "name": "RLS r1 (PMD canonical)", "purpose": "Recursive learning system / PMD canonical-path enforcement (3 invariants from RLS-PMD review)", "status": "done", "pr": 140, "plan": ".claude/PRPs/plans/v1-rls-r1.plan.md", "retro": ".claude/PRPs/reports/v1-rls-r1-retro.md" },
+    "v1-dq-schema-r1":   { "name": "DQ Schema v3", "purpose": "Decision-queue schema v3: composite ids + approved_by fields", "status": "done", "plan": ".claude/PRPs/plans/v1-dq-schema-r1.plan.md", "retro": ".claude/PRPs/reports/v1-dq-schema-r1-retro.md", "note": "Shipped + merged; four-role retro present on trunk (c858aa7ab)" },
+    "v1-retro-followups-r1": { "name": "Retro Followups r1", "purpose": "Promote durable lessons from prior session retros (live-state validation, pre-compact handover, four-role retro)", "status": "done", "plan": ".claude/PRPs/plans/v1-retro-followups-r1.plan.md", "retro": ".claude/PRPs/reports/v1-retro-followups-r1-retro.md" },
+    "brehon-conformance-audit": { "name": "Conformance Audit", "purpose": "Conformance audit skill + tooling", "status": "done", "pr": 141, "merge_commit": "7cfc21c23" }
+  },
+
+  "what_remains": {
+    "high_priority_unstarted": [
+      { "lane": "SR (Ship Readiness)", "items": ["v1-ship-2", "v1-ship-3"], "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1 + remediation cycles shipped, ship-2/3 unstarted. Closes v0 ship-gate to 'first external user'." },
+      { "lane": "RT (Reputation Tuning)", "items": ["v1-RT-r2", "v1-RT-r3", "v1-RT-r4", "v1-RT-r5"], "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes)." }
+    ],
+    "in_flight_outside_roadmap": [
+      { "lane": "federation-inbound-d", "worktree": "brehon-fork-fed-in-d", "branch": "worker-task1-fix", "note": "User-steered out of roadmap scope" },
+      { "lane": "quality-r1", "worktree": "brehon-fork-quality-r1", "branch": "phase-v1-quality-r1", "note": "User-steered out of roadmap scope" }
+    ],
+    "documentation_drift": ["SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in governance-log-entry-kind-registry.md — code emits correctly; docs lag."],
+    "steering": {
+      "next_logical_sub_phase": "Resolve federation-inbound-d + quality-r1 first (both in flight), then plan v1-ship-2 to continue closing the v0 ship-gate before tackling RT-r2..r5",
+      "ship_first_rationale": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness — they add feature breadth, not ship-readiness.",
+      "RT_later_rationale": "RT-r2 flips reputation_v1_decay_enabled feature flag. Doing this AFTER ship-readiness closes means the flag flip lands on a system already in compliance + tested at endpoint granularity."
+    }
+  }
+};
+
+// ──────────────────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────────────────
+function badge(status) {
+  const label = status === 'in_flight' ? 'in-flight' : status;
+  return `<span class="badge ${status}">${label}</span>`;
+}
+
+function prLinks(pr) {
+  if (!pr) return '—';
+  const nums = Array.isArray(pr) ? pr : [pr];
+  return nums.map(n => `<a href="https://github.com/barrie-cork/lemmy/pull/${n}" target="_blank">#${n}</a>`).join(', ');
+}
+
+function togDetail(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// ──────────────────────────────────────────────────────────
+// RENDER MAIN LANES
+// ──────────────────────────────────────────────────────────
+function renderLane(key, lane) {
+  const sps = Object.entries(lane.sub_phases || {});
+  const spCards = sps.map(([id, sp], i) => {
+    const detailId = `sp-${key}-${i}`;
+    const metaTags = [];
+    if (sp.pr)            metaTags.push(`PR ${prLinks(sp.pr)}`);
+    else if (sp.direct_to_trunk) metaTags.push('direct-to-trunk');
+    if (sp.merge_commit)  metaTags.push(`<code>${sp.merge_commit.slice(0,7)}</code>`);
+    if (sp.plan)          metaTags.push(`<a href="${sp.plan}" title="${sp.plan}">plan</a>`);
+    if (sp.retro)         metaTags.push(`<a href="${sp.retro}" title="${sp.retro}">retro</a>`);
+    if (sp.verify)        metaTags.push(`<a href="${sp.verify}" title="${sp.verify}">verify</a>`);
+    if (sp.blocker)       metaTags.push(`<em>blocker: ${sp.blocker}</em>`);
+
+    return `
+      <div class="sp-card ${sp.status}">
+        <div class="sp-header" onclick="togDetail('${detailId}')">
+          ${badge(sp.status)}
+          <span class="sp-id">${id}</span>
+          <span class="sp-scope">${sp.scope}</span>
+        </div>
+        <div class="sp-detail" id="${detailId}">
+          ${sp.note ? `<p style="margin-bottom:4px;font-style:italic">${sp.note}</p>` : ''}
+          <div class="sp-meta">${metaTags.map(t => `<span class="sp-meta-tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const followups = (lane.known_followups || []).length > 0 ? `
+    <div class="followups">
+      <div class="followups-title">Known follow-ups</div>
+      <ul>${(lane.known_followups).map(f => `<li>${f}</li>`).join('')}</ul>
+    </div>` : '';
+
+  return `
+    <div class="lane">
+      <div class="lane-header">
+        <div class="lane-title">
+          <span>
+            <span class="lane-key">${key}</span>
+            &nbsp;
+            <span class="lane-name">${lane.name}</span>
+          </span>
+          ${badge(lane.status)}
+        </div>
+        <div class="lane-summary">${lane.evidence_summary || ''}</div>
+      </div>
+      <div class="sub-phases">${spCards}</div>
+      ${followups}
+    </div>`;
+}
+
+document.getElementById('main-board').innerHTML =
+  Object.entries(ROADMAP.lanes).map(([k,v]) => renderLane(k, v)).join('');
+
+// ──────────────────────────────────────────────────────────
+// RENDER META LANES
+// ──────────────────────────────────────────────────────────
+function renderMetaLane(key, ml) {
+  const metaTags = [];
+  if (ml.pr)           metaTags.push(`PR ${prLinks(ml.pr)}`);
+  if (ml.merge_commit) metaTags.push(`<code>${ml.merge_commit.slice(0,7)}</code>`);
+  if (ml.plan)         metaTags.push(`<a href="${ml.plan}">plan</a>`);
+  if (ml.retro)        metaTags.push(`<a href="${ml.retro}">retro</a>`);
+  if (ml.verify)       metaTags.push(`<a href="${ml.verify}">verify</a>`);
+
+  return `
+    <div class="lane" style="min-height:0">
+      <div class="lane-header">
+        <div class="lane-title">
+          <span class="lane-name">${ml.name || key}</span>
+          ${badge(ml.status)}
+        </div>
+        <div class="lane-summary">${ml.purpose || ''}</div>
+      </div>
+      <div class="sub-phases">
+        <div class="sp-meta" style="padding:4px 2px">
+          ${metaTags.map(t => `<span class="sp-meta-tag">${t}</span>`).join('')}
+        </div>
+        ${ml.note ? `<p style="font-size:0.72rem;color:#64748b;margin-top:4px;font-style:italic">${ml.note}</p>` : ''}
+      </div>
+    </div>`;
+}
+
+document.getElementById('meta-board').innerHTML =
+  Object.entries(ROADMAP.meta_lanes).map(([k,v]) => renderMetaLane(k,v)).join('');
+
+// ──────────────────────────────────────────────────────────
+// RENDER WHAT REMAINS
+// ──────────────────────────────────────────────────────────
+const wr = ROADMAP.what_remains;
+
+const hiPri = wr.high_priority_unstarted.map(hp => `
+  <li>
+    <strong>${hp.lane}</strong>: ${hp.items.join(', ')}<br>
+    <span style="color:#6b7280;font-size:0.75rem">${hp.rationale}</span>
+  </li>`).join('');
+
+const inFlight = wr.in_flight_outside_roadmap.map(inf => `
+  <li>
+    <strong>${inf.lane}</strong> &mdash; worktree <code>${inf.worktree}</code>, branch <code>${inf.branch}</code><br>
+    <span style="color:#6b7280;font-size:0.75rem">${inf.note}</span>
+  </li>`).join('');
+
+const steering = wr.steering;
+
+document.getElementById('remains-board').innerHTML = `
+  <div class="remains-card high-priority">
+    <h3>High-Priority Unstarted</h3>
+    <ul>${hiPri}</ul>
+  </div>
+  <div class="remains-card inflight">
+    <h3>In-Flight Outside Roadmap</h3>
+    <ul>${inFlight}</ul>
+  </div>
+  <div class="remains-card steering">
+    <h3>Implementation Steering</h3>
+    <div class="steering-block">
+      <p><strong>Next logical sub-phase:</strong> ${steering.next_logical_sub_phase}</p>
+      <p style="margin-top:8px"><strong>Ship first because:</strong> ${steering.ship_first_rationale}</p>
+      <p style="margin-top:8px"><strong>RT later because:</strong> ${steering.RT_later_rationale}</p>
+    </div>
+  </div>
+  <div class="remains-card docs">
+    <h3>Documentation Drift</h3>
+    <ul>${wr.documentation_drift.map(d => `<li>${d}</li>`).join('')}</ul>
+  </div>`;
+</script>
+</body>
+</html>

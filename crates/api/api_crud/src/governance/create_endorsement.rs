@@ -34,18 +34,12 @@
 
 use actix_web::web::{Data, Json};
 use chrono::{DateTime, Duration, Utc};
-use diesel::{
-  ExpressionMethods,
-  QueryDsl,
-  dsl::count_star,
-  insert_into,
-};
+use diesel::{ExpressionMethods, QueryDsl, dsl::count_star, insert_into};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log,
-  reputation_snapshot,
+  governance_log, reputation_snapshot,
 };
 use lemmy_api_common::governance::{CreateEndorsement, CreateEndorsementResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -134,10 +128,8 @@ pub async fn create_endorsement(
 
   let outcome = conn
     .run_transaction(|conn| {
-      async move {
-        process_endorsement(conn, sponsor_id, pseudonym_for_tx, data_for_tx).await
-      }
-      .scope_boxed()
+      async move { process_endorsement(conn, sponsor_id, pseudonym_for_tx, data_for_tx).await }
+        .scope_boxed()
     })
     .await?;
 
@@ -238,10 +230,7 @@ async fn process_endorsement(
       sponsored_id: data.person_id,
       community_id: data.community_id,
     };
-    insert_into(surety::table)
-      .values(&sf)
-      .execute(conn)
-      .await?;
+    insert_into(surety::table).values(&sf).execute(conn).await?;
     true
   } else {
     false

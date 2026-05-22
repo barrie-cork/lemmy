@@ -1,18 +1,14 @@
 use crate::CommunityFollowerView;
 use chrono::Utc;
 use diesel::{
-  ExpressionMethods,
-  JoinOnDsl,
-  QueryDsl,
-  SelectableHelper,
+  ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper,
   dsl::{count_star, exists, not},
   select,
 };
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::newtypes::CommunityId;
 use lemmy_db_schema_file::{
-  InstanceId,
-  PersonId,
+  InstanceId, PersonId,
   enums::CommunityFollowerState,
   schema::{community, community_actions, person},
 };

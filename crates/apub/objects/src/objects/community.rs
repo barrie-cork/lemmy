@@ -3,9 +3,7 @@ use crate::{
   protocol::{group::Group, tags::ApubCommunityTag},
   utils::{
     functions::{
-      GetActorType,
-      check_apub_id_valid_with_strictness,
-      community_visibility,
+      GetActorType, check_apub_id_valid_with_strictness, community_visibility,
       read_from_string_or_source_opt,
     },
     markdown_links::markdown_rewrite_remote_links_opt,
@@ -22,13 +20,8 @@ use chrono::{DateTime, Utc};
 use lemmy_api_utils::{
   context::LemmyContext,
   utils::{
-    check_nsfw_allowed,
-    generate_featured_url,
-    generate_moderators_url,
-    generate_outbox_url,
-    process_markdown_opt,
-    proxy_image_link_opt_apub,
-    slur_regex,
+    check_nsfw_allowed, generate_featured_url, generate_moderators_url, generate_outbox_url,
+    process_markdown_opt, proxy_image_link_opt_apub, slur_regex,
   },
 };
 use lemmy_db_schema::{
@@ -301,6 +294,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_lemmy_community() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     parse_lemmy_instance(&context).await?;

@@ -8,7 +8,7 @@ use crate::governance::{
   admin_reputation_stats::{bucket_query, capability_query, founder_query},
   audit_projection::project_to_audit_entry,
   config::{ConfigCache, Scope, get_int},
-  governance_log::{ENTRY_KIND_ADMIN_CONFIG_CHANGED, ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED},
+  governance_log::{ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED, ENTRY_KIND_ADMIN_CONFIG_CHANGED},
 };
 use actix_web::web::{Data, Json};
 use chrono::Utc;
@@ -20,9 +20,9 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_common::governance::{
-  ActiveCasesSummary, AdminConfigAuditEntry, AdminDashboardResponse,
-  AdminReputationStatsResponse, FederationSummary, JuryQueueSummary, PerCommunityActiveRuleSet,
-  ReputationBuckets, RuleSetSummary, ThresholdsSnapshot,
+  ActiveCasesSummary, AdminConfigAuditEntry, AdminDashboardResponse, AdminReputationStatsResponse,
+  FederationSummary, JuryQueueSummary, PerCommunityActiveRuleSet, ReputationBuckets,
+  RuleSetSummary, ThresholdsSnapshot,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{newtypes::CommunityId, source::governance::governance_log::GovernanceLog};
@@ -295,10 +295,7 @@ async fn rule_sets_summary(conn: &mut AsyncPgConnection) -> LemmyResult<RuleSetS
     .filter(governance_config::key.eq("rule_set.active_version_id"))
     .filter(governance_config::value_type.eq("int"))
     .filter(governance_config::scope.eq_any(&scope_strings))
-    .select((
-      governance_config::scope,
-      governance_config::value_int,
-    ))
+    .select((governance_config::scope, governance_config::value_int))
     .order_by(governance_config::valid_from.desc())
     .load::<ScopeValueIntRow>(conn)
     .await?;
@@ -342,10 +339,20 @@ async fn reputation_instance_scope(
 ) -> LemmyResult<AdminReputationStatsResponse> {
   let thresholds_current = ThresholdsSnapshot {
     jury_reliability: get_int(cache, pool, Scope::Instance, "thresholds.jury_reliability").await?,
-    reporting_accuracy: get_int(cache, pool, Scope::Instance, "thresholds.reporting_accuracy")
-      .await?,
-    endorsement_strength: get_int(cache, pool, Scope::Instance, "thresholds.endorsement_strength")
-      .await?,
+    reporting_accuracy: get_int(
+      cache,
+      pool,
+      Scope::Instance,
+      "thresholds.reporting_accuracy",
+    )
+    .await?,
+    endorsement_strength: get_int(
+      cache,
+      pool,
+      Scope::Instance,
+      "thresholds.endorsement_strength",
+    )
+    .await?,
   };
 
   let buckets = ReputationBuckets {

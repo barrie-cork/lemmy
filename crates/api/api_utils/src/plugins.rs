@@ -1,14 +1,7 @@
 use crate::context::LemmyContext;
 use anyhow::anyhow;
 use extism::{
-  FromBytesOwned,
-  Manifest,
-  PluginBuilder,
-  Pool,
-  PoolPlugin,
-  ToBytes,
-  Wasm,
-  WasmMetadata,
+  FromBytesOwned, Manifest, PluginBuilder, Pool, PoolPlugin, ToBytes, Wasm, WasmMetadata,
 };
 use extism_convert::Json;
 use extism_manifest::HttpRequest;

@@ -4,13 +4,8 @@ use either::Either;
 use lemmy_db_schema::{
   newtypes::CommunityId,
   source::{
-    comment::Comment,
-    community::Community,
-    multi_community::MultiCommunity,
-    person::Person,
-    post::Post,
-    private_message::PrivateMessage,
-    site::Site,
+    comment::Comment, community::Community, multi_community::MultiCommunity, person::Person,
+    post::Post, private_message::PrivateMessage, site::Site,
   },
 };
 use lemmy_db_schema_file::PersonId;
@@ -21,8 +16,7 @@ use lemmy_utils::error::LemmyResult;
 use std::sync::LazyLock;
 use tokio::{
   sync::{
-    Mutex,
-    mpsc,
+    Mutex, mpsc,
     mpsc::{UnboundedReceiver, UnboundedSender, WeakUnboundedSender},
   },
   task::JoinHandle,

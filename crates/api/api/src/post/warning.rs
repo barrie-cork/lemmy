@@ -1,9 +1,7 @@
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use lemmy_api_utils::{
-  build_response::build_post_response,
-  context::LemmyContext,
-  notify::notify_mod_action,
+  build_response::build_post_response, context::LemmyContext, notify::notify_mod_action,
   utils::check_community_mod_action,
 };
 use lemmy_db_schema::source::modlog::{Modlog, ModlogInsertForm};

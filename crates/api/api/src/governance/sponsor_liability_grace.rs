@@ -39,18 +39,10 @@
 
 use chrono::{DateTime, Utc};
 use diesel::{
-  ExpressionMethods,
-  NullableExpressionMethods,
-  OptionalExtension,
-  QueryDsl,
-  SelectableHelper,
+  ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper,
   dsl::min,
 };
-use diesel_async::{
-  AsyncPgConnection,
-  RunQueryDsl,
-  scoped_futures::ScopedFutureExt,
-};
+use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::{
   newtypes::{CommunityId, ModerationCaseId},
@@ -70,9 +62,7 @@ use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
   governance_log::{
-    self,
-    ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
-    ENTRY_KIND_SPONSOR_LIABILITY_FIRED,
+    self, ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED, ENTRY_KIND_SPONSOR_LIABILITY_FIRED,
   },
   sponsor_liability,
 };
@@ -124,9 +114,7 @@ enum PerCaseOutcome {
 /// Does NOT open a transaction — each case opens its own per-case tx
 /// (per PRD §6.2 + watchpoint #8). Per-case errors are caught and
 /// logged; the outer function returns `Ok(...)` regardless.
-pub async fn run_grace_check_batch(
-  context: &LemmyContext,
-) -> LemmyResult<GraceCheckBatchOutcome> {
+pub async fn run_grace_check_batch(context: &LemmyContext) -> LemmyResult<GraceCheckBatchOutcome> {
   let pool = &mut context.pool();
   let mut batch_cache = ConfigCache::new();
 
@@ -521,8 +509,7 @@ async fn fire_or_escape_case_inner(
         .execute(conn)
         .await?;
       let target_pseudonym =
-        actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), target_person_id)
-          .await?;
+        actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), target_person_id).await?;
       governance_log::append(
         &mut (&mut *conn).into(),
         ENTRY_KIND_SPONSOR_LIABILITY_FIRED,

@@ -48,10 +48,7 @@ async fn appealed_case_ids(
 /// Map a single main-query row + the appealed set into a
 /// `GovernanceModlogView`, inlining the plan §2 drift stubs
 /// (`decision = None`, `sanction_action = None`) at the same step.
-fn build_view(
-  row: ModlogRow,
-  appealed: &HashSet<ModerationCaseId>,
-) -> GovernanceModlogView {
+fn build_view(row: ModlogRow, appealed: &HashSet<ModerationCaseId>) -> GovernanceModlogView {
   let (_pcl_id, case_id, community_id, community_name, summary, published_at) = row;
   GovernanceModlogView {
     case_id: case_id.0,
@@ -70,9 +67,7 @@ fn build_view(
 /// in Phase 4 — handler layer adds pagination).
 ///
 /// Two round-trips: main join + appealed-case-id set.
-pub async fn list_public_case_log(
-  pool: &mut DbPool<'_>,
-) -> LemmyResult<Vec<GovernanceModlogView>> {
+pub async fn list_public_case_log(pool: &mut DbPool<'_>) -> LemmyResult<Vec<GovernanceModlogView>> {
   let conn = &mut get_conn(pool).await?;
 
   let rows: Vec<ModlogRow> = public_case_log::table
@@ -219,16 +214,18 @@ pub async fn list_capability_changed_entries_since(
   Ok(
     rows
       .into_iter()
-      .map(|(id, entry_kind, payload, actor_pseudonym, created_at, signature)| {
-        CapabilityChangeLogEntry {
-          id,
-          entry_kind,
-          payload,
-          actor_pseudonym,
-          created_at,
-          signature,
-        }
-      })
+      .map(
+        |(id, entry_kind, payload, actor_pseudonym, created_at, signature)| {
+          CapabilityChangeLogEntry {
+            id,
+            entry_kind,
+            payload,
+            actor_pseudonym,
+            created_at,
+            signature,
+          }
+        },
+      )
       .collect(),
   )
 }

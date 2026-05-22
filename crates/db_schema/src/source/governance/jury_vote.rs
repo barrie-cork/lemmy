@@ -1,8 +1,8 @@
 use crate::newtypes::{JuryVoteId, ModerationCaseId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{PersonId, enums::JuryDecision};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::jury_vote;
+use lemmy_db_schema_file::{PersonId, enums::JuryDecision};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

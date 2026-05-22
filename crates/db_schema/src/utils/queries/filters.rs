@@ -1,6 +1,5 @@
 use diesel::{
-  BoolExpressionMethods,
-  ExpressionMethods,
+  BoolExpressionMethods, ExpressionMethods,
   helper_types::{Eq, NotEq},
 };
 use lemmy_db_schema_file::{

@@ -1,7 +1,6 @@
 use super::send_activity_from_user_or_community_or_multi;
 use crate::{
-  check_community_deleted_or_removed,
-  generate_activity_id,
+  check_community_deleted_or_removed, generate_activity_id,
   protocol::following::{follow::Follow, reject::RejectFollow},
 };
 use activitypub_federation::{

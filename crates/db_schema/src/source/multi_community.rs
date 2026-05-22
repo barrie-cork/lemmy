@@ -7,9 +7,7 @@ use chrono::{DateTime, Utc};
 use i_love_jesus::CursorKeysModule;
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::{
-  multi_community,
-  multi_community_entry,
-  multi_community_follow,
+  multi_community, multi_community_entry, multi_community_follow,
 };
 use lemmy_db_schema_file::{InstanceId, PersonId, enums::CommunityFollowerState};
 use lemmy_diesel_utils::{dburl::DbUrl, sensitive::SensitiveString};

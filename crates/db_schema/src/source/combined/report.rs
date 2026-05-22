@@ -1,13 +1,6 @@
 use crate::newtypes::{
-  CommentId,
-  CommentReportId,
-  CommunityId,
-  CommunityReportId,
-  PostId,
-  PostReportId,
-  PrivateMessageId,
-  PrivateMessageReportId,
-  ReportCombinedId,
+  CommentId, CommentReportId, CommunityId, CommunityReportId, PostId, PostReportId,
+  PrivateMessageId, PrivateMessageReportId, ReportCombinedId,
 };
 use chrono::{DateTime, Utc};
 #[cfg(feature = "full")]
