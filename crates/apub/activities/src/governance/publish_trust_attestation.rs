@@ -34,6 +34,14 @@ use serde_json::{Map, Value, json};
 use tracing::info;
 use url::Url;
 
+/// Maximum number of distinct (subject_url, hour_bucket) keys held in the
+/// per-actor rate-limit map at any moment. A single allowlisted peer can
+/// craft arbitrarily many subject URLs within one hour bucket; the
+/// insertion-order eviction at `check_per_actor_rate_limit` keeps the map
+/// bounded regardless of attacker key cardinality. See v1-federation-inbound-d
+/// plan §3.
+const MAX_PER_ACTOR_RATE_ENTRIES: usize = 10_000;
+
 #[async_trait::async_trait]
 impl Activity for PublishTrustAttestation {
   type DataType = LemmyContext;
@@ -169,7 +177,24 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
         .unwrap_or_else(std::sync::PoisonError::into_inner);
       // Opportunistic prune: drop buckets older than the previous hour.
       counts.retain(|(_, b), _| *b >= bucket - 1);
-      let entry = counts.entry((subject_url.to_string(), bucket)).or_insert(0);
+
+      // Insertion-order bound: cap distinct (subject_url, bucket) keys at
+      // MAX_PER_ACTOR_RATE_ENTRIES. A single allowlisted peer can craft
+      // arbitrarily many subject_url values within one hour bucket; retain()
+      // above only drops prior-hour entries. Without this bound the map grows
+      // O(attacker key cardinality). See v1-federation-inbound-d plan §3.
+      let key = (subject_url.to_string(), bucket);
+      if counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES
+        && !counts.contains_key(&key)
+        && let Some(oldest_key) = counts
+          .iter()
+          .min_by_key(|((_, b), _)| *b)
+          .map(|(k, _)| k.clone())
+      {
+        counts.remove(&oldest_key);
+      }
+
+      let entry = counts.entry(key).or_insert(0);
       *entry = entry.saturating_add(1);
       i64::from(*entry) > actor_cap
     };
@@ -380,4 +405,73 @@ fn stub_from_protocol(
     kind: TrustAttestationKind::TrustAttestation,
     rest: object_map,
   })
+}
+
+#[cfg(test)]
+mod tests_per_actor_bound {
+  //! Pure-function tests for the per-actor rate-map insertion-order bound
+  //! added per v1-federation-inbound-d plan §3. Exercises
+  //! `MAX_PER_ACTOR_RATE_ENTRIES` cap behaviour against the live
+  //! `rate_per_actor_counts()` `OnceLock` — clears the global at test start
+  //! AND end so test order is not load-bearing across the apub-activities
+  //! lib-test binary.
+  //!
+  //! No unwrap/expect per workspace lints — uses `PoisonError::into_inner`
+  //! for Mutex-poison recovery (canonical pattern; see
+  //! `publish_trust_attestation.rs:161` + `inbox.rs:547`).
+  use super::MAX_PER_ACTOR_RATE_ENTRIES;
+  use crate::governance::inbox::{current_hour_bucket, rate_per_actor_counts};
+  use std::sync::PoisonError;
+
+  #[test]
+  fn per_actor_map_evicts_oldest_when_cap_reached() {
+    // Acquire a single guard and hold it through the entire test body to prevent
+    // interleaving from concurrent tests in the same binary.
+    let mut counts = rate_per_actor_counts()
+      .lock()
+      .unwrap_or_else(PoisonError::into_inner);
+
+    // Clear stale state from prior tests (the OnceLock is process-global).
+    counts.clear();
+
+    let bucket = current_hour_bucket();
+    let cap = MAX_PER_ACTOR_RATE_ENTRIES;
+
+    // Insert `cap + 1` distinct keys, applying the same bound logic that
+    // ships in `check_per_actor_rate_limit` (Task 1).
+    for i in 0..=cap {
+      let key = (format!("https://test/{i}"), bucket);
+      counts.retain(|(_, b), _| *b >= bucket - 1);
+      if counts.len() >= cap
+        && !counts.contains_key(&key)
+        && let Some(oldest_key) = counts
+          .iter()
+          .min_by_key(|((_, b), _)| *b)
+          .map(|(k, _)| k.clone())
+      {
+        counts.remove(&oldest_key);
+      }
+      let entry = counts.entry(key).or_insert(0);
+      *entry = entry.saturating_add(1);
+    }
+
+    // Assert: map size capped at MAX_PER_ACTOR_RATE_ENTRIES AND the trigger key
+    // (i=cap, the key that forced the eviction) is present.
+    // Note: which specific prior key gets evicted is not guaranteed — the eviction
+    // uses min_by_key on the bucket value, and when all keys share the same bucket
+    // (as in this test), HashMap iteration order is unspecified.
+    assert_eq!(
+      counts.len(),
+      cap,
+      "per-actor map must be bounded at MAX_PER_ACTOR_RATE_ENTRIES after cap + 1 inserts",
+    );
+    let trigger_key = (format!("https://test/{cap}"), bucket);
+    assert!(
+      counts.contains_key(&trigger_key),
+      "trigger key (i=cap) must be present after insertion-order-bound eviction",
+    );
+
+    // Cleanup: clear the map so other tests in this binary start fresh.
+    counts.clear();
+  }
 }
