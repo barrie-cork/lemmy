@@ -2509,6 +2509,30 @@
       "approved_at": null
     },
     {
+      "id": 326,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T06:02:37Z",
+      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
+      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
+      "phase_task": 8,
+      "commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      ],
+      "result": "fail",
+      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
+      "failed_commands": [
+        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
+      ],
+      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails. [SUPERSEDED by PR #141 merge 2026-05-21T18:35:18Z (7cfc21c23); phase shipped; entry moved pending[]→resolved[] for hygiene 2026-05-21T20:30Z.]",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T06:08:27Z",
+      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]",
+      "id_v1": 326,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": 327,
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -2527,6 +2551,54 @@
       "resolved_at": "2026-05-21T18:25:37.070964Z",
       "notes": " [renumbered from #320 on merge due to DQ id collision with concurrent fed-in-c session: trunk #320 was a different entry]",
       "id_v1": 327,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": 328,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T18:59:00Z",
+      "question": "Reserved for v1-federation-inbound-c cohort 1 task 1",
+      "options": [],
+      "context": "impl-task committed 0ed04fc7181192cf1f5e4812d4515c8088a586c0 on junior/role-impl-task-v1-fed-in-c-task-1-see-claude-prps-briefs-v1-federation-inbound-c-impl-1-md-397; mutated reserved stub to attach commands",
+      "answer": "Task 1 validate-pending-laptop pass: cargo-check --workspace --features full exit 0 (8m47s); cargo-clippy --workspace --features full --no-deps -- -D warnings exit 0 (7m25s). Both commands ran on lane CWD brehon-fork-fed-in-c against phase tip 8fea680d3 (which already includes Task 2 edit, so the workspace compile exercises both). Lossless DQ reconcile verified — daemon BOTH-RAN finalize-merge produced identical tree-hash to advisor-side merge.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T19:44:42Z",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task1-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-1-see-claude-prps-briefs-v1-federation-inbound-c-impl-1-md-397",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": "=== cargo-check.bat --workspace --features full (exit 0) ===\n    Checking lemmy_db_views_person v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 8m 47s\n\n=== cargo-clippy.bat --workspace --features full --no-deps -- -D warnings (exit 0) ===\n    Checking lemmy_db_views_person v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 7m 25s",
+      "failed_commands": [],
+      "id_v1": 328,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": 329,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T19:00:54Z",
+      "question": "Reserved for v1-federation-inbound-c cohort 1 task 2",
+      "options": [],
+      "context": "impl-task #398 committed 01ed9241f26ad8ff1609761ce0f08f66d649bae2 on junior/role-impl-task-v1-fed-in-c-task-2-see-claude-prps-briefs-v1-federation-inbound-c-impl-2-md-398; mutated reserved stub to attach commands",
+      "answer": "Task 2 validate-pending-laptop pass: cargo-check --workspace --features full exit 0 (1m37s, warm re-run after Task 1 validate); cargo-clippy --workspace --features full --no-deps -- -D warnings exit 0 (2m24s, warm). Both commands ran on lane CWD brehon-fork-fed-in-c against phase tip 4a4b0f463 (= 8fea680d3 + DQ #328-pass-mutation; same code state as Task 1 validate run since both 1-line edits are already merged). Cohort 1 barrier now CLEAR — both #328 and #329 result: pass; Task 3 can dispatch after the gov-v0 forward-merge step.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T19:50:52Z",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task2-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-2-see-claude-prps-briefs-v1-federation-inbound-c-impl-2-md-398",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": "=== cargo-check.bat --workspace --features full (exit 0) ===\n    Checking lemmy_db_views_report_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\report_combined)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 1m 37s\n\n=== cargo-clippy.bat --workspace --features full --no-deps -- -D warnings (exit 0) ===\n    Checking lemmy_db_views_person v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\site)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\notification)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\db_views\\person_content_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api_common)\n    Checking lemmy_apub_objects v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\objects)\n    Checking lemmy_apub_activities v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\activities)\n    Checking lemmy_apub_send v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\send)\n    Checking lemmy_apub v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\apub\\apub)\n    Checking lemmy_api v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\api)\n    Checking lemmy_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\routes)\n    Checking brehon_seed_founders v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\tools\\seed_founders)\n    Checking lemmy_api_routes_v3 v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes_v3)\n    Checking lemmy_api_routes v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\api\\routes)\n    Checking lemmy_server v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-fed-in-c\\crates\\server)\n    Finished `dev` profile [unoptimized] target(s) in 2m 24s",
+      "failed_commands": [],
+      "id_v1": 329,
       "approved_by": null,
       "approved_at": null
     },
@@ -2658,56 +2730,43 @@
       "approved_at": null
     },
     {
-      "id": 326,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T06:02:37Z",
-      "question": "validate phase-brehon-conformance-audit task 8 worker branch (probe-fail path — blocker DQ #307)",
-      "branch": "junior/role-impl-task-brehon-conformance-audit-task-8-retry-clippy-toml-probe-post-fix-impl-1-see-claude-prps-briefs-368",
-      "phase_task": 8,
-      "commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings > .claude/PRPs/debug/brehon-conformance-audit-task8-probe.log 2>&1; echo exit: $?"
+      "id": 337,
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-21T17:30:00Z",
+      "question": "bm-cut Junior #393 finalize-agent deleted runlog file that bm-task wrote via git-plumbing; phase branch on origin lacked the brief-mandated runlog. Two compounding root causes: (a) Junior session PostToolUse hook (likely allow-prp-deliverables.sh) blocked direct Write on .claude/runlog/** forcing bm-task to use git hash-object + update-index plumbing path which wrote to HEAD/index but not working tree; (b) Junior finalize-agent ran git status, saw runlog as deleted in working tree, and committed the deletion (c488963a0) without cross-checking the bm-task assistant message that explicitly listed runlog creation as a delivered item.",
+      "options": [
+        "document-and-defer-structural-fix",
+        "file-as-issue-track-for-immediate-fix",
+        "in-scope-the-hook-edit-now"
       ],
-      "result": "fail",
-      "log_slice": "cargo-clippy.sh --workspace --no-deps --features full -- -D warnings (worker-368, clippy.toml seed in tree):\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:111\nnote: Use .ok_or_else(|| LemmyErrorType::*) for required federation fields.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/pagination.rs:274\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:73\nnote: Use ? or .map_err with explicit error type.\n\nerror: use of a disallowed method \n   --> crates/diesel_utils/src/schema_setup/mod.rs:117\nnote: Use ? or .map_err with explicit error type.\n\nerror: aborting due to 4 previous errors\n\nexit: 101\n",
-      "failed_commands": [
-        "bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings"
-      ],
-      "answer": "Task 8 probe (worker-368) found 4 disallowed-methods violations in lemmy_diesel_utils. Blocked by DQ #307 (resolved option-a 2026-05-21: fix-impl-2 will remediate). Entry stays in pending[] per §G4 fail-handling — to be re-validated after fix-impl-2 + Task 8 third dispatch. clippy.toml itself committed cleanly to phase tip 7c030ffb5; only the lint enforcement against existing diesel_utils code fails. [SUPERSEDED by PR #141 merge 2026-05-21T18:35:18Z (7cfc21c23); phase shipped; entry moved pending[]→resolved[] for hygiene 2026-05-21T20:30Z.]",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T06:08:27Z",
-      "notes": " [renumbered from #308 on merge due to DQ id collision with concurrent fed-in-c session: trunk #308 was a different entry]",
-      "id_v1": 326,
+      "context": "Worker commit 9df6879a6 (bm-task) created runlog via plumbing; commit c488963a0 (finalize-agent) deleted it; advisor re-applied at 21583e798 from canonical laptop checkout lane worktree at C:/Users/barri/Developer/brehon-fork-fed-in-c. Junior #393 task_logs show no error, no refusal — both bm-task and finalize-agent reported done cleanly. The defect surfaces as a contract breach: brief §2 Phase 4 required runlog; phase branch tip on origin had no runlog until advisor belt-and-braces. Similar class to L14 (post-merge runlog ordering) but different mechanism — index-vs-worktree skew + heuristic deletion.",
+      "answer": "document-and-defer-structural-fix. The fix-now options would require either (1) editing .claude/hooks/allow-prp-deliverables.sh to allow .claude/runlog/** writes (and re-running bm-cut from scratch — re-cut the phase branch), or (2) editing Junior finalize-agent prompt to cross-check assistant deliverables before committing deletions. Both are structural changes worth a dedicated retro decision, not a mid-phase fix. The advisor belt-and-braces re-apply at 21583e798 closes the immediate gap. Retro signals to track: (i) does the same hook block fire on the next bm-task in any lane? — if yes, fix the hook; (ii) does the finalize-agent heuristic produce other false-deletions on tasks with plumbing-path writes? — if yes, harden the finalize prompt. Both go into v1-federation-inbound-c-retro.md §BM signals.",
+      "answered_by": "advisor-self-resolved",
+      "resolved_at": "2026-05-21T17:35:00Z",
+      "notes": "[renumbered from #326 on merge governance-v0 -> phase-v1-federation-inbound-c due to DQ id collision: gov #326 was a different entry, renumbered from #308 earlier]",
+      "id_v1": 337,
       "approved_by": null,
       "approved_at": null
     },
     {
-      "id": "ae5ff4ec3e8c-001",
-      "id_v1": null,
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-21T20:29:54Z",
-      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-1-migration-new-entry-scripts-live-dq-migration-track-a-see-claude-prps-400",
-      "phase_task": 1,
-      "commands": [
-        "bash -n scripts/brehon/dq-schema-v3-migrate.sh",
-        "bash -n scripts/brehon/dq-v3-new-entry.sh",
-        "bash scripts/brehon/dq-schema-v3-migrate.sh --dry-run --file .claude/decision-queue.json",
-        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert d['schema_version']==3; print('schema_version OK')\"",
-        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); [e['id_v1'] for e in d['pending']+d['resolved']]; print('id_v1 OK')\"",
-        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert all('approved_by' in e and 'approved_at' in e for e in d['pending']+d['resolved']); print('approved_* OK')\"",
-        "rm -f .claude/.dq-session-id && bash scripts/brehon/dq-v3-new-entry.sh",
-        "test -f .claude/.dq-session-id && grep -E '^[a-f0-9]{12}$' .claude/.dq-session-id && echo 'session-id OK'",
-        "grep -F '.claude/.dq-session-id' .gitignore"
+      "id": 338,
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-21T20:16:59Z",
+      "question": "Junior daemon reset governance-v0 to origin/phase-v1-federation-inbound-c immediately after finalize-merging task #399's plan commit — investigate root cause and harness fix.",
+      "options": [
+        "option-a: investigate /opt/junior-src/src/daemon/executor.ts finalize-merge code path to find the wrong-ref reset; file structural fix",
+        "option-b: track as recurrence-class only; file lesson; investigate when second occurrence surfaces"
       ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "All 9 §15 commands pass on laptop checkout (governance-v0 @ 9f7ba68bb post-cohort-merge). bash -n both new scripts exit 0; migration --dry-run prints 'already v3 — no-op' exit 0 (idempotent); schema_version == 3; all 133 entries have id_v1 key (one v3-native ae5ff4ec3e8c-001 has id_v1=null per design); all entries have approved_by + approved_at; new-entry helper round-trip works (a3d0e9941441-001 returned, session-id cached); .gitignore entry present. Task 1 deliverables verified end-to-end.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T22:59:11.152522Z",
-      "approved_by": null,
-      "approved_at": null
+      "context": "Task #399 (planning v1-dq-schema-r1) status=succeeded 2026-05-21T19:55:37Z. Worker branch finalize-merged into daemon-local governance-v0 as merge commit 2ad835aa4 (reflog @{1}). Immediately after, daemon-local governance-v0 was reset to origin/phase-v1-federation-inbound-c (reflog @{0}: 'reset: moving to origin/phase-v1-federation-inbound-c'). This destroyed the plan-merge AND set governance-v0 to a non-trunk phase branch's tip. Plan commit b1a6553b8 became unreachable; recovered via cherry-pick on EliteDesk (c02dc8617) then push to recovery/v1-dq-schema-r1-plan and pull-cherry-pick on laptop (f746a00b9). The bug class is: daemon's finalize step issued an unintended 'git reset --hard origin/phase-v1-federation-inbound-c' or equivalent on governance-v0. Worktree may have been wedged between trunk and the active phase branch; finalize's branch-restore step picked the wrong ref. RECURRENCE: this could refire on any planning task that finalizes while fed-in-c (or any future phase) is active.",
+      "answer": "RESOLVED via option-b 2026-05-22. SHIPPED: PreToolUse Bash hook .claude/hooks/refuse-ssh-reset-hard-shared-checkout.sh — refuses `ssh ...homeserver \"...git reset --hard origin/<phase-or-trunk>\"` against /srv/brehon-fork (the shared daemon checkout). Exit 2 with fix-message recommending `git update-ref refs/heads/<branch> origin/<branch>` instead. Wired in tracked .claude/settings.json PreToolUse Bash matcher alongside check-cargo-pipe.sh (so it activates in every lane without per-lane configuration). Escape hatch: BREHON_ALLOW_SSH_RESET_HARD=1 for conscious opt-in. Dogfooded in 7 test cases: (1) offending pattern → exit 2 with fix message; (2) update-ref pattern → exit 0; (3) local git reset --hard (not ssh) → exit 0; (4) ssh reset to a SHA (not origin/) → exit 0; (5) ssh reset --hard origin/governance-v0 → exit 2; (6) escape hatch → exit 0; (7) ssh to a different path → exit 0. Companion deliverables: lesson feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md rewritten under correct RCA on 2026-05-22 (commit 8a392f217); feedback_phase_lane_worktree_bootstrap_checklist.md step 11 added (programmatic verification that the tracked hook is wired); .claude/hooks/README.md inventory updated. The structural defence is now in place; the silent destructive-reset bug class is converted to a loud refusal.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-21T23:39:23Z",
+      "notes": " [advisor recommendation appended 2026-05-21T20:30Z; user-relay pending] [RCA revised 2026-05-22T01:00Z based on sub-agent forensics — original daemon-finalize hypothesis falsified; true vector is lane-agent ssh-reset against shared daemon checkout; lesson body rewritten; awaiting user pick on a/b/c] [RESOLVED option-b 2026-05-22T23:39Z; hook + lesson + bootstrap-checklist + README shipped; commit 8a392f217 (lesson rewrite + RCA mutation) + pending commit (hook + wiring + checklist + README).]",
+      "id_v1": 338,
+      "approved_by": "user",
+      "approved_at": "2026-05-21T23:39:23Z"
     },
     {
       "id": 339,
@@ -2739,23 +2798,86 @@
       "approved_at": null
     },
     {
-      "id": 338,
+      "id": 340,
       "from": "advisor",
-      "kind": "blocker",
-      "timestamp": "2026-05-21T20:16:59Z",
-      "question": "Junior daemon reset governance-v0 to origin/phase-v1-federation-inbound-c immediately after finalize-merging task #399's plan commit — investigate root cause and harness fix.",
-      "options": [
-        "option-a: investigate /opt/junior-src/src/daemon/executor.ts finalize-merge code path to find the wrong-ref reset; file structural fix",
-        "option-b: track as recurrence-class only; file lesson; investigate when second occurrence surfaces"
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-21T21:52:20Z",
+      "question": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 (local, user gate 4 choice)",
+      "branch": "phase-v1-federation-inbound-c",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log 2>&1 && echo E2E_EXIT_0 >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log || echo E2E_EXIT_NONZERO >> .claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log\""
       ],
-      "context": "Task #399 (planning v1-dq-schema-r1) status=succeeded 2026-05-21T19:55:37Z. Worker branch finalize-merged into daemon-local governance-v0 as merge commit 2ad835aa4 (reflog @{1}). Immediately after, daemon-local governance-v0 was reset to origin/phase-v1-federation-inbound-c (reflog @{0}: 'reset: moving to origin/phase-v1-federation-inbound-c'). This destroyed the plan-merge AND set governance-v0 to a non-trunk phase branch's tip. Plan commit b1a6553b8 became unreachable; recovered via cherry-pick on EliteDesk (c02dc8617) then push to recovery/v1-dq-schema-r1-plan and pull-cherry-pick on laptop (f746a00b9). The bug class is: daemon's finalize step issued an unintended 'git reset --hard origin/phase-v1-federation-inbound-c' or equivalent on governance-v0. Worktree may have been wedged between trunk and the active phase branch; finalize's branch-restore step picked the wrong ref. RECURRENCE: this could refire on any planning task that finalizes while fed-in-c (or any future phase) is active.",
-      "answer": "RESOLVED via option-b 2026-05-22. SHIPPED: PreToolUse Bash hook .claude/hooks/refuse-ssh-reset-hard-shared-checkout.sh — refuses `ssh ...homeserver \"...git reset --hard origin/<phase-or-trunk>\"` against /srv/brehon-fork (the shared daemon checkout). Exit 2 with fix-message recommending `git update-ref refs/heads/<branch> origin/<branch>` instead. Wired in tracked .claude/settings.json PreToolUse Bash matcher alongside check-cargo-pipe.sh (so it activates in every lane without per-lane configuration). Escape hatch: BREHON_ALLOW_SSH_RESET_HARD=1 for conscious opt-in. Dogfooded in 7 test cases: (1) offending pattern → exit 2 with fix message; (2) update-ref pattern → exit 0; (3) local git reset --hard (not ssh) → exit 0; (4) ssh reset to a SHA (not origin/) → exit 0; (5) ssh reset --hard origin/governance-v0 → exit 2; (6) escape hatch → exit 0; (7) ssh to a different path → exit 0. Companion deliverables: lesson feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md rewritten under correct RCA on 2026-05-22 (commit 8a392f217); feedback_phase_lane_worktree_bootstrap_checklist.md step 11 added (programmatic verification that the tracked hook is wired); .claude/hooks/README.md inventory updated. The structural defence is now in place; the silent destructive-reset bug class is converted to a loud refusal.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-21T23:39:23Z",
-      "notes": " [advisor recommendation appended 2026-05-21T20:30Z; user-relay pending] [RCA revised 2026-05-22T01:00Z based on sub-agent forensics — original daemon-finalize hypothesis falsified; true vector is lane-agent ssh-reset against shared daemon checkout; lesson body rewritten; awaiting user pick on a/b/c] [RESOLVED option-b 2026-05-22T23:39Z; hook + lesson + bootstrap-checklist + README shipped; commit 8a392f217 (lesson rewrite + RCA mutation) + pending commit (hook + wiring + checklist + README).]",
-      "id_v1": 338,
-      "approved_by": "user",
-      "approved_at": "2026-05-21T23:39:23Z"
+      "local_log_path": ".claude/runlog/e2e-v1-federation-inbound-c-e06e918e2.log",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "user-gate-4 LOCAL chosen 2026-05-21; advisor runs cargo, mutates this entry on completion"
+      ],
+      "context": "All 3 §13 impl tasks finalize-merged + §5 validated. Phase 2 e2e validates the actual test runtime (testcontainers Postgres + 6 fed-in-b fixtures incl new appended_config_override_takes_effect_returns_429). Phase tip e06e918e2 immediately post-DQ-#339 mutation. Docker preflight OK.",
+      "answer": "Phase 2 e2e on phase-v1-federation-inbound-c tip e06e918e2 passed. cargo test --workspace --features full --test e2e finished in 2171.42s (36m 11s). Test result: 103 passed; 0 failed; 5 ignored; 0 measured. All 6 fed-in-b fixtures pass including the new appended_config_override_takes_effect_returns_429 (proves Task 1's .order_by(valid_from.desc()) makes append-history INSERT-with-newer-valid_from overrides effective). 5 ignored tests are pre-existing v0-polish TODOs (GH issues #42, #43, #45) — NOT phase regressions. E2E_EXIT_0 confirmed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T22:33:17Z",
+      "id_v1": 340,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "9ee605cdfe49-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:52:29Z",
+      "question": "validate v1-federation-inbound-c Task 3 worker branch (e2e regression in mod v1_federation_inbound_b_fixtures + workaround-comment update)",
+      "branch": "junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402",
+      "phase_task": 3,
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-c-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-c-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-c-task3-test-norun.log 2>&1\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "options": [
+        "advisor pre-reserved stub; impl-task #N will mutate with commands[] + branch after worker commit + push"
+      ],
+      "context": "impl-task committed 9c7c43aff5d0d4a48f1cad2ef522eefcd1eb1a43 on junior/role-impl-task-v1-fed-in-c-task-3-see-claude-prps-briefs-v1-federation-inbound-c-impl-3-md-402; mutated reserved stub to attach commands",
+      "answer": "All 3 §5 commands passed on phase tip 877bd849c (advisor-laptop): §5.1 cargo-check --workspace --features full exit 0 (1m 26s warm); §5.2 cargo-clippy --workspace --features full --no-deps -- -D warnings exit 0 (2m 34s) — no warnings, no disallowed_methods firings from federation-mod-roots deny; §5.3 cargo test --workspace --features full --test e2e --no-run exit 0 (18m 13s) — e2e binary re-linked cleanly with new appended_config_override_takes_effect_returns_429 fn. Phase 2 e2e (user gate 4) follows on post-merge tip.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T21:16:58Z",
+      "id_v1": null,
+      "approved_by": null,
+      "approved_at": null,
+      "notes": " [renumbered from int-id 339 on forward-merge gov-v0 -> phase-v1-federation-inbound-c (post-v3 migration; gov-v0 #339 = v1-dq-schema-r1 Task 2 grep-audits, this entry = fed-in-c Task 3 e2e regression validate); id_v1 set to null per design]"
+    },
+    {
+      "id": "ae5ff4ec3e8c-001",
+      "id_v1": null,
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-21T20:29:54Z",
+      "branch": "junior/role-impl-task-v1-dq-schema-r1-task-1-migration-new-entry-scripts-live-dq-migration-track-a-see-claude-prps-400",
+      "phase_task": 1,
+      "commands": [
+        "bash -n scripts/brehon/dq-schema-v3-migrate.sh",
+        "bash -n scripts/brehon/dq-v3-new-entry.sh",
+        "bash scripts/brehon/dq-schema-v3-migrate.sh --dry-run --file .claude/decision-queue.json",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert d['schema_version']==3; print('schema_version OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); [e['id_v1'] for e in d['pending']+d['resolved']]; print('id_v1 OK')\"",
+        "python3 -c \"import json,io; d=json.load(io.open('.claude/decision-queue.json', encoding='utf-8')); assert all('approved_by' in e and 'approved_at' in e for e in d['pending']+d['resolved']); print('approved_* OK')\"",
+        "rm -f .claude/.dq-session-id && bash scripts/brehon/dq-v3-new-entry.sh",
+        "test -f .claude/.dq-session-id && grep -E '^[a-f0-9]{12}$' .claude/.dq-session-id && echo 'session-id OK'",
+        "grep -F '.claude/.dq-session-id' .gitignore"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 9 §15 commands pass on laptop checkout (governance-v0 @ 9f7ba68bb post-cohort-merge). bash -n both new scripts exit 0; migration --dry-run prints 'already v3 — no-op' exit 0 (idempotent); schema_version == 3; all 133 entries have id_v1 key (one v3-native ae5ff4ec3e8c-001 has id_v1=null per design); all entries have approved_by + approved_at; new-entry helper round-trip works (a3d0e9941441-001 returned, session-id cached); .gitignore entry present. Task 1 deliverables verified end-to-end.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-21T22:59:11.152522Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
