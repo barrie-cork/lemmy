@@ -64,8 +64,8 @@ None. Heaviest single task was the skill body edit: `1/1/8/0` (1 file, 1 commit,
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] Change #1 (document retro-action-execution leg pattern): promote to `.claude/skills/session-retro/SKILL.md` "When NOT to use this skill" section — one-line addition. Recurrence: 2× across distinct sessions (this leg 2026-05-22 + 2026-05-21 retro-action-items-execution per PMD #451). **Meets threshold.**
-- [ ] Change #2 (system-reminder rule load is a signal, not noise): promote to a brief note in `.claude/rules/pmd-search-strategy.md` or `feedback_context_trim_verify_empirically.md`. Recurrence: 1× this leg + 1× prior (2026-04-23 measurement). **Meets 1+1 threshold.**
+- [x] Change #1 (document retro-action-execution leg pattern): SHIPPED 2026-05-22 in commit `e2f44894b` — `.claude/skills/session-retro/SKILL.md` lines 349-357. Bullet added under "When NOT to use this skill". Recurrence: 2× across distinct sessions (this leg 2026-05-22 + 2026-05-21 retro-action-items-execution per PMD #451). **Met threshold; shipped.**
+- [x] Change #2 (system-reminder rule load is a signal, not noise): SHIPPED 2026-05-22 in commit `e2f44894b` — `.claude/lessons/feedback_context_trim_verify_empirically.md` lines 20-30. "Reading the signal" paragraph appended at end. Recurrence: 1× this leg + 1× prior (2026-04-23 measurement). **Met 1+1 threshold; shipped.**
 - [ ] Optional PMD eval write for this leg (composite ~0.82 — high execution efficiency, clean ship, no classifier denials, all action items landed; per `evaluation-calibration.md` 0.80 reserved for "clean completion with all outputs verified, no issues at all" — this leg meets that bar but loses a few hundredths to the leg being execution-only rather than including the design work; the design work was the prior leg's score).
 
 ---
