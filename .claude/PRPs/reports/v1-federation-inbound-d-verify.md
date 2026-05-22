@@ -1,9 +1,9 @@
 # Verify report — v1-federation-inbound-d
 
-**Run at:** 2026-05-22T17:55:18Z
-**Phase branch:** `phase-v1-federation-inbound-d` @ `dc8b985399577fbf4228ae57c454e59f5c8fc40f`
+**Run at:** 2026-05-22T17:55:18Z (Story 1); updated 2026-05-22T19:43:00Z (Story 2)
+**Phase branch:** `phase-v1-federation-inbound-d` @ `2ad472025805362ec040309f39ab7f3587dbd3ba`
 **Plan:** `.claude/PRPs/plans/v1-federation-inbound-d.plan.md`
-**Outcome summary:** 1 story checked: 1 ✓; Stories 2-3 pending (expected — gates 4 + 6 not yet fired)
+**Outcome summary:** 2 stories verified: 2 ✓; Story 3 pending (post-merge retro)
 
 ---
 
@@ -24,10 +24,11 @@
 ## Story 2 — Phase-2 e2e regression gate (gate 4)
 
 - **Composing tasks:** (phase-level e2e)
-- **Status:** PENDING — user gate 4 (Phase-2 e2e local vs dispatch) not yet fired.
-  E2e log (`e2e-v1-federation-inbound-d-*.log`) not expected until gate 4 resolves.
-  Will re-verify after e2e completes.
-- **Outcome:** pending (not phantom — gate 4 is pre-condition)
+- **Checkpoint:** ✓ exit 0 — `cargo-test.bat --workspace --test e2e --features full`
+  - 103 passed; 0 failed; 5 ignored; finished in 2327.67s
+  - Log: `C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-d-2ad472025.log`
+  - DQ: `817043cf3f31-002` mutated to `result: "pass"`, `answered_by: "advisor-laptop"`
+- **Outcome:** ✓
 
 ## Story 3 — Retro (Task 3)
 
@@ -40,8 +41,8 @@
 
 ## Required actions
 
-- **Story 1:** ✓ — no action required. Advance to user gate 4.
-- **Story 2:** Fire user gate 4 (Phase-2 e2e local vs dispatch); re-verify after e2e ✓.
+- **Story 1:** ✓ — complete.
+- **Story 2:** ✓ — complete.
 - **Story 3:** Author retro post-merge; verify at retro sign-off (gate 6).
 
-**Merge-confirm gate:** BLOCKED pending Story 2 e2e ✓ (gate 4) → then CLEAR for gate 5.
+**Merge-confirm gate:** CLEAR — Stories 1 + 2 ✓. Awaiting user gate 5 (merge confirm).
