@@ -1,6 +1,29 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "8fff70ad6ce3-001",
+      "kind": "validate-pending-laptop",
+      "from": "impl",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "branch": "junior/role-impl-task-v1-fed-in-d-task2-unit-test-see-claude-prps-briefs-v1-federation-inbound-d-impl-2-md-413",
+      "phase_task": 2,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-d-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-d-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_apub_activities --lib > .claude/PRPs/debug/v1-federation-inbound-d-task2-libtest.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-d-task2-e2e-norun.log 2>&1\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,

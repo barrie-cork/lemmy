@@ -400,3 +400,78 @@ fn stub_from_protocol(
     rest: object_map,
   })
 }
+
+#[cfg(test)]
+mod tests_per_actor_bound {
+  //! Pure-function tests for the per-actor rate-map insertion-order bound
+  //! added per v1-federation-inbound-d plan §3. Exercises
+  //! `MAX_PER_ACTOR_RATE_ENTRIES` cap behaviour against the live
+  //! `rate_per_actor_counts()` `OnceLock` — clears the global at test start
+  //! AND end so test order is not load-bearing across the apub-activities
+  //! lib-test binary.
+  //!
+  //! No unwrap/expect per workspace lints — uses `PoisonError::into_inner`
+  //! for Mutex-poison recovery (canonical pattern; see
+  //! `publish_trust_attestation.rs:161` + `inbox.rs:547`).
+  use super::MAX_PER_ACTOR_RATE_ENTRIES;
+  use crate::governance::inbox::{current_hour_bucket, rate_per_actor_counts};
+  use std::sync::PoisonError;
+
+  #[test]
+  fn per_actor_map_evicts_oldest_when_cap_reached() {
+    // Clear stale state from prior tests (the OnceLock is process-global).
+    {
+      let mut counts = rate_per_actor_counts()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+      counts.clear();
+    }
+
+    let bucket = current_hour_bucket();
+    let cap = MAX_PER_ACTOR_RATE_ENTRIES;
+
+    // Insert `cap + 1` distinct keys, applying the same bound logic that
+    // ships in `check_per_actor_rate_limit` (Task 1).
+    for i in 0..=cap {
+      let key = (format!("https://test/{i}"), bucket);
+      let mut counts = rate_per_actor_counts()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+      counts.retain(|(_, b), _| *b >= bucket - 1);
+      if counts.len() >= cap
+        && !counts.contains_key(&key)
+        && let Some(oldest_key) = counts
+          .iter()
+          .min_by_key(|((_, b), _)| *b)
+          .map(|(k, _)| k.clone())
+      {
+        counts.remove(&oldest_key);
+      }
+      let entry = counts.entry(key).or_insert(0);
+      *entry = entry.saturating_add(1);
+    }
+
+    // Assert: map size capped at MAX_PER_ACTOR_RATE_ENTRIES.
+    {
+      let counts = rate_per_actor_counts()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+      assert_eq!(
+        counts.len(),
+        cap,
+        "per-actor map must be bounded at MAX_PER_ACTOR_RATE_ENTRIES after cap + 1 inserts",
+      );
+      let first_key = (String::from("https://test/0"), bucket);
+      assert!(
+        !counts.contains_key(&first_key),
+        "oldest inserted key (i=0) must be evicted by the bound",
+      );
+    }
+
+    // Cleanup: clear the map so other tests in this binary start fresh.
+    let mut counts = rate_per_actor_counts()
+      .lock()
+      .unwrap_or_else(PoisonError::into_inner);
+    counts.clear();
+  }
+}
