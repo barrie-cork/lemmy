@@ -14,8 +14,8 @@ A complete plan file at `.claude/PRPs/plans/v1-ship-2.plan.md` covering:
   - `POST /api/v4/governance/appeal` → `request_appeal_happy_path_and_auth_failure`
   - `GET /api/v4/governance/modlog` → `modlog_happy_path_and_unauthenticated_access`
   - `GET /api/v4/governance/reputation/me` → `get_my_reputation_happy_path_and_no_auth`
-  - `POST /api/v4/governance/endorsement` → `create_endorsement_happy_path_and_conflict`
-- Each test covers: (a) happy path returning expected 2xx body shape, (b) one failure mode (auth-missing 401, conflict 409, or validation 400 — pick the most natural for each endpoint).
+  - `POST /api/v4/governance/endorsement` → `create_endorsement_happy_path_and_self_endorse_rejects`
+- Each test covers: (a) happy path returning expected 2xx body shape, (b) one failure mode (auth-missing 401, self-endorse 404, or validation 400 — pick the most natural for each endpoint). Note: the endorsement handler returns `LemmyErrorType::NotFound` (not 409) for all failure modes; self-endorsement (line 168 of `create_endorsement.rs`) is the natural test case. See DQ `a3d0e9941441-007`.
 - Tests live in a new `mod v1_ship_2_fixtures { }` section appended to `e2e.rs`, following the `mod v1_sl_b_fixtures` / `mod v1_federation_inbound_a_fixtures` shape (Case A — uniform `LemmyResult<()>`).
 
 ### 2.2 Explicit boundaries
@@ -64,6 +64,7 @@ Per `.claude/rules/advisor-orchestrator.md` §2.4 file-class table, any edit to 
 - `.claude/lessons/feedback_lemmy_error_no_std_error.md` — Case A/B/C enumeration. §13 stubs MUST use Case A (uniform `LemmyResult<()>` outer + helpers). The plan §13 stubs must quote the chosen case and its canonical sibling reference. **When a v1-SL-* or v1-JM-* sibling module already exists in e2e.rs, mirror its error-shape case verbatim per this lesson — canonical-schema-first gate.**
 - `.claude/lessons/feedback_async_pool_test_pattern.md` — `AsyncPgConnection::establish` + `DbPool::Conn` pattern for e2e. Read before writing any test that needs a DB connection.
 - `.claude/lessons/feedback_plan_stub_uniformity_with_canonical_sibling.md` — §13 stubs MUST mirror sibling fixture shape; failure to do so caused the 3-cycle catch-fire on v1-SL-c-2.
+- `.claude/lessons/feedback_junior_worker_e2e_edit_hang.md` — **≥2 e2e.rs edits in this task/cohort:** never queue a full e2e `Edit` on the 16k-line file; plan §13 stubs must note the append-only pattern. See DQ `a3d0e9941441-008`.
 
 ### 3.4 Supporting context
 

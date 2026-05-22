@@ -3088,6 +3088,40 @@
       "resolved_at": "2026-05-22T18:40:28Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-007",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T18:00:00Z",
+      "question": "Brief §2.1 names test `create_endorsement_happy_path_and_conflict` implying a 409 conflict, but create_endorsement.rs:163-192 returns LemmyErrorType::NotFound (404) for all failure modes. Which failure mode and name?",
+      "options": [
+        "self-endorse-rejects (404 NotFound) — rename to `create_endorsement_happy_path_and_self_endorse_rejects`",
+        "cooldown-rejects (404 NotFound) — rename to `create_endorsement_happy_path_and_cooldown_rejects`"
+      ],
+      "context": "Read crates/api/api_crud/src/governance/create_endorsement.rs lines 163-192. All failure modes return NotFound: (1) Closed gate, (2) self-endorsement (line 168), (3) cap exceeded, (4) 48h cooldown. No 409 Conflict path exists.",
+      "answer": "Option 1: rename to `create_endorsement_happy_path_and_self_endorse_rejects`. Self-endorsement at line 168 (actor_id == target_id -> LemmyErrorType::NotFound) is the most natural failure mode: requires no prior state, clearly exercises the identity boundary. (per advisor 2026-05-22)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T18:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-008",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T18:00:00Z",
+      "question": "Brief §3.3 is missing `feedback_junior_worker_e2e_edit_hang.md`. The file-class table in advisor-orchestrator.md §2.4 mandates this lesson for crates/server/tests/e2e.rs edits when a cohort has >=2 edits. This brief adds 4 tests = 4 edits.",
+      "options": [
+        "Add feedback_junior_worker_e2e_edit_hang.md to brief §3.3 Required reading",
+        "Defer — lesson applies only to impl-task brief, not planning brief"
+      ],
+      "context": "advisor-orchestrator.md §2.4 file-class table: e2e.rs >=2 edits -> mandatory feedback_junior_worker_e2e_edit_hang.md. Planning brief §3 drives what the planner includes in plan §3 for impl-task. 4 tests = >=2 threshold met.",
+      "answer": "Option 1: Add feedback_junior_worker_e2e_edit_hang.md to brief §3.3. Advisor edits brief in-place. (per advisor 2026-05-22)",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T18:00:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
