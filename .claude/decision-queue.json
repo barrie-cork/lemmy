@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Task 2 cargo validation: clippy + e2e compile + targeted e2e against worker branch 85ab181fe",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "test(fed-in-e): concurrent receivers respect storage cap (task 2) — commit 85ab181fe. Pre-push cargo check skipped on daemon (lemmy_email build script fails due to missing translations/backend/ in worktree — pre-existing env gap). Laptop advisor runs all §15 commands verbatim.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-e-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-e-task2-test-norun.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- v1_federation_inbound_e_fixtures::storage_cap_holds_under_concurrent_receivers > .claude/PRPs/debug/v1-federation-inbound-e-task2-targeted-e2e.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-e-task-2-see-claude-prps-briefs-v1-federation-inbound-e-impl-2-md-424",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "364754a7bcbd-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
