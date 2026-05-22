@@ -1928,3 +1928,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **governance-v0 HEAD:** eec20a102
 - **Merged by:** advisor (user gate 5 approved)
 - **Pre-merge state:** 0 critical/major/medium open findings; 1 low wont-fix; all cargo checks PASS; e2e 103/0/5
+
+## advisor: roadmap-next cut phase-v1-ship-2 — 2026-05-22T17:30:00Z
+- **branch:** phase-v1-ship-2 (pushed to origin)
+- **off:** governance-v0 @ cdff6392e
+- **plan:** n/a (plan-gap — skill 2 will handle via /auto-roadmap plan-gap handler)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-ship-2 (to be bootstrapped below)
+- **roadmap:** v1-ship-2 status unstarted -> in_flight (pending flip commit)
+- **next:** user opens CC in worktree, runs /auto-roadmap

@@ -6,8 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": null,
-
+  "last_updated_at": "2026-05-22T17:30:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -15,7 +14,6 @@
     "unstarted": "PRD exists; no sub-phase planned or merged",
     "skipped": "user instructed to exclude from this roadmap (currently being implemented elsewhere)"
   },
-
   "evidence_legend": {
     "pr": "PR number merged into governance-v0",
     "retro": "path to sub-phase retro on trunk",
@@ -25,7 +23,6 @@
     "in_flight_since": "ISO date when /roadmap-next flipped status unstarted -> in_flight",
     "done_at": "ISO date when /auto-roadmap flipped status in_flight -> done"
   },
-
   "lanes": {
     "JM": {
       "name": "Jury Mechanics",
@@ -57,7 +54,10 @@
         "v1-JM-c": {
           "status": "done",
           "scope": "submit_jury_vote 9-step rewrite + ENTRY_KIND_JURY_DEADLOCK + 6 e2e tests",
-          "pr": [97, 98],
+          "pr": [
+            97,
+            98
+          ],
           "plan": ".claude/PRPs/plans/v1-jury-mechanics-c.plan.md",
           "retro": ".claude/PRPs/reports/v1-JM-c-retro.md",
           "verify": null
@@ -66,7 +66,14 @@
           "status": "done",
           "scope": "request_appeal rewrite + admin_trigger_appeal_rejury + appeal_window_expiry job + select_appeal_panel/seat_appeal_panel helpers + appeal.decided_at/requester_role schema; Tasks 1-5 direct-to-trunk, Tasks 6-7 collapsed into retro",
           "pr": null,
-          "direct_to_trunk_commits": ["72dd5d527", "7397b8437", "dfaa28906", "775459505", "ee7d4b1c6", "7a7b0e6ad"],
+          "direct_to_trunk_commits": [
+            "72dd5d527",
+            "7397b8437",
+            "dfaa28906",
+            "775459505",
+            "ee7d4b1c6",
+            "7a7b0e6ad"
+          ],
           "plan": ".claude/PRPs/plans/v1-jury-mechanics-d.plan.md",
           "retro": ".claude/PRPs/reports/v1-JM-d-retro.md",
           "verify": null,
@@ -88,7 +95,6 @@
         "Admin-dashboard view for jury_constraint_violation_log (admin-dashboard-v1 owns)"
       ]
     },
-
     "SL": {
       "name": "Sponsor Liability",
       "prd": ".claude/PRPs/prds/v1-sponsor-liability.prd.md",
@@ -108,7 +114,10 @@
         "v1-SL-b": {
           "status": "done",
           "scope": "revoke_endorsement handler + DTO + route + 9 e2e tests",
-          "pr": [114, 119],
+          "pr": [
+            114,
+            119
+          ],
           "plan": ".claude/PRPs/plans/v1-sponsor-liability-b.plan.md",
           "retro": null,
           "verify": ".claude/PRPs/reports/v1-SL-b-verify.md",
@@ -149,7 +158,6 @@
         "Registry markers for SPONSOR_LIABILITY_PENDING/FIRED/ESCAPED + ENDORSEMENT_REVOKED still say (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — documentation drift; code emits correctly. Flip recommended but not blocking."
       ]
     },
-
     "AD": {
       "name": "Admin Dashboard",
       "prd": ".claude/PRPs/prds/v1-admin-dashboard.prd.md",
@@ -199,7 +207,6 @@
       },
       "known_followups": []
     },
-
     "RT": {
       "name": "Reputation Tuning",
       "prd": ".claude/PRPs/prds/v1-reputation-tuning.prd.md",
@@ -251,7 +258,6 @@
         "RT-r2 is the 'feature flag on' moment for v1 decay calculator — single sub-phase, but high-stakes (changes reputation arithmetic for every user)"
       ]
     },
-
     "SR": {
       "name": "Ship Readiness (a.k.a. SR / Ship)",
       "prd": ".claude/PRPs/prds/v1-ship-readiness.prd.md",
@@ -274,7 +280,10 @@
           "merge_commit": "a27812631",
           "plan": ".claude/PRPs/plans/v1-ship-1.plan.md",
           "retro": null,
-          "remediation_sub_phases": ["v1-ship-1-r1", "v1-ship-1-r2"]
+          "remediation_sub_phases": [
+            "v1-ship-1-r1",
+            "v1-ship-1-r2"
+          ]
         },
         "v1-ship-1-r1": {
           "status": "done",
@@ -292,10 +301,12 @@
           "verify": ".claude/PRPs/reports/v1-ship-1-r2-verify.md"
         },
         "v1-ship-2": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "PRD-named second ship-gate sub-phase (specifics TBD — read PRD §2/§3 for scope)",
           "plan": null,
-          "blocker": "no plan written; PRD says ship-readiness is 'three sequenced sub-phases'"
+          "blocker": "no plan written; PRD says ship-readiness is 'three sequenced sub-phases'",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-ship-2",
+          "in_flight_since": "2026-05-22"
         },
         "v1-ship-3": {
           "status": "unstarted",
@@ -310,14 +321,12 @@
         "Hard boundary per PRD: '11 v0 endpoints + 15 ADRs. No scope creep into v1 feature breadth (RT-r2..RT-r6 / JM-f / restorative-mechanics-v1)'"
       ]
     },
-
     "federation_inbound": {
       "name": "Federation Inbound",
       "prd": ".claude/PRPs/prds/v1-federation-inbound.prd.md",
       "status": "skipped",
       "reason": "User instructed 2026-05-22: federation-inbound is currently being implemented; not in roadmap scope. Sub-phases a/b/c shipped (PRs #138, #139, #144); d in-flight at brehon-fork-fed-in-d worktree. Refer to fed-in-d brief + planning queue for state."
     },
-
     "quality": {
       "name": "Quality / QA",
       "prd": null,
@@ -332,7 +341,6 @@
       ]
     }
   },
-
   "meta_lanes": {
     "v1-validate-agent": {
       "purpose": "Shape G validation orchestration (cargo runs off-box on GH Actions)",
@@ -369,17 +377,24 @@
       "merge_commit": "7cfc21c23"
     }
   },
-
   "what_remains": {
     "high_priority_unstarted": [
       {
         "lane": "SR (Ship Readiness)",
-        "items": ["v1-ship-2", "v1-ship-3"],
+        "items": [
+          "v1-ship-2",
+          "v1-ship-3"
+        ],
         "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1 + remediation cycles shipped, ship-2/3 unstarted. Closes v0 ship-gate to 'first external user'."
       },
       {
         "lane": "RT (Reputation Tuning)",
-        "items": ["v1-RT-r2", "v1-RT-r3", "v1-RT-r4", "v1-RT-r5"],
+        "items": [
+          "v1-RT-r2",
+          "v1-RT-r3",
+          "v1-RT-r4",
+          "v1-RT-r5"
+        ],
         "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes — changes reputation arithmetic for every user)."
       }
     ],
@@ -406,7 +421,6 @@
       "JM v2: sanction-override on appeal, step_up_token enforcement, appeal-panel concurrency tests"
     ]
   },
-
   "implementation_steering": {
     "next_logical_sub_phase": "Resolve federation-inbound-d + quality-r1 first (both in flight), then plan v1-ship-2 to continue closing the v0 ship-gate before tackling RT-r2..r5",
     "rationale_for_ship_first": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness (named as such in the PRD's hard-boundary statement) — they add feature breadth, not ship-readiness.",
