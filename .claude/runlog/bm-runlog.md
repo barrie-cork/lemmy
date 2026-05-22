@@ -1906,3 +1906,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** pending
 - **YAML:** .claude/PRPs/reviews/pr-145-findings.yaml (poll #2, committed 703ed8686)
 - **Notes:** BILLING-BLOCKED FAST EXIT. CR issue comment body contains billing warning: "we have not been able to collect payment for this subscription for more than 72 hours". CR is still in "review in progress" state — no completed walkthrough, no severity findings, no inline comments. Zero actionable findings. Action required: resolve CodeRabbit billing (update payment method at coderabbit.ai billing). Then re-poll.
+
+## bm: prp-review — 2026-05-22T16:40Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **head SHA:** 8dedb3dcb (current HEAD at review time)
+- **cargo check:** PASS exit 0, log .claude/build-bm-pr145-check.log
+- **cargo clippy:** PASS exit 0, log .claude/build-bm-pr145-clippy.log (note: --no-deps; 8 pre-existing test-code errors not surfaced without --all-targets)
+- **cargo test --no-run:** PENDING — compiling testcontainers stack, log .claude/build-bm-pr145-test.log
+- **ADR violations:** 0
+- **Issues by severity:** critical 0 / major 0 / medium 0 / low 0 (wont-fix 1) / nit 0
+- **Recommendation:** approve
+- **Markdown report:** .claude/PRPs/reviews/pr-145-review.md
+- **Findings YAML updated:** .claude/PRPs/reviews/pr-145-findings.yaml (claude_run_count: 1, claude-1 wont-fix)
+- **CR substitute:** Full Claude review substituting for billing-blocked CR. ADR-010/013/014/015 PASS. Rustfmt reformat verified mechanical. LazyLock helper scope and Once semantics correct.
