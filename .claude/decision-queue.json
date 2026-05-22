@@ -1,6 +1,26 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-22T20:30:00Z",
+      "phase": "v1-federation-inbound-e",
+      "question": "v1-federation-inbound-e Task 1 concurrency model: pg_advisory_xact_lock per (peer_domain, table_name) (planner-recommended) vs SELECT FOR UPDATE SKIP LOCKED vs atomic-SQL-with-RETURNING — proceed with planner-recommended pg_advisory_xact_lock?",
+      "options": [
+        "pg_advisory_xact_lock per (peer_domain, table_name) — chosen by planner",
+        "SELECT FOR UPDATE SKIP LOCKED",
+        "atomic-SQL-with-RETURNING (multi-CTE)"
+      ],
+      "context": "Per fed-in-d retro Mandatory carry-forward + the bootstrap doc, the TOCTOU fix in evict_oldest_unreviewed_if_needed needs an explicit concurrency model gate-1 decision. The planner recommends pg_advisory_xact_lock keyed on (peer_domain, table_name) per plan §4.1 + §4.5 — already-wired Brehon pattern (reputation_snapshot::acquire_advisory_xact_lock at line 824), serialises the COUNT-DELETE-INSERT-LOG critical section, lock released on tx commit/rollback. SKIP LOCKED rejected because it doesn't serialise the COUNT-vs-INSERT-new race (Race B unfixed). atomic-SQL-with-RETURNING rejected because the inline COUNT subquery is racey under READ COMMITTED. See plan §4.5 + §10.1 + §18 for full trade-off. Advisor at User Gate 1 (plan approval) validates the planner pick or names an alternative.",
+      "answer": "Planner recommends pg_advisory_xact_lock keyed on (peer_domain, table_name) per plan §4.1. Pending advisor validation at User Gate 1.",
+      "answered_by": "planner",
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "bcdf6ecb126c-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -3122,6 +3142,25 @@
       "resolved_at": "2026-05-22T18:00:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-22T20:30:00Z",
+      "phase": "v1-federation-inbound-e",
+      "question": "v1-federation-inbound-e planning Junior was queued without first authoring .claude/PRPs/briefs/v1-federation-inbound-e-planning-1.md; bootstrap doc served as de-facto brief. Process gap or acceptable improvisation?",
+      "options": [
+        "Promote candidate lesson feedback_advisor_must_commit_brief_before_planning_dispatch.md at retro",
+        "Document in retro as one-off; bootstrap-as-brief acceptable under exceptional circumstance",
+        "Wait for 2nd recurrence before promoting per feedback_principles_not_rules.md threshold"
+      ],
+      "context": "The advisor session (canonical brehon-fork, governance-v0 HEAD 2fcda11b7) authored the v1-federation-inbound-e-bootstrap.md handover file at commit 01ddb785a (2026-05-22), which describes 'No plan exists yet. Author .claude/PRPs/briefs/v1-federation-inbound-e-planning-1.md scoped to ...' as the next concrete action. That brief was never committed; instead the planning Junior task #419 was dispatched directly with the bootstrap's §3-7 sections (handover doc) serving as the de-facto scope source. The planner read the bootstrap, the fed-in-d plan §12 + §13 retro carry-forward (which explicitly named the v1-federation-inbound-e TOCTOU fix scope), surveyed the call sites + MIRROR refs, and authored the plan from that combined context. Process gap recorded here for retro harvest. Future-session impact: a brief-skip discipline lesson would prevent ambiguity at planner dispatch time. Per advisor-orchestrator.md §3.2 'Brief discipline', planning briefs are committed to governance-v0 BEFORE planning Junior is queued.",
+      "answer": "Planner self-resolved: proceeded with plan author using bootstrap doc as de-facto brief + fed-in-d retro carry-forward as scope source. Recording the process gap for retro evaluation (per feedback_junior_pmd_write_convention.md kind:log discipline). Retro decides promotion threshold per feedback_principles_not_rules.md.",
+      "answered_by": "planner-self-resolved",
+      "resolved_at": "2026-05-22T20:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "bcdf6ecb126c-002"
     }
   ]
 }
