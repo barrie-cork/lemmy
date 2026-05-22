@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-22T17:30:00Z",
+  "last_updated_at": "2026-05-22T22:00:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -324,20 +324,82 @@
     "federation_inbound": {
       "name": "Federation Inbound",
       "prd": ".claude/PRPs/prds/v1-federation-inbound.prd.md",
-      "status": "skipped",
-      "reason": "User instructed 2026-05-22: federation-inbound is currently being implemented; not in roadmap scope. Sub-phases a/b/c shipped (PRs #138, #139, #144); d in-flight at brehon-fork-fed-in-d worktree. Refer to fed-in-d brief + planning queue for state."
+      "status": "partial",
+      "user_steered": true,
+      "user_steered_note": "User instructed 2026-05-22: federation-inbound is being implemented out-of-band (parallel session); not driven by /roadmap-next. Sub-phases tracked here for visibility; the active driver is the lane-dedicated worktree session.",
+      "sub_phases": {
+        "v1-federation-inbound-a": {
+          "status": "done",
+          "scope": "federation-inbound foundation: peer trust + inbox nonce + remote moderation labels + Phase-6 model ext + e2e probes",
+          "pr": 138,
+          "merge_commit": "7af873731",
+          "merged_at": "2026-05-19T00:33:36Z",
+          "plan": ".claude/PRPs/plans/v1-federation-inbound-a.plan.md",
+          "retro": ".claude/PRPs/reports/v1-federation-inbound-a-retro.md"
+        },
+        "v1-federation-inbound-b": {
+          "status": "done",
+          "scope": "HTTP-path enforcement for federated governance: wrap + per-peer trust + per-actor rate + replay nonce + payload cap + replay-cleanup cron + handler-e2e",
+          "pr": 139,
+          "merge_commit": "413ef5899",
+          "merged_at": "2026-05-20T13:45:40Z",
+          "plan": ".claude/PRPs/plans/v1-federation-inbound-b.plan.md",
+          "retro": ".claude/PRPs/reports/v1-federation-inbound-b-retro.md"
+        },
+        "v1-federation-inbound-c": {
+          "status": "done",
+          "scope": "reader-side append-history fix on get_inbound_config_int + mirror",
+          "pr": 144,
+          "merge_commit": "dc9bf17a2",
+          "merged_at": "2026-05-22T08:05:51Z",
+          "plan": ".claude/PRPs/plans/v1-federation-inbound-c.plan.md",
+          "retro": ".claude/PRPs/reports/v1-federation-inbound-c-retro.md"
+        },
+        "v1-federation-inbound-d": {
+          "status": "done",
+          "scope": "per-actor rate-map insertion-order bound at publish_trust_attestation.rs (option-b DoS-hardening; Task 1 of original plan)",
+          "pr": 146,
+          "merge_commit": "897d3f72d",
+          "merged_at": "2026-05-22T18:58:42Z",
+          "plan": ".claude/PRPs/plans/v1-federation-inbound-d.plan.md",
+          "retro": ".claude/PRPs/reports/v1-federation-inbound-d-retro.md",
+          "note": "Task 2 (per-peer bound + SHA-256 nonce) deferred to fed-in-e per ship-mid scope decision"
+        },
+        "v1-federation-inbound-e": {
+          "status": "in_flight",
+          "scope": "per-peer bound + SHA-256 nonce (deferred Task 2 from fed-in-d)",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-e",
+          "in_flight_since": "2026-05-22",
+          "plan": ".claude/PRPs/plans/v1-federation-inbound-e.plan.md",
+          "bootstrap": ".claude/PRPs/handovers/v1-federation-inbound-e-bootstrap.md"
+        }
+      },
+      "known_followups": [
+        "fed-in-d worktree at C:/Users/barri/Developer/brehon-fork-fed-in-d is stale (branch merged); user to git worktree remove when ready"
+      ]
     },
     "quality": {
       "name": "Quality / QA",
       "prd": null,
-      "status": "skipped",
-      "reason": "User instructed 2026-05-22: quality-r1 is also ongoing. Branch phase-v1-quality-r1 active at brehon-fork-quality-r1 worktree. No PRD; treated as quality-pass meta-lane.",
-      "active_branch": "phase-v1-quality-r1",
-      "worktree": "C:/Users/barri/Developer/brehon-fork-quality-r1",
-      "recent_work": [
-        "test-settings: ensure_default_settings() to prevent LazyLock poisoning",
-        "fmt: workspace reformat under stable rustfmt",
-        "case-open-snapshot: pin all 27 requires_re_jury keys (ADR-010 compliance)"
+      "status": "done",
+      "user_steered": true,
+      "user_steered_note": "User instructed 2026-05-22: quality is a meta-lane driven out-of-band; not /roadmap-next-cut. Recurring r-cycles may appear.",
+      "shipped_at": "2026-05-22",
+      "sub_phases": {
+        "v1-quality-r1": {
+          "status": "done",
+          "scope": "ADR-010 snapshot (pin all 27 requires_re_jury keys) + workspace rustfmt under stable + LazyLock test-poison fix (ensure_default_settings())",
+          "pr": 145,
+          "merge_commit": "eec20a102",
+          "merged_at": "2026-05-22T16:57:34Z",
+          "carry_forwards": [
+            "ADR-010 read-side enforcement (DQ 922c8bae61db-002)",
+            "clippy 8 errors (DQ 922c8bae61db-001)"
+          ]
+        }
+      },
+      "known_followups": [
+        "quality-r1 worktree at C:/Users/barri/Developer/brehon-fork-quality-r1 is stale (branch merged); user to git worktree remove when ready"
       ]
     }
   },
@@ -400,16 +462,13 @@
     ],
     "in_flight_outside_roadmap": [
       {
-        "lane": "federation-inbound-d",
-        "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-d",
-        "branch": "worker-task1-fix",
-        "user_steered_out": true
-      },
-      {
-        "lane": "quality-r1",
-        "worktree": "C:/Users/barri/Developer/brehon-fork-quality-r1",
-        "branch": "phase-v1-quality-r1",
-        "user_steered_out": true
+        "lane": "federation-inbound-e",
+        "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-e",
+        "branch": "phase-v1-federation-inbound-e",
+        "bootstrap": ".claude/PRPs/handovers/v1-federation-inbound-e-bootstrap.md",
+        "plan": ".claude/PRPs/plans/v1-federation-inbound-e.plan.md",
+        "user_steered_out": true,
+        "note": "Plan authored 2026-05-22 21:51; planning brief at .claude/PRPs/briefs/v1-federation-inbound-e-planning-1.md"
       }
     ],
     "documentation_drift_followups": [
@@ -422,7 +481,11 @@
     ]
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "Resolve federation-inbound-d + quality-r1 first (both in flight), then plan v1-ship-2 to continue closing the v0 ship-gate before tackling RT-r2..r5",
+    "next_logical_sub_phase": "v1-ship-2 is already in_flight (cut 2026-05-22, no plan yet) — drive it next to continue closing the v0 ship-gate. fed-in-e is in-flight in parallel out-of-band (user-steered). After ship-2 + ship-3 close, tackle RT-r2..r5.",
+    "concurrent_lanes_2026_05_22": [
+      "v1-ship-2 (in_flight, roadmap-tracked, no plan yet — primary next focus)",
+      "v1-federation-inbound-e (in_flight, user-steered out-of-band, plan authored)"
+    ],
     "rationale_for_ship_first": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness (named as such in the PRD's hard-boundary statement) — they add feature breadth, not ship-readiness.",
     "rationale_for_RT_later": "RT-r2 flips reputation_v1_decay_enabled feature flag. Doing this AFTER ship-readiness closes means the flag flip lands on a system already in compliance + tested at endpoint granularity."
   }
