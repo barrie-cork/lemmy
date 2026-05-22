@@ -4,25 +4,20 @@ When you hit a decision you cannot make alone during a ralph loop, use
 the decision queue at `.claude/decision-queue.json` instead of stopping
 the loop entirely.
 
-## Schema (v2)
+## Schema
 
 Top-level keys: `pending` (array), `resolved` (array), `schema_version`
-(integer; currently `3`). The legacy `phase` field was removed in v2 —
-it tracked the Brehon sub-phase but was never read by any agent or
-rule and drifted stale. Sub-phase membership is derivable from the entry's
-`timestamp` + git history; no top-level field needed.
+(integer; currently `3`). v3 fields per entry: `id` (composite — see
+§"Schema (v3)" below), `from`, `kind`, `timestamp`, `question`,
+`options`, `context`, `answer`, `answered_by`, `resolved_at`,
+`approved_by`, `approved_at`.
 
-v2 adds the `kind` field on entries (`"blocker"` | `"log"` — see
-"kind: blocker vs log" below) and standardises a `resolved_at` ISO 8601
-timestamp on resolved entries (replacing the historical drift between
-`answered_at` / `ts_resolved` / `resolved_timestamp` / missing).
-**Do not rewrite historical entries** — pre-v2 idiosyncrasies stay as
-the audit trail. Forward-only consistency.
-
-If `schema_version` is missing or `1`, treat entries as v1 (no `kind`,
-varied resolved-timestamp keys). When you read a v1 entry into a v2
-write context, do not backfill `kind` or `resolved_at` — leave the
-historical record untouched.
+**Forward-only consistency.** Never rewrite pre-v3 entries. Treat
+`schema_version` missing or `1` as v1 (no `kind`; varied resolved-
+timestamp keys: `answered_at` / `ts_resolved` / `resolved_timestamp` /
+missing); do not backfill `kind` or `resolved_at` on read. The legacy
+`phase` top-level field was removed in v2 (drifted stale; sub-phase
+derivable from `timestamp` + git history) — do not re-add.
 
 ## Schema (v3)
 
