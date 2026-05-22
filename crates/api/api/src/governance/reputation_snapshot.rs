@@ -45,9 +45,16 @@
 //!   `admin-config-write.sh` wrapper (decision-queue #13; deferred to
 //!   5c sibling docs) is the v0 story for attributing the cascade root.
 
-use crate::governance::{actor_pseudonym_helper, config::{self, ConfigCache, Scope}, governance_log};
+use crate::governance::{
+  actor_pseudonym_helper,
+  config::{self, ConfigCache, Scope},
+  governance_log,
+};
 use chrono::{DateTime, Duration, Utc};
-use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, sql_query, sql_types::BigInt};
+use diesel::{
+  BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, sql_query,
+  sql_types::BigInt,
+};
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::newtypes::{CommunityId, ReputationSnapshotId};
@@ -128,7 +135,10 @@ pub fn detect_capability_changes(
   new: &ReputationSnapshot,
 ) -> Vec<CapabilityChange> {
   let mut changes = Vec::new();
-  let check = |old_val: bool, new_val: bool, dim: CapabilityDimension, changes: &mut Vec<CapabilityChange>| {
+  let check = |old_val: bool,
+               new_val: bool,
+               dim: CapabilityDimension,
+               changes: &mut Vec<CapabilityChange>| {
     if old_val != new_val {
       changes.push(CapabilityChange {
         dimension: dim,
@@ -222,22 +232,46 @@ pub async fn recompute_snapshot(
   //    sanctions that apply to that community (plus instance-wide
   //    sanctions); an instance-scoped snapshot (`community_id = None`)
   //    considers every active sanction.
-  let (published_at, active_sanctions) =
-    load_person_context(conn, person_id, community_id).await?;
+  let (published_at, active_sanctions) = load_person_context(conn, person_id, community_id).await?;
 
   // 4. Read the config thresholds and decay half-life via the cache.
   //    NOTE: all reads flow through a single ConfigCache so repeated
   //    lookups in one recompute don't hit the DB multiple times.
-  let decay_half_life_days =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, "decay.positive_half_life_days").await?;
-  let threshold_jury_reliability =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, "thresholds.jury_reliability").await?;
-  let threshold_reporting_accuracy =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, "thresholds.reporting_accuracy").await?;
-  let threshold_endorsement_strength =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, "thresholds.endorsement_strength").await?;
-  let jury_age_requirement_days =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, "jury.age_requirement_days").await?;
+  let decay_half_life_days = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "decay.positive_half_life_days",
+  )
+  .await?;
+  let threshold_jury_reliability = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.jury_reliability",
+  )
+  .await?;
+  let threshold_reporting_accuracy = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.reporting_accuracy",
+  )
+  .await?;
+  let threshold_endorsement_strength = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.endorsement_strength",
+  )
+  .await?;
+  let jury_age_requirement_days = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.age_requirement_days",
+  )
+  .await?;
 
   // 5. Sum deltas by dimension, applying decay only when expires_at is
   //    None (Watch 8 — double-decay guard). Founders keep their full delta
@@ -341,7 +375,11 @@ fn compute_applied_delta(event: &ReputationEvent, now: DateTime<Utc>, half_life:
     // TODO(brehon-fork): v1 — switch to chained halving per half-life
     // elapsed and add a regression test for age > 2× half-life.
     let age = now - event.created_at;
-    if age > half_life { original / 2 } else { original }
+    if age > half_life {
+      original / 2
+    } else {
+      original
+    }
   } else {
     // expires_at is Some — founder seed. Skip decay entirely.
     original
@@ -362,8 +400,13 @@ pub async fn run_snapshot_batch(context: &LemmyContext) -> LemmyResult<SnapshotB
   let pool = &mut context.pool();
   let mut cache = ConfigCache::new();
 
-  let chunk_size =
-    config::get_int(&mut cache, pool, Scope::Instance, "job.snapshot_batch_chunk_size").await?;
+  let chunk_size = config::get_int(
+    &mut cache,
+    pool,
+    Scope::Instance,
+    "job.snapshot_batch_chunk_size",
+  )
+  .await?;
   let chunk_size_usize = usize::try_from(chunk_size).map_err(|_e| {
     LemmyErrorType::Unknown(format!(
       "job.snapshot_batch_chunk_size out of range for usize: {chunk_size}"
@@ -379,9 +422,7 @@ pub async fn run_snapshot_batch(context: &LemmyContext) -> LemmyResult<SnapshotB
   };
 
   if dirty_pairs.is_empty() {
-    info!(
-      "governance: snapshot batch tick — no dirty pairs (chunk_size={chunk_size_usize})"
-    );
+    info!("governance: snapshot batch tick — no dirty pairs (chunk_size={chunk_size_usize})");
     return Ok(outcome);
   }
 
@@ -569,28 +610,32 @@ async fn load_live_events(
   use diesel::SelectableHelper;
   let now = Utc::now();
   let rows: Vec<ReputationEvent> = match community_id {
-    Some(cid) => reputation_event::table
-      .filter(reputation_event::person_id.eq(person_id))
-      .filter(reputation_event::community_id.eq(cid))
-      .filter(
-        reputation_event::expires_at
-          .is_null()
-          .or(reputation_event::expires_at.gt(now)),
-      )
-      .select(ReputationEvent::as_select())
-      .load::<ReputationEvent>(conn)
-      .await?,
-    None => reputation_event::table
-      .filter(reputation_event::person_id.eq(person_id))
-      .filter(reputation_event::community_id.is_null())
-      .filter(
-        reputation_event::expires_at
-          .is_null()
-          .or(reputation_event::expires_at.gt(now)),
-      )
-      .select(ReputationEvent::as_select())
-      .load::<ReputationEvent>(conn)
-      .await?,
+    Some(cid) => {
+      reputation_event::table
+        .filter(reputation_event::person_id.eq(person_id))
+        .filter(reputation_event::community_id.eq(cid))
+        .filter(
+          reputation_event::expires_at
+            .is_null()
+            .or(reputation_event::expires_at.gt(now)),
+        )
+        .select(ReputationEvent::as_select())
+        .load::<ReputationEvent>(conn)
+        .await?
+    }
+    None => {
+      reputation_event::table
+        .filter(reputation_event::person_id.eq(person_id))
+        .filter(reputation_event::community_id.is_null())
+        .filter(
+          reputation_event::expires_at
+            .is_null()
+            .or(reputation_event::expires_at.gt(now)),
+        )
+        .select(ReputationEvent::as_select())
+        .load::<ReputationEvent>(conn)
+        .await?
+    }
   };
   Ok(rows)
 }
@@ -628,15 +673,17 @@ async fn load_person_context(
   let active_sanctions: i64 = match community_filter {
     // Community-scoped snapshot: count instance-wide sanctions (null
     // target_community_id) OR sanctions scoped to this same community.
-    Some(cid) => base
-      .filter(
-        sanction::target_community_id
-          .is_null()
-          .or(sanction::target_community_id.eq(cid)),
-      )
-      .count()
-      .get_result(conn)
-      .await?,
+    Some(cid) => {
+      base
+        .filter(
+          sanction::target_community_id
+            .is_null()
+            .or(sanction::target_community_id.eq(cid)),
+        )
+        .count()
+        .get_result(conn)
+        .await?
+    }
     // Instance-scoped snapshot: count every active sanction.
     None => base.count().get_result(conn).await?,
   };
@@ -680,25 +727,29 @@ async fn upsert_snapshot(
   };
 
   let row: ReputationSnapshot = match existing_id {
-    None => insert_into(reputation_snapshot::table)
-      .values(form)
-      .returning(ReputationSnapshot::as_returning())
-      .get_result::<ReputationSnapshot>(conn)
-      .await?,
-    Some(id) => diesel::update(reputation_snapshot::table.filter(reputation_snapshot::id.eq(id)))
-      .set((
-        reputation_snapshot::reporting_accuracy.eq(form.reporting_accuracy),
-        reputation_snapshot::jury_reliability.eq(form.jury_reliability),
-        reputation_snapshot::participation_consistency.eq(form.participation_consistency),
-        reputation_snapshot::endorsement_strength.eq(form.endorsement_strength),
-        reputation_snapshot::jury_eligible.eq(form.jury_eligible),
-        reputation_snapshot::trusted_reporter.eq(form.trusted_reporter),
-        reputation_snapshot::can_sponsor.eq(form.can_sponsor),
-        reputation_snapshot::calculated_at.eq(calc_time),
-      ))
-      .returning(ReputationSnapshot::as_returning())
-      .get_result::<ReputationSnapshot>(conn)
-      .await?,
+    None => {
+      insert_into(reputation_snapshot::table)
+        .values(form)
+        .returning(ReputationSnapshot::as_returning())
+        .get_result::<ReputationSnapshot>(conn)
+        .await?
+    }
+    Some(id) => {
+      diesel::update(reputation_snapshot::table.filter(reputation_snapshot::id.eq(id)))
+        .set((
+          reputation_snapshot::reporting_accuracy.eq(form.reporting_accuracy),
+          reputation_snapshot::jury_reliability.eq(form.jury_reliability),
+          reputation_snapshot::participation_consistency.eq(form.participation_consistency),
+          reputation_snapshot::endorsement_strength.eq(form.endorsement_strength),
+          reputation_snapshot::jury_eligible.eq(form.jury_eligible),
+          reputation_snapshot::trusted_reporter.eq(form.trusted_reporter),
+          reputation_snapshot::can_sponsor.eq(form.can_sponsor),
+          reputation_snapshot::calculated_at.eq(calc_time),
+        ))
+        .returning(ReputationSnapshot::as_returning())
+        .get_result::<ReputationSnapshot>(conn)
+        .await?
+    }
   };
 
   Ok(row)
@@ -852,9 +903,15 @@ mod tests {
     assert_eq!(changes.len(), 2);
     // Order follows the check order in detect_capability_changes: jury_eligible, trusted_reporter, can_sponsor.
     assert!(matches!(changes[0].direction, CapabilityDirection::Lost));
-    assert!(matches!(changes[0].dimension, CapabilityDimension::JuryEligible));
+    assert!(matches!(
+      changes[0].dimension,
+      CapabilityDimension::JuryEligible
+    ));
     assert!(matches!(changes[1].direction, CapabilityDirection::Gained));
-    assert!(matches!(changes[1].dimension, CapabilityDimension::TrustedReporter));
+    assert!(matches!(
+      changes[1].dimension,
+      CapabilityDimension::TrustedReporter
+    ));
   }
 
   #[test]

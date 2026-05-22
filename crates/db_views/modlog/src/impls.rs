@@ -1,10 +1,6 @@
 use crate::ModlogView;
 use diesel::{
-  BoolExpressionMethods,
-  ExpressionMethods,
-  JoinOnDsl,
-  NullableExpressionMethods,
-  QueryDsl,
+  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl,
   SelectableHelper,
 };
 use diesel_async::RunQueryDsl;
@@ -25,19 +21,14 @@ use lemmy_db_schema::{
   },
 };
 use lemmy_db_schema_file::{
-  PersonId,
-  aliases,
+  PersonId, aliases,
   enums::{CommunityFollowerState, CommunityVisibility, ListingType},
   schema::{comment, community, community_actions, instance, modlog, person, post},
 };
 use lemmy_diesel_utils::{
   connection::{DbPool, get_conn},
   pagination::{
-    CursorData,
-    PagedResponse,
-    PaginationCursor,
-    PaginationCursorConversion,
-    paginate_response,
+    CursorData, PagedResponse, PaginationCursor, PaginationCursorConversion, paginate_response,
   },
 };
 use lemmy_utils::error::LemmyResult;

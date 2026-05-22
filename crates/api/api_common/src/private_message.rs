@@ -3,8 +3,6 @@ pub use lemmy_db_views_private_message::{PrivateMessageView, api::PrivateMessage
 
 pub mod actions {
   pub use lemmy_db_views_private_message::api::{
-    CreatePrivateMessage,
-    DeletePrivateMessage,
-    EditPrivateMessage,
+    CreatePrivateMessage, DeletePrivateMessage, EditPrivateMessage,
   };
 }

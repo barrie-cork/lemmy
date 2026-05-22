@@ -1,8 +1,6 @@
 use crate::{CommunityView, MultiCommunityView};
 use lemmy_db_schema::{
-  CommunitySortType,
-  MultiCommunityListingType,
-  MultiCommunitySortType,
+  CommunitySortType, MultiCommunityListingType, MultiCommunitySortType,
   newtypes::{CommunityId, CommunityTagId, LanguageId, MultiCommunityId},
   source::site::Site,
 };

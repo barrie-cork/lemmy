@@ -40,13 +40,14 @@
 
 use actix_web::web::{Data, Json};
 use chrono::{DateTime, Duration, Utc};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper, dsl::count_star, update};
+use diesel::{
+  ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper, dsl::count_star, update,
+};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log,
-  reputation_snapshot,
+  governance_log, reputation_snapshot,
 };
 use lemmy_api_common::governance::{RevokeEndorsement, RevokeEndorsementResponse};
 use lemmy_api_utils::{
@@ -129,9 +130,7 @@ pub async fn revoke_endorsement(
 
   // PRE-TX: reason validation (DQ #139 — mirrors admin_close_case.rs:30-32).
   if data.reason.trim().is_empty() {
-    return Err(
-      LemmyErrorType::Unknown("revoke-endorsement reason required".to_string()).into(),
-    );
+    return Err(LemmyErrorType::Unknown("revoke-endorsement reason required".to_string()).into());
   }
 
   let data_for_tx = data.clone();
@@ -354,9 +353,7 @@ async fn process_revocation(
     "reason": data.reason,
     "liability_chain_severed_for_cases": severed.iter().map(|c| c.0).collect::<Vec<_>>(),
   });
-  if bypass_recorded
-    && let Some(obj) = payload.as_object_mut()
-  {
+  if bypass_recorded && let Some(obj) = payload.as_object_mut() {
     obj.insert("rate_limit_bypassed".to_string(), json!(true));
   }
   governance_log::append(

@@ -25,18 +25,13 @@ use crate::governance::config::{ConfigCache, Scope, get_int};
 use actix_web::web::{Data, Json, Query};
 use chrono::Utc;
 use diesel::{
-  QueryableByName,
-  sql_query,
+  QueryableByName, sql_query,
   sql_types::{BigInt, Nullable, Text},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_common::governance::{
-  AdminReputationStats,
-  AdminReputationStatsResponse,
-  CapabilityCounts,
-  FounderEventStats,
-  ReputationBuckets,
-  ThresholdsSnapshot,
+  AdminReputationStats, AdminReputationStatsResponse, CapabilityCounts, FounderEventStats,
+  ReputationBuckets, ThresholdsSnapshot,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_views_local_user::LocalUserView;

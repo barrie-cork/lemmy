@@ -6,10 +6,7 @@ use lemmy_api_utils::{
   plugins::{plugin_hook_after, plugin_hook_before},
   send_activity::{ActivityChannel, SendActivityData},
   utils::{
-    check_local_user_valid,
-    check_private_messages_enabled,
-    get_url_blocklist,
-    process_markdown,
+    check_local_user_valid, check_private_messages_enabled, get_url_blocklist, process_markdown,
     slur_regex,
   },
 };

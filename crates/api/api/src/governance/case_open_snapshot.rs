@@ -54,12 +54,22 @@ pub async fn build_applied_config_snapshot(
     config::get_int(&mut cache, pool, scope, "jury.panel_size.founder.severe").await?;
   let panel_probation_minor =
     config::get_int(&mut cache, pool, scope, "jury.panel_size.probation.minor").await?;
-  let panel_probation_moderate =
-    config::get_int(&mut cache, pool, scope, "jury.panel_size.probation.moderate").await?;
+  let panel_probation_moderate = config::get_int(
+    &mut cache,
+    pool,
+    scope,
+    "jury.panel_size.probation.moderate",
+  )
+  .await?;
   let panel_probation_severe =
     config::get_int(&mut cache, pool, scope, "jury.panel_size.probation.severe").await?;
-  let juror_cooldown_days =
-    config::get_int(&mut cache, pool, scope, "jury.constraints.juror_cooldown_days").await?;
+  let juror_cooldown_days = config::get_int(
+    &mut cache,
+    pool,
+    scope,
+    "jury.constraints.juror_cooldown_days",
+  )
+  .await?;
 
   // -- Float keys -------------------------------------------------------------
   let quorum_fraction_minor =
@@ -76,16 +86,41 @@ pub async fn build_applied_config_snapshot(
     config::get_float(&mut cache, pool, scope, "jury.threshold_fraction.severe").await?;
 
   // -- Bool keys --------------------------------------------------------------
-  let diversity_enabled =
-    config::get_bool(&mut cache, pool, scope, "jury.diversity_constraints_enabled").await?;
-  let no_majority_same_sponsor =
-    config::get_bool(&mut cache, pool, scope, "jury.constraints.no_majority_from_same_sponsor_cluster").await?;
-  let geographic_diversity =
-    config::get_bool(&mut cache, pool, scope, "jury.constraints.geographic_diversity_preferred").await?;
-  let no_recent_repeat =
-    config::get_bool(&mut cache, pool, scope, "jury.constraints.no_recent_juror_repeat").await?;
-  let no_same_endorsement =
-    config::get_bool(&mut cache, pool, scope, "jury.constraints.no_same_endorsement_chain").await?;
+  let diversity_enabled = config::get_bool(
+    &mut cache,
+    pool,
+    scope,
+    "jury.diversity_constraints_enabled",
+  )
+  .await?;
+  let no_majority_same_sponsor = config::get_bool(
+    &mut cache,
+    pool,
+    scope,
+    "jury.constraints.no_majority_from_same_sponsor_cluster",
+  )
+  .await?;
+  let geographic_diversity = config::get_bool(
+    &mut cache,
+    pool,
+    scope,
+    "jury.constraints.geographic_diversity_preferred",
+  )
+  .await?;
+  let no_recent_repeat = config::get_bool(
+    &mut cache,
+    pool,
+    scope,
+    "jury.constraints.no_recent_juror_repeat",
+  )
+  .await?;
+  let no_same_endorsement = config::get_bool(
+    &mut cache,
+    pool,
+    scope,
+    "jury.constraints.no_same_endorsement_chain",
+  )
+  .await?;
 
   // -- Enum keys (stored as text) ---------------------------------------------
   let sev_minor =

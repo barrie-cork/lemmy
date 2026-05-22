@@ -184,8 +184,14 @@ async fn process_appeal(
 
   if auto_select {
     let selection = select_appeal_panel(conn, &case, &mut cache).await?;
-    seat_appeal_panel(conn, data.case_id, new_appeal.id, &selection, caller_pseudonym.clone())
-      .await?;
+    seat_appeal_panel(
+      conn,
+      data.case_id,
+      new_appeal.id,
+      &selection,
+      caller_pseudonym.clone(),
+    )
+    .await?;
   }
 
   Ok(new_appeal.id)

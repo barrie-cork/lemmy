@@ -1,11 +1,11 @@
 use crate::newtypes::{CommentId, CommunityId, ModerationCaseId, PostId, RuleSetVersionId};
 use chrono::{DateTime, Utc};
+#[cfg(feature = "full")]
+use lemmy_db_schema_file::schema::moderation_case;
 use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryDecision, SeverityTier},
 };
-#[cfg(feature = "full")]
-use lemmy_db_schema_file::schema::moderation_case;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;

@@ -3,15 +3,11 @@ use crate::{
   activity_lists::AnnouncableActivities,
   check_community_deleted_or_removed,
   community::send_activity_in_community,
-  generate_activity_id,
-  post_or_comment_community,
+  generate_activity_id, post_or_comment_community,
   protocol::community::lock::{LockPageOrNote, LockType, UndoLockPageOrNote},
 };
 use activitypub_federation::{
-  config::Data,
-  fetch::object_id::ObjectId,
-  kinds::activity::UndoType,
-  traits::Activity,
+  config::Data, fetch::object_id::ObjectId, kinds::activity::UndoType, traits::Activity,
 };
 use lemmy_api_utils::{context::LemmyContext, notify::notify_mod_action};
 use lemmy_apub_objects::{

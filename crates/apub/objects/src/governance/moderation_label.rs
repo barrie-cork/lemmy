@@ -1,8 +1,6 @@
 use crate::protocol::governance::moderation_label::ModerationLabelProtocol;
 use activitypub_federation::{
-  config::Data,
-  protocol::verification::verify_domains_match,
-  traits::Object,
+  config::Data, protocol::verification::verify_domains_match, traits::Object,
 };
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};

@@ -1,8 +1,8 @@
 use crate::newtypes::{CaseEvidenceId, ModerationCaseId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{PersonId, enums::EvidenceVisibility};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::case_evidence;
+use lemmy_db_schema_file::{PersonId, enums::EvidenceVisibility};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

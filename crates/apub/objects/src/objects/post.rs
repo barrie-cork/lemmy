@@ -5,12 +5,8 @@ use crate::{
   },
   utils::{
     functions::{
-      check_apub_id_valid_with_strictness,
-      context_url,
-      generate_to,
-      read_from_string_or_source_opt,
-      verify_person_in_community,
-      verify_visibility,
+      check_apub_id_valid_with_strictness, context_url, generate_to,
+      read_from_string_or_source_opt, verify_person_in_community, verify_visibility,
     },
     markdown_links::{markdown_rewrite_remote_links_opt, to_local_url},
     mentions::collect_non_local_mentions,
@@ -33,11 +29,7 @@ use lemmy_api_utils::{
   plugins::{plugin_hook_after, plugin_hook_before},
   request::generate_post_link_metadata,
   utils::{
-    check_nsfw_allowed,
-    get_url_blocklist,
-    process_markdown_opt,
-    slur_regex,
-    update_post_tags,
+    check_nsfw_allowed, get_url_blocklist, process_markdown_opt, slur_regex, update_post_tags,
   },
 };
 use lemmy_db_schema::source::{
@@ -389,6 +381,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_lemmy_post() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     parse_lemmy_person(&context).await?;
@@ -415,6 +408,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_convert_mastodon_post_title() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     parse_lemmy_community(&context).await?;

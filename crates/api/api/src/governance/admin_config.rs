@@ -39,59 +39,31 @@ use crate::governance::{
   actor_pseudonym_helper,
   audit_projection::project_to_audit_entry,
   config::{
-    self,
-    ApplyAt,
-    CONFIG_KEY_METADATA,
-    ConfigCache,
-    ConfigKeyMetadata,
-    ConfigScope,
-    NumericRange,
-    Scope,
-    ValueType,
-    const_default_bool,
-    const_default_float,
-    const_default_int,
+    self, ApplyAt, CONFIG_KEY_METADATA, ConfigCache, ConfigKeyMetadata, ConfigScope, NumericRange,
+    Scope, ValueType, const_default_bool, const_default_float, const_default_int,
     const_default_text,
   },
   governance_log::{
-    self,
-    ENTRY_KIND_ADMIN_CONFIG_CHANGED,
-    ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED,
-    GovernanceLog,
+    self, ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED, ENTRY_KIND_ADMIN_CONFIG_CHANGED, GovernanceLog,
   },
 };
 use actix_web::web::{Data, Json, Query};
 use diesel::{
-  ExpressionMethods,
-  OptionalExtension,
-  QueryDsl,
-  QueryableByName,
-  SelectableHelper,
-  insert_into,
+  ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, SelectableHelper, insert_into,
   sql_query,
   sql_types::{BigInt, Integer, Nullable},
 };
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{
-  AdminConfigAuditEntry,
-  AdminConfigEntry,
-  AdminGetConfig,
-  AdminGetConfigAudit,
-  AdminGetConfigResponse,
-  AdminSetConfig,
-  AdminSetConfigResponse,
-  ConfigChangePreview,
+  AdminConfigAuditEntry, AdminConfigEntry, AdminGetConfig, AdminGetConfigAudit,
+  AdminGetConfigResponse, AdminSetConfig, AdminSetConfigResponse, ConfigChangePreview,
   ConfigValueWithProvenance,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::source::governance::governance_config::{
-  GovernanceConfig,
-  GovernanceConfigInsertForm,
+  GovernanceConfig, GovernanceConfigInsertForm,
 };
-use lemmy_db_schema_file::schema::{
-  governance_config,
-  governance_log as governance_log_schema,
-};
+use lemmy_db_schema_file::schema::{governance_config, governance_log as governance_log_schema};
 use lemmy_db_views_community_moderator::CommunityModeratorView;
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -229,7 +201,9 @@ async fn impact_for_threshold_key(
 /// threshold queries where the column type is `Int4`.
 fn i32_from_value(v: &Value, label: &str, key: &str) -> LemmyResult<i32> {
   let n = v.as_i64().ok_or_else(|| {
-    LemmyErrorType::Unknown(format!("threshold impact: {label} for `{key}` is not an integer"))
+    LemmyErrorType::Unknown(format!(
+      "threshold impact: {label} for `{key}` is not an integer"
+    ))
   })?;
   i32::try_from(n).map_err(|_err| {
     LemmyErrorType::Unknown(format!(
@@ -420,8 +394,7 @@ pub async fn admin_set_config(
   //    LemmyErrorType::Unknown so existing wire behaviour (400 + readable
   //    text) is preserved while the enum gives callers a discriminable
   //    error variant; see v1-AD-c plan §10.2.
-  let scope = Scope::parse_wire(&data.scope)
-    .map_err(|e| LemmyErrorType::Unknown(e.to_string()))?;
+  let scope = Scope::parse_wire(&data.scope).map_err(|e| LemmyErrorType::Unknown(e.to_string()))?;
 
   // 3. Reason must be non-empty trimmed — mirror of admin_close_case.
   if data.reason.trim().is_empty() {
@@ -430,13 +403,15 @@ pub async fn admin_set_config(
 
   // 4. Value type matches metadata. Mismatch → 400 (bad input, not denial).
   if data.value_type != value_type_label(metadata.value_type) {
-    return Err(LemmyErrorType::Unknown(format!(
-      "value_type `{}` does not match metadata for key `{}` (expected `{}`)",
-      data.value_type,
-      data.key,
-      value_type_label(metadata.value_type),
-    ))
-    .into());
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "value_type `{}` does not match metadata for key `{}` (expected `{}`)",
+        data.value_type,
+        data.key,
+        value_type_label(metadata.value_type),
+      ))
+      .into(),
+    );
   }
 
   // 5. Value conforms to range/enum. Mismatch → 400.
@@ -669,11 +644,13 @@ fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyRes
       ))
     })?;
     if n < range.min || n > range.max {
-      return Err(LemmyErrorType::Unknown(format!(
-        "value {n} for `{}` out of range [{}, {}]",
-        metadata.key, range.min, range.max
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "value {n} for `{}` out of range [{}, {}]",
+          metadata.key, range.min, range.max
+        ))
+        .into(),
+      );
     }
   }
 
@@ -686,11 +663,13 @@ fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyRes
       ))
     })?;
     if !allowed.contains(&s) {
-      return Err(LemmyErrorType::Unknown(format!(
-        "value `{}` for key `{}` not in allowed set {:?}",
-        s, metadata.key, allowed
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "value `{}` for key `{}` not in allowed set {:?}",
+          s, metadata.key, allowed
+        ))
+        .into(),
+      );
     }
   }
 
@@ -703,11 +682,7 @@ fn validate_value_shape(metadata: &ConfigKeyMetadata, value: &Value) -> LemmyRes
 type TypedColumns = (Option<i64>, Option<f64>, Option<bool>, Option<String>);
 
 /// Unpack the JSON value into the four Diesel columns. Exactly one is `Some`.
-fn split_typed_value(
-  vt: ValueType,
-  value: &Value,
-  key: &str,
-) -> LemmyResult<TypedColumns> {
+fn split_typed_value(vt: ValueType, value: &Value, key: &str) -> LemmyResult<TypedColumns> {
   match vt {
     ValueType::Int => {
       let v = value.as_i64().ok_or_else(|| {
@@ -717,17 +692,13 @@ fn split_typed_value(
     }
     ValueType::Float => {
       let v = value.as_f64().ok_or_else(|| {
-        LemmyErrorType::Unknown(format!(
-          "`{key}` value_type=float but JSON is not a number"
-        ))
+        LemmyErrorType::Unknown(format!("`{key}` value_type=float but JSON is not a number"))
       })?;
       Ok((None, Some(v), None, None))
     }
     ValueType::Bool => {
       let v = value.as_bool().ok_or_else(|| {
-        LemmyErrorType::Unknown(format!(
-          "`{key}` value_type=bool but JSON is not a boolean"
-        ))
+        LemmyErrorType::Unknown(format!("`{key}` value_type=bool but JSON is not a boolean"))
       })?;
       Ok((None, None, Some(v), None))
     }
@@ -810,9 +781,7 @@ async fn check_policy(
       }
     }
     (ConfigScope::Instance, Scope::Community(_)) => Ok(Err(DenialReason::ScopeMismatchInstanceKey)),
-    (ConfigScope::Community, Scope::Instance) => {
-      Ok(Err(DenialReason::ScopeMismatchCommunityKey))
-    }
+    (ConfigScope::Community, Scope::Instance) => Ok(Err(DenialReason::ScopeMismatchCommunityKey)),
   }
 }
 
@@ -1216,18 +1185,8 @@ pub async fn admin_get_config_audit(
   let entries: Vec<AdminConfigAuditEntry> = rows
     .into_iter()
     .map(project_to_audit_entry)
-    .filter(|entry| {
-      data
-        .key
-        .as_deref()
-        .is_none_or(|k| entry.key == k)
-    })
-    .filter(|entry| {
-      data
-        .scope
-        .as_deref()
-        .is_none_or(|s| entry.scope == s)
-    })
+    .filter(|entry| data.key.as_deref().is_none_or(|k| entry.key == k))
+    .filter(|entry| data.scope.as_deref().is_none_or(|s| entry.scope == s))
     .collect();
 
   Ok(Json(entries))
@@ -1348,7 +1307,9 @@ mod build_payload_tests {
   use super::build_admin_config_changed_payload;
   use chrono::Utc;
   use lemmy_api_common::governance::{AdminSetConfig, ConfigValueWithProvenance};
-  use lemmy_db_schema::{newtypes::GovernanceConfigId, source::governance::governance_config::GovernanceConfig};
+  use lemmy_db_schema::{
+    newtypes::GovernanceConfigId, source::governance::governance_config::GovernanceConfig,
+  };
   use serde_json::json;
 
   // Drift-guard for Issue #77. The HTTP response exposes

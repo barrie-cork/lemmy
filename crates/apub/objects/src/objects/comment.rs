@@ -2,13 +2,8 @@ use crate::{
   protocol::note::Note,
   utils::{
     functions::{
-      append_attachments_to_comment,
-      check_apub_id_valid_with_strictness,
-      context_url,
-      generate_to,
-      read_from_string_or_source,
-      verify_person_in_community,
-      verify_visibility,
+      append_attachments_to_comment, check_apub_id_valid_with_strictness, context_url, generate_to,
+      read_from_string_or_source, verify_person_in_community, verify_visibility,
     },
     markdown_links::markdown_rewrite_remote_links,
     mentions::{collect_non_local_mentions, get_comment_parent_creator},
@@ -273,6 +268,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   pub(crate) async fn test_parse_lemmy_comment() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     let url = Url::parse("https://enterprise.lemmy.ml/comment/38741")?;
@@ -298,6 +294,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_pleroma_comment() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     let url = Url::parse("https://enterprise.lemmy.ml/comment/38741")?;

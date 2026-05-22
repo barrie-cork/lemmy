@@ -1,18 +1,12 @@
 use crate::{CommunityModeratorView, CommunityPersonBanView};
 use diesel::{
-  ExpressionMethods,
-  JoinOnDsl,
-  OptionalExtension,
-  QueryDsl,
-  SelectableHelper,
+  ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, SelectableHelper,
   dsl::{exists, not},
   select,
 };
 use diesel_async::RunQueryDsl;
 use lemmy_db_schema::{
-  impls::local_user::LocalUserOptionHelper,
-  newtypes::CommunityId,
-  source::local_user::LocalUser,
+  impls::local_user::LocalUserOptionHelper, newtypes::CommunityId, source::local_user::LocalUser,
 };
 use lemmy_db_schema_file::{
   PersonId,

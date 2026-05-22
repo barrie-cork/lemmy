@@ -12,21 +12,12 @@ use lemmy_db_schema::{
     actor_language::LocalUserLanguage,
     comment::{Comment, CommentInsertForm},
     community::{
-      Community,
-      CommunityActions,
-      CommunityBlockForm,
-      CommunityFollowerForm,
-      CommunityInsertForm,
-      CommunityModeratorForm,
-      CommunityPersonBanForm,
-      CommunityUpdateForm,
+      Community, CommunityActions, CommunityBlockForm, CommunityFollowerForm, CommunityInsertForm,
+      CommunityModeratorForm, CommunityPersonBanForm, CommunityUpdateForm,
     },
     community_tag::{CommunityTag, CommunityTagInsertForm, PostCommunityTag},
     instance::{
-      Instance,
-      InstanceActions,
-      InstanceBanForm,
-      InstanceCommunitiesBlockForm,
+      Instance, InstanceActions, InstanceBanForm, InstanceCommunitiesBlockForm,
       InstancePersonsBlockForm,
     },
     keyword_block::LocalUserKeywordBlock,
@@ -42,11 +33,7 @@ use lemmy_db_schema::{
   traits::{Bannable, Blockable, Followable, Likeable},
 };
 use lemmy_db_schema_file::enums::{
-  CommunityFollowerState,
-  CommunityVisibility,
-  ListingType,
-  PostSortType,
-  TagColor,
+  CommunityFollowerState, CommunityVisibility, ListingType, PostSortType, TagColor,
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::{

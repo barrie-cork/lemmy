@@ -18,10 +18,7 @@ use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{AdminTriggerAppealRejury, AdminTriggerAppealRejuryResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
-use lemmy_db_schema::source::governance::{
-  appeal::Appeal,
-  moderation_case::ModerationCase,
-};
+use lemmy_db_schema::source::governance::{appeal::Appeal, moderation_case::ModerationCase};
 use lemmy_db_schema_file::{
   enums::{CaseStatus, JuryAssignmentRole},
   schema::{appeal, jury_assignment, moderation_case},
@@ -49,8 +46,7 @@ pub async fn admin_trigger_appeal_rejury(
 
   let outcome = conn
     .run_transaction(|conn| {
-      async move { process_trigger_rejury(conn, pseudonym_for_tx, data_for_tx).await }
-        .scope_boxed()
+      async move { process_trigger_rejury(conn, pseudonym_for_tx, data_for_tx).await }.scope_boxed()
     })
     .await?;
 

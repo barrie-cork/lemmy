@@ -87,10 +87,7 @@ use lemmy_apub::governance::outbox;
 use lemmy_apub_objects::objects::person::ApubPerson;
 use lemmy_db_schema::{
   newtypes::ModerationCaseId,
-  source::governance::governance_log::{
-    self,
-    ENTRY_KIND_FEDERATION_SANCTION_SENT,
-  },
+  source::governance::governance_log::{self, ENTRY_KIND_FEDERATION_SANCTION_SENT},
 };
 use lemmy_db_views_person::PersonView;
 use lemmy_db_views_site::SiteView;
@@ -172,13 +169,7 @@ pub async fn send_local_sanction_notice(
   // `submit_jury_vote.rs:226-242`. If we used a fresh pool conn here,
   // the sanction wouldn't be visible (different tx, doesn't see
   // uncommitted writes).
-  let plan = outbox::build_local_sanction_notice_plan(
-    case_id,
-    &apub_actor,
-    conn,
-    context,
-  )
-  .await?;
+  let plan = outbox::build_local_sanction_notice_plan(case_id, &apub_actor, conn, context).await?;
 
   // Step 3 — enqueue the AP activity on the in-flight conn. The
   // sent_activity INSERT participates in the outer tx, so it commits
@@ -222,15 +213,7 @@ async fn load_local_admin(
   context: &Data<LemmyContext>,
 ) -> LemmyResult<lemmy_db_schema::source::person::Person> {
   let site_view = SiteView::read_local(&mut context.pool()).await?;
-  let admins = PersonView::list_admins(
-    None,
-    site_view.instance.id,
-    &mut context.pool(),
-  )
-  .await?;
-  let admin_view = admins
-    .into_iter()
-    .next()
-    .ok_or(LemmyErrorType::NotFound)?;
+  let admins = PersonView::list_admins(None, site_view.instance.id, &mut context.pool()).await?;
+  let admin_view = admins.into_iter().next().ok_or(LemmyErrorType::NotFound)?;
   Ok(admin_view.person)
 }

@@ -30,14 +30,10 @@
 //! full DQ-6.6 framing.
 
 pub use lemmy_apub_activities::governance::publish_sanction_notice::{
-  SanctionNoticeSendPlan,
-  build_local_sanction_notice_plan,
-  enqueue_sanction_notice_activity,
+  SanctionNoticeSendPlan, build_local_sanction_notice_plan, enqueue_sanction_notice_activity,
 };
 pub use lemmy_apub_activities::governance::publish_trust_attestation::{
-  TrustAttestationSendPlan,
-  build_local_trust_attestation_plan,
-  enqueue_trust_attestation_activity,
+  TrustAttestationSendPlan, build_local_trust_attestation_plan, enqueue_trust_attestation_activity,
 };
 
 // The names below are aliases for the builders; they exist so the

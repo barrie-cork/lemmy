@@ -8,5 +8,5 @@
 
 pub mod create_endorsement;
 pub mod create_report;
-pub mod revoke_endorsement;
 pub mod request_appeal;
+pub mod revoke_endorsement;

@@ -21,10 +21,7 @@ use lemmy_utils::{
   utils::{
     slurs::check_slurs,
     validation::{
-      is_valid_actor_name,
-      is_valid_body_field,
-      is_valid_display_name,
-      summary_length_check,
+      is_valid_actor_name, is_valid_body_field, is_valid_display_name, summary_length_check,
     },
   },
 };

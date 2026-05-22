@@ -2,9 +2,7 @@ use crate::{
   protocol::instance::Instance,
   utils::{
     functions::{
-      GetActorType,
-      check_apub_id_valid_with_strictness,
-      read_from_string_or_source_opt,
+      GetActorType, check_apub_id_valid_with_strictness, read_from_string_or_source_opt,
     },
     markdown_links::markdown_rewrite_remote_links_opt,
     protocol::{ImageObject, LanguageTag, Source},
@@ -224,6 +222,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_lemmy_instance() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     let site = parse_lemmy_instance(&context).await?;

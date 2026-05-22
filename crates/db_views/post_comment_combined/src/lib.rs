@@ -15,15 +15,10 @@ use {
   diesel::{Queryable, Selectable},
   lemmy_db_schema::traits::InternalToCombinedView,
   lemmy_db_schema::utils::queries::selects::{
-    CreatorLocalHomeCommunityBanExpiresType,
-    creator_ban_expires_from_community,
-    creator_banned_from_community,
-    creator_is_admin,
-    creator_is_moderator,
-    creator_local_home_community_ban_expires,
-    creator_local_home_community_banned,
-    local_user_can_mod,
-    post_community_tags_fragment,
+    CreatorLocalHomeCommunityBanExpiresType, creator_ban_expires_from_community,
+    creator_banned_from_community, creator_is_admin, creator_is_moderator,
+    creator_local_home_community_ban_expires, creator_local_home_community_banned,
+    local_user_can_mod, post_community_tags_fragment,
   },
 };
 

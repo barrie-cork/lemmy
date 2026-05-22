@@ -1,8 +1,6 @@
 use super::utils::{adapt_request, convert_header};
 use actix_web::{
-  HttpRequest,
-  HttpResponse,
-  Responder,
+  HttpRequest, HttpResponse, Responder,
   body::{BodyStream, BoxBody},
   http::StatusCode,
   web::{Data, *},

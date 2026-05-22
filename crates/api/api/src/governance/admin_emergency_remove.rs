@@ -15,8 +15,7 @@
 //! extra-visible per [06 §2.2.1].
 
 use crate::governance::{
-  actor_pseudonym_helper,
-  admin_assign_jury,
+  actor_pseudonym_helper, admin_assign_jury,
   config::{self, ConfigCache, Scope},
   governance_log::{self, ENTRY_KIND_SEVERITY_TIER_FROZEN},
 };
@@ -31,7 +30,9 @@ use lemmy_db_schema::{
 };
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryAssignmentStatus, SeverityTier},
+  enums::{
+    CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryAssignmentStatus, SeverityTier,
+  },
   schema::{comment, community, jury_assignment, moderation_case, post},
 };
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
@@ -210,9 +211,7 @@ async fn process_emergency_remove(
   .await?;
 
   let panel_size_i32: i32 = i32::try_from(panel_size).map_err(|_e| {
-    lemmy_utils::error::LemmyErrorType::Unknown(format!(
-      "panel_size {panel_size} out of i32 range"
-    ))
+    lemmy_utils::error::LemmyErrorType::Unknown(format!("panel_size {panel_size} out of i32 range"))
   })?;
   let quorum =
     admin_assign_jury::ceil_count(f64::from(panel_size_i32) * quorum_fraction, "quorum")?;
@@ -222,7 +221,8 @@ async fn process_emergency_remove(
   )?;
 
   let (eligible, record) =
-    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache).await?;
+    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache)
+      .await?;
 
   // 3a. Snapshot the resolved tier + counts onto the case row. Mirrors
   //     `admin_assign_jury::process_assignment` step 6 (plan §10.5) but

@@ -6,12 +6,8 @@ use lemmy_apub_objects::objects::SiteOrMultiOrCommunityOrUser;
 use lemmy_db_schema::{
   newtypes::ActivityId,
   source::{
-    activity::SentActivity,
-    community::Community,
-    federation_queue_state::FederationQueueState,
-    multi_community::MultiCommunity,
-    person::Person,
-    site::Site,
+    activity::SentActivity, community::Community, federation_queue_state::FederationQueueState,
+    multi_community::MultiCommunity, person::Person, site::Site,
   },
   traits::ApubActor,
 };

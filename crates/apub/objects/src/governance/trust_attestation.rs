@@ -1,8 +1,6 @@
 use crate::protocol::governance::trust_attestation::TrustAttestationProtocol;
 use activitypub_federation::{
-  config::Data,
-  protocol::verification::verify_domains_match,
-  traits::Object,
+  config::Data, protocol::verification::verify_domains_match, traits::Object,
 };
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::source::governance::federation_attestation::FederationAttestation;

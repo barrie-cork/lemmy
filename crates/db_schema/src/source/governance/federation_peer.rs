@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{InstanceId, enums::FederationPeerTrust};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::{federation_peer, instance};
+use lemmy_db_schema_file::{InstanceId, enums::FederationPeerTrust};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;

@@ -4,16 +4,16 @@ use lemmy_api_utils::{
   plugins::{is_captcha_plugin_loaded, plugin_metadata},
 };
 use lemmy_db_schema::source::{
-  actor_language::SiteLanguage,
-  language::Language,
-  local_site_url_blocklist::LocalSiteUrlBlocklist,
-  oauth_provider::AdminOAuthProvider,
-  registration_application::RegistrationApplication,
-  tagline::Tagline,
+  actor_language::SiteLanguage, language::Language,
+  local_site_url_blocklist::LocalSiteUrlBlocklist, oauth_provider::AdminOAuthProvider,
+  registration_application::RegistrationApplication, tagline::Tagline,
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_db_views_person::PersonView;
-use lemmy_db_views_site::{SiteView, api::{GetSiteResponse, SourceDisclosure}};
+use lemmy_db_views_site::{
+  SiteView,
+  api::{GetSiteResponse, SourceDisclosure},
+};
 use lemmy_utils::{CacheLock, VERSION, build_cache, error::LemmyResult};
 use std::sync::LazyLock;
 

@@ -32,7 +32,7 @@
 
 use crate::governance::{
   audit_projection::project_to_audit_entry,
-  governance_log::{ENTRY_KIND_ADMIN_CONFIG_CHANGED, ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED},
+  governance_log::{ENTRY_KIND_ADMIN_CONFIG_CHANGE_DENIED, ENTRY_KIND_ADMIN_CONFIG_CHANGED},
 };
 use actix_web::{
   HttpResponse,
@@ -43,20 +43,13 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
-  newtypes::GovernanceLogId,
-  source::governance::governance_log::GovernanceLog,
+  newtypes::GovernanceLogId, source::governance::governance_log::GovernanceLog,
 };
 use lemmy_db_schema_file::{PersonId, schema::governance_log as governance_log_schema};
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::get_conn;
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};
-use std::{
-  collections::HashSet,
-  pin::Pin,
-  sync::OnceLock,
-  task::Poll,
-  time::Duration,
-};
+use std::{collections::HashSet, pin::Pin, sync::OnceLock, task::Poll, time::Duration};
 use tokio::{
   sync::{Mutex, mpsc},
   time::interval,
@@ -147,10 +140,10 @@ pub async fn admin_audit_stream(
   let (tx, rx): (_, mpsc::Receiver<Notification>) = mpsc::channel(SSE_CHANNEL_CAPACITY);
   let driver = tokio::spawn(async move {
     let mut connection = pg_conn;
-    std::future::poll_fn(move |cx| loop {
-      match Pin::new(&mut connection).poll_message(cx) {
-        Poll::Ready(Some(Ok(AsyncMessage::Notification(n)))) => {
-          match tx.try_send(n) {
+    std::future::poll_fn(move |cx| {
+      loop {
+        match Pin::new(&mut connection).poll_message(cx) {
+          Poll::Ready(Some(Ok(AsyncMessage::Notification(n)))) => match tx.try_send(n) {
             Ok(()) => {}
             Err(mpsc::error::TrySendError::Full(_)) => {
               tracing::warn!(
@@ -161,13 +154,13 @@ pub async fn admin_audit_stream(
             Err(mpsc::error::TrySendError::Closed(_)) => {
               return Poll::Ready(());
             }
+          },
+          Poll::Ready(Some(Ok(_))) => {}
+          Poll::Ready(Some(Err(_))) | Poll::Ready(None) => {
+            return Poll::Ready(());
           }
+          Poll::Pending => return Poll::Pending,
         }
-        Poll::Ready(Some(Ok(_))) => {}
-        Poll::Ready(Some(Err(_))) | Poll::Ready(None) => {
-          return Poll::Ready(());
-        }
-        Poll::Pending => return Poll::Pending,
       }
     })
     .await;

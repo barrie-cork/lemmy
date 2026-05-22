@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 #[cfg(feature = "full")]
 use chrono::Duration;
+use chrono::{DateTime, Utc};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::federation_inbox_nonce;
 use serde::{Deserialize, Serialize};

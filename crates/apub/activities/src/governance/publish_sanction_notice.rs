@@ -1,7 +1,5 @@
 use crate::protocol::governance::publish_sanction_notice::{
-  PublishSanctionNotice,
-  SanctionNoticeKind,
-  SanctionNoticeObjectStub,
+  PublishSanctionNotice, SanctionNoticeKind, SanctionNoticeObjectStub,
 };
 use activitypub_federation::{
   config::Data,
@@ -33,11 +31,7 @@ use lemmy_db_schema_file::{
   enums::{ActorType, CaseTargetType, SanctionScope},
   schema::{moderation_case, sanction},
 };
-use lemmy_diesel_utils::{
-  connection::DbPool,
-  dburl::DbUrl,
-  traits::Crud,
-};
+use lemmy_diesel_utils::{connection::DbPool, dburl::DbUrl, traits::Crud};
 use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};
 use serde_json::{Map, Value, json};
 use tracing::info;
@@ -79,13 +73,9 @@ impl Activity for PublishSanctionNotice {
       .rest
       .get("actor")
       .and_then(serde_json::Value::as_str)
-      .ok_or_else(|| {
-        LemmyErrorType::Unknown("SanctionNotice object missing actor field".into())
-      })?;
+      .ok_or_else(|| LemmyErrorType::Unknown("SanctionNotice object missing actor field".into()))?;
     let object_actor_url = Url::parse(object_actor).map_err(|e| {
-      LemmyErrorType::Unknown(format!(
-        "SanctionNotice object.actor not a valid URL: {e}"
-      ))
+      LemmyErrorType::Unknown(format!("SanctionNotice object.actor not a valid URL: {e}"))
     })?;
     if self.actor.inner() != &object_actor_url {
       return Err(
@@ -103,19 +93,29 @@ impl Activity for PublishSanctionNotice {
   async fn receive(self, context: &Data<Self::DataType>) -> LemmyResult<()> {
     crate::governance::inbox::wrap_governance_inbound(self, context, |a, c| async move {
       crate::governance::inbox::receive_remote_sanction_notice(a, c).await
-    }).await
+    })
+    .await
   }
 }
 
 #[async_trait::async_trait]
 impl crate::governance::inbox::GovernanceInboundActivity for PublishSanctionNotice {
-  fn activity_id(&self) -> &Url { &self.id }
+  fn activity_id(&self) -> &Url {
+    &self.id
+  }
   fn actor_domain(&self) -> LemmyResult<String> {
-    self.actor.inner().domain()
+    self
+      .actor
+      .inner()
+      .domain()
       .map(str::to_string)
-      .ok_or_else(|| LemmyErrorType::Unknown(
-        format!("PublishSanctionNotice actor {} has no domain", self.actor.inner())
-      ).into())
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown(format!(
+          "PublishSanctionNotice actor {} has no domain",
+          self.actor.inner()
+        ))
+        .into()
+      })
   }
   fn payload_size_bytes(&self) -> LemmyResult<usize> {
     Ok(serde_json::to_vec(self)?.len())
@@ -462,9 +462,7 @@ async fn resolve_target_url(
   let mut pool: DbPool<'_> = conn.into();
   match case.target_type {
     CaseTargetType::Person => {
-      let id = case
-        .target_person_id
-        .ok_or(LemmyErrorType::NotFound)?;
+      let id = case.target_person_id.ok_or(LemmyErrorType::NotFound)?;
       let person = Person::read(&mut pool, id).await?;
       Ok(person.ap_id.into())
     }
@@ -474,16 +472,12 @@ async fn resolve_target_url(
       Ok(post.ap_id.into())
     }
     CaseTargetType::Comment => {
-      let id = case
-        .target_comment_id
-        .ok_or(LemmyErrorType::NotFound)?;
+      let id = case.target_comment_id.ok_or(LemmyErrorType::NotFound)?;
       let comment = Comment::read(&mut pool, id).await?;
       Ok(comment.ap_id.into())
     }
     CaseTargetType::Community => {
-      let id = case
-        .target_community_id
-        .ok_or(LemmyErrorType::NotFound)?;
+      let id = case.target_community_id.ok_or(LemmyErrorType::NotFound)?;
       let community = Community::read(&mut pool, id).await?;
       Ok(community.ap_id.into())
     }
@@ -557,18 +551,14 @@ fn synthesise_object_id(
 ///
 /// TODO(merge-1b): remove this shim when the wrapper switches to
 /// carrying the typed protocol directly.
-fn stub_from_protocol(
-  protocol: &SanctionNoticeProtocol,
-) -> LemmyResult<SanctionNoticeObjectStub> {
+fn stub_from_protocol(protocol: &SanctionNoticeProtocol) -> LemmyResult<SanctionNoticeObjectStub> {
   let value = serde_json::to_value(protocol)?;
   let mut object_map: Map<String, Value> = match value {
     Value::Object(map) => map,
     _ => {
       return Err(
-        LemmyErrorType::Unknown(
-          "SanctionNoticeProtocol did not serialise to an object".into(),
-        )
-        .into(),
+        LemmyErrorType::Unknown("SanctionNoticeProtocol did not serialise to an object".into())
+          .into(),
       );
     }
   };
@@ -624,10 +614,7 @@ mod tests {
   use super::{ApubPerson, SanctionScope, assert_actor_is_local, assert_scope_is_federated};
   use chrono::Utc;
   use lemmy_db_schema::source::person::Person;
-  use lemmy_db_schema_file::{
-    PersonId, InstanceId,
-    enums::MembershipState,
-  };
+  use lemmy_db_schema_file::{InstanceId, PersonId, enums::MembershipState};
   use lemmy_utils::error::LemmyResult;
   use url::Url;
 

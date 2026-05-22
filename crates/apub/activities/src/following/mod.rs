@@ -1,9 +1,6 @@
 use super::{generate_activity_id, send_lemmy_activity};
 use crate::protocol::following::{
-  accept::AcceptFollow,
-  follow::Follow,
-  reject::RejectFollow,
-  undo_follow::UndoFollow,
+  accept::AcceptFollow, follow::Follow, reject::RejectFollow, undo_follow::UndoFollow,
 };
 use activitypub_federation::{config::Data, kinds::activity::FollowType, traits::Activity};
 use either::Either::*;

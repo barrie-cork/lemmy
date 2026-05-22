@@ -3,20 +3,14 @@ use crate::{
   newtypes::{CommunityId, CommunityTagId, PostId},
   source::{
     community_tag::{
-      CommunityTag,
-      CommunityTagInsertForm,
-      CommunityTagUpdateForm,
-      CommunityTagsView,
-      PostCommunityTag,
-      PostCommunityTagForm,
+      CommunityTag, CommunityTagInsertForm, CommunityTagUpdateForm, CommunityTagsView,
+      PostCommunityTag, PostCommunityTagForm,
     },
     post::Post,
   },
 };
 use diesel::{
-  ExpressionMethods,
-  QueryDsl,
-  delete,
+  ExpressionMethods, QueryDsl, delete,
   deserialize::FromSql,
   insert_into,
   pg::{Pg, PgValue},

@@ -4,10 +4,7 @@ use futures::{StreamExt, future::try_join_all};
 use itertools::Itertools;
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_apub_objects::objects::{
-  comment::ApubComment,
-  community::ApubCommunity,
-  person::ApubPerson,
-  post::ApubPost,
+  comment::ApubComment, community::ApubCommunity, person::ApubPerson, post::ApubPost,
 };
 use lemmy_db_schema::{
   source::{
@@ -320,6 +317,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_settings_export_import() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let data = TestData::create(pool).await?;
@@ -391,6 +389,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn disallow_large_backup() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let data = TestData::create(pool).await?;
@@ -428,6 +427,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn import_partial_backup() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let pool = &mut context.pool();
     let data = TestData::create(pool).await?;
