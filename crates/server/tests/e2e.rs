@@ -7654,9 +7654,16 @@ async fn admin_get_config_audit_hydrates_previous_value() -> lemmy_utils::error:
 }
 
 /// v1-AD-c task 8 test D1: community-target `create_report` opens a case
-/// whose `applied_config_snapshot` contains exactly the 7
-/// `requires_re_jury` keys AND `rule_set_version_id` equals the
-/// community's active rule-set version.
+/// whose `applied_config_snapshot` contains exactly the set of
+/// `requires_re_jury: true` keys from `CONFIG_KEY_METADATA` AND
+/// `rule_set_version_id` equals the community's active rule-set version.
+///
+/// The expected key set is computed from the metadata at test time
+/// (mirrors the `snapshot_keyset_matches_requires_re_jury_metadata`
+/// parity test in `lemmy_api`). This is drift-proof: adding a new
+/// `requires_re_jury: true` key to `CONFIG_KEY_METADATA` automatically
+/// extends the expected set, so no manual list maintenance is required
+/// here.
 #[tokio::test(flavor = "multi_thread")]
 async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
 -> lemmy_utils::error::LemmyResult<()> {
@@ -7664,6 +7671,7 @@ async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
   use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::admin_rule_sets::admin_create_rule_set;
+  use lemmy_api::governance::config::CONFIG_KEY_METADATA;
   use lemmy_api_common::governance::AdminCreateRuleSet;
   use lemmy_api_common::governance::CreateGovernanceReport;
   use lemmy_api_crud::governance::create_report::create_report;
@@ -7749,23 +7757,23 @@ async fn case_open_pins_applied_config_snapshot_and_rule_set_version_id()
   let snap_obj = snapshot
     .as_object()
     .expect("applied_config_snapshot is a JSON object");
-  let expected_keys: &[&str] = &[
-    "jury.panel_size",
-    "jury.quorum",
-    "jury.severity_thresholds.minor",
-    "jury.severity_thresholds.moderate",
-    "jury.severity_thresholds.severe",
-    "jury.diversity_constraints_enabled",
-    "jury.appeal_panel_size_increase",
-  ];
+
+  // Source-of-truth: every `requires_re_jury: true` entry in metadata
+  // must appear in the case-open snapshot per ADR-010. Computing the
+  // expected set from metadata here keeps the assertion drift-proof
+  // (no hardcoded key list to maintain).
+  let mut expected_keys: Vec<&str> = CONFIG_KEY_METADATA
+    .iter()
+    .filter(|m| m.requires_re_jury)
+    .map(|m| m.key)
+    .collect();
+  expected_keys.sort_unstable();
+  let mut snapshot_keys: Vec<&str> = snap_obj.keys().map(String::as_str).collect();
+  snapshot_keys.sort_unstable();
   assert_eq!(
-    snap_obj.len(),
-    expected_keys.len(),
-    "snapshot has exactly 7 keys",
+    snapshot_keys, expected_keys,
+    "applied_config_snapshot keys must equal the requires_re_jury set in CONFIG_KEY_METADATA",
   );
-  for key in expected_keys {
-    assert!(snap_obj.contains_key(*key), "snapshot contains `{key}`",);
-  }
 
   Ok(())
 }
