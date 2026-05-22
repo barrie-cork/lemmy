@@ -1,10 +1,12 @@
 {
-  "$schema_version": 1,
+  "$schema_version": 2,
+  "$schema_v2_changes": "Adds optional per-sub-phase fields { worktree, in_flight_since, done_at } populated by /roadmap-next + /auto-roadmap skill pair. Adds top-level optional field { last_updated_at } bumped on every skill-driven mutation. Pre-existing v1 entries are unchanged; absent fields are treated as null. Forward-only.",
   "generated_at": "2026-05-22",
   "generated_by": "advisor session (canonical brehon-fork checkout)",
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
+  "last_updated_at": null,
 
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
@@ -18,7 +20,10 @@
     "pr": "PR number merged into governance-v0",
     "retro": "path to sub-phase retro on trunk",
     "verify": "path to /brehon-verify report on trunk",
-    "meta_retro": "path to lane meta-retro on trunk (strong signal lane closed)"
+    "meta_retro": "path to lane meta-retro on trunk (strong signal lane closed)",
+    "worktree": "absolute path to lane-dedicated worktree (set by /roadmap-next; cleared on user `git worktree remove` post-merge)",
+    "in_flight_since": "ISO date when /roadmap-next flipped status unstarted -> in_flight",
+    "done_at": "ISO date when /auto-roadmap flipped status in_flight -> done"
   },
 
   "lanes": {
