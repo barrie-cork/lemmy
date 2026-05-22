@@ -1,6 +1,11 @@
 {
   "effortLevel": "max",
   "skillListingBudgetFraction": 0.005,
+  "env": {
+    "_comment_pmd_cross_lane": "PROJECT_MEMORY_DB and OLLAMA_URL are cross-lane PMD constants exposed in every CC session env (per .claude/rules/pmd-invariants.md invariant #1 + feedback_pmd_cross_lane_canonical_db.md). PROJECT_MEMORY_DB must be the ABSOLUTE path to the canonical brehon-fork checkout's .project-memory/memory.db — NEVER relative, NEVER per-worktree. OLLAMA_URL is the Tailscale-routed endpoint for the homeserver Ollama embedder used by the project-memory MCP and dist/scripts/backfill.js. PROJECT_ROOT is deliberately NOT set here — each lane worktree's .mcp.json carries its own PROJECT_ROOT.",
+    "PROJECT_MEMORY_DB": "C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db",
+    "OLLAMA_URL": "http://homeserver:11434"
+  },
   "permissions": {
     "allow": [
       "Edit(.claude/runlog/**)",
