@@ -136,6 +136,27 @@ pub fn federate_retry_sleep_duration(retry_count: i32) -> Duration {
   min(DAY, pow)
 }
 
+/// Set `LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS` before the first test that
+/// touches `Settings::SETTINGS`. Without this, `cargo test -p <crate> --lib`
+/// from a crate-local CWD cannot resolve `config/config.hjson` and the
+/// `LazyLock` poisons, cascading all subsequent tests in the binary.
+///
+/// Call once per test fn (or once per `#[cfg(test)] mod`) before any call to
+/// `LemmyContext::init_test_context()`. The `Once` guard makes it safe to call
+/// from multiple tests in the same binary.
+#[cfg(any(test, feature = "full"))]
+pub fn ensure_default_settings() {
+  use std::sync::Once;
+  static INIT: Once = Once::new();
+  INIT.call_once(|| {
+    // SAFETY: called before the LazyLock is first accessed; all test binaries
+    // are single-process, so no concurrent readers are present at this point.
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    }
+  });
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
   use super::*;
