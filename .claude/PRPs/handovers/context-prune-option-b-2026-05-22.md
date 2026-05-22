@@ -59,6 +59,12 @@ claims about what loads have been wrong before — Phase A's archive
 trim into `.claude/rules/archived/` shipped ~0 savings until proven
 in a fresh-session `/context` measurement.
 
+> **Note:** this step is now codified in
+> `.claude/skills/memory-prune/SKILL.md` §3.5.c (shipped `563725ab6`,
+> 2026-05-22). Invoking `/memory-prune` from next session will reach
+> Step 3.5.c automatically; the procedure below remains here as the
+> canonical reference for sessions that don't invoke the skill.
+
 **Procedure:**
 
 1. Create `.claude/refs/_test_trigger.md` with a unique sentinel string

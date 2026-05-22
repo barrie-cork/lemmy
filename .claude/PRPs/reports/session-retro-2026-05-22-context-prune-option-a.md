@@ -69,10 +69,11 @@ None of this session's work was complexity-class (no multi-file impl, no Junior 
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] Change #1 (load-bearing dry-run step for memory-prune skill): promote to `.claude/skills/memory-prune/SKILL.md` — directly edit the skill body. Recurrence: 2× this session (G4 + DQ how-to-write), 0× prior in this skill but conceptual sibling exists in `feedback_advisor_dryrun_process_rule_preconditions_at_brief_author.md`. **Meets threshold.**
-- [ ] Change #3 (`.claude/refs/` sentinel-probe in memory-prune skill): promote to `.claude/skills/memory-prune/SKILL.md`. Recurrence: 1× this session + 1× prior (PMD #147 / Phase A archive-trim). **Meets 1+1 threshold.**
+- [x] Change #1 (load-bearing dry-run step for memory-prune skill): **SHIPPED `563725ab6`** as Step 3.5.a in `.claude/skills/memory-prune/SKILL.md`. Recurrence: 2× this session (G4 + DQ how-to-write), 0× prior in this skill but conceptual sibling exists in `feedback_advisor_dryrun_process_rule_preconditions_at_brief_author.md`.
+- [x] Change #2 (verification tag per surviving cut): **SHIPPED `563725ab6`** as Step 3.5.b. Three tags: `verified-pure-prose` / `verified-historical-only` / `unverified-load-bearing-risk` — the last is inadmissible without §3.5.c.
+- [x] Change #3 (`.claude/refs/` sentinel-probe in memory-prune skill): **SHIPPED `563725ab6`** as Step 3.5.c. Mandatory before any rule relocation cut per `feedback_context_trim_verify_empirically.md` (PMD #147).
+- [x] PMD eval written: **memory #487**, embedding backfilled (canonical PMD, 0 missing).
 - [ ] Change #4 (audit `cdff6392e` cross-session attribution): one-off audit task for next session, not a lesson promotion. Track only.
-- [ ] Optional PMD eval write for this session's findings (composite ~0.72 — clean execution with two proposal-pass misjudgments, ~700 token savings delivered, durable handover authored, all per `evaluation-calibration.md` typical-range expectations).
 
 ---
 
