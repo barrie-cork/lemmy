@@ -16,7 +16,7 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
 2. `git fetch origin <phase-branch>`
 3. `git worktree add ../brehon-fork-<lane> <phase-branch>`
 4. `cd ../brehon-fork-<lane>`
-5. `cp .mcp.json.example .mcp.json` — the example carries the canonical absolute `PROJECT_MEMORY_DB` (`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`) per `feedback_pmd_cross_lane_canonical_db.md`. Verify: `grep PROJECT_MEMORY_DB .mcp.json` must show that canonical absolute path, not a relative one.
+5. **Write `.mcp.json` with real paths** — do NOT copy `.mcp.json.example`; the example carries `/path/to/` placeholder strings that produce `-32000` MCP connection failures at session start. Instead, write the file directly with the correct absolute paths (see template in `~/.claude/commands/roadmap-next.md` Phase 5). Required servers: `project-memory` (canonical PMD path + `OLLAMA_URL`), `junior-brehon`, `ref-context`, `tavily`. **`rust-analyzer-mcp` is NOT included** — the `rust-analyzer-mcp` wrapper binary is not installed; `rust-analyzer.exe` alone does not expose an MCP interface. Verify: `grep PROJECT_MEMORY_DB .mcp.json` must show `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`.
 6. **(NEW — v1-rls-r1)** Wire `pmd-canonical-guard.sh` as a `SessionStart` hook in `.claude/settings.local.json`. Create the file if absent; merge into it if it already exists — do not overwrite existing sections (`permissions`, `env`, etc). Paste the following snippet, sequenced BEFORE any existing `SessionStart` entry that calls `pre-phase-audit.sh` (the canonical guard must surface PMD-path drift before phase audit assumes the canonical PMD is reachable):
 
    ```json
