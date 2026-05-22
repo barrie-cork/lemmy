@@ -42,56 +42,9 @@ Archive files (`decision-queue-archive-*.json`) are NOT migrated to v3 — they 
 
 ## Archive policy
 
-The live `decision-queue.json` should hold only entries from **the
-current sub-phase + the last-completed sub-phase**. Older entries
-move to a sibling archive file. This keeps task-0 reads cheap (the
-file is loaded by every Junior subagent at task start) and the
-mental model clean ("these are the *current* decisions").
+Live `decision-queue.json` holds entries from the current sub-phase + the last-completed sub-phase. Older entries move to dated archive files via `homeserver/scripts/dq-archive.sh` (idempotent, `--dry-run` supported). Triggers: live file >100 entries or >200 KB, Junior task-0 read drops content under context pressure, or **at sub-phase retro** (primary trigger).
 
-### When to archive
-
-Archive at one of three triggers, whichever fires first:
-
-1. The live file passes **100 entries** or **200 KB**, OR
-2. A Junior subagent's task-0 read is observed dropping content due
-   to context pressure, OR
-3. **At sub-phase retro** — the natural close-out moment. Archive
-   everything that doesn't reference the new sub-phase. This is the
-   primary trigger; the others are safety nets.
-
-As of 2026-04-27 (post-v1-JM-c ship): live file holds 51 entries,
-~128 KB. Comfortable. First archive landed at pre-v1-AD-e (see `decision-queue-archive-pre-v1-AD-e.json`).
-
-### How to archive
-
-Use `homeserver/scripts/dq-archive.sh` (idempotent, supports
-`--dry-run`). It moves resolved entries with `id <= --cutoff-id` from
-the live file to a dated archive file at
-`.claude/decision-queue-archive-<sub-phase-slug>.json` (e.g.
-`decision-queue-archive-pre-v1-AD-e.json`). The script:
-
-- Reads both `pending` and `resolved`; only resolved entries with
-  `id <= cutoff` are eligible (pending entries are never archived).
-- Preserves entry shape exactly — does NOT rewrite historical
-  idiosyncrasies (per the v2 forward-only rule above).
-- Sets `schema_version` on the archive file to **the value the
-  archived entries used**, not the live file's version. If the
-  archive contains v1 entries (no `kind`, drift in resolved-timestamp
-  keys), the archive file is `schema_version: 1`. Mixed-vintage
-  archives use `schema_version: 1` (the lower of any contained version)
-  so consumers know to handle drift.
-- Commits both files in one commit with subject
-  `chore(decision-queue): archive entries up to #<cutoff-id> for <sub-phase> retro`.
-
-### Reading across live + archive
-
-When a subagent needs an entry by id and it's not in the live file,
-check the archive(s):
-
-```bash
-ls .claude/decision-queue-archive-*.json
-# Read each until the id is found
-```
+Full procedure (script flags, archive `schema_version` rules, commit-subject pattern, "what does NOT get archived"): `.claude/refs/dq-mechanics.md` §"Archive policy".
 
 ### Next-id calculation (v3 — canonical)
 
@@ -112,30 +65,11 @@ the Windows backslash-path mangling class (see
 
 ### Next-id calculation (pre-v3 — historical only)
 
-Pre-v3 entries used integer ids computed as
-`max(all_ids, default=0) + 1` spanning the live DQ + archive files.
-That recipe is **abolished** for new v3 writes (per "Composite id" above
-+ Hard refusal #9) — using it on a mixed int/string id corpus raises
-`TypeError` on Python `max()`. Do **not** copy the historical recipe
-into a new authoring script. The pre-v3 recipe survives only so the
-`dq-schema-v3-migrate.sh` provenance is readable; it is not a recipe to
-re-implement.
-
-The DQ #50 collision incident (`e9fa1e01a`) and the recurring cross-lane
-race documented in `feedback_cohort_dq_id_collision.md` are both
-structurally eliminated by the v3 composite-id mechanism.
+Pre-v3 used `max(all_ids, default=0) + 1` spanning live + archives. **Abolished** for new v3 writes (Hard refusal #9) — raises `TypeError` on mixed int/string ids. Do **not** copy this recipe; the v3 composite-id mechanism structurally eliminates the cross-lane race (`feedback_cohort_dq_id_collision.md`) + the DQ #50 collision incident (`e9fa1e01a`). Full pre-v3 historical context: `.claude/refs/dq-mechanics.md` §"Pre-v3 next-id calculation".
 
 ### What does NOT get archived
 
-- **Pending entries** — never. Pending entries are by definition
-  blocking current work.
-- **Entries cited by name** in any active rule, lesson, brief, or
-  template. If `decision-queue.md` references DQ #37 by id (it does),
-  that entry stays live as long as the citation does. Move the
-  citation to the archive file path before archiving the entry.
-- **Entries from the active sub-phase or its predecessor.** These are
-  load-bearing for the current advisor session and any subagent that
-  may need to revisit recent decisions.
+Pending entries (never), entries cited by name in any active rule/lesson/brief/template (move the citation first), entries from the active sub-phase or its predecessor. Detail: `.claude/refs/dq-mechanics.md` §"What does NOT get archived".
 
 ## When to use
 

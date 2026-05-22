@@ -138,51 +138,15 @@ Before BM opens a PR:
 
 ## Telegram scope (notification carrier only)
 
-Per `feedback_telegram_scope_notification_only.md`, the BM session
-fires Telegram pings ONLY for these events, and ALWAYS asks before
-sending:
+Per `feedback_telegram_scope_notification_only.md`, the BM session fires Telegram pings ONLY for five event shapes (`cr-posted`, `pr-ready`, `dq-blocking`, `merge-ready`, `cargo-done`) and ALWAYS asks before sending. Never sends: diff content, CR review responses, DQ answers, secrets, file-tail dumps, anything phone-authored. MCP disconnected → silent skip + log to runlog (pings are notifications, not gating signals).
 
-| Event | Trigger | Ping body shape |
-|---|---|---|
-| `cr-posted` | `/bm-poll-cr` finds new findings | "CR posted N findings on PR #X (Y critical, Z major)" |
-| `pr-ready` | `/bm-pr` succeeds | "PR #X opened: {title} → {url}" |
-| `dq-blocking` | BM writes a DQ entry it can't self-resolve | "BM filed DQ #N (blocking): {one-line}" |
-| `merge-ready` | `/bm-merge` pre-checks all green | "PR #X ready to merge — awaiting confirmation" |
-| `cargo-done` | Long cargo run from `/bm-prp-review` finishes | "cargo test --test e2e finished, exit {N} in {time}" |
-
-Never:
-
-- Diff content
-- CR review responses or composed answers
-- DQ answers (attribution rules in `decision-queue.md` forbid auto-edit
-  from Telegram content)
-- Secrets, tokens, `.env` lines, paths likely to leak deployment info
-- File-tail dumps (cargo logs, error backtraces)
-- Anything authored on phone — those are user-only via terminal
-
-If the Telegram MCP server is disconnected, BM **silently skips** the
-ping (logs to runlog) instead of failing the command. Pings are
-notifications, not gating signals.
+Full event-trigger-ping table + never-send list: `.claude/refs/bm-mechanics.md` §"Telegram scope".
 
 ## Findings YAML — schema discipline
 
-Every PR ingestion writes `.claude/PRPs/reviews/pr-<N>-findings.yaml`
-in the schema documented at `.claude/PRPs/reviews/SCHEMA.md`. Hard
-invariants:
+Every PR ingestion writes `.claude/PRPs/reviews/pr-<N>-findings.yaml` in the schema at `.claude/PRPs/reviews/SCHEMA.md`. Hard invariants: stable `id` per finding; `bucket` ∈ {`fix-in-pr`, `rebut`, `carry-forward`, `done`, `wont-fix`}; `source` ∈ {`coderabbit`, `claude`, `user`}; `severity` ∈ {`critical`, `major`, `medium`, `low`, `nit`}; `addressed_in` is SHA when `bucket=done` else null; `counters` regenerated on every write; `last_poll_at`+`poll_count` advance per `/bm-poll-cr`. Impl reads via `yq`.
 
-- Every finding has a stable `id` (e.g. `cr-1`, `claude-1`, `user-1`)
-  that does not change once written.
-- `bucket` is one of: `fix-in-pr`, `rebut`, `carry-forward`, `done`,
-  `wont-fix`. Never empty, never invented.
-- `addressed_in` is a commit SHA when `bucket=done`, else `null`.
-- `source` is one of: `coderabbit`, `claude`, `user`. Never empty.
-- `severity` is one of: `critical`, `major`, `medium`, `low`, `nit`.
-- `counters` block is regenerated from `findings[]` on every write.
-- `last_poll_at` and `poll_count` advance every `/bm-poll-cr` run.
-
-The findings file is the BM's only structured handoff to the impl
-session. Impl reads with `yq` (e.g.
-`yq '.findings[] | select(.bucket=="fix-in-pr" and .severity=="critical")'`).
+Full invariant detail: `.claude/refs/bm-mechanics.md` §"Findings YAML".
 
 ## Decision queue use (BM-side)
 
@@ -238,17 +202,9 @@ calls until the user requests a `/bm-*` command.
 
 ## Failure modes the BM is responsible for catching
 
-- Push fails because impl is mid-commit → retry on next `/bm-push`,
-  notify user.
-- `gh pr create` fails because PR already exists → fall through to
-  `gh pr edit` to update body if needed.
-- CR parser finds zero findings on a PR that was open >30 min → log
-  warning to runlog, ask user (CR may have failed silently).
-- `/prp-review` cargo step fails → write the failure into the findings
-  YAML as `source: claude`, `severity: critical`, `bucket: fix-in-pr`.
-- A finding's commit-SHA ref disappears (force-push removed it) →
-  mark `addressed_in: null` and bucket back to `fix-in-pr`, log to
-  runlog.
+Push race with impl mid-commit (retry), `gh pr create` exists-already (fall through to `gh pr edit`), CR zero-findings on PR open >30 min (warn + ask user), `/prp-review` cargo step fail (writes critical finding into YAML), finding SHA disappears after force-push (bucket back to `fix-in-pr`).
+
+Full recovery procedures per case: `.claude/refs/bm-mechanics.md` §"Failure modes".
 
 ## See also
 
