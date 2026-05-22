@@ -168,3 +168,4 @@ Single-occurrence noise (recorded but NOT proposed):
   the lesson candidates 1+2 would extend
 - `17a3eb1bb` — Step 2 ship commit
 - `f4d584345` — Step 1 sentinel-probe PASS verdict commit
+- Promotion candidates 1+2+3 augmentation shipped in this commit: three new sub-patterns added under `feedback_advisor_dryrun_process_rule_preconditions_at_brief_author.md` "How to apply:" — (a) Read target file's own preamble before relocating, (b) inventory path list against filesystem before trusting a handover, (c) audit consuming-file semantics-claims not just citation paths. Frontmatter description broadened from "brief transcription" to "brief OR handover execution"; Generalises-to extended to cover any execution-time read of a documented procedure.
