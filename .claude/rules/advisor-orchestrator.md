@@ -148,29 +148,9 @@ Per `feedback_advisor_watchpoint_specificity.md`. Every watchpoint in plan §4 m
 
 Per `feedback_read_canonical_before_writing_spec.md`. Before authoring any new `*.md` under `.claude/{rules,commands,lessons,PRPs/templates}`, `Glob` + `Read` 1-2 sibling instances first. Cite the canonical example in the new file body or commit body. A commit that adds such a file without citation is a process miss; retro flags it. `grep '^##' <existing>` is always worth the 2-second read.
 
-### 3.7 Dogfood gate (new slash commands)
+### 3.7 Dogfood gate + 3.8 Schema-retrofit gate
 
-Per `feedback_dogfood_slash_command_specs.md`. Every new `.claude/commands/<verb>.md` must include a "Pre-commit dogfood" sub-section under `<rationale>` naming the real existing input the command was walked-through against, what worked, what didn't.
-
-| Command class | Dogfood target |
-|---|---|
-| Planning-stage (e.g. `/brehon-clarify`) | Most-recent `.claude/PRPs/briefs/<phase>-planning-N.md` |
-| Impl-stage | Most-recent `.claude/PRPs/briefs/<phase>-impl-N.md` |
-| Verification (e.g. `/brehon-verify`) | Most-recent `.claude/PRPs/plans/<phase>.plan.md` |
-| BM verb | Most-recent `.claude/runlog/<phase>.md` |
-
-Cost of pre-commit dogfood ~5 min; cost of post-deploy fix ~10× that.
-
-### 3.8 Schema-changing-spec retrofit gate (plan-mode shape changes)
-
-Per `feedback_schema_changing_spec_retrofit_question.md`. When plan-mode produces a plan that changes the shape of an artifact class (new section in a template, new marker in a section, new field in JSON/YAML schema, new required sub-section in a frontmatter), advisor calls `AskUserQuestion` **once before `ExitPlanMode`**:
-
-- "The new pattern applies forward-only to artifacts authored after this lands. Should I also retrofit the existing artifact(s) [<list>] in a follow-up commit?"
-- Options: "Retrofit all" / "Retrofit named subset" / "Forward-only (no retrofit)".
-
-Answer goes into the plan's "Out of scope" or a new "Retrofit scope" section verbatim. "Forward-only" → plan ships with explicit "Pre-existing X are not affected; retrofit deferred indefinitely". "Retrofit" → Phase Z appended at end of implementation phases.
-
-**Skip when:** purely additive functionality (new commands not changing existing shapes), bug fixes (retrofit IS the work), plans explicitly limited to one artifact.
+Both gates fire only when authoring new slash commands or when plan-mode produces a new artifact shape. Procedure: `.claude/refs/advisor-narrow-gates.md`.
 
 ### 3.9 Verify gate (post-impl, pre-merge)
 
@@ -419,36 +399,9 @@ Stop the loop and surface to user immediately. Include catch-fire reason + cited
 
 Distinct from the four Junior subagents (planning / impl-task / bm-task / ci-watcher) — this section covers the **laptop-side** `Agent` tool the advisor invokes for in-session research, file edits, audits, or any independent deliverable that doesn't need to run on the EliteDesk. The Junior subagents are queued via `mcp__junior-brehon__create_task` and run on the daemon; the `Agent` tool subagents run in the advisor session's harness and return inline.
 
-### 6.1 Parallel dispatch for N independent deliverables (status: defer-pending-2nd-recurrence)
+### 6.1 Parallel dispatch + 6.2 Verify-after-subagent-completes
 
-When the advisor session has N independent deliverables to produce (retro-followups, multi-file audits, parallel lesson-authoring, parallel research probes), dispatch all N in a **single assistant message with multiple `Agent` tool blocks**. The harness parallelises them — total wall-clock is approximately `max(per-agent runtime)`, NOT `sum(per-agent runtime)`.
-
-**Demonstrated 2026-05-22:** three `general-purpose` sub-agents (rule promotion + lesson authoring + hooks audit) dispatched in one message ran concurrently; ~7 min wall-clock vs ~12-15 min serial. First-try usability on all three; ~3× speedup.
-
-**When to apply:**
-
-- The deliverables are **independent** — no agent's output is required input to another's. (Sequential pipeline → still serial.)
-- Each deliverable is **bounded** — a single file edit, a single audit report, a focused research probe. Open-ended "investigate X" tasks may need iteration; harder to parallelise reliably.
-- The advisor has the **synthesis context** — sub-agents return their work; the parent integrates. Don't delegate the integration step.
-
-**Dispatch shape:** one assistant message containing K `Agent` tool blocks (K typically 2-4). Each block carries its own self-contained prompt (sub-agents see no parent conversation; brief them as if they walked into the room cold per the `Agent` tool guidance). Use `general-purpose` subagent_type unless a specialised agent fits better; pass `model: "sonnet"` for routine work (cheaper, fast enough), `model: "opus"` for synthesis-heavy work.
-
-**Promotion status:** **defer-pending-2nd-recurrence**. The pattern worked once (2026-05-22); recurrence threshold per `feedback_principles_not_rules.md` is 2 across distinct session types. Use the pattern when it fits; record evidence in session retros; promote to formal discipline after 2nd applicable session (likely: another retro-followup batch, or a multi-file audit in a sub-phase). Per `.claude/PRPs/reports/session-retro-2026-05-22-parallel-subagent-dispatch.md` §"Promotion candidates".
-
-### 6.2 Verify-after-subagent-completes (belt-and-braces; status: record-only, single occurrence)
-
-When a sub-agent's report claims a file edit landed in a tracked file under shared `.git/` (canonical `brehon-fork` checkout OR any `brehon-fork-<lane>` worktree), the parent advisor session MUST verify the edit still exists in the working tree **before** staging or proceeding with dependent work.
-
-**Why:** sub-agent reports describe sub-agent state at exit, NOT current parent-session state. Between sub-agent exit and parent-session use of the report, concurrent writers to the shared `.git/` can invalidate the report. Race B per `feedback_cross_session_commit_attribution_collision.md`: unstaged working-tree edits silently reverted by concurrent push + local fast-forward state alignment.
-
-**How to apply:**
-
-1. Sub-agent returns claiming "edit landed at line N" or similar specific change.
-2. **Immediately run a `grep` for a distinctive string** from the sub-agent's reported diff. (Distinctive = unlikely to appear elsewhere in the file by accident — pick a phrase from the new bullet, a unique identifier, a specific section heading.)
-3. **Zero matches** → the edit has been reverted by a concurrent writer. Re-apply inline via `Edit` tool using the bullet/section text from the sub-agent's report. **Do NOT re-dispatch the sub-agent** — the report itself is the recovery source.
-4. **Match found** → stage immediately (`git add <file>`) BEFORE any other tool call. Staging converts Race B into Race A which has a known mitigation (`git status` verify between add and commit per `feedback_cross_session_commit_attribution_collision.md`).
-
-**Promotion status:** **record-only**. Single occurrence at promotion time (2026-05-22 sub-agent A clobber + inline-recovery). The mechanism is documented here; formal promotion to a hard `MUST` defers until 2nd applicable incident. In the interim, the pattern is in the corpus and reachable by any future session.
+Both patterns are sub-promotion (single recurrence each at promotion time). Procedure: `.claude/refs/advisor-subagent-dispatch.md`. Read on demand when the corresponding dispatch shape fits the current task. When a 2nd recurrence lands for either, lift back from refs/ into this section.
 
 ### 6.3 Bounded sub-agent dispatch and report semantics
 
