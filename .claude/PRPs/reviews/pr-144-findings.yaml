@@ -1,37 +1,247 @@
 schema_version: 1
 pr: 144
-title: Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int` + mirror
+title: Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int`
+  + mirror
 head: phase-v1-federation-inbound-c
 base: governance-v0
-opened_at: '2026-05-21T23:39:00Z'
-last_poll_at: null
-poll_count: 0
-last_polled_head_sha: null
+opened_at: '2026-05-21T23:29:31Z'
+last_poll_at: '2026-05-22T00:03:12.388107Z'
+poll_count: 1
+last_polled_head_sha: 418c4d7
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: null
-findings: []
+recommendation: pending
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/decision-queue.json
+  line: null
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Fix contradictory state text in the resolved entry.**
+
+
+    The answer sa'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943799
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/decision-queue.json
+  line: 2746
+  summary: '_⚠️ Potential issue_ | _🟠 Major_ | _⚡ Quick win_
+
+
+    **Route this judgment-heavy decision through explicit user approval be'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943800
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/briefs/v1-federation-inbound-c-impl-1.md
+  line: 18
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Resolve markdownlint warnings in the brief.**
+
+
+    Line 18 has a blockqu'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943802
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/briefs/v1-federation-inbound-c-impl-2.md
+  line: 18
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Fix markdownlint issues in this task brief.**
+
+
+    Line 18 triggers MD02'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943805
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/briefs/v1-federation-inbound-c-impl-3.md
+  line: 33
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Add language specifiers to fenced code blocks.**
+
+
+    Lines 33, 126, 231'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943809
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-6
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/briefs/v1-federation-inbound-c-planning-2.md
+  line: 34
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Normalise fenced code blocks for markdownlint compliance.**
+
+
+    Several'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943812
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-7
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/reports/v1-federation-inbound-c-retro.md
+  line: 23
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Avoid leading `#` at line start in prose; markdownlint treats it as '
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943813
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-8
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:34:10Z'
+  file: .claude/PRPs/reports/v1-federation-inbound-c-retro.md
+  line: 273
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    **Add language identifiers to fenced code blocks.**
+
+
+    The fences in thi'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943814
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-9
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-21T23:34:12Z'
+  file: null
+  line: null
+  summary: '**Actionable comments posted: 8**'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#pullrequestreview-4341429632
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-10
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-21T23:53:36Z'
+  file: .claude/PRPs/reviews/pr-144-findings.yaml
+  line: 6
+  summary: '_⚠️ Potential issue_ | _🟡 Minor_ | _⚡ Quick win_
+
+
+    <details>
+
+    <summary>🧩 Analysis chain</summary>
+
+
+    🏁 Script executed:
+
+
+    ```'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3285008287
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
+- id: cr-11
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-21T23:53:37Z'
+  file: null
+  line: null
+  summary: '**Actionable comments posted: 1**'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/144#pullrequestreview-4341523296
+  bucket: ""
+  addressed_in: null
+  rationale: null
+  notes: null
 counters:
-  total: 0
+  total: 11
   by_source:
-    coderabbit: 0
+    coderabbit: 11
     claude: 0
     user: 0
   by_severity:
     critical: 0
-    major: 0
+    major: 1
     medium: 0
-    low: 0
-    nit: 0
+    low: 8
+    nit: 2
   by_bucket:
+    "": 11
     fix-in-pr: 0
     rebut: 0
     carry-forward: 0
     done: 0
     wont-fix: 0
 notes: |
-  Shell authored advisor-side post-BM-skip (BM Junior #404 skipped Phase 5
-  per `feedback_bm_false_success_advisor_post_condition_catch.md` — 4th
-  confirmed occurrence). Will be populated by /bm-poll-cr once CR posts
-  findings. PR currently mergeable=MERGEABLE (post-forward-merge of gov-v0
-  resolved CONFLICTING state) with CR check pending.
+  ## Advisor post-condition notes (5th BM false-success occurrence)
+
+  BM Junior #408 ingested 11 CR findings cleanly but violated brief §4
+  constraint: every finding was set to `bucket: fix-in-pr` instead of
+  left blank as `bucket: ""`. Brief §4 explicit: "do NOT bucket — triage
+  is the next, separate verb; bucketing here is a process breach."
+
+  Advisor blanked all 11 buckets to `""` post-merge so triage gate is
+  unprejudiced. Pattern occurrence #5 per
+  `feedback_bm_false_success_advisor_post_condition_catch.md` (prior 4:
+  #322 bm-merge, #392 bm-poll-cr, #394 bm-triage, #404 bm-pr). Auto-
+  detect signal here: every finding having identical bucket value =
+  diff-vs-brief-§4-constraint mismatch caught by post-merge sanitisation.
+
+  Counter block also re-shaped from BM's invented `per-severity → open/
+  done/rebutted/carry_forward/wont_fix` schema to SCHEMA.md's canonical
+  `by_source / by_severity / by_bucket` flat structure.
+
+  Two findings are PR-level review-summary comments, not actionable
+  findings: cr-9 (summary "Actionable comments posted: 8") and cr-11
+  (summary "Actionable comments posted: 1"). Triage will likely
+  classify these as wont-fix (not actionable; they're CR's own
+  metadata-summary line items).
+
+  Recommendation count check vs brief §4 last bullet ("if parser finds
+  fewer than 9 actionable CR findings: emit warning"): parser found 11
+  (9 actionable + 2 summary-line non-actionable). Not a "fewer than 9"
+  fail — but the 2 summary-line items inflate the actionable count.
