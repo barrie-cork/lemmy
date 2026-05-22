@@ -1869,3 +1869,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **scope summary:** 4 §13 tasks (Tasks 1+2 [P] cohort reader-side `.order_by(valid_from.desc())` adds + Task 3 e2e regression `appended_config_override_takes_effect_returns_429` + Task 4 retro authoring); 0 fix-impl cycles (plan §5.1 complexity 2/10 accurate); 1 Phase-2 e2e round CLEAN (DQ #340 result:pass, 103 passed / 0 failed / 5 ignored, 36m11s LOCAL on tip `e06e918e2`); zero §G4 firings.
 - **process incident (4th BM false-success, retro candidate):** BM Junior #404 reported succeeded but advisor post-condition catches: (a) Phase 5 `.claude/PRPs/reviews/pr-144-findings.yaml` shell NOT written (advisor authored at `89addc3d6` post-merge); (b) Phase 6 trunk-side `bm-runlog.md` entry NOT written (THIS entry is the L14-style belt-and-braces fallback authored by advisor on `governance-v0` via canonical worktree `git -C` cross-worktree commit from fed-in-c lane session). Phase 6 phase-branch runlog entry DID land at `c51d00ce1`. Pattern recurrence per `feedback_bm_false_success_advisor_post_condition_catch.md` (MEMORY.md: **3× CONFIRMED**; this is the 4th).
 - **next:** bm-poll-cr after ~5-15 min for CR findings.
+
+
+## bm: merge COMPLETE — 2026-05-22T08:05:51Z
+
+- **PR:** #144 (Phase v1-federation-inbound-c — reader-side append-history fix on `get_inbound_config_int` + mirror)
+- **base ← head:** governance-v0 ← phase-v1-federation-inbound-c
+- **outcome:** MERGED ✓
+- **merge sha:** `dc9bf17a2` ("Merge pull request #144 from barrie-cork/phase-v1-federation-inbound-c")
+- **merged at:** 2026-05-22T08:05:51Z
+- **trunk position:** `dc9bf17a2` (governance-v0 advanced from `47e166e87` to `dc9bf17a2`)
+- **remote branch deleted?** yes (`phase-v1-federation-inbound-c` removed from origin via `--delete-branch`)
+- **deliverable on trunk:** `crates/apub/activities/src/governance/inbox.rs` and `crates/api/api/src/governance/publish_trust_attestation.rs` carry `.order_by(valid_from.desc())` ordering fixes; `crates/server/tests/e2e.rs` carries `appended_config_override_takes_effect_returns_429` e2e regression test
+- **note:** Phase v1-federation-inbound-c complete. PR #144 CodeRabbit review was paused during active development; CR auto-triggered on final push. No critical findings. DQ #338 (daemon-reset bug) is orthogonal meta-issue; does not block phase merge.
