@@ -1919,3 +1919,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Markdown report:** .claude/PRPs/reviews/pr-145-review.md
 - **Findings YAML updated:** .claude/PRPs/reviews/pr-145-findings.yaml (claude_run_count: 1, claude-1 wont-fix)
 - **CR substitute:** Full Claude review substituting for billing-blocked CR. ADR-010/013/014/015 PASS. Rustfmt reformat verified mechanical. LazyLock helper scope and Once semantics correct.
+
+## bm: merge PR #145 COMPLETE — 2026-05-22T16:57Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **Merge commit:** `eec20a102ac3851e1e9d05b1e186bf5b8ec5ccba`
+- **Merge time:** 2026-05-22T16:57:34Z
+- **Phase branch deleted:** phase-v1-quality-r1 (--delete-branch)
+- **governance-v0 HEAD:** eec20a102
+- **Merged by:** advisor (user gate 5 approved)
+- **Pre-merge state:** 0 critical/major/medium open findings; 1 low wont-fix; all cargo checks PASS; e2e 103/0/5
