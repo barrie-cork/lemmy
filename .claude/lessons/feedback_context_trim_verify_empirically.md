@@ -16,3 +16,15 @@ When optimizing context cost (trimming CLAUDE.md, scoping rules via `paths:`, ar
 - `paths:` loads only on Read events (not Grep, Glob, or Edit)
 
 See `reference_claude_code_rules_loading.md` for full measurements.
+
+**Reading the signal:** a rule auto-loading as a `<system-reminder>`
+mid-session is the `paths:`-on-Read mechanism working correctly — not
+noise. The natural read is "the harness loaded the right governance for
+the action in progress." On 2026-05-22, editing
+`.claude/PRPs/handovers/context-prune-option-b-2026-05-22.md` triggered
+`.claude/rules/handover.md` to load as a system-reminder. That signal
+confirmed the handover size was within the canonical 150-350 line range
+and the structure aligned with exemplars listed in `handover.md`
+§"Canonical exemplars" — without a separate manual cross-check. Future
+sessions should treat such mid-session rule loads as confirmatory signals
+about action correctness, not interruptions.

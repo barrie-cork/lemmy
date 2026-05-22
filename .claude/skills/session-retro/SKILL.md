@@ -346,6 +346,15 @@ file.
   shape under `.claude/PRPs/reports/v1-XX-Y-retro.md`. Per-role
   structure and TL;DR are required at that scope; this skill's
   template is too thin.
+- A prior retro's "What to change" table already has concrete file
+  paths + commands + skill refs — the current session is just
+  shipping that table. Don't wrap the execution leg in a new retro
+  proposal. Execute directly against the table; flip checkboxes;
+  surface the execution as a small note in the original retro OR
+  write a separate retro only if the execution surfaced new findings
+  worth carrying forward. Two-session recurrence basis: 2026-05-22
+  (memory-prune-gate-ship leg) + 2026-05-21 (retro-action-items-
+  execution, PMD #451).
 
 ## Why this skill exists
 
