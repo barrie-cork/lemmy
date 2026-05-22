@@ -4,17 +4,18 @@ title: 'quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix
 head: phase-v1-quality-r1
 base: governance-v0
 opened_at: '2026-05-22T15:41:24Z'
-last_poll_at: '2026-05-22T15:50:50.298488Z'
-poll_count: 1
-last_polled_head_sha: 2c1b593f22
+last_poll_at: '2026-05-22T16:01:45.480982Z'
+poll_count: 2
+last_polled_head_sha: 49da0d109
 last_polled_fingerprint: null
 last_claude_run_at: null
 claude_run_count: 0
 recommendation: pending
-notes: 'WARN: CR review failed mid-flight (head SHA changed from 000c3c063e to 2c1b593f22
-  during CR run at 2026-05-22T15:41:50Z). Zero actionable findings at poll #1. PR
-  is 9 min old (under 30-min threshold) — re-poll after CR completes a full review
-  pass. Billing warning present on CR comment: subscription payment outstanding.'
+notes: 'WARN: CR review still in progress at poll #2 (2026-05-22T17:01Z). Head SHA
+  advanced from 2c1b593f22 to 49da0d109 (commit: fix bm-poll-cr Phase 2.5 gate). Billing
+  warning on CR comment: subscription payment outstanding >72h — CR may not complete
+  review until billing resolved. Zero actionable findings. Re-poll after billing resolved
+  + CR completes full review pass.'
 findings: []
 counters:
   critical:
