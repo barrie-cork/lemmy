@@ -1912,7 +1912,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **head SHA:** 8dedb3dcb (current HEAD at review time)
 - **cargo check:** PASS exit 0, log .claude/build-bm-pr145-check.log
 - **cargo clippy:** PASS exit 0, log .claude/build-bm-pr145-clippy.log (note: --no-deps; 8 pre-existing test-code errors not surfaced without --all-targets)
-- **cargo test --no-run:** PENDING — compiling testcontainers stack, log .claude/build-bm-pr145-test.log
+- **cargo test --no-run:** PASS exit 0 (23m 35s), log .claude/build-bm-pr145-test.log
 - **ADR violations:** 0
 - **Issues by severity:** critical 0 / major 0 / medium 0 / low 0 (wont-fix 1) / nit 0
 - **Recommendation:** approve

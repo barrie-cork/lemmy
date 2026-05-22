@@ -247,7 +247,7 @@ Cargo commands run on `phase-v1-quality-r1` HEAD (`8dedb3dcb`):
 |---|---|---|
 | `cargo check --workspace --features full` | **PASS** (exit 0) | `.claude/build-bm-pr145-check.log` |
 | `cargo clippy --workspace --features full --no-deps -- -D warnings` | **PASS** (exit 0) | `.claude/build-bm-pr145-clippy.log` |
-| `cargo test --test e2e --no-run -p lemmy_server` | **PENDING** | `.claude/build-bm-pr145-test.log` |
+| `cargo test --test e2e --no-run -p lemmy_server` | **PASS exit 0** (23m 35s) | `.claude/build-bm-pr145-test.log` |
 
 **Note on clippy result vs plan expectation:** Per plan §"Verification" step 5 and DQ
 `922c8bae61db-001`, clippy was expected to exit non-zero (exit 101) with 8 pre-existing
