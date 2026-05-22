@@ -2878,6 +2878,74 @@
       "resolved_at": "2026-05-21T22:59:11.152522Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-001",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T09:09:02.619137Z",
+      "question": "fed-in-d brief Defect 1 (per-peer rate map) claims unbounded growth. HEAD shows inbox.rs:548 already runs counts.retain(|(_,b),_| *b >= bucket-1) on every insert — entries older than the prior hour are evicted. Should the new MAX_RATE_MAP_ENTRIES bound apply to the per-peer map too?",
+      "options": [
+        "total-map-size",
+        "per-bucket-size",
+        "skip-per-peer-bound"
+      ],
+      "context": "Read inbox.rs:464-479 (definitions) + 540-565 (use site). Both rate maps already have 2-hour bucket retain(). Per-peer DoS surface is bounded by upstream allowlist+signature gates limiting how many distinct domains can federate to us per hour. Per-actor DoS surface is unbounded because a single trusted peer can craft N distinct subject_url values.",
+      "answer": "Skip per-peer bound. The existing 2-hour retain() plus the upstream allowlist+signature gate is adequate for the per-peer surface. The new bound applies only to the per-actor map (rate_per_actor_counts). Per user B1 at /brehon-clarify 2026-05-22.",
+      "answered_by": "user",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-05-22T09:09:02.619137Z",
+      "resolved_at": "2026-05-22T09:09:02.619137Z"
+    },
+    {
+      "id": "a3d0e9941441-002",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T09:09:02.619137Z",
+      "question": "fed-in-d brief PRECON-7 claims Tasks 1+2 are [P] (disjoint files). HEAD shows both rate-map DEFINITIONS live in inbox.rs:464-474 (one file). Brief claim is wrong. How to dispatch?",
+      "options": [
+        "single-task-shared-helper",
+        "serial-cohort-same-file",
+        "split-by-file-at-use-sites"
+      ],
+      "context": "rate_per_peer_counts() at inbox.rs:465 and rate_per_actor_counts() at inbox.rs:471 are both defined in inbox.rs. Adding bounds at the definition site means both tasks touch the same file → cohort YAML overlap check (advisor-orchestrator.md §4.1 step 4) degrades to serial. Adding bounds at use sites would split them: inbox.rs:548 for per-peer, publish_trust_attestation.rs:159 for per-actor.",
+      "answer": "Single task with shared helper, except after user B1 dropped the per-peer bound entirely, there is no shared helper to share — only the per-actor bound remains. Brief reduces to one code task at the per-actor use site (publish_trust_attestation.rs:158-167). No cohort. Per user B2 at /brehon-clarify 2026-05-22.",
+      "answered_by": "user",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-05-22T09:09:02.619137Z",
+      "resolved_at": "2026-05-22T09:09:02.619137Z"
+    },
+    {
+      "id": "a3d0e9941441-003",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T09:09:02.619137Z",
+      "question": "fed-in-d brief PRECON-3 mandates SHA-256 key-hash for the per-actor map (subject_url String → [u8; 32]). Cost-benefit: ~800 KB heap savings at 10k entries × 80B URL, vs losing debug-log readability of the URL. Worth it?",
+      "options": [
+        "yes-hash-key",
+        "no-keep-string",
+        "defer-decision"
+      ],
+      "context": "Current key type (String, i64) ≈ 32B + heap(url) + 8B. Hashing to ([u8; 32], i64) gives 40B fixed but loses URL in debug logs. The load-bearing fix is the bound itself; the hash is an optimisation on top.",
+      "answer": "No, keep String key. The bound is the load-bearing fix; per-entry heap savings (~800 KB at 10k entries × 80B URL) is small compared to debug-trace value of subject_url being readable. Per user B3 at /brehon-clarify 2026-05-22.",
+      "answered_by": "user",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-05-22T09:09:02.619137Z",
+      "resolved_at": "2026-05-22T09:09:02.619137Z"
+    },
+    {
+      "id": "a3d0e9941441-004",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T09:09:02.619137Z",
+      "question": "Retro harvest candidate: fed-in-d bootstrap @ 6a9f004a9 cited three wrong file:line refs (inbox.rs:473, publish_trust_attestation.rs:165, inbox.rs:698 — actual values 465, 159, 654) and the wrong crate path (crates/api/api vs crates/apub/activities) for publish_trust_attestation.rs. Original brief @ bcc022310 inherited the drift verbatim. /brehon-clarify caught it because the advisor grep-ed live code before authoring DQ entries. Lesson candidate: bootstrap authors MUST rg live code for every file:line citation before commit; runbook-audit-drift pattern (feedback_runbook_audit_drift_post_event_check.md) extended to handover files.",
+      "options": [],
+      "context": "Bootstrap was authored 2026-05-22 as part of fed-in-c→fed-in-d transition; advisor copied carry-forward descriptions from fed-in-c retro without re-grepping HEAD. Class: pre-existing-drift-propagated-via-handover. Retro should propose feedback_bootstrap_file_line_citations_must_grep_head.md as a candidate lesson.",
+      "answer": "log-only — promote at v1-federation-inbound-d retro per pattern_lesson_lifecycle_chain (PMD → lessons/ → mirror → brief). No mid-task action.",
+      "answered_by": "advisor-self-resolved",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-05-22T09:09:02.619137Z"
     }
   ]
 }
