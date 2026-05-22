@@ -29,6 +29,14 @@ use serde_json::{Map, Value, json};
 use tracing::info;
 use url::Url;
 
+/// Maximum number of distinct (subject_url, hour_bucket) keys held in the
+/// per-actor rate-limit map at any moment. A single allowlisted peer can
+/// craft arbitrarily many subject URLs within one hour bucket; the
+/// insertion-order eviction at `check_per_actor_rate_limit` keeps the map
+/// bounded regardless of attacker key cardinality. See v1-federation-inbound-d
+/// plan §3.
+const MAX_PER_ACTOR_RATE_ENTRIES: usize = 10_000;
+
 #[async_trait::async_trait]
 impl Activity for PublishTrustAttestation {
   type DataType = LemmyContext;
@@ -161,7 +169,24 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
         .unwrap_or_else(std::sync::PoisonError::into_inner);
       // Opportunistic prune: drop buckets older than the previous hour.
       counts.retain(|(_, b), _| *b >= bucket - 1);
-      let entry = counts.entry((subject_url.to_string(), bucket)).or_insert(0);
+
+      // Insertion-order bound: cap distinct (subject_url, bucket) keys at
+      // MAX_PER_ACTOR_RATE_ENTRIES. A single allowlisted peer can craft
+      // arbitrarily many subject_url values within one hour bucket; retain()
+      // above only drops prior-hour entries. Without this bound the map grows
+      // O(attacker key cardinality). See v1-federation-inbound-d plan §3.
+      let key = (subject_url.to_string(), bucket);
+      if counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES
+        && !counts.contains_key(&key)
+        && let Some(oldest_key) = counts
+          .iter()
+          .min_by_key(|((_, b), _)| *b)
+          .map(|(k, _)| k.clone())
+      {
+        counts.remove(&oldest_key);
+      }
+
+      let entry = counts.entry(key).or_insert(0);
       *entry = entry.saturating_add(1);
       i64::from(*entry) > actor_cap
     };
