@@ -1942,3 +1942,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **worktree:** C:/Users/barri/Developer/brehon-fork-ship-2 (to be bootstrapped below)
 - **roadmap:** v1-ship-2 status unstarted -> in_flight (pending flip commit)
 - **next:** user opens CC in worktree, runs /auto-roadmap
+
+## bm: cut phase-v1-federation-inbound-e off governance-v0 @ 89efda639
+- **branch:** phase-v1-federation-inbound-e (pushed to origin)
+- **off:** governance-v0 @ 89efda639
+- **plan:** .claude/PRPs/plans/v1-federation-inbound-e.plan.md (approved at user gate 1)
+- **next:** impl session takes over for task 1
