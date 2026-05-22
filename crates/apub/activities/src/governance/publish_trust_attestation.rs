@@ -451,7 +451,11 @@ mod tests_per_actor_bound {
       *entry = entry.saturating_add(1);
     }
 
-    // Assert: map size capped at MAX_PER_ACTOR_RATE_ENTRIES.
+    // Assert: map size capped at MAX_PER_ACTOR_RATE_ENTRIES AND the trigger key
+    // (i=cap, the key that forced the eviction) is present.
+    // Note: which specific prior key gets evicted is not guaranteed — the eviction
+    // uses min_by_key on the bucket value, and when all keys share the same bucket
+    // (as in this test), HashMap iteration order is unspecified.
     {
       let counts = rate_per_actor_counts()
         .lock()
@@ -461,10 +465,10 @@ mod tests_per_actor_bound {
         cap,
         "per-actor map must be bounded at MAX_PER_ACTOR_RATE_ENTRIES after cap + 1 inserts",
       );
-      let first_key = (String::from("https://test/0"), bucket);
+      let trigger_key = (format!("https://test/{cap}"), bucket);
       assert!(
-        !counts.contains_key(&first_key),
-        "oldest inserted key (i=0) must be evicted by the bound",
+        counts.contains_key(&trigger_key),
+        "trigger key (i=cap) must be present after insertion-order-bound eviction",
       );
     }
 
