@@ -1929,6 +1929,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Merged by:** advisor (user gate 5 approved)
 - **Pre-merge state:** 0 critical/major/medium open findings; 1 low wont-fix; all cargo checks PASS; e2e 103/0/5
 
+## bm: merge COMPLETE — PR #146 phase-v1-federation-inbound-d → governance-v0
+- **sha:** 897d3f72d0259630f4c01e7b6f2dca4d883a6892
+- **merged_at:** 2026-05-22T18:58:42Z
+- **branch deleted:** phase-v1-federation-inbound-d (--delete-branch)
+- **note:** L14 runlog COMPLETE entry authored post-merge by advisor (bm-merge-1 Junior #416 missed the brief due to daemon stale ref; advisor executed merge inline)
+
 ## advisor: roadmap-next cut phase-v1-ship-2 — 2026-05-22T17:30:00Z
 - **branch:** phase-v1-ship-2 (pushed to origin)
 - **off:** governance-v0 @ cdff6392e
