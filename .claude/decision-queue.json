@@ -2946,6 +2946,38 @@
       "approved_by": null,
       "approved_at": null,
       "resolved_at": "2026-05-22T09:09:02.619137Z"
+    },
+    {
+      "id": "a3d0e9941441-005",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T09:18:16.266032Z",
+      "question": "fed-in-d revised brief Task 2 e2e is infeasible: rate_per_actor_counts is pub(crate) to lemmy_apub_activities and cannot be called from crates/server/tests/e2e.rs; also sending 10_001 trust-attestation activities through the real inbox is far over per-test budget. How to test the bound?",
+      "options": [
+        "unit-test-in-apub-activities",
+        "e2e-with-test-only-bound-override",
+        "skip-test-entirely"
+      ],
+      "context": "Confirmed via grep: rate_per_actor_counts at inbox.rs:471 is pub(crate). E2e test sibling per_peer_rate_limit_returns_429 at e2e.rs:15600 uses real-DB-write per inbound (testcontainers); 10_001 activities at that cost is well beyond per-test budget. Bound is a Rust const, not config-table-driven, so cannot raise/lower it from e2e.",
+      "answer": "Unit test in the apub-activities crate. Task 2 is now a #[cfg(test)] mod inside crates/apub/activities/src/governance/publish_trust_attestation.rs (or inbox.rs — planner picks). Exercises bound directly via rate_per_actor_counts() lock, inserts MAX+1 entries, asserts len() and FIFO eviction. pub(crate) visibility works inside the crate. Brief §13 Task 2 rewritten accordingly; §3.2 sibling module shifted; §3.3 file-class lessons updated (e2e-specific lessons no longer fire); §4.6 inject changed. Per user B1 at /brehon-clarify second pass 2026-05-22.",
+      "answered_by": "user",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-05-22T09:18:16.266032Z",
+      "resolved_at": "2026-05-22T09:18:16.266032Z"
+    },
+    {
+      "id": "a3d0e9941441-006",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T09:18:16.266032Z",
+      "question": "Second-pass /brehon-clarify on the revised fed-in-d brief surfaced 3 inline-correctable findings beyond the load-bearing B1 question: (i) config-key name was federation.inbound.per_actor_rate_per_hour, actual is federation.inbound.per_actor_attestation_rate_per_hour per publish_trust_attestation.rs:122; (ii) bootstrap SHA was dc9bf17a2 (which is the fed-in-c PR merge SHA), actual is 6a9f004a9; (iii) §4.5 §G4 allowlist named clippy::needless_collect, clippy::if_same_then_else, clippy::await_holding_lock as auto-fixable, but none of those have allowlist rows in advisor-orchestrator.md §5.3 — those fail modes would catch-fire, not auto-fix. All 3 applied as brief edits; no user input needed.",
+      "options": [],
+      "context": "Pattern class: brief-text drift even after first-pass clarify. The first-pass clarify caught the load-bearing structural errors (data structure shape, file paths, line numbers); the second-pass clarify caught smaller-grained drifts (config-key name, commit SHA, allowlist row vs catch-fire row distinction). Suggests second-pass /brehon-clarify is load-bearing even on already-revised briefs, NOT just on first drafts. Retro candidate: feedback_brehon_clarify_second_pass_value.md — second-pass clarify catches a different defect class (smaller-grained text drift) than first-pass (structural).",
+      "answer": "log-only — no mid-task action. Advisor applied the 3 corrections inline as part of the second-pass clarify commit. Retro proposes second-pass /brehon-clarify as a standard discipline (the spec already supports re-running /brehon-clarify on revised briefs; this run confirms its value empirically).",
+      "answered_by": "advisor-self-resolved",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-05-22T09:18:16.266032Z"
     }
   ]
 }

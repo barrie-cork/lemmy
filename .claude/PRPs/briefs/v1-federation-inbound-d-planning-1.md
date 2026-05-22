@@ -178,23 +178,28 @@ The plan's §13 task list MUST cover EXACTLY the following four tasks and NOTHIN
 - VALIDATE: `bash scripts/brehon/cargo-check.sh --workspace --features full` + `bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings` both exit 0.
 - FILES YAML: `creates: []`, `modifies: [crates/apub/activities/src/governance/publish_trust_attestation.rs]`, `requires: []`.
 
-**Task 2 — E2e for Task 1 (per-actor rate-map bound, `requires: [1]`):**
+**Task 2 — Unit test for Task 1 (per-actor rate-map bound, `requires: [1]`):**
 
-- IMPLEMENT: Add ONE `#[tokio::test(flavor = "multi_thread")]` inside existing `mod v1_federation_inbound_b_fixtures` in `crates/server/tests/e2e.rs`. Test shape:
-  1. Setup: seed config to allow many actor attestations (raise `federation.inbound.per_actor_rate_per_hour` cap to a value > MAX_PER_ACTOR_RATE_ENTRIES so the cap is the bound enforcer, not the per-actor rate).
-  2. Act: send `MAX_PER_ACTOR_RATE_ENTRIES + 1` trust-attestation activities, each with a distinct `subject_url`.
-  3. Assert: `rate_per_actor_counts().lock().unwrap().len() == MAX_PER_ACTOR_RATE_ENTRIES` (NOT `MAX + 1`).
-  4. Assert: the FIRST `subject_url` inserted is no longer present in the map (evicted).
-- MIRROR ref: an existing test inside `mod v1_federation_inbound_b_fixtures` that exercises rate-counter state (planner picks the closest sibling at canonical-schema-first read; cite the exact line range in plan §10). The `per_peer_rate_limit_returns_429` test at lines 15600+ is the closest shape (planner verifies line range against current HEAD).
-- GOTCHA: `LemmyResult<()>` outer + bare `?` (Case A per `feedback_lemmy_error_no_std_error.md`). Edit budget ≤200 lines per `feedback_junior_worker_e2e_edit_hang.md`.
-- GOTCHA: e2e file is 15600+ lines; never full-file Edit. Use Read with offset+limit to find the sibling module, then targeted Edit.
-- VALIDATE: `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-d-<sha>.log 2>&1 && echo E2E_EXIT_0 >> <log> || echo E2E_EXIT_NONZERO >> <log>"` with `run_in_background: true`. Exit marker: `E2E_EXIT_0`.
-- FILES YAML: `creates: []`, `modifies: [crates/server/tests/e2e.rs]`, `requires: [1]`.
+Per /brehon-clarify B1 2026-05-22 (DQ `a3d0e9941441-005`): e2e is NOT feasible because (a) `rate_per_actor_counts` is `pub(crate)` to `lemmy_apub_activities` and cannot be called from `crates/server/tests/e2e.rs`, and (b) sending 10_001 trust-attestation activities through the real inbox path is far over per-test budget. Unit-test inside the apub-activities crate is the canonical approach.
+
+- IMPLEMENT: Add a `#[cfg(test)] mod tests_per_actor_bound { ... }` (or equivalent) at the bottom of `crates/apub/activities/src/governance/publish_trust_attestation.rs` (or at the bottom of `inbox.rs` — planner picks based on where the bound logic actually lives post-Task-1). The test exercises the bound DIRECTLY by inserting into `rate_per_actor_counts` (visibility works inside the crate). Test shape:
+  1. Setup: acquire the map lock via `rate_per_actor_counts().lock().unwrap_or_else(std::sync::PoisonError::into_inner)`. Capture starting `len()` (may be non-zero from prior tests — clear or note baseline). Compute `bucket = current_hour_bucket()`.
+  2. Act: insert `MAX_PER_ACTOR_RATE_ENTRIES + 1` distinct keys (e.g. `(format!("https://test/{}", i), bucket)` for `i in 0..=MAX_PER_ACTOR_RATE_ENTRIES`). After each insert, run the bound-check + eviction logic from Task 1.
+  3. Assert: `counts.len() == MAX_PER_ACTOR_RATE_ENTRIES` (NOT `MAX + 1`).
+  4. Assert: the FIRST inserted key (`(format!("https://test/0"), bucket)`) is no longer present (evicted).
+  5. Cleanup: clear the map at test end so it does not pollute other tests in the same process (`counts.clear()` — acceptable in test scope).
+- IMPLEMENT alternative if Task 1 places the bound logic in a small private helper fn (e.g. `enforce_bound_on(map, cap)`): the unit test can call that helper directly with a small `HashMap`, no global-state cleanup needed. Planner picks at plan-author time.
+- MIRROR ref: planner picks a `#[cfg(test)] mod` example from the apub-activities crate (run `rg "#\\[cfg\\(test\\)\\]\\s*mod" crates/apub/activities/src/` to locate a sibling). Cite the exact line range in plan §10. If no `#[cfg(test)] mod` exists in the apub-activities crate, this is the first one — note in plan §4 watchpoint that mod is novel.
+- GOTCHA: `LemmyResult<()>` is NOT required for unit tests (those return `()` or `Result<(), E>` with the simplest E; `feedback_lemmy_error_no_std_error.md` Case A applies to crates/server/tests/e2e.rs, not to crate-internal unit tests). Planner picks the simplest test signature.
+- GOTCHA: the unit test runs in the same process as other tests in the crate; the global `OnceLock<Mutex<HashMap<...>>>` is SHARED across tests in the same `cargo test` invocation. Always `clear()` the map at test start AND end so test order is not load-bearing.
+- VALIDATE: `bash scripts/brehon/cargo-check.sh --workspace --features full` + `bash scripts/brehon/cargo-clippy.sh --workspace --no-deps --features full -- -D warnings` + `cargo test -p lemmy_apub_activities --lib` all exit 0. Per `feedback_cargo_test_p_lib.md` if it exists (planner verifies the wrapper command shape).
+- VALIDATE Phase 2 (full e2e suite as regression check, NOT as the new test's runner): `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/runlog/e2e-v1-federation-inbound-d-<sha>.log 2>&1 && echo E2E_EXIT_0 >> <log> || echo E2E_EXIT_NONZERO >> <log>"` to confirm Task 1 doesn't break existing e2e. Exit marker: `E2E_EXIT_0`.
+- FILES YAML: `creates: []`, `modifies: [crates/apub/activities/src/governance/publish_trust_attestation.rs]` (same file as Task 1; sequential commit), `requires: [1]`.
 
 **Task 3 — Retro** per `feedback_retro_not_report.md` + `feedback_four_role_retro_signals.md` + `feedback_retro_task_complexity_score.md`:
 
 - Output: `.claude/PRPs/reports/v1-federation-inbound-d-retro.md` with per-role signals, per-task complexity score, lessons promoted, carry-forward items.
-- **Mandatory carry-forward item**: bootstrap-vs-reality drift class. The fed-in-d bootstrap committed at `dc9bf17a2` cited `inbox.rs:473` / `publish_trust_attestation.rs:165` / `inbox.rs:698` — all three line numbers were wrong vs HEAD. Original brief inherited the drift. `/brehon-clarify` caught it because the advisor `grep`ed live code before authoring DQ entries. Retro proposes a tighter discipline (the bootstrap author MUST `rg` live code for every file:line citation before commit) and a lesson candidate: `feedback_bootstrap_file_line_citations_must_grep_head.md` (if user judges promotable).
+- **Mandatory carry-forward item**: bootstrap-vs-reality drift class. The fed-in-d bootstrap (committed at `6a9f004a9` as part of `chore(brehon): close v1-federation-inbound-c, bootstrap v1-federation-inbound-d`) cited `inbox.rs:473` / `publish_trust_attestation.rs:165` / `inbox.rs:698` — all three line numbers were wrong vs HEAD. Original brief at `bcc022310` inherited the drift. `/brehon-clarify` caught it because the advisor `grep`ed live code before authoring DQ entries. Retro proposes a tighter discipline (the bootstrap author MUST `rg` live code for every file:line citation before commit) and a lesson candidate: `feedback_bootstrap_file_line_citations_must_grep_head.md` (if user judges promotable).
 - **Mandatory carry-forward item**: TOCTOU eviction fix on `inbox.rs:654` (`evict_oldest_unreviewed_if_needed`) — still deferred. Retro proposes the next slice (likely v1-federation-inbound-e) with a §0.1 PRECON naming atomic-SQL-with-RETURNING vs `SELECT FOR UPDATE SKIP LOCKED` choice as the gate-1 question.
 - **Optional carry-forward item**: per-peer rate-map bound (was Defect 1, dropped per user B1). Retro evaluates whether post-pilot DoS metrics justify revisiting.
 
@@ -223,17 +228,22 @@ Per §0.2. The plan's §12 "NOT building" enumerates these (each with one-line r
 3. **`crates/apub/activities/src/governance/publish_trust_attestation.rs:130-190`** — the per-actor USE site (the fix site for Task 1). Read to confirm the `let exceeded_actor = { ... }` block layout and the `subject_url` key construction.
 4. **`crates/apub/activities/src/governance/publish_trust_attestation.rs:155-167` (drill-down)** — exact lines where Task 1's bound check is inserted (between `counts.retain(...)` and `counts.entry(...)`).
 
-### 3.2 The e2e sibling pattern
+### 3.2 The unit-test sibling pattern (post-B1 narrowing)
 
-5. **`crates/server/tests/e2e.rs` — `mod v1_federation_inbound_b_fixtures`** — read via `rg -n "mod v1_federation_inbound_b_fixtures" crates/server/tests/e2e.rs` to find the module's line range, then `Read` with `offset: <start>, limit: 300`. Identify the test that most closely resembles "trust-attestation flood" (likely `per_peer_rate_limit_returns_429` or a sibling). Cite the exact line range as MIRROR ref for Task 2 in plan §10.
+5. **`#[cfg(test)] mod` sibling inside apub-activities crate** — Per DQ `a3d0e9941441-005` B1 2026-05-22, Task 2 is a crate-internal unit test, NOT an e2e test. Planner runs `rg "#\\[cfg\\(test\\)\\]\\s*mod" crates/apub/activities/src/` to locate an existing `#[cfg(test)] mod` in this crate. If found, cite its exact line range as MIRROR ref for Task 2 in plan §10. If none exists (this is the crate's first unit-test module), planner picks a sibling from `crates/db_schema/src/` or `crates/utils/src/` and notes the "first unit test in apub-activities crate" status in plan §4 watchpoint. The fed-in-b sibling e2e module at `crates/server/tests/e2e.rs:15510` (`mod v1_federation_inbound_b_fixtures`) is NO LONGER the MIRROR ref for Task 2 (out-of-crate; visibility blocks the assertion).
 
 ### 3.3 Mandatory file-class lesson injection (§2.4 of advisor-orchestrator.md)
 
-For Task 2 (e2e edit), inject these lessons into §3 Required reading and §4 Constraints:
+Task 2 is now a crate-internal UNIT TEST (per DQ `a3d0e9941441-005` B1 2026-05-22), not an e2e edit. The mandatory file-class lessons fire on the file pattern + edit class:
 
-6. **`.claude/lessons/feedback_lemmy_error_no_std_error.md`** — Case A (`LemmyResult<()>` outer + bare `?`).
-7. **`.claude/lessons/feedback_async_pool_test_pattern.md`** — connection acquisition.
-8. **`.claude/lessons/feedback_junior_worker_e2e_edit_hang.md`** — Edit budget ≤200 lines on e2e.rs.
+- `feedback_lemmy_error_no_std_error.md` (Case A `LemmyResult<()>`) does NOT fire — that rule is scoped to `crates/server/tests/e2e.rs` per the §2.4 table; unit tests under `crates/apub/activities/src/**.rs` use simpler signatures.
+- `feedback_async_pool_test_pattern.md` does NOT fire — the unit test does not acquire a `DbPool::Conn`; it touches only the in-memory map.
+- `feedback_junior_worker_e2e_edit_hang.md` does NOT fire — the unit test edit lands on `publish_trust_attestation.rs` (~190 lines), not on `e2e.rs` (~15700 lines). Edit budget ≤200 lines per `feedback_junior_worker_e2e_edit_hang.md` still applies as a general edit-hang precaution, but the file size is small enough that full-file Read is safe.
+
+Lessons still relevant for the brief (Task 1 + Task 2 both):
+
+6. **`.claude/lessons/feedback_clippy_test_style.md`** — denies `unwrap`/`expect`/`allow_attributes` in the codebase; unit-test bodies must follow the workspace lint set, NOT the standard library "tests can `.unwrap()`" convention. Planner verifies the unit test uses `expect("msg")` / `?` / `unwrap_or_else(|_| panic!(...))` patterns rather than bare `.unwrap()`.
+7. **`.claude/lessons/feedback_dq_self_resolved_belongs_in_resolved_array.md`** — applies to advisor (`/brehon-clarify` already follows this); cited for planner's awareness when filing `kind: "log"` mid-plan-authoring.
 
 ### 3.4 The carry-forward context
 
@@ -283,15 +293,18 @@ Only one task touches `crates/`; no `[P]` cohort. No DQ pre-reservation needed (
 
 ### 4.5 §G4 classifier awareness
 
-Anticipated fail modes for Task 1 cargo runs:
+The `advisor-orchestrator.md` §5.3 §G4 allowlist (verified at HEAD) covers `clippy::doc_lazy_continuation`, `E0432 unresolved import`, deprecated API replacement, `E0277 LemmyError` (Case A/B/C), `clippy::map_err_ignore`, missing macro `use`, and `E0599 no method`. The Task 1 fix shape is mechanical Rust (HashMap insert + bound check + key removal) and is UNLIKELY to hit any of those classes. More likely fail modes — NONE OF WHICH have allowlist rows and ALL OF WHICH would catch-fire to user:
 
-- `clippy::needless_collect` or `clippy::if_same_then_else` — if the eviction code uses an unnecessary intermediate collection. Mechanical fix per `feedback_clippy_test_style.md`.
-- `clippy::await_holding_lock` — if any `.await` slips into the `let exceeded_actor = { ... }` block. Mechanical fix: move await out of block.
-- Cycle-count meta-rule: ≥3 fails with same `(error_class, file_basename)` → HARD REFUSAL catch-fire.
+- `clippy::await_holding_lock` — if any `.await` slips between `counts.lock()` and end of `let exceeded_actor = { ... }` block. Mitigation: PRECON-2's "no `.await` under the lock" gotcha. Not auto-fixable; catch-fire if it fires (re-plan).
+- `clippy::needless_collect` / `clippy::or_fun_call` / similar style-clippy — possible on the `iter().min_by_key(...)` chain. Mitigation: planner writes the eviction chain conservatively (early `let oldest_key = ...; counts.remove(&oldest_key)` pattern, not chained `.and_then(...)`). Not auto-fixable.
+- Unit-test compilation errors — if the `#[cfg(test)]` mod is the first in the apub-activities crate and the test-only `use` lines are missing. Mitigation: planner reads a `#[cfg(test)] mod` from a sibling crate (e.g. `lemmy_db_schema`) as MIRROR ref.
+- Cycle-count meta-rule: ≥3 fails with same `(error_class, file_basename)` → HARD REFUSAL catch-fire regardless of allowlist match.
+
+Plan §15 row notes the anticipated fail mode is "user catch-fire, not allowlist auto-fix" — keep expectations honest.
 
 ### 4.6 File-class lesson injection on Task 2 brief (post-plan-approval, advisor-side)
 
-Task 2 impl-task brief MUST inject lessons 6-8 from §3.3 (mechanical per advisor-orchestrator.md §2.4). The plan documents this in §13 Task 2's "Brief constraints" sub-section.
+Task 2 is now a unit test inside `crates/apub/activities/src/governance/publish_trust_attestation.rs` (DQ `a3d0e9941441-005` B1 2026-05-22). The standard e2e file-class lessons (`feedback_lemmy_error_no_std_error.md` Case A, `feedback_async_pool_test_pattern.md`, `feedback_junior_worker_e2e_edit_hang.md`) do NOT apply per the §2.4 file-pattern table. The Task 2 impl-task brief MUST inject `feedback_clippy_test_style.md` instead (test body must follow workspace lint discipline — no bare `.unwrap()`, no `#[allow]` shotguns). The plan documents this in §13 Task 2's "Brief constraints" sub-section.
 
 ### 4.7 Conformance-audit prevention checkpoint (§3.1.1)
 
@@ -308,7 +321,7 @@ Task 1 targets `crates/apub/activities/src/governance/publish_trust_attestation.
 
 ## 5. Dogfood — pre-commit walkthrough
 
-This planning brief was dogfooded by the advisor against codebase state at HEAD `bcc022310` (advisor's brief commit; reads happened immediately after):
+This planning brief was dogfooded by the advisor against codebase state at HEAD `3910e4085` (first-pass-clarify commit; the second-pass /brehon-clarify coverage reads happened immediately after):
 
 1. **Defect verification via live code**:
    - `grep -n "rate_per_actor_counts" crates/apub/activities/src/governance/inbox.rs` → line 471 (definition).
@@ -321,11 +334,15 @@ This planning brief was dogfooded by the advisor against codebase state at HEAD 
 3. **Crate location**:
    - `find crates/apub -name "publish_trust_attestation.rs"` → confirmed `crates/apub/activities/src/governance/publish_trust_attestation.rs`. Bootstrap said `crates/api/api/...`; that path doesn't even exist. Brief corrected.
 4. **`sha2` dep**: confirmed at workspace `Cargo.toml` (`sha2 = "0.10"`). Now irrelevant since user B3 dropped the key-hash, but pre-verified for the brief's audit trail.
-5. **Sibling e2e module existence**: `grep -n "mod v1_federation_inbound_b_fixtures" crates/server/tests/e2e.rs` — confirmed by fed-in-c retro + grep. Planner reads at canonical-schema-first time.
-6. **No silent migration**: Task 1 is in-memory data-structure logic only; `creates: []` in FILES YAML. Watchpoint WP-2 + WP-3 + scope §4.1 enforce.
-7. **PMD pre-search** (§2.3): `memory_search_hybrid("rate limit map bounded eviction federation inbound")` — relevant hits: `feedback_multi_write_handlers_need_transactions.md` (advisory — not required; no multi-write in Task 1), `feedback_pg_advisory_xact_lock_void_decode.md` (advisory — TOCTOU is deferred). No prior bound-eviction lessons; novel territory.
+5. **Sibling e2e module existence**: `grep -n "mod v1_federation_inbound_b_fixtures" crates/server/tests/e2e.rs` → line 15510 (NOT 15600+; module starts at 15510 and `per_peer_rate_limit_returns_429` is at 15600). Brief corrected. Module is no longer the MIRROR ref for Task 2 (post-B1; visibility blocks the assertion).
+6. **Visibility check on `rate_per_actor_counts`** (second-pass coverage finding): `grep` showed `pub(crate)` scope — CANNOT be called from `crates/server/tests/e2e.rs`. Original Task 2 e2e design was infeasible. B1 resolved: Task 2 is now a crate-internal unit test.
+7. **No silent migration**: Task 1 is in-memory data-structure logic only; `creates: []` in FILES YAML. Watchpoint WP-2 + WP-3 + scope §4.1 enforce.
+8. **PMD pre-search** (§2.3): `memory_search_hybrid("rate limit map bounded eviction federation inbound")` — relevant hits: `feedback_multi_write_handlers_need_transactions.md` (advisory — not required; no multi-write in Task 1), `feedback_pg_advisory_xact_lock_void_decode.md` (advisory — TOCTOU is deferred). No prior bound-eviction lessons; novel territory.
+9. **§G4 allowlist verification** (second-pass coverage finding): `grep "clippy::needless_collect\|clippy::if_same_then_else\|clippy::await_holding_lock" .claude/rules/advisor-orchestrator.md` → no matches. The allowlist covers `doc_lazy_continuation`, `E0432`, deprecated API, `E0277 LemmyError`, `map_err_ignore`, missing macro, `E0599`. The anticipated fail modes for Task 1 are NOT auto-fixable; brief §4.5 corrected to set honest "catch-fire" expectations.
+10. **Config-key name verification**: brief Task 2 setup mentioned `federation.inbound.per_actor_rate_per_hour`; actual key per `publish_trust_attestation.rs:122` is `federation.inbound.per_actor_attestation_rate_per_hour`. After B1 narrowing to unit-test, the test does not touch `governance_config` — config-key reference removed entirely.
+11. **Bootstrap commit SHA**: brief Task 3 retro originally cited bootstrap SHA `dc9bf17a2` (the fed-in-c PR merge SHA). Actual bootstrap SHA is `6a9f004a9` (commit `chore(brehon): close v1-federation-inbound-c, bootstrap v1-federation-inbound-d`). Brief corrected.
 
-The dogfood reads were done at HEAD; no remaining bootstrap-vs-reality drift in this brief.
+The second-pass /brehon-clarify on the revised brief surfaced 1 user-relay question (B1 — test feasibility) + 3 advisor-resolvable corrections (config-key name, bootstrap SHA, §G4 allowlist). All applied. Brief now reflects HEAD `3910e4085` + clarify-resolution `a3d0e9941441-005`.
 
 ---
 
@@ -348,7 +365,7 @@ The dogfood reads were done at HEAD; no remaining bootstrap-vs-reality drift in 
 - [x] §1 dispatch line is <100 chars.
 - [x] §2.1 enumerates exactly 4 tasks (Task 0 + Tasks 1-3) with IMPLEMENT/MIRROR/GOTCHA/VALIDATE/FILES YAML shape.
 - [x] §2.2 mirrors §0.2 in plan-template "NOT building" enumeration shape.
-- [x] §3 Required reading is 16 items; bootstrap drift documented at item 10 so planner doesn't re-import the wrong line numbers.
+- [x] §3 Required reading is 15 items post second-pass /brehon-clarify (was 16, lost 2 e2e-specific lessons + gained 1 clippy-test-style lesson + 1 dq-self-resolved lesson; bootstrap drift documented at item 10 so planner doesn't re-import the wrong line numbers).
 - [x] §4 Constraints cover scope, mirror, 4 watchpoints, §G4 awareness, conformance-audit gate, governance rules.
 - [x] §5 dogfood is grounded in 7 live-code reads against HEAD.
 - [x] §6 names the post-planner stage shape.
