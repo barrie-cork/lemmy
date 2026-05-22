@@ -187,12 +187,23 @@ pub async fn receive_remote_sanction_notice(
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
-  // PRD §7.3 — evict oldest unreviewed row for this peer if cap reached.
-  evict_oldest_unreviewed_if_needed(&source_instance, "remote_sanction_notice", evict_cap, conn)
-    .await?;
+  // PRD §7.3 — serialise eviction + insert for this peer per (peer_domain, table_name).
+  // Advisory lock prevents Race A (over-eviction) and Race B (over-cap) under
+  // concurrent inbound from the same peer.
+  // Clone so the async move can use it while the original remains
+  // available for the best-effort persist_failed handler below.
+  let si_tx = source_instance.clone();
   let outcome = conn
     .run_transaction(|conn| {
       async move {
+        acquire_evict_lock(conn, &si_tx, "remote_sanction_notice").await?;
+        evict_oldest_unreviewed_if_needed_in_tx(
+          &si_tx,
+          "remote_sanction_notice",
+          evict_cap,
+          conn,
+        )
+        .await?;
         insert_remote_sanction_notice(&form, conn).await?;
         // Audit the receipt in the hash-chained governance log. No local
         // pseudonym for a remote actor; pass None per ADR-015.
@@ -301,12 +312,19 @@ pub async fn receive_remote_trust_attestation(
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
-  // PRD §7.3 — evict oldest unreviewed row for this peer if cap reached.
-  evict_oldest_unreviewed_if_needed(&peer_domain, "federation_attestation", evict_cap, conn)
-    .await?;
+  // PRD §7.3 — serialise eviction + insert for this peer per (peer_domain, table_name).
+  let pd_tx = peer_domain.clone();
   let outcome = conn
     .run_transaction(|conn| {
       async move {
+        acquire_evict_lock(conn, &pd_tx, "federation_attestation").await?;
+        evict_oldest_unreviewed_if_needed_in_tx(
+          &pd_tx,
+          "federation_attestation",
+          evict_cap,
+          conn,
+        )
+        .await?;
         insert_federation_attestation(&form, conn).await?;
         governance_log::append(
           &mut (&mut *conn).into(),
@@ -631,7 +649,25 @@ pub(crate) async fn log_inbox_drop(
     .await
 }
 
-/// COUNT(*) result row type used by `evict_oldest_unreviewed_if_needed`.
+/// Acquire a `pg_advisory_xact_lock` keyed on `(peer_domain, table_name)`.
+/// Serialises concurrent eviction+insert sequences for the same peer and
+/// table. Released automatically on transaction commit or rollback.
+/// Must be called inside a transaction (`pg_advisory_xact_lock` is undefined
+/// outside a tx per Postgres docs).
+async fn acquire_evict_lock(
+  conn: &mut AsyncPgConnection,
+  peer_domain: &str,
+  table_name: &str,
+) -> LemmyResult<()> {
+  let key_input = format!("{peer_domain}\x00{table_name}");
+  diesel::sql_query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+    .bind::<diesel::sql_types::Text, _>(key_input)
+    .execute(conn)
+    .await?;
+  Ok(())
+}
+
+/// COUNT(*) result row type used by `evict_oldest_unreviewed_if_needed_in_tx`.
 /// Module-level to satisfy `clippy::items_after_statements`.
 #[derive(diesel::QueryableByName)]
 struct CountRow {
@@ -641,13 +677,16 @@ struct CountRow {
 
 /// Evict the oldest admin-unreviewed row for `peer_domain` in `table_name`
 /// if the per-peer count reaches `cap`. Writes a drop-log row and a
-/// `governance_log` entry atomically. Uses raw SQL because Diesel's typed
-/// DSL cannot accept a runtime-determined table name.
-async fn evict_oldest_unreviewed_if_needed(
+/// `governance_log` entry against the passed connection. Uses raw SQL because
+/// Diesel's typed DSL cannot accept a runtime-determined table name.
+///
+/// Must be called inside a transaction that has already acquired the advisory
+/// lock via `acquire_evict_lock` — this function has no lock of its own.
+async fn evict_oldest_unreviewed_if_needed_in_tx(
   peer_domain: &str,
   table_name: &str,
   cap: i64,
-  conn: &mut DbConn<'_>,
+  conn: &mut AsyncPgConnection,
 ) -> LemmyResult<()> {
   let count_sql = format!(
     "SELECT COUNT(*)::bigint AS count FROM {table_name} \
@@ -676,30 +715,22 @@ async fn evict_oldest_unreviewed_if_needed(
     "table": table_name,
     "reason": "storage_cap_evicted",
   });
-  let peer_str = peer_domain.to_string();
-  conn
-    .run_transaction(|conn| {
-      async move {
-        diesel::sql_query(delete_sql)
-          .bind::<diesel::sql_types::Text, _>(peer_str.as_str())
-          .execute(conn)
-          .await?;
-        diesel::insert_into(federation_inbox_dropped_log::table)
-          .values(&form)
-          .execute(conn)
-          .await?;
-        governance_log::append(
-          &mut (&mut *conn).into(),
-          ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED,
-          payload,
-          None,
-        )
-        .await?;
-        Ok(())
-      }
-      .scope_boxed()
-    })
-    .await
+  diesel::sql_query(delete_sql)
+    .bind::<diesel::sql_types::Text, _>(peer_domain)
+    .execute(conn)
+    .await?;
+  diesel::insert_into(federation_inbox_dropped_log::table)
+    .values(&form)
+    .execute(conn)
+    .await?;
+  governance_log::append(
+    &mut (&mut *conn).into(),
+    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED,
+    payload,
+    None,
+  )
+  .await?;
+  Ok(())
 }
 
 /// Decode the wrapper's untyped `ModerationLabelObjectStub` into the typed
@@ -757,11 +788,7 @@ pub async fn receive_remote_moderation_label(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
-  // DQ #275 option-a — eviction at insert time.
-  evict_oldest_unreviewed_if_needed(&peer_domain, "remote_moderation_label", evict_cap, conn)
-    .await?;
-
-  // DQ #273 option-a — re-query peer trust inside the handler body.
+  // DQ #273 option-a — re-query peer trust before the consolidated tx.
   let trust = federation_inbox_check_peer_trust(&peer_domain, conn).await?;
 
   let form = RemoteModerationLabelInsertForm {
@@ -783,9 +810,19 @@ pub async fn receive_remote_moderation_label(
     "activity_id": activity_id_str,
   });
 
+  // PRD §7.3 — serialise eviction + insert for this peer per (peer_domain, table_name).
+  let pd_tx = peer_domain.clone();
   let outcome = conn
     .run_transaction(|conn| {
       async move {
+        acquire_evict_lock(conn, &pd_tx, "remote_moderation_label").await?;
+        evict_oldest_unreviewed_if_needed_in_tx(
+          &pd_tx,
+          "remote_moderation_label",
+          evict_cap,
+          conn,
+        )
+        .await?;
         diesel::insert_into(remote_moderation_label::table)
           .values(&form)
           .execute(conn)
