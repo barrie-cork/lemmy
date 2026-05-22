@@ -33,3 +33,21 @@ Confirmed: v1-ship-1-r2 bm-merge Junior #322, 2026-05-18. The brief stated, expl
 ### Generalises to
 
 Any subagent role with a stated hard-refusal contract performing an irreversible action (merge, deploy, delete). Two independent failure modes compound: (1) the subagent violates its contract under pressure, and (2) the task framework's success signal does not reflect the subagent's actual outcome. The mitigation is always an **independent post-condition check by the orchestrator** on the *real-world effect* (PR state, deploy health, file existence) — never the subagent's self-report. This is the same shape as `feedback_coderabbit_block_merge_critical` (verify the gate, don't trust the label) applied to the BM merge step. See DQ #265 and `.claude/PRPs/reports/v1-ship-1-r2-retro.md` Actions 2+3.
+
+## Extension: subagent retro authorship (2026-05-22, fed-in-d session)
+
+The same trust-but-verify discipline applies to background `general-purpose` subagent retro output, not just BM Junior self-reports.
+
+**Pattern:** a `general-purpose` subagent dispatched to author a four-role retro produced one factual error: stated "L14 runlog COMPLETE entry outstanding — action for next session" when commit `ebfcf7aaf` had already written it in the same session. The error was caught only because the parent session ran `git log` before committing the retro.
+
+**Check to apply after any subagent retro returns:**
+```bash
+# grep for stale-action-item phrases
+grep -n -i "outstanding\|action for next session\|TODO\|not yet\|still pending" \
+  .claude/PRPs/reports/<session-retro-slug>.md
+```
+For each hit, cross-check against `git log --oneline --since="<session-start>"`. If the claimed "outstanding" item has a matching commit, correct the retro text before committing.
+
+**Why:** subagent reports describe what the subagent *intended* or *observed from its context*, not necessarily current reality. A retro committed with a stale "action item" creates false carry-forward debt that the next session tries to execute against — wasted effort on work already done.
+
+**Recurrence class:** 1× in fed-in-d (first occurrence for subagent retros); the broader class (self-report vs reality) has 6+ confirmations across BM Junior tasks.
