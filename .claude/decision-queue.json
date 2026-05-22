@@ -3122,6 +3122,40 @@
       "resolved_at": "2026-05-22T18:00:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-009",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T21:00:00Z",
+      "question": "Which atomic SQL approach should the planner use for the TOCTOU fix in evict_oldest_unreviewed_if_needed: Option A (DELETE … WHERE id IN (SELECT id … LIMIT 1 OFFSET cap-1 ORDER BY received_at ASC) RETURNING id) or Option B (SELECT FOR UPDATE SKIP LOCKED)?",
+      "options": [
+        "option-a: DELETE RETURNING — one round-trip, simpler atomicity proof, preferred default",
+        "option-b: SELECT FOR UPDATE SKIP LOCKED — more complex, harder to reason about under concurrent insert pressure"
+      ],
+      "context": "Brief §2.4 designates Option A as preferred default. The function already uses run_transaction wrapping three writes; Option A fits inside that scope unchanged. Option B has void-decode trap documented in feedback_pg_advisory_xact_lock_void_decode.md. No correctness issue found with Option A.",
+      "answer": "Use Option A: DELETE … WHERE id IN (SELECT id FROM {table_name} WHERE source_instance = $1 AND admin_reviewed_at IS NULL ORDER BY received_at ASC LIMIT 1 OFFSET $2 - 1) RETURNING id. Rationale: single SQL round-trip; the DELETE itself is the atomic decision — if two concurrent threads race, only one gets a returned row; the other gets 0 rows and no eviction occurs. No extra locking, no void-decode trap, no SKIP LOCKED complexity. The existing run_transaction scope stays: DELETE RETURNING + insert_drop_log + governance_log all execute inside one transaction. The CountRow struct and count_sql are removed entirely. Source: brief §2.4 + feedback_pg_advisory_xact_lock_void_decode.md (consulted; Option A avoids the trap entirely).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T21:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-010",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-22T21:00:30Z",
+      "question": "Brief §3 Required reading is missing a citation for feedback_explicit_file_arrays_on_tasks.md. The plan §4.5 requires FILES YAML (creates: + modifies:) on every §13 task — should this lesson be added to §3.3 Mandatory lessons?",
+      "options": [
+        "yes: add feedback_explicit_file_arrays_on_tasks.md to brief §3.3 so the planner reads it before drafting §13 tasks",
+        "no: the §4.5 requirement is already stated verbatim; the planner can derive it from the plan template"
+      ],
+      "context": "Brief §4.5 explicitly states 'FILES YAML (creates: + modifies:) on every task per feedback_explicit_file_arrays_on_tasks.md'. The plan.template.md does not reference this lesson. Per the mandatory file-class lesson injection table in advisor-orchestrator.md, planning briefs should cite all lessons needed for plan-shape compliance.",
+      "answer": "Yes — add feedback_explicit_file_arrays_on_tasks.md to brief §3.3. The brief references it in §4.5 but the planner should read it before drafting §13 tasks, not discover it mid-plan. Brief will be edited to add: '.claude/lessons/feedback_explicit_file_arrays_on_tasks.md — FILES YAML (creates: + modifies:) required on every §13 task; planner must include these arrays for the verify gate and cohort-dispatch overlap check.' Source: advisor-orchestrator.md §2.4 mandatory file-class table + brehon-verify.md §4a primary-signal spec.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T21:00:30Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }

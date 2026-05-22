@@ -129,6 +129,10 @@ Model` section explaining the chosen atomic SQL and why it eliminates the race w
 - `.claude/lessons/feedback_daemon_stale_bm_verb_brief_miss.md` — pre-dispatch
   ref-currency check; planning Junior must confirm brief is visible on daemon before
   proceeding
+- `.claude/lessons/feedback_explicit_file_arrays_on_tasks.md` — FILES YAML
+  (`creates:` + `modifies:`) required on every §13 task; read before drafting §13
+  so the verify gate and cohort-dispatch overlap check have complete file arrays
+  (DQ `a3d0e9941441-010`)
 
 ### 3.4 Pre-queue lesson check
 
