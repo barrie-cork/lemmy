@@ -9,9 +9,16 @@ end-to-end with calibrated `ScheduleWakeup` cadences.
 The rule exists because `/auto-phase` is the first user-scope skill that
 mutates state machine progress across multiple advisor session restarts
 (the auto-state JSON survives restart). Its hard refusals + state-routing
-rules need to live in-repo so they are read at session start (alongside
-`branch-manager.md`, `advisor-orchestrator.md`, `decision-queue.md`) by
-any advisor session that resumes a `/auto-phase` invocation.
+rules live in-repo so they are loaded on-demand at the start of every
+`/auto-phase` invocation (per the skill body's Phase 0 Step 0).
+
+> **Loading note (2026-05-22):** this file was relocated from
+> `.claude/rules/` to `.claude/refs/` to free Memory-files budget — it is
+> NO LONGER auto-loaded at session start (unlike `branch-manager.md`,
+> `advisor-orchestrator.md`, `decision-queue.md`). The skill body
+> `~/.claude/commands/auto-phase.md` Phase 0 Step 0 reads this file
+> before any routing decision; if invoking `/auto-phase` logic outside
+> the skill (e.g. ad-hoc advisor-driven resume), Read this file FIRST.
 
 > **Mirror note:** like `advisor-orchestrator.md`, this rule may be
 > mirrored at `homeserver/.claude/rules/auto-phase.md` if cross-machine

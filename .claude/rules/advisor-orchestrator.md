@@ -462,7 +462,7 @@ Independent of §6.1/§6.2, two invariants for all `Agent` tool dispatch:
 - `.claude/agents/<name>.md` — Junior subagent contracts (planning, impl-task, bm-task, ci-watcher) — distinct from §6's advisor-side `Agent` tool subagents.
 - `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md` — BM mechanics, file-ownership, autonomy bounds.
 - `.claude/rules/decision-queue.md` — DQ schema, attribution, per-kind routing.
-- `.claude/rules/auto-phase.md` — `/auto-phase` state machine that compiles §3.1 + §4.1 + §5.3.
+- `.claude/refs/auto-phase.md` — `/auto-phase` state machine that compiles §3.1 + §4.1 + §5.3 (lazy-loaded by the skill body's Phase 0 Step 0).
 - `.claude/rules/pmd-search-strategy.md` — PMD search modes referenced by §2.3.
 - `homeserver/.claude/advisor-context-phase-<N>.md` — phase-specific texture (session-start read).
 - `.claude/lessons/feedback_cross_session_commit_attribution_collision.md` — Race-A + Race-B mitigations cited from §6.2.

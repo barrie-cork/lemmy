@@ -10,9 +10,20 @@ The rule exists because the skill pair mutates state across **two
 worktrees** (canonical + lane-dedicated) and across **session
 boundaries** (skill 1 runs in canonical CC, then the user manually opens
 CC in the lane worktree and runs skill 2). Hard refusals + ownership
-boundaries + handoff invariants need to live in-repo so they are read at
-session start (alongside `branch-manager.md`, `advisor-orchestrator.md`,
-`decision-queue.md`, `multi-lane-worktree.md`, `auto-phase.md`).
+boundaries + handoff invariants live in-repo so they are loaded
+on-demand at the start of every `/roadmap-next` and `/auto-roadmap`
+invocation (per the skill bodies' Phase 0 Step 0).
+
+> **Loading note (2026-05-22):** this file was relocated from
+> `.claude/rules/` to `.claude/refs/` to free Memory-files budget — it is
+> NO LONGER auto-loaded at session start (unlike `branch-manager.md`,
+> `advisor-orchestrator.md`, `decision-queue.md`, `multi-lane-worktree.md`).
+> The skill bodies `.claude/commands/roadmap-next.md` and
+> `.claude/commands/auto-roadmap.md` Phase 0 Step 0 each Read this file
+> before any routing decision; skill 2 additionally Reads
+> `.claude/refs/auto-phase.md`. If invoking `/roadmap-next` or
+> `/auto-roadmap` logic outside the skills (e.g. ad-hoc advisor-driven
+> roadmap mutation), Read this file FIRST.
 
 ## Companion files
 
@@ -23,7 +34,7 @@ session start (alongside `branch-manager.md`, `advisor-orchestrator.md`,
 | `.claude/PRPs/v1-roadmap.json` | The roadmap skill 1 reads + both skills mutate |
 | `.claude/PRPs/specs/auto-roadmap-skill-pair.md` | Feasibility spec (DRAFT 2026-05-22; ships alongside this rule) |
 | `~/.claude/commands/auto-phase.md` | Single-sub-phase orchestrator skill 2 composes on top of |
-| `.claude/rules/auto-phase.md` | Auto-phase state-machine rule (the source of truth skill 2 inherits) |
+| `.claude/refs/auto-phase.md` | Auto-phase state-machine rule (the source of truth skill 2 inherits) |
 | `.claude/rules/multi-lane-worktree.md` | Worktree-per-lane discipline both skills honour |
 | `.claude/lessons/feedback_phase_lane_worktree_bootstrap_checklist.md` | The 11-step bootstrap skill 1 walks |
 | `.claude/commands/bm/bm-cut.md` | The BM verb skill 1 dispatches |
@@ -370,7 +381,7 @@ mid-sub-phase resume case. Skill 2's own resume path is:
 - The skills' tick procedures (live in `~/.claude/commands/roadmap-
   next.md` and `~/.claude/commands/auto-roadmap.md`).
 - `/auto-phase` state-machine semantics (live in
-  `.claude/rules/auto-phase.md` and `~/.claude/commands/auto-phase.md`).
+  `.claude/refs/auto-phase.md` and `~/.claude/commands/auto-phase.md`).
 - BM verb scripts (`/bm-cut` reused unchanged from
   `.claude/commands/bm/bm-cut.md`).
 - DQ schema (lives in `.claude/rules/decision-queue.md`).
@@ -388,7 +399,7 @@ mid-sub-phase resume case. Skill 2's own resume path is:
 - `~/.claude/commands/roadmap-next.md` — skill 1 body
 - `~/.claude/commands/auto-roadmap.md` — skill 2 body
 - `~/.claude/commands/auto-phase.md` — the skill skill 2 composes on
-- `.claude/rules/auto-phase.md` — state-machine source skill 2 inherits
+- `.claude/refs/auto-phase.md` — state-machine source skill 2 inherits
 - `.claude/rules/advisor-orchestrator.md` — clarify gate + DoD smoke
   + watchpoint gate + cohort dispatch the pair honours
 - `.claude/rules/branch-manager.md` — BM file-ownership skill 1 honours

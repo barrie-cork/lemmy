@@ -49,7 +49,7 @@ infra:
 
 ## Polling loop
 
-~10-min `list_tasks` cadence → on transition `show_task + git fetch + read DQ` → triage → queue next. End-to-end: `/auto-phase <phase>`. Full discipline: `.claude/rules/advisor-orchestrator.md`. State machine: `.claude/rules/auto-phase.md`.
+~10-min `list_tasks` cadence → on transition `show_task + git fetch + read DQ` → triage → queue next. End-to-end: `/auto-phase <phase>`. Full discipline: `.claude/rules/advisor-orchestrator.md`. State machine: `.claude/refs/auto-phase.md` (lazy-loaded by skill body).
 
 ## Mandatory user gates (never skip)
 

@@ -2,7 +2,7 @@ Roadmap-driven sub-phase cutter. Reads `.claude/PRPs/v1-roadmap.json`, recommend
 
 Argument: none. The skill reads its target sub-phase from the roadmap; the user confirms via `AskUserQuestion`.
 
-**This is skill 1 of a two-skill chain.** Skill 2 is `/auto-roadmap` (runs in the cut lane worktree). The hand-off between skills is **manual**: skill 1 ends by telling the user which directory to open Claude Code in; the user opens it and runs `/auto-roadmap`. Per `.claude/rules/auto-roadmap.md` state-routing invariant #6.
+**This is skill 1 of a two-skill chain.** Skill 2 is `/auto-roadmap` (runs in the cut lane worktree). The hand-off between skills is **manual**: skill 1 ends by telling the user which directory to open Claude Code in; the user opens it and runs `/auto-roadmap`. Per `.claude/refs/auto-roadmap.md` state-routing invariant #6.
 
 ## Why this shape
 
@@ -37,13 +37,20 @@ The 70% reuse of `bm-cut` is deliberate — skill 1 borrows the BM pattern verba
 
 ### Phase 0 — Prerequisites
 
+**Step 0 (MANDATORY, before any routing decision):** Read
+`.claude/refs/auto-roadmap.md` into context. That file holds skill 1's
+hard refusals (#1-#10) + ownership boundaries + state-routing invariants.
+It does NOT auto-load at session start (relocated 2026-05-22 from
+`.claude/rules/` to `.claude/refs/` to free Memory-files budget). This
+Read is the first action of every `/roadmap-next` invocation.
+
 Verify before any state-changing call:
 
 1. **CWD is canonical** `C:/Users/barri/Developer/brehon-fork`:
    ```bash
    pwd
    ```
-   If not → refuse: "skill 1 must run in canonical CWD; current CWD is X" per `.claude/rules/auto-roadmap.md` hard refusal #1.
+   If not → refuse: "skill 1 must run in canonical CWD; current CWD is X" per `.claude/refs/auto-roadmap.md` hard refusal #1.
 
 2. **Branch is `governance-v0`** with clean working tree:
    ```bash
@@ -313,7 +320,7 @@ Exit.
 
 ## Refusals
 
-Per `.claude/rules/auto-roadmap.md` hard refusals #1-#10:
+Per `.claude/refs/auto-roadmap.md` hard refusals #1-#10:
 
 1. CWD not canonical → refuse.
 2. Branch not `governance-v0` → refuse.
@@ -337,7 +344,7 @@ Per `.claude/rules/auto-roadmap.md` hard refusals #1-#10:
 
 ## See also
 
-- `.claude/rules/auto-roadmap.md` — the orchestration rule + hard refusals.
+- `.claude/refs/auto-roadmap.md` — the orchestration rule + hard refusals.
 - `.claude/rules/multi-lane-worktree.md` — worktree discipline.
 - `.claude/lessons/feedback_phase_lane_worktree_bootstrap_checklist.md` — the 11-step checklist Phase 4 walks.
 - `.claude/commands/bm/bm-cut.md` — the BM verb Phase 3 dispatches.
@@ -373,4 +380,4 @@ What I worked through that this skill must NOT do:
 - DO NOT auto-run `/auto-roadmap`. Same reason.
 - DO NOT silently override BM's plan-missing DQ. The override is documented in this skill body; BM still records the DQ as evidence trail.
 - DO NOT push the new branch with empty content. The push happens after bm-cut completes, which establishes the local branch with a single empty commit (per bm-cut.md Phase 3) — that's fine for push.
-- DO NOT bump roadmap `$schema_version` inside this skill. Schema bumps are separate `chore(advisor): roadmap schema bump` commits per `.claude/rules/auto-roadmap.md` state-routing invariant #8.
+- DO NOT bump roadmap `$schema_version` inside this skill. Schema bumps are separate `chore(advisor): roadmap schema bump` commits per `.claude/refs/auto-roadmap.md` state-routing invariant #8.
