@@ -113,6 +113,7 @@ Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on
 - **bm-pr complete** → wait for CodeRabbit (`bm-task` polls) → on CR posted, queue `bm-poll-cr`.
 - **bm-poll-cr complete** → queue `bm-triage` (draft auto).
 - **Triage drafted** → user gate 3 (CR triage) → on approval, queue `impl-task` for fix-in-PR commits.
+- **bm-pr complete → before gate 5:** run `git log --oneline origin/governance-v0 ^phase-v1-<phase>` and review for reformatting/structural commits landed on governance-v0 while the phase was in flight. Non-empty output = merge-forward required: checkout phase branch → `git merge origin/governance-v0` → resolve conflicts (`.claude/` files: `--ours`; Rust/migration files: verify content, accept auto-resolution) → push. Then proceed to `/brehon-verify` + gate 5. First occurrence: v1-federation-inbound-d PR #146 blocked CONFLICTING by v1-quality-r1 rustfmt commit `2f13ffb80`.
 - **No critical findings open** → confirm `/brehon-verify` ✓ → user gate 5 (merge confirm) → queue `bm-merge`.
 - **bm-merge complete** → author retro → user gate 6 (retro sign-off) → run `/brehon-phase-transition`.
 
