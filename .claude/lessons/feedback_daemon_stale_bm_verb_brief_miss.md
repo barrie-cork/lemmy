@@ -1,3 +1,9 @@
+---
+name: feedback_daemon_stale_bm_verb_brief_miss
+description: BM-verb tasks (bm-pr, bm-merge, fix-in-pr) declare false success when daemon-local governance-v0 lags origin — brief is invisible to the worker. Pre-dispatch ref-currency check required before all Junior task types.
+type: feedback
+---
+
 # BM-verb tasks miss their brief when daemon-local governance-v0 lags origin
 
 **Rule:** Before dispatching any Junior task — impl-task OR bm-task — verify the daemon-local ref
