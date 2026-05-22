@@ -419,13 +419,14 @@ mod tests_per_actor_bound {
 
   #[test]
   fn per_actor_map_evicts_oldest_when_cap_reached() {
+    // Acquire a single guard and hold it through the entire test body to prevent
+    // interleaving from concurrent tests in the same binary.
+    let mut counts = rate_per_actor_counts()
+      .lock()
+      .unwrap_or_else(PoisonError::into_inner);
+
     // Clear stale state from prior tests (the OnceLock is process-global).
-    {
-      let mut counts = rate_per_actor_counts()
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner);
-      counts.clear();
-    }
+    counts.clear();
 
     let bucket = current_hour_bucket();
     let cap = MAX_PER_ACTOR_RATE_ENTRIES;
@@ -434,9 +435,6 @@ mod tests_per_actor_bound {
     // ships in `check_per_actor_rate_limit` (Task 1).
     for i in 0..=cap {
       let key = (format!("https://test/{i}"), bucket);
-      let mut counts = rate_per_actor_counts()
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner);
       counts.retain(|(_, b), _| *b >= bucket - 1);
       if counts.len() >= cap
         && !counts.contains_key(&key)
@@ -456,26 +454,18 @@ mod tests_per_actor_bound {
     // Note: which specific prior key gets evicted is not guaranteed — the eviction
     // uses min_by_key on the bucket value, and when all keys share the same bucket
     // (as in this test), HashMap iteration order is unspecified.
-    {
-      let counts = rate_per_actor_counts()
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner);
-      assert_eq!(
-        counts.len(),
-        cap,
-        "per-actor map must be bounded at MAX_PER_ACTOR_RATE_ENTRIES after cap + 1 inserts",
-      );
-      let trigger_key = (format!("https://test/{cap}"), bucket);
-      assert!(
-        counts.contains_key(&trigger_key),
-        "trigger key (i=cap) must be present after insertion-order-bound eviction",
-      );
-    }
+    assert_eq!(
+      counts.len(),
+      cap,
+      "per-actor map must be bounded at MAX_PER_ACTOR_RATE_ENTRIES after cap + 1 inserts",
+    );
+    let trigger_key = (format!("https://test/{cap}"), bucket);
+    assert!(
+      counts.contains_key(&trigger_key),
+      "trigger key (i=cap) must be present after insertion-order-bound eviction",
+    );
 
     // Cleanup: clear the map so other tests in this binary start fresh.
-    let mut counts = rate_per_actor_counts()
-      .lock()
-      .unwrap_or_else(PoisonError::into_inner);
     counts.clear();
   }
 }
