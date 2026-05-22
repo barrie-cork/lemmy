@@ -7,10 +7,7 @@ use lemmy_api_utils::{
   plugins::{plugin_hook_after, plugin_hook_before},
   send_activity::{ActivityChannel, SendActivityData},
   utils::{
-    check_community_user_action,
-    check_is_mod_or_admin,
-    check_nsfw_allowed,
-    update_post_tags,
+    check_community_user_action, check_is_mod_or_admin, check_nsfw_allowed, update_post_tags,
   },
 };
 use lemmy_db_schema::source::post::{Post, PostUpdateForm};

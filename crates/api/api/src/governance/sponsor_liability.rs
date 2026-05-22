@@ -63,9 +63,7 @@ use crate::governance::{
   governance_log,
 };
 use diesel::{
-  ExpressionMethods,
-  OptionalExtension,
-  QueryDsl,
+  ExpressionMethods, OptionalExtension, QueryDsl,
   dsl::{exists, now, select},
   insert_into,
 };
@@ -145,9 +143,9 @@ fn multiply_and_round(pre_multiplier_delta: i64, multiplier: f64) -> i64 {
 /// wildcard, so a new variant forces a compile-time decision. See GOTCHA-56a.
 fn severity_for_action(action: SanctionAction) -> LiabilitySeverity {
   match action {
-    SanctionAction::Label
-    | SanctionAction::VisibilityReduction
-    | SanctionAction::Restoration => LiabilitySeverity::Minor,
+    SanctionAction::Label | SanctionAction::VisibilityReduction | SanctionAction::Restoration => {
+      LiabilitySeverity::Minor
+    }
     SanctionAction::TemporaryRestriction | SanctionAction::ContentRemoval => {
       LiabilitySeverity::Moderate
     }
@@ -190,8 +188,7 @@ pub(crate) async fn grace_window_for_severity(
     LiabilitySeverity::Moderate => "liability.grace_window_moderate_hours",
     LiabilitySeverity::Severe => "liability.grace_window_severe_hours",
   };
-  let hours: i64 =
-    config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
+  let hours: i64 = config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance, key).await?;
   Ok(chrono::Duration::hours(hours))
 }
 
@@ -272,14 +269,9 @@ pub(crate) async fn compute_sponsor_liability(
   let mut deltas = Vec::with_capacity(sponsor_count);
 
   for (i, sponsor_id) in sponsor_ids.iter().copied().enumerate() {
-    let i_u64 = u64::try_from(i).map_err(|_e| {
-      LemmyErrorType::Unknown(format!("sponsor index {i} overflows u64"))
-    })?;
-    let remainder_bump: i64 = if i_u64 < remainder_abs {
-      extra_unit
-    } else {
-      0
-    };
+    let i_u64 = u64::try_from(i)
+      .map_err(|_e| LemmyErrorType::Unknown(format!("sponsor index {i} overflows u64")))?;
+    let remainder_bump: i64 = if i_u64 < remainder_abs { extra_unit } else { 0 };
     let pre_multiplier_delta: i64 = per_sponsor_base + remainder_bump;
 
     // Founder check (OQ-022 — now() == transaction_timestamp() == case-close ± ms).
@@ -500,10 +492,17 @@ pub(crate) async fn apply_sponsor_liability(
   cache: &mut ConfigCache,
 ) -> LemmyResult<usize> {
   let deltas =
-    compute_sponsor_liability(conn, target_person_id, case_id, community_id, action, cache)
-      .await?;
-  fire_sponsor_liability(conn, target_person_id, case_id, community_id, action, &deltas, cache)
-    .await
+    compute_sponsor_liability(conn, target_person_id, case_id, community_id, action, cache).await?;
+  fire_sponsor_liability(
+    conn,
+    target_person_id,
+    case_id,
+    community_id,
+    action,
+    &deltas,
+    cache,
+  )
+  .await
 }
 
 #[cfg(test)]
@@ -512,8 +511,8 @@ mod tests {
   use crate::governance::config::ConfigCache;
   use diesel_async::{AsyncConnection, AsyncPgConnection};
   use lemmy_db_schema::newtypes::ModerationCaseId;
-  use lemmy_db_schema_file::enums::{CaseSeverity, SanctionAction};
   use lemmy_db_schema_file::PersonId;
+  use lemmy_db_schema_file::enums::{CaseSeverity, SanctionAction};
   use lemmy_utils::error::LemmyResult;
 
   /// Calls `compute_sponsor_liability` twice with identical inputs and asserts

@@ -208,6 +208,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_lemmy_pm() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     let url = Url::parse("https://enterprise.lemmy.ml/private_message/1621")?;
@@ -232,6 +233,7 @@ mod tests {
   #[tokio::test]
   #[serial]
   async fn test_parse_pleroma_pm() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let test_data = TestData::create(&mut context.pool()).await?;
     let url = Url::parse("https://enterprise.lemmy.ml/private_message/1621")?;

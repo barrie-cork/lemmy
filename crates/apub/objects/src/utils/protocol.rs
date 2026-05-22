@@ -7,9 +7,7 @@ use activitypub_federation::{
 };
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::{
-  impls::actor_language::UNDETERMINED_ID,
-  newtypes::LanguageId,
-  source::language::Language,
+  impls::actor_language::UNDETERMINED_ID, newtypes::LanguageId, source::language::Language,
 };
 use lemmy_diesel_utils::{connection::DbPool, dburl::DbUrl};
 use lemmy_utils::error::LemmyResult;

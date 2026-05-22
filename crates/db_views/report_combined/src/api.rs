@@ -1,16 +1,9 @@
 use crate::{CommentReportView, CommunityReportView, PostReportView, PrivateMessageReportView};
 use lemmy_db_schema::{
-  ReportSortType,
-  ReportType,
+  ReportSortType, ReportType,
   newtypes::{
-    CommentId,
-    CommentReportId,
-    CommunityId,
-    CommunityReportId,
-    PostId,
-    PostReportId,
-    PrivateMessageId,
-    PrivateMessageReportId,
+    CommentId, CommentReportId, CommunityId, CommunityReportId, PostId, PostReportId,
+    PrivateMessageId, PrivateMessageReportId,
   },
 };
 use lemmy_diesel_utils::pagination::PaginationCursor;

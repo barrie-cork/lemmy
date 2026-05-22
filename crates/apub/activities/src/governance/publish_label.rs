@@ -38,13 +38,18 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishLabel {
     &self.id
   }
   fn actor_domain(&self) -> LemmyResult<String> {
-    self.actor.inner().domain().map(str::to_string).ok_or_else(|| {
-      LemmyErrorType::Unknown(format!(
-        "PublishLabel actor {} has no domain",
-        self.actor.inner()
-      ))
-      .into()
-    })
+    self
+      .actor
+      .inner()
+      .domain()
+      .map(str::to_string)
+      .ok_or_else(|| {
+        LemmyErrorType::Unknown(format!(
+          "PublishLabel actor {} has no domain",
+          self.actor.inner()
+        ))
+        .into()
+      })
   }
   fn payload_size_bytes(&self) -> LemmyResult<usize> {
     Ok(serde_json::to_vec(self)?.len())

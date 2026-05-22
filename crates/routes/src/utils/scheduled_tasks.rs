@@ -3,11 +3,7 @@ use activitypub_federation::config::Data;
 use chrono::{DateTime, TimeZone, Utc};
 use clokwerk::{AsyncScheduler, TimeUnits as CTimeUnits};
 use diesel::{
-  BoolExpressionMethods,
-  ExpressionMethods,
-  NullableExpressionMethods,
-  QueryDsl,
-  QueryableByName,
+  BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, QueryDsl, QueryableByName,
   SelectableHelper,
   dsl::{IntervalDsl, count, exists, not, update},
   query_builder::AsQuery,
@@ -31,19 +27,8 @@ use lemmy_db_schema::{
   utils::DELETED_REPLACEMENT_TEXT,
 };
 use lemmy_db_schema_file::schema::{
-  comment,
-  community,
-  community_actions,
-  federation_blocklist,
-  instance,
-  instance_actions,
-  local_site,
-  local_user,
-  person,
-  post,
-  received_activity,
-  sent_activity,
-  site,
+  comment, community, community_actions, federation_blocklist, instance, instance_actions,
+  local_site, local_user, person, post, received_activity, sent_activity, site,
 };
 use lemmy_db_views_site::SiteView;
 use lemmy_diesel_utils::{
@@ -243,8 +228,7 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
       // (or the table is empty entirely). Pure observability — no DB
       // writes, no governance_log entry.
       let staleness_pool = &mut context.pool();
-      let mut staleness_cache =
-        lemmy_api::governance::config::ConfigCache::new();
+      let mut staleness_cache = lemmy_api::governance::config::ConfigCache::new();
       let interval_s = lemmy_api::governance::config::get_int(
         &mut staleness_cache,
         staleness_pool,
@@ -255,13 +239,12 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
       .unwrap_or(900);
       match get_conn(staleness_pool).await {
         Ok(mut conn) => {
-          if let Err(e) =
-            lemmy_api::governance::reputation_snapshot::check_snapshot_staleness(
-              &mut conn,
-              interval_s,
-              Utc::now(),
-            )
-            .await
+          if let Err(e) = lemmy_api::governance::reputation_snapshot::check_snapshot_staleness(
+            &mut conn,
+            interval_s,
+            Utc::now(),
+          )
+          .await
           {
             warn!("snapshot staleness check failed: {e}");
           }
@@ -328,69 +311,68 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   )
   .await
   .unwrap_or(5);
-  let grace_interval_minutes: u32 =
-    u32::try_from(grace_interval_minutes_i64).unwrap_or(5);
-  scheduler.every(CTimeUnits::minutes(grace_interval_minutes)).run(move || {
-    let context = context_grace.reset_request_count();
-    async move {
-      // Watchpoint #9: env-var check FIRST in closure body. Reversing
-      // means tests that set BREHON_DISABLE_GRACE_CHECK_JOB still
-      // consume an atomic-bool slot, leaking guards.
-      if std::env::var("BREHON_DISABLE_GRACE_CHECK_JOB").as_deref() == Ok("1") {
-        return;
-      }
-      if SPONSOR_LIABILITY_GRACE_RUNNING
-        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-        .is_err()
-      {
-        warn!("sponsor_liability_grace: previous batch still running, skipping this tick");
-        return;
-      }
-      let _guard = GraceCheckRunningGuard;
-      lemmy_api::governance::sponsor_liability_grace::run_grace_check_batch(&context)
-        .await
-        .inspect_err(|e| warn!("Failed to run grace_check batch: {e}"))
-        .ok();
+  let grace_interval_minutes: u32 = u32::try_from(grace_interval_minutes_i64).unwrap_or(5);
+  scheduler
+    .every(CTimeUnits::minutes(grace_interval_minutes))
+    .run(move || {
+      let context = context_grace.reset_request_count();
+      async move {
+        // Watchpoint #9: env-var check FIRST in closure body. Reversing
+        // means tests that set BREHON_DISABLE_GRACE_CHECK_JOB still
+        // consume an atomic-bool slot, leaking guards.
+        if std::env::var("BREHON_DISABLE_GRACE_CHECK_JOB").as_deref() == Ok("1") {
+          return;
+        }
+        if SPONSOR_LIABILITY_GRACE_RUNNING
+          .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+          .is_err()
+        {
+          warn!("sponsor_liability_grace: previous batch still running, skipping this tick");
+          return;
+        }
+        let _guard = GraceCheckRunningGuard;
+        lemmy_api::governance::sponsor_liability_grace::run_grace_check_batch(&context)
+          .await
+          .inspect_err(|e| warn!("Failed to run grace_check batch: {e}"))
+          .ok();
 
-      // Staleness pass after the batch (per PRD §6.3 + DQ #146).
-      // Mirrors snapshot pattern at scheduled_tasks.rs:213-244.
-      let staleness_pool = &mut context.pool();
-      let mut staleness_cache =
-        lemmy_api::governance::config::ConfigCache::new();
-      let max_grace_hours = lemmy_api::governance::config::get_int(
-        &mut staleness_cache,
-        staleness_pool,
-        lemmy_api::governance::config::Scope::Instance,
-        "liability.grace_window_maximum_hours",
-      )
-      .await
-      .unwrap_or(720);
-      let multiplier = lemmy_api::governance::config::get_float(
-        &mut staleness_cache,
-        staleness_pool,
-        lemmy_api::governance::config::Scope::Instance,
-        "job.grace_check_staleness_alert_multiplier",
-      )
-      .await
-      .unwrap_or(2.0);
-      match get_conn(staleness_pool).await {
-        Ok(mut conn) => {
-          if let Err(e) =
-            lemmy_api::governance::sponsor_liability_grace::check_grace_staleness(
+        // Staleness pass after the batch (per PRD §6.3 + DQ #146).
+        // Mirrors snapshot pattern at scheduled_tasks.rs:213-244.
+        let staleness_pool = &mut context.pool();
+        let mut staleness_cache = lemmy_api::governance::config::ConfigCache::new();
+        let max_grace_hours = lemmy_api::governance::config::get_int(
+          &mut staleness_cache,
+          staleness_pool,
+          lemmy_api::governance::config::Scope::Instance,
+          "liability.grace_window_maximum_hours",
+        )
+        .await
+        .unwrap_or(720);
+        let multiplier = lemmy_api::governance::config::get_float(
+          &mut staleness_cache,
+          staleness_pool,
+          lemmy_api::governance::config::Scope::Instance,
+          "job.grace_check_staleness_alert_multiplier",
+        )
+        .await
+        .unwrap_or(2.0);
+        match get_conn(staleness_pool).await {
+          Ok(mut conn) => {
+            if let Err(e) = lemmy_api::governance::sponsor_liability_grace::check_grace_staleness(
               &mut conn,
               max_grace_hours,
               multiplier,
               Utc::now(),
             )
             .await
-          {
-            warn!("grace staleness check failed: {e}");
+            {
+              warn!("grace staleness check failed: {e}");
+            }
           }
+          Err(e) => warn!("grace staleness check: get_conn failed: {e}"),
         }
-        Err(e) => warn!("grace staleness check: get_conn failed: {e}"),
       }
-    }
-  });
+    });
 
   // v1-federation-inbound-b: replay-cleanup cron tick. Delete
   // federation_inbox_nonce rows older than

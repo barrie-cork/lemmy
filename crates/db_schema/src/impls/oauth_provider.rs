@@ -1,10 +1,7 @@
 use crate::{
   newtypes::OAuthProviderId,
   source::oauth_provider::{
-    AdminOAuthProvider,
-    OAuthProviderInsertForm,
-    OAuthProviderUpdateForm,
-    PublicOAuthProvider,
+    AdminOAuthProvider, OAuthProviderInsertForm, OAuthProviderUpdateForm, PublicOAuthProvider,
   },
 };
 use diesel::{QueryDsl, dsl::insert_into};

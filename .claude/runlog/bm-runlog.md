@@ -1882,3 +1882,40 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remote branch deleted?** yes (`phase-v1-federation-inbound-c` removed from origin via `--delete-branch`)
 - **deliverable on trunk:** `crates/apub/activities/src/governance/inbox.rs` and `crates/api/api/src/governance/publish_trust_attestation.rs` carry `.order_by(valid_from.desc())` ordering fixes; `crates/server/tests/e2e.rs` carries `appended_config_override_takes_effect_returns_429` e2e regression test
 - **note:** Phase v1-federation-inbound-c complete. PR #144 CodeRabbit review was paused during active development; CR auto-triggered on final push. No critical findings. DQ #338 (daemon-reset bug) is orthogonal meta-issue; does not block phase merge.
+
+## bm: poll-cr — 2026-05-22T15:50:21Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **head SHA:** 2c1b593f22 (first poll — no prior SHA)
+- **CR comments seen:** 1 total (0 review / 0 inline / 1 issue)
+- **Actionable findings ingested:** 0 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 0 (n/a — first poll)
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 0/0/0 | nit 0/0/0
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-145-findings.yaml (1357 bytes, committed 31ff47dad)
+- **Notes:** CR review FAILED mid-flight. Head SHA changed from 000c3c063e to 2c1b593f22 during the CR run (issue comment at 2026-05-22T15:41:50Z, 26 s after PR open). Zero actionable findings: no severity headers, no inline comments, no review body. PR is 9 min old at poll time (under 30-min threshold — not a stall signal). Billing warning present on CR comment (subscription payment outstanding >72 h). Re-poll after CR completes a full review pass on the stable head SHA.
+
+## bm: poll-cr — 2026-05-22T17:01Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **head SHA:** 49da0d109 (ADVANCED from 2c1b593f22 since poll #1 — commit: fix bm-poll-cr Phase 2.5 gate)
+- **CR comments seen:** 1 total (0 review / 0 inline / 1 issue)
+- **Actionable findings ingested:** 0 (0 from walkthrough/pre-merge)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 0/0/0 | nit 0/0/0
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-145-findings.yaml (poll #2, committed 703ed8686)
+- **Notes:** BILLING-BLOCKED FAST EXIT. CR issue comment body contains billing warning: "we have not been able to collect payment for this subscription for more than 72 hours". CR is still in "review in progress" state — no completed walkthrough, no severity findings, no inline comments. Zero actionable findings. Action required: resolve CodeRabbit billing (update payment method at coderabbit.ai billing). Then re-poll.
+
+## bm: prp-review — 2026-05-22T16:40Z
+- **PR:** #145 (quality-r1: ADR-010 snapshot + stable rustfmt + LazyLock test-poison fix)
+- **head SHA:** 8dedb3dcb (current HEAD at review time)
+- **cargo check:** PASS exit 0, log .claude/build-bm-pr145-check.log
+- **cargo clippy:** PASS exit 0, log .claude/build-bm-pr145-clippy.log (note: --no-deps; 8 pre-existing test-code errors not surfaced without --all-targets)
+- **cargo test --no-run:** PASS exit 0 (23m 35s), log .claude/build-bm-pr145-test.log
+- **ADR violations:** 0
+- **Issues by severity:** critical 0 / major 0 / medium 0 / low 0 (wont-fix 1) / nit 0
+- **Recommendation:** approve
+- **Markdown report:** .claude/PRPs/reviews/pr-145-review.md
+- **Findings YAML updated:** .claude/PRPs/reviews/pr-145-findings.yaml (claude_run_count: 1, claude-1 wont-fix)
+- **CR substitute:** Full Claude review substituting for billing-blocked CR. ADR-010/013/014/015 PASS. Rustfmt reformat verified mechanical. LazyLock helper scope and Once semantics correct.

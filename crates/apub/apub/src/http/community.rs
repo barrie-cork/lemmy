@@ -1,10 +1,8 @@
 use super::check_community_content_fetchable;
 use crate::{
   collections::{
-    community_featured::ApubCommunityFeatured,
-    community_follower::ApubCommunityFollower,
-    community_moderators::ApubCommunityModerators,
-    community_outbox::ApubCommunityOutbox,
+    community_featured::ApubCommunityFeatured, community_follower::ApubCommunityFollower,
+    community_moderators::ApubCommunityModerators, community_outbox::ApubCommunityOutbox,
   },
   http::{check_community_fetchable, get_instance_id},
 };
@@ -15,16 +13,13 @@ use activitypub_federation::{
   traits::{Collection, Object},
 };
 use actix_web::{
-  HttpRequest,
-  HttpResponse,
+  HttpRequest, HttpResponse,
   web::{Path, Query},
 };
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::{
   objects::{
-    SiteOrMultiOrCommunityOrUser,
-    community::ApubCommunity,
-    multi_community::ApubMultiCommunity,
+    SiteOrMultiOrCommunityOrUser, community::ApubCommunity, multi_community::ApubMultiCommunity,
     multi_community_collection::ApubFeedCollection,
   },
   protocol::tags::ApubCommunityTag,
@@ -281,6 +276,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_get_community() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let (data, community, path) = init(false, CommunityVisibility::Public, &context).await?;
     let request = TestRequest::default().to_http_request();
@@ -320,6 +316,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_get_deleted_community() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let (data, _, path) = init(true, CommunityVisibility::Public, &context).await?;
     let request = TestRequest::default().to_http_request();
@@ -350,6 +347,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_get_local_only_community() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let (data, _, path) = init(false, CommunityVisibility::LocalOnlyPrivate, &context).await?;
     let request = TestRequest::default().to_http_request();
@@ -376,6 +374,7 @@ pub(crate) mod tests {
   #[tokio::test]
   #[serial]
   async fn test_outbox_deleted_user() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let (data, community, path) = init(false, CommunityVisibility::Public, &context).await?;
     let request = TestRequest::default().to_http_request();

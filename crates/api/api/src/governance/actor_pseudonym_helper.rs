@@ -23,10 +23,7 @@ use uuid::Uuid;
 /// or `None` if not. Performs no INSERT — use this on governance hot
 /// paths where allocating a pseudonym would be a hidden side effect
 /// without a paired `governance_log` entry (GH #48 finding 2).
-pub async fn get(
-  pool: &mut DbPool<'_>,
-  person_id: PersonId,
-) -> LemmyResult<Option<String>> {
+pub async fn get(pool: &mut DbPool<'_>, person_id: PersonId) -> LemmyResult<Option<String>> {
   let conn = &mut get_conn(pool).await?;
   let existing = actor_pseudonym::table
     .filter(actor_pseudonym::person_id.eq(person_id))

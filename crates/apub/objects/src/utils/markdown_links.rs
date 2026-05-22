@@ -84,6 +84,7 @@ mod tests {
   #[serial]
   #[tokio::test]
   async fn test_markdown_rewrite_remote_links() -> LemmyResult<()> {
+    lemmy_utils::ensure_default_settings();
     let context = LemmyContext::init_test_context().await;
     let data = TestData::create(&mut context.pool()).await?;
     let community = Community::create(

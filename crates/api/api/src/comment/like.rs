@@ -6,10 +6,7 @@ use lemmy_api_utils::{
   plugins::{plugin_hook_after, plugin_hook_before},
   send_activity::{ActivityChannel, SendActivityData},
   utils::{
-    check_bot_account,
-    check_community_user_action,
-    check_local_user_valid,
-    check_local_vote_mode,
+    check_bot_account, check_community_user_action, check_local_user_valid, check_local_vote_mode,
   },
 };
 use lemmy_db_schema::{

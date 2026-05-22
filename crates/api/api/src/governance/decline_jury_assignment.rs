@@ -13,15 +13,13 @@ use crate::governance::{
   actor_pseudonym_helper,
   admin_assign_jury::select_eligible_jurors,
   config::{self, ConfigCache, DEFAULT_JURY_PANEL_SIZE, Scope},
-  governance_log::{
-    self,
-    ENTRY_KIND_JURY_DECLINED,
-    ENTRY_KIND_JURY_REPLACEMENT_SELECTED,
-  },
+  governance_log::{self, ENTRY_KIND_JURY_DECLINED, ENTRY_KIND_JURY_REPLACEMENT_SELECTED},
 };
 use actix_web::web::{Data, Json};
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
+use diesel::{
+  BoolExpressionMethods, ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update,
+};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{DeclineJuryAssignment, DeclineJuryAssignmentResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -58,10 +56,8 @@ pub async fn decline_jury_assignment(
 
   let replacement = conn
     .run_transaction(|conn| {
-      async move {
-        process_decline(conn, caller_id, pseudonym_for_tx, data_for_tx).await
-      }
-      .scope_boxed()
+      async move { process_decline(conn, caller_id, pseudonym_for_tx, data_for_tx).await }
+        .scope_boxed()
     })
     .await?;
 
@@ -150,16 +146,14 @@ async fn process_decline(
   //    (e.g. pre-JM-a case that got a replacement request).
   let panel_size = match case.panel_size_snapshot {
     Some(n) => i64::from(n),
-    None => {
-      config::get_int(
-        &mut cache,
-        &mut (&mut *conn).into(),
-        Scope::Instance,
-        "jury.panel_size",
-      )
-      .await
-      .unwrap_or(DEFAULT_JURY_PANEL_SIZE)
-    }
+    None => config::get_int(
+      &mut cache,
+      &mut (&mut *conn).into(),
+      Scope::Instance,
+      "jury.panel_size",
+    )
+    .await
+    .unwrap_or(DEFAULT_JURY_PANEL_SIZE),
   };
   let (replacements, record) = select_eligible_jurors(
     conn,

@@ -1,6 +1,8 @@
 use crate::newtypes::FederationAttestationId;
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::enums::{AttestationType, FederationInboxAdminAction, FederationPeerTrust};
+use lemmy_db_schema_file::enums::{
+  AttestationType, FederationInboxAdminAction, FederationPeerTrust,
+};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::federation_attestation;
 use serde::{Deserialize, Serialize};

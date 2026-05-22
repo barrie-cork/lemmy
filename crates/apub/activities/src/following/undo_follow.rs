@@ -1,6 +1,5 @@
 use crate::{
-  check_community_deleted_or_removed,
-  generate_activity_id,
+  check_community_deleted_or_removed, generate_activity_id,
   protocol::following::{follow::Follow, undo_follow::UndoFollow},
   send_lemmy_activity,
 };
@@ -15,12 +14,9 @@ use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::objects::{CommunityOrMulti, person::ApubPerson};
 use lemmy_db_schema::{
   source::{
-    activity::ActivitySendTargets,
-    community::CommunityActions,
-    community_community_follow::CommunityCommunityFollow,
-    instance::InstanceActions,
-    multi_community::MultiCommunity,
-    person::PersonActions,
+    activity::ActivitySendTargets, community::CommunityActions,
+    community_community_follow::CommunityCommunityFollow, instance::InstanceActions,
+    multi_community::MultiCommunity, person::PersonActions,
   },
   traits::Followable,
 };

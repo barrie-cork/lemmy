@@ -74,7 +74,9 @@ fn profile_url_regex() -> &'static Regex {
 pub fn scrub(text: &str) -> String {
   let no_urls = profile_url_regex().replace_all(text, "[redacted]");
   let no_mentions = mention_regex().replace_all(&no_urls, "$1[redacted]");
-  email_regex().replace_all(&no_mentions, "[redacted]").into_owned()
+  email_regex()
+    .replace_all(&no_mentions, "[redacted]")
+    .into_owned()
 }
 
 /// Recursively scrub every string value in a JSON tree.
@@ -106,12 +108,18 @@ mod tests {
 
   #[test]
   fn scrub_strips_mentions() {
-    assert_eq!(scrub("hi @alice, see @bob@remote.example"), "hi [redacted], see [redacted]");
+    assert_eq!(
+      scrub("hi @alice, see @bob@remote.example"),
+      "hi [redacted], see [redacted]"
+    );
   }
 
   #[test]
   fn scrub_strips_email() {
-    assert_eq!(scrub("contact foo.bar@example.com for details"), "contact [redacted] for details");
+    assert_eq!(
+      scrub("contact foo.bar@example.com for details"),
+      "contact [redacted] for details"
+    );
   }
 
   #[test]

@@ -19,19 +19,14 @@ use either::Either;
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::{
   objects::{
-    PostOrComment,
-    ReportableObjects,
-    community::ApubCommunity,
-    instance::ApubSite,
+    PostOrComment, ReportableObjects, community::ApubCommunity, instance::ApubSite,
     person::ApubPerson,
   },
   utils::functions::verify_person_in_site_or_community,
 };
 use lemmy_db_schema::{
   source::{
-    comment_report::CommentReport,
-    community_report::CommunityReport,
-    post_report::PostReport,
+    comment_report::CommentReport, community_report::CommunityReport, post_report::PostReport,
   },
   traits::Reportable,
 };

@@ -1,6 +1,5 @@
 use crate::{
-  check_community_deleted_or_removed,
-  generate_activity_id,
+  check_community_deleted_or_removed, generate_activity_id,
   protocol::voting::{undo_vote::UndoVote, vote::Vote},
   voting::{undo_vote_comment, undo_vote_post},
 };

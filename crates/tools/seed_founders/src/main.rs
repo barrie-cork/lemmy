@@ -28,8 +28,7 @@ use diesel_async::RunQueryDsl;
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log,
-  reputation_snapshot,
+  governance_log, reputation_snapshot,
 };
 use lemmy_db_schema::source::governance::reputation_event::ReputationEventInsertForm;
 use lemmy_db_schema_file::{
@@ -75,10 +74,12 @@ struct FounderSpec {
 fn parse_founder_spec(raw: &str, max_seed_delta: i32) -> LemmyResult<FounderSpec> {
   let parts: Vec<&str> = raw.split(':').collect();
   if parts.len() != 4 {
-    return Err(LemmyErrorType::Unknown(format!(
-      "founder spec `{raw}` must be PERSON_ID:JUR:RPT:END (4 colon-separated ints)"
-    ))
-    .into());
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "founder spec `{raw}` must be PERSON_ID:JUR:RPT:END (4 colon-separated ints)"
+      ))
+      .into(),
+    );
   }
   let parse_i32 = |idx: usize, label: &str| -> LemmyResult<i32> {
     let raw_part = parts.get(idx).copied().unwrap_or("");
@@ -100,16 +101,17 @@ fn parse_founder_spec(raw: &str, max_seed_delta: i32) -> LemmyResult<FounderSpec
     ("endorsement_strength", endorsement_strength),
   ] {
     if value <= 0 {
-      return Err(LemmyErrorType::Unknown(format!(
-        "founder spec `{raw}` {label} must be > 0"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!("founder spec `{raw}` {label} must be > 0")).into(),
+      );
     }
     if i64::from(value) > i64::from(max_seed_delta) {
-      return Err(LemmyErrorType::Unknown(format!(
-        "founder spec `{raw}` {label}={value} exceeds founder.max_seed_delta={max_seed_delta}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "founder spec `{raw}` {label}={value} exceeds founder.max_seed_delta={max_seed_delta}"
+        ))
+        .into(),
+      );
     }
   }
 
@@ -146,9 +148,8 @@ async fn count_active_founders(conn: &mut DbConn<'_>) -> LemmyResult<i64> {
     .distinct()
     .load(&mut **conn)
     .await?;
-  i64::try_from(ids.len()).map_err(|_e| {
-    LemmyErrorType::Unknown("active founder count exceeds i64".to_string()).into()
-  })
+  i64::try_from(ids.len())
+    .map_err(|_e| LemmyErrorType::Unknown("active founder count exceeds i64".to_string()).into())
 }
 
 async fn seed_one_founder(
@@ -164,7 +165,10 @@ async fn seed_one_founder(
     let mut conn = get_conn(pool).await?;
     for (dimension, delta) in [
       (ReputationDimension::JuryReliability, spec.jury_reliability),
-      (ReputationDimension::ReportingAccuracy, spec.reporting_accuracy),
+      (
+        ReputationDimension::ReportingAccuracy,
+        spec.reporting_accuracy,
+      ),
       (
         ReputationDimension::EndorsementStrength,
         spec.endorsement_strength,
@@ -217,12 +221,27 @@ async fn run(args: Args) -> LemmyResult<()> {
   let mut dbp = DbPool::Pool(&pool);
   let mut cache = ConfigCache::new();
 
-  let max_active =
-    config::get_int(&mut cache, &mut dbp, Scope::Instance, "founder.max_founders_active").await?;
-  let max_expires_days =
-    config::get_int(&mut cache, &mut dbp, Scope::Instance, "founder.max_expires_days").await?;
-  let max_seed_delta_i64 =
-    config::get_int(&mut cache, &mut dbp, Scope::Instance, "founder.max_seed_delta").await?;
+  let max_active = config::get_int(
+    &mut cache,
+    &mut dbp,
+    Scope::Instance,
+    "founder.max_founders_active",
+  )
+  .await?;
+  let max_expires_days = config::get_int(
+    &mut cache,
+    &mut dbp,
+    Scope::Instance,
+    "founder.max_expires_days",
+  )
+  .await?;
+  let max_seed_delta_i64 = config::get_int(
+    &mut cache,
+    &mut dbp,
+    Scope::Instance,
+    "founder.max_seed_delta",
+  )
+  .await?;
   let max_seed_delta: i32 = i32::try_from(max_seed_delta_i64).map_err(|_e| {
     LemmyErrorType::Unknown(format!(
       "founder.max_seed_delta={max_seed_delta_i64} does not fit in i32"
@@ -235,11 +254,13 @@ async fn run(args: Args) -> LemmyResult<()> {
   // yet still emit founder_seeded log lines. Checked before horizon so the
   // error message reflects the real problem.
   if args.expires_at <= now {
-    return Err(LemmyErrorType::Unknown(format!(
-      "expires_at={} must be strictly in the future (now={now})",
-      args.expires_at
-    ))
-    .into());
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "expires_at={} must be strictly in the future (now={now})",
+        args.expires_at
+      ))
+      .into(),
+    );
   }
   let horizon = now
     .checked_add_signed(Duration::days(max_expires_days))
@@ -247,11 +268,13 @@ async fn run(args: Args) -> LemmyResult<()> {
       LemmyErrorType::Unknown("expires_at horizon overflowed DateTime range".to_string())
     })?;
   if args.expires_at > horizon {
-    return Err(LemmyErrorType::Unknown(format!(
-      "expires_at={} exceeds founder.max_expires_days={} horizon={}",
-      args.expires_at, max_expires_days, horizon
-    ))
-    .into());
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "expires_at={} exceeds founder.max_expires_days={} horizon={}",
+        args.expires_at, max_expires_days, horizon
+      ))
+      .into(),
+    );
   }
 
   let specs = args
@@ -260,7 +283,9 @@ async fn run(args: Args) -> LemmyResult<()> {
     .map(|raw| parse_founder_spec(raw, max_seed_delta))
     .collect::<LemmyResult<Vec<_>>>()?;
   if specs.is_empty() {
-    return Err(LemmyErrorType::Unknown("at least one --founder spec is required".to_string()).into());
+    return Err(
+      LemmyErrorType::Unknown("at least one --founder spec is required".to_string()).into(),
+    );
   }
   // Dedup --founder entries so max_founders_active enforcement cannot be
   // evaded by duplicate CLI specs and seed_one_founder does not double-apply
@@ -269,11 +294,13 @@ async fn run(args: Args) -> LemmyResult<()> {
   let mut requested: std::collections::HashSet<PersonId> = std::collections::HashSet::new();
   for spec in &specs {
     if !requested.insert(spec.person_id) {
-      return Err(LemmyErrorType::Unknown(format!(
-        "duplicate --founder entry for person_id={}",
-        spec.person_id.0
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "duplicate --founder entry for person_id={}",
+          spec.person_id.0
+        ))
+        .into(),
+      );
     }
   }
 
@@ -287,19 +314,27 @@ async fn run(args: Args) -> LemmyResult<()> {
     let mut conn = get_conn(&mut dbp).await?;
     count_active_founders(&mut conn).await?
   };
-  let new_count = i64::try_from(specs.len()).map_err(|_e| {
-    LemmyErrorType::Unknown("founder spec count exceeds i64 range".to_string())
-  })?;
+  let new_count = i64::try_from(specs.len())
+    .map_err(|_e| LemmyErrorType::Unknown("founder spec count exceeds i64 range".to_string()))?;
   if current + new_count > max_active {
-    return Err(LemmyErrorType::Unknown(format!(
-      "seeding {new_count} new founder(s) would exceed founder.max_founders_active={max_active} \
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "seeding {new_count} new founder(s) would exceed founder.max_founders_active={max_active} \
        (current active={current})"
-    ))
-    .into());
+      ))
+      .into(),
+    );
   }
 
   for spec in &specs {
-    seed_one_founder(&mut dbp, &mut cache, &admin_pseudonym, spec, args.expires_at).await?;
+    seed_one_founder(
+      &mut dbp,
+      &mut cache,
+      &admin_pseudonym,
+      spec,
+      args.expires_at,
+    )
+    .await?;
   }
 
   println!(
@@ -328,9 +363,9 @@ mod tests {
           assert!(msg.contains(substr), "error missing '{substr}'; got: {msg}");
           Ok(())
         }
-        _ => Err(
-          LemmyErrorType::Unknown(format!("unexpected error variant: {}", e.error_type)).into(),
-        ),
+        _ => {
+          Err(LemmyErrorType::Unknown(format!("unexpected error variant: {}", e.error_type)).into())
+        }
       },
     }
   }
@@ -347,7 +382,10 @@ mod tests {
 
   #[test]
   fn parse_founder_spec_negative_delta() -> LemmyResult<()> {
-    assert_unknown_err(parse_founder_spec("1:0:5:5", 100), "jury_reliability must be > 0")?;
+    assert_unknown_err(
+      parse_founder_spec("1:0:5:5", 100),
+      "jury_reliability must be > 0",
+    )?;
     assert_unknown_err(
       parse_founder_spec("1:5:-3:5", 100),
       "reporting_accuracy must be > 0",

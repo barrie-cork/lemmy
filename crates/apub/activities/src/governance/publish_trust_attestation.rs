@@ -1,7 +1,5 @@
 use crate::protocol::governance::publish_trust_attestation::{
-  PublishTrustAttestation,
-  TrustAttestationKind,
-  TrustAttestationObjectStub,
+  PublishTrustAttestation, TrustAttestationKind, TrustAttestationObjectStub,
 };
 use activitypub_federation::{
   config::Data,
@@ -22,8 +20,15 @@ use lemmy_db_schema::source::{
   activity::{ActivitySendTargets, SentActivity, SentActivityForm},
   governance::governance_log::ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_ACTOR,
 };
-use lemmy_db_schema_file::{PersonId, enums::{ActorType, AttestationType}, schema::governance_config};
-use lemmy_diesel_utils::{connection::{DbPool, get_conn}, dburl::DbUrl};
+use lemmy_db_schema_file::{
+  PersonId,
+  enums::{ActorType, AttestationType},
+  schema::governance_config,
+};
+use lemmy_diesel_utils::{
+  connection::{DbPool, get_conn},
+  dburl::DbUrl,
+};
 use lemmy_utils::error::{LemmyError, LemmyErrorType, LemmyResult};
 use serde_json::{Map, Value, json};
 use tracing::info;
@@ -100,12 +105,16 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
     &self.id
   }
   fn actor_domain(&self) -> LemmyResult<String> {
-    self.actor.inner().domain()
+    self
+      .actor
+      .inner()
+      .domain()
       .map(str::to_string)
       .ok_or_else(|| {
-        LemmyErrorType::Unknown(
-          format!("PublishTrustAttestation actor {} has no domain", self.actor.inner())
-        )
+        LemmyErrorType::Unknown(format!(
+          "PublishTrustAttestation actor {} has no domain",
+          self.actor.inner()
+        ))
         .into()
       })
   }
@@ -115,10 +124,7 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
   fn payload_size_cap_key(&self) -> &'static str {
     "federation.inbound.max_payload_bytes_trust_attestation"
   }
-  async fn check_per_actor_rate_limit(
-    &self,
-    context: &Data<LemmyContext>,
-  ) -> LemmyResult<()> {
+  async fn check_per_actor_rate_limit(&self, context: &Data<LemmyContext>) -> LemmyResult<()> {
     const CONFIG_KEY: &str = "federation.inbound.per_actor_attestation_rate_per_hour";
     // Extract the attested subject URL from the untyped object stub. The
     // `subject` field is carried in `rest` because TrustAttestationObjectStub
@@ -149,7 +155,9 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
         .map_err(|_e| {
           LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} not seeded"))
         })?;
-      val.ok_or_else(|| LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} has null value_int")))?
+      val.ok_or_else(|| {
+        LemmyErrorType::Unknown(format!("governance_config.{CONFIG_KEY} has null value_int"))
+      })?
     };
 
     // Increment the per-actor counter. Key structure mirrors the per-peer
@@ -362,10 +370,8 @@ fn stub_from_protocol(
     Value::Object(map) => map,
     _ => {
       return Err(
-        LemmyErrorType::Unknown(
-          "TrustAttestationProtocol did not serialise to an object".into(),
-        )
-        .into(),
+        LemmyErrorType::Unknown("TrustAttestationProtocol did not serialise to an object".into())
+          .into(),
       );
     }
   };

@@ -55,16 +55,13 @@ use diesel::insert_into;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::protocol::governance::{
-  moderation_label::ModerationLabelProtocol,
-  sanction_notice::SanctionNoticeProtocol,
+  moderation_label::ModerationLabelProtocol, sanction_notice::SanctionNoticeProtocol,
   trust_attestation::TrustAttestationProtocol,
 };
 use lemmy_db_schema::source::governance::{
   federation_attestation::FederationAttestationInsertForm,
   governance_log::{
-    self,
-    ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED,
-    ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
+    self, ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED, ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
   },
   remote_sanction_notice::RemoteSanctionNoticeInsertForm,
 };
@@ -74,35 +71,30 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::{Value, json};
 use tracing::info;
 // v1-federation-inbound-b Task 4 additions
-use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
-use diesel::{ExpressionMethods, QueryDsl};
-use url::Url;
 use crate::protocol::governance::publish_label::PublishLabel;
+use diesel::{ExpressionMethods, QueryDsl};
 use lemmy_db_schema::source::governance::{
   federation_inbox_dropped_log::FederationInboxDroppedLogInsertForm,
   federation_inbox_nonce::FederationInboxNonceInsertForm,
   federation_peer::federation_inbox_check_peer_trust,
-  remote_moderation_label::RemoteModerationLabelInsertForm,
   governance_log::{
-    ENTRY_KIND_FEDERATION_INBOUND_BLOCKED,
-    ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE,
+    ENTRY_KIND_FEDERATION_INBOUND_BLOCKED, ENTRY_KIND_FEDERATION_INBOUND_DROPPED_OVERSIZE,
     ENTRY_KIND_FEDERATION_INBOUND_DROPPED_RATE_LIMIT_PEER,
     ENTRY_KIND_FEDERATION_INBOUND_DROPPED_REPLAY,
     ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED,
-    ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED,
-    ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
+    ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED, ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
   },
+  remote_moderation_label::RemoteModerationLabelInsertForm,
 };
 use lemmy_db_schema_file::enums::FederationPeerTrust;
 use lemmy_db_schema_file::schema::{
-  federation_inbox_dropped_log,
-  federation_inbox_nonce,
-  governance_config,
-  remote_moderation_label,
+  federation_inbox_dropped_log, federation_inbox_nonce, governance_config, remote_moderation_label,
 };
 use lemmy_diesel_utils::connection::DbConn;
 use lemmy_diesel_utils::connection::DbPool;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+use url::Url;
 
 /// Persist an inbound `PublishSanctionNotice` as an advisory record and
 /// log the receipt to the governance hash chain.
@@ -163,8 +155,11 @@ pub async fn receive_remote_sanction_notice(
   let activity_id_str = activity.id.to_string();
 
   // PRD §7.3 storage-cap eviction config read before the main pool borrow.
-  let evict_cap =
-    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
+  let evict_cap = get_inbound_config_int(
+    &mut context.pool(),
+    "federation.inbound.per_peer_storage_cap",
+  )
+  .await?;
 
   // Steps 2+3 — write the advisory row and append the hash-chain entry
   // in one transaction so ADR-006's "exactly two rows per inbound notice"
@@ -255,7 +250,10 @@ pub async fn receive_remote_trust_attestation(
 
   info!(
     "Receiving remote trust attestation {} (actor={}, subject={}, attestation_type={:?})",
-    activity.id, object.actor.inner(), object.subject, object.attestation_type,
+    activity.id,
+    object.actor.inner(),
+    object.subject,
+    object.attestation_type,
   );
 
   let peer_domain = activity
@@ -274,8 +272,11 @@ pub async fn receive_remote_trust_attestation(
   let activity_id_str = activity.id.to_string();
 
   // PRD §7.3 storage-cap eviction config read before the main pool borrow.
-  let evict_cap =
-    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
+  let evict_cap = get_inbound_config_int(
+    &mut context.pool(),
+    "federation.inbound.per_peer_storage_cap",
+  )
+  .await?;
 
   // Steps 2+3 — write the attestation row and append the hash-chain entry
   // in one transaction so the ADR-006 "exactly two rows" invariant holds
@@ -360,7 +361,10 @@ fn decode_sanction_notice_object(
   // Re-insert the type discriminator that the wrapper stripped on send.
   // SanctionNoticeProtocol's `kind` field is required and serde-renamed
   // to "type" in the wire format.
-  map.insert("type".to_string(), Value::String("SanctionNotice".to_string()));
+  map.insert(
+    "type".to_string(),
+    Value::String("SanctionNotice".to_string()),
+  );
   let object = serde_json::from_value::<SanctionNoticeProtocol>(Value::Object(map))
     .map_err(|e| LemmyErrorType::Unknown(format!("decode SanctionNoticeProtocol: {e}")))?;
   Ok(object)
@@ -427,14 +431,9 @@ async fn get_inbound_config_int(pool: &mut DbPool<'_>, config_key: &str) -> Lemm
     .order_by(governance_config::valid_from.desc())
     .first::<Option<i64>>(conn)
     .await
-    .map_err(|_e| {
-      LemmyErrorType::Unknown(format!("governance_config.{config_key} not seeded"))
-    })?;
+    .map_err(|_e| LemmyErrorType::Unknown(format!("governance_config.{config_key} not seeded")))?;
   val.ok_or_else(|| {
-    LemmyErrorType::Unknown(format!(
-      "governance_config.{config_key} has null value_int",
-    ))
-    .into()
+    LemmyErrorType::Unknown(format!("governance_config.{config_key} has null value_int",)).into()
   })
 }
 
@@ -452,10 +451,7 @@ pub(crate) trait GovernanceInboundActivity: Sized {
   fn payload_size_cap_key(&self) -> &'static str;
   /// Per-actor rate-limit check. Default is a no-op; only trust attestations
   /// override this (Task 6).
-  async fn check_per_actor_rate_limit(
-    &self,
-    context: &Data<LemmyContext>,
-  ) -> LemmyResult<()> {
+  async fn check_per_actor_rate_limit(&self, context: &Data<LemmyContext>) -> LemmyResult<()> {
     let _ = context;
     Ok(())
   }
@@ -499,9 +495,11 @@ where
   // never re-borrow the pool while conn is live (DbPool<'_> lifetime conflict).
   let size_cap =
     get_inbound_config_int(&mut context.pool(), activity.payload_size_cap_key()).await?;
-  let peer_cap =
-    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_rate_per_hour")
-      .await?;
+  let peer_cap = get_inbound_config_int(
+    &mut context.pool(),
+    "federation.inbound.per_peer_rate_per_hour",
+  )
+  .await?;
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
@@ -625,13 +623,7 @@ pub(crate) async fn log_inbox_drop(
           .values(&form)
           .execute(conn)
           .await?;
-        governance_log::append(
-          &mut (&mut *conn).into(),
-          entry_kind,
-          payload,
-          None,
-        )
-        .await?;
+        governance_log::append(&mut (&mut *conn).into(), entry_kind, payload, None).await?;
         Ok(())
       }
       .scope_boxed()
@@ -712,9 +704,7 @@ async fn evict_oldest_unreviewed_if_needed(
 
 /// Decode the wrapper's untyped `ModerationLabelObjectStub` into the typed
 /// [`ModerationLabelProtocol`]. Mirrors [`decode_sanction_notice_object`].
-fn decode_moderation_label_object(
-  activity: &PublishLabel,
-) -> LemmyResult<ModerationLabelProtocol> {
+fn decode_moderation_label_object(activity: &PublishLabel) -> LemmyResult<ModerationLabelProtocol> {
   let mut map = activity.object.rest.clone();
   map.insert(
     "type".to_string(),
@@ -758,8 +748,11 @@ pub async fn receive_remote_moderation_label(
   );
 
   // Read config before acquiring the main conn.
-  let evict_cap =
-    get_inbound_config_int(&mut context.pool(), "federation.inbound.per_peer_storage_cap").await?;
+  let evict_cap = get_inbound_config_int(
+    &mut context.pool(),
+    "federation.inbound.per_peer_storage_cap",
+  )
+  .await?;
 
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;

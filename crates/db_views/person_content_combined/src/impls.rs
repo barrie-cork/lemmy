@@ -3,8 +3,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, Sele
 use diesel_async::RunQueryDsl;
 use i_love_jesus::SortDirection;
 use lemmy_db_schema::{
-  self,
-  PersonContentType,
+  self, PersonContentType,
   impls::local_user::LocalUserOptionHelper,
   newtypes::CommunityId,
   source::combined::person_content::{PersonContentCombined, person_content_combined_keys as key},
@@ -12,36 +11,24 @@ use lemmy_db_schema::{
   utils::limit_fetch,
 };
 use lemmy_db_schema_file::{
-  InstanceId,
-  PersonId,
+  InstanceId, PersonId,
   enums::{CommunityFollowerState, CommunityVisibility},
   joins::{
-    creator_community_actions_join,
-    creator_community_instance_actions_join,
-    creator_home_instance_actions_join,
-    creator_local_instance_actions_join,
-    creator_local_user_admin_join,
-    image_details_join,
-    my_comment_actions_join,
-    my_community_actions_join,
-    my_local_user_admin_join,
-    my_person_actions_join,
+    creator_community_actions_join, creator_community_instance_actions_join,
+    creator_home_instance_actions_join, creator_local_instance_actions_join,
+    creator_local_user_admin_join, image_details_join, my_comment_actions_join,
+    my_community_actions_join, my_local_user_admin_join, my_person_actions_join,
     my_post_actions_join,
   },
   schema::{comment, community, community_actions, person, person_content_combined, post},
 };
 use lemmy_db_views_post_comment_combined::{
-  PostCommentCombinedView,
-  PostCommentCombinedViewInternal,
+  PostCommentCombinedView, PostCommentCombinedViewInternal,
 };
 use lemmy_diesel_utils::{
   connection::{DbPool, get_conn},
   pagination::{
-    CursorData,
-    PagedResponse,
-    PaginationCursor,
-    PaginationCursorConversion,
-    paginate_response,
+    CursorData, PagedResponse, PaginationCursor, PaginationCursorConversion, paginate_response,
   },
 };
 use lemmy_utils::error::{LemmyErrorType, LemmyResult};

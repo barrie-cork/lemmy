@@ -6,8 +6,5 @@ pub use lemmy_db_schema::{
   },
 };
 pub use lemmy_db_views_site::api::{
-  AuthenticateWithOauth,
-  CreateOAuthProvider,
-  DeleteOAuthProvider,
-  EditOAuthProvider,
+  AuthenticateWithOauth, CreateOAuthProvider, DeleteOAuthProvider, EditOAuthProvider,
 };

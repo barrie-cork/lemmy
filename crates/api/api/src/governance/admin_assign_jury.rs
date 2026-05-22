@@ -33,23 +33,16 @@ use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
   governance_log::{
-    self,
-    ENTRY_KIND_APPEAL_PANEL_ASSEMBLED,
-    ENTRY_KIND_JURY_CONSTRAINT_RELAXED,
+    self, ENTRY_KIND_APPEAL_PANEL_ASSEMBLED, ENTRY_KIND_JURY_CONSTRAINT_RELAXED,
     ENTRY_KIND_SEVERITY_TIER_FROZEN,
   },
   jury_common::panel_has_sponsor_majority_cluster,
 };
 use actix_web::web::{Data, Json};
 use diesel::{
-  ExpressionMethods,
-  OptionalExtension,
-  QueryDsl,
-  QueryableByName,
-  SelectableHelper,
+  ExpressionMethods, OptionalExtension, QueryDsl, QueryableByName, SelectableHelper,
   dsl::{exists, now, select},
-  insert_into,
-  sql_query,
+  insert_into, sql_query,
   sql_types::{Array, BigInt, Integer, Nullable},
   update,
 };
@@ -67,22 +60,11 @@ use lemmy_db_schema::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::{
-    CaseStatus,
-    CaseStatusTier,
-    JuryAssignmentRole,
-    JuryAssignmentStatus,
-    JuryConstraintRelaxationReason,
-    MembershipState,
-    ReputationDimension,
-    SeverityTier,
+    CaseStatus, CaseStatusTier, JuryAssignmentRole, JuryAssignmentStatus,
+    JuryConstraintRelaxationReason, MembershipState, ReputationDimension, SeverityTier,
   },
   schema::{
-    appeal,
-    jury_assignment,
-    jury_constraint_violation_log,
-    local_user,
-    moderation_case,
-    person,
+    appeal, jury_assignment, jury_constraint_violation_log, local_user, moderation_case, person,
     reputation_event,
   },
 };

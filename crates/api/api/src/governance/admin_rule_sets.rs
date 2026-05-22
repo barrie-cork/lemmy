@@ -22,11 +22,8 @@ use chrono::{DateTime, Utc};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{
-  AdminCreateRuleSet,
-  AdminCreateRuleSetResponse,
-  AdminListRuleSetsRequest,
-  AdminListRuleSetsResponse,
-  RuleSetVersionView,
+  AdminCreateRuleSet, AdminCreateRuleSetResponse, AdminListRuleSetsRequest,
+  AdminListRuleSetsResponse, RuleSetVersionView,
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
@@ -248,17 +245,14 @@ async fn process_create_rule_set(
 /// Extracted so that `tests/e2e.rs::admin_create_rule_set_duplicate_version_rejected`
 /// exercises the real production mapping rather than recreating it inline
 /// (CR PR #81 round 2 finding D).
-pub fn map_rsv_unique_violation(
-  err: diesel::result::Error,
-) -> lemmy_utils::error::LemmyError {
+pub fn map_rsv_unique_violation(err: diesel::result::Error) -> lemmy_utils::error::LemmyError {
   match err {
-    diesel::result::Error::DatabaseError(
-      diesel::result::DatabaseErrorKind::UniqueViolation,
-      _,
-    ) => LemmyErrorType::Unknown(
-      "rule_set_version already exists for this community + version — retry".to_string(),
-    )
-    .into(),
+    diesel::result::Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _) => {
+      LemmyErrorType::Unknown(
+        "rule_set_version already exists for this community + version — retry".to_string(),
+      )
+      .into()
+    }
     other => other.into(),
   }
 }
@@ -367,9 +361,9 @@ async fn validate_parent_id(
     .optional()?;
   match parent_community {
     Some(cid) if cid == community_id => Ok(()),
-    Some(_) => Err(
-      LemmyErrorType::Unknown("parent_id belongs to a different community".to_string()).into(),
-    ),
+    Some(_) => {
+      Err(LemmyErrorType::Unknown("parent_id belongs to a different community".to_string()).into())
+    }
     None => Err(LemmyErrorType::Unknown(format!("parent_id {parent_wire_id} not found")).into()),
   }
 }

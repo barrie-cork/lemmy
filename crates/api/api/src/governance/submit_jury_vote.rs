@@ -42,14 +42,18 @@
 use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK, ENTRY_KIND_SPONSOR_LIABILITY_PENDING},
-  redaction,
-  sponsor_liability,
+  governance_log::{
+    self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK, ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
+  },
+  redaction, sponsor_liability,
 };
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use chrono::{DateTime, Duration, Utc};
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star, insert_into, update};
+use diesel::{
+  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star,
+  insert_into, update,
+};
 use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
@@ -67,24 +71,11 @@ use lemmy_db_schema::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::{
-    AppealStatus,
-    CaseSeverity,
-    CaseStatus,
-    JuryAssignmentRole,
-    JuryAssignmentStatus,
-    JuryDecision,
-    ReputationDimension,
-    ReputationEventSourceType,
-    SanctionAction,
-    SanctionScope,
+    AppealStatus, CaseSeverity, CaseStatus, JuryAssignmentRole, JuryAssignmentStatus, JuryDecision,
+    ReputationDimension, ReputationEventSourceType, SanctionAction, SanctionScope,
   },
   schema::{
-    appeal,
-    jury_assignment,
-    jury_vote,
-    moderation_case,
-    public_case_log,
-    reputation_event,
+    appeal, jury_assignment, jury_vote, moderation_case, public_case_log, reputation_event,
     sanction,
   },
 };
@@ -476,8 +467,7 @@ async fn process_vote(
       .await?;
       if !deltas.is_empty() {
         let grace_dur =
-          sponsor_liability::grace_window_for_severity(case_row.severity, &mut cache, conn)
-            .await?;
+          sponsor_liability::grace_window_for_severity(case_row.severity, &mut cache, conn).await?;
         let grace_expires = now + grace_dur;
         let target_pseudonym =
           actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), target_id).await?;
@@ -503,7 +493,9 @@ async fn process_vote(
   // 8.9. Flip case status. Pending path sets SponsorLiabilityPending + grace_expires_at;
   // Decided path sets Decided. Step 9 (appeal_window_expires_at) fires on both paths.
   if path_kind == SLDPathKind::Pending {
-    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into()))?;
+    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| {
+      LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into())
+    })?;
     update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
       .set((
         moderation_case::status.eq(CaseStatus::SponsorLiabilityPending),
@@ -690,9 +682,11 @@ async fn process_vote(
 
   // 9b. Sponsor-liability-pending log entry (Pending path only).
   if path_kind == SLDPathKind::Pending {
-    let (target_pseudonym, severity_str, sponsors_pseudonyms) =
-      sld_log_data.ok_or_else(|| LemmyErrorType::Unknown("sld_log_data missing on Pending path".into()))?;
-    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into()))?;
+    let (target_pseudonym, severity_str, sponsors_pseudonyms) = sld_log_data
+      .ok_or_else(|| LemmyErrorType::Unknown("sld_log_data missing on Pending path".into()))?;
+    let grace_expires_at = sld_grace_expires_at.ok_or_else(|| {
+      LemmyErrorType::Unknown("sld_grace_expires_at missing on Pending path".into())
+    })?;
     governance_log::append(
       &mut conn.into(),
       ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
@@ -836,9 +830,8 @@ async fn process_appeal_vote(
   for (decision, rationale) in all_appeal_votes {
     tally.entry(decision).or_default().push(rationale);
   }
-  let appeal_vote_count: i64 =
-    i64::try_from(tally.values().map(Vec::len).sum::<usize>())
-      .map_err(|_e| LemmyErrorType::Unknown("appeal vote count overflows i64".to_string()))?;
+  let appeal_vote_count: i64 = i64::try_from(tally.values().map(Vec::len).sum::<usize>())
+    .map_err(|_e| LemmyErrorType::Unknown("appeal vote count overflows i64".to_string()))?;
 
   // Stable enum-order tally — same source-of-truth as process_vote.
   let mut appeal_winning_decision: Option<JuryDecision> = None;

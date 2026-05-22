@@ -240,10 +240,12 @@ pub async fn get_int(
   let v = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Int(v)) => v,
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as int but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as int but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => const_default_int(key).ok_or_else(|| {
       LemmyErrorType::Unknown(format!(
@@ -251,9 +253,10 @@ pub async fn get_int(
       ))
     })?,
   };
-  cache
-    .entries
-    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Int(v));
+  cache.entries.insert(
+    (scope_repr.into_owned(), key.to_string()),
+    CachedValue::Int(v),
+  );
   Ok(v)
 }
 
@@ -273,10 +276,12 @@ pub async fn get_float(
   let v = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Float(v)) => v,
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as float but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as float but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => const_default_float(key).ok_or_else(|| {
       LemmyErrorType::Unknown(format!(
@@ -284,9 +289,10 @@ pub async fn get_float(
       ))
     })?,
   };
-  cache
-    .entries
-    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Float(v));
+  cache.entries.insert(
+    (scope_repr.into_owned(), key.to_string()),
+    CachedValue::Float(v),
+  );
   Ok(v)
 }
 
@@ -306,10 +312,12 @@ pub async fn get_bool(
   let v = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Bool(v)) => v,
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as bool but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as bool but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => const_default_bool(key).ok_or_else(|| {
       LemmyErrorType::Unknown(format!(
@@ -317,9 +325,10 @@ pub async fn get_bool(
       ))
     })?,
   };
-  cache
-    .entries
-    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Bool(v));
+  cache.entries.insert(
+    (scope_repr.into_owned(), key.to_string()),
+    CachedValue::Bool(v),
+  );
   Ok(v)
 }
 
@@ -339,10 +348,12 @@ pub async fn get_text(
   let v = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Text(v)) => v,
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as text but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as text but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => const_default_text(key).ok_or_else(|| {
       LemmyErrorType::Unknown(format!(
@@ -350,9 +361,10 @@ pub async fn get_text(
       ))
     })?,
   };
-  cache
-    .entries
-    .insert((scope_repr.into_owned(), key.to_string()), CachedValue::Text(v.clone()));
+  cache.entries.insert(
+    (scope_repr.into_owned(), key.to_string()),
+    CachedValue::Text(v.clone()),
+  );
   Ok(v)
 }
 
@@ -418,16 +430,19 @@ pub async fn get_int_cascade(
     }
     match fetch_value(pool, scope, candidate).await? {
       Some(CachedValue::Int(v)) => {
-        cache
-          .entries
-          .insert((scope_repr.into_owned(), candidate.clone()), CachedValue::Int(v));
+        cache.entries.insert(
+          (scope_repr.into_owned(), candidate.clone()),
+          CachedValue::Int(v),
+        );
         return Ok(v);
       }
       Some(other) => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{candidate}` requested as int but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{candidate}` requested as int but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
       None => continue,
     }
@@ -473,16 +488,19 @@ pub async fn get_float_cascade(
     }
     match fetch_value(pool, scope, candidate).await? {
       Some(CachedValue::Float(v)) => {
-        cache
-          .entries
-          .insert((scope_repr.into_owned(), candidate.clone()), CachedValue::Float(v));
+        cache.entries.insert(
+          (scope_repr.into_owned(), candidate.clone()),
+          CachedValue::Float(v),
+        );
         return Ok(v);
       }
       Some(other) => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{candidate}` requested as float but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{candidate}` requested as float but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
       None => continue,
     }
@@ -527,10 +545,12 @@ pub async fn get_int_opt(
       CachedValue::Int(v) => return Ok(Some(*v)),
       CachedValue::Absent => return Ok(None),
       other => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{key}` requested as int_opt but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{key}` requested as int_opt but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
     }
   }
@@ -538,10 +558,12 @@ pub async fn get_int_opt(
   let result = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Int(v)) => Some(v),
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as int_opt but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as int_opt but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => None,
   };
@@ -569,10 +591,12 @@ pub async fn get_float_opt(
       CachedValue::Float(v) => return Ok(Some(*v)),
       CachedValue::Absent => return Ok(None),
       other => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{key}` requested as float_opt but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{key}` requested as float_opt but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
     }
   }
@@ -580,10 +604,12 @@ pub async fn get_float_opt(
   let result = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Float(v)) => Some(v),
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as float_opt but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as float_opt but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => None,
   };
@@ -611,10 +637,12 @@ pub async fn get_bool_opt(
       CachedValue::Bool(v) => return Ok(Some(*v)),
       CachedValue::Absent => return Ok(None),
       other => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
     }
   }
@@ -622,10 +650,12 @@ pub async fn get_bool_opt(
   let result = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Bool(v)) => Some(v),
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as bool_opt but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => None,
   };
@@ -653,10 +683,12 @@ pub async fn get_text_opt(
       CachedValue::Text(v) => return Ok(Some(v.clone())),
       CachedValue::Absent => return Ok(None),
       other => {
-        return Err(LemmyErrorType::Unknown(format!(
-          "governance_config key `{key}` requested as text_opt but stored as {other:?}"
-        ))
-        .into());
+        return Err(
+          LemmyErrorType::Unknown(format!(
+            "governance_config key `{key}` requested as text_opt but stored as {other:?}"
+          ))
+          .into(),
+        );
       }
     }
   }
@@ -664,10 +696,12 @@ pub async fn get_text_opt(
   let result = match fetch_value(pool, scope, key).await? {
     Some(CachedValue::Text(v)) => Some(v),
     Some(other) => {
-      return Err(LemmyErrorType::Unknown(format!(
-        "governance_config key `{key}` requested as text_opt but stored as {other:?}"
-      ))
-      .into());
+      return Err(
+        LemmyErrorType::Unknown(format!(
+          "governance_config key `{key}` requested as text_opt but stored as {other:?}"
+        ))
+        .into(),
+      );
     }
     None => None,
   };
@@ -759,13 +793,15 @@ async fn fetch_value_at_scope(
     .await
     .optional()?;
 
-  Ok(row.and_then(|(vtype, vi, vf, vb, vt)| match vtype.as_str() {
-    "int" => vi.map(CachedValue::Int),
-    "float" => vf.map(CachedValue::Float),
-    "bool" => vb.map(CachedValue::Bool),
-    "text" => vt.map(CachedValue::Text),
-    _ => None,
-  }))
+  Ok(
+    row.and_then(|(vtype, vi, vf, vb, vt)| match vtype.as_str() {
+      "int" => vi.map(CachedValue::Int),
+      "float" => vf.map(CachedValue::Float),
+      "bool" => vb.map(CachedValue::Bool),
+      "text" => vt.map(CachedValue::Text),
+      _ => None,
+    }),
+  )
 }
 
 // -- Const defaults ---------------------------------------------------------
@@ -1032,7 +1068,9 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "liability.sponsor_liability_floor" => Some(DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR),
     "report.case_threshold_micros" => Some(DEFAULT_REPORT_CASE_THRESHOLD_MICROS),
     "decay.positive_half_life_days" => Some(DEFAULT_DECAY_POSITIVE_HALF_LIFE_DAYS),
-    "onboarding.sponsor_min_account_age_days" => Some(DEFAULT_ONBOARDING_SPONSOR_MIN_ACCOUNT_AGE_DAYS),
+    "onboarding.sponsor_min_account_age_days" => {
+      Some(DEFAULT_ONBOARDING_SPONSOR_MIN_ACCOUNT_AGE_DAYS)
+    }
     "founder.max_founders_active" => Some(DEFAULT_FOUNDER_MAX_FOUNDERS_ACTIVE),
     "founder.max_expires_days" => Some(DEFAULT_FOUNDER_MAX_EXPIRES_DAYS),
     "founder.max_seed_delta" => Some(DEFAULT_FOUNDER_MAX_SEED_DELTA),
@@ -1070,9 +1108,7 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "jury.panel_size.probation.minor" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_MINOR),
     "jury.panel_size.probation.moderate" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_MODERATE),
     "jury.panel_size.probation.severe" => Some(DEFAULT_JURY_PANEL_SIZE_PROBATION_SEVERE),
-    "jury.constraints.juror_cooldown_days" => {
-      Some(DEFAULT_JURY_CONSTRAINTS_JUROR_COOLDOWN_DAYS)
-    }
+    "jury.constraints.juror_cooldown_days" => Some(DEFAULT_JURY_CONSTRAINTS_JUROR_COOLDOWN_DAYS),
     "jury.constraints.max_retries_before_relax" => {
       Some(DEFAULT_JURY_CONSTRAINTS_MAX_RETRIES_BEFORE_RELAX)
     }
@@ -1165,15 +1201,11 @@ pub(crate) fn const_default_int(key: &str) -> Option<i64> {
     "federation.inbound.max_payload_bytes_moderation_label" => {
       Some(DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL)
     }
-    "federation.inbound.replay_window_days" => {
-      Some(DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS)
-    }
+    "federation.inbound.replay_window_days" => Some(DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS),
     "federation.inbound.replay_cleanup_cron_interval_minutes" => {
       Some(DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES)
     }
-    "federation.inbound.summary_max_chars" => {
-      Some(DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS)
-    }
+    "federation.inbound.summary_max_chars" => Some(DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS),
     "federation.inbound.admin_review_default_filter_days" => {
       Some(DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS)
     }
@@ -1221,9 +1253,7 @@ pub(crate) fn const_default_bool(key: &str) -> Option<bool> {
     "governance.dashboard.html_pages_enabled" => {
       Some(DEFAULT_GOVERNANCE_DASHBOARD_HTML_PAGES_ENABLED)
     }
-    "governance.dashboard.step_up_enforced" => {
-      Some(DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED)
-    }
+    "governance.dashboard.step_up_enforced" => Some(DEFAULT_GOVERNANCE_DASHBOARD_STEP_UP_ENFORCED),
     // v1-JM-a additions
     "jury.constraints.no_majority_from_same_sponsor_cluster" => {
       Some(DEFAULT_JURY_CONSTRAINTS_NO_MAJORITY_FROM_SAME_SPONSOR_CLUSTER)
@@ -1260,15 +1290,11 @@ pub(crate) fn const_default_text(key: &str) -> Option<String> {
       Some(DEFAULT_ONBOARDING_SPONSOR_GATE_STRATEGY.to_string())
     }
     // v1-AD-a additions
-    "jury.severity_thresholds.minor" => {
-      Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR.to_string())
-    }
+    "jury.severity_thresholds.minor" => Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR.to_string()),
     "jury.severity_thresholds.moderate" => {
       Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE.to_string())
     }
-    "jury.severity_thresholds.severe" => {
-      Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE.to_string())
-    }
+    "jury.severity_thresholds.severe" => Some(DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE.to_string()),
     "onboarding.sponsor_allowlist_table_name" => {
       Some(DEFAULT_ONBOARDING_SPONSOR_ALLOWLIST_TABLE_NAME.to_string())
     }
@@ -1295,49 +1321,193 @@ pub(crate) fn const_default_text(key: &str) -> Option<String> {
 /// in GOTCHA-50i). `pub` so `crates/server/tests/e2e.rs::config_parity_round_trip`
 /// can walk it without re-declaring.
 pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
-  ("thresholds.jury_reliability", "DEFAULT_THRESHOLDS_JURY_RELIABILITY", "int"),
-  ("thresholds.reporting_accuracy", "DEFAULT_THRESHOLDS_REPORTING_ACCURACY", "int"),
-  ("thresholds.endorsement_strength", "DEFAULT_THRESHOLDS_ENDORSEMENT_STRENGTH", "int"),
+  (
+    "thresholds.jury_reliability",
+    "DEFAULT_THRESHOLDS_JURY_RELIABILITY",
+    "int",
+  ),
+  (
+    "thresholds.reporting_accuracy",
+    "DEFAULT_THRESHOLDS_REPORTING_ACCURACY",
+    "int",
+  ),
+  (
+    "thresholds.endorsement_strength",
+    "DEFAULT_THRESHOLDS_ENDORSEMENT_STRENGTH",
+    "int",
+  ),
   ("jury.panel_size", "DEFAULT_JURY_PANEL_SIZE", "int"),
   ("jury.quorum", "DEFAULT_JURY_QUORUM", "int"),
-  ("jury.age_requirement_days", "DEFAULT_JURY_AGE_REQUIREMENT_DAYS", "int"),
-  ("jury.max_concurrent_assignments", "DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS", "int"),
-  ("jury.fallback_on_small_pool", "DEFAULT_JURY_FALLBACK_ON_SMALL_POOL", "bool"),
-  ("deltas.juror_aligned", "DEFAULT_DELTAS_JUROR_ALIGNED", "int"),
-  ("deltas.juror_outlier", "DEFAULT_DELTAS_JUROR_OUTLIER", "int"),
-  ("deltas.reporter_upheld", "DEFAULT_DELTAS_REPORTER_UPHELD", "int"),
-  ("deltas.reporter_dismissed", "DEFAULT_DELTAS_REPORTER_DISMISSED", "int"),
-  ("deltas.endorsement_created_sponsor", "DEFAULT_DELTAS_ENDORSEMENT_CREATED_SPONSOR", "int"),
-  ("deltas.endorsement_created_sponsee", "DEFAULT_DELTAS_ENDORSEMENT_CREATED_SPONSEE", "int"),
-  ("deltas.sponsor_liability_minor", "DEFAULT_DELTAS_SPONSOR_LIABILITY_MINOR", "int"),
-  ("deltas.sponsor_liability_moderate", "DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE", "int"),
-  ("deltas.sponsor_liability_severe", "DEFAULT_DELTAS_SPONSOR_LIABILITY_SEVERE", "int"),
-  ("liability.founder_multiplier", "DEFAULT_LIABILITY_FOUNDER_MULTIPLIER", "float"),
-  ("liability.regular_multiplier", "DEFAULT_LIABILITY_REGULAR_MULTIPLIER", "float"),
-  ("liability.sponsor_liability_floor", "DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR", "int"),
+  (
+    "jury.age_requirement_days",
+    "DEFAULT_JURY_AGE_REQUIREMENT_DAYS",
+    "int",
+  ),
+  (
+    "jury.max_concurrent_assignments",
+    "DEFAULT_JURY_MAX_CONCURRENT_ASSIGNMENTS",
+    "int",
+  ),
+  (
+    "jury.fallback_on_small_pool",
+    "DEFAULT_JURY_FALLBACK_ON_SMALL_POOL",
+    "bool",
+  ),
+  (
+    "deltas.juror_aligned",
+    "DEFAULT_DELTAS_JUROR_ALIGNED",
+    "int",
+  ),
+  (
+    "deltas.juror_outlier",
+    "DEFAULT_DELTAS_JUROR_OUTLIER",
+    "int",
+  ),
+  (
+    "deltas.reporter_upheld",
+    "DEFAULT_DELTAS_REPORTER_UPHELD",
+    "int",
+  ),
+  (
+    "deltas.reporter_dismissed",
+    "DEFAULT_DELTAS_REPORTER_DISMISSED",
+    "int",
+  ),
+  (
+    "deltas.endorsement_created_sponsor",
+    "DEFAULT_DELTAS_ENDORSEMENT_CREATED_SPONSOR",
+    "int",
+  ),
+  (
+    "deltas.endorsement_created_sponsee",
+    "DEFAULT_DELTAS_ENDORSEMENT_CREATED_SPONSEE",
+    "int",
+  ),
+  (
+    "deltas.sponsor_liability_minor",
+    "DEFAULT_DELTAS_SPONSOR_LIABILITY_MINOR",
+    "int",
+  ),
+  (
+    "deltas.sponsor_liability_moderate",
+    "DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE",
+    "int",
+  ),
+  (
+    "deltas.sponsor_liability_severe",
+    "DEFAULT_DELTAS_SPONSOR_LIABILITY_SEVERE",
+    "int",
+  ),
+  (
+    "liability.founder_multiplier",
+    "DEFAULT_LIABILITY_FOUNDER_MULTIPLIER",
+    "float",
+  ),
+  (
+    "liability.regular_multiplier",
+    "DEFAULT_LIABILITY_REGULAR_MULTIPLIER",
+    "float",
+  ),
+  (
+    "liability.sponsor_liability_floor",
+    "DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR",
+    "int",
+  ),
   ("report.base_weight", "DEFAULT_REPORT_BASE_WEIGHT", "float"),
   ("report.clamp_min", "DEFAULT_REPORT_CLAMP_MIN", "float"),
   ("report.clamp_max", "DEFAULT_REPORT_CLAMP_MAX", "float"),
-  ("report.recency_half_life_hours", "DEFAULT_REPORT_RECENCY_HALF_LIFE_HOURS", "float"),
-  ("report.case_threshold_micros", "DEFAULT_REPORT_CASE_THRESHOLD_MICROS", "int"),
-  ("decay.positive_half_life_days", "DEFAULT_DECAY_POSITIVE_HALF_LIFE_DAYS", "int"),
-  ("onboarding.default_membership_state", "DEFAULT_ONBOARDING_DEFAULT_MEMBERSHIP_STATE", "text"),
-  ("onboarding.sponsor_gate_strategy", "DEFAULT_ONBOARDING_SPONSOR_GATE_STRATEGY", "text"),
-  ("onboarding.sponsor_min_account_age_days", "DEFAULT_ONBOARDING_SPONSOR_MIN_ACCOUNT_AGE_DAYS", "int"),
-  ("founder.max_founders_active", "DEFAULT_FOUNDER_MAX_FOUNDERS_ACTIVE", "int"),
-  ("founder.max_expires_days", "DEFAULT_FOUNDER_MAX_EXPIRES_DAYS", "int"),
-  ("founder.max_seed_delta", "DEFAULT_FOUNDER_MAX_SEED_DELTA", "int"),
-  ("job.snapshot_interval_seconds", "DEFAULT_JOB_SNAPSHOT_INTERVAL_SECONDS", "int"),
-  ("job.snapshot_batch_chunk_size", "DEFAULT_JOB_SNAPSHOT_BATCH_CHUNK_SIZE", "int"),
+  (
+    "report.recency_half_life_hours",
+    "DEFAULT_REPORT_RECENCY_HALF_LIFE_HOURS",
+    "float",
+  ),
+  (
+    "report.case_threshold_micros",
+    "DEFAULT_REPORT_CASE_THRESHOLD_MICROS",
+    "int",
+  ),
+  (
+    "decay.positive_half_life_days",
+    "DEFAULT_DECAY_POSITIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "onboarding.default_membership_state",
+    "DEFAULT_ONBOARDING_DEFAULT_MEMBERSHIP_STATE",
+    "text",
+  ),
+  (
+    "onboarding.sponsor_gate_strategy",
+    "DEFAULT_ONBOARDING_SPONSOR_GATE_STRATEGY",
+    "text",
+  ),
+  (
+    "onboarding.sponsor_min_account_age_days",
+    "DEFAULT_ONBOARDING_SPONSOR_MIN_ACCOUNT_AGE_DAYS",
+    "int",
+  ),
+  (
+    "founder.max_founders_active",
+    "DEFAULT_FOUNDER_MAX_FOUNDERS_ACTIVE",
+    "int",
+  ),
+  (
+    "founder.max_expires_days",
+    "DEFAULT_FOUNDER_MAX_EXPIRES_DAYS",
+    "int",
+  ),
+  (
+    "founder.max_seed_delta",
+    "DEFAULT_FOUNDER_MAX_SEED_DELTA",
+    "int",
+  ),
+  (
+    "job.snapshot_interval_seconds",
+    "DEFAULT_JOB_SNAPSHOT_INTERVAL_SECONDS",
+    "int",
+  ),
+  (
+    "job.snapshot_batch_chunk_size",
+    "DEFAULT_JOB_SNAPSHOT_BATCH_CHUNK_SIZE",
+    "int",
+  ),
   // v1-AD-a additions (admin-dashboard-owned subset per PRD §5.2 minus
   // 10 sponsor-liability rows minus 1 rule_set.active_version_id)
-  ("jury.severity_thresholds.minor", "DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR", "text"),
-  ("jury.severity_thresholds.moderate", "DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE", "text"),
-  ("jury.severity_thresholds.severe", "DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE", "text"),
-  ("jury.diversity_constraints_enabled", "DEFAULT_JURY_DIVERSITY_CONSTRAINTS_ENABLED", "bool"),
-  ("jury.appeal_panel_size_increase", "DEFAULT_JURY_APPEAL_PANEL_SIZE_INCREASE", "int"),
-  ("jury.deadline_window_hours", "DEFAULT_JURY_DEADLINE_WINDOW_HOURS", "int"),
-  ("decay.negative_half_life_days", "DEFAULT_DECAY_NEGATIVE_HALF_LIFE_DAYS", "int"),
+  (
+    "jury.severity_thresholds.minor",
+    "DEFAULT_JURY_SEVERITY_THRESHOLDS_MINOR",
+    "text",
+  ),
+  (
+    "jury.severity_thresholds.moderate",
+    "DEFAULT_JURY_SEVERITY_THRESHOLDS_MODERATE",
+    "text",
+  ),
+  (
+    "jury.severity_thresholds.severe",
+    "DEFAULT_JURY_SEVERITY_THRESHOLDS_SEVERE",
+    "text",
+  ),
+  (
+    "jury.diversity_constraints_enabled",
+    "DEFAULT_JURY_DIVERSITY_CONSTRAINTS_ENABLED",
+    "bool",
+  ),
+  (
+    "jury.appeal_panel_size_increase",
+    "DEFAULT_JURY_APPEAL_PANEL_SIZE_INCREASE",
+    "int",
+  ),
+  (
+    "jury.deadline_window_hours",
+    "DEFAULT_JURY_DEADLINE_WINDOW_HOURS",
+    "int",
+  ),
+  (
+    "decay.negative_half_life_days",
+    "DEFAULT_DECAY_NEGATIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
   (
     "decay.endorsement_strength_half_life_days",
     "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_HALF_LIFE_DAYS",
@@ -1368,21 +1538,61 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
     "DEFAULT_FOUNDER_FOUNDER_SEAL_VISIBLE_IN_PROFILE",
     "bool",
   ),
-  ("deltas.participation_weekly_active", "DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE", "int"),
-  ("participation.dormancy_window_days", "DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS", "int"),
-  ("deltas.participation_dormant", "DEFAULT_DELTAS_PARTICIPATION_DORMANT", "int"),
-  ("participation.attestation_enabled", "DEFAULT_PARTICIPATION_ATTESTATION_ENABLED", "bool"),
-  ("federation.inbound_advisory_only", "DEFAULT_FEDERATION_INBOUND_ADVISORY_ONLY", "bool"),
-  ("federation.peer_attestation_ttl_days", "DEFAULT_FEDERATION_PEER_ATTESTATION_TTL_DAYS", "int"),
-  ("federation.signature_required", "DEFAULT_FEDERATION_SIGNATURE_REQUIRED", "bool"),
+  (
+    "deltas.participation_weekly_active",
+    "DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE",
+    "int",
+  ),
+  (
+    "participation.dormancy_window_days",
+    "DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS",
+    "int",
+  ),
+  (
+    "deltas.participation_dormant",
+    "DEFAULT_DELTAS_PARTICIPATION_DORMANT",
+    "int",
+  ),
+  (
+    "participation.attestation_enabled",
+    "DEFAULT_PARTICIPATION_ATTESTATION_ENABLED",
+    "bool",
+  ),
+  (
+    "federation.inbound_advisory_only",
+    "DEFAULT_FEDERATION_INBOUND_ADVISORY_ONLY",
+    "bool",
+  ),
+  (
+    "federation.peer_attestation_ttl_days",
+    "DEFAULT_FEDERATION_PEER_ATTESTATION_TTL_DAYS",
+    "int",
+  ),
+  (
+    "federation.signature_required",
+    "DEFAULT_FEDERATION_SIGNATURE_REQUIRED",
+    "bool",
+  ),
   (
     "federation.quarantine_recommendation_severity_floor",
     "DEFAULT_FEDERATION_QUARANTINE_RECOMMENDATION_SEVERITY_FLOOR",
     "text",
   ),
-  ("federation.outbound_publish_enabled", "DEFAULT_FEDERATION_OUTBOUND_PUBLISH_ENABLED", "bool"),
-  ("rule_set.auto_carry_in_flight_cases", "DEFAULT_RULE_SET_AUTO_CARRY_IN_FLIGHT_CASES", "bool"),
-  ("rule_set.text_max_bytes", "DEFAULT_RULE_SET_TEXT_MAX_BYTES", "int"),
+  (
+    "federation.outbound_publish_enabled",
+    "DEFAULT_FEDERATION_OUTBOUND_PUBLISH_ENABLED",
+    "bool",
+  ),
+  (
+    "rule_set.auto_carry_in_flight_cases",
+    "DEFAULT_RULE_SET_AUTO_CARRY_IN_FLIGHT_CASES",
+    "bool",
+  ),
+  (
+    "rule_set.text_max_bytes",
+    "DEFAULT_RULE_SET_TEXT_MAX_BYTES",
+    "int",
+  ),
   (
     "rule_set.version_propagation_delay_hours",
     "DEFAULT_RULE_SET_VERSION_PROPAGATION_DELAY_HOURS",
@@ -1447,13 +1657,21 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
     "DEFAULT_JURY_PANEL_SIZE_PROBATION_SEVERE",
     "int",
   ),
-  ("jury.quorum_fraction.minor", "DEFAULT_JURY_QUORUM_FRACTION_MINOR", "float"),
+  (
+    "jury.quorum_fraction.minor",
+    "DEFAULT_JURY_QUORUM_FRACTION_MINOR",
+    "float",
+  ),
   (
     "jury.quorum_fraction.moderate",
     "DEFAULT_JURY_QUORUM_FRACTION_MODERATE",
     "float",
   ),
-  ("jury.quorum_fraction.severe", "DEFAULT_JURY_QUORUM_FRACTION_SEVERE", "float"),
+  (
+    "jury.quorum_fraction.severe",
+    "DEFAULT_JURY_QUORUM_FRACTION_SEVERE",
+    "float",
+  ),
   (
     "jury.threshold_fraction.minor",
     "DEFAULT_JURY_THRESHOLD_FRACTION_MINOR",
@@ -1514,7 +1732,11 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
     "DEFAULT_APPEAL_PANEL_SIZE_FLOOR_INCREMENT",
     "int",
   ),
-  ("appeal.threshold_tier_bump", "DEFAULT_APPEAL_THRESHOLD_TIER_BUMP", "int"),
+  (
+    "appeal.threshold_tier_bump",
+    "DEFAULT_APPEAL_THRESHOLD_TIER_BUMP",
+    "int",
+  ),
   ("appeal.window_days", "DEFAULT_APPEAL_WINDOW_DAYS", "int"),
   (
     "appeal.auto_select_on_appeal_acceptance",
@@ -1524,60 +1746,260 @@ pub const SEEDED_KEYS_WITH_CONSTS: &[(&str, &str, &str)] = &[
   // v1-SL-a additions (sponsor-liability sub-phase A — 13 new keys per
   // PRD §10 defaults matrix; flat liability.* + job.grace_check_*
   // namespaces per PRD §18 B4 key-rename table).
-  ("job.grace_check_batch_size", "DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE", "int"),
-  ("job.grace_check_interval_minutes", "DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES", "int"),
-  ("job.grace_check_staleness_alert_multiplier", "DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER", "float"),
-  ("liability.grace_window_alert_threshold_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_ALERT_THRESHOLD_HOURS", "int"),
-  ("liability.grace_window_maximum_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MAXIMUM_HOURS", "int"),
-  ("liability.grace_window_minimum_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MINIMUM_HOURS", "int"),
-  ("liability.grace_window_minor_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MINOR_HOURS", "int"),
-  ("liability.grace_window_moderate_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_MODERATE_HOURS", "int"),
-  ("liability.grace_window_severe_hours", "DEFAULT_LIABILITY_GRACE_WINDOW_SEVERE_HOURS", "int"),
-  ("liability.multi_sponsor_escape_rule", "DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE", "text"),
-  ("liability.restoration_escapes_liability", "DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY", "bool"),
-  ("liability.restoration_severity_reduction_steps", "DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS", "int"),
-  ("liability.revoke_rate_limit_per_day", "DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY", "int"),
+  (
+    "job.grace_check_batch_size",
+    "DEFAULT_JOB_GRACE_CHECK_BATCH_SIZE",
+    "int",
+  ),
+  (
+    "job.grace_check_interval_minutes",
+    "DEFAULT_JOB_GRACE_CHECK_INTERVAL_MINUTES",
+    "int",
+  ),
+  (
+    "job.grace_check_staleness_alert_multiplier",
+    "DEFAULT_JOB_GRACE_CHECK_STALENESS_ALERT_MULTIPLIER",
+    "float",
+  ),
+  (
+    "liability.grace_window_alert_threshold_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_ALERT_THRESHOLD_HOURS",
+    "int",
+  ),
+  (
+    "liability.grace_window_maximum_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_MAXIMUM_HOURS",
+    "int",
+  ),
+  (
+    "liability.grace_window_minimum_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_MINIMUM_HOURS",
+    "int",
+  ),
+  (
+    "liability.grace_window_minor_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_MINOR_HOURS",
+    "int",
+  ),
+  (
+    "liability.grace_window_moderate_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_MODERATE_HOURS",
+    "int",
+  ),
+  (
+    "liability.grace_window_severe_hours",
+    "DEFAULT_LIABILITY_GRACE_WINDOW_SEVERE_HOURS",
+    "int",
+  ),
+  (
+    "liability.multi_sponsor_escape_rule",
+    "DEFAULT_LIABILITY_MULTI_SPONSOR_ESCAPE_RULE",
+    "text",
+  ),
+  (
+    "liability.restoration_escapes_liability",
+    "DEFAULT_LIABILITY_RESTORATION_ESCAPES_LIABILITY",
+    "bool",
+  ),
+  (
+    "liability.restoration_severity_reduction_steps",
+    "DEFAULT_LIABILITY_RESTORATION_SEVERITY_REDUCTION_STEPS",
+    "int",
+  ),
+  (
+    "liability.revoke_rate_limit_per_day",
+    "DEFAULT_LIABILITY_REVOKE_RATE_LIMIT_PER_DAY",
+    "int",
+  ),
   // v1-RT-r1 additions (26 net-new keys per PRD section 8 minus 3
   // v1-AD-a-shipped duplicates per DQ #187).
-  ("bounds.endorsement_strength.ceiling",                       "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING",                       "int"),
-  ("bounds.endorsement_strength.floor",                         "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR",                         "int"),
-  ("bounds.jury_reliability.ceiling",                           "DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING",                           "int"),
-  ("bounds.jury_reliability.floor",                             "DEFAULT_BOUNDS_JURY_RELIABILITY_FLOOR",                             "int"),
-  ("bounds.participation_consistency.ceiling",                  "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_CEILING",                  "int"),
-  ("bounds.participation_consistency.floor",                    "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_FLOOR",                    "int"),
-  ("bounds.reporting_accuracy.ceiling",                         "DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING",                         "int"),
-  ("bounds.reporting_accuracy.floor",                           "DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR",                           "int"),
-  ("decay.endorsement_strength.negative_half_life_days",        "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_NEGATIVE_HALF_LIFE_DAYS",        "int"),
-  ("decay.endorsement_strength.positive_half_life_days",        "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_POSITIVE_HALF_LIFE_DAYS",        "int"),
-  ("decay.jury_reliability.negative_half_life_days",            "DEFAULT_DECAY_JURY_RELIABILITY_NEGATIVE_HALF_LIFE_DAYS",            "int"),
-  ("decay.jury_reliability.positive_half_life_days",            "DEFAULT_DECAY_JURY_RELIABILITY_POSITIVE_HALF_LIFE_DAYS",            "int"),
-  ("decay.participation_consistency.negative_half_life_days",   "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_NEGATIVE_HALF_LIFE_DAYS",   "int"),
-  ("decay.participation_consistency.positive_half_life_days",   "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_POSITIVE_HALF_LIFE_DAYS",   "int"),
-  ("decay.reporting_accuracy.negative_half_life_days",          "DEFAULT_DECAY_REPORTING_ACCURACY_NEGATIVE_HALF_LIFE_DAYS",          "int"),
-  ("decay.reporting_accuracy.positive_half_life_days",          "DEFAULT_DECAY_REPORTING_ACCURACY_POSITIVE_HALF_LIFE_DAYS",          "int"),
-  ("deltas.evidence_bad_faith",                                 "DEFAULT_DELTAS_EVIDENCE_BAD_FAITH",                                 "int"),
-  ("deltas.evidence_cited",                                     "DEFAULT_DELTAS_EVIDENCE_CITED",                                     "int"),
-  ("deltas.participation_juror_aligned",                        "DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED",                        "int"),
-  ("feature.reputation_v1_decay_enabled",                       "DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED",                       "bool"),
-  ("job.participation_interval_days",                           "DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS",                           "int"),
-  ("job.rollup_equal_weights",                                  "DEFAULT_JOB_ROLLUP_EQUAL_WEIGHTS",                                  "bool"),
-  ("job.rollup_interval_days",                                  "DEFAULT_JOB_ROLLUP_INTERVAL_DAYS",                                  "int"),
-  ("participation.activity_threshold_comments",                 "DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS",                 "int"),
-  ("participation.evidence_cited_rationale_threshold_chars",    "DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS",    "int"),
-  ("participation.lookback_days",                               "DEFAULT_PARTICIPATION_LOOKBACK_DAYS",                               "int"),
+  (
+    "bounds.endorsement_strength.ceiling",
+    "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_CEILING",
+    "int",
+  ),
+  (
+    "bounds.endorsement_strength.floor",
+    "DEFAULT_BOUNDS_ENDORSEMENT_STRENGTH_FLOOR",
+    "int",
+  ),
+  (
+    "bounds.jury_reliability.ceiling",
+    "DEFAULT_BOUNDS_JURY_RELIABILITY_CEILING",
+    "int",
+  ),
+  (
+    "bounds.jury_reliability.floor",
+    "DEFAULT_BOUNDS_JURY_RELIABILITY_FLOOR",
+    "int",
+  ),
+  (
+    "bounds.participation_consistency.ceiling",
+    "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_CEILING",
+    "int",
+  ),
+  (
+    "bounds.participation_consistency.floor",
+    "DEFAULT_BOUNDS_PARTICIPATION_CONSISTENCY_FLOOR",
+    "int",
+  ),
+  (
+    "bounds.reporting_accuracy.ceiling",
+    "DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING",
+    "int",
+  ),
+  (
+    "bounds.reporting_accuracy.floor",
+    "DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR",
+    "int",
+  ),
+  (
+    "decay.endorsement_strength.negative_half_life_days",
+    "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_NEGATIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.endorsement_strength.positive_half_life_days",
+    "DEFAULT_DECAY_ENDORSEMENT_STRENGTH_POSITIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.jury_reliability.negative_half_life_days",
+    "DEFAULT_DECAY_JURY_RELIABILITY_NEGATIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.jury_reliability.positive_half_life_days",
+    "DEFAULT_DECAY_JURY_RELIABILITY_POSITIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.participation_consistency.negative_half_life_days",
+    "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_NEGATIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.participation_consistency.positive_half_life_days",
+    "DEFAULT_DECAY_PARTICIPATION_CONSISTENCY_POSITIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.reporting_accuracy.negative_half_life_days",
+    "DEFAULT_DECAY_REPORTING_ACCURACY_NEGATIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "decay.reporting_accuracy.positive_half_life_days",
+    "DEFAULT_DECAY_REPORTING_ACCURACY_POSITIVE_HALF_LIFE_DAYS",
+    "int",
+  ),
+  (
+    "deltas.evidence_bad_faith",
+    "DEFAULT_DELTAS_EVIDENCE_BAD_FAITH",
+    "int",
+  ),
+  (
+    "deltas.evidence_cited",
+    "DEFAULT_DELTAS_EVIDENCE_CITED",
+    "int",
+  ),
+  (
+    "deltas.participation_juror_aligned",
+    "DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED",
+    "int",
+  ),
+  (
+    "feature.reputation_v1_decay_enabled",
+    "DEFAULT_FEATURE_REPUTATION_V1_DECAY_ENABLED",
+    "bool",
+  ),
+  (
+    "job.participation_interval_days",
+    "DEFAULT_JOB_PARTICIPATION_INTERVAL_DAYS",
+    "int",
+  ),
+  (
+    "job.rollup_equal_weights",
+    "DEFAULT_JOB_ROLLUP_EQUAL_WEIGHTS",
+    "bool",
+  ),
+  (
+    "job.rollup_interval_days",
+    "DEFAULT_JOB_ROLLUP_INTERVAL_DAYS",
+    "int",
+  ),
+  (
+    "participation.activity_threshold_comments",
+    "DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS",
+    "int",
+  ),
+  (
+    "participation.evidence_cited_rationale_threshold_chars",
+    "DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS",
+    "int",
+  ),
+  (
+    "participation.lookback_days",
+    "DEFAULT_PARTICIPATION_LOOKBACK_DAYS",
+    "int",
+  ),
   // v1-federation-inbound-a additions (11 federation.inbound.* keys per PRD §10).
   // Alphabetised within this block; do NOT interleave into sibling-lane blocks.
-  ("federation.inbound.admin_review_default_filter_days",       "DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS",       "int"),
-  ("federation.inbound.default_trust_for_new_peers",            "DEFAULT_FEDERATION_INBOUND_DEFAULT_TRUST_FOR_NEW_PEERS",            "text"),
-  ("federation.inbound.max_payload_bytes_moderation_label",     "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL",     "int"),
-  ("federation.inbound.max_payload_bytes_sanction_notice",      "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_SANCTION_NOTICE",      "int"),
-  ("federation.inbound.max_payload_bytes_trust_attestation",    "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_TRUST_ATTESTATION",    "int"),
-  ("federation.inbound.per_actor_attestation_rate_per_hour",    "DEFAULT_FEDERATION_INBOUND_PER_ACTOR_ATTESTATION_RATE_PER_HOUR",    "int"),
-  ("federation.inbound.per_peer_rate_per_hour",                 "DEFAULT_FEDERATION_INBOUND_PER_PEER_RATE_PER_HOUR",                 "int"),
-  ("federation.inbound.per_peer_storage_cap",                   "DEFAULT_FEDERATION_INBOUND_PER_PEER_STORAGE_CAP",                   "int"),
-  ("federation.inbound.replay_cleanup_cron_interval_minutes",   "DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES",   "int"),
-  ("federation.inbound.replay_window_days",                     "DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS",                     "int"),
-  ("federation.inbound.summary_max_chars",                      "DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS",                      "int"),
+  (
+    "federation.inbound.admin_review_default_filter_days",
+    "DEFAULT_FEDERATION_INBOUND_ADMIN_REVIEW_DEFAULT_FILTER_DAYS",
+    "int",
+  ),
+  (
+    "federation.inbound.default_trust_for_new_peers",
+    "DEFAULT_FEDERATION_INBOUND_DEFAULT_TRUST_FOR_NEW_PEERS",
+    "text",
+  ),
+  (
+    "federation.inbound.max_payload_bytes_moderation_label",
+    "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_MODERATION_LABEL",
+    "int",
+  ),
+  (
+    "federation.inbound.max_payload_bytes_sanction_notice",
+    "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_SANCTION_NOTICE",
+    "int",
+  ),
+  (
+    "federation.inbound.max_payload_bytes_trust_attestation",
+    "DEFAULT_FEDERATION_INBOUND_MAX_PAYLOAD_BYTES_TRUST_ATTESTATION",
+    "int",
+  ),
+  (
+    "federation.inbound.per_actor_attestation_rate_per_hour",
+    "DEFAULT_FEDERATION_INBOUND_PER_ACTOR_ATTESTATION_RATE_PER_HOUR",
+    "int",
+  ),
+  (
+    "federation.inbound.per_peer_rate_per_hour",
+    "DEFAULT_FEDERATION_INBOUND_PER_PEER_RATE_PER_HOUR",
+    "int",
+  ),
+  (
+    "federation.inbound.per_peer_storage_cap",
+    "DEFAULT_FEDERATION_INBOUND_PER_PEER_STORAGE_CAP",
+    "int",
+  ),
+  (
+    "federation.inbound.replay_cleanup_cron_interval_minutes",
+    "DEFAULT_FEDERATION_INBOUND_REPLAY_CLEANUP_CRON_INTERVAL_MINUTES",
+    "int",
+  ),
+  (
+    "federation.inbound.replay_window_days",
+    "DEFAULT_FEDERATION_INBOUND_REPLAY_WINDOW_DAYS",
+    "int",
+  ),
+  (
+    "federation.inbound.summary_max_chars",
+    "DEFAULT_FEDERATION_INBOUND_SUMMARY_MAX_CHARS",
+    "int",
+  ),
 ];
 
 /// 34 after Perplexity-review 2026-04-17 added `job.snapshot_batch_chunk_size`
@@ -1679,7 +2101,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "thresholds.jury_reliability",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1691,7 +2116,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "thresholds.reporting_accuracy",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1703,7 +2131,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "thresholds.endorsement_strength",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1715,7 +2146,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 21.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 21.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -1727,7 +2161,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.quorum",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 21.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 21.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -1739,7 +2176,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.age_requirement_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1751,7 +2191,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.max_concurrent_assignments",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 20.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 20.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1775,7 +2218,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.juror_aligned",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1787,7 +2233,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.juror_outlier",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1799,7 +2248,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.reporter_upheld",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1811,7 +2263,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.reporter_dismissed",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1823,7 +2278,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.endorsement_created_sponsor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1835,7 +2293,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.endorsement_created_sponsee",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1847,7 +2308,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.sponsor_liability_minor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1859,7 +2323,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.sponsor_liability_moderate",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1871,7 +2338,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.sponsor_liability_severe",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1883,7 +2353,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.founder_multiplier",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1895,7 +2368,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.regular_multiplier",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1907,7 +2383,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.sponsor_liability_floor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -100000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -100000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1919,7 +2398,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "report.base_weight",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1931,7 +2413,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "report.clamp_min",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1943,7 +2428,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "report.clamp_max",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1955,7 +2443,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "report.recency_half_life_hours",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 1.0, max: 8760.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 8760.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -1967,7 +2458,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "report.case_threshold_micros",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 100_000_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 100_000_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -1979,7 +2473,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.positive_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2015,7 +2512,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "onboarding.sponsor_min_account_age_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2027,7 +2527,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "founder.max_founders_active",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2039,7 +2542,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "founder.max_expires_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2051,7 +2557,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "founder.max_seed_delta",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2063,7 +2572,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.snapshot_interval_seconds",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 60.0, max: 86_400.0 }),
+    valid_range: Some(NumericRange {
+      min: 60.0,
+      max: 86_400.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2075,7 +2587,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.snapshot_batch_chunk_size",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 10_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 10_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2136,7 +2651,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.appeal_panel_size_increase",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 20.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 20.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: true,
@@ -2148,7 +2666,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.deadline_window_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2160,7 +2681,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.negative_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2172,7 +2696,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.endorsement_strength_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2184,7 +2711,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.jury_reliability_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2196,7 +2726,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "onboarding.sponsor_min_endorsement_strength",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2220,7 +2753,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "onboarding.provisional_membership_cooldown_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2244,7 +2780,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.participation_weekly_active",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2256,7 +2795,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "participation.dormancy_window_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2268,7 +2810,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.participation_dormant",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -1000.0, max: 1000.0 }),
+    valid_range: Some(NumericRange {
+      min: -1000.0,
+      max: 1000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2304,7 +2849,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.peer_attestation_ttl_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2364,7 +2912,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "rule_set.text_max_bytes",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1_024.0, max: 1_048_576.0 }),
+    valid_range: Some(NumericRange {
+      min: 1_024.0,
+      max: 1_048_576.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2376,7 +2927,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "rule_set.version_propagation_delay_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2416,7 +2970,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.regular.minor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2428,7 +2985,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.regular.moderate",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2440,7 +3000,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.regular.severe",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2452,7 +3015,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.founder.minor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2464,7 +3030,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.founder.moderate",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2476,7 +3045,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.founder.severe",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2488,7 +3060,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.probation.minor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2500,7 +3075,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.probation.moderate",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2512,7 +3090,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.panel_size.probation.severe",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 3.0, max: 11.0 }),
+    valid_range: Some(NumericRange {
+      min: 3.0,
+      max: 11.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2562,7 +3143,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.threshold_fraction.minor",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.5001,
+      max: 1.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2574,7 +3158,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.threshold_fraction.moderate",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.5001,
+      max: 1.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2586,7 +3173,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.threshold_fraction.severe",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 0.5001, max: 1.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.5001,
+      max: 1.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2635,7 +3225,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.constraints.juror_cooldown_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 365.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 365.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: true,
@@ -2660,7 +3253,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.constraints.max_retries_before_relax",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 50.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 50.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2672,7 +3268,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "jury.max_concurrent_assignments_per_juror_total",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 20.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 20.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2698,7 +3297,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "appeal.panel_size_floor_increment",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2722,7 +3324,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "appeal.window_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 90.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 90.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2748,7 +3353,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_minor_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2760,7 +3368,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_moderate_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2772,7 +3383,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_severe_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2784,7 +3398,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_minimum_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2796,7 +3413,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_maximum_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2808,7 +3428,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.grace_window_alert_threshold_hours",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 720.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 720.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2859,7 +3482,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "liability.revoke_rate_limit_per_day",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2872,7 +3498,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.grace_check_interval_minutes",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 60.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 60.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2884,7 +3513,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.grace_check_batch_size",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 10000.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 10000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2896,7 +3528,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.grace_check_staleness_alert_multiplier",
     value_type: ValueType::Float,
-    valid_range: Some(NumericRange { min: 1.0, max: 10.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 10.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -2910,7 +3545,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.reporting_accuracy.positive_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2922,7 +3560,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.reporting_accuracy.negative_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2934,7 +3575,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.jury_reliability.positive_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2946,7 +3590,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.jury_reliability.negative_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2958,7 +3605,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.participation_consistency.positive_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2970,7 +3620,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.participation_consistency.negative_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2982,7 +3635,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.endorsement_strength.positive_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -2994,7 +3650,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "decay.endorsement_strength.negative_half_life_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 3650.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 3650.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3007,7 +3666,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.reporting_accuracy.floor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3019,7 +3681,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.reporting_accuracy.ceiling",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3031,7 +3696,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.jury_reliability.floor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3043,7 +3711,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.jury_reliability.ceiling",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3055,7 +3726,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.participation_consistency.floor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3067,7 +3741,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.participation_consistency.ceiling",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3079,7 +3756,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.endorsement_strength.floor",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -10000.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -10000.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3091,7 +3771,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "bounds.endorsement_strength.ceiling",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 10000.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 10000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3104,7 +3787,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.participation_juror_aligned",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3116,7 +3802,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.evidence_cited",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3128,7 +3817,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "deltas.evidence_bad_faith",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: -100.0, max: 0.0 }),
+    valid_range: Some(NumericRange {
+      min: -100.0,
+      max: 0.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3141,7 +3833,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "participation.activity_threshold_comments",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 100.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 100.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3153,7 +3848,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "participation.lookback_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 90.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 90.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3165,7 +3863,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "participation.evidence_cited_rationale_threshold_chars",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 32.0, max: 4096.0 }),
+    valid_range: Some(NumericRange {
+      min: 32.0,
+      max: 4096.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Both,
     requires_re_jury: false,
@@ -3178,7 +3879,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.participation_interval_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 30.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3190,7 +3894,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "job.rollup_interval_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 30.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3240,7 +3947,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.per_peer_rate_per_hour",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 100_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 100_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3252,7 +3962,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.per_actor_attestation_rate_per_hour",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 10_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 10_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3264,7 +3977,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.per_peer_storage_cap",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 100.0, max: 1_000_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 100.0,
+      max: 1_000_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3276,7 +3992,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.max_payload_bytes_sanction_notice",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1_024.0, max: 1_048_576.0 }),
+    valid_range: Some(NumericRange {
+      min: 1_024.0,
+      max: 1_048_576.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3288,7 +4007,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.max_payload_bytes_trust_attestation",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1_024.0, max: 65_536.0 }),
+    valid_range: Some(NumericRange {
+      min: 1_024.0,
+      max: 65_536.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3300,7 +4022,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.max_payload_bytes_moderation_label",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1_024.0, max: 65_536.0 }),
+    valid_range: Some(NumericRange {
+      min: 1_024.0,
+      max: 65_536.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3312,7 +4037,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.replay_window_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 1.0, max: 30.0 }),
+    valid_range: Some(NumericRange {
+      min: 1.0,
+      max: 30.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3324,7 +4052,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.replay_cleanup_cron_interval_minutes",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 5.0, max: 1_440.0 }),
+    valid_range: Some(NumericRange {
+      min: 5.0,
+      max: 1_440.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3336,7 +4067,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.summary_max_chars",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 256.0, max: 32_000.0 }),
+    valid_range: Some(NumericRange {
+      min: 256.0,
+      max: 32_000.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3348,7 +4082,10 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
   ConfigKeyMetadata {
     key: "federation.inbound.admin_review_default_filter_days",
     value_type: ValueType::Int,
-    valid_range: Some(NumericRange { min: 0.0, max: 365.0 }),
+    valid_range: Some(NumericRange {
+      min: 0.0,
+      max: 365.0,
+    }),
     valid_enum: None,
     scope: ConfigScope::Instance,
     requires_re_jury: false,
@@ -3358,7 +4095,6 @@ pub const CONFIG_KEY_METADATA: &[ConfigKeyMetadata] = &[
     doc_anchor: "v1-federation-inbound.prd.md§10",
   },
 ];
-
 
 #[cfg(test)]
 mod parity {
@@ -3411,9 +4147,10 @@ mod parity {
       SEEDED_KEYS_WITH_CONSTS.len(),
     );
     for (key, _const_name, vtype) in SEEDED_KEYS_WITH_CONSTS {
-      let md = CONFIG_KEY_METADATA.iter().find(|m| m.key == *key).unwrap_or_else(|| {
-        panic!("seeded key `{key}` has no matching CONFIG_KEY_METADATA entry")
-      });
+      let md = CONFIG_KEY_METADATA
+        .iter()
+        .find(|m| m.key == *key)
+        .unwrap_or_else(|| panic!("seeded key `{key}` has no matching CONFIG_KEY_METADATA entry"));
       let vt_matches = match *vtype {
         "int" => matches!(md.value_type, ValueType::Int),
         "float" => matches!(md.value_type, ValueType::Float),

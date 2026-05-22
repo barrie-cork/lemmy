@@ -1,8 +1,11 @@
 use crate::newtypes::{AppealId, ModerationCaseId};
 use chrono::{DateTime, Utc};
-use lemmy_db_schema_file::{PersonId, enums::{AppealRequesterRole, AppealStatus}};
 #[cfg(feature = "full")]
 use lemmy_db_schema_file::schema::appeal;
+use lemmy_db_schema_file::{
+  PersonId,
+  enums::{AppealRequesterRole, AppealStatus},
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

@@ -1,11 +1,7 @@
 use crate::{CommentSlimView, CommentView};
 use diesel::{
-  BoolExpressionMethods,
-  ExpressionMethods,
-  NullableExpressionMethods,
-  PgTextExpressionMethods,
-  QueryDsl,
-  SelectableHelper,
+  BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, PgTextExpressionMethods,
+  QueryDsl, SelectableHelper,
 };
 use diesel_async::RunQueryDsl;
 use diesel_ltree::{Ltree, LtreeExtensions, nlevel};
@@ -28,36 +24,23 @@ use lemmy_db_schema::{
   },
 };
 use lemmy_db_schema_file::{
-  InstanceId,
-  PersonId,
+  InstanceId, PersonId,
   enums::{
     CommentSortType::{self, *},
-    CommunityFollowerState,
-    CommunityVisibility,
-    ListingType,
+    CommunityFollowerState, CommunityVisibility, ListingType,
   },
   joins::{
-    creator_community_actions_join,
-    creator_community_instance_actions_join,
-    creator_home_instance_actions_join,
-    creator_local_instance_actions_join,
-    my_comment_actions_join,
-    my_community_actions_join,
-    my_instance_communities_actions_join,
-    my_instance_persons_actions_join_1,
-    my_local_user_admin_join,
-    my_person_actions_join,
+    creator_community_actions_join, creator_community_instance_actions_join,
+    creator_home_instance_actions_join, creator_local_instance_actions_join,
+    my_comment_actions_join, my_community_actions_join, my_instance_communities_actions_join,
+    my_instance_persons_actions_join_1, my_local_user_admin_join, my_person_actions_join,
   },
   schema::{comment, community, community_actions, person, post},
 };
 use lemmy_diesel_utils::{
   connection::{DbPool, get_conn},
   pagination::{
-    CursorData,
-    PagedResponse,
-    PaginationCursor,
-    PaginationCursorConversion,
-    paginate_response,
+    CursorData, PagedResponse, PaginationCursor, PaginationCursorConversion, paginate_response,
   },
   traits::Crud,
   utils::{Subpath, fuzzy_search, now, seconds_to_pg_interval},
@@ -365,13 +348,8 @@ mod tests {
       actor_language::LocalUserLanguage,
       comment::{Comment, CommentActions, CommentInsertForm, CommentLikeForm, CommentUpdateForm},
       community::{
-        Community,
-        CommunityActions,
-        CommunityFollowerForm,
-        CommunityInsertForm,
-        CommunityModeratorForm,
-        CommunityPersonBanForm,
-        CommunityUpdateForm,
+        Community, CommunityActions, CommunityFollowerForm, CommunityInsertForm,
+        CommunityModeratorForm, CommunityPersonBanForm, CommunityUpdateForm,
       },
       instance::Instance,
       language::Language,

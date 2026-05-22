@@ -52,9 +52,7 @@ pub async fn list_jury_assignments_for_person(
 
   let rows: Vec<JuryRow> = jury_assignment::table
     .inner_join(moderation_case::table)
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(jury_assignment::person_id.eq(person_id))
     .order_by(jury_assignment::selected_at.desc())
     .select((
@@ -113,9 +111,7 @@ pub async fn list_available_jury_cases_for_person(
   let conn = &mut get_conn(pool).await?;
 
   let rows: Vec<JuryRow> = moderation_case::table
-    .left_join(
-      community::table.on(community::id.nullable().eq(moderation_case::community_id)),
-    )
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(moderation_case::status.eq(CaseStatus::ThresholdMet))
     .filter(
       moderation_case::target_person_id
