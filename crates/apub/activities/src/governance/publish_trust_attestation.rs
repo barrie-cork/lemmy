@@ -176,14 +176,14 @@ impl crate::governance::inbox::GovernanceInboundActivity for PublishTrustAttesta
       // above only drops prior-hour entries. Without this bound the map grows
       // O(attacker key cardinality). See v1-federation-inbound-d plan §3.
       let key = (subject_url.to_string(), bucket);
-      if counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES && !counts.contains_key(&key) {
-        if let Some(oldest_key) = counts
+      if counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES
+        && !counts.contains_key(&key)
+        && let Some(oldest_key) = counts
           .iter()
           .min_by_key(|((_, b), _)| *b)
           .map(|(k, _)| k.clone())
-        {
-          counts.remove(&oldest_key);
-        }
+      {
+        counts.remove(&oldest_key);
       }
 
       let entry = counts.entry(key).or_insert(0);
