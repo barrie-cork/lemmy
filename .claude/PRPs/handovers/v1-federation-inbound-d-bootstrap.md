@@ -14,10 +14,10 @@ purpose: Bootstrap the v1-federation-inbound-d advisor session. Read the RESUME 
 
 ## Session-start ritual (do these first)
 
-1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane. Until bm-cut, you are on canonical `brehon-fork` / `governance-v0` (meta-edit lane: briefs + plan land on trunk). At handoff the lane worktree `C:/Users/barri/Developer/brehon-fork-fed-in-c` still exists with the deleted phase branch — user is expected to remove it post-transition (`git worktree remove ../brehon-fork-fed-in-c && git branch -d phase-v1-federation-inbound-c`); the canonical bm-cut for fed-in-d creates a fresh `brehon-fork-fed-in-d` worktree.
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0 origin/governance-v0` — both must be at-or-ahead of `<HANDOFF-HASH>` (`a85b5bf2f` plus this transition's commit; see §"Git state at handoff"). If origin lags, push before any Junior dispatch (Junior workers branch from the committed+pushed trunk tip).
+1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane. The lane worktree `C:/Users/barri/Developer/brehon-fork-fed-in-d` on `phase-v1-federation-inbound-d` is already bootstrapped. Open Claude Code **there** to drive the impl session. The canonical `brehon-fork` checkout remains on `governance-v0` for meta-edits only. Cleanup pending: `git worktree remove ../brehon-fork-quality-r1 && git branch -d phase-v1-quality-r1` (phase branch already deleted on origin).
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0 origin/governance-v0` — both must be at-or-ahead of `<HANDOFF-HASH>` (`6a01276f2` plus this transition's commit; see §"Git state at handoff"). If origin lags, push before any Junior dispatch (Junior workers branch from the committed+pushed trunk tip).
 3. Read `.claude/decision-queue.json` (and `scripts/brehon/resolve-dq-canonical.sh v1-federation-inbound-d` once a phase branch exists) for pending entries since handoff; compare against §"Decision-queue snapshot" below. At handoff: pending may include DQ #326 (conformance-audit stale leftover — see §3 carry-forward; do NOT cross-lane-edit it).
-4. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_v1_federation_inbound_d.md` is the running-state scratchpad (most-recent "Session handoff block" is authoritative on resume). Read `workflow_state_v1_federation_inbound_c.md` ONCE for carry-forward (it is the CLOSED record).
+4. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_v1_federation_inbound_d.md` is the running-state scratchpad (most-recent "Session handoff block" is authoritative on resume). Read `workflow_state_v1_quality_r1.md` ONCE for carry-forward on quality-r1 deferred items (ADR-010 read-side gap, clippy 8 errors, LazyLock long-term fix). The fed-in-c CLOSED record has been deleted.
 
 ## Next concrete action
 
@@ -127,16 +127,16 @@ The standard close: run `/brehon-phase-transition v1-federation-inbound-d v1-fed
 
 ## Git state at handoff (captured literally — do not paraphrase)
 
-- governance-v0 HEAD: `a85b5bf2f` (captured 2026-05-22) — `chore(hooks): track allow-prp-deliverables.sh`
-- Phase branch HEAD: not yet created (branch `phase-v1-federation-inbound-d` cut at bm-cut)
+- governance-v0 HEAD: `6a01276f2` (captured 2026-05-22) — `docs(retro): v1-quality-r1 retro — PR #145 merged eec20a102`
+- Phase branch HEAD: `phase-v1-federation-inbound-d` cut at `26c6badf2` (bm-cut completed; lane worktree `brehon-fork-fed-in-d` bootstrapped)
 - Recent governance-v0 commits (`git -C C:/Users/barri/Developer/brehon-fork log --oneline -5 governance-v0`):
 
   ```
-  a85b5bf2f chore(hooks): track allow-prp-deliverables.sh
-  abfe5ac44 docs(retro): session-retro 2026-05-22 — carry-forward shipped
-  180a0f9aa chore(advisor): promote 3 carry-forwards from parallel-subagent-dispatch retro
-  45ef46a7f chore(bm): merge PR #144 complete — runlog
-  a1b62280f feat(retro-followups-r1): four-role retro (task 4)
+  6a01276f2 docs(retro): v1-quality-r1 retro — PR #145 merged eec20a102
+  cea679810 chore(bm): merge PR #145 complete — eec20a102 — quality-r1 shipped
+  eec20a102 Merge pull request #145 from barrie-cork/phase-v1-quality-r1
+  6c3ae1238 chore(bm): force-add pr-145-findings.yaml — recommendation approve, 1 low wont-fix
+  819d5d1bd chore(bm): prp-review PR #145 — test compile PASS, review complete
   ```
 
 ## Decision-queue snapshot at handoff
