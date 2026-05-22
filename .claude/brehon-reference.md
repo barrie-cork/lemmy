@@ -13,7 +13,7 @@ CLAUDE.md names four roles (Advisor + Planning + Impl + BM) and points at this f
 | Advisor | (not a Junior subagent — runs as the persistent CC session on laptop) | Opus 4.7 (1M) | n/a | Meta-oversight: queue Junior tasks, triage DQ, run DoD smoke tests, surface user gates. Never authors content. |
 | Planning | `.claude/agents/planning.md` | `claude-opus-4-7` | purple | Author plan files. Reads PRD + ADRs + lessons; runs Explore agents; commits one plan file. |
 | Impl-task | `.claude/agents/impl-task.md` | `claude-sonnet-4-6` | green | Execute one task from an approved plan. Pattern-following from MIRROR refs. Per-task validation gate. |
-| BM-task | `.claude/agents/bm-task.md` | `claude-sonnet-4-6` | (default) | Single `/bm-*` shape — branch op, PR, CR triage, runlog write. |
+| BM-task | `.claude/agents/bm-task.md` | `claude-haiku-4-5` | (default) | Single `/bm-*` shape — branch op, PR, CR triage, runlog write. |
 
 **Dispatch mechanism:** the advisor calls `mcp__junior-brehon__create_task(description: "[role:planning] <slug> — see .claude/PRPs/briefs/<file>.md")`. Junior on the EliteDesk reads the description, matches the leading `[role:X]` token against the subagent's `description` frontmatter (which mentions the same token), and dispatches to that subagent in a fresh worktree. **The `[role:X]` token is a brief-content convention, not a Claude Code feature** — Claude Code's actual subagent selection mechanism is description-field matching. See `.claude/rules/advisor-orchestrator.md` "Junior task description template."
 

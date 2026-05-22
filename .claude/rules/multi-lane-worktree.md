@@ -236,15 +236,8 @@ only.
 
 ## Migration plan (existing topology → multi-lane)
 
-For the current state where `brehon-fork` is the shared checkout:
-
-1. **Phase v1-RT-r1 (paused at `37a62f9b4`):** after L4 ship, before resuming,
-   cut `brehon-fork-rt-r1` worktree off `phase-v1-RT-r1`:
-   ```bash
-   git worktree add ../brehon-fork-rt-r1 phase-v1-RT-r1
-   ```
-2. **Phase v1-SL-d (shipped 2026-05-11):** no new worktree needed; merged.
-3. **Future phases:** worktree at bm-cut time per §"Lifecycle" above.
+Multi-lane adoption is complete as of v1-RT-r1 (2026-05-11). New lanes
+are bootstrapped at bm-cut time per §"Lifecycle" above.
 
 ## See also
 

@@ -7,10 +7,9 @@ the loop entirely.
 ## Schema (v2)
 
 Top-level keys: `pending` (array), `resolved` (array), `schema_version`
-(integer; currently `2`). The legacy `phase` field was removed in v2 —
+(integer; currently `3`). The legacy `phase` field was removed in v2 —
 it tracked the Brehon sub-phase but was never read by any agent or
-rule and drifted four sub-phases stale (last bumped at "6", current is
-v1-JM-d). Sub-phase membership is derivable from the entry's
+rule and drifted stale. Sub-phase membership is derivable from the entry's
 `timestamp` + git history; no top-level field needed.
 
 v2 adds the `kind` field on entries (`"blocker"` | `"log"` — see
@@ -66,7 +65,7 @@ Archive at one of three triggers, whichever fires first:
    primary trigger; the others are safety nets.
 
 As of 2026-04-27 (post-v1-JM-c ship): live file holds 51 entries,
-~128 KB. Comfortable. First archive likely lands at v1-JM-d retro.
+~128 KB. Comfortable. First archive landed at pre-v1-AD-e (see `decision-queue-archive-pre-v1-AD-e.json`).
 
 ### How to archive
 
@@ -74,7 +73,7 @@ Use `homeserver/scripts/dq-archive.sh` (idempotent, supports
 `--dry-run`). It moves resolved entries with `id <= --cutoff-id` from
 the live file to a dated archive file at
 `.claude/decision-queue-archive-<sub-phase-slug>.json` (e.g.
-`decision-queue-archive-pre-v1-JM-d.json`). The script:
+`decision-queue-archive-pre-v1-AD-e.json`). The script:
 
 - Reads both `pending` and `resolved`; only resolved entries with
   `id <= cutoff` are eligible (pending entries are never archived).
