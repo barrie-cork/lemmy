@@ -2978,6 +2978,125 @@
       "approved_by": null,
       "approved_at": null,
       "resolved_at": "2026-05-22T09:18:16.266032Z"
+    },
+    {
+      "id": "922c8bae61db-001",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Clippy 8 errors deferred from quality-r1: migrate admin_config.rs (3) and reputation_snapshot.rs (5) test fns to LemmyResult<()> + ?",
+      "options": [
+        "Fix in a follow-up impl task using feedback_clippy_test_style.md recipe",
+        "Leave indefinitely (CI clippy gate already exits 101 on these; no regression)"
+      ],
+      "context": "audit-2026-05-22 worktree: cargo clippy --workspace --features full --all-targets -- -D warnings exits 101 with 8 errors. All 8 are test-style violations (unwrap/expect/changes[N] indexing). Per user decision 2026-05-22: defer to a follow-up task, not in quality-r1 scope. Estimated effort: 1 impl task, ~30 min.",
+      "answer": "Defer. Fix recipe: migrate each failing test fn to LemmyResult<()> return type + ? propagation per feedback_clippy_test_style.md. File as follow-up impl task on governance-v0 when clippy backlog sweep is scheduled.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-002",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "v1-JM-b read-side flip still pending: admin_assign_jury.rs / submit_jury_vote.rs / sponsor_liability.rs still read live config for the 20 v1-JM-a keys added in quality-r1. ADR-010 violation persists for cases opened before quality-r1 merges AND in-flight cases until v1-JM-b ships.",
+      "options": [
+        "Track as v1-JM-b sub-phase scope (already planned)",
+        "Add emergency reader-flip to quality-r1 (scope creep, out of bounds)"
+      ],
+      "context": "quality-r1 Phase 1 fixed the WRITE side: build_applied_config_snapshot() now pins all 27 requires_re_jury keys. The READ side (handlers that read live config rather than the snapshot) was explicitly out of scope per plan Phase 1 Out of scope. Three files affected: crates/api/api/src/governance/admin_assign_jury.rs:480-550, submit_jury_vote.rs, sponsor_liability.rs.",
+      "answer": "Track as v1-JM-b scope. quality-r1 write-side fix is a prerequisite for v1-JM-b; sequence is correct. No emergency action needed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-003",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "cargo fmt --check CI gate missing: .github/workflows/cargo-validate-workspace.yml does not enforce fmt. Future fmt drift will not be caught in CI.",
+      "options": [
+        "Add cargo fmt --check step to cargo-validate-workspace.yml in a follow-up chore commit",
+        "Leave as developer discipline only (no CI enforcement)"
+      ],
+      "context": "quality-r1 Phase 2 removed nightly-only .rustfmt.toml options and reformatted the workspace. cargo fmt --all -- --check now exits 0. Without a CI step, a future nightly-only option or careless fmt skip will silently accumulate again.",
+      "answer": "Recommended: add the CI step. Low effort, prevents recurrence. Bundle with DQ 922c8bae61db-007 (lib-test env var) when workflows are next touched.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-004",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "EXPECTED_SEED_COUNT_V1_* per-phase breakdown test missing: total-count test catches the big defect class but not a key-moved-between-phases footgun.",
+      "options": [
+        "Add per-phase breakdown const + test in a follow-up task",
+        "Leave total-count test as-is (low probability footgun, not a current defect)"
+      ],
+      "context": "Audit 4.2 finding. crates/api/api/src/governance/config.rs has EXPECTED_SEED_COUNT_V1_TOTAL and per-phase constants but no test that verifies per-phase key assignment is stable. If a key is moved from v1-JM-a to v1-SL-a scope without updating the per-phase const, the total-count test still passes. Hygiene gap, not a current defect.",
+      "answer": "Defer. Low probability. Worth adding before v1-JM-b ships. Track as hygiene follow-up.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-005",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "init_test_context() auto-set env var: long-term fix to remove per-test ensure_default_settings() boilerplate added in quality-r1 Phase 3.",
+      "options": [
+        "Modify LemmyContext::init_test_context() to call ensure_default_settings() itself (Path B from Phase 3 plan)",
+        "Leave per-test calls as-is (Path A already shipped; Path B is an ergonomics improvement only)"
+      ],
+      "context": "quality-r1 Phase 3 added ensure_default_settings() calls to 19 test fns across 13 files. Path B modifies init_test_context() in crates/api/api_common/src/context.rs so every test that calls it automatically gets the env var set. Path B was deferred in Phase 3 due to blast-radius concern. Now that Path A is shipped and green, Path B is safe to evaluate.",
+      "answer": "Defer to follow-up impl task. Estimate: 1 task, ~20 min impl + verify all 19 call sites can drop the ensure_default_settings() call.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-006",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Other LazyLock/OnceLock statics: sweep for poisoning risk beyond Settings::SETTINGS. Audit 4.3 named crates/apub/objects/src/utils/functions.rs:CACHE as a starting point.",
+      "options": [
+        "Run a targeted sweep in a follow-up read-only audit task",
+        "Accept current coverage (Settings::SETTINGS is the only known poisoning path)"
+      ],
+      "context": "Audit 4.3 recommendation. crates/apub/objects/src/utils/functions.rs contains a LazyLock or OnceLock static named CACHE. If this static panics on init from a wrong CWD in lib tests, the same masking-cascade pattern applies. Single follow-up sweep: grep for LazyLock and OnceLock across workspace, classify init paths.",
+      "answer": "Defer to a read-only audit sweep. Low urgency. Schedule before next apub-layer sub-phase.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "922c8bae61db-007",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "CI workflow LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS=1 missing for lib-test runs. Defence-in-depth if lib tests are ever added to GH Actions.",
+      "options": [
+        "Add env var to .github/workflows/cargo-validate-workspace.yml as a precautionary step",
+        "Leave as-is (CI today only runs e2e; lib-test env var is a local-only concern)"
+      ],
+      "context": "Audit 4.3 last recommendation. GitHub CI currently runs only the e2e binary. If a future sub-phase adds --lib runs to CI, the LazyLock poisoning will surface. The env var is a one-line addition to the workflow. Bundle with DQ 922c8bae61db-003 (fmt CI gate) when workflows are next touched.",
+      "answer": "Defer. Bundle with DQ 922c8bae61db-003 when workflows are next touched.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-22T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
