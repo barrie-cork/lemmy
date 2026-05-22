@@ -10,7 +10,7 @@ poll_count: 1
 last_polled_head_sha: 418c4d7
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: approve_after_triage
 findings:
 - id: cr-1
   source: coderabbit
@@ -26,9 +26,13 @@ findings:
 
     The answer sa'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943799
-  bucket: ""
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: 'DQ entry text drift in resolved entry. Per decision-queue.md v2/v3 forward-only
+    rule: do not rewrite historical entries — pre-v2 idiosyncrasies stay as audit
+    trail. The narrative-vs-array-position drift on #326 was already corrected via
+    the post-migration update (entry now lives in resolved[] with correct narrative
+    + audit-trail-preserving notes appended). No further action.'
   notes: null
 - id: cr-2
   source: coderabbit
@@ -41,9 +45,14 @@ findings:
 
     **Route this judgment-heavy decision through explicit user approval be'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943800
-  bucket: ""
+  bucket: carry-forward
   addressed_in: null
-  rationale: null
+  rationale: 'Judgment-heavy DQ approval-gate request. Already addressed structurally:
+    gov-v0 v1-dq-schema-r1 (merged 2026-05-22) ships DQ schema v3 with approved_by
+    + approved_at fields on every entry. Cross-references existing carry-forward issue
+    #142 (DQ schema-v3 proposal originally from PR #141 cr-1). The schema fields exist;
+    the policy of WHEN to require approval for judgment-heavy resolutions is a separate
+    forward decision tracked at issue #142.'
   notes: null
 - id: cr-3
   source: coderabbit
@@ -59,9 +68,12 @@ findings:
 
     Line 18 has a blockqu'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943802
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: 'Markdownlint nits on advisor meta-doc (impl-1 brief). Per feedback_severity_labels_dont_imply_semantic.md
+    + PR #141 wont-fix precedent (13 markdownlint nits on advisor meta-docs): advisor
+    briefs are historical authoring records; markdownlint on them is net-noise vs
+    the cost of editing landed briefs.'
   notes: null
 - id: cr-4
   source: coderabbit
@@ -77,9 +89,10 @@ findings:
 
     Line 18 triggers MD02'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943805
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Markdownlint nits on advisor meta-doc (impl-2 brief). Same rationale
+    as cr-3.
   notes: null
 - id: cr-5
   source: coderabbit
@@ -95,9 +108,10 @@ findings:
 
     Lines 33, 126, 231'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943809
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Markdownlint fenced-code language specifiers on advisor meta-doc (impl-3
+    brief). Same rationale as cr-3.
   notes: null
 - id: cr-6
   source: coderabbit
@@ -113,9 +127,10 @@ findings:
 
     Several'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943812
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Markdownlint fenced-code normalization on advisor meta-doc (planning-2
+    brief). Same rationale as cr-3.
   notes: null
 - id: cr-7
   source: coderabbit
@@ -128,9 +143,10 @@ findings:
 
     **Avoid leading `#` at line start in prose; markdownlint treats it as '
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943813
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Markdownlint heading-style nit on retro file. Retros are historical artifacts;
+    advisor does not edit landed retros.
   notes: null
 - id: cr-8
   source: coderabbit
@@ -146,9 +162,10 @@ findings:
 
     The fences in thi'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3284943814
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: Markdownlint fenced-code language specifiers on retro file. Same rationale
+    as cr-7.
   notes: null
 - id: cr-9
   source: coderabbit
@@ -158,9 +175,11 @@ findings:
   line: null
   summary: '**Actionable comments posted: 8**'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#pullrequestreview-4341429632
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: 'CR PR-level review-summary line (Actionable comments posted: 8). Non-actionable
+    CR metadata, not a finding per the canonical bm-poll-cr.md spec. BM #408 incorrectly
+    ingested it as a finding; triage corrects.'
   notes: null
 - id: cr-10
   source: coderabbit
@@ -181,9 +200,11 @@ findings:
 
     ```'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#discussion_r3285008287
-  bucket: ""
+  bucket: done
   addressed_in: null
-  rationale: null
+  rationale: 'pr-144-findings.yaml:6 opened_at timestamp drift. BM #408 corrected
+    the value during ingest — the merged findings.yaml at e2bab2423 has opened_at:
+    2026-05-21T23:29:31Z (the PR creation time). No further action.'
   notes: null
 - id: cr-11
   source: coderabbit
@@ -193,9 +214,10 @@ findings:
   line: null
   summary: '**Actionable comments posted: 1**'
   cr_url: https://github.com/barrie-cork/lemmy/pull/144#pullrequestreview-4341523296
-  bucket: ""
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: 'CR PR-level review-summary line (Actionable comments posted: 1). Same
+    rationale as cr-9.'
   notes: null
 counters:
   total: 11
@@ -210,38 +232,38 @@ counters:
     low: 8
     nit: 2
   by_bucket:
-    "": 11
     fix-in-pr: 0
-    rebut: 0
-    carry-forward: 0
-    done: 0
-    wont-fix: 0
-notes: |
-  ## Advisor post-condition notes (5th BM false-success occurrence)
-
-  BM Junior #408 ingested 11 CR findings cleanly but violated brief §4
-  constraint: every finding was set to `bucket: fix-in-pr` instead of
-  left blank as `bucket: ""`. Brief §4 explicit: "do NOT bucket — triage
-  is the next, separate verb; bucketing here is a process breach."
-
-  Advisor blanked all 11 buckets to `""` post-merge so triage gate is
-  unprejudiced. Pattern occurrence #5 per
-  `feedback_bm_false_success_advisor_post_condition_catch.md` (prior 4:
-  #322 bm-merge, #392 bm-poll-cr, #394 bm-triage, #404 bm-pr). Auto-
-  detect signal here: every finding having identical bucket value =
-  diff-vs-brief-§4-constraint mismatch caught by post-merge sanitisation.
-
-  Counter block also re-shaped from BM's invented `per-severity → open/
-  done/rebutted/carry_forward/wont_fix` schema to SCHEMA.md's canonical
-  `by_source / by_severity / by_bucket` flat structure.
-
-  Two findings are PR-level review-summary comments, not actionable
-  findings: cr-9 (summary "Actionable comments posted: 8") and cr-11
-  (summary "Actionable comments posted: 1"). Triage will likely
-  classify these as wont-fix (not actionable; they're CR's own
-  metadata-summary line items).
-
-  Recommendation count check vs brief §4 last bullet ("if parser finds
-  fewer than 9 actionable CR findings: emit warning"): parser found 11
-  (9 actionable + 2 summary-line non-actionable). Not a "fewer than 9"
-  fail — but the 2 summary-line items inflate the actionable count.
+    rebut: 1
+    carry-forward: 1
+    done: 1
+    wont-fix: 8
+notes: "## Advisor post-condition notes (5th BM false-success occurrence)\n\nBM Junior\
+  \ #408 ingested 11 CR findings cleanly but violated brief §4\nconstraint: every\
+  \ finding was set to `bucket: fix-in-pr` instead of\nleft blank as `bucket: \"\"\
+  `. Brief §4 explicit: \"do NOT bucket — triage\nis the next, separate verb; bucketing\
+  \ here is a process breach.\"\n\nAdvisor blanked all 11 buckets to `\"\"` post-merge\
+  \ so triage gate is\nunprejudiced. Pattern occurrence #5 per\n`feedback_bm_false_success_advisor_post_condition_catch.md`\
+  \ (prior 4:\n#322 bm-merge, #392 bm-poll-cr, #394 bm-triage, #404 bm-pr). Auto-\n\
+  detect signal here: every finding having identical bucket value =\ndiff-vs-brief-§4-constraint\
+  \ mismatch caught by post-merge sanitisation.\n\nCounter block also re-shaped from\
+  \ BM's invented `per-severity → open/\ndone/rebutted/carry_forward/wont_fix` schema\
+  \ to SCHEMA.md's canonical\n`by_source / by_severity / by_bucket` flat structure.\n\
+  \nTwo findings are PR-level review-summary comments, not actionable\nfindings: cr-9\
+  \ (summary \"Actionable comments posted: 8\") and cr-11\n(summary \"Actionable comments\
+  \ posted: 1\"). Triage will likely\nclassify these as wont-fix (not actionable;\
+  \ they're CR's own\nmetadata-summary line items).\n\nRecommendation count check\
+  \ vs brief §4 last bullet (\"if parser finds\nfewer than 9 actionable CR findings:\
+  \ emit warning\"): parser found 11\n(9 actionable + 2 summary-line non-actionable).\
+  \ Not a \"fewer than 9\"\nfail — but the 2 summary-line items inflate the actionable\
+  \ count.\n\n\n  ## Advisor triage notes (post-merge, user gate 3 approved 2026-05-22)\n\
+  \n  Triage buckets per advisor draft + user approval:\n  - cr-2 (major): carry-forward\
+  \ -> existing issue #142 (DQ schema-v3 approved_*\n    already ships on gov-v0 via\
+  \ v1-dq-schema-r1; policy decision deferred).\n  - cr-1 (low): rebut (DQ v2/v3 forward-only\
+  \ rule; narrative drift acceptable).\n  - cr-3..cr-8 (6x low markdownlint on advisor\
+  \ meta-docs): wont-fix (PR #141\n    precedent + feedback_severity_labels_dont_imply_semantic.md).\n\
+  \  - cr-9, cr-11 (2x nit): wont-fix (CR PR-level summary lines, non-actionable\n\
+  \    metadata BM incorrectly ingested as findings).\n  - cr-10 (low): done (BM #408\
+  \ corrected opened_at during ingest; verified at\n    e2bab2423 yaml line 7: opened_at\
+  \ = 2026-05-21T23:29:31Z).\n\n  Net triage: 0 fix-in-pr, 1 rebut, 1 carry-forward,\
+  \ 1 done, 8 wont-fix.\n  Zero code fixes needed pre-merge. Recommendation: approve\
+  \ PR #144 for merge\n  after CR-comment notification.\n"
