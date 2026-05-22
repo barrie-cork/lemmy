@@ -1,26 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-22T20:30:00Z",
-      "phase": "v1-federation-inbound-e",
-      "question": "v1-federation-inbound-e Task 1 concurrency model: pg_advisory_xact_lock per (peer_domain, table_name) (planner-recommended) vs SELECT FOR UPDATE SKIP LOCKED vs atomic-SQL-with-RETURNING — proceed with planner-recommended pg_advisory_xact_lock?",
-      "options": [
-        "pg_advisory_xact_lock per (peer_domain, table_name) — chosen by planner",
-        "SELECT FOR UPDATE SKIP LOCKED",
-        "atomic-SQL-with-RETURNING (multi-CTE)"
-      ],
-      "context": "Per fed-in-d retro Mandatory carry-forward + the bootstrap doc, the TOCTOU fix in evict_oldest_unreviewed_if_needed needs an explicit concurrency model gate-1 decision. The planner recommends pg_advisory_xact_lock keyed on (peer_domain, table_name) per plan §4.1 + §4.5 — already-wired Brehon pattern (reputation_snapshot::acquire_advisory_xact_lock at line 824), serialises the COUNT-DELETE-INSERT-LOG critical section, lock released on tx commit/rollback. SKIP LOCKED rejected because it doesn't serialise the COUNT-vs-INSERT-new race (Race B unfixed). atomic-SQL-with-RETURNING rejected because the inline COUNT subquery is racey under READ COMMITTED. See plan §4.5 + §10.1 + §18 for full trade-off. Advisor at User Gate 1 (plan approval) validates the planner pick or names an alternative.",
-      "answer": "Planner recommends pg_advisory_xact_lock keyed on (peer_domain, table_name) per plan §4.1. Pending advisor validation at User Gate 1.",
-      "answered_by": "planner",
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "bcdf6ecb126c-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3161,6 +3141,25 @@
       "approved_by": null,
       "approved_at": null,
       "id": "bcdf6ecb126c-002"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-22T20:30:00Z",
+      "phase": "v1-federation-inbound-e",
+      "question": "v1-federation-inbound-e Task 1 concurrency model: pg_advisory_xact_lock per (peer_domain, table_name) (planner-recommended) vs SELECT FOR UPDATE SKIP LOCKED vs atomic-SQL-with-RETURNING — proceed with planner-recommended pg_advisory_xact_lock?",
+      "options": [
+        "pg_advisory_xact_lock per (peer_domain, table_name) — chosen by planner",
+        "SELECT FOR UPDATE SKIP LOCKED",
+        "atomic-SQL-with-RETURNING (multi-CTE)"
+      ],
+      "context": "Per fed-in-d retro Mandatory carry-forward + the bootstrap doc, the TOCTOU fix in evict_oldest_unreviewed_if_needed needs an explicit concurrency model gate-1 decision. The planner recommends pg_advisory_xact_lock keyed on (peer_domain, table_name) per plan §4.1 + §4.5 — already-wired Brehon pattern (reputation_snapshot::acquire_advisory_xact_lock at line 824), serialises the COUNT-DELETE-INSERT-LOG critical section, lock released on tx commit/rollback. SKIP LOCKED rejected because it doesn't serialise the COUNT-vs-INSERT-new race (Race B unfixed). atomic-SQL-with-RETURNING rejected because the inline COUNT subquery is racey under READ COMMITTED. See plan §4.5 + §10.1 + §18 for full trade-off. Advisor at User Gate 1 (plan approval) validates the planner pick or names an alternative.",
+      "answer": "pg_advisory_xact_lock per (peer_domain, table_name) — approved by user 2026-05-22. Plan §4.1/§4.5 approach confirmed. Race B (over-cap) correctly identified by planner — atomic-SQL-with-RETURNING does not fix Race B under READ COMMITTED because eviction decision and caller INSERT are separate transactions. pg_advisory_xact_lock serialises entire COUNT+DELETE+INSERT+LOG critical section in one consolidated transaction. Already-wired Brehon pattern (reputation_snapshot.rs:821-848). Option A (clarify DQ a3d0e9941441-009) was incorrect — advisor missed Race B. (per user 2026-05-22)",
+      "answered_by": "user",
+      "resolved_at": "2026-05-22T21:30:00Z",
+      "approved_by": "user",
+      "approved_at": "2026-05-22T21:30:00Z",
+      "id": "bcdf6ecb126c-001"
     }
   ]
 }
