@@ -1,0 +1,12 @@
+{
+  "from": "advisor",
+  "kind": "blocker",
+  "timestamp": "2026-05-23T00:00:00Z",
+  "question": "Task 1 acquire_evict_lock binds '{peer_domain}\\x00{table_name}' as Postgres TEXT to pg_advisory_xact_lock(hashtextextended($1,0)). Postgres TEXT rejects 0x00 (UTF-8 invariant). Every receive_remote_* path now fails at runtime with: 'invalid byte sequence for encoding UTF8: 0x00' at inbox.rs:663. Caught by Task 2 e2e (storage_cap_holds_under_concurrent_receivers) but applies to ALL inbound governance activities. How should Task 1 be remediated?",
+  "options": [
+    "amend-in-place: 1-char separator swap \\x00 -> ':' (or '|' or '/'); land as task 1 amendment commit on phase branch; re-run Task 2 e2e",
+    "revert-and-replan: revert 6961a915e + 2ca65904f from phase branch; planner re-authors Task 1 with separator constraint encoded in §13 IMPLEMENT spec; re-dispatch impl",
+    "roll-forward-with-new-task: keep Task 1 commits; insert new Task 1.5 'fix advisory-lock key encoding' between current Task 1 and Task 2; impl-task brief authored by advisor; Task 2 re-dispatched after 1.5 ships"
+  ],
+  "context": "Defect site: crates/apub/activities/src/governance/inbox.rs:662 — let key_input = format!(\"{peer_domain}\\x00{table_name}\"); diesel::sql_query(SELECT pg_advisory_xact_lock(hashtextextended($1,0))).bind::<Text,_>(key_input).execute(conn).await? — line 663 is the .execute() call that Postgres rejects. Detection: Task 2 e2e log .claude/PRPs/debug/v1-federation-inbound-e-task2-targeted-e2e.log line 15. Severity: Task 1 effectively non-functional (acquire_evict_lock fires on every receive path); cargo-check + clippy + --no-run all passed (no Rust compile/lint error — runtime PG invariant). Validation gap: pre-Shape-G validate-pending-laptop only ran cargo-check + clippy on Task 1; targeted runtime exercise of acquire_evict_lock would have caught this. Task 2 e2e DQ 364754a7bcbd-001 (validate-pending-laptop) is the discovering evidence — currently pending result; advisor will mutate to fail with log_slice once this blocker is resolved. Lesson candidate: bind a Postgres TEXT param ALWAYS validate null-byte-free; for advisory-lock keys prefer hashing-friendly separators (':' '|' '/'). User decision: option 3 ('treat as Task 1 regression, file blocker DQ, halt phase pending re-plan')."
+}

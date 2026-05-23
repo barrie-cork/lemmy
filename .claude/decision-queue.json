@@ -3160,6 +3160,75 @@
       "approved_by": "user",
       "approved_at": "2026-05-22T21:30:00Z",
       "id": "bcdf6ecb126c-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Task 1 cargo validation: cargo check + clippy against worker branch 6961a915e",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "feat(fed-in-e): serialise per-peer storage-cap eviction with pg_advisory_xact_lock (task 1) — commit 6961a915e on branch junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-federation-inbound-e-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-e-task1-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-e-task-1-see-claude-prps-briefs-v1-federation-inbound-e-impl-1-md-422",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: CHECK_EXIT_0. cargo clippy --workspace --features full --no-deps -D warnings: CLIPPY_EXIT_0. Both commands passed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-22T22:32:39Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "7f504f757815-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-05-23T00:00:00Z",
+      "question": "Task 1 acquire_evict_lock binds '{peer_domain}\\x00{table_name}' as Postgres TEXT to pg_advisory_xact_lock(hashtextextended($1,0)). Postgres TEXT rejects 0x00 (UTF-8 invariant). Every receive_remote_* path now fails at runtime with: 'invalid byte sequence for encoding UTF8: 0x00' at inbox.rs:663. Caught by Task 2 e2e (storage_cap_holds_under_concurrent_receivers) but applies to ALL inbound governance activities. How should Task 1 be remediated?",
+      "options": [
+        "amend-in-place: 1-char separator swap \\x00 -> ':' (or '|' or '/'); land as task 1 amendment commit on phase branch; re-run Task 2 e2e",
+        "revert-and-replan: revert 6961a915e + 2ca65904f from phase branch; planner re-authors Task 1 with separator constraint encoded in §13 IMPLEMENT spec; re-dispatch impl",
+        "roll-forward-with-new-task: keep Task 1 commits; insert new Task 1.5 'fix advisory-lock key encoding' between current Task 1 and Task 2; impl-task brief authored by advisor; Task 2 re-dispatched after 1.5 ships"
+      ],
+      "context": "Defect site: crates/apub/activities/src/governance/inbox.rs:662 — let key_input = format!(\"{peer_domain}\\x00{table_name}\"); diesel::sql_query(SELECT pg_advisory_xact_lock(hashtextextended($1,0))).bind::<Text,_>(key_input).execute(conn).await? — line 663 is the .execute() call that Postgres rejects. Detection: Task 2 e2e log .claude/PRPs/debug/v1-federation-inbound-e-task2-targeted-e2e.log line 15. Severity: Task 1 effectively non-functional (acquire_evict_lock fires on every receive path); cargo-check + clippy + --no-run all passed (no Rust compile/lint error — runtime PG invariant). Validation gap: pre-Shape-G validate-pending-laptop only ran cargo-check + clippy on Task 1; targeted runtime exercise of acquire_evict_lock would have caught this. Task 2 e2e DQ 364754a7bcbd-001 (validate-pending-laptop) is the discovering evidence — currently pending result; advisor will mutate to fail with log_slice once this blocker is resolved. Lesson candidate: bind a Postgres TEXT param ALWAYS validate null-byte-free; for advisory-lock keys prefer hashing-friendly separators (':' '|' '/'). User decision: option 3 ('treat as Task 1 regression, file blocker DQ, halt phase pending re-plan').",
+      "id": "527406f2cdee-001",
+      "answer": "amend-in-place: 1-char separator swap \\x00 -> ':' at crates/apub/activities/src/governance/inbox.rs:662. Lands as Task 1 amendment commit on phase branch. Re-run Task 2 e2e after amendment.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-23T06:47:40Z"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "Task 2 cargo validation: clippy + e2e compile + targeted e2e against worker branch 85ab181fe",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "test(fed-in-e): concurrent receivers respect storage cap (task 2) — commit 85ab181fe. Pre-push cargo check skipped on daemon (lemmy_email build script fails due to missing translations/backend/ in worktree — pre-existing env gap). Laptop advisor runs all §15 commands verbatim.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-federation-inbound-e-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-federation-inbound-e-task2-test-norun.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- v1_federation_inbound_e_fixtures::storage_cap_holds_under_concurrent_receivers > .claude/PRPs/debug/v1-federation-inbound-e-task2-targeted-e2e.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-federation-inbound-e-task-2-see-claude-prps-briefs-v1-federation-inbound-e-impl-2-md-424",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass: cargo-clippy (CLIPPY_EXIT_0, 2m 17s), cargo-test --no-run (NORUN_EXIT_0, 4m 13s), targeted e2e v1_federation_inbound_e_fixtures::storage_cap_holds_under_concurrent_receivers (E2E_EXIT_0, 50.69s after Task 1 amendment c31add660). Initial e2e run on Task 1 unamended failed at runtime — caught the \\x00-in-TEXT bug at acquire_evict_lock (DQ 527406f2cdee-001 user-resolved option-a). Re-run against amended phase tip c5cea890a passed. Race A (drop_log_count==8) and Race B (final_count==5) assertions both held.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T06:55:06Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "364754a7bcbd-001"
     }
   ]
 }
