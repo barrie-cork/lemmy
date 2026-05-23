@@ -12,18 +12,18 @@ purpose: Bootstrap the v1-RT-r2 advisor session. Read the RESUME block first; it
 
 **You are the advisor for Brehon v1-RT-r2.** The Brehon advisor runs inside the brehon-fork checkout — CWD `C:/Users/barri/Developer/brehon-fork` for governance-v0 meta-work, or `C:/Users/barri/Developer/brehon-fork-rt-r2` once `bm-cut` creates the lane worktree (per `.claude/rules/multi-lane-worktree.md`). There is no homeserver session.
 
-**Parallel lane active:** `v1-ship-2` is running concurrently in worktree `brehon-fork-ship-2` (PR #147 open). Multi-lane discipline applies: both lanes share the canonical PMD (`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`) but have separate `.claude/decision-queue.json` files. Do NOT mutate ship-2's DQ entries from the RT-r2 session.
+**ship-2 closed:** `v1-ship-2` shipped (PR #147 merged 2026-05-23T10:01:00Z, merge SHA `ac37a125dfc9f0c38dd5d9355ec25bee58c08bc7`). The `brehon-fork-ship-2` worktree is still alive but unused — clean it up: `git -C C:/Users/barri/Developer/brehon-fork worktree remove ../brehon-fork-ship-2 && git -C C:/Users/barri/Developer/brehon-fork branch -d phase-v1-ship-2`. RT-r2 is now the only active lane.
 
 ## Session-start ritual (do these first)
 
 1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane; verify ship-2 worktree is separate.
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `ece760ae6` (see §"Git state at handoff"); if drifted, log the delta.
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `556b94922` (see §"Git state at handoff"); if drifted, log the delta.
 3. Read `.claude/decision-queue.json` for any pending entries (0 at handoff — see §"Decision-queue snapshot").
 4. `memory_search_hybrid(query: "reputation tuning decay chained halving", limit: 5)` — load relevant lessons before authoring the planning brief.
 
 ## Next concrete action
 
-Author `.claude/PRPs/briefs/v1-RT-r2-planning-1.md` (scope: per-dimension chained-halving decay per PRD §11 phase 2). Run `/brehon-clarify v1-RT-r2-planning-1.md`. Queue planning Junior once all clarify-DQs resolved.
+Planning brief already authored (`f420d9cc2`) and clarify DQs `a3d0e9941441-009/010` answered (`57b1ade60`). Verify those DQs are fully resolved in `.claude/decision-queue.json`, then queue the planning Junior (`[role:planning] v1-RT-r2 — see .claude/PRPs/briefs/v1-RT-r2-planning-1.md`).
 
 ---
 
@@ -76,6 +76,13 @@ v1-RT-r2 ships the per-dimension chained-halving decay logic for the reputation 
 - **DQ attribution:** `chore|docs(advisor|decision-queue):` subject pattern for any advisor DQ write.
 - **Multi-lane PMD:** canonical `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db` — never relative path in `.mcp.json`.
 
+## 3b. Additional carry-forward from v1-ship-2 (closed same day as this bootstrap update)
+
+**Advisor-side:**
+- **DQ rebase conflict recipe:** "take HEAD" strategy correctly resolves field-update conflicts on existing entries but silently drops new array element additions. Correct approach: take-HEAD for field updates on existing entries + union (take-BOTH) for new entries not present in HEAD. See `v1-ship-2-retro.md` §3 action 1. Will be documented as `feedback_dq_rebase_conflict_union_new_entries.md`.
+- **Force-push after autonomous rebase requires explicit user authorization.** Auto-mode classifier correctly blocks it. Do not batch a rebase + force-push as a single autonomous action — obtain explicit "I authorise" before the push.
+- **L14 runlog COMPLETE post-merge** held cleanly this phase (no self-conflict). This is the validated form.
+
 ## 6. What changed from v1-federation-inbound-e's rule set
 
 - **Domain shift:** federation/concurrency → reputation math. No AP protocol, no advisory-lock, no null-byte trap. Domain-specific watchpoints above (§4) replace fed-in-e's TOCTOU/race watchpoints.
@@ -103,16 +110,16 @@ Run `/brehon-phase-transition v1-RT-r2 v1-RT-r3`. This skill will: close `workfl
 
 ## Git state at handoff (captured literally — do not paraphrase)
 
-- governance-v0 HEAD: `ece760ae6` (captured 2026-05-23) — `chore(advisor): log bm-merge PR #148 v1-federation-inbound-e — 183d2753f`
+- governance-v0 HEAD: `556b94922` (captured 2026-05-23) — `docs(retro): v1-ship-2 — 4 governance e2e tests (appeal, modlog, reputation, endorsement)`
 - Phase branch HEAD: `phase-v1-RT-r2` not yet created (branch cut at bm-cut)
 - Recent governance-v0 commits:
 
   ```
-  ece760ae6 chore(advisor): log bm-merge PR #148 v1-federation-inbound-e — 183d2753f
-  183d2753f Merge pull request #148 from barrie-cork/phase-v1-federation-inbound-e
-  66688fced chore(advisor): author bm-merge brief for v1-federation-inbound-e
-  12afb7fbc chore(bm): PR #148 opened for v1-federation-inbound-e
-  004872cf5 chore(advisor): author bm-pr brief for v1-federation-inbound-e
+  556b94922 docs(retro): v1-ship-2 — 4 governance e2e tests (appeal, modlog, reputation, endorsement)
+  57b1ade60 chore(advisor): clarify v1-RT-r2-planning-1 — see DQ a3d0e9941441-009/010
+  c709a5258 chore(bm): merge PR #147 complete — v1-ship-2
+  f420d9cc2 chore(advisor): author planning brief for v1-RT-r2 — chained-halving decay
+  ac37a125d Merge pull request #147 from barrie-cork/phase-v1-ship-2
   ```
 
 ## Decision-queue snapshot at handoff
@@ -120,6 +127,7 @@ Run `/brehon-phase-transition v1-RT-r2 v1-RT-r3`. This skill will: close `workfl
 ```decision-queue-snapshot
 (empty at handoff — 0 pending entries)
 Note: DQ #229 (Shape G re-enable) is in resolved[], dated reminder for 2026-06-01.
+Note: ship-2 clarify DQs a3d0e9941441-007/008/009/010 are in resolved[]; all answered by advisor.
 ```
 
 ## Stop-and-ask tripwires
