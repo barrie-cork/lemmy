@@ -15448,6 +15448,390 @@ mod v1_federation_inbound_a_fixtures {
   }
 }
 
+mod v1_ship_2_fixtures {
+  use super::*;
+  use actix_web::{App, test, web::Data};
+  use chrono::{Duration, Utc};
+  use diesel::ExpressionMethods;
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_common::governance::{
+    CreateEndorsementResponse, GetMyReputationResponse, RequestAppealResponse,
+  };
+  use lemmy_api_utils::{claims::Claims, context::LemmyContext};
+  use lemmy_db_schema::{
+    newtypes::LocalUserId,
+    source::{
+      instance::Instance,
+      governance::{
+        moderation_case::ModerationCaseInsertForm,
+        public_case_log::PublicCaseLogInsertForm,
+      },
+    },
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_db_views_governance_modlog::GovernanceModlogView;
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit};
+
+  async fn mint_jwt(ctx: &LemmyContext, local_user_id: LocalUserId) -> LemmyResult<String> {
+    let req = test::TestRequest::default().to_http_request();
+    let token = Claims::generate(local_user_id, None, req, ctx).await?;
+    Ok(token.into_inner())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn request_appeal_happy_path_and_auth_failure() -> LemmyResult<()> {
+    use lemmy_db_schema::newtypes::ModerationCaseId;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+    let (target_pid, target_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_appeal_target", false).await?;
+
+    let case_id: ModerationCaseId = {
+      let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+      let decided_form = ModerationCaseInsertForm {
+        community_id: None,
+        creator_id: None,
+        target_type: CaseTargetType::RemoteInstance,
+        target_post_id: None,
+        target_comment_id: None,
+        target_person_id: Some(target_pid),
+        target_community_id: None,
+        target_remote_url: None,
+        reason_code: "v1_ship_2_appeal_probe".to_string(),
+        severity: CaseSeverity::Low,
+        status: CaseStatus::Decided,
+        threshold_score: 1,
+        ..Default::default()
+      };
+      let id: ModerationCaseId = diesel::insert_into(moderation_case::table)
+        .values(&decided_form)
+        .returning(moderation_case::id)
+        .get_result(&mut async_conn)
+        .await?;
+      let future = Utc::now() + Duration::days(7);
+      diesel::update(moderation_case::table)
+        .filter(moderation_case::id.eq(id))
+        .set((
+          moderation_case::appeal_window_expires_at.eq(Some(future)),
+          moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+        ))
+        .execute(&mut async_conn)
+        .await?;
+      id
+    };
+
+    let target_jwt = mint_jwt(&context, target_lu_view.local_user.id).await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/appeal")
+      .insert_header(("authorization", format!("Bearer {target_jwt}")))
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(
+        r#"{{"case_id":{},"reason":"v1_ship_2 appeal probe"}}"#,
+        case_id.0
+      ))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "appeal expected 200 for authed target on Decided case"
+    );
+    let body: RequestAppealResponse = test::read_body_json(resp).await;
+    assert!(body.appeal_id.0 > 0, "appeal_id must be positive");
+    assert_eq!(body.case_id, case_id, "case_id must match inserted case");
+
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/appeal")
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(
+        r#"{{"case_id":{},"reason":"v1_ship_2 appeal probe"}}"#,
+        case_id.0
+      ))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      401,
+      "appeal expected 401 for unauthenticated request"
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn list_governance_modlog_returns_seeded_entry() -> LemmyResult<()> {
+    use lemmy_db_schema::newtypes::ModerationCaseId;
+    use lemmy_db_schema_file::schema::public_case_log;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let case_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some("https://example.invalid/modlog-test".to_string()),
+      reason_code: "v1_ship_2_modlog_probe".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Decided,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let case_id: ModerationCaseId = diesel::insert_into(moderation_case::table)
+      .values(&case_form)
+      .returning(moderation_case::id)
+      .get_result(&mut async_conn)
+      .await?;
+
+    let log_form = PublicCaseLogInsertForm {
+      case_id,
+      community_id: None,
+      summary: "v1_ship_2 modlog probe — no identifiers".to_string(),
+      rationale_redacted: None,
+    };
+    diesel::insert_into(public_case_log::table)
+      .values(&log_form)
+      .execute(&mut async_conn)
+      .await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/modlog")
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "modlog expected 200 without auth"
+    );
+    let body: Vec<GovernanceModlogView> = test::read_body_json(resp).await;
+    assert_eq!(body.len(), 1, "expected exactly one modlog entry");
+    assert_eq!(
+      body[0].case_id,
+      case_id.0,
+      "case_id must match inserted case"
+    );
+    assert_eq!(
+      body[0].summary,
+      "v1_ship_2 modlog probe — no identifiers",
+      "summary must round-trip unchanged"
+    );
+    assert!(!body[0].appealed, "newly seeded case has no appeal");
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn get_my_reputation_happy_path_and_no_auth() -> LemmyResult<()> {
+    let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+    let (_user_pid, user_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_rep_user", false).await?;
+    let user_jwt = mint_jwt(&context, user_lu_view.local_user.id).await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    // Happy path: authed GET /reputation/me — load_or_compute_snapshot writes a
+    // default snapshot row for a first-time caller; fresh user has no sanction
+    // rows so active_sanctions == 0. Mirror of sweep test e2e.rs:4326-4337.
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/reputation/me")
+      .insert_header(("authorization", format!("Bearer {user_jwt}")))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "reputation/me expected 200 for authed user"
+    );
+    let body: GetMyReputationResponse = test::read_body_json(resp).await;
+    assert_eq!(
+      body.view.active_sanctions,
+      0,
+      "fresh user must have zero active sanctions"
+    );
+
+    // Failure mode: GET /reputation/me without Authorization header → 401.
+    // LocalUserView extractor rejects missing JWT before the handler runs.
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/reputation/me")
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      401,
+      "reputation/me expected 401 for unauthenticated request"
+    );
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn create_endorsement_happy_path_and_self_endorse_rejects() -> LemmyResult<()> {
+    use lemmy_db_schema::source::governance::governance_config::GovernanceConfigInsertForm;
+    use lemmy_db_schema_file::schema::governance_config;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+    let (sponsor_pid, sponsor_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_endorse_sponsor", false).await?;
+    let (sponsee_pid, _sponsee_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_endorse_sponsee", false).await?;
+
+    // Insert "open" strategy row — fetch_value_at_scope uses ORDER BY valid_from DESC
+    // LIMIT 1, so this row (DEFAULT now()) wins over the seed row (2026-04-18T00:00:00Z),
+    // bypassing enforce_age_gate before the self-endorse check at line 178.
+    {
+      let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+      diesel::insert_into(governance_config::table)
+        .values(&GovernanceConfigInsertForm {
+          scope: "instance".to_string(),
+          key: "onboarding.sponsor_gate_strategy".to_string(),
+          value_type: "text".to_string(),
+          value_text: Some("open".to_string()),
+          ..Default::default()
+        })
+        .execute(&mut async_conn)
+        .await?;
+    }
+
+    let sponsor_jwt = mint_jwt(&context, sponsor_lu_view.local_user.id).await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    // Happy path: sponsor endorses sponsee (distinct users, "open" gate) → 200.
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/endorsement")
+      .insert_header(("authorization", format!("Bearer {sponsor_jwt}")))
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(r#"{{"person_id":{}}}"#, sponsee_pid.0))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "endorsement expected 200 for distinct sponsor/sponsee"
+    );
+    let body: CreateEndorsementResponse = test::read_body_json(resp).await;
+    assert!(body.endorsement_id.0 > 0, "endorsement_id must be positive");
+    assert!(
+      body.surety_created,
+      "surety_created must be true for fresh sponsee with no active sureties"
+    );
+
+    // Failure mode: self-endorsement → 404 (per DQ a3d0e9941441-007).
+    // Self-endorse check (create_endorsement.rs:178) fires before the cooldown
+    // check (line 195), so the happy-path endorsement above does not interfere.
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/endorsement")
+      .insert_header(("authorization", format!("Bearer {sponsor_jwt}")))
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(r#"{{"person_id":{}}}"#, sponsor_pid.0))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      404,
+      "self-endorsement expected 404 (LemmyErrorType::NotFound at create_endorsement.rs:179)"
+    );
+
+    Ok(())
+  }
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn agpl_source_disclosure_surface_returns_notice() -> lemmy_utils::error::LemmyResult<()> {
   use activitypub_federation::config::{FederationConfig, FederationMiddleware};
