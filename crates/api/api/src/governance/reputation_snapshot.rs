@@ -44,6 +44,15 @@
 //!   into many `capability_changed` entries on the next tick; the
 //!   `admin-config-write.sh` wrapper (decision-queue #13; deferred to
 //!   5c sibling docs) is the v0 story for attributing the cascade root.
+//!
+//! ## v1 feature flag (RT-r2)
+//!
+//! `feature.reputation_v1_decay_enabled` (governance_config, default `false`)
+//! gates the per-(dimension, direction) chained-halving decay + per-dimension
+//! bounds clamp introduced in v1-RT-r2. When `false`, the v0 single-halving
+//! against `decay.positive_half_life_days` is preserved verbatim and no clamp
+//! applies. The 16 per-(dim, direction) + bounds keys are read only when the
+//! flag is `true`; otherwise the legacy single key is read.
 
 use crate::governance::{
   actor_pseudonym_helper,
@@ -234,16 +243,24 @@ pub async fn recompute_snapshot(
   //    considers every active sanction.
   let (published_at, active_sanctions) = load_person_context(conn, person_id, community_id).await?;
 
-  // 4. Read the config thresholds and decay half-life via the cache.
-  //    NOTE: all reads flow through a single ConfigCache so repeated
-  //    lookups in one recompute don't hit the DB multiple times.
-  let decay_half_life_days = config::get_int(
+  // 4. Read the config thresholds, feature flag, decay half-life, and bounds
+  //    via the cache. NOTE: all reads flow through a single ConfigCache so
+  //    repeated lookups in one recompute don't hit the DB multiple times.
+  let v1_decay_enabled = config::get_bool(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "feature.reputation_v1_decay_enabled",
+  )
+  .await?;
+  let legacy_half_life_days = config::get_int(
     cache,
     &mut (&mut *conn).into(),
     Scope::Instance,
     "decay.positive_half_life_days",
   )
   .await?;
+  let legacy_half_life = Duration::days(legacy_half_life_days);
   let threshold_jury_reliability = config::get_int(
     cache,
     &mut (&mut *conn).into(),
@@ -274,23 +291,61 @@ pub async fn recompute_snapshot(
   .await?;
 
   // 5. Sum deltas by dimension, applying decay only when expires_at is
-  //    None (Watch 8 — double-decay guard). Founders keep their full delta
-  //    until their cliff fires; organic events get halved past half-life.
+  //    None (Watch 8 — double-decay guard). The per-event half-life is
+  //    resolved per-(dimension, direction) when v1 decay is enabled, or
+  //    the legacy single half-life when disabled.
   let now = Utc::now();
-  let half_life = Duration::days(decay_half_life_days);
   let mut reporting_accuracy = 0_i32;
   let mut jury_reliability = 0_i32;
   let mut participation_consistency = 0_i32;
   let mut endorsement_strength = 0_i32;
 
   for event in &events {
-    let applied_delta = compute_applied_delta(event, now, half_life, false);
+    let half_life = if v1_decay_enabled {
+      resolve_half_life_for_event(cache, conn, event).await?
+    } else {
+      legacy_half_life
+    };
+    let applied_delta = compute_applied_delta(event, now, half_life, v1_decay_enabled);
     match event.dimension {
       ReputationDimension::ReportingAccuracy => reporting_accuracy += applied_delta,
       ReputationDimension::JuryReliability => jury_reliability += applied_delta,
       ReputationDimension::ParticipationConsistency => participation_consistency += applied_delta,
       ReputationDimension::EndorsementStrength => endorsement_strength += applied_delta,
     }
+  }
+
+  // 5a. (r2) Bounds clamping — only when v1 decay is enabled. v0 has no
+  //     bounds and must not change behaviour when the flag is false.
+  if v1_decay_enabled {
+    reporting_accuracy = clamp_dimension_i32(
+      reporting_accuracy,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.reporting_accuracy.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.reporting_accuracy.ceiling").await?,
+    );
+    jury_reliability = clamp_dimension_i32(
+      jury_reliability,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.jury_reliability.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.jury_reliability.ceiling").await?,
+    );
+    participation_consistency = clamp_dimension_i32(
+      participation_consistency,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.participation_consistency.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.participation_consistency.ceiling").await?,
+    );
+    endorsement_strength = clamp_dimension_i32(
+      endorsement_strength,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.endorsement_strength.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.endorsement_strength.ceiling").await?,
+    );
   }
 
   // 6. Compute the three capability booleans.
@@ -874,6 +929,51 @@ async fn acquire_advisory_xact_lock(
   Ok(())
 }
 
+/// Resolve the half-life for a given event under v1 decay. Reads the
+/// `decay.<dim>.<positive|negative>_half_life_days` key matching the
+/// event's `(dimension, direction)` from the ConfigCache.
+///
+/// Direction:
+/// * `delta >= 0` -> `positive` (organic positive events; the only path
+///   that actually invokes decay because the penalty guard in
+///   `compute_applied_delta` returns early for `delta <= 0`)
+/// * `delta < 0` -> `negative` (read for future-completeness; the negative
+///   half-life is wired but never consumed in r2 because penalties
+///   short-circuit before the half-life is consulted)
+async fn resolve_half_life_for_event(
+  cache: &mut ConfigCache,
+  conn: &mut AsyncPgConnection,
+  event: &ReputationEvent,
+) -> LemmyResult<Duration> {
+  let dim_segment = match event.dimension {
+    ReputationDimension::ReportingAccuracy => "reporting_accuracy",
+    ReputationDimension::JuryReliability => "jury_reliability",
+    ReputationDimension::ParticipationConsistency => "participation_consistency",
+    ReputationDimension::EndorsementStrength => "endorsement_strength",
+  };
+  let direction_segment = if event.delta >= 0 { "positive" } else { "negative" };
+  let key = format!("decay.{dim_segment}.{direction_segment}_half_life_days");
+  let days = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    &key,
+  )
+  .await?;
+  Ok(Duration::days(days))
+}
+
+/// Clamp a per-dimension i32 sum to the (floor, ceiling) bounds read as
+/// i64 from governance_config. The clamp is performed on i64 to avoid
+/// any chance of the sum overflowing i32 before the clamp narrows it.
+fn clamp_dimension_i32(value: i32, floor: i64, ceiling: i64) -> i32 {
+  let widened = i64::from(value);
+  let clamped = widened.clamp(floor, ceiling);
+  i32::try_from(clamped).unwrap_or({
+    if clamped > 0 { i32::MAX } else { i32::MIN }
+  })
+}
+
 // -- Tests ------------------------------------------------------------------
 
 #[cfg(test)]
@@ -982,5 +1082,103 @@ mod tests {
       ..old_organic.clone()
     };
     assert_eq!(compute_applied_delta(&old_penalty, now, half_life, false), -20);
+  }
+
+  fn make_event(
+    now: DateTime<Utc>,
+    delta: i32,
+    age_days: i64,
+    expires_at: Option<DateTime<Utc>>,
+  ) -> ReputationEvent {
+    ReputationEvent {
+      id: lemmy_db_schema::newtypes::ReputationEventId(0),
+      person_id: PersonId(1),
+      community_id: None,
+      dimension: ReputationDimension::JuryReliability,
+      delta,
+      source_case_id: None,
+      source_report_id: None,
+      reason: "test".to_string(),
+      created_at: now - Duration::days(age_days),
+      expires_at,
+      dedupe_key: None,
+      source_event_type: ReputationEventSourceType::Endorsement,
+    }
+  }
+
+  #[test]
+  fn chained_halving_at_2x_half_life_quarters_delta() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 25);
+  }
+
+  #[test]
+  fn chained_halving_at_3x_half_life_eighths_delta() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 270, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 12);
+  }
+
+  #[test]
+  fn chained_halving_at_age_zero_no_decay() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 0, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 100);
+  }
+
+  #[test]
+  fn chained_halving_negative_delta_skipped() {
+    let now = Utc::now();
+    let event = make_event(now, -20, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), -20);
+  }
+
+  #[test]
+  fn chained_halving_founder_cliff_skipped() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, Some(now + Duration::days(30)));
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 100);
+  }
+
+  #[test]
+  fn v0_arm_at_2x_half_life_single_halving() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, false), 50);
+  }
+
+  #[test]
+  fn chained_halve_helper_saturates_at_very_old_event() {
+    assert_eq!(
+      chained_halve(100, Duration::days(365 * 100), Duration::days(90)),
+      0
+    );
+  }
+
+  #[test]
+  fn clamp_dimension_i32_within_bounds() {
+    assert_eq!(clamp_dimension_i32(50, -100, 100), 50);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_above_ceiling() {
+    assert_eq!(clamp_dimension_i32(250, -100, 100), 100);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_below_floor() {
+    assert_eq!(clamp_dimension_i32(-250, -100, 100), -100);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_negative_below_zero_floor() {
+    assert_eq!(clamp_dimension_i32(-5, 0, 200), 0);
   }
 }
