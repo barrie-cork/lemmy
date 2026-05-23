@@ -2664,6 +2664,11 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
     "single report must not meet threshold"
   );
   let case_id = create_resp.case_id.expect("case_id present");
+  assert_eq!(
+    create_resp.case.case_id,
+    case_id.0,
+    "POST /report response carries the case summary view with matching case_id"
+  );
 
   // -- 8. DB checks after report --------------------------------------
   let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
