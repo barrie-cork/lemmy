@@ -3229,6 +3229,114 @@
       "approved_by": null,
       "approved_at": null,
       "id": "364754a7bcbd-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T23:30:00Z",
+      "question": "validate-pending-laptop for v1-ship-2 Task 1 (scaffold mod + request_appeal test)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-task committed 5384aab07 on junior/role-impl-task-v1-ship-2-task-1-scaffold-mod-request-appeal-test-see-claude-prps-briefs-v1-ship-2-impl-1-md-423; all three local validate gates passed (check exit:0, clippy exit:0, test --no-run exit:0); awaiting laptop advisor cargo validation",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace",
+        "./scripts/brehon/cargo-clippy.sh --workspace -- -D warnings --no-deps",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "branch": "junior/role-impl-task-v1-ship-2-task-1-scaffold-mod-request-appeal-test-see-claude-prps-briefs-v1-ship-2-impl-1-md-423",
+      "phase_task": 1,
+      "answer": "cargo-check exit:0 (1m34s), cargo-clippy exit:0 (2m55s), cargo-test --no-run exit:0 (2m16s) — all three laptop advisor gates passed 2026-05-23",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T23:14:51Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "b48f0a8655b8-001",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a042cc5425d8-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-22T00:00:00Z",
+      "question": "validate-pending-laptop for v1-ship-2 Task 2 (modlog test)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 appended list_governance_modlog_returns_seeded_entry to mod v1_ship_2_fixtures. cargo-check, clippy, test --no-run all pass locally. Awaiting laptop advisor validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "./scripts/brehon/cargo-test.sh --workspace --test e2e --features full list_governance_modlog_returns_seeded_entry"
+      ],
+      "branch": "phase-v1-ship-2",
+      "phase_task": 2,
+      "result": "pass",
+      "answer": "cargo-check exit:0, cargo-clippy exit:0, cargo-test --no-run exit:0 — all three laptop advisor gates passed 2026-05-23",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T06:37:33Z",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-23T00:00:00Z",
+      "question": "validate-pending-laptop for v1-ship-2 Task 3 (reputation test — get_my_reputation_happy_path_and_no_auth)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 appended get_my_reputation_happy_path_and_no_auth to mod v1_ship_2_fixtures in e2e.rs (commit 584fe7f6e). Tests GET /api/v4/governance/reputation/me: happy-path authed (active_sanctions==0 for fresh user) + 401 no-auth failure. cargo-check --workspace --features full fails on EliteDesk worktree due to pre-existing empty translations dir in lemmy_email crate (pre-infra gap, not introduced by this task). Awaiting laptop advisor validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "./scripts/brehon/cargo-test.sh --workspace --test e2e --features full get_my_reputation_happy_path_and_no_auth"
+      ],
+      "branch": "junior/role-impl-task-v1-ship-2-task-3-reputation-test-see-claude-prps-briefs-v1-ship-2-impl-3-md-426",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All three laptop validation gates passed: cargo-check exit 0, cargo-clippy exit 0, cargo-test --no-run exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T06:57:33Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "badd1c624d8d-001"
+    },
+    {
+      "id": "0b975bcb001b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-23T00:00:00Z",
+      "question": "validate-pending-laptop for v1-ship-2 Task 4 (endorsement test — create_endorsement_happy_path_and_self_endorse_rejects)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 appended create_endorsement_happy_path_and_self_endorse_rejects to mod v1_ship_2_fixtures in e2e.rs (commit 2c28b7c2b). Tests POST /api/v4/governance/endorsement: happy-path distinct users (200 + CreateEndorsementResponse) + self-endorse 404 failure. cargo-check --workspace --features full fails on EliteDesk due to pre-existing uninitialized lemmy_email translations submodule (not introduced by this task). Awaiting laptop advisor validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "./scripts/brehon/cargo-test.sh --workspace --test e2e --features full create_endorsement_happy_path_and_self_endorse_rejects"
+      ],
+      "branch": "junior/role-impl-task-v1-ship-2-task-4-endorsement-test-see-claude-prps-briefs-v1-ship-2-impl-4-md-427",
+      "phase_task": 4,
+      "result": "pass",
+      "log_slice": "check: Finished dev profile in 1m 32s EXIT_0 | clippy: Finished dev profile in 3m 41s EXIT_0 | test --no-run: Finished test profile in 5m 34s EXIT_0",
+      "failed_commands": null,
+      "answer": "All 3 gates passed on laptop: cargo-check EXIT_0 (1m32s), cargo-clippy EXIT_0 (3m41s), cargo-test --no-run EXIT_0 (5m34s). 2 unused-import warnings (acceptable). Task 4 endorsement test compiled cleanly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T07:34:07Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
