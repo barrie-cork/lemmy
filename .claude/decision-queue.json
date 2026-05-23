@@ -3371,6 +3371,42 @@
       "resolved_at": "2026-05-23T09:30:30Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "ship3clarify01-001",
+      "kind": "clarify",
+      "phase": "v1-ship-3",
+      "brief": ".claude/PRPs/briefs/v1-ship-3-planning-1.md",
+      "question": "WP-1: Task 1 Postgres image — switch from pgautoupgrade/pgautoupgrade:18-alpine to postgres:16.4 or stay in pgautoupgrade family?",
+      "answer": "Do NOT switch to postgres:16.4. The current image pgautoupgrade/pgautoupgrade:18-alpine is already effectively pinned (specific tag, not :latest). Switching to postgres:16.4 would be a PG18->PG16 downgrade requiring a data volume dump/restore — this triggers the §6 stop-and-ask. The PRD audit intent was to prevent tag drift, which is already satisfied. Task 1 should instead: (a) check if a minor-version tag like pgautoupgrade:18.4-alpine is available and more specific, and (b) document in a comment that the tag is intentional. No family switch. Rationale: brief §6 \"stop if switch requires dump/restore\"; data volume at PG18 cannot be read by PG16 without pg_dumpall/pg_restore.",
+      "from": "advisor",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-23T12:30:00Z",
+      "source": "docker/docker-compose.yml:84 (pgautoupgrade/pgautoupgrade:18-alpine); brief §3 WP-1; PRD §7.3 item 1; config.rs DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR"
+    },
+    {
+      "id": "ship3clarify01-002",
+      "kind": "clarify",
+      "phase": "v1-ship-3",
+      "brief": ".claude/PRPs/briefs/v1-ship-3-planning-1.md",
+      "question": "WP-2: Does GovernanceCaseSummaryView have a read(case_id) helper, and can Task 2 add case: GovernanceCaseSummaryView to CreateGovernanceReportResponse without authoring a new function?",
+      "answer": "No read(case_id)->GovernanceCaseSummaryView helper exists. crates/db_views/governance_case/src/impls.rs has only list-style helpers (list_open_cases_for_community, list_cases_filtered, list_cases_for_person) and read_case_detail (returns GovernanceCaseDetailView, not GovernanceCaseSummaryView). Task 2 MUST author one new function: read_summary_for_case(pool, case_id) in impls.rs, following the same two-round-trip pattern (main query + submitted_counts_by_case). This is exactly 1 new function — within the §6 threshold (>1 triggers escalation). The plan task brief must explicitly include this fn. File: crates/db_views/governance_case/src/impls.rs. Mirror pattern: list_open_cases_for_community (impls.rs:51) but filtered by moderation_case::id.eq(case_id) and returning Option<GovernanceCaseSummaryView> (returns None if case not found, Err on DB error).",
+      "from": "advisor",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-23T12:30:00Z",
+      "source": "crates/db_views/governance_case/src/impls.rs (full read — no read_summary_for_case fn present); brief §3 WP-2; brief §6 stop-if >1 new fn"
+    },
+    {
+      "id": "ship3clarify01-003",
+      "kind": "clarify",
+      "phase": "v1-ship-3",
+      "brief": ".claude/PRPs/briefs/v1-ship-3-planning-1.md",
+      "question": "WP-5: PRD says endorsement_strength: 10 initial for 2-sponsors test. With floor=0 and moderate delta=-50, what does the assertion assert?",
+      "answer": "Assert endorsement_strength == 0 (not -40). Reasoning: DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR = 0 (config.rs:835); DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE = -50 (config.rs:831). Clamped delta = max(-50, floor - current) = max(-50, 0 - 10) = max(-50, -10) = -10. Final value = 10 + (-10) = 0. The plan task must specify: seed sponsors at endorsement_strength=10; use ContentRemoval (moderate severity); assert both sponsors land at endorsement_strength=0 after sanction. Do NOT hardcode -10 as the delta — read it from governance_config key \"liability.endorsement_delta_moderate\" at test runtime, per the pattern in sponsor_liability_with_founder_multiplier. The assertion is: snap.endorsement_strength == 0.",
+      "from": "advisor",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-23T12:30:00Z",
+      "source": "config.rs:831 DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE=-50; config.rs:835 DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR=0; sponsor_liability.rs:348 clamped-delta math; e2e.rs:3773 existing tests use seed 100"
     }
   ]
 }

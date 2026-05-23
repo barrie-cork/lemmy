@@ -13,11 +13,11 @@
 
 Three independent, file-disjoint deliverables bundled to amortize branch/PR overhead:
 
-1. **Postgres image pin** — `docker/docker-compose.yml` currently uses `pgautoupgrade/pgautoupgrade:18-alpine`; PRD calls for pinning to `postgres:16.4`. Planner must verify whether the intended target is a pin within the `pgautoupgrade` family (e.g., `pgautoupgrade:16-alpine`) or a switch to plain `postgres:16.4` — see §3 watchpoint 1.
+1. **Postgres image pin** — `docker/docker-compose.yml:84` uses `pgautoupgrade/pgautoupgrade:18-alpine`. **Do NOT switch to `postgres:16.4`** (DQ ship3clarify01-001): that would be a PG18→PG16 downgrade requiring a data volume dump/restore. The image is already effectively pinned (specific tag, not `:latest`). Task 1 scope: (a) check if a more specific minor-version tag like `pgautoupgrade:18.4-alpine` is available and prefer it; (b) if no minor tag exists, add an inline YAML comment documenting the intentional tag choice. One-line edit (possibly zero if `18-alpine` is the most specific available tag for PG18).
 
-2. **`POST /report` DTO reshape** — `CreateGovernanceReportResponse` currently returns `{ case_id: Option<ModerationCaseId>, threshold_met: bool }` (defined at `crates/api/api_common/src/governance.rs:56`). PRD §7.3 requires adding `case: GovernanceCaseSummaryView` to match the read surface (`ListGovernanceCasesResponse.cases: Vec<GovernanceCaseSummaryView>` at `governance.rs:88`). The handler at `crates/api/api_crud/src/governance/create_report.rs:192` returns the response at line 325. The existing `report_to_modlog_golden_path` e2e test must also be updated to assert against the new field — locate its return assertions before authoring the brief.
+2. **`POST /report` DTO reshape** — `CreateGovernanceReportResponse` currently returns `{ case_id: Option<ModerationCaseId>, threshold_met: bool }` (defined at `crates/api/api_common/src/governance.rs:56`). PRD §7.3 requires adding `case: GovernanceCaseSummaryView` to match the read surface (`ListGovernanceCasesResponse.cases: Vec<GovernanceCaseSummaryView>` at `governance.rs:88`). **Clarified (DQ ship3clarify01-002):** No `read_summary_for_case(case_id)` helper exists in `impls.rs` — Task 2 MUST author one new function: `read_summary_for_case(pool, case_id) -> LemmyResult<Option<GovernanceCaseSummaryView>>` in `crates/db_views/governance_case/src/impls.rs`, following the two-round-trip pattern of `list_open_cases_for_community` (impls.rs:51) but filtered by `moderation_case::id.eq(case_id)`. The handler at `crates/api/api_crud/src/governance/create_report.rs:192` then calls this helper after the insert to populate the response. The existing `report_to_modlog_golden_path` e2e test must be updated to assert against the new field.
 
-3. **`two_sponsors_lose_endorsement_strength_on_sanction` e2e** — named test in `crates/server/tests/e2e.rs`, in a new `mod v1_ship_3_fixtures` appended after the existing `mod v1_federation_inbound_e_fixtures` at line 16513. Asserts the §9 done-criterion: 1 sponsee + 2 sponsors (each with `endorsement_strength: 10`) → full report→jury→vote flow → both sponsors' `endorsement_strength` decremented by the per-severity-tier delta. Substrate: `apply_sponsor_liability` at `crates/api/api/src/governance/sponsor_liability.rs:486`.
+3. **`two_sponsors_lose_endorsement_strength_on_sanction` e2e** — named test in `crates/server/tests/e2e.rs`, in a new `mod v1_ship_3_fixtures` appended after the existing `mod v1_federation_inbound_e_fixtures` at line 16513. Asserts the §9 done-criterion: 1 sponsee + 2 sponsors (each with `endorsement_strength: 10`) → full report→jury→vote flow → both sponsors' `endorsement_strength` reach `0`. **Clarified (DQ ship3clarify01-003):** Use ContentRemoval (moderate severity, `DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE = -50` at `config.rs:831`). Floor = 0 (`DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR` at `config.rs:835`). Clamped delta = max(-50, 0 - 10) = -10. Final assertion: both sponsors' `endorsement_strength == 0`. Read the delta from `governance_config` at test runtime (key `"liability.endorsement_delta_moderate"`) — do NOT hardcode -10. Substrate: `apply_sponsor_liability` at `crates/api/api/src/governance/sponsor_liability.rs:486`.
 
 All three deliverables are confirmed file-disjoint:
 - Item 1: `docker/docker-compose.yml`
@@ -32,7 +32,7 @@ All three deliverables are confirmed file-disjoint:
 
 | File | Anchor | Purpose |
 |---|---|---|
-| `docker/docker-compose.yml:84` | `image: pgautoupgrade/pgautoupgrade:18-alpine` | Task 1 edit target |
+| `docker/docker-compose.yml:84` | `image: pgautoupgrade/pgautoupgrade:18-alpine` | Task 1: check for minor-version tag; add comment if none found |
 | `crates/api/api_common/src/governance.rs:56` | `struct CreateGovernanceReportResponse` | Task 2 DTO to extend |
 | `crates/api/api_common/src/governance.rs:87` | `struct ListGovernanceCasesResponse` | Task 2 mirror target |
 | `crates/db_views/governance_case/src/lib.rs:44` | `struct GovernanceCaseSummaryView` | Task 2 field type to add |
@@ -41,28 +41,24 @@ All three deliverables are confirmed file-disjoint:
 | `crates/server/tests/e2e.rs:2485` | `report_to_modlog_golden_path` | Task 2 e2e assertion update needed |
 | `crates/server/tests/e2e.rs:16513` | `mod v1_federation_inbound_e_fixtures` | Task 3 insertion point (append after this mod) |
 | `crates/server/tests/e2e.rs:16692` | EOF | Task 3 module goes here |
+| `crates/db_views/governance_case/src/impls.rs:51` | `list_open_cases_for_community` | Task 2 MIRROR for new `read_summary_for_case` fn |
+| `crates/api/api/src/governance/config.rs:831` | `DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE = -50` | Task 3 delta constant reference |
+| `crates/api/api/src/governance/config.rs:835` | `DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR = 0` | Task 3 floor constant reference |
 | `crates/api/api/src/governance/sponsor_liability.rs:486` | `apply_sponsor_liability` | Task 3 assertion target |
 
 ---
 
 ## 3. Watchpoints for the planner
 
-**WP-1 (Task 1 — Postgres image family):** The current image is `pgautoupgrade/pgautoupgrade:18-alpine`, NOT plain `postgres:latest`. The PRD says pin to `postgres:16.4` — but switching from `pgautoupgrade` to `postgres` is a different family, not just a tag pin. The planner must:
-- Check if there is a `pgautoupgrade:16-alpine` equivalent (to stay in the same image family).
-- Check Lemmy 1.0-beta upstream's `docker/docker-compose.yml` for their tested Postgres image.
-- If the correct pin is `postgres:16.4` (plain), confirm this is a safe switch given the existing local data volume (same major PG16, no dump/restore needed if data was written by PG16 already).
-- If uncertain: flag as a clarify DQ before authoring the plan task.
+**WP-1 (Task 1 — Postgres image family) — RESOLVED (DQ ship3clarify01-001):** Do not switch to `postgres:16.4`. `pgautoupgrade:18-alpine` runs PG18; switching to PG16 requires a data volume dump/restore (major downgrade). Task 1 scope is narrowed: check if `pgautoupgrade:18.4-alpine` (minor-version pin) exists; if yes, prefer it. If only `18-alpine` is available, add a YAML comment documenting the intentional choice. No family switch.
 
-**WP-2 (Task 2 — `GovernanceCaseSummaryView` population):** `GovernanceCaseSummaryView` is a complex view-type that requires a join across `moderation_case` + `jury_assignment` + community tables (per `crates/db_views/governance_case/src/lib.rs`). The `create_report_inner` fn at line 192 currently only returns `case_id` + `threshold_met` — adding the full view requires fetching it from the DB after the insert. The planner must:
-- Read `crates/db_views/governance_case/src/lib.rs` to understand how `GovernanceCaseSummaryView` is loaded (is there a `read(case_id)` fn?).
-- Confirm whether the view-load can happen inside the existing transaction or requires a separate query after the fn returns.
-- If a `read(case_id)` helper doesn't exist: the task may need to author one first, OR return a subset of the view (and note this as a scope flag).
+**WP-2 (Task 2 — `GovernanceCaseSummaryView` population) — RESOLVED (DQ ship3clarify01-002):** No `read_summary_for_case(case_id)` helper exists in `impls.rs`. Task 2 must author exactly 1 new function: `read_summary_for_case(pool: &mut DbPool<'_>, case_id: ModerationCaseId) -> LemmyResult<Option<GovernanceCaseSummaryView>>` in `crates/db_views/governance_case/src/impls.rs`. Mirror pattern: `list_open_cases_for_community` (impls.rs:51) — same two round-trips (main SELECT + `submitted_counts_by_case`), filtered by `moderation_case::id.eq(case_id)`, returning `Option` (`.first().optional()`). The handler calls this after the insert; the view fetch happens in a separate connection get (after the insert transaction commits) — not inside the insert transaction.
 
 **WP-3 (Task 3 — e2e pattern):** The `two_sponsors_lose_endorsement_strength_on_sanction` test follows the same sponsor-liability pattern as `sponsor_liability_with_founder_multiplier` (starting at e2e.rs:3237). Read that test's fixture setup to reuse the same jury-drive helper (`admin_assign_jury` + `accept_jury_assignment` + `submit_jury_vote` chain). Do NOT re-implement the jury drive from scratch. The `mod v1_sl_d_fixtures` at line 13562 is the canonical reference for this pattern.
 
 **WP-4 (Task 3 — governance_config seed for per-severity delta):** The `endorsement_strength` decrement amount is read from `governance_config` at runtime by `apply_sponsor_liability`. The test must either: (a) rely on seeded defaults from the migration, or (b) INSERT the config row inline. Check which severity tier the test will use (ContentRemoval = moderate, delta = -50 per existing tests) and verify that value is present in the `governance_config` seed rows at test runtime. Do NOT hardcode the delta value in the assertion without reading it from config — use the pattern from `sponsor_liability_with_founder_multiplier` which reads `liability.endorsement_delta_moderate` via governance_config.
 
-**WP-5 (Task 3 — `endorsement_strength` initial value):** PRD §7.3 says "2 sponsors with `endorsement_strength: 10` initial." Existing tests use 100 as the seed value (see `e2e.rs:3773`). The planner must decide whether 10 is achievable given the governance_config floor (`sponsor_liability_floor` default). If `10 + delta` would go below floor and get clamped, the assertion must assert the clamped value. Clarify the test expectation explicitly in the plan task — don't leave it ambiguous.
+**WP-5 (Task 3 — `endorsement_strength` initial value) — RESOLVED (DQ ship3clarify01-003):** Seed sponsors at `endorsement_strength = 10`. Use ContentRemoval (moderate). Clamped delta = max(-50, 0 - 10) = -10. Final value = 10 + (-10) = 0. Assert `endorsement_strength == 0` for both sponsors. Read the delta from `governance_config` at test runtime (key `"liability.endorsement_delta_moderate"`) — do NOT hardcode the -10 arithmetic; pattern from `sponsor_liability_with_founder_multiplier`.
 
 ---
 
@@ -103,9 +99,9 @@ All three tasks touch `crates/server/tests/e2e.rs` (Tasks 2 and 3 directly; Task
 ## 6. Scope boundaries (stop-and-ask tripwires)
 
 - **Stop if:** planner proposes any DB migration — ship-3 is compute-logic + e2e only; schema is complete from ship-1/SL-d.
-- **Stop if:** `rg "CreateGovernanceReportResponse" crates/` returns hits in more than 5 distinct files — callsite enumeration required before brief dispatch.
-- **Stop if:** Task 1 Postgres image analysis concludes the switch from `pgautoupgrade` to `postgres:16.4` requires a data volume dump/restore — surface to user before coding.
-- **Stop if:** `GovernanceCaseSummaryView` has no `read(case_id)` helper and the Task 2 impl would require >1 new function — flag scope and clarify.
+- **Stop if:** `rg "CreateGovernanceReportResponse" crates/` returns hits in more than 5 distinct files — callsite enumeration required before brief dispatch. (Current count: 2 files — clear.)
+- ~~Stop if Task 1 Postgres image requires dump/restore~~ — RESOLVED (DQ ship3clarify01-001): no family switch; stay in pgautoupgrade.
+- ~~Stop if GovernanceCaseSummaryView has no read(case_id) helper and >1 new fn needed~~ — RESOLVED (DQ ship3clarify01-002): 1 new fn (`read_summary_for_case`) required and in scope.
 
 ---
 
