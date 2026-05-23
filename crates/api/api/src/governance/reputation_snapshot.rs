@@ -284,7 +284,7 @@ pub async fn recompute_snapshot(
   let mut endorsement_strength = 0_i32;
 
   for event in &events {
-    let applied_delta = compute_applied_delta(event, now, half_life);
+    let applied_delta = compute_applied_delta(event, now, half_life, false);
     match event.dimension {
       ReputationDimension::ReportingAccuracy => reporting_accuracy += applied_delta,
       ReputationDimension::JuryReliability => jury_reliability += applied_delta,
@@ -345,45 +345,72 @@ pub async fn recompute_snapshot(
 }
 
 /// Compute the decayed delta applied to the running sum for a single
-/// event (Watch 8). Organic events (expires_at IS NONE) get halved past
-/// the half-life; founders keep their full delta until their cliff
-/// fires (which the query-level filter has already enforced).
+/// event (Watch 8). Organic positive events get halved once per complete
+/// half-life elapsed when v1 decay is enabled; founders keep their full
+/// delta until their cliff fires; penalties (delta <= 0) persist at full
+/// value.
 ///
-/// Only POSITIVE deltas decay — negative deltas (penalties) persist at
-/// full value per plan task 53 step 2.c.
-fn compute_applied_delta(event: &ReputationEvent, now: DateTime<Utc>, half_life: Duration) -> i32 {
+/// The `half_life` argument carries the resolved per-(dimension, direction)
+/// half-life when `v1_enabled = true`, OR the legacy
+/// `decay.positive_half_life_days` value when `v1_enabled = false`.
+///
+/// Watch 8 — decay half-life must NOT apply to events with expires_at set
+/// (founder cliffs).
+fn compute_applied_delta(
+  event: &ReputationEvent,
+  now: DateTime<Utc>,
+  half_life: Duration,
+  v1_enabled: bool,
+) -> i32 {
   let original = event.delta;
-  // Watch 8 — decay half-life must NOT apply to events with expires_at set.
-  // The branch gates on `if event.expires_at.is_none()` (a distinct predicate
-  // from the query-level filter in `load_live_events`). Founder seeds keep
-  // their full delta until their cliff fires.
-  if event.expires_at.is_none() {
-    // Penalty path — negative deltas never decay (penalties persist).
-    if original <= 0 {
-      return original;
-    }
-    // Organic positive event: halve once if older than the half-life.
-    // v0 uses a single half-life window; more aggressive schedules
-    // (chained halving per half-life elapsed) are v1 — combined with
-    // the dirty-pair detection gap for stale-by-age pairs (carry-forward
-    // to 5b/5c alongside DQ#13's admin-config-write wrapper), this
-    // means a positive organic event from 400 days ago will pin
-    // `endorsement_strength` at `delta/2` essentially forever. Since
-    // `can_sponsor` is NOT read by any v0 handler ([99 OQ-014]), this
-    // staleness cannot affect behaviour in v0; v1 flips the config
-    // gate AND lands chained halving in the same release.
-    // TODO(brehon-fork): v1 — switch to chained halving per half-life
-    // elapsed and add a regression test for age > 2× half-life.
+  // Cliff guard FIRST: founder seeds skip decay entirely.
+  if event.expires_at.is_some() {
+    return original;
+  }
+  // Penalty guard SECOND: negative + zero deltas never decay.
+  if original <= 0 {
+    return original;
+  }
+  // Positive organic event — apply the v1 or v0 decay path.
+  if v1_enabled {
+    // Chained halving per complete half-life elapsed.
+    chained_halve(original, now - event.created_at, half_life)
+  } else {
+    // v0 path: single halving past one half-life. PRESERVE EXACTLY.
     let age = now - event.created_at;
     if age > half_life {
       original / 2
     } else {
       original
     }
-  } else {
-    // expires_at is Some — founder seed. Skip decay entirely.
-    original
   }
+}
+
+/// Apply chained halving: `original >> floor(age_days / half_life_days)`,
+/// saturating at 0 for very large `n`. Returns `original` when
+/// `half_life_days <= 0` (defensive against misconfigured DB rows; the
+/// PRD section 8 range floor is 1, so this branch is defence-in-depth).
+fn chained_halve(original: i32, age: Duration, half_life: Duration) -> i32 {
+  let hl_days = half_life.num_days();
+  if hl_days <= 0 {
+    return original;
+  }
+  let age_days = age.num_days();
+  if age_days < hl_days {
+    return original;
+  }
+  // Number of complete half-lives elapsed; n >= 1 here.
+  // i64 division floors toward zero for positive operands.
+  let n = age_days / hl_days;
+  // Saturate at 31 to avoid undefined-behaviour shift overflow;
+  // beyond that the result is 0 (any non-zero i32 shifted past 31 is 0
+  // for positive operands). `n.min(31)` is in [1, 31] at this point
+  // (age_days >= hl_days > 0 ensures n >= 1); try_from never actually
+  // errors here — the fallback 31 is defence-in-depth.
+  let shift = u32::try_from(n.min(31)).unwrap_or(31);
+  // For positive i32, right-shift is arithmetic AND logical (both yield
+  // 0 in the limit). Penalty guard above ensures original > 0 here.
+  original >> shift
 }
 
 // -- Batch scheduler entry point -------------------------------------------
@@ -933,27 +960,27 @@ mod tests {
       source_event_type: ReputationEventSourceType::Endorsement,
     };
     // Organic event past half-life — halved.
-    assert_eq!(compute_applied_delta(&old_organic, now, half_life), 50);
+    assert_eq!(compute_applied_delta(&old_organic, now, half_life, false), 50);
 
     // Founder seed same age — NOT halved (Watch 8).
     let old_founder = ReputationEvent {
       expires_at: Some(now + Duration::days(30)),
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&old_founder, now, half_life), 100);
+    assert_eq!(compute_applied_delta(&old_founder, now, half_life, false), 100);
 
     // Recent organic event — NOT halved.
     let recent_organic = ReputationEvent {
       created_at: now - Duration::days(30),
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&recent_organic, now, half_life), 100);
+    assert_eq!(compute_applied_delta(&recent_organic, now, half_life, false), 100);
 
     // Negative delta past half-life — NOT halved (penalties persist).
     let old_penalty = ReputationEvent {
       delta: -20,
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&old_penalty, now, half_life), -20);
+    assert_eq!(compute_applied_delta(&old_penalty, now, half_life, false), -20);
   }
 }
