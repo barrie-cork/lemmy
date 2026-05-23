@@ -22,12 +22,12 @@ The existing feature flag `feature.reputation_v1_decay_enabled` is already seede
 **What the plan must produce:**
 
 1. A revised `compute_applied_delta` (or replacement) that:
-   - When `feature.reputation_v1_decay_enabled = true`: applies chained halving — for each complete half-life elapsed, halves the delta again (so age=2×half-life → delta/4, age=3×half-life → delta/8, etc.)
-   - When `feature.reputation_v1_decay_enabled = false`: preserves the existing single-halving behaviour (no regression for existing deployments)
+   - When `feature.reputation_v1_decay_enabled = true`: applies chained halving using **per-dimension/per-direction half-life** — `recompute_snapshot` reads 8 config keys (`decay.<dim>.positive_half_life_days` / `decay.<dim>.negative_half_life_days` for each of 4 dimensions, all seeded by r1 at config.rs:1137-1158) and passes the resolved `Duration` values into the calculator. For each complete half-life elapsed, halves the delta again (age=2×half-life → delta/4, age=3×half-life → delta/8). (Per clarify DQ a3d0e9941441-010 — PRD §5.2 + config.rs:1137-1158.)
+   - When `feature.reputation_v1_decay_enabled = false`: preserves the existing single-halving behaviour using the legacy `decay.positive_half_life_days` key (no regression for existing deployments)
    - Penalty path (`original <= 0`) unchanged (penalties never decay)
    - Founder-seed path (`event.expires_at.is_some()`) unchanged (no decay on cliff-dated seeds)
 
-2. Bounds clamping in `recompute_snapshot` (line ~213): clamp the accumulated score to `[0, i32::MAX]` (or the domain-appropriate bounds per PRD §5) after summing deltas.
+2. Bounds clamping in `recompute_snapshot` (line ~213): after summing deltas per dimension, clamp each dimension's accumulated score to `[bounds.<dim>.floor, bounds.<dim>.ceiling]` using the per-dimension governance_config keys already seeded by r1 (config.rs:1161-1172). For example, `reporting_accuracy` is clamped to `[DEFAULT_BOUNDS_REPORTING_ACCURACY_FLOOR, DEFAULT_BOUNDS_REPORTING_ACCURACY_CEILING]`. Negative floors are valid — do NOT use `[0, i32::MAX]`. (Per clarify DQ a3d0e9941441-009 — PRD §5.2 + config.rs:1161-1172.)
 
 3. Unit tests covering:
    - age = 0 (no decay)
@@ -54,6 +54,7 @@ The existing feature flag `feature.reputation_v1_decay_enabled` is already seede
 - `.claude/lessons/feedback_plan_dod_dry_run_at_write.md` — DoD commands must be executable as written
 - `.claude/PRPs/plans/v1-RT-r1.plan.md` — prior phase plan for context (task structure, MIRROR refs used, e2e patterns)
 - `.claude/rules/advisor-orchestrator.md` §2.4 — mandatory file-class lesson injection table
+- `.claude/lessons/feedback_explicit_file_arrays_on_tasks.md` — FILES YAML (`creates:` + `modifies:`) required on every §13 task; planner must include these arrays for the brehon-verify gate and cohort-dispatch overlap check
 
 ## 4. Constraints
 

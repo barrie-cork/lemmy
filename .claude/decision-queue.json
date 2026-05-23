@@ -3337,6 +3337,40 @@
       "resolved_at": "2026-05-23T07:34:07Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-009",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-23T09:30:00Z",
+      "question": "Should bounds clamping in r2 read per-dimension floor/ceiling from governance_config, or apply a simpler hardcoded clamp such as [0, i32::MAX] as stated in the brief?",
+      "options": [
+        "option-a: per-dimension bounds from config — read bounds.<dim>.floor and bounds.<dim>.ceiling for each of the 4 dimensions after the delta sum; these 8 keys are already seeded by r1 (config.rs:1161-1172)",
+        "option-b: simplified hardcoded clamp [0, i32::MAX] as stated in the brief §2 — defer per-dimension bounds reads to a later r-phase"
+      ],
+      "context": "PRD §5.2 explicitly states 'Bounds apply at snapshot-write time in recompute_snapshot after the dimension sums are tallied' and lists 8 floor/ceiling knobs (default range -100..+100 per dimension). config.rs lines ~1161-1172 confirm r1 already seeded all 8 bounds keys. The brief's §2 says '[0, i32::MAX]' which contradicts the PRD (negative floors are valid, e.g. bounds.reporting_accuracy.floor = -100).",
+      "answer": "option-a: per-dimension bounds from config. PRD §5.2 is unambiguous: 'bounds apply at snapshot-write time in recompute_snapshot after the dimension sums are tallied.' The 8 bounds keys are already seeded by r1 (config.rs:1161-1172). Brief §2 '[0, i32::MAX]' was an approximation that contradicts the PRD — negative floors are valid. The clamp must be clamp(sum, floor, ceiling) using per-dimension config values read via get_int. No ADR impact. Brief §2 corrected to cite per-dimension bounds per PRD §5.2.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-23T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-010",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-23T09:30:30Z",
+      "question": "Should r2's per-dimension chained-halving calculator read all 8 per-dimension/per-direction half-life keys from governance_config (full PRD §5.2 intent), or use a single half-life value for all dimensions as the current compute_applied_delta does?",
+      "options": [
+        "option-a: full per-dimension/per-direction reads — compute_applied_delta (or its replacement) receives the dimension and reads decay.<dim>.positive_half_life_days or decay.<dim>.negative_half_life_days depending on sign of original delta; all 8 keys seeded by r1 (config.rs:1137-1158)",
+        "option-b: single half-life for all dimensions — keep the existing signature shape, passing one half_life Duration; the per-dim knobs are read upstream in recompute_snapshot and averaged or the positive key is used for all dims; simpler but misses PRD §5.2 per-dim intent"
+      ],
+      "context": "PRD §11 row 2 says 'Replace compute_applied_delta with per-dimension/per-direction calculator.' PRD §5.2 lists 8 half-life knobs: 4 dimensions × 2 directions. config.rs:1137-1158 confirms r1 seeded all 8. The current compute_applied_delta signature is fn(event, now, half_life: Duration) -> i32 — a single half_life with no dimension context. Option-a requires either signature change or passing pre-resolved values from recompute_snapshot.",
+      "answer": "option-a: full per-dimension/per-direction reads. PRD §11 row 2 is unambiguous: 'per-dimension/per-direction calculator.' config.rs:1137-1158 confirms all 8 keys are available. The cleanest implementation: recompute_snapshot reads the 8 half-life values from config, then passes the per-event (dimension, direction) resolved Duration into compute_applied_delta. compute_applied_delta signature changes to fn(event, now, half_life_positive: Duration, half_life_negative: Duration) -> i32 — caller resolves dimension from the event, direction from delta sign. All callers of compute_applied_delta are in the same file (it is a private fn — rg confirms only recompute_snapshot calls it in reputation_snapshot.rs). No external callsite impact. Source: PRD §5.2 + config.rs:1137-1158 + reading reputation_snapshot.rs (compute_applied_delta is private, only called from within the module).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-23T09:30:30Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
