@@ -72,6 +72,19 @@ Cargo runs on GH Actions (not EliteDesk). JM-e onward = pure Shape G. Pre-Shape-
 
 Junior workers branch from the **committed HEAD** of the trunk branch in `/srv/brehon-fork`. Before every real-work `mcp__junior-brehon__create_task`: run `/precheck` (user-scope command, registered at `~/.claude/commands/precheck.md`). Smoke / diagnostic tasks must branch off a throwaway branch first to isolate contamination.
 
+## Lane worktree bootstrap (mandatory after `git worktree add`)
+
+`git worktree add` does NOT init submodules or copy gitignored files. The `crates/email/translations` submodule directory exists as an empty gitlink — any cargo command touching `lemmy_email` fails with `Os { code: 3, kind: NotFound }` until initialized. Run before first cargo or advisor session in any new lane worktree:
+
+```bash
+git submodule update --init --recursive          # fixes lemmy_email build.rs
+cp C:/Users/barri/Developer/brehon-fork/.mcp.json        .mcp.json
+cp C:/Users/barri/Developer/brehon-fork/.env             .env
+cp C:/Users/barri/Developer/brehon-fork/.claude/settings.local.json .claude/settings.local.json
+```
+
+Full checklist: `feedback_phase_lane_worktree_bootstrap_checklist.md`.
+
 ## Resume / state-recovery
 
 `/start-brehon [phase]` — synthesises live state from git/gh/DQ/Junior into one-screen report. `--fast <N>` for mid-task polling. DQ pending > 0 → `/check-dq`.
