@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-22T22:00:00Z",
+  "last_updated_at": "2026-05-23T00:00:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -301,18 +301,23 @@
           "verify": ".claude/PRPs/reports/v1-ship-1-r2-verify.md"
         },
         "v1-ship-2": {
-          "status": "in_flight",
-          "scope": "PRD-named second ship-gate sub-phase (specifics TBD — read PRD §2/§3 for scope)",
-          "plan": null,
-          "blocker": "no plan written; PRD says ship-readiness is 'three sequenced sub-phases'",
-          "worktree": "C:/Users/barri/Developer/brehon-fork-ship-2",
-          "in_flight_since": "2026-05-22"
+          "status": "done",
+          "scope": "4 governance e2e tests: appeal_request_and_deny_happy_path, modlog_list_returns_appeal_entry, get_my_reputation_returns_snapshot, create_endorsement_happy_path_and_self_endorse_rejects (mod v1_ship_2_fixtures in crates/server/tests/e2e.rs)",
+          "pr": 147,
+          "merge_commit": "ac37a125d",
+          "merged_at": "2026-05-23T10:01:00Z",
+          "in_flight_since": "2026-05-22",
+          "done_at": "2026-05-23",
+          "plan": ".claude/PRPs/plans/v1-ship-2.plan.md",
+          "retro": ".claude/PRPs/reports/v1-ship-2-retro.md"
         },
         "v1-ship-3": {
-          "status": "unstarted",
-          "scope": "PRD-named third ship-gate sub-phase",
+          "status": "in_flight",
+          "scope": "PRD §7.3: docker-compose Postgres pin to 16.4 + POST /report returns GovernanceCaseSummaryView DTO + two_sponsors_lose_endorsement_strength_on_sanction e2e",
           "plan": null,
-          "blocker": "no plan written"
+          "blocker": "no plan written; planning Junior not yet dispatched",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-ship-3",
+          "in_flight_since": "2026-05-23"
         }
       },
       "known_followups": [
@@ -366,10 +371,13 @@
           "note": "Task 2 (per-peer bound + SHA-256 nonce) deferred to fed-in-e per ship-mid scope decision"
         },
         "v1-federation-inbound-e": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "per-peer bound + SHA-256 nonce (deferred Task 2 from fed-in-d)",
-          "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-e",
+          "pr": 148,
+          "merge_commit": "183d2753f",
+          "merged_at": "2026-05-23T08:20:10Z",
           "in_flight_since": "2026-05-22",
+          "done_at": "2026-05-23",
           "plan": ".claude/PRPs/plans/v1-federation-inbound-e.plan.md",
           "bootstrap": ".claude/PRPs/handovers/v1-federation-inbound-e-bootstrap.md"
         }
@@ -444,10 +452,9 @@
       {
         "lane": "SR (Ship Readiness)",
         "items": [
-          "v1-ship-2",
           "v1-ship-3"
         ],
-        "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1 + remediation cycles shipped, ship-2/3 unstarted. Closes v0 ship-gate to 'first external user'."
+        "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1/ship-2 shipped, ship-3 in_flight (worktree cut 2026-05-23, planning not yet dispatched). Closes v0 ship-gate to 'first external user'."
       },
       {
         "lane": "RT (Reputation Tuning)",
@@ -460,17 +467,7 @@
         "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes — changes reputation arithmetic for every user)."
       }
     ],
-    "in_flight_outside_roadmap": [
-      {
-        "lane": "federation-inbound-e",
-        "worktree": "C:/Users/barri/Developer/brehon-fork-fed-in-e",
-        "branch": "phase-v1-federation-inbound-e",
-        "bootstrap": ".claude/PRPs/handovers/v1-federation-inbound-e-bootstrap.md",
-        "plan": ".claude/PRPs/plans/v1-federation-inbound-e.plan.md",
-        "user_steered_out": true,
-        "note": "Plan authored 2026-05-22 21:51; planning brief at .claude/PRPs/briefs/v1-federation-inbound-e-planning-1.md"
-      }
-    ],
+    "in_flight_outside_roadmap": [],
     "documentation_drift_followups": [
       "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — should be flipped to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly."
     ],
@@ -481,10 +478,10 @@
     ]
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "v1-ship-2 is already in_flight (cut 2026-05-22, no plan yet) — drive it next to continue closing the v0 ship-gate. fed-in-e is in-flight in parallel out-of-band (user-steered). After ship-2 + ship-3 close, tackle RT-r2..r5.",
-    "concurrent_lanes_2026_05_22": [
-      "v1-ship-2 (in_flight, roadmap-tracked, no plan yet — primary next focus)",
-      "v1-federation-inbound-e (in_flight, user-steered out-of-band, plan authored)"
+    "next_logical_sub_phase": "v1-ship-3 is in_flight (cut 2026-05-23, no plan yet) — drive it to continue closing the v0 ship-gate. v1-RT-r2 is in_flight in the rt-r2 worktree (separate lane session). After ship-3 closes + RT-r2..r5 land, the v0 ship-gate closes.",
+    "concurrent_lanes_2026_05_23": [
+      "v1-ship-3 (in_flight, worktree cut, planning not yet dispatched — primary next focus for this session)",
+      "v1-RT-r2 (in_flight, rt-r2 worktree, planning brief authored, clarify DQs answered — driven by separate lane session)"
     ],
     "rationale_for_ship_first": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness (named as such in the PRD's hard-boundary statement) — they add feature breadth, not ship-readiness.",
     "rationale_for_RT_later": "RT-r2 flips reputation_v1_decay_enabled feature flag. Doing this AFTER ship-readiness closes means the flag flip lands on a system already in compliance + tested at endpoint granularity."
