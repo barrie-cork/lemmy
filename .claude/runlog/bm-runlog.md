@@ -1955,3 +1955,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Base ← Head:** governance-v0 ← phase-v1-federation-inbound-e
 - **Body source:** completion-report (pending) + plan
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 148`
+## advisor: validate-pending-laptop Task 1 in progress — 2026-05-22T22:30Z
+- **DQ:** 7f504f757815-001 (validate-pending-laptop, Task 1)
+- **status:** cargo-check running from canonical checkout (bg bnjyukd8e) — lane worktree had uninitialized submodule (feedback_worktree_submodules_not_auto_init); submodule now fixed
+- **impl commit:** 6961a915e (inbox.rs only, 77+/40−)
+- **LESSON from impl:** async move closures move captured Strings; pre-clone before run_transaction when original needed in post-await error handler
+
+## bm: PR #148 merged — 2026-05-23T08:20:10Z
+- **PR:** #148 — Phase v1-federation-inbound-e — TOCTOU fix in evict_oldest_unreviewed_if_needed
+- **merge SHA:** 183d2753fd93db6dc78158ec86a7697baacde3a8
+- **base:** governance-v0
+- **method:** --merge (no squash; task-per-commit history preserved)
+- **result:** MERGED ✓
+- **next:** phase-transition + worktree cleanup
