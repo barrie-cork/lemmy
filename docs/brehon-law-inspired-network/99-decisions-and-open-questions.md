@@ -59,7 +59,7 @@ Lightweight Architecture Decision Records. Each has: ID, title, date, status, co
 ### ADR-004 — Governance plane separated from content plane
 
 - **Date:** 2026-04-14
-- **Status:** Accepted
+- **Status:** Accepted — **amended by [ADR-016](#adr-016--brehon-is-a-cross-app-governance-backplane-federated-app-planes) on 2026-05-23** to add federated app planes outside the Brehon binary.
 - **Context:** A compromised admin on the content plane must not be able to silently finalise governance changes. Security reviewers (OWASP, CISA) consistently recommend separating privileged and general-purpose code paths.
 - **Decision:** Governance code lives in its own route tree (`/api/v4/governance/*`), its own handler modules (`crates/api/api/src/governance/*`), and its own permission boundary. Every governance write emits an append-only signed log entry before responding. High-risk governance actions require step-up auth, and some require quorum + delay.
 - **Consequences:**
@@ -68,6 +68,7 @@ Lightweight Architecture Decision Records. Each has: ID, title, date, status, co
   - Admin action on the governance plane is visible, verifiable, and revertible
 - **Alternatives considered:** Single unified API with per-endpoint authz (rejected — hard to audit, easy to regress into).
 - **Enacted in:** [03-architecture.md](03-architecture.md) §4, [06-security-and-threat-model.md](06-security-and-threat-model.md) §2.2
+- **Amendment (2026-05-23, via ADR-016):** The two-plane model (governance + content) describes the Brehon binary's internal architecture. ADR-016 extends the model with **federated app planes** — independently operated external apps (Matrix, PeerTube, etc.) that participate in Brehon governance over a defined federation contract. The within-Brehon two-plane invariant is unchanged; app planes are not in-process and do not share Brehon's permission boundary. See ADR-016 for the cross-app contract.
 
 ### ADR-005 — Reputation is multi-dimensional and event-sourced, never a single score
 
@@ -268,6 +269,45 @@ Lightweight Architecture Decision Records. Each has: ID, title, date, status, co
   - New responsibility on Redaction Service: scrub direct identifiers from rationale before log append — add to [06-security-and-threat-model.md](06-security-and-threat-model.md) §6
 - **Alternatives considered:** Log scrub on request (rejected — breaks the hash chain and defeats ADR-008), legitimate-interest defence (rejected — legally shaky in EU, high regulatory risk), store identifiers then argue about it later (rejected — path-dependent; once identifiers are in the log you can't extract them cleanly).
 - **Enacted in:** [04-data-model-and-api.md](04-data-model-and-api.md) §3 (new `actor_pseudonym` table), [06-security-and-threat-model.md](06-security-and-threat-model.md) §6 (redaction service responsibility)
+
+### ADR-016 — Brehon is a cross-app governance backplane; federated app planes
+
+- **Date:** 2026-05-23
+- **Status:** Accepted
+- **Amends:** [ADR-004](#adr-004--governance-plane-separated-from-content-plane) (extends two-plane model with federated app planes)
+- **Context:** Brehon's purpose is to provide a substrate for community self-governance, not to be tied to a single content app. Communities standing up alternatives to WhatsApp, YouTube, Reddit, etc. (typically Matrix, PeerTube, Lemmy-fork, and successors) need *one* governance system — one jury pool, one reputation graph, one rule set — applied to misbehaviour wherever it happens. The existing two-plane model (ADR-004) describes Brehon's internal architecture but is silent on apps that live outside the Brehon binary. The V2 messaging PRD (see `.claude/PRPs/prds/v2-messaging-rtc.prd.md`) is the first cross-app integration and exposes the architectural question: how do external, independently-operated apps participate in Brehon governance without becoming part of the Brehon binary?
+- **Decision:** Brehon is a **governance backplane**. Apps stay independent: each app is operated by whoever runs it, with its own admin, its own users, its own data. Apps connect to Brehon over a **federation-shaped contract** with three load-bearing components:
+  1. **Evidence fetch (B-fetch):** Brehon fetches evidence from the app's existing public API at report-submission time and archives a hashed snapshot. Reporter-side hash at observation catches admin tampering. Per-app adapters live in Brehon's federation fetch worker ([07 §1.2](07-operations-and-federation.md)). Apps do not implement Brehon-specific signing.
+  2. **Sanction publish/subscribe (B-publish):** Brehon publishes sanction events on a federation channel. Apps that opt into Brehon governance run a small subscriber that receives events and translates them into local app primitives (Matrix mutes, PeerTube demonetisations, Lemmy-fork removals). Brehon never holds admin credentials on connected apps; the app retains sovereignty.
+  3. **Portable actor ID (B-actor):** Brehon issues a portable actor ID per Brehon-participating user. Each app maintains a local mapping from its native user identifier to the Brehon actor ID, established at user opt-in via a Brehon-link flow. Reputation, sanctions, and sponsorship key off the portable actor ID. Apps remain their own identity authority for login; Brehon is *not* an identity provider (no OIDC IdP role).
+
+  The V2 messaging PRD is the **first reference integration** of this contract. Messaging phases are renamed from V2a/V2b/V2c to **M1 (chat infrastructure) / M2 (governance-triggered rooms) / M3 (town halls with mic-passing)** to end the naming collision with [ADR-010](#adr-010--staged-releases-v0--v1--v2--v3)'s v2-security-hardening release. Future apps (PeerTube, others) get their own ADRs codifying their adapter + their participation, citing this ADR-016 as the parent contract.
+
+- **Consequences:**
+  - Brehon binary stays free of app-specific code beyond per-app adapters in the federation fetch worker. The Lemmy-fork integration is internal (Brehon and Lemmy-fork share a process today) but is the *exception* to be unified with the cross-app contract over time, not the rule that other apps must follow.
+  - Cross-app reputation, sanctions, and trust labels become coherent: one actor, one reputation graph, one set of capabilities visible across every integrated app.
+  - Adoption barrier per app is low: communities standing up Matrix/PeerTube/etc. can use the standard upstream release; they do not need Brehon-patched forks. They run a small subscriber alongside the app and register with their Brehon node.
+  - Brehon is *not* a single point of failure for app operation: if Brehon is down, apps continue working; only governance events queue. If Brehon is compromised, apps' admin authority is unaffected (no held credentials), and sanctions can be locally suspended until Brehon recovers.
+  - E2EE and private-content scenarios are partially supported: B-fetch requires content to be fetchable by Brehon. E2EE messages, private rooms, and gated content require either reporter-supplied decrypted snapshots (loses tamper-evidence — jury weighs accordingly) or app-side cooperation to expose the content. The contract does not promise integrity for content the app cannot serve.
+  - Cross-pod / cross-instance federation ([ADR-006](#adr-006--remote-sanction-notices-are-advisory-only-in-mvp) shape) layers cleanly on top: Pod A's verdict is advisory to Pod B; both pods independently publish to their connected apps.
+  - The messaging V2 PRD's rename to M1/M2/M3 must be propagated when the PRD next gets edited. The cross-app contract details (protocol shapes, adapter spec, subscriber spec, link-flow UX) are deferred to the M1 sub-PRD and per-app integration ADRs — this ADR commits the principles, not the wire formats.
+  - New open questions opened (see §Open Questions below): OQ-ADR016-01 (B-fetch protocol shape and per-app adapter SPI), OQ-ADR016-02 (B-publish event schema and subscriber contract), OQ-ADR016-03 (B-actor link-flow UX, mapping table location, sign-claim model to prevent re-pointing), OQ-ADR016-04 (sanction translation semantics — what "muted globally" means in each app's primitives). Note: the `ADR016-` prefix avoids collision with the pre-existing OQ-016 (deferred-enforcement `membership_state` column, resolved 2026-04-17).
+
+- **Alternatives considered:**
+  - **App signs evidence with its instance key (rejected):** Strongest cryptographic chain of custody but requires every app to implement Brehon-specific signing endpoints, forcing forks of Matrix/PeerTube/etc. Breaks "apps stay independent" and the signature only proves the homeserver attests to the evidence — not that the event happened — so the integrity gain over B-fetch + reporter hash is marginal.
+  - **Brehon writes to apps via admin API (rejected):** Strongest enforcement but Brehon holds admin credentials on every connected app, becoming a super-admin across communities. Massive blast radius if Brehon is compromised; tight coupling; many apps and admins will refuse the trust requirement.
+  - **Sanctions advisory only, local mods enforce (rejected):** Respects app autonomy maximally but undermines cross-app governance — a jury says "muted for 7d" and individual app mods may ignore it, so reputation rolls up incoherently. The cross-app value proposition collapses.
+  - **Single sign-on through Brehon (OIDC IdP) (rejected):** Tightest identity binding but makes Brehon a SPOF for app login, locks app choice to OIDC-capable apps, expands Brehon's scope to identity-provider (with all its threat model — account recovery, MFA, breach response). Identity sovereignty is a value the federation-shaped model preserves; SSO sacrifices it.
+  - **Apps own identity, Brehon stores per-app IDs separately (rejected):** Lowest integration burden but reputation never rolls up across apps without per-user manual linking; bad actors evade sanctions by switching apps. Functionally turns Brehon into N parallel governance silos.
+  - **Defer the cross-app architecture until forced by a second app (rejected):** Leaves the V2 messaging PRD as a one-off integration. Future apps would have to retrofit. Better to commit the contract once and let M1 prove it.
+
+- **Enacted in:**
+  - `.claude/PRPs/prds/v2-messaging-rtc.prd.md` (rename V2a/V2b/V2c → M1/M2/M3 + first reference integration of B-fetch / B-publish / B-actor)
+  - [03-architecture.md](03-architecture.md) §4 (extend plane model with "federated app planes" subsection)
+  - [06-security-and-threat-model.md](06-security-and-threat-model.md) §2.2 (extend plane boundary wording), §7 (new threat-table rows for B-fetch adapter, B-publish subscriber, B-actor mapping compromise)
+  - [07-operations-and-federation.md](07-operations-and-federation.md) §1.2 (federation fetch worker carries per-app B-fetch adapters), §5 (operator runbook for connected-app onboarding)
+  - Future companion doc `08-cross-app-governance.md` (deferred — written when M1 sub-PRD is scheduled and the protocol-level detail is concrete)
+  - Future ADR-017 onward (each new app integration cites this contract)
 
 ---
 
@@ -564,6 +604,42 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** v1.5 general-severity-inference sub-phase only. Does NOT block v1-JM-c (vote tally), v1-JM-d (appeals), or v1-JM-e (capstone) because those paths only READ `moderation_case.severity_tier` — and the NOT NULL DEFAULT 'Minor' at the column level means every case pre-inference-ship remains Minor, which the JM-b cascade handles correctly.
 - **Target:** v1.5 sub-phase. Resolve before any implementer writes the first call-site in `create_report`.
 
+### OQ-ADR016-01 — B-fetch protocol shape and per-app adapter SPI
+
+- **Opened:** 2026-05-23 (ADR-016)
+- **Owner:** TBD (backend + federation)
+- **Question:** What is the wire shape Brehon's federation fetch worker uses to retrieve evidence from external apps? Sub-questions: (a) is the per-app adapter SPI a trait inside the fetch worker (Rust trait `EvidenceAdapter` with `fetch(uri: &str) -> Result<SnapshotBlob>`), a subprocess plugin (each adapter is its own binary), or a sidecar service (adapters speak HTTP to the fetch worker)? (b) what is the canonical reference URI shape — `matrix://homeserver/!room/$event`, an `actor://app/identifier` pattern, or app-specific URIs the adapter parses? (c) what metadata must every adapter return alongside the content (timestamp, actor-in-app, app-instance-pubkey-fingerprint, snapshot-hash)? (d) how does the reporter-side hash get to Brehon — embedded in the report DTO, or a separate signed claim?
+- **Current lean:** (a) Rust trait inside the fetch worker, one impl per supported app. Matches existing federation-fetch-worker pattern in [07 §1.2](07-operations-and-federation.md) and avoids the operational complexity of subprocesses or sidecars. (b) URI shape per-app; adapter parses its own — no need for a universal scheme until a third app proves the need. (c) Minimum metadata: ISO-8601 timestamp, app-actor identifier, app-instance fingerprint (for later peer-list verification), content-hash; everything else is app-specific. (d) Reporter-side hash in the report DTO as an optional `observed_content_hash` field; Brehon flags divergence to the jury rather than rejecting outright.
+- **Blocks:** M1 sub-PRD (chat infrastructure) — adapter SPI must be settled before the M1 reference integration writes the first MatrixEvidenceAdapter. Also blocks any threat-model row for B-fetch adapter compromise (06 §7 extension per ADR-016 Enacted-in).
+- **Target:** Resolve at M1 schedule time. Lean is the v0 default; revisit if a second adapter (likely PeerTube) exposes a constraint the lean doesn't handle.
+
+### OQ-ADR016-02 — B-publish event schema and subscriber contract
+
+- **Opened:** 2026-05-23 (ADR-016)
+- **Owner:** TBD (backend + federation)
+- **Question:** What is the schema Brehon publishes sanction events in, and what guarantees does it offer subscribers? Sub-questions: (a) transport — webhook delivery (HTTP POST per subscriber URL), ActivityPub-style outbox (apps pull from Brehon's outbox), or pub/sub broker (Brehon writes to NATS/Redis/etc., apps consume)? (b) event schema — does Brehon emit one universal event with a `sanction_kind` field, or app-specific events the subscriber filters? (c) delivery guarantees — at-least-once (subscribers idempotent), at-most-once (events lost on subscriber outage), or exactly-once with retry queue? (d) how does a subscriber prove to Brehon it's authorised to receive events about a particular user (the user's Brehon-link-flow established consent — what token / signed claim flows where)?
+- **Current lean:** (a) Webhook delivery per subscriber URL — lowest operational complexity, matches HTTP-everywhere posture; pub/sub broker deferred until subscriber count justifies it. (b) One universal event schema with `sanction_kind`, `subject_brehon_actor_id`, `effective_from`, `effective_until`, `governance_log_entry_hash`; the subscriber decides how to translate `sanction_kind` into local primitives (OQ-ADR016-04). (c) At-least-once with subscriber-side idempotency on `governance_log_entry_hash`. (d) At link-flow time (OQ-ADR016-03), the app receives a signed claim binding `app_local_id` ↔ `brehon_actor_id`; the app presents this claim when subscribing to events about that user.
+- **Blocks:** M1 sub-PRD if M1 includes any sanction propagation (likely deferred to M2 — governance-triggered rooms). Blocks first non-Matrix app integration ADR.
+- **Target:** Resolve at M2 schedule time.
+
+### OQ-ADR016-03 — B-actor link-flow UX and mapping integrity
+
+- **Opened:** 2026-05-23 (ADR-016)
+- **Owner:** TBD (backend + UX)
+- **Question:** How does a user link their app account to a Brehon actor ID, and how is the mapping kept tamper-resistant? Sub-questions: (a) UX flow — OAuth-style "log in to Brehon" redirect from the app, or app-side "paste your Brehon actor ID + sign this challenge" form, or QR-code pairing? (b) mapping storage — does Brehon hold the canonical mapping table (per-Brehon-node `actor_app_link` table), or does each app hold its own slice (Matrix homeserver stores `@alice ↔ brehon-actor-42` privately, Brehon stores the inverse)? (c) signing — is the mapping a single-signed claim (Brehon signs at link), dual-signed (Brehon + app both sign), or unsigned with both sides agreeing to trust the link-flow transport? (d) revocation — can a user unlink unilaterally, does it require app+Brehon consent, and what happens to in-flight cases/sanctions naming the old link?
+- **Current lean:** (a) OAuth-style redirect from app to Brehon; user authenticates against Brehon; Brehon redirects back with a one-time signed link-claim the app stores. (b) Both sides store their half of the mapping (Brehon stores `brehon_actor_id ↔ app_local_id`; app stores the inverse). (c) Dual-signed claim — both Brehon and the app countersign, preventing either side from re-pointing unilaterally. (d) User can request unlink; takes effect prospectively (future sanctions go nowhere); historical case attributions retain the linked actor ID for the audit trail per [ADR-008](#adr-008--append-only-signed-governance-log-is-architecturally-mandatory).
+- **Blocks:** M1 sub-PRD (user-facing flow design); first non-Matrix app integration ADR.
+- **Target:** Resolve before M1 sub-PRD writes the user-facing link flow. UX research may be needed; soft-target v1.5 / v2 timeframe.
+
+### OQ-ADR016-04 — Sanction translation semantics per app
+
+- **Opened:** 2026-05-23 (ADR-016)
+- **Owner:** TBD (backend + domain)
+- **Question:** When Brehon publishes a sanction of `sanction_kind = "mute_global_7d"` (or similar), how does each app translate that into its local moderation primitives? Sub-questions: (a) is there a universal vocabulary of sanction kinds Brehon emits, and apps document which ones they implement, or does Brehon emit app-agnostic intent ("reduce reach", "prevent posting", "remove voice") that each subscriber maps? (b) what's the minimum primitive set every connected app must implement to be a "Brehon-governed app" (e.g. block-post, mute-voice, hide-content), and what's optional? (c) how are partial-applicability sanctions handled — e.g. "demonetise" makes sense in PeerTube but not in Matrix; does Matrix's subscriber ignore it, log it, or fail-loud? (d) how does Brehon's audit trail reflect what each app actually did with a sanction (the subscriber acknowledges, Brehon logs per-app application status)?
+- **Current lean:** (a) Universal vocabulary — fixed enum of sanction kinds in Brehon, with semver-style expansion. (b) Minimum: `prevent_post`, `mute_voice`, `hide_content`, `restrict_reach`. Beyond that, app-specific extensions. (c) Subscribers receive every event and ignore (with logged "not applicable") for sanction kinds outside their primitives — Brehon's audit reflects the partial-applicability. (d) Subscribers POST acknowledgement back to Brehon (`{ event_hash, applied: true|false, reason, applied_at }`); Brehon stores per-event per-app application status as governance_log entries.
+- **Blocks:** M2 sub-PRD (governance-triggered rooms emitting sanctions); per-app integration ADR for any second app.
+- **Target:** Resolve at M2 schedule time.
+
 ---
 
 ## Changelog
@@ -605,3 +681,6 @@ OQ-027 opened (v2-research): Autonomi as governance-log anchor and evidence-stor
 
 **2026-04-30** — *99*
 OQ-028 (named governance-profile bundles for v1 tuning rollout) opened. Captures the dogfood-vs-pilot evidence-preservation problem: dev-team usage between v0 ship and the OQ-011 pilot launch produces tuning evidence for OQ-006 / OQ-013 / OQ-019 / OQ-020 / OQ-024 / OQ-025 / OQ-003 / ADR-007, but the dev team is a homogeneous sample. Named profiles preserve the dev-team-vs-pilot comparison rather than collapsing it at first overwrite. Architectural OQs (OQ-002 / OQ-010 / OQ-018 / OQ-026) explicitly excluded — they are not tuning-by-experience choices.
+
+**2026-05-23** — *99*
+ADR-016 added: Brehon is a cross-app governance backplane; federated app planes. Codifies the three-component federation contract (B-fetch evidence retrieval; B-publish sanction events; B-actor portable IDs) and reframes the V2 messaging PRD as the first reference integration (M1/M2/M3 — renamed from V2a/V2b/V2c to end the ADR-010 v2 naming collision). ADR-004 amended (header) to note the extension. Four new OQs opened — OQ-ADR016-01 (B-fetch SPI), OQ-ADR016-02 (B-publish schema), OQ-ADR016-03 (B-actor link UX), OQ-ADR016-04 (sanction translation per app). PRD edit and design-doc updates (03 §4, 06 §2.2/§7, 07 §1.2/§5) deferred to M1 schedule time. Rejected alternatives: per-app signed-evidence (forks every app), Brehon-as-super-admin via app admin APIs (blast radius + trust gate), advisory-only sanctions (undermines cross-app value), OIDC IdP (Brehon as identity SPOF), per-app-identity-no-roll-up (parallel silos).
