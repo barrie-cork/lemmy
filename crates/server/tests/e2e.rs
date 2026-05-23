@@ -15740,6 +15740,98 @@ mod v1_ship_2_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn create_endorsement_happy_path_and_self_endorse_rejects() -> LemmyResult<()> {
+    use lemmy_db_schema::source::governance::governance_config::GovernanceConfigInsertForm;
+    use lemmy_db_schema_file::schema::governance_config;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+    let (sponsor_pid, sponsor_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_endorse_sponsor", false).await?;
+    let (sponsee_pid, _sponsee_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_endorse_sponsee", false).await?;
+
+    // Insert "open" strategy row — fetch_value_at_scope uses ORDER BY valid_from DESC
+    // LIMIT 1, so this row (DEFAULT now()) wins over the seed row (2026-04-18T00:00:00Z),
+    // bypassing enforce_age_gate before the self-endorse check at line 178.
+    {
+      let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+      diesel::insert_into(governance_config::table)
+        .values(&GovernanceConfigInsertForm {
+          scope: "instance".to_string(),
+          key: "onboarding.sponsor_gate_strategy".to_string(),
+          value_type: "text".to_string(),
+          value_text: Some("open".to_string()),
+          ..Default::default()
+        })
+        .execute(&mut async_conn)
+        .await?;
+    }
+
+    let sponsor_jwt = mint_jwt(&context, sponsor_lu_view.local_user.id).await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    // Happy path: sponsor endorses sponsee (distinct users, "open" gate) → 200.
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/endorsement")
+      .insert_header(("authorization", format!("Bearer {sponsor_jwt}")))
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(r#"{{"person_id":{}}}"#, sponsee_pid.0))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "endorsement expected 200 for distinct sponsor/sponsee"
+    );
+    let body: CreateEndorsementResponse = test::read_body_json(resp).await;
+    assert!(body.endorsement_id.0 > 0, "endorsement_id must be positive");
+    assert!(
+      body.surety_created,
+      "surety_created must be true for fresh sponsee with no active sureties"
+    );
+
+    // Failure mode: self-endorsement → 404 (per DQ a3d0e9941441-007).
+    // Self-endorse check (create_endorsement.rs:178) fires before the cooldown
+    // check (line 195), so the happy-path endorsement above does not interfere.
+    let resp = test::TestRequest::post()
+      .uri("/api/v4/governance/endorsement")
+      .insert_header(("authorization", format!("Bearer {sponsor_jwt}")))
+      .insert_header(("content-type", "application/json"))
+      .set_payload(format!(r#"{{"person_id":{}}}"#, sponsor_pid.0))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      404,
+      "self-endorsement expected 404 (LemmyErrorType::NotFound at create_endorsement.rs:179)"
+    );
+
+    Ok(())
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]
