@@ -659,7 +659,11 @@ async fn acquire_evict_lock(
   peer_domain: &str,
   table_name: &str,
 ) -> LemmyResult<()> {
-  let key_input = format!("{peer_domain}\x00{table_name}");
+  // ':' separator: invalid in RFC 1035 domain names AND in SQL identifiers,
+  // so '{peer_domain}:{table_name}' is unambiguous. Cannot use '\x00' here
+  // because the value is bound as Postgres TEXT, which rejects null bytes
+  // (UTF-8 invariant — see DQ 527406f2cdee-001).
+  let key_input = format!("{peer_domain}:{table_name}");
   diesel::sql_query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
     .bind::<diesel::sql_types::Text, _>(key_input)
     .execute(conn)
