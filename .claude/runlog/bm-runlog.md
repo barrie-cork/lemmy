@@ -1984,3 +1984,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remote branch deleted?** yes (--delete-branch)
 - **trunk position:** ac37a125d — Merge pull request #147 from barrie-cork/phase-v1-ship-2
 - **findings YAML archived:** .claude/PRPs/reviews/pr-147-findings.yaml
+
+## bm: cut phase-v1-RT-r2 — 2026-05-23T11:11:29Z
+- **branch:** phase-v1-RT-r2
+- **base:** governance-v0
+- **cut sha:** f8d4ee33f
+- **status:** CREATED ✓
