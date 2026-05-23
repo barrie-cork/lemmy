@@ -1990,3 +1990,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **off:** governance-v0 @ f8d4ee33f
 - **plan:** not yet authored (pre-planning cut)
 - **next:** planning Junior queued; impl session takes over for task 1
+
+## advisor: roadmap-next cut v1-ship-3 — 2026-05-23T12:15:00Z
+- **branch:** phase-v1-ship-3 (pushed to origin)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-ship-3
+- **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse-hook ✓
+- **roadmap:** flipped v1-ship-3 unstarted → in_flight; closed v1-ship-2 → done (PR #147, ac37a125d); closed v1-fed-in-e → done (PR #148, 183d2753f)
