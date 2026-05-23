@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "b6b7e4a77e02-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-23T23:00:45Z",
-      "question": "validate fix-impl-1 commit on laptop before advisor proceeds",
-      "options": [
-        "pass — all 3 commands exit 0",
-        "fail — at least one command exits non-zero"
-      ],
-      "context": "fix(rep-tuning) commit a8a6f4bbe: clamp bounds guard + DQ dedup + md lint; cargo-check/clippy/unit-tests passed on EliteDesk worker; e2e delegated to laptop per brief §4",
-      "commands": [
-        "cargo check --workspace --features full",
-        "cargo clippy --workspace --features full --no-deps -- -D warnings",
-        "cargo test --workspace --features full --lib -- reputation_snapshot::tests"
-      ],
-      "branch": "phase-v1-RT-r2",
-      "phase_task": "fix-impl-1",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3454,6 +3426,33 @@
       "resolved_at": "2026-05-23T19:45:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "b6b7e4a77e02-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-23T23:00:45Z",
+      "question": "validate fix-impl-1 commit on laptop before advisor proceeds",
+      "options": [
+        "pass — all 3 commands exit 0",
+        "fail — at least one command exits non-zero"
+      ],
+      "context": "fix(rep-tuning) commit a8a6f4bbe: clamp bounds guard + DQ dedup + md lint; cargo-check/clippy/unit-tests passed on EliteDesk worker; e2e delegated to laptop per brief §4",
+      "commands": [
+        "cargo check --workspace --features full",
+        "cargo clippy --workspace --features full --no-deps -- -D warnings",
+        "cargo test --workspace --features full --lib -- reputation_snapshot::tests"
+      ],
+      "branch": "phase-v1-RT-r2",
+      "phase_task": "fix-impl-1",
+      "answer": "cargo-check --workspace --features full: exit 0; cargo-clippy --workspace --features full --no-deps -- -D warnings: exit 0; cargo-test --workspace --features full --lib -- reputation_snapshot::tests: 16 passed (15 original + 1 new clamp_dimension_i32_inverted_bounds_no_panic). Validated on laptop 2026-05-24.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T23:29:18Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "check exit 0; clippy exit 0; unit-tests 16 passed",
+      "failed_commands": null
     }
   ]
 }
