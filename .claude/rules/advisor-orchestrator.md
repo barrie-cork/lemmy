@@ -99,23 +99,21 @@ Mechanical: read score, read top factor, add citation. No DQ, no escalation.
 
 ### 3.1 Stage-shape orchestration
 
-Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on each completion:
+Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on each completion. Full state-transition contract (with Phase 1/Phase 2 multi-paragraph detail): `.claude/refs/auto-phase.md` §"Stage-shape orchestration (canonical contract)".
 
-- **Brief authored, no planning task yet** → run `/brehon-clarify <brief-path>` → resolve every clarify-DQ entry → queue planning. Skipping clarify on a planning brief is a process breach.
-- **Planning complete** → run §3.4 DoD smoke test → run §3.5 watchpoint specificity → user gate 1 (plan approval) → on approval, queue `bm-cut`.
-- **bm-cut complete** → queue impl per §4 cohort dispatch: Task 1 (or first non-pre-flight) `[P]` → compute cohort, queue all simultaneously; otherwise queue alone.
-- **impl-task complete (pre-Shape-G, v1-JM-d and earlier)** → if cohort has pending peers wait; else compute next cohort. All tasks done → `chore(lint):` follow-up if needed → `bm-pr`.
-- **impl-task complete (Shape G, v1-JM-e onward)** — two-phase validation per option (b) 2026-04-28:
-  - **Phase 1 (workspace-check on `junior/*`):** impl-task already wrote `kind: "validate-pending"` post-push (workflow_run_id + branch + phase_task; `result`/`log_slice`/`failed_jobs` null). Queue `[role:ci-watcher]` Junior task with brief from DQ entry fields (template `.claude/PRPs/templates/ci-watcher-brief.template.md`). Originating impl-task gated until ci-watcher resolves. **Serial ci-watcher rule (per `feedback_ci_watcher_serial_per_task_pair.md` 2026-05-11):** when a cohort has N members each with a validate-pending DQ, dispatch **ONE ci-watcher per logical task** (long-polling 1-2 workflow runs in sequence inside that ci-watcher), NOT N parallel ci-watchers. Parallel ci-watchers all fork off the same phase-branch tip; sequential finalize-merges then auto-resolve `.claude/decision-queue.json` conflicts by reverting earlier ci-watchers' mutations back to `pending` state ("resurrection bug"). Serial dispatch keeps each ci-watcher's worker branch in causal-order with the previous mutation. **Atomic raise-before-dispatch rule (per `feedback_dq_raise_before_ci_watcher_queue.md` 2026-05-11):** the `validate-pending` DQ entry MUST be committed and pushed BEFORE the `[role:ci-watcher]` Junior task is created. Junior worker branches fork from the current `phase-<phase>` tip at task-creation time; if the raise hasn't pushed yet, the ci-watcher's worker branch will not see the entry and will file a `kind: "blocker"` contract-violation. The atomic ordering is: (a) `git add .claude/decision-queue.json && git commit && git push origin <phase-branch>`, THEN (b) `mcp__junior-brehon__create_task`. NEVER reverse this order.
-  - **Phase 2 (e2e, advisor-driven, off-Actions by default — 2026-04-28 minutes-budget audit):** `cargo-test-e2e.yml` no longer auto-fires on `phase-v1-*` push. After daemon finalize-merges, advisor sees new tip on next `git fetch` and runs e2e locally. See §5.2 validate-pending-laptop handler for the full flow (raise `kind: "validate-pending"` with `local_log_path` + `from: "advisor"`, no ci-watcher dispatch, advisor mutates the entry directly when bg cargo exits). User-gate 4 (Phase 2 e2e — local vs dispatch) selects local vs `gh workflow run cargo-test-e2e.yml`. Cohort advancement waits on BOTH workspace AND e2e mutated to `result: "pass"`.
-- **ci-watcher complete** → read mutated entry. `kind` stays `"validate-pending"` regardless of result. `result: "pass"` (in `resolved[]`) → advance pipeline. `result: "fail" | "cancelled" | "timed_out"` (still in `pending[]`) → run §5.3 §G4 classifier.
-- **All §16a stories `[done]`** (between last impl complete and bm-merge confirm) → run `/brehon-verify` → phantom → catch-fire; else advance to bm-pr.
-- **bm-pr complete** → wait for CodeRabbit (`bm-task` polls) → on CR posted, queue `bm-poll-cr`.
-- **bm-poll-cr complete** → queue `bm-triage` (draft auto).
-- **Triage drafted** → user gate 3 (CR triage) → on approval, queue `impl-task` for fix-in-PR commits.
-- **bm-pr complete → before gate 5:** run `git log --oneline origin/governance-v0 ^phase-v1-<phase>` and review for reformatting/structural commits landed on governance-v0 while the phase was in flight. Non-empty output = merge-forward required: checkout phase branch → `git merge origin/governance-v0` → resolve conflicts (`.claude/` files: `--ours`; Rust/migration files: verify content, accept auto-resolution) → push. Then proceed to `/brehon-verify` + gate 5. First occurrence: v1-federation-inbound-d PR #146 blocked CONFLICTING by v1-quality-r1 rustfmt commit `2f13ffb80`.
-- **No critical findings open** → confirm `/brehon-verify` ✓ → user gate 5 (merge confirm) → queue `bm-merge`.
-- **bm-merge complete** → author retro → user gate 6 (retro sign-off) → run `/brehon-phase-transition`.
+- **Brief authored, no planning task yet** → `/brehon-clarify` → resolve clarify-DQ → queue planning.
+- **Planning complete** → §3.4 + §3.5 → gate 1 (plan approval) → queue `bm-cut`.
+- **bm-cut complete** → §4 cohort dispatch.
+- **impl-task complete (pre-Shape-G, ≤v1-JM-d)** → cohort barrier → next cohort or `chore(lint):` → `bm-pr`.
+- **impl-task complete (Shape G, ≥v1-JM-e)** → Phase 1 ci-watcher (workspace check) → Phase 2 e2e (advisor-driven). Cohort advancement waits on BOTH `result: "pass"`. Detail in refs.
+- **ci-watcher complete** → `pass` advances; `fail/cancelled/timed_out` → §5.3 §G4 classifier.
+- **All §16a stories `[done]`** → `/brehon-verify` → phantom = catch-fire; else `bm-pr`.
+- **bm-pr complete** → CodeRabbit polls → `bm-poll-cr`.
+- **bm-poll-cr complete** → `bm-triage` (draft auto).
+- **Triage drafted** → gate 3 (CR triage) → fix-in-PR impl-tasks.
+- **bm-pr complete → before gate 5** → merge-forward check (`git log origin/governance-v0 ^phase-v1-<phase>`); non-empty → checkout + merge + push.
+- **No critical findings open** → `/brehon-verify` ✓ → gate 5 (merge confirm) → `bm-merge`.
+- **bm-merge complete** → author retro → gate 6 (retro sign-off) → `/brehon-phase-transition`.
 
 Advisor never auto-merges or auto-resolves ADR-affecting DQ.
 
@@ -148,29 +146,9 @@ Per `feedback_advisor_watchpoint_specificity.md`. Every watchpoint in plan §4 m
 
 Per `feedback_read_canonical_before_writing_spec.md`. Before authoring any new `*.md` under `.claude/{rules,commands,lessons,PRPs/templates}`, `Glob` + `Read` 1-2 sibling instances first. Cite the canonical example in the new file body or commit body. A commit that adds such a file without citation is a process miss; retro flags it. `grep '^##' <existing>` is always worth the 2-second read.
 
-### 3.7 Dogfood gate (new slash commands)
+### 3.7 Dogfood gate + 3.8 Schema-retrofit gate
 
-Per `feedback_dogfood_slash_command_specs.md`. Every new `.claude/commands/<verb>.md` must include a "Pre-commit dogfood" sub-section under `<rationale>` naming the real existing input the command was walked-through against, what worked, what didn't.
-
-| Command class | Dogfood target |
-|---|---|
-| Planning-stage (e.g. `/brehon-clarify`) | Most-recent `.claude/PRPs/briefs/<phase>-planning-N.md` |
-| Impl-stage | Most-recent `.claude/PRPs/briefs/<phase>-impl-N.md` |
-| Verification (e.g. `/brehon-verify`) | Most-recent `.claude/PRPs/plans/<phase>.plan.md` |
-| BM verb | Most-recent `.claude/runlog/<phase>.md` |
-
-Cost of pre-commit dogfood ~5 min; cost of post-deploy fix ~10× that.
-
-### 3.8 Schema-changing-spec retrofit gate (plan-mode shape changes)
-
-Per `feedback_schema_changing_spec_retrofit_question.md`. When plan-mode produces a plan that changes the shape of an artifact class (new section in a template, new marker in a section, new field in JSON/YAML schema, new required sub-section in a frontmatter), advisor calls `AskUserQuestion` **once before `ExitPlanMode`**:
-
-- "The new pattern applies forward-only to artifacts authored after this lands. Should I also retrofit the existing artifact(s) [<list>] in a follow-up commit?"
-- Options: "Retrofit all" / "Retrofit named subset" / "Forward-only (no retrofit)".
-
-Answer goes into the plan's "Out of scope" or a new "Retrofit scope" section verbatim. "Forward-only" → plan ships with explicit "Pre-existing X are not affected; retrofit deferred indefinitely". "Retrofit" → Phase Z appended at end of implementation phases.
-
-**Skip when:** purely additive functionality (new commands not changing existing shapes), bug fixes (retrofit IS the work), plans explicitly limited to one artifact.
+Both gates fire only when authoring new slash commands or when plan-mode produces a new artifact shape. Procedure: `.claude/refs/advisor-narrow-gates.md`.
 
 ### 3.9 Verify gate (post-impl, pre-merge)
 
@@ -252,68 +230,17 @@ prior_cohort_tasks:
 
 ### 5.1 Forbidden execution windows
 
-EliteDesk shares cron-driven workloads (NAS backups, web-archive crawls, weekly review) with Brehon Junior tasks. Repeated OOM cascades (2026-04-27) confirm temporal isolation > spatial isolation. Source-of-truth: `homeserver/docs/troubleshooting-laptop-elitedesk.md` "Temporal isolation" section.
+EliteDesk shares cron-driven workloads (NAS backups, web-archive crawls, weekly review) with Brehon Junior tasks. Repeated OOM cascades (2026-04-27) confirm temporal isolation > spatial isolation. Full window table + override + cargo-routing detail: `.claude/refs/advisor-validation.md` §"Forbidden execution windows".
 
-| Window (UTC) | Why |
-|---|---|
-| Daily 02:55–04:15 | NAS backup chain (03:00, 03:15) + web-archive `govie-search` (03:00, 03:30) |
-| Sunday 01:55–02:35 | HSE crawl (02:00) + `junior-weekly-review.sh` (02:30) |
-| Sunday 03:55–04:30 | `restore-drill.timer` (04:00) |
-| Wednesday 03:55–04:15 | `web-archive govie-cdx` (04:00) — subset of daily |
+**Shape G note:** under Shape G (v1-validate-agent onward), cargo runs on GitHub-hosted runners — forbidden windows **non-binding** for Shape-G impl-task dispatch. Binding only for: (a) ad-hoc local cargo by advisor pre-plan-approval (§3.4 DoD smoke test), (b) pre-Shape-G plan dispatches (v1-JM-d and earlier), (c) any local diagnostic cargo authorised by user during a CR fix-in-PR cycle.
 
-**Recommended Brehon execution windows:** Primary 16:00–02:30 UTC (10.5 h, evening/overnight). Secondary 04:30–14:59 UTC (10.5 h, post-crawl, pre-evening).
-
-**Advisor enforcement** — before queueing any new `impl-task`:
-
-1. Compute next "safe" minute (end of current forbidden window).
-2. Note deferral in polling output: `deferring <task-slug> until <HH:MM UTC>`.
-3. Re-check on next poll. Queue once window closes. **No DQ for routine deferrals.**
-
-Mechanical, not heuristic — read table + `date -u`.
-
-**Subagent enforcement (defence in depth):** the `impl-task` subagent's task-0 pre-flight check refuses to start in a forbidden window, exits non-zero with `FORBIDDEN_WINDOW: <window>` (per `.claude/agents/impl-task.md`). Catches advisor-mistaken queues (e.g. cron table out of sync, DST edge case).
-
-**Shape G note:** under Shape G (v1-validate-agent onward), cargo runs on GitHub-hosted runners — forbidden windows non-binding for Shape-G impl-task dispatch. Still binding for: (a) ad-hoc local cargo by advisor pre-plan-approval (§3.4 DoD smoke test), (b) pre-Shape-G plan dispatches (v1-JM-d and earlier), (c) any local diagnostic cargo authorised by user during a CR fix-in-PR cycle.
-
-### When to override
-
-Forbidden windows protect from contention, not absolute prohibition. If user authorises a forbidden-window run:
-
-1. File a DQ entry citing the user's override.
-2. Queue with brief note: "user-authorised forbidden-window override per DQ #<id>".
-
-Do not silently queue inside a forbidden window without a DQ trail.
-
-#### Cargo never runs on the EliteDesk worker
-
-Per 2026-04-28 task #47 incident: `cargo check --workspace --features full` ran for >1 h with sustained OOM-cascade risk. Both validation modes route cargo OFF the worker:
-
-- **Shape-G plans:** GitHub-hosted runners. impl-task pushes branch, raises `kind: "validate-pending"`; ci-watcher polls workflow, mutates entry.
-- **Pre-Shape-G plans:** the **laptop** (advisor's CWD `C:\Users\barri\Developer\brehon-fork`). impl-task pushes branch, raises `kind: "validate-pending-laptop"` naming §15 DoD commands verbatim; advisor reads on next poll, runs each command sequentially, mutates the entry. See §5.2 below.
+**Advisor enforcement** (when binding) — before queueing: compute next safe minute, note deferral (`deferring <task-slug> until <HH:MM UTC>`), re-check on next poll. Mechanical, no DQ for routine deferrals. **Subagent defence-in-depth:** `impl-task` task-0 pre-flight refuses with `FORBIDDEN_WINDOW: <window>` if advisor mis-queues.
 
 ### 5.2 validate-pending-laptop handler
 
-When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `pending[]`, the advisor (laptop session) runs the §15 commands locally. Mutation shape, log-slice rules, kind enum, and §G4 fail handling: see `.claude/rules/decision-queue.md` §"ci-watcher mutation pattern" + §"Two-phase validation under Shape G" (mutation is identical; only the runner identity differs — `answered_by: "advisor-laptop"` instead of `"ci-watcher"`).
+When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `pending[]`, the advisor runs the §15 commands locally. Full pre-flight, sequence, Phase-2 e2e advisor-driven flow, escape hatch, Windows invocation: `.claude/refs/advisor-validation.md` §"validate-pending-laptop handler".
 
-**Pre-flight (mandatory, before fetch):**
-
-- Clean working tree (`git -C C:/Users/barri/Developer/brehon-fork status --short` empty); dirty → surface to user, do NOT auto-stash.
-- `mkdir -p C:/Users/barri/.claude/logs/` (idempotent).
-- Concurrent-cargo serialization: if another `validate-pending-laptop` is in-flight (`[P]` cohort fan-out), process this one behind it in DQ id order — two cargos on the same `target/` = lock + thrash.
-- Docker Desktop check (e2e only): if `commands[]` includes `--features full` testcontainers paths, `docker ps` must return 0; not running → surface "start Docker Desktop or pick GH dispatch via Phase 2 e2e user gate". `cargo check`/`clippy`/`test --no-run` skip the check.
-
-**Sequence:**
-
-1. `git fetch origin <entry.branch>` then `git checkout origin/<entry.branch>` (detached-HEAD; no edits, just cargo source).
-2. Run each command in `entry.commands[]` sequentially. `Bash` `run_in_background: true` for runs >5 min (`cargo-check.sh` ~8 min cold / 3-5 min warm; e2e ~26 min). Capture to `C:\Users\barri\.claude\logs\validate-laptop-<entry.id>-cmd-<n>.log`. Non-zero exit → stop chain.
-3. Mutate the DQ entry in place per the canonical mutation shape (see decision-queue.md ref above). Failure stays in `pending[]` for §G4 triage; pass moves to `resolved[]`.
-4. Commit + push to `governance-v0`. Subject: `chore(decision-queue): advisor-laptop mutated DQ #<id> — <pass|fail> validate-pending-laptop`.
-5. On fail, run §G4 classifier (§5.3): allowlist → narrow fix-impl-task; non-allowlist → catch-fire.
-6. `git checkout governance-v0 && git pull --ff-only origin governance-v0` (skip only if user wants laptop kept on worker branch for hand-debug).
-
-**Phase 2 e2e (advisor-driven, off-Actions default — 2026-04-28 minutes-budget audit):** advisor raises the entry up front (`from: "advisor"`, `workflow_run_id: null`, `local_log_path: ".claude/runlog/e2e-<phase>-<sha>.log"`, `branch: "phase-v1-<phase>"`, `phase_task: <N>`, `result: null`). Subject: `chore(advisor): raise local e2e validate-pending for phase-v1-<phase> tip <sha>`. No ci-watcher dispatch (nothing on GH to poll). On bg cargo exit, advisor mutates directly: `answered_by: "advisor"`, `resolved_at`, `log_slice` from runlog tail (~150 lines failures block). **Escape hatch (explicit user request only):** `gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>` — entry reverts to pre-2026-04-28 shape (`workflow_run_id: <id>`, `local_log_path: null`); ci-watcher queued as for Phase 1.
-
-**Windows invocation (mandatory — 2026-05-09 RCA):** use `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1 && echo E2E_EXIT_0 >> <log> || echo E2E_EXIT_NONZERO >> <log>"` with `run_in_background: true`. Never bare `cargo test` on Windows — libpq.dll requires the bat wrapper's vcpkg PATH setup; bash PATH export does not propagate to the Windows PE DLL loader. Never `-p lemmy_server --features full` — `lemmy_server` has no `full` feature; use `--workspace`. See `feedback_windows_e2e_requires_bat_wrapper.md` and RCA at `.claude/PRPs/reports/rca-phase2-e2e-invocation-failure-2026-05-09.md`.
+Mutation shape, log-slice rules, kind enum, §G4 fail handling: `.claude/rules/decision-queue.md` §"ci-watcher mutation pattern" + §"Two-phase validation under Shape G" (mutation identical; `answered_by: "advisor-laptop"` instead of `"ci-watcher"`).
 
 ### 5.3 §G4 classifier
 
@@ -419,36 +346,9 @@ Stop the loop and surface to user immediately. Include catch-fire reason + cited
 
 Distinct from the four Junior subagents (planning / impl-task / bm-task / ci-watcher) — this section covers the **laptop-side** `Agent` tool the advisor invokes for in-session research, file edits, audits, or any independent deliverable that doesn't need to run on the EliteDesk. The Junior subagents are queued via `mcp__junior-brehon__create_task` and run on the daemon; the `Agent` tool subagents run in the advisor session's harness and return inline.
 
-### 6.1 Parallel dispatch for N independent deliverables (status: defer-pending-2nd-recurrence)
+### 6.1 Parallel dispatch + 6.2 Verify-after-subagent-completes
 
-When the advisor session has N independent deliverables to produce (retro-followups, multi-file audits, parallel lesson-authoring, parallel research probes), dispatch all N in a **single assistant message with multiple `Agent` tool blocks**. The harness parallelises them — total wall-clock is approximately `max(per-agent runtime)`, NOT `sum(per-agent runtime)`.
-
-**Demonstrated 2026-05-22:** three `general-purpose` sub-agents (rule promotion + lesson authoring + hooks audit) dispatched in one message ran concurrently; ~7 min wall-clock vs ~12-15 min serial. First-try usability on all three; ~3× speedup.
-
-**When to apply:**
-
-- The deliverables are **independent** — no agent's output is required input to another's. (Sequential pipeline → still serial.)
-- Each deliverable is **bounded** — a single file edit, a single audit report, a focused research probe. Open-ended "investigate X" tasks may need iteration; harder to parallelise reliably.
-- The advisor has the **synthesis context** — sub-agents return their work; the parent integrates. Don't delegate the integration step.
-
-**Dispatch shape:** one assistant message containing K `Agent` tool blocks (K typically 2-4). Each block carries its own self-contained prompt (sub-agents see no parent conversation; brief them as if they walked into the room cold per the `Agent` tool guidance). Use `general-purpose` subagent_type unless a specialised agent fits better; pass `model: "sonnet"` for routine work (cheaper, fast enough), `model: "opus"` for synthesis-heavy work.
-
-**Promotion status:** **defer-pending-2nd-recurrence**. The pattern worked once (2026-05-22); recurrence threshold per `feedback_principles_not_rules.md` is 2 across distinct session types. Use the pattern when it fits; record evidence in session retros; promote to formal discipline after 2nd applicable session (likely: another retro-followup batch, or a multi-file audit in a sub-phase). Per `.claude/PRPs/reports/session-retro-2026-05-22-parallel-subagent-dispatch.md` §"Promotion candidates".
-
-### 6.2 Verify-after-subagent-completes (belt-and-braces; status: record-only, single occurrence)
-
-When a sub-agent's report claims a file edit landed in a tracked file under shared `.git/` (canonical `brehon-fork` checkout OR any `brehon-fork-<lane>` worktree), the parent advisor session MUST verify the edit still exists in the working tree **before** staging or proceeding with dependent work.
-
-**Why:** sub-agent reports describe sub-agent state at exit, NOT current parent-session state. Between sub-agent exit and parent-session use of the report, concurrent writers to the shared `.git/` can invalidate the report. Race B per `feedback_cross_session_commit_attribution_collision.md`: unstaged working-tree edits silently reverted by concurrent push + local fast-forward state alignment.
-
-**How to apply:**
-
-1. Sub-agent returns claiming "edit landed at line N" or similar specific change.
-2. **Immediately run a `grep` for a distinctive string** from the sub-agent's reported diff. (Distinctive = unlikely to appear elsewhere in the file by accident — pick a phrase from the new bullet, a unique identifier, a specific section heading.)
-3. **Zero matches** → the edit has been reverted by a concurrent writer. Re-apply inline via `Edit` tool using the bullet/section text from the sub-agent's report. **Do NOT re-dispatch the sub-agent** — the report itself is the recovery source.
-4. **Match found** → stage immediately (`git add <file>`) BEFORE any other tool call. Staging converts Race B into Race A which has a known mitigation (`git status` verify between add and commit per `feedback_cross_session_commit_attribution_collision.md`).
-
-**Promotion status:** **record-only**. Single occurrence at promotion time (2026-05-22 sub-agent A clobber + inline-recovery). The mechanism is documented here; formal promotion to a hard `MUST` defers until 2nd applicable incident. In the interim, the pattern is in the corpus and reachable by any future session.
+Both patterns are sub-promotion (single recurrence each at promotion time). Procedure: `.claude/refs/advisor-subagent-dispatch.md`. Read on demand when the corresponding dispatch shape fits the current task. When a 2nd recurrence lands for either, lift back from refs/ into this section.
 
 ### 6.3 Bounded sub-agent dispatch and report semantics
 
@@ -462,7 +362,7 @@ Independent of §6.1/§6.2, two invariants for all `Agent` tool dispatch:
 - `.claude/agents/<name>.md` — Junior subagent contracts (planning, impl-task, bm-task, ci-watcher) — distinct from §6's advisor-side `Agent` tool subagents.
 - `.claude/rules/branch-manager.md` + `.claude/commands/bm/<verb>.md` — BM mechanics, file-ownership, autonomy bounds.
 - `.claude/rules/decision-queue.md` — DQ schema, attribution, per-kind routing.
-- `.claude/rules/auto-phase.md` — `/auto-phase` state machine that compiles §3.1 + §4.1 + §5.3.
+- `.claude/refs/auto-phase.md` — `/auto-phase` state machine that compiles §3.1 + §4.1 + §5.3 (lazy-loaded by the skill body's Phase 0 Step 0).
 - `.claude/rules/pmd-search-strategy.md` — PMD search modes referenced by §2.3.
 - `homeserver/.claude/advisor-context-phase-<N>.md` — phase-specific texture (session-start read).
 - `.claude/lessons/feedback_cross_session_commit_attribution_collision.md` — Race-A + Race-B mitigations cited from §6.2.

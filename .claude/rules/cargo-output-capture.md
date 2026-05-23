@@ -64,12 +64,12 @@ Three things to notice:
 ## Why this matters here
 
 The Brehon governance fork uses `cargo check --workspace` and `cargo test
---test e2e` as the validation signal for every PRP plan and every ralph
-loop iteration. The stop hook on `/prp-ralph` decides whether to emit
-`<promise>COMPLETE</promise>` based on those exit codes. If a piped cargo
-invocation hides a real failure, the loop will declare success on a broken
-build, write the wrong progress log entry, and poison the state file for
-the next iteration. False-green is worse than red because the loop won't
-self-correct.
+--test e2e` as the validation signal for every plan task and every
+ci-watcher cycle. If a piped cargo invocation hides a real failure, the
+validation gate will declare success on a broken build, write the wrong
+progress log entry, and poison downstream cohort advancement. False-green
+is worse than red because the loop won't self-correct.
 
-This rule is mandatory for any cargo invocation (PRP commands, ralph loop, BM tasks) and is loaded automatically at session start.
+This rule is mandatory for any cargo invocation (impl-task, BM tasks,
+validate-pending-laptop handler) and is loaded automatically at session
+start.

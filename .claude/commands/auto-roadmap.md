@@ -2,7 +2,7 @@ Lane-worktree sub-phase driver. Reads the sub-phase from the current `phase-v*-*
 
 Argument: none. The skill derives its target sub-phase from `git branch --show-current`.
 
-**This is skill 2 of a two-skill chain.** Skill 1 is `/roadmap-next` (runs in canonical `brehon-fork`). Skill 2 expects to run in a lane-dedicated worktree (`brehon-fork-<lane-suffix>`) on a `phase-v1-<sub-phase>` branch — typically the worktree just cut by skill 1. Per `.claude/rules/auto-roadmap.md` state-routing invariant #6, the hand-off between skills is manual: the user opens Claude Code in the lane worktree and runs `/auto-roadmap` after `/roadmap-next` exits.
+**This is skill 2 of a two-skill chain.** Skill 1 is `/roadmap-next` (runs in canonical `brehon-fork`). Skill 2 expects to run in a lane-dedicated worktree (`brehon-fork-<lane-suffix>`) on a `phase-v1-<sub-phase>` branch — typically the worktree just cut by skill 1. Per `.claude/refs/auto-roadmap.md` state-routing invariant #6, the hand-off between skills is manual: the user opens Claude Code in the lane worktree and runs `/auto-roadmap` after `/roadmap-next` exits.
 
 ## Why this shape
 
@@ -43,13 +43,22 @@ The plan-gap auto-dispatch is the new piece of advisor logic. Everything else is
 
 ### Phase 0 — Prerequisites + sub-phase identification
 
+**Step 0 (MANDATORY, before any routing decision):** Read
+`.claude/refs/auto-roadmap.md` AND `.claude/refs/auto-phase.md` into
+context. Neither file auto-loads at session start (relocated 2026-05-22
+to free Memory-files budget; see commit history for `.claude/rules/auto-*.md`
+→ `.claude/refs/`). Skill 2 inherits `/auto-phase`'s state machine; both
+rule files are load-bearing for hard refusals + state-routing decisions +
+plan-gap dispatch + roadmap atomic protocol. This Read is the first
+action of every `/auto-roadmap` invocation.
+
 Verify before any state-changing call:
 
 1. **CWD is a lane-dedicated worktree** matching `brehon-fork-<lane-suffix>`:
    ```bash
    pwd
    ```
-   If CWD is canonical `brehon-fork` or any non-lane path → refuse per `.claude/rules/auto-roadmap.md` hard refusal #11.
+   If CWD is canonical `brehon-fork` or any non-lane path → refuse per `.claude/refs/auto-roadmap.md` hard refusal #11.
 
 2. **Branch is `phase-v*-*`** (not `governance-v0`, `main`, or any other shape):
    ```bash
@@ -157,7 +166,7 @@ The brief is committed to the **lane branch** (`phase-<sub-phase>`), not `govern
 
 #### Step 0.5.3 — User gate: approve auto-authored brief (extra gate, beyond /auto-phase's six)
 
-Per `.claude/rules/auto-roadmap.md` hard refusal #17 — auto-dispatch without user confirmation is a hard refusal. Fire AskUserQuestion:
+Per `.claude/refs/auto-roadmap.md` hard refusal #17 — auto-dispatch without user confirmation is a hard refusal. Fire AskUserQuestion:
 
 ```
 question: "Auto-authored planning brief for <sub-phase> at <brief-path>. Confirm dispatch to planning Junior?"
@@ -394,7 +403,7 @@ Exit cleanly. Skill 2 does NOT auto-prune the worktree (write-while-in-use risk 
 
 ## Refusals
 
-Per `.claude/rules/auto-roadmap.md` hard refusals #11-#20:
+Per `.claude/refs/auto-roadmap.md` hard refusals #11-#20:
 
 11. Wrong CWD (not lane-dedicated) → refuse.
 12. Branch not `phase-v*-*` → refuse.
@@ -418,9 +427,9 @@ Per `.claude/rules/auto-roadmap.md` hard refusals #11-#20:
 
 ## See also
 
-- `.claude/rules/auto-roadmap.md` — the orchestration rule + hard refusals.
+- `.claude/refs/auto-roadmap.md` — the orchestration rule + hard refusals.
 - `~/.claude/commands/auto-phase.md` — the skill skill 2 composes on.
-- `.claude/rules/auto-phase.md` — `/auto-phase` state-machine source.
+- `.claude/refs/auto-phase.md` — `/auto-phase` state-machine source.
 - `.claude/rules/advisor-orchestrator.md` — clarify gate + DoD smoke + watchpoint gates skill 2 honours.
 - `.claude/rules/multi-lane-worktree.md` — worktree-per-lane discipline.
 - `.claude/rules/decision-queue.md` — attribution + atomic protocol.

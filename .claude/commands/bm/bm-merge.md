@@ -71,7 +71,7 @@ if the BM Junior skips the POST-merge runlog COMPLETE commit (observed
 — Junior #323 did), the advisor's post-merge tick authors a
 `docs(advisor): L14 belt-and-braces — runlog COMPLETE re-apply` block
 on `governance-v0` with the *verified real merge sha* (per
-`.claude/rules/auto-phase.md` invariant 7).
+`.claude/refs/auto-phase.md` invariant 7).
 
 **Stronger structural option (SHIPPED 2026-05-18):** a `merge=union`
 driver in `.gitattributes` for `.claude/runlog/bm-runlog.md` — it is

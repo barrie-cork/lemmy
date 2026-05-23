@@ -9,9 +9,16 @@ end-to-end with calibrated `ScheduleWakeup` cadences.
 The rule exists because `/auto-phase` is the first user-scope skill that
 mutates state machine progress across multiple advisor session restarts
 (the auto-state JSON survives restart). Its hard refusals + state-routing
-rules need to live in-repo so they are read at session start (alongside
-`branch-manager.md`, `advisor-orchestrator.md`, `decision-queue.md`) by
-any advisor session that resumes a `/auto-phase` invocation.
+rules live in-repo so they are loaded on-demand at the start of every
+`/auto-phase` invocation (per the skill body's Phase 0 Step 0).
+
+> **Loading note (2026-05-22):** this file was relocated from
+> `.claude/rules/` to `.claude/refs/` to free Memory-files budget — it is
+> NO LONGER auto-loaded at session start (unlike `branch-manager.md`,
+> `advisor-orchestrator.md`, `decision-queue.md`). The skill body
+> `~/.claude/commands/auto-phase.md` Phase 0 Step 0 reads this file
+> before any routing decision; if invoking `/auto-phase` logic outside
+> the skill (e.g. ad-hoc advisor-driven resume), Read this file FIRST.
 
 > **Mirror note:** like `advisor-orchestrator.md`, this rule may be
 > mirrored at `homeserver/.claude/rules/auto-phase.md` if cross-machine
@@ -361,12 +368,147 @@ without conversation context):
 - Subagent context — any Explore / general-purpose agents the prior
   session spawned are gone. Re-spawn if needed.
 
+## Stage-shape orchestration (canonical contract)
+
+Externalised from `.claude/rules/advisor-orchestrator.md` §3.1 on
+2026-05-22 (rule-trim pass). The rule file kept a 16-bullet summary +
+forward-ref; the full state-transition contract — with Phase 1/Phase 2
+multi-paragraph detail — lives here. Cite this file by anchor (e.g.
+"auto-phase.md §impl-task complete (Shape G)") when a lesson, brief,
+or handover needs to reference one transition specifically.
+
+This block supersedes the prior "Stage-shape semantics (live in
+`advisor-orchestrator.md`; the skill reads but does not replace)"
+forward-ref — the canonical contract now lives in refs/, both
+`advisor-orchestrator.md §3.1` and the auto-phase skill's state
+machine compile against this section.
+
+### Brief authored, no planning task yet
+
+Run `/brehon-clarify <brief-path>` → resolve every clarify-DQ entry →
+queue planning. Skipping clarify on a planning brief is a process
+breach.
+
+### Planning complete
+
+Run advisor-orchestrator.md §3.4 DoD smoke test → run §3.5 watchpoint
+specificity → user gate 1 (plan approval) → on approval, queue
+`bm-cut`.
+
+### bm-cut complete
+
+Queue impl per advisor-orchestrator.md §4 cohort dispatch: Task 1 (or
+first non-pre-flight) `[P]` → compute cohort, queue all simultaneously;
+otherwise queue alone.
+
+### impl-task complete (pre-Shape-G, v1-JM-d and earlier)
+
+If cohort has pending peers wait; else compute next cohort. All tasks
+done → `chore(lint):` follow-up if needed → `bm-pr`.
+
+### impl-task complete (Shape G, v1-JM-e onward)
+
+Two-phase validation per option (b) 2026-04-28.
+
+#### Phase 1 (workspace-check on `junior/*`)
+
+impl-task already wrote `kind: "validate-pending"` post-push
+(workflow_run_id + branch + phase_task; `result`/`log_slice`/
+`failed_jobs` null). Queue `[role:ci-watcher]` Junior task with brief
+from DQ entry fields (template
+`.claude/PRPs/templates/ci-watcher-brief.template.md`). Originating
+impl-task gated until ci-watcher resolves.
+
+**Serial ci-watcher rule** (per `feedback_ci_watcher_serial_per_task_pair.md`
+2026-05-11): when a cohort has N members each with a validate-pending
+DQ, dispatch **ONE ci-watcher per logical task** (long-polling 1-2
+workflow runs in sequence inside that ci-watcher), NOT N parallel
+ci-watchers. Parallel ci-watchers all fork off the same phase-branch
+tip; sequential finalize-merges then auto-resolve
+`.claude/decision-queue.json` conflicts by reverting earlier
+ci-watchers' mutations back to `pending` state ("resurrection bug").
+Serial dispatch keeps each ci-watcher's worker branch in causal-order
+with the previous mutation.
+
+**Atomic raise-before-dispatch rule** (per
+`feedback_dq_raise_before_ci_watcher_queue.md` 2026-05-11): the
+`validate-pending` DQ entry MUST be committed and pushed BEFORE the
+`[role:ci-watcher]` Junior task is created. Junior worker branches
+fork from the current `phase-<phase>` tip at task-creation time; if
+the raise hasn't pushed yet, the ci-watcher's worker branch will not
+see the entry and will file a `kind: "blocker"` contract-violation.
+The atomic ordering is: (a) `git add .claude/decision-queue.json &&
+git commit && git push origin <phase-branch>`, THEN (b)
+`mcp__junior-brehon__create_task`. NEVER reverse this order.
+
+#### Phase 2 (e2e, advisor-driven, off-Actions by default — 2026-04-28 minutes-budget audit)
+
+`cargo-test-e2e.yml` no longer auto-fires on `phase-v1-*` push. After
+daemon finalize-merges, advisor sees new tip on next `git fetch` and
+runs e2e locally. See advisor-orchestrator.md §5.2 validate-pending-laptop
+handler for the full flow (raise `kind: "validate-pending"` with
+`local_log_path` + `from: "advisor"`, no ci-watcher dispatch, advisor
+mutates the entry directly when bg cargo exits). User-gate 4 (Phase 2
+e2e — local vs dispatch) selects local vs `gh workflow run
+cargo-test-e2e.yml`. Cohort advancement waits on BOTH workspace AND
+e2e mutated to `result: "pass"`.
+
+### ci-watcher complete
+
+Read mutated entry. `kind` stays `"validate-pending"` regardless of
+result. `result: "pass"` (in `resolved[]`) → advance pipeline.
+`result: "fail" | "cancelled" | "timed_out"` (still in `pending[]`)
+→ run advisor-orchestrator.md §5.3 §G4 classifier.
+
+### All §16a stories `[done]`
+
+Between last impl complete and bm-merge confirm: run `/brehon-verify`
+→ phantom → catch-fire; else advance to bm-pr.
+
+### bm-pr complete
+
+Wait for CodeRabbit (`bm-task` polls) → on CR posted, queue
+`bm-poll-cr`.
+
+### bm-poll-cr complete
+
+Queue `bm-triage` (draft auto).
+
+### Triage drafted
+
+User gate 3 (CR triage) → on approval, queue `impl-task` for
+fix-in-PR commits.
+
+### bm-pr complete → before gate 5: merge-forward check
+
+Run `git log --oneline origin/governance-v0 ^phase-v1-<phase>` and
+review for reformatting/structural commits landed on governance-v0
+while the phase was in flight. Non-empty output = merge-forward
+required: checkout phase branch → `git merge origin/governance-v0` →
+resolve conflicts (`.claude/` files: `--ours`; Rust/migration files:
+verify content, accept auto-resolution) → push. Then proceed to
+`/brehon-verify` + gate 5. First occurrence:
+v1-federation-inbound-d PR #146 blocked CONFLICTING by v1-quality-r1
+rustfmt commit `2f13ffb80`.
+
+### No critical findings open
+
+Confirm `/brehon-verify` ✓ → user gate 5 (merge confirm) → queue
+`bm-merge`.
+
+### bm-merge complete
+
+Author retro → user gate 6 (retro sign-off) → run
+`/brehon-phase-transition`.
+
+### Refusal
+
+Advisor never auto-merges or auto-resolves ADR-affecting DQ.
+
 ## What this rule does NOT cover
 
 - The skill's tick procedure body (lives in
   `~/.claude/commands/auto-phase.md` Phase 1).
-- Stage-shape semantics (live in `advisor-orchestrator.md`; the skill
-  reads but does not replace).
 - BM verb scripts (the skill dispatches them unchanged from
   `.claude/commands/bm/*.md`).
 - DQ schema (lives in `.claude/rules/decision-queue.md`).
