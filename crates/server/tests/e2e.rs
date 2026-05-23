@@ -15455,8 +15455,7 @@ mod v1_ship_2_fixtures {
   use diesel::ExpressionMethods;
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api_common::governance::{
-    CreateEndorsementResponse, GetMyReputationResponse, ListGovernanceModlog,
-    RequestAppeal, RequestAppealResponse,
+    CreateEndorsementResponse, GetMyReputationResponse, RequestAppealResponse,
   };
   use lemmy_api_utils::{claims::Claims, context::LemmyContext};
   use lemmy_db_schema::{
@@ -15470,8 +15469,7 @@ mod v1_ship_2_fixtures {
     },
   };
   use lemmy_db_schema_file::{
-    PersonId,
-    enums::{CaseSeverity, CaseStatus, CaseTargetType, JuryDecision},
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
     schema::moderation_case,
   };
   use lemmy_db_views_governance_modlog::GovernanceModlogView;
@@ -15517,7 +15515,7 @@ mod v1_ship_2_fixtures {
         .await?;
       let future = Utc::now() + Duration::days(7);
       diesel::update(moderation_case::table)
-        .filter(moderation_case::status.eq(CaseStatus::Decided))
+        .filter(moderation_case::id.eq(id))
         .set((
           moderation_case::appeal_window_expires_at.eq(Some(future)),
           moderation_case::panel_size_snapshot.eq(Some(5_i32)),
