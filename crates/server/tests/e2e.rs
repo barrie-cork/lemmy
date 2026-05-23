@@ -15587,6 +15587,94 @@ mod v1_ship_2_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn list_governance_modlog_returns_seeded_entry() -> LemmyResult<()> {
+    use lemmy_db_schema::newtypes::ModerationCaseId;
+    use lemmy_db_schema_file::schema::public_case_log;
+
+    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let case_form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: None,
+      target_type: CaseTargetType::RemoteInstance,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: None,
+      target_community_id: None,
+      target_remote_url: Some("https://example.invalid/modlog-test".to_string()),
+      reason_code: "v1_ship_2_modlog_probe".to_string(),
+      severity: CaseSeverity::Low,
+      status: CaseStatus::Decided,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let case_id: ModerationCaseId = diesel::insert_into(moderation_case::table)
+      .values(&case_form)
+      .returning(moderation_case::id)
+      .get_result(&mut async_conn)
+      .await?;
+
+    let log_form = PublicCaseLogInsertForm {
+      case_id,
+      community_id: None,
+      summary: "v1_ship_2 modlog probe — no identifiers".to_string(),
+      rationale_redacted: None,
+    };
+    diesel::insert_into(public_case_log::table)
+      .values(&log_form)
+      .execute(&mut async_conn)
+      .await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/modlog")
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "modlog expected 200 without auth"
+    );
+    let body: Vec<GovernanceModlogView> = test::read_body_json(resp).await;
+    assert_eq!(body.len(), 1, "expected exactly one modlog entry");
+    assert_eq!(
+      body[0].case_id,
+      case_id.0,
+      "case_id must match inserted case"
+    );
+    assert_eq!(
+      body[0].summary,
+      "v1_ship_2 modlog probe — no identifiers",
+      "summary must round-trip unchanged"
+    );
+    assert!(!body[0].appealed, "newly seeded case has no appeal");
+
+    Ok(())
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]
