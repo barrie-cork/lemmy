@@ -964,9 +964,10 @@ async fn resolve_half_life_for_event(
 }
 
 /// Clamp a per-dimension i32 sum to the (floor, ceiling) bounds read as
-/// i64 from governance_config. The clamp is performed on i64 to avoid
-/// any chance of the sum overflowing i32 before the clamp narrows it.
+/// i64 from governance_config. Normalises inverted bounds (floor > ceiling)
+/// by swapping, so a misconfigured admin setting cannot panic at runtime.
 fn clamp_dimension_i32(value: i32, floor: i64, ceiling: i64) -> i32 {
+  let (floor, ceiling) = (floor.min(ceiling), floor.max(ceiling));
   let widened = i64::from(value);
   let clamped = widened.clamp(floor, ceiling);
   i32::try_from(clamped).unwrap_or({
@@ -1180,5 +1181,12 @@ mod tests {
   #[test]
   fn clamp_dimension_i32_negative_below_zero_floor() {
     assert_eq!(clamp_dimension_i32(-5, 0, 200), 0);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_inverted_bounds_no_panic() {
+    // floor > ceiling — should not panic; behaves as if bounds were swapped
+    let result = clamp_dimension_i32(50, 100, 0); // floor=100, ceiling=0 → normalised to [0,100]
+    assert_eq!(result, 50); // 50 is within [0, 100]
   }
 }

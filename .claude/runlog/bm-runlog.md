@@ -1986,12 +1986,14 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **findings YAML archived:** .claude/PRPs/reviews/pr-147-findings.yaml
 
 ## bm: cut phase-v1-RT-r2 — 2026-05-23T11:11:29Z
+
 - **branch:** phase-v1-RT-r2
 - **base:** governance-v0
 - **cut sha:** f8d4ee33f
 - **status:** CREATED ✓
 
 ## bm: opened PR #150 — 2026-05-23T20:00:00Z
+
 - **pr:** https://github.com/barrie-cork/lemmy/pull/150
 - **title:** v1-RT-r2 — per-dimension chained-halving decay + bounds clamp behind feature flag
 - **base:** governance-v0

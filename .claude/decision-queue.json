@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "b6b7e4a77e02-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-23T23:00:45Z",
+      "question": "validate fix-impl-1 commit on laptop before advisor proceeds",
+      "options": [
+        "pass — all 3 commands exit 0",
+        "fail — at least one command exits non-zero"
+      ],
+      "context": "fix(rep-tuning) commit a8a6f4bbe: clamp bounds guard + DQ dedup + md lint; cargo-check/clippy/unit-tests passed on EliteDesk worker; e2e delegated to laptop per brief §4",
+      "commands": [
+        "cargo check --workspace --features full",
+        "cargo clippy --workspace --features full --no-deps -- -D warnings",
+        "cargo test --workspace --features full --lib -- reputation_snapshot::tests"
+      ],
+      "branch": "phase-v1-RT-r2",
+      "phase_task": "fix-impl-1",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
@@ -3400,33 +3428,6 @@
       "approved_at": null
     },
     {
-      "id": "8aca794fb044-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-23T12:32:00Z",
-      "question": "Task 1 cargo-check + clippy + unit-test validation for compute_applied_delta rewrite",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Worker ran cargo check --workspace --features full (exit 0), cargo clippy --workspace --features full --no-deps -- -D warnings (exit 0), cargo test --lib -- reputation_snapshot::tests::decay_applies_only_to_organic_events_past_half_life (1 passed, exit 0). Ran on EliteDesk worktree. Shape G suspended; validate-pending-laptop pathway per plan.",
-      "commands": [
-        "cargo check --workspace --features full > .claude/PRPs/debug/v1-RT-r2-task1-check.log 2>&1",
-        "cargo clippy --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r2-task1-clippy.log 2>&1",
-        "cargo test --workspace --features full --lib -- reputation_snapshot::tests::decay_applies_only_to_organic_events_past_half_life > .claude/PRPs/debug/v1-RT-r2-task1-test.log 2>&1"
-      ],
-      "branch": "phase-v1-RT-r2",
-      "phase_task": 1,
-      "answer": "All 3 validate-pending-laptop commands passed on laptop. cargo-check exit 0; clippy exit 0; unit-test decay_applies_only_to_organic_events_past_half_life passed. Validated 2026-05-23.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-23T14:00:00Z",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
       "id": "b246616aaf8f-001",
       "from": "impl",
       "kind": "validate-pending-laptop-e2e",
@@ -3450,7 +3451,7 @@
       "failed_commands": null,
       "answer": "All 4 validate commands passed on laptop. cargo-check/clippy/unit-tests/e2e all exit 0.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-23T18:31:54Z",
+      "resolved_at": "2026-05-23T19:45:00Z",
       "approved_by": null,
       "approved_at": null
     }

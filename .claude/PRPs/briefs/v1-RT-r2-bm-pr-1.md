@@ -19,7 +19,7 @@ Open a PR from `phase-v1-RT-r2` into `governance-v0` on `barrie-cork/lemmy`.
 
 **Body:**
 
-```
+```md
 ## Summary
 
 - `compute_applied_delta` extended with `v1_enabled: bool` parameter; v1 path applies per-half-life chained right-shift (floor(age/hl) halvings, capped at 31); v0 path preserved verbatim
