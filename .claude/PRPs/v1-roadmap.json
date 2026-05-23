@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-23T00:00:00Z",
+  "last_updated_at": "2026-05-23T11:55:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -329,7 +329,7 @@
     "federation_inbound": {
       "name": "Federation Inbound",
       "prd": ".claude/PRPs/prds/v1-federation-inbound.prd.md",
-      "status": "partial",
+      "status": "done",
       "user_steered": true,
       "user_steered_note": "User instructed 2026-05-22: federation-inbound is being implemented out-of-band (parallel session); not driven by /roadmap-next. Sub-phases tracked here for visibility; the active driver is the lane-dedicated worktree session.",
       "sub_phases": {
