@@ -15675,6 +15675,71 @@ mod v1_ship_2_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn get_my_reputation_happy_path_and_no_auth() -> LemmyResult<()> {
+    let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+    let (_user_pid, user_lu_view) =
+      governance_fixtures::seed_user(&context, instance.id, "ship2_rep_user", false).await?;
+    let user_jwt = mint_jwt(&context, user_lu_view.local_user.id).await?;
+
+    let rate_limit = RateLimit::with_debug_config();
+    {
+      use enum_map::enum_map;
+      use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+      rate_limit.set_config(enum_map! {
+        ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+        ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+      });
+    }
+    let app = test::init_service(
+      App::new()
+        .app_data(Data::new((**context).clone()))
+        .wrap(SessionMiddleware::new((**context).clone()))
+        .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+    )
+    .await;
+
+    // Happy path: authed GET /reputation/me — load_or_compute_snapshot writes a
+    // default snapshot row for a first-time caller; fresh user has no sanction
+    // rows so active_sanctions == 0. Mirror of sweep test e2e.rs:4326-4337.
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/reputation/me")
+      .insert_header(("authorization", format!("Bearer {user_jwt}")))
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      200,
+      "reputation/me expected 200 for authed user"
+    );
+    let body: GetMyReputationResponse = test::read_body_json(resp).await;
+    assert_eq!(
+      body.view.active_sanctions,
+      0,
+      "fresh user must have zero active sanctions"
+    );
+
+    // Failure mode: GET /reputation/me without Authorization header → 401.
+    // LocalUserView extractor rejects missing JWT before the handler runs.
+    let resp = test::TestRequest::get()
+      .uri("/api/v4/governance/reputation/me")
+      .send_request(&app)
+      .await;
+    assert_eq!(
+      resp.status().as_u16(),
+      401,
+      "reputation/me expected 401 for unauthenticated request"
+    );
+
+    Ok(())
+  }
 }
 
 #[tokio::test(flavor = "multi_thread")]
