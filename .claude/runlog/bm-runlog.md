@@ -1968,3 +1968,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **method:** --merge (no squash; task-per-commit history preserved)
 - **result:** MERGED ✓
 - **next:** phase-transition + worktree cleanup
+## advisor: bm-pr phase-v1-ship-2 — 2026-05-23T07:50Z
+- **branch:** phase-v1-ship-2
+- **PR:** #147 — feat(e2e): v1-ship-2 — 4 governance e2e integration tests
+- **base:** governance-v0
+- **tip:** 7bcc04c2f
+- **tasks:** 4/4 complete, all validate-pending-laptop pass
+- **e2e:** full module run in progress (.claude/PRPs/debug/v1-ship-2-module-e2e.log)
+- **status:** PR opened, awaiting CodeRabbit review
