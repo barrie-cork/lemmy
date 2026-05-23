@@ -16695,3 +16695,405 @@ mod v1_federation_inbound_e_fixtures {
     Ok(())
   }
 }
+
+mod v1_ship_3_fixtures {
+  use super::*;
+  use actix_web::web::{Data, Json};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment, admin_assign_jury::admin_assign_jury,
+    reputation_snapshot::recompute_snapshot, sponsor_liability_grace::run_grace_check_batch,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, CreateGovernanceReport, SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    community::{Community, CommunityInsertForm},
+    governance::{
+      reputation_event::ReputationEventInsertForm,
+      reputation_snapshot::ReputationSnapshotInsertForm,
+      surety::SuretyInsertForm,
+    },
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    InstanceId, PersonId,
+    enums::{CaseStatus, CaseTargetType, JuryDecision, ReputationDimension},
+    schema::{moderation_case, reputation_event, reputation_snapshot, surety},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests, get_conn},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn two_sponsors_lose_endorsement_strength_on_sanction() -> LemmyResult<()> {
+    const SIGNING_SEED_HEX: &str =
+      "0000000000000000000000000000000000000000000000000000000000000001";
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    }
+
+    let (_container, host_port) = governance_fixtures::start_postgres().await?;
+    let db_url = governance_fixtures::db_url(host_port);
+    unsafe {
+      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+    }
+    {
+      let mut sync_conn = PgConnection::establish(&db_url)?;
+      governance_fixtures::apply_all_schema(&mut sync_conn)?;
+    }
+
+    let pool: ActualDbPool = build_db_pool_for_tests();
+    let client = client_builder(&SETTINGS).build()?;
+    let middleware_client = ClientBuilder::new(client).build();
+    let secret = Secret {
+      id: 0,
+      jwt_secret: String::new().into(),
+    };
+    let rate_limit = RateLimit::with_debug_config();
+    let context = Data::new(LemmyContext::create(
+      pool,
+      middleware_client.clone(),
+      middleware_client,
+      secret,
+      rate_limit,
+    ));
+
+    let federation_config = activitypub_federation::config::FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await
+      .map_err(|e| anyhow::anyhow!("{e}"))?;
+    let federation_context = federation_config.to_request_data();
+
+    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+
+    let community_form = CommunityInsertForm::new(
+      instance.id,
+      "ship3comm".to_string(),
+      "Ship3 Community".to_string(),
+      "comm-pubkey".to_string(),
+    );
+    let community = Community::create(&mut context.pool(), &community_form).await?;
+
+    async fn seed_person(
+      ctx: &LemmyContext,
+      instance_id: InstanceId,
+      name: &str,
+      is_admin: bool,
+    ) -> LemmyResult<PersonId> {
+      let person_form = PersonInsertForm::test_form(instance_id, name);
+      let person = Person::create(&mut ctx.pool(), &person_form).await?;
+      let mut lu_form = if is_admin {
+        LocalUserInsertForm::test_form_admin(person.id)
+      } else {
+        LocalUserInsertForm::test_form(person.id)
+      };
+      lu_form.accepted_application = Some(true);
+      LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+      Ok(person.id)
+    }
+
+    let admin = seed_person(&context, instance.id, "ship3_admin", true).await?;
+    let reporter = seed_person(&context, instance.id, "ship3_reporter", false).await?;
+
+    let mut jurors: Vec<PersonId> = Vec::new();
+    for i in 0..6 {
+      jurors.push(
+        seed_person(
+          &context,
+          instance.id,
+          &format!("ship3_juror_{i}"),
+          false,
+        )
+        .await?,
+      );
+    }
+
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await?;
+
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    async fn seed_surety(
+      conn: &mut AsyncPgConnection,
+      sponsor: PersonId,
+      sponsored: PersonId,
+    ) -> LemmyResult<()> {
+      let form = SuretyInsertForm {
+        sponsor_id: sponsor,
+        sponsored_id: sponsored,
+        community_id: None,
+      };
+      diesel::insert_into(surety::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+      Ok(())
+    }
+
+    async fn seed_snapshot(
+      conn: &mut AsyncPgConnection,
+      person: PersonId,
+      endorsement_strength: i32,
+    ) -> LemmyResult<()> {
+      let form = ReputationSnapshotInsertForm {
+        person_id: person,
+        community_id: None,
+        reporting_accuracy: 0,
+        jury_reliability: 0,
+        participation_consistency: 0,
+        endorsement_strength,
+        jury_eligible: false,
+        trusted_reporter: false,
+        ..Default::default()
+      };
+      diesel::insert_into(reputation_snapshot::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+      Ok(())
+    }
+
+    // Seed the initial endorsement_strength as a reputation_event row so that
+    // recompute_snapshot (which sums events, not the snapshot table) reflects
+    // the starting balance. Mirrors seed_founder_events pattern at e2e.rs:3424.
+    async fn seed_endorsement_event(
+      conn: &mut AsyncPgConnection,
+      person: PersonId,
+      delta: i32,
+    ) -> LemmyResult<()> {
+      use chrono::{Duration as ChronoDuration, Utc};
+      let expiry = Utc::now() + ChronoDuration::days(90);
+      let form = ReputationEventInsertForm {
+        person_id: person,
+        community_id: None,
+        dimension: ReputationDimension::EndorsementStrength,
+        delta,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "test_seed".to_string(),
+        expires_at: Some(expiry),
+        dedupe_key: None,
+        source_event_type: None,
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+      Ok(())
+    }
+
+    #[expect(
+      clippy::too_many_arguments,
+      reason = "integration test helper orchestrates a full sanction round; all parameters are required"
+    )]
+    async fn run_sanction_scenario(
+      context: &Data<LemmyContext>,
+      federation_context: &activitypub_federation::config::Data<LemmyContext>,
+      admin_view: &LocalUserView,
+      reporter_view: &LocalUserView,
+      jurors: &[PersonId],
+      target: PersonId,
+      community_id: lemmy_db_schema::newtypes::CommunityId,
+      reason_code: &str,
+      decision: JuryDecision,
+    ) -> LemmyResult<i32> {
+      let create_resp = create_report(
+        Json(CreateGovernanceReport {
+          community_id: Some(community_id),
+          target_type: CaseTargetType::Person,
+          target_id: target.0,
+          reason_code: reason_code.to_string(),
+          description: Some(format!("Test report for {reason_code}")),
+        }),
+        context.clone(),
+        reporter_view.clone(),
+      )
+      .await?
+      .into_inner();
+      let case_id = create_resp
+        .case_id
+        .ok_or_else(|| anyhow::anyhow!("case_id missing"))?;
+
+      {
+        let mut pool = context.pool();
+        let mut conn = get_conn(&mut pool).await?;
+        diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id.0)))
+          .set(moderation_case::status.eq(CaseStatus::ThresholdMet))
+          .execute(&mut *conn)
+          .await?;
+      }
+
+      let assign_resp = admin_assign_jury(
+        Json(AdminAssignJury { case_id }),
+        context.clone(),
+        admin_view.clone(),
+      )
+      .await?
+      .into_inner();
+      assert_eq!(assign_resp.assigned_person_ids.len(), 5, "5 jurors assigned");
+
+      for juror_id in &assign_resp.assigned_person_ids {
+        let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+        accept_jury_assignment(
+          Json(AcceptJuryAssignment { case_id }),
+          context.clone(),
+          juror_view,
+        )
+        .await?;
+      }
+
+      let voting: Vec<PersonId> = assign_resp
+        .assigned_person_ids
+        .iter()
+        .copied()
+        .take(3)
+        .collect();
+      for juror in &voting {
+        let juror_view = LocalUserView::read_person(&mut context.pool(), *juror).await?;
+        submit_jury_vote(
+          Json(SubmitJuryVote {
+            case_id,
+            decision,
+            rationale: Some("test".to_string()),
+          }),
+          federation_context.reset_request_count(),
+          juror_view,
+        )
+        .await?;
+      }
+
+      let _ = jurors;
+      Ok(case_id.0)
+    }
+
+    async fn liability_delta_for(
+      conn: &mut AsyncPgConnection,
+      person: PersonId,
+      case_id: i32,
+    ) -> LemmyResult<i32> {
+      let delta: i32 = reputation_event::table
+        .filter(reputation_event::person_id.eq(person))
+        .filter(reputation_event::source_case_id.eq(case_id))
+        .filter(reputation_event::reason.eq("sponsor_liability_applied"))
+        .select(reputation_event::delta)
+        .order_by(reputation_event::id.desc())
+        .first(conn)
+        .await?;
+      Ok(delta)
+    }
+
+    let target = seed_person(&context, instance.id, "ship3_target", false).await?;
+    let sponsor_1 = seed_person(&context, instance.id, "ship3_sponsor_1", false).await?;
+    let sponsor_2 = seed_person(&context, instance.id, "ship3_sponsor_2", false).await?;
+
+    seed_surety(&mut async_conn, sponsor_1, target).await?;
+    seed_surety(&mut async_conn, sponsor_2, target).await?;
+    seed_snapshot(&mut async_conn, sponsor_1, 10).await?;
+    seed_snapshot(&mut async_conn, sponsor_2, 10).await?;
+    // Seed backing events so recompute_snapshot reflects the initial 10.
+    seed_endorsement_event(&mut async_conn, sponsor_1, 10).await?;
+    seed_endorsement_event(&mut async_conn, sponsor_2, 10).await?;
+
+    let case = run_sanction_scenario(
+      &context,
+      &federation_context,
+      &admin_view,
+      &reporter_view,
+      &jurors,
+      target,
+      community.id,
+      "ship3_moderate",
+      JuryDecision::RemoveContent,
+    )
+    .await?;
+
+    // v1-SL-d: submit_jury_vote transitions the case to SponsorLiabilityPending
+    // (grace window) instead of firing liability immediately. Expire the grace
+    // window and call run_grace_check_batch to trigger fire_sponsor_liability
+    // so reputation_event rows exist for the assertions below.
+    // Set grace_expires_at to 1s in the past (same pattern as v1-SL-c test at
+    // e2e.rs:14288) so the batch filter `grace_expires_at <= now()` picks it up.
+    diesel::sql_query(
+      "UPDATE moderation_case \
+       SET grace_expires_at = now() - interval '1 second' \
+       WHERE id = $1",
+    )
+    .bind::<diesel::sql_types::Int4, _>(case)
+    .execute(&mut async_conn)
+    .await?;
+    let batch_outcome = run_grace_check_batch(&context).await?;
+    assert_eq!(batch_outcome.fired, 1, "grace batch fired 1 case");
+
+    // Math: raw_delta = -50 (moderate), 2 sponsors → per_sponsor = -25,
+    // remainder = 0. Non-founder → multiplier = regular_multiplier (1.0
+    // default). post_multiplier_delta = -25. current = 10.
+    // 10 + (-25) = -15 < floor(0) → clamp: final_delta = 0 - 10 = -10.
+    // Final endorsement_strength = 10 + (-10) = 0.
+    // Read from runtime config so the assertion survives future RT-r* tuning.
+    let mut cache = lemmy_api::governance::config::ConfigCache::new();
+    let floor: i64 = lemmy_api::governance::config::get_int(
+      &mut cache,
+      &mut (&mut async_conn).into(),
+      lemmy_api::governance::config::Scope::Instance,
+      "liability.sponsor_liability_floor",
+    )
+    .await?;
+    let moderate_delta: i64 = lemmy_api::governance::config::get_int(
+      &mut cache,
+      &mut (&mut async_conn).into(),
+      lemmy_api::governance::config::Scope::Instance,
+      "deltas.sponsor_liability_moderate",
+    )
+    .await?;
+    let initial_strength: i64 = 10;
+    let per_sponsor_pre = moderate_delta / 2;
+    let expected_clamped = std::cmp::max(per_sponsor_pre, floor - initial_strength);
+    let expected_final_strength = initial_strength + expected_clamped;
+
+    let d_1 = liability_delta_for(&mut async_conn, sponsor_1, case).await?;
+    let d_2 = liability_delta_for(&mut async_conn, sponsor_2, case).await?;
+    assert_eq!(
+      i64::from(d_1),
+      expected_clamped,
+      "sponsor_1 delta clamped to floor"
+    );
+    assert_eq!(
+      i64::from(d_2),
+      expected_clamped,
+      "sponsor_2 delta clamped to floor"
+    );
+
+    let snap_1 = recompute_snapshot(&mut async_conn, sponsor_1, None, &mut cache).await?;
+    let snap_2 = recompute_snapshot(&mut async_conn, sponsor_2, None, &mut cache).await?;
+    assert_eq!(
+      i64::from(snap_1.endorsement_strength),
+      expected_final_strength,
+      "sponsor_1 final endorsement_strength = floor (0) by clamp"
+    );
+    assert_eq!(
+      i64::from(snap_2.endorsement_strength),
+      expected_final_strength,
+      "sponsor_2 final endorsement_strength = floor (0) by clamp"
+    );
+
+    Ok(())
+  }
+}
