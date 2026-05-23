@@ -1976,3 +1976,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **tasks:** 4/4 complete, all validate-pending-laptop pass
 - **e2e:** full module run in progress (.claude/PRPs/debug/v1-ship-2-module-e2e.log)
 - **status:** PR opened, awaiting CodeRabbit review
+
+## bm: merge COMPLETE — 2026-05-23T10:01:01Z
+- **PR:** #147 (v1-ship-2 — 4 governance e2e tests (appeal, modlog, reputation, endorsement))
+- **base ← head:** governance-v0 ← phase-v1-ship-2
+- **merge sha:** ac37a125dfc9f0c38dd5d9355ec25bee58c08bc7
+- **remote branch deleted?** yes (--delete-branch)
+- **trunk position:** ac37a125d — Merge pull request #147 from barrie-cork/phase-v1-ship-2
+- **findings YAML archived:** .claude/PRPs/reviews/pr-147-findings.yaml
