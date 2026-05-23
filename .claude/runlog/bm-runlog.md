@@ -1948,3 +1948,10 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **off:** governance-v0 @ 89efda639
 - **plan:** .claude/PRPs/plans/v1-federation-inbound-e.plan.md (approved at user gate 1)
 - **next:** impl session takes over for task 1
+
+## bm: PR opened — 2026-05-23T08:09:12Z
+- **PR:** #148 — Phase v1-federation-inbound-e — TOCTOU fix in evict_oldest_unreviewed_if_needed
+- **URL:** https://github.com/barrie-cork/lemmy/pull/148
+- **Base ← Head:** governance-v0 ← phase-v1-federation-inbound-e
+- **Body source:** completion-report (pending) + plan
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 148`
