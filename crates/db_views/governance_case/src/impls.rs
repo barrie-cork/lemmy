@@ -248,7 +248,16 @@ pub async fn read_summary_for_case(
   case_id: ModerationCaseId,
 ) -> LemmyResult<Option<GovernanceCaseSummaryView>> {
   let conn = &mut get_conn(pool).await?;
+  read_summary_for_case_conn(conn, case_id).await
+}
 
+/// Same as [`read_summary_for_case`] but accepts a bare `AsyncPgConnection`
+/// so it can run inside an open transaction (e.g. in `create_report` to
+/// avoid a post-commit read that could 500 on an already-committed write).
+pub async fn read_summary_for_case_conn(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case_id: ModerationCaseId,
+) -> LemmyResult<Option<GovernanceCaseSummaryView>> {
   let row: Option<SummaryRow> = moderation_case::table
     .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
     .filter(moderation_case::id.eq(case_id))
