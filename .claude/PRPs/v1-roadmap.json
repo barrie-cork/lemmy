@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-23T11:55:00Z",
+  "last_updated_at": "2026-05-23T18:00:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -409,6 +409,29 @@
       "known_followups": [
         "quality-r1 worktree at C:/Users/barri/Developer/brehon-fork-quality-r1 is stale (branch merged); user to git worktree remove when ready"
       ]
+    },
+    "deps": {
+      "name": "Deps (Cargo dependency bumps)",
+      "prd": null,
+      "status": "unstarted",
+      "user_steered": true,
+      "user_steered_note": "User instructed 2026-05-23: deps is gated on v1-ship-3 + v1-RT-r2 both shipping; not /roadmap-next-cut. Cut by hand once preconditions met.",
+      "depends_on": [
+        "v1-ship-3",
+        "v1-RT-r2"
+      ],
+      "sub_phases": {
+        "v1-deps-r1": {
+          "status": "unstarted",
+          "scope": "diesel-async 0.8→0.9 (BREAKING, 42 .run_transaction callsites) + sha2 0.10→0.11 (BREAKING, newtype change) + 10 SemVer-compatible bumps (diesel 2.3.9, tokio 1.52, rustls 0.23.40, bcrypt 0.19.1, serde_with 3.20, jsonwebtoken 10.4, lettre 0.11.22, rss 2.0.13, dashmap 6.2, html2text 0.17). Bundled to amortize cargo+e2e validation cost.",
+          "trigger": "v1-ship-3 + v1-RT-r2 both merged to governance-v0 with retros signed off; Dependabot may have re-opened PR #136 with newer head SHA — prefer current versions over the brief's 2026-05-23 snapshot.",
+          "brief": ".claude/PRPs/briefs/v1-deps-r1-planning-1.md",
+          "plan": null,
+          "pr": null,
+          "blocker": "preconditions: v1-ship-3 + v1-RT-r2 not yet shipped",
+          "background": "Dependabot PR #136 (opened 2026-05-18) bundled all 12 bumps; investigation 2026-05-23 found 2 breaking changes requiring 42-file mechanical rewrite + trait-resolution pre-flight. User chose deferred sub-phase over fix-in-PR'ing the Dependabot branch."
+        }
+      }
     }
   },
   "meta_lanes": {
@@ -465,6 +488,13 @@
           "v1-RT-r5"
         ],
         "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes — changes reputation arithmetic for every user)."
+      },
+      {
+        "lane": "Deps (Cargo dependency bumps)",
+        "items": [
+          "v1-deps-r1"
+        ],
+        "rationale": "Dependabot PR #136 (cargo-all, 12 bumps) deferred 2026-05-23 because diesel-async 0.9 (breaking) + sha2 0.11 (breaking) require 42-callsite mechanical rewrite of the governance write path. Bundled with 10 SemVer-compatible bumps. Hard-gated on v1-ship-3 + v1-RT-r2 close to avoid concurrent-lane conflicts on .run_transaction sites."
       }
     ],
     "in_flight_outside_roadmap": [],
