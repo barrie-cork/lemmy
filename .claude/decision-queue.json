@@ -1,35 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "b246616aaf8f-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-23T19:30:00Z",
-      "question": "Task 2 validate complete — all 4 commands passed on laptop. Mutate to result:pass.",
-      "options": [
-        "result:pass",
-        "result:fail"
-      ],
-      "context": "cargo-check exit 0, clippy exit 0, unit-tests exit 0 (15 tests, 11 new), e2e exit 0 (108 passed). branch: phase-v1-RT-r2, phase_task: 2.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r2-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r2-task2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --lib -- reputation_snapshot::tests > .claude/PRPs/debug/v1-RT-r2-task2-unit-tests.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-RT-r2-task2-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-RT-r2-task2-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-RT-r2-task2-e2e.log\""
-      ],
-      "branch": "phase-v1-RT-r2",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3452,6 +3423,34 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "b246616aaf8f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-23T19:30:00Z",
+      "question": "Task 2 validate complete — all 4 commands passed on laptop. Mutate to result:pass.",
+      "options": [
+        "result:pass",
+        "result:fail"
+      ],
+      "context": "cargo-check exit 0, clippy exit 0, unit-tests exit 0 (15 tests, 11 new), e2e exit 0 (108 passed). branch: phase-v1-RT-r2, phase_task: 2.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r2-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r2-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --lib -- reputation_snapshot::tests > .claude/PRPs/debug/v1-RT-r2-task2-unit-tests.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-RT-r2-task2-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-RT-r2-task2-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-RT-r2-task2-e2e.log\""
+      ],
+      "branch": "phase-v1-RT-r2",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 4 validate commands passed on laptop. cargo-check/clippy/unit-tests/e2e all exit 0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T18:31:54Z",
       "approved_by": null,
       "approved_at": null
     }
