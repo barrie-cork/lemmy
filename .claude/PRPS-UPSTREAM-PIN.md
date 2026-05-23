@@ -50,5 +50,5 @@ After refreshing, update the SHA and date at the top of this file.
 ## Customisation policy
 
 - **Tier 1 commands** (`prp-plan`, `prp-prd`, `prp-implement`, `prp-review`): Brehon-customised, diverge from upstream freely. See [CLAUDE.md](../CLAUDE.md) for design-doc links they must read.
-- **Tier 3 commands** (`prp-review-agents`, `prp-ralph`, `prp-ralph-cancel`) and everything listed in the table above: keep as close to upstream as possible. Only customise for language/tooling (Python/TS → Rust/cargo). Do not rewrite logic.
+- **Tier 3 commands** (`prp-review-agents`) and everything listed in the table above: keep as close to upstream as possible. Only customise for language/tooling (Python/TS → Rust/cargo). Do not rewrite logic.
 - **Drift rule**: if a Brehon command starts referencing something not listed above, either add the dependency and re-pin, or change the command to use a built-in instead.

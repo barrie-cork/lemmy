@@ -9,7 +9,6 @@ on stdin, and signals decisions through stdout/stderr + exit code per
 
 | Script                      | Event              | Matcher           | Purpose                                                                                              |
 | :-------------------------- | :----------------- | :---------------- | :--------------------------------------------------------------------------------------------------- |
-| `prp-ralph-stop.sh`         | `Stop`             | (any)             | Keeps the PRP Ralph autonomous loop running between iterations until `<promise>COMPLETE</promise>`. |
 | `check-cargo-pipe.sh`       | `PreToolUse`       | `Bash`            | Blocks `cargo … \| tail/head/grep/…` per `.claude/rules/cargo-output-capture.md`. Exit 2 with fix.  |
 | `refuse-ssh-reset-hard-shared-checkout.sh` | `PreToolUse` | `Bash`        | Refuses `ssh ...homeserver "...git reset --hard origin/<phase-or-trunk>"` against `/srv/brehon-fork`. Per `.claude/lessons/feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md` (DQ #338). Exit 2 with `update-ref` recipe. Escape hatch: `BREHON_ALLOW_SSH_RESET_HARD=1`. |
 | `inject-dq-state.sh`        | `UserPromptSubmit` | (any)             | Injects current decision-queue + task-hopper state when anything is pending. Silent in steady state. |
@@ -65,22 +64,6 @@ the audit complete so the SessionStart reminder stops firing for this branch:
 ```bash
 touch .claude/audit-$(git rev-parse --abbrev-ref HEAD | tr / -)-complete.flag
 ```
-
-## Ralph loop specifics
-
-The Stop hook (`prp-ralph-stop.sh`) keys off `.claude/prp-ralph.state.md`:
-
-1. `/prp-ralph <plan>` creates the state file with iteration counter.
-2. On every session-stop attempt, the hook checks for the state file.
-3. If state exists and `<promise>COMPLETE</promise>` not in last assistant message:
-   - Increments iteration counter
-   - Feeds the plan execution prompt back to Claude
-   - Loop continues
-4. If completion promise detected OR max iterations reached:
-   - State file is removed
-   - Session exits normally
-
-Manual cancellation: `/prp-ralph-cancel` or `rm .claude/prp-ralph.state.md`.
 
 ## Troubleshooting
 

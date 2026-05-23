@@ -481,7 +481,7 @@ mkdir -p .claude/PRPs/reports
 ## Next Steps
 
 - [ ] Review implementation
-- [ ] Create PR: `/prp-pr` (if ready)
+- [ ] Create PR: `/bm-pr` (Brehon four-role flow) or `gh pr create --base governance-v0`
 - [ ] Mark the relevant phase in [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) as done (in a separate commit in the homeserver repo — do NOT edit from inside brehon-fork)
 
 ---
@@ -554,7 +554,7 @@ mv $ARGUMENTS .claude/PRPs/plans/completed/
 ### Next Steps
 
 1. Review the report (especially deviations)
-2. Create PR: `/prp-pr` or `gh pr create --base governance-v0`
+2. Create PR: `/bm-pr` (Brehon four-role flow) or `gh pr create --base governance-v0`
 3. Update [IMPLEMENTATION-PLAN-v0.md](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) phase status in the `homeserver` repo (separate commit)
 ```
 

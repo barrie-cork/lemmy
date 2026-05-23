@@ -75,11 +75,7 @@ Brehon-customised PRP commands + 9 BM (branch-manager) commands. Run `/` in Clau
 | `/prp-issue-investigate` | Investigate a GitHub issue; produce an artifact for `/prp-issue-fix` |
 | `/prp-issue-fix` | Implement a fix from an investigation artifact — Rust changes, cargo validation, PR |
 | `/prp-codebase-question` | Research codebase questions using parallel `Explore` agents; documents what exists |
-| `/prp-pr` | Create a PR targeting `governance-v0` by default |
-| `/prp-commit` | Stage + commit with a clean message (Rust-aware file globs) |
 | `/prp-review-agents` | Upstream-verbatim multi-agent review flow (not Brehon-customised; may drop later) |
-| `/prp-ralph` | Upstream Ralph loop (verbatim; may drop later) |
-| `/prp-ralph-cancel` | Cancel an active Ralph loop (verbatim) |
 | `/bm-cut` | Cut a new phase or plan branch off `governance-v0` trunk |
 | `/bm-push` | Push the current phase or plan branch to origin |
 | `/bm-pr` | Open a PR from current phase/plan branch into `governance-v0` |

@@ -240,4 +240,5 @@ _Authored by the advisor session on `phase-v1-federation-inbound-b` (not the Tas
 ## Closes
 
 GH #41 — this file replaces the issue's tracker role. Subsequent v1 PRDs
-append their section via their own `/prp-plan` → `/prp-ralph` runs.
+append their section via their own planning + impl-task cohort runs
+(four-role flow).
