@@ -1242,6 +1242,34 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-23T12:30:00Z",
       "source": "config.rs:831 DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE=-50; config.rs:835 DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR=0; sponsor_liability.rs:348 clamped-delta math; e2e.rs:3773 existing tests use seed 100"
+    },
+    {
+      "id": "ac8728bf3772-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-23T18:45:19Z",
+      "question": "Task 2 DoD validation passed locally — all four commands green. Mark resolved.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "cargo check, clippy, test --no-run, and report_to_modlog_golden_path all passed on laptop. Commit c9b4c85c9 on phase-v1-ship-3.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-ship-3-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-ship-3-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-ship-3-task2-test-no-run.log 2>&1\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full report_to_modlog_golden_path > .claude/PRPs/debug/v1-ship-3-task2-e2e.log 2>&1\""
+      ],
+      "branch": "phase-v1-ship-3",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All four DoD commands passed on advisor laptop. check/clippy/no-run/e2e all green.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-23T18:45:19Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
