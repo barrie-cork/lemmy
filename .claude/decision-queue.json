@@ -1,25 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-24T00:00:00Z",
-      "question": "Probe 8d shows Sha256 count=9 (expected 8) and Probe 10 finds open PR #136 (Dependabot catalyst). Do these require re-scoping T2 or PR #136 closure before T1?",
-      "options": [
-        "option-a: accept-both — Sha256 drift +1 is within tolerance; PR #136 is the catalyst, not a conflict. Update T2 brief scope to 9 callsites and proceed with T1.",
-        "option-b: close-pr136-first — close PR #136 before T1 to avoid merge conflicts on Cargo.toml/Cargo.lock; update T2 brief to 9 Sha256 callsites.",
-        "option-c: blocker — re-run plan with updated callsite counts before dispatching T1."
-      ],
-      "context": "Probe 8d: rg Sha256 crates/ tests/ = 9 lines (7 in e2e.rs: 3 imports + 4 usages; 2 in crates/api/api/src/governance/admin_rule_sets.rs). Plan EXPECT 8. One extra vs plan — one new governance e2e usage added since plan-author time. Probe 10: PR #136 deps(cargo) bump 12 packages on dependabot/cargo/governance-v0/cargo-all-2de90c2d2a touches Cargo.toml and Cargo.lock — this is the Dependabot catalyst PR for v1-deps-r1, not an independent concurrent PR. Submodule uninitialized at worktree creation — fixed inline (git submodule update --init --recursive); Probe 4 passed after fix. Probe 11: epoch 1779632440 past 2026-06-01 boundary 1748736000 — advisor should file kind:log DQ per DQ a3d0e9941441-015 answer(a). All other probes passed: 0(docker ok), 1(junior branch confirmed forked from phase-v1-deps-r1), 2(cargo-check -p ok), 3(--features full ok), 4(e2e --no-run ok after submodule init), 5(both exits 101), 6(clippy clean exit 0), 7(workspace e2e --no-run exit 0), 8a(42 run_transaction), 8b(30 scoped_futures), 8c(38 scope_boxed), 8e(0 impl.*Digest), 8f(2 source files html2text + 2 Cargo.toml — source match ok), 9(ship-3+RT-r2 merged, retros exist).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "c60d3217f899-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3710,6 +3691,24 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-017"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-24T00:00:00Z",
+      "question": "Probe 8d shows Sha256 count=9 (expected 8) and Probe 10 finds open PR #136 (Dependabot catalyst). Do these require re-scoping T2 or PR #136 closure before T1?",
+      "options": [
+        "option-a: accept-both — Sha256 drift +1 is within tolerance; PR #136 is the catalyst, not a conflict. Update T2 brief scope to 9 callsites and proceed with T1.",
+        "option-b: close-pr136-first — close PR #136 before T1 to avoid merge conflicts on Cargo.toml/Cargo.lock; update T2 brief to 9 Sha256 callsites.",
+        "option-c: blocker — re-run plan with updated callsite counts before dispatching T1."
+      ],
+      "context": "Probe 8d: rg Sha256 crates/ tests/ = 9 lines (7 in e2e.rs: 3 imports + 4 usages; 2 in crates/api/api/src/governance/admin_rule_sets.rs). Plan EXPECT 8. One extra vs plan — one new governance e2e usage added since plan-author time. Probe 10: PR #136 deps(cargo) bump 12 packages on dependabot/cargo/governance-v0/cargo-all-2de90c2d2a touches Cargo.toml and Cargo.lock — this is the Dependabot catalyst PR for v1-deps-r1, not an independent concurrent PR. Submodule uninitialized at worktree creation — fixed inline (git submodule update --init --recursive); Probe 4 passed after fix. Probe 11: epoch 1779632440 past 2026-06-01 boundary 1748736000 — advisor should file kind:log DQ per DQ a3d0e9941441-015 answer(a). All other probes passed: 0(docker ok), 1(junior branch confirmed forked from phase-v1-deps-r1), 2(cargo-check -p ok), 3(--features full ok), 4(e2e --no-run ok after submodule init), 5(both exits 101), 6(clippy clean exit 0), 7(workspace e2e --no-run exit 0), 8a(42 run_transaction), 8b(30 scoped_futures), 8c(38 scope_boxed), 8e(0 impl.*Digest), 8f(2 source files html2text + 2 Cargo.toml — source match ok), 9(ship-3+RT-r2 merged, retros exist).",
+      "answer": "option-a: accept-both. Sha256 +1 drift (9 vs expected 8) is a tracking-number delta from one new callsite in crates/api/api/src/governance/admin_rule_sets.rs added after plan-author baseline rg — does NOT change T2's zero-diff outcome (sha2 0.11 newtype shift; if all callers compile against new aliases, source diff stays empty). T2 brief will scope to 9 callsites at author time. PR #136 is the planned Dependabot catalyst this sub-phase supersedes at bm-pr time per DQ a3d0e9941441-014 — not a concurrent-PR conflict. Probe 11 advisory was based on epoch math error (1748736000 = 2025-06-01, not 2026); today 2026-05-24 IS pre-boundary; Shape G stays SUSPENDED correctly with no advisor action. Proceed to T1 dispatch with current plan.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T19:25:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "c60d3217f899-001"
     }
   ]
 }
