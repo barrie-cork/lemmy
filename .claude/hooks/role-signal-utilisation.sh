@@ -16,13 +16,20 @@
 # of retro-check.sh — no ordering dependency.
 #
 # Junior-only gate: the laptop advisor session also runs Stop hooks but is
-# the CONSUMER of role signals, not the SUBJECT. We exit 0 early unless the
-# current branch is junior/*, matching the existing retro-check.sh §"branch
-# detection" pattern.
+# the CONSUMER of role signals, not the SUBJECT. Detection used to gate on
+# `git rev-parse --abbrev-ref HEAD` matching `^junior/`, but that resolves
+# against the Stop-hook process cwd which is the daemon's MAIN checkout
+# (e.g. /srv/brehon-fork on governance-v0), NOT the per-task worktree.
+# Bm-task workers were therefore silently dropped because the daemon's main
+# checkout is rarely on a junior/* branch. The reliable Junior-vs-advisor
+# signal is the CLAUDE_PROMPT env carrying a `[role:X]` dispatch tag — that
+# tag is only present in Junior worker prompts, never in advisor sessions.
+# Per .claude/PRPs/handovers/role-customization-2026-05-24-session3.md §3.1.
 #
 # Dependencies (paranoid — verified one-by-one, missing tool = exit 0):
-#   git, jq, sqlite3 (read-only on PMD), python3 (stdin JSON parse),
-#   node OR npx (write-role-signal CLI from project-memory-mcp).
+#   jq, python3 (stdin JSON parse), node OR npx (write-role-signal CLI
+#   from project-memory-mcp). git used only for config_version + branch
+#   resolution against the WORKER'S worktree, not the daemon's main checkout.
 
 set -euo pipefail
 
@@ -56,31 +63,55 @@ SESSION_ID=$(extract_field "session_id")
 TRANSCRIPT_PATH=$(extract_field "transcript_path")
 CWD_FROM_STDIN=$(extract_field "cwd")
 
-# --- Skip on non-Junior branches ---
-if ! command -v git &>/dev/null; then
-  exit 0
-fi
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-if [[ ! "$CURRENT_BRANCH" =~ ^junior/ ]]; then
-  exit 0
-fi
-
 # --- Resolve role from the CLAUDE_PROMPT env (dispatch line) ---
-# Junior dispatch lines start with `[role:planning|impl-task|bm-task|ci-watcher] ...`
+# Junior dispatch lines start with `[role:planning|impl-task|bm-task|ci-watcher] ...`.
+# This IS the Junior-vs-advisor gate: advisor sessions never carry a [role:X]
+# tag in their prompt. No git-branch check needed (and the branch check was
+# actively wrong for bm-task workers — see header comment).
 ROLE=""
 PROMPT="${CLAUDE_PROMPT:-}"
 if [[ "$PROMPT" =~ \[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
   ROLE="${BASH_REMATCH[1]}"
 fi
 if [ -z "$ROLE" ]; then
-  # No role tag in prompt — likely an ad-hoc Junior task, skip signal emission.
+  # No role tag in prompt — advisor session or ad-hoc Junior task, skip
+  # signal emission.
   exit 0
+fi
+
+# --- Resolve WORKER worktree directory (NOT the daemon's main checkout) ---
+# transcript_path lives under the worker's per-task worktree, e.g.:
+#   /srv/brehon-fork/.junior/worktrees/job-447/.claude/transcript-XXXX.jsonl
+# Walk up from transcript_path until we find a .git/ entry (worktrees have
+# a .git FILE pointing at the daemon's .git/worktrees/<name> admin dir).
+# Falls back to the Stop-hook process cwd if transcript_path is absent.
+WORKER_DIR=""
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  _dir=$(dirname "$TRANSCRIPT_PATH")
+  while [ "$_dir" != "/" ] && [ "$_dir" != "." ]; do
+    if [ -e "$_dir/.git" ]; then
+      WORKER_DIR="$_dir"
+      break
+    fi
+    _dir=$(dirname "$_dir")
+  done
+fi
+if [ -z "$WORKER_DIR" ]; then
+  WORKER_DIR="${CWD_FROM_STDIN:-$(pwd)}"
+fi
+
+# --- Resolve branch from the worker worktree ---
+# `git -C <worker_dir>` ensures we read the worktree's HEAD, not the daemon
+# main checkout's. This is the branch the worker is actually committing on.
+CURRENT_BRANCH=""
+if command -v git &>/dev/null; then
+  CURRENT_BRANCH=$(git -C "$WORKER_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 fi
 
 # --- Resolve task_id ---
 # Prefer session_id from stdin (most stable); fall back to branch suffix.
 TASK_ID="${SESSION_ID:-}"
-if [ -z "$TASK_ID" ]; then
+if [ -z "$TASK_ID" ] && [ -n "$CURRENT_BRANCH" ]; then
   # branch shape: junior/<slug>-<id>
   TASK_ID="${CURRENT_BRANCH##*-}"
 fi
@@ -88,12 +119,15 @@ fi
 # --- Resolve config_version (subtree SHA of .claude/roles/<role>) ---
 # Per .claude/PRPs/handovers/role-customization-2026-05-24.md §4 T2:
 # the subtree SHA pins the signal to the exact manifest state at task time.
+# Read from the WORKER worktree's HEAD, not the daemon main checkout.
 #
 # Quirk: `git rev-parse` on missing refs prints the literal ref to STDOUT
 # (not stderr) and exits 128. So we can't rely on `2>/dev/null || echo`.
 # Capture exit code explicitly and discard stdout on failure.
 CONFIG_VERSION=""
-_GR_OUT=$(git rev-parse "HEAD:.claude/roles/${ROLE}" 2>/dev/null) && CONFIG_VERSION="$_GR_OUT" || CONFIG_VERSION=""
+if command -v git &>/dev/null; then
+  _GR_OUT=$(git -C "$WORKER_DIR" rev-parse "HEAD:.claude/roles/${ROLE}" 2>/dev/null) && CONFIG_VERSION="$_GR_OUT" || CONFIG_VERSION=""
+fi
 if [ -z "$CONFIG_VERSION" ] || [[ "$CONFIG_VERSION" == HEAD:* ]]; then
   # Role substrate not present on this branch — pre-T2 history, or the
   # ref-not-found stdout leaked through. Mark as pre-t2.
@@ -131,15 +165,17 @@ fi
 
 # --- Count DQ blockers added on this branch vs governance-v0 base ---
 # A blocker = an entry with kind:"blocker" appearing in pending[] or resolved[]
-# on this branch that was NOT present on governance-v0 base.
+# on this branch that was NOT present on governance-v0 base. Read from the
+# WORKER worktree's working tree + the daemon's governance-v0 ref via -C.
 DQ_BLOCKERS=0
-if command -v jq &>/dev/null && [ -f .claude/decision-queue.json ]; then
+DQ_FILE="${WORKER_DIR}/.claude/decision-queue.json"
+if command -v jq &>/dev/null && [ -f "$DQ_FILE" ]; then
   # Get the count of blocker entries currently on this branch.
   THIS_BRANCH_BLOCKERS=$(jq -r '
     ([.pending[]?, .resolved[]?] | map(select(.kind? == "blocker"))) | length
-  ' .claude/decision-queue.json 2>/dev/null || echo 0)
+  ' "$DQ_FILE" 2>/dev/null || echo 0)
   # Get the count from governance-v0 base (if reachable; falls back to 0).
-  BASE_BLOCKERS=$(git show governance-v0:.claude/decision-queue.json 2>/dev/null | jq -r '
+  BASE_BLOCKERS=$(git -C "$WORKER_DIR" show governance-v0:.claude/decision-queue.json 2>/dev/null | jq -r '
     ([.pending[]?, .resolved[]?] | map(select(.kind? == "blocker"))) | length
   ' 2>/dev/null || echo 0)
   # Delta — clamped to >=0 (a branch could have fewer if blockers were resolved+pruned).
@@ -170,20 +206,33 @@ elif command -v write-role-signal &>/dev/null; then
   CLI="write-role-signal"
 fi
 
-if [ -z "$CLI" ]; then
-  # No CLI reachable; fall back to JSONL queue.
-  QUEUE_DIR=".claude"
-  mkdir -p "$QUEUE_DIR" 2>/dev/null || true
-  QUEUE_FILE="${QUEUE_DIR}/role-signal-queue.jsonl"
-  QUEUE_ROW=$(cat <<JSON
-{"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","role":"${ROLE}","kind":"utilisation","task_id":"${TASK_ID}","branch":"${CURRENT_BRANCH}","config_version":"${CONFIG_VERSION}","content":${CONTENT_JSON},"queued_reason":"write-role-signal CLI not found"}
+# --- Emit signal via CLI, or fall back to JSONL queue ---
+# JSONL queue lives next to the worker worktree (or daemon main checkout if
+# worker_dir resolution failed). On EliteDesk the CLI requires a local
+# PROJECT_MEMORY_DB but the canonical PMD lives on the laptop — so EliteDesk
+# expectedly takes the JSONL path. A drain script on the laptop rsyncs
+# /srv/brehon-fork/.claude/role-signal-queue.jsonl and ingests into the
+# canonical PMD. Per .claude/PRPs/handovers/role-customization-2026-05-24-session3.md
+# §3 architecture decision (lossless async queue + drain).
+QUEUE_DIR="${WORKER_DIR}/.claude"
+QUEUE_FILE="${QUEUE_DIR}/role-signal-queue.jsonl"
+mkdir -p "$QUEUE_DIR" 2>/dev/null || true
+
+queue_signal() {
+  local reason="$1"
+  local row
+  row=$(cat <<JSON
+{"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","role":"${ROLE}","kind":"utilisation","task_id":"${TASK_ID}","branch":"${CURRENT_BRANCH}","config_version":"${CONFIG_VERSION}","content":${CONTENT_JSON},"queued_reason":"${reason}"}
 JSON
 )
-  echo "$QUEUE_ROW" >> "$QUEUE_FILE" 2>/dev/null || true
+  echo "$row" >> "$QUEUE_FILE" 2>/dev/null || true
+}
+
+if [ -z "$CLI" ]; then
+  queue_signal "write-role-signal CLI not found"
   exit 0
 fi
 
-# Try to emit; on any error, queue.
 if ! ROW_ID=$($CLI \
   --role "$ROLE" \
   --kind utilisation \
@@ -191,14 +240,7 @@ if ! ROW_ID=$($CLI \
   --branch "$CURRENT_BRANCH" \
   --config-version "$CONFIG_VERSION" \
   --content "$CONTENT_JSON" 2>&1); then
-  QUEUE_DIR=".claude"
-  mkdir -p "$QUEUE_DIR" 2>/dev/null || true
-  QUEUE_FILE="${QUEUE_DIR}/role-signal-queue.jsonl"
-  QUEUE_ROW=$(cat <<JSON
-{"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","role":"${ROLE}","kind":"utilisation","task_id":"${TASK_ID}","branch":"${CURRENT_BRANCH}","config_version":"${CONFIG_VERSION}","content":${CONTENT_JSON},"queued_reason":"CLI exit non-zero: ${ROW_ID}"}
-JSON
-)
-  echo "$QUEUE_ROW" >> "$QUEUE_FILE" 2>/dev/null || true
+  queue_signal "CLI exit non-zero: ${ROW_ID}"
 fi
 
 exit 0
