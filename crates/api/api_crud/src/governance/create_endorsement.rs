@@ -35,7 +35,7 @@
 use actix_web::web::{Data, Json};
 use chrono::{DateTime, Duration, Utc};
 use diesel::{ExpressionMethods, QueryDsl, dsl::count_star, insert_into};
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
@@ -127,9 +127,8 @@ pub async fn create_endorsement(
   let pseudonym_for_tx = sponsor_pseudonym.clone();
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move { process_endorsement(conn, sponsor_id, pseudonym_for_tx, data_for_tx).await }
-        .scope_boxed()
+    .run_transaction(async |conn| {
+      process_endorsement(conn, sponsor_id, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

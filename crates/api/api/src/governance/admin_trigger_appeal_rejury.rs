@@ -15,7 +15,7 @@ use crate::governance::{
 };
 use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AdminTriggerAppealRejury, AdminTriggerAppealRejuryResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::source::governance::{appeal::Appeal, moderation_case::ModerationCase};
@@ -45,8 +45,8 @@ pub async fn admin_trigger_appeal_rejury(
   let pseudonym_for_tx = admin_pseudonym.clone();
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move { process_trigger_rejury(conn, pseudonym_for_tx, data_for_tx).await }.scope_boxed()
+    .run_transaction(async |conn| {
+      process_trigger_rejury(conn, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

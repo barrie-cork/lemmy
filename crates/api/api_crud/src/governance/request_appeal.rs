@@ -20,7 +20,7 @@
 use actix_web::web::{Data, Json};
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api::governance::{
   actor_pseudonym_helper,
   admin_assign_jury::{seat_appeal_panel, select_appeal_panel},
@@ -64,9 +64,8 @@ pub async fn request_appeal(
   let pseudonym_for_tx = caller_pseudonym.clone();
 
   let appeal_id = conn
-    .run_transaction(|conn| {
-      async move { process_appeal(conn, caller_id, pseudonym_for_tx, data_for_tx).await }
-        .scope_boxed()
+    .run_transaction(async |conn| {
+      process_appeal(conn, caller_id, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

@@ -54,7 +54,7 @@ use diesel::{
   BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star,
   insert_into, update,
 };
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::{
@@ -136,11 +136,8 @@ pub async fn submit_jury_vote(
   let context_for_tx = context.clone();
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move {
-        process_vote(conn, juror_id, pseudonym_for_tx, vote_data, &context_for_tx).await
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      process_vote(conn, juror_id, pseudonym_for_tx, vote_data, &context_for_tx).await
     })
     .await?;
 

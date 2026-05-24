@@ -590,8 +590,6 @@ async fn process_chunk(
   pairs: &[(PersonId, Option<CommunityId>)],
   cache: &mut ConfigCache,
 ) -> LemmyResult<usize> {
-  use diesel_async::scoped_futures::ScopedFutureExt;
-
   // Count how many pairs in this chunk had at least one event whose
   // expires_at just crossed now(). This is informational — logged by
   // the caller in its structured field output (GOTCHA-54g).
@@ -599,18 +597,15 @@ async fn process_chunk(
 
   let pairs_owned: Vec<(PersonId, Option<CommunityId>)> = pairs.to_vec();
   conn
-    .transaction(|conn| {
-      async move {
-        for (person_id, community_id) in pairs_owned {
-          // Advisory lock keyed on (person_id, community_id) serialises
-          // bg-job recomputes against any concurrent synchronous handler
-          // call (Watch 9).
-          acquire_advisory_xact_lock(conn, person_id, community_id).await?;
-          recompute_snapshot(conn, person_id, community_id, cache).await?;
-        }
-        Ok::<_, lemmy_utils::error::LemmyError>(())
+    .transaction(async |conn| {
+      for (person_id, community_id) in pairs_owned {
+        // Advisory lock keyed on (person_id, community_id) serialises
+        // bg-job recomputes against any concurrent synchronous handler
+        // call (Watch 9).
+        acquire_advisory_xact_lock(conn, person_id, community_id).await?;
+        recompute_snapshot(conn, person_id, community_id, cache).await?;
       }
-      .scope_boxed()
+      Ok::<_, lemmy_utils::error::LemmyError>(())
     })
     .await?;
 

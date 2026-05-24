@@ -4,7 +4,7 @@ use crate::source::images::{
 use diesel::{
   BoolExpressionMethods, ExpressionMethods, QueryDsl, dsl::exists, insert_into, select,
 };
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_db_schema_file::{
   PersonId,
   schema::{image_details, local_image, remote_image},
@@ -24,19 +24,16 @@ impl LocalImage {
   ) -> LemmyResult<Self> {
     let conn = &mut get_conn(pool).await?;
     conn
-      .run_transaction(|conn| {
-        async move {
-          let local_insert = insert_into(local_image::table)
-            .values(form)
-            .get_result::<Self>(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntCreate);
+      .run_transaction(async |conn| {
+        let local_insert = insert_into(local_image::table)
+          .values(form)
+          .get_result::<Self>(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntCreate);
 
-          ImageDetails::create(&mut conn.into(), image_details_form).await?;
+        ImageDetails::create(&mut conn.into(), image_details_form).await?;
 
-          local_insert
-        }
-        .scope_boxed()
+        local_insert
       })
       .await
   }

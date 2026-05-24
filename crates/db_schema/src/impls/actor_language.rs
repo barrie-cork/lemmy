@@ -11,7 +11,7 @@ use crate::{
   },
 };
 use diesel::{ExpressionMethods, QueryDsl, delete, dsl::exists, insert_into, select};
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema_file::{
   InstanceId,
   schema::{community_language, local_site, local_user_language, site, site_language},
@@ -68,37 +68,34 @@ impl LocalUserLanguage {
     }
 
     conn
-      .run_transaction(|conn| {
-        async move {
-          // Delete old languages, not including new languages
-          delete(local_user_language::table)
-            .filter(local_user_language::local_user_id.eq(for_local_user_id))
-            .filter(local_user_language::language_id.ne_all(&lang_ids))
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
+      .run_transaction(async |conn| {
+        // Delete old languages, not including new languages
+        delete(local_user_language::table)
+          .filter(local_user_language::local_user_id.eq(for_local_user_id))
+          .filter(local_user_language::language_id.ne_all(&lang_ids))
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
 
-          let forms = lang_ids
-            .iter()
-            .map(|&l| LocalUserLanguageForm {
-              local_user_id: for_local_user_id,
-              language_id: l,
-            })
-            .collect::<Vec<_>>();
+        let forms = lang_ids
+          .iter()
+          .map(|&l| LocalUserLanguageForm {
+            local_user_id: for_local_user_id,
+            language_id: l,
+          })
+          .collect::<Vec<_>>();
 
-          // Insert new languages
-          insert_into(local_user_language::table)
-            .values(forms)
-            .on_conflict((
-              local_user_language::language_id,
-              local_user_language::local_user_id,
-            ))
-            .do_nothing()
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)
-        }
-        .scope_boxed()
+        // Insert new languages
+        insert_into(local_user_language::table)
+          .values(forms)
+          .on_conflict((
+            local_user_language::language_id,
+            local_user_language::local_user_id,
+          ))
+          .do_nothing()
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)
       })
       .await
   }
@@ -145,38 +142,35 @@ impl SiteLanguage {
     }
 
     conn
-      .run_transaction(|conn| {
-        async move {
-          // Delete old languages, not including new languages
-          delete(site_language::table)
-            .filter(site_language::site_id.eq(for_site_id))
-            .filter(site_language::language_id.ne_all(&lang_ids))
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
+      .run_transaction(async |conn| {
+        // Delete old languages, not including new languages
+        delete(site_language::table)
+          .filter(site_language::site_id.eq(for_site_id))
+          .filter(site_language::language_id.ne_all(&lang_ids))
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
 
-          let forms = lang_ids
-            .iter()
-            .map(|&l| SiteLanguageForm {
-              site_id: for_site_id,
-              language_id: l,
-            })
-            .collect::<Vec<_>>();
+        let forms = lang_ids
+          .iter()
+          .map(|&l| SiteLanguageForm {
+            site_id: for_site_id,
+            language_id: l,
+          })
+          .collect::<Vec<_>>();
 
-          // Insert new languages
-          insert_into(site_language::table)
-            .values(forms)
-            .on_conflict((site_language::site_id, site_language::language_id))
-            .do_nothing()
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
+        // Insert new languages
+        insert_into(site_language::table)
+          .values(forms)
+          .on_conflict((site_language::site_id, site_language::language_id))
+          .do_nothing()
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
 
-          CommunityLanguage::limit_languages(conn, instance_id).await?;
+        CommunityLanguage::limit_languages(conn, instance_id).await?;
 
-          Ok(())
-        }
-        .scope_boxed()
+        Ok(())
       })
       .await
   }
@@ -276,29 +270,26 @@ impl CommunityLanguage {
       .collect::<Vec<_>>();
 
     conn
-      .run_transaction(|conn| {
-        async move {
-          // Delete old languages, not including new languages
-          delete(community_language::table)
-            .filter(community_language::community_id.eq(for_community_id))
-            .filter(community_language::language_id.ne_all(&lang_ids))
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
+      .run_transaction(async |conn| {
+        // Delete old languages, not including new languages
+        delete(community_language::table)
+          .filter(community_language::community_id.eq(for_community_id))
+          .filter(community_language::language_id.ne_all(&lang_ids))
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)?;
 
-          // Insert new languages
-          insert_into(community_language::table)
-            .values(form)
-            .on_conflict((
-              community_language::community_id,
-              community_language::language_id,
-            ))
-            .do_nothing()
-            .execute(conn)
-            .await
-            .with_lemmy_type(LemmyErrorType::CouldntUpdate)
-        }
-        .scope_boxed()
+        // Insert new languages
+        insert_into(community_language::table)
+          .values(form)
+          .on_conflict((
+            community_language::community_id,
+            community_language::language_id,
+          ))
+          .do_nothing()
+          .execute(conn)
+          .await
+          .with_lemmy_type(LemmyErrorType::CouldntUpdate)
       })
       .await
   }

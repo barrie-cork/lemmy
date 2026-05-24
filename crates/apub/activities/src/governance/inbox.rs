@@ -52,7 +52,7 @@ use crate::protocol::governance::{
 };
 use activitypub_federation::config::Data;
 use diesel::insert_into;
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_apub_objects::protocol::governance::{
   moderation_label::ModerationLabelProtocol, sanction_notice::SanctionNoticeProtocol,
@@ -194,29 +194,26 @@ pub async fn receive_remote_sanction_notice(
   // available for the best-effort persist_failed handler below.
   let si_tx = source_instance.clone();
   let outcome = conn
-    .run_transaction(|conn| {
-      async move {
-        acquire_evict_lock(conn, &si_tx, "remote_sanction_notice").await?;
-        evict_oldest_unreviewed_if_needed_in_tx(
-          &si_tx,
-          "remote_sanction_notice",
-          evict_cap,
-          conn,
-        )
-        .await?;
-        insert_remote_sanction_notice(&form, conn).await?;
-        // Audit the receipt in the hash-chained governance log. No local
-        // pseudonym for a remote actor; pass None per ADR-015.
-        governance_log::append(
-          &mut (&mut *conn).into(),
-          ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
-          payload,
-          None,
-        )
-        .await?;
-        Ok(())
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      acquire_evict_lock(conn, &si_tx, "remote_sanction_notice").await?;
+      evict_oldest_unreviewed_if_needed_in_tx(
+        &si_tx,
+        "remote_sanction_notice",
+        evict_cap,
+        conn,
+      )
+      .await?;
+      insert_remote_sanction_notice(&form, conn).await?;
+      // Audit the receipt in the hash-chained governance log. No local
+      // pseudonym for a remote actor; pass None per ADR-015.
+      governance_log::append(
+        &mut (&mut *conn).into(),
+        ENTRY_KIND_FEDERATION_SANCTION_RECEIVED,
+        payload,
+        None,
+      )
+      .await?;
+      Ok(())
     })
     .await;
   // Best-effort persist_failed emit outside the rollback — swallow any
@@ -315,27 +312,24 @@ pub async fn receive_remote_trust_attestation(
   // PRD §7.3 — serialise eviction + insert for this peer per (peer_domain, table_name).
   let pd_tx = peer_domain.clone();
   let outcome = conn
-    .run_transaction(|conn| {
-      async move {
-        acquire_evict_lock(conn, &pd_tx, "federation_attestation").await?;
-        evict_oldest_unreviewed_if_needed_in_tx(
-          &pd_tx,
-          "federation_attestation",
-          evict_cap,
-          conn,
-        )
-        .await?;
-        insert_federation_attestation(&form, conn).await?;
-        governance_log::append(
-          &mut (&mut *conn).into(),
-          ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED,
-          payload,
-          None,
-        )
-        .await?;
-        Ok(())
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      acquire_evict_lock(conn, &pd_tx, "federation_attestation").await?;
+      evict_oldest_unreviewed_if_needed_in_tx(
+        &pd_tx,
+        "federation_attestation",
+        evict_cap,
+        conn,
+      )
+      .await?;
+      insert_federation_attestation(&form, conn).await?;
+      governance_log::append(
+        &mut (&mut *conn).into(),
+        ENTRY_KIND_FEDERATION_ATTESTATION_RECEIVED,
+        payload,
+        None,
+      )
+      .await?;
+      Ok(())
     })
     .await;
   // Best-effort persist_failed emit outside the rollback.
@@ -635,16 +629,13 @@ pub(crate) async fn log_inbox_drop(
     "reason": reason,
   });
   conn
-    .run_transaction(|conn| {
-      async move {
-        diesel::insert_into(federation_inbox_dropped_log::table)
-          .values(&form)
-          .execute(conn)
-          .await?;
-        governance_log::append(&mut (&mut *conn).into(), entry_kind, payload, None).await?;
-        Ok(())
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      diesel::insert_into(federation_inbox_dropped_log::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+      governance_log::append(&mut (&mut *conn).into(), entry_kind, payload, None).await?;
+      Ok(())
     })
     .await
 }
@@ -817,30 +808,27 @@ pub async fn receive_remote_moderation_label(
   // PRD §7.3 — serialise eviction + insert for this peer per (peer_domain, table_name).
   let pd_tx = peer_domain.clone();
   let outcome = conn
-    .run_transaction(|conn| {
-      async move {
-        acquire_evict_lock(conn, &pd_tx, "remote_moderation_label").await?;
-        evict_oldest_unreviewed_if_needed_in_tx(
-          &pd_tx,
-          "remote_moderation_label",
-          evict_cap,
-          conn,
-        )
+    .run_transaction(async |conn| {
+      acquire_evict_lock(conn, &pd_tx, "remote_moderation_label").await?;
+      evict_oldest_unreviewed_if_needed_in_tx(
+        &pd_tx,
+        "remote_moderation_label",
+        evict_cap,
+        conn,
+      )
+      .await?;
+      diesel::insert_into(remote_moderation_label::table)
+        .values(&form)
+        .execute(conn)
         .await?;
-        diesel::insert_into(remote_moderation_label::table)
-          .values(&form)
-          .execute(conn)
-          .await?;
-        governance_log::append(
-          &mut (&mut *conn).into(),
-          ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
-          payload,
-          None,
-        )
-        .await?;
-        Ok(())
-      }
-      .scope_boxed()
+      governance_log::append(
+        &mut (&mut *conn).into(),
+        ENTRY_KIND_FEDERATION_LABEL_RECEIVED,
+        payload,
+        None,
+      )
+      .await?;
+      Ok(())
     })
     .await;
   // Best-effort persist_failed emit outside the rollback.

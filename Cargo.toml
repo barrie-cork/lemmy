@@ -171,7 +171,7 @@ lemmy_db_views_vote = { version = "=1.0.0-test-arm-qemu.0", path = "./crates/db_
 activitypub_federation = { version = "0.7.0-beta.11", default-features = false, features = [
   "actix-web",
 ] }
-diesel = { version = "=2.3.7", features = [
+diesel = { version = "=2.3.9", features = [
   "64-column-tables",
   "chrono",
   "postgres",
@@ -179,7 +179,7 @@ diesel = { version = "=2.3.7", features = [
   "uuid",
 ] }
 diesel_migrations = "2.3.1"
-diesel-async = "0.8.0"
+diesel-async = "0.9.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_with = "3.18.0"
 sha2 = "0.10"

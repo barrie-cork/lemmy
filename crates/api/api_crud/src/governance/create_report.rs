@@ -29,7 +29,7 @@ use diesel::{
   BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper,
   insert_into, update,
 };
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api::governance::{
   actor_pseudonym_helper, case_open_snapshot,
   config::{self, ConfigCache, Scope},
@@ -144,27 +144,24 @@ pub async fn create_report(
   let pseudonym_for_tx = pseudonym;
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move {
-        process_report(
-          conn,
-          reporter_id,
-          pseudonym_for_tx,
-          data_for_tx,
-          weight_micros,
-          threshold_micros,
-          reporter_reputation,
-          target_post_id,
-          target_comment_id,
-          target_person_id,
-          target_community_id,
-          target_remote_url,
-          reason_code,
-          cache,
-        )
-        .await
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      process_report(
+        conn,
+        reporter_id,
+        pseudonym_for_tx,
+        data_for_tx,
+        weight_micros,
+        threshold_micros,
+        reporter_reputation,
+        target_post_id,
+        target_comment_id,
+        target_person_id,
+        target_community_id,
+        target_remote_url,
+        reason_code,
+        cache,
+      )
+      .await
     })
     .await?;
 

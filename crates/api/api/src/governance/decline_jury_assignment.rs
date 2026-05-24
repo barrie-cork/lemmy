@@ -20,7 +20,7 @@ use chrono::Utc;
 use diesel::{
   BoolExpressionMethods, ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update,
 };
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{DeclineJuryAssignment, DeclineJuryAssignmentResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::source::governance::{
@@ -55,9 +55,8 @@ pub async fn decline_jury_assignment(
   let pseudonym_for_tx = caller_pseudonym.clone();
 
   let replacement = conn
-    .run_transaction(|conn| {
-      async move { process_decline(conn, caller_id, pseudonym_for_tx, data_for_tx).await }
-        .scope_boxed()
+    .run_transaction(async |conn| {
+      process_decline(conn, caller_id, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

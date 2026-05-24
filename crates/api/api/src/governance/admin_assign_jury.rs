@@ -46,7 +46,7 @@ use diesel::{
   sql_types::{Array, BigInt, Integer, Nullable},
   update,
 };
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AdminAssignJury, AdminAssignJuryResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
@@ -92,8 +92,8 @@ pub async fn admin_assign_jury(
   let pseudonym_for_tx = admin_pseudonym.clone();
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move { process_assignment(conn, pseudonym_for_tx, data_for_tx).await }.scope_boxed()
+    .run_transaction(async |conn| {
+      process_assignment(conn, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

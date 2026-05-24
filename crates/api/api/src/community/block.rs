@@ -1,6 +1,5 @@
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
-use diesel_async::scoped_futures::ScopedFutureExt;
 use lemmy_api_utils::{
   context::LemmyContext,
   send_activity::{ActivityChannel, SendActivityData},
@@ -35,22 +34,19 @@ pub async fn user_block_community(
   let conn = &mut get_conn(pool).await?;
   let tx_data = data.clone();
   conn
-    .run_transaction(|conn| {
-      async move {
-        if tx_data.block {
-          CommunityActions::block(&mut conn.into(), &community_block_form).await?;
+    .run_transaction(async |conn| {
+      if tx_data.block {
+        CommunityActions::block(&mut conn.into(), &community_block_form).await?;
 
-          // Also, unfollow the community, and send a federated unfollow
-          CommunityActions::unfollow(&mut conn.into(), person_id, tx_data.community_id)
-            .await
-            .ok();
-        } else {
-          CommunityActions::unblock(&mut conn.into(), &community_block_form).await?;
-        }
-
-        Ok(())
+        // Also, unfollow the community, and send a federated unfollow
+        CommunityActions::unfollow(&mut conn.into(), person_id, tx_data.community_id)
+          .await
+          .ok();
+      } else {
+        CommunityActions::unblock(&mut conn.into(), &community_block_form).await?;
       }
-      .scope_boxed()
+
+      Ok(())
     })
     .await?;
 

@@ -10,7 +10,6 @@ use diesel_async::{
     AsyncDieselConnectionManager, ManagerConfig,
     deadpool::{Hook, HookError, Object as PooledConnection, Pool},
   },
-  scoped_futures::ScopedBoxFuture,
 };
 use futures_util::{FutureExt, future::BoxFuture};
 use lemmy_utils::{
@@ -57,10 +56,35 @@ pub async fn get_conn<'a, 'b: 'a>(pool: &'a mut DbPool<'b>) -> Result<DbConn<'a>
   })
 }
 
+/// Local mirror of `diesel_async::transaction_manager::AsyncFunc`.
+///
+/// diesel-async 0.9 keeps `AsyncFunc` in a private module (`mod transaction_manager;`
+/// upstream), so we cannot name it directly as a bound. The blanket impl below
+/// reproduces upstream's verbatim, letting `run_transaction` accept the same closure
+/// shapes that satisfy the inner `AsyncConnection::transaction` bound. Remove this
+/// mirror once `AsyncFunc` becomes public (or `AsyncFnOnce::CallOnceFuture` stabilises).
+pub trait LocalAsyncFunc<T, R>:
+  AsyncFnOnce(T) -> R + FnOnce(T) -> <Self as LocalAsyncFunc<T, R>>::Fut
+{
+  type Fut: std::future::Future<Output = R>;
+}
+
+impl<F, T, Fut, R> LocalAsyncFunc<T, R> for F
+where
+  F: AsyncFnOnce(T) -> R + FnOnce(T) -> Fut,
+  Fut: std::future::Future<Output = R>,
+{
+  type Fut = Fut;
+}
+
 impl DbConn<'_> {
+  /// Run a transaction whose closure body returns `LemmyResult<R>`. Callers spell the
+  /// closure as `.run_transaction(async |conn| { /* body */ })` — the 0.8-era
+  /// `|conn| async move { ... }.scope_boxed()` wrapping shape is gone.
   pub async fn run_transaction<'a, R, F>(&mut self, callback: F) -> LemmyResult<R>
   where
-    F: for<'r> FnOnce(&'r mut AsyncPgConnection) -> ScopedBoxFuture<'a, 'r, LemmyResult<R>>
+    for<'r> F: AsyncFnOnce(&'r mut AsyncPgConnection) -> LemmyResult<R>
+      + LocalAsyncFunc<&'r mut AsyncPgConnection, LemmyResult<R>, Fut: Send>
       + Send
       + 'a,
     R: Send + 'a,

@@ -58,7 +58,7 @@ use serde_with::skip_serializing_none;
 use {
   crate::source::governance::redaction::scrub_json,
   diesel::{ExpressionMethods, QueryDsl, SelectableHelper},
-  diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt},
+  diesel_async::RunQueryDsl,
   ed25519_dalek::{Signer, SigningKey},
   lemmy_diesel_utils::connection::{DbPool, get_conn},
   lemmy_utils::error::{LemmyErrorType, LemmyResult},
@@ -284,34 +284,31 @@ pub async fn append(
   // atomic INSERT+UPDATE also resolves GH #35: subscribers observe the
   // row only once the transaction commits with signature populated.
   conn
-    .run_transaction(|conn| {
-      async move {
-        let row = diesel::insert_into(governance_log::table)
-          .values(&form)
-          .returning(GovernanceLog::as_returning())
-          .get_result::<GovernanceLog>(conn)
-          .await?;
+    .run_transaction(async |conn| {
+      let row = diesel::insert_into(governance_log::table)
+        .values(&form)
+        .returning(GovernanceLog::as_returning())
+        .get_result::<GovernanceLog>(conn)
+        .await?;
 
-        // Sign the trigger-computed entry_hash. The 32-byte SHA-256
-        // digest is what goes on the wire; the resulting 64-byte
-        // signature rides in the `signature` column.
-        let signature = signing_key.sign(&row.entry_hash).to_bytes().to_vec();
+      // Sign the trigger-computed entry_hash. The 32-byte SHA-256
+      // digest is what goes on the wire; the resulting 64-byte
+      // signature rides in the `signature` column.
+      let signature = signing_key.sign(&row.entry_hash).to_bytes().to_vec();
 
-        // The signature-gate trigger allows exactly one NULL→non-NULL
-        // transition on `signature` and rejects any other column
-        // change, so the .set(...) clause must contain only
-        // `signature`.
-        diesel::update(governance_log::table.filter(governance_log::id.eq(row.id)))
-          .set(governance_log::signature.eq(&signature))
-          .execute(conn)
-          .await?;
+      // The signature-gate trigger allows exactly one NULL→non-NULL
+      // transition on `signature` and rejects any other column
+      // change, so the .set(...) clause must contain only
+      // `signature`.
+      diesel::update(governance_log::table.filter(governance_log::id.eq(row.id)))
+        .set(governance_log::signature.eq(&signature))
+        .execute(conn)
+        .await?;
 
-        Ok(GovernanceLog {
-          signature: Some(signature),
-          ..row
-        })
-      }
-      .scope_boxed()
+      Ok(GovernanceLog {
+        signature: Some(signature),
+        ..row
+      })
     })
     .await
 }
