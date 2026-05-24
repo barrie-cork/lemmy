@@ -2024,3 +2024,4 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r3
 - **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓
 - **roadmap:** flipped v1-RT-r3 unstarted → in_flight
+2026-05-24T10:55:00Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-05-24-fed-in-e-planning-queued.md branch=governance-v0 head=347033bf8
