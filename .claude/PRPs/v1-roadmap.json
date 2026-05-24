@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-23T18:00:00Z",
+  "last_updated_at": "2026-05-24T00:00:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -232,11 +232,13 @@
           "blocker": "no plan written yet"
         },
         "v1-RT-r3": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "scheduled_tasks weekly-active cron + submit_jury_vote post-decision juror-aligned hook + admin_emergency_remove flag_bad_faith; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED",
           "registry_evidence": "3 RT-r1 pre-landed consts name v1-RT-r3 as their fire site",
           "plan": null,
-          "blocker": "no plan written yet"
+          "blocker": "no plan written; planning Junior not yet dispatched",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3",
+          "in_flight_since": "2026-05-24"
         },
         "v1-RT-r4": {
           "status": "unstarted",
