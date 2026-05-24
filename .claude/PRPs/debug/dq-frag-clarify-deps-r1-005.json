@@ -1,0 +1,17 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:39:00Z",
+  "question": "DoD executability — Shape G — Brief §4 cites `validate-pending-laptop` (correct per Shape G suspended until 2026-06-01). If this lane runs past June 1 when Shape G is re-enabled (per DQ #229 pending), should the planner author dual-path DoD (laptop OR Shape G dispatch)?",
+  "options": [
+    "(a) Laptop-only — author validate-pending-laptop throughout; if Shape G re-enables mid-lane, the planner files a `kind: \"log\"` DQ at the boundary and switches subsequent tasks; no dual-path authored upfront",
+    "(b) Dual-path — author plan §15 with both validate-pending-laptop AND validate-pending forms; planner annotates which is active at plan-author time and impl-task subagents check current Shape G state per `project_shape_g_suspended_2026_05_16` memory before raising the DQ kind",
+    "(c) Defer — author laptop-only; if June 1 passes mid-lane, raise a `kind: \"blocker\"` DQ requesting user gate before switching"
+  ],
+  "context": "Shape G suspended 2026-05-16 (per `project_shape_g_suspended_2026_05_16` memory + DQ #229 pending). Re-enable date: 2026-06-01 (~7 days from lane cut). Brief lane wall-clock estimate: 2-4 days for T1 + <1 day for T2/T3 — likely lands before June 1, but if Task 1's 42-callsite rewrite triggers fix-impl cycles, lane could overrun. Per advisor-orchestrator §5.2, both laptop and Shape G paths use the SAME DQ schema (`validate-pending-laptop` vs `validate-pending`); the routing is in the polling loop. Dual-authoring adds plan-author cost; defer-with-blocker adds catch-fire cost; laptop-only-with-mid-lane-switch is cheapest if the boundary is hit.",
+  "answer": "(a) — laptop-only, with explicit mid-lane switch protocol. Plan §15 authors validate-pending-laptop throughout (wrapper-prefixed per DQ deps-r1-001). If June 1 passes mid-lane: (i) advisor files a `kind: \"log\"` DQ at the boundary citing this clarify entry + DQ #229 resolution; (ii) subsequent impl-tasks raise `kind: \"validate-pending\"` (Shape G) instead of `validate-pending-laptop`; (iii) plan §15 does NOT need re-authoring — the polling loop handles both kinds transparently. Per `feedback_principles_not_rules.md` (don't dual-author for a boundary that may not be hit) + `project_shape_g_suspended_2026_05_16` memory's How-to-apply checklist.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:39:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

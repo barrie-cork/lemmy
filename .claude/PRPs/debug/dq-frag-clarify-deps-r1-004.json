@@ -1,0 +1,16 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:38:00Z",
+  "question": "Watchpoint specificity — DoD clippy baseline — §4 Task 1 prescribes `cargo clippy --workspace --features full --no-deps -- -D warnings`. Per pre-phase-harness-audit.md §3 (clippy baseline capture), the planner MUST verify the baseline is exit-0 against trunk BEFORE the migration; otherwise the DoD is unexecutable and the brief is gating an impossible state. Should the planner run probe-3 (clippy baseline against trunk-at-cut-time) as Task 0 (pre-flight)?",
+  "options": [
+    "(a) Yes — Task 0 in plan §13 = pre-phase-harness-audit including clippy baseline; non-zero baseline → plan §13 adds a `chore(lint):` pre-task before Task 1",
+    "(b) No — assume trunk is clean because v1-ship-3 + v1-RT-r2 both shipped with green clippy DoD; skip the baseline probe"
+  ],
+  "context": "Brief §8 lists Task 0 as 'Pre-phase harness audit + re-enumerate callsites' — pre-phase-harness-audit.md mandates four probes (1: -p honored, 2: features flag, 3: target selection, 4: exit-code propagation) + a clippy baseline capture (§3). The brief implies but does not enforce the clippy baseline. Per `feedback_clippy_per_module_deny_requires_workspace_allow.md`, a workspace-level group-deny can silently break the DoD; per `feedback_advisor_watchpoint_specificity.md`, the brief watchpoint must cite the specific lint or table.",
+  "answer": "(a) — Task 0 includes both the four probes from pre-phase-harness-audit.md §1 AND the clippy baseline capture from §3. If `cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"` exits non-zero on trunk-at-cut-time (HEAD before any Task 1 commit lands), the planner MUST: (i) capture the failing log to `.claude/PRPs/debug/v1-deps-r1-task0-clippy-baseline.log`; (ii) add a `chore(lint):` task before Task 1 in §13 to clear the pre-existing debt; (iii) re-run the baseline post-chore until exit 0. Without this gate, the DoD is unexecutable — the migration would land green-clippy results that include pre-existing debt as new noise.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:38:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

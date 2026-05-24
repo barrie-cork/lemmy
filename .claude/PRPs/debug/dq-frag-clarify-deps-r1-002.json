@@ -1,0 +1,16 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:36:00Z",
+  "question": "Missing required-reading — brief §5 omits three Windows-wrapper lessons that the most recent sibling plan (v1-ship-3) cites verbatim. Inject into the planning brief's required-reading list?",
+  "options": [
+    "(a) Inject all three: `feedback_validate_pending_laptop_must_use_wrapper.md`, `feedback_targeted_validate_pending_laptop_commands.md`, `feedback_windows_e2e_requires_bat_wrapper.md` — match v1-ship-3 §2 pattern",
+    "(b) Skip — brief §5 already cites `feedback_laptop_default_for_validate_pending.md` which transitively links the others"
+  ],
+  "context": "v1-ship-3 plan §2 cites all three Windows-wrapper lessons explicitly in the binding-lesson list. Brief §5 cites only `feedback_laptop_default_for_validate_pending.md`. While that lesson references the wrapper trio, transitive citation is weaker than direct — the planner reads §3 Required reading and may not chase transitive links. Per `feedback_read_canonical_before_writing_spec.md` + `feedback_clarify_before_plan.md` step 3 axes table 'Missing required-reading'.",
+  "answer": "(a) — add all three lessons to brief §5 required-reading list (effectively §3 Required reading in the impl-task-brief.template.md vocabulary; the planning brief uses §5 for lesson injections). The planner's plan §2 Source list must cite them verbatim in the same form v1-ship-3 plan §2 does. Brief edit committed alongside this clarify pass.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:36:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

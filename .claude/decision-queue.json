@@ -3568,6 +3568,129 @@
       "resolved_at": "2026-05-24T09:00:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:35:00Z",
+      "question": "DoD executability — brief §4 prescribes raw `cargo check / clippy / test` commands. On Windows (the canonical cargo runner per project_laptop_canonical_cargo_runner), these MUST be wrapper-prefixed `cmd //c \"scripts\\brehon\\cargo-*.bat ...\"` for libpq.dll discovery + vcvars + PQ_LIB_DIR. Should the planner author DoD commands with wrappers throughout?",
+      "options": [
+        "(a) Yes — author every DoD line in §15 as `cmd //c \"scripts\\brehon\\cargo-<verb>.bat ...\"` per `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md` (the planner inherits this discipline; raw cargo in DoD strings is the failure mode)",
+        "(b) No — raw cargo in DoD is fine because the advisor's polling loop infers wrapper prefix from `validate-pending-laptop` kind"
+      ],
+      "context": "Brief §4 uses raw `cargo check --workspace --features full`, `cargo clippy --workspace --features full --no-deps -- -D warnings`, etc — no wrapper. Compare v1-ship-3 plan §2 which cites `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md` verbatim in the lesson-injection list and uses wrapper-prefixed commands throughout. The DQ entries impl-task subagents will raise carry `commands[]` arrays that the advisor-laptop handler runs verbatim — wrapper authorship at DQ-write time is mandatory per `feedback_validate_pending_laptop_must_use_wrapper.md` §How-to-apply. Raw cargo would compile but tests would crash at runtime with `STATUS_DLL_NOT_FOUND (0xc0000135)` because libpq.dll is not on PATH for spawned test binaries.",
+      "answer": "(a) — author every §15 DoD command as `cmd //c \"scripts\\brehon\\cargo-<verb>.bat ...\"`. The planner MUST inherit Windows-wrapper discipline per `feedback_validate_pending_laptop_must_use_wrapper.md` and `feedback_windows_e2e_requires_bat_wrapper.md`. Sibling plan v1-ship-3 (`.claude/PRPs/plans/v1-ship-3.plan.md` §2 lesson list) is the canonical pattern — cite verbatim. impl-task subagents raise `validate-pending-laptop` DQ entries whose `commands[]` arrays MUST be wrapper-prefixed at write time. The brief's §4 raw-cargo lines are advisory-shape only; the planner converts them to wrapper form when authoring §15 + §13 task DoDs.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:35:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-011"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:36:00Z",
+      "question": "Missing required-reading — brief §5 omits three Windows-wrapper lessons that the most recent sibling plan (v1-ship-3) cites verbatim. Inject into the planning brief's required-reading list?",
+      "options": [
+        "(a) Inject all three: `feedback_validate_pending_laptop_must_use_wrapper.md`, `feedback_targeted_validate_pending_laptop_commands.md`, `feedback_windows_e2e_requires_bat_wrapper.md` — match v1-ship-3 §2 pattern",
+        "(b) Skip — brief §5 already cites `feedback_laptop_default_for_validate_pending.md` which transitively links the others"
+      ],
+      "context": "v1-ship-3 plan §2 cites all three Windows-wrapper lessons explicitly in the binding-lesson list. Brief §5 cites only `feedback_laptop_default_for_validate_pending.md`. While that lesson references the wrapper trio, transitive citation is weaker than direct — the planner reads §3 Required reading and may not chase transitive links. Per `feedback_read_canonical_before_writing_spec.md` + `feedback_clarify_before_plan.md` step 3 axes table 'Missing required-reading'.",
+      "answer": "(a) — add all three lessons to brief §5 required-reading list (effectively §3 Required reading in the impl-task-brief.template.md vocabulary; the planning brief uses §5 for lesson injections). The planner's plan §2 Source list must cite them verbatim in the same form v1-ship-3 plan §2 does. Brief edit committed alongside this clarify pass.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:36:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-012"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:37:00Z",
+      "question": "Scope ambiguity — WP-1 surfaces two migration shapes for diesel-async 0.9: (a) update wrapper signature + mechanically rewrite all 42 callsites, or (b) keep wrapper signature and bridge internally. Brief defaults to (a). Is the planner authorised to switch to (b) if 0.9 docs/source reveal a clean bridge pattern?",
+      "options": [
+        "(a) Lock to option (a) — planner MUST rewrite all 42 callsites; bridging is not authorised even if available",
+        "(b) Planner-choice — planner reads diesel-async 0.9 source/docs at plan-author time; if a clean bridge exists, (b) is permitted with rationale in plan §4; default remains (a)",
+        "(c) Lock to option (b) — minimise diff at any cost"
+      ],
+      "context": "Brief WP-1 explicitly states 'Planner picks the path. Default: option (a) — explicit closure rewrite is what every callsite reader will see, and the `scoped_futures` crate is going away upstream; bridging keeps a dead pattern alive.' But it doesn't say (b) is forbidden. Per `feedback_principles_not_rules.md`, judgment calls belong to the planner unless the brief is explicit. The brief's §6 stop-and-ask tripwires also forbid (b)-shaped solutions that 'keep a dead pattern alive' implicitly.",
+      "answer": "(b) — planner-choice with discipline. Planner reads diesel-async 0.9.0 changelog + `transaction` signature at plan-author time. If 0.9's `transaction()` accepts an async closure cleanly via a bridge that does NOT depend on `scoped_futures` (which is removed), the planner MAY choose (b) and document the rationale in plan §4. Default remains (a) per brief WP-1. If (b) is chosen, plan §4 must include a 'no-scoped_futures dependency' assertion; cargo check exit 0 on the bridged wrapper validates the assertion. The planner files a `kind: \"blocker\"` DQ if neither (a) nor (b) compiles cleanly against 0.9 — a third path would warrant user catch-fire.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:37:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-013"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:38:00Z",
+      "question": "Watchpoint specificity — DoD clippy baseline — §4 Task 1 prescribes `cargo clippy --workspace --features full --no-deps -- -D warnings`. Per pre-phase-harness-audit.md §3 (clippy baseline capture), the planner MUST verify the baseline is exit-0 against trunk BEFORE the migration; otherwise the DoD is unexecutable and the brief is gating an impossible state. Should the planner run probe-3 (clippy baseline against trunk-at-cut-time) as Task 0 (pre-flight)?",
+      "options": [
+        "(a) Yes — Task 0 in plan §13 = pre-phase-harness-audit including clippy baseline; non-zero baseline → plan §13 adds a `chore(lint):` pre-task before Task 1",
+        "(b) No — assume trunk is clean because v1-ship-3 + v1-RT-r2 both shipped with green clippy DoD; skip the baseline probe"
+      ],
+      "context": "Brief §8 lists Task 0 as 'Pre-phase harness audit + re-enumerate callsites' — pre-phase-harness-audit.md mandates four probes (1: -p honored, 2: features flag, 3: target selection, 4: exit-code propagation) + a clippy baseline capture (§3). The brief implies but does not enforce the clippy baseline. Per `feedback_clippy_per_module_deny_requires_workspace_allow.md`, a workspace-level group-deny can silently break the DoD; per `feedback_advisor_watchpoint_specificity.md`, the brief watchpoint must cite the specific lint or table.",
+      "answer": "(a) — Task 0 includes both the four probes from pre-phase-harness-audit.md §1 AND the clippy baseline capture from §3. If `cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"` exits non-zero on trunk-at-cut-time (HEAD before any Task 1 commit lands), the planner MUST: (i) capture the failing log to `.claude/PRPs/debug/v1-deps-r1-task0-clippy-baseline.log`; (ii) add a `chore(lint):` task before Task 1 in §13 to clear the pre-existing debt; (iii) re-run the baseline post-chore until exit 0. Without this gate, the DoD is unexecutable — the migration would land green-clippy results that include pre-existing debt as new noise.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:38:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-014"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:39:00Z",
+      "question": "DoD executability — Shape G — Brief §4 cites `validate-pending-laptop` (correct per Shape G suspended until 2026-06-01). If this lane runs past June 1 when Shape G is re-enabled (per DQ #229 pending), should the planner author dual-path DoD (laptop OR Shape G dispatch)?",
+      "options": [
+        "(a) Laptop-only — author validate-pending-laptop throughout; if Shape G re-enables mid-lane, the planner files a `kind: \"log\"` DQ at the boundary and switches subsequent tasks; no dual-path authored upfront",
+        "(b) Dual-path — author plan §15 with both validate-pending-laptop AND validate-pending forms; planner annotates which is active at plan-author time and impl-task subagents check current Shape G state per `project_shape_g_suspended_2026_05_16` memory before raising the DQ kind",
+        "(c) Defer — author laptop-only; if June 1 passes mid-lane, raise a `kind: \"blocker\"` DQ requesting user gate before switching"
+      ],
+      "context": "Shape G suspended 2026-05-16 (per `project_shape_g_suspended_2026_05_16` memory + DQ #229 pending). Re-enable date: 2026-06-01 (~7 days from lane cut). Brief lane wall-clock estimate: 2-4 days for T1 + <1 day for T2/T3 — likely lands before June 1, but if Task 1's 42-callsite rewrite triggers fix-impl cycles, lane could overrun. Per advisor-orchestrator §5.2, both laptop and Shape G paths use the SAME DQ schema (`validate-pending-laptop` vs `validate-pending`); the routing is in the polling loop. Dual-authoring adds plan-author cost; defer-with-blocker adds catch-fire cost; laptop-only-with-mid-lane-switch is cheapest if the boundary is hit.",
+      "answer": "(a) — laptop-only, with explicit mid-lane switch protocol. Plan §15 authors validate-pending-laptop throughout (wrapper-prefixed per DQ deps-r1-001). If June 1 passes mid-lane: (i) advisor files a `kind: \"log\"` DQ at the boundary citing this clarify entry + DQ #229 resolution; (ii) subsequent impl-tasks raise `kind: \"validate-pending\"` (Shape G) instead of `validate-pending-laptop`; (iii) plan §15 does NOT need re-authoring — the polling loop handles both kinds transparently. Per `feedback_principles_not_rules.md` (don't dual-author for a boundary that may not be hit) + `project_shape_g_suspended_2026_05_16` memory's How-to-apply checklist.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:39:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-015"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:40:00Z",
+      "question": "Undefined output (DQ entry shape) — Brief §4 doesn't specify the exact `commands[]` array shape for the `validate-pending-laptop` DQ entries impl-task subagents will raise. Per `feedback_targeted_validate_pending_laptop_commands.md`, the commands array should be class-targeted (full 4-command sequence is wasteful for some change classes). What shape per task?",
+      "options": [
+        "(a) Per-task class-targeted commands per `feedback_targeted_validate_pending_laptop_commands.md` table: T1 = check + clippy + e2e (production code + tests, 42-callsite mechanical rewrite warrants full coverage); T2 = check + clippy + targeted lib-test (sha2 surface is narrow); T3 = check + clippy only (SemVer-compat bundle, lockfile + 4 Cargo.toml edits, no behavioral change)",
+        "(b) Full 4-command sequence (check + clippy + lib-test + e2e --no-run) for every task — conservative",
+        "(c) Plan §15 authors a single canonical command set; planner does NOT vary per task"
+      ],
+      "context": "v1-ship-3 plan §2 cites `feedback_targeted_validate_pending_laptop_commands.md` explicitly. v1-federation-inbound-d Task 2 fix-impl-1 (test assertion fix) successfully used class-targeted (check omitted, e2e --no-run omitted, clippy + lib-test only) — saved ~3-4 min per validate cycle. T1's diesel-async migration is genuinely production code (run_transaction is the load-bearing governance write path) — warrants full coverage. T3's Cargo.toml edits + Cargo.lock regen don't add types/imports — pure dependency surface change — clippy + check sufficient.",
+      "answer": "(a) — class-targeted per task. Plan §15 per-task commands[]: T1 (production code + tests, 42 files) = check + clippy + lib-test for the touched governance crates + e2e via validate-pending-laptop-e2e; T2 (sha2 narrow surface, 1 production file + 3 test modules) = check + clippy + targeted lib-test (`-p lemmy_api_common --features full --lib`); T3 (SemVer-compat bundle, lockfile + Cargo.toml edits only) = check + clippy. Phase-tip e2e gate (post-T3, pre-PR) runs full workspace e2e per brief §4 — that ONE e2e run replaces three per-task e2e runs and saves ~50 min. All commands wrapper-prefixed per DQ deps-r1-001.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:40:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-016"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T08:41:00Z",
+      "question": "Cross-phase invariant — A `phase-v1-RT-r3` worktree exists at session-start (`C:/Users/barri/Developer/brehon-fork-rt-r3`, currently empty: zero commits ahead of trunk, no brief/plan). The RT-r3 lane (per MEMORY.md) is scoped to 'multi-source participation_consistency events (weekly activity cron, dormancy cron, vote-outcome emitter, evidence-quality emitter)'. Could RT-r3 add new `.run_transaction` callsites that would conflict with v1-deps-r1's 42-callsite rewrite?",
+      "options": [
+        "(a) Defer v1-deps-r1 cut until RT-r3 ships — RT-r3 emitters touch governance write paths and will likely add 2-6 new `.run_transaction` callsites; concurrent cuts → merge conflicts on those callsites",
+        "(b) Proceed v1-deps-r1 cut now — RT-r3 has zero commits ahead of trunk; if RT-r3 ships first, v1-deps-r1 re-enumerates at planning gate; if v1-deps-r1 ships first, RT-r3 inherits the diesel-async-0.9 closure idiom",
+        "(c) Surface to user — judgment call on lane priority"
+      ],
+      "context": "RT-r3 worktree exists but is empty (zero commits ahead of trunk at session-start). No brief, no plan, no Junior dispatch evidence. The brief's WP-5 already mandates 'planner MUST re-run the rg enumeration against trunk-at-cut-time and update Task 1's callsite count in plan §13'. v1-deps-r1's lane is roughly 2-4 days; RT-r3 has not started (no planning brief on trunk per Glob). Two lanes can coexist if v1-deps-r1's callsite enumeration happens AFTER any RT-r3 work that pushes to trunk. User explicitly said 'only this session to continue' — implies v1-deps-r1 takes precedence; RT-r3 will be driven later.",
+      "answer": "(b) — proceed v1-deps-r1 cut now. Rationale: (i) RT-r3 has zero commits ahead of trunk at session-start (verified via `git log origin/governance-v0..origin/phase-v1-RT-r3 --oneline` = empty); (ii) user confirmed 'only this session to continue' — v1-deps-r1 is the active lane, RT-r3 is dormant; (iii) WP-5 already mandates planner re-enumeration at plan-author time, so callsite drift is detected mechanically; (iv) if RT-r3 emitters land on trunk between this clarify and v1-deps-r1 plan-author, the planner re-counts and adjusts T1's callsite list. The 42-callsite count in the brief is from 2026-05-23 (`28f0dc0ff`); fresh count at `335628525` (today's trunk) is also 42 — verified at session start by the explicit `rg \"\\.run_transaction\" crates/ -c` recount. No conflict risk while v1-deps-r1 holds the lane.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T08:41:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-017"
     }
   ]
 }
