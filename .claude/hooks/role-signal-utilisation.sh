@@ -63,19 +63,38 @@ SESSION_ID=$(extract_field "session_id")
 TRANSCRIPT_PATH=$(extract_field "transcript_path")
 CWD_FROM_STDIN=$(extract_field "cwd")
 
-# --- Resolve role from the CLAUDE_PROMPT env (dispatch line) ---
+# --- Resolve role from the dispatch line in transcript_path ---
 # Junior dispatch lines start with `[role:planning|impl-task|bm-task|ci-watcher] ...`.
 # This IS the Junior-vs-advisor gate: advisor sessions never carry a [role:X]
-# tag in their prompt. No git-branch check needed (and the branch check was
-# actively wrong for bm-task workers — see header comment).
+# tag in their prompt; Junior dispatches always do.
+#
+# Where to find the dispatch line:
+#   - CLAUDE_PROMPT env var: DOES NOT EXIST in `claude -p` mode (confirmed
+#     against https://code.claude.com/docs/en/hooks.md — env exposes
+#     CLAUDE_PROJECT_DIR + plugin paths, NOT prompt content).
+#   - transcript_path stdin field: Claude Code's per-session JSONL transcript
+#     under ~/.claude/projects/<proj>/<session-id>.jsonl. The full dispatch
+#     prompt lives in the FIRST queue-operation:enqueue entry's `content`
+#     field — including the `[role:X]` tag verbatim.
+#
+# So we parse transcript_path for the role tag. Env var is checked first
+# as a no-cost fast path in case some future invocation does set it.
 ROLE=""
 PROMPT="${CLAUDE_PROMPT:-}"
 if [[ "$PROMPT" =~ \[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
   ROLE="${BASH_REMATCH[1]}"
 fi
+if [ -z "$ROLE" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  # Grep the first ~50 lines for the role tag. The dispatch prompt is the
+  # FIRST queue-operation in the transcript so this lands in line 1 in
+  # practice; 50 is a generous safety bound.
+  _ROLE_LINE=$(head -50 "$TRANSCRIPT_PATH" 2>/dev/null | grep -oE '\[role:(planning|impl-task|bm-task|ci-watcher)\]' | head -1)
+  if [[ "$_ROLE_LINE" =~ \[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
+    ROLE="${BASH_REMATCH[1]}"
+  fi
+fi
 if [ -z "$ROLE" ]; then
-  # No role tag in prompt — advisor session or ad-hoc Junior task, skip
-  # signal emission.
+  # No role tag anywhere — advisor session or ad-hoc Junior task, skip.
   exit 0
 fi
 
