@@ -187,7 +187,9 @@ Skip for internal-only changes.
 
 This is the **final action** of the skill and must be the final action of the task. See the Enforcement contract at the top of this file — on Junior worktrees the Stop hook matches the retro's `source_ref` against the current branch, so getting that field right is mandatory, not optional.
 
-**Step 7a — confirm the branch name.** Run `git rev-parse --abbrev-ref HEAD` to get the exact branch. It should look like `junior/refactor-...-26`. Copy this verbatim into the `source_ref` field below.
+**Step 7a — confirm the branch name AND task id.** Run `git rev-parse --abbrev-ref HEAD` to get the exact branch. It should look like `junior/refactor-...-26`. Copy this verbatim into the `source_ref` field below.
+
+Extract the Junior task id from the trailing `-<id>` of the branch (e.g. branch `junior/refactor-...-26` → task id `26`). For non-Junior branches (advisor sessions, hand-cut work), task id is `n/a`. The task id goes into the `tags` field as `task_id:<id>` so `/check-role-health`'s outcome-section retro-join (Step 6) can match retros against role-signal rows by task id.
 
 **Step 7b — call `memory_write_eval`:**
 
@@ -195,7 +197,7 @@ This is the **final action** of the skill and must be the final action of the ta
 title: "Task retro: <short task description>"
 skill_or_tool: "<primary skill used, or 'general'>"
 score: <0.0-1.0>
-tags: "<outcome>,<repo-name>"
+tags: "<outcome>,<repo-name>,task_id:<id>"
 source_ref: "<exact output of git rev-parse --abbrev-ref HEAD>"
 content: |
   SCORE: <score>
@@ -207,6 +209,8 @@ content: |
   ROOT_CAUSE: <category> — <explanation>  (partial/failure only)
   DOWNSTREAM: <list>  (only if step 6b identified consumers)
 ```
+
+**The `task_id:<id>` tag is mandatory on Junior-worktree retros.** Without it, `/check-role-health`'s outcome retro-join (Step 6) cannot pair retros to role-signal rows — both store `source_ref=<branch>` for the hook but role-signal rows use `task_id` as the cross-key. The tag is the schema bridge between the two row classes. Authored 2026-05-24 per session-retro Ship-3 readiness sweep.
 
 **Why `source_ref` is mandatory:** the Stop hook on a `junior/*` branch runs
 ```sql

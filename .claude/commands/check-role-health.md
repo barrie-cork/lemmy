@@ -1,6 +1,6 @@
 ---
 description: Generate a per-role health report joining .claude/roles/<role>/ manifest data ("what's loaded") with PMD role-signal rows ("what's used") and Task-retro rows ("outcome"). Names strip candidates for rules.allowlist + mcp.json when sample size is sufficient. Read-only, advisory only — never edits .claude/roles/<role>/.
-argument-hint: <role: planning|impl-task|bm-task|ci-watcher> [--no-drain] [--strip-candidates-only]
+argument-hint: <role: planning|impl-task|bm-task|ci-watcher> [--no-drain] [--strip-candidates-only] [--threshold=<N>]
 ---
 
 <objective>
@@ -21,11 +21,14 @@ Per session-4 handover §4.1: T4a is the consumer the whole substrate exists for
 
 Examples:
 
-- `/check-role-health bm-task` — full report for bm-task role (drains queue first, then reports).
+- `/check-role-health bm-task` — full report for bm-task role (drains queue first, then reports). Default threshold 18 dispatches per config_version.
 - `/check-role-health impl-task --no-drain` — skip the drain pre-step (use when freshness doesn't matter or to avoid scp).
 - `/check-role-health planning --strip-candidates-only` — terse output, only the strip-candidate section.
+- `/check-role-health bm-task --threshold=6` — override strip-candidate threshold to 6 dispatches per config_version (e.g. for small sub-phases like Ship-3 where 18 dispatches won't accumulate before the phase closes).
 
 If `$ARGUMENTS` is empty or the role isn't one of the four canonical roles, refuse: "specify a role: planning, impl-task, bm-task, or ci-watcher".
+
+**Threshold override (`--threshold=<N>`):** the 18-dispatch threshold balances sample-size noise vs. recommendation latency. For small sub-phases (e.g. Ship-3's 3 work packets) that won't accumulate 18 dispatches before close, override to a smaller N. Trade-off: lower N produces strip recommendations earlier but with higher false-positive rate (a rule legitimately needed for 1-in-10 dispatches could read 0 in a sample of 6). Always report sample size + threshold used in the report so the operator can weight the signal.
 </usage>
 
 <precondition>
@@ -58,6 +61,10 @@ If the canonical PMD file is missing: refuse with "canonical PMD not found at C:
 - Confirm `role` ∈ `{planning, impl-task, bm-task, ci-watcher}`.
 - Confirm CWD is brehon-fork (per <precondition>).
 - Confirm `.claude/roles/<role>/manifest.yaml` exists; else refuse with "no role substrate for <role> — has T2 shipped?".
+- Parse `--threshold=<N>` flag if present:
+  - Must match `^--threshold=([1-9][0-9]*)$` (positive integer, no leading zeros).
+  - Bind `THRESHOLD` to the captured integer; otherwise default `THRESHOLD=18`.
+  - Refuse if `N > 100` ("threshold values above 100 are pointless — accumulated signals lose value past a phase boundary") or `N < 3` ("threshold below 3 is statistically meaningless for strip recommendations").
 
 ### Step 2: Drain pre-step (unless `--no-drain`)
 
@@ -148,33 +155,53 @@ Also compute:
 - `DQ_BLOCKER_TOTAL` = `sum(dq_blockers_added)` across all rows.
 - `DQ_BLOCKER_AVG` = `DQ_BLOCKER_TOTAL / DISPATCHES_TOTAL` (rounded to 2 decimal).
 
-### Step 6: Join Task-retro rows for outcome (DEFERRED — schema gap)
+### Step 6: Join Task-retro rows for outcome
 
-**Status: DEFERRED.** The retro-join is structurally impossible against the current PMD schema and the post-task-retro skill convention.
+**Status: ENABLED** (as of 2026-05-24 — post-task-retro skill ships `task_id:<id>` tag per Step 7a of SKILL.md).
 
-**Schema gap:** signal rows store `source_ref = <task_id>` (a Junior task UUID, e.g. `8cc3270f-91e1-4e82-95ea-bd2c03ff838b`). Task-retro rows store `source_ref = <branch>` (e.g. `governance-v0`) or `<commits>` (comma-separated short SHAs). A direct `source_ref` join cannot resolve task identity. Retros also carry no `task_id:<value>` tag — only branch + role tags.
+Query Task-retro rows with the matching `task_id` tags from this role's signal rows:
 
-**Two paths to fix (both out of scope for T4a v1):**
+```sql
+SELECT id, source_ref, content, tags, score, created_at
+FROM memories
+WHERE repo_name = 'brehon-fork'
+  AND memory_type = 'qa-result'
+  AND title LIKE 'Task retro:%'
+  AND tags LIKE '%task_id:%'
+  AND created_at >= datetime('now', '-30 days');
+```
 
-1. **Update post-task-retro skill** (cleanest) — make Junior worker retros emit an extra tag `task_id:<id>` when running under Junior (detectable via env or branch shape `junior/*`). One-line change in `.claude/rules/post-task-retro.md` + `.claude/skills/post-task-retro/SKILL.md`. Once shipped, future retros become joinable by task_id; this command's Step 6 enables.
-2. **Best-effort branch-join** (lossy) — match retro `source_ref` ↔ signal `branch` tag. Works for single-task branches (e.g. `junior/<slug>-<id>` worker branches) but collapses when a branch hosts multiple tasks (always true for `governance-v0` and any long-lived phase branch). Reports "retro count exceeds dispatch count" when N retros land on one branch.
+For each retro row:
 
-**For this command v1: skip the Outcome section.** The report prints a single line under `## Outcome`:
+- Extract `task_id` from tags (`task_id:<value>`).
+- Extract `outcome` from tags (`success | partial | failure` — the canonical post-task-retro tag).
+- Bind to the signal row with the same `task_id` (signal rows store `task_id:<value>` in their tags from `role-signal-utilisation.sh`).
 
-> **DEFERRED — retro-to-signal join requires post-task-retro skill change** (add `task_id:<id>` tag). See [session-4 handover §4.1](../PRPs/handovers/role-customization-2026-05-24-session4.md) note 1 for the architectural decision.
+For each `config_version` group, compute:
 
-Future revision (v2 of this command) re-enables Step 6 once the retro skill ships the tag. Do not silently best-effort-join in v1 — it produces wrong-but-plausible numbers that look authoritative.
+- `RETRO_COUNT[version]` = number of signal rows for this version that have a paired retro by task_id.
+- `OUTCOME_RATE[version][outcome]` = count of paired retros with each outcome.
+- `MEAN_SCORE[version]` = mean of `score` field across paired retros.
+- `UNPAIRED[version]` = signal rows with no paired retro (Junior task didn't write a retro, or task_id mismatch).
+
+**Back-compat:** signal rows authored before 2026-05-24 + retros authored before the task_id-tag patch will NOT pair. Report them as `UNPAIRED`. Once a critical mass of post-tag retros exists (≥3 per config_version), the outcome rate becomes meaningful; below that, it's anecdotal — surface as "n=<count>, outcomes anecdotal".
+
+**Do NOT best-effort-join by branch** (the v1 deferral lesson stands — produces wrong-but-plausible numbers).
 
 ### Step 7: Identify strip candidates
 
-Per session-2 §3.2 + user direction (≥18 threshold):
+Per session-2 §3.2 + user direction (≥18 default threshold; overridable via `--threshold=<N>`):
 
-For each `config_version` group with `DISPATCHES_TOTAL[version] >= 18`:
+For each `config_version` group with `DISPATCHES_TOTAL[version] >= THRESHOLD`:
 
 - **Rule strip candidate**: any file in `ALLOWLIST` with `READ_COUNT[file] == 0` across that config_version's dispatches.
 - **MCP strip candidate**: any server in `MCP_LOADED` with `INVOKED_COUNT[server] == 0` across that config_version's dispatches.
 
-For groups with `DISPATCHES_TOTAL[version] < 18`: report "insufficient signals (n=<count>/18)" in place of strip suggestions.
+For groups with `DISPATCHES_TOTAL[version] < THRESHOLD`: report "insufficient signals (n=<count>/<THRESHOLD>)" in place of strip suggestions.
+
+**When THRESHOLD is overridden** (i.e. `THRESHOLD != 18`), prepend the Strip-candidates section with a one-line warning:
+
+> **⚠ Threshold lowered to <N>** (default 18). Smaller samples raise false-positive rate: a rule legitimately needed for 1-in-10 dispatches reads 0 in ~35% of samples of 6. Verify candidate rules' usage on adjacent sub-phases before stripping.
 
 If `--strip-candidates-only` flag is set: skip Step 5+6 aggregations from the output and report only this section.
 
@@ -188,6 +215,7 @@ Print one-screen markdown to stdout (advisor reads it inline). Shape:
 **Generated:** <ISO 8601 UTC>
 **Drained:** <yes | skipped | failed-but-continued>
 **Sample window:** last 30 days
+**Strip-candidate threshold:** <THRESHOLD> dispatches/config_version <(default | overridden via --threshold=<N>)>
 **Current config_version:** <subtree SHA>
 
 ## Loaded substrate
@@ -218,8 +246,20 @@ Print one-screen markdown to stdout (advisor reads it inline). Shape:
 
 ## Outcome
 
-DEFERRED — retro-to-signal join requires post-task-retro skill change (add `task_id:<id>` tag).
-See [session-4 handover §4.1](../PRPs/handovers/role-customization-2026-05-24-session4.md) note 1.
+For each config_version with paired retros (≥3 per group is meaningful, below that = anecdotal):
+
+### config_version <sha-12> (paired retros: <RETRO_COUNT>/<DISPATCHES>)
+
+| Outcome | Count | Rate |
+|---------|------:|-----:|
+| success | <N> | <pct> |
+| partial | <N> | <pct> |
+| failure | <N> | <pct> |
+
+**Mean score:** <MEAN_SCORE> (0.0-1.0 scale)
+**Unpaired signals:** <UNPAIRED> (retro absent OR task_id mismatch — pre-2026-05-24 retros lack the tag)
+
+If `RETRO_COUNT < 3`: report "n=<RETRO_COUNT>, outcomes anecdotal — accumulate more retros before correlating with substrate decisions"
 
 ## Strip candidates
 
