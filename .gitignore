@@ -56,6 +56,7 @@ migrations/.diesel_lock
 .claude/prp-ralph.state.md
 .claude/worktrees/
 .claude/tmp/
+.claude/role-signal-queue.jsonl
 # Task-hopper lock directory (the JSON itself IS committed — it's the ledger)
 .claude/task-hopper.json.lock/
 .claude/task-hopper.json.tmp.*
