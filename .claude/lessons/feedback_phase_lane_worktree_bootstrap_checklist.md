@@ -108,6 +108,31 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
 
     Expected output: `OK: refuse-ssh-reset-hard-shared-checkout.sh wired at PreToolUse`. Hook refuses `ssh ...homeserver "...git reset --hard origin/<phase-or-trunk>"` against `/srv/brehon-fork`; safer alternative is `git update-ref refs/heads/<branch> origin/<branch>`. Escape hatch: `BREHON_ALLOW_SSH_RESET_HARD=1`. See `.claude/lessons/feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md` for the incident + RCA.
 
+12. **(NEW — 2026-05-24, task #450 stale-base incident)** Before queuing any **planning
+    Junior task**, fast-forward the daemon's local `governance-v0` ref to match origin.
+    Without this, the planning worker branches from a stale daemon-local ref and may read
+    an old brief with the same filename, producing a plan for a closed phase.
+
+    ```bash
+    ssh homeserver "cd /srv/brehon-fork && git fetch origin && \
+      git update-ref refs/heads/governance-v0 origin/governance-v0 && \
+      git log --oneline governance-v0 | head -3"
+    ```
+
+    Verify the top commit matches the latest `governance-v0` tip seen on the laptop
+    (`git log --oneline origin/governance-v0 | head -1`). If they differ, the fetch
+    failed — check SSH + GitHub connectivity before re-queuing.
+
+    **Root cause:** the daemon's finalize-merge step fast-forwards its local
+    `governance-v0` only when it merges a completed Junior worktree branch. If no Junior
+    task ran recently (session boundary, phase close, long idle), the daemon's local ref
+    drifts behind origin. The advisor's `git push origin governance-v0` writes to origin
+    but does NOT update the daemon's local ref — those are two separate git objects.
+
+    This step is **planning-only** (impl-task briefs are committed to the phase branch
+    which Junior checks out by name from origin; planning briefs land on `governance-v0`
+    which Junior reads from the daemon's LOCAL ref).
+
 ## DQ #301 dual-wire (v1-rls-r1 ships)
 
 Step 6's wiring MUST be applied in BOTH locations:

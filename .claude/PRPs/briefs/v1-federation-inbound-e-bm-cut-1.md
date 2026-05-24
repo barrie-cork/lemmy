@@ -1,3 +1,6 @@
+> **[CLOSED — shipped 2026-05-24, advisory-lock phase]** This brief is from the
+> completed `v1-federation-inbound-e` sub-phase (pg_advisory_xact_lock eviction fix).
+
 # BM-cut brief — v1-federation-inbound-e
 
 **Role:** `[role:bm-task]`

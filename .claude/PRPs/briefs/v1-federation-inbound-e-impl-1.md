@@ -1,3 +1,8 @@
+> **[CLOSED — shipped 2026-05-24, advisory-lock phase]** This brief is from the
+> completed `v1-federation-inbound-e` sub-phase (pg_advisory_xact_lock eviction fix).
+> The active phase brief is `v1-federation-inbound-e-planning-1.md` (per-peer actor-map
+> bound + SHA-256 nonce).
+
 # Impl-task brief — v1-federation-inbound-e Task 1
 
 **Role:** `[role:impl-task]`
