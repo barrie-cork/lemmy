@@ -35,6 +35,12 @@ GH-billed minutes are a finite shared resource (Actions monthly budget for the p
 
 **Generalises to:** any persistent agent session where a CI-side workflow exists for canonical PR evidence but the agent's question is "does my local diff pass?" The cost-per-round of CI is high enough that local validation should be the default for non-canonical-evidence rounds.
 
+**Brief-authoring constraint (v1-RT-r2, 2026-05-23):** Every `impl-task` brief whose DoD includes an e2e command MUST include this explicit guard in §4 Constraints:
+
+> e2e runs on **laptop only** — after cargo-check/clippy/unit-tests pass, write `kind: "validate-pending-laptop-e2e"` DQ entry (commands array = all 4 validate commands, branch, phase_task) and **stop**. Do NOT run e2e on the EliteDesk worker; the laptop advisor session runs it and mutates the DQ entry.
+
+Without this guard, workers interpret prior until-loop patterns and run e2e on the EliteDesk daemon, blocking until session timeout (v1-RT-r2 Task 2: 65-min session ended with e2e loop still running; impl was correct but commit step was missed). The recovery recipe (read worker worktree diff via SSH, copy file to lane, run all 4 commands on laptop) works but costs ~30 min overhead.
+
 **Related lessons:**
 - `feedback_clippy_rerun_after_fix.md` — when running clippy locally, re-run after applying any clippy fix because removing dead code can promote sibling bindings to also-stale state.
 - `feedback_e2e_local_or_dispatch_user_choice.md` — for e2e tests specifically, the user picks local-vs-dispatch per session. The cost-asymmetry argument here for clippy/check generalises the same logic to the cargo-validate-workspace dimension.

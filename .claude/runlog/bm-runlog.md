@@ -1985,6 +1985,21 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **trunk position:** ac37a125d — Merge pull request #147 from barrie-cork/phase-v1-ship-2
 - **findings YAML archived:** .claude/PRPs/reviews/pr-147-findings.yaml
 
+## bm: cut phase-v1-RT-r2 — 2026-05-23T11:11:29Z
+
+- **branch:** phase-v1-RT-r2
+- **base:** governance-v0
+- **cut sha:** f8d4ee33f
+- **status:** CREATED ✓
+
+## bm: opened PR #150 — 2026-05-23T20:00:00Z
+
+- **pr:** https://github.com/barrie-cork/lemmy/pull/150
+- **title:** v1-RT-r2 — per-dimension chained-halving decay + bounds clamp behind feature flag
+- **base:** governance-v0
+- **head:** phase-v1-RT-r2
+- **opened-by:** advisor (bm-pr brief was on phase branch, not governance-v0; advisor opened PR directly)
+- **status:** OPEN — awaiting CodeRabbit review
 ## bm: cut phase-v1-ship-3 off governance-v0 @ f8d4ee33f — 2026-05-23T12:01:02Z
 - **branch:** phase-v1-ship-3
 - **off:** governance-v0 @ f8d4ee33f

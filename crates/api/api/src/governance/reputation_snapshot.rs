@@ -44,6 +44,15 @@
 //!   into many `capability_changed` entries on the next tick; the
 //!   `admin-config-write.sh` wrapper (decision-queue #13; deferred to
 //!   5c sibling docs) is the v0 story for attributing the cascade root.
+//!
+//! ## v1 feature flag (RT-r2)
+//!
+//! `feature.reputation_v1_decay_enabled` (governance_config, default `false`)
+//! gates the per-(dimension, direction) chained-halving decay + per-dimension
+//! bounds clamp introduced in v1-RT-r2. When `false`, the v0 single-halving
+//! against `decay.positive_half_life_days` is preserved verbatim and no clamp
+//! applies. The 16 per-(dim, direction) + bounds keys are read only when the
+//! flag is `true`; otherwise the legacy single key is read.
 
 use crate::governance::{
   actor_pseudonym_helper,
@@ -234,16 +243,24 @@ pub async fn recompute_snapshot(
   //    considers every active sanction.
   let (published_at, active_sanctions) = load_person_context(conn, person_id, community_id).await?;
 
-  // 4. Read the config thresholds and decay half-life via the cache.
-  //    NOTE: all reads flow through a single ConfigCache so repeated
-  //    lookups in one recompute don't hit the DB multiple times.
-  let decay_half_life_days = config::get_int(
+  // 4. Read the config thresholds, feature flag, decay half-life, and bounds
+  //    via the cache. NOTE: all reads flow through a single ConfigCache so
+  //    repeated lookups in one recompute don't hit the DB multiple times.
+  let v1_decay_enabled = config::get_bool(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "feature.reputation_v1_decay_enabled",
+  )
+  .await?;
+  let legacy_half_life_days = config::get_int(
     cache,
     &mut (&mut *conn).into(),
     Scope::Instance,
     "decay.positive_half_life_days",
   )
   .await?;
+  let legacy_half_life = Duration::days(legacy_half_life_days);
   let threshold_jury_reliability = config::get_int(
     cache,
     &mut (&mut *conn).into(),
@@ -274,23 +291,61 @@ pub async fn recompute_snapshot(
   .await?;
 
   // 5. Sum deltas by dimension, applying decay only when expires_at is
-  //    None (Watch 8 — double-decay guard). Founders keep their full delta
-  //    until their cliff fires; organic events get halved past half-life.
+  //    None (Watch 8 — double-decay guard). The per-event half-life is
+  //    resolved per-(dimension, direction) when v1 decay is enabled, or
+  //    the legacy single half-life when disabled.
   let now = Utc::now();
-  let half_life = Duration::days(decay_half_life_days);
   let mut reporting_accuracy = 0_i32;
   let mut jury_reliability = 0_i32;
   let mut participation_consistency = 0_i32;
   let mut endorsement_strength = 0_i32;
 
   for event in &events {
-    let applied_delta = compute_applied_delta(event, now, half_life);
+    let half_life = if v1_decay_enabled {
+      resolve_half_life_for_event(cache, conn, event).await?
+    } else {
+      legacy_half_life
+    };
+    let applied_delta = compute_applied_delta(event, now, half_life, v1_decay_enabled);
     match event.dimension {
       ReputationDimension::ReportingAccuracy => reporting_accuracy += applied_delta,
       ReputationDimension::JuryReliability => jury_reliability += applied_delta,
       ReputationDimension::ParticipationConsistency => participation_consistency += applied_delta,
       ReputationDimension::EndorsementStrength => endorsement_strength += applied_delta,
     }
+  }
+
+  // 5a. (r2) Bounds clamping — only when v1 decay is enabled. v0 has no
+  //     bounds and must not change behaviour when the flag is false.
+  if v1_decay_enabled {
+    reporting_accuracy = clamp_dimension_i32(
+      reporting_accuracy,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.reporting_accuracy.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.reporting_accuracy.ceiling").await?,
+    );
+    jury_reliability = clamp_dimension_i32(
+      jury_reliability,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.jury_reliability.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.jury_reliability.ceiling").await?,
+    );
+    participation_consistency = clamp_dimension_i32(
+      participation_consistency,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.participation_consistency.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.participation_consistency.ceiling").await?,
+    );
+    endorsement_strength = clamp_dimension_i32(
+      endorsement_strength,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.endorsement_strength.floor").await?,
+      config::get_int(cache, &mut (&mut *conn).into(), Scope::Instance,
+                      "bounds.endorsement_strength.ceiling").await?,
+    );
   }
 
   // 6. Compute the three capability booleans.
@@ -345,45 +400,72 @@ pub async fn recompute_snapshot(
 }
 
 /// Compute the decayed delta applied to the running sum for a single
-/// event (Watch 8). Organic events (expires_at IS NONE) get halved past
-/// the half-life; founders keep their full delta until their cliff
-/// fires (which the query-level filter has already enforced).
+/// event (Watch 8). Organic positive events get halved once per complete
+/// half-life elapsed when v1 decay is enabled; founders keep their full
+/// delta until their cliff fires; penalties (delta <= 0) persist at full
+/// value.
 ///
-/// Only POSITIVE deltas decay — negative deltas (penalties) persist at
-/// full value per plan task 53 step 2.c.
-fn compute_applied_delta(event: &ReputationEvent, now: DateTime<Utc>, half_life: Duration) -> i32 {
+/// The `half_life` argument carries the resolved per-(dimension, direction)
+/// half-life when `v1_enabled = true`, OR the legacy
+/// `decay.positive_half_life_days` value when `v1_enabled = false`.
+///
+/// Watch 8 — decay half-life must NOT apply to events with expires_at set
+/// (founder cliffs).
+fn compute_applied_delta(
+  event: &ReputationEvent,
+  now: DateTime<Utc>,
+  half_life: Duration,
+  v1_enabled: bool,
+) -> i32 {
   let original = event.delta;
-  // Watch 8 — decay half-life must NOT apply to events with expires_at set.
-  // The branch gates on `if event.expires_at.is_none()` (a distinct predicate
-  // from the query-level filter in `load_live_events`). Founder seeds keep
-  // their full delta until their cliff fires.
-  if event.expires_at.is_none() {
-    // Penalty path — negative deltas never decay (penalties persist).
-    if original <= 0 {
-      return original;
-    }
-    // Organic positive event: halve once if older than the half-life.
-    // v0 uses a single half-life window; more aggressive schedules
-    // (chained halving per half-life elapsed) are v1 — combined with
-    // the dirty-pair detection gap for stale-by-age pairs (carry-forward
-    // to 5b/5c alongside DQ#13's admin-config-write wrapper), this
-    // means a positive organic event from 400 days ago will pin
-    // `endorsement_strength` at `delta/2` essentially forever. Since
-    // `can_sponsor` is NOT read by any v0 handler ([99 OQ-014]), this
-    // staleness cannot affect behaviour in v0; v1 flips the config
-    // gate AND lands chained halving in the same release.
-    // TODO(brehon-fork): v1 — switch to chained halving per half-life
-    // elapsed and add a regression test for age > 2× half-life.
+  // Cliff guard FIRST: founder seeds skip decay entirely.
+  if event.expires_at.is_some() {
+    return original;
+  }
+  // Penalty guard SECOND: negative + zero deltas never decay.
+  if original <= 0 {
+    return original;
+  }
+  // Positive organic event — apply the v1 or v0 decay path.
+  if v1_enabled {
+    // Chained halving per complete half-life elapsed.
+    chained_halve(original, now - event.created_at, half_life)
+  } else {
+    // v0 path: single halving past one half-life. PRESERVE EXACTLY.
     let age = now - event.created_at;
     if age > half_life {
       original / 2
     } else {
       original
     }
-  } else {
-    // expires_at is Some — founder seed. Skip decay entirely.
-    original
   }
+}
+
+/// Apply chained halving: `original >> floor(age_days / half_life_days)`,
+/// saturating at 0 for very large `n`. Returns `original` when
+/// `half_life_days <= 0` (defensive against misconfigured DB rows; the
+/// PRD section 8 range floor is 1, so this branch is defence-in-depth).
+fn chained_halve(original: i32, age: Duration, half_life: Duration) -> i32 {
+  let hl_days = half_life.num_days();
+  if hl_days <= 0 {
+    return original;
+  }
+  let age_days = age.num_days();
+  if age_days < hl_days {
+    return original;
+  }
+  // Number of complete half-lives elapsed; n >= 1 here.
+  // i64 division floors toward zero for positive operands.
+  let n = age_days / hl_days;
+  // Saturate at 31 to avoid undefined-behaviour shift overflow;
+  // beyond that the result is 0 (any non-zero i32 shifted past 31 is 0
+  // for positive operands). `n.min(31)` is in [1, 31] at this point
+  // (age_days >= hl_days > 0 ensures n >= 1); try_from never actually
+  // errors here — the fallback 31 is defence-in-depth.
+  let shift = u32::try_from(n.min(31)).unwrap_or(31);
+  // For positive i32, right-shift is arithmetic AND logical (both yield
+  // 0 in the limit). Penalty guard above ensures original > 0 here.
+  original >> shift
 }
 
 // -- Batch scheduler entry point -------------------------------------------
@@ -847,6 +929,52 @@ async fn acquire_advisory_xact_lock(
   Ok(())
 }
 
+/// Resolve the half-life for a given event under v1 decay. Reads the
+/// `decay.<dim>.<positive|negative>_half_life_days` key matching the
+/// event's `(dimension, direction)` from the ConfigCache.
+///
+/// Direction:
+/// * `delta >= 0` -> `positive` (organic positive events; the only path
+///   that actually invokes decay because the penalty guard in
+///   `compute_applied_delta` returns early for `delta <= 0`)
+/// * `delta < 0` -> `negative` (read for future-completeness; the negative
+///   half-life is wired but never consumed in r2 because penalties
+///   short-circuit before the half-life is consulted)
+async fn resolve_half_life_for_event(
+  cache: &mut ConfigCache,
+  conn: &mut AsyncPgConnection,
+  event: &ReputationEvent,
+) -> LemmyResult<Duration> {
+  let dim_segment = match event.dimension {
+    ReputationDimension::ReportingAccuracy => "reporting_accuracy",
+    ReputationDimension::JuryReliability => "jury_reliability",
+    ReputationDimension::ParticipationConsistency => "participation_consistency",
+    ReputationDimension::EndorsementStrength => "endorsement_strength",
+  };
+  let direction_segment = if event.delta >= 0 { "positive" } else { "negative" };
+  let key = format!("decay.{dim_segment}.{direction_segment}_half_life_days");
+  let days = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    &key,
+  )
+  .await?;
+  Ok(Duration::days(days))
+}
+
+/// Clamp a per-dimension i32 sum to the (floor, ceiling) bounds read as
+/// i64 from governance_config. Normalises inverted bounds (floor > ceiling)
+/// by swapping, so a misconfigured admin setting cannot panic at runtime.
+fn clamp_dimension_i32(value: i32, floor: i64, ceiling: i64) -> i32 {
+  let (floor, ceiling) = (floor.min(ceiling), floor.max(ceiling));
+  let widened = i64::from(value);
+  let clamped = widened.clamp(floor, ceiling);
+  i32::try_from(clamped).unwrap_or({
+    if clamped > 0 { i32::MAX } else { i32::MIN }
+  })
+}
+
 // -- Tests ------------------------------------------------------------------
 
 #[cfg(test)]
@@ -933,27 +1061,132 @@ mod tests {
       source_event_type: ReputationEventSourceType::Endorsement,
     };
     // Organic event past half-life — halved.
-    assert_eq!(compute_applied_delta(&old_organic, now, half_life), 50);
+    assert_eq!(compute_applied_delta(&old_organic, now, half_life, false), 50);
 
     // Founder seed same age — NOT halved (Watch 8).
     let old_founder = ReputationEvent {
       expires_at: Some(now + Duration::days(30)),
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&old_founder, now, half_life), 100);
+    assert_eq!(compute_applied_delta(&old_founder, now, half_life, false), 100);
 
     // Recent organic event — NOT halved.
     let recent_organic = ReputationEvent {
       created_at: now - Duration::days(30),
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&recent_organic, now, half_life), 100);
+    assert_eq!(compute_applied_delta(&recent_organic, now, half_life, false), 100);
 
     // Negative delta past half-life — NOT halved (penalties persist).
     let old_penalty = ReputationEvent {
       delta: -20,
       ..old_organic.clone()
     };
-    assert_eq!(compute_applied_delta(&old_penalty, now, half_life), -20);
+    assert_eq!(compute_applied_delta(&old_penalty, now, half_life, false), -20);
+  }
+
+  fn make_event(
+    now: DateTime<Utc>,
+    delta: i32,
+    age_days: i64,
+    expires_at: Option<DateTime<Utc>>,
+  ) -> ReputationEvent {
+    ReputationEvent {
+      id: lemmy_db_schema::newtypes::ReputationEventId(0),
+      person_id: PersonId(1),
+      community_id: None,
+      dimension: ReputationDimension::JuryReliability,
+      delta,
+      source_case_id: None,
+      source_report_id: None,
+      reason: "test".to_string(),
+      created_at: now - Duration::days(age_days),
+      expires_at,
+      dedupe_key: None,
+      source_event_type: ReputationEventSourceType::Endorsement,
+    }
+  }
+
+  #[test]
+  fn chained_halving_at_2x_half_life_quarters_delta() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 25);
+  }
+
+  #[test]
+  fn chained_halving_at_3x_half_life_eighths_delta() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 270, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 12);
+  }
+
+  #[test]
+  fn chained_halving_at_age_zero_no_decay() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 0, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 100);
+  }
+
+  #[test]
+  fn chained_halving_negative_delta_skipped() {
+    let now = Utc::now();
+    let event = make_event(now, -20, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), -20);
+  }
+
+  #[test]
+  fn chained_halving_founder_cliff_skipped() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, Some(now + Duration::days(30)));
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, true), 100);
+  }
+
+  #[test]
+  fn v0_arm_at_2x_half_life_single_halving() {
+    let now = Utc::now();
+    let event = make_event(now, 100, 180, None);
+    let half_life = Duration::days(90);
+    assert_eq!(compute_applied_delta(&event, now, half_life, false), 50);
+  }
+
+  #[test]
+  fn chained_halve_helper_saturates_at_very_old_event() {
+    assert_eq!(
+      chained_halve(100, Duration::days(365 * 100), Duration::days(90)),
+      0
+    );
+  }
+
+  #[test]
+  fn clamp_dimension_i32_within_bounds() {
+    assert_eq!(clamp_dimension_i32(50, -100, 100), 50);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_above_ceiling() {
+    assert_eq!(clamp_dimension_i32(250, -100, 100), 100);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_below_floor() {
+    assert_eq!(clamp_dimension_i32(-250, -100, 100), -100);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_negative_below_zero_floor() {
+    assert_eq!(clamp_dimension_i32(-5, 0, 200), 0);
+  }
+
+  #[test]
+  fn clamp_dimension_i32_inverted_bounds_no_panic() {
+    // floor > ceiling — should not panic; behaves as if bounds were swapped
+    let result = clamp_dimension_i32(50, 100, 0); // floor=100, ceiling=0 → normalised to [0,100]
+    assert_eq!(result, 50); // 50 is within [0, 100]
   }
 }
