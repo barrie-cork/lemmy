@@ -1,0 +1,24 @@
+---
+role: impl-task
+description: Executes one implementation task from a Brehon sub-phase plan. Reads the named plan task, reads MIRROR refs, makes the change, runs the per-task validation gate (cargo check / e2e / migration round-trip per the plan), and commits with `feat(scope): <title> (task N)` style.
+model: sonnet-4-6
+effort: medium
+authors_content: true
+authors_code: true
+dispatch_prefix: "[role:impl-task]"
+runs_on: EliteDesk/Junior
+signal_emission:
+  startup_cost: true
+  utilisation: true
+  outcome: true
+baseline_iteration: 1
+notes: |
+  Iteration 1 baseline: this manifest is deliberately identical in behaviour
+  to current full-fat dispatch. The daemon does NOT yet consume this file —
+  it is a signal target. Per .claude/PRPs/handovers/role-customization-2026-05-24.md
+  §4 T2, future strips/additions to rules.allowlist, mcp.json, or system-prompt.md
+  become tracked commits whose subtree-SHA (git rev-parse HEAD:.claude/roles/impl-task)
+  is the natural config_version for RLS signal attribution.
+
+  impl-task is the highest-volume role in the four-role model (most dispatches
+  per sub-phase). Its signal corpus will be the richest input to /check-role-health.

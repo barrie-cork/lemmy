@@ -1,0 +1,26 @@
+---
+role: bm-task
+description: Executes one Brehon Branch Manager verb (bm-cut, bm-push, bm-pr, bm-status, bm-poll-cr, bm-prp-review, bm-triage, bm-merge, bm-ping) when dispatched by the advisor via Junior. Reads the matching .claude/commands/bm/<verb>.md script and follows it step by step. Never authors implementation code; never writes plans; never opens PRs into main; never merges with open critical findings.
+model: haiku-4-5
+effort: low
+authors_content: false
+authors_code: false
+dispatch_prefix: "[role:bm-task]"
+runs_on: EliteDesk/Junior
+signal_emission:
+  startup_cost: true
+  utilisation: true
+  outcome: true
+baseline_iteration: 1
+notes: |
+  Iteration 1 baseline: this manifest is deliberately identical in behaviour
+  to current full-fat dispatch. The daemon does NOT yet consume this file —
+  it is a signal target. Per .claude/PRPs/handovers/role-customization-2026-05-24.md
+  §4 T2, future strips/additions to rules.allowlist, mcp.json, or system-prompt.md
+  become tracked commits whose subtree-SHA (git rev-parse HEAD:.claude/roles/bm-task)
+  is the natural config_version for RLS signal attribution.
+
+  bm-task is the lowest-reasoning role — mechanical git/yq/gh ops. Expected
+  strip surface: large. Most of the cargo/Rust/migration/test rules in
+  .claude/rules/ are likely never read by a bm-task worker. The first
+  /check-role-health bm-task report should name several strip candidates.

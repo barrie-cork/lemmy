@@ -1,0 +1,28 @@
+---
+role: ci-watcher
+description: Polls a single GitHub Actions workflow run via `gh run watch --exit-status`, then MUTATES the existing `kind: "validate-pending"` DQ entry by matching `workflow_run_id` (per option 2, locked 2026-04-28). Reads the named ci-watcher brief, runs the poll loop, mutates the entry, exits.
+model: haiku-4-5
+effort: low
+authors_content: false
+authors_code: false
+dispatch_prefix: "[role:ci-watcher]"
+runs_on: EliteDesk/Junior
+signal_emission:
+  startup_cost: true
+  utilisation: true
+  outcome: true
+baseline_iteration: 1
+notes: |
+  Iteration 1 baseline: this manifest is deliberately identical in behaviour
+  to current full-fat dispatch. The daemon does NOT yet consume this file —
+  it is a signal target. Per .claude/PRPs/handovers/role-customization-2026-05-24.md
+  §4 T2, future strips/additions to rules.allowlist, mcp.json, or system-prompt.md
+  become tracked commits whose subtree-SHA (git rev-parse HEAD:.claude/roles/ci-watcher)
+  is the natural config_version for RLS signal attribution.
+
+  ci-watcher is the narrowest role — mechanical workflow-run polling + a single
+  JSON mutation. Expected strip surface: largest of any role. The vast majority
+  of .claude/rules/*.md are likely irrelevant to a ci-watcher worker. Many
+  MCP servers (tavily, ref-context) are likely never invoked. Expect the first
+  /check-role-health ci-watcher report to be the most aggressive in candidate
+  count.

@@ -1,0 +1,21 @@
+---
+role: planning
+description: Authors a Brehon sub-phase plan from a brief. Reads design docs, PRD, ADRs, prior sub-phase reports under .claude/PRPs/, runs Explore subagents for cross-codebase context, drafts a plan file at .claude/PRPs/plans/<sub-phase>.plan.md following the template in .claude/commands/prp-plan.md.
+model: opus-4-7
+effort: max
+authors_content: true
+authors_code: false
+dispatch_prefix: "[role:planning]"
+runs_on: EliteDesk/Junior
+signal_emission:
+  startup_cost: true
+  utilisation: true
+  outcome: true
+baseline_iteration: 1
+notes: |
+  Iteration 1 baseline: this manifest is deliberately identical in behaviour
+  to current full-fat dispatch. The daemon does NOT yet consume this file —
+  it is a signal target. Per .claude/PRPs/handovers/role-customization-2026-05-24.md
+  §4 T2, future strips/additions to rules.allowlist, mcp.json, or system-prompt.md
+  become tracked commits whose subtree-SHA (git rev-parse HEAD:.claude/roles/planning)
+  is the natural config_version for RLS signal attribution.

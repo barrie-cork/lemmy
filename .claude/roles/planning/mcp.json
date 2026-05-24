@@ -1,0 +1,43 @@
+{
+  "_comment": "Baseline iteration 1 — copy of canonical .mcp.json with secrets stripped. Daemon reads tokens from env at dispatch time (PMD_HTTP_TOKEN, REF_API_KEY, TAVILY_API_KEY). The daemon does NOT yet consume this file; it is a signal target for the RLS loop. See README.md.",
+  "mcpServers": {
+    "project-memory": {
+      "command": "node",
+      "args": ["C:\\Users\\barri\\Developer\\MCPs\\project-memory-mcp\\dist\\index.js"],
+      "env": {
+        "PROJECT_MEMORY_DB": "C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db",
+        "PROJECT_ROOT": "C:\\Users\\barri\\Developer\\brehon-fork",
+        "PROJECT_NAME": "brehon-fork",
+        "OLLAMA_URL": "http://homeserver:11434"
+      }
+    },
+    "junior-brehon": {
+      "command": "node",
+      "args": ["C:\\Users\\barri\\Developer\\MCPs\\junior-mcp\\dist\\index.js"],
+      "env": {
+        "JUNIOR_REPO": "brehon-fork",
+        "JUNIOR_SSH_HOST": "homeserver"
+      }
+    },
+    "ref-context": {
+      "type": "http",
+      "url": "https://api.ref.tools/mcp",
+      "headers": {
+        "x-ref-api-key": "${REF_API_KEY}"
+      }
+    },
+    "tavily": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "tavily-mcp@latest"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    }
+  }
+}
