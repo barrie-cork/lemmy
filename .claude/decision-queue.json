@@ -3709,6 +3709,20 @@
       "approved_by": null,
       "approved_at": null,
       "id": "c60d3217f899-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-24T20:55:00Z",
+      "question": "T1 #454/#455 findings — durable record for retro harvest before advisor takeover.",
+      "options": [
+        "log-only"
+      ],
+      "context": "Junior workers #454 and #455 both failed to complete T1 mechanical sweep + cargo check. Three substantive findings preserved here: (F1) diesel-async 0.9 has a private-bounds bug: AsyncFunc trait is `pub trait` but lives in `mod transaction_manager` (private module per /home/barrie/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/diesel-async-0.9.0/src/lib.rs:123 `mod transaction_manager;`). Callers cannot name `diesel_async::AsyncFunc` as a trait bound. Worker #455 invented a `LocalAsyncFunc` mirror trait with identical blanket impl at crates/diesel_utils/src/connection.rs:35-50 (and used it as the wrapper bound). Workaround is legitimate; alternative is to drop the explicit AsyncFunc bound and rely on the inner `AsyncConnection::transaction()` to auto-derive via blanket impl — advisor will try the simpler approach first during takeover. (F2) diesel pin needs bump: workspace Cargo.toml currently pins `diesel = '=2.3.7'`; diesel-async 0.9 transitive requirement is `diesel ~2.3.9`. cargo check fails with 'failed to select a version for diesel' until pin is updated to '=2.3.9'. Plan §13 T1 did not enumerate this transitive bump. (F3) diesel 2.3.9 introduces a separate breaking API change in crates/db_schema/src/impls/language.rs producing E0277 — worker #455 was investigating at cancellation. Scope unknown; advisor will diagnose during takeover. All three findings are advisor-takeover scope per user decision 20:53 UTC. RETRO: plan §13 T1 should have surfaced (F1) at plan-author time (the planner used WebFetch on docs.rs but did not compile the proposed signature against the actual crate source); plan §13 T1 should have surfaced (F2) by running cargo update --dry-run in plan §3.4 DoD smoke; (F3) is intrinsically discoverable only at compile time, but a planner cargo-check-dry-run would have caught it. Aggregate: 'plan §3.4 DoD smoke against a throwaway branch with the proposed bumps applied' would have caught all three before any Junior dispatch. Worker logs preserved at /srv/brehon-fork/.junior/logs/job-454-run-454.log + job-455-run-455.log.",
+      "answer": "advisor logged for retro harvest; takeover proceeding per user decision",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T20:55:00Z",
+      "id": "a22859c2ae07-001"
     }
   ]
 }
