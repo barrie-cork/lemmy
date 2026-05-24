@@ -2018,3 +2018,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **plan:** n/a — plan not yet authored (override: /roadmap-next pre-planning cut)
 - **pushed:** yes — origin/phase-v1-RT-r3 (upstream tracking set via -u)
 - **next:** author planning brief → /brehon-clarify → queue planning Junior
+
+## advisor: roadmap-next cut v1-RT-r3 — 2026-05-24T09:20:00Z
+- **branch:** phase-v1-RT-r3
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r3
+- **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓
+- **roadmap:** flipped v1-RT-r3 unstarted → in_flight
