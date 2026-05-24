@@ -3517,6 +3517,57 @@
       "resolved_at": "2026-05-23T18:45:19Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "ac8728bf3772-002",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T09:00:00Z",
+      "question": "Brief §6 stop condition says >2 hits on rate_per_actor_counts — actual count is 5 (1 definition + 1 prod callsite + 3 test references). What is the correct stop condition?",
+      "options": [
+        "Update §6 to >5 hits",
+        "Keep §6 at >2 and have planner exclude test refs"
+      ],
+      "context": "rg rate_per_actor_counts crates/ returns 5: inbox.rs:485 (definition), publish_trust_attestation.rs:175 (prod check_per_actor_rate_limit), publish_trust_attestation.rs:415 (doc comment in tests), :423 (use import in tests), :430 (test body). Brief §6 says stop if >2 hits.",
+      "answer": "Update §6 stop condition to >5 hits (1 definition + 1 production callsite + 3 test module references). Also add tests_per_actor_bound test module (publish_trust_attestation.rs lines 415-460) to §5 Files as a 4th modification — the test exercises the eviction path and must be rewritten to use rate_per_actor_state() with the new (String, [u8; 32], i64) 3-tuple key. Evidence: rg output 2026-05-24.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T09:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "ac8728bf3772-003",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T09:00:00Z",
+      "question": "Brief §4 says new constant MAX_PER_PEER_ACTOR_ENTRIES goes alongside MAX_PER_ACTOR_RATE_ENTRIES in inbox.rs — but MAX_PER_ACTOR_RATE_ENTRIES is actually at publish_trust_attestation.rs:43. Which file should both constants live in?",
+      "options": [
+        "Move MAX_PER_ACTOR_RATE_ENTRIES to inbox.rs alongside MAX_PER_PEER_ACTOR_ENTRIES",
+        "Keep MAX_PER_ACTOR_RATE_ENTRIES in publish_trust_attestation.rs and add MAX_PER_PEER_ACTOR_ENTRIES there"
+      ],
+      "context": "grep publish_trust_attestation.rs:43 confirms const MAX_PER_ACTOR_RATE_ENTRIES: usize = 10_000 lives there. Both rate-limit statics (rate_per_actor_state, rate_per_peer_counts) are defined in inbox.rs. Brief §4 assumes both constants are in inbox.rs.",
+      "answer": "Move MAX_PER_ACTOR_RATE_ENTRIES from publish_trust_attestation.rs:43 to inbox.rs, alongside the new MAX_PER_PEER_ACTOR_ENTRIES. Both constants govern statics defined in inbox.rs — co-location is correct. Update §5 to include this move as part of the inbox.rs change, and update §5 to note that publish_trust_attestation.rs will reference the constant via crate:: or the same module path. Evidence: file read 2026-05-24.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T09:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "ac8728bf3772-004",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-24T09:00:00Z",
+      "question": "Brief §5 lists 3 files but omits publish_trust_attestation.rs test module tests_per_actor_bound (lines 415-460). Should the test module be in scope?",
+      "options": [
+        "Yes — add as 4th IMPLEMENT section; rewrite to use rate_per_actor_state() and (String, [u8; 32], i64) key",
+        "No — accept compile failure on test module (not acceptable)"
+      ],
+      "context": "tests_per_actor_bound (publish_trust_attestation.rs:415-460) directly calls rate_per_actor_counts() and uses (String, i64) key type. After rate_per_actor_counts() is replaced by rate_per_actor_state(), this test will fail to compile. Must be updated.",
+      "answer": "Yes — add tests_per_actor_bound to §5 as a 4th modification within publish_trust_attestation.rs. The test must be rewritten to: (1) call rate_per_actor_state() to get the ActorRateState mutex guard, (2) use the (String, [u8; 32], i64) 3-tuple key, (3) verify the new per-domain eviction logic (argmax domain, evict min-bucket entry from that domain). DoD 22 lib tests still applies — these tests are counted in that 22. (Collapsed with ac8728bf3772-002 finding — same root cause: 4th file missing from §5.) Evidence: file read 2026-05-24.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-24T09:00:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }

@@ -98,10 +98,15 @@ struct ActorRateState {
 3. If global `counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES` and new key absent → find the
    domain with `argmax(per_domain)`, remove its `min_by_key(bucket)` entry.
 
-New constant alongside `MAX_PER_ACTOR_RATE_ENTRIES` in `inbox.rs`:
+New constants in `inbox.rs` (move `MAX_PER_ACTOR_RATE_ENTRIES` here from
+`publish_trust_attestation.rs:43` where it currently lives):
 ```rust
+const MAX_PER_ACTOR_RATE_ENTRIES: usize = 10_000;  // moved from publish_trust_attestation.rs
 const MAX_PER_PEER_ACTOR_ENTRIES: usize = 500;
 ```
+`publish_trust_attestation.rs` will reference `MAX_PER_ACTOR_RATE_ENTRIES` from its
+current location via the crate-internal path after the move.
+(DQ `ac8728bf3772-003`: constant was at `publish_trust_attestation.rs:43`, not `inbox.rs`.)
 
 **SHA-256 helper** (private fn in `publish_trust_attestation.rs`):
 ```rust
@@ -115,14 +120,22 @@ fn sha256_url(s: &str) -> [u8; 32] {
 
 | File | Change |
 |---|---|
-| `crates/apub/activities/src/governance/inbox.rs` | Add `ActorRateState` struct; replace `rate_per_actor_counts()` with `rate_per_actor_state()`; add `MAX_PER_PEER_ACTOR_ENTRIES`; add `sha2` import |
-| `crates/apub/activities/src/governance/publish_trust_attestation.rs` | Update `check_per_actor_rate_limit`: use `rate_per_actor_state()`, 3-tuple key, new eviction; add `sha256_url` helper |
+| `crates/apub/activities/src/governance/inbox.rs` | Add `ActorRateState` struct; replace `rate_per_actor_counts()` with `rate_per_actor_state()`; move `MAX_PER_ACTOR_RATE_ENTRIES` here from `publish_trust_attestation.rs`; add `MAX_PER_PEER_ACTOR_ENTRIES`; add `sha2` import |
+| `crates/apub/activities/src/governance/publish_trust_attestation.rs` | Update `check_per_actor_rate_limit`: use `rate_per_actor_state()`, 3-tuple key, new eviction; add `sha256_url` helper; remove `MAX_PER_ACTOR_RATE_ENTRIES` definition (moved to `inbox.rs`); rewrite `tests_per_actor_bound` test module (lines 415–460) to use `rate_per_actor_state()` and `(String, [u8; 32], i64)` key |
 | `crates/apub/activities/Cargo.toml` | Add `sha2 = { workspace = true }` |
+
+(DQ `ac8728bf3772-002`+`ac8728bf3772-004`: 5 callsites of `rate_per_actor_counts` exist —
+1 definition in `inbox.rs`, 1 prod callsite + 3 test references in `publish_trust_attestation.rs`.
+The test module `tests_per_actor_bound` is a 4th modification area within
+`publish_trust_attestation.rs`.)
 
 ## 6. Stop conditions (raise `kind: "blocker"` DQ)
 
-- `rg "rate_per_actor_counts" crates/` returns more than 2 hits (one in inbox.rs, one in
-  publish_trust_attestation.rs) — additional callsites change refactor scope.
+- `rg "rate_per_actor_counts" crates/` returns more than **5 hits** — expected exactly 5:
+  `inbox.rs:485` (definition), `publish_trust_attestation.rs:175` (prod), and 3 test
+  references at `publish_trust_attestation.rs:415`, `:423`, `:430`. Additional hits beyond
+  these 5 indicate unknown callsites and change refactor scope.
+  (DQ `ac8728bf3772-002`: corrected from "2 hits" to "5 hits".)
 - `sha2` is already a direct dep of `crates/apub/activities/Cargo.toml`.
 - Any migration would be required (this task must produce zero migrations).
 
@@ -130,7 +143,7 @@ fn sha256_url(s: &str) -> [u8; 32] {
 
 - `[role:planning]` only — produce a plan file; do NOT write Rust.
 - Plan §4 watchpoints MUST cite specific function names and line numbers.
-- Plan §13 IMPLEMENT: exactly 3 files listed in §5 above.
+- Plan §13 IMPLEMENT: exactly 3 files listed in §5 above (note: `publish_trust_attestation.rs` has 2 change areas — prod function + test module — but counts as one file).
 - Plan §15 DoD: `cargo check --workspace --features full` + `cargo clippy --workspace
   --features full --no-deps -- -D warnings` + 22 lib tests still passing
   (`cargo test -p lemmy_apub_activities --lib`). No e2e required for this task.
