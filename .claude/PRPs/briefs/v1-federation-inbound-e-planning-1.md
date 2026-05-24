@@ -8,6 +8,12 @@
 
 Produce `.claude/PRPs/plans/v1-federation-inbound-e.plan.md`.
 
+**NOTE — file already exists:** An older `v1-federation-inbound-e.plan.md` from the
+previously-shipped advisory-lock phase exists on `governance-v0`. **Overwrite it.**
+The old plan is for `evict_oldest_unreviewed_if_needed` (shipped, closed). This new
+plan is for the per-peer actor-map bound + SHA-256 nonce work described in §2–§5 below.
+Replace the file entirely — do not append.
+
 **Deliverables (one impl task, one worker branch):**
 
 1. **Per-peer actor-map entry bound** — prevent one hostile peer from evicting legitimate
