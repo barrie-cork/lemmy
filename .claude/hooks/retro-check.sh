@@ -95,6 +95,9 @@ fi
 if [[ "$CURRENT_BRANCH" == junior/* ]]; then
   WINDOW_MINUTES=30
   MODE="branch-scoped on '$CURRENT_BRANCH'"
+  # Junior worktrees: post-task-retro skill prescribes 'Task retro:%' titles.
+  # /session-retro is for advisor/interactive sessions only — would never fire
+  # on a junior/* branch. So keep the branch-scoped Junior check title-strict.
   RECENT=$(sqlite3 "$DB" \
     "SELECT COUNT(*) FROM memories
      WHERE memory_type='qa-result'
@@ -104,16 +107,23 @@ if [[ "$CURRENT_BRANCH" == junior/* ]]; then
        AND created_at <= datetime('now', '+5 minutes')" \
     2>/dev/null || echo 0)
 else
-  # 60-min window for advisor / interactive sessions on governance-v0 (long
-  # polling-loop sessions don't need per-poll retros — bumped 2026-05-03 from
-  # 15 min after duplicate-retro feedback). Junior worktree branches keep
-  # the 30-min branch-scoped check above (load-bearing for Junior task eval).
+  # Advisor / interactive sessions on governance-v0 / phase-v* branches.
+  # Two retro disciplines satisfy this gate:
+  #   - post-task-retro skill: title 'Task retro:%' (Junior task end OR mid-
+  #     session interactive task close).
+  #   - /session-retro skill: title 'Session retro:%' (ad-hoc session
+  #     retrospective via SKILL.md Step 5 PMD eval).
+  # Pre-2026-05-24 the hook only matched 'Task retro:%' — a /session-retro
+  # eval row did not release the hook, producing the user-visible 3-ESC
+  # fail-open pattern even when discipline was followed. Per session-retro
+  # 2026-05-24-task4-followups proposal §"Stop hook title-prefix gap".
+  # 60-min window unchanged (long polling sessions don't need per-poll retros).
   WINDOW_MINUTES=60
   MODE="time-window (branch='${CURRENT_BRANCH:-unknown}')"
   RECENT=$(sqlite3 "$DB" \
     "SELECT COUNT(*) FROM memories
      WHERE memory_type='qa-result'
-       AND title LIKE 'Task retro:%'
+       AND (title LIKE 'Task retro:%' OR title LIKE 'Session retro:%')
        AND created_at >= datetime('now', '-${WINDOW_MINUTES} minutes')
        AND created_at <= datetime('now', '+5 minutes')" \
     2>/dev/null || echo 0)
