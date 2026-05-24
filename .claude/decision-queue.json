@@ -1,37 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-24T20:30:00Z",
-      "question": "Run advisor-laptop §15 DoD commands against phase-v1-deps-r1 tip 7bd047f2d (diesel-async 0.9 migration). Mutate this entry with result + log_slice + failed_commands.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T1 single commit 7bd047f2d ships diesel-async 0.9 wrapper (LocalAsyncFunc mirror) + 38 .run_transaction callsites (Shapes A=18 / B=18 / C=2) + 1 Shape D raw .transaction (reputation_snapshot.rs). Diesel transitively bumped 2.3.7 -> 2.3.9, with one extra fix at language.rs (OrderDsl bound). Workspace cargo check + clippy already green locally (exits 0). Per plan §13 T1 Step 6 + DQ a3d0e9941441-016. Shape G SUSPENDED until 2026-06-01; advisor-laptop runs the gate.",
-      "branch": "phase-v1-deps-r1",
-      "phase_task": 1,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-deps-r1-task1-validate-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_api --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-api.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_apub --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-apub.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-dbschema.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-e2e.log 2>&1\""
-      ],
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a22859c2ae07-002"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -3754,6 +3723,54 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-24T20:55:00Z",
       "id": "a22859c2ae07-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-24T20:30:00Z",
+      "question": "Run advisor-laptop §15 DoD commands against phase-v1-deps-r1 tip 7bd047f2d (diesel-async 0.9 migration). Mutate this entry with result + log_slice + failed_commands.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T1 single commit 7bd047f2d ships diesel-async 0.9 wrapper (LocalAsyncFunc mirror) + 38 .run_transaction callsites (Shapes A=18 / B=18 / C=2) + 1 Shape D raw .transaction (reputation_snapshot.rs). Diesel transitively bumped 2.3.7 -> 2.3.9, with one extra fix at language.rs (OrderDsl bound). Workspace cargo check + clippy already green locally (exits 0). Per plan §13 T1 Step 6 + DQ a3d0e9941441-016. Shape G SUSPENDED until 2026-06-01; advisor-laptop runs the gate.",
+      "branch": "phase-v1-deps-r1",
+      "phase_task": 1,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-deps-r1-task1-validate-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_api --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-api.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_apub --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-apub.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-dbschema.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-e2e.log 2>&1\""
+      ],
+      "answer": "PASS — diesel-async 0.9 migration validated. cargo check + clippy + e2e (109/109) all green on T1 tip. lemmy_api (35/35) + lemmy_db_schema (37/37) lib tests pass with dev-PG + LEMMY_CONFIG_LOCATION env. lemmy_apub lib has 5 pre-existing failures (200/308 redirect mismatch in http::community tests) falsified against pre-T1 commit 2f0ab6a87 — same failure signature, file unchanged on phase branch — NOT T1-caused; tracked as separate kind:log DQ. T2 (sha2 0.11) cleared to proceed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-24T23:36:45Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": [
+        "cargo test -p lemmy_apub --features full --lib (5 of 7 failed — PRE-EXISTING ON BRANCH; failure signature reproduces on pre-T1 commit 2f0ab6a87, file crates/apub/apub/src/http/community.rs is unchanged between governance-v0 and phase-v1-deps-r1; not T1-attributable; tracked separately as kind:log DQ for branch backlog)"
+      ],
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a22859c2ae07-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-25T00:30:00Z",
+      "question": "Five lemmy_apub lib tests fail pre-existing on phase-v1-deps-r1 (and on governance-v0 trunk). Track for separate cleanup, not load-bearing for any current sub-phase.",
+      "options": [
+        "acknowledge"
+      ],
+      "context": "While running validate-pending-laptop-e2e DQ a22859c2ae07-002 for T1, ran `cargo test -p lemmy_apub --features full --lib` with dev-PG (port 5433, canonical lemmy/password creds) + LEMMY_CONFIG_LOCATION env. Result: 2 passed / 5 failed. Failures: http::community::tests::{test_get_community, test_get_deleted_community, test_get_local_only_community, test_outbox_deleted_user} + collections::community_moderators::tests::test_parse_lemmy_community_moderators. Root failure is test_get_community with `assertion left == right failed; left: 200, right: 308` at community.rs:293 — handler returns 308 Permanent Redirect instead of 200 OK. Other 4 fail with `duplicate key value violates unique constraint idx_site_instance_unique` (cascade from root failure leaking site state). Falsified against pre-T1 commit 2f0ab6a87: same failure signature reproduces, file crates/apub/apub/src/http/community.rs is unchanged between governance-v0 and phase-v1-deps-r1. NOT T1-attributable. Likely root cause: an upstream-inherited test relies on a specific federation context state (testcontainers infrastructure, redirect rule, or settings) that doesn't match the lemmy-alpha config when run as standalone lib test (versus inside e2e harness, where same flows succeed across 109 tests).",
+      "answer": "Logged for backlog. Not blocking T1 ship. The full workspace e2e suite (which exercises these same federation flows through testcontainers + real http stack) passes 109/109 on T1. The 5 lib-test failures are environmental edge cases of the standalone lib-test harness. Cleanup deferred until a federation-touching sub-phase has incentive to fix.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T00:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a22859c2ae07-003"
     }
   ]
 }
