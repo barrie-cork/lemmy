@@ -1,208 +1,142 @@
-# Planning brief — v1-federation-inbound-e
+# [role:planning] v1-federation-inbound-e — per-peer actor-map bound + SHA-256 nonce
 
-**Role:** `[role:planning]`
-**Phase:** `v1-federation-inbound-e`
-**Authored:** 2026-05-22 (governance-v0 `673f1b8b0`)
-**Next:** `/brehon-clarify` → queue planning Junior
+## 1. Role + dispatch
 
----
-
-## 1. Role + dispatch line
-
-```
-[role:planning] v1-federation-inbound-e — plan TOCTOU fix in evict_oldest_unreviewed_if_needed
-```
-
----
+`[role:planning] v1-federation-inbound-e — see .claude/PRPs/briefs/v1-federation-inbound-e-planning-1.md`
 
 ## 2. Scope
 
-### 2.1 What to produce
+Produce `.claude/PRPs/plans/v1-federation-inbound-e.plan.md`.
 
-A complete plan file at `.claude/PRPs/plans/v1-federation-inbound-e.plan.md` following
-the canonical template at `.claude/PRPs/templates/plan.template.md`.
+**Deliverables (one impl task, one worker branch):**
 
-### 2.2 Goal (one sentence)
+1. **Per-peer actor-map entry bound** — prevent one hostile peer from evicting legitimate
+   actors from other peers by capping how many distinct keys from a single `peer_domain`
+   can exist in the actor rate map at any moment.
+2. **SHA-256 subject_url nonce** — replace the raw `subject_url: String` key in
+   `rate_per_actor_counts()` with a fixed-width `[u8; 32]` SHA-256 digest.
 
-Fix the TOCTOU race in `evict_oldest_unreviewed_if_needed` (`inbox.rs:646-703`) by
-replacing the two-step `COUNT(*) → DELETE` sequence with a single atomic
-`DELETE … RETURNING id` SQL statement that only evicts when the count exceeds cap.
+Both changes land in one commit on one worker branch. No new migrations. No new
+governance_config keys. No new HTTP endpoints.
 
-### 2.3 Scope boundary (explicit)
-
-**IN scope:**
-- Rewrite `evict_oldest_unreviewed_if_needed` in
-  `crates/apub/activities/src/governance/inbox.rs` to use atomic SQL
-- One `#[cfg(test)] mod tests_evict_atomicity` unit test block inside the same
-  file, verifying that a concurrent second insert does not double-evict (or that
-  a single call at cap+1 evicts exactly one row)
-- Update the `CountRow` helper struct if it becomes unused after the rewrite
-
-**OUT of scope (explicitly deferred):**
-- Per-peer bound enforcement changes (the cap-check logic already calls
-  `evict_oldest_unreviewed_if_needed`; the eviction policy itself is unchanged)
-- SHA-256 key-hashing for the per-actor rate-map (user clarify B3 from fed-in-d;
-  still deferred)
-- The per-peer rate-map bound (`inbox.rs:540-565` use site; user clarify B1 fed-in-d)
-- Any other function in `inbox.rs` (the three callers of `evict_oldest_unreviewed_if_needed`
-  at lines 191, 305, 761 are READ-ONLY MIRROR refs — do not edit them)
-- Migration: no schema change; pure Rust logic rewrite
-- New `governance_log` entry kinds: no new kinds required; existing
-  `ENTRY_KIND_FEDERATION_INBOUND_DROPPED_STORAGE_CAP_EVICTED` continues unchanged
-- `governance_config` knob for cap: the const `evict_cap` is already passed
-  as a parameter from the callers; no new config key
-
-### 2.4 Concurrency model (MANDATORY — this is the gate-1 question)
-
-The TOCTOU race:
-```
-Thread A: COUNT(*) → 100 (at cap)      Thread B: INSERT → row 101
-Thread A:                                Thread B: COUNT(*) → 101 (at cap)
-Thread A: DELETE oldest                  Thread B: DELETE oldest  (DOUBLE eviction)
-```
-
-The fix must make the count+evict decision atomic. Two viable approaches:
-
-**Option A — `DELETE … WHERE id IN (SELECT id FROM … LIMIT 1 OFFSET cap-1 ORDER BY received_at ASC) RETURNING id`**
-- One SQL round-trip: delete the row that is exactly at position `cap` by rank, if any exists
-- Returns 0 rows if count < cap; returns the deleted id if count ≥ cap
-- No race: the DELETE is the atomic decision; if two threads race, only one gets a returned row
-
-**Option B — `SELECT FOR UPDATE SKIP LOCKED` advisory lock**
-- Lock the oldest unreviewed row, then count + conditionally delete
-- More complex; SKIP LOCKED may allow two threads to each lock different rows
-- Harder to reason about correctness under concurrent insert pressure
-
-The planner MUST choose Option A or Option B, state the reasoning in §1 (plan goal),
-and design the §13 task around the chosen approach. Option A is the preferred default
-(one round-trip, simpler proof of atomicity) unless the planner finds a correctness
-issue with it.
-
-**Gate-1 DQ:** the advisor will raise `kind: "clarify"` asking the planner to confirm
-the approach before the plan is committed. Planner MUST include a `§17 Concurrency
-Model` section explaining the chosen atomic SQL and why it eliminates the race window.
-
-### 2.5 Test scope
-
-- **Story 1:** `evict_oldest_unreviewed_if_needed` with the new atomic SQL — unit test
-  inside `inbox.rs`'s `#[cfg(test)]` block (NOT e2e; no testcontainers required)
-- Test must follow the `LemmyResult<()>` return shape and `?` propagation (no `.unwrap()`),
-  matching the existing test module style in `publish_sanction_notice.rs:612-720`
-  (MIRROR ref)
-- Phase-2 e2e regression gate: full `cargo test --workspace --test e2e --features full`
-  confirming baseline 103/0/5 holds after the rewrite
-
----
+**Do NOT author:**
+- New governance_log entry kinds
+- Any change to `crates/db_schema/`, `migrations/`, or `crates/server/tests/e2e.rs`
+- Any change to `rate_per_peer_counts()` (separate per-peer hourly rate map)
 
 ## 3. Required reading
 
-### 3.1 Canonical files (read before planning)
+### 3a. Handover
+None — first task of this phase. Read bootstrap:
+`.claude/PRPs/handovers/v1-federation-inbound-e-bootstrap.md` §1 + §2 + §3.
+The TOCTOU framing in the bootstrap is corrected by the advisor design decision in §4
+of THIS brief — read §4 before §2 of the bootstrap.
 
-- `crates/apub/activities/src/governance/inbox.rs:634-703` — `CountRow` helper +
-  `evict_oldest_unreviewed_if_needed` — the function being rewritten
-- `crates/apub/activities/src/governance/inbox.rs:183-195` — first caller (sanction)
-- `crates/apub/activities/src/governance/inbox.rs:297-310` — second caller (attestation)
-- `crates/apub/activities/src/governance/inbox.rs:753-765` — third caller (label)
-  (READ-ONLY — these callers are MIRROR refs; the function signature must remain
-  compatible with all three calling sites)
-- `crates/apub/activities/src/governance/publish_sanction_notice.rs:612-720` —
-  MIRROR ref for `#[cfg(test)] mod tests` shape inside the apub-activities crate
+### 3b. MIRROR refs (read in full before authoring §13)
 
-### 3.2 Design refs
+- `crates/apub/activities/src/governance/inbox.rs` lines 479–495 — the two
+  `OnceLock<Mutex<HashMap>>` statics and their key types. Current actor key:
+  `(String, i64)` → target: `(String, [u8; 32], i64)` (domain + hash + bucket).
+- `crates/apub/activities/src/governance/publish_trust_attestation.rs` lines 135–220 —
+  the `check_per_actor_rate_limit` impl (config read, eviction, increment). Only callsite
+  of `rate_per_actor_counts()` outside inbox.rs.
+- `crates/apub/activities/src/governance/inbox.rs` lines 555–580 — per-peer Gate 4 rate
+  check; mirror this synchronous-guard pattern for the per-domain count logic.
+- `crates/apub/activities/Cargo.toml` — `sha2` is NOT yet a direct dep; workspace root
+  `Cargo.toml` declares `sha2 = "0.10"`. Adding requires one line in activities
+  `[dependencies]`: `sha2 = { workspace = true }`.
+- `crates/apub/activities/src/governance/inbox.rs` lines 93–97 — existing `use` block;
+  SHA-256 import (`use sha2::{Sha256, Digest};`) goes here.
 
-- `.claude/PRPs/prds/v1-federation-inbound.prd.md` §7.3 (storage cap with oldest-drop
-  policy; TOCTOU is a risk explicitly noted there)
-- `.claude/PRPs/plans/v1-federation-inbound-d.plan.md` §12 item 3 — the deferred item
-  this phase ships; `§22 MIRROR refs` for the inbox.rs TOCTOU description
+### 3c. Lessons (mandatory)
 
-### 3.3 Mandatory lessons for §3 Required reading (file-class table matches)
+- `.claude/lessons/feedback_features_full_workspace_only.md` — `sha2` has no feature gate;
+  do not wrap the import in `#[cfg(feature = "full")]`.
+- `.claude/lessons/feedback_clippy_rerun_after_fix.md` — run clippy after key type change;
+  `[u8; 32]` implements `Hash + Eq` natively, no derive needed.
+- `.claude/lessons/feedback_fix_impl_pre_push_cargo_check.md` — pre-push cargo-check
+  constraint must appear in §4 of every impl-task brief this phase generates.
 
-- `.claude/lessons/feedback_clippy_test_style.md` — workspace denies `unwrap`/`expect`
-  in test bodies; new test module must use `LemmyResult<()>` + `?`
-- `.claude/lessons/feedback_multi_write_handlers_need_transactions.md` — the existing
-  `run_transaction` in `evict_oldest_unreviewed_if_needed` already wraps three writes;
-  the atomic SQL rewrite must preserve or replace this transaction scope correctly
-- `.claude/lessons/feedback_pg_advisory_xact_lock_void_decode.md` — if Option B
-  (SELECT FOR UPDATE) is chosen, this lesson is mandatory; if Option A (DELETE RETURNING)
-  is chosen, note in §3 that this lesson was consulted and Option A was selected to avoid
-  the void-decode trap entirely
-- `.claude/lessons/feedback_daemon_stale_bm_verb_brief_miss.md` — pre-dispatch
-  ref-currency check; planning Junior must confirm brief is visible on daemon before
-  proceeding
-- `.claude/lessons/feedback_explicit_file_arrays_on_tasks.md` — FILES YAML
-  (`creates:` + `modifies:`) required on every §13 task; read before drafting §13
-  so the verify gate and cohort-dispatch overlap check have complete file arrays
-  (DQ `a3d0e9941441-010`)
+## 4. Design decision (ADVISOR — authoritative, do not re-litigate)
 
-### 3.4 Pre-queue lesson check
+### Corrected TOCTOU analysis
 
-Run `memory_search_hybrid(query: "evict oldest row atomic SQL RETURNING postgres concurrency", tags: "lesson,brehon", limit: 5)` before drafting §13.
+The existing `check_per_actor_rate_limit` holds the `Mutex` guard for the entire
+check-modify-evict block with **no `.await` inside** — there is no real race condition.
+The two actual gaps are:
 
----
+**Gap 1 — Cross-peer eviction unfairness.** At `MAX_PER_ACTOR_RATE_ENTRIES` (10,000) the
+current eviction picks the globally-oldest entry. A hostile peer sending N distinct
+`subject_url` values fills the map and forces eviction of legitimate entries from other
+peers. Fix: evict the oldest entry belonging to the **domain with the highest entry count**.
 
-## 4. Constraints
+**Gap 2 — O(URL-length) key inflation.** `subject_url` is attacker-controlled. Fix: hash
+it to a fixed `[u8; 32]`.
 
-### 4.1 PRE-PUSH MANDATE (extended — applies to BM-verb AND impl-task workers)
+### Chosen structure
 
-Before every `git push` on the worker branch:
-1. Confirm `cargo check --workspace --features full` exits 0 (or the plan's §15 DoD
-   commands pass) — run `bash scripts/brehon/cargo-check.sh --workspace --features full`
-   (Linux wrapper on EliteDesk)
-2. If non-zero: patch in same commit (if in-scope) OR file `kind: "blocker"` DQ and stop.
-   NEVER `#[allow(...)]`-spam to bypass.
+Keep `OnceLock<Mutex<...>>`. Do NOT switch to DashMap (batch eviction becomes non-atomic
+under per-key locking) or Postgres (serializes on DB pool; PRD specifies in-memory).
 
-### 4.2 BM-verb brief visibility check (new — daemon stale-ref prevention)
+Replace `rate_per_actor_counts()` with `rate_per_actor_state()` returning a new struct:
 
-Before creating any Junior task (including this planning task), the advisor will run:
-```bash
-ssh homeserver "cd /srv/brehon-fork && git fetch origin && git log --oneline origin/governance-v0 | head -3"
+```rust
+struct ActorRateState {
+    /// (peer_domain, sha256(subject_url), hour_bucket) → count
+    counts: HashMap<(String, [u8; 32], i64), u32>,
+    /// peer_domain → distinct-key count currently in `counts`
+    per_domain: HashMap<String, usize>,
+}
 ```
-The brief commit (`<sha>`) must be visible before the task is dispatched. This constraint is
-noted here so the plan includes it in §4 Constraints for impl-task briefs too.
 
-### 4.3 File-ownership
+**Eviction (replaces the current `contains_key` / `iter().min_by_key` / `remove` block):**
 
-The planning Junior writes ONLY:
-- `.claude/PRPs/plans/v1-federation-inbound-e.plan.md`
-- DQ entries (`kind: "blocker"` or `kind: "log"`) if needed
-- One-line append to `.claude/runlog/v1-federation-inbound-e-runlog.md` if the file exists
+1. After `retain()` prune, rebuild `per_domain` from `counts` (O(n), n ≤ 10,000, fully sync).
+2. Check per-domain sub-cap: if `per_domain[new_key.peer_domain] >= MAX_PER_PEER_ACTOR_ENTRIES`
+   and the new key is not already present → return `FederationActorRateLimitExceeded`
+   immediately (one peer is saturating its slot).
+3. If global `counts.len() >= MAX_PER_ACTOR_RATE_ENTRIES` and new key absent → find the
+   domain with `argmax(per_domain)`, remove its `min_by_key(bucket)` entry.
 
-NEVER writes:
-- `crates/**`, `migrations/**`, `tests/**`, `docs/brehon-law-inspired-network/**`
-- `.claude/PRPs/reviews/**`, `.claude/rules/**`, `.claude/lessons/**`
-- Briefs, templates, or bootstrap files
+New constant alongside `MAX_PER_ACTOR_RATE_ENTRIES` in `inbox.rs`:
+```rust
+const MAX_PER_PEER_ACTOR_ENTRIES: usize = 500;
+```
 
-### 4.4 Attribution integrity
+**SHA-256 helper** (private fn in `publish_trust_attestation.rs`):
+```rust
+fn sha256_url(s: &str) -> [u8; 32] {
+    use sha2::{Sha256, Digest};
+    Sha256::digest(s.as_bytes()).into()
+}
+```
 
-- DQ entries: `from: "planner"`, `answered_by: null` for blockers; `answered_by: "planner"`
-  with self-resolved evidence for log entries
-- NEVER write `answered_by: "advisor"` from the planning session
-- Commit subject: `docs(plan): v1-federation-inbound-e — <one-line>`
+## 5. Files changed
 
-### 4.5 Plan shape requirements
+| File | Change |
+|---|---|
+| `crates/apub/activities/src/governance/inbox.rs` | Add `ActorRateState` struct; replace `rate_per_actor_counts()` with `rate_per_actor_state()`; add `MAX_PER_PEER_ACTOR_ENTRIES`; add `sha2` import |
+| `crates/apub/activities/src/governance/publish_trust_attestation.rs` | Update `check_per_actor_rate_limit`: use `rate_per_actor_state()`, 3-tuple key, new eviction; add `sha256_url` helper |
+| `crates/apub/activities/Cargo.toml` | Add `sha2 = { workspace = true }` |
 
-The plan MUST include:
-- `§17 Concurrency Model` — explains the chosen atomic SQL approach (Option A or B),
-  the TOCTOU race window, and why the chosen approach eliminates it
-- `§16a Stories` — at minimum Story 1 (eviction atomicity unit test) and Story 2
-  (Phase-2 e2e baseline holds at 103/0/5)
-- `§13` tasks with `[P]` markers where tasks are disjoint; FILES YAML (`creates:` +
-  `modifies:`) on every task per `feedback_explicit_file_arrays_on_tasks.md`
-- `§15 DoD` including `cargo test -p lemmy_apub_activities --lib` (lib tests) and
-  `cargo test --workspace --test e2e --features full` (Phase-2 e2e regression gate)
+## 6. Stop conditions (raise `kind: "blocker"` DQ)
 
-### 4.6 LESSON trailers
+- `rg "rate_per_actor_counts" crates/` returns more than 2 hits (one in inbox.rs, one in
+  publish_trust_attestation.rs) — additional callsites change refactor scope.
+- `sha2` is already a direct dep of `crates/apub/activities/Cargo.toml`.
+- Any migration would be required (this task must produce zero migrations).
 
-End each planning-phase commit body with `LESSON: <one-line observation>` for any
-load-bearing design decision, per `feedback_junior_pmd_write_convention.md`.
+## 7. Constraints
 
----
-
-## 5. Estimated task count
-
-2–3 impl tasks:
-- Task 0: pre-flight harness audit
-- Task 1: rewrite `evict_oldest_unreviewed_if_needed` with atomic `DELETE RETURNING` SQL
-- Task 2: `#[cfg(test)] mod tests_evict_atomicity` unit test block
-
-The planner may split or merge these based on the concurrency model choice.
+- `[role:planning]` only — produce a plan file; do NOT write Rust.
+- Plan §4 watchpoints MUST cite specific function names and line numbers.
+- Plan §13 IMPLEMENT: exactly 3 files listed in §5 above.
+- Plan §15 DoD: `cargo check --workspace --features full` + `cargo clippy --workspace
+  --features full --no-deps -- -D warnings` + 22 lib tests still passing
+  (`cargo test -p lemmy_apub_activities --lib`). No e2e required for this task.
+- If planner adds an e2e story in a later sub-task, the impl-task brief MUST include
+  the laptop-only e2e guard: worker stops after unit tests, writes
+  `kind: "validate-pending-laptop-e2e"` DQ entry (commands array, branch, phase_task),
+  and stops. Laptop advisor session runs e2e and mutates the DQ entry.
+- Pre-push cargo-check constraint in every impl-task brief §4 (per
+  `feedback_fix_impl_pre_push_cargo_check.md`).
