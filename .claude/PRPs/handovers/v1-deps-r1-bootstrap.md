@@ -2,7 +2,7 @@
 
 **Authored:** 2026-05-24
 **Authored by:** advisor (canonical brehon-fork session, single-session continuation per user)
-**Phase branch:** `phase-v1-deps-r1` @ `4a0055a79` (clarify pass landed)
+**Phase branch:** `phase-v1-deps-r1` @ `834cf2cc4` (clarify pass + handover + forward-merge of trunk landed)
 **Trunk at lane-cut:** `governance-v0` @ `335628525`
 **Worktree:** `C:/Users/barri/Developer/brehon-fork-deps-r1` (`phase-v1-deps-r1` checked out)
 **Lane mode:** in-place (per `.claude/rules/multi-lane-worktree.md` — single-session safe variant; switch to lane-dedicated session only if a second CC session opens)
@@ -22,7 +22,9 @@ User directed mid-session: *"stop at next safe place and save your progress. we 
 | Sub-phase | `v1-deps-r1` |
 | Stage | post-clarify, pre-planning-Junior-dispatch |
 | Phase branch | `phase-v1-deps-r1` (pushed to `origin/phase-v1-deps-r1`) |
-| Latest commit | `4a0055a79` chore(advisor): v1-deps-r1 clarify pass — see DQ a3d0e9941441-011..017 |
+| Latest commit | `834cf2cc4` chore(advisor): merge governance-v0 forward — pull 629447b86 hook fix |
+| Lane ahead of trunk by | 3 commits (clarify pass `4a0055a79`, handover `5b95ca6cc`, forward-merge `834cf2cc4`) |
+| Lane in sync with trunk | ✅ (forward-merged 2026-05-24) |
 | Trunk SHA at cut | `335628525` |
 | Brief | `.claude/PRPs/briefs/v1-deps-r1-planning-1.md` (edited per clarify; cites DQ 011/013/014/016 inline) |
 | Plan file | NOT YET AUTHORED (`.claude/PRPs/plans/v1-deps-r1.plan.md` absent) |
@@ -80,10 +82,11 @@ pwd                                          # expect: brehon-fork or brehon-for
 git branch --show-current                    # if canonical: governance-v0; if worktree: phase-v1-deps-r1
 git worktree list                            # expect 3 worktrees: canonical, deps-r1, rt-r3
 
-# Confirm clarify landed on phase branch
+# Confirm clarify + handover + forward-merge landed on phase branch
 cd C:/Users/barri/Developer/brehon-fork-deps-r1
-git log --oneline -3                         # top: 4a0055a79
-git log origin/governance-v0..HEAD --oneline # should show 4a0055a79 only
+git log --oneline -4                         # top: 834cf2cc4
+git log origin/governance-v0..HEAD --oneline # should show 834cf2cc4, 5b95ca6cc, 4a0055a79
+git log HEAD..origin/governance-v0 --oneline # should be empty (lane in sync)
 
 # Confirm DQ in sync
 python -c "import json,io; d=json.load(io.open('.claude/decision-queue.json',encoding='utf-8')); print('pending:',len(d['pending']),'resolved:',len(d['resolved']))"
