@@ -81,7 +81,10 @@ services:
     logging: *default-logging
 
   postgres:
-    image: pgautoupgrade/pgautoupgrade:18-alpine
+    image: pgautoupgrade/pgautoupgrade:18.4-alpine
+    # PG18 family with auto-minor-version upgrade on restart (pinned to
+    # specific minor for reproducibility). Do NOT downgrade to postgres:16.x
+    # without dump/restore — incompatible data volume format.
     # this needs to match the database host in lemmy.hson
     # Tune your settings via
     # https://pgtune.leopard.in.ua/#/

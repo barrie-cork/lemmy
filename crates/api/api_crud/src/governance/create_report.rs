@@ -57,6 +57,7 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
 
 use lemmy_api_common::governance::{CreateGovernanceReport, CreateGovernanceReportResponse};
+use lemmy_db_views_governance_case::GovernanceCaseSummaryView;
 
 pub async fn create_report(
   Json(data): Json<CreateGovernanceReport>,
@@ -167,7 +168,17 @@ pub async fn create_report(
     })
     .await?;
 
-  Ok(Json(outcome))
+  Ok(Json(CreateGovernanceReportResponse {
+    case_id: Some(outcome.case_id),
+    threshold_met: outcome.threshold_met,
+    case: outcome.case_summary,
+  }))
+}
+
+struct ProcessReportOutcome {
+  case_id: ModerationCaseId,
+  threshold_met: bool,
+  case_summary: GovernanceCaseSummaryView,
 }
 
 /// Body of the `run_transaction` closure. Named helper so the outer
@@ -189,7 +200,7 @@ async fn process_report(
   target_remote_url: Option<String>,
   reason_code: String,
   mut cache: ConfigCache,
-) -> LemmyResult<CreateGovernanceReportResponse> {
+) -> LemmyResult<ProcessReportOutcome> {
   let existing: Option<(ModerationCaseId, i64, CaseStatus)> = moderation_case::table
     .filter(moderation_case::target_type.eq(data.target_type))
     .filter(
@@ -322,9 +333,15 @@ async fn process_report(
     .await?;
   }
 
-  Ok(CreateGovernanceReportResponse {
-    case_id: Some(case_id),
+  let case_summary =
+    lemmy_db_views_governance_case::impls::read_summary_for_case_conn(conn, case_id)
+      .await?
+      .ok_or(LemmyErrorType::NotFound)?;
+
+  Ok(ProcessReportOutcome {
+    case_id,
     threshold_met: just_met_threshold,
+    case_summary,
   })
 }
 

@@ -49,13 +49,14 @@ pub struct CreateGovernanceReport {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 /// Response from creating a governance report.
 pub struct CreateGovernanceReportResponse {
   pub case_id: Option<ModerationCaseId>,
   pub threshold_met: bool,
+  pub case: lemmy_db_views_governance_case::GovernanceCaseSummaryView,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]

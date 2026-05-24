@@ -240,6 +240,49 @@ pub async fn list_cases_filtered(
   )
 }
 
+/// Fetch a `GovernanceCaseSummaryView` for a single case by id.
+/// Returns `None` when no `moderation_case` row matches.
+/// Mirrors the two-round-trip pattern of `list_open_cases_for_community`.
+pub async fn read_summary_for_case(
+  pool: &mut DbPool<'_>,
+  case_id: ModerationCaseId,
+) -> LemmyResult<Option<GovernanceCaseSummaryView>> {
+  let conn = &mut get_conn(pool).await?;
+  read_summary_for_case_conn(conn, case_id).await
+}
+
+/// Same as [`read_summary_for_case`] but accepts a bare `AsyncPgConnection`
+/// so it can run inside an open transaction (e.g. in `create_report` to
+/// avoid a post-commit read that could 500 on an already-committed write).
+pub async fn read_summary_for_case_conn(
+  conn: &mut diesel_async::AsyncPgConnection,
+  case_id: ModerationCaseId,
+) -> LemmyResult<Option<GovernanceCaseSummaryView>> {
+  let row: Option<SummaryRow> = moderation_case::table
+    .left_join(community::table.on(community::id.nullable().eq(moderation_case::community_id)))
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::id,
+      moderation_case::status,
+      moderation_case::severity,
+      moderation_case::reason_code,
+      moderation_case::opened_at,
+      moderation_case::community_id,
+      community::name.nullable(),
+      moderation_case::target_type,
+    ))
+    .first::<SummaryRow>(conn)
+    .await
+    .optional()?;
+
+  let Some(r) = row else {
+    return Ok(None);
+  };
+
+  let submitted_counts = submitted_counts_by_case(conn, &[r.0]).await?;
+  Ok(Some(build_summary(r, &submitted_counts)))
+}
+
 /// Aggregate helper: count `jury_assignment` rows with
 /// `status = 'submitted'` grouped by `case_id`, restricted to the given
 /// list of cases. Returns an empty map when `case_ids` is empty.
