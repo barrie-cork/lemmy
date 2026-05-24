@@ -1,6 +1,37 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-24T20:30:00Z",
+      "question": "Run advisor-laptop §15 DoD commands against phase-v1-deps-r1 tip 7bd047f2d (diesel-async 0.9 migration). Mutate this entry with result + log_slice + failed_commands.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T1 single commit 7bd047f2d ships diesel-async 0.9 wrapper (LocalAsyncFunc mirror) + 38 .run_transaction callsites (Shapes A=18 / B=18 / C=2) + 1 Shape D raw .transaction (reputation_snapshot.rs). Diesel transitively bumped 2.3.7 -> 2.3.9, with one extra fix at language.rs (OrderDsl bound). Workspace cargo check + clippy already green locally (exits 0). Per plan §13 T1 Step 6 + DQ a3d0e9941441-016. Shape G SUSPENDED until 2026-06-01; advisor-laptop runs the gate.",
+      "branch": "phase-v1-deps-r1",
+      "phase_task": 1,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-deps-r1-task1-validate-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_api --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-api.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_apub --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-apub.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full --lib > .claude/PRPs/debug/v1-deps-r1-task1-validate-libtest-dbschema.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task1-validate-e2e.log 2>&1\""
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a22859c2ae07-002"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
