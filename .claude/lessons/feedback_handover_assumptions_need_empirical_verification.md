@@ -25,6 +25,25 @@ Session-3 handover §3.3 confidently proposed Option A as the smallest-change fo
 
 The pattern recurs across `feedback_falsifiable_hypothesis_before_structural_fix.md` (DQ #338, 2026-05-21): there the artifact was a DQ entry's RCA; here it's a handover's prescription. Same defect class — confidence-loaded artifact + untested premise + wrong-shaped patch.
 
+## Why this matters (session-5 T4a incident 2026-05-24 — scope-vs-locality variant)
+
+Session-5 inherited session-4 handover's §3.2 and §4.1, which BOTH explicitly prescribed user-scope (`~/.claude/commands/check-role-health.md`) for the new `/check-role-health` consumer slash command. Session 5 authored to that path and was already mid-spec when the user asked **"should this be project level rather than user level?"** — the question instantly falsified the handover's prescription.
+
+Every dependency the command consumes is brehon-fork-specific:
+
+- Role manifests live at `.claude/roles/<role>/` (project-scope, not in any user-scope dir).
+- Canonical PMD is at `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db` (pmd-invariants invariant #1 — absolute path tied to ONE checkout).
+- Drain script lives at `scripts/brehon/<drain-script>` (project-scope).
+- The `[role:X]` tag schema, the four-role model, the config_version subtree SHA — all project-scope concepts.
+
+A user-scope command would have installed globally but produced empty results from every other repo. The handover's recommendation carried forward unchallenged across 3 sessions (session 2 → session 3 → session 4 handovers all said "user-scope") before the user falsified it on first read. **The handover author's session never tested the assumption against the command's dependency locality.**
+
+**Cost of detection: ~4 min of write churn** before the user-as-falsifier inverted the scope. Cost of a missed detection (had the user not asked): a globally-installed command useless from anywhere except brehon-fork, plus user-scope contamination of a project-bound concept (advisor sessions in unrelated repos seeing the command).
+
+The defect class generalises beyond env vars + CLI tools to **any handover-prescribed configuration-locality decision** (scope, path, install location, host machine). The new mandatory check: when a handover prescribes a config decision, list the dependencies that decision constrains and verify the decision is consistent with them.
+
+**Threshold met (2×):** session-4 incident (env var existence) + session-5 incident (scope-vs-locality). Pattern is no longer hypothesis — promoted to canonical lesson row.
+
 ## When to apply
 
 Every time a handover file or bootstrap brief proposes a "smallest change" / "first iteration" / "minimum patch" that names a specific system property as the gate. The gate fires AFTER reading the handover in full and BEFORE writing the first patch.
@@ -35,6 +54,7 @@ Triggering signatures in the handover entry:
 - Prescription cites a CLI tool by name (`rsync`, `gh`, `jq`) and assumes presence on the target host's PATH.
 - Prescription cites a remote directory shape (git checkout, deploy method, on-disk artifact).
 - Prescription cites a hook event, log line, file path on a remote machine, or any system property whose state the handover author may have inferred without testing.
+- Prescription cites a **configuration locality** (user-scope vs project-scope, install path, host machine, scope of a slash command / hook / settings entry). Variant from session-5 T4a 2026-05-24: handover said "user-scope at `~/.claude/commands/`" for a command whose every dependency was project-bound.
 
 Does NOT fire when:
 
@@ -53,6 +73,7 @@ Three mechanical steps, total ≤5 min per assumption:
    - CLI tool: `ssh <host> "command -v <tool>"` or `which <tool>` on the worktree host.
    - Remote directory shape: `ssh <host> "ls -la <path> && cd <path> && git status 2>&1 | head -3"` (catches non-git-checkout instantly).
    - Hook event / log line: read the relevant rule/docs OR ask `claude-code-guide` (1 min round-trip vs 25-min smoke task).
+   - **Configuration locality (scope-vs-locality check):** list the dependencies the prescribed scope constrains (data store paths, sibling files, peer scripts, the things the artifact reads/writes). If ANY dependency is more-local than the prescribed scope, the prescription is structurally wrong. Mechanical check: for a user-scope prescription, every dependency should also be user-scope (`~/.claude/`, `~/.config/`, `$HOME/...`). For a project-scope prescription, dependencies can be project-scope OR user-scope (project includes both). Mixed dependencies + user-scope prescription = falsify.
 
 3. **If verification falsifies any assumption: surface to user via `AskUserQuestion` with the failed assumption + a revised options list.** Do NOT proceed with the handover's named "smallest change". The handover's higher-level intent is still valid; the prescribed path is not.
 

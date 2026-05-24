@@ -66,7 +66,7 @@ CWD_FROM_STDIN=$(extract_field "cwd")
 # --- Resolve role from the dispatch line in transcript_path ---
 # Junior dispatch lines start with `[role:planning|impl-task|bm-task|ci-watcher] ...`.
 # This IS the Junior-vs-advisor gate: advisor sessions never carry a [role:X]
-# tag in their prompt; Junior dispatches always do.
+# tag at the START of their first user message; Junior dispatches always do.
 #
 # Where to find the dispatch line:
 #   - CLAUDE_PROMPT env var: DOES NOT EXIST in `claude -p` mode (confirmed
@@ -74,27 +74,50 @@ CWD_FROM_STDIN=$(extract_field "cwd")
 #     CLAUDE_PROJECT_DIR + plugin paths, NOT prompt content).
 #   - transcript_path stdin field: Claude Code's per-session JSONL transcript
 #     under ~/.claude/projects/<proj>/<session-id>.jsonl. The full dispatch
-#     prompt lives in the FIRST queue-operation:enqueue entry's `content`
-#     field — including the `[role:X]` tag verbatim.
+#     prompt lives in the FIRST user-message entry's `content` field —
+#     starting with the `[role:X]` tag verbatim.
 #
-# So we parse transcript_path for the role tag. Env var is checked first
-# as a no-cost fast path in case some future invocation does set it.
+# Detection discipline (post-2026-05-24 false-positive fix):
+#   - Earlier versions did `head -50 | grep '[role:X]'` which produced false
+#     positives in advisor sessions discussing the four-role model. Mid-line
+#     `[role:X]` mentions inside tool_result content (e.g. reading a handover
+#     file that quotes the dispatch syntax) made advisor sessions get
+#     misclassified as Junior workers, triggering the full jq -rcs scan over
+#     the entire 1MB+ transcript on every Stop event — visible CPU cost on
+#     mobile remote sessions per session-retro 2026-05-24 T4a §"What to change"
+#     #2. Per `feedback_falsifiable_hypothesis_before_structural_fix.md`:
+#     verified by counting role-tag occurrences in this advisor transcript
+#     (14) vs the dispatch position (line 1 only).
+#   - The fix narrows the search: only check the FIRST user-message line of
+#     the transcript (where Junior CLI puts the dispatch prompt). jq parses
+#     the first user message's content field; bash regex on that string
+#     anchors `^\[role:`. Avoids string-search false positives + caps work at
+#     exactly one line read + one regex.
+#
+# Env-var fast path retained as a no-cost prefix in case some future
+# invocation does set CLAUDE_PROMPT.
 ROLE=""
 PROMPT="${CLAUDE_PROMPT:-}"
-if [[ "$PROMPT" =~ \[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
+if [[ "$PROMPT" =~ ^\[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
   ROLE="${BASH_REMATCH[1]}"
 fi
-if [ -z "$ROLE" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-  # Grep the first ~50 lines for the role tag. The dispatch prompt is the
-  # FIRST queue-operation in the transcript so this lands in line 1 in
-  # practice; 50 is a generous safety bound.
-  _ROLE_LINE=$(head -50 "$TRANSCRIPT_PATH" 2>/dev/null | grep -oE '\[role:(planning|impl-task|bm-task|ci-watcher)\]' | head -1)
-  if [[ "$_ROLE_LINE" =~ \[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
+if [ -z "$ROLE" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ] && command -v jq &>/dev/null; then
+  # Extract the FIRST user-message content string. Junior CLI's dispatch
+  # prompt lands here as a plain string starting with `[role:X]`. Advisor
+  # sessions either have a different first-message shape or have content
+  # that does NOT start with `[role:X]` (free-form user text).
+  _FIRST_USER=$(jq -rs '
+    [.[] | select(.type? == "user" and (.message?.content | type) == "string")] | .[0]?.message?.content // ""
+  ' "$TRANSCRIPT_PATH" 2>/dev/null | head -c 200)
+  if [[ "$_FIRST_USER" =~ ^\[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
     ROLE="${BASH_REMATCH[1]}"
   fi
 fi
 if [ -z "$ROLE" ]; then
-  # No role tag anywhere — advisor session or ad-hoc Junior task, skip.
+  # No role tag at start of first user message — advisor session or ad-hoc
+  # Junior task, skip. Early exit BEFORE worktree resolution / git rev-parse /
+  # transcript jq -rcs scan — these are the expensive steps on a 1MB+ advisor
+  # transcript.
   exit 0
 fi
 
