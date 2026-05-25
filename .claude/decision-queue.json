@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "a22859c2ae07-005",
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-25T09:35:00Z",
-      "question": "Phase-tip e2e gate for v1-deps-r1: full workspace e2e on phase-v1-deps-r1 tip after all 3 tasks (diesel-async 0.9 + sha2 0.11 + 8 SemVer-compat bumps)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "phase-v1-deps-r1 tip df2f05d06 (after T1+T2+T3+verify commit). Runs per plan §15.5 phase-tip e2e gate. T1 per-task e2e already passed (DQ a22859c2ae07-001). This is the composite gate covering all 3 commits together.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log\""
-      ],
-      "branch": "phase-v1-deps-r1",
-      "phase_task": "phase-tip",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "advisor",
@@ -3855,6 +3829,31 @@
       "answer": "cargo check --workspace --features full: exit 0 (5m30s). cargo clippy --workspace --features full --no-deps -- -D warnings: exit 0 (5m16s). serde_with_macros v3.20.0 recompiled (confirms T3 bumps active). No warnings.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-25T09:12:17Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a22859c2ae07-005",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-25T09:35:00Z",
+      "question": "Phase-tip e2e gate for v1-deps-r1: full workspace e2e on phase-v1-deps-r1 tip after all 3 tasks (diesel-async 0.9 + sha2 0.11 + 8 SemVer-compat bumps)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "phase-v1-deps-r1 tip df2f05d06 (after T1+T2+T3+verify commit). Runs per plan §15.5 phase-tip e2e gate. T1 per-task e2e already passed (DQ a22859c2ae07-001). This is the composite gate covering all 3 commits together.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-deps-r1-phase-tip-e2e.log\""
+      ],
+      "branch": "phase-v1-deps-r1",
+      "phase_task": "phase-tip",
+      "answer": "cargo-test.bat --workspace --test e2e --features full: exit 0. 109 passed; 0 failed; 5 ignored; finished in 2162.19s (36 min).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-25T10:17:42Z",
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,

@@ -3,7 +3,7 @@
 **Run at:** 2026-05-25T09:30:00Z
 **Phase branch:** `phase-v1-deps-r1` @ `74a7066f4`
 **Plan:** `.claude/PRPs/plans/v1-deps-r1.plan.md` @ `cd5861f00`
-**Outcome summary:** 4 stories: 3✓ 0✗-phantom 0✗-regression 1[note]
+**Outcome summary:** 4 stories: 4✓ 0✗-phantom 0✗-regression 0[malformed]
 
 ---
 
@@ -56,15 +56,16 @@
 - **Composing tasks:** Tasks 1 + 2 + 3
 - **Outputs:**
   - ✓ All Story 1-3 outputs present (see above)
-  - ⏳ Full workspace e2e — PENDING (phase-tip e2e gate per plan §15.5 not yet run; required before PR open per plan §13 Task 3 "Phase-tip e2e gate" note)
+  - ✓ Full workspace e2e — 109 passed; 0 failed; 5 ignored; finished in 2162.19s (DQ a22859c2ae07-005 resolved pass 2026-05-25T10:15Z)
   - ✓ `Cargo.lock` delta bounded: 106 lines per HANDOVER (within ±200 envelope; brief estimated ~165)
-- **Checkpoint:** `cargo-test.bat --workspace --test e2e --features full` — NOT YET RUN
-- **Outcome:** ⏳ pending phase-tip e2e
+- **Checkpoint:** `cargo-test.bat --workspace --test e2e --features full` — exit 0 (109 passed; 0 failed)
+- **Outcome:** ✓
 
 ---
 
 ## Required actions
 
-- **Advisory (Story 1):** doc-comment at `crates/diesel_utils/src/connection.rs:83` references `scope_boxed()`. Plan §12 says to delete it. Low priority — does not affect compilation or correctness. Can be folded into a `chore(lint):` commit pre-PR or addressed post-CR-triage.
-- **Blocking (Story 4):** phase-tip e2e gate must pass before opening PR. Per plan §13 Task 3 and §15.5: `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"` must exit 0. Advisor raises `validate-pending-laptop-e2e` DQ entry; runs locally; result must be `pass`.
+- **Advisory (Story 1):** doc-comment at `crates/diesel_utils/src/connection.rs:83` references `scope_boxed()`. Plan §12 says to delete it. Non-blocking — can fold into `chore(lint):` pre-PR commit.
 - **Notes (Story 3):** rustls at 0.23.39 and dashmap at 6.1.0 are WP-6 compliant — latest stable versions at task-time. No action needed.
+
+**Merge-confirm gate: CLEAR** — all 4 stories ✓. Proceed to `bm-pr`.
