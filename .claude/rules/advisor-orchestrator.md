@@ -25,7 +25,10 @@ Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-
 
 - **Planning briefs** → committed on `governance-v0` (no phase branch yet).
 - **bm-cut briefs** → committed on `governance-v0` (no phase branch yet).
-- **Impl-task briefs** → committed on `phase-<X>` (the phase branch the impl worker forks from). Authoring on `governance-v0` requires a subsequent cherry-pick + forward-merge to make the brief visible to the worker; the pattern observed in fed-in-b (commit `0ea7ab4f7`) is "author briefs directly on the phase branch". Per session retro 2026-05-20 §2.8.
+- **Impl-task briefs** → MUST be visible on `phase-<X>` (the phase branch the impl worker forks from) before `create_task` is called. **The how depends on the lane mode** (per `.claude/rules/multi-lane-worktree.md` §"Lane modes"):
+  - **Mode A (dedicated lane worktree):** author directly on the phase branch in the lane worktree session. `git commit` + `git push origin phase-<X>`. The fed-in-b pattern (commit `0ea7ab4f7`) is the canonical example.
+  - **Mode B (mobile remote-control):** author on `governance-v0` in canonical, `git commit` + `git push origin governance-v0`, then trigger a trunk→phase sync per `multi-lane-worktree.md` §"Brief location and trunk→phase sync" (SSH-merge from the daemon's main worktree, which is on the phase branch post-bm-cut). Verify with `git -C <canonical> fetch origin phase-<X> && git log governance-v0..origin/phase-<X> --oneline` — the brief commit must appear via the merge commit.
+  - In BOTH modes the worker forks from `phase-v1-<lane>`; the brief must be reachable at that ref at task-spawn time. The "how" differs; the "what" doesn't. Per session retro 2026-05-20 §2.8 + this session 2026-05-25 (Mode B procedure discovered empirically; documented post-session).
 - **BM-pr / bm-merge briefs** → committed on `governance-v0` (BM worker reads from trunk).
 - **ci-watcher briefs** → committed on `governance-v0` (mutation lives on whatever ref the workflow_run_id's branch was; the brief just names IDs).
 
