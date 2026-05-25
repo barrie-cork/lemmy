@@ -53,6 +53,21 @@
       "failed_commands": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "bm-merge-gate-failure-001",
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-25T11:15:07.897208Z",
+      "question": "Merge gate failed: decision-queue.json still has 2 pending validate-pending-laptop entries that must be resolved before PR #153 can merge",
+      "options": [
+        "resolve pending entries then retry merge",
+        "advisor confirms merge safe despite pending entries"
+      ],
+      "context": "Brief states 'All gates have been cleared by the advisor' but pending[] contains: 2b05f9a6183b-001 (Task 3 cargo validation) and 823f445abc47-002 (Task 2 sha2 validation). Pre-merge gate 3 requires pending array to be empty.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null
     }
   ],
   "resolved": [
