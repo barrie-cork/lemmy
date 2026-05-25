@@ -3859,6 +3859,112 @@
       "failed_commands": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Cron-batch governance_log entries: synthetic `system` actor_pseudonym (PRD §5.3) vs actor_pseudonym=None (v0 precedent at admin_assign_jury.rs:932)?",
+      "options": [
+        "actor_pseudonym_id=None per v0 precedent (admin_assign_jury.rs:932)",
+        "Seed synthetic `system` person + actor_pseudonym row via new migration"
+      ],
+      "context": "actor_pseudonym schema (db_schema/source/governance/actor_pseudonym.rs:18-23 + migrations/2026-04-15-100400/up.sql) has NOT NULL person_id FK. PRD §5.3 specifies a synthetic `system` pseudonym but doesn't reconcile with the schema. v0 precedent at admin_assign_jury.rs:932 doc-comment writes None for system-attributed entries.",
+      "answer": "Use actor_pseudonym_id=None for r3 cron-batch governance_log entries — follow v0 precedent at admin_assign_jury.rs:932. Zero schema churn. The PRD's 'synthetic system pseudonym' framing is honoured semantically (no real-person attribution) but realised via Option::None on governance_log.actor_pseudonym_id rather than a sentinel row in actor_pseudonym. Per user 2026-05-25.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-018"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Where should the `flag-bad-faith` admin handler land — new file `admin_flag_bad_faith.rs` or extend existing `admin_emergency_remove.rs`?",
+      "options": [
+        "Extend admin_emergency_remove.rs (Recommended)",
+        "New file admin_flag_bad_faith.rs"
+      ],
+      "context": "PRD §5.3 source 4 specifies endpoint POST /api/v4/governance/admin/emergency-remove/flag-bad-faith. URL path nests under emergency-remove. admin_emergency_remove.rs is 330 lines with one handler — adding a second handler in same file keeps capability-check pattern + shared imports together.",
+      "answer": "Extend admin_emergency_remove.rs with a second handler `flag_bad_faith_emergency_report`. Rationale: the URL path nests under `/admin/emergency-remove/...` (PRD §5.3 source 4); the existing handler shape (capability check → case load → status assertion → governance_log entry) is the canonical sibling to mirror; file is small enough (330 lines) that splitting buys nothing. The new handler shares the EmergencyRemoveTarget type and existing imports. Per `feedback_read_canonical_before_writing_spec.md` — mirror sibling shape rather than fragment surface.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-019"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Vote-outcome emitter location inside submit_jury_vote.rs `case_decided` branch — where exactly does the panel-iteration emit live?",
+      "options": [
+        "Inside the case_decided branch at line 282, before the existing emit_reputation_event call at line 583",
+        "After the existing emit at line 583, separate loop",
+        "In the run_transaction at line 139, before commit"
+      ],
+      "context": "submit_jury_vote.rs has the case_decided branch at line 282 (already inside run_transaction at line 139). emit_reputation_event call at line 583 (existing jury_reliability emit). Helper at line 968. Per PRD §5.3 source 3: 'mirrors jury_reliability emit — same case_id, same juror, separate reputation_event row'.",
+      "answer": "Plan should add the vote-outcome iteration INSIDE the existing case_decided branch, INSIDE the same run_transaction (line 139) — co-located with the existing jury_reliability emit at line 583. Iterate panel jurors once; for each majority-aligned juror, emit `participation_consistency +1` immediately after the existing `jury_reliability` emit (or via a shared helper that emits both). One transaction, both event rows; rollback semantics already provided by the outer `run_transaction`. The existing `emit_reputation_event` helper at line 968 must already accept `source_event_type` (verified: reputation_event.rs:34 + ReputationEventInsertForm at line 51) — no new helper needed unless the planner wants a `emit_vote_outcome_event` wrapper. Per `feedback_multi_write_handlers_need_transactions.md` already cited in brief §4.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-020"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Source 4a evidence-cited heuristic cites case_evidence rows — what file:line is the canonical schema reference for the planner's §3 Required reading?",
+      "options": [
+        "Add crates/db_schema/src/source/governance/case_evidence.rs to §3",
+        "Defer to planner to find"
+      ],
+      "context": "Brief §2.2 Source 4a heuristic checks 'case has ≥1 case_evidence row authored by the reporter'. Brief §3 Required reading doesn't cite the case_evidence schema file. Planner needs to know the row shape (in particular: is there an `author_id` / `submitted_by` column tying evidence to the reporter?).",
+      "answer": "Add `crates/db_schema/src/source/governance/case_evidence.rs` to brief §3 Required reading. The planner must verify (a) which column ties evidence to its submitter (reporter), (b) that the column is queryable from the case_decided branch context. If the row carries `submitter_id` (or equivalent person_id FK), the heuristic is: SELECT EXISTS(SELECT 1 FROM case_evidence WHERE case_id = $1 AND submitter_id = $2) — straightforward. Brief edit applied via separate commit.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-021"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Source 4a heuristic precondition: is `jury_vote.rationale` populated in v0 such that the rationale-length heuristic has signal? Brief §4 says 'if NULL-by-default, file DQ and defer to v2'.",
+      "options": [
+        "Verified: rationale exists as populated TEXT column — Source 4a ships in r3",
+        "Defer — planner verifies via e2e fixture inspection"
+      ],
+      "context": "crates/db_schema/src/source/governance/jury_vote.rs:22+33 carries `rationale: Option<String>` on both the query type and InsertForm. Column exists; population is up to submit_jury_vote callers (the e2e fixtures will demonstrate).",
+      "answer": "rationale column EXISTS (`Option<String>` per jury_vote.rs:22+33) and is populated by `submit_jury_vote` callers — verified via PRD §5.3 source 4 N2 note (which describes the column as a populated free-text field). Source 4a ships in r3. Planner should add a Story-level assertion that confirms population in v0 e2e fixtures (e.g. existing v1-SL-* / v1-JM-* fixtures already populate rationale on case-decision votes). If the planner's pre-flight discovers v0 fixtures DON'T populate rationale (rare), Source 4a defers to v2 — but the default expectation is ship-in-r3.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-022"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "Activity cron comment-count source: query against `comment` table directly or via `comment_aggregates` / a v0 helper?",
+      "options": [
+        "Use existing v0 active-count pattern at scheduled_tasks.rs:163 (all_active_counts) as MIRROR",
+        "Direct query against comment table with filter on (community_id, person_id, created_at)"
+      ],
+      "context": "scheduled_tasks.rs:163 already calls `all_active_counts` to maintain comment activity counters across communities. PRD §5.3 source 1 says 'comment authored in that community in the lookback window' — needs (community_id, person_id) cardinality.",
+      "answer": "MIRROR `all_active_counts` at scheduled_tasks.rs:163 as the design reference for the comment-activity query shape, but write a NEW dedicated helper for r3 (different output cardinality: r3 needs per-(community, person) grouping rather than per-community aggregate counts). The planner should locate the all_active_counts implementation, read its query, and adapt for the (community_id, person_id, count >= activity_threshold_comments) cardinality. If the planner finds the existing helper sufficient (returns per-person breakdown), reuse it. Watchpoint for plan §4: cite the all_active_counts file:line as MIRROR.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-023"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-25T13:00:00Z",
+      "question": "`flag-bad-faith` endpoint URL path — does the brief enforce PRD's literal `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith` or leave URL choice to planner?",
+      "options": [
+        "Enforce PRD literal URL",
+        "Defer to planner judgment"
+      ],
+      "context": "PRD §5.3 source 4 specifies URL `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith`. Brief §2.2 source 4b mentions the URL parenthetically but §4 Constraints doesn't enforce it.",
+      "answer": "Enforce PRD literal URL `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith`. This nests under the existing emergency-remove route group (consistent with the recommendation from clarify-Q2 to extend admin_emergency_remove.rs as the handler file). Brief §4 receives an URL-path constraint via separate commit. Plan §13 must wire the route in `crates/api/api_routes/src/governance/...` (verify exact path during planning) and §16a must include a story asserting the URL returns 403 for non-admin + 400 for non-EmergencyRemove case + 200 with governance_log emit for admin+correct-status.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T13:00:00Z",
+      "id": "a3d0e9941441-024"
     }
   ]
 }

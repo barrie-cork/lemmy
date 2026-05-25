@@ -49,7 +49,7 @@ Pre-flight verification (2026-05-25) confirms r1 already shipped the full schema
 
 4. **Source 4a — Evidence-quality positive emitter (post-decision, same `submit_jury_vote.rs` `case_decided` branch)**. Heuristic: if the case has ≥1 `case_evidence` row authored by the reporter AND `jury_vote.rationale.length() ≥ participation.evidence_cited_rationale_threshold_chars` (default 256), emit `+1 reporting_accuracy` event for the reporter (delta from `deltas.evidence_cited`, `source_event_type = EvidenceQuality`, `dedupe_key = format!("evidence_cited:{case_id}:{reporter_pseudonym}")`). One `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED` entry. The planner MUST verify that `jury_vote.rationale` (or equivalent column) is a populated `TEXT` field in v0 schema; if it's `NULL`-by-default or empty-by-convention, Source 4a defers to v2 per PRD §5.3 N2 note — file a DQ.
 
-5. **Source 4b — Evidence-quality bad-faith path + `flag-bad-faith` admin endpoint** at `crates/api/api/src/governance/admin_emergency_remove.rs` (NEW handler or extension). Per PRD §5.3 source 4 + §7 cross-cutting: instance-admin-only `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith { case_id }`. Capability check (instance-admin only); load the case; assert `case.status = EmergencyRemove`; emit `−1 reporting_accuracy` for the case's reporter (delta from `deltas.evidence_bad_faith`, `source_event_type = EvidenceQuality`, `dedupe_key = format!("evidence_bad_faith:{case_id}")`). One `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED` entry with `actor_pseudonym = <admin>`, payload distinguishing the bad-faith trigger from the cited-rationale trigger.
+5. **Source 4b — Evidence-quality bad-faith path + `flag-bad-faith` admin endpoint** — handler EXTENDS `crates/api/api/src/governance/admin_emergency_remove.rs` (per clarify DQ a3d0e9941441-019; do NOT create a new file). Add a second handler `flag_bad_faith_emergency_report` alongside the existing `emergency_remove_open_case` (330-line file; mirror its capability-check + case-load shape). Endpoint URL: `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith { case_id }` — verbatim PRD literal (per clarify DQ a3d0e9941441-024). Instance-admin-only capability check; load the case; assert `case.status = EmergencyRemove`; emit `−1 reporting_accuracy` for the case's reporter (delta from `deltas.evidence_bad_faith`, `source_event_type = EvidenceQuality`, `dedupe_key = format!("evidence_bad_faith:{case_id}")`). One `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED` entry with `actor_pseudonym_id = <admin's id>` (real admin attribution; this is NOT a cron-batch system-attributed entry), payload distinguishing the bad-faith trigger from the cited-rationale trigger.
 
 **Out of scope for r3:**
 
@@ -68,6 +68,9 @@ Pre-flight verification (2026-05-25) confirms r1 already shipped the full schema
 - `crates/routes/src/utils/scheduled_tasks.rs` lines 50-130 (RunningGuard + structural cron patterns) + lines 190-260 (the canonical `RunningGuard` + 15-min reputation-snapshot tick; MIRROR ref for the two new cron blocks).
 - `crates/api/api/src/governance/submit_jury_vote.rs` (full file — understand `process_vote`, the `case_decided` branch at line 282, the existing `run_transaction` at line 139, the existing `emit_reputation_event` helper at line 968).
 - `crates/db_schema/src/source/governance/reputation_event.rs` (full file — confirm `dedupe_key` + `source_event_type` columns + the `ReputationEventSourceType` enum variants `ParticipationCron`, `DormancyCron`, `VoteOutcome`, `EvidenceQuality`).
+- `crates/db_schema/src/source/governance/case_evidence.rs` (full file — Source 4a heuristic queries this; planner must identify the submitter_id/person_id FK column tying evidence to its reporter; added per clarify DQ a3d0e9941441-021).
+- `crates/db_schema/src/source/governance/actor_pseudonym.rs` + `migrations/2026-04-15-100400-0000_add_actor_pseudonym/up.sql` (schema reference for the `actor_pseudonym_id=None` cron-batch attribution decision per clarify DQ a3d0e9941441-018).
+- `crates/api/api/src/governance/admin_assign_jury.rs:932` (v0 precedent — `actor_pseudonym = None` for system-attributed governance_log entries; MIRROR for r3 cron-batch entries).
 - `crates/db_schema/src/source/governance/governance_log.rs` lines 200-220 (the r1-shipped ENTRY_KIND constants for r3 use; do NOT add new ones).
 - `crates/api/api/src/governance/governance_log.rs` (the shim — verify `pub use` re-exports for the five r3-relevant kinds).
 - `crates/api/api/src/governance/admin_emergency_remove.rs` (full file — understand the existing emergency-remove handler shape; the `flag-bad-faith` endpoint mirrors its capability-check pattern).
@@ -95,7 +98,7 @@ Pre-flight verification (2026-05-25) confirms r1 already shipped the full schema
 - **Dedupe-key idempotency MUST be tested.** Plan §16a MUST include a story: "re-running the activity cron in the same ISO week produces zero new rows (constraint violation = idempotent success)". Same for dormancy.
 - **No-penalty-for-dissent in vote-outcome emitter.** Jurors who vote in the minority emit nothing — NOT a `0` event, NOT a `−1` event. Test must assert minority jurors have no `VoteOutcome` event after case decision.
 - **`flag-bad-faith` endpoint is instance-admin-only.** Capability check is `is_admin(person)` AND the case status must be `EmergencyRemove`. Per ADR-013 admin-driven posture: no auto-detection. Returns 403 for non-admins, 400 if case is not in EmergencyRemove status.
-- **`actor_pseudonym = system` for cron-batch entries.** Cron-emitted governance_log entries use the reserved `system` pseudonym (new addition per PRD §5.3 + ADR-015). Planner must specify how `system` is registered in the `actor_pseudonym` table — file a DQ if no precedent exists in v0 for a reserved-pseudonym row.
+- **`actor_pseudonym_id = None` for cron-batch entries (resolved per clarify DQ a3d0e9941441-018).** Cron-emitted governance_log entries write `actor_pseudonym_id = None` (the column is `Option<...>` on `governance_log`). Honors PRD §5.3 "synthetic system pseudonym" framing semantically (no real-person attribution) but realises it via `Option::None` rather than seeding a sentinel row. MIRROR the v0 precedent at `admin_assign_jury.rs:932` doc-comment. **NOTE:** the `flag-bad-faith` admin endpoint (Source 4b) is NOT a cron-batch entry — it uses real admin attribution (`actor_pseudonym_id = <admin's pseudonym row id>`).
 - **DQ discipline:** write `kind: "validate-pending-laptop"` DQ entry after impl-task pushes its worker branch (Shape G suspended per DQ #229; cargo runs on laptop). E2e is `kind: "validate-pending-laptop-e2e"` separately.
 - **e2e-on-laptop-only guard (MANDATORY in every impl-task brief whose DoD includes e2e)** — verbatim text per `.claude/PRPs/handovers/v1-RT-r3-bootstrap.md` §3 carry-forward Action 1:
 
@@ -110,11 +113,14 @@ Pre-flight verification (2026-05-25) confirms r1 already shipped the full schema
 - **Commit attribution:** impl-task commits use `feat(rep-tuning): <description> (task N)` subject (matching r2 convention).
 - **Watchpoints in plan §4** cite specific file:line:
   - `scheduled_tasks.rs:201` (existing reputation-snapshot tick — shape to copy for `RunningGuard`).
-  - `submit_jury_vote.rs:282` (the `case_decided` branch where vote-outcome + evidence-cited emitters land).
-  - `submit_jury_vote.rs:583` (existing `emit_reputation_event` call — MIRROR for new calls).
-  - `submit_jury_vote.rs:968` (existing `emit_reputation_event` helper — confirm signature accepts `source_event_type` + `dedupe_key`).
+  - `scheduled_tasks.rs:163` (existing `all_active_counts` call — MIRROR for the activity-cron comment-counting query shape, per clarify DQ a3d0e9941441-023).
+  - `submit_jury_vote.rs:282` (the `case_decided` branch where vote-outcome + evidence-cited emitters land — emit INSIDE the existing `run_transaction` at line 139, per clarify DQ a3d0e9941441-020).
+  - `submit_jury_vote.rs:583` (existing `emit_reputation_event` call — MIRROR for new calls; co-locate vote-outcome emit immediately after the existing jury_reliability emit in the same iteration).
+  - `submit_jury_vote.rs:968` (existing `emit_reputation_event` helper — confirm signature accepts `source_event_type` + `dedupe_key`; already verified at reputation_event.rs:34+51).
   - `reputation_event.rs:32-51` (dedupe_key + source_event_type schema columns).
   - `governance_log.rs:212-216` (r1-pre-landed ENTRY_KIND consts — do NOT add to this file).
+  - `admin_emergency_remove.rs` (330-line file — second handler `flag_bad_faith_emergency_report` lands here, MIRROR `emergency_remove_open_case` shape, per clarify DQ a3d0e9941441-019).
+  - `jury_vote.rs:22+33` (`rationale: Option<String>` column — Source 4a heuristic precondition, verified populated per clarify DQ a3d0e9941441-022).
 
 - **Plan §16a stories** — minimum 4 stories:
   1. Activity cron emits `+1` per active user per community; idempotent across same-ISO-week re-runs (`dedupe_key` ON CONFLICT DO NOTHING).
@@ -128,6 +134,6 @@ Pre-flight verification (2026-05-25) confirms r1 already shipped the full schema
 - **Stop-and-ask tripwires for the planner** (carried from bootstrap §"Stop-and-ask tripwires"):
   - Stop if a §13 task proposes a new migration → catch-fire (scope violation; r1 owns the schema).
   - Stop if a §13 task proposes adding to `governance_log.rs` ENTRY_KIND list → catch-fire (r1 pre-landed all five).
+  - Stop if a §13 task proposes seeding a `system` person + actor_pseudonym row → catch-fire (resolved per clarify DQ a3d0e9941441-018: use `actor_pseudonym_id=None` for cron entries; no sentinel row).
   - Stop if the planner proposes more than 4 §13 tasks — r3's file footprint is wider than r2's but 5+ tasks signals over-splitting; check if tasks can be batched by emitter location (one task per file makes sense: scheduled_tasks.rs, submit_jury_vote.rs, admin_emergency_remove.rs, e2e.rs).
-  - Stop if `jury_vote.rationale` (or equivalent rationale column) is empty/NULL by default in v0 schema — Source 4a heuristic has no signal; file a DQ and defer Source 4a to v2 (keep Source 4b `flag-bad-faith` in r3 since it doesn't depend on rationale).
-  - Stop if `actor_pseudonym = system` has no precedent row in v0 — planner must specify how the synthetic `system` pseudonym is seeded.
+  - Stop if `jury_vote.rationale` is `None`-by-default in v0 e2e fixtures (verified at schema level per clarify DQ a3d0e9941441-022; population is fixture-dependent) — Source 4a heuristic has no signal; file a DQ and defer Source 4a to v2 (keep Source 4b `flag-bad-faith` in r3 since it doesn't depend on rationale).
