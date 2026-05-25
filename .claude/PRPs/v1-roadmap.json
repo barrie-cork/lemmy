@@ -420,14 +420,13 @@
     "deps": {
       "name": "Deps (Cargo dependency bumps)",
       "prd": null,
-      "status": "done",
+      "status": "partial",
       "user_steered": true,
-      "user_steered_note": "User instructed 2026-05-23: deps is gated on v1-ship-3 + v1-RT-r2 both shipping; not /roadmap-next-cut. Cut by hand once preconditions met.",
+      "user_steered_note": "User instructed 2026-05-23: deps-r1 gated on v1-ship-3 + v1-RT-r2 both shipping; not /roadmap-next-cut. Cut by hand once preconditions met. User instructed 2026-05-25: deps-r2 (security-alert sweep) + deps-r3 (wasmtime upgrade) DEFERRED until after v1 ships. Status flips to 'partial' (deps-r1 done, r2+r3 unstarted).",
       "depends_on": [
         "v1-ship-3",
         "v1-RT-r2"
       ],
-      "shipped_at": "2026-05-25",
       "sub_phases": {
         "v1-deps-r1": {
           "status": "done",
@@ -440,6 +439,28 @@
           "in_flight_since": "2026-05-24",
           "done_at": "2026-05-25",
           "background": "Dependabot PR #136 (opened 2026-05-18) bundled all 12 bumps; investigation 2026-05-23 found 2 breaking changes requiring 42-file mechanical rewrite + trait-resolution pre-flight. User chose deferred sub-phase over fix-in-PR'ing the Dependabot branch."
+        },
+        "v1-deps-r2": {
+          "status": "unstarted",
+          "deferred_until": "post-v1-ship",
+          "scope": "Security-alert sweep retiring 6/18 open Dependabot alerts: (T1) inline webmention crate replacement to drop rustls 0.21 / rustls-webpki 0.101.7 chain (3 alerts inc 1 High); (T2) fork rlidwka/mdurl.rs to barrie-cork/mdurl + bump idna 0.3→1.1 + [patch.crates-io] (1 medium alert); (T3) dispute astral-tokio-tar 0.6.0 advisories as already-fixed (2 alerts via Dependabot dismissal); (T4) defer wasmtime to v1-deps-r3 with documented Dependabot suppressions on all 13 alerts (aarch64-only criticals, Brehon deploys x86_64).",
+          "brief": ".claude/PRPs/briefs/v1-deps-r2-planning-1.md",
+          "background": "Investigation 2026-05-25 (Perplexity research) confirmed every vulnerable transitive crate is already at its latest upstream version, so the 18 alerts are not closable by cargo update. User decision 2026-05-25: defer until after v1 ships. The 18 alerts are non-blocking for pilot launch; the 1 High is on outbound webmention TLS cert parsing (low real-world exposure); the 2 wasmtime criticals are aarch64-only.",
+          "depends_on": [
+            "v1-deps-r1",
+            "v1-ship-complete"
+          ]
+        },
+        "v1-deps-r3": {
+          "status": "unstarted",
+          "deferred_until": "upstream: extism wasmtime release OR post-v1-ship (whichever later)",
+          "scope": "wasmtime 41.x → 44.x+ upgrade via extism 1.21.0 fork+patch OR upstream extism release adoption. Closes 13 wasmtime alerts (2 critical + 7 medium + 4 low). High risk against ADR-012 plugin host; 1-3 days of work if fork path is taken.",
+          "brief": null,
+          "background": "Per Perplexity research 2026-05-25: extism 1.21.0 pins wasmtime via internal wiggle macro APIs; [patch.crates-io] override of wasmtime alone will not compile without forking extism. Upstream tracking: extism/extism Dependabot PR #847 (open since 2026-04-07). Critical CVEs are aarch64-only; not exploitable on Brehon's x86_64 deployment. v1-deps-r2 records this deferral in a kind:'log' DQ entry.",
+          "depends_on": [
+            "v1-deps-r2",
+            "upstream: extism release with wasmtime ≥ 42.x"
+          ]
         }
       },
       "in_flight_since": "2026-05-24"
