@@ -1,24 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-25T19:30:00Z",
-      "question": "v1-RT-r3 Task 0 pre-flight: 3 probe methodology gaps found — do all functional deliverables pass and is it safe to proceed to Task 1? Option A: yes, proceed. Option B: fix probe thresholds first.",
-      "options": [
-        "option-A: accept audit as PASS (methodology gaps only, all functional deliverables confirmed present) — proceed to Task 1",
-        "option-B: require probe threshold fixes before proceeding (edit probe expectations in plan §13 Task 0)"
-      ],
-      "context": "All 19 probes run. Three methodology gaps: (1) Probe 6: Junior worker always runs on junior/* branch, not phase-v1-RT-r3 — base IS phase-v1-RT-r3 at 11ec35219 (confirmed by git merge-base). (2) Probes 8a+8b: rg count=2 not >=3 because doc comments in reputation_event.rs do not repeat field names; both dedupe_key + source_event_type ARE present in ReputationEvent + ReputationEventInsertForm structs AND in schema.rs. (3) Probe 14: A=55 consts vs B=51 string literals — gap=4 multi-line defs (FEDERATION_INBOUND_DROPPED_OVERSIZE etc); uniq -d correctly empty (no duplicate values). One infrastructure note: crates/email/translations submodule was not initialized in this worktree — ran git submodule update --init --recursive (standard bootstrap step per CLAUDE.md) which fixed Probe 2. All cargo probes passed after init: workspace check exit 0, e2e test compile exit 0, clippy baseline exit 0, exit-code propagation exit 101. Probes 7 (r1+r2 PRs), 9 (ENTRY_KIND consts), 10 (34 config keys), 11 (partial index), 12 (emit_reputation_event + JuryVote), 13 (no concurrent PR overlap) all PASS.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "1b8527b076d4-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "advisor",
@@ -3983,6 +3965,23 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-25T13:00:00Z",
       "id": "a3d0e9941441-024"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-25T19:30:00Z",
+      "question": "v1-RT-r3 Task 0 pre-flight: 3 probe methodology gaps found — do all functional deliverables pass and is it safe to proceed to Task 1? Option A: yes, proceed. Option B: fix probe thresholds first.",
+      "options": [
+        "option-A: accept audit as PASS (methodology gaps only, all functional deliverables confirmed present) — proceed to Task 1",
+        "option-B: require probe threshold fixes before proceeding (edit probe expectations in plan §13 Task 0)"
+      ],
+      "context": "All 19 probes run. Three methodology gaps: (1) Probe 6: Junior worker always runs on junior/* branch, not phase-v1-RT-r3 — base IS phase-v1-RT-r3 at 11ec35219 (confirmed by git merge-base). (2) Probes 8a+8b: rg count=2 not >=3 because doc comments in reputation_event.rs do not repeat field names; both dedupe_key + source_event_type ARE present in ReputationEvent + ReputationEventInsertForm structs AND in schema.rs. (3) Probe 14: A=55 consts vs B=51 string literals — gap=4 multi-line defs (FEDERATION_INBOUND_DROPPED_OVERSIZE etc); uniq -d correctly empty (no duplicate values). One infrastructure note: crates/email/translations submodule was not initialized in this worktree — ran git submodule update --init --recursive (standard bootstrap step per CLAUDE.md) which fixed Probe 2. All cargo probes passed after init: workspace check exit 0, e2e test compile exit 0, clippy baseline exit 0, exit-code propagation exit 101. Probes 7 (r1+r2 PRs), 9 (ENTRY_KIND consts), 10 (34 config keys), 11 (partial index), 12 (emit_reputation_event + JuryVote), 13 (no concurrent PR overlap) all PASS.",
+      "answer": "option-A: accept audit as PASS — all 19 probes ran; all functional deliverables confirmed present (workspace check exit 0, e2e compile exit 0, clippy baseline 0, exit-code 101 propagation, r1+r2 PRs verified, 34 config keys, partial index, no concurrent PR overlap). The 3 methodology gaps are not defects: (a) Probe 6 — junior/* worker branch is expected topology (base IS phase-v1-RT-r3 confirmed via git merge-base, brief §3 reading clarifies); (b) Probes 8a/8b — doc comments do not repeat field names but dedupe_key + source_event_type confirmed present in ReputationEvent struct, ReputationEventInsertForm, and schema.rs; (c) Probe 14 — count gap of 4 explained by multi-line FEDERATION_INBOUND_DROPPED_* const defs; uniq -d empty (no duplicates). Proceed to Task 1 cohort dispatch.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T19:11:20.705989Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1b8527b076d4-001"
     }
   ]
 }
