@@ -11,8 +11,13 @@
 # write their queue file into the worktree which lives under
 # /srv/brehon-fork/.junior/worktrees/job-N/.claude/role-signal-queue.jsonl —
 # the queue file CAN survive until reap. To capture signals lossless, we
-# rsync any matching files from EliteDesk before the next worktree reap and
+# fetch any matching files from EliteDesk before the next worktree reap and
 # ingest into the laptop PMD via the write-role-signal CLI.
+#
+# Fetch method: scp (OpenSSH, available in Git Bash on Windows 10+).
+# rsync is NOT used — it is not available in Git Bash on Windows.
+# Worktree queue files are fetched by ssh-listing active worktrees first,
+# then scp-copying each file individually.
 #
 # Usage:
 #   bash scripts/brehon/drain-role-signal-queue.sh [--dry-run]
@@ -24,7 +29,7 @@
 # Exit codes:
 #   0 — success (zero or more rows ingested)
 #   1 — bad usage or missing dependency
-#   2 — rsync or ingest error
+#   2 — scp or ingest error
 
 set -euo pipefail
 
@@ -41,31 +46,52 @@ fi
 mkdir -p "$DRAIN_DIR"
 touch "$DRAINED_INDEX"
 
-# 1. rsync queue files from EliteDesk worker worktrees + the daemon main
-#    checkout (in case a hook ever ran with WORKER_DIR fallback to main).
-#    The trailing slash on the source matters — copy directory CONTENTS.
-echo "==> rsync queue files from homeserver"
-rsync -avz --include='**/role-signal-queue.jsonl' --include='*/' --exclude='*' \
-  "homeserver:/srv/brehon-fork/.junior/worktrees/" \
-  "${DRAIN_DIR}/worktrees/" 2>&1 | tail -20 || true
+# 1. Fetch queue files from EliteDesk via scp (rsync not available in Git Bash).
+#
+#    Two sources:
+#    a) Daemon main-checkout queue — persists across worktree reaps; primary source.
+#    b) Active worker worktrees — fetched by listing paths via ssh first, then
+#       scp each. Reaped worktrees no longer have files; ssh find exits cleanly.
 
-rsync -avz --ignore-missing-args \
-  "homeserver:/srv/brehon-fork/.claude/role-signal-queue.jsonl" \
-  "${DRAIN_DIR}/main-checkout-queue.jsonl" 2>&1 | tail -5 || true
+echo "==> fetching queue files from homeserver via scp"
+
+# a) Main-checkout queue
+mkdir -p "${DRAIN_DIR}"
+scp -q "homeserver:/srv/brehon-fork/.claude/role-signal-queue.jsonl" \
+  "${DRAIN_DIR}/main-checkout-queue.jsonl" 2>/dev/null || true
+
+# b) Worker worktree queues — find live files via ssh, scp each
+WORKTREE_QUEUE_PATHS=$(ssh homeserver \
+  "find /srv/brehon-fork/.junior/worktrees -name 'role-signal-queue.jsonl' 2>/dev/null" \
+  2>/dev/null || true)
+
+if [ -n "$WORKTREE_QUEUE_PATHS" ]; then
+  while IFS= read -r remote_path; do
+    [ -z "$remote_path" ] && continue
+    # Derive a stable local filename from the worktree job dir name
+    job_dir=$(basename "$(dirname "$(dirname "$remote_path")")")
+    local_path="${DRAIN_DIR}/worktree-${job_dir}-queue.jsonl"
+    scp -q "homeserver:${remote_path}" "$local_path" 2>/dev/null || true
+    echo "  fetched worktree queue: ${job_dir}"
+  done <<< "$WORKTREE_QUEUE_PATHS"
+else
+  echo "  no active worktree queue files on homeserver"
+fi
 
 # 2. Walk every queue file, ingest lines not yet in DRAINED_INDEX.
 INGESTED=0
 SKIPPED=0
 ERRORED=0
 
-# Build a portable list of queue files
+# Build a portable list of queue files.
+# Worker queues are fetched as `worktree-<job>-queue.jsonl` (line 73 above);
+# main-checkout queue is `main-checkout-queue.jsonl`. Match both shapes —
+# the legacy `-name 'role-signal-queue.jsonl'` filter missed every worker
+# file because the scp rename above strips that filename.
 QUEUE_FILES=()
 while IFS= read -r -d '' f; do
   QUEUE_FILES+=("$f")
-done < <(find "$DRAIN_DIR" -name 'role-signal-queue.jsonl' -print0 2>/dev/null)
-if [ -f "${DRAIN_DIR}/main-checkout-queue.jsonl" ]; then
-  QUEUE_FILES+=("${DRAIN_DIR}/main-checkout-queue.jsonl")
-fi
+done < <(find "$DRAIN_DIR" -maxdepth 1 \( -name 'worktree-*-queue.jsonl' -o -name 'main-checkout-queue.jsonl' \) -print0 2>/dev/null)
 
 if [ ${#QUEUE_FILES[@]} -eq 0 ]; then
   echo "==> no queue files found on homeserver"
