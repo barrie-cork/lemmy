@@ -20,7 +20,7 @@ use crate::governance::{
   governance_log::{self, ENTRY_KIND_SEVERITY_TIER_FROZEN},
 };
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema::{
   newtypes::{CommentId, CommunityId, ModerationCaseId, PostId},
   source::governance::{
@@ -86,19 +86,16 @@ pub async fn emergency_remove_open_case(
   let reason_for_tx = reason;
 
   conn
-    .run_transaction(|conn| {
-      async move {
-        process_emergency_remove(
-          conn,
-          admin_id,
-          admin_pseudonym_for_tx,
-          target,
-          community_id,
-          reason_for_tx,
-        )
-        .await
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      process_emergency_remove(
+        conn,
+        admin_id,
+        admin_pseudonym_for_tx,
+        target,
+        community_id,
+        reason_for_tx,
+      )
+      .await
     })
     .await
 }

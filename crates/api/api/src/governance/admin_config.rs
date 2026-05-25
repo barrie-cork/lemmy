@@ -53,7 +53,7 @@ use diesel::{
   sql_query,
   sql_types::{BigInt, Integer, Nullable},
 };
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{
   AdminConfigAuditEntry, AdminConfigEntry, AdminGetConfig, AdminGetConfigAudit,
   AdminGetConfigResponse, AdminSetConfig, AdminSetConfigResponse, ConfigChangePreview,
@@ -494,20 +494,17 @@ pub async fn admin_set_config(
   let previous_for_tx = preview.previous.clone();
 
   let (cfg_id, log_id, applied_at) = conn
-    .run_transaction(|conn| {
-      async move {
-        process_set_config(
-          conn,
-          admin_id_for_tx,
-          pseudonym_for_tx,
-          scope_for_tx,
-          metadata_for_tx,
-          data_for_tx,
-          previous_for_tx,
-        )
-        .await
-      }
-      .scope_boxed()
+    .run_transaction(async |conn| {
+      process_set_config(
+        conn,
+        admin_id_for_tx,
+        pseudonym_for_tx,
+        scope_for_tx,
+        metadata_for_tx,
+        data_for_tx,
+        previous_for_tx,
+      )
+      .await
     })
     .await?;
 

@@ -20,8 +20,8 @@ impl Language {
         language::table
           .left_join(post::table)
           .group_by(language::id)
-          .order_by(count(post::id).desc())
           .select(language::all_columns)
+          .order_by(count(post::id).desc())
           .load(conn)
           .await
       })

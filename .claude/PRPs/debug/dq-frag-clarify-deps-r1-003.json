@@ -1,0 +1,17 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:37:00Z",
+  "question": "Scope ambiguity — WP-1 surfaces two migration shapes for diesel-async 0.9: (a) update wrapper signature + mechanically rewrite all 42 callsites, or (b) keep wrapper signature and bridge internally. Brief defaults to (a). Is the planner authorised to switch to (b) if 0.9 docs/source reveal a clean bridge pattern?",
+  "options": [
+    "(a) Lock to option (a) — planner MUST rewrite all 42 callsites; bridging is not authorised even if available",
+    "(b) Planner-choice — planner reads diesel-async 0.9 source/docs at plan-author time; if a clean bridge exists, (b) is permitted with rationale in plan §4; default remains (a)",
+    "(c) Lock to option (b) — minimise diff at any cost"
+  ],
+  "context": "Brief WP-1 explicitly states 'Planner picks the path. Default: option (a) — explicit closure rewrite is what every callsite reader will see, and the `scoped_futures` crate is going away upstream; bridging keeps a dead pattern alive.' But it doesn't say (b) is forbidden. Per `feedback_principles_not_rules.md`, judgment calls belong to the planner unless the brief is explicit. The brief's §6 stop-and-ask tripwires also forbid (b)-shaped solutions that 'keep a dead pattern alive' implicitly.",
+  "answer": "(b) — planner-choice with discipline. Planner reads diesel-async 0.9.0 changelog + `transaction` signature at plan-author time. If 0.9's `transaction()` accepts an async closure cleanly via a bridge that does NOT depend on `scoped_futures` (which is removed), the planner MAY choose (b) and document the rationale in plan §4. Default remains (a) per brief WP-1. If (b) is chosen, plan §4 must include a 'no-scoped_futures dependency' assertion; cargo check exit 0 on the bridged wrapper validates the assertion. The planner files a `kind: \"blocker\"` DQ if neither (a) nor (b) compiles cleanly against 0.9 — a third path would warrant user catch-fire.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:37:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

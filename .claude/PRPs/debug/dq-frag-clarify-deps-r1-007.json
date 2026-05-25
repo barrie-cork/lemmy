@@ -1,0 +1,17 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:41:00Z",
+  "question": "Cross-phase invariant — A `phase-v1-RT-r3` worktree exists at session-start (`C:/Users/barri/Developer/brehon-fork-rt-r3`, currently empty: zero commits ahead of trunk, no brief/plan). The RT-r3 lane (per MEMORY.md) is scoped to 'multi-source participation_consistency events (weekly activity cron, dormancy cron, vote-outcome emitter, evidence-quality emitter)'. Could RT-r3 add new `.run_transaction` callsites that would conflict with v1-deps-r1's 42-callsite rewrite?",
+  "options": [
+    "(a) Defer v1-deps-r1 cut until RT-r3 ships — RT-r3 emitters touch governance write paths and will likely add 2-6 new `.run_transaction` callsites; concurrent cuts → merge conflicts on those callsites",
+    "(b) Proceed v1-deps-r1 cut now — RT-r3 has zero commits ahead of trunk; if RT-r3 ships first, v1-deps-r1 re-enumerates at planning gate; if v1-deps-r1 ships first, RT-r3 inherits the diesel-async-0.9 closure idiom",
+    "(c) Surface to user — judgment call on lane priority"
+  ],
+  "context": "RT-r3 worktree exists but is empty (zero commits ahead of trunk at session-start). No brief, no plan, no Junior dispatch evidence. The brief's WP-5 already mandates 'planner MUST re-run the rg enumeration against trunk-at-cut-time and update Task 1's callsite count in plan §13'. v1-deps-r1's lane is roughly 2-4 days; RT-r3 has not started (no planning brief on trunk per Glob). Two lanes can coexist if v1-deps-r1's callsite enumeration happens AFTER any RT-r3 work that pushes to trunk. User explicitly said 'only this session to continue' — implies v1-deps-r1 takes precedence; RT-r3 will be driven later.",
+  "answer": "(b) — proceed v1-deps-r1 cut now. Rationale: (i) RT-r3 has zero commits ahead of trunk at session-start (verified via `git log origin/governance-v0..origin/phase-v1-RT-r3 --oneline` = empty); (ii) user confirmed 'only this session to continue' — v1-deps-r1 is the active lane, RT-r3 is dormant; (iii) WP-5 already mandates planner re-enumeration at plan-author time, so callsite drift is detected mechanically; (iv) if RT-r3 emitters land on trunk between this clarify and v1-deps-r1 plan-author, the planner re-counts and adjusts T1's callsite list. The 42-callsite count in the brief is from 2026-05-23 (`28f0dc0ff`); fresh count at `335628525` (today's trunk) is also 42 — verified at session start by the explicit `rg \"\\.run_transaction\" crates/ -c` recount. No conflict risk while v1-deps-r1 holds the lane.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:41:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

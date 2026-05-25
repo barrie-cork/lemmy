@@ -82,14 +82,14 @@ Planner picks the path. Default: **option (a)** — explicit closure rewrite is 
 
 ## 4. DoD gates (cargo + e2e)
 
-Per `feedback_plan_dod_dry_run_at_write.md`:
+Per `feedback_plan_dod_dry_run_at_write.md`. **All DoD commands MUST be wrapper-prefixed (`cmd //c "scripts\brehon\cargo-<verb>.bat ..."`) per DQ `a3d0e9941441-011` clarify (Windows + libpq.dll + vcvars discipline).** The raw-cargo lines below are advisory-shape only; the planner converts every command to wrapper form when authoring plan §15 + per-task §13 DoDs. Per-task `commands[]` arrays for `validate-pending-laptop` DQ entries are class-targeted per DQ `a3d0e9941441-016` (see §4a below).
 
 **Task 1 (diesel-async 0.9 migration):**
 ```
-cargo check --workspace --features full         # must exit 0
-cargo clippy --workspace --features full --no-deps -- -D warnings    # must exit 0
+cmd //c "scripts\brehon\cargo-check.bat --workspace --features full"          # must exit 0
+cmd //c "scripts\brehon\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"    # must exit 0
 ```
-**Task 1 e2e gate** (validate-pending-laptop, per `feedback_laptop_default_for_validate_pending.md`):
+**Task 1 e2e gate** (validate-pending-laptop-e2e, per `feedback_laptop_default_for_validate_pending.md` + `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md`):
 ```
 cmd //c "scripts\brehon\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task1-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-deps-r1-task1-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-deps-r1-task1-e2e.log"
 ```
@@ -97,19 +97,30 @@ cmd //c "scripts\brehon\cargo-test.bat --workspace --test e2e --features full > 
 
 **Task 2 (sha2 0.11 migration):**
 ```
-cargo check --workspace --features full
-cargo clippy --workspace --features full --no-deps -- -D warnings
-cargo test --workspace --features full --test e2e -- --skip 'governance_log_chain' --nocapture  # quick gate
+cmd //c "scripts\brehon\cargo-check.bat --workspace --features full"
+cmd //c "scripts\brehon\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"
+cmd //c "scripts\brehon\cargo-test.bat -p lemmy_api_common --features full --lib"  # targeted lib-test (sha2 surface is narrow)
 ```
-Full e2e gate runs only after Task 3 lands (single gate at PR-open).
+Full e2e gate runs only after Task 3 lands (single phase-tip gate at PR-open per DQ `a3d0e9941441-016`).
 
 **Task 3 (SemVer-compatible bundle):**
 ```
-cargo check --workspace --features full
-cargo clippy --workspace --features full --no-deps -- -D warnings
+cmd //c "scripts\brehon\cargo-check.bat --workspace --features full"
+cmd //c "scripts\brehon\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"
 ```
 
-**Phase-tip e2e gate (post-Task 3, pre-PR):** full workspace e2e per the validate-pending-laptop pattern (or dispatch path if Shape G is re-enabled by lane-cut time). Result MUST be `pass` for every test (no skips, no flakes) before opening the PR.
+**Phase-tip e2e gate (post-Task 3, pre-PR):** full workspace e2e per the validate-pending-laptop pattern. Per DQ `a3d0e9941441-015` clarify, Shape G stays SUSPENDED through 2026-06-01 — if the lane runs past June 1 (DQ #229 re-enable), advisor files a `kind: "log"` DQ at the boundary and subsequent impl-tasks raise `kind: "validate-pending"` (Shape G) instead of `validate-pending-laptop`; plan §15 does NOT need re-authoring (polling loop handles both kinds transparently). Result MUST be `pass` for every test (no skips, no flakes) before opening the PR.
+
+### 4a. Per-task class-targeted `commands[]` (per DQ `a3d0e9941441-016`)
+
+| Task | Class | `commands[]` shape (each wrapper-prefixed per DQ 011) |
+|---|---|---|
+| T1 | Production code + tests (42-callsite mechanical rewrite — full coverage) | check + clippy + lib-test for touched governance crates + e2e (raise as `validate-pending-laptop-e2e` kind) |
+| T2 | Production code narrow + 3 test modules (sha2 surface narrow) | check + clippy + targeted lib-test `-p lemmy_api_common --features full --lib` |
+| T3 | Cargo.toml + Cargo.lock edits only (no behavioral change) | check + clippy |
+| Phase-tip (post-T3, pre-PR) | Full workspace e2e single gate | `cmd //c "scripts\brehon\cargo-test.bat --workspace --test e2e --features full"` |
+
+This replaces three per-task e2e runs with one phase-tip e2e gate (saves ~50 min lane-time).
 
 ---
 
@@ -127,7 +138,12 @@ cargo clippy --workspace --features full --no-deps -- -D warnings
 **Inject for all tasks:**
 - `feedback_clippy_test_style.md` — `#![deny(unwrap, expect)]` applies; use `?` throughout.
 - `feedback_features_full_workspace_only.md` — every cargo gate above uses `--workspace --features full`; never `-p lemmy_server --features full` (the recurring footgun).
+- `feedback_features_full_p_crate_incompatible.md` — companion to the workspace-only rule; `-p <crate> --features full` is structurally broken in this workspace.
 - `pattern_cargo_feature_flag_propagation.md` — covers feature unification across the 6 sub-crate Cargo.toml edits (api_utils, email, routes, utils, etc).
+- `feedback_validate_pending_laptop_must_use_wrapper.md` — Windows wrapper discipline for every cargo invocation in `commands[]` arrays (per DQ `a3d0e9941441-011` clarify).
+- `feedback_targeted_validate_pending_laptop_commands.md` — per-task class-targeted command selection (per DQ `a3d0e9941441-016` clarify; see §4a).
+- `feedback_windows_e2e_requires_bat_wrapper.md` — e2e invocation on Windows requires `cmd //c "scripts\brehon\cargo-test.bat ..."` for libpq.dll discovery.
+- `feedback_clippy_per_module_deny_requires_workspace_allow.md` — clippy baseline trap: workspace-level group-deny silently breaks per-module `#![deny]` (per DQ `a3d0e9941441-014` clarify; Task 0 captures baseline before Task 1).
 
 **Do NOT inject** `feedback_junior_worker_e2e_edit_hang.md` (only relevant for large mid-file edits; this phase's e2e file edits are at import statements, not in test bodies).
 
@@ -156,12 +172,12 @@ cargo clippy --workspace --features full --no-deps -- -D warnings
 
 ## 8. Plan structure guidance
 
-The plan should have 3 §13 tasks (or 4 if WP-1 splits Task 1 into wrapper + callsites):
+The plan should have 3 §13 tasks (or 4 if WP-1 splits Task 1 into wrapper + callsites). **Task 0 MUST include both the four wrapper-probes from `pre-phase-harness-audit.md` §1 AND the clippy baseline capture from §3** (per DQ `a3d0e9941441-014` clarify) — non-zero baseline → planner adds a `chore(lint):` pre-task before Task 1 to clear pre-existing debt:
 
 | Task # | Deliverable | Files | `[P]`? |
 |---|---|---|---|
-| T0 | Pre-phase harness audit + re-enumerate callsites | (none — diagnostic) | No |
-| T1 | diesel-async 0.9 migration: wrapper + 42 callsites | `crates/diesel_utils/src/connection.rs`, ~42 governance handler files, e2e.rs imports | No — single-file invariants violated by parallel dispatch |
+| T0 | Pre-phase harness audit + clippy baseline capture + re-enumerate callsites | `.claude/PRPs/debug/v1-deps-r1-task0-*.log` (diagnostic) | No |
+| T1 | diesel-async 0.9 migration: wrapper + 42 callsites (planner-choice WP-1 a/b per DQ `a3d0e9941441-013`; default option a) | `crates/diesel_utils/src/connection.rs`, ~42 governance handler files, e2e.rs imports | No — single-file invariants violated by parallel dispatch |
 | T2 | sha2 0.11 migration | `Cargo.toml`, `admin_rule_sets.rs`, e2e.rs (3 test modules) | No — must follow T1 (`cargo check` validates T1 first) |
 | T3 | SemVer-compatible bundle (10 bumps) | `Cargo.toml`, `Cargo.lock`, 4 sub-crate Cargo.toml files | No — must follow T2 (`Cargo.lock` ordering) |
 

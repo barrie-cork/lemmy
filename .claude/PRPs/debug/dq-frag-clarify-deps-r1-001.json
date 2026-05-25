@@ -1,0 +1,16 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:35:00Z",
+  "question": "DoD executability — brief §4 prescribes raw `cargo check / clippy / test` commands. On Windows (the canonical cargo runner per project_laptop_canonical_cargo_runner), these MUST be wrapper-prefixed `cmd //c \"scripts\\brehon\\cargo-*.bat ...\"` for libpq.dll discovery + vcvars + PQ_LIB_DIR. Should the planner author DoD commands with wrappers throughout?",
+  "options": [
+    "(a) Yes — author every DoD line in §15 as `cmd //c \"scripts\\brehon\\cargo-<verb>.bat ...\"` per `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md` (the planner inherits this discipline; raw cargo in DoD strings is the failure mode)",
+    "(b) No — raw cargo in DoD is fine because the advisor's polling loop infers wrapper prefix from `validate-pending-laptop` kind"
+  ],
+  "context": "Brief §4 uses raw `cargo check --workspace --features full`, `cargo clippy --workspace --features full --no-deps -- -D warnings`, etc — no wrapper. Compare v1-ship-3 plan §2 which cites `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md` verbatim in the lesson-injection list and uses wrapper-prefixed commands throughout. The DQ entries impl-task subagents will raise carry `commands[]` arrays that the advisor-laptop handler runs verbatim — wrapper authorship at DQ-write time is mandatory per `feedback_validate_pending_laptop_must_use_wrapper.md` §How-to-apply. Raw cargo would compile but tests would crash at runtime with `STATUS_DLL_NOT_FOUND (0xc0000135)` because libpq.dll is not on PATH for spawned test binaries.",
+  "answer": "(a) — author every §15 DoD command as `cmd //c \"scripts\\brehon\\cargo-<verb>.bat ...\"`. The planner MUST inherit Windows-wrapper discipline per `feedback_validate_pending_laptop_must_use_wrapper.md` and `feedback_windows_e2e_requires_bat_wrapper.md`. Sibling plan v1-ship-3 (`.claude/PRPs/plans/v1-ship-3.plan.md` §2 lesson list) is the canonical pattern — cite verbatim. impl-task subagents raise `validate-pending-laptop` DQ entries whose `commands[]` arrays MUST be wrapper-prefixed at write time. The brief's §4 raw-cargo lines are advisory-shape only; the planner converts them to wrapper form when authoring §15 + §13 task DoDs.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:35:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

@@ -1,0 +1,34 @@
+{
+  "from": "advisor",
+  "kind": "validate-pending-laptop-e2e",
+  "timestamp": "2026-05-25T07:30:00Z",
+  "question": "Run advisor-laptop §15 DoD commands against phase-v1-deps-r1 tip 16d722c8e (T2 sha2 0.11 bump, cherry-picked via #292 recovery onto post-T1 baseline). Mutate this entry with result + log_slice + failed_commands.",
+  "options": [
+    "pass",
+    "fail"
+  ],
+  "context": "T2 ship via #292 stale-base recovery: worker #456 forked from stale daemon-local ref (2da902a41 = pre-T1), made the clean sha2 0.11 commit b337b0cce against the pre-T1 baseline (diesel-async 0.8 + diesel 2.3.7), then raised a validate-pending-laptop DQ blob referencing the stale-base SHA. Per #292 recover recipe (feedback_junior_292_stale_base_recover_recipe.md), advisor cherry-picked b337b0cce onto the live phase tip 2763b5e67 at 522cff012, amended commit message to call out the recovery (now at 16d722c8e), and abandoned the worker's DQ blobs (823f445abc47-001 + 823f445abc47-002). Worker's cargo check + clippy were on pre-T1 baseline and are INVALIDATED by the cherry-pick to post-T1 baseline (diesel-async 0.9 + diesel 2.3.9 + LocalAsyncFunc wrapper). Re-validation against the new post-T1 baseline is the entire purpose of this entry. Same 6 §15 DoD commands as T1 (per plan DQ a3d0e9941441-016 answer (a)).",
+  "branch": "phase-v1-deps-r1",
+  "phase_task": 2,
+  "commands": [
+    "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-deps-r1-task2-validate-check.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full -- -D warnings > .claude/PRPs/debug/v1-deps-r1-task2-validate-clippy.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_api --features full --lib > .claude/PRPs/debug/v1-deps-r1-task2-validate-libtest-api.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_apub --features full --lib > .claude/PRPs/debug/v1-deps-r1-task2-validate-libtest-apub.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full --lib > .claude/PRPs/debug/v1-deps-r1-task2-validate-libtest-dbschema.log 2>&1\"",
+    "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task2-validate-e2e.log 2>&1\""
+  ],
+  "result": null,
+  "log_slice": null,
+  "failed_commands": null,
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null,
+  "approved_by": null,
+  "approved_at": null,
+  "recovery_context": {
+    "supersedes_worker_dq": "823f445abc47-002",
+    "supersedes_reason": "worker DQ referenced stale-base SHA on pre-T1 baseline; this entry references the cherry-picked post-T1 SHA 16d722c8e",
+    "pattern": "#292 stale-base recover recipe step 6 — FRESH DQ on new on-branch cherry-picked SHA"
+  }
+}

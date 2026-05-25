@@ -10,7 +10,7 @@
 use crate::governance::{actor_pseudonym_helper, governance_log};
 use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl, SelectableHelper, update};
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AdminCloseCase, AdminCloseCaseResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
@@ -42,8 +42,8 @@ pub async fn admin_close_case(
   let pseudonym_for_tx = admin_pseudonym.clone();
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move { process_close(conn, pseudonym_for_tx, data_for_tx).await }.scope_boxed()
+    .run_transaction(async |conn| {
+      process_close(conn, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
 

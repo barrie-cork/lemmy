@@ -1,0 +1,13 @@
+{
+  "from": "advisor",
+  "kind": "log",
+  "timestamp": "2026-05-25T00:30:00Z",
+  "question": "Five lemmy_apub lib tests fail pre-existing on phase-v1-deps-r1 (and on governance-v0 trunk). Track for separate cleanup, not load-bearing for any current sub-phase.",
+  "options": ["acknowledge"],
+  "context": "While running validate-pending-laptop-e2e DQ a22859c2ae07-002 for T1, ran `cargo test -p lemmy_apub --features full --lib` with dev-PG (port 5433, canonical lemmy/password creds) + LEMMY_CONFIG_LOCATION env. Result: 2 passed / 5 failed. Failures: http::community::tests::{test_get_community, test_get_deleted_community, test_get_local_only_community, test_outbox_deleted_user} + collections::community_moderators::tests::test_parse_lemmy_community_moderators. Root failure is test_get_community with `assertion left == right failed; left: 200, right: 308` at community.rs:293 — handler returns 308 Permanent Redirect instead of 200 OK. Other 4 fail with `duplicate key value violates unique constraint idx_site_instance_unique` (cascade from root failure leaking site state). Falsified against pre-T1 commit 2f0ab6a87: same failure signature reproduces, file crates/apub/apub/src/http/community.rs is unchanged between governance-v0 and phase-v1-deps-r1. NOT T1-attributable. Likely root cause: an upstream-inherited test relies on a specific federation context state (testcontainers infrastructure, redirect rule, or settings) that doesn't match the lemmy-alpha config when run as standalone lib test (versus inside e2e harness, where same flows succeed across 109 tests).",
+  "answer": "Logged for backlog. Not blocking T1 ship. The full workspace e2e suite (which exercises these same federation flows through testcontainers + real http stack) passes 109/109 on T1. The 5 lib-test failures are environmental edge cases of the standalone lib-test harness. Cleanup deferred until a federation-touching sub-phase has incentive to fix.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-25T00:30:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

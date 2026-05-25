@@ -1,6 +1,5 @@
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
-use diesel_async::scoped_futures::ScopedFutureExt;
 use lemmy_api_utils::{
   context::LemmyContext,
   notify::notify_mod_action,
@@ -60,27 +59,24 @@ pub async fn add_mod_to_community(
   let conn = &mut get_conn(pool).await?;
   let tx_data = data.clone();
   let action = conn
-    .run_transaction(|conn| {
-      async move {
-        // Update in local database
-        let community_moderator_form =
-          CommunityModeratorForm::new(tx_data.community_id, tx_data.person_id);
-        if tx_data.added {
-          CommunityActions::join(&mut conn.into(), &community_moderator_form).await?;
-        } else {
-          CommunityActions::leave(&mut conn.into(), &community_moderator_form).await?;
-        }
-
-        // Mod tables
-        let form = ModlogInsertForm::mod_add_to_community(
-          local_user_view.person.id,
-          tx_data.community_id,
-          tx_data.person_id,
-          !tx_data.added,
-        );
-        Modlog::create(&mut conn.into(), &[form]).await
+    .run_transaction(async |conn| {
+      // Update in local database
+      let community_moderator_form =
+        CommunityModeratorForm::new(tx_data.community_id, tx_data.person_id);
+      if tx_data.added {
+        CommunityActions::join(&mut conn.into(), &community_moderator_form).await?;
+      } else {
+        CommunityActions::leave(&mut conn.into(), &community_moderator_form).await?;
       }
-      .scope_boxed()
+
+      // Mod tables
+      let form = ModlogInsertForm::mod_add_to_community(
+        local_user_view.person.id,
+        tx_data.community_id,
+        tx_data.person_id,
+        !tx_data.added,
+      );
+      Modlog::create(&mut conn.into(), &[form]).await
     })
     .await?;
   notify_mod_action(action.clone(), &context);

@@ -20,7 +20,7 @@
 use actix_web::web::{Data, Json, Query};
 use chrono::{DateTime, Utc};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_common::governance::{
   AdminCreateRuleSet, AdminCreateRuleSetResponse, AdminListRuleSetsRequest,
   AdminListRuleSetsResponse, RuleSetVersionView,
@@ -134,7 +134,7 @@ pub async fn admin_create_rule_set(
   let text_sha256_for_tx = text_sha256.clone();
 
   let (rsv_row, cfg_id, log_id, created_at) = conn
-    .run_transaction(|conn| {
+    .run_transaction(async |conn| {
       let args = CreateRuleSetTxArgs {
         admin_id,
         admin_pseudonym: pseudonym_for_tx.clone(),
@@ -144,7 +144,7 @@ pub async fn admin_create_rule_set(
         text_sha256: text_sha256_for_tx.clone(),
         rule_text: rule_text_for_tx.clone(),
       };
-      async move { process_create_rule_set(conn, args).await }.scope_boxed()
+      process_create_rule_set(conn, args).await
     })
     .await?;
 
@@ -287,28 +287,25 @@ pub async fn admin_list_rule_sets(
 
   let community_id = data.community_id;
   let (rows, active_version_id): (Vec<RuleSetVersion>, Option<i32>) = conn
-    .run_transaction(|conn| {
-      async move {
-        let rows: Vec<RuleSetVersion> = rule_set_version::table
-          .filter(rule_set_version::community_id.eq(community_id))
-          .order(rule_set_version::version.desc())
-          .select(RuleSetVersion::as_select())
-          .load(conn)
-          .await?;
+    .run_transaction(async |conn| {
+      let rows: Vec<RuleSetVersion> = rule_set_version::table
+        .filter(rule_set_version::community_id.eq(community_id))
+        .order(rule_set_version::version.desc())
+        .select(RuleSetVersion::as_select())
+        .load(conn)
+        .await?;
 
-        let mut cache = config::ConfigCache::new();
-        let active_version_id = config::get_int_opt(
-          &mut cache,
-          &mut conn.into(),
-          Scope::Community(community_id),
-          "rule_set.active_version_id",
-        )
-        .await?
-        .and_then(|i| i32::try_from(i).ok());
+      let mut cache = config::ConfigCache::new();
+      let active_version_id = config::get_int_opt(
+        &mut cache,
+        &mut conn.into(),
+        Scope::Community(community_id),
+        "rule_set.active_version_id",
+      )
+      .await?
+      .and_then(|i| i32::try_from(i).ok());
 
-        Ok::<_, lemmy_utils::error::LemmyError>((rows, active_version_id))
-      }
-      .scope_boxed()
+      Ok::<_, lemmy_utils::error::LemmyError>((rows, active_version_id))
     })
     .await?;
 

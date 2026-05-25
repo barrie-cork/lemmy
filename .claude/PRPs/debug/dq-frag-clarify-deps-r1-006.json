@@ -1,0 +1,17 @@
+{
+  "from": "advisor",
+  "kind": "clarify",
+  "timestamp": "2026-05-24T08:40:00Z",
+  "question": "Undefined output (DQ entry shape) — Brief §4 doesn't specify the exact `commands[]` array shape for the `validate-pending-laptop` DQ entries impl-task subagents will raise. Per `feedback_targeted_validate_pending_laptop_commands.md`, the commands array should be class-targeted (full 4-command sequence is wasteful for some change classes). What shape per task?",
+  "options": [
+    "(a) Per-task class-targeted commands per `feedback_targeted_validate_pending_laptop_commands.md` table: T1 = check + clippy + e2e (production code + tests, 42-callsite mechanical rewrite warrants full coverage); T2 = check + clippy + targeted lib-test (sha2 surface is narrow); T3 = check + clippy only (SemVer-compat bundle, lockfile + 4 Cargo.toml edits, no behavioral change)",
+    "(b) Full 4-command sequence (check + clippy + lib-test + e2e --no-run) for every task — conservative",
+    "(c) Plan §15 authors a single canonical command set; planner does NOT vary per task"
+  ],
+  "context": "v1-ship-3 plan §2 cites `feedback_targeted_validate_pending_laptop_commands.md` explicitly. v1-federation-inbound-d Task 2 fix-impl-1 (test assertion fix) successfully used class-targeted (check omitted, e2e --no-run omitted, clippy + lib-test only) — saved ~3-4 min per validate cycle. T1's diesel-async migration is genuinely production code (run_transaction is the load-bearing governance write path) — warrants full coverage. T3's Cargo.toml edits + Cargo.lock regen don't add types/imports — pure dependency surface change — clippy + check sufficient.",
+  "answer": "(a) — class-targeted per task. Plan §15 per-task commands[]: T1 (production code + tests, 42 files) = check + clippy + lib-test for the touched governance crates + e2e via validate-pending-laptop-e2e; T2 (sha2 narrow surface, 1 production file + 3 test modules) = check + clippy + targeted lib-test (`-p lemmy_api_common --features full --lib`); T3 (SemVer-compat bundle, lockfile + Cargo.toml edits only) = check + clippy. Phase-tip e2e gate (post-T3, pre-PR) runs full workspace e2e per brief §4 — that ONE e2e run replaces three per-task e2e runs and saves ~50 min. All commands wrapper-prefixed per DQ deps-r1-001.",
+  "answered_by": "advisor",
+  "resolved_at": "2026-05-24T08:40:00Z",
+  "approved_by": null,
+  "approved_at": null
+}

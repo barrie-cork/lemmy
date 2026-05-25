@@ -34,7 +34,7 @@ use crate::governance::{
 use actix_web::web::{Data, Json};
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, update};
-use diesel_async::{RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AcceptJuryAssignment, AcceptJuryAssignmentResponse};
 use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
@@ -63,8 +63,8 @@ pub async fn accept_jury_assignment(
   let conn = &mut get_conn(pool).await?;
 
   let outcome = conn
-    .run_transaction(|conn| {
-      async move { process_accept(conn, caller_id, caller_pseudonym, data).await }.scope_boxed()
+    .run_transaction(async |conn| {
+      process_accept(conn, caller_id, caller_pseudonym, data).await
     })
     .await?;
 

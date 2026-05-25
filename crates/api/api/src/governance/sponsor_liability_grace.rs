@@ -42,7 +42,7 @@ use diesel::{
   ExpressionMethods, NullableExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper,
   dsl::min,
 };
-use diesel_async::{AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api_utils::context::LemmyContext;
 use lemmy_db_schema::{
   newtypes::{CommunityId, ModerationCaseId},
@@ -158,8 +158,8 @@ pub async fn run_grace_check_batch(context: &LemmyContext) -> LemmyResult<GraceC
     // Per-case run_transaction — outer batch never returns Err on per-case
     // failures (per PRD §6.3 + watchpoint #8).
     let case_outcome = conn
-      .run_transaction(|conn| {
-        async move { fire_or_escape_case_inner(conn, &case, now).await }.scope_boxed()
+      .run_transaction(async |conn| {
+        fire_or_escape_case_inner(conn, &case, now).await
       })
       .await;
     match case_outcome {
@@ -273,57 +273,54 @@ pub async fn fire_or_escape_case(
 ) -> LemmyResult<()> {
   let now: DateTime<Utc> = Utc::now();
   conn
-    .run_transaction(|conn| {
-      async move {
-        match status {
-          EscapeStatus::Escape {
-            reason,
-            actor_pseudonym,
-            ref_id,
-          } => {
-            let escape_reason_json = json!({
-              "version": 1,
+    .run_transaction(async |conn| {
+      match status {
+        EscapeStatus::Escape {
+          reason,
+          actor_pseudonym,
+          ref_id,
+        } => {
+          let escape_reason_json = json!({
+            "version": 1,
+            "reason": reason,
+            "actor_pseudonym": actor_pseudonym,
+            "endorsement_id": ref_id,
+          });
+          diesel::update(
+            moderation_case::table.filter(moderation_case::id.eq(case.id)),
+          )
+          .set((
+            moderation_case::status.eq(CaseStatus::SponsorLiabilityEscaped),
+            moderation_case::liability_escape_reason.eq(Some(escape_reason_json)),
+          ))
+          .execute(conn)
+          .await?;
+          governance_log::append(
+            &mut (&mut *conn).into(),
+            ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
+            json!({
+              "case_id": case.id.0,
+              "escaped_at": now,
               "reason": reason,
               "actor_pseudonym": actor_pseudonym,
               "endorsement_id": ref_id,
-            });
-            diesel::update(
-              moderation_case::table.filter(moderation_case::id.eq(case.id)),
+            }),
+            Some(actor_pseudonym),
+          )
+          .await?;
+          Ok(())
+        }
+        EscapeStatus::Fire => {
+          // Fire branch (caller-driven) — requires sanction-action context.
+          // Callers without that context must use run_grace_check_batch instead.
+          Err(
+            LemmyErrorType::Unknown(
+              "fire_or_escape_case public entry: Fire branch requires sanction-action context; call run_grace_check_batch instead".to_string(),
             )
-            .set((
-              moderation_case::status.eq(CaseStatus::SponsorLiabilityEscaped),
-              moderation_case::liability_escape_reason.eq(Some(escape_reason_json)),
-            ))
-            .execute(conn)
-            .await?;
-            governance_log::append(
-              &mut (&mut *conn).into(),
-              ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
-              json!({
-                "case_id": case.id.0,
-                "escaped_at": now,
-                "reason": reason,
-                "actor_pseudonym": actor_pseudonym,
-                "endorsement_id": ref_id,
-              }),
-              Some(actor_pseudonym),
-            )
-            .await?;
-            Ok(())
-          }
-          EscapeStatus::Fire => {
-            // Fire branch (caller-driven) — requires sanction-action context.
-            // Callers without that context must use run_grace_check_batch instead.
-            Err(
-              LemmyErrorType::Unknown(
-                "fire_or_escape_case public entry: Fire branch requires sanction-action context; call run_grace_check_batch instead".to_string(),
-              )
-              .into(),
-            )
-          }
+            .into(),
+          )
         }
       }
-      .scope_boxed()
     })
     .await
 }
