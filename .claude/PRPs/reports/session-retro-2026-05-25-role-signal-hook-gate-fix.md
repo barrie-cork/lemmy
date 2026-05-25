@@ -146,21 +146,24 @@ Below all flags (>55 / >40 / >8). Bounded surgical fix.
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] §3 #2 (hook smoke-harness discipline, 4× recurrence on this
-  one hook): promote to
+- [x] §3 #2 (hook smoke-harness discipline, 4× recurrence on this
+  one hook): SHIPPED 2026-05-25 `b63dfd8bd` — harness at
+  `.claude/hooks/test-role-signal-utilisation.sh` + lesson at
   `.claude/lessons/feedback_role_detection_smoke_three_shapes.md`
-  with the principle "every role/gate change runs against ≥3
-  transcript shapes — real worker, finalize agent, advisor session —
-  before commit." Cross-references the four sequential fixes by SHA.
-- [ ] §3 #3 (gitignore audit at feature-author time, 2× recurrence):
-  per MEMORY.md WATCH (already lifted 1× from T4a 2026-05-24). Now
-  2×. Codify as
+  (cites all 5 sequential SHAs). Verified live: 4 PASS / 0 FAIL on
+  EliteDesk against real transcripts.
+- [x] §3 #3 (gitignore audit at feature-author time, 2× recurrence):
+  SHIPPED 2026-05-25 `b63dfd8bd` — lesson at
   `.claude/lessons/feedback_sibling_gitignore_at_feature_author.md`.
-- [ ] §3 #1 (`/check-role-health` surface): update
-  `~/.claude/skills/check-role-health/SKILL.md` (or
-  `.claude/skills/check-role-health/SKILL.md` per skill registry) to
-  add Step 5b "dispatch-vs-signal-rate check."
-- [ ] PMD eval write — Step 5 below.
+  MEMORY.md WATCH replaced with promotion line.
+- [x] §3 #1 (`/check-role-health` surface): SHIPPED 2026-05-25 to
+  user-scope skill `~/.claude/commands/check-role-health.md` — added
+  Step 5b "dispatch-vs-signal-rate health check (MANDATORY surface)"
+  + extended interpretation guidance to distinguish "empty arrays
+  expected for Haiku worker" vs "empty arrays + zero signals over
+  24h = instrumentation bug." Skill is user-scope (not tracked in
+  brehon-fork repo); edit lives on laptop disk only.
+- [x] PMD eval write — Step 5 done (row #565, embedded via backfill).
 
 ---
 
