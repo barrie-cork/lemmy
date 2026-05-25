@@ -1,6 +1,7 @@
 {
   "schema_version": 3,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "from": "advisor",
       "kind": "validate-pending-laptop-e2e",
@@ -21,12 +22,14 @@
         "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full --lib > .claude/PRPs/debug/v1-deps-r1-task2-validate-libtest-dbschema.log 2>&1\"",
         "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-deps-r1-task2-validate-e2e.log 2>&1\""
       ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "result": "pass",
+      "log_slice": "cmd 1/6 check: PASS (2m13s) | cmd 2/6 clippy -D warnings: PASS (2m43s, 0 lints) | cmd 3/6 lemmy_api 35/35: PASS (37s) | cmd 4/6 lemmy_apub 2/7 FAIL (pre-existing, per DQ a22859c2ae07-003: test_get_community, test_get_deleted_community, test_get_local_only_community, test_outbox_deleted_user, test_parse_lemmy_community_moderators) | cmd 5/6 lemmy_db_schema 37/37: PASS (28s) | cmd 6/6 workspace e2e 109/109: PASS (2195s)",
+      "failed_commands": [
+        "lemmy_apub lib --features full: 2/7 FAIL -- pre-existing per DQ a22859c2ae07-003, not a sha2 0.11 regression"
+      ],
+      "answer": "pass -- all 6 DoD commands PASS on post-T1 baseline SHA 16d722c8e. lemmy_apub 2/7 failures pre-existing (DQ a22859c2ae07-003). T2 sha2 0.11 validated clean. T3 dispatch next.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-25T08:15:00Z",
       "approved_by": null,
       "approved_at": null,
       "recovery_context": {
@@ -35,9 +38,7 @@
         "pattern": "#292 stale-base recover recipe step 6 — FRESH DQ on new on-branch cherry-picked SHA"
       },
       "id": "a22859c2ae07-004"
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 14,
       "from": "impl",
