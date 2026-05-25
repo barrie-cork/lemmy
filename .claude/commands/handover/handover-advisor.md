@@ -171,8 +171,7 @@ truly empty (e.g. no PRs open → omit §"PR advisor-gate" header; write
    git status --short              # expect <inventory from §State at handover>
    gh pr list --repo barrie-cork/lemmy --state open --json number,title,mergeStateStatus
    ```
-6. **Verify untested assumptions BEFORE writing any patch.** For each numbered item under §"What's pending" that lists `ASSUMES: <property> — VERIFY: <check>`, run the named VERIFY check (≤5 min per assumption). If any check falsifies the assumption, surface to user via `AskUserQuestion` with the failed assumption + revised options — do NOT proceed with the prescribed "smallest change". Per `.claude/lessons/feedback_handover_assumptions_need_empirical_verification.md`.
-7. Append cold-resume event to runlog:
+6. Append cold-resume event to runlog:
    ```
    <ISO-UTC> | advisor | meta | cold-resume | handover=<file> drift=<none|<detail>>
    ```
@@ -211,7 +210,6 @@ truly empty (e.g. no PRs open → omit §"PR advisor-gate" header; write
    - File/command: <path or command>
    - Expected outcome: <one sentence>
    - Rollback if it fails: <one sentence>
-   - **Untested assumptions** (env vars, CLI tools, remote dir shapes, hook events the prescription depends on but THIS session did NOT empirically verify): <list each as "ASSUMES: <property> — VERIFY: <one-line cheap check>"; OR "(none — all dependencies verified in this session)". Per `feedback_handover_assumptions_need_empirical_verification.md` — next session MUST run each VERIFY check BEFORE the patch.
 >
 
 ## What NOT to touch

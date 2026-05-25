@@ -41,32 +41,17 @@ fi
 mkdir -p "$DRAIN_DIR"
 touch "$DRAINED_INDEX"
 
-# 1. Pull queue files from EliteDesk worker worktrees + the daemon main
+# 1. rsync queue files from EliteDesk worker worktrees + the daemon main
 #    checkout (in case a hook ever ran with WORKER_DIR fallback to main).
-#    Uses scp (Windows-compatible — rsync not available on Git-Bash) plus
-#    a remote `find -print0 | xargs scp` for the worktree fan-out. Per
-#    feedback_cross_platform_divergences.md (no rsync on Windows path).
-echo "==> pull queue files from homeserver"
+#    The trailing slash on the source matters — copy directory CONTENTS.
+echo "==> rsync queue files from homeserver"
+rsync -avz --include='**/role-signal-queue.jsonl' --include='*/' --exclude='*' \
+  "homeserver:/srv/brehon-fork/.junior/worktrees/" \
+  "${DRAIN_DIR}/worktrees/" 2>&1 | tail -20 || true
 
-# Main checkout queue (single fixed path — most common case for bm-task)
-scp -q homeserver:/srv/brehon-fork/.claude/role-signal-queue.jsonl \
-  "${DRAIN_DIR}/main-checkout-queue.jsonl" 2>/dev/null \
-  && echo "  pulled main-checkout-queue.jsonl" \
-  || true
-
-# Worktree queues (variable per-task paths)
-mkdir -p "${DRAIN_DIR}/worktrees"
-WORKTREE_QUEUES=$(ssh homeserver "find /srv/brehon-fork/.junior/worktrees -name 'role-signal-queue.jsonl' 2>/dev/null" 2>/dev/null || echo "")
-if [ -n "$WORKTREE_QUEUES" ]; then
-  while IFS= read -r remote_path; do
-    [ -z "$remote_path" ] && continue
-    # Flatten to one file per worktree: job-N-queue.jsonl
-    job_name=$(basename "$(dirname "$(dirname "$remote_path")")")
-    scp -q "homeserver:$remote_path" "${DRAIN_DIR}/worktrees/${job_name}-queue.jsonl" 2>/dev/null \
-      && echo "  pulled ${job_name}-queue.jsonl" \
-      || true
-  done <<< "$WORKTREE_QUEUES"
-fi
+rsync -avz --ignore-missing-args \
+  "homeserver:/srv/brehon-fork/.claude/role-signal-queue.jsonl" \
+  "${DRAIN_DIR}/main-checkout-queue.jsonl" 2>&1 | tail -5 || true
 
 # 2. Walk every queue file, ingest lines not yet in DRAINED_INDEX.
 INGESTED=0
