@@ -20,3 +20,23 @@
 **Output:** `.claude/PRPs/reviews/pr-153-findings.yaml`
 
 **Recommendation:** pending (awaiting Claude/manual review and triage)
+
+## 2026-05-25 10:45 UTC — BM triage (task #460)
+
+**Action:** Applied triage decisions to PR #153 findings (advisor-approved 2026-05-25)
+
+**Triage results:**
+- **fix-in-pr:** 0 findings (all addressed)
+- **rebut:** 4 findings (cr-1, cr-2, cr-3, cr-9)
+  - cr-1: Plan file exists; CR misread diff scope
+  - cr-2: DQ entries are historical records; retroactive edits are process breaches
+  - cr-3: Pre-existing lemmy_apub failure; not a contradiction
+  - cr-9: Pre-existing registration_created logic; out of scope for dep-bump
+- **wont-fix:** 5 findings (cr-4, cr-5, cr-6, cr-7, cr-8)
+  - cr-4, cr-5, cr-6, cr-8: Markdown style noise on advisor meta-files
+  - cr-7: Debug artifact; no impact on build/tests/runtime
+- **carry-forward:** 0 findings
+
+**Recommendation:** approve (no fix-in-pr findings remain; all rebutted or wont-fix)
+
+**Output:** `.claude/PRPs/reviews/pr-153-findings.yaml` updated with buckets and rationales
