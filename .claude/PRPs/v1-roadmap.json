@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-24T08:30:00Z",
+  "last_updated_at": "2026-05-25T18:10:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -213,7 +213,7 @@
       "status": "partial",
       "capstone": null,
       "lane_meta_retro": null,
-      "evidence_summary": "ONLY r1 shipped (PR #126). r2-r5 are pre-landed in the governance-log entry-kind registry but UNSTARTED — 4 sub-phases of planned work remain.",
+      "evidence_summary": "r1 (PR #126) + r2 (PR #150) shipped. r3 in_flight (plan done, bm-cut pending). r4 + r5 unstarted.",
       "sub_phases": {
         "v1-RT-r1": {
           "status": "done",
@@ -225,20 +225,23 @@
           "note": "Plan was halted at fix-impl-1 due to N-callsite enumeration miss (DQ #205); recovered after planner re-plan."
         },
         "v1-RT-r2": {
-          "status": "unstarted",
+          "status": "done",
           "scope": "v1 decay calculator goes live; admin_config emits ENTRY_KIND_DECAY_KNOB_CHANGED on first decay-key write; flips feature.reputation_v1_decay_enabled",
-          "registry_evidence": "ENTRY_KIND_DECAY_KNOB_CHANGED row in .claude/rules/governance-log-entry-kind-registry.md cites v1-RT-r2 admin_config.rs (pending)",
-          "plan": null,
-          "blocker": "no plan written yet"
+          "pr": 150,
+          "merge_commit": "3b36b4e61",
+          "merged_at": "2026-05-24T07:15:53Z",
+          "plan": ".claude/PRPs/plans/v1-RT-r2.plan.md",
+          "retro": ".claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md"
         },
         "v1-RT-r3": {
           "status": "in_flight",
-          "scope": "scheduled_tasks weekly-active cron + submit_jury_vote post-decision juror-aligned hook + admin_emergency_remove flag_bad_faith; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED",
+          "scope": "scheduled_tasks weekly-active + dormancy cron + submit_jury_vote vote-outcome + evidence-cited emitters + flag-bad-faith admin endpoint; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED",
           "registry_evidence": "3 RT-r1 pre-landed consts name v1-RT-r3 as their fire site",
-          "plan": null,
-          "blocker": "no plan written; planning Junior not yet dispatched",
+          "plan": ".claude/PRPs/plans/v1-RT-r3.plan.md",
+          "phase_branch": "phase-v1-RT-r3",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3",
-          "in_flight_since": "2026-05-24"
+          "in_flight_since": "2026-05-24",
+          "stage": "plan-approval-gate (planning task #463 done; bm-cut not yet run)"
         },
         "v1-RT-r4": {
           "status": "unstarted",
@@ -263,10 +266,11 @@
     "SR": {
       "name": "Ship Readiness (a.k.a. SR / Ship)",
       "prd": ".claude/PRPs/prds/v1-ship-readiness.prd.md",
-      "status": "partial",
-      "capstone": null,
+      "status": "done",
+      "capstone": "v1-ship-3",
       "lane_meta_retro": null,
-      "evidence_summary": "Sub-PRD 'From Substrate-Complete to First External User'. Closes the v0 ship-gate via 3 sequenced sub-phases (ship-1, ship-2, ship-3 expected). ship-1 (+ r1/r2 follow-ups) shipped 2026-05-18 at PR #137. ship-2 and ship-3 unstarted.",
+      "shipped_at": "2026-05-24",
+      "evidence_summary": "All 3 sub-phases shipped: ship-1 (PR #137, 2026-05-18) + ship-2 (PR #147, 2026-05-23) + ship-3 (PR #149, 2026-05-24). v0 ship-gate closed.",
       "ship_gates_identified": [
         "AGPL §13 source-disclosure user-visible HTTP endpoint (addressed in ship-1)",
         "Per-endpoint e2e coverage on POST /appeal, GET /modlog, GET /reputation/me, POST /endorsement (addressed in ship-1)",
@@ -314,12 +318,13 @@
           "retro": ".claude/PRPs/reports/v1-ship-2-retro.md"
         },
         "v1-ship-3": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "PRD §7.3: docker-compose Postgres pin to 16.4 + POST /report returns GovernanceCaseSummaryView DTO + two_sponsors_lose_endorsement_strength_on_sanction e2e",
-          "plan": null,
-          "blocker": "no plan written; planning Junior not yet dispatched",
-          "worktree": "C:/Users/barri/Developer/brehon-fork-ship-3",
-          "in_flight_since": "2026-05-23"
+          "pr": 149,
+          "merge_commit": "9f1584574",
+          "merged_at": "2026-05-24T07:20:13Z",
+          "in_flight_since": "2026-05-23",
+          "done_at": "2026-05-24"
         }
       },
       "known_followups": [
@@ -415,26 +420,26 @@
     "deps": {
       "name": "Deps (Cargo dependency bumps)",
       "prd": null,
-      "status": "in_flight",
+      "status": "done",
       "user_steered": true,
       "user_steered_note": "User instructed 2026-05-23: deps is gated on v1-ship-3 + v1-RT-r2 both shipping; not /roadmap-next-cut. Cut by hand once preconditions met.",
       "depends_on": [
         "v1-ship-3",
         "v1-RT-r2"
       ],
+      "shipped_at": "2026-05-25",
       "sub_phases": {
         "v1-deps-r1": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "diesel-async 0.8→0.9 (BREAKING, 42 .run_transaction callsites) + sha2 0.10→0.11 (BREAKING, newtype change) + 10 SemVer-compatible bumps (diesel 2.3.9, tokio 1.52, rustls 0.23.40, bcrypt 0.19.1, serde_with 3.20, jsonwebtoken 10.4, lettre 0.11.22, rss 2.0.13, dashmap 6.2, html2text 0.17). Bundled to amortize cargo+e2e validation cost.",
-          "trigger": "v1-ship-3 + v1-RT-r2 both merged to governance-v0 with retros signed off; Dependabot may have re-opened PR #136 with newer head SHA — prefer current versions over the brief's 2026-05-23 snapshot.",
           "brief": ".claude/PRPs/briefs/v1-deps-r1-planning-1.md",
-          "plan": null,
-          "pr": null,
-          "blocker": null,
-          "background": "Dependabot PR #136 (opened 2026-05-18) bundled all 12 bumps; investigation 2026-05-23 found 2 breaking changes requiring 42-file mechanical rewrite + trait-resolution pre-flight. User chose deferred sub-phase over fix-in-PR'ing the Dependabot branch.",
+          "pr": 153,
+          "merge_commit": "ab1e79a70",
+          "merged_at": "2026-05-25T11:47:52Z",
+          "retro": ".claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md",
           "in_flight_since": "2026-05-24",
-          "worktree": "C:/Users/barri/Developer/brehon-fork",
-          "phase_branch": "phase-v1-deps-r1"
+          "done_at": "2026-05-25",
+          "background": "Dependabot PR #136 (opened 2026-05-18) bundled all 12 bumps; investigation 2026-05-23 found 2 breaking changes requiring 42-file mechanical rewrite + trait-resolution pre-flight. User chose deferred sub-phase over fix-in-PR'ing the Dependabot branch."
         }
       },
       "in_flight_since": "2026-05-24"
@@ -479,33 +484,19 @@
   "what_remains": {
     "high_priority_unstarted": [
       {
-        "lane": "SR (Ship Readiness)",
-        "items": [
-          "v1-ship-3"
-        ],
-        "rationale": "PRD §1 names 3 sequenced sub-phases; ship-1/ship-2 shipped, ship-3 in_flight (worktree cut 2026-05-23, planning not yet dispatched). Closes v0 ship-gate to 'first external user'."
-      },
-      {
         "lane": "RT (Reputation Tuning)",
         "items": [
-          "v1-RT-r2",
-          "v1-RT-r3",
+          "v1-RT-r3 (in_flight — plan approved, bm-cut pending)",
           "v1-RT-r4",
           "v1-RT-r5"
         ],
-        "rationale": "All 4 remaining RT sub-phases unstarted; 8 ENTRY_KIND consts already pre-landed on trunk awaiting fire sites. RT-r2 = v1 decay calculator goes live (high-stakes — changes reputation arithmetic for every user)."
-      },
-      {
-        "lane": "Deps (Cargo dependency bumps)",
-        "items": [
-          "v1-deps-r1"
-        ],
-        "rationale": "Dependabot PR #136 (cargo-all, 12 bumps) deferred 2026-05-23 because diesel-async 0.9 (breaking) + sha2 0.11 (breaking) require 42-callsite mechanical rewrite of the governance write path. Bundled with 10 SemVer-compatible bumps. Hard-gated on v1-ship-3 + v1-RT-r2 close to avoid concurrent-lane conflicts on .run_transaction sites."
+        "rationale": "RT-r2 shipped 2026-05-24. RT-r3 planning task #463 done; plan-approval gate not yet cleared. RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted."
       }
     ],
     "in_flight_outside_roadmap": [],
     "documentation_drift_followups": [
-      "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — should be flipped to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly."
+      "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — should be flipped to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly.",
+      "RT-r2 retro path in this roadmap points to deps-r1 retro (placeholder) — update if a dedicated RT-r2 retro file is authored."
     ],
     "v2_out_of_scope": [
       "v2-messaging-rtc.prd.md (Matrix + LiveKit messaging)",
@@ -514,12 +505,21 @@
     ]
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "v1-ship-3 is in_flight (cut 2026-05-23, no plan yet) — drive it to continue closing the v0 ship-gate. v1-RT-r2 is in_flight in the rt-r2 worktree (separate lane session). After ship-3 closes + RT-r2..r5 land, the v0 ship-gate closes.",
-    "concurrent_lanes_2026_05_23": [
-      "v1-ship-3 (in_flight, worktree cut, planning not yet dispatched — primary next focus for this session)",
-      "v1-RT-r2 (in_flight, rt-r2 worktree, planning brief authored, clarify DQs answered — driven by separate lane session)"
-    ],
-    "rationale_for_ship_first": "Per ship-readiness PRD §1.1: 'fork is not shippable' until ship-gates 1+2 close. RT-r2..r5 are explicitly out-of-scope of ship-readiness (named as such in the PRD's hard-boundary statement) — they add feature breadth, not ship-readiness.",
-    "rationale_for_RT_later": "RT-r2 flips reputation_v1_decay_enabled feature flag. Doing this AFTER ship-readiness closes means the flag flip lands on a system already in compliance + tested at endpoint granularity."
+    "next_logical_sub_phase": "v1-RT-r3 is in_flight — planning task #463 done, plan on trunk. Run plan-approval gate (DoD smoke + watchpoint check) then queue bm-cut. After RT-r3 ships, drive RT-r4 (sponsor-allowlist) then RT-r5 (rollup cron) to close the RT lane.",
+    "state_as_of_2026_05_25": {
+      "shipped_since_last_roadmap_update": [
+        "v1-RT-r2 (PR #150, 2026-05-24)",
+        "v1-ship-3 (PR #149, 2026-05-24)",
+        "v1-deps-r1 (PR #153, 2026-05-25)"
+      ],
+      "in_flight": [
+        "v1-RT-r3 (plan-approval gate; bm-cut not yet run)"
+      ],
+      "unstarted": [
+        "v1-RT-r4 (sponsor-allowlist)",
+        "v1-RT-r5 (rollup cron)"
+      ]
+    },
+    "rationale_for_RT_r3_next": "SR lane fully shipped (ship-1 through ship-3). deps-r1 shipped. RT-r3 is the active in-flight lane — four emitter paths wired, no new migrations, complexity 7/10. Natural next step after plan approval."
   }
 }
