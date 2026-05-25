@@ -29,12 +29,21 @@ The parent (impl) session should call `Agent(subagent_type="branch-manager", mod
 ## Operational script (for the subagent)
 
 The BM agent cuts a new branch off `governance-v0` for a sub-phase
-or plan. Verifies trunk is clean and up-to-date first. The branch is
-local-only at this stage (Phase 5 below pushes with `-u` to set
-upstream tracking). Auto, no prompt (local-only action per
-`.claude/rules/branch-manager.md`).
+or plan. Verifies trunk is clean and up-to-date first, cuts the
+branch locally (Phase 3), then pushes with `-u` to origin (Phase 4)
+so the advisor's polling loop can see the phase branch and the
+worker can fork from it. Auto, no prompt (local-only-write + one
+remote push per `.claude/rules/branch-manager.md` autonomy table:
+"Push a `phase-*` or `plan/*` branch to origin (`git push -u`) — Auto").
 <!-- cr-1 (closes #88): wording aligned with the actual command flow —
-     `git checkout -b` does not set upstream; `git push -u` in Phase 5 does. -->
+     `git checkout -b` does not set upstream; `git push -u` in Phase 4 does. -->
+<!-- 2026-05-25 friction-fix C: previous wording claimed branch was
+     "local-only at this stage" with "Phase 5 below pushes". Phase 5
+     was an output block, no push happened in-script — every bm-cut
+     brief overrode and instructed push, so the script and practice
+     diverged. Phase 4 now does the push; Phase 5 is runlog; Phase 6
+     is output. -->
+
 
 
 **Reads:** `.claude/rules/branch-manager.md`, `.claude/rules/phase-branch.md`.
@@ -114,33 +123,88 @@ decision-queue entry:
 
 ---
 
-## Phase 3 — Cut the branch
+## Phase 3 — Cut the branch (local)
 
 ```bash
 git checkout -b <branch-name> governance-v0
 ```
 
-Do NOT push yet. The branch sits local until impl makes its first
-commit. (Pushing an empty branch creates a useless remote ref with no
-PR target.)
+Phase 3 is local-only — the push happens in Phase 4. This split exists
+so a refusal in Phase 3 (e.g. branch already exists locally) doesn't
+leave a remote ref behind, and so the runlog can be written between
+the cut and the push as a recovery point.
+
+If `<branch-name>` already exists locally (e.g. a worktree was created
+earlier by `/roadmap-next`), `git checkout -b` will fail. In that case
+verify the existing branch matches the expected base (`git log
+governance-v0..<branch-name> --oneline` shows only expected commits or
+none), then `git checkout <branch-name>` (without `-b`) and proceed to
+Phase 4. Do NOT delete and re-cut without confirming the existing
+branch is unreferenced — it may have a worktree, a CI run history, or
+a runlog citation.
 
 ---
 
-## Phase 4 — Append to runlog
+## Phase 4 — Push to origin with upstream tracking
 
-Create or append to `.claude/runlog/<phase>-runlog.md`:
+```bash
+git push -u origin <branch-name>
+```
+
+After the push:
+1. Verify the branch exists on origin:
+   ```bash
+   gh api repos/barrie-cork/lemmy/branches/<branch-name> \
+     --jq '.name + " @ " + .commit.sha[0:9]'
+   ```
+2. If the push was a no-op because `<branch-name>` already existed on
+   origin (e.g. pre-created by an earlier `/roadmap-next` run), confirm
+   the remote tip matches the local tip — if it doesn't, STOP and file
+   a `kind: "blocker"` DQ entry. Do NOT force-push.
+
+Why push immediately (changed 2026-05-25): every recent bm-cut brief
+overrode the previous "deferred push" instruction. The advisor's
+polling loop reads `origin/<phase-branch>` to detect impl-task
+worker pushes (per `advisor-orchestrator.md` §1). A worker can only
+fork from a branch that exists on origin (per
+`feedback_daemon_local_trunk_stale_multi_lane.md`). Pushing in
+Phase 4 makes the branch reachable to both readers; the empty-ref
+concern from the old "deferred" rationale is moot because phase
+branches have a runlog commit (Phase 3 of bm-cut + Phase 4 of this
+script + the runlog write below all happen on the new branch before
+the push, so the branch is one-commit-ahead, not empty, at push time).
+
+---
+
+## Phase 5 — Append to runlog
+
+The runlog write commit is the first commit on the new branch. Create
+or append to `.claude/runlog/<phase>-runlog.md`:
 
 ```markdown
-## bm: branch cut — {ISO timestamp}
+## bm: cut <branch-name> off governance-v0 @ {short-sha} — {ISO timestamp}
 - **branch:** {branch-name}
 - **off:** governance-v0 @ {short-sha}
 - **plan:** .claude/PRPs/plans/{plan-file} (or "n/a — chore branch")
-- **next:** impl session takes over for task 1
+- **pushed:** yes — origin/{branch-name} (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed
+- **next:** advisor authors impl-task briefs; worker forks from {branch-name}
 ```
+
+Commit + push the runlog entry:
+
+```bash
+git add .claude/runlog/<phase>-runlog.md
+git commit -m "chore(bm-task): log branch cut <branch-name> post-planning approval"
+git push origin <branch-name>
+```
+
+The advisor reads this entry on its next polling tick to confirm the
+cut landed cleanly.
 
 ---
 
-## Phase 5 — Output
+## Phase 6 — Output
 
 ```markdown
 ## /bm-cut complete
@@ -148,18 +212,65 @@ Create or append to `.claude/runlog/<phase>-runlog.md`:
 **Branch cut:** {branch-name}
 **Off:** governance-v0 @ {short-sha}
 **Plan file on trunk:** {path} (or "n/a")
-**Pushed?:** No (deferred to first commit + /bm-push)
-**Runlog:** .claude/runlog/<phase>-runlog.md updated
+**Pushed?:** Yes — origin/{branch-name} (upstream tracking via -u)
+**Runlog:** .claude/runlog/<phase>-runlog.md updated + pushed
+**Daemon worktree** (Junior runtime only): now on {branch-name} (was governance-v0). See §7.
 
-### Hand-off to impl session
+### Hand-off to advisor
 
-Impl can now run `/prp-implement` against the plan above. BM will pick
-up the branch on `/bm-status` once commits land.
+Advisor can now author impl-task briefs. Per
+`advisor-orchestrator.md` §2.1 + `.claude/rules/multi-lane-worktree.md`
+"Brief location and trunk→phase sync", impl-task briefs MUST be
+visible on {branch-name} before the corresponding Junior task is
+queued. See those docs for the sync procedure (advisor-side, not a
+bm-task verb).
 ```
 
 ---
 
-## Phase 6 — Finalize hazard (READ — daemon finalize agent is NOT bm-cut-aware)
+## Phase 7 — Daemon worktree state post-bm-cut (load-bearing side effect)
+
+The bm-cut Junior task runs in the daemon's main worktree at
+`/srv/<repo>` (its own worktree per `feedback_parallel_agents_one_worktree_per_agent`
+is created by Junior for the task, but the `git checkout -b` in Phase 3
+mutates the **daemon's** branch checkout because Junior dispatches the
+bm-task into the main worktree's branch ref space, not into a separate
+sub-worktree). After bm-cut completes, the daemon worktree is on the
+new phase branch (`phase-<X>`) regardless of what branch it was on
+before.
+
+This is intentional and load-bearing for two downstream advisor
+patterns:
+
+1. **Advisor-side trunk→phase merge** (`multi-lane-worktree.md`
+   §"Brief location and trunk→phase sync"). When the advisor authors
+   an impl-task brief on trunk + needs to make it visible on the phase
+   branch, the canonical path is to SSH into the daemon and run
+   `git merge origin/governance-v0` from the daemon worktree —
+   which works because the daemon is conveniently on `phase-<X>`
+   after bm-cut. If the daemon worktree were on `governance-v0`,
+   the advisor would need a temporary worktree or a checkout-switch
+   to do the merge.
+
+2. **Next-cohort impl-task fork base.** Junior creates per-task
+   worktrees off the daemon-local branch ref (per
+   `feedback_daemon_local_trunk_stale_multi_lane.md`). After bm-cut
+   the daemon-local `phase-<X>` ref points at the runlog commit,
+   matching origin — workers fork from the right base.
+
+**Failure mode if daemon worktree is NOT on `phase-<X>` after bm-cut:**
+a concurrent task switched it. Detection:
+```bash
+ssh homeserver 'cd /srv/<repo> && git symbolic-ref HEAD'
+# EXPECT: refs/heads/phase-<X>
+```
+Recovery: from the daemon worktree, `git checkout phase-<X>` (safe;
+the bm-task push already landed the branch on origin). DO NOT delete
+or re-cut.
+
+---
+
+## Phase 8 — Finalize hazard (READ — daemon finalize agent is NOT bm-cut-aware)
 
 bm-cut **creates divergence from trunk**. The phase branch is the
 deliverable; it must **NEVER** be merged back into `governance-v0`.
@@ -179,7 +290,7 @@ fix = extend the `[role:bm-task]` finalize-skip, or a
 planned `[role:impl-task]` skip in
 `feedback_junior_finalize_skips_when_worker_pre_pushes.md`):
 
-- **The bm-cut brief MUST carry a §6 "KNOWN harness limitation" block**
+- **The bm-cut brief MUST carry a §8 "KNOWN harness limitation" block**
   stating bm-cut creates divergence (NOT a feature branch to merge
   back), the CC v2.1.119 runlog gate-block, and the advisor-relocate
   recovery (see `feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md`).
@@ -204,7 +315,7 @@ planned `[role:impl-task]` skip in
 - **Finalize agent merged the phase branch into trunk** (daemon-local
   `governance-v0` shows `Merge phase-<X> into governance-v0 (bm-cut
   task)`; origin unchanged) → NOT a bm-cut failure (branch was created
-  correctly); recover per Phase 6 via `git update-ref` + push the
+  correctly); recover per Phase 8 via `git update-ref` + push the
   phase branch; relocate the gate-blocked runlog advisor-side.
 
 ---
@@ -215,5 +326,5 @@ planned `[role:impl-task]` skip in
 - `.claude/rules/phase-branch.md` — phase-branch flow
 - `.claude/commands/bm/bm-status.md` — see current state
 - `.claude/commands/bm/bm-push.md` — push when impl has committed
-- `.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md` — Phase 6 hazard detail + recovery
+- `.claude/lessons/feedback_junior_finalize_merges_bm_cut_branch.md` — Phase 8 hazard detail + recovery
 - `.claude/lessons/feedback_cc_v2_1_119_claude_gate_blocks_bm_writes.md` — runlog gate-block + advisor-relocate (§6)

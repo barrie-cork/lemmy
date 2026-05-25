@@ -1,8 +1,6 @@
 # Multi-lane worktree discipline
 
-When multiple Brehon sub-phases (`phase-v1-*`) are concurrently active, each
-phase MUST have its own git worktree on the human side. This rule loads at
-session start.
+When multiple Brehon sub-phases (`phase-v1-*`) are concurrently active, each phase MUST have its own git worktree on the human side. This rule loads at session start.
 
 ## Why this rule exists
 
@@ -37,10 +35,141 @@ C:/Users/barri/Developer/
 The canonical `brehon-fork` checkout is reserved for `governance-v0` work:
 authoring briefs (committed to trunk), plan files (after planner Junior
 finalize-merges), rule edits, lesson edits, template edits, retro authorship.
-**The canonical checkout MUST NOT be used to mutate phase-branch DQ entries.**
+**The canonical checkout MUST NOT be used to mutate phase-branch DQ entries**
+(applies to both Mode A and Mode B below). The carve-out for plan-time DQ
+writes on `governance-v0` (clarify entries, planning-time blockers) is
+documented in Hard refusal #6 below.
 
-Each active sub-phase (`phase-v1-SL-d`, `phase-v1-RT-r1`, `phase-v1-RT-r2`,
-`phase-v1-JM-f`, …) gets its own worktree.
+Each active sub-phase in Mode A (`phase-v1-SL-d`, `phase-v1-RT-r1`,
+`phase-v1-RT-r2`, `phase-v1-JM-f`, …) gets its own worktree. In Mode B,
+no laptop-side phase worktree exists — see §"Lane modes" below.
+
+## Lane modes (added 2026-05-25)
+
+A lane operates in one of two modes. Both modes are valid; pick at
+bm-cut time and document in the lane's bootstrap handover.
+
+### Mode A — Dedicated lane worktree (default)
+
+Laptop side has a phase worktree at
+`C:/Users/barri/Developer/brehon-fork-<lane>`, running its own Claude
+Code session.
+
+- Lane session CWD = `brehon-fork-<lane>`, branch = `phase-v1-<lane>`.
+- Lane session writes phase-branch DQ entries, runs validate-pending-laptop
+  cargo locally, authors impl-task briefs directly on the phase branch
+  (no trunk→phase sync needed).
+- Canonical `brehon-fork` session does meta-edits on `governance-v0`
+  (rules, lessons, templates, retros). Does NOT mutate phase-branch DQ.
+- Lifecycle per §"Lifecycle" below (worktree add → drive → worktree remove).
+- Use when: you have laptop disk + RAM headroom for a second worktree
+  (~3–5 GB after submodules + .git) AND you'll be at the laptop the
+  whole phase.
+
+### Mode B — Mobile remote-control (added 2026-05-25)
+
+Laptop has ONLY the canonical `brehon-fork` checkout. All phase-branch
+work happens via Junior tasks on the daemon (EliteDesk). The advisor
+session runs in canonical `brehon-fork` and dispatches everything via
+`mcp__junior-brehon__create_task` with `base_branch=phase-v1-<lane>`.
+
+- Lane session CWD = `brehon-fork` (canonical), branch = `governance-v0`.
+- Advisor authors impl-task briefs in canonical, commits to
+  `governance-v0`, then triggers a trunk→phase sync (per §"Brief
+  location and trunk→phase sync" below) so the brief is visible to
+  workers forking from `phase-v1-<lane>`.
+- Junior workers run in per-task worktrees on the daemon. They write
+  worker-branch DQ entries; daemon-side finalize-merges them into
+  `phase-v1-<lane>` and pushes.
+- The lane's `.claude/decision-queue.json` mutations happen on the
+  worker branch (Junior's mid-task push) → daemon merges into
+  `phase-v1-<lane>` → advisor sees them on `origin/phase-v1-<lane>`
+  fetch. **The advisor's canonical checkout does NOT write DQ entries
+  for the phase branch in Mode B** — phase DQ writes happen on the
+  daemon, not the laptop.
+- The canonical-checkout "MUST NOT mutate phase-branch DQ entries"
+  rule (§Layout) STILL applies — Mode B doesn't relax it. Plan-time DQ
+  writes on `governance-v0` (clarify entries, planning-time blockers)
+  remain allowed per the §Layout carve-out + Hard refusal #6's
+  "legitimate `governance-v0` plan-time DQ writes" clause.
+- Use when: laptop is constrained (mobile / low disk), OR the lane
+  will run mostly while you're away from the laptop, OR you want to
+  minimize per-lane worktree bootstrap overhead.
+
+### How to tell which mode you're in
+
+```bash
+git -C C:/Users/barri/Developer/brehon-fork worktree list
+# Mode A: shows `brehon-fork-<lane>` for the active phase
+# Mode B: shows only `brehon-fork` (canonical)
+```
+
+The lane's bootstrap handover (`.claude/PRPs/handovers/<phase>-bootstrap.md`)
+SHOULD state the mode in its RESUME block. Example phrasing:
+> "Lane mode for this <phase> session: Mode B (mobile remote-control).
+> User driving from canonical brehon-fork; all impl/bm phase-branch
+> work dispatched as Junior tasks targeting `phase-v1-<lane>`."
+
+## Brief location and trunk→phase sync (added 2026-05-25)
+
+Per `advisor-orchestrator.md` §2.1: **impl-task briefs MUST be visible
+on the phase branch the worker forks from** (because the worker's
+worktree starts at `phase-v1-<lane>` HEAD; if the brief isn't at that
+ref, the worker can't read it). This applies regardless of mode.
+
+The procedure differs by mode:
+
+### Mode A — author directly on phase branch
+
+The lane worktree session is already on `phase-v1-<lane>`. Author the
+brief there, `git commit`, `git push origin phase-v1-<lane>`. The
+worker forking from the phase branch sees the brief immediately.
+
+### Mode B — author on trunk, sync to phase via daemon SSH
+
+The canonical session cannot `git checkout phase-v1-<lane>` (Hard
+refusal #1) and the lane worktree doesn't exist on the laptop. The
+working primitive uses the daemon's main worktree, which is on
+`phase-v1-<lane>` after bm-cut completes (per bm-cut.md §7 "Daemon
+worktree state post-bm-cut"):
+
+```bash
+# Step 1 (laptop, canonical): author brief on governance-v0, commit, push.
+git add .claude/PRPs/briefs/<phase>-impl-<n>.md
+git commit -m "chore(advisor): brief <phase> impl-task <n> — <slug>"
+git push origin governance-v0
+
+# Step 2 (daemon, via SSH): merge trunk into the phase branch from the
+# daemon's main worktree (it's on phase-v1-<lane> post-bm-cut). The
+# merge bridges the new brief commit into the phase branch.
+ssh homeserver "cd /srv/<repo> \
+  && git fetch origin governance-v0 \
+  && git merge origin/governance-v0 --no-edit -m 'Merge governance-v0 into <phase> — pull impl-<n> brief for Task <n> dispatch' \
+  && git push origin phase-v1-<lane>"
+
+# Step 3 (laptop, canonical): queue the Junior task.
+# mcp__junior-brehon__create_task with base_branch=phase-v1-<lane>.
+```
+
+**Precondition for step 2:** daemon worktree must be on the phase
+branch. Verify with `ssh homeserver 'cd /srv/<repo> && git symbolic-ref HEAD'`.
+If it returns `refs/heads/phase-v1-<lane>`, proceed. If it returns a
+different branch (governance-v0, another phase), a concurrent task
+switched it — recover by `git checkout phase-v1-<lane>` on the daemon
+before merging. Do NOT delete and re-cut; the branch already has
+upstream tracking from bm-cut Phase 4.
+
+**Alternative for step 2 (Mode B, if daemon worktree is unavailable):**
+queue a tiny one-line bm-task with description `[role:bm-task]
+trunk-sync <phase> — merge governance-v0 into phase-v1-<lane> for
+brief visibility — see .claude/PRPs/briefs/<phase>-trunk-sync-<n>.md`.
+This costs one Junior task per brief and is heavier than the SSH
+merge but doesn't depend on daemon-worktree state. Add a
+`bm-merge-forward` verb in the future if this alternative recurs
+across phases.
+
+**Mode A skip:** if you're in Mode A, this whole section doesn't
+apply — author the brief on the phase branch directly.
 
 ## Lifecycle
 
@@ -63,16 +192,29 @@ git worktree list                                # see ALL active worktrees
 ```
 
 If `git worktree list` shows another active worktree on a `phase-v1-*`
-branch, the current session MUST verify:
+branch (Mode A for that lane), the current session MUST verify:
 
 - Its CWD matches the intended lane (or governance-v0 for the canonical
   meta-edit lane).
 - It will NOT write `.claude/decision-queue.json` outside that lane.
 
+If `git worktree list` shows ONLY canonical `brehon-fork` and the
+intended lane is supposed to be active (per workflow_state /
+roadmap.json), the lane is in Mode B (mobile remote-control) — the
+canonical session drives the lane via Junior dispatch with
+`base_branch=phase-v1-<lane>`. See §"Lane modes" + §"Brief location
+and trunk→phase sync".
+
 If the session was opened in the wrong CWD (e.g. user opened Claude Code
-in `brehon-fork` intending to drive RT-r1), surface to user and ask whether
-to (a) switch CWD by closing + reopening Claude Code in
-`brehon-fork-rt-r1`, or (b) proceed in `brehon-fork` for meta-edits only.
+in `brehon-fork` intending to drive a lane in Mode A), surface to user
+and ask whether to:
+- (a) switch to Mode A by closing + reopening Claude Code in
+  `brehon-fork-<lane>` (requires the worktree to exist; `git worktree
+  add ../brehon-fork-<lane> phase-v1-<lane>` from canonical creates it).
+- (b) switch to Mode B and drive the lane from canonical via Junior
+  dispatch. Document the mode flip in the lane bootstrap handover.
+- (c) proceed in `brehon-fork` for meta-edits only (no lane work this
+  session).
 
 ## Hard refusals
 
