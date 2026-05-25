@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "c76792506538-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-25T19:30:00Z",
+      "question": "Run cargo-check and cargo-clippy for task 1 participation_cron module on laptop.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 commit b9876b7d8 on worker branch creates participation_cron.rs + wires scheduler tick. Shape G suspended (DQ #229); laptop runs the validation commands.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-task1-check.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-task1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-task1-clippy.log\n# EXPECT: exit 0"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "advisor",
