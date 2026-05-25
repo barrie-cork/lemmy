@@ -82,22 +82,43 @@ Line numbers are at advisor-brief-author time; T1's commit may have shifted some
 
 ### 3.3 Handover from prior task (Task 2)
 
-**(Populated by advisor before T3 queue, AFTER T2 validate-pending-laptop-e2e DQ → PASS. Template placeholder follows; advisor replaces with verbatim T2 HANDOVER trailer block extracted from `git log -1 --format=%B <T2-sha>`.)**
+**(Populated 2026-05-25 after T2 validate-pending-laptop-e2e DQ a22859c2ae07-004 → PASS. Verbatim HANDOVER trailer from `git log -1 --format=%B 16d722c8e`, plus validation results from advisor-laptop DoD run.)**
 
 ```yaml
 prior_task:
   task: 2
-  commit: <T2-sha — populate after T2 ship>
-  type: sha2 0.10 → 0.11 migration (workspace bump only; 9 Sha256 callsites preserved)
-  outcome: <populate from T2 validate-pending-laptop-e2e DQ result>
+  commit: 16d722c8e
+  type: sha2 0.10 -> 0.11 migration (workspace bump only; 9 Sha256 callsites preserved)
+  outcome: PASS — DQ a22859c2ae07-004 resolved result=pass 2026-05-25T08:15:00Z
   validation_pass:
-    cargo_workspace_check: <0 expected>
-    cargo_workspace_clippy: <0 expected>
-    lemmy_api_lib: <35/35 expected>
-    lemmy_db_schema_lib: <37/37 expected>
-    workspace_e2e: <109/109 expected>
-    lemmy_apub_lib: <2/7 expected — pre-existing failures per DQ a22859c2ae07-003>
-  source_diff_lines: <0 expected, per plan §10.4 risk = low>
+    cargo_workspace_check: 0  # PASS 2m13s
+    cargo_workspace_clippy: 0  # PASS 2m43s, 0 lints
+    lemmy_api_lib: 35/35  # PASS 37s
+    lemmy_db_schema_lib: 37/37  # PASS 28s
+    workspace_e2e: 109/109  # PASS 2195s
+    lemmy_apub_lib: 2/7  # pre-existing failures per DQ a22859c2ae07-003 (UNCHANGED — not a sha2 regression)
+  source_diff_lines: 0
+  files_modified: 2  # Cargo.toml + Cargo.lock
+  cargo_toml_change: 'sha2 = "0.10" -> sha2 = "0.11"'
+  cargo_lock_delta_lines: 4
+  cargo_check_status: 0  # post-T1 baseline validated
+  cargo_clippy_status: 0  # post-T1 baseline validated
+  touched_rust_files: 0
+  pre_flight_impl_digest: 0
+  pre_flight_sha2_std_feature: 0
+  sha2_usage_count: 9
+  adr_012_preserved: true
+  recovery_context:
+    pattern: '#292 stale-base recover recipe'
+    worker_branch: 'junior/role-impl-task-v1-deps-r1-task-2-sha2-0-11-migration-see-claude-prps-briefs-v1-deps-r1-impl-2-md-456'
+    worker_stale_base: '2da902a41 (T1 brief REV-2; pre-T1 ship)'
+    worker_clean_sha: 'b337b0cce'
+    cherry_picked_sha: '522cff012'
+    abandoned_commits:
+      - '3b1d97ad7 (worker DQ-raise; stale-base SHA reference)'
+    abandoned_dq_blobs:
+      - '823f445abc47-001 (false-premise log; "T2 dispatched before T1")'
+      - '823f445abc47-002 (worker validate-pending-laptop; stale-base SHA)'
   workspace_state_at_T2_tip:
     diesel: "=2.3.9"          # carried from T1
     diesel-async: "0.9.0"     # carried from T1
@@ -106,13 +127,18 @@ prior_task:
     scope_boxed_refs: 2       # both intentional doc-comment literals in connection.rs
     run_transaction_callsites: 38  # from T1
   notes: |
-    sha2 0.11 in. T3 (10 SemVer-compat bumps, reduced to 9 per brief §0
-    scope adjustment — diesel already in from T1) sees a workspace where
-    diesel-async / diesel / sha2 are all at their target versions. T3
-    bumps only touch Cargo.toml + Cargo.lock; no Rust source diff expected.
+    sha2 0.11 in. ADR-012 preserved. Worker verification was on pre-T1
+    baseline and was invalidated by cherry-pick; advisor-laptop re-ran
+    full §15 DoD (6 commands) against post-T1 baseline SHA 16d722c8e —
+    all PASS. lemmy_apub 2/7 failures unchanged from T1 validate (same
+    5 test names: test_get_community, test_get_deleted_community,
+    test_get_local_only_community, test_outbox_deleted_user,
+    test_parse_lemmy_community_moderators — pre-existing per DQ
+    a22859c2ae07-003; not a sha2 regression).
+    T3 sees workspace where diesel-async/diesel/sha2 all at target
+    versions. T3 bumps only touch Cargo.toml + Cargo.lock; no Rust
+    source diff expected.
 ```
-
-If T2 shipped with the apub libtest count CHANGED from 2/7 (e.g. dropped to 1/7), surface in §3.3 notes — sha2 0.11 is highly unlikely to interact with federation http handlers but the change would be diagnostic for T3 awareness.
 
 ---
 
