@@ -77,25 +77,44 @@ CWD_FROM_STDIN=$(extract_field "cwd")
 #     prompt lives in the FIRST user-message entry's `content` field —
 #     starting with the `[role:X]` tag verbatim.
 #
-# Detection discipline (post-2026-05-24 false-positive fix):
-#   - Earlier versions did `head -50 | grep '[role:X]'` which produced false
-#     positives in advisor sessions discussing the four-role model. Mid-line
-#     `[role:X]` mentions inside tool_result content (e.g. reading a handover
-#     file that quotes the dispatch syntax) made advisor sessions get
-#     misclassified as Junior workers, triggering the full jq -rcs scan over
-#     the entire 1MB+ transcript on every Stop event — visible CPU cost on
-#     mobile remote sessions per session-retro 2026-05-24 T4a §"What to change"
-#     #2. Per `feedback_falsifiable_hypothesis_before_structural_fix.md`:
-#     verified by counting role-tag occurrences in this advisor transcript
-#     (14) vs the dispatch position (line 1 only).
-#   - The fix narrows the search: only check the FIRST user-message line of
-#     the transcript (where Junior CLI puts the dispatch prompt). jq parses
-#     the first user message's content field; bash regex on that string
-#     anchors `^\[role:`. Avoids string-search false positives + caps work at
-#     exactly one line read + one regex.
+# Detection discipline (post-2026-05-25 fix — three failed predecessors below):
+#   1. Branch-gate (cwd's git branch ^junior/) — broken: Stop-hook cwd is the
+#      daemon's MAIN checkout, not the worker worktree (commit feaa75db9 fix).
+#   2. CLAUDE_PROMPT env regex — broken: env var doesn't exist in `claude -p`
+#      mode per code.claude.com/docs/en/hooks.md (commit 729b13312 fix).
+#   3. `head -50 transcript | grep '[role:X]'` ANYWHERE in first 50 lines —
+#      permissive: matched advisor sessions discussing the four-role model AND
+#      finalize-agent transcripts whose own prompts quote the completed task's
+#      [role:X] dispatch (post-task finalize-agent's first user message contains
+#      `Task that was completed: [role:planning] ...`). False-positive rate
+#      visible in PMD rows 561+562 (commit b80c16dcf narrowed it).
+#   4. `^\[role:` anchored at first 200 bytes of first user message — broken:
+#      Junior CLI wraps the dispatch in a framework prefix
+#      ("You are an autonomous worker agent..." ~552 bytes), so the legitimate
+#      `[role:X]` tag sits at byte ~553. EVERY production Junior worker since
+#      2026-05-24 12:06 UTC silently exited the role gate (this commit fixes).
 #
-# Env-var fast path retained as a no-cost prefix in case some future
-# invocation does set CLAUDE_PROMPT.
+# The current shape we match: `^Task:\n\[role:X\]` (multi-line anchor) inside
+# the FIRST user-message content string. The Junior CLI's dispatch template is:
+#
+#   You are an autonomous worker agent in the Junior framework.
+#   ... ~400 bytes of framework prefix ...
+#
+#   Task:
+#   [role:planning] v1-RT-r3 — plan ... — see .claude/PRPs/briefs/...
+#
+# What this rejects:
+#   - Advisor sessions: no `Task:\n[role:X]` shape anywhere (first message is
+#     either free-form user prose or, when discussing the four-role model,
+#     `[role:X]` mentions appear mid-paragraph after prose, never on a line of
+#     their own immediately following a bare `Task:` line).
+#   - Finalize agents: their first user message is
+#     `You are a git finalize agent... Task that was completed: [role:X] ...`
+#     — the role tag is on the SAME line as "Task that was completed:", not on
+#     a new line after `Task:\n`.
+#
+# Env-var fast path retained as a no-cost prefix in case some future invocation
+# does set CLAUDE_PROMPT — there the role tag is at the literal start.
 ROLE=""
 PROMPT="${CLAUDE_PROMPT:-}"
 if [[ "$PROMPT" =~ ^\[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
@@ -103,21 +122,25 @@ if [[ "$PROMPT" =~ ^\[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
 fi
 if [ -z "$ROLE" ] && [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ] && command -v jq &>/dev/null; then
   # Extract the FIRST user-message content string. Junior CLI's dispatch
-  # prompt lands here as a plain string starting with `[role:X]`. Advisor
-  # sessions either have a different first-message shape or have content
-  # that does NOT start with `[role:X]` (free-form user text).
+  # prompt lands here as a plain string containing the framework prefix
+  # followed by `Task:\n[role:X]`. Cap at 2000 bytes — the dispatch always
+  # sits within the first ~700 bytes; 2000 leaves headroom for future prompt-
+  # template changes while keeping the regex cheap on a 1MB+ advisor transcript.
   _FIRST_USER=$(jq -rs '
     [.[] | select(.type? == "user" and (.message?.content | type) == "string")] | .[0]?.message?.content // ""
-  ' "$TRANSCRIPT_PATH" 2>/dev/null | head -c 200)
-  if [[ "$_FIRST_USER" =~ ^\[role:(planning|impl-task|bm-task|ci-watcher)\] ]]; then
-    ROLE="${BASH_REMATCH[1]}"
+  ' "$TRANSCRIPT_PATH" 2>/dev/null | head -c 2000)
+  # Multi-line bash regex: $'...' enables \n interpretation, then anchor
+  # `^Task:` at line start followed by optional whitespace + literal newline
+  # + `[role:X]` at the next line start. BASH_REMATCH[1] captures the role.
+  _TASK_HEADER_RE=$'(^|\n)Task:[[:space:]]*\n\\[role:(planning|impl-task|bm-task|ci-watcher)\\]'
+  if [[ "$_FIRST_USER" =~ $_TASK_HEADER_RE ]]; then
+    ROLE="${BASH_REMATCH[2]}"
   fi
 fi
 if [ -z "$ROLE" ]; then
-  # No role tag at start of first user message — advisor session or ad-hoc
-  # Junior task, skip. Early exit BEFORE worktree resolution / git rev-parse /
-  # transcript jq -rcs scan — these are the expensive steps on a 1MB+ advisor
-  # transcript.
+  # No `Task:\n[role:X]` shape in first user message — advisor session,
+  # finalize agent, or ad-hoc Junior task. Skip. Early exit BEFORE the
+  # expensive worktree resolution / git rev-parse / transcript jq -rcs scan.
   exit 0
 fi
 
