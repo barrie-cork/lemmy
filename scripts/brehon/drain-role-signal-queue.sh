@@ -83,14 +83,15 @@ INGESTED=0
 SKIPPED=0
 ERRORED=0
 
-# Build a portable list of queue files
+# Build a portable list of queue files.
+# Worker queues are fetched as `worktree-<job>-queue.jsonl` (line 73 above);
+# main-checkout queue is `main-checkout-queue.jsonl`. Match both shapes —
+# the legacy `-name 'role-signal-queue.jsonl'` filter missed every worker
+# file because the scp rename above strips that filename.
 QUEUE_FILES=()
 while IFS= read -r -d '' f; do
   QUEUE_FILES+=("$f")
-done < <(find "$DRAIN_DIR" -name 'role-signal-queue.jsonl' -print0 2>/dev/null)
-if [ -f "${DRAIN_DIR}/main-checkout-queue.jsonl" ]; then
-  QUEUE_FILES+=("${DRAIN_DIR}/main-checkout-queue.jsonl")
-fi
+done < <(find "$DRAIN_DIR" -maxdepth 1 \( -name 'worktree-*-queue.jsonl' -o -name 'main-checkout-queue.jsonl' \) -print0 2>/dev/null)
 
 if [ ${#QUEUE_FILES[@]} -eq 0 ]; then
   echo "==> no queue files found on homeserver"
