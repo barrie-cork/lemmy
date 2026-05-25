@@ -5,6 +5,7 @@ phase_branch: phase-v1-RT-r3                  # not yet created — cut at bm-cu
 worktree: C:/Users/barri/Developer/brehon-fork-rt-r3   # created at bm-cut; until then use canonical brehon-fork
 authored: 2026-05-24
 authored_by: advisor (canonical brehon-fork / governance-v0 session)
+updated: 2026-05-25 (post v1-deps-r1 ship — completing-phase pivoted from v1-RT-r2 to v1-deps-r1)
 purpose: Bootstrap the v1-RT-r3 advisor session. Read the RESUME block first; it is the entry point.
 ---
 
@@ -12,12 +13,17 @@ purpose: Bootstrap the v1-RT-r3 advisor session. Read the RESUME block first; it
 
 **You are the advisor for Brehon v1-RT-r3.** The Brehon advisor runs inside the brehon-fork checkout — CWD `C:/Users/barri/Developer/brehon-fork` for governance-v0 meta-work, or `C:/Users/barri/Developer/brehon-fork-rt-r3` once `bm-cut` creates the lane worktree (per `.claude/rules/multi-lane-worktree.md`). There is no homeserver session.
 
-**RT-r2 closed:** `v1-RT-r2` shipped (PR #150 merged 2026-05-24T07:15:53Z, merge SHA `3b36b4e61c51cda1d16d360572a12199dd53819a`). The `brehon-fork-rt-r2` worktree is still alive — clean it up: `git -C C:/Users/barri/Developer/brehon-fork worktree remove ../brehon-fork-rt-r2 && git -C C:/Users/barri/Developer/brehon-fork branch -d phase-v1-RT-r2`.
+**Completing phase pivoted (2026-05-25):** since this bootstrap was authored (2026-05-24), `v1-deps-r1` shipped between RT-r2 and RT-r3. The immediately-prior CLOSED record is now `workflow_state_v1_deps_r1.md` (NOT RT-r2). Read both — RT-r2 close record stays live (lane changed twice; two-ago delete skipped per skill).
+
+- **RT-r2 closed:** PR #150 merged 2026-05-24T07:15:53Z, merge SHA `3b36b4e61c51cda1d16d360572a12199dd53819a`.
+- **deps-r1 closed:** PR #153 merged 2026-05-25T11:47:52Z, merge SHA `ab1e79a70ed696f9dae413db61f1a2bf6077113f`. Retro: `.claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md`.
+- **Worktree cleanup status (2026-05-25):** `brehon-fork-rt-r2` was cleaned at RT-r2 ship. `brehon-fork-deps-r1` was cleaned at deps-r1 transition (`git worktree prune` after the directory was emptied by stash-restore). Only active worktrees: canonical `brehon-fork` (governance-v0) + `brehon-fork-rt-r3` (`phase-v1-RT-r3` at tip `eaa4669ea`, pre-created from earlier session).
+- **Lane mode for this RT-r3 session:** user is driving from canonical `brehon-fork` (mobile remote-control); all impl/bm phase-branch work dispatched as Junior tasks targeting the existing `brehon-fork-rt-r3` lane. Canonical session writes briefs to `governance-v0`; never `git checkout phase-v1-RT-r3` here (multi-lane-worktree.md §Hard refusals #1).
 
 ## Session-start ritual (do these first)
 
 1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane; verify rt-r2 worktree is separate (or already removed).
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `9f1584574` (see §"Git state at handoff"); if drifted, `git log --oneline 9f1584574..governance-v0` and update your mental model before acting.
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `6aaaa5c23` (see §"Git state at handoff"); if drifted, `git log --oneline 6aaaa5c23..governance-v0` and update your mental model before acting.
 3. Read `.claude/decision-queue.json` for any pending entries (0 at handoff — see §"Decision-queue snapshot").
 4. `memory_search_hybrid(query: "participation consistency cron weekly dormancy vote outcome", limit: 5)` — load relevant lessons before authoring the planning brief.
 
@@ -37,9 +43,21 @@ v1-RT-r3 ships the multi-source `participation_consistency` event emitters. The 
 
 **Not easier:** Significantly wider file footprint than r2 (r2 = 1 file in 1 crate; r3 = 3+ crates: `scheduled_tasks.rs` in `crates/routes`, `submit_jury_vote.rs` in `crates/api`, new `flag-bad-faith` handler, migration if new config keys land). Cron architecture requires per-community-tx atomicity. Four distinct event sources may produce 3–4 separate impl tasks. e2e test coverage for cron paths requires either a test-scoped cron trigger or direct fn-call through the scheduler.
 
-## 3. Carry-forward from v1-RT-r2
+## 3. Carry-forward from v1-deps-r1 + v1-RT-r2
 
-**Most critical (§3 actions from RT-r2 retro):**
+**From v1-deps-r1 retro (2026-05-25, most recent — see `.claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md`):**
+
+1. **Stash-restore DQ contamination on governance-v0 (WATCH — emerging pattern, not yet 2nd occurrence):** the `chore: restore stashed changes from earlier session` commit (`17b40e2a4` on deps-r1) reintroduced 2 resolved DQ entries into pending on `governance-v0`, causing bm-merge #461 to false-block. Before dispatching any bm-merge in RT-r3, verify `.claude/decision-queue.json` on `governance-v0` is clean (zero stale pending entries from prior stash/restore). Recovery if it happens: `chore(advisor): resolve bm-merge-gate-failure-NNN` to drain stale entries, then retry bm-merge. If 2nd occurrence in RT-r3, promote to a lesson.
+
+2. **`git update-ref` blocked when daemon is checked out on governance-v0** — observed during deps-r1 post-finalize daemon sync. Fallback: `git merge --ff-only origin/governance-v0`. Carry to precheck Check 3b instruction.
+
+3. **#292 stale-base recovery recipe applied (T2 deps-r1)** — cherry-pick from worker branch to lane is the working recovery (`feedback_junior_292_stale_base_recover_recipe.md`). If RT-r3 cron-emitter tasks dispatch via Junior on a stale daemon-local ref, the recipe is the same.
+
+4. **Advisory miss (low signal):** `crates/diesel_utils/src/connection.rs:83` doc-comment referencing `scope_boxed()` was NOT deleted by the worker despite plan §12 specifying deletion. Non-blocking. If RT-r3 touches `diesel_utils` (unlikely — RT-r3 is cron + emitters), opportunistically clean up.
+
+5. **bm-merge brief — findings YAML is gitignored** — bm-merge brief v2 explicitly noted this; carry to RT-r3's bm-merge brief template.
+
+**From v1-RT-r2 retro (most critical §3 actions — still binding):**
 
 **Action 1 (MANDATORY for all r3 impl-task briefs with e2e in DoD):**
 Every impl-task brief whose DoD includes an e2e command MUST include this exact guard in §4 Constraints:
@@ -115,26 +133,33 @@ Run `/brehon-phase-transition v1-RT-r3 v1-RT-r4` (or `v1-RT-r5` if r4 completes 
 
 ## Git state at handoff (captured literally — do not paraphrase)
 
-- governance-v0 HEAD: `9f1584574` (captured 2026-05-24) — `Merge pull request #149 from barrie-cork/phase-v1-ship-3`
-- RT-r2 merge SHA (for reference): `3b36b4e61c51cda1d16d360572a12199dd53819a` (PR #150 merged 2026-05-24T07:15:53Z)
-- Phase branch: `phase-v1-RT-r3` not yet created (branch cut at bm-cut)
+**Original handoff (2026-05-24):** governance-v0 HEAD `9f1584574` (post-RT-r2/ship-3 merges).
+
+**Refreshed handoff (2026-05-25, post v1-deps-r1 ship):**
+
+- governance-v0 HEAD: `6aaaa5c23` — `docs(retro): v1-deps-r1 — diesel-async 0.9 + sha2 0.11 + 8 SemVer-compat bumps; PR #153 merged ab1e79a70`
+- v1-deps-r1 merge SHA: `ab1e79a70ed696f9dae413db61f1a2bf6077113f` (PR #153 merged 2026-05-25T11:47:52Z)
+- v1-RT-r2 merge SHA (still relevant — calculator + bounds clamp absorb r3 events): `3b36b4e61c51cda1d16d360572a12199dd53819a` (PR #150 merged 2026-05-24T07:15:53Z)
+- Phase branch: `phase-v1-RT-r3` already exists at `eaa4669ea` (lane worktree `brehon-fork-rt-r3` pre-created from earlier session); branch did NOT come from a bm-cut against this transition's trunk — verify it forks cleanly from `6aaaa5c23` OR run a forward-merge before first impl push.
 - Recent governance-v0 commits:
 
   ```
-  9f1584574 Merge pull request #149 from barrie-cork/phase-v1-ship-3
-  3b36b4e61 Merge pull request #150 from barrie-cork/phase-v1-RT-r2
-  32931e5a2 chore(advisor): author bm-merge brief for v1-ship-3 PR #149
-  117602f2b chore(merge): merge-forward governance-v0 into phase-v1-RT-r2 pre-merge
-  3b87503dd chore(decision-queue): advisor-laptop mutate DQ b6b7e4a77e02-001 result:pass (fix-impl-1)
+  6aaaa5c23 docs(retro): v1-deps-r1 — diesel-async 0.9 + sha2 0.11 + 8 SemVer-compat bumps; PR #153 merged ab1e79a70
+  ab1e79a70 Merge pull request #153 from barrie-cork/phase-v1-deps-r1
+  222bb5671 chore(advisor): author v1-deps-r1 bm-merge-2 brief (retry — DQ now clean)
+  87de1e37f chore(advisor): resolve bm-merge-gate-failure-001 — stale pending entries from restore-stash; lane DQ clean (0 pending)
+  2346ed06f chore(decision-queue): merge bm-task v1-deps-r1-bm-merge
   ```
 
 ## Decision-queue snapshot at handoff
 
 ```decision-queue-snapshot
-(empty at handoff — 0 pending entries)
-Note: DQ #229 (Shape G re-enable) is in resolved[], dated reminder for 2026-06-01.
-Note: RT-r2 validate-pending entries (8aca794fb044-001, b246616aaf8f-001, b6b7e4a77e02-001) are all in resolved[].
-Note: ship-3 clarify DQs (ship3clarify01-001/002/003) are in resolved[] from merge-forward.
+(empty at refreshed handoff 2026-05-25 — 0 pending entries; verified `cat .claude/decision-queue.json | jq '.pending|length'` = 0; resolved count: 187)
+Note: DQ #229 (Shape G re-enable) is in resolved[], dated reminder for 2026-06-01 (~1 week out — verify before any GH-Actions-side cargo work).
+Note: RT-r2 validate-pending entries (8aca794fb044-001, b246616aaf8f-001, b6b7e4a77e02-001) all in resolved[].
+Note: ship-3 clarify DQs (ship3clarify01-001/002/003) all in resolved[].
+Note: deps-r1 lifecycle DQs (a22859c2ae07-001..005, 2b05f9a6183b-001, plus advisor-mode clarify entries) all in resolved[].
+Note: bm-merge-gate-failure-001 from deps-r1 cycle is in resolved[] (stash-restore DQ contamination — watch for recurrence in RT-r3).
 ```
 
 ## Stop-and-ask tripwires
@@ -144,3 +169,5 @@ Note: ship-3 clarify DQs (ship3clarify01-001/002/003) are in resolved[] from mer
 - Stop and ask if: the planner proposes more than 4 impl tasks — r3's file footprint is wider than r2's, but 5+ tasks signals the planner is over-splitting; check if tasks can be batched by emitter pair.
 - Stop and ask if: `submit_jury_vote.rs` does NOT already use `conn.run_transaction()` — the vote-outcome emitter addition requires a transaction boundary; if the handler is currently non-transactional, the scope of change is larger than the brief anticipates.
 - Stop and ask if: the Phase-2 e2e log shows a failure in any pre-existing `v1_*_fixtures` test — regression suspected; do not auto-queue a fix-impl before surfacing to user.
+- Stop and ask if: `git log governance-v0 ^phase-v1-RT-r3 --oneline` is non-empty (i.e. trunk is ahead of the pre-created rt-r3 branch tip `eaa4669ea`) — RT-r3 branch was created BEFORE deps-r1 shipped; forward-merge `6aaaa5c23` into `phase-v1-RT-r3` before any impl push, OR delete + recut from `governance-v0` if the lane has zero work. Per `feedback_daemon_local_trunk_stale_multi_lane.md`.
+- Stop and ask if: `cat .claude/decision-queue.json | jq '.pending|length'` returns non-zero before dispatching bm-merge — stash-restore DQ contamination pattern (deps-r1 emerged). Drain stale pending via `chore(advisor): resolve bm-merge-gate-failure-NNN` before retry.
