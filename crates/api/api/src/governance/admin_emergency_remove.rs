@@ -444,6 +444,7 @@ async fn process_flag_bad_faith(
   Ok(true)
 }
 
+#[expect(clippy::too_many_arguments)]
 async fn emit_reputation_event_local(
   conn: &mut AsyncPgConnection,
   person_id: PersonId,
