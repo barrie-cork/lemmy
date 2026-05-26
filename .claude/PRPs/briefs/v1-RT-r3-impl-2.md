@@ -47,6 +47,24 @@ Required fields:
 
 Generate id via `bash scripts/brehon/dq-v3-new-entry.sh`. Append via `bash scripts/brehon/dq-v3-append-fragment.sh <fragment.json> --pending`. Commit + push DQ to worker branch.
 
+## 3a. Handover from prior cohort
+
+```yaml
+prior_cohort_tasks:
+  - task: 1
+    commit: b9876b7d8
+    filesCreated:
+      - crates/api/api/src/governance/participation_cron.rs
+    filesModified:
+      - crates/api/api/src/governance/mod.rs
+      - crates/routes/src/utils/scheduled_tasks.rs
+    keyDecisions:
+      - sql_query for both discovery queries (activity GROUP BY HAVING + dormancy NOT EXISTS anti-join)
+      - on_conflict_do_nothing untargeted (partial index; targeted form not supported)
+      - ENTRY_KIND_PARTICIPATION_CRON_TICK used for both source-1 and source-2 governance_log entries
+    notes: validate-pending-laptop DQ c76792506538-001 PASS (cargo-check + cargo-clippy --no-deps -- -D warnings clean, advisor-laptop SHA 7c1bcddab on phase-v1-RT-r3)
+```
+
 ## 3. Required reading
 
 - `.claude/PRPs/plans/v1-RT-r3.plan.md` §13 Task 2 (authoritative IMPLEMENT + MIRROR + GOTCHA + VALIDATE)
