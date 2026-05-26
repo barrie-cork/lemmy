@@ -4190,6 +4190,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-030"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T10:30:00Z",
+      "question": "Junior daemon's per-task `git worktree add` handler does not init submodules. crates/email/translations is an empty gitlink until `git submodule update --init --recursive` runs, causing lemmy_email build.rs to fail with `Os { code: 2, kind: NotFound }` on any --workspace cargo invocation. Carry-forward to MCPs/junior-mcp: patch the daemon-side worktree-create handler to auto-init recursively?",
+      "options": [
+        "patch-daemon-worktree-add",
+        "keep-brief-side-only"
+      ],
+      "context": "Junior #475 failure 2026-05-26: 151 turns / $8.79 / 37min on submodule build break. Defect class confirmed 2x: laptop lane worktrees (feedback_phase_lane_worktree_bootstrap_checklist.md) + Junior daemon per-task worktrees (this incident). The brief-side fix (§2.0 Task-0 pre-flight in v1-RT-r3-impl-4 brief commit 4538eb8b9) closes this dispatch but every future impl-task brief must remember to include the same pre-flight — error-prone and re-fires the defect class. Daemon-side patch in MCPs/junior-mcp's per-task worktree handler (run `git submodule update --init --recursive` immediately after `git worktree add`) closes the entire class structurally.",
+      "answer": "patch-daemon-worktree-add — carry-forward to MCPs/junior-mcp as a separate PR/patch. Acceptance criteria: (a) after the per-task `git worktree add` call, daemon runs `git submodule update --init --recursive` in the new worktree directory; (b) submodule init exit code propagates to task failure if non-zero (with descriptive log line); (c) a smoke test verifies fresh worktrees expose `crates/email/translations/` populated. Scope ~1h. Reference incidents: laptop lane bootstrap miss (feedback_phase_lane_worktree_bootstrap_checklist.md) + Junior #475 2026-05-26. Until daemon patch ships, brief-side §2.0 Task-0 pre-flight remains the contractual gate (Path A). When daemon patch lands, the brief-side step becomes belt-and-braces — still safe to keep.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T10:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-031"
     }
   ]
 }
