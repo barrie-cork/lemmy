@@ -20,6 +20,27 @@ Implement §13 Task 4 of `.claude/PRPs/plans/v1-RT-r3.plan.md` verbatim. Add `v1
 
 All `requires:` on `phase-v1-RT-r3` @ `ddb439553`.
 
+### 2.0 Task-0 pre-flight (MANDATORY — run BEFORE any Read/Edit/cargo on this worktree)
+
+The Junior daemon's per-task `git worktree add` does NOT init submodules. The `crates/email/translations` submodule directory exists as an empty gitlink; any cargo command touching `lemmy_email` (which is in every `--workspace` invocation) fails with `Os { code: 2, kind: NotFound }` on the build script until initialized. This is the **first** action the worker takes, before reading the canonical sibling, before any Edit, before any cargo invocation:
+
+```bash
+# Step 0.1 — init submodules (idempotent; fixes lemmy_email build.rs)
+git submodule update --init --recursive
+echo "submodule init exit: $?"
+# EXPECT: exit 0. If non-zero, raise kind: "blocker" DQ — do not proceed.
+
+# Step 0.2 — smoke cargo-check (baseline; confirms worktree is buildable BEFORE any Edit)
+bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task4-preflight.log 2>&1
+echo "cargo-check exit: $?"
+tail -20 .claude/PRPs/debug/v1-RT-r3-task4-preflight.log
+# EXPECT: exit 0 against base tip `6c1b326c1`. If non-zero, the failure
+# is environmental (not caused by this task's pending edits) — raise
+# kind: "blocker" DQ citing the failing log and do not proceed.
+```
+
+Both steps are pre-conditions; failing either is a hard refusal — file a `kind: "blocker"` DQ with the failing exit code + log tail, do NOT attempt any Edit on `e2e.rs` until baseline is green. **Recurrence basis**: 2× (laptop lane worktree per `feedback_phase_lane_worktree_bootstrap_checklist.md` + Junior daemon worktree per Junior #475 incident 2026-05-26: `/srv/brehon-fork/.junior/worktrees/job-475` was created via `git worktree add` and `git worktree add` doesn't init submodules — worker burned 60+ turns on post-failure research before exhausting turn budget).
+
 ### 2.1 Canonical sibling (single — read FIRST, mirror verbatim)
 
 **`v1_ship_3_fixtures` at `crates/server/tests/e2e.rs:16699-17099`** is the sole canonical mirror for this task. Do NOT read other sibling fixtures modules. The audit at `.claude/PRPs/reports/e2e-rs-code-quality-audit-2026-05-26.md` Axis 1 confirms all 13 sibling modules are Case A (outer `LemmyResult<()>`, helper `LemmyResult<T>`, `?` propagation); `v1_ship_3_fixtures` is the most recent and the closest fit.
@@ -141,6 +162,7 @@ After Edit 1 run `bash scripts/brehon/cargo-check.sh --workspace --features full
 
 ### 3.3 Lessons (THIRD — load-bearing only)
 
+- `.claude/lessons/feedback_worktree_submodules_not_auto_init.md` + `feedback_phase_lane_worktree_bootstrap_checklist.md` — `git worktree add` does NOT init submodules; `crates/email/translations` gitlink is empty until `git submodule update --init --recursive` runs. Drives §2.0 Task-0 pre-flight.
 - `.claude/lessons/feedback_lemmy_error_no_std_error.md` — Case A discipline (outer `LemmyResult<()>` + helper `LemmyResult<T>` + no `.map_err` bridges).
 - `.claude/lessons/feedback_junior_worker_e2e_edit_hang.md` — single contiguous block; 2-Edit cap per §2.5.
 - `.claude/lessons/feedback_clippy_test_style.md` + `feedback_clippy_rerun_after_fix.md` — workspace denies `unwrap_used`, `expect_used`, `allow_attributes`. Test bodies must use `?` propagation; helpers must return `LemmyResult<T>`.
@@ -202,6 +224,7 @@ prior_cohort_tasks:
 
 ## 4. Constraints
 
+- **§2.0 Task-0 pre-flight is mandatory and runs FIRST.** `git submodule update --init --recursive` + smoke `cargo-check --workspace --features full` (exit 0) BEFORE any Read of canonical sibling, BEFORE any Edit, BEFORE any Grep. Non-zero exit on either step → `kind: "blocker"` DQ + halt. Per Junior #475 failure class.
 - **No edits outside `crates/server/tests/e2e.rs`.** Touching any other file is a process breach.
 - **Two-Edit cap** (per §2.5). Edit 1 = module skeleton + helpers (~150 lines). Edit 2 = 10 tests (~450 lines). No third Edit on this block. Fix-in-place additional Edits to address cargo-check failures are allowed but must stay inside the new `v1_rt_r3_fixtures` module.
 - **One commit:** `test(governance): r3 e2e tests across all 5 stories (task 4)`.
