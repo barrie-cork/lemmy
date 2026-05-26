@@ -4224,6 +4224,25 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-032"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T12:35:00Z",
+      "question": "Task 4 cycle-count meta-rule §5.3 HARD REFUSAL fired after 4 consecutive error_max_turns (#474 #475 #476 #477); user authorised carve-out (B) advisor-side authorship — record the catch-fire + carve-out decision durably",
+      "options": [
+        "(A) split Task 4 into two tasks (Story 1+2 + Stories 3+4+5)",
+        "(B) advisor-side authorship of Task 4 (CHOSEN — user authorised one-time carve-out from crates/** discipline)",
+        "(C) narrower-scope re-dispatch (helpers task + tests task)",
+        "(D) catch-fire-only, replan in new sub-phase"
+      ],
+      "context": "Failure cascade on Task 4 / crates/server/tests/e2e.rs / error_max_turns: #474 (recon hang, broad multi-candidate convergence — $9.46 / 151 turns), #475 (environmental error — submodule-not-init Os{code:2,NotFound} on lemmy_email build.rs; brief patched §2.0 Task-0; carry-forward DQ -031 for MCPs/junior-mcp daemon-side worktree-create patch), #476 (false-promise recon — announced Edit at turn ~22 'Writing Edit 1...' but never emitted; brief-prose precondition read but not executed; SSH-tarred 3.4 GB forensics + DQ -032 log), #477 (hardened-dispatch retry — Task-0 bash literal embedded in create_task description; ENCODING FAILED — Junior parses description as natural-language context not imperative; productive-drift-back-to-recon — 6 Edits fired turn ~10-50 then dropped back into recon to resolve E0271 Diesel type error, exhausted budget — $10.22 / 151 turns / 52 min / worktree auto-reaped before forensics window). Total cost ~$30+ API + ~3.5h wallclock + zero shipped code. Per advisor-orchestrator.md §5.3 cycle-count meta-rule: same (error_class, file_basename) ≥3 → HARD REFUSAL. We are at 4. Discipline mandates catch-fire to user for re-plan.",
+      "answer": "Option (B) — user-authorised advisor-side authorship of Task 4 as the corrective replan. This is a ONE-TIME carve-out from the advisor-orchestrator.md 'advisor never authors crates/**' discipline; it is NOT precedent. Execution moves to a new session per handover at .claude/PRPs/handovers/v1-RT-r3-task4-advisor-authorship-2026-05-26.md. Recommended lane mode A: worktree brehon-fork-rt-r3 on phase-v1-RT-r3 for local cargo iteration. Exit criteria: v1_rt_r3_fixtures module + 10 tests at crates/server/tests/e2e.rs; cargo-check --workspace --features full exit 0; commit subject 'feat(governance): v1-RT-r3 task 4 — e2e tests 10 across 5 stories (advisor-authored carve-out per cycle-count §5.3)' with HANDOVER trailer per brief §3a; user-gate-4 e2e (local vs dispatch) after compile; /brehon-verify → bm-merge. Promotion-candidate findings to harvest at retro: (1) feedback_dispatch_description_is_context_not_directive.md — 1× confirmed via #477 deliberate experiment; (2) feedback_brief_task0_submodule_init.md OR amend feedback_worktree_submodules_not_auto_init.md with Junior-daemon variant — 2× confirmed (laptop + Junior daemon); (3) productive-drift-back-to-recon — new failure sub-class, 1× #477, distinct from #474 (never reached Edit) and #476 (announced Edit didn't emit); (4) forensics window for error_max_turns is narrower than §5.6 implies — daemon auto-reaps within seconds, not 'after user-initiated cancel'; rule-update candidate. junior-log-triage methodology used 5× this session; promotion-ready as .claude/agents/junior-log-triage.md at retro.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T12:35:00Z",
+      "approved_by": "user",
+      "approved_at": "2026-05-26T12:33:00Z",
+      "id": "a3d0e9941441-033"
     }
   ]
 }
