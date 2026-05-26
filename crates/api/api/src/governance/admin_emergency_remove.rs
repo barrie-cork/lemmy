@@ -17,26 +17,33 @@
 use crate::governance::{
   actor_pseudonym_helper, admin_assign_jury,
   config::{self, ConfigCache, Scope},
-  governance_log::{self, ENTRY_KIND_SEVERITY_TIER_FROZEN},
+  governance_log::{self, ENTRY_KIND_EVIDENCE_QUALITY_RECORDED, ENTRY_KIND_SEVERITY_TIER_FROZEN},
 };
+use activitypub_federation::config::Data;
+use actix_web::web::Json;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use lemmy_api_common::governance::{FlagBadFaithEmergencyReport, FlagBadFaithEmergencyReportResponse};
+use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
   newtypes::{CommentId, CommunityId, ModerationCaseId, PostId},
   source::governance::{
     jury_assignment::JuryAssignmentInsertForm,
     moderation_case::{ModerationCase, ModerationCaseInsertForm},
+    reputation_event::ReputationEventInsertForm,
   },
 };
 use lemmy_db_schema_file::{
   PersonId,
   enums::{
-    CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryAssignmentStatus, SeverityTier,
+    CaseSeverity, CaseStatus, CaseStatusTier, CaseTargetType, JuryAssignmentStatus,
+    ReputationDimension, ReputationEventSourceType, SeverityTier,
   },
-  schema::{comment, community, jury_assignment, moderation_case, post},
+  schema::{comment, community, jury_assignment, moderation_case, post, reputation_event},
 };
+use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
-use lemmy_utils::error::LemmyResult;
+use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 use serde_json::json;
 
 /// Scoped target for an emergency removal. Encodes both the target type
@@ -327,4 +334,143 @@ async fn process_emergency_remove(
   .await?;
 
   Ok(case_id)
+}
+
+/// Admin-flagged bad-faith report against an EmergencyRemove-status
+/// case. Emits `-1 reporting_accuracy` for the case reporter via a
+/// dedupe-keyed `reputation_event` row plus an
+/// `ENTRY_KIND_EVIDENCE_QUALITY_RECORDED` governance_log entry
+/// attributed to the admin. PRD section 5.3 source 4b + ADR-013.
+pub async fn flag_bad_faith_emergency_report(
+  Json(data): Json<FlagBadFaithEmergencyReport>,
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<FlagBadFaithEmergencyReportResponse>> {
+  is_admin(&local_user_view)?;
+
+  let admin_id = local_user_view.person.id;
+  let admin_pseudonym =
+    actor_pseudonym_helper::get_or_create(&mut context.pool(), admin_id).await?;
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+
+  let case_id = data.case_id;
+  let admin_pseudonym_for_tx = admin_pseudonym;
+
+  let flagged = conn
+    .run_transaction(async |conn| {
+      process_flag_bad_faith(conn, admin_pseudonym_for_tx, case_id).await
+    })
+    .await?;
+
+  Ok(Json(FlagBadFaithEmergencyReportResponse {
+    case_id,
+    flagged,
+  }))
+}
+
+async fn process_flag_bad_faith(
+  conn: &mut AsyncPgConnection,
+  admin_pseudonym: String,
+  case_id: ModerationCaseId,
+) -> LemmyResult<bool> {
+  // 1. Load case + assert status.
+  let case_row: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await
+    .map_err(|_e| LemmyErrorType::NotFound)?;
+  if case_row.status != CaseStatus::EmergencyRemove {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "case {} is in status {:?}; flag-bad-faith requires EmergencyRemove",
+        case_id.0, case_row.status
+      ))
+      .into(),
+    );
+  }
+  let reporter_id = case_row.creator_id.ok_or_else(|| {
+    LemmyErrorType::Unknown(format!(
+      "case {} has no reporter (creator_id); flag-bad-faith requires a reporter",
+      case_id.0
+    ))
+  })?;
+
+  // 2. Emit reputation_event + governance_log.
+  let reporter_pseudonym =
+    actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), reporter_id).await?;
+  let mut cache = ConfigCache::new();
+  let evidence_delta_i64 = config::get_int(
+    &mut cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "deltas.evidence_bad_faith",
+  )
+  .await?;
+  let evidence_delta = i32::try_from(evidence_delta_i64).map_err(|_e| {
+    LemmyErrorType::Unknown(format!(
+      "deltas.evidence_bad_faith ({evidence_delta_i64}) overflows i32"
+    ))
+  })?;
+  // file-private emit_reputation_event_local helper (mirrors
+  // submit_jury_vote.rs:968 verbatim but lives in admin_emergency_remove.rs).
+  emit_reputation_event_local(
+    conn,
+    reporter_id,
+    case_row.community_id,
+    ReputationDimension::ReportingAccuracy,
+    evidence_delta,
+    case_id,
+    "evidence_bad_faith",
+    ReputationEventSourceType::EvidenceQuality,
+    Some(format!("evidence_bad_faith:{}", case_id.0)),
+  )
+  .await?;
+  governance_log::append(
+    &mut conn.into(),
+    ENTRY_KIND_EVIDENCE_QUALITY_RECORDED,
+    json!({
+      "case_id": case_id.0,
+      "reporter_pseudonym": reporter_pseudonym,
+      "dimension": "reporting_accuracy",
+      "delta": evidence_delta,
+      "source_event_type": "evidence_quality",
+      "trigger": "admin_flagged_bad_faith",
+    }),
+    Some(admin_pseudonym),
+  )
+  .await?;
+  Ok(true)
+}
+
+async fn emit_reputation_event_local(
+  conn: &mut AsyncPgConnection,
+  person_id: PersonId,
+  community_id: Option<CommunityId>,
+  dimension: ReputationDimension,
+  delta: i32,
+  source_case_id: ModerationCaseId,
+  reason: &str,
+  source_event_type: ReputationEventSourceType,
+  dedupe_key: Option<String>,
+) -> LemmyResult<()> {
+  let form = ReputationEventInsertForm {
+    person_id,
+    community_id,
+    dimension,
+    delta,
+    source_case_id: Some(source_case_id),
+    source_report_id: None,
+    reason: reason.to_string(),
+    expires_at: None,
+    dedupe_key,
+    source_event_type: Some(source_event_type),
+  };
+  insert_into(reputation_event::table)
+    .values(&form)
+    .on_conflict_do_nothing()
+    .execute(conn)
+    .await?;
+  Ok(())
 }
