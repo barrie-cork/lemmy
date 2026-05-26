@@ -57,6 +57,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "1bb1ff7a00a8-001"
+    },
+    {
+      "id": "8fc5df3a3664-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "validate-pending-laptop: cargo-check + clippy + test --no-run on fix-impl-1 (#[expect] attrs on emit helpers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 adds #[expect(clippy::too_many_arguments)] to emit_reputation_event (submit_jury_vote.rs:1095) and emit_reputation_event_local (admin_emergency_remove.rs:447). Pre-push cargo-check passed (exit 0). Validation deferred to laptop per Shape G suspension.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log\n# EXPECT: exit 0"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
     }
   ],
   "resolved": [

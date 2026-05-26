@@ -1092,6 +1092,7 @@ fn map_decision_to_sanction(decision: JuryDecision) -> Option<(SanctionScope, Sa
 /// byte-identical v0 behaviour at those sites. The r3 callers
 /// (vote-outcome juror loop + evidence-cited reporter) pass
 /// `VoteOutcome` / `EvidenceQuality` + a populated `dedupe_key`.
+#[expect(clippy::too_many_arguments)]
 async fn emit_reputation_event(
   conn: &mut diesel_async::AsyncPgConnection,
   person_id: PersonId,
