@@ -202,6 +202,29 @@ pub struct AdminCloseCaseResponse {
   pub closed: bool,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request payload for `POST /api/v4/governance/admin/emergency-remove/flag-bad-faith`.
+/// Admin-only per ADR-013 + PRD section 5.3 source 4b. Flags the
+/// reporter of an `EmergencyRemove`-status case as bad-faith; emits
+/// `-1 reporting_accuracy`.
+pub struct FlagBadFaithEmergencyReport {
+  pub case_id: ModerationCaseId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from `flag_bad_faith_emergency_report`. `flagged: true`
+/// confirms the reputation_event row was written (or de-duped to a
+/// prior identical row via the dedupe_key partial unique index).
+pub struct FlagBadFaithEmergencyReportResponse {
+  pub case_id: ModerationCaseId,
+  pub flagged: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
