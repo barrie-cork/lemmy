@@ -1,91 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "81719cf8ca8d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-26T19:10:00Z",
-      "question": "Run v1-RT-r3 task 3 cargo validation on laptop (Shape G suspended per DQ #229)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 committed e544ae26e on worker branch. Three files changed: api_common DTOs, admin_emergency_remove.rs handler+inner+helper, routes/lib.rs import+scope wire.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-task3-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-task3-test-no-run.log 2>&1\""
-      ],
-      "branch": "phase-v1-RT-r3",
-      "phase_task": 3,
-      "result": "fail",
-      "log_slice": "Validated against merged tip e4cc1e951 (task 2+3 combined). cargo-check --workspace --features full PASS 1m36s warm. cargo-clippy --workspace --features full --no-deps -- -D warnings FAIL: clippy::too_many_arguments (9/7) at admin_emergency_remove.rs:447:1 on async fn emit_reputation_event_local. Single error attributable to task 3. cargo-test --workspace --features full --test e2e --no-run NOT RUN (blocked by clippy gate). Root cause: plan §10.2 signature extension grew to 9 args (above clippy threshold of 7); affects task 3's helper which mirrors task 2's emit shape verbatim per brief.",
-      "failed_commands": [
-        "cargo-clippy --workspace --features full --no-deps -- -D warnings: clippy::too_many_arguments on admin_emergency_remove.rs:447 emit_reputation_event_local (9/7)"
-      ],
-      "answer": "fail — non-allowlist §G4 (clippy::too_many_arguments). Surfaced to user. Fix path approved: narrow fix-impl-task adding #[expect(clippy::too_many_arguments)] on both emit helpers per feedback_clippy_test_style.md (workspace allows #[expect] not #[allow]). Entry stays in pending[] for §G4 triage; will mutate to pass after fix-impl + re-validate.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-26T00:00:00Z",
-      "question": "Validate task 2 (vote-outcome + evidence-cited emit) — cargo check + clippy on crates/api",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Commit 996765cae on worker branch. Shape G suspended per DQ #229; laptop advisor runs validation.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full -- -D warnings"
-      ],
-      "branch": "phase-v1-RT-r3",
-      "phase_task": 2,
-      "result": "fail",
-      "log_slice": "Junior worker paraphrased brief §2 VALIDATE blocks when authoring DQ commands — wrote ./scripts/brehon/cargo-check.sh -p lemmy_api -- -D warnings (cargo-check + -D warnings is meaningless; not a clippy gate). User approved running brief's canonical commands instead. Against merged tip e4cc1e951: cargo-check --workspace --features full PASS 1m36s. cargo-clippy --workspace --features full --no-deps -- -D warnings FAIL: clippy::too_many_arguments (9/7) at submit_jury_vote.rs:1095:1 on async fn emit_reputation_event. Single error attributable to task 2's signature extension per plan §10.2. Lesson candidate: Junior paraphrased brief VALIDATE blocks in DQ entry (watch for 2nd recurrence).",
-      "failed_commands": [
-        "cargo-clippy --workspace --features full --no-deps -- -D warnings: clippy::too_many_arguments on submit_jury_vote.rs:1095 emit_reputation_event (9/7)"
-      ],
-      "answer": "fail — non-allowlist §G4 (clippy::too_many_arguments). Surfaced to user. Fix path approved: narrow fix-impl-task adding #[expect(clippy::too_many_arguments)] on both emit helpers per feedback_clippy_test_style.md (workspace allows #[expect] not #[allow]). Entry stays in pending[] for §G4 triage; will mutate to pass after fix-impl + re-validate.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "1bb1ff7a00a8-001"
-    },
-    {
-      "id": "8fc5df3a3664-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-26T00:00:00Z",
-      "question": "validate-pending-laptop: cargo-check + clippy + test --no-run on fix-impl-1 (#[expect] attrs on emit helpers)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-1 adds #[expect(clippy::too_many_arguments)] to emit_reputation_event (submit_jury_vote.rs:1095) and emit_reputation_event_local (admin_emergency_remove.rs:447). Pre-push cargo-check passed (exit 0). Validation deferred to laptop per Shape G suspension.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log\n# EXPECT: exit 0",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log\n# EXPECT: exit 0",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log\n# EXPECT: exit 0"
-      ],
-      "branch": "phase-v1-RT-r3",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "c76792506538-001",
@@ -4093,6 +4008,86 @@
       "approved_by": null,
       "approved_at": null,
       "id": "1b8527b076d4-001"
+    },
+    {
+      "id": "81719cf8ca8d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T19:10:00Z",
+      "question": "Run v1-RT-r3 task 3 cargo validation on laptop (Shape G suspended per DQ #229)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 committed e544ae26e on worker branch. Three files changed: api_common DTOs, admin_emergency_remove.rs handler+inner+helper, routes/lib.rs import+scope wire.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-task3-test-no-run.log 2>&1\""
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "Validate task 2 (vote-outcome + evidence-cited emit) — cargo check + clippy on crates/api",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Commit 996765cae on worker branch. Shape G suspended per DQ #229; laptop advisor runs validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full -- -D warnings"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1bb1ff7a00a8-001"
+    },
+    {
+      "id": "8fc5df3a3664-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "validate-pending-laptop: cargo-check + clippy + test --no-run on fix-impl-1 (#[expect] attrs on emit helpers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 adds #[expect(clippy::too_many_arguments)] to emit_reputation_event (submit_jury_vote.rs:1095) and emit_reputation_event_local (admin_emergency_remove.rs:447). Pre-push cargo-check passed (exit 0). Validation deferred to laptop per Shape G suspension.",
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log\n# EXPECT: exit 0"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
