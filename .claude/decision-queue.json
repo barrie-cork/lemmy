@@ -4207,6 +4207,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-031"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T11:25:30Z",
+      "question": "Junior #476 cancelled — Task-0 brief-prose precondition not executed despite being read; false-promise sub-signature of #474-class reconnaissance hang",
+      "options": [
+        "redispatch-with-prose-only-hardening (lower-risk, less novel)",
+        "redispatch-with-dispatch-string-encoded-task-0 (chosen — make Task-0 mechanically unavoidable on turn 1)"
+      ],
+      "context": "Two consecutive polls (5 min apart) of Junior #476 showed: zero Edit calls; zero Bash calls except a decoy grep; Task-0 §2.0 (git submodule update --init --recursive + smoke cargo-check.sh) never invoked despite the brief explicitly requiring it as the first action. At turn ~22 Junior emitted an assistant narration 'Now I have all the context I need. Writing Edit 1 — the module skeleton with use block, EnvVarGuard, and 5 helper bodies' but the following message reverted to Read without emitting any Edit tool call. Trajectory: #474-variant recon hang with a new sub-signature ('brief-prose precondition read, internalised, NOT executed; announced edit, did not emit'). Tool tally at turn ~26: 18 Read / 6 Grep / 1 Bash (decoy) / 0 Edit. Forensics preserved at homeserver:/tmp/job-476-recovery-1779794574.tar.gz (3.4 GB). Cancelled to free EliteDesk RAM for redispatch.",
+      "answer": "redispatch-with-dispatch-string-encoded-task-0 — move Task-0 commands verbatim into the create_task description literal so the mechanical first-turn action is bash-with-the-commands, not 'read the brief and decide'. Carve-out from the <100-char dispatch convention is justified: convention exists to prevent description-as-brief, not to forbid encoding a single hard-refusal-class precondition. Promotion-candidate (1× so far) for a new defect class 'brief-prose precondition not executed despite being read'; watch for 2nd occurrence to author lesson feedback_dispatch_string_for_hard_preconditions.md.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T11:25:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-032"
     }
   ]
 }
