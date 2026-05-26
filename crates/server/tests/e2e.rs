@@ -17141,7 +17141,7 @@ mod v1_rt_r3_fixtures {
   use lemmy_api_crud::governance::create_report::create_report;
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
   use lemmy_db_schema::source::{
-    comment::CommentInsertForm,
+    comment::{Comment, CommentInsertForm},
     community::{Community, CommunityInsertForm},
     governance::{
       case_evidence::CaseEvidenceInsertForm,
@@ -17150,7 +17150,7 @@ mod v1_rt_r3_fixtures {
     instance::Instance,
     local_user::{LocalUser, LocalUserInsertForm},
     person::{Person, PersonInsertForm},
-    post::PostInsertForm,
+    post::{Post, PostInsertForm},
     secret::Secret,
   };
   use lemmy_db_schema_file::{
@@ -17159,7 +17159,7 @@ mod v1_rt_r3_fixtures {
       CaseSeverity, CaseStatus, CaseTargetType, EvidenceVisibility, JuryDecision,
       ReputationDimension, ReputationEventSourceType,
     },
-    schema::{case_evidence, comment, governance_log, moderation_case, post, reputation_event},
+    schema::{case_evidence, governance_log, moderation_case, reputation_event},
   };
   use lemmy_db_views_local_user::LocalUserView;
   use lemmy_diesel_utils::{
@@ -17167,7 +17167,7 @@ mod v1_rt_r3_fixtures {
     traits::Crud,
   };
   use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
-  use lemmy_db_schema::newtypes::{ModerationCaseId, PostId};
+  use lemmy_db_schema::newtypes::ModerationCaseId;
   use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
   use reqwest_middleware::ClientBuilder;
 
@@ -17272,23 +17272,23 @@ mod v1_rt_r3_fixtures {
       owner,
       community.id,
     );
-    let post_id: PostId = diesel::insert_into(post::table)
-      .values(&post_form)
-      .returning(post::id)
-      .get_result(conn)
-      .await?;
+    // Use the LemmyContext pool (not the raw AsyncPgConnection) so the connection
+    // carries the `lemmy.protocol_and_hostname` GUC required by post/comment INSERT
+    // triggers (see crates/utils/src/settings/mod.rs:94-96 +
+    // crates/diesel_utils/replaceable_schema/utils.sql:64). The raw establish
+    // connection used by callers for follow-up reputation_event reads doesn't set
+    // this GUC, and the triggers crash with "unrecognized configuration parameter".
+    let _ = conn;
+    let post = Post::create(&mut ctx.pool(), &post_form).await?;
     for pid in &persons {
       for c in 0..comments_per_user {
         let comment_form = CommentInsertForm::new(
           *pid,
-          post_id,
+          post.id,
           community.id,
           format!("c{c}"),
         );
-        diesel::insert_into(comment::table)
-          .values(&comment_form)
-          .execute(conn)
-          .await?;
+        Comment::create(&mut ctx.pool(), &comment_form, None).await?;
       }
     }
     Ok(persons)
@@ -17684,7 +17684,7 @@ mod v1_rt_r3_fixtures {
     // Backdate the seeded prior ParticipationConsistency rows so the dormancy
     // LEFT-ANTI-JOIN's lookback window can detect them as "prior activity".
     diesel::sql_query(
-      "UPDATE reputation_event SET published_at = now() - interval '30 days' \
+      "UPDATE reputation_event SET created_at = now() - interval '30 days' \
        WHERE reason = 'prior_activity_seed'",
     )
     .execute(&mut async_conn)
@@ -17726,7 +17726,7 @@ mod v1_rt_r3_fixtures {
     )
     .await?;
     diesel::sql_query(
-      "UPDATE reputation_event SET published_at = now() - interval '30 days' \
+      "UPDATE reputation_event SET created_at = now() - interval '30 days' \
        WHERE reason = 'prior_activity_seed'",
     )
     .execute(&mut async_conn)
