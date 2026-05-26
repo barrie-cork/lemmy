@@ -17097,3 +17097,366 @@ mod v1_ship_3_fixtures {
     Ok(())
   }
 }
+
+mod v1_rt_r3_fixtures {
+  //! v1-RT-r3 multi-source participation_consistency emitters + flag-bad-faith admin endpoint.
+  //!
+  //! 5 stories / 10 tests per plan §16a:
+  //!   Story 1 — activity cron emit + idempotency (2 tests)
+  //!   Story 2 — dormancy cron emit + idempotency (2 tests)
+  //!   Story 3 — vote-outcome emit + no-penalty-for-dissent (2 tests)
+  //!   Story 4 — flag-bad-faith 403/400/200 (3 tests)
+  //!   Story 5 — evidence-cited heuristic emit (1 test)
+  //!
+  //! Mirror v1_ship_3_fixtures (e2e.rs:16699-17099) for boot + helper shape:
+  //!   Case A error shape (outer `LemmyResult<()>` + helper `LemmyResult<T>`),
+  //!   `?` propagation, `.ok_or_else(|| anyhow::anyhow!(...))?` for Option→Result,
+  //!   `.map_err(|e| anyhow::anyhow!("{e}"))?` for foreign FederationConfig errors.
+  //!
+  //! Advisor-authored carve-out per cycle-count §5.3 hard-refusal on Junior dispatch
+  //! (DQ a3d0e9941441-033). One-time exception to "advisor never authors crates/**".
+
+  use super::*;
+  use actix_web::web::{Data, Json};
+  use chrono::{Datelike, Duration as ChronoDuration, Utc};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::{
+    accept_jury_assignment::accept_jury_assignment,
+    admin_assign_jury::admin_assign_jury,
+    admin_emergency_remove::flag_bad_faith_emergency_report,
+    config::{
+      DEFAULT_DELTAS_EVIDENCE_BAD_FAITH, DEFAULT_DELTAS_EVIDENCE_CITED,
+      DEFAULT_DELTAS_PARTICIPATION_DORMANT, DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED,
+      DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE,
+      DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS,
+    },
+    participation_cron,
+    submit_jury_vote::submit_jury_vote,
+  };
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment, AdminAssignJury, CreateGovernanceReport, FlagBadFaithEmergencyReport,
+    SubmitJuryVote,
+  };
+  use lemmy_api_crud::governance::create_report::create_report;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    comment::CommentInsertForm,
+    community::{Community, CommunityInsertForm},
+    governance::{
+      case_evidence::CaseEvidenceInsertForm,
+      reputation_event::ReputationEventInsertForm,
+    },
+    instance::Instance,
+    local_user::{LocalUser, LocalUserInsertForm},
+    person::{Person, PersonInsertForm},
+    post::PostInsertForm,
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    InstanceId, PersonId,
+    enums::{
+      CaseSeverity, CaseStatus, CaseTargetType, EvidenceVisibility, JuryDecision,
+      ReputationDimension, ReputationEventSourceType,
+    },
+    schema::{case_evidence, comment, governance_log, moderation_case, post, reputation_event},
+  };
+  use lemmy_db_views_local_user::LocalUserView;
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
+  use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId};
+  use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
+  use reqwest_middleware::ClientBuilder;
+
+  /// RAII guard for an environment variable. Set via `EnvVarGuard::set`
+  /// before the operation that depends on the env var; on Drop (success,
+  /// `?` short-circuit, panic), the previous value is restored — closing
+  /// the leak-via-`?` defect class flagged by Axis 3 of the e2e
+  /// code-quality audit (`.claude/PRPs/reports/e2e-rs-code-quality-audit-2026-05-26.md`).
+  struct EnvVarGuard {
+    key: &'static str,
+    prev: Option<String>,
+  }
+
+  impl EnvVarGuard {
+    fn set(key: &'static str, value: &str) -> Self {
+      let prev = std::env::var(key).ok();
+      // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+      unsafe {
+        std::env::set_var(key, value);
+      }
+      Self { key, prev }
+    }
+  }
+
+  impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+      // SAFETY: same justification — single-threaded test runner.
+      unsafe {
+        match &self.prev {
+          Some(prev) => std::env::set_var(self.key, prev),
+          None => std::env::remove_var(self.key),
+        }
+      }
+    }
+  }
+
+  /// Seed one person/local_user pair. Mirror governance_fixtures::seed_user
+  /// at e2e.rs:835 but takes the optional admin flag and returns only the
+  /// PersonId (caller resolves LocalUserView via `LocalUserView::read_person`
+  /// when needed; mirrors v1_ship_3_fixtures::seed_person at e2e.rs:16795).
+  async fn seed_person(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+    is_admin: bool,
+  ) -> LemmyResult<PersonId> {
+    let person_form = PersonInsertForm::test_form(instance_id, name);
+    let person = Person::create(&mut ctx.pool(), &person_form).await?;
+    let mut lu_form = if is_admin {
+      LocalUserInsertForm::test_form_admin(person.id)
+    } else {
+      LocalUserInsertForm::test_form(person.id)
+    };
+    lu_form.accepted_application = Some(true);
+    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
+    Ok(person.id)
+  }
+
+  /// Seed a community with an explicit name so callers can build multiple
+  /// communities in one test (governance_fixtures::seed_community at
+  /// e2e.rs:855 hardcodes "testcomm" — Story 1 needs ≥3 communities).
+  async fn seed_named_community(
+    ctx: &LemmyContext,
+    instance_id: InstanceId,
+    name: &str,
+  ) -> LemmyResult<Community> {
+    let form = CommunityInsertForm::new(
+      instance_id,
+      name.to_string(),
+      format!("Community {name}"),
+      format!("{name}-pubkey"),
+    );
+    Community::create(&mut ctx.pool(), &form).await
+  }
+
+  /// Seed `person_count` persons + one post per community + `comments_per_user`
+  /// comments per person. Returns PersonIds in insertion order. Each comment's
+  /// `published_at` is set to `now()` so it falls inside the activity-cron
+  /// `participation.lookback_days` window. The shared post is owned by the
+  /// first seeded person.
+  async fn seed_active_users_in_community(
+    ctx: &LemmyContext,
+    conn: &mut AsyncPgConnection,
+    instance_id: InstanceId,
+    community: &Community,
+    person_count: usize,
+    comments_per_user: usize,
+    name_prefix: &str,
+  ) -> LemmyResult<Vec<PersonId>> {
+    let mut persons = Vec::with_capacity(person_count);
+    for i in 0..person_count {
+      let pid = seed_person(ctx, instance_id, &format!("{name_prefix}_active_{i}"), false).await?;
+      persons.push(pid);
+    }
+    let owner = *persons
+      .first()
+      .ok_or_else(|| anyhow::anyhow!("seed_active_users_in_community: person_count must be ≥ 1"))?;
+    let post_form = PostInsertForm::new(
+      format!("post_{name_prefix}"),
+      owner,
+      community.id,
+    );
+    let post_id: lemmy_db_schema_file::PostId = diesel::insert_into(post::table)
+      .values(&post_form)
+      .returning(post::id)
+      .get_result(conn)
+      .await?;
+    for pid in &persons {
+      for c in 0..comments_per_user {
+        let comment_form = CommentInsertForm::new(
+          *pid,
+          post_id,
+          community.id,
+          format!("c{c}"),
+        );
+        diesel::insert_into(comment::table)
+          .values(&comment_form)
+          .execute(conn)
+          .await?;
+      }
+    }
+    Ok(persons)
+  }
+
+  /// Seed `person_count` dormant users in `community`: each has a prior
+  /// `ParticipationConsistency` reputation_event (so the dormancy LEFT-ANTI-JOIN
+  /// in `run_dormancy_batch`'s SQL keeps them) but ZERO recent comments (so the
+  /// `NOT EXISTS` arm fires). Returns PersonIds in insertion order.
+  async fn seed_dormant_users_in_community(
+    ctx: &LemmyContext,
+    conn: &mut AsyncPgConnection,
+    instance_id: InstanceId,
+    community: &Community,
+    person_count: usize,
+    name_prefix: &str,
+  ) -> LemmyResult<Vec<PersonId>> {
+    let mut persons = Vec::with_capacity(person_count);
+    for i in 0..person_count {
+      let pid = seed_person(ctx, instance_id, &format!("{name_prefix}_dormant_{i}"), false).await?;
+      persons.push(pid);
+    }
+    for pid in &persons {
+      let form = ReputationEventInsertForm {
+        person_id: *pid,
+        community_id: Some(community.id),
+        dimension: ReputationDimension::ParticipationConsistency,
+        delta: 1,
+        source_case_id: None,
+        source_report_id: None,
+        reason: "prior_activity_seed".to_string(),
+        expires_at: None,
+        dedupe_key: None,
+        source_event_type: Some(ReputationEventSourceType::ParticipationCron),
+      };
+      diesel::insert_into(reputation_event::table)
+        .values(&form)
+        .execute(conn)
+        .await?;
+    }
+    Ok(persons)
+  }
+
+  /// Insert one `case_evidence` row for `case_id` attributed to `uploader_id`.
+  /// Story 5 (evidence-cited heuristic) requires this for the `reporter_has_evidence`
+  /// existence check at submit_jury_vote.rs:679-685 to return true.
+  async fn seed_case_evidence(
+    conn: &mut AsyncPgConnection,
+    case_id: ModerationCaseId,
+    uploader_id: PersonId,
+  ) -> LemmyResult<()> {
+    let form = CaseEvidenceInsertForm {
+      case_id,
+      uploader_id,
+      storage_key: format!("evidence/{}/{}", case_id.0, uploader_id.0),
+      sha256: "0".repeat(64),
+      mime_type: "text/plain".to_string(),
+      visibility: EvidenceVisibility::Public,
+    };
+    diesel::insert_into(case_evidence::table)
+      .values(&form)
+      .execute(conn)
+      .await?;
+    Ok(())
+  }
+
+  /// Count reputation_event rows for `person_id` filtered by `dimension`
+  /// + `source_event_type`. Used by Story 1/2/3/4/5 assertions to verify
+  /// the new emit sites produced the expected per-user row counts.
+  async fn count_reputation_events_for(
+    conn: &mut AsyncPgConnection,
+    person_id: PersonId,
+    dimension: ReputationDimension,
+    source_event_type: ReputationEventSourceType,
+  ) -> LemmyResult<i64> {
+    reputation_event::table
+      .filter(reputation_event::person_id.eq(person_id))
+      .filter(reputation_event::dimension.eq(dimension))
+      .filter(reputation_event::source_event_type.eq(source_event_type))
+      .count()
+      .get_result(conn)
+      .await
+      .map_err(Into::into)
+  }
+
+  /// Insert a moderation_case row directly with the given creator + status.
+  /// Returns the ModerationCaseId. Mirror v1_jm_b_fixtures::seed_case
+  /// (e2e.rs:8559) but parameterises `creator_id` + `status` so Story 4's
+  /// non-EmergencyRemove arm (CaseStatus::Decided) and the EmergencyRemove
+  /// arms can share one helper.
+  async fn seed_case_with_status(
+    conn: &mut AsyncPgConnection,
+    creator_id: PersonId,
+    status: CaseStatus,
+  ) -> LemmyResult<ModerationCaseId> {
+    let form = ModerationCaseInsertForm {
+      community_id: None,
+      creator_id: Some(creator_id),
+      target_type: CaseTargetType::Person,
+      target_post_id: None,
+      target_comment_id: None,
+      target_person_id: Some(creator_id),
+      target_community_id: None,
+      target_remote_url: None,
+      reason_code: "v1_rt_r3_test".to_string(),
+      severity: CaseSeverity::Medium,
+      status,
+      threshold_score: 1,
+      ..Default::default()
+    };
+    let case_id: i32 = diesel::insert_into(moderation_case::table)
+      .values(&form)
+      .returning(moderation_case::id)
+      .get_result(conn)
+      .await?;
+    Ok(ModerationCaseId(case_id))
+  }
+
+  /// Standard bootstrap mirroring v1_ship_3_fixtures (e2e.rs:16740-16783).
+  /// Returns the containers/context the tests need + the federation_context
+  /// for handler invocations. The `_container` binding holds the testcontainers
+  /// guard alive for the lifetime of the test scope.
+  async fn boot_context() -> LemmyResult<(
+    testcontainers::ContainerAsync<testcontainers::GenericImage>,
+    Data<LemmyContext>,
+    activitypub_federation::config::FederationConfig<LemmyContext>,
+    String,
+  )> {
+    const SIGNING_SEED_HEX: &str =
+      "0000000000000000000000000000000000000000000000000000000000000001";
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    unsafe {
+      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    }
+    let (container, host_port) = governance_fixtures::start_postgres().await?;
+    let db_url = governance_fixtures::db_url(host_port);
+    // SAFETY: tests run with --test-threads=1.
+    unsafe {
+      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
+    }
+    {
+      let mut sync_conn = PgConnection::establish(&db_url)?;
+      governance_fixtures::apply_all_schema(&mut sync_conn)?;
+    }
+    let pool: ActualDbPool = build_db_pool_for_tests();
+    let client = client_builder(&SETTINGS).build()?;
+    let middleware_client = ClientBuilder::new(client).build();
+    let secret = Secret {
+      id: 0,
+      jwt_secret: String::new().into(),
+    };
+    let rate_limit = RateLimit::with_debug_config();
+    let context = Data::new(LemmyContext::create(
+      pool,
+      middleware_client.clone(),
+      middleware_client,
+      secret,
+      rate_limit,
+    ));
+    let federation_config = activitypub_federation::config::FederationConfig::builder()
+      .domain(context.settings().hostname.clone())
+      .app_data((**context).clone())
+      .debug(true)
+      .http_fetch_limit(0)
+      .build()
+      .await
+      .map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok((container, context, federation_config, db_url))
+  }
+
+  // TESTS: 10 tests follow in Edit 2 — see brief §2.4 for mapping
+}
