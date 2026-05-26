@@ -4087,7 +4087,109 @@
       "phase_task": 1,
       "result": "pass",
       "log_slice": null,
-      "failed_commands": null
+      "failed_commands": null,
+    "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Audit-flagged coverage gaps: 4 shipped sub-phases have no e2e fixtures module in crates/server/tests/e2e.rs — v1-RT-r2, v1-federation-inbound-c, v1-federation-inbound-d, v1-ship-1. Should the v1-quality-r2 backlog include a fixtures-coverage pass that retroactively adds modules for these?",
+      "options": [
+        "queue-quality-r2",
+        "defer-to-v2"
+      ],
+      "context": "Per .claude/PRPs/reports/e2e-rs-code-quality-audit-2026-05-26.md Axis 10: shipped modules cover JM-a/c/d/e, SL-a/b/c/d/e, AD-c/d/e, RT-r1, fed-in-a/b/e, ship-2/ship-3. Missing: RT-r2 (shipped 2026-05-24 PR #150), fed-in-c, fed-in-d, ship-1. RT-r2 in particular ships behavioural changes (rep-event reslot) — absence of e2e fixtures is a regression-risk surface CR triage can't reach. The v1-rls-r1, v1-dq-schema-r1, v1-retro-followups-r1 sub-phases are correctly absent (meta-infra; not e2e scope).",
+      "answer": "queue-quality-r2: file a v1-quality-r2 backlog item to retro-add e2e fixtures modules for v1-RT-r2 (behavioural), v1-federation-inbound-c (behavioural), v1-federation-inbound-d (behavioural), v1-ship-1 (less critical — ship is retro/docs/lessons; lower priority). Sequence: RT-r2 first (highest regression risk), fed-in-c next (federation-inbound depends-on chain), fed-in-d (same chain), ship-1 last (lowest behavioural surface). v1-quality-r2 plan author should size each module separately; if total >5 §13 tasks, split into r2 + r3.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-025"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Cross-module reach-overs: 6 sites where one v1_X_fixtures module imports from super::v1_Y_fixtures, violating the 'governance_fixtures-only is allowed' rule. Hoist or duplicate?",
+      "options": [
+        "hoist-to-governance_fixtures",
+        "duplicate-per-module"
+      ],
+      "context": "Per audit Axis 7. Sites: v1_jm_e_fixtures→super::v1_jm_b_fixtures::seed_jury_eligible_snapshots + seed_case (e2e.rs:10523, 10526, 10665, 10666); v1_sl_d_fixtures→super::v1_jm_b_fixtures::seed_jury_eligible_snapshots (13664, 13903, 14097, 14275); v1_sl_e_fixtures→super::v1_jm_b_fixtures::seed_jury_eligible_snapshots (14632, 14956). Comments at 10482/10602 acknowledge the reach as deliberate but the rule explicitly forbids it. SL-d/e have no semantic dependency on JM-b — pure helper convenience.",
+      "answer": "hoist-to-governance_fixtures: move seed_jury_eligible_snapshots + seed_case into mod governance_fixtures as canonical shared helpers; rewrite the 10 callsites to use governance_fixtures::seed_jury_eligible_snapshots / governance_fixtures::seed_case. One commit on a chore branch; mechanical refactor; estimate ~1h Junior task. Better than duplication (which would scatter the seeder; future schema drift on jury_panel_snapshot would need multi-site fixes). File this against v1-quality-r2 backlog as a single fixtures-cleanup task, sequenced AFTER the unwrap/expect bulk-cleanup (DQ audit-3+4) so the diff doesn't compound.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-026"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Workspace denies clippy::unwrap_used but 9 test-body .unwrap() sites exist in crates/server/tests/e2e.rs. Why are they not currently failing clippy?",
+      "options": [
+        "current-ci-skips-tests",
+        "clippy-not-yet-run-against-these-files"
+      ],
+      "context": "Per audit Axis 2: workspace [workspace.lints.clippy] sets unwrap_used=\"deny\". 9 .unwrap() sites in test bodies at e2e.rs:14867, 14885, 15118, 15219, 15384, 16265, 16305, 16345, 16382. None covered by #[expect(clippy::unwrap_used)]. They survived prior CR cycles + validate-pending-laptop runs. Either (a) test crates inherit a different lint config than workspace lib crates, (b) the prior fed-in-e and v1-RT-r2 + later phases ship-3 / RT-r3 cohort-2 simply never ran clippy against e2e.rs after these were authored (RT-r2 PR #150 was clippy-clean on changed files only via --no-deps + cargo clippy --workspace doesn't lint test deps without extra flags), or (c) Lemmy's clippy config has a tests/* override.",
+      "answer": "advisor-investigated: this is likely option (b) — `cargo clippy --workspace --features full --no-deps -- -D warnings` is the standard lint command and `crates/server/tests/e2e.rs` IS a test target of the lemmy_server crate, so it SHOULD be linted. The 9 sites would surface as MAJOR fails if clippy ran today. Two-step fix plan: (1) verify by running advisor-laptop `cargo clippy --workspace --features full --tests --no-deps -- -D warnings` (note --tests flag — without it clippy may skip integration tests). If 9 sites surface as expected, (2) file v1-quality-r2 bulk-cleanup task converting .unwrap() → .ok_or_else(|| LemmyErrorType::Unknown(\"…\".into()))? per the canonical fix recipe in feedback_lemmy_error_no_std_error.md Case A. Estimate ~10 min Junior task; 9 narrow mechanical edits. Companion entry audit-4 covers .expect() class.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-027"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Workspace denies clippy::expect_used but ~50 test/helper .expect(…) sites exist in crates/server/tests/e2e.rs. Same defect class as audit-3 .unwrap()?",
+      "options": [
+        "same-class-bulk-cleanup",
+        "case-by-case-some-need-expect-attribute"
+      ],
+      "context": "Per audit Axis 2: ~50 .expect(\"…\") sites across helpers + test bodies. Audit cites first 20 explicitly (line range 1138-15378); ~30 more in line range 10717-15378. Canonical fix recipe: .ok_or_else(|| LemmyErrorType::Unknown(msg.into()))? for Option, .map_err(|_| LemmyErrorType::Unknown(msg.into()))? for Result. Note: governance_fixtures pg_template block (288-735) deliberately uses Box<dyn Error> + closure-typed .map_err for FFI/docker boundary — those should NOT be converted; only test-body + governance-fixtures helper expects in the LemmyResult<T> error shape.",
+      "answer": "same-class-bulk-cleanup: bundle with audit-3 unwrap fix into one v1-quality-r2 sub-phase task. Estimated 3h Junior work (50+ sites; each site reviewed for context to ensure correct Option-vs-Result fix shape). Constraints for the future Junior brief: (1) DO NOT touch pg_template block 288-735 (deliberate Box<dyn Error> for docker FFI); (2) DO NOT touch existing #[expect(clippy::dead_code)] etc. — those cover different lints; (3) preserve every .expect()'s panic-message string (becomes the new LemmyErrorType::Unknown arg verbatim); (4) follow Case A discipline per feedback_lemmy_error_no_std_error.md. Pre-push cargo-clippy --tests gate mandatory.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-028"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Magic numbers hardcoded in e2e tests (case_threshold_micros 3_000_000 / 1_000_000 at lines 10670/10704/10708; jury_panel_size 5/9 at 9027/9101/9122) drift-risk if config defaults change. Replace with config-cascade reads, named constants, or governance_fixtures consts?",
+      "options": [
+        "config-cascade-read",
+        "import-named-constant",
+        "introduce-fixtures-const"
+      ],
+      "context": "Per audit Axis 6: comments reference DEFAULT_REPORT_CASE_THRESHOLD_MICROS = 3_000_000 + DEFAULT_JURY_PANEL_SIZE = 5 + DEFAULT_JURY_PANEL_SIZE_FOUNDER_SEVERE = 9 as numeric literals. Tests assert against these values inline. If a future config-tuning sub-phase (e.g. v1-RT-r4 sponsor-rep-tuning) adjusts the default, tests would silently pass against stale numbers (because the test seeds matching values manually). Audit MAJOR severity flagged.",
+      "answer": "import-named-constant: replace numeric literals with `lemmy_db_schema::governance::config_defaults::DEFAULT_REPORT_CASE_THRESHOLD_MICROS` etc. The consts already exist on the lib side (config.rs metadata table at registered_keys.rs). Test imports the constants; numeric drift surfaces as a compile-time test miscount instead of silent assertion-pass. Config-cascade reads (option 2) work but add `governance_config` table seed dependency to every test that uses the threshold; introducing fixtures-mod consts (option 3) duplicates source-of-truth. Single-import gives lowest-friction drift-safety. Estimate <30 min Junior task. Bundle into the v1-quality-r2 sub-phase with audit-3+4 cleanup.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-029"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-26T09:30:00Z",
+      "question": "Junior task #474 (v1-RT-r3 Task 4 e2e tests) hit error_max_turns (151 turns, $9.46, ~38 min). Worker spent entire budget on canonical-sibling reconnaissance before any Edit. Brief over-prescribed §3 'read 4 candidate siblings + sibling at declaration' rather than naming one canonical mirror upfront. What is the durable brief-authoring rule to prevent recurrence?",
+      "options": [
+        "name-canonical-sibling-up-front",
+        "ban-multi-candidate-lists",
+        "both"
+      ],
+      "context": "Audit Axis 1 confirmed all 13 sibling modules are Case A (LemmyResult<()>/LemmyResult<T>) and the most recent (v1_ship_3_fixtures at e2e.rs:16699) has the closest structural shape match (9-arg run_sanction_scenario with #[expect(clippy::too_many_arguments)] — same pattern Task 4 needs for emit-helper signatures). Brief §3 listed 4 candidates ('v1_rt_r2_fixtures, v1_sl_d_fixtures, v1_jm_e_fixtures' + 'pick whichever is Case A') and asked Junior to read at declaration line; on an 8945-line file, exhaustive scan blew the turn budget. This is the inverse of feedback_junior_worker_e2e_edit_hang.md's hang risk: not Edit-hang but Reconnaissance-hang.",
+      "answer": "both — promote-candidate (1x evidence so far; watch for 2nd recurrence to confirm pattern): (a) When a Junior impl-task brief asks for sibling-mirror discipline on a >5k-line file, the advisor MUST name exactly ONE canonical sibling (module + declaration line range, e.g. 'mirror v1_ship_3_fixtures at e2e.rs:16699-16910 verbatim') in §3 Required reading slot 1. Listing multiple candidates is a brief over-prescription that converts to reconnaissance budget burn. (b) Brief §3 Required reading should be ordered most-load-bearing first; canonical sibling FIRST, schema reads SECOND, lessons THIRD. (c) Implementation split: a single >500-line Edit on e2e.rs should be split into 2 Edits with natural turn-budget checkpoints (e.g. helpers first, tests second). Cite to next session retro: promote to feedback_brief_canonical_sibling_no_multi_candidate.md after 2nd recurrence; for now, apply ad-hoc in v1-RT-r3 Task 4 re-brief.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-26T09:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-030"
     }
   ]
 }
