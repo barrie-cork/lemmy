@@ -86,9 +86,29 @@ Advisor authors ONLY the JSON fix (3 lines, ~5 min). Move cr-3 (iso-week guard) 
 
 **Risk:** minimal — the 🔴 Critical lands; the 🟡 Minor waits. fix-impl-3 (config clamps) still needs to happen before merge regardless.
 
+## DO FIRST — implement 2 user-authorised lesson promotions before fix-impl-2 retry
+
+User authorised at session close 2026-05-26T~19:15Z: **implement the 2
+threshold-met changes from `.claude/PRPs/reports/session-retro-2026-05-26-pr-155-cr-triage-junior-479-fail.md`
+§"NEXT-SESSION ACTION" BEFORE any fix-impl-2 retry work.**
+
+Order:
+
+1. Author `.claude/lessons/feedback_fix_impl_pre_locate_e2e_anchors.md`
+   (verbatim `old_string`/`new_string` anchors required for e2e.rs fix-impl Edits).
+2. Update `.claude/PRPs/templates/impl-task-brief.template.md` §2 Scope gate
+   (cap: ≤150 lines + ≤2 file edits + ≤2 Edits/file when target is e2e.rs).
+3. Commit on `governance-v0` (trunk-direct per `phase-branch.md`).
+4. Sync to PMD + backfill per retro Step 5.5.
+5. **THEN** return to fix-impl-2 retry below.
+
+Full implementation detail in the retro file §"NEXT-SESSION ACTION".
+~25 min total. Reason: any retry of fix-impl-2 must use the new brief
+shape, so the lesson + template must land first.
+
 ## Recommended next-session opening
 
-After reading this handover:
+After implementing the 2 promotions above, then this handover:
 
 1. **Verify state** (1 min):
    ```bash
