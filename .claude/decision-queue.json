@@ -27,6 +27,32 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "Validate task 2 (vote-outcome + evidence-cited emit) — cargo check + clippy on crates/api",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Commit 996765cae on worker branch. Shape G suspended per DQ #229; laptop advisor runs validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full -- -D warnings"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1bb1ff7a00a8-001"
     }
   ],
   "resolved": [

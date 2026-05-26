@@ -43,7 +43,12 @@ use crate::governance::{
   actor_pseudonym_helper,
   config::{self, ConfigCache, Scope},
   governance_log::{
-    self, ENTRY_KIND_APPEAL_DECIDED, ENTRY_KIND_JURY_DEADLOCK, ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
+    self,
+    ENTRY_KIND_APPEAL_DECIDED,
+    ENTRY_KIND_EVIDENCE_QUALITY_RECORDED,
+    ENTRY_KIND_JURY_DEADLOCK,
+    ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
+    ENTRY_KIND_VOTE_OUTCOME_RECORDED,
   },
   redaction, sponsor_liability,
 };
@@ -75,8 +80,8 @@ use lemmy_db_schema_file::{
     ReputationDimension, ReputationEventSourceType, SanctionAction, SanctionScope,
   },
   schema::{
-    appeal, jury_assignment, jury_vote, moderation_case, public_case_log, reputation_event,
-    sanction,
+    appeal, case_evidence, jury_assignment, jury_vote, moderation_case, public_case_log,
+    reputation_event, sanction,
   },
 };
 use lemmy_db_views_local_user::LocalUserView;
@@ -592,8 +597,52 @@ async fn process_vote(
         } else {
           "outlier_vote"
         },
+        ReputationEventSourceType::JuryVote,
+        None,
       )
       .await?;
+      // Source 3 (r3) — vote-outcome +1 participation_consistency for majority-aligned jurors.
+      if juror_decision == winning_decision {
+        let juror_pseudonym =
+          actor_pseudonym_helper::get_or_create(&mut (&mut *conn).into(), other_juror_id).await?;
+        let participation_delta_i64 = config::get_int(
+          &mut cache,
+          &mut (&mut *conn).into(),
+          Scope::Instance,
+          "deltas.participation_juror_aligned",
+        )
+        .await?;
+        let participation_delta = i32::try_from(participation_delta_i64).map_err(|_e| {
+          LemmyErrorType::Unknown(format!(
+            "deltas.participation_juror_aligned ({participation_delta_i64}) overflows i32"
+          ))
+        })?;
+        emit_reputation_event(
+          conn,
+          other_juror_id,
+          case_row.community_id,
+          ReputationDimension::ParticipationConsistency,
+          participation_delta,
+          data.case_id,
+          "vote_outcome_aligned",
+          ReputationEventSourceType::VoteOutcome,
+          Some(format!("vote_outcome:{}:{}", data.case_id.0, juror_pseudonym)),
+        )
+        .await?;
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          ENTRY_KIND_VOTE_OUTCOME_RECORDED,
+          json!({
+            "case_id": data.case_id.0,
+            "juror_pseudonym": juror_pseudonym.clone(),
+            "dimension": "participation_consistency",
+            "delta": participation_delta,
+            "source_event_type": "vote_outcome",
+          }),
+          Some(juror_pseudonym),
+        )
+        .await?;
+      }
     }
 
     // 12. Reporter reputation event — only when the case has a creator.
@@ -620,8 +669,78 @@ async fn process_vote(
         delta,
         data.case_id,
         reason,
+        ReputationEventSourceType::JuryVote,
+        None,
       )
       .await?;
+    }
+    // 12.5 (r3) — Source 4a evidence-cited heuristic per PRD section 5.3.
+    if let Some(reporter_id) = case_row.creator_id {
+      let reporter_has_evidence: bool = diesel::select(diesel::dsl::exists(
+        case_evidence::table
+          .filter(case_evidence::case_id.eq(data.case_id))
+          .filter(case_evidence::uploader_id.eq(reporter_id)),
+      ))
+      .get_result(conn)
+      .await?;
+      if reporter_has_evidence {
+        let threshold_i64 = config::get_int(
+          &mut cache,
+          &mut (&mut *conn).into(),
+          Scope::Instance,
+          "participation.evidence_cited_rationale_threshold_chars",
+        )
+        .await?;
+        let threshold_chars = usize::try_from(threshold_i64.max(0)).unwrap_or(0);
+        let cited = winning_rationales
+          .iter()
+          .any(|r| r.chars().count() >= threshold_chars);
+        if cited {
+          let evidence_delta_i64 = config::get_int(
+            &mut cache,
+            &mut (&mut *conn).into(),
+            Scope::Instance,
+            "deltas.evidence_cited",
+          )
+          .await?;
+          let evidence_delta = i32::try_from(evidence_delta_i64).map_err(|_e| {
+            LemmyErrorType::Unknown(format!(
+              "deltas.evidence_cited ({evidence_delta_i64}) overflows i32"
+            ))
+          })?;
+          let reporter_pseudonym = actor_pseudonym_helper::get_or_create(
+            &mut (&mut *conn).into(),
+            reporter_id,
+          )
+          .await?;
+          emit_reputation_event(
+            conn,
+            reporter_id,
+            case_row.community_id,
+            ReputationDimension::ReportingAccuracy,
+            evidence_delta,
+            data.case_id,
+            "evidence_cited",
+            ReputationEventSourceType::EvidenceQuality,
+            Some(format!("evidence_cited:{}:{}", data.case_id.0, reporter_pseudonym)),
+          )
+          .await?;
+          governance_log::append(
+            &mut conn.into(),
+            ENTRY_KIND_EVIDENCE_QUALITY_RECORDED,
+            json!({
+              "case_id": data.case_id.0,
+              "reporter_pseudonym": reporter_pseudonym.clone(),
+              "dimension": "reporting_accuracy",
+              "delta": evidence_delta,
+              "source_event_type": "evidence_quality",
+              "trigger": "rationale_cited",
+            }),
+            Some(reporter_pseudonym),
+          )
+          .await?;
+        }
+      }
     }
   }
 
@@ -965,6 +1084,14 @@ fn map_decision_to_sanction(decision: JuryDecision) -> Option<(SanctionScope, Sa
 /// One-shot insert helper for `reputation_event`. Pulled out to keep the
 /// handler body readable and to ensure every reputation write goes
 /// through the same shape (no inline insert forms).
+///
+/// `source_event_type` + `dedupe_key` are explicit per r3 per PRD
+/// section 5.3 + 7. The v0 callers (juror reliability + reporter
+/// accuracy at lines 583, 615) pass
+/// `ReputationEventSourceType::JuryVote` + `None` to preserve
+/// byte-identical v0 behaviour at those sites. The r3 callers
+/// (vote-outcome juror loop + evidence-cited reporter) pass
+/// `VoteOutcome` / `EvidenceQuality` + a populated `dedupe_key`.
 async fn emit_reputation_event(
   conn: &mut diesel_async::AsyncPgConnection,
   person_id: PersonId,
@@ -973,6 +1100,8 @@ async fn emit_reputation_event(
   delta: i32,
   source_case_id: ModerationCaseId,
   reason: &str,
+  source_event_type: ReputationEventSourceType,
+  dedupe_key: Option<String>,
 ) -> LemmyResult<()> {
   let form = ReputationEventInsertForm {
     person_id,
@@ -983,11 +1112,12 @@ async fn emit_reputation_event(
     source_report_id: None,
     reason: reason.to_string(),
     expires_at: None,
-    dedupe_key: None,
-    source_event_type: Some(ReputationEventSourceType::JuryVote),
+    dedupe_key,
+    source_event_type: Some(source_event_type),
   };
   insert_into(reputation_event::table)
     .values(&form)
+    .on_conflict_do_nothing()
     .execute(conn)
     .await?;
   Ok(())
