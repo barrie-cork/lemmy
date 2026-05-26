@@ -17118,7 +17118,7 @@ mod v1_rt_r3_fixtures {
 
   use super::*;
   use actix_web::web::{Data, Json};
-  use chrono::{Datelike, Duration as ChronoDuration, Utc};
+  use chrono::{Datelike, Utc};
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
@@ -17167,7 +17167,7 @@ mod v1_rt_r3_fixtures {
     traits::Crud,
   };
   use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
-  use lemmy_db_schema::newtypes::{CommunityId, ModerationCaseId};
+  use lemmy_db_schema::newtypes::{ModerationCaseId, PostId};
   use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
   use reqwest_middleware::ClientBuilder;
 
@@ -17262,15 +17262,17 @@ mod v1_rt_r3_fixtures {
       let pid = seed_person(ctx, instance_id, &format!("{name_prefix}_active_{i}"), false).await?;
       persons.push(pid);
     }
-    let owner = *persons
-      .first()
+    let owner = persons
+      .iter()
+      .next()
+      .copied()
       .ok_or_else(|| anyhow::anyhow!("seed_active_users_in_community: person_count must be ≥ 1"))?;
     let post_form = PostInsertForm::new(
       format!("post_{name_prefix}"),
       owner,
       community.id,
     );
-    let post_id: lemmy_db_schema_file::PostId = diesel::insert_into(post::table)
+    let post_id: PostId = diesel::insert_into(post::table)
       .values(&post_form)
       .returning(post::id)
       .get_result(conn)
@@ -17344,7 +17346,7 @@ mod v1_rt_r3_fixtures {
       storage_key: format!("evidence/{}/{}", case_id.0, uploader_id.0),
       sha256: "0".repeat(64),
       mime_type: "text/plain".to_string(),
-      visibility: EvidenceVisibility::Public,
+      visibility: EvidenceVisibility::PublicRedacted,
     };
     diesel::insert_into(case_evidence::table)
       .values(&form)
@@ -17458,5 +17460,624 @@ mod v1_rt_r3_fixtures {
     Ok((container, context, federation_config, db_url))
   }
 
-  // TESTS: 10 tests follow in Edit 2 — see brief §2.4 for mapping
+  // ============================================================
+  // Tests — Stories 1-5 per plan §16a + brief §2.4
+  // ============================================================
+
+  use lemmy_diesel_utils::connection::get_conn;
+
+  /// Run a full vote scenario (report → ThresholdMet → assign 5 jurors →
+  /// accept all → first 3 vote `decision`, last 2 vote the opposite).
+  /// Returns the seeded `case_id`. Mirrors `v1_ship_3_fixtures::run_sanction_scenario`
+  /// at e2e.rs:16907 but exposes per-juror vote control for Stories 3 + 5.
+  #[expect(
+    clippy::too_many_arguments,
+    reason = "integration helper needs full handler/view/community plumbing"
+  )]
+  async fn run_3_2_vote_scenario(
+    context: &Data<LemmyContext>,
+    federation_context: &activitypub_federation::config::Data<LemmyContext>,
+    admin_view: &LocalUserView,
+    reporter_view: &LocalUserView,
+    target: PersonId,
+    community: &Community,
+    reason_code: &str,
+    majority_decision: JuryDecision,
+    minority_decision: JuryDecision,
+    rationale: Option<String>,
+  ) -> LemmyResult<(i32, Vec<PersonId>, Vec<PersonId>)> {
+    let create_resp = create_report(
+      Json(CreateGovernanceReport {
+        community_id: Some(community.id),
+        target_type: CaseTargetType::Person,
+        target_id: target.0,
+        reason_code: reason_code.to_string(),
+        description: Some(format!("Test report for {reason_code}")),
+      }),
+      context.clone(),
+      reporter_view.clone(),
+    )
+    .await?
+    .into_inner();
+    let case_id = create_resp
+      .case_id
+      .ok_or_else(|| anyhow::anyhow!("case_id missing"))?;
+    {
+      let mut pool = context.pool();
+      let mut conn = get_conn(&mut pool).await?;
+      diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id.0)))
+        .set(moderation_case::status.eq(CaseStatus::ThresholdMet))
+        .execute(&mut *conn)
+        .await?;
+    }
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?
+    .into_inner();
+    assert_eq!(assign_resp.assigned_person_ids.len(), 5, "5 jurors assigned");
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+    let majority: Vec<PersonId> = assign_resp
+      .assigned_person_ids
+      .iter()
+      .copied()
+      .take(3)
+      .collect();
+    let minority: Vec<PersonId> = assign_resp
+      .assigned_person_ids
+      .iter()
+      .copied()
+      .skip(3)
+      .take(2)
+      .collect();
+    for juror in &majority {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: majority_decision,
+          rationale: rationale.clone(),
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+    for juror in &minority {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: minority_decision,
+          rationale: rationale.clone(),
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+    Ok((case_id.0, majority, minority))
+  }
+
+  // -------- Story 1 — activity cron (Source 1) --------
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn participation_activity_cron_emits_plus_one_per_active_user() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
+    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act1.example.com").await?;
+
+    let week_start_iso_week = Utc::now().iso_week();
+
+    let mut all_communities: Vec<Community> = Vec::with_capacity(3);
+    for i in 0..3 {
+      let c = seed_named_community(&context, instance.id, &format!("rt_r3_act1_c{i}")).await?;
+      let _persons = seed_active_users_in_community(
+        &context,
+        &mut async_conn,
+        instance.id,
+        &c,
+        5,
+        2,
+        &format!("act1_c{i}"),
+      )
+      .await?;
+      all_communities.push(c);
+    }
+
+    let outcome = participation_cron::run_activity_batch(&context).await?;
+    assert_eq!(
+      outcome.events_emitted, 15,
+      "expected 15 ParticipationConsistency rows (3 communities * 5 active users)"
+    );
+
+    let total: i64 = reputation_event::table
+      .filter(reputation_event::dimension.eq(ReputationDimension::ParticipationConsistency))
+      .filter(reputation_event::source_event_type.eq(ReputationEventSourceType::ParticipationCron))
+      .filter(reputation_event::delta.eq(i32::try_from(DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE)?))
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert_eq!(total, 15, "all rows delta == DEFAULT_DELTAS_PARTICIPATION_WEEKLY_ACTIVE");
+
+    let cron_ticks: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("participation_cron_tick"))
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert!(cron_ticks >= 1, "at least one participation_cron_tick log row");
+
+    let week_end_iso_week = Utc::now().iso_week();
+    if week_start_iso_week != week_end_iso_week {
+      eprintln!("xfail: ISO week boundary crossed mid-test ({week_start_iso_week:?} -> {week_end_iso_week:?})");
+      return Ok(());
+    }
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn participation_activity_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
+    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act2.example.com").await?;
+
+    let week_start_iso_week = Utc::now().iso_week();
+    let community = seed_named_community(&context, instance.id, "rt_r3_act2").await?;
+    let _persons = seed_active_users_in_community(
+      &context,
+      &mut async_conn,
+      instance.id,
+      &community,
+      3,
+      1,
+      "act2",
+    )
+    .await?;
+
+    let first = participation_cron::run_activity_batch(&context).await?;
+    assert_eq!(first.events_emitted, 3, "first run emits 3 rows");
+    let second = participation_cron::run_activity_batch(&context).await?;
+    assert_eq!(
+      second.events_emitted, 0,
+      "second run in same iso_week emits 0 (dedupe_key on activity_cron:<community>:<person>:<iso_week>)"
+    );
+
+    let week_end_iso_week = Utc::now().iso_week();
+    if week_start_iso_week != week_end_iso_week {
+      eprintln!("xfail: ISO week boundary crossed mid-test ({week_start_iso_week:?} -> {week_end_iso_week:?})");
+    }
+    Ok(())
+  }
+
+  // -------- Story 2 — dormancy cron (Source 2) --------
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn participation_dormancy_cron_emits_minus_two_per_dormant_user() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
+    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm1.example.com").await?;
+
+    let community = seed_named_community(&context, instance.id, "rt_r3_dorm1").await?;
+    let persons = seed_dormant_users_in_community(
+      &context,
+      &mut async_conn,
+      instance.id,
+      &community,
+      4,
+      "dorm1",
+    )
+    .await?;
+
+    // Backdate the seeded prior ParticipationConsistency rows so the dormancy
+    // LEFT-ANTI-JOIN's lookback window can detect them as "prior activity".
+    diesel::sql_query(
+      "UPDATE reputation_event SET published_at = now() - interval '30 days' \
+       WHERE reason = 'prior_activity_seed'",
+    )
+    .execute(&mut async_conn)
+    .await?;
+
+    let outcome = participation_cron::run_dormancy_batch(&context).await?;
+    assert_eq!(outcome.events_emitted, 4, "4 dormant users -> 4 emits");
+
+    let expected_delta = i32::try_from(DEFAULT_DELTAS_PARTICIPATION_DORMANT)?;
+    for pid in &persons {
+      let dormant_rows: i64 = reputation_event::table
+        .filter(reputation_event::person_id.eq(pid))
+        .filter(reputation_event::delta.eq(expected_delta))
+        .filter(reputation_event::source_event_type.eq(ReputationEventSourceType::DormancyCron))
+        .count()
+        .get_result(&mut async_conn)
+        .await?;
+      assert_eq!(dormant_rows, 1, "dormant user {pid:?} has 1 -2 row");
+    }
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn participation_dormancy_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
+    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm2.example.com").await?;
+
+    let week_start_iso_week = Utc::now().iso_week();
+    let community = seed_named_community(&context, instance.id, "rt_r3_dorm2").await?;
+    let _persons = seed_dormant_users_in_community(
+      &context,
+      &mut async_conn,
+      instance.id,
+      &community,
+      3,
+      "dorm2",
+    )
+    .await?;
+    diesel::sql_query(
+      "UPDATE reputation_event SET published_at = now() - interval '30 days' \
+       WHERE reason = 'prior_activity_seed'",
+    )
+    .execute(&mut async_conn)
+    .await?;
+
+    let first = participation_cron::run_dormancy_batch(&context).await?;
+    assert_eq!(first.events_emitted, 3, "first run emits 3 rows");
+    let second = participation_cron::run_dormancy_batch(&context).await?;
+    assert_eq!(second.events_emitted, 0, "second run in same iso_week emits 0");
+
+    let week_end_iso_week = Utc::now().iso_week();
+    if week_start_iso_week != week_end_iso_week {
+      eprintln!("xfail: ISO week boundary crossed mid-test");
+    }
+    Ok(())
+  }
+
+  // -------- Story 3 — vote-outcome (Source 3) --------
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn vote_outcome_emits_plus_one_for_majority_aligned_jurors() -> LemmyResult<()> {
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo1.example.com").await?;
+    let federation_context = federation_config.to_request_data();
+
+    let admin = seed_person(&context, instance.id, "rt_r3_vo1_admin", true).await?;
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter = seed_person(&context, instance.id, "rt_r3_vo1_reporter", false).await?;
+    let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await?;
+    let target = seed_person(&context, instance.id, "rt_r3_vo1_target", false).await?;
+    let community = seed_named_community(&context, instance.id, "rt_r3_vo1").await?;
+    // Pre-seed 5 jurors so admin_assign_jury has a pool to draw from.
+    let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 5).await?;
+
+    let (case_id, majority, minority) = run_3_2_vote_scenario(
+      &context,
+      &federation_context,
+      &admin_view,
+      &reporter_view,
+      target,
+      &community,
+      "rt_r3_vo1",
+      JuryDecision::RemoveContent,
+      JuryDecision::NoAction,
+      Some("test".to_string()),
+    )
+    .await?;
+
+    let expected_delta = i32::try_from(DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED)?;
+    for pid in &majority {
+      let n = count_reputation_events_for(
+        &mut async_conn,
+        *pid,
+        ReputationDimension::ParticipationConsistency,
+        ReputationEventSourceType::VoteOutcome,
+      )
+      .await?;
+      assert_eq!(n, 1, "majority juror {pid:?} got 1 vote_outcome row");
+      let delta: i32 = reputation_event::table
+        .filter(reputation_event::person_id.eq(pid))
+        .filter(reputation_event::source_event_type.eq(ReputationEventSourceType::VoteOutcome))
+        .select(reputation_event::delta)
+        .first(&mut async_conn)
+        .await?;
+      assert_eq!(delta, expected_delta, "delta == DEFAULT_DELTAS_PARTICIPATION_JUROR_ALIGNED");
+    }
+    // Minority jurors must not appear under VoteOutcome.
+    for pid in &minority {
+      let n = count_reputation_events_for(
+        &mut async_conn,
+        *pid,
+        ReputationDimension::ParticipationConsistency,
+        ReputationEventSourceType::VoteOutcome,
+      )
+      .await?;
+      assert_eq!(n, 0, "minority juror {pid:?} got 0 vote_outcome rows");
+    }
+    let _ = case_id;
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn vote_outcome_emits_nothing_for_minority_jurors() -> LemmyResult<()> {
+    // Distinct test focus: minority jurors get zero rows under VoteOutcome.
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo2.example.com").await?;
+    let federation_context = federation_config.to_request_data();
+
+    let admin = seed_person(&context, instance.id, "rt_r3_vo2_admin", true).await?;
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter = seed_person(&context, instance.id, "rt_r3_vo2_reporter", false).await?;
+    let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await?;
+    let target = seed_person(&context, instance.id, "rt_r3_vo2_target", false).await?;
+    let community = seed_named_community(&context, instance.id, "rt_r3_vo2").await?;
+    let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 5).await?;
+
+    let (_case_id, _majority, minority) = run_3_2_vote_scenario(
+      &context,
+      &federation_context,
+      &admin_view,
+      &reporter_view,
+      target,
+      &community,
+      "rt_r3_vo2",
+      JuryDecision::RemoveContent,
+      JuryDecision::NoAction,
+      Some("test".to_string()),
+    )
+    .await?;
+
+    for pid in &minority {
+      let n = count_reputation_events_for(
+        &mut async_conn,
+        *pid,
+        ReputationDimension::ParticipationConsistency,
+        ReputationEventSourceType::VoteOutcome,
+      )
+      .await?;
+      assert_eq!(n, 0, "minority juror {pid:?} skipped vote_outcome emit");
+    }
+    Ok(())
+  }
+
+  // -------- Story 4 — flag-bad-faith admin endpoint (Source 4b) --------
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn flag_bad_faith_returns_403_for_non_admin() -> LemmyResult<()> {
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let federation_context = federation_config.to_request_data();
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf1.example.com").await?;
+
+    let reporter = seed_person(&context, instance.id, "rt_r3_fbf1_reporter", false).await?;
+    let case_id = seed_case_with_status(&mut async_conn, reporter, CaseStatus::EmergencyRemove).await?;
+    // Non-admin caller.
+    let caller = seed_person(&context, instance.id, "rt_r3_fbf1_user", false).await?;
+    let caller_view = LocalUserView::read_person(&mut context.pool(), caller).await?;
+
+    let result = flag_bad_faith_emergency_report(
+      Json(FlagBadFaithEmergencyReport { case_id }),
+      federation_context.reset_request_count(),
+      caller_view,
+    )
+    .await;
+    match result {
+      Ok(_) => panic!("expected non-admin caller to be rejected"),
+      Err(e) => assert_eq!(e.error_type, lemmy_utils::error::LemmyErrorType::NotAnAdmin),
+    }
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn flag_bad_faith_returns_400_for_non_emergency_remove_status() -> LemmyResult<()> {
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let federation_context = federation_config.to_request_data();
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf2.example.com").await?;
+
+    let admin = seed_person(&context, instance.id, "rt_r3_fbf2_admin", true).await?;
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter = seed_person(&context, instance.id, "rt_r3_fbf2_reporter", false).await?;
+    let case_id = seed_case_with_status(&mut async_conn, reporter, CaseStatus::Decided).await?;
+
+    let result = flag_bad_faith_emergency_report(
+      Json(FlagBadFaithEmergencyReport { case_id }),
+      federation_context.reset_request_count(),
+      admin_view,
+    )
+    .await;
+    match result {
+      Ok(_) => panic!("expected Decided case to be rejected by flag-bad-faith"),
+      Err(e) => match &e.error_type {
+        lemmy_utils::error::LemmyErrorType::Unknown(msg) => {
+          assert!(
+            msg.contains("flag-bad-faith requires EmergencyRemove"),
+            "error message should mention status requirement, got: {msg}"
+          );
+        }
+        other => panic!("expected LemmyErrorType::Unknown, got {other:?}"),
+      },
+    }
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn flag_bad_faith_admin_on_emergency_remove_case_emits_minus_one() -> LemmyResult<()> {
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let federation_context = federation_config.to_request_data();
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf3.example.com").await?;
+
+    let admin = seed_person(&context, instance.id, "rt_r3_fbf3_admin", true).await?;
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter = seed_person(&context, instance.id, "rt_r3_fbf3_reporter", false).await?;
+    let case_id = seed_case_with_status(&mut async_conn, reporter, CaseStatus::EmergencyRemove).await?;
+
+    let resp = flag_bad_faith_emergency_report(
+      Json(FlagBadFaithEmergencyReport { case_id }),
+      federation_context.reset_request_count(),
+      admin_view,
+    )
+    .await?
+    .into_inner();
+    assert!(resp.flagged, "flagged == true");
+    assert_eq!(resp.case_id, case_id, "case_id echoed");
+
+    // Verify -1 ReportingAccuracy row exists for the reporter under EvidenceQuality.
+    let n = count_reputation_events_for(
+      &mut async_conn,
+      reporter,
+      ReputationDimension::ReportingAccuracy,
+      ReputationEventSourceType::EvidenceQuality,
+    )
+    .await?;
+    assert_eq!(n, 1, "1 ReportingAccuracy/EvidenceQuality row for reporter");
+
+    let expected_delta = i32::try_from(DEFAULT_DELTAS_EVIDENCE_BAD_FAITH)?;
+    let row: (i32, Option<String>) = reputation_event::table
+      .filter(reputation_event::person_id.eq(reporter))
+      .filter(reputation_event::source_event_type.eq(ReputationEventSourceType::EvidenceQuality))
+      .select((reputation_event::delta, reputation_event::dedupe_key))
+      .first(&mut async_conn)
+      .await?;
+    assert_eq!(row.0, expected_delta, "delta == DEFAULT_DELTAS_EVIDENCE_BAD_FAITH (-1)");
+    assert_eq!(
+      row.1.as_deref(),
+      Some(format!("evidence_bad_faith:{}", case_id.0).as_str()),
+      "dedupe_key matches evidence_bad_faith:<case_id>"
+    );
+
+    let log_rows: i64 = governance_log::table
+      .filter(governance_log::entry_kind.eq("evidence_quality_recorded"))
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert!(log_rows >= 1, "evidence_quality_recorded log row exists");
+    Ok(())
+  }
+
+  // -------- Story 5 — evidence-cited heuristic (Source 4a) --------
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn evidence_cited_heuristic_emits_plus_one_when_rationale_above_threshold(
+  ) -> LemmyResult<()> {
+    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+    let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_ec1.example.com").await?;
+    let federation_context = federation_config.to_request_data();
+
+    let admin = seed_person(&context, instance.id, "rt_r3_ec1_admin", true).await?;
+    let admin_view = LocalUserView::read_person(&mut context.pool(), admin).await?;
+    let reporter = seed_person(&context, instance.id, "rt_r3_ec1_reporter", false).await?;
+    let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter).await?;
+    let target = seed_person(&context, instance.id, "rt_r3_ec1_target", false).await?;
+    let community = seed_named_community(&context, instance.id, "rt_r3_ec1").await?;
+    let _jurors = governance_fixtures::seed_jurors(&context, instance.id, 5).await?;
+
+    let threshold_chars =
+      usize::try_from(DEFAULT_PARTICIPATION_EVIDENCE_CITED_RATIONALE_THRESHOLD_CHARS.max(0))
+        .unwrap_or(0);
+    let long_rationale: String = "a".repeat(threshold_chars + 8);
+    // Pre-condition: reporter must own ≥1 case_evidence row when the case fires.
+    // We seed evidence AFTER create_report but BEFORE the deciding vote — but
+    // case_id is only known post-create. So: create_report first, then seed
+    // case_evidence on the resulting case_id, then proceed.
+    let create_resp = create_report(
+      Json(CreateGovernanceReport {
+        community_id: Some(community.id),
+        target_type: CaseTargetType::Person,
+        target_id: target.0,
+        reason_code: "rt_r3_ec1".to_string(),
+        description: Some("evidence-cited test".to_string()),
+      }),
+      context.clone(),
+      reporter_view.clone(),
+    )
+    .await?
+    .into_inner();
+    let case_id = create_resp
+      .case_id
+      .ok_or_else(|| anyhow::anyhow!("case_id missing"))?;
+    seed_case_evidence(&mut async_conn, case_id, reporter).await?;
+    {
+      let mut pool = context.pool();
+      let mut conn = get_conn(&mut pool).await?;
+      diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id.0)))
+        .set(moderation_case::status.eq(CaseStatus::ThresholdMet))
+        .execute(&mut *conn)
+        .await?;
+    }
+    let assign_resp = admin_assign_jury(
+      Json(AdminAssignJury { case_id }),
+      context.clone(),
+      admin_view.clone(),
+    )
+    .await?
+    .into_inner();
+    for juror_id in &assign_resp.assigned_person_ids {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror_id).await?;
+      accept_jury_assignment(
+        Json(AcceptJuryAssignment { case_id }),
+        context.clone(),
+        juror_view,
+      )
+      .await?;
+    }
+    // First 3 vote RemoveContent with the threshold-length rationale; last 2
+    // vote NoAction (the rationale is bound to the majority decision via
+    // winning_rationales filtering, so minority rationales are ignored).
+    for juror in assign_resp.assigned_person_ids.iter().take(3) {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::RemoveContent,
+          rationale: Some(long_rationale.clone()),
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+    for juror in assign_resp.assigned_person_ids.iter().skip(3).take(2) {
+      let juror_view = LocalUserView::read_person(&mut context.pool(), *juror).await?;
+      submit_jury_vote(
+        Json(SubmitJuryVote {
+          case_id,
+          decision: JuryDecision::NoAction,
+          rationale: None,
+        }),
+        federation_context.reset_request_count(),
+        juror_view,
+      )
+      .await?;
+    }
+
+    let expected_delta = i32::try_from(DEFAULT_DELTAS_EVIDENCE_CITED)?;
+    let evidence_cited_rows: i64 = reputation_event::table
+      .filter(reputation_event::person_id.eq(reporter))
+      .filter(reputation_event::source_event_type.eq(ReputationEventSourceType::EvidenceQuality))
+      .filter(reputation_event::reason.eq("evidence_cited"))
+      .filter(reputation_event::delta.eq(expected_delta))
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert_eq!(
+      evidence_cited_rows, 1,
+      "1 evidence_cited row for reporter with delta == DEFAULT_DELTAS_EVIDENCE_CITED"
+    );
+    Ok(())
+  }
 }
