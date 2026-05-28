@@ -2117,3 +2117,5 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **outcome:** merge succeeded; both post-condition verifications pass (state=MERGED, mergedAt non-null, mergeCommit.oid valid 40-char sha)
 
 ## bm-cut: phase-v1-redaction-r1 off 321c848fc — 2026-05-28
+
+## bm-cut: phase-v1-quality-r2 off 27c235a20 — 2026-05-28
