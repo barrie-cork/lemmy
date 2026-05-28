@@ -2033,3 +2033,20 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **pushed:** yes — origin/phase-v1-RT-r3 (upstream tracking set via -u)
 - **verified:** gh api branch endpoint confirmed
 - **next:** await impl-task briefs
+
+## bm: poll-cr — 2026-05-28T15:42:29Z
+- **PR:** #155
+- **head SHA:** 90cd0183d (advanced from 87285bbfe)
+- **CR comments seen:** 18 total (5 review / 12 inline / 1 issue-walkthrough)
+- **Actionable findings ingested:** 13 CR + 5 Copilot/user = 18 total
+- **New findings this poll:** 6 (cr-8..cr-13 — all on `.claude/PRPs/briefs/v1-RT-r3-fix-impl-2.md`, `handovers/v1-RT-r3-fix-impl-2-recovery-2026-05-26.md`, `reports/session-retro-2026-05-26-pr-155-cr-triage-junior-479-fail.md`)
+- **Findings addressed since last poll:** 2 — cr-1 (DQ boundary) + cr-3 (iso-week guards), both via `90cd0183d` (advisor carve-out fix-impl-2; commit subject explicitly cites cr-1 + cr-3)
+- **Counters:** critical 0-fix/2-addressed-pending-promote | major 2-fix (cr-2 carry, cr-8 fix) | medium 3-fix (cp-1/2/3) | minor 6-fix-or-carry + 2-wont-fix | nit 3 mixed
+- **Recommendation:** pending (still needs `/bm-triage 155` to promote cr-1+cr-3 to `done`, decide cr-8..cr-13 buckets)
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (committed at e66906cdf, force-added — file was gitignored)
+- **Notes:**
+  - CR walkthrough is in **auto-pause** ("Reviews paused" — auto_pause_after_reviewed_commits). To resume: `@coderabbitai resume` in PR comment. Not blocking — CR still posted reviews 2-5 (4366379668/4366724628/4366749242/4366774433) on each subsequent push.
+  - All 6 new findings are on documentation/coordination files (briefs, handover, retro). None touch `crates/**` or other production paths.
+  - cr-8 is `Major` by CR but on a gitignored brief that already served its purpose (no Junior worker consumed it; advisor wrote the fix). Strong case for `wont-fix` parity with cr-5/cr-6.
+  - cr-12 is the only new finding on a tracked-and-referenced doc (session-retro) — strong case for `fix-in-pr`.
+  - Fingerprint: f5a2b4270b... (changed from prior poll; PROCEED-write triggered).
