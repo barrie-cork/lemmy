@@ -70,7 +70,7 @@ If the BM worker is uncertain about this exemption, refer to the precedent at `.
 
 ## 4. Constraints
 
-- **PRE-CUT verification:** `git rev-parse --short governance-v0` MUST equal `ec490cace` before cut. If drift (e.g. concurrent advisor commit landed), STOP and file `kind: "blocker"` DQ.
+- **PRE-CUT verification:** `git rev-parse --short governance-v0` MUST equal `f6c8781ad` before cut (this is the brief commit itself — Junior task #482 cut against a stale daemon-local trunk and exited as no-op; advisor ff'd daemon `governance-v0` to `f6c8781ad` before re-queueing). If drift (e.g. concurrent advisor commit landed), STOP and file `kind: "blocker"` DQ.
 - **PRE-CUT trunk cleanliness:** `git status --short` MUST be empty on `governance-v0` before cut. If non-empty, STOP and surface.
 - **Branch name:** exactly `phase-v1-redaction-r1`. No deviation; no `phase-redaction-r1` shorthand; no `v1-r1-redaction` reordering.
 - **Base MUST be `governance-v0`** (never `main` per `phase-branch.md`).
