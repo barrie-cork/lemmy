@@ -470,7 +470,7 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // BREHON_DISABLE_SNAPSHOT_JOB at line 209).
   let context_participation = context.reset_request_count();
   let participation_pool = &mut context.pool();
-  let participation_interval_days_i64: i64 = lemmy_api::governance::config::get_int(
+  let raw_participation_interval_days_i64: i64 = lemmy_api::governance::config::get_int(
     &mut lemmy_api::governance::config::ConfigCache::new(),
     participation_pool,
     lemmy_api::governance::config::Scope::Instance,
@@ -478,6 +478,12 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   )
   .await
   .unwrap_or(7);
+  let participation_interval_days_i64 = raw_participation_interval_days_i64.max(1);
+  if raw_participation_interval_days_i64 < 1 {
+    warn!(
+      "participation_cron: invalid participation_interval_days={raw_participation_interval_days_i64}; clamped to 1"
+    );
+  }
   let participation_interval_days: u32 =
     u32::try_from(participation_interval_days_i64).unwrap_or(7);
   scheduler

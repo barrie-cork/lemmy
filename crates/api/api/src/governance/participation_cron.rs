@@ -83,7 +83,7 @@ pub async fn run_activity_batch(
   let pool = &mut context.pool();
   let mut cache = ConfigCache::new();
 
-  let lookback_days = config::get_int(
+  let raw_lookback_days = config::get_int(
     &mut cache,
     pool,
     Scope::Instance,
@@ -91,8 +91,14 @@ pub async fn run_activity_batch(
   )
   .await
   .unwrap_or(config::DEFAULT_PARTICIPATION_LOOKBACK_DAYS);
+  let lookback_days = raw_lookback_days.max(1);
+  if raw_lookback_days < 1 {
+    warn!(
+      "participation_activity_cron: invalid lookback_days={raw_lookback_days}; clamped to 1"
+    );
+  }
 
-  let activity_threshold = config::get_int(
+  let raw_activity_threshold = config::get_int(
     &mut cache,
     pool,
     Scope::Instance,
@@ -100,6 +106,12 @@ pub async fn run_activity_batch(
   )
   .await
   .unwrap_or(config::DEFAULT_PARTICIPATION_ACTIVITY_THRESHOLD_COMMENTS);
+  let activity_threshold = raw_activity_threshold.max(1);
+  if raw_activity_threshold < 1 {
+    warn!(
+      "participation_activity_cron: invalid activity_threshold_comments={raw_activity_threshold}; clamped to 1"
+    );
+  }
 
   let delta_active = i32::try_from(
     config::get_int(
@@ -230,7 +242,7 @@ pub async fn run_dormancy_batch(
   let pool = &mut context.pool();
   let mut cache = ConfigCache::new();
 
-  let dormancy_window_days = config::get_int(
+  let raw_dormancy_window_days = config::get_int(
     &mut cache,
     pool,
     Scope::Instance,
@@ -238,6 +250,12 @@ pub async fn run_dormancy_batch(
   )
   .await
   .unwrap_or(config::DEFAULT_PARTICIPATION_DORMANCY_WINDOW_DAYS);
+  let dormancy_window_days = raw_dormancy_window_days.max(1);
+  if raw_dormancy_window_days < 1 {
+    warn!(
+      "participation_dormancy_cron: invalid dormancy_window_days={raw_dormancy_window_days}; clamped to 1"
+    );
+  }
 
   let delta_dormant = i32::try_from(
     config::get_int(
