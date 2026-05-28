@@ -359,14 +359,17 @@ Mandatory reading; rules apply silently in the implementation:
 
 ### 4.2 Worker-side validation gates (mandatory before push)
 
-Run all 3 in sequence; all must exit 0. Use Linux-side cargo wrappers:
+Run all 3 in sequence; all must exit 0. Use Linux-side cargo wrappers with
+**narrow `-p lemmy_db_schema` scope** (matches Task 1 worker-side discipline;
+`--workspace` scope is reserved for the laptop-side validate-pending-laptop
+step per §4.3, not worker self-test):
 
 ```bash
-bash scripts/brehon/cargo-check.sh --workspace --features full
+bash scripts/brehon/cargo-check.sh -p lemmy_db_schema --features full
 echo "check exit: $?"
 # EXPECT: exit 0
 
-bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings
+bash scripts/brehon/cargo-clippy.sh -p lemmy_db_schema --features full --no-deps -- -D warnings
 echo "clippy exit: $?"
 # EXPECT: exit 0
 
@@ -489,8 +492,9 @@ Public API non-regression:
 - `rg "fn scrub_json" crates/db_schema/.../redaction.rs` = 1 hit (no `pub` widening).
 - `rg "scrub_json_inner" crates/` = 3 hits (1 def + 2 recursive call sites).
 
-Worker-side gates: cargo-check.sh --workspace --features full (exit 0),
-cargo-clippy.sh --workspace --features full --no-deps -- -D warnings (exit 0),
+Worker-side gates (narrow -p lemmy_db_schema scope per Task 1 discipline):
+cargo-check.sh -p lemmy_db_schema --features full (exit 0),
+cargo-clippy.sh -p lemmy_db_schema --features full --no-deps -- -D warnings (exit 0),
 cargo-test.sh -p lemmy_db_schema --features full redaction::tests (exit 0;
 11 passed; 0 failed; 2 ignored).
 
