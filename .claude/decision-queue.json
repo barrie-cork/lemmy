@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-28T21:00:00Z",
-      "question": "Run cargo check + clippy + test (redaction::tests) on worker branch for v1-redaction-r1 Task 1 adversarial test corpus",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "One commit on branch junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491 (e42cb4d70). Shape-G suspended per DQ #229 + project_shape_g_suspended_2026_05_16.md; laptop runs the final gates.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task1-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full redaction::tests > .claude/PRPs/debug/v1-redaction-r1-task1-test.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491",
-      "phase_task": "v1-redaction-r1-task-1",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "642f320508ca-002"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "457a6a6b74f8-001",
@@ -4316,6 +4288,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "642f320508ca-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-28T21:00:00Z",
+      "question": "Run cargo check + clippy + test (redaction::tests) on worker branch for v1-redaction-r1 Task 1 adversarial test corpus",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "One commit on branch junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491 (e42cb4d70). Shape-G suspended per DQ #229 + project_shape_g_suspended_2026_05_16.md; laptop runs the final gates.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full redaction::tests > .claude/PRPs/debug/v1-redaction-r1-task1-test.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491",
+      "phase_task": "v1-redaction-r1-task-1",
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-redaction-r1 tip 6cee24307 (lane worktree brehon-fork-redaction-r1): cargo-check.bat --workspace --features full exit 0 (11m 14s); cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (5m 35s); cargo-test.bat -p lemmy_db_schema --features full redaction::tests exit 0 (10 passed; 0 failed; 2 ignored; 0 measured; 32 filtered out; finished in 0.01s). All 7 task-1 adversarial tests + 3 pre-existing scrub tests pass. 2 #[ignore] tests carry forward to v1-redaction-r2 per DQ 642f320508ca-001.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T00:35:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "642f320508ca-002"
     }
   ]
 }
