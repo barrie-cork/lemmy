@@ -45,6 +45,54 @@ You are the **impl-task** subagent (Sonnet 4.6 per your frontmatter). Execute pl
 
 **Commit message** (exactly): `feat(<scope>): <title> (task <N>)`
 
+### 2.0 Scope gate — e2e.rs fix-impl size cap (mandatory)
+
+Per `feedback_fix_impl_pre_locate_e2e_anchors.md` §"How to apply" + the
+2× recurrence at v1-RT-r3 Task 4 cycle (Junior #474–#477, DQ
+`a3d0e9941441-033`) + fix-impl-2 dispatch (Junior #479, 2026-05-26).
+
+**When this brief is a fix-impl** (filename matches `*-fix-impl-*.md`)
+**AND** the `modifies:` array (or §2 "Produce" list) contains
+`crates/server/tests/e2e.rs`, the brief MUST satisfy ALL THREE caps:
+
+- **Brief length ≤ 150 lines** (excluding frontmatter, excluding any
+  pasted `old_string`/`new_string` blocks — those are bounded by the
+  edit-count cap below, not the line cap).
+- **File edits ≤ 2** (the `modifies:` array, plus `creates:` if any,
+  must total at most 2 distinct files).
+- **Edit calls per file ≤ 2** (each file's worker-side Edits must
+  number ≤ 2; if the recipe requires 3+ Edits per file, the brief is
+  over the cap).
+
+**Briefs exceeding any cap MUST split** into narrower
+`<phase>-fix-impl-<N>a.md` + `<phase>-fix-impl-<N>b.md` briefs. Each
+split brief independently satisfies all three caps. The advisor
+dispatches them as separate Junior tasks (serial or `[P]`-cohort per
+the cohort dispatch rule).
+
+**Pre-located verbatim anchors are required** (not just guidance) for
+every Edit in a fix-impl brief targeting e2e.rs. The brief MUST paste
+the exact `old_string` (5-10 lines of distinctive surrounding context)
+and `new_string` (the replacement) into the recipe section. Per
+`feedback_fix_impl_pre_locate_e2e_anchors.md` §"How to apply".
+
+**Why the cap exists:** a fix-impl brief targeting e2e.rs that violates
+any of the three caps statistically reproduces the v1-RT-r3 Junior
+#474–#477 + #479 `error_max_turns` failure class. Sonnet 4.6 impl-task
+on a 17,000-line file cannot afford the Read+Grep budget to locate
+anchors AND apply 3+ Edits within the 150-turn budget. The cap
+mechanically forces the brief author to either (a) shrink the scope
+per-dispatch or (b) pre-locate so the worker spends turns on Edits, not
+on Reads.
+
+**This gate applies to fix-impl briefs only.** Non-fix-impl briefs
+(plan §13 task briefs adding NEW e2e fixtures modules) may legitimately
+exceed the cap when authoring net-new modules of 200-500 lines — those
+go through the canonical impl-task-brief shape with §2.4 lesson
+injection per `feedback_junior_worker_e2e_edit_hang.md` (parent class).
+
+Delete this §2.0 block from a non-fix-impl brief.
+
 ## 3. Required reading
 
 In this order:

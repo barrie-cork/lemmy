@@ -76,6 +76,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 |---|---|
 | `crates/server/tests/e2e.rs` (any edit, any size) | `feedback_lemmy_error_no_std_error.md`, `feedback_async_pool_test_pattern.md`. **When a v1-SL-* or v1-JM-* fixtures sibling module already exists in the same file, mirror its error-shape case (A or B) verbatim per `feedback_lemmy_error_no_std_error.md` case enumeration. Pick by reading sibling at the cited line range BEFORE authoring the brief — canonical-schema-first gate.** |
 | `crates/server/tests/e2e.rs` (≥2 edits in this task or cohort) | + `feedback_junior_worker_e2e_edit_hang.md` |
+| `crates/server/tests/e2e.rs` AND brief is a fix-impl (filename matches `*-fix-impl-*.md`) | + `feedback_fix_impl_pre_locate_e2e_anchors.md` (pre-locate verbatim `old_string`/`new_string` anchors; subject to template §2.0 scope gate: ≤150 lines, ≤2 file edits, ≤2 Edits/file). 2× recurrence at v1-RT-r3 Task 4 cycle (DQ `a3d0e9941441-033`) + fix-impl-2 dispatch (Junior #479). |
 | `crates/db_schema/migrations/**` (any new migration) | `feedback_lemmy_migration_runner.md`, `feedback_postgres_jsonb_canonicalization.md` (if JSONB) |
 | Any new test under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
 | Any handler under `crates/api/**/src/**` doing 2+ DB writes | `feedback_multi_write_handlers_need_transactions.md` |
