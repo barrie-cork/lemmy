@@ -1,0 +1,16 @@
+{
+  "from": "planner",
+  "kind": "log",
+  "timestamp": "2026-05-28T23:43:49Z",
+  "question": "C3 (Issue #158) emit_reputation_event helper extraction deferred per premature-DRY gate",
+  "answer": "v1-quality-r2 brief WP-2 default: defer C3 unless planner identifies a 3rd consumer in near-term roadmap. As of 2026-05-28, federation_inbound lane status='done' in .claude/PRPs/v1-roadmap.json — no upcoming sub-phase introduces a 3rd reputation-event emitter. Therefore: 2 consumers as of plan author time; revisit when 3rd materialises. Per feedback_principles_not_rules.md.",
+  "options": [
+    "defer",
+    "extract"
+  ],
+  "context": "Two existing emitter sites: crates/api/api/src/governance/admin_emergency_remove.rs:448 (emit_reputation_event_local) and crates/api/api/src/governance/submit_jury_vote.rs:1096 (emit_reputation_event). Bodies are byte-identical. Extraction target: crates/api/api/src/governance/reputation_helpers.rs. Trigger condition for v1-quality-r3 follow-on: any sub-phase introduces a 3rd reputation-event emit path.",
+  "answered_by": "planner",
+  "resolved_at": "2026-05-28T23:43:49Z",
+  "approved_by": null,
+  "approved_at": null
+}
