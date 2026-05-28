@@ -2115,3 +2115,5 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **head:** phase-v1-RT-r3 (deleted via --delete-branch)
 - **trunk_position:** 5ebd8ae23
 - **outcome:** merge succeeded; both post-condition verifications pass (state=MERGED, mergedAt non-null, mergeCommit.oid valid 40-char sha)
+
+## bm-cut: phase-v1-redaction-r1 off 321c848fc — 2026-05-28
