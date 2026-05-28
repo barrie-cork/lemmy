@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-25T18:10:00Z",
+  "last_updated_at": "2026-05-28T16:30:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -396,10 +396,9 @@
     "quality": {
       "name": "Quality / QA",
       "prd": null,
-      "status": "done",
+      "status": "partial",
       "user_steered": true,
-      "user_steered_note": "User instructed 2026-05-22: quality is a meta-lane driven out-of-band; not /roadmap-next-cut. Recurring r-cycles may appear.",
-      "shipped_at": "2026-05-22",
+      "user_steered_note": "User instructed 2026-05-22: quality is a meta-lane driven out-of-band; not /roadmap-next-cut. Recurring r-cycles may appear. 2026-05-28: r2 added bundling 5 PR #155 carry-forward issues; gated on RT-r3 ship (4 of 5 reference RT-r3-only code).",
       "sub_phases": {
         "v1-quality-r1": {
           "status": "done",
@@ -410,6 +409,17 @@
           "carry_forwards": [
             "ADR-010 read-side enforcement (DQ 922c8bae61db-002)",
             "clippy 8 errors (DQ 922c8bae61db-001)"
+          ]
+        },
+        "v1-quality-r2": {
+          "status": "unstarted",
+          "deferred_until": "post-v1-RT-r3 merge (4 of 5 issues reference RT-r3-only code: EnvVarGuard, v1_rt_r3_fixtures module, emit_reputation_event helper)",
+          "scope": "Bundle of 5 PR #155 carry-forward issues: (T1, #157) DQ negative-duration lint + one-shot sweep; (T2, #156) audit fixtures-module process-env safety doc-comments; (T3, #158) extract emit_reputation_event shared helper to dedupe local vs federated paths; (T4, #159) wrap boot_context env mutations in EnvVarGuard; (T5, #160) wrap LEMMY_DATABASE_URL setter in EnvVarGuard (companion to T4).",
+          "issues": [156, 157, 158, 159, 160],
+          "source_pr": 155,
+          "background": "5 carry-forward issues filed 2026-05-28 from PR #155 (v1-RT-r3 BM triage). #157 is the only issue independent of RT-r3 (pure scripts + JSON). #156 references the v1_rt_r3_fixtures module not on governance-v0. #158/#159/#160 reference EnvVarGuard + emit_reputation_event symbols that only exist on phase-v1-RT-r3 (tip 1e2f536a3 as of 2026-05-28). All 5 issue bodies explicitly target 'v1-quality-r2' as the bundling sub-phase. User decision 2026-05-28: defer authoring brief + cutting phase branch until RT-r3 ships; add roadmap entry only.",
+          "depends_on": [
+            "v1-RT-r3"
           ]
         }
       },
@@ -507,11 +517,18 @@
       {
         "lane": "RT (Reputation Tuning)",
         "items": [
-          "v1-RT-r3 (in_flight — plan approved, bm-cut pending)",
+          "v1-RT-r3 (in_flight — Task 4 catch-fire 2026-05-26; advisor-side authorship in flight per handover)",
           "v1-RT-r4",
           "v1-RT-r5"
         ],
-        "rationale": "RT-r2 shipped 2026-05-24. RT-r3 planning task #463 done; plan-approval gate not yet cleared. RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted."
+        "rationale": "RT-r2 shipped 2026-05-24. RT-r3 in_flight on phase-v1-RT-r3 — Task 4 (e2e tests) hit cycle-count §5.3 HARD REFUSAL after 4 fix-impl attempts; user authorised advisor-side authorship. RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted."
+      },
+      {
+        "lane": "quality (Quality / QA)",
+        "items": [
+          "v1-quality-r2 (unstarted — gated on RT-r3 ship)"
+        ],
+        "rationale": "5 PR #155 carry-forward issues (#156-#160) bundled into v1-quality-r2. 4 of 5 reference RT-r3-only code; queue planning task only after RT-r3 merges to governance-v0."
       }
     ],
     "in_flight_outside_roadmap": [],
