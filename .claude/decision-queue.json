@@ -1,25 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-28T20:35:00Z",
-      "question": "Probe 6 failure: DQ entry ids 3999/4007/4016/4035 not found in .claude/decision-queue.json — are these line numbers from the CR review (not DQ entry ids), and which actual entry ids should T1 sweep?",
-      "options": [
-        "option-A: confirm that 3999/4007/4016/4035 are CR line-number references; update plan §13 Task 1 IMPLEMENT to sweep the 3 current back-dated entries by actual id (315, 1b8527b076d4-001, 81719cf8ca8d-001); proceed",
-        "option-B: confirm that those entries were already swept before this task ran (idempotent re-run); provide the actual entry ids that remain for T1 to verify; proceed",
-        "option-C: provide the actual DQ entry ids (not line numbers) that issue #157 intended to target; update Probe 6 expectation in plan before proceeding"
-      ],
-      "context": "Probe 6 ran: python3 searched resolved[] for entries with id or id_v1 in {3999, 4007, 4016, 4035}. Found 0 of 4. Investigation: (1) max integer id in live DQ = 340; max in both archive files = 340 and 224. No entry has id or id_v1 anywhere near 3999-4035. (2) PR #155 CR finding cr-4 notes: 'entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z' — this matches live entry id=1b8527b076d4-001 (same ts/ra values). CR finding uses FILE LINE NUMBERS (4007, 4016, 4035), not DQ entry ids. (3) Current live back-dated entries (resolved_at < timestamp): id=315 (ts=2026-05-21T10:45:00Z, ra=2026-05-21T08:53:00Z), id=1b8527b076d4-001 (ts=2026-05-25T19:30:00Z, ra=2026-05-25T19:11:20.705989Z), id=81719cf8ca8d-001 (ts=2026-05-26T19:10:00Z, ra=2026-05-26T07:08:50.884428Z). (4) Secondary finding: dq-v3-append-fragment.sh lacks +x permission (-rw-r--r--); callable via 'bash scripts/...' explicitly but not directly. dq-v3-new-entry.sh IS executable (-rwxr-xr-x). All other probes (0-5, 7, 8) PASS: Docker OK, branch BASE_OK, cargo-check exit 0, workspace+features exit 0, negative exit 101, clippy exit 0, both scripts present, no concurrent PR overlap.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "3ef987b66db4-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "457a6a6b74f8-001",
@@ -4290,6 +4271,24 @@
       "approved_by": "user",
       "approved_at": "2026-05-26T12:33:00Z",
       "id": "a3d0e9941441-033"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-28T20:35:00Z",
+      "question": "Probe 6 failure: DQ entry ids 3999/4007/4016/4035 not found in .claude/decision-queue.json — are these line numbers from the CR review (not DQ entry ids), and which actual entry ids should T1 sweep?",
+      "options": [
+        "option-A: confirm that 3999/4007/4016/4035 are CR line-number references; update plan §13 Task 1 IMPLEMENT to sweep the 3 current back-dated entries by actual id (315, 1b8527b076d4-001, 81719cf8ca8d-001); proceed",
+        "option-B: confirm that those entries were already swept before this task ran (idempotent re-run); provide the actual entry ids that remain for T1 to verify; proceed",
+        "option-C: provide the actual DQ entry ids (not line numbers) that issue #157 intended to target; update Probe 6 expectation in plan before proceeding"
+      ],
+      "context": "Probe 6 ran: python3 searched resolved[] for entries with id or id_v1 in {3999, 4007, 4016, 4035}. Found 0 of 4. Investigation: (1) max integer id in live DQ = 340; max in both archive files = 340 and 224. No entry has id or id_v1 anywhere near 3999-4035. (2) PR #155 CR finding cr-4 notes: 'entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z' — this matches live entry id=1b8527b076d4-001 (same ts/ra values). CR finding uses FILE LINE NUMBERS (4007, 4016, 4035), not DQ entry ids. (3) Current live back-dated entries (resolved_at < timestamp): id=315 (ts=2026-05-21T10:45:00Z, ra=2026-05-21T08:53:00Z), id=1b8527b076d4-001 (ts=2026-05-25T19:30:00Z, ra=2026-05-25T19:11:20.705989Z), id=81719cf8ca8d-001 (ts=2026-05-26T19:10:00Z, ra=2026-05-26T07:08:50.884428Z). (4) Secondary finding: dq-v3-append-fragment.sh lacks +x permission (-rw-r--r--); callable via 'bash scripts/...' explicitly but not directly. dq-v3-new-entry.sh IS executable (-rwxr-xr-x). All other probes (0-5, 7, 8) PASS: Docker OK, branch BASE_OK, cargo-check exit 0, workspace+features exit 0, negative exit 101, clippy exit 0, both scripts present, no concurrent PR overlap.",
+      "answer": "option-A. Plan §13 Task 1 lists CR-finding LINE NUMBERS from PR #155 cr-4 review, not DQ entry ids — worker's investigation in this entry's context is correct. Actual back-dated entries on phase-v1-quality-r2 HEAD: id=315, id=1b8527b076d4-001, id=81719cf8ca8d-001. Plan amended in the same chore commit to sweep those 3 real ids. Secondary finding (dq-v3-append-fragment.sh 100644) ALSO fixed: chmod +x committed on trunk at 817291c9a and merge-fwd'd into phase-v1-quality-r2. Task 1 may proceed. Per .claude/lessons/feedback_falsifiable_hypothesis_before_structural_fix.md the worker ran the falsification (grep DQ for ids → 0 hits → investigate → identify real ids); the plan was the wrong hypothesis, not the back-dated-DQ premise.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-28T20:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "3ef987b66db4-001"
     }
   ]
 }
