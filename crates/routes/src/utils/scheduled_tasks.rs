@@ -102,6 +102,19 @@ impl Drop for FedReplayCleanupRunningGuard {
   }
 }
 
+// Concurrency guard for the weekly Brehon participation-cron tick
+// (Sources 1 + 2 per PRD §5.3). Mirrors FED_REPLAY_CLEANUP_RUNNING /
+// FedReplayCleanupRunningGuard above.
+static PARTICIPATION_CRON_RUNNING: AtomicBool = AtomicBool::new(false);
+
+struct ParticipationCronRunningGuard;
+
+impl Drop for ParticipationCronRunningGuard {
+  fn drop(&mut self) {
+    PARTICIPATION_CRON_RUNNING.store(false, Ordering::Release);
+  }
+}
+
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // https://github.com/mdsherry/clokwerk/issues/38
@@ -445,6 +458,58 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
           }
           Err(e) => warn!("federation_inbox_nonce cleanup: get_conn failed: {e}"),
         }
+      }
+    });
+
+  // v1-RT-r3 participation cron (Sources 1 + 2). Interval is read from
+  // `job.participation_interval_days` at scheduler setup (default 7).
+  // Both run_activity_batch and run_dormancy_batch dispatch under one
+  // tick + one RunningGuard (per brief — "in same scheduled_tasks.rs
+  // tick, registered after the activity cron block"). Disabled in tests
+  // via BREHON_DISABLE_PARTICIPATION_JOB=1 (mirrors
+  // BREHON_DISABLE_SNAPSHOT_JOB at line 209).
+  let context_participation = context.reset_request_count();
+  let participation_pool = &mut context.pool();
+  let raw_participation_interval_days_i64: i64 = lemmy_api::governance::config::get_int(
+    &mut lemmy_api::governance::config::ConfigCache::new(),
+    participation_pool,
+    lemmy_api::governance::config::Scope::Instance,
+    "job.participation_interval_days",
+  )
+  .await
+  .unwrap_or(7);
+  let participation_interval_days_i64 = raw_participation_interval_days_i64.max(1);
+  if raw_participation_interval_days_i64 < 1 {
+    warn!(
+      "participation_cron: invalid participation_interval_days={raw_participation_interval_days_i64}; clamped to 1"
+    );
+  }
+  let participation_interval_days: u32 =
+    u32::try_from(participation_interval_days_i64).unwrap_or(7);
+  scheduler
+    .every(CTimeUnits::days(participation_interval_days))
+    .run(move || {
+      let context = context_participation.reset_request_count();
+      async move {
+        if std::env::var("BREHON_DISABLE_PARTICIPATION_JOB").as_deref() == Ok("1") {
+          return;
+        }
+        if PARTICIPATION_CRON_RUNNING
+          .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+          .is_err()
+        {
+          warn!("participation_cron: previous batch still running, skipping this tick");
+          return;
+        }
+        let _guard = ParticipationCronRunningGuard;
+        lemmy_api::governance::participation_cron::run_activity_batch(&context)
+          .await
+          .inspect_err(|e| warn!("Failed to run participation activity batch: {e}"))
+          .ok();
+        lemmy_api::governance::participation_cron::run_dormancy_batch(&context)
+          .await
+          .inspect_err(|e| warn!("Failed to run participation dormancy batch: {e}"))
+          .ok();
       }
     });
 

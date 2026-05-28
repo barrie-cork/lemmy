@@ -36,6 +36,7 @@ pub mod jury_common;
 pub mod list_cases;
 pub mod list_modlog;
 pub mod list_my_jury_queue;
+pub mod participation_cron;
 pub mod redaction;
 pub mod reputation_snapshot;
 pub mod sponsor_liability;

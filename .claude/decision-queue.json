@@ -3,6 +3,58 @@
   "pending": [],
   "resolved": [
     {
+      "id": "457a6a6b74f8-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-28T00:00:00Z",
+      "question": "Run cargo check + clippy on worker branch for fix-impl-3 (cp-1/cp-2/cp-3 clamps + cr-12 markdown escape)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Two commits on branch junior/role-impl-task-v1-rt-r3-fix-impl-3-retry-see-claude-prps-briefs-v1-rt-r3-fix-impl-3-md-481. Commits: feca72af0 (clamp), 20a616356 (retro). Shape-G suspended per brief §5.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full > .claude/PRPs/debug/v1-RT-r3-fix-impl-3-check.log 2>&1",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-fix-impl-3-clippy.log 2>&1"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r3-fix-impl-3-retry-see-claude-prps-briefs-v1-rt-r3-fix-impl-3-md-481",
+      "phase_task": "cr-triage-fixes-3",
+      "answer": "pass",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-28T17:08:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c76792506538-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-25T19:30:00Z",
+      "question": "Run cargo-check and cargo-clippy for task 1 participation_cron module on laptop.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 commit b9876b7d8 on worker branch creates participation_cron.rs + wires scheduler tick. Shape G suspended (DQ #229); laptop runs the validation commands.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-task1-check.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-task1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-task1-clippy.log\n# EXPECT: exit 0"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": "cmd 1/2 cargo-check --workspace --features full: PASS (10m48s warm, 0 errors, 0 warnings). cmd 2/2 cargo-clippy --workspace --features full --no-deps -- -D warnings: PASS (5m26s warm, 0 lints with -D warnings). Ran on canonical-checkout-spawned lane worktree brehon-fork-rt-r3 at worker tip 68608bbc8 (impl SHA b9876b7d8). Logs at .claude/PRPs/debug/v1-RT-r3-task1-check.log + ...-clippy.log.",
+      "failed_commands": [],
+      "answer": "pass — both cargo-check and cargo-clippy clean against task-1 worker SHA b9876b7d8 (impl) / 68608bbc8 (tip). participation_cron module compiles workspace-wide; clippy -D warnings finds zero lints. Ready for daemon finalize-merge into phase-v1-RT-r3 + cohort-2 task 2+3 dispatch.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T00:25:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "from": "advisor",
       "kind": "validate-pending-laptop-e2e",
       "timestamp": "2026-05-25T07:30:00Z",
@@ -3965,6 +4017,103 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-25T13:00:00Z",
       "id": "a3d0e9941441-024"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-25T19:30:00Z",
+      "question": "v1-RT-r3 Task 0 pre-flight: 3 probe methodology gaps found — do all functional deliverables pass and is it safe to proceed to Task 1? Option A: yes, proceed. Option B: fix probe thresholds first.",
+      "options": [
+        "option-A: accept audit as PASS (methodology gaps only, all functional deliverables confirmed present) — proceed to Task 1",
+        "option-B: require probe threshold fixes before proceeding (edit probe expectations in plan §13 Task 0)"
+      ],
+      "context": "All 19 probes run. Three methodology gaps: (1) Probe 6: Junior worker always runs on junior/* branch, not phase-v1-RT-r3 — base IS phase-v1-RT-r3 at 11ec35219 (confirmed by git merge-base). (2) Probes 8a+8b: rg count=2 not >=3 because doc comments in reputation_event.rs do not repeat field names; both dedupe_key + source_event_type ARE present in ReputationEvent + ReputationEventInsertForm structs AND in schema.rs. (3) Probe 14: A=55 consts vs B=51 string literals — gap=4 multi-line defs (FEDERATION_INBOUND_DROPPED_OVERSIZE etc); uniq -d correctly empty (no duplicate values). One infrastructure note: crates/email/translations submodule was not initialized in this worktree — ran git submodule update --init --recursive (standard bootstrap step per CLAUDE.md) which fixed Probe 2. All cargo probes passed after init: workspace check exit 0, e2e test compile exit 0, clippy baseline exit 0, exit-code propagation exit 101. Probes 7 (r1+r2 PRs), 9 (ENTRY_KIND consts), 10 (34 config keys), 11 (partial index), 12 (emit_reputation_event + JuryVote), 13 (no concurrent PR overlap) all PASS.",
+      "answer": "option-A: accept audit as PASS — all 19 probes ran; all functional deliverables confirmed present (workspace check exit 0, e2e compile exit 0, clippy baseline 0, exit-code 101 propagation, r1+r2 PRs verified, 34 config keys, partial index, no concurrent PR overlap). The 3 methodology gaps are not defects: (a) Probe 6 — junior/* worker branch is expected topology (base IS phase-v1-RT-r3 confirmed via git merge-base, brief §3 reading clarifies); (b) Probes 8a/8b — doc comments do not repeat field names but dedupe_key + source_event_type confirmed present in ReputationEvent struct, ReputationEventInsertForm, and schema.rs; (c) Probe 14 — count gap of 4 explained by multi-line FEDERATION_INBOUND_DROPPED_* const defs; uniq -d empty (no duplicates). Proceed to Task 1 cohort dispatch.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-25T19:11:20.705989Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1b8527b076d4-001"
+    },
+    {
+      "id": "81719cf8ca8d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T19:10:00Z",
+      "question": "Run v1-RT-r3 task 3 cargo validation on laptop (Shape G suspended per DQ #229)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 committed e544ae26e on worker branch. Three files changed: api_common DTOs, admin_emergency_remove.rs handler+inner+helper, routes/lib.rs import+scope wire.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-task3-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-task3-test-no-run.log 2>&1\""
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "Validate task 2 (vote-outcome + evidence-cited emit) — cargo check + clippy on crates/api",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Commit 996765cae on worker branch. Shape G suspended per DQ #229; laptop advisor runs validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full -- -D warnings"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1bb1ff7a00a8-001"
+    },
+    {
+      "id": "8fc5df3a3664-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-26T00:00:00Z",
+      "question": "validate-pending-laptop: cargo-check + clippy + test --no-run on fix-impl-1 (#[expect] attrs on emit helpers)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 adds #[expect(clippy::too_many_arguments)] to emit_reputation_event (submit_jury_vote.rs:1095) and emit_reputation_event_local (admin_emergency_remove.rs:447). Pre-push cargo-check passed (exit 0). Validation deferred to laptop per Shape G suspension.",
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-check.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log 2>&1\"\necho \"exit: $?\"\ntail -40 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-clippy.log\n# EXPECT: exit 0",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --features full --test e2e --no-run > .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log 2>&1\"\necho \"exit: $?\"\ntail -20 .claude/PRPs/debug/v1-RT-r3-fix-impl-1-test-no-run.log\n# EXPECT: exit 0"
+      ],
+      "branch": "phase-v1-RT-r3",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     },
     {
       "from": "advisor",

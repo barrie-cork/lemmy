@@ -2025,3 +2025,85 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓
 - **roadmap:** flipped v1-RT-r3 unstarted → in_flight
 2026-05-24T10:55:00Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-05-24-fed-in-e-planning-queued.md branch=governance-v0 head=347033bf8
+
+## bm: cut branch (post-planning approval) — 2026-05-25T18:15:59Z
+- **branch:** phase-v1-RT-r3
+- **off:** governance-v0 @ e5ee569bb (incl. brief commit)
+- **plan:** .claude/PRPs/plans/v1-RT-r3.plan.md (already on trunk)
+- **pushed:** yes — origin/phase-v1-RT-r3 (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed
+- **next:** await impl-task briefs
+
+## bm: poll-cr — 2026-05-28T15:42:29Z
+- **PR:** #155
+- **head SHA:** 90cd0183d (advanced from 87285bbfe)
+- **CR comments seen:** 18 total (5 review / 12 inline / 1 issue-walkthrough)
+- **Actionable findings ingested:** 13 CR + 5 Copilot/user = 18 total
+- **New findings this poll:** 6 (cr-8..cr-13 — all on `.claude/PRPs/briefs/v1-RT-r3-fix-impl-2.md`, `handovers/v1-RT-r3-fix-impl-2-recovery-2026-05-26.md`, `reports/session-retro-2026-05-26-pr-155-cr-triage-junior-479-fail.md`)
+- **Findings addressed since last poll:** 2 — cr-1 (DQ boundary) + cr-3 (iso-week guards), both via `90cd0183d` (advisor carve-out fix-impl-2; commit subject explicitly cites cr-1 + cr-3)
+- **Counters:** critical 0-fix/2-addressed-pending-promote | major 2-fix (cr-2 carry, cr-8 fix) | medium 3-fix (cp-1/2/3) | minor 6-fix-or-carry + 2-wont-fix | nit 3 mixed
+- **Recommendation:** pending (still needs `/bm-triage 155` to promote cr-1+cr-3 to `done`, decide cr-8..cr-13 buckets)
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (committed at e66906cdf, force-added — file was gitignored)
+- **Notes:**
+  - CR walkthrough is in **auto-pause** ("Reviews paused" — auto_pause_after_reviewed_commits). To resume: `@coderabbitai resume` in PR comment. Not blocking — CR still posted reviews 2-5 (4366379668/4366724628/4366749242/4366774433) on each subsequent push.
+  - All 6 new findings are on documentation/coordination files (briefs, handover, retro). None touch `crates/**` or other production paths.
+  - cr-8 is `Major` by CR but on a gitignored brief that already served its purpose (no Junior worker consumed it; advisor wrote the fix). Strong case for `wont-fix` parity with cr-5/cr-6.
+  - cr-12 is the only new finding on a tracked-and-referenced doc (session-retro) — strong case for `fix-in-pr`.
+  - Fingerprint: f5a2b4270b... (changed from prior poll; PROCEED-write triggered).
+
+## bm: triage — 2026-05-28T15:50:01Z
+- **PR:** #155
+- **Buckets:** fix-in-pr 4 | rebut 0 | carry-forward 5 | done 2 | wont-fix 7
+- **Triage decisions:**
+  - **Promoted to done (2):** cr-1 (critical), cr-3 (minor) — both `addressed_in: 90cd0183d`
+  - **Promoted to wont-fix (5 newly bucketed):** cr-8 (major, brief contradiction parity with cr-5/cr-6), cr-9 (minor, MD040 on brief), cr-10 (minor, MD038 on brief), cr-11 (nit, handover doc reorg), cr-13 (nit, handover doc clarity) — all gitignored-artifact class
+  - **Stays fix-in-pr (4):** cp-1, cp-2, cp-3 (medium config-clamp footguns), cr-12 (minor retro table)
+  - **Stays carry-forward (5):** cr-2, cr-4, cr-7, cp-4, cp-5
+  - **Stays wont-fix (2 prior):** cr-5, cr-6
+- **Comment posted?** AWAITING USER CONFIRMATION (Phase 5 ASK)
+- **Carry-forward issues filed:** 0 — pending per-finding asks in Phase 6 (post-confirm)
+- **Recommendation:** approve (no open critical/major in fix-in-pr; only medium/minor)
+- **YAML updated:** .claude/PRPs/reviews/pr-155-findings.yaml — counters + recommendation recomputed
+- **Comment draft:** .claude/PRPs/reviews/pr-155-comment.md
+- **Notes:**
+  - cr-1 (critical) DQ boundary repair AND cr-3 (minor) iso-week guards both shipped via `90cd0183d` (advisor carve-out fix-impl-2; commit subject cites both ids). Promotion to `done` is the second-poll catchup.
+  - Five major-or-minor findings on briefs/handover (cr-8/9/10/11/13) bucketed `wont-fix` on the same gitignored-artifact rationale as cr-5/cr-6: brief/handover/runlog files are runtime artifacts, not in the markdownlint authoring contract.
+  - cr-8 was Major-severity per CR but `wont-fix`-bucketed because (a) the brief was an advisor-authored recovery handover not consumed by any Junior worker; (b) the actual fix shipped at `90cd0183d`; (c) per `feedback_severity_labels_dont_imply_semantic.md` "if I revert this, does the symptom return?" — reverting the brief contradiction cannot return a symptom because no consumer ever read it. Major-tagged but semantically nit.
+  - cr-12 is the only new finding bucketed `fix-in-pr` — markdown table breakage in a TRACKED retro (not gitignored); affects long-term readability. HTML-entity escape (`&#124;`).
+  - cp-1/cp-2/cp-3 group as one fix-impl commit (single defect class: input-clamping + warn-log). Already mirror pattern exists in `scheduled_tasks.rs` for `replay_window_days`.
+  - All carry-forward findings target v1-quality-r2 or v1-fed-in-* per the original `notes:` rationales. 5 GH issues to file (1 per row) — asks deferred to Phase 6 per script.
+
+## bm: triage outbound — 2026-05-28T15:55:00Z
+- **PR:** #155
+- **Digest comment posted:** https://github.com/barrie-cork/lemmy/pull/155#issuecomment-4565869493
+- **Carry-forward issues filed (5):**
+  - cr-2 → https://github.com/barrie-cork/lemmy/issues/156 (e2e.rs process-env safety rationale)
+  - cr-4 → https://github.com/barrie-cork/lemmy/issues/157 (DQ negative-duration entries)
+  - cr-7 → https://github.com/barrie-cork/lemmy/issues/158 (emit_reputation_event helper extraction)
+  - cp-4 → https://github.com/barrie-cork/lemmy/issues/159 (boot_context EnvVarGuard)
+  - cp-5 → https://github.com/barrie-cork/lemmy/issues/160 (LEMMY_DATABASE_URL EnvVarGuard)
+- **YAML updated:** carry-forward `notes:` fields back-filled with issue URLs.
+- **Recommendation:** approve (pending 4 fix-in-pr commits — cp-1/cp-2/cp-3 group + cr-12 standalone).
+
+## bm: poll-cr — 2026-05-28T16:05:00Z
+- **PR:** #155
+- **head SHA:** 73a1fe54d (changed since poll #2 — prior: 90cd0183d)
+- **CR comments seen:** 18 (5 review / 12 inline / 1 issue) — all from original review pass; no new CR comments since poll #2
+- **CR review status:** paused (auto-pause due to active development; walkthrough present from prior pass)
+- **Actionable findings ingested:** 0 new (all 18 findings already in YAML from polls #1/#2)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 4 — cp-1/cp-2/cp-3 → feca72af0 (clamp cron inputs), cr-12 → 20a616356 (retro table escape)
+- **Counters:** critical 0/1/0 | major 0/0/0/1/1 | medium 3/0/0/0/0 | minor 1/1/0/3/4 | nit 0/0/0/1/2 (open/done/rebutted/carry_forward/wont_fix)
+- **Recommendation:** approve (unchanged — no open critical/major; 4 fix-in-pr have addressed_in set, awaiting triage promotion to done)
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (poll_count: 3, commit: 1781e5251)
+- **Notes:** Fingerprint changed (new commits advanced head SHA); 4 fix-in-pr findings now carry addressed_in; triage step needed to promote cp-1/cp-2/cp-3/cr-12 to bucket:done.
+
+## bm: triage — 2026-05-28T16:20:00Z
+- **PR:** #155
+- **Buckets after triage:** fix-in-pr 0 | rebut 0 | carry-forward 5 | done 6 | wont-fix 7
+- **Promoted to done this poll:** cp-1, cp-2, cp-3 (→ feca72af0); cr-12 (→ 20a616356) — addressed_in already cited from poll #3 ingest, promoted from fix-in-pr → done.
+- **Comment posted?** yes — https://github.com/barrie-cork/lemmy/pull/155#issuecomment-4566562292 (posted 2026-05-28T17:18Z after user `confirm` via AskUserQuestion).
+- **Carry-forward issues filed:** 0 this poll (5 prior issues #156-#160 filed in poll #2 triage; no new carry-forward bucketed this poll).
+- **Recommendation:** approve (unchanged; flip from "approve pending fix-in-pr commits" → "approve" — no open fix-in-pr remain).
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (counters block recomputed; by_bucket fix-in-pr 4→0, done 2→6; open_by_severity all opens cleared).
+- **Comment body:** .claude/PRPs/reviews/pr-155-comment.md (overwritten with final post-fix-impl-3 digest).
