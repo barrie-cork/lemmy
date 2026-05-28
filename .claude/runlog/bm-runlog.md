@@ -2072,3 +2072,15 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - cr-12 is the only new finding bucketed `fix-in-pr` — markdown table breakage in a TRACKED retro (not gitignored); affects long-term readability. HTML-entity escape (`&#124;`).
   - cp-1/cp-2/cp-3 group as one fix-impl commit (single defect class: input-clamping + warn-log). Already mirror pattern exists in `scheduled_tasks.rs` for `replay_window_days`.
   - All carry-forward findings target v1-quality-r2 or v1-fed-in-* per the original `notes:` rationales. 5 GH issues to file (1 per row) — asks deferred to Phase 6 per script.
+
+## bm: triage outbound — 2026-05-28T15:55:00Z
+- **PR:** #155
+- **Digest comment posted:** https://github.com/barrie-cork/lemmy/pull/155#issuecomment-4565869493
+- **Carry-forward issues filed (5):**
+  - cr-2 → https://github.com/barrie-cork/lemmy/issues/156 (e2e.rs process-env safety rationale)
+  - cr-4 → https://github.com/barrie-cork/lemmy/issues/157 (DQ negative-duration entries)
+  - cr-7 → https://github.com/barrie-cork/lemmy/issues/158 (emit_reputation_event helper extraction)
+  - cp-4 → https://github.com/barrie-cork/lemmy/issues/159 (boot_context EnvVarGuard)
+  - cp-5 → https://github.com/barrie-cork/lemmy/issues/160 (LEMMY_DATABASE_URL EnvVarGuard)
+- **YAML updated:** carry-forward `notes:` fields back-filled with issue URLs.
+- **Recommendation:** approve (pending 4 fix-in-pr commits — cp-1/cp-2/cp-3 group + cr-12 standalone).

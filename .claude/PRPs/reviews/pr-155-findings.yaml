@@ -39,7 +39,7 @@ findings:
     bucket: carry-forward
     addressed_in: null
     rationale: null
-    notes: "Module doc-comment safety claim is overstated; underlying env mutation works because tests run with --test-threads=1 (BREHON_TEST_THREADS_GUARD), but the doc-comment doesn't state that constraint. Defer to v1-quality-r2 — rationale: process-env safety in e2e harness is a structural Lemmy issue (multiple existing fixtures modules use same pattern; this PR follows convention). Fixing JUST this module would be inconsistent."
+    notes: "Module doc-comment safety claim is overstated; underlying env mutation works because tests run with --test-threads=1 (BREHON_TEST_THREADS_GUARD), but the doc-comment doesn't state that constraint. Defer to v1-quality-r2 — rationale: process-env safety in e2e harness is a structural Lemmy issue (multiple existing fixtures modules use same pattern; this PR follows convention). Fixing JUST this module would be inconsistent. Carry-forward issue: https://github.com/barrie-cork/lemmy/issues/156"
 
   - id: cr-3
     source: coderabbit
@@ -67,7 +67,7 @@ findings:
     bucket: carry-forward
     addressed_in: null
     rationale: null
-    notes: "Real — entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z (back-dated). No data corruption; just clock-skew in handover-block fields. Carry-forward to v1-quality-r2: lint the DQ for negative durations in CI, fix all back-dated entries in one sweep."
+    notes: "Real — entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z (back-dated). No data corruption; just clock-skew in handover-block fields. Carry-forward to v1-quality-r2: lint the DQ for negative durations in CI, fix all back-dated entries in one sweep. Carry-forward issue: https://github.com/barrie-cork/lemmy/issues/157"
 
   - id: cr-5
     source: coderabbit
@@ -109,7 +109,7 @@ findings:
     bucket: carry-forward
     addressed_in: null
     rationale: null
-    notes: "emit_reputation_event_local duplicates emit_reputation_event in submit_jury_vote.rs. Hoisting to a shared governance/reputation_helpers.rs module is a clean refactor but expands the surface beyond the carve-out. Carry-forward to v1-quality-r2 or v1-fed-in-* where rep_event helpers see another consumer."
+    notes: "emit_reputation_event_local duplicates emit_reputation_event in submit_jury_vote.rs. Hoisting to a shared governance/reputation_helpers.rs module is a clean refactor but expands the surface beyond the carve-out. Carry-forward to v1-quality-r2 or v1-fed-in-* where rep_event helpers see another consumer. Carry-forward issue: https://github.com/barrie-cork/lemmy/issues/158"
 
   - id: cr-8
     source: coderabbit
@@ -249,7 +249,7 @@ findings:
     bucket: carry-forward
     addressed_in: null
     rationale: null
-    notes: "Copilot finding. EnvVarGuard was introduced in v1-RT-r3 to close the leak-via-? defect class for new fixture env mutations; boot_context predates the guard and uses the legacy pattern. Retroactively guarding boot_context is structural — affects every fixtures module that calls boot_context. Carry-forward to v1-quality-r2."
+    notes: "Copilot finding. EnvVarGuard was introduced in v1-RT-r3 to close the leak-via-? defect class for new fixture env mutations; boot_context predates the guard and uses the legacy pattern. Retroactively guarding boot_context is structural — affects every fixtures module that calls boot_context. Carry-forward to v1-quality-r2. Carry-forward issue: https://github.com/barrie-cork/lemmy/issues/159"
 
   - id: cp-5
     source: user
@@ -263,7 +263,7 @@ findings:
     bucket: carry-forward
     addressed_in: null
     rationale: null
-    notes: "Copilot finding. Same defect class as cp-4 (boot_context env var leak); covered by the same v1-quality-r2 carry-forward."
+    notes: "Copilot finding. Same defect class as cp-4 (boot_context env var leak); covered by the same v1-quality-r2 carry-forward. Carry-forward issue: https://github.com/barrie-cork/lemmy/issues/160"
 
 counters:
   total: 18
