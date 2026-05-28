@@ -176,10 +176,10 @@ findings:
     summary: "Markdown table broken — unescaped pipe characters inside code spans"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306255275
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: 20a616356
     rationale: null
-    notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs) — this one is binding fix-in-pr (quick rendering fix; retro will be referenced for years)."
+    notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs). Fix landed in 20a616356 (fix-impl-3 cycle). Promoted from fix-in-pr to done on poll #3 — bm-triage 2026-05-28."
 
   - id: cr-13
     source: coderabbit
@@ -204,10 +204,10 @@ findings:
     summary: "participation_interval_days config can be 0 — would tick every run_pending iteration"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676292
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: feca72af0
     rationale: null
-    notes: "Copilot finding. Real config-misuse footgun: 0-interval would burn the runner. Clamp to >=1, log warn when clamped. Companion to cp-2/cp-3 (all three are input-clamping fixes; group them into one fix-impl-2 commit if approved)."
+    notes: "Copilot finding. Real config-misuse footgun: 0-interval would burn the runner. Clamp to >=1, log warn when clamped. Fix landed in feca72af0 (fix-impl-3 cycle, scheduled_tasks.rs raw_interval_days clamp+warn). Promoted from fix-in-pr to done on poll #3 — bm-triage 2026-05-28."
 
   - id: cp-2
     source: user
@@ -218,10 +218,10 @@ findings:
     summary: "Negative lookback_days shifts cutoff into future (silences emits); zero threshold_comments matches everyone"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676356
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: feca72af0
     rationale: null
-    notes: "Copilot finding. Real config-misuse: silent-emit suppression OR mass-emit storm. Clamp lookback_days >=0 (or >=1), threshold_comments >=1, log warn when clamped."
+    notes: "Copilot finding. Real config-misuse: silent-emit suppression OR mass-emit storm. Clamp lookback_days >=0 (or >=1), threshold_comments >=1, log warn when clamped. Fix landed in feca72af0 (fix-impl-3 cycle, participation_cron.rs run_activity_batch clamp+warn for both inputs). Promoted from fix-in-pr to done on poll #3 — bm-triage 2026-05-28."
 
   - id: cp-3
     source: user
@@ -232,10 +232,10 @@ findings:
     summary: "Negative dormancy_window_days marks everyone as dormant (mass minus-two storm)"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676385
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: feca72af0
     rationale: null
-    notes: "Copilot finding. Real config-misuse: mass-dormancy storm. Clamp dormancy_window_days >=1, log warn when clamped. Group with cp-1/cp-2 in fix-impl-2."
+    notes: "Copilot finding. Real config-misuse: mass-dormancy storm. Clamp dormancy_window_days >=1, log warn when clamped. Fix landed in feca72af0 (fix-impl-3 cycle, participation_cron.rs run_dormancy_batch clamp+warn). Promoted from fix-in-pr to done on poll #3 — bm-triage 2026-05-28."
 
   - id: cp-4
     source: user
@@ -268,10 +268,10 @@ findings:
 counters:
   total: 18
   by_bucket:
-    fix-in-pr: 4
+    fix-in-pr: 0
     rebut: 0
     carry-forward: 5
-    done: 2
+    done: 6
     wont-fix: 7
   by_severity:
     critical: 1
@@ -286,8 +286,8 @@ counters:
   open_by_severity:
     critical: {open: 0, done: 1, rebutted: 0, carry_forward: 0, wont_fix: 0}
     major: {open: 0, done: 0, rebutted: 0, carry_forward: 1, wont_fix: 1}
-    medium: {open: 3, done: 0, rebutted: 0, carry_forward: 0, wont_fix: 0}
-    minor: {open: 1, done: 1, rebutted: 0, carry_forward: 3, wont_fix: 4}
+    medium: {open: 0, done: 3, rebutted: 0, carry_forward: 0, wont_fix: 0}
+    minor: {open: 0, done: 2, rebutted: 0, carry_forward: 3, wont_fix: 4}
     nit: {open: 0, done: 0, rebutted: 0, carry_forward: 1, wont_fix: 2}
 
 merged_at: null
