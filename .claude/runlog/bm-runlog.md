@@ -2097,3 +2097,13 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** approve (unchanged — no open critical/major; 4 fix-in-pr have addressed_in set, awaiting triage promotion to done)
 - **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (poll_count: 3, commit: 1781e5251)
 - **Notes:** Fingerprint changed (new commits advanced head SHA); 4 fix-in-pr findings now carry addressed_in; triage step needed to promote cp-1/cp-2/cp-3/cr-12 to bucket:done.
+
+## bm: triage — 2026-05-28T16:20:00Z
+- **PR:** #155
+- **Buckets after triage:** fix-in-pr 0 | rebut 0 | carry-forward 5 | done 6 | wont-fix 7
+- **Promoted to done this poll:** cp-1, cp-2, cp-3 (→ feca72af0); cr-12 (→ 20a616356) — addressed_in already cited from poll #3 ingest, promoted from fix-in-pr → done.
+- **Comment posted?** yes — https://github.com/barrie-cork/lemmy/pull/155#issuecomment-4566562292 (posted 2026-05-28T17:18Z after user `confirm` via AskUserQuestion).
+- **Carry-forward issues filed:** 0 this poll (5 prior issues #156-#160 filed in poll #2 triage; no new carry-forward bucketed this poll).
+- **Recommendation:** approve (unchanged; flip from "approve pending fix-in-pr commits" → "approve" — no open fix-in-pr remain).
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (counters block recomputed; by_bucket fix-in-pr 4→0, done 2→6; open_by_severity all opens cleared).
+- **Comment body:** .claude/PRPs/reviews/pr-155-comment.md (overwritten with final post-fix-impl-3 digest).
