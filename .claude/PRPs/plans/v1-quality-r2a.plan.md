@@ -55,8 +55,11 @@ zero new dependencies.
 Two distinct defect classes from PR #155, both addressable without
 touching `crates/**`:
 
-1. **DQ negative-duration data corruption risk (#157).** Four DQ entries
-   (3999, 4007, 4016, 4035 per the issue body) carry `resolved_at < timestamp`,
+1. **DQ negative-duration data corruption risk (#157).** Three DQ entries
+   (id=315, id=1b8527b076d4-001, id=81719cf8ca8d-001 — the real back-dated
+   entries as of phase-v1-quality-r2 HEAD; #157 body uses file LINE numbers
+   3999/4007/4016/4035, not DQ entry ids — see DQ #3ef987b66db4-001 for the
+   investigation) carry `resolved_at < timestamp`,
    producing negative durations in any time-series consumer. No script
    gates this on write; the issue can recur on every
    `dq-v3-append-fragment.sh` invocation that lets the caller pre-compute
@@ -364,13 +367,13 @@ echo "clippy exit: $?"
 python3 -c "
 import json
 d = json.load(open('.claude/decision-queue.json'))
-ids = {3999, 4007, 4016, 4035}
+ids = {315, '315', '1b8527b076d4-001', '81719cf8ca8d-001'}
 hits = [e for e in d.get('resolved', []) if e.get('id') in ids or e.get('id_v1') in ids]
-print(f'found {len(hits)} of 4 target entries')
+print(f'found {len(hits)} of 3 target entries')
 backdated = [e for e in hits if e.get('resolved_at') and e.get('timestamp') and e['resolved_at'] < e['timestamp']]
 print(f'{len(backdated)} are currently back-dated')
 "
-# EXPECT: found 4 of 4; 4 are currently back-dated
+# EXPECT: found 3 of 3; 3 are currently back-dated
 
 # Probe 7 — confirm dq-v3-new-entry.sh + dq-v3-append-fragment.sh present
 ls -la scripts/brehon/dq-v3-*.sh
@@ -386,7 +389,7 @@ gh pr list --repo barrie-cork/lemmy --state open --json number,title,headRefName
 - Probes 0, 1, 2, 3, 5, 6, 7, 8 exit 0
 - Probe 4 exits NON-ZERO (negative test)
 - Probe 1 returns `junior/...` + `BASE_OK`
-- Probe 6 confirms 4 of 4 target entries present + all 4 back-dated
+- Probe 6 confirms 3 of 3 target entries present + all 3 back-dated
 - Probe 7 confirms helper scripts present
 - Probe 8 confirms no concurrent PR overlap
 
@@ -397,8 +400,10 @@ gh pr list --repo barrie-cork/lemmy --state open --json number,title,headRefName
 
 **Goal:** add a non-zero-exit lint that catches `resolved_at < timestamp`
 DQ entries; wire it as the first gate in a new `scripts/brehon/precheck.sh`;
-one-shot floor-sweep the 4 currently back-dated entries (3999, 4007,
-4016, 4035 per #157).
+one-shot floor-sweep the 3 currently back-dated entries (id=315,
+id=1b8527b076d4-001, id=81719cf8ca8d-001; #157's body LINE numbers 3999/4007/4016/4035
+were CR-finding file-line references, not DQ ids — confirmed by Task 0 worker
+investigation in DQ #3ef987b66db4-001).
 
 **FILES:**
 ```yaml
@@ -412,7 +417,7 @@ requires: []
 
 **ACTION:** ship the lint script per §10.1 + the precheck wrapper per
 §10.2 + execute a one-shot floor sweep on `.claude/decision-queue.json`
-entries `3999`, `4007`, `4016`, `4035`. Verify post-sweep that the lint
+entries `id=315`, `id=1b8527b076d4-001`, `id=81719cf8ca8d-001`. Verify post-sweep that the lint
 exits 0; verify the lint exits non-zero on a synthetic back-dated entry.
 
 **IMPLEMENT (file 1 of 3):** in `scripts/brehon/dq-lint-durations.sh`,
@@ -425,10 +430,10 @@ emit `DQ-LINT FAIL: entry "<id>" has resolved_at (<rfc3339>) earlier than timest
 wrapper per §10.2. The script calls `dq-lint-durations.sh` (paths via
 `SCRIPT_DIR`) and surfaces non-zero exits. `chmod +x`.
 
-**IMPLEMENT (file 3 of 3):** in `.claude/decision-queue.json`, edit 4
+**IMPLEMENT (file 3 of 3):** in `.claude/decision-queue.json`, edit 3
 named entries' `resolved_at`:
-- For entries 3999, 4007, 4016, 4035: if `resolved_at < timestamp`, set
-  `resolved_at = timestamp` (Option A floor).
+- For entries id=315, id=1b8527b076d4-001, id=81719cf8ca8d-001: if
+  `resolved_at < timestamp`, set `resolved_at = timestamp` (Option A floor).
 - Option B (resolve from git history) is allowed PER ENTRY only if
   `git log --all --format='%H %cI' --grep='<id-citation-pattern>' | head -1`
   unambiguously returns a single commit-date AFTER `timestamp` AND BEFORE
@@ -630,8 +635,8 @@ r2a runs zero e2e tests. The e2e gate moves to r2b.
   - `scripts/brehon/dq-lint-durations.sh` exists, has `#!/usr/bin/env bash`,
     `set -euo pipefail`.
   - `scripts/brehon/precheck.sh` exists, sources the lint via `SCRIPT_DIR`.
-  - `.claude/decision-queue.json` entries 3999, 4007, 4016, 4035 have
-    `resolved_at >= timestamp`.
+  - `.claude/decision-queue.json` entries id=315, id=1b8527b076d4-001,
+    id=81719cf8ca8d-001 have `resolved_at >= timestamp`.
 
 ### Story 2: C3 helper extraction is deferred with audit trail
 
