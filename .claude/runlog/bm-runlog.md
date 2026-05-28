@@ -2084,3 +2084,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - cp-5 → https://github.com/barrie-cork/lemmy/issues/160 (LEMMY_DATABASE_URL EnvVarGuard)
 - **YAML updated:** carry-forward `notes:` fields back-filled with issue URLs.
 - **Recommendation:** approve (pending 4 fix-in-pr commits — cp-1/cp-2/cp-3 group + cr-12 standalone).
+
+## bm: poll-cr — 2026-05-28T16:05:00Z
+- **PR:** #155
+- **head SHA:** 73a1fe54d (changed since poll #2 — prior: 90cd0183d)
+- **CR comments seen:** 18 (5 review / 12 inline / 1 issue) — all from original review pass; no new CR comments since poll #2
+- **CR review status:** paused (auto-pause due to active development; walkthrough present from prior pass)
+- **Actionable findings ingested:** 0 new (all 18 findings already in YAML from polls #1/#2)
+- **New findings this poll:** 0
+- **Findings addressed since last poll:** 4 — cp-1/cp-2/cp-3 → feca72af0 (clamp cron inputs), cr-12 → 20a616356 (retro table escape)
+- **Counters:** critical 0/1/0 | major 0/0/0/1/1 | medium 3/0/0/0/0 | minor 1/1/0/3/4 | nit 0/0/0/1/2 (open/done/rebutted/carry_forward/wont_fix)
+- **Recommendation:** approve (unchanged — no open critical/major; 4 fix-in-pr have addressed_in set, awaiting triage promotion to done)
+- **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (poll_count: 3, commit: 1781e5251)
+- **Notes:** Fingerprint changed (new commits advanced head SHA); 4 fix-in-pr findings now carry addressed_in; triage step needed to promote cp-1/cp-2/cp-3/cr-12 to bucket:done.
