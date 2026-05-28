@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-28T21:00:00Z",
+      "question": "Run cargo check + clippy + test (redaction::tests) on worker branch for v1-redaction-r1 Task 1 adversarial test corpus",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "One commit on branch junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491 (e42cb4d70). Shape-G suspended per DQ #229 + project_shape_g_suspended_2026_05_16.md; laptop runs the final gates.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full redaction::tests > .claude/PRPs/debug/v1-redaction-r1-task1-test.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-redaction-r1-task-1-adversarial-test-corpus-see-claude-prps-briefs-v1-redaction-r1-impl-1-md-491",
+      "phase_task": "v1-redaction-r1-task-1",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "642f320508ca-002"
+    }
+  ],
   "resolved": [
     {
       "id": "457a6a6b74f8-001",
@@ -4271,6 +4299,23 @@
       "approved_by": "user",
       "approved_at": "2026-05-26T12:33:00Z",
       "id": "a3d0e9941441-033"
+    },
+    {
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-28T21:05:00Z",
+      "question": "Unicode confusables (ZWJ injection + in-username Cyrillic lookalike) deferred to v1-redaction-r2 per IMPLEMENTATION-PLAN-v0.md §4.2",
+      "options": [
+        "v1-redaction-r2",
+        "v0+unicode-normalization"
+      ],
+      "context": "Two #[ignore] tests added in Task 1: scrub_zero_width_joiner_between_at_and_handle (ZWJ between @ and handle) and scrub_handle_with_unicode_confusable_in_username (Cyrillic U+0430 in username slot). Both deferred to v1-redaction-r2 which will add unicode-normalization crate.",
+      "answer": "v1-redaction-r2 owns Unicode normalisation; v0 ships #[ignore]'d tests in redaction.rs as in-tree carry-forward markers.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-28T21:05:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "642f320508ca-001"
     }
   ]
 }
