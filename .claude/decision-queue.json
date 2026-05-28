@@ -4087,8 +4087,10 @@
       "phase_task": 1,
       "result": "pass",
       "log_slice": null,
-      "failed_commands": null,
-    "from": "advisor",
+      "failed_commands": null
+    },
+    {
+      "from": "advisor",
       "kind": "log",
       "timestamp": "2026-05-26T09:30:00Z",
       "question": "Audit-flagged coverage gaps: 4 shipped sub-phases have no e2e fixtures module in crates/server/tests/e2e.rs — v1-RT-r2, v1-federation-inbound-c, v1-federation-inbound-d, v1-ship-1. Should the v1-quality-r2 backlog include a fixtures-coverage pass that retroactively adds modules for these?",

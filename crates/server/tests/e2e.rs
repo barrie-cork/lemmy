@@ -17648,16 +17648,19 @@ mod v1_rt_r3_fixtures {
 
     let first = participation_cron::run_activity_batch(&context).await?;
     assert_eq!(first.events_emitted, 3, "first run emits 3 rows");
+
+    let week_end_iso_week = Utc::now().iso_week();
+    if week_start_iso_week != week_end_iso_week {
+      eprintln!("xfail: ISO week boundary crossed mid-test ({week_start_iso_week:?} -> {week_end_iso_week:?})");
+      return Ok(());
+    }
+
     let second = participation_cron::run_activity_batch(&context).await?;
     assert_eq!(
       second.events_emitted, 0,
       "second run in same iso_week emits 0 (dedupe_key on activity_cron:<community>:<person>:<iso_week>)"
     );
 
-    let week_end_iso_week = Utc::now().iso_week();
-    if week_start_iso_week != week_end_iso_week {
-      eprintln!("xfail: ISO week boundary crossed mid-test ({week_start_iso_week:?} -> {week_end_iso_week:?})");
-    }
     Ok(())
   }
 
@@ -17734,13 +17737,16 @@ mod v1_rt_r3_fixtures {
 
     let first = participation_cron::run_dormancy_batch(&context).await?;
     assert_eq!(first.events_emitted, 3, "first run emits 3 rows");
-    let second = participation_cron::run_dormancy_batch(&context).await?;
-    assert_eq!(second.events_emitted, 0, "second run in same iso_week emits 0");
 
     let week_end_iso_week = Utc::now().iso_week();
     if week_start_iso_week != week_end_iso_week {
       eprintln!("xfail: ISO week boundary crossed mid-test");
+      return Ok(());
     }
+
+    let second = participation_cron::run_dormancy_batch(&context).await?;
+    assert_eq!(second.events_emitted, 0, "second run in same iso_week emits 0");
+
     Ok(())
   }
 
