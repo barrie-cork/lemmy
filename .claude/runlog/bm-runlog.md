@@ -2050,3 +2050,25 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
   - cr-8 is `Major` by CR but on a gitignored brief that already served its purpose (no Junior worker consumed it; advisor wrote the fix). Strong case for `wont-fix` parity with cr-5/cr-6.
   - cr-12 is the only new finding on a tracked-and-referenced doc (session-retro) — strong case for `fix-in-pr`.
   - Fingerprint: f5a2b4270b... (changed from prior poll; PROCEED-write triggered).
+
+## bm: triage — 2026-05-28T15:50:01Z
+- **PR:** #155
+- **Buckets:** fix-in-pr 4 | rebut 0 | carry-forward 5 | done 2 | wont-fix 7
+- **Triage decisions:**
+  - **Promoted to done (2):** cr-1 (critical), cr-3 (minor) — both `addressed_in: 90cd0183d`
+  - **Promoted to wont-fix (5 newly bucketed):** cr-8 (major, brief contradiction parity with cr-5/cr-6), cr-9 (minor, MD040 on brief), cr-10 (minor, MD038 on brief), cr-11 (nit, handover doc reorg), cr-13 (nit, handover doc clarity) — all gitignored-artifact class
+  - **Stays fix-in-pr (4):** cp-1, cp-2, cp-3 (medium config-clamp footguns), cr-12 (minor retro table)
+  - **Stays carry-forward (5):** cr-2, cr-4, cr-7, cp-4, cp-5
+  - **Stays wont-fix (2 prior):** cr-5, cr-6
+- **Comment posted?** AWAITING USER CONFIRMATION (Phase 5 ASK)
+- **Carry-forward issues filed:** 0 — pending per-finding asks in Phase 6 (post-confirm)
+- **Recommendation:** approve (no open critical/major in fix-in-pr; only medium/minor)
+- **YAML updated:** .claude/PRPs/reviews/pr-155-findings.yaml — counters + recommendation recomputed
+- **Comment draft:** .claude/PRPs/reviews/pr-155-comment.md
+- **Notes:**
+  - cr-1 (critical) DQ boundary repair AND cr-3 (minor) iso-week guards both shipped via `90cd0183d` (advisor carve-out fix-impl-2; commit subject cites both ids). Promotion to `done` is the second-poll catchup.
+  - Five major-or-minor findings on briefs/handover (cr-8/9/10/11/13) bucketed `wont-fix` on the same gitignored-artifact rationale as cr-5/cr-6: brief/handover/runlog files are runtime artifacts, not in the markdownlint authoring contract.
+  - cr-8 was Major-severity per CR but `wont-fix`-bucketed because (a) the brief was an advisor-authored recovery handover not consumed by any Junior worker; (b) the actual fix shipped at `90cd0183d`; (c) per `feedback_severity_labels_dont_imply_semantic.md` "if I revert this, does the symptom return?" — reverting the brief contradiction cannot return a symptom because no consumer ever read it. Major-tagged but semantically nit.
+  - cr-12 is the only new finding bucketed `fix-in-pr` — markdown table breakage in a TRACKED retro (not gitignored); affects long-term readability. HTML-entity escape (`&#124;`).
+  - cp-1/cp-2/cp-3 group as one fix-impl commit (single defect class: input-clamping + warn-log). Already mirror pattern exists in `scheduled_tasks.rs` for `replay_window_days`.
+  - All carry-forward findings target v1-quality-r2 or v1-fed-in-* per the original `notes:` rationales. 5 GH issues to file (1 per row) — asks deferred to Phase 6 per script.

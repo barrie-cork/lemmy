@@ -1,3 +1,4 @@
+---
 schema_version: 1
 pr: 155
 title: "v1-RT-r3 — multi-source participation_consistency emitters + flag-bad-faith admin endpoint"
@@ -10,7 +11,7 @@ last_polled_head_sha: 90cd0183d
 last_polled_fingerprint: f5a2b4270b4244237c3114a781cc685fa573ef64651bf56dfdde9c938822320b
 last_claude_run_at: null
 claude_run_count: 0
-recommendation: pending
+recommendation: approve
 findings:
   - id: cr-1
     source: coderabbit
@@ -21,10 +22,10 @@ findings:
     summary: "DQ entry boundary missing — entry -025 fields collapsed into entry -026 (silent dup-key)"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#pullrequestreview-4366042583
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: 90cd0183d
     rationale: null
-    notes: "Outside-diff finding from CR review #4366042583. Verified real: entry -025 carries both validate-pending-laptop fields (branch:phase-v1-RT-r3, result:pass) AND kind:log fields (audit fixtures-gap question) in one object. Python json.load + jq parse to 207 entries but the entry is corrupt: previous validate-pending-laptop entry is missing its closing brace before -025 begins, so the new key/value pairs append into it as duplicates. Last-write-wins masking is silent. Fix: add `}\\n    },\\n    {` between line 4090 and 4091, re-indent. Addressed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-1)."
+    notes: "Outside-diff finding from CR review #4366042583. Verified real: entry -025 carries both validate-pending-laptop fields (branch:phase-v1-RT-r3, result:pass) AND kind:log fields (audit fixtures-gap question) in one object. Fix landed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-1)."
 
   - id: cr-2
     source: coderabbit
@@ -49,10 +50,10 @@ findings:
     summary: "ISO-week boundary guard runs too late in idempotency tests"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670145
     adr: null
-    bucket: fix-in-pr
+    bucket: done
     addressed_in: 90cd0183d
     rationale: null
-    notes: "Real test-flakiness risk on week-boundary midnight. Hoist the week-end iso_week check BEFORE the events_emitted assertion, return early as xfail. Two test functions affected (participation_activity_cron_idempotent_across_same_iso_week, participation_dormancy_cron_idempotent_across_same_iso_week). Addressed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-3 — iso-week guards hoisted in v1_rt_r3_fixtures idempotency tests)."
+    notes: "Real test-flakiness risk on week-boundary midnight. Hoisted the week-end iso_week check BEFORE the events_emitted assertion, return early as xfail. Two test functions affected (participation_activity_cron_idempotent_across_same_iso_week, participation_dormancy_cron_idempotent_across_same_iso_week). Fix landed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-3 — iso-week guards hoisted in v1_rt_r3_fixtures idempotency tests)."
 
   - id: cr-4
     source: coderabbit
@@ -119,10 +120,10 @@ findings:
     summary: "Conflicting file-count instruction — Line 14 says 'Three file edits total' but rest enforces two"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959677
     adr: null
-    bucket: fix-in-pr
+    bucket: wont-fix
     addressed_in: null
-    rationale: null
-    notes: "CR re-reviewed after fix-impl-2 brief authored. CR severity = Major (execution-risk contradiction for assignee). Brief file is gitignored runtime artifact — same class as cr-5/cr-6 (markdownlint on briefs/runlog) which were buckets wont-fix. RECOMMEND triage to wont-fix on same rationale: brief was authored ad-hoc as recovery handover; fix-impl-2 already shipped at 90cd0183d (advisor carve-out, no Junior worker consumed the brief, so the contradiction had no execution impact). Also applies to lines 28, 88, 225-226 per CR's 'Also applies to' note."
+    rationale: "Brief was authored ad-hoc as recovery handover; fix-impl-2 already shipped at 90cd0183d (advisor carve-out, no Junior worker consumed the brief, so the contradiction had no execution impact). Same defect class as cr-5/cr-6 (markdownlint on briefs/runlog) which were bucketed wont-fix. Brief files are gitignored runtime artifacts."
+    notes: "CR severity was Major (execution-risk contradiction for assignee). No execution impact materialised: advisor carve-out shipped the fix, no Junior worker consumed the brief. Also applies to lines 28, 88, 225-226 per CR's 'Also applies to' note."
 
   - id: cr-9
     source: coderabbit
@@ -133,10 +134,10 @@ findings:
     summary: "Markdownlint MD040: fenced code blocks without language identifier"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959686
     adr: null
-    bucket: fix-in-pr
+    bucket: wont-fix
     addressed_in: null
-    rationale: null
-    notes: "Same defect class as cr-5 (MD040 on briefs). RECOMMEND triage to wont-fix on the same rationale. Also applies to lines 56-70 and 198-200."
+    rationale: "Same defect class as cr-5 (MD040 on briefs). Brief files are gitignored runtime artifacts; markdownlint cleanliness is not in the brief authoring contract. Also applies to lines 56-70 and 198-200."
+    notes: null
 
   - id: cr-10
     source: coderabbit
@@ -147,10 +148,10 @@ findings:
     summary: "Markdownlint MD038: spaces inside inline code span"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959691
     adr: null
-    bucket: fix-in-pr
+    bucket: wont-fix
     addressed_in: null
-    rationale: null
-    notes: "Same defect class as cr-5/cr-6 (markdownlint on briefs). RECOMMEND triage to wont-fix on the same rationale."
+    rationale: "Same defect class as cr-5/cr-6 (markdownlint on briefs). Brief files are gitignored runtime artifacts."
+    notes: null
 
   - id: cr-11
     source: coderabbit
@@ -161,10 +162,10 @@ findings:
     summary: "Reorganise section to separate committed vs untracked files in handover doc"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306235902
     adr: null
-    bucket: fix-in-pr
+    bucket: wont-fix
     addressed_in: null
-    rationale: null
-    notes: "Handover doc was a one-shot recovery artifact for the fix-impl-2 cycle (now consumed and superseded by the actual fix-impl-2 commit 90cd0183d). RECOMMEND triage to wont-fix or carry-forward — the handover served its purpose; reorganising post-consume is churn."
+    rationale: "Handover doc was a one-shot recovery artifact for the fix-impl-2 cycle (now consumed and superseded by the actual fix-impl-2 commit 90cd0183d). Reorganising post-consume is churn."
+    notes: null
 
   - id: cr-12
     source: coderabbit
@@ -178,7 +179,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     rationale: null
-    notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs) — this one is more arguably fix-in-pr than the brief-only findings. RECOMMEND triage: fix-in-pr (quick rendering fix; retro will be referenced for years)."
+    notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs) — this one is binding fix-in-pr (quick rendering fix; retro will be referenced for years)."
 
   - id: cr-13
     source: coderabbit
@@ -189,10 +190,10 @@ findings:
     summary: "Ambiguous referent — 'then this handover:' needs clarification"
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306274633
     adr: null
-    bucket: fix-in-pr
+    bucket: wont-fix
     addressed_in: null
-    rationale: null
-    notes: "Same artifact as cr-11 (recovery handover, now consumed). Style/clarity nit on already-superseded doc. RECOMMEND triage to wont-fix."
+    rationale: "Same artifact as cr-11 (recovery handover, now consumed). Style/clarity nit on already-superseded doc."
+    notes: null
 
   - id: cp-1
     source: user
@@ -267,12 +268,11 @@ findings:
 counters:
   total: 18
   by_bucket:
-    fix-in-pr: 9
+    fix-in-pr: 4
     rebut: 0
     carry-forward: 5
-    done: 0
-    wont-fix: 2
-    addressed-pending-promote: 2
+    done: 2
+    wont-fix: 7
   by_severity:
     critical: 1
     major: 2
@@ -283,6 +283,12 @@ counters:
     coderabbit: 13
     claude: 0
     user: 5
+  open_by_severity:
+    critical: {open: 0, done: 1, rebutted: 0, carry_forward: 0, wont_fix: 0}
+    major: {open: 0, done: 0, rebutted: 0, carry_forward: 1, wont_fix: 1}
+    medium: {open: 3, done: 0, rebutted: 0, carry_forward: 0, wont_fix: 0}
+    minor: {open: 1, done: 1, rebutted: 0, carry_forward: 3, wont_fix: 4}
+    nit: {open: 0, done: 0, rebutted: 0, carry_forward: 1, wont_fix: 2}
 
 merged_at: null
 merge_commit: null
