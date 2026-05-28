@@ -156,4 +156,90 @@ mod tests {
     });
     assert_eq!(scrub_json(&input), input);
   }
+
+  #[test]
+  fn scrub_order_dependence_mention_with_remote_host_not_eaten_by_email() {
+    // Locks docstring invariant at redaction.rs:66-73.
+    // If someone re-orders the 3 replace_all calls in `scrub`, this fails:
+    // mention regex must run before email regex so @bob@remote.example
+    // is replaced as a whole unit, not as @[redacted] (orphan @).
+    assert_eq!(
+      scrub("hi @bob@remote.example see you"),
+      "hi [redacted] see you"
+    );
+  }
+
+  #[test]
+  fn scrub_handles_newline_separated_mentions() {
+    assert_eq!(
+      scrub("@alice\n@bob\n@carol"),
+      "[redacted]\n[redacted]\n[redacted]"
+    );
+  }
+
+  #[test]
+  fn scrub_does_not_treat_username_as_regex_pattern() {
+    // Username class is restrictive [A-Za-z0-9_-]+, so adversarial
+    // patterns like @.*, @[abc], @(group) don't match — they're
+    // literal text, not matched as mentions. Verifies the regex
+    // engine isn't tricked into treating username content as a
+    // pattern.
+    assert_eq!(
+      scrub("ok @abc bad @.* worse @[xyz]"),
+      "ok [redacted] bad @.* worse @[xyz]"
+    );
+  }
+
+  #[test]
+  fn scrub_json_preserves_integer_id_fields() {
+    // Confirms scrub_json passes integer scalars through unchanged
+    // (issue #58 hint: "preserve schema-typed fields, scrub only
+    // string identifiers"). Pseudonyms ARE strings but opaque-by-
+    // construction; the scrubber regex doesn't match them.
+    let input = json!({"community_id": 42, "actor_pseudonym": "abc123def"});
+    let result = scrub_json(&input);
+    assert_eq!(result["community_id"], json!(42));
+    assert_eq!(
+      result["actor_pseudonym"],
+      json!("abc123def"),
+      "pseudonym is opaque-by-construction; scrubber regex doesn't match"
+    );
+  }
+
+  #[test]
+  fn scrub_mention_after_cyrillic_letter_is_scrubbed() {
+    // The ASCII boundary class [^A-Za-z0-9._%+\-] is permissive for
+    // non-ASCII letters (they fall INTO the boundary set because
+    // they're not in the excluded ASCII alphanumeric set). So a
+    // mention preceded by a Cyrillic 'а' IS scrubbed.
+    assert_eq!(
+      scrub("hi а@alice"),
+      "hi а[redacted]"
+    );
+  }
+
+  #[test]
+  #[ignore = "v1-redaction-r2 will normalise via unicode-normalization crate"]
+  fn scrub_zero_width_joiner_between_at_and_handle() {
+    // TODO(v1-redaction-r2): handle Unicode confusables (ZWJ injection
+    // between @ and handle). v0 over-scrub bias is acceptable but ZWJ
+    // adversarial vector is not currently caught. Tracked via DQ
+    // kind:"log" carry-forward written at Task 1 completion.
+    assert_eq!(
+      scrub("@\u{200D}alice"),
+      "[redacted]"
+    );
+  }
+
+  #[test]
+  #[ignore = "v1-redaction-r2 will normalise via unicode-normalization crate"]
+  fn scrub_handle_with_unicode_confusable_in_username() {
+    // TODO(v1-redaction-r2): Cyrillic 'а' inside the username slot
+    // — current ASCII-only username pattern [A-Za-z0-9_\-]+ doesn't
+    // match, so the mention is NOT scrubbed. Adversarial vector.
+    assert_eq!(
+      scrub("@аlice"),  // 'а' is Cyrillic U+0430
+      "[redacted]"
+    );
+  }
 }
