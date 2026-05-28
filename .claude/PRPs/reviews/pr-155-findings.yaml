@@ -5,10 +5,10 @@ title: "v1-RT-r3 — multi-source participation_consistency emitters + flag-bad-
 head: phase-v1-RT-r3
 base: governance-v0
 opened_at: 2026-05-26T17:26:35Z
-last_poll_at: 2026-05-28T15:42:29Z
-poll_count: 2
-last_polled_head_sha: 90cd0183d
-last_polled_fingerprint: f5a2b4270b4244237c3114a781cc685fa573ef64651bf56dfdde9c938822320b
+last_poll_at: 2026-05-28T16:05:00Z
+poll_count: 3
+last_polled_head_sha: 73a1fe54d
+last_polled_fingerprint: d33e51afe28e326d07b773ed9998f3b6f71d8847392da753c45d8402fb089ab2
 last_claude_run_at: null
 claude_run_count: 0
 recommendation: approve
@@ -177,7 +177,7 @@ findings:
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306255275
     adr: null
     bucket: fix-in-pr
-    addressed_in: null
+    addressed_in: 20a616356
     rationale: null
     notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs) — this one is binding fix-in-pr (quick rendering fix; retro will be referenced for years)."
 
@@ -205,7 +205,7 @@ findings:
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676292
     adr: null
     bucket: fix-in-pr
-    addressed_in: null
+    addressed_in: feca72af0
     rationale: null
     notes: "Copilot finding. Real config-misuse footgun: 0-interval would burn the runner. Clamp to >=1, log warn when clamped. Companion to cp-2/cp-3 (all three are input-clamping fixes; group them into one fix-impl-2 commit if approved)."
 
@@ -219,7 +219,7 @@ findings:
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676356
     adr: null
     bucket: fix-in-pr
-    addressed_in: null
+    addressed_in: feca72af0
     rationale: null
     notes: "Copilot finding. Real config-misuse: silent-emit suppression OR mass-emit storm. Clamp lookback_days >=0 (or >=1), threshold_comments >=1, log warn when clamped."
 
@@ -233,7 +233,7 @@ findings:
     cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676385
     adr: null
     bucket: fix-in-pr
-    addressed_in: null
+    addressed_in: feca72af0
     rationale: null
     notes: "Copilot finding. Real config-misuse: mass-dormancy storm. Clamp dormancy_window_days >=1, log warn when clamped. Group with cp-1/cp-2 in fix-impl-2."
 
