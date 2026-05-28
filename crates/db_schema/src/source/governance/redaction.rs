@@ -58,6 +58,16 @@ fn profile_url_regex() -> &'static Regex {
   })
 }
 
+/// Maximum recursion depth for `scrub_json`. Defence-in-depth against
+/// adversarial / buggy upstream JSON trees. Well below stack-overflow
+/// threshold (~10K on x86_64) and generous for legitimate use
+/// (governance_log payloads are flat — 5-6 levels worst case).
+///
+/// Hard cap; over-scrub bias under GDPR §17 + ADR-015 — a truncated
+/// tree looking complete to the consumer is worse than visibly-null
+/// leaves.
+const MAX_RECURSION_DEPTH: usize = 64;
+
 /// Strip identifiers from a human-readable string.
 ///
 /// Replaces fediverse mentions (`@user`, `@user@host`), email addresses,
@@ -81,18 +91,30 @@ pub fn scrub(text: &str) -> String {
 
 /// Recursively scrub every string value in a JSON tree.
 ///
-/// Object **keys** are left intact because they are schema labels, not
-/// user content. Values at every depth — strings, array elements, object
-/// values — are passed through [`scrub`]. Non-string scalars (numbers,
-/// booleans, nulls) are passed through unchanged.
+/// Object **keys** are left intact because they are schema labels,
+/// not user content. Values at every depth — strings, array elements,
+/// object values — are passed through [`scrub`]. Non-string scalars
+/// (numbers, booleans, nulls) are passed through unchanged.
+///
+/// Recursion bounded at [`MAX_RECURSION_DEPTH`] (64); deeper subtrees
+/// substituted with [`Value::Null`] (over-scrub bias).
 pub fn scrub_json(value: &Value) -> Value {
+  scrub_json_inner(value, 0)
+}
+
+fn scrub_json_inner(value: &Value, depth: usize) -> Value {
+  if depth >= MAX_RECURSION_DEPTH {
+    return Value::Null;
+  }
   match value {
     Value::String(s) => Value::String(scrub(s)),
-    Value::Array(items) => Value::Array(items.iter().map(scrub_json).collect()),
+    Value::Array(items) => Value::Array(
+      items.iter().map(|v| scrub_json_inner(v, depth + 1)).collect(),
+    ),
     Value::Object(map) => {
       let scrubbed = map
         .iter()
-        .map(|(k, v)| (k.clone(), scrub_json(v)))
+        .map(|(k, v)| (k.clone(), scrub_json_inner(v, depth + 1)))
         .collect();
       Value::Object(scrubbed)
     }
@@ -240,6 +262,38 @@ mod tests {
     assert_eq!(
       scrub("@аlice"),  // 'а' is Cyrillic U+0430
       "[redacted]"
+    );
+  }
+
+  #[test]
+  fn scrub_json_at_depth_cap_returns_null_not_truncated_tree() {
+    // Locks the WP-3 invariant: at recursion depth >= MAX_RECURSION_DEPTH,
+    // the substitution is Value::Null (NOT the un-scrubbed leaf, NOT a
+    // truncated subtree). Over-scrub bias per ADR-015.
+    let mut tree = Value::String("user @alice email foo@example.com".into());
+    for _ in 0..70 {
+      tree = Value::Array(vec![tree]);
+    }
+    let scrubbed = scrub_json(&tree);
+
+    // Walk down 64 levels of the scrubbed tree. At each step, expect an
+    // Array of length 1; at level 64 the inner value must be Value::Null
+    // (NOT the original string, NOT a partial-scrub representation).
+    let mut cursor = &scrubbed;
+    for level in 0..64 {
+      match cursor {
+        Value::Array(items) => {
+          assert_eq!(items.len(), 1, "level {level} should be Array(1)");
+          cursor = &items[0];
+        }
+        other => panic!("level {level} expected Array, got {other:?}"),
+      }
+    }
+    // At level 64 (the depth-cap boundary), the inner value is Null.
+    assert_eq!(
+      cursor,
+      &Value::Null,
+      "at depth 64, the substitution must be Value::Null (over-scrub bias)"
     );
   }
 }
