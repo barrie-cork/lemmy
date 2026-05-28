@@ -1,0 +1,289 @@
+schema_version: 1
+pr: 155
+title: "v1-RT-r3 — multi-source participation_consistency emitters + flag-bad-faith admin endpoint"
+head: phase-v1-RT-r3
+base: governance-v0
+opened_at: 2026-05-26T17:26:35Z
+last_poll_at: 2026-05-28T15:42:29Z
+poll_count: 2
+last_polled_head_sha: 90cd0183d
+last_polled_fingerprint: f5a2b4270b4244237c3114a781cc685fa573ef64651bf56dfdde9c938822320b
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings:
+  - id: cr-1
+    source: coderabbit
+    severity: critical
+    posted_at: 2026-05-26T17:31:46Z
+    file: .claude/decision-queue.json
+    line: 4091
+    summary: "DQ entry boundary missing — entry -025 fields collapsed into entry -026 (silent dup-key)"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#pullrequestreview-4366042583
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: 90cd0183d
+    rationale: null
+    notes: "Outside-diff finding from CR review #4366042583. Verified real: entry -025 carries both validate-pending-laptop fields (branch:phase-v1-RT-r3, result:pass) AND kind:log fields (audit fixtures-gap question) in one object. Python json.load + jq parse to 207 entries but the entry is corrupt: previous validate-pending-laptop entry is missing its closing brace before -025 begins, so the new key/value pairs append into it as duplicates. Last-write-wins masking is silent. Fix: add `}\\n    },\\n    {` between line 4090 and 4091, re-indent. Addressed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-1)."
+
+  - id: cr-2
+    source: coderabbit
+    severity: major
+    posted_at: 2026-05-26T17:31:44Z
+    file: crates/server/tests/e2e.rs
+    line: 17203
+    summary: "Unsafe process-env mutation safety rationale conflicts with multi-thread tokio runtime"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670134
+    adr: null
+    bucket: carry-forward
+    addressed_in: null
+    rationale: null
+    notes: "Module doc-comment safety claim is overstated; underlying env mutation works because tests run with --test-threads=1 (BREHON_TEST_THREADS_GUARD), but the doc-comment doesn't state that constraint. Defer to v1-quality-r2 — rationale: process-env safety in e2e harness is a structural Lemmy issue (multiple existing fixtures modules use same pattern; this PR follows convention). Fixing JUST this module would be inconsistent."
+
+  - id: cr-3
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T17:31:44Z
+    file: crates/server/tests/e2e.rs
+    line: 17660
+    summary: "ISO-week boundary guard runs too late in idempotency tests"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670145
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: 90cd0183d
+    rationale: null
+    notes: "Real test-flakiness risk on week-boundary midnight. Hoist the week-end iso_week check BEFORE the events_emitted assertion, return early as xfail. Two test functions affected (participation_activity_cron_idempotent_across_same_iso_week, participation_dormancy_cron_idempotent_across_same_iso_week). Addressed in 90cd0183d (advisor carve-out fix-impl-2 commit subject explicitly cites cr-3 — iso-week guards hoisted in v1_rt_r3_fixtures idempotency tests)."
+
+  - id: cr-4
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T17:31:44Z
+    file: .claude/decision-queue.json
+    line: 4007
+    summary: "DQ entry resolved_at earlier than timestamp (negative duration) on entries 3999/4007 + 4016/4035"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670084
+    adr: null
+    bucket: carry-forward
+    addressed_in: null
+    rationale: null
+    notes: "Real — entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z (back-dated). No data corruption; just clock-skew in handover-block fields. Carry-forward to v1-quality-r2: lint the DQ for negative durations in CI, fix all back-dated entries in one sweep."
+
+  - id: cr-5
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T17:31:44Z
+    file: .claude/PRPs/briefs/v1-RT-r3-fix-impl-1.md
+    line: 31
+    summary: "Markdownlint: code fences without language identifier + missing blank lines"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670092
+    adr: null
+    bucket: wont-fix
+    addressed_in: null
+    rationale: "Brief files are gitignored runtime artifacts on the phase branch. Markdownlint cleanliness is not in the brief authoring contract. We have ~100 prior briefs with the same shape — fixing this one is churn without policy change."
+    notes: null
+
+  - id: cr-6
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T17:31:44Z
+    file: .claude/runlog/bm-runlog.md
+    line: 2030
+    summary: "Markdownlint MD022: missing blank line after heading"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670099
+    adr: null
+    bucket: wont-fix
+    addressed_in: null
+    rationale: "Runlog is an append-only ledger written by bm-task verbs; the missing blank line is in machine-generated text. Fixing one entry would diverge from the rest of the runlog. No policy benefit."
+    notes: null
+
+  - id: cr-7
+    source: coderabbit
+    severity: nit
+    posted_at: 2026-05-26T17:31:44Z
+    file: crates/api/api/src/governance/admin_emergency_remove.rs
+    line: 477
+    summary: "Extract shared emit_reputation_event helper to avoid duplication"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305670130
+    adr: null
+    bucket: carry-forward
+    addressed_in: null
+    rationale: null
+    notes: "emit_reputation_event_local duplicates emit_reputation_event in submit_jury_vote.rs. Hoisting to a shared governance/reputation_helpers.rs module is a clean refactor but expands the surface beyond the carve-out. Carry-forward to v1-quality-r2 or v1-fed-in-* where rep_event helpers see another consumer."
+
+  - id: cr-8
+    source: coderabbit
+    severity: major
+    posted_at: 2026-05-26T18:22:23Z
+    file: .claude/PRPs/briefs/v1-RT-r3-fix-impl-2.md
+    line: 14
+    summary: "Conflicting file-count instruction — Line 14 says 'Three file edits total' but rest enforces two"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959677
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "CR re-reviewed after fix-impl-2 brief authored. CR severity = Major (execution-risk contradiction for assignee). Brief file is gitignored runtime artifact — same class as cr-5/cr-6 (markdownlint on briefs/runlog) which were buckets wont-fix. RECOMMEND triage to wont-fix on same rationale: brief was authored ad-hoc as recovery handover; fix-impl-2 already shipped at 90cd0183d (advisor carve-out, no Junior worker consumed the brief, so the contradiction had no execution impact). Also applies to lines 28, 88, 225-226 per CR's 'Also applies to' note."
+
+  - id: cr-9
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T18:22:23Z
+    file: .claude/PRPs/briefs/v1-RT-r3-fix-impl-2.md
+    line: 47
+    summary: "Markdownlint MD040: fenced code blocks without language identifier"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959686
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Same defect class as cr-5 (MD040 on briefs). RECOMMEND triage to wont-fix on the same rationale. Also applies to lines 56-70 and 198-200."
+
+  - id: cr-10
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T18:22:23Z
+    file: .claude/PRPs/briefs/v1-RT-r3-fix-impl-2.md
+    line: 52
+    summary: "Markdownlint MD038: spaces inside inline code span"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305959691
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Same defect class as cr-5/cr-6 (markdownlint on briefs). RECOMMEND triage to wont-fix on the same rationale."
+
+  - id: cr-11
+    source: coderabbit
+    severity: nit
+    posted_at: 2026-05-26T19:09:05Z
+    file: .claude/PRPs/handovers/v1-RT-r3-fix-impl-2-recovery-2026-05-26.md
+    line: 133
+    summary: "Reorganise section to separate committed vs untracked files in handover doc"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306235902
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Handover doc was a one-shot recovery artifact for the fix-impl-2 cycle (now consumed and superseded by the actual fix-impl-2 commit 90cd0183d). RECOMMEND triage to wont-fix or carry-forward — the handover served its purpose; reorganising post-consume is churn."
+
+  - id: cr-12
+    source: coderabbit
+    severity: minor
+    posted_at: 2026-05-26T19:12:50Z
+    file: .claude/PRPs/reports/session-retro-2026-05-26-pr-155-cr-triage-junior-479-fail.md
+    line: 31
+    summary: "Markdown table broken — unescaped pipe characters inside code spans"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306255275
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Real markdown rendering defect — table row with `--paginate | jq` code span splits into 7 cols not 5. CR's proposed HTML-entity escape (`&#124;`) is the standard fix. Retros ARE tracked artifacts (not gitignored like briefs) — this one is more arguably fix-in-pr than the brief-only findings. RECOMMEND triage: fix-in-pr (quick rendering fix; retro will be referenced for years)."
+
+  - id: cr-13
+    source: coderabbit
+    severity: nit
+    posted_at: 2026-05-26T19:16:35Z
+    file: .claude/PRPs/handovers/v1-RT-r3-fix-impl-2-recovery-2026-05-26.md
+    line: 111
+    summary: "Ambiguous referent — 'then this handover:' needs clarification"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3306274633
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Same artifact as cr-11 (recovery handover, now consumed). Style/clarity nit on already-superseded doc. RECOMMEND triage to wont-fix."
+
+  - id: cp-1
+    source: user
+    severity: medium
+    posted_at: 2026-05-26T17:31:51Z
+    file: crates/routes/src/utils/scheduled_tasks.rs
+    line: 482
+    summary: "participation_interval_days config can be 0 — would tick every run_pending iteration"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676292
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Copilot finding. Real config-misuse footgun: 0-interval would burn the runner. Clamp to >=1, log warn when clamped. Companion to cp-2/cp-3 (all three are input-clamping fixes; group them into one fix-impl-2 commit if approved)."
+
+  - id: cp-2
+    source: user
+    severity: medium
+    posted_at: 2026-05-26T17:31:51Z
+    file: crates/api/api/src/governance/participation_cron.rs
+    line: 90
+    summary: "Negative lookback_days shifts cutoff into future (silences emits); zero threshold_comments matches everyone"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676356
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Copilot finding. Real config-misuse: silent-emit suppression OR mass-emit storm. Clamp lookback_days >=0 (or >=1), threshold_comments >=1, log warn when clamped."
+
+  - id: cp-3
+    source: user
+    severity: medium
+    posted_at: 2026-05-26T17:31:51Z
+    file: crates/api/api/src/governance/participation_cron.rs
+    line: 237
+    summary: "Negative dormancy_window_days marks everyone as dormant (mass minus-two storm)"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676385
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Copilot finding. Real config-misuse: mass-dormancy storm. Clamp dormancy_window_days >=1, log warn when clamped. Group with cp-1/cp-2 in fix-impl-2."
+
+  - id: cp-4
+    source: user
+    severity: minor
+    posted_at: 2026-05-26T17:31:51Z
+    file: crates/server/tests/e2e.rs
+    line: 17432
+    summary: "boot_context env vars not wrapped in new EnvVarGuard — leak risk on early ?"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676422
+    adr: null
+    bucket: carry-forward
+    addressed_in: null
+    rationale: null
+    notes: "Copilot finding. EnvVarGuard was introduced in v1-RT-r3 to close the leak-via-? defect class for new fixture env mutations; boot_context predates the guard and uses the legacy pattern. Retroactively guarding boot_context is structural — affects every fixtures module that calls boot_context. Carry-forward to v1-quality-r2."
+
+  - id: cp-5
+    source: user
+    severity: minor
+    posted_at: 2026-05-26T17:31:51Z
+    file: crates/server/tests/e2e.rs
+    line: 17432
+    summary: "LEMMY_DATABASE_URL set without EnvVarGuard — early ? leaves it set for rest of binary"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/155#discussion_r3305676446
+    adr: null
+    bucket: carry-forward
+    addressed_in: null
+    rationale: null
+    notes: "Copilot finding. Same defect class as cp-4 (boot_context env var leak); covered by the same v1-quality-r2 carry-forward."
+
+counters:
+  total: 18
+  by_bucket:
+    fix-in-pr: 9
+    rebut: 0
+    carry-forward: 5
+    done: 0
+    wont-fix: 2
+    addressed-pending-promote: 2
+  by_severity:
+    critical: 1
+    major: 2
+    medium: 3
+    minor: 9
+    nit: 3
+  by_source:
+    coderabbit: 13
+    claude: 0
+    user: 5
+
+merged_at: null
+merge_commit: null
+final_recommendation: null
