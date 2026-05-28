@@ -2107,3 +2107,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** approve (unchanged; flip from "approve pending fix-in-pr commits" → "approve" — no open fix-in-pr remain).
 - **YAML:** .claude/PRPs/reviews/pr-155-findings.yaml (counters block recomputed; by_bucket fix-in-pr 4→0, done 2→6; open_by_severity all opens cleared).
 - **Comment body:** .claude/PRPs/reviews/pr-155-comment.md (overwritten with final post-fix-impl-3 digest).
+
+## bm: merge COMPLETE — 2026-05-28T17:37:24Z
+- **PR:** #155 (now MERGED)
+- **merge_commit:** 5ebd8ae2313199a08dff1c8c6c2921ca5223221b
+- **base:** governance-v0
+- **head:** phase-v1-RT-r3 (deleted via --delete-branch)
+- **trunk_position:** 5ebd8ae23
+- **outcome:** merge succeeded; both post-condition verifications pass (state=MERGED, mergedAt non-null, mergeCommit.oid valid 40-char sha)
