@@ -1,8 +1,10 @@
-# Plan: v1-quality-r2 — PR #155 carry-forward bundle (DQ duration lint + fixtures doc audit + EnvVarGuard retrofit; C3 helper extraction deferred)
+# Plan: v1-quality-r2 — PR #155 carry-forward bundle, r2-half (fixtures doc audit + EnvVarGuard retrofit)
+
+> **RE-SCOPED 2026-05-29 (3-issue, r2-half).** The original v1-quality-r2 plan below was the full 5-issue/7-task bundle. At user gate-1 (2026-05-28) the §5 split-DQ was resolved **split** → **v1-quality-r2a** (Tasks 1+2) + **v1-quality-r2** (Tasks 3+4+5, this plan). **r2a SHIPPED** as PR #161 (`8b2e5b1ef`): Task 1 (#157 DQ negative-duration lint `dq-lint-durations.sh` + `precheck.sh` + 3-entry sweep — #157 CLOSED) + Task 2 (#158 deferral `kind:log` DQ `dd6012873857-001` — #158 stays OPEN). **This (r2) plan's LIVE scope = Task 0 + Task 3 + Task 4 + Task 5 + Task 6.** Tasks 1 + 2 below are retained for traceability and marked **`[SHIPPED in r2a — DO NOT re-run]`**; task numbers are NOT renumbered (the T1/T2 gap is intentional and self-documenting; `requires:` refs + §16a story-to-task mapping stay valid). Where the prose below still says "4 of 5" / "five issues" / "Tasks 1–2", read it against this banner — the live scope is the 3 e2e.rs issues.
 
 ## 1. Summary
 
-Retire **4 of 5** PR #155 carry-forward issues filed during the v1-RT-r3 BM triage (2026-05-28): #157 (DQ negative-duration lint + bulk sweep + precheck wiring), #156 (fixtures-module process-env safety doc audit), #159 (boot_context env mutations → EnvVarGuard), #160 (LEMMY_DATABASE_URL setter sites → EnvVarGuard, 14 sites across 13 fixtures modules). Issue **#158** (emit_reputation_event shared helper extraction) is **DEFERRED** per the premature-DRY gate (WP-2): no near-term 3rd consumer materialises in the roadmap (federation_inbound lane is `done`); a `kind: "log"` DQ on this phase records the deferral and #158 stays open with a "blocked-on-3rd-consumer" comment. Headline acceptance: workspace cargo gates exit 0, full e2e suite passes locally, `dq-lint-durations.sh` exits 0 on trunk + non-zero on a synthetic back-dated entry, every `*_fixtures` module's doc-comment cites the `--test-threads=1` constraint, and every `boot_context` env mutation + every `LEMMY_DATABASE_URL` setter site in `e2e.rs` is wrapped by the `EnvVarGuard` RAII pattern shipped in v1-RT-r3.
+Retire the **3 of 5** PR #155 carry-forward issues NOT shipped in r2a, all `crates/server/tests/e2e.rs`-confined: **#156** (fixtures-module process-env safety doc audit, 14 modules), **#159** (boot_context env mutations → EnvVarGuard hoist + thread-guards refactor), **#160** (LEMMY_DATABASE_URL setter sites → EnvVarGuard, 13 in-scope sites + 1 covered by #159's refactor). The two non-e2e issues from the original bundle shipped in r2a: **#157** (DQ negative-duration lint) CLOSED; **#158** (emit_reputation_event helper extraction) DEFERRED per the premature-DRY gate (`kind: "log"` DQ `dd6012873857-001`; #158 stays OPEN with a "blocked-on-3rd-consumer" comment). Headline acceptance: workspace cargo gates exit 0, full e2e suite passes locally (no regression vs pre-r2 baseline), every `*_fixtures` module's doc-comment cites the `--test-threads=1` constraint, and every `boot_context` env mutation + every `LEMMY_DATABASE_URL` setter site in `e2e.rs` is wrapped by the `EnvVarGuard` RAII pattern shipped in v1-RT-r3.
 
 ## 2. Source
 
@@ -22,26 +24,28 @@ Retire **4 of 5** PR #155 carry-forward issues filed during the v1-RT-r3 BM tria
 
 ## 3. Problem statement
 
-PR #155 (v1-RT-r3) shipped 4 net-new defect classes the BM triage filed as carry-forwards rather than fix-in-PR; each is in a different defect class and the bundle deliberately consolidates them to amortise one CR cycle + one local e2e gate (~26 min). The four addressed in this phase:
+PR #155 (v1-RT-r3) shipped 5 net-new defect classes the BM triage filed as carry-forwards rather than fix-in-PR. r2a shipped 2 of them (#157 + #158-defer); **the 3 addressed in THIS phase** are the e2e.rs-confined ones:
 
-1. **DQ negative-duration data corruption risk (#157).** Four DQ entries (3999, 4007, 4016, 4035 per the issue body) carry `resolved_at < timestamp`, producing negative durations in any time-series consumer. No script gates this on write; the issue can recur on every `dq-v3-append-fragment.sh` invocation that lets the caller pre-compute `resolved_at` before `timestamp`. Tied to **Task 1**.
+1. _**[#157 — SHIPPED in r2a, PR #161.]**_ DQ negative-duration data corruption risk. ~~Tied to Task 1.~~ Closed: `dq-lint-durations.sh` + `precheck.sh` on `governance-v0`; 3 back-dated entries swept. Retained here only as bundle context.
 2. **Fixtures-module process-env safety doc-comments (#156).** The `v1_rt_r3_fixtures` module documents `// SAFETY: tests run with --test-threads=1; no concurrent env mutation.` on every `env::set_var` call, but most older fixtures modules (13 of 14 sibling `mod *_fixtures` blocks) omit the `--test-threads=1` constraint citation entirely. A contributor reading those older modules cannot tell that the safety claim depends on a Cargo-runner flag; the convention is enforced by prose, not the compiler. Tied to **Task 3**.
 3. **`boot_context` env-leak via early-`?` (#159).** `v1_rt_r3_fixtures::boot_context()` (e2e.rs:17414) mutates three env vars (`LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS`, `GOVERNANCE_LOG_SIGNING_KEY`, `LEMMY_DATABASE_URL` at lines 17424/17425/17431) using raw `std::env::set_var` instead of the `EnvVarGuard` pattern that the same module ships at line 17179. If `start_postgres()` / `apply_all_schema()` / `FederationConfig::builder()` returns an error before `boot_context()` returns, the env vars are not restored — the next test in the same process sees the leaked state. Tied to **Task 4**.
 4. **Legacy `LEMMY_DATABASE_URL` setter env-leak (#160).** 14 callsites across 13 fixtures modules set `LEMMY_DATABASE_URL` via raw `std::env::set_var` without `EnvVarGuard` (lines 806, 2544, 3324, 4096, 4443, 4774, 4907, 5044, 5093, 5671, 5874, 6137, 16752, 17431). Same defect class as #159, broader surface. Companion to #159 — shipping only #159 is "half a fix". Tied to **Task 5**.
 
-The fifth issue (#158, `emit_reputation_event` shared helper) is a code-duplication finding the issue body itself flags as "wait until a third consumer materialises before introducing the abstraction (premature DRY is its own footgun)" — Task 2 files the deferral DQ, NOT an extraction.
+The fifth issue (#158, `emit_reputation_event` shared helper) was a code-duplication finding the issue body itself flagged as "wait until a third consumer materialises (premature DRY is its own footgun)" — **r2a's Task 2 filed the deferral DQ (`dd6012873857-001`), NOT an extraction.** #158 stays OPEN.
+
+> **Note on line numbers (re-scope, 2026-05-29):** all e2e.rs line numbers in §3/§9/§10/§11/§13 were captured 2026-05-28 against trunk `1edb8b94c`. The concurrent `phase-v1-redaction-r1` lane edits e2e.rs; if it merges to `governance-v0` before this phase's bm-cut, line numbers shift. The T3/T4/T5 briefs MUST carry verbatim **text** anchors (R11), and Task 0 Probe 8 re-enumerates the 11/14/14 counts against the actual cut tip — line numbers below are a navigation aid, not the contract.
 
 ## 4. Solution statement
 
-Five impl tasks plus Task 0 (harness audit) and a retro task. Tasks 1–2 are pure metadata work (scripts/JSON/DQ), Tasks 3–5 are e2e.rs-confined edits in three disjoint shape classes (doc-comment headers, single-module body refactor, scattered single-line wraps). All five impl tasks ship in one PR against `governance-v0` (Option A per WP-Cluster — callsite enumeration at threshold, not exceeding).
+**Live scope: 3 impl tasks (T3, T4, T5) plus Task 0 (harness audit) and a retro task (T6).** (Tasks 1–2 — metadata/DQ work — SHIPPED in r2a; struck below.) T3–T5 are e2e.rs-confined edits in three disjoint shape classes (doc-comment headers, single-module body refactor, scattered single-line wraps). All three impl tasks ship in one PR against `governance-v0`.
 
 Task shape map:
 
 | Task | Cluster | Surface | Edit shape | Risk |
 |---|---|---|---|---|
 | T0 | — | (harness audit only) | n/a | — |
-| T1 | C2 | `scripts/brehon/dq-lint-durations.sh` (new), `scripts/brehon/precheck.sh` (new), `.claude/decision-queue.json` (bulk sweep edit) | Author shell scripts + run sweep | low |
-| T2 | C3 | `.claude/decision-queue.json` (append deferral entry via `dq-v3-append-fragment.sh`) | Single DQ append + close issue comment | low |
+| ~~T1~~ | ~~C2~~ | _**SHIPPED in r2a (PR #161).**_ `dq-lint-durations.sh` + `precheck.sh` + DQ sweep. | — | done |
+| ~~T2~~ | ~~C3~~ | _**SHIPPED in r2a (PR #161).**_ #158 deferral DQ `dd6012873857-001`. | — | done |
 | T3 | C1 | `crates/server/tests/e2e.rs` (14 module-header doc-comments) | 14 mechanical doc-comment header rewrites; all in `//! ` lines at the top of each `mod *_fixtures` block | low (doc-only, no compile-relevant change) |
 | T4 | C4-A | `crates/server/tests/e2e.rs` (v1_rt_r3_fixtures module body) | Hoist `EnvVarGuard` to test-crate top-level (pub-visible to all sibling fixtures); refactor `boot_context()` return type to thread guards; update 10 same-module callsites | medium (signature change in one well-bounded module; pre-located anchors mandatory) |
 | T5 | C4-B | `crates/server/tests/e2e.rs` (LEMMY_DATABASE_URL setter sites in 13 older fixtures modules) | 13 scattered `let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);` wraps replacing `unsafe { std::env::set_var("LEMMY_DATABASE_URL", &db_url); }` blocks (site 14 covered by T4) | medium (13 anchors across 13 modules; pre-located anchors mandatory) |
@@ -49,35 +53,47 @@ Task shape map:
 
 The `EnvVarGuard` hoist (T4) is the load-bearing structural change: the existing `struct EnvVarGuard` at e2e.rs:17179 lives inside the `v1_rt_r3_fixtures` module and is not `pub`, so T5 cannot reach it without either duplicating the struct in each sibling fixtures module (~13 copies) or hoisting it to the test-crate root where every `mod *_fixtures` block can `use super::EnvVarGuard;`. The hoist is mechanical (move the struct + 2 impl blocks ~30 lines up to the file root) and lets T5 be a uniform mechanical sweep.
 
-The §13 task order serialises every e2e.rs-touching task because the cohort YAML overlap check rejects `[P]` across same-file tasks (per `.claude/rules/advisor-orchestrator.md` §4.2). T1 + T2 BOTH modify `.claude/decision-queue.json` (T1 bulk sweep + T2 append) → serial. No `[P]` markers in this plan.
+The §13 task order serialises every e2e.rs-touching task because the cohort YAML overlap check rejects `[P]` across same-file tasks (per `.claude/rules/advisor-orchestrator.md` §4.2). T3 + T4 + T5 ALL modify `crates/server/tests/e2e.rs` → serial (T3→T4→T5, with explicit `requires:` chain T4←T3, T5←T4). No `[P]` markers in this plan. (The struck T1+T2 also serialised on `.claude/decision-queue.json`; moot now — both shipped in r2a.)
 
 ## 5. Metadata
 
-- **Phase:** `v1-quality-r2`
-- **Branch:** `phase-v1-quality-r2` (cut from `governance-v0` at `1edb8b94c` per BM-cut log at `d5f0114eb`)
+- **Phase:** `v1-quality-r2` (r2-half of the original bundle; r2a shipped the C2+C3 half as PR #161)
+- **Branch:** `phase-v1-quality-r2` — **NOT yet cut** (the original full-scope cut never happened; r2a cut its own `phase-v1-quality-r2a`). bm-cut from `governance-v0` HEAD at task-execution time, post-clarify.
 - **Target impl-task model:** `sonnet-4-6` (default)
-- **Estimated tasks:** 7 (Task 0 pre-flight + 5 impl tasks + 1 retro)
+- **Estimated tasks (LIVE):** 5 (Task 0 pre-flight + 3 impl tasks T3/T4/T5 + 1 retro). (Original estimate was 7; T1+T2 shipped in r2a.)
 - **Estimated cargo budget:** N/A (validate-pending-laptop; cargo runs on laptop ~6 GB peak per `cargo test --workspace --features full`; Shape G suspended through 2026-06-01 per `project_shape_g_suspended_2026_05_16.md`).
 - **Forbidden-window applicability:** non-binding for impl-task dispatch under validate-pending-laptop (cargo runs on laptop, not EliteDesk).
-- **Complexity score:** **10/10** (over Sonnet threshold; split-DQ filed — see §5.1; planner recommends `proceed` with v1-RT-r3 precedent).
+- **Complexity score (LIVE re-scope):** **+10 → recomputed below.** The original full-scope score was 10 (over the Sonnet-8 threshold → split-DQ filed → resolved **split** at gate-1). Post-split, this r2-half retains the full +9 e2e-edit factor (T3/T4/T5 are exactly the 3 e2e.rs tasks) + the +1 crate factor = **still 10**. The split-DQ is **already resolved (split executed)** — do NOT re-surface it; see §5.1.
 
 ### 5.1 Complexity factor breakdown
 
 Per `feedback_complexity_score_pre_split.md` + `plan.template.md` §5.1. Counts are mechanical from the §13 task YAML:
 
-| Factor | Weight | This plan | Source |
+**Original full-scope table (5 impl tasks):**
+
+| Factor | Weight | Original | Source |
 |---|---|---|---|
-| §13 impl tasks above 5 | +1 each | **0** | 5 impl tasks (T1, T2, T3, T4, T5); count excludes Task 0 (pre-flight) and the retro task; 5 − 5 = 0. |
-| Migrations touched | +2 each | **0** | This plan touches zero `migrations/**` files. |
-| Crates touched | +1 each | **+1** | `crates/server/tests/e2e.rs` (1 crate: `lemmy_server`). `scripts/brehon/*` and `.claude/decision-queue.json` are not Cargo crates. |
-| `crates/server/tests/e2e.rs` edits | +3 each | **+9** | Tasks 3, 4, 5 each modify `crates/server/tests/e2e.rs`. 3 × +3 = +9. |
-| New ADR-affecting decisions | +2 each | **0** | This plan does not supersede any entry in `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md`. |
-| Cargo budget peak above 6 GB | +1 per GB | **0** | Validate-pending-laptop, ~6 GB peak; +0 above the 6 GB floor. |
-| **Total** | — | **10** | Threshold for split-DQ (Sonnet target): `> 8` — **FIRES**. |
+| §13 impl tasks above 5 | +1 each | **0** | 5 impl tasks (T1–T5); excludes Task 0 + retro; 5 − 5 = 0. |
+| Migrations touched | +2 each | **0** | Zero `migrations/**` files. |
+| Crates touched | +1 each | **+1** | `crates/server/tests/e2e.rs` (1 crate: `lemmy_server`). |
+| `crates/server/tests/e2e.rs` edits | +3 each | **+9** | Tasks 3, 4, 5 each modify e2e.rs. 3 × +3 = +9. |
+| New ADR-affecting decisions | +2 each | **0** | Supersedes no `99-...md` entry. |
+| Cargo budget peak above 6 GB | +1 per GB | **0** | Validate-pending-laptop, ~6 GB peak. |
+| **Total (original)** | — | **10** | `> 8` Sonnet threshold → split-DQ fired. |
 
-**Score 10 > 8 (Sonnet threshold). Split-DQ to be pre-seeded as a `pending` planner entry** (per `.claude/agents/planning.md` "§5 complexity score + split threshold"). Question: "Complexity score 10 exceeds Sonnet threshold 8 (target model: sonnet-4-6) — split `v1-quality-r2` into `v1-quality-r2a` (C2 tooling + C3 deferral) + `v1-quality-r2b` (C1 doc audit + C4 EnvVarGuard retrofit), or proceed with prior-Sonnet-phase precedent (v1-RT-r3 shipped 4 impl tasks with heavy e2e.rs edits successfully under Sonnet 4.6)?"
+**Split-DQ RESOLVED at gate-1 (2026-05-28): SPLIT.** The score-10 split-DQ was surfaced to the user, who chose to split → **r2a** (C2 #157 + C3 #158-defer; metadata only, ~0 e2e factor) + **r2** (this plan; C1 #156 + C4 #159/#160; the +9 e2e factor lives here). r2a SHIPPED (PR #161). **Do NOT re-surface the split-DQ — it is resolved.**
 
-Planner recommendation in the DQ `context`: **proceed**. Reasoning: (a) the 3 e2e.rs tasks decompose into clearly distinct edit shapes (doc-only header sweep, single-module body refactor with pre-located anchors, scattered single-line wraps with pre-located anchors), each well within Sonnet's e2e-edit envelope per v1-RT-r3 precedent; (b) splitting would double the CR cycle and e2e gate cost (~52 min vs ~26 min) for no Junior-worker benefit (each task is independently dispatched); (c) the phase branch `phase-v1-quality-r2` was already cut at `d5f0114eb` — splitting requires re-cutting two new branches and adds bm-cut + handover overhead.
+**Live re-scope table (this r2-half, 3 impl tasks T3/T4/T5):**
+
+| Factor | Weight | This (r2) | Note |
+|---|---|---|---|
+| §13 impl tasks above 5 | +1 each | **0** | 3 impl tasks (T3/T4/T5); 3 − 5 < 0 → 0. |
+| Crates touched | +1 each | **+1** | e2e.rs (lemmy_server). |
+| e2e.rs edits | +3 each | **+9** | T3 + T4 + T5 each modify e2e.rs. |
+| (others) | — | **0** | no migrations / ADR / >6GB. |
+| **Total (this r2-half)** | — | **10** | Still 10 — the split moved the metadata half out, not the e2e half. |
+
+The score stays 10 because the split carved off the low-factor metadata tasks (T1/T2) and left the e2e-heavy half here. This is **expected and accepted**: per the gate-1 decision, the e2e tasks decompose into 3 distinct edit shapes (doc-only header sweep; single-module body refactor with pre-located anchors; scattered single-line wraps with pre-located anchors), each well within Sonnet's e2e-edit envelope per v1-RT-r3 precedent + r2a's clean Sonnet execution. No further split — each task is independently dispatched + serial-gated. The dominant +9 is the e2e-edit factor, NOT task count; `feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md` (§19) flags that T3 (doc-only) is over-weighted by the flat +3.
 
 ### 5.2 Per-task complexity ceiling
 
@@ -87,7 +103,7 @@ Target model is Sonnet, so the Sonnet ceiling applies (per template §5.2 / plan
 - `count(distinct crates/<X>/ prefixes in union(creates, modifies)) ≤ 2` crates per task
 - `crates/server/tests/e2e.rs` bundling allowed (Sonnet only)
 
-Verified at §13 task YAML walk-time: every task satisfies. T1 = 3 files (`scripts/brehon/dq-lint-durations.sh`, `scripts/brehon/precheck.sh`, `.claude/decision-queue.json`), 0 crates. T2 = 1 file, 0 crates. T3 = 1 file (e2e.rs), 1 crate (lemmy_server). T4 = 1 file (e2e.rs), 1 crate. T5 = 1 file (e2e.rs), 1 crate. T6 = 1 file (retro report), 0 crates.
+Verified at §13 task YAML walk-time: every LIVE task satisfies. T3 = 1 file (e2e.rs), 1 crate (lemmy_server). T4 = 1 file (e2e.rs), 1 crate. T5 = 1 file (e2e.rs), 1 crate. T6 = 1 file (retro report), 0 crates. (Struck: T1 = 3 files / 0 crates, T2 = 1 file / 0 crates — both shipped in r2a.)
 
 ## 6. Relationship to other v1-quality-* sub-phases
 
@@ -110,16 +126,19 @@ Verified at §13 task YAML walk-time: every task satisfies. T1 = 3 files (`scrip
 ## 8. Flow design
 
 ```
+# LIVE flow (r2-half) = Task 0 → Task 3 → Task 4 → Task 5 → Task 6.
+# Task 1 + Task 2 (below, dimmed) SHIPPED in r2a (PR #161) — not executed this phase.
+
 Task 0 (harness audit)
   │
   ▼
-Task 1 (C2: dq-lint-durations.sh + precheck.sh + bulk sweep)
+[r2a] Task 1 (C2: dq-lint-durations.sh + precheck.sh + bulk sweep)   ← SHIPPED in r2a
   │  modifies .claude/decision-queue.json, scripts/brehon/*
   ▼
-Task 2 (C3: deferral DQ for #158)
+[r2a] Task 2 (C3: deferral DQ for #158)                              ← SHIPPED in r2a
   │  modifies .claude/decision-queue.json (append-only)
   ▼
-Task 3 (C1: 14 fixtures-module doc-comment header rewrites)
+Task 3 (C1: 14 fixtures-module doc-comment header rewrites)   ← LIVE: first task this phase
   │  modifies crates/server/tests/e2e.rs (doc-only)
   ▼
 Task 4 (C4-A: EnvVarGuard hoist + boot_context refactor + 10 callsite updates in v1_rt_r3_fixtures)
@@ -492,6 +511,8 @@ echo "*_fixtures modules:"; rg -c "^mod \w+_fixtures \{" crates/server/tests/e2e
 
 ### Task 1: C2 — DQ negative-duration lint script + precheck wiring + bulk sweep of back-dated entries
 
+> **`[SHIPPED in r2a — DO NOT re-run]`** — Closed as r2a PR #161. `scripts/brehon/dq-lint-durations.sh` + `scripts/brehon/precheck.sh` on `governance-v0`; 3 back-dated entries swept (ids 315 / 1b8527b076d4-001 / 81719cf8ca8d-001 — NOT the 4 ids this task body names below; the original body's 3999/4007/4016/4035 were wrong, caught by r2a Task-0 Probe 6 enumeration). Issue #157 CLOSED. The body below is retained verbatim for the r2a audit trail; the live v1-quality-r2 phase does NOT execute it.
+
 **Goal:** add a non-zero-exit lint that catches `resolved_at < timestamp` DQ entries; wire it as the first gate in a new `scripts/brehon/precheck.sh`; one-shot floor-sweep the 4 currently back-dated entries.
 
 **FILES:**
@@ -551,6 +572,8 @@ echo "exit: $?"
 ---
 
 ### Task 2: C3 — file `kind: "log"` deferral DQ for emit_reputation_event helper extraction (#158)
+
+> **`[SHIPPED in r2a — DO NOT re-run]`** — Closed as r2a PR #161. Deferral DQ `dd6012873857-001` (`kind: "log"`, `from: "planner"`, `answered_by: "planner"`) in `.claude/decision-queue.json` `resolved[]`. Issue #158 remains OPEN with the deferral comment. The body below is retained verbatim for the r2a audit trail; the live v1-quality-r2 phase does NOT execute it. **Note:** the live Task 3 carries `requires: []` — it does NOT depend on this (struck) Task 2.
 
 **Goal:** record the planner's WP-2 DEFER decision as an immutable DQ log entry; do NOT modify any `crates/**` files; issue #158 stays open with a deferral comment filed by the BM session post-merge.
 
@@ -855,7 +878,7 @@ Layer-by-layer:
 - **Lint:** `cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"` — after T3, T4, T5.
 - **Test target compile (R7):** `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features full"` — after T4 (signature change).
 - **e2e execution (phase-tip gate):** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"` — ONCE post-T5. ~26 min on laptop. Raised as `kind: "validate-pending-laptop-e2e"`.
-- **DQ lint:** `bash scripts/brehon/dq-lint-durations.sh` — after T1, T2.
+- **DQ lint:** `bash scripts/brehon/dq-lint-durations.sh` — the lint itself shipped in r2a; in this phase it runs as a passive guard (advisor session-start + `/precheck`). No live task gates on it.
 - **Migration round-trip:** N/A.
 
 ## 15. Validation commands (DoD)
@@ -910,10 +933,10 @@ Raised as `kind: "validate-pending-laptop-e2e"` from T5's worker; advisor runs o
 - [ ] R9: every cargo gate invokes the wrapper.
 - [ ] R10: every cargo invocation redirects to a file.
 - [ ] R11: every e2e.rs Edit in T3/T4/T5 has pre-located verbatim anchors.
-- [ ] `dq-lint-durations.sh` exits 0 on `.claude/decision-queue.json` post-T1+T2.
+- [ ] `dq-lint-durations.sh` exits 0 on `.claude/decision-queue.json` (passive guard; shipped r2a).
 - [ ] No new `unsafe { std::env::set_var(...) }` blocks outside `EnvVarGuard::set`/`EnvVarGuard::drop` in `e2e.rs`.
-- [ ] No edits to files outside §11 list.
-- [ ] Issues #156/#157/#159/#160 have closing PR references at merge time; #158 has a deferral comment + remains open.
+- [ ] No edits to files outside §11 list (live edits: e2e.rs + retro file only).
+- [ ] Issues **#156/#159/#160** have closing PR references at merge time; #158 remains open (deferred r2a); #157 already closed (r2a).
 
 ### 15.6 DoD per workflow (Shape G)
 
@@ -923,24 +946,26 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
 
 ## 16. Acceptance criteria
 
-- [ ] All 5 impl tasks (T1, T2, T3, T4, T5) completed in dependency order
+- [ ] All 3 LIVE impl tasks (T3, T4, T5) completed in dependency order (T3→T4→T5). _(T1+T2 shipped in r2a.)_
 - [ ] §15.1 exit 0 after T3, T4, T5
 - [ ] §15.2 exit 0 after T3, T4, T5
 - [ ] §15.3 exit 0 after T4
 - [ ] §15.4 exit 0 phase-tip — pre-RT-r3 pass count (103+) or higher, 0 fail
 - [ ] §15.5 cross-cutting verification — all checkboxes ticked
-- [ ] §16a stories — all 5 stories `[done]`
-- [ ] No edits to files outside §11 list
+- [ ] §16a stories — all 3 LIVE stories (3, 4, 5) `[done]`. _(Stories 1+2 shipped in r2a.)_
+- [ ] No edits to files outside §11 list (live edits are e2e.rs only + the retro file)
 - [ ] Retro committed per §13 Task 6
 - [ ] PR opens against `governance-v0` with `--repo barrie-cork/lemmy`
-- [ ] Issues #156, #157, #159, #160 closed with merge-commit + PR references
-- [ ] Issue #158 carries a deferral comment cross-referencing the C3 deferral DQ id; remains OPEN
+- [ ] Issues **#156, #159, #160** closed with merge-commit + PR references _(this PR)_. _(#157 already CLOSED via r2a PR #161.)_
+- [ ] Issue #158 remains OPEN (deferral comment + DQ `dd6012873857-001` filed in r2a)
 
 ---
 
 ## 16a. Stories (independently-testable behaviour units)
 
 ### Story 1: DQ negative-duration entries are blocked at gate time
+
+> **`[SHIPPED in r2a — PR #161]`** — verified at r2a /brehon-verify. Not part of the live v1-quality-r2 §16a story set; retained for traceability.
 
 - **Composing tasks:** Task 1
 - **Checkpoint command (positive):** `bash scripts/brehon/dq-lint-durations.sh; echo "exit: $?"`
@@ -953,6 +978,8 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
   - `.claude/decision-queue.json` entries 3999, 4007, 4016, 4035 have `resolved_at >= timestamp`.
 
 ### Story 2: C3 helper extraction is deferred with audit trail
+
+> **`[SHIPPED in r2a — PR #161]`** — DQ `dd6012873857-001` filed. Not part of the live v1-quality-r2 §16a story set; retained for traceability.
 
 - **Composing tasks:** Task 2
 - **Checkpoint command:** Task 2 §VALIDATE Python block.
@@ -994,16 +1021,16 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
 
 ## 17. Completion checklist
 
-- [ ] Task 0 audit complete (Probes 0–8 confirmed; counts match planner baseline 11/14/14)
-- [ ] Task 1..5 committed in dependency order on `phase-v1-quality-r2`
+- [ ] Task 0 audit complete (Probes 0–8 confirmed; counts match planner baseline 11/14/14, re-verified vs actual cut tip)
+- [ ] Tasks **3, 4, 5** committed in dependency order on `phase-v1-quality-r2` _(T1/T2 shipped in r2a)_
 - [ ] §15 validation green at every gate
-- [ ] §16a stories all `[done]`
+- [ ] §16a LIVE stories (3, 4, 5) all `[done]`
 - [ ] Retro committed (Task 6)
 - [ ] PR opened by BM session against `governance-v0` with `--repo barrie-cork/lemmy`
 - [ ] CodeRabbit review complete with findings triaged per `feedback_pr_review_triage_pattern.md`
-- [ ] `/brehon-verify` report at `.claude/PRPs/reports/v1-quality-r2-verify.md` shows all 5 stories ✓
-- [ ] Issues #156/#157/#159/#160 closed with merge-commit references by BM
-- [ ] Issue #158 carries the deferral comment with C3 DQ id; remains OPEN
+- [ ] `/brehon-verify` report at `.claude/PRPs/reports/v1-quality-r2-verify.md` shows all 3 LIVE stories (3/4/5) ✓
+- [ ] Issues **#156/#159/#160** closed with merge-commit references by BM _(#157 already closed via r2a)_
+- [ ] Issue #158 remains OPEN (deferral comment + DQ `dd6012873857-001` from r2a)
 - [ ] Roadmap updated: `lanes.quality.sub_phases.v1-quality-r2` flipped `done`
 - [ ] Post-merge phase branch retained for retro reads
 
