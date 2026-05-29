@@ -4523,6 +4523,57 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-037"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:00Z",
+      "question": "RT-r4 age_or_surety strategy needs a surety table with sponsored_id + revoked_at. Does it exist with those columns, or must RT-r4 add them?",
+      "options": [
+        "exists-use-as-is",
+        "needs-migration-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies age_or_surety passes if EXISTS (surety WHERE sponsored_id = caller AND revoked_at IS NULL). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-use-as-is. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/surety.rs:17 defines `pub struct Surety` (diesel table_name = surety, line 12) with `sponsored_id: PersonId` (:20) and `revoked_at: Option<DateTime<Utc>>` (:23). The PRD §5.4 OR-EXISTS clause is implementable verbatim — no migration needed. Planner writes the age_or_surety arm reading the existing age-gate helper (create_endorsement.rs:328) plus a new surety-existence query against this table.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:30Z",
+      "question": "RT-r4 reputation strategy needs reputation_snapshot.can_sponsor as a readable column. Does it exist as a real column with a read path, or is it computed-only?",
+      "options": [
+        "exists-readable-column",
+        "computed-only-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies the reputation strategy passes if reputation_snapshot.can_sponsor is true for the caller (community-scoped if community_id provided, else instance-scoped). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-readable-column. Verified 2026-05-29 against phase-v1-RT-r4 tree: can_sponsor is a `pub can_sponsor: bool` column on the reputation_snapshot struct (reputation_snapshot.rs:31 and :46 — both the row and a view variant). Read paths exist at crates/api/api/src/governance/reputation_snapshot.rs, crates/db_views/reputation/src/impls.rs, crates/db_views/reputation/src/lib.rs, admin_reputation_stats.rs, admin_dashboard_html.rs. The reputation strategy reads the caller's snapshot (community-scoped or instance via community_id NULL) and gates on can_sponsor. Per PRD §5.4 this flips an existing computed-but-unread boolean (Phase 5a task 53, gated on thresholds.endorsement_strength default 25) to strategy-readable. No migration needed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:41:00Z",
+      "question": "RT-r4 allowlist strategy + admin add/remove endpoints need sponsor_allowlist db-layer helpers (insert/delete/exists). Did RT-r1 ship them, or must RT-r4 add them?",
+      "options": [
+        "exists-reuse",
+        "absent-rt-r4-adds-them"
+      ],
+      "context": "Brief rt-r4-planning-1 §2.1 deliverable (b) is conditional on whether RT-r1 shipped insert/delete/exists query fns for the sponsor_allowlist table (it shipped the table + struct + InsertForm). Determines whether deliverable (b) is a real §13 task.",
+      "answer": "absent-rt-r4-adds-them. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/sponsor_allowlist.rs contains ONLY the struct SponsorAllowlist + SponsorAllowlistInsertForm (no impl block, no query fns); grep for sponsor_allowlist/SponsorAllowlist across crates/db_views/ + crates/db_schema/src/impls/ returns ZERO matches. RT-r1 shipped the table + struct + InsertForm but NO query helpers. CONSEQUENCE: brief deliverable (b) is a REAL §13 task — RT-r4 must add insert(row) / delete(by person+community or by id) / is_allowlisted(person, community) helpers. Mirror an existing governance db-helper insert/delete/exists shape (e.g. the surety or reputation_event impls). These are Rust query fns, NOT a migration (the table already exists). The allowlist strategy arm (deliverable a) and both admin endpoints (deliverable c) requires: this helper task — planner threads the requires: dependency so the cohort dependency-check passes.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:41:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-003"
     }
   ]
 }

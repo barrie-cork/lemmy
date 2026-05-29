@@ -28,7 +28,12 @@ Per `feedback_runbook_audit_drift_post_event_check.md` + `feedback_handover_assu
 | `admin_sponsor_allowlist.rs` handler | ❌ DOES NOT EXIST | this is what RT-r4 BUILDS |
 | `SponsorGateStrategy` enum + dispatch | ✅ EXISTS (v0, 3 strategies) | `crates/api/api_crud/src/governance/create_endorsement.rs:84` enum (`Age`, `Open`, `Closed`, `Unknown`); `:161` `match &strategy` dispatch; `:94` `parse()` |
 
-**Load-bearing consequence**: RT-r4 needs **NO new migration** for the allowlist table or the entry-kind consts (both shipped in RT-r1). RT-r4 MAY need allowlist query helpers (`insert`, `delete`, `is_allowlisted`) in the db layer if they don't exist yet — planner verifies (see §2.1 deliverable b). The two `ENTRY_KIND_*` consts are **declared-but-not-yet-emitted**; RT-r4 is their first emission site. This flips them from registry `(pending)` to live — planner's §13 must include the registry-row update (drop `(pending)`, fill the real handler-fn name).
+**Load-bearing consequence**: RT-r4 needs **NO new migration** for the allowlist table or the entry-kind consts (both shipped in RT-r1). The two `ENTRY_KIND_*` consts are **declared-but-not-yet-emitted**; RT-r4 is their first emission site. This flips them from registry `(pending)` to live — planner's §13 must include the registry-row update (drop `(pending)`, fill the real handler-fn name).
+
+**Clarify-gate resolutions (advisor-mode, 2026-05-29) — load-bearing, READ before authoring §13:**
+- **DQ `de57d6ce31bc-001`** (age_or_surety): `surety` table EXISTS at `crates/db_schema/src/source/governance/surety.rs:17` with `sponsored_id` (:20) + `revoked_at` (:23). PRD §5.4 OR-EXISTS clause implementable verbatim; no migration. → deliverable (a) `age_or_surety` arm is straightforward.
+- **DQ `de57d6ce31bc-002`** (reputation): `reputation_snapshot.can_sponsor` EXISTS as a `bool` column (`reputation_snapshot.rs:31`/`:46`) with read paths in `db_views/reputation/src/impls.rs` + `reputation_snapshot.rs`. → deliverable (a) `reputation` arm reads the existing snapshot; no migration.
+- **DQ `de57d6ce31bc-003`** (allowlist helpers): `sponsor_allowlist.rs` has ONLY the struct + InsertForm — **NO query helpers** (insert/delete/exists), zero `db_views` references. → **deliverable (b) is a REAL §13 task**, not conditional. RT-r4 adds the helpers (Rust query fns, NOT a migration). The allowlist strategy arm (a) + admin endpoints (c) `requires:` this helper task.
 
 ---
 
@@ -272,7 +277,7 @@ What I worked through that the planner must resolve (expected planner DQ or grep
 Brief is queueable when:
 - DQ pending count = 0 OR all pending entries are non-blocking for RT-r4 planning.
 - Forbidden-window check at dispatch time per advisor-orchestrator.md §5.1 (non-binding for planning dispatch; advisor confirms anyway).
-- ✅ **Clarify gate** per advisor-orchestrator.md §3.3 — runs AFTER this brief is committed + before the planning Junior is dispatched (`/brehon-clarify .claude/PRPs/briefs/rt-r4-planning-1.md`). Any clarify-DQ must resolve before dispatch.
+- ✅ **Clarify gate COMPLETE** per advisor-orchestrator.md §3.3 — advisor-mode, 2026-05-29. Three clarify-DQ entries all resolved with code-citation evidence: `de57d6ce31bc-001` (surety table exists), `de57d6ce31bc-002` (can_sponsor column exists), `de57d6ce31bc-003` (allowlist db-helpers absent → deliverable b is a real task). Zero pending. Planning gate CLEAR. Resolutions folded into §0 above.
 
 Brief is committed to `phase-v1-RT-r4` (Mode A — directly on the phase branch the planning Junior forks from) with subject:
 ```
