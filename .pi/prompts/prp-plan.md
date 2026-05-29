@@ -20,7 +20,7 @@ Transform "$ARGUMENTS" into a battle-tested Rust implementation plan for the Bre
 
 P0 (read every time):
 - `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — the phase-by-phase blueprint, cross-cutting requirements, test strategy, Monday-morning checklist
-- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — primary backend reference: tables, enums, Diesel structs, view structs, DTOs, route table, handler responsibilities
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — primary backend reference (LIVING; current v0+v1 schema derived from live code, CODE WINS on discrepancy): tables, enums, Diesel models, view structs, DTOs, route table, handler responsibilities, jury-vote lifecycle, federation
 - `docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md` — the 11-endpoint MVP scope, v0 simplifications, 6-step order, done-definition
 - `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — 15 committed ADRs (hard constraints) and 12 open questions
 

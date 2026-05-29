@@ -36,7 +36,7 @@ Advisor = meta-oversight only, never authors content. Junior workers run on Elit
 ```yaml
 roles:
   advisor:  { runs_on: "laptop (this session)", model: "opus-4-7",  task_prefix: null,            authors_content: false }
-  planning: { runs_on: "EliteDesk/Junior",      model: "opus-4-7",  task_prefix: "[role:planning]"  }
+  planning: { runs_on: "EliteDesk/Junior",      model: "opus-4-8",  task_prefix: "[role:planning]"  }
   impl:     { runs_on: "EliteDesk/Junior",      model: "sonnet-4-6", task_prefix: "[role:impl-task]" }
   bm:       { runs_on: "EliteDesk/Junior",      model: "haiku-4-5", task_prefix: "[role:bm-task]"   }
   ci_watcher: { runs_on: "EliteDesk/Junior",    model: "haiku-4-5", task_prefix: "[role:ci-watcher]" }
@@ -111,7 +111,7 @@ paths:
 
 - **Planning / design docs / crate layout / slash commands / Monday-morning checklist / out-of-scope list:** read `.claude/brehon-reference.md` on demand.
 - **Live work hub (current state, what remains):** `.claude/PRPs/v1-roadmap.json` — lane/sub-phase tracker (status, PRs, retros, `what_remains`); driven by `/roadmap-next` + `/auto-roadmap`. v1 PRDs at `.claude/PRPs/prds/v1-*.prd.md`; v2 at `v2-messaging-rtc.prd.md`.
-- **Canonical schema / DTO / route reference:** `docs/brehon-law-inspired-network/04-data-model-and-api.md` (tables, DTOs, routes — still authoritative).
+- **Canonical schema / DTO / route reference:** `docs/brehon-law-inspired-network/04-data-model-and-api.md` (LIVING — current v0 base + all merged v1 schema; tables, enums, Diesel models, DTOs, routes, jury-vote lifecycle, federation; derived from live code, CODE WINS on discrepancy).
 - **ADRs + open questions:** `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md`.
 
 **Never write Rust code without a plan file in `.claude/PRPs/plans/`.** Planning and implementation are separate phases.
