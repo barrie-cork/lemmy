@@ -28,9 +28,9 @@
 5. Verify the branch exists on origin via `gh api repos/barrie-cork/lemmy/branches/phase-v1-quality-r2 --jq '.name + " @ " + .commit.sha[0:9]'`.
 6. Append one line to `.claude/runlog/bm-runlog.md` on `governance-v0`:
    ```
-   ## bm-cut: phase-v1-quality-r2 off <SHA> — 2026-05-28
+   ## bm-cut: phase-v1-quality-r2 off <SHA> — 2026-05-29
    ```
-   where `<SHA>` is the short SHA of the cut base after ff.
+   where `<SHA>` is the short SHA of the cut base after ff (should be `2bf293f48` or later on `governance-v0`).
 7. Commit + push the runlog append to `governance-v0`. Commit subject: `chore(bm-task): log branch cut phase-v1-quality-r2 — PR #155 carry-forward bundle`.
 
 ### 2.2 Scope boundary
@@ -48,15 +48,9 @@
 - Any worktree creation on the laptop (Lane is Mode B — no laptop worktree by design)
 - Any plan file authorship (`.claude/PRPs/plans/v1-quality-r2.plan.md` will be created by the planning Junior task on `phase-v1-quality-r2`, NOT on `governance-v0`)
 
-### 2.3 Plan-file precondition is intentionally absent
+### 2.3 Plan-file precondition — SATISFIED (re-scope 2026-05-29)
 
-Per `.claude/commands/bm/bm-cut.md` Phase 2: "A phase branch needs the corresponding plan file on trunk." This brief **explicitly exempts** v1-quality-r2 from that precondition because:
-
-- The planning brief at `.claude/PRPs/briefs/v1-quality-r2-planning-1.md` is committed on `governance-v0`. The planning Junior worker forks from `phase-v1-quality-r2` after bm-cut and authors `.claude/PRPs/plans/v1-quality-r2.plan.md` on the phase branch.
-- This is the Mode B convention (per `multi-lane-worktree.md` §"Brief location and trunk→phase sync"): planning brief on trunk + planning Junior on phase branch + plan file shipped on phase branch.
-- The bm-cut.md Phase 2 paragraph is canonical for plans authored ahead of time; v1-quality-r2 authors plan after bm-cut.
-
-Same precedent applies as Lane A: `.claude/PRPs/briefs/v1-redaction-r1-bm-cut-1.md` cut without a plan-file precondition.
+> **UPDATED 2026-05-29 (re-scope).** Unlike the original draft of this brief, the plan **already exists on `governance-v0`**: `.claude/PRPs/plans/v1-quality-r2.plan.md` (re-scoped to the 3-issue r2-half at `74197312d`; the full bundle was clarified pre-r2a). So the bm-cut.md Phase 2 "plan file on trunk" precondition is **met outright** — no exemption needed. There is **NO planning Junior to dispatch** this phase (planning is done). After bm-cut, the advisor syncs the existing plan + the Task 0 / T3 / T4 / T5 briefs to the phase branch and dispatches **Task 0 (harness audit)** as the first Junior task — see §6.
 
 ---
 
@@ -90,7 +84,7 @@ Same precedent applies as Lane A: `.claude/PRPs/briefs/v1-redaction-r1-bm-cut-1.
 
 ## 5. Context
 
-- **Phase:** v1-quality-r2 (PR #155 carry-forward bundle — quality/cleanup sweep for issues #156, #157, #158, #159, #160)
+- **Phase:** v1-quality-r2 (PR #155 carry-forward bundle, **r2-half** — quality/cleanup sweep for the 3 remaining issues **#156, #159, #160**. #157 + #158-defer shipped in r2a PR #161.)
 - **Lane:** Q (second concurrent active lane; Lane A redaction is in-flight at `phase-v1-redaction-r1`)
 - **Planning brief on trunk:** `.claude/PRPs/briefs/v1-quality-r2-planning-1.md` (committed in the same advisor commit as this bm-cut brief, OR in a prior advisor commit)
 - **User authorization for this lane:** 2026-05-28 explicit ("Schedule the other postponed GT issue fixes too, if safe to do so" → user selected v1-quality-r2 via AskUserQuestion)
@@ -104,10 +98,13 @@ Same precedent applies as Lane A: `.claude/PRPs/briefs/v1-redaction-r1-bm-cut-1.
 
 ## 6. After this bm-task completes
 
+> **UPDATED 2026-05-29 (re-scope).** Planning is DONE (plan exists on trunk). The post-cut path goes straight to impl, NOT to a planning Junior.
+
 Advisor will:
 
 1. Verify daemon worktree state post-bm-cut per bm-cut.md Phase 8 (`ssh homeserver 'cd /srv/brehon-fork && git symbolic-ref HEAD'` should return `refs/heads/phase-v1-quality-r2`).
-2. Trunk→phase sync the planning brief so it's visible on `phase-v1-quality-r2` for the planning Junior to read. Per `multi-lane-worktree.md` §"Brief location and trunk→phase sync" Mode B procedure (SSH-merge from daemon's main worktree, which is on the phase branch post-bm-cut).
-3. Dispatch the planning Junior with `base_branch=phase-v1-quality-r2` per `feedback_handover_assumptions_need_empirical_verification.md` discipline.
+2. Trunk→phase sync the **re-scoped plan** (`.claude/PRPs/plans/v1-quality-r2.plan.md` @`74197312d`) so it's visible on `phase-v1-quality-r2`, via the Mode B SSH-merge of `governance-v0` into the phase branch from the daemon's main worktree (per `multi-lane-worktree.md` §"Brief location and trunk→phase sync"). The clarify-resolved DQ (`a3d0e9941441-037`) rides along in the merge.
+3. Author the **Task 0 / T3 / T4 / T5 impl-task briefs** on `governance-v0` (with verbatim e2e.rs text anchors per R11 — derived from the actual phase-branch tip, NOT the plan's stale line numbers), commit, then trunk→phase sync each before its dispatch.
+4. Dispatch **Task 0 (pre-flight harness audit)** with `base_branch=phase-v1-quality-r2` — it re-runs Probe 8 (11/14/14 enumeration) against the phase tip + captures the clippy baseline. Then serial T3→T4→T5 under validate-pending-laptop, then T6 retro. Per `feedback_handover_assumptions_need_empirical_verification.md` discipline.
 
 None of those steps are bm-task scope. The bm-task EXITS after the runlog commit + push.
