@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "237cd769325e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T01:57:51Z",
+      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-2",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
