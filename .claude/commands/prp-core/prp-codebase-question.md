@@ -23,7 +23,7 @@ Answer codebase questions about the Brehon fork (Lemmy 1.0-beta + governance ext
 
 **The fork lives at `C:\Users\barri\Developer\brehon-fork\` (Lemmy 1.0-beta, working branch `governance-v0`).** The authoritative design docs live in a sibling repo on the same machine, so reference them via absolute Windows paths when research touches governance primitives:
 
-- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — tables, enums, Diesel structs, DTOs, routes
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — tables, enums, Diesel models, DTOs, routes (LIVING; current v0+v1 schema from live code)
 - `docs/brehon-law-inspired-network/05-mvp-and-delivery-plan.md` — 11-endpoint v0 scope
 - `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — 15 ADRs
 - `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — phase blueprint
