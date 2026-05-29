@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "be594e67e072-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-29T15:34:11Z",
+      "question": "Advisor-laptop: run check/clippy/WHOLE-binary-e2e for v1-rt-r3-followup task 2 (Sites C+D rep_count 4->7). Expect 119 passed; 0 failed; 5 ignored.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 commit d57b755c9 on worktree branch (phase tip carries Tasks 1+2). Shape G suspended; advisor-laptop runs the three commands below.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": 2,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
