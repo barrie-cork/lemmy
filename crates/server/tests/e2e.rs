@@ -2929,9 +2929,9 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       "rationale must contain redaction sentinel"
     );
 
-    // Drift #8: 4 reputation_event rows (3 jurors on JuryReliability + 1
-    // reporter on ReportingAccuracy) per [05 §6] — NOT 3 as the plan
-    // body suggests.
+    // Drift #8: 7 reputation_event rows (3 jurors on JuryReliability + 1
+    // reporter on ReportingAccuracy + 3 ParticipationConsistency from the
+    // RT-r3 vote-outcome emit, one per majority-aligned juror) per [05 §6].
     //
     // Exactly-once under post-quorum votes: reputation_event writes occur
     // only in the post-decision block. Votes 4+5 MUST NOT produce additional
@@ -2946,8 +2946,8 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .get_result(conn)
       .await?;
     assert_eq!(
-      rep_total, 4,
-      "4 reputation_event rows (exactly-once under late votes)"
+      rep_total, 7,
+      "7 reputation_event rows (4 prior + 3 ParticipationConsistency from RT-r3 vote-outcome emit; exactly-once under late votes)"
     );
 
     let jury_rep_count: i64 = reputation_event::table
@@ -11191,9 +11191,12 @@ async fn governance_log_sequence_matches_prd_state_machine() -> lemmy_utils::err
   //     juror's accept_jury_assignment (Phase 5c task 64). Subsequent
   //     accepts also emit this kind but the first-occurrence filter
   //     collapses them.
-  //   - public_log_published (between case_decided and appeal_requested) —
-  //     redacted public log entry created on case-decide
-  //     (Phase 4b shipped, submit_jury_vote.rs)
+  //   - public_log_published (between jury_accepted and vote_outcome_recorded,
+  //     i.e. BEFORE case_decided) — redacted public log entry created on
+  //     case-decide (Phase 4b shipped, submit_jury_vote.rs)
+  //   - vote_outcome_recorded (between public_log_published and case_decided) —
+  //     RT-r3 (996765cae) per-vote outcome emit on submit_jury_vote; first
+  //     occurrence is the decision-time write.
   //
   // Test catches future state-machine drift (a new const dropping in or an
   // existing emission disappearing). The plan §10.7 spec is the
@@ -11206,6 +11209,7 @@ async fn governance_log_sequence_matches_prd_state_machine() -> lemmy_utils::err
     "panel_assembled",
     "jury_accepted",
     "public_log_published",
+    "vote_outcome_recorded",
     "case_decided",
     "appeal_requested",
     "appeal_panel_assembled",
@@ -14017,14 +14021,15 @@ mod v1_sl_d_fixtures {
     let plog_count: i64 = public_case_log::table.count().get_result(&mut conn).await?;
     assert_eq!(plog_count, 1, "1 public_case_log row on Decided path");
 
-    // 3 juror reputation events (3 votes cast) + 1 reporter = 4 total.
+    // 3 ParticipationConsistency (RT-r3 vote-outcome emit, 3 majority-aligned jurors)
+    // + 3 JuryReliability (3 votes cast) + 1 ReportingAccuracy (reporter) = 7 total.
     let rep_count: i64 = reputation_event::table
       .count()
       .get_result(&mut conn)
       .await?;
     assert_eq!(
-      rep_count, 4,
-      "3 juror + 1 reporter reputation events fire immediately on Decided path"
+      rep_count, 7,
+      "3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy reputation events fire immediately on Decided path (RT-r3 vote-outcome added the 3 ParticipationConsistency rows)"
     );
 
     // 0 sponsor_liability_pending entries: no sureties → Decided path, not Pending.
@@ -14235,15 +14240,16 @@ mod v1_sl_d_fixtures {
       "0 reputation_event rows for sponsors on NoAction path"
     );
 
-    // Juror events fire for the 3 who voted; reporter event fires (1 row).
-    // Total = 3 juror + 1 reporter = 4.
+    // Juror events fire for the 3 who voted (3 JuryReliability) + reporter (1 ReportingAccuracy);
+    // RT-r3 vote-outcome adds 3 ParticipationConsistency (3 NoAction-aligned jurors).
+    // Total = 3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy = 7.
     let rep_count: i64 = reputation_event::table
       .count()
       .get_result(&mut conn)
       .await?;
     assert_eq!(
-      rep_count, 4,
-      "3 juror + 1 reporter reputation events fire on NoAction Decided path"
+      rep_count, 7,
+      "3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy reputation events fire on NoAction Decided path (RT-r3 vote-outcome added the 3 ParticipationConsistency rows)"
     );
 
     Ok(())

@@ -2119,3 +2119,23 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ## bm-cut: phase-v1-redaction-r1 off 321c848fc — 2026-05-28
 
 ## bm-cut: phase-v1-quality-r2 off 27c235a20 — 2026-05-28
+
+## advisor: bm-cut phase-v1-rt-r3-followup off 9ef77896d — 2026-05-29
+- **branch:** phase-v1-rt-r3-followup
+- **off:** governance-v0 @ 9ef77896d (chore(brehon): close v1-quality-r2a, bootstrap v1-rt-r3-followup)
+- **plan:** .claude/PRPs/plans/v1-rt-r3-followup.plan.md (not yet authored — plan follows e2e baseline)
+- **pushed:** yes — origin/phase-v1-rt-r3-followup (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed @ 9ef77896d
+- **mode:** Mode A — lane worktree C:/Users/barri/Developer/brehon-fork-rt-r3-followup created + bootstrapped (submodule init + .mcp.json/.env/settings.local.json copied)
+- **execution:** advisor-side local cut (NOT Junior bm-task) — Mode A precedent per `/roadmap-next`-style RT-r3 cut (bm-runlog 2022); avoids daemon finalize-merge + CC v2.1.119 runlog-gate hazards (bm-cut.md Phase 8). Lane not in v1-roadmap.json so /roadmap-next not directly usable; mechanics done manually.
+- **next:** e2e baseline run on lane tip (capture real failing tests + real reputation_event counts) → author plan against real numbers → /brehon-clarify → planning Junior
+
+## bm-pr: PR #162 OPEN (advisor-side) — 2026-05-29
+- **PR:** #162 — v1-rt-r3-followup → governance-v0
+- **head:** phase-v1-rt-r3-followup @ 7b324abe8
+- **base:** governance-v0 @ 381882942
+- **dispatch:** advisor-side inline (user chose via AskUserQuestion; lane was cut advisor-side, 4-line test diff)
+- **post-condition verify:** state=OPEN, isDraft=false, baseRefName=governance-v0, mergeable=MERGEABLE ✓
+- **PR diff (three-dot):** crates/server/tests/e2e.rs (12 ins/9 del) + phase-branch .claude/ artifacts; scope-discipline clean (0 lines in crates/api|db_schema|routes + migrations/)
+- **validation:** check CHECK_EXIT_0 + clippy CLIPPY_EXIT_0 + whole-binary e2e 119 passed/0 failed/5 ignored
+- **next:** CodeRabbit auto-review → bm-poll-cr → bm-triage → gate 3 (4-bucket counts)
