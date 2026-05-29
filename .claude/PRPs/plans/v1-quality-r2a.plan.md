@@ -669,7 +669,7 @@ r2a runs zero e2e tests. The e2e gate moves to r2b.
 |---|---|---|---|
 | Concurrent advisor write to `.claude/decision-queue.json` clobbers T1 sweep | LOW | MED | Hard refusal #6 atomic protocol; re-fetch immediately before mutate; verify post-push |
 | Git log for one of the 3 entries returns multiple resolving-commit candidates | MED | LOW | Per-entry: Option B requires a single unambiguous candidate; default Option A floor |
-| `dq-lint-durations.sh` regex misses an edge-case timestamp format | LOW | MED | Python `fromisoformat` handles all valid ISO-8601; non-ISO timestamps surface as `None` and skip the comparison |
+| `dq-lint-durations.sh` regex misses an edge-case timestamp format | LOW | MED | Python `fromisoformat` handles all valid ISO-8601; malformed timestamps raise `ValueError` which the `parse()` wrapper catches and returns `None`, so the entry is silently skipped rather than crashing the lint |
 | `dq-v3-append-fragment.sh` rejects fragment due to schema-v3 mismatch | LOW | LOW | Mirror an existing `kind: "log"` `from: "planner"` entry verbatim; helper validates and emits a clear error |
 | r2b regression: r2b adds a new fixtures module that re-violates the doc-comment audit | LOW | LOW | r2b's Task 0 re-counts; defect class is monotonic |
 
