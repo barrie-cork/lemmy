@@ -2150,3 +2150,5 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **CR triage:** 13 findings, 0 blocking, recommendation=approve, final_recommendation=approve. 9 wont-fix (MD-nits on .claude/ prose), 2 done (cr-10/cr-11 e2e stale comments → fix-impl-1 84526e6e2), 2 rebut (scope + Copilot summary). CR advisory/non-blocking; free-tier skipped re-review of comment-only commit (user approved proceed).
 - **gates:** /brehon-verify 3/3 stories ✓; whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression).
 - **remaining:** gate 6 retro sign-off (@94a005b55) → /brehon-phase-transition; pre-prune worktrees.
+
+## bm-cut: phase-v1-quality-r2 off 20d92ff3f — 2026-05-28
