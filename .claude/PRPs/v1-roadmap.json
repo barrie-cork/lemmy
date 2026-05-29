@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T17:46:00Z",
+  "last_updated_at": "2026-05-29T18:09:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -246,15 +246,16 @@
           "notes": "Task 4 (e2e tests) hit cycle-count §5.3 HARD REFUSAL after 4 fix-impl attempts; resolved via advisor-side authorship. Ship landed e2e EMIT paths (996765cae) but left 4 downstream e2e assertions stale -> follow-up sub-phase v1-rt-r3-followup. Local worktree C:/Users/barri/Developer/brehon-fork-rt-r3 NOT yet pruned (origin branch deleted post-merge); prune after v1-rt-r3-followup ships."
         },
         "v1-rt-r3-followup": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "Fix downstream e2e assertions left stale by v1-RT-r3 ship (996765cae added vote_outcome_recorded + evidence_cited emit paths without updating reputation_event count assertions + governance_log sequence expectation in crates/server/tests/e2e.rs). Pure test-fix lane; e2e is the only gate.",
           "pr": 162,
-          "merge_commit": null,
+          "merge_commit": "28518605b",
           "plan": ".claude/PRPs/plans/v1-rt-r3-followup.plan.md",
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "cr-fix-validated-awaiting-cr-rereview (2026-05-29): PR #162 @e44e34817; CR triaged 13/0-blocking/approve. fix-impl-1 #507 DONE (comment-only 84526e6e2) + VALIDATED: check CHECK_EXIT_0 + clippy CLIPPY_EXIT_0 + targeted-e2e 2 passed/0 failed (84.21s); DQ 79db52a6e3be-001 mutated pass @e44e34817 (pending=0). findings YAML: cr-10+cr-11 -> DONE (addressed_in 84526e6e2); 0 open fix-in-pr; recommendation approve. FINALIZE-NO-PUSH RECURRENCE #4 bridged. HOLDING on CR re-review: the 2 e2e.rs review threads are isOutdated=false despite the fix touching those exact lines -> CR has NOT yet re-reviewed the incremental commits (84526e6e2/e44e34817); 'no new findings' is INCONCLUSIVE until CR processes the push. Do NOT proceed to gate 5 until CR confirms (threads go isOutdated=true OR a fresh CR review posts no-actionable). ALL impl (Task1 834f9d85d + Task2 d57b755c9) + e2e 119/0 + retro @94a005b55 done. NEXT: re-poll CR (~5-10 min); once CR re-reviewed clean -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge --merge (NOT squash) -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
+          "done_at": "2026-05-29",
+          "stage": "MERGED 2026-05-29: PR #162 -> governance-v0 @28518605b (verified state=MERGED, mergedAt 18:07:35Z, phase branch deleted on origin). Shipped: 4 stale e2e assertions current with RT-r3 vote-outcome emit (Task1 A+B 834f9d85d rep_total 4->7 + vote_outcome_recorded; Task2 C+D d57b755c9 rep_count 4->7; fix-impl-1 84526e6e2 stale-comment fixes per CR cr-10/cr-11). Headline whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression). /brehon-verify 3/3 ✓. CR triaged 13 findings 0 blocking (9 wont-fix MD-nits + 2 fix-in-pr done + 2 rebut); CR advisory/non-blocking, re-review skipped on free-tier comment-only commit (user-approved proceed). Retro @94a005b55 + 2 lessons promoted (feedback_emit_added_requires_full_e2e_gate NEW + feedback_junior_worker_e2e_edit_hang promoted/reconciled). REMAINING: gate 6 retro sign-off (surfacing) -> /brehon-phase-transition; pre-prune workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 (now) + brehon-fork-rt-r3-followup (defer — active CWD). 4 structural carry-forwards in retro §3 (finalize-no-push 4x = daemon-push-after-finalize candidate; Task-0 fabrication; daemon worktree bootstrap; PMD-MCP HTTP doc drift).",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
