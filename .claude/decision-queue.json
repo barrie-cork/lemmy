@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "e9ed653cfd0a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-3",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
