@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T15:45:00Z",
+  "last_updated_at": "2026-05-29T16:35:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -254,7 +254,7 @@
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "impl-task-2-validate (2026-05-29): all impl committed; running headline whole-binary e2e gate. Task 0 (#504 re-verified) -> Task 1 A+B (#505, 834f9d85d) validate ALL-PASS -> DQ cdb6bab5fef8-001 resolved @197815f63 -> impl-2 brief @312cab5a0 -> Task 2 C+D DONE (#506, impl d57b755c9: rep_count 4->7 ×2 @14028(C)+14248(D); regression guard sponsor_rep_count,0 @14236 held; evidence_quality_recorded NOT added). FINALIZE-NO-PUSH RECURRENCE #3 bridged (daemon-local 50e0323709 FF-pushed to origin; lane FF'd). Task 2 edits VERIFIED (rg rep_count,7 ×2; rep_count,4 zero; diff = 2 hunks in mod v1_sl_d_fixtures only). DQ be594e67e072-001 (validate-pending-laptop-e2e) pending. GATES RUNNING bg bcycg570q (check->clippy->WHOLE-BINARY e2e, verified live: 8 cargo/rustc procs); EXPECT 119 passed/0 failed/5 ignored (NEGATIVE-test gate, pre-fix 115/4/5). NEXT: on 119/0 mutate DQ pass -> Task 3 retro -> /brehon-verify -> bm-pr -> CR triage (gate 3) -> merge-forward -> merge (gate 5) -> retro (gate 6). On count-mismatch=derivation error surface (don't guess); green-to-red=regression catch-fire.",
+          "stage": "retro-authored (2026-05-29): ALL IMPL DONE + headline gate GREEN. Task0 (#504 re-verified) -> Task1 A+B (#505, 834f9d85d) -> DQ cdb6bab5fef8-001 pass @197815f63 -> Task2 C+D (#506, d57b755c9) -> finalize-no-push #3 bridged (origin @50e032370). HEADLINE WHOLE-BINARY E2E PASS: 'test result: ok. 119 passed; 0 failed; 5 ignored' in 2392.77s (E2E_EXIT_0; pre-fix 115/4/5; 4 RT-r3-stale tests now green, ZERO regression of 115 prior-green). DQ be594e67e072-001 mutated pass @7b324abe8 (pending=0). Retro authored @94a005b55 (.claude/PRPs/reports/v1-rt-r3-followup-retro.md) + 2 lessons promoted (feedback_emit_added_requires_full_e2e_gate NEW + feedback_junior_worker_e2e_edit_hang promoted/reconciled; §2.4 repointed) + PMD synced (2 imported). NEXT: /brehon-verify (§16a 3 stories) -> bm-pr -> CR -> bm-poll-cr -> bm-triage (GATE 3, WAIT) -> merge-forward -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
