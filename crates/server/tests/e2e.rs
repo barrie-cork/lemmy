@@ -14018,14 +14018,15 @@ mod v1_sl_d_fixtures {
     let plog_count: i64 = public_case_log::table.count().get_result(&mut conn).await?;
     assert_eq!(plog_count, 1, "1 public_case_log row on Decided path");
 
-    // 3 juror reputation events (3 votes cast) + 1 reporter = 4 total.
+    // 3 ParticipationConsistency (RT-r3 vote-outcome emit, 3 majority-aligned jurors)
+    // + 3 JuryReliability (3 votes cast) + 1 ReportingAccuracy (reporter) = 7 total.
     let rep_count: i64 = reputation_event::table
       .count()
       .get_result(&mut conn)
       .await?;
     assert_eq!(
-      rep_count, 4,
-      "3 juror + 1 reporter reputation events fire immediately on Decided path"
+      rep_count, 7,
+      "3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy reputation events fire immediately on Decided path (RT-r3 vote-outcome added the 3 ParticipationConsistency rows)"
     );
 
     // 0 sponsor_liability_pending entries: no sureties → Decided path, not Pending.
@@ -14236,15 +14237,16 @@ mod v1_sl_d_fixtures {
       "0 reputation_event rows for sponsors on NoAction path"
     );
 
-    // Juror events fire for the 3 who voted; reporter event fires (1 row).
-    // Total = 3 juror + 1 reporter = 4.
+    // Juror events fire for the 3 who voted (3 JuryReliability) + reporter (1 ReportingAccuracy);
+    // RT-r3 vote-outcome adds 3 ParticipationConsistency (3 NoAction-aligned jurors).
+    // Total = 3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy = 7.
     let rep_count: i64 = reputation_event::table
       .count()
       .get_result(&mut conn)
       .await?;
     assert_eq!(
-      rep_count, 4,
-      "3 juror + 1 reporter reputation events fire on NoAction Decided path"
+      rep_count, 7,
+      "3 ParticipationConsistency + 3 JuryReliability + 1 ReportingAccuracy reputation events fire on NoAction Decided path (RT-r3 vote-outcome added the 3 ParticipationConsistency rows)"
     );
 
     Ok(())
