@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "237cd769325e-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T01:57:51Z",
-      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
-      "branch": "phase-v1-quality-r2",
-      "phase_task": "v1-quality-r2a-fix-impl-2",
-      "commands": [
-        "bash scripts/brehon/dq-lint-durations.sh",
-        "bash scripts/brehon/precheck.sh"
-      ],
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4349,6 +4322,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "dd6012873857-001"
+    },
+    {
+      "id": "237cd769325e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T01:57:51Z",
+      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-2",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 530da702f. (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 in ~20ms (zero negative-duration entries on the phase-branch DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0 in ~17ms (REPO_ROOT-derivation works correctly; sibling-script invocation succeeds). Gates run via SSH on /srv/brehon-fork (daemon worktree on phase-v1-quality-r2) per Mode B mobile remote-control. Lane Q-r2a fix-impl-2 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-3..cr-8 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T02:01:30Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
