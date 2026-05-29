@@ -51,12 +51,29 @@ housekeeping (dead 1.3M surface), NOT a budget lever. The 50k target is hit via 
 exactly as planned. The user chose "B2+B3+MEMORY now; defer Pi decision" — so **the Pi-retire
 call is still open; do not delete `.pi/` without re-confirming.**
 
-### STATUS: COMPLETE (2026-05-29 session 2). Floor reached. Nothing remains.
+### STATUS: COMPLETE (2026-05-29 session 2). Floor reached + harness-validated.
 
 All planned levers applied + the two follow-on levers (B5a stale-trim, B5b
-profile-scope) investigated and resolved. **Final always-load: ~62.2k tok
-(was 71.5k) — cut ~9.3k (13%).** This is at the defensible floor; no further
-structural lever exists for this dual-harness repo. Details below.
+profile-scope) investigated and resolved.
+
+**HARNESS-VALIDATED FINAL (via `/context`, fresh session, Opus 4.6):
+Memory files = 45k tok (22.5% of 200K).** Under the 25%/50k threshold. Good.
+
+**⚠️ TOKENIZER-MATH CORRECTION — the report's 2.4 chars→token ratio is WRONG.**
+Measured directly against the harness's own per-file `/context` numbers, the
+real ratio is **~3.3 chars/token** (advisor-orchestrator 33,207 ch → 10.1k tok
+= 3.29; decision-queue 3.40; multi-lane 3.35; consistent across all files). So:
+- Every "≈ Δ tok @2.4×" figure in this handover OVER-counts by ~1.4×. The
+  CHAR deltas are accurate; divide chars by ~3.3 (not 2.4) for real tokens.
+- The "71.5k → 62.2k" framing used the bad ratio on both endpoints. At the true
+  ratio the baseline was ~52k and we are now at **45k** — a real **~−4k tok /
+  ~−13k char** cut. The relative cut (~13%) is right; the absolute token
+  numbers below are inflated — trust the 45k harness figure.
+- Do NOT re-propagate 2.4 into any future harness-audit; use 3.3 (Opus-4.6
+  tokenizer) or just read `/context` directly.
+
+This is at the defensible floor; no further structural lever exists for this
+dual-harness repo. Details below.
 
 ### ⚠️ DO NOT re-chase these (verified dead ends — proven, not assumed)
 
