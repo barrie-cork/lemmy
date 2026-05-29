@@ -2139,3 +2139,14 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **PR diff (three-dot):** crates/server/tests/e2e.rs (12 ins/9 del) + phase-branch .claude/ artifacts; scope-discipline clean (0 lines in crates/api|db_schema|routes + migrations/)
 - **validation:** check CHECK_EXIT_0 + clippy CLIPPY_EXIT_0 + whole-binary e2e 119 passed/0 failed/5 ignored
 - **next:** CodeRabbit auto-review → bm-poll-cr → bm-triage → gate 3 (4-bucket counts)
+
+## bm-merge: PR #162 MERGED (advisor-side) — 2026-05-29T18:07:35Z
+- **PR:** #162 (now MERGED) — v1-rt-r3-followup → governance-v0
+- **merge_commit:** 28518605bee21eb656dff0cb2030ad7036d0532d
+- **base:** governance-v0 · **head:** phase-v1-rt-r3-followup (deleted via --delete-branch)
+- **method:** --merge (NOT squash — task-per-commit history load-bearing per phase-branch.md)
+- **dispatch:** advisor-side (user confirmed gate 5 via AskUserQuestion)
+- **post-condition verify:** state=MERGED ✓, mergedAt=2026-05-29T18:07:35Z (non-null) ✓, mergeCommit.oid valid 40-char ✓, origin phase branch deleted ✓
+- **CR triage:** 13 findings, 0 blocking, recommendation=approve, final_recommendation=approve. 9 wont-fix (MD-nits on .claude/ prose), 2 done (cr-10/cr-11 e2e stale comments → fix-impl-1 84526e6e2), 2 rebut (scope + Copilot summary). CR advisory/non-blocking; free-tier skipped re-review of comment-only commit (user approved proceed).
+- **gates:** /brehon-verify 3/3 stories ✓; whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression).
+- **remaining:** gate 6 retro sign-off (@94a005b55) → /brehon-phase-transition; pre-prune worktrees.
