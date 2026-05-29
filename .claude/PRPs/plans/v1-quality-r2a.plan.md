@@ -600,7 +600,7 @@ echo "exit: $?"
 - [ ] `dq-lint-durations.sh` exits 0 on `.claude/decision-queue.json` post-T1+T2.
 - [ ] `dq-lint-durations.sh` exits non-zero on a synthetic back-dated fixture.
 - [ ] `precheck.sh` sources `dq-lint-durations.sh` via `SCRIPT_DIR`.
-- [ ] Zero edits to files outside §11 list (no `crates/**`, no `migrations/**`, no `tests/**`).
+- [ ] No edits to `crates/**`, `migrations/**`, `tests/**` (r2a is zero-Rust by design; PR also includes the plan files and `.claude/PRPs/debug/v1-quality-r2a-c3-defer.json` per CR cr-7).
 - [ ] Issues #157 closed with PR reference at merge time; #158 has a deferral comment + remains open.
 
 ### 15.4 No e2e gate
@@ -668,7 +668,7 @@ r2a runs zero e2e tests. The e2e gate moves to r2b.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Concurrent advisor write to `.claude/decision-queue.json` clobbers T1 sweep | LOW | MED | Hard refusal #6 atomic protocol; re-fetch immediately before mutate; verify post-push |
-| Git log for one of the 4 entries returns multiple resolving-commit candidates | MED | LOW | Per-entry: Option B requires a single unambiguous candidate; default Option A floor |
+| Git log for one of the 3 entries returns multiple resolving-commit candidates | MED | LOW | Per-entry: Option B requires a single unambiguous candidate; default Option A floor |
 | `dq-lint-durations.sh` regex misses an edge-case timestamp format | LOW | MED | Python `fromisoformat` handles all valid ISO-8601; non-ISO timestamps surface as `None` and skip the comparison |
 | `dq-v3-append-fragment.sh` rejects fragment due to schema-v3 mismatch | LOW | LOW | Mirror an existing `kind: "log"` `from: "planner"` entry verbatim; helper validates and emits a clear error |
 | r2b regression: r2b adds a new fixtures module that re-violates the doc-comment audit | LOW | LOW | r2b's Task 0 re-counts; defect class is monotonic |
