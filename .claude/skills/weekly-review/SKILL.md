@@ -64,6 +64,40 @@ Log the before/after missing-count in the weekly-review report. If
 `backfill.js` can't be located or Ollama is down, that is itself a
 finding to surface (semantic search is degrading week-over-week).
 
+### 1c. Lesson frontmatter sweep (silently-skipped-lesson backstop)
+
+**Why:** `scripts/sync-lessons-to-pmd.sh` imports a
+`.claude/lessons/{feedback,reference}_*.md` file into the PMD only when
+it has a leading `---\n…\n---\n` frontmatter block with a non-empty
+`name:`. A lesson authored without it is SILENTLY SKIPPED (`errors: N`)
+on every sync and is invisible to `memory_search_hybrid` recall —
+forever, with no signal. On 2026-05-29, 8 lessons were found in this
+state, unindexed for weeks. The author-time PostToolUse hook
+(`lesson-frontmatter-reminder.sh`) catches the common case; this sweep
+is the backstop for files that slip in via direct git operations (a
+`git mv`, a manual editor write, a merge) that fire no PostToolUse hook.
+Per `feedback_lessons_need_frontmatter_for_pmd_sync.md`.
+
+Runs on the daemon side. Non-fatal (log + continue; this is a
+safety-net sweep, not a gate):
+
+```bash
+# Sweep every synced lesson file. Exit 2 if any would be skipped by the sync.
+bash scripts/brehon/lesson-frontmatter-lint.sh
+RC=$?
+if [ "$RC" -eq 2 ]; then
+  echo "WEEKLY-REVIEW FINDING: one or more lessons lack PMD-sync frontmatter (see BROKEN lines above)."
+  echo "These are invisible to memory_search_hybrid until fixed. Surface in the weekly summary."
+elif [ "$RC" -eq 0 ]; then
+  echo "lesson frontmatter sweep: all clean"
+fi
+```
+
+If the sweep reports BROKEN files, list them in the weekly-review
+report under findings. **Do NOT auto-fix** — frontmatter content
+(`name`/`description`) is a human authoring decision; surface the file
+list so the maintainer adds the right metadata, then re-runs the sync.
+
 ### 2. Promote candidates (backup sweep)
 
 For each promotion candidate from step 1 (tags/files in 3+ memories):
