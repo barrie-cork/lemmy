@@ -2929,9 +2929,9 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       "rationale must contain redaction sentinel"
     );
 
-    // Drift #8: 4 reputation_event rows (3 jurors on JuryReliability + 1
-    // reporter on ReportingAccuracy) per [05 §6] — NOT 3 as the plan
-    // body suggests.
+    // Drift #8: 7 reputation_event rows (3 jurors on JuryReliability + 1
+    // reporter on ReportingAccuracy + 3 ParticipationConsistency from the
+    // RT-r3 vote-outcome emit, one per majority-aligned juror) per [05 §6].
     //
     // Exactly-once under post-quorum votes: reputation_event writes occur
     // only in the post-decision block. Votes 4+5 MUST NOT produce additional
@@ -11191,9 +11191,12 @@ async fn governance_log_sequence_matches_prd_state_machine() -> lemmy_utils::err
   //     juror's accept_jury_assignment (Phase 5c task 64). Subsequent
   //     accepts also emit this kind but the first-occurrence filter
   //     collapses them.
-  //   - public_log_published (between case_decided and appeal_requested) —
-  //     redacted public log entry created on case-decide
-  //     (Phase 4b shipped, submit_jury_vote.rs)
+  //   - public_log_published (between jury_accepted and vote_outcome_recorded,
+  //     i.e. BEFORE case_decided) — redacted public log entry created on
+  //     case-decide (Phase 4b shipped, submit_jury_vote.rs)
+  //   - vote_outcome_recorded (between public_log_published and case_decided) —
+  //     RT-r3 (996765cae) per-vote outcome emit on submit_jury_vote; first
+  //     occurrence is the decision-time write.
   //
   // Test catches future state-machine drift (a new const dropping in or an
   // existing emission disappearing). The plan §10.7 spec is the
