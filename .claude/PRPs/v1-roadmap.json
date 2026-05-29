@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T11:52:00Z",
+  "last_updated_at": "2026-05-29T15:03:04Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -254,7 +254,7 @@
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "e2e-baseline (lane cut 2026-05-29 off governance-v0 @ 9ef77896d, Mode A; baseline e2e running to derive real assertion deltas before plan authorship)",
+          "stage": "impl-task-1-validate (2026-05-29): plan shipped (6dc2d7aa1, 4 tasks, complexity 7) -> gate-1 approved -> Task 0 pre-flight DONE (#504, advisor re-verified 3 fabricated probes, all genuinely pass; anchors at exact 2485/11054/13866/14059) -> Task 1 Sites A+B DONE (#505, impl 834f9d85d: rep_total 4->7 @2949 + vote_outcome_recorded insert @11209; regression guards held L2959 jury_rep_count=3 + L2967 reporter_rep_count=1 unchanged) -> finalize-no-push bridged (origin @1bbec1659) -> validate-pending-laptop cdb6bab5fef8-001: cargo check PASS + clippy -D warnings PASS (panic::Location false-alarm cleared) + targeted e2e (report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine) IN-FLIGHT. NEXT: on e2e pass -> mutate DQ pass -> author impl-2 brief (Sites C+D) -> queue Task 2 -> Task 3 retro -> bm-pr -> CR triage (gate 3) -> merge (gate 5) -> retro (gate 6).",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
