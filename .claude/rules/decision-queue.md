@@ -201,38 +201,9 @@ ci-watcher wrote a new entry — DQ #73 was orphaned for ~7 hours
 before manual cleanup at `30597b436`. Single-entry mutation makes
 the inconsistency impossible.
 
-### Deprecated kinds (historical-only — do not use for new writes)
+### Deprecated kinds + two-phase Shape-G validation (historical)
 
-`kind: "validate-result"` and `kind: "validate-failed"` are DEPRECATED 2026-04-28 by option 2 (single-entry mutation). No session writes them. Schema-v2 readers tolerate historical entries (DQ #74 on `governance-v0` carries `validate-result`; paired with manually-migrated DQ #73 at `30597b436`). See Hard refusal #7.
-
-> **Note on enum values:** GitHub's workflow `conclusion` API returns `timed_out` (with underscore). `run_not_found` covers garbage-collected or wrong-branch runs; ci-watcher's pre-flight check mutates the paired entry with this result and exits 0.
-
-### Two-phase validation under Shape G (option (b), locked 2026-04-28)
-
-Per `cargo-test-e2e.yml` triggering on push to `phase-v1-*` only
-(not `junior/*` worktree branches — option (b) defers e2e to the
-phase-branch tip; saves ~80% of e2e runs across a sub-phase):
-
-- **Phase 1 (workspace check on `junior/*`):** impl-task writes a
-  `validate-pending` entry referencing the
-  `cargo-validate-workspace.yml` run id. Goes to `pending`,
-  `from: "impl"`. Advisor queues a ci-watcher to mutate it.
-- **Phase 2 (e2e on `phase-v1-*`):** after Junior's daemon finalize-
-  merges the impl-task worktree branch into the phase branch, the
-  advisor's polling loop detects the new phase-branch tip on next
-  `git fetch`. The push to `phase-v1-*` triggers
-  `cargo-test-e2e.yml`. The advisor captures the e2e workflow_run_id
-  via `gh run list --repo barrie-cork/lemmy --branch
-  phase-v1-<phase> --workflow cargo-test-e2e --limit 1 --json
-  databaseId`, and writes a NEW `validate-pending` entry,
-  `from: "advisor"` (the advisor commit subject is `chore(advisor):
-  raise e2e validate-pending for phase-v1-<phase> tip <sha>` per
-  `^(chore|docs)\((advisor|decision-queue)\)`). Advisor queues a
-  second ci-watcher to mutate it.
-
-Both phases use the same single-entry mutation pattern. Cohort
-advancement waits on both phases per the cohort dispatch rule in
-`.claude/rules/advisor-orchestrator.md`.
+`kind: "validate-result"` / `"validate-failed"` are DEPRECATED 2026-04-28 (option 2 single-entry mutation supersedes; no session writes them — Hard refusal #7). The two-phase Shape-G validation flow (Phase 1 workspace-check on `junior/*` `from: "impl"`; Phase 2 e2e on `phase-v1-*` `from: "advisor"` post-finalize-merge) is locked but **Shape G is SUSPENDED until 2026-06-01**. Full deprecated-kinds note + enum-value note + two-phase dispatch detail: `.claude/refs/dq-mechanics.md` §"Deprecated kinds" + §"Two-phase validation under Shape G".
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
