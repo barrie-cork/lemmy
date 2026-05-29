@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T16:35:00Z",
+  "last_updated_at": "2026-05-29T16:48:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -248,13 +248,13 @@
         "v1-rt-r3-followup": {
           "status": "in_flight",
           "scope": "Fix downstream e2e assertions left stale by v1-RT-r3 ship (996765cae added vote_outcome_recorded + evidence_cited emit paths without updating reputation_event count assertions + governance_log sequence expectation in crates/server/tests/e2e.rs). Pure test-fix lane; e2e is the only gate.",
-          "pr": null,
+          "pr": 162,
           "merge_commit": null,
           "plan": ".claude/PRPs/plans/v1-rt-r3-followup.plan.md",
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "retro-authored (2026-05-29): ALL IMPL DONE + headline gate GREEN. Task0 (#504 re-verified) -> Task1 A+B (#505, 834f9d85d) -> DQ cdb6bab5fef8-001 pass @197815f63 -> Task2 C+D (#506, d57b755c9) -> finalize-no-push #3 bridged (origin @50e032370). HEADLINE WHOLE-BINARY E2E PASS: 'test result: ok. 119 passed; 0 failed; 5 ignored' in 2392.77s (E2E_EXIT_0; pre-fix 115/4/5; 4 RT-r3-stale tests now green, ZERO regression of 115 prior-green). DQ be594e67e072-001 mutated pass @7b324abe8 (pending=0). Retro authored @94a005b55 (.claude/PRPs/reports/v1-rt-r3-followup-retro.md) + 2 lessons promoted (feedback_emit_added_requires_full_e2e_gate NEW + feedback_junior_worker_e2e_edit_hang promoted/reconciled; §2.4 repointed) + PMD synced (2 imported). NEXT: /brehon-verify (§16a 3 stories) -> bm-pr -> CR -> bm-poll-cr -> bm-triage (GATE 3, WAIT) -> merge-forward -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
+          "stage": "bm-pr-open (2026-05-29): PR #162 OPEN into governance-v0 (advisor-side, user-chosen). Verified: state=OPEN, isDraft=false, base=governance-v0, mergeable=MERGEABLE. /brehon-verify ALL 3 STORIES ✓ (report @381882942). Three-dot PR diff clean: only crates/server/tests/e2e.rs (12 ins/9 del) + phase .claude/ artifacts; scope-discipline 0 lines in crates/api|db_schema|routes+migrations. ALL IMPL DONE: Task1 A+B (834f9d85d) + Task2 C+D (d57b755c9); headline whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression); both validate-pending-laptop DQs pass (pending=0). Retro @94a005b55 + 2 lessons promoted + PMD synced. NOTE merge-forward: governance-v0 is 8 commits ahead of phase merge-base, but all 8 are advisor meta-work (retro/lessons/roadmap/verify) + 2 unrelated frontmatter-lint commits from a concurrent session — NONE touch crates/, so the PR merge will not conflict; the standard pre-gate-5 merge-forward check will re-confirm. NEXT: CodeRabbit auto-review -> bm-poll-cr -> bm-triage (GATE 3 surface 4-bucket counts, WAIT) -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
