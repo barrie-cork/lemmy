@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T18:09:00Z",
+  "last_updated_at": "2026-05-29T18:30:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -552,11 +552,10 @@
       {
         "lane": "RT (Reputation Tuning)",
         "items": [
-          "v1-rt-r3-followup (in_flight — fix 4 stale e2e assertions from RT-r3 ship miss; lane cut 2026-05-29)",
           "v1-RT-r4",
           "v1-RT-r5"
         ],
-        "rationale": "RT-r3 shipped 2026-05-28 (PR #155). Ship landed emit paths but left downstream e2e assertions stale -> v1-rt-r3-followup in_flight on phase-v1-rt-r3-followup (Mode A lane worktree). RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted."
+        "rationale": "RT-r3 shipped 2026-05-28 (PR #155). Ship landed emit paths but left downstream e2e assertions stale -> v1-rt-r3-followup SHIPPED 2026-05-29 (PR #162, merge 28518605b; whole-binary e2e 119/0/5; retro signed off). RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted; RT-r4 is the next RT-lane work (also the MiniMax-M2.7 A/B trial phase)."
       },
       {
         "lane": "quality (Quality / QA)",
