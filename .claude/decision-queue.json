@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "79db52a6e3be-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "Run laptop cargo gates for fix-impl-1 comment fixes in e2e.rs: (a) cargo check --workspace --features full, (b) cargo clippy --workspace --features full --no-deps -D warnings, (c) targeted e2e test run.",
-      "options": [
-        "pass — all three commands exit 0 + TEST_EXIT_0",
-        "fail — one or more commands exit non-zero"
-      ],
-      "context": "Commit 84526e6e2 on worktree branch fixes stale explanatory comments at Sites A+B in e2e.rs (comment-only, no assertion or test-logic change). Shape G suspended until 2026-06-01; laptop runs the cargo gates.",
-      "branch": "phase-v1-rt-r3-followup",
-      "phase_task": "fix-impl-1",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4505,6 +4477,33 @@
       "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; whole-binary e2e (cargo test --workspace --test e2e --features full, no filter) E2E_EXIT_0, \"test result: ok. 119 passed; 0 failed; 5 ignored\" in 2392.77s. Pre-fix baseline was 115 passed/4 failed/5 ignored; the 4 RT-r3-stale tests (report_to_modlog_golden_path, governance_log_sequence_matches_prd_state_machine, submit_jury_vote_preserves_v0_decided_for_no_sponsor_target, submit_jury_vote_no_action_skips_liability_machinery) are now green with NO regression of the 115 prior-green tests (NEGATIVE-test gate satisfied). All impl complete.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-29T16:29:08Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "79db52a6e3be-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Run laptop cargo gates for fix-impl-1 comment fixes in e2e.rs: (a) cargo check --workspace --features full, (b) cargo clippy --workspace --features full --no-deps -D warnings, (c) targeted e2e test run.",
+      "options": [
+        "pass — all three commands exit 0 + TEST_EXIT_0",
+        "fail — one or more commands exit non-zero"
+      ],
+      "context": "Commit 84526e6e2 on worktree branch fixes stale explanatory comments at Sites A+B in e2e.rs (comment-only, no assertion or test-logic change). Shape G suspended until 2026-06-01; laptop runs the cargo gates.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": "fix-impl-1",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; targeted e2e report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine TEST_EXIT_0, \"test result: ok. 2 passed; 0 failed\" in 84.21s. fix-impl-1 is comment-only (CR #162 cr-10/cr-11) — assertions/vec untouched, runtime unchanged; the 2 Site A/B tests stay green. Targeted 2-test run is sufficient regression coverage for a //-comment edit.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T17:43:30Z",
       "approved_by": null,
       "approved_at": null
     }
