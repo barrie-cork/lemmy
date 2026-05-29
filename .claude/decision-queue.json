@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-28T00:00:00Z",
-      "question": "Run cargo check + clippy + test (redaction::tests) on worker branch for v1-redaction-r1 Task 2 bounded scrub_json recursion",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "One commit on worker branch (sha = 471ba7565f22c2baacaa396612c447cf0a14b915). Shape-G suspended per project_shape_g_suspended_2026_05_16.md; laptop runs final gates.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full redaction::tests > .claude/PRPs/debug/v1-redaction-r1-task2-test.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-redaction-r1-task-2-bounded-scrub-json-recursion-see-claude-prps-briefs-v1-redaction-r1-impl-2-493",
-      "phase_task": "v1-redaction-r1-task-2",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "7fea5e9cab18-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "457a6a6b74f8-001",
@@ -4343,6 +4315,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "642f320508ca-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-28T00:00:00Z",
+      "question": "Run cargo check + clippy + test (redaction::tests) on worker branch for v1-redaction-r1 Task 2 bounded scrub_json recursion",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "One commit on worker branch (sha = 471ba7565f22c2baacaa396612c447cf0a14b915). Shape-G suspended per project_shape_g_suspended_2026_05_16.md; laptop runs final gates.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat -p lemmy_db_schema --features full redaction::tests > .claude/PRPs/debug/v1-redaction-r1-task2-test.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-redaction-r1-task-2-bounded-scrub-json-recursion-see-claude-prps-briefs-v1-redaction-r1-impl-2-493",
+      "phase_task": "v1-redaction-r1-task-2",
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-redaction-r1 tip add01bd89 (lane worktree brehon-fork-redaction-r1): cargo-check.bat --workspace --features full exit 0 (1m 08s warm cache); cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (1m 55s); cargo-test.bat -p lemmy_db_schema --features full redaction::tests exit 0 (11 passed; 0 failed; 2 ignored; 0 measured; 32 filtered out; finished in 0.01s). New scrub_json_at_depth_cap_returns_null_not_truncated_tree test passes — WP-3 depth-cap invariant locked. All 6 Task-1-active adversarial tests + 4 pre-existing scrub tests + 1 new depth-cap test = 11 passed. 2 #[ignore] tests (scrub_zero_width_joiner_between_at_and_handle, scrub_handle_with_unicode_confusable_in_username) carry forward to v1-redaction-r2 unicode-normalization sub-phase per DQ 642f320508ca-001.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T00:21:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "7fea5e9cab18-001"
     }
   ]
 }
