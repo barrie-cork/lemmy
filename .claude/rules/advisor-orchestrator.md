@@ -21,16 +21,7 @@ The advisor session orchestrates one Brehon sub-phase end-to-end via Junior suba
 
 ### 2.1 Junior task description template
 
-Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`, committed on the branch the Junior worker will fork from **BEFORE** the task is created. Workers fork from `base_branch`; the brief must be visible in that branch's tree at task-spawn time. Per role:
-
-- **Planning briefs** → committed on `governance-v0` (no phase branch yet).
-- **bm-cut briefs** → committed on `governance-v0` (no phase branch yet). Author from `.claude/PRPs/templates/bm-task-brief.template.md` (promoted 2026-05-29) + 1-2 sibling `*-bm-cut-*.md` briefs as the canonical-schema-first reference.
-- **bm-pr / bm-poll-cr / bm-triage / bm-merge / bm-push / bm-ping briefs** → committed on `governance-v0` (the bm-task worker reads from trunk). Author from `.claude/PRPs/templates/bm-task-brief.template.md` + 1-2 sibling briefs of the SAME verb. The template's per-verb cheat sheets (§2.1, §3, §4) encode the recurring shape.
-- **Impl-task briefs** → MUST be visible on `phase-<X>` (the phase branch the impl worker forks from) before `create_task` is called. **The how depends on the lane mode** (per `.claude/rules/multi-lane-worktree.md` §"Lane modes"):
-  - **Mode A (dedicated lane worktree):** author directly on the phase branch in the lane worktree session. `git commit` + `git push origin phase-<X>`. The fed-in-b pattern (commit `0ea7ab4f7`) is the canonical example.
-  - **Mode B (mobile remote-control):** author on `governance-v0` in canonical, `git commit` + `git push origin governance-v0`, then trigger a trunk→phase sync per `multi-lane-worktree.md` §"Brief location and trunk→phase sync" (SSH-merge from the daemon's main worktree, which is on the phase branch post-bm-cut). Verify with `git -C <canonical> fetch origin phase-<X> && git log governance-v0..origin/phase-<X> --oneline` — the brief commit must appear via the merge commit.
-  - In BOTH modes the worker forks from `phase-v1-<lane>`; the brief must be reachable at that ref at task-spawn time. The "how" differs; the "what" doesn't. Per session retro 2026-05-20 §2.8 + this session 2026-05-25 (Mode B procedure discovered empirically; documented post-session).
-- **ci-watcher briefs** → committed on `governance-v0` (mutation lives on whatever ref the workflow_run_id's branch was; the brief just names IDs).
+Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`, committed on the branch the worker forks from (`base_branch`) **BEFORE** `create_task` — the brief must be reachable at that ref at task-spawn time. **Per-role brief location + the Mode-A/Mode-B impl-task procedures (SSH trunk→phase sync) are in `.claude/refs/auto-phase.md` §"Brief location per role + lane mode (canonical detail)".** Quick rule: planning / bm-* / ci-watcher briefs commit on `governance-v0`; impl-task briefs must be visible on `phase-<X>` (Mode A: author on the phase branch directly; Mode B: author on trunk + SSH-merge into the phase branch).
 
 The dispatch string is intentionally minimal (under 100 chars, no URLs, no inline code, no secrets):
 
@@ -178,60 +169,13 @@ Update the per-phase metrics file at `.claude/PRPs/audit-metrics/<phase>.json`. 
 
 ## 4. Cohort dispatch
 
-Per `.claude/PRPs/templates/plan.template.md` §13 (`[P]` markers) + `feedback_parallel_cohort_dispatch.md`. When a §13 task carries `[P]` and is the next pending, advisor computes the **cohort** — consecutive `[P]`-marked tasks until a non-`[P]` boundary. Task 0 (pre-flight harness audit) is always non-`[P]`.
+Per `.claude/PRPs/templates/plan.template.md` §13 (`[P]` markers) + `feedback_parallel_cohort_dispatch.md`. When a §13 task carries `[P]` and is the next pending, advisor computes the **cohort** — consecutive `[P]`-marked tasks until a non-`[P]` boundary. Task 0 is always non-`[P]`. The dispatch is gated by five checks that can degrade a cohort to serial or defer it: YAML file-overlap, `requires:` dependency, pre-Shape-G memory budget, shared-`.git/index.lock` hazard (daemon single-`.git/`, cohort ≥3), and forbidden-window. Cohort members are queued simultaneously, advance only when ALL reach `complete` + validated, then a handover-trailer aggregation seeds the next cohort's brief §3a.
+
+**Full mechanism — the 9-step sequence, the five degrade/refuse checks verbatim, handover aggregation, and the Shape-G cohort flow — is in `.claude/refs/auto-phase.md` §"Cohort dispatch mechanism (canonical detail)".** It fires only inside `/auto-phase` `impl-cohort-N` (which reads it JIT). Read that section before acting on any cohort decision outside `/auto-phase`.
 
 ### 4.1 Cohort dispatch sequence
 
-1. Read plan §13. Locate next pending task by id (smallest task whose impl commit is not on the phase branch).
-2. Non-`[P]` (or Task 0) → queue alone via `mcp__junior-brehon__create_task`; wait for complete/failed.
-3. `[P]` → walk §13 forward collecting consecutive `[P]` until non-`[P]` boundary or end-of-list. Collected list = cohort.
-4. **YAML overlap check** (per `feedback_explicit_file_arrays_on_tasks.md`): parse FILES YAML (`creates:` + `modifies:` arrays). Pairwise intersect across cohort members. Non-empty intersection → degrade to serial. Surface: `cohort overlap detected: tasks <A>+<B> share <path> — degrading to serial`. No DQ filed; planner's `[P]` was wrong; retro flags it. Missing YAML on any member → back-compat: skip check, trust `[P]`. Trust YAML over `[P]` when they disagree.
-4a. **`requires:` dependency check** (new — per `feedback_cohort_validation_dependency_check.md` 2026-05-11). For each cohort member, parse FILES YAML `requires:` array. For each `requires: - task: <N>` entry: verify task `<N>`'s impl commit is already on `phase-<phase>` (`git log phase-<phase> --grep "(task <N>)" --oneline | head -1` returns non-empty). If task `<N>` is NOT yet merged: **(a)** if `<N>` is also in this cohort, refuse the cohort — these tasks need bundling, not parallelism. Surface: `cohort refused: tasks <A>+<B> have circular requires: — planner must bundle or re-order`. **(b)** if `<N>` is in a prior cohort not yet merged, defer the cohort until `<N>` lands. Surface: `cohort deferred: task <M> requires task <N> not yet on phase branch`. Missing `requires:` field on a member = no cross-task dependency claimed; trust the planner's `[P]` marker alone (back-compat: pre-2026-05-11 plans). This step prevents the Cohort A / Cohort B-serial isolation-validation bug class (per v1-RT-r1 halt retro `ffa2876e3`).
-5. **Budget check** (pre-Shape-G only; Shape G non-binding, cargo runs off-box): each `cargo check --workspace --features full` ~6 GB peak (EliteDesk cap `MemoryMax=10G`). `cohort_size × per_task_peak > 10 GB` → degrade to serial. Per `feedback_resource_budget_pre_queue.md`. Surface: `cohort degraded to serial: budget exceeded (<size> tasks × <peak> GB > 10 GB)`.
-5a. **Shared-`.git/index.lock` hazard check** (per `feedback_cohort_shared_git_index_contention.md`, 2026-05-25): on the EliteDesk daemon, every `git add` / `git commit` in any parallel worker acquires the SAME `.git/index.lock` — this is NOT in any task's FILES YAML and the YAML overlap check cannot detect it. Hard rule: **if the daemon topology is a single shared `.git/` (i.e. per-task worktrees share one `.git/worktrees/<name>/` admin tree under a single `.git/`) AND the cohort size is ≥3**, auto-degrade to serial regardless of file-disjointness. Surface: `cohort degraded to serial: shared .git/index.lock hazard (daemon single-.git/, cohort size <N> ≥ 3)`. Cohort size ≤2 is allowed (two workers contending on a lock is low-probability; three or more produce D-state cascades empirically — 2026-05-25 RT-r3 cohort-2 with #467/#468/#469). Under Mode A (lane worktrees on the laptop): this check is not applicable — each lane worktree has its own `.git/` isolated from other lanes. The rule applies only to daemon-dispatched `[P]` cohorts of size ≥3.
-6. **Forbidden-window check** (§5.1): if any cohort task starts in a forbidden window, defer the entire cohort.
-7. **Queue every cohort task simultaneously** via parallel `create_task` calls (single message, multiple tool uses). Each task gets its own worktree. Brief paths unique per task.
-8. **Wait for all members to reach complete or failed** before next cohort. A failed member blocks advancement.
-9. **On cohort completion** (all members complete + validated) → run §4.3 handover aggregation before computing next cohort.
-
-### 4.2 Cohort dispatch refusals
-
-- Never queue a cohort whose tasks have not all been clarified. Re-run `/brehon-clarify` if post-clarify edits introduced overlap.
-- Never queue a cohort during a forbidden window, even partially.
-- Never re-queue a cohort task that already shows running (Junior task IDs are unique per worktree; duplicate worktree + branch name).
-- Never queue a `[P]` task whose IMPLEMENT files overlap a non-`[P]` task still running. `[P]` is a within-cohort disjointness promise, not across-boundary.
-- Never queue a cohort with non-empty YAML intersection without first degrading to serial. Mechanical: `intersect(union(creates, modifies)_taskA, union(creates, modifies)_taskB) != ∅` → degrade.
-
-### 4.3 Cohort handover aggregation
-
-Per `feedback_handover_trailer_cohort_propagation.md`. Once all cohort members reach `complete` (and under Shape G, all paired `validate-pending` entries mutated to `result: "pass"` for both Phase 1 and Phase 2), populate the *next* cohort's brief §3a "Handover from prior cohort" before queueing.
-
-1. For each cohort member's commit on `phase-<phase>`, parse `HANDOVER:` YAML trailer (`git log -1 --format=%B <sha>`). Missing trailer = degraded handover (note in polling output; not a catch-fire).
-2. Aggregate into one block matching §3a schema in `impl-task-brief.template.md`:
-
-```yaml
-prior_cohort_tasks:
-  - task: <N>
-    commit: <sha>
-    filesCreated: [...]
-    filesModified: [...]
-    keyDecisions: [...]
-    notes: <verbatim from trailer>
-  - task: <N+1>
-    ...
-```
-
-3. For each next-cohort brief at `.claude/PRPs/briefs/<phase>-impl-<M>.md`, Edit §3a in place — replace `(none — first cohort)` or `(none — prior task non-[P])` with the aggregated block. Commit subject: `chore(advisor): inject prior-cohort handover for <next-cohort-tasks>`.
-4. Push to `governance-v0`.
-5. Proceed to next-cohort dispatch (§4.1 step 1).
-
-**Skip if** the next cohort is empty (prior cohort was last before retro) — retro task reads §3a as `(none — last cohort)`. **Single-task cohorts** (one `[P]` followed by non-`[P]`) still aggregate — trailer is the unit of handover; cohort size doesn't change the rule.
-
-### 4.4 Notes
-
-**Plans without `[P]` markers** (legacy or planner judged no parallelism safe) → every task non-`[P]`, dispatched serially. Cohort logic does NOT broaden serial into accidental parallel — `[P]` must be explicit.
-
-**Cohort dispatch under Shape G:** members enter `kind: "validate-pending"` simultaneously after their respective push (one workspace-check workflow run per cohort task on GitHub-hosted runners). Advisor dispatches one ci-watcher per pending entry. Cohort advancement waits for **all** Phase-1 members to reach `result: "pass"`. Multiple simultaneous failures → classify each independently per §5.3 (allowlist match → parallel fix-impl-tasks; non-allowlist → single catch-fire bundle). After all Phase-1 pass and daemon finalize-merges each into the phase branch, advisor raises ONE Phase-2 e2e `validate-pending` for the post-finalize phase-branch tip. Next-cohort advancement waits on Phase 2 e2e `result: "pass"` as well.
+The 9-step sequence (locate next pending → `[P]`-walk → YAML overlap → `requires:` → budget → index.lock hazard → forbidden-window → simultaneous queue → barrier on all-complete) lives verbatim in `.claude/refs/auto-phase.md` §"Cohort dispatch sequence (steps 1–9)". (Heading kept resident — cited by name from `~/.claude/commands/auto-phase.md`.)
 
 ## 5. Validation, classification, recovery
 
@@ -257,67 +201,11 @@ Mutation shape, log-slice rules, kind enum, §G4 fail handling: `.claude/rules/d
 
 Per `.claude/PRPs/plans/v1-validate-agent.plan.md` §4 watchpoint #7 + §10.9. When a `validate-pending` entry is mutated to `result: "fail" | "cancelled" | "timed_out"` and remains in `pending[]`, advisor reads `result`, `log_slice`, `failed_jobs`, applies the classifier.
 
-**Cycle-count meta-rule (above the allowlist).** Per `feedback_plan_stub_uniformity_with_canonical_sibling.md`: count of prior fails with same `(error_class, file_basename)` for this cohort member ≥3 → **HARD REFUSAL, catch-fire regardless of allowlist match**. Cycles 1+2 classify normally below. Mechanism (parse log slice, append history entry, count tuples) lives in `~/.claude/commands/auto-phase.md` Phase 2 routing; durable record in `current_cohort.members[].error_class_history[]` per template at `.claude/PRPs/templates/auto-phase-state.template.json`.
+**Cycle-count meta-rule (above the allowlist — resident SAFETY policy).** Per `feedback_plan_stub_uniformity_with_canonical_sibling.md`: count of prior fails with same `(error_class, file_basename)` for this cohort member ≥3 → **HARD REFUSAL, catch-fire regardless of allowlist match**. Cycles 1+2 classify normally. Mechanism (parse log slice, append history entry, count tuples) lives in `~/.claude/commands/auto-phase.md` Phase 2 routing; durable record in `current_cohort.members[].error_class_history[]` per `.claude/PRPs/templates/auto-phase-state.template.json`. // 2026-05-09 c-2 cycle-3 catchfire: 3 cycles same `(E0277, e2e.rs)` cost ~123 min before user-prompted re-plan.
 
-// 2026-05-09 c-2 cycle-3 catchfire: 3 cycles same `(E0277, e2e.rs)` cost ~123 min before user-prompted re-plan; root cause was §13 stub shape, not recipe. Per session-retro-2026-05-09-cycle-3-catchfire-replan.md proposal #1.
+**Routing (resident SAFETY policy):** failure log_slice matches an **allowlist** row → auto-queue a narrow fix-impl-task (≤3 file edits, or the callsite-enumeration count for struct-shape changes). Anything else — any `error[E*]` except `E0432`, any test/panic/e2e failure, timeout/OOM/runner-death, a conformance-audit Tier-1 governance finding, or **any log_slice that does not match an allowlist row** → **catch-fire to user, no auto-fix attempted.** The allowlist is conservative by design (`feedback_principles_not_rules.md`); grow only on retro evidence.
 
-**Allowlist (auto-queue narrow fix-impl-task, ≤3 file edits):**
-
-| Failure signature | Auto-fix | Source lesson |
-|---|---|---|
-| `clippy::doc_lazy_continuation` warning | reword + mid-paragraph "and" | `feedback_clippy_doc_lazy_continuation_in_doc_comments.md` |
-| `error[E0432]: unresolved import` | add the missing `use` per the suggestion | n/a (mechanical) |
-| `warning: use of deprecated <api>` | replace with the suggested replacement | n/a (mechanical) |
-| **4a** `error[E0277]: ?` couldn't convert `LemmyError`/`LemmyResult<T>` to `Box<dyn Error>` AND test fn returns `Result<(), Box<dyn Error>>` AND helpers all return `Result<T, Box<dyn Error>>` (Case B per lesson) | wrap each Lemmy-native call with **annotated** closure: `.map_err(\|e\| -> Box<dyn std::error::Error + Send + Sync> { format!("{e}").into() })?`. Bare `.map_err(\|e\| format!("{e}").into())?` will fail E0283 because `_` in `Into<_>` cannot resolve through abstract trait objects. | `feedback_lemmy_error_no_std_error.md` Case B |
-| **4b** `error[E0277]: ?` couldn't convert `LemmyError`/`LemmyResult<T>` to `Box<dyn Error>` AND a v1-SL-* / v1-JM-* sibling fixtures module exists in the same file using `LemmyResult<()>` outer | flip the test fn signature to `LemmyResult<()>` AND flip ALL helper signatures in this module's fixtures mod to `LemmyResult<T>`. No `.map_err` bridges. Mirror the canonical sibling shape verbatim (Case A per lesson). | `feedback_lemmy_error_no_std_error.md` Case A |
-| **4c** `error[E0277]: ?` propagation Send/Sync/Sized cascade (≥3 sites at once) — Case C symptom: test fn outer differs in Result type from helper outer | **HARD REFUSAL** — do NOT auto-queue a fix-impl task. Surface to user as a re-plan signal: type-shape uniformity is mandatory across a single test module; no mechanical bridge resolves Case C. The recipe family is wrong-shaped. | `feedback_lemmy_error_no_std_error.md` Case C |
-| `error[E0277]: trait bound \`<T>: <Trait>\` not satisfied` where the lesson corpus has a citation | apply the recipe per the cited lesson | search `.claude/lessons/` for the failing trait + type before classifying |
-| `clippy::map_err_ignore` (E0277-adjacent) | rename `\|_\|` → `\|_e\|` per `feedback_clippy_map_err_ignore_pattern_rename.md` (when authored) | mechanical |
-| `error: cannot find macro \`<name>\` in this scope` | add the missing `use` from the macro's home crate | n/a (mechanical) |
-| `error[E0599]: no method named \`<name>\`` (when method is on a re-exported trait) | add the missing `use` for the trait | n/a (mechanical, but verify the trait isn't intentionally hidden) |
-
-For an allowlist match: author a narrow fix-impl-task brief at `.claude/PRPs/briefs/<phase>-fix-impl-<n>.md` containing failed-job log slice (≤200 lines), specific file:line cited by the lint, auto-fix recipe from source lesson (or mechanical replacement), hard cap "≤3 file edits". Dispatched as normal `[role:impl-task]` Junior task; resulting commit lands on phase branch and re-triggers the workflow.
-
-**Callsite-enumeration discipline (per `feedback_fix_impl_enumerate_all_callsites.md` 2026-05-11):** when the failure signature is a struct-shape change (E0063 missing-field on `<Type>` initializer; renamed/added field; trait-impl signature change) and the compile error points at K specific call sites, the advisor MUST `rg "<Type>" crates/ tests/` to enumerate the FULL set of N callsites BEFORE authoring the fix-impl brief. The brief lists all N callsites; the file-edit cap is the count of distinct files containing those callsites (NOT the ≤3 default — that cap was designed for clippy/unused-import patterns, not struct-shape changes). If N > 10 callsites or > 5 files, the change is no longer "narrow mechanical" — catch-fire to user with the enumeration list so user can decide whether to extend the brief or split the fix across multiple commits. Without enumeration, fix-impl-1 patches only the compile-error-cited K sites and the workflow fails AGAIN on the next N-K callsites (v1-RT-r1 fix-impl-1 DQ #205 incident: brief covered 2 sites; workspace check FAILED with same E0063 on 8 more callsites, forcing fix-impl-2).
-
-**Pre-push cargo-check discipline (per `feedback_fix_impl_pre_push_cargo_check.md` 2026-05-13):** mechanical fix-impl briefs MUST include a §4 Constraint requiring `bash scripts/brehon/cargo-check.sh --workspace --features full` (or `.bat` on Windows worker) BEFORE the worker pushes the worker branch. Non-zero exit → patch in same commit (if in-scope) OR file `kind: "blocker"` DQ (if out-of-scope). NEVER `#[allow]`-spam to bypass. Without this gate, an adjacent regression class (typically unused-import surfacing after a struct-field pad — e.g. v1-RT-r1 fix-impl-3 incident: `seed_founders/main.rs` import unused in non-test build after fix-impl-2 padded the consumers) costs a full ci-watcher cycle + fix-impl-(N+1) recovery. Local `cargo check` is ~30s warm; one extra ci-watcher cycle is ~5 min. Net positive on every cycle.
-
-**Non-allowlist (catch-fire to user):**
-
-| Trigger | Action |
-|---|---|
-| Compile errors (any `error[E*]` other than `E0432`) | Catch-fire |
-| Test failures (panics, assertion fails, e2e flakes, testcontainers issues) | Catch-fire |
-| Timeout / OOM / runner death | Catch-fire |
-| Any failure whose log slice doesn't match an allowlist row | Catch-fire |
-| Conformance-audit Tier-1 finding on `crates/apub/activities/src/governance/**.rs` OR `crates/api/api/src/governance/**.rs` OR `crates/db_schema/src/source/governance/**.rs` | **HARD REFUSAL — catch-fire to user** with audit report + suggested per-axis fix. NOT auto-fix; human-in-the-loop decides. (Per `feedback_mirror_phase6_convention_in_same_file.md`.) |
-
-Surface as: "validate-failed on `<branch>` (workflow run `<id>`): non-allowlist failure. Failed jobs: `<failed_jobs>`. Log slice attached. Surfaced to user — no auto-fix attempted."
-
-The allowlist is **conservative by design** (per `feedback_principles_not_rules.md`). Grow only on retro evidence — if a CR-triage cycle classifies a non-allowlist as "this could have been auto-fixed", record in retro §5 watch-items and add to next sub-phase's plan if pattern reproduces.
-
-#### Mandatory verbatim §G4 row in fix-impl briefs (anti-paraphrase gate)
-
-When a fix-impl-task brief's triggering DQ matches an allowlist row above, the brief's §2 Scope MUST contain a **verbatim block-quote of the matched row text — both columns (Failure signature + Auto-fix recipe + Source lesson) — copy-pasted as a markdown blockquote (`> ...`) BEFORE any file:line context.** Canonical recipe text is the contract; paraphrase is a process miss even if meaning preserved.
-
-Blockquote shape (matches the table row literally):
-
-```markdown
-## 2. Scope
-
-### 2.1 §G4 CANONICAL RECIPE (verbatim from `.claude/rules/advisor-orchestrator.md` §G4 classifier table)
-
-> | Failure signature | Auto-fix | Source lesson |
-> | <row text 1> | <row text 2> | <row text 3> |
-```
-
-After the blockquote, brief MAY add file:line context, line-by-line diff targets, acceptance criteria — but the recipe text is the contract Junior implements against. If the rest of the brief contradicts the blockquote, the blockquote wins (Junior hard refusal: stop, raise `kind: "blocker"` DQ citing this gate).
-
-**Detection:** an advisor commit adding `.claude/PRPs/briefs/*-fix-impl-*.md` matching an allowlist row but lacking the verbatim §2 blockquote is a process miss — retro flags it. Future PostToolUse hook on brief Write/Edit can scan §2 for the literal blockquote (not yet implemented).
-
-**Does NOT apply** to non-allowlist fix-impl briefs (catch-fire with hand-authored recipe). Gate prevents paraphrase drift on mechanical recipes, not user-driven fixes.
-
-// 2026-05-09 c-2 cycle-2 catch-fire: fix-impl-1 brief cited canonical lesson in §3 but paraphrased in §2 (signature flip + forbid `.map_err`, instead of canonical "signature stays Box<dyn Error> + add `.map_err`"). Junior #158 followed brief literally. Cost: ~17 min. Verbatim copy-paste makes "I read the row but prescribed something different" structurally impossible.
+**Full mechanism — the allowlist + non-allowlist recipe tables, the callsite-enumeration discipline, the pre-push cargo-check discipline, and the mandatory-verbatim-§G4-row anti-paraphrase gate — is in `.claude/refs/auto-phase.md` §"§G4 classifier — allowlist + recipe tables (canonical detail)".** It fires only on a `validate-pending` failure (mid-orchestration); the Phase-2 routing reads it JIT. Fix-impl briefs copy the matched allowlist row verbatim from that refs table (the anti-paraphrase gate's verbatim-source). Read it before classifying any validate-fail outside `/auto-phase`.
 
 ### 5.4 DQ triage decision tree
 
