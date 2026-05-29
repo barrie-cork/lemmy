@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T17:25:00Z",
+  "last_updated_at": "2026-05-29T17:32:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -254,7 +254,7 @@
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "cr-triage-fix-in-pr (2026-05-29): PR #162 OPEN; CR+Copilot reviewed -> bm-triage drafted (advisor-side, findings @.claude/PRPs/reviews/pr-162-findings.yaml). 13 findings, 0 BLOCKING, recommendation=approve. Buckets: 9 wont-fix (MD0xx markdown nits on .claude/ briefs/plan/runlog — net-noise per phase-branch.md), 2 fix-in-pr (cr-10 e2e.rs:2931 stale 'Drift #8: 4 rows' comment + cr-11 e2e.rs:11194 stale public_log_published ordering comment — BOTH verified real by advisor read; comment-only, assertions correct), 2 rebut (cr-12 scope=PR body discloses .claude artifacts + copilot-1 summary no distinct findings). GATE 3 surfaced to user -> user chose 'fix the 2 stale comments'. fix-impl-1 brief @c9e9b165f (comment-only, 2 Edits, verbatim anchors); daemon-local FF'd to c9e9b165f; Task #507 QUEUED (validate-pending-laptop on push). ALL IMPL (Task1 834f9d85d + Task2 d57b755c9) + e2e 119/0 done; retro @94a005b55. NEXT: poll #507 -> on done bridge finalize-no-push + run check/clippy/targeted-e2e -> on pass mutate DQ + bucket cr-10/cr-11 done -> re-poll CR -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
+          "stage": "cr-fix-validate (2026-05-29): PR #162; CR triaged 13 findings 0 BLOCKING approve (9 wont-fix MD-nits + 2 fix-in-pr e2e comments + 2 rebut). GATE 3 done -> user chose fix. fix-impl-1 #507 DONE (comment-only commit 84526e6e2: Site A 'Drift #8: 4'->7 +ParticipationConsistency clause; Site B public_log_published repositioned BEFORE case_decided + vote_outcome_recorded bullet added; idempotency-guard preserved). FINALIZE-NO-PUSH RECURRENCE #4 bridged (daemon-local 5b6c8e84e FF-pushed; lane FF'd). VERIFIED comment-only: diff is pure // lines (git show: zero assert_eq!/let/vec changes); assertions UNTOUCHED (rep_total,7 ==1 + rep_count,7 ==2 + expected_prefix vec intact). DQ 79db52a6e3be-001 (validate-pending-laptop fix-impl-1) pending. GATES RUNNING bg b9caw3jhu (check->clippy->targeted-e2e 2 Site A/B tests; comment edit can't change runtime so targeted sufficient; verified live 8 procs). ALL prior impl (Task1 834f9d85d + Task2 d57b755c9) + e2e 119/0 done; retro @94a005b55. NEXT: on gates pass mutate DQ pass + bucket cr-10/cr-11 done in findings YAML -> re-poll CR (confirm comment commit triggers no new findings) -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge --merge (NOT squash) -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
