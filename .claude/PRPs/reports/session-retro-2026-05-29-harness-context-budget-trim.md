@@ -50,7 +50,7 @@ in prevention over one-time cuts.
 | 2 | **DONE this session** — new lesson `feedback_rule_narrative_to_refs_at_author_time.md` + paired §3.6 rule clause + PostToolUse hook `rule-narrative-bloat-reminder.sh`. | Converts growth-discipline from advice → mechanism; the corpus stops re-bloating one incident-narrative at a time. | medium (shipped) | 1× here + recurs against `feedback_lesson_must_pair_with_structural_fix` |
 | 3 | **DONE this session** — `pmd-search-strategy.md` output-size footgun note (broad hybrid queries → 85K-char dumps; prefer tight queries or `grep` lessons dir for coverage). | Stops recall queries from costing more context than they save, esp. in budget sessions. | minor (shipped) | 2× this session |
 | 4 | **DONE this session** — fixed 8 frontmatter-less lessons (now `imported: 8, errors: 0`). | 8 unfindable lessons become recallable; every future session's hybrid recall improves. | medium (shipped) | 1× (but 8 files = systemic) |
-| 5 | **Carry-forward** — add a CI/pre-commit (or weekly-review step) lint that fails if any `.claude/lessons/feedback_*.md` lacks `^---` frontmatter. | Prevents the silent-skip class from recurring; the 8 broke over weeks with zero signal. | medium | 1× here (propose if a 9th appears) |
+| 5 | **DONE 2026-05-29 (`8724ea53e`)** — author-time PostToolUse hook (`lesson-frontmatter-reminder.sh`) + backstop sweep (`scripts/brehon/lesson-frontmatter-lint.sh`, weekly-review Step 1c) that flag/fail any `.claude/lessons/{feedback,reference}_*.md` lacking valid sync frontmatter. | Prevents the silent-skip class from recurring; the 8 broke over weeks with zero signal. | medium (shipped) | 1× here (shipped pre-emptively — the 8-file systemic break justified it now) |
 | 6 | **Carry-forward** — the scoring-matrix redundancy term over-counts on a shared-keyword grep (P3 self-rejected: "SessionStart" matched 4 distinct invariants). Add an execute-pass prose-diff confirmation before acting on a redundancy score. | Audit doesn't waste a cut proposal on coincidental keyword overlap. | minor | 1× here (noted in report + lesson; promote if 2nd audit hits it) |
 
 ## What to carry forward
@@ -118,7 +118,7 @@ small frontmatter prepends + one hook.
 - [x] **DONE** — `feedback_rule_narrative_to_refs_at_author_time.md` written + synced + embedded (§3 #2).
 - [x] **DONE** — `pmd-search-strategy.md` output-size note (§3 #3).
 - [x] **DONE** — `rule-narrative-bloat-reminder.sh` hook + `.claude/settings.json` wiring (§3 #2).
-- [ ] **§3 #5** — frontmatter-presence lint for `.claude/lessons/*.md`: add to weekly-review Step 1 OR a pre-commit hook. (1× here; promote on 2nd occurrence or fold into weekly-review now.)
+- [x] **§3 #5 — DONE 2026-05-29 (`8724ea53e`)** — frontmatter-presence lint for `.claude/lessons/*.md`. Shipped as a two-layer defence: author-time PostToolUse hook `lesson-frontmatter-reminder.sh` + backstop sweep `scripts/brehon/lesson-frontmatter-lint.sh` (wired into weekly-review Step 1c). Single source of truth validates against a verbatim copy of the sync regex. Lesson `feedback_lessons_need_frontmatter_for_pmd_sync.md` written + synced + embedded. Dogfooded 9 cases; caught 2 path bugs that passed `bash -n`.
 - [ ] **§3 #6** — scoring-matrix redundancy over-count calibration: already noted in the audit report + the new lesson; promote to a `helpers/scoring-matrix.md` edit if a 2nd audit hits it.
 
 ---
