@@ -2946,8 +2946,8 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
       .get_result(conn)
       .await?;
     assert_eq!(
-      rep_total, 4,
-      "4 reputation_event rows (exactly-once under late votes)"
+      rep_total, 7,
+      "7 reputation_event rows (4 prior + 3 ParticipationConsistency from RT-r3 vote-outcome emit; exactly-once under late votes)"
     );
 
     let jury_rep_count: i64 = reputation_event::table
@@ -11206,6 +11206,7 @@ async fn governance_log_sequence_matches_prd_state_machine() -> lemmy_utils::err
     "panel_assembled",
     "jury_accepted",
     "public_log_published",
+    "vote_outcome_recorded",
     "case_decided",
     "appeal_requested",
     "appeal_panel_assembled",
