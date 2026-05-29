@@ -2163,3 +2163,5 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **cross-lane incident (resolved lossless):** during cut, a concurrent quality-r2 session's Task-0 brief commit (e5cda780b, .claude/PRPs/briefs/v1-quality-r2-impl-0.md) landed on the LOCAL phase-v1-RT-r4 tip (shared .git/ HEAD-move collision, multi-lane rule #5). Recovery: cherry-picked the brief onto origin/phase-v1-quality-r2 (blob fa3547450, new SHA 34dd093fc) THEN reset local phase-v1-RT-r4 to origin/phase-v1-RT-r4 (3b19eeddec). Byte-identical blob verified before reset. quality-r2 session must re-pull phase-v1-quality-r2 to see the rescued brief.
 
 2026-05-29T19:58Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-05-29-quality-r2-task0-running.md branch=governance-v0 head=03ea231bb
+
+2026-05-29T20:03Z | advisor | meta | cold-resume | handover=advisor-2026-05-29-quality-r2-task0-running.md drift=none (gov-v0 advanced 03ea231bb→cf3a410b9 via concurrent RT-r4 session — expected); Task #509 still running (~16min); DQ pending=0; phase-v1-quality-r2@34dd093fc
