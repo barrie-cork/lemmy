@@ -110,7 +110,8 @@ paths:
 ## Where to look next
 
 - **Planning / design docs / crate layout / slash commands / Monday-morning checklist / out-of-scope list:** read `.claude/brehon-reference.md` on demand.
-- **Design doc hub:** `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` (§3 phase-by-phase) and `04-data-model-and-api.md` (tables, DTOs, routes).
+- **Live work hub (current state, what remains):** `.claude/PRPs/v1-roadmap.json` — lane/sub-phase tracker (status, PRs, retros, `what_remains`); driven by `/roadmap-next` + `/auto-roadmap`. v1 PRDs at `.claude/PRPs/prds/v1-*.prd.md`; v2 at `v2-messaging-rtc.prd.md`.
+- **Canonical schema / DTO / route reference:** `docs/brehon-law-inspired-network/04-data-model-and-api.md` (tables, DTOs, routes — still authoritative).
 - **ADRs + open questions:** `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md`.
 
 **Never write Rust code without a plan file in `.claude/PRPs/plans/`.** Planning and implementation are separate phases.
