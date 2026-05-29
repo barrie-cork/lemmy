@@ -1,3 +1,8 @@
+---
+name: Impl-task briefs must land on the phase branch the worker forks from
+description: Feedback rule — a Junior impl-task brief committed only on governance-v0 is invisible to a worker that forks from phase-<X>; author + commit + push the brief on the phase branch (or cherry-pick forward) before create_task, because workers Read the brief from their base_branch worktree
+type: feedback
+---
 # feedback: briefs land on the branch the worker forks from
 
 ## TL;DR

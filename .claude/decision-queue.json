@@ -4374,6 +4374,57 @@
       "approved_by": null,
       "approved_at": null,
       "resolved_at": "2026-05-29T09:15:00Z"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:56Z",
+      "question": "Brief §2.2 (this lane) and bootstrap §1 give conflicting assertion-site tables — bootstrap claims a single rep_count==4 fix to 7 at report_to_modlog_golden_path; §2.2 shows THREE assertions (rep_total==4 @2949, jury_rep_count==3 @2959, reporter_rep_count==1 @2967) and data-dependent deltas. Which table does the planner trust?",
+      "options": [
+        "Trust brief §2.2 (verified at lane tip 2026-05-29); treat bootstrap §1 table as superseded",
+        "Trust bootstrap §1 table (rep_count==7)"
+      ],
+      "context": "Bootstrap §1 predates the falsifiable-hypothesis re-verification recorded in workflow_state_v1_rt_r3_followup.md (2026-05-29). Brief §2.2 line numbers re-confirmed at phase-v1-rt-r3-followup tip via grep + Read.",
+      "answer": "Trust brief §2.2 — verified at lane tip. The bootstrap §1 table and its 'rep_count == 7' rows are SUPERSEDED by the brief §2.2 table and by workflow_state_v1_rt_r3_followup.md's 2026-05-29 re-verification block (which the bootstrap itself flags as authoritative-on-conflict). Confirmed at lane tip phase-v1-rt-r3-followup: report_to_modlog_golden_path (fn at crates/server/tests/e2e.rs:2485) carries THREE related assertions — rep_total==4 (line 2949, the actual total-count assertion, named rep_total not rep_count which is why a grep for 'rep_count' missed it), jury_rep_count==3 (line 2959, JuryReliability dimension), reporter_rep_count==1 (line 2967, ReportingAccuracy dimension). There is NO single 'rep_count==4' to bump to 7 at this site. Per feedback_plan_drift_metadata_cross_check.md and feedback_runbook_audit_drift_post_event_check.md (every handover claim is a hypothesis; verify against the code).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:56Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-034"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:57Z",
+      "question": "For Site B (governance_log_sequence_matches_prd_state_machine, expected_prefix vec @11201), RT-r3 added TWO new emit kinds (vote_outcome_recorded + evidence_quality_recorded). Does the planner insert BOTH into the expected sequence, or only the kinds the golden-path scenario actually triggers?",
+      "options": [
+        "Insert ONLY the kinds the golden-path scenario triggers; derive from the baseline panic 'got {sequence:?}' output",
+        "Insert both vote_outcome_recorded and evidence_quality_recorded unconditionally"
+      ],
+      "context": "Sequence is 'first-occurrence per kind'. vote_outcome_recorded fires when ≥1 juror aligns with the majority (always true on a decided case). evidence_quality_recorded fires only if the case seeds case_evidence AND rationale ≥256 chars (Source 4a precondition).",
+      "answer": "Insert ONLY the kinds the golden-path scenario actually triggers — derive the exact set + ordering from the e2e baseline panic output (.claude/v1-rt-r3-followup-e2e-baseline.log shows 'got {sequence:?}' on the failing assert at line 11215). Static analysis at lane tip corroborates: neither governance_log_sequence_matches_prd_state_machine (fn lines 11054-11218) nor report_to_modlog_golden_path references the case_evidence table — they set jury_vote.rationale but Source 4a (submit_jury_vote.rs:730) requires BOTH a case_evidence row AND a winning_rationale ≥ participation.evidence_cited_rationale_threshold_chars (default 256). So evidence_quality_recorded almost certainly does NOT fire in the golden-path scenario, and vote_outcome_recorded almost certainly DOES (the panel decides, so ≥1 juror aligns with the majority). But the baseline output is the authority, NOT this static reasoning — the planner copies the actual ordering from the panic. Per feedback_plan_drift_metadata_cross_check.md + the brief §2.3 baseline-as-authority rule.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:57Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-035"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:58Z",
+      "question": "crates/server/tests/e2e.rs is a high-traffic shared file (RT-r3 just shipped to it; redaction-r1 lane is concurrently active). Does this lane's 4-assertion edit risk a file-ownership collision with another active lane?",
+      "options": [
+        "No collision — this lane is the sole active writer of e2e.rs; proceed",
+        "Collision risk — coordinate before editing"
+      ],
+      "context": "Three worktrees active: rt-r3-followup (this), redaction-r1 (DEFERRED at gate-4), rt-r3 (shipped, stale worktree). Need to confirm no concurrent e2e.rs edits land while this lane is open.",
+      "answer": "No collision — this lane is the sole active writer of crates/server/tests/e2e.rs among the active lanes. Verified 2026-05-29: (1) `git diff governance-v0...phase-v1-redaction-r1 --stat -- crates/server/tests/e2e.rs` is EMPTY — redaction-r1's deferral is at a gate-4 e2e *run*, not e2e *edits*; it has zero e2e.rs delta vs trunk. (2) `git log governance-v0..phase-v1-RT-r3 -- crates/server/tests/e2e.rs` is EMPTY — RT-r3 is fully merged; no unmerged e2e delta; its worktree is stale (pending prune). The lane Mode A worktree (brehon-fork-rt-r3-followup) has its own .git/, sidestepping the daemon shared-index contention class entirely (feedback_cohort_shared_git_index_contention.md applies only to daemon single-.git/ cohorts). Watchpoint for the advisor (already in brief §7 / bootstrap §7): if redaction-r1 resumes and lands e2e.rs edits while this lane is open, re-baseline before bm-pr. Per the brief §4 NEGATIVE-test gate.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:58Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-036"
     }
   ]
 }

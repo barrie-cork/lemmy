@@ -1,3 +1,8 @@
+---
+name: Targeted validate-pending-laptop cargo command selection by change class
+description: Feedback rule — when authoring a validate-pending-laptop DQ entry (pre-Shape-G), select the minimum cargo command set by change class instead of defaulting to the full 4-command sequence; cargo-check and e2e --no-run are redundant for test-only or assertion-fix changes, but lib-test is always warranted for any .rs change
+type: feedback
+---
 # Targeted validate-pending-laptop command selection
 
 ## Rule

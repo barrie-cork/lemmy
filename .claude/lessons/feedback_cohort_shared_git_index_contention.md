@@ -1,3 +1,8 @@
+---
+name: Cohort [P] shared .git/index.lock contention on single-.git daemon
+description: Feedback rule — parallel [P] cohort workers on a single-.git EliteDesk daemon all contend on the same .git/index.lock (not in any FILES YAML), causing D-state git cascades at cohort size >=3; auto-degrade cohorts of >=3 to serial and SSH-tar uncommitted worktrees before cancel
+type: feedback
+---
 # Cohort `[P]` shared `.git/index.lock` contention
 
 **Source:** session retro 2026-05-25 — v1-RT-r3 cohort-2 cascade (#467/#468/#469)

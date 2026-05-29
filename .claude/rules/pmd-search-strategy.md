@@ -2,6 +2,16 @@
 
 Project memory exposes two search tools. Pick by query shape.
 
+> **Output-size footgun (2026-05-29):** a broad `memory_search_hybrid` query can return an
+> 85K–105K-char result (hundreds of lines) that is auto-spilled to a tool-results file with a
+> "read in chunks" instruction — a single recall query then costs more context than the thing
+> you were investigating. This bites hardest in context-budget-sensitive sessions. Mitigations:
+> (a) keep queries narrow and distinctive (specific subsystem/error terms, not generic phrases
+> like "recent lessons improvement"); (b) for a pure *coverage check* ("do we already have a
+> lesson on X?"), `grep`/`ls` the `.claude/lessons/` dir directly — it's faster and bounded;
+> (c) if a broad semantic query is genuinely needed, run it inside a subagent so the dump stays
+> out of the main context (per the spill-file's own guidance).
+
 ## brehon-fork PMD status (2026-05-16)
 
 - **DB path:** `.project-memory/memory.db` (relative to repo root). The MCP server's env wires `PROJECT_MEMORY_DB` here.

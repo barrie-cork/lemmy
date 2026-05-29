@@ -1,3 +1,8 @@
+---
+name: Lane agent git reset --hard against shared daemon checkout orphans current HEAD
+description: Feedback rule — running `ssh homeserver git reset --hard origin/<phase-branch>` on the shared /srv/brehon-fork daemon checkout resets whatever branch HEAD is currently on (not the named target); if a Junior finalize-merge transiently switched HEAD to governance-v0, the reset orphans the just-merged trunk commit; coordination defect between two laptop sessions sharing one daemon .git
+type: feedback
+---
 # feedback: lane agent `git reset --hard` against shared daemon checkout orphans whatever HEAD is currently on
 
 > **Note on title:** this lesson was originally titled *"daemon finalize step hard-resets governance-v0 to a non-trunk phase branch's tip"* — a hypothesis that was falsified on 2026-05-22 by sub-agent re-investigation (sub-agent ts 2026-05-22, transcript citation below). The daemon's finalize step is NOT the vector. The file slug is preserved for cross-reference stability; the title and body are corrected. See §"Falsified hypothesis" appendix.

@@ -1,3 +1,8 @@
+---
+name: Daemon fetch refspec excludes meta-phase branches (phase-brehon-*, phase-v2-*)
+description: Feedback rule — the Junior daemon's /srv/brehon-fork/.git/config had a narrow phase-v1-* fetch refspec that excluded meta-phase branches like phase-brehon-conformance-audit, so git fetch origin never created their remote-tracking refs (ambiguous-argument errors); fixed by adding +refs/heads/phase-*:refs/remotes/origin/phase-*
+type: feedback
+---
 # feedback: daemon refspec filter excludes meta-phase branches (until 2026-05-20 fix)
 
 ## TL;DR

@@ -2,17 +2,12 @@
 name: command-retro
 description: >
   Per-slash-command retrospective. Aggregates friction signals for one or all
-  `.claude/commands/*.md` (and `~/.claude/commands/*.md`) specs from PMD,
-  `.claude/PRPs/reports/*-retro.md`, and `decision-queue.json`, scores each
-  verb on a three-signal scale, auto-applies minor spec edits (typos, broken
-  refs, dead links), and surfaces major edits as proposals for user review.
-  DO use when: user says `/command-retro <verb>` or `/command-retro --all`,
-  user asks "is this slash command still earning its keep", auditing a verb
-  before a phase ship, weekly-review wants a command-level signal pass.
-  Do NOT use for: per-Junior-task retros (use `post-task-retro`), session-wide
-  retros (use `session-retro`), sub-phase retros (`.claude/PRPs/reports/v1-*-retro.md`),
-  mid-invocation debugging of a verb that just failed (read the spec + transcript
-  directly). Sibling to `post-task-retro` (per-task) and `session-retro` (per-session).
+  `.claude/commands/*.md` specs from PMD, `*-retro.md` reports, and decision-queue.json;
+  scores each verb on three signals; auto-applies minor spec edits (typos, dead refs);
+  surfaces major edits as proposals. Use on `/command-retro <verb>`/`--all`, "is this
+  slash command earning its keep", or a verb audit before a phase ship. Do NOT use for
+  per-task retros (`post-task-retro`), session retros (`session-retro`), or mid-failure
+  verb debugging (read the spec + transcript directly).
 ---
 
 # Command Retrospective
