@@ -150,6 +150,8 @@ Per `feedback_advisor_watchpoint_specificity.md`. Every watchpoint in plan §4 m
 
 Per `feedback_read_canonical_before_writing_spec.md`. Before authoring any new `*.md` under `.claude/{rules,commands,lessons,PRPs/templates}`, `Glob` + `Read` 1-2 sibling instances first. Cite the canonical example in the new file body or commit body. A commit that adds such a file without citation is a process miss; retro flags it. `grep '^##' <existing>` is always worth the 2-second read.
 
+**Narrative-to-refs at author time (per `feedback_rule_narrative_to_refs_at_author_time.md`):** when *editing* an always-load `.claude/rules/*.md` file, keep the rule *statement* inline (terse imperative + trigger) but author any incident narrative, FP/FN taxonomy, locked-decision rationale, or worked example (>3 lines) in `.claude/refs/<rule>-incidents.md` (or an existing refs file) with a one-line pointer. Section *headings* stay in the rule file (`.pi/` + skills cite them by name — moving a heading breaks the dual-harness contract). The always-load corpus is ~35% of the 200K budget; growth-discipline at author time is the durable lever (one-time extraction of the already-trimmed corpus yields ~1% — 2026-05-29 harness-audit).
+
 ### 3.7 Dogfood gate + 3.8 Schema-retrofit gate
 
 Both gates fire only when authoring new slash commands or when plan-mode produces a new artifact shape. Procedure: `.claude/refs/advisor-narrow-gates.md`.

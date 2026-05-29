@@ -186,4 +186,45 @@ byte-prune. Recommend applying P1–P3 (Pi-safe) and gating P4 on the per-sectio
 
 ---
 
+## Execute-pass actuals (appended 2026-05-29 after user approved P1–P3 + skills + MEMORY.md)
+
+The report above is the *audit* (read-only by skill contract). The user then approved
+applying the Pi-safe wins at **conservative depth** (narratives only). What actually shipped
+(commit `f9982bd6e`):
+
+**Live-token correction (load-bearing):** the chars/4 estimate under-counted markdown by
+~1.6×. Live `/context` shows ALWAYS-load = **~70.8k tokens ≈ 35% of 200K** (not the ~42.7k /
+21% the chars/4 Phase-1 math gave). advisor-orchestrator = 19.8k (est. 11.9k), decision-queue
+= 12.3k (est. 7.6k), MEMORY.md = 11.1k (est. 6.3k). **Future audits should apply a ~2.4×
+chars→token factor for markdown, not 4.**
+
+| Item | Planned | Actual outcome | Δ tokens (~2.4× chars) |
+|---|---|---|---|
+| P1 advisor-orchestrator §1 | extract narratives → refs/ | done; new `refs/advisor-orchestrator-incidents.md` | −1,130 chars ≈ **−470** |
+| P2 decision-queue historical | extract → refs/dq-mechanics.md | done (deprecated-kinds + two-phase Shape-G) | −1,415 chars ≈ **−590** |
+| P3 pmd-invariants redundancy | collapse SessionStart prose | **SELF-REJECTED on execute-pass** | 0 |
+| Skills (session-retro, command-retro) | tighten descriptions | done; trigger keywords preserved | ≈ **−250** |
+| MEMORY.md byte-prune | under 24.4 KB | 25,375 → 24,190 bytes (210 headroom) | ≈ **−490** |
+| P4 multi-lane-worktree | gated on per-section Pi grep | **NOT done** (deferred — needs the grep) | 0 |
+
+**Total ALWAYS-load reduction ≈ 1,800 tokens (~0.9% of 200K).**
+
+**Why P3 self-rejected:** the Phase-2 grep matched the literal string "SessionStart" across
+pmd-invariants + branch-manager + multi-lane + session-awareness and flagged it as redundancy.
+On execute-pass inspection these are *distinct invariants* that share a keyword, not duplicated
+prose — pmd-invariants #5 is the canonical-PMD-path guard, a different hook from the multi-lane
+check. Collapsing would have merged distinct invariants (semantic damage). This is exactly the
+`memory-prune` Step 3.5 "is-it-the-mechanism" check working as designed — and a calibration note
+for the scoring matrix: **keyword-match redundancy detection over-counts; a high redundancy score
+needs execute-pass prose-diff confirmation, not just a shared-string grep.**
+
+**The honest, durable conclusion:** conservative-depth extraction on an already-trimmed,
+dual-harness-shared corpus yields ~1%, not 5%. Most advisor-orchestrator / decision-queue bulk is
+load-bearing schema / mechanism / Pi-cited content that cannot move. **The real lever is
+growth-discipline** — new incident post-mortems and FP/FN taxonomies should be authored in
+`refs/` from the start, with a one-line pointer in the rule, rather than inline. See
+`.claude/lessons/feedback_rule_narrative_to_refs_at_author_time.md`.
+
+---
+
 The user reviews this report and decides which (if any) trims to apply. This skill does not edit harness files.
