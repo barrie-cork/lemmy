@@ -23,6 +23,34 @@
 //! `lemmy_api`). The previous module path `lemmy_api::governance::redaction`
 //! is preserved as a `pub use` re-export in the api crate so the 2 existing
 //! call sites in `submit_jury_vote.rs` continue to compile unchanged.
+//!
+//! ## Maintenance invariants
+//!
+//! 1. **Order of operations in [`scrub`]** is load-bearing —
+//!    profile URLs first, then fediverse mentions, then emails. See
+//!    the `scrub` fn doc-comment below for the footgun this prevents.
+//!    Locked by `scrub_order_dependence_mention_with_remote_host_not_eaten_by_email`
+//!    in the test module.
+//!
+//! 2. **[`scrub_json`] recursion is bounded at
+//!    [`MAX_RECURSION_DEPTH`] (= 64)** — defence-in-depth against
+//!    adversarial / buggy upstream JSON trees. At the cap, the
+//!    substitution is [`serde_json::Value::Null`] (NOT a truncated
+//!    subtree). Over-scrub bias per GDPR §17 + ADR-015 — a leak
+//!    defeats right-to-delete permanently; an over-scrubbed leaf is
+//!    cosmetic loss.
+//!
+//! 3. **[`email_regex`] is permissive on purpose** — it accepts a
+//!    superset of RFC-5322. False positives (e.g.
+//!    `version-1.0@build-2026` scrubbed as email) are acceptable;
+//!    false negatives are GDPR violations. Do NOT tighten without a
+//!    new ADR amending ADR-015's over-scrub bias.
+//!
+//! 4. **Unicode confusables** (zero-width joiner, right-to-left
+//!    override, Cyrillic lookalike in username) are partially covered
+//!    by the ASCII-boundary-class behaviour but two known-deferred
+//!    cases are tracked as `#[ignore]` tests in this module. Their
+//!    resolution is owned by v1-redaction-r2 (not yet on roadmap).
 
 use regex::Regex;
 use serde_json::Value;
@@ -35,6 +63,8 @@ fn mention_regex() -> &'static Regex {
   // the `@` in an email like `foo.bar@example.com` would match as a
   // fediverse mention. `regex` has no lookbehind, so we capture the
   // boundary char and re-emit it in the replacement.
+  // ASCII boundary class — Unicode-permissive by side-effect; see
+  // Maintenance invariants #4 in the module doc above.
   #[expect(clippy::expect_used, reason = "static regex — infallible at startup")]
   RE.get_or_init(|| {
     Regex::new(r"(^|[^A-Za-z0-9._%+\-])@[A-Za-z0-9_\-]+(?:@[A-Za-z0-9._\-]+)?")
@@ -42,6 +72,8 @@ fn mention_regex() -> &'static Regex {
   })
 }
 
+// Permissive on purpose — see Maintenance invariants #3 in the
+// module doc above. Over-scrub bias per GDPR §17 + ADR-015.
 fn email_regex() -> &'static Regex {
   static RE: OnceLock<Regex> = OnceLock::new();
   #[expect(clippy::expect_used, reason = "static regex — infallible at startup")]
