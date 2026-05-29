@@ -4506,6 +4506,23 @@
       "resolved_at": "2026-05-29T17:43:30Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T19:25:00Z",
+      "question": "v1-quality-r2 re-scope (3-issue r2-half): do the plan's enumerated e2e.rs anchor counts (11 boot_context refs / 14 LEMMY_DATABASE_URL setters / 14 *_fixtures modules) still hold against current governance-v0 after rt-r3-followup merged + with Lane A redaction-r1 concurrently editing e2e.rs, such that T3/T4/T5 are dispatchable without re-planning?",
+      "options": [
+        "anchors-hold-dispatch-ready",
+        "anchors-drifted-refresh-before-bm-cut"
+      ],
+      "answer": "anchors-hold-dispatch-ready. Empirical re-enumeration on governance-v0 @74197312d (advisor, 2026-05-29): `rg -c boot_context` = 11 (1 decl + 10 callsites, matches plan §11); `rg -c env::set_var(\"LEMMY_DATABASE_URL\")` = 14 (matches plan §3: 13 in-scope for T5 + 1 in boot_context for T4); `rg -c '^mod \\w+_fixtures \\{'` = 14 (matches plan §10.7); EnvVarGuard still at e2e.rs:~17185 inside v1_rt_r3_fixtures (NOT yet hoisted — T4 target intact); e2e.rs = 18,095 lines. Lane A redaction-r1 has NOT merged anything to governance-v0 that shifts these counts. The plan's LINE NUMBERS are stale (rt-r3-followup's Site-B vote_outcome_recorded insert + other merges shifted lines) but the COUNTS and text-anchorable targets are intact, and R11 mandates verbatim text anchors in the T3/T4/T5 briefs regardless of line numbers. The plan was already clarified pre-r2a (a3d0e994...-034/035/036); the re-scope only removed the 2 shipped tasks (T1/T2) without altering the substance of T3/T4/T5. Clarify gate SATISFIED: plan is dispatch-ready. Task 0 Probe 8 re-runs this same enumeration against the actual phase-branch tip post-bm-cut as the in-band guard (per r2a lesson: pre-flight enumerates what the plan names).",
+      "context": "Re-scope path = edit-in-place (user choice 2026-05-29). The load-bearing clarify risk for a re-scoped e2e.rs-heavy plan is anchor drift from concurrent lanes; this clarify pass is the empirical falsification of that risk per feedback_falsifiable_hypothesis_before_structural_fix.md + feedback_runbook_audit_drift_post_event_check.md. A full coverage-question clarify pass is low-value here (plan exists, scope is mechanical EnvVarGuard wraps with v1-RT-r3 canonical pattern, already clarified pre-r2a). Plan @74197312d.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T19:25:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-037"
     }
   ]
 }
