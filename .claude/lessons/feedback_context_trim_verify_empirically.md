@@ -17,6 +17,18 @@ When optimizing context cost (trimming CLAUDE.md, scoping rules via `paths:`, ar
 
 See `reference_claude_code_rules_loading.md` for full measurements.
 
+**MEMORY.md is byte-limited, not line-limited (2026-05-29):** the `memory-prune` skill documented a
+"200-line hard limit (lines past 200 silently truncated)". Observed reality: a 186-line file (under
+200) at 25375 bytes was **truncated** with a SessionStart warning `MEMORY.md is 25.2KB (limit:
+24.4KB) — index entries are too long. Only part of it was loaded.` The binding limit is **bytes
+(~24400)**, not lines; at ~135 bytes/line the byte budget binds first (~180 lines of average-length
+entries). A lines-only gate reported 14 lines of headroom while the file was actively truncating.
+Fix shipped: `memory-prune` now measures both, gates on bytes, and treats the Verbose-entry class as
+a primary byte-reclaim lever (shorten longest entries / move long stale entries to Historical —
+removing short entries barely moves the byte total). Same root pattern as the rules-subdirectory
+case: the documented limit (lines) did not match observed load behavior (bytes); measure the
+constraint that actually fires.
+
 **Reading the signal:** a rule auto-loading as a `<system-reminder>`
 mid-session is the `paths:`-on-Read mechanism working correctly — not
 noise. The natural read is "the harness loaded the right governance for
