@@ -628,8 +628,8 @@ Author the sub-phase retro per `feedback_retro_not_report` +
 `./scripts/brehon/cargo-check.sh --workspace --features full` → exit 0.
 
 ### 15.2 Clippy
-`./scripts/brehon/cargo-check.sh --workspace --features full --no-deps -- -D warnings`
-(clippy form) → exit 0. (`--no-deps` mandatory to avoid upstream lint debt;
+`./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings`
+→ exit 0. (`--no-deps` mandatory to avoid upstream lint debt;
 `--features full` mandatory to see governance code behind the gate.)
 
 ### 15.3 Test compile
