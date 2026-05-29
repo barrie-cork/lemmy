@@ -75,7 +75,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 | File pattern | Mandatory lesson(s) for §3 Required reading |
 |---|---|
 | `crates/server/tests/e2e.rs` (any edit, any size) | `feedback_lemmy_error_no_std_error.md`, `feedback_async_pool_test_pattern.md`. **When a v1-SL-* or v1-JM-* fixtures sibling module already exists in the same file, mirror its error-shape case (A or B) verbatim per `feedback_lemmy_error_no_std_error.md` case enumeration. Pick by reading sibling at the cited line range BEFORE authoring the brief — canonical-schema-first gate.** |
-| `crates/server/tests/e2e.rs` (≥2 edits in this task or cohort) | + `feedback_junior_worker_e2e_edit_hang.md` |
+| `crates/server/tests/e2e.rs` (≥2 edits in this task or cohort) | + `feedback_fix_impl_pre_locate_e2e_anchors.md` (pre-locate verbatim anchors; the canonical e2e-edit-hang-prevention lesson — the historically-cited `feedback_junior_worker_e2e_edit_hang.md` slug was never authored; repointed 2026-05-29 per v1-rt-r3-followup retro item #4) |
 | `crates/server/tests/e2e.rs` AND brief is a fix-impl (filename matches `*-fix-impl-*.md`) | + `feedback_fix_impl_pre_locate_e2e_anchors.md` (pre-locate verbatim `old_string`/`new_string` anchors; subject to template §2.0 scope gate: ≤150 lines, ≤2 file edits, ≤2 Edits/file). 2× recurrence at v1-RT-r3 Task 4 cycle (DQ `a3d0e9941441-033`) + fix-impl-2 dispatch (Junior #479). |
 | `crates/db_schema/migrations/**` (any new migration) | `feedback_lemmy_migration_runner.md`, `feedback_postgres_jsonb_canonicalization.md` (if JSONB) |
 | Any new test under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
@@ -94,7 +94,7 @@ Brief commit body lists which mandatory lessons fired and why (one line each). T
 When the next pending §13 task is cargo-class (DoD names `cargo check`, `cargo clippy --workspace`, or `cargo test --workspace`) AND plan §5.1 complexity score `> 8`:
 
 1. Confirm planner's split-or-proceed DQ resolved (look in `.claude/decision-queue.json` resolved entries from `planner` referencing this plan).
-2. Dominant factor = e2e edits (≥2) → append `feedback_junior_worker_e2e_edit_hang.md` to §3 Required reading.
+2. Dominant factor = e2e edits (≥2) → append `feedback_fix_impl_pre_locate_e2e_anchors.md` to §3 Required reading (the canonical e2e-edit-hang-prevention lesson; the old `feedback_junior_worker_e2e_edit_hang.md` slug was never authored — repointed 2026-05-29).
 3. Dominant factor = migrations (≥2) AND pre-Shape-G → expect cargo+migration peak ~6 GB on the laptop; note in polling output if low battery. Per `feedback_complexity_score_pre_split.md`.
 
 Mechanical: read score, read top factor, add citation. No DQ, no escalation.
