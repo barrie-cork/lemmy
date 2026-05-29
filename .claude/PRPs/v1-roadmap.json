@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T16:48:00Z",
+  "last_updated_at": "2026-05-29T17:25:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -254,7 +254,7 @@
           "phase_branch": "phase-v1-rt-r3-followup",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
           "in_flight_since": "2026-05-29",
-          "stage": "bm-pr-open (2026-05-29): PR #162 OPEN into governance-v0 (advisor-side, user-chosen). Verified: state=OPEN, isDraft=false, base=governance-v0, mergeable=MERGEABLE. /brehon-verify ALL 3 STORIES ✓ (report @381882942). Three-dot PR diff clean: only crates/server/tests/e2e.rs (12 ins/9 del) + phase .claude/ artifacts; scope-discipline 0 lines in crates/api|db_schema|routes+migrations. ALL IMPL DONE: Task1 A+B (834f9d85d) + Task2 C+D (d57b755c9); headline whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression); both validate-pending-laptop DQs pass (pending=0). Retro @94a005b55 + 2 lessons promoted + PMD synced. NOTE merge-forward: governance-v0 is 8 commits ahead of phase merge-base, but all 8 are advisor meta-work (retro/lessons/roadmap/verify) + 2 unrelated frontmatter-lint commits from a concurrent session — NONE touch crates/, so the PR merge will not conflict; the standard pre-gate-5 merge-forward check will re-confirm. NEXT: CodeRabbit auto-review -> bm-poll-cr -> bm-triage (GATE 3 surface 4-bucket counts, WAIT) -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
+          "stage": "cr-triage-fix-in-pr (2026-05-29): PR #162 OPEN; CR+Copilot reviewed -> bm-triage drafted (advisor-side, findings @.claude/PRPs/reviews/pr-162-findings.yaml). 13 findings, 0 BLOCKING, recommendation=approve. Buckets: 9 wont-fix (MD0xx markdown nits on .claude/ briefs/plan/runlog — net-noise per phase-branch.md), 2 fix-in-pr (cr-10 e2e.rs:2931 stale 'Drift #8: 4 rows' comment + cr-11 e2e.rs:11194 stale public_log_published ordering comment — BOTH verified real by advisor read; comment-only, assertions correct), 2 rebut (cr-12 scope=PR body discloses .claude artifacts + copilot-1 summary no distinct findings). GATE 3 surfaced to user -> user chose 'fix the 2 stale comments'. fix-impl-1 brief @c9e9b165f (comment-only, 2 Edits, verbatim anchors); daemon-local FF'd to c9e9b165f; Task #507 QUEUED (validate-pending-laptop on push). ALL IMPL (Task1 834f9d85d + Task2 d57b755c9) + e2e 119/0 done; retro @94a005b55. NEXT: poll #507 -> on done bridge finalize-no-push + run check/clippy/targeted-e2e -> on pass mutate DQ + bucket cr-10/cr-11 done -> re-poll CR -> merge-forward re-check -> GATE 5 merge confirm (WAIT) -> bm-merge -> GATE 6 retro sign-off (WAIT) -> /brehon-phase-transition. Pre-prune at ship: workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 + brehon-fork-rt-r3-followup.",
           "lane_mode": "A",
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
