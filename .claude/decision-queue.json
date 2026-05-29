@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Task 1 Sites A+B cargo validation — check, clippy, targeted e2e (report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine); await advisor-laptop mutation",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 commit 834f9d85d on worktree branch; Edit 1.1 rep_total 4->7 @L2949; Edit 1.2 vote_outcome_recorded insert @L11208-11209; regression guards L2959/L2967 untouched. Shape G suspended per DQ #229 until 2026-06-01.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": 1,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "cdb6bab5fef8-001"
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
