@@ -243,6 +243,10 @@ EliteDesk shares cron-driven workloads (NAS backups, web-archive crawls, weekly 
 
 **Advisor enforcement** (when binding) — before queueing: compute next safe minute, note deferral (`deferring <task-slug> until <HH:MM UTC>`), re-check on next poll. Mechanical, no DQ for routine deferrals. **Subagent defence-in-depth:** `impl-task` task-0 pre-flight refuses with `FORBIDDEN_WINDOW: <window>` if advisor mis-queues.
 
+#### When to override
+
+User may authorise a forbidden-window run. Procedure (file DQ citing the user's override; queue with the `forbidden-window-override: DQ #<id>` dispatch note so the subagent skips its time check): `.claude/refs/advisor-validation.md` §"When to override". (Anchor kept resident — `.pi/skills/impl-task/SKILL.md` cites this heading by name.)
+
 ### 5.2 validate-pending-laptop handler
 
 When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `pending[]`, the advisor runs the §15 commands locally. Full pre-flight, sequence, Phase-2 e2e advisor-driven flow, escape hatch, Windows invocation: `.claude/refs/advisor-validation.md` §"validate-pending-laptop handler".
