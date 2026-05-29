@@ -113,6 +113,11 @@ async fn template_dump_capture() -> lemmy_utils::error::LemmyResult<()> {
 // ============================================================================
 
 mod governance_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection};
   use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
@@ -6098,6 +6103,11 @@ async fn declining_juror_not_picked_as_own_replacement() -> lemmy_utils::error::
 // well under 30s on a warm host.
 
 mod admin_config_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection};
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
@@ -8533,6 +8543,11 @@ async fn admin_audit_stream_emits_frame_on_config_change() -> lemmy_utils::error
 // applies upstream of the fallback and the snapshot fields still land.
 
 mod v1_jm_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use chrono::{Duration as ChronoDuration, Utc};
   use diesel::{Connection as _, PgConnection};
   use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -10452,6 +10467,11 @@ async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
 // workers hang on Edit calls into this 9000+ line file).
 
 mod v1_jm_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use actix_web::web::Json;
   use diesel::{ExpressionMethods, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
@@ -11660,6 +11680,11 @@ async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spo
 }
 
 mod v1_sl_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::web::Json;
   use chrono::{DateTime, Duration, Utc};
@@ -12691,6 +12716,11 @@ mod v1_sl_b_fixtures {
 }
 
 mod v1_sl_c_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use chrono::{Duration, Utc};
   use diesel::{ExpressionMethods, QueryDsl, insert_into, update};
@@ -13569,6 +13599,11 @@ mod v1_sl_c_fixtures {
 }
 
 mod v1_sl_d_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use actix_web::web::{Data, Json};
@@ -14430,6 +14465,11 @@ mod v1_sl_d_fixtures {
 }
 
 mod v1_sl_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use actix_web::web::{Data, Json};
@@ -15397,6 +15437,11 @@ mod v1_sl_e_fixtures {
 }
 
 mod v1_federation_inbound_a_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use diesel::ExpressionMethods;
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
@@ -15460,6 +15505,11 @@ mod v1_federation_inbound_a_fixtures {
 }
 
 mod v1_ship_2_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::{App, test, web::Data};
   use chrono::{Duration, Utc};
@@ -16190,6 +16240,11 @@ async fn admin_audit_html_forbidden_for_non_admin() -> lemmy_utils::error::Lemmy
 }
 
 mod v1_federation_inbound_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use activitypub_federation::traits::Activity as ActivityTrait;
@@ -16522,6 +16577,11 @@ mod v1_federation_inbound_b_fixtures {
 }
 
 mod v1_federation_inbound_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use activitypub_federation::traits::Activity as ActivityTrait;
@@ -16703,6 +16763,11 @@ mod v1_federation_inbound_e_fixtures {
 }
 
 mod v1_ship_3_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::web::{Data, Json};
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
@@ -17121,6 +17186,12 @@ mod v1_rt_r3_fixtures {
   //!
   //! Advisor-authored carve-out per cycle-count §5.3 hard-refusal on Junior dispatch
   //! (DQ a3d0e9941441-033). One-time exception to "advisor never authors crates/**".
+  //!
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
 
   use super::*;
   use actix_web::web::{Data, Json};
