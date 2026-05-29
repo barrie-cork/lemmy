@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "e9ed653cfd0a-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
-      "branch": "phase-v1-quality-r2",
-      "phase_task": "v1-quality-r2a-fix-impl-3",
-      "commands": [
-        "bash scripts/brehon/dq-lint-durations.sh",
-        "bash scripts/brehon/precheck.sh"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "approved_by": null,
-      "approved_at": null,
-      "resolved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4375,6 +4348,32 @@
       "failed_commands": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "e9ed653cfd0a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-3",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 3ddcef334 (daemon worktree, Mode B per Hard refusal #2). (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 (zero negative-duration entries; new fail-closed parser does not regress the existing clean DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0. Worker §2.5 step 9 NEGATIVE gate already validated fail-closed semantics: bad timestamp emits 'DQ-LINT FAIL: entry \"test-malformed-001\" timestamp=\"not-an-iso-date\" is not a valid ISO-8601 timestamp' and exits 1. Lane Q-r2a fix-impl-3 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-new-1 + cr-new-2 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-05-29T09:15:00Z"
     }
   ]
 }
