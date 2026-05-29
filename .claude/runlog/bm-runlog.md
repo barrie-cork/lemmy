@@ -2119,3 +2119,13 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ## bm-cut: phase-v1-redaction-r1 off 321c848fc — 2026-05-28
 
 ## bm-cut: phase-v1-quality-r2 off 27c235a20 — 2026-05-28
+
+## advisor: bm-cut phase-v1-rt-r3-followup off 9ef77896d — 2026-05-29
+- **branch:** phase-v1-rt-r3-followup
+- **off:** governance-v0 @ 9ef77896d (chore(brehon): close v1-quality-r2a, bootstrap v1-rt-r3-followup)
+- **plan:** .claude/PRPs/plans/v1-rt-r3-followup.plan.md (not yet authored — plan follows e2e baseline)
+- **pushed:** yes — origin/phase-v1-rt-r3-followup (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed @ 9ef77896d
+- **mode:** Mode A — lane worktree C:/Users/barri/Developer/brehon-fork-rt-r3-followup created + bootstrapped (submodule init + .mcp.json/.env/settings.local.json copied)
+- **execution:** advisor-side local cut (NOT Junior bm-task) — Mode A precedent per `/roadmap-next`-style RT-r3 cut (bm-runlog 2022); avoids daemon finalize-merge + CC v2.1.119 runlog-gate hazards (bm-cut.md Phase 8). Lane not in v1-roadmap.json so /roadmap-next not directly usable; mechanics done manually.
+- **next:** e2e baseline run on lane tip (capture real failing tests + real reputation_event counts) → author plan against real numbers → /brehon-clarify → planning Junior
