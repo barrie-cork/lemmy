@@ -7,13 +7,17 @@ set -euo pipefail
 DQ_PATH="${1:-.claude/decision-queue.json}"
 [ -f "$DQ_PATH" ] || { echo "FATAL: not found: $DQ_PATH" >&2; exit 2; }
 
-python3 -c "
+python3 - "$DQ_PATH" <<'PY'
 import json, sys
 from datetime import datetime
+dq_path = sys.argv[1]
 def parse(t):
     if not t: return None
-    return datetime.fromisoformat(t.replace('Z', '+00:00'))
-with open('$DQ_PATH') as f:
+    try:
+        return datetime.fromisoformat(t.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+with open(dq_path) as f:
     dq = json.load(f)
 bad = []
 for arr in ('pending', 'resolved'):
@@ -24,6 +28,6 @@ for arr in ('pending', 'resolved'):
             delta = ts - ra
             bad.append((str(e.get('id')), e.get('timestamp'), e.get('resolved_at'), str(delta)))
 for (eid, ts, ra, d) in bad:
-    print(f'DQ-LINT FAIL: entry \"{eid}\" has resolved_at ({ra}) earlier than timestamp ({ts}) by {d}')
+    print(f'DQ-LINT FAIL: entry "{eid}" has resolved_at ({ra}) earlier than timestamp ({ts}) by {d}')
 sys.exit(1 if bad else 0)
-"
+PY
