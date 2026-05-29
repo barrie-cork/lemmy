@@ -24,12 +24,12 @@ The advisor session orchestrates one Brehon sub-phase end-to-end via Junior suba
 Every Junior task is preceded by a brief at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`, committed on the branch the Junior worker will fork from **BEFORE** the task is created. Workers fork from `base_branch`; the brief must be visible in that branch's tree at task-spawn time. Per role:
 
 - **Planning briefs** → committed on `governance-v0` (no phase branch yet).
-- **bm-cut briefs** → committed on `governance-v0` (no phase branch yet).
+- **bm-cut briefs** → committed on `governance-v0` (no phase branch yet). Author from `.claude/PRPs/templates/bm-task-brief.template.md` (promoted 2026-05-29) + 1-2 sibling `*-bm-cut-*.md` briefs as the canonical-schema-first reference.
+- **bm-pr / bm-poll-cr / bm-triage / bm-merge / bm-push / bm-ping briefs** → committed on `governance-v0` (the bm-task worker reads from trunk). Author from `.claude/PRPs/templates/bm-task-brief.template.md` + 1-2 sibling briefs of the SAME verb. The template's per-verb cheat sheets (§2.1, §3, §4) encode the recurring shape.
 - **Impl-task briefs** → MUST be visible on `phase-<X>` (the phase branch the impl worker forks from) before `create_task` is called. **The how depends on the lane mode** (per `.claude/rules/multi-lane-worktree.md` §"Lane modes"):
   - **Mode A (dedicated lane worktree):** author directly on the phase branch in the lane worktree session. `git commit` + `git push origin phase-<X>`. The fed-in-b pattern (commit `0ea7ab4f7`) is the canonical example.
   - **Mode B (mobile remote-control):** author on `governance-v0` in canonical, `git commit` + `git push origin governance-v0`, then trigger a trunk→phase sync per `multi-lane-worktree.md` §"Brief location and trunk→phase sync" (SSH-merge from the daemon's main worktree, which is on the phase branch post-bm-cut). Verify with `git -C <canonical> fetch origin phase-<X> && git log governance-v0..origin/phase-<X> --oneline` — the brief commit must appear via the merge commit.
   - In BOTH modes the worker forks from `phase-v1-<lane>`; the brief must be reachable at that ref at task-spawn time. The "how" differs; the "what" doesn't. Per session retro 2026-05-20 §2.8 + this session 2026-05-25 (Mode B procedure discovered empirically; documented post-session).
-- **BM-pr / bm-merge briefs** → committed on `governance-v0` (BM worker reads from trunk).
 - **ci-watcher briefs** → committed on `governance-v0` (mutation lives on whatever ref the workflow_run_id's branch was; the brief just names IDs).
 
 The dispatch string is intentionally minimal (under 100 chars, no URLs, no inline code, no secrets):

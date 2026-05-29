@@ -13,6 +13,7 @@ that operationalise this rule are:
 - `.claude/PRPs/reviews/SCHEMA.md` — the YAML findings-file schema
 - `.claude/rules/phase-branch.md` — phase-branch discipline (BM enforces)
 - `.claude/rules/gh-pr-fork-target.md` — `--repo barrie-cork/lemmy` rule
+- `.claude/PRPs/templates/bm-task-brief.template.md` — canonical brief template (promoted 2026-05-29, post 3× recurrence across all 7 verbs). The template encodes the 14 always-apply hard refusals + the verb-specific per-row cheat sheets (scope, required reading, constraints). Sibling-pattern check (`feedback_read_canonical_before_writing_spec.md`) still required — `ls -t .claude/PRPs/briefs/*-bm-<verb>-*.md | head -2` for the SAME verb before filling in the template.
 
 ## Why this role exists
 
