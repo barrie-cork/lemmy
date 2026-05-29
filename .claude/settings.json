@@ -125,6 +125,16 @@
         ]
       },
       {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/rule-narrative-bloat-reminder.sh",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
         "matcher": ".*",
         "hooks": [
           {
