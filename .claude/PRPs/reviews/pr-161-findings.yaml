@@ -1,0 +1,172 @@
+schema_version: 1
+pr: 161
+title: 'feat(quality): v1-quality-r2a — DQ duration lint + C3 deferral DQ (#157, #158)'
+head: phase-v1-quality-r2
+base: governance-v0
+opened_at: '2026-05-29T00:23:45Z'
+last_poll_at: '2026-05-29T12:00:00Z'
+poll_count: 3
+last_polled_head_sha: a626b65c6
+last_polled_fingerprint: null
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-29T00:28:43Z'
+  file: .claude/PRPs/debug/v1-quality-r2a-c3-defer.json
+  line: 11
+  summary: Remove hardcoded line numbers from planning records
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321384967
+  adr: null
+  bucket: carry-forward
+  addressed_in: null
+  rationale: null
+  notes: Nit/cosmetic; defer to Lane Q-r2b
+- id: cr-2
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-29T00:28:43Z'
+  file: .claude/PRPs/plans/v1-quality-r2.plan.md
+  line: 27
+  summary: 'Clarify count discrepancy: Four vs Three DQ entries'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321384977
+  adr: null
+  bucket: carry-forward
+  addressed_in: null
+  rationale: null
+  notes: Parent-plan drift (v1-quality-r2 master plan, not r2a sub-plan); defer to
+    Lane Q-r2b
+- id: cr-3
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-29T00:28:43Z'
+  file: .claude/PRPs/plans/v1-quality-r2a.plan.md
+  line: 671
+  summary: 'Typo: one of the 4 entries should be one of the 3 entries'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321384980
+  adr: null
+  bucket: done
+  addressed_in: 8bad6c9
+  rationale: null
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-29T00:28:43Z'
+  file: scripts/brehon/dq-lint-durations.sh
+  line: null
+  summary: Shell injection vulnerability when interpolating $DQ_PATH
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321384986
+  adr: null
+  bucket: done
+  addressed_in: 88159ebde
+  rationale: null
+  notes: null
+- id: cr-new-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-29T01:52:24Z'
+  file: .claude/PRPs/debug/v1-quality-r2a-fix-impl-1-c3-blocker.json
+  line: 4
+  summary: Timestamp appears to be a placeholder
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321685668
+  adr: null
+  bucket: done
+  addressed_in: bee095e98
+  rationale: null
+  notes: null
+- id: cr-new-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-05-29T02:09:24Z'
+  file: .claude/PRPs/plans/v1-quality-r2a.plan.md
+  line: 672
+  summary: Fail closed on malformed timestamps instead of silently skipping
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3321737411
+  adr: null
+  bucket: done
+  addressed_in: 88159ebde
+  rationale: null
+  notes: null
+- id: cr-new-3
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-29T09:21:16Z'
+  file: .claude/PRPs/plans/v1-quality-r2a.plan.md
+  line: 672
+  summary: Mitigation text promises error reporting, but skeleton lacks handling
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3323386710
+  adr: null
+  bucket: done
+  addressed_in: 88159ebde
+  rationale: null
+  notes: null
+- id: cr-new-4
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-05-29T09:21:16Z'
+  file: scripts/brehon/dq-lint-durations.sh
+  line: 22
+  summary: Consider adding JSON parse error handling
+  cr_url: https://github.com/barrie-cork/lemmy/pull/161#discussion_r3323386726
+  adr: null
+  bucket: done
+  addressed_in: 88159ebde
+  rationale: null
+  notes: null
+- id: copilot-2
+  source: copilot
+  severity: major
+  posted_at: '2026-05-29T02:09:24Z'
+  file: .claude/PRPs/plans/v1-quality-r2a.plan.md
+  line: 672
+  summary: Fail closed on malformed timestamps (duplicate of cr-new-2)
+  cr_url: null
+  adr: null
+  bucket: done
+  addressed_in: 88159ebde
+  rationale: null
+  notes: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 3
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 2
+    rebutted: 0
+    carry_forward: 1
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 2
+    rebutted: 0
+    carry_forward: 1
+    wont_fix: 0
+  by_source:
+    coderabbit: 8
+    claude: 0
+    user: 0
+    copilot: 1
+  total: 9
+merged_at: null
+merge_commit: null
+final_recommendation: null
