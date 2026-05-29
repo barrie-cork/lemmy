@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "9e79364e3eb1-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "Run cargo check + clippy on canonical brehon-fork-redaction-r1 lane worktree for v1-redaction-r1 Task 3 — regex commentary + Maintenance invariants (comment-only, no new tests).",
-      "options": [
-        "all gates pass",
-        "any gate fails"
-      ],
-      "context": "Task 3 inserts Maintenance-invariants H2 in module-doc + 2 per-regex policy comments. Pure comment-only edit; zero production-code or test changes. Worker self-test (cargo check + clippy on -p lemmy_db_schema) passed; laptop-side runs --workspace gates.",
-      "answer": null,
-      "answered_by": null,
-      "approved_by": null,
-      "resolved_at": null,
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "branch": "junior/role-impl-task-v1-redaction-r1-task-3-regex-commentary-maintenance-invariants-see-claude-prps-briefs-v1-redacti-495",
-      "phase_task": "v1-redaction-r1-task-3",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task3-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task3-clippy.log 2>&1\""
-      ]
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "457a6a6b74f8-001",
@@ -4369,6 +4342,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "7fea5e9cab18-001"
+    },
+    {
+      "id": "9e79364e3eb1-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Run cargo check + clippy on canonical brehon-fork-redaction-r1 lane worktree for v1-redaction-r1 Task 3 — regex commentary + Maintenance invariants (comment-only, no new tests).",
+      "options": [
+        "all gates pass",
+        "any gate fails"
+      ],
+      "context": "Task 3 inserts Maintenance-invariants H2 in module-doc + 2 per-regex policy comments. Pure comment-only edit; zero production-code or test changes. Worker self-test (cargo check + clippy on -p lemmy_db_schema) passed; laptop-side runs --workspace gates.",
+      "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-redaction-r1 tip 2deefda6e (lane worktree brehon-fork-redaction-r1, warm cache): cargo-check.bat --workspace --features full exit 0 (1m 01s); cargo-clippy.bat --workspace --features full --no-deps -- -D warnings exit 0 (1m 39s). doc_lazy_continuation did NOT fire on the new module-doc Maintenance-invariants block (verbatim §10.4 copy preserved compliant whitespace). Task 3 deliverables verified: (A) Maintenance invariants H2 inserted at module-doc lines 26-54; (B) email_regex policy comment at lines 72-74; (C) mention_regex citation appended at lines 39-41. Zero production-code or test changes. Public API byte-identical.",
+      "answered_by": "advisor-laptop",
+      "approved_by": null,
+      "resolved_at": "2026-05-29T00:35:00Z",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "branch": "junior/role-impl-task-v1-redaction-r1-task-3-regex-commentary-maintenance-invariants-see-claude-prps-briefs-v1-redacti-495",
+      "phase_task": "v1-redaction-r1-task-3",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-redaction-r1-task3-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-redaction-r1-task3-clippy.log 2>&1\""
+      ]
     }
   ]
 }
