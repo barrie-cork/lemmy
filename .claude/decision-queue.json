@@ -3,6 +3,22 @@
   "pending": [],
   "resolved": [
     {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Edit C.3 old_string in brief §2.4 does not exist in the plan file. Advisor must provide correct old_string for the cr-6 mitigation-text update (line ~672). Should advisor (a) provide correct old_string for the existing edge-case timestamp row at line 672, or (b) confirm cr-6 is already satisfied by Edit A alone?",
+      "options": [
+        "option-a: brief old_string was wrong; correct old_string is the `dq-lint-durations.sh regex misses...` row at line 672 — advisor provides updated old/new pair for a follow-up edit",
+        "option-b: cr-6 is already satisfied by Edit A (ValueError handler now makes the mitigation text accurate as-is); no plan edit needed for cr-6"
+      ],
+      "context": "Brief §2.4 Edit C.3 old_string: '| Negative-duration lint fires on a legitimately-resolved entry (false positive) | LOW | LOW | ...'. This text does NOT exist in v1-quality-r2a.plan.md. rg returns 0 results for 'Negative-duration lint'. The risks table at line 672 has: '| dq-lint-durations.sh regex misses an edge-case timestamp format | LOW | MED | Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison |'. Brief instructions: if text does not match, raise blocker DQ — do NOT improvise. The other 4 edits (A, B, C.1, C.2) applied successfully; all worker self-tests exit 0.",
+      "answer": "option-a: brief old_string was wrong; advisor 2026-05-29 verified actual line 672 risks-table row reads 'dq-lint-durations.sh regex misses an edge-case timestamp format ... Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison'. fix-impl-2 brief §2.2 provides the correct old_string targeting this row. Updated mitigation text spells out the parse() ValueError wrapper added by Edit A in fix-impl-1 commit 8621a84bb.",
+      "answered_by": "impl-self-resolved",
+      "approved_by": null,
+      "resolved_at": "2026-05-29T01:57:20Z",
+      "id": "745da950edad-001"
+    },
+    {
       "id": "457a6a6b74f8-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -2392,7 +2408,7 @@
       "failed_commands": null,
       "answer": "cargo-check.sh --workspace --features full exit 0 on lane worktree phase-v1-rls-r1 @ e76a37455. Worker #381 hung post-DQ-raise (same Task 6 pattern); advisor cancelled + FF-merged + ran cargo. Worker used id=315 instead of brief-assigned 314 (Task 6 worker delayed-pushed a retro log into #314 first — collision-prevention recipe needs refinement for cross-worker PMD-fallback retros). VALIDATE: 3 H2 sections, 2x retro_bypass, DIFFERENT THINGS distinction present, 04 cross-link present.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-21T08:53:00Z",
+      "resolved_at": "2026-05-21T10:45:00Z",
       "id_v1": 315,
       "approved_by": null,
       "approved_at": null
@@ -4030,7 +4046,7 @@
       "context": "All 19 probes run. Three methodology gaps: (1) Probe 6: Junior worker always runs on junior/* branch, not phase-v1-RT-r3 — base IS phase-v1-RT-r3 at 11ec35219 (confirmed by git merge-base). (2) Probes 8a+8b: rg count=2 not >=3 because doc comments in reputation_event.rs do not repeat field names; both dedupe_key + source_event_type ARE present in ReputationEvent + ReputationEventInsertForm structs AND in schema.rs. (3) Probe 14: A=55 consts vs B=51 string literals — gap=4 multi-line defs (FEDERATION_INBOUND_DROPPED_OVERSIZE etc); uniq -d correctly empty (no duplicate values). One infrastructure note: crates/email/translations submodule was not initialized in this worktree — ran git submodule update --init --recursive (standard bootstrap step per CLAUDE.md) which fixed Probe 2. All cargo probes passed after init: workspace check exit 0, e2e test compile exit 0, clippy baseline exit 0, exit-code propagation exit 101. Probes 7 (r1+r2 PRs), 9 (ENTRY_KIND consts), 10 (34 config keys), 11 (partial index), 12 (emit_reputation_event + JuryVote), 13 (no concurrent PR overlap) all PASS.",
       "answer": "option-A: accept audit as PASS — all 19 probes ran; all functional deliverables confirmed present (workspace check exit 0, e2e compile exit 0, clippy baseline 0, exit-code 101 propagation, r1+r2 PRs verified, 34 config keys, partial index, no concurrent PR overlap). The 3 methodology gaps are not defects: (a) Probe 6 — junior/* worker branch is expected topology (base IS phase-v1-RT-r3 confirmed via git merge-base, brief §3 reading clarifies); (b) Probes 8a/8b — doc comments do not repeat field names but dedupe_key + source_event_type confirmed present in ReputationEvent struct, ReputationEventInsertForm, and schema.rs; (c) Probe 14 — count gap of 4 explained by multi-line FEDERATION_INBOUND_DROPPED_* const defs; uniq -d empty (no duplicates). Proceed to Task 1 cohort dispatch.",
       "answered_by": "advisor",
-      "resolved_at": "2026-05-25T19:11:20.705989Z",
+      "resolved_at": "2026-05-25T19:30:00Z",
       "approved_by": null,
       "approved_at": null,
       "id": "1b8527b076d4-001"
@@ -4058,7 +4074,7 @@
       "failed_commands": null,
       "answer": "advisor-laptop validate-pending-laptop PASS at phase-v1-RT-r3 tip f5dc8bde3: cargo-check + cargo-clippy --no-deps -- -D warnings + cargo-test --test e2e --no-run all exit 0. fix-impl-1 #[expect(clippy::too_many_arguments)] resolved the 9/7 clippy fails on emit_reputation_event + emit_reputation_event_local.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-26T07:08:50.884428Z",
+      "resolved_at": "2026-05-26T19:10:00Z",
       "approved_by": null,
       "approved_at": null
     },
@@ -4271,6 +4287,93 @@
       "approved_by": "user",
       "approved_at": "2026-05-26T12:33:00Z",
       "id": "a3d0e9941441-033"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-28T20:35:00Z",
+      "question": "Probe 6 failure: DQ entry ids 3999/4007/4016/4035 not found in .claude/decision-queue.json — are these line numbers from the CR review (not DQ entry ids), and which actual entry ids should T1 sweep?",
+      "options": [
+        "option-A: confirm that 3999/4007/4016/4035 are CR line-number references; update plan §13 Task 1 IMPLEMENT to sweep the 3 current back-dated entries by actual id (315, 1b8527b076d4-001, 81719cf8ca8d-001); proceed",
+        "option-B: confirm that those entries were already swept before this task ran (idempotent re-run); provide the actual entry ids that remain for T1 to verify; proceed",
+        "option-C: provide the actual DQ entry ids (not line numbers) that issue #157 intended to target; update Probe 6 expectation in plan before proceeding"
+      ],
+      "context": "Probe 6 ran: python3 searched resolved[] for entries with id or id_v1 in {3999, 4007, 4016, 4035}. Found 0 of 4. Investigation: (1) max integer id in live DQ = 340; max in both archive files = 340 and 224. No entry has id or id_v1 anywhere near 3999-4035. (2) PR #155 CR finding cr-4 notes: 'entry 3999 has timestamp 2026-05-25T19:30:00Z but resolved_at 2026-05-25T19:11:20Z' — this matches live entry id=1b8527b076d4-001 (same ts/ra values). CR finding uses FILE LINE NUMBERS (4007, 4016, 4035), not DQ entry ids. (3) Current live back-dated entries (resolved_at < timestamp): id=315 (ts=2026-05-21T10:45:00Z, ra=2026-05-21T08:53:00Z), id=1b8527b076d4-001 (ts=2026-05-25T19:30:00Z, ra=2026-05-25T19:11:20.705989Z), id=81719cf8ca8d-001 (ts=2026-05-26T19:10:00Z, ra=2026-05-26T07:08:50.884428Z). (4) Secondary finding: dq-v3-append-fragment.sh lacks +x permission (-rw-r--r--); callable via 'bash scripts/...' explicitly but not directly. dq-v3-new-entry.sh IS executable (-rwxr-xr-x). All other probes (0-5, 7, 8) PASS: Docker OK, branch BASE_OK, cargo-check exit 0, workspace+features exit 0, negative exit 101, clippy exit 0, both scripts present, no concurrent PR overlap.",
+      "answer": "option-A. Plan §13 Task 1 lists CR-finding LINE NUMBERS from PR #155 cr-4 review, not DQ entry ids — worker's investigation in this entry's context is correct. Actual back-dated entries on phase-v1-quality-r2 HEAD: id=315, id=1b8527b076d4-001, id=81719cf8ca8d-001. Plan amended in the same chore commit to sweep those 3 real ids. Secondary finding (dq-v3-append-fragment.sh 100644) ALSO fixed: chmod +x committed on trunk at 817291c9a and merge-fwd'd into phase-v1-quality-r2. Task 1 may proceed. Per .claude/lessons/feedback_falsifiable_hypothesis_before_structural_fix.md the worker ran the falsification (grep DQ for ids → 0 hits → investigate → identify real ids); the plan was the wrong hypothesis, not the back-dated-DQ premise.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-28T20:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "3ef987b66db4-001"
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-28T23:43:49Z",
+      "question": "C3 (Issue #158) emit_reputation_event helper extraction deferred per premature-DRY gate",
+      "answer": "v1-quality-r2 brief WP-2 default: defer C3 unless planner identifies a 3rd consumer in near-term roadmap. As of 2026-05-28, federation_inbound lane status='done' in .claude/PRPs/v1-roadmap.json — no upcoming sub-phase introduces a 3rd reputation-event emitter. Therefore: 2 consumers as of plan author time; revisit when 3rd materialises. Per feedback_principles_not_rules.md.",
+      "options": [
+        "defer",
+        "extract"
+      ],
+      "context": "Two existing emitter sites: crates/api/api/src/governance/admin_emergency_remove.rs:448 (emit_reputation_event_local) and crates/api/api/src/governance/submit_jury_vote.rs:1096 (emit_reputation_event). Bodies are byte-identical. Extraction target: crates/api/api/src/governance/reputation_helpers.rs. Trigger condition for v1-quality-r3 follow-on: any sub-phase introduces a 3rd reputation-event emit path.",
+      "answered_by": "planner",
+      "resolved_at": "2026-05-28T23:43:49Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "dd6012873857-001"
+    },
+    {
+      "id": "237cd769325e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T01:57:51Z",
+      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-2",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 530da702f. (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 in ~20ms (zero negative-duration entries on the phase-branch DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0 in ~17ms (REPO_ROOT-derivation works correctly; sibling-script invocation succeeds). Gates run via SSH on /srv/brehon-fork (daemon worktree on phase-v1-quality-r2) per Mode B mobile remote-control. Lane Q-r2a fix-impl-2 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-3..cr-8 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T02:01:30Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "e9ed653cfd0a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-3",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 3ddcef334 (daemon worktree, Mode B per Hard refusal #2). (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 (zero negative-duration entries; new fail-closed parser does not regress the existing clean DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0. Worker §2.5 step 9 NEGATIVE gate already validated fail-closed semantics: bad timestamp emits 'DQ-LINT FAIL: entry \"test-malformed-001\" timestamp=\"not-an-iso-date\" is not a valid ISO-8601 timestamp' and exits 1. Lane Q-r2a fix-impl-3 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-new-1 + cr-new-2 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-05-29T09:15:00Z"
     }
   ]
 }

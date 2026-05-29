@@ -1,0 +1,15 @@
+{
+  "from": "impl",
+  "kind": "blocker",
+  "timestamp": "2026-05-29T01:14:34Z",
+  "question": "Edit C.3 old_string in brief §2.4 does not exist in the plan file. Advisor must provide correct old_string for the cr-6 mitigation-text update (line ~672). Should advisor (a) provide correct old_string for the existing edge-case timestamp row at line 672, or (b) confirm cr-6 is already satisfied by Edit A alone?",
+  "options": [
+    "option-a: brief old_string was wrong; correct old_string is the `dq-lint-durations.sh regex misses...` row at line 672 — advisor provides updated old/new pair for a follow-up edit",
+    "option-b: cr-6 is already satisfied by Edit A (ValueError handler now makes the mitigation text accurate as-is); no plan edit needed for cr-6"
+  ],
+  "context": "Brief §2.4 Edit C.3 old_string: '| Negative-duration lint fires on a legitimately-resolved entry (false positive) | LOW | LOW | ...'. This text does NOT exist in v1-quality-r2a.plan.md. rg returns 0 results for 'Negative-duration lint'. The risks table at line 672 has: '| dq-lint-durations.sh regex misses an edge-case timestamp format | LOW | MED | Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison |'. Brief instructions: if text does not match, raise blocker DQ — do NOT improvise. The other 4 edits (A, B, C.1, C.2) applied successfully; all worker self-tests exit 0.",
+  "answer": null,
+  "answered_by": null,
+  "approved_by": null,
+  "resolved_at": null
+}
