@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T18:30:00Z",
+  "last_updated_at": "2026-05-29T19:10:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -444,7 +444,7 @@
           ]
         },
         "v1-quality-r2": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "Remaining 3 of 5 PR #155 carry-forwards NOT shipped in r2a: #156 (fixtures-module --test-threads=1 doc-comment audit, 13 of 14 modules), #159 (boot_context env-leak via early-? -> EnvVarGuard), #160 (14 LEMMY_DATABASE_URL setter sites across 13 fixtures modules -> EnvVarGuard). Original full-scope v1-quality-r2 plan (4-issue bundle) is on trunk as historical context; r2a narrowed it to 2 at gate-1.",
           "pr": null,
           "merge_commit": null,
@@ -454,7 +454,8 @@
             159,
             160
           ],
-          "note": "r2a (PR #161) shipped #157 + deferred #158 off this same bundle. The 3 EnvVarGuard/doc issues remain open and unstarted."
+          "note": "ACTIVE 2026-05-29 (Mode TBD at bm-cut). Scope = the 3 remaining PR#155 carry-forwards NOT shipped in r2a: #156 (fixtures --test-threads=1 doc audit, 14 modules), #159 (boot_context EnvVarGuard), #160 (LEMMY_DATABASE_URL setter sites EnvVarGuard). r2a (PR #161) shipped #157 + deferred #158 off the same original bundle (user gate-1 chose split r2a=T1+T2 / r2=T3+T4+T5). Plan .claude/PRPs/plans/v1-quality-r2.plan.md re-scoped in place to T0/T3/T4/T5/T6 (T1/T2 marked SHIPPED-in-r2a). No phase-v1-quality-r2 branch cut yet; bm-cut pending post-clarify.",
+          "activated_at": "2026-05-29"
         }
       },
       "known_followups": [
