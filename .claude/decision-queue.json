@@ -1,6 +1,24 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "v1-RT-r4 complexity score is 10 (>8 Sonnet split threshold): split into RT-r4a (db+DTO+strategy) / RT-r4b (handler+routes+e2e), or proceed as one plan?",
+      "options": [
+        "proceed-as-one",
+        "split-into-RT-r4a-RT-r4b"
+      ],
+      "context": "Mechanical section 5.1 score = 10 (RT-r3-calibrated): impl tasks above 5 = +2 (7 impl tasks: db-helpers, DTOs, strategy-arms, admin-handlers, routes, registry, e2e); crates touched = +5 (lemmy_db_schema, lemmy_api_common, lemmy_api_crud, lemmy_api, lemmy_api_routes); e2e edit = +3 (one e2e.rs file). Migrations 0, ADR-affecting 0 (conforms to ADR-008/ADR-015, no new OQ delta), cargo-budget 0 (Shape-G/laptop). Planner recommends PROCEED-AS-ONE: one cohesive feature (sponsor-gate strategy completion + allowlist admin surface) with a tight serial dependency chain (strategy/handler/routes/e2e all consume the db-helper + DTO base); splitting adds a phase boundary, a second bm-cut, a second retro, and a cross-phase brief-visibility sync for ~7 small tasks. Per-task ceilings all hold (<=4 files / <=2 crates each). RT-r3 shipped at 7; RT precedent ships single-feature plans at this size. Plan authored proceed-as-one per brief section 2 (one plan file) + section 4.1a (no planner-initiated split); this DQ surfaces the score for the gate-1 plan-approval decision.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9f9026a1d618-001"
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
