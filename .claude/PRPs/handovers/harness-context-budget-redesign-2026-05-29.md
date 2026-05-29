@@ -51,21 +51,71 @@ housekeeping (dead 1.3M surface), NOT a budget lever. The 50k target is hit via 
 exactly as planned. The user chose "B2+B3+MEMORY now; defer Pi decision" — so **the Pi-retire
 call is still open; do not delete `.pi/` without re-confirming.**
 
-### What REMAINS (do these in order)
+### STATUS: COMPLETE (2026-05-29 session 2). Floor reached. Nothing remains.
 
-- ~~**B2 — decision-queue.md**~~ **DONE** (`206d1740d`). Routing matrix relocated; frozen anchors kept. Net −625 tok (the historical sections were already pointer-stubbed by a prior trim, so the realizable B2 surface was much smaller than the report's ~3,900 estimate — do NOT chase the missing ~3,300; it was never there. Concurrency/Subagents-and-attribution were left resident: too small or load-bearing).
-- **B3 — multi-lane-worktree.md → refs/multi-lane-mechanics.md** (`~4,170 tok`, exists) — **NEXT, the biggest remaining win.** multi-lane has **0 Pi citations** (and 0 non-Pi heading citations on the relocatable sections) — least constrained file. Move: `§Lane modes / Mode A / Mode B`, `§Brief location and trunk→phase sync` (SSH recipe), `§Daemon side`, `§Migration plan`, `§Why this rule exists`, `§PMD is cross-lane shared` (overlaps pmd-invariants #1). **Keep resident:** `§Layout`, `§Hard refusals`, `§Lifecycle` (Claude-cited 3× — `auto-roadmap.md:40`, `roadmap-next.md:33`, lesson), `§Session-start ritual` (Claude-cited — `roadmap-next.md:81`). Method: append relocated sections to `refs/multi-lane-mechanics.md` with provenance note → shrink rule sections to stub+pointer → run guard.
-- **MEMORY.md structural rewrite** (`~2-4k tok` + it's currently ~26,318 bytes = OVER the 24.4 KB budget). Move CLOSED-lane detail to topic files, keep one-line active pointers. This is a `memory-prune` structural pass. Bytes bind first. (Consider invoking the `memory-prune` skill — it's purpose-built for this.)
+All planned levers applied + the two follow-on levers (B5a stale-trim, B5b
+profile-scope) investigated and resolved. **Final always-load: ~62.2k tok
+(was 71.5k) — cut ~9.3k (13%).** This is at the defensible floor; no further
+structural lever exists for this dual-harness repo. Details below.
 
-### Running total (toward ≤50k Memory-files baseline; started at 71k)
+### ⚠️ DO NOT re-chase these (verified dead ends — proven, not assumed)
 
-| Step | Δ chars | ≈ Δ tok @2.4× | Status |
-|---|---:|---:|---|
-| B1 advisor-orchestrator | −14,203 | −5,900 | done `7b7a2ab98` |
-| B2 decision-queue | −1,503 | −625 | done `206d1740d` |
-| B3 multi-lane (planned) | ~−10,000 | ~−4,170 | **NEXT** |
-| MEMORY.md (planned) | ~−6,000 | ~−2,500 | pending |
-| **Cumulative if all land** | | **~−13,200** | → Memory files ≈ **57-58k** |
+1. **Profile-scoping (B5b) is STRUCTURALLY IMPOSSIBLE.** The predecessor report's
+   "~15-22k from making impl/BM sessions skip advisor-orchestrator.md etc." is a
+   MIRAGE. Verified against source this session:
+   - The ONLY rule-scoping primitive is `paths:`-on-Read (empirically confirmed,
+     `.claude/lessons/reference_claude_code_rules_loading.md:13`). It fires on a
+     file-Read. The three big files' load conditions are session-role (advisor)
+     and worktree-count (multi-lane) — neither is a file-Read. No glob means
+     "this is an advisor session."
+   - NO role-based rule-loading config exists (`settings.json`/`.local.json` =
+     permissions + hooks only). Subagents inherit the full corpus.
+   - `branch-manager.md` is Pi-pinned: `.pi/skills/branch-manager/SKILL.md:12`
+     tells Pi's BM agent the file is "already loaded… through project-rules
+     inheritance" and not to re-read it. Scoping it out silently strips Pi's BM
+     agent of all file-ownership/refusal discipline.
+   - **Conclusion: the only structural lever is refs-relocation (B1/B2/B3), now
+     exhausted.** Do not re-open profile-scoping.
+2. **The freeze map in `harness-redesign-session-profiles-2026-05-29.md` §2 is
+   STALE for multi-lane.** It said `§"Lane modes"` + `§"Brief location and
+   trunk→phase sync"` were relocatable (0 citations). They are NOT — B1 added
+   Claude-side citations to them (`refs/auto-phase.md:586,588`) THIS effort, so
+   they became frozen mid-stream. **The `verify-rule-anchors.sh` guard is the
+   ground truth, NOT the report.** Always run it before trusting any freeze call.
+
+### What was DONE (all on governance-v0)
+
+| Commit | Lever | Δ tok |
+|---|---|---:|
+| `7b7a2ab98` | B1 advisor-orchestrator → refs/auto-phase | −5,900 |
+| `206d1740d` | B2 decision-queue routing matrix → refs/dq-mechanics | −625 |
+| `d52fd5811` | B3 multi-lane rationale → refs + PMD-cross-lane compress | −823 |
+| (MEMORY.md, not repo-tracked) | MEMORY.md prune: Historical ledger collapse + 6 verbose entries shortened | −1,475 |
+| `22418bad6` | B5a decision-queue stale-trim (deprecated Shape-G kinds, two-entry-design, Phase-6-#37 rationale, refusal #7 compress) | −498 |
+
+MEMORY.md: 26,318 → 22,781 bytes (under the 24.4 KB hard budget; was truncating).
+
+### Running total (final)
+
+| Step | ≈ Δ tok @2.4× | Status |
+|---|---:|---|
+| B1 advisor-orchestrator | −5,900 | done `7b7a2ab98` |
+| B2 decision-queue routing | −625 | done `206d1740d` |
+| B3 multi-lane | −823 | done `d52fd5811` |
+| MEMORY.md prune | −1,475 | done (user-scope) |
+| B5a decision-queue stale-trim | −498 | done `22418bad6` |
+| **Cumulative** | **~−9,300** | **71.5k → ~62.2k (31% of 200K window)** |
+
+**Why not ≤50k:** B2 was already-trimmed (−625 not −3,900); B3 hit the frozen
+`Lane modes`/`Brief location` wall (−823 not −4,170); B5b (the big ~15-20k hope)
+is impossible. The ~62k floor = the Pi-frozen DQ contract (~8k) + resident-by-
+inheritance branch-manager (~5k) + gate/safety policy + ADR substrate. Going
+lower means breaking Pi or dropping four-role safety discipline. **The durable
+lever from here is growth-discipline** (new mechanism authored in refs/ from the
+start — the `rule-narrative-bloat-reminder.sh` hook + advisor-orchestrator §3.6
+already enforce it), NOT another relocation pass. v1 nears completion (5 lanes
+done / 3 partial); the orchestration apparatus retires when v1 closes, which is
+the only thing that meaningfully shrinks this corpus further.
 
 **Honest note on the target:** even with all of B1+B2+B3+MEMORY, the floor lands ~55-58k, not a hard 50k — B2 under-delivered (already-trimmed) and the irreducible Junior-pinned contract (~13k of decision-queue + the resident-by-inheritance branch-manager ~5k + the gate/safety policy) is the wall. To get UNDER 55k you'd need to either (a) accept it, (b) attack the floor files / MEMORY.md harder, or (c) revisit whether branch-manager.md's resident-by-inheritance assumption can be converted to an explicit Read in `agents/branch-manager.md` (would free ~5k but needs testing the foreground BM still works). **Validate the actual number via `/context` in the new session before deciding if further cutting is worth it.**
 
@@ -77,21 +127,27 @@ call is still open; do not delete `.pi/` without re-confirming.**
 4. After each rule file's edits: run `bash scripts/brehon/verify-rule-anchors.sh --list`. **The baseline has exactly 3 known-benign dangles** (compound-name/phrase artifacts, NOT real breaks): `decision-queue.md §"Attribution integrity §Detection"`, `decision-queue.md §"Recipe 2 self-resolved"`, `multi-lane-worktree.md §"multiple active files"`. **Any NEW dangle = you broke a citation; fix before committing.**
 5. Commit each B-step separately with measured char/token delta in the commit body.
 
-### VALIDATION (user's instruction — do this in the new session)
+### VALIDATION (optional — the chars→tok math below is already done)
 
-After B2+B3+MEMORY land, **validate the cut against the baseline via `/context`**:
-- **Baseline (this session start):** Memory files = **71k tokens (7.1% of 1M / ~35% of 200K effective)**. The 16 always-load entries are listed in the redesign report §0.
-- **Target after all moves:** Memory files ≈ **50–54k tokens**. Run `/context` in the NEW session (fresh load picks up the relocations) and compare the "Memory files" line. Note: `/context` itself inflates "Messages" — read the **Memory files** bucket specifically, not total.
-- Expected per-file: advisor-orchestrator ~13k (was 19.8k), decision-queue ~8k (was 12.3k), multi-lane ~3k (was 7.3k), MEMORY.md ~7-8k (was 11.4k).
+The post-session number was computed directly from char counts at 2.4 chars→tok
+(the verified live ratio): **~62.2k always-load** (rules 118,981 ch ≈ 49.6k +
+CLAUDE.md 7,467 ch ≈ 3.1k + MEMORY.md 22,781 ch ≈ 9.5k). If you want the
+harness's own figure, run `/context` in a FRESH session and read the **Memory
+files** bucket (not total — `/context` inflates "Messages"). Expect ~62k, NOT
+the report's stale ~50-54k target (that assumed B5b profile-scoping, which is
+impossible — see "DO NOT re-chase" above).
+- Per-file now: advisor-orchestrator ~13.8k (was 19.8k), decision-queue ~11k
+  (was 12.3k), multi-lane ~6.5k (was 7.3k), MEMORY.md ~9.5k (was 11.4k).
 
-### Tasks (TaskList state at handover)
+### Tasks (final — all resolved)
 
-- #1 Read report + freeze map — **completed**
-- #2 B1 advisor-orchestrator — **completed**
-- #3 B2 decision-queue — **pending** (next)
-- #4 B3 multi-lane — pending
-- #5 MEMORY.md rewrite — pending
-- #6 Guard — **completed**
+- B1 advisor-orchestrator — **done** `7b7a2ab98`
+- B2 decision-queue routing — **done** `206d1740d`
+- B3 multi-lane — **done** `d52fd5811`
+- MEMORY.md prune — **done** (user-scope, not repo-tracked)
+- B5a decision-queue stale-trim — **done** `22418bad6`
+- B5b profile-scope — **closed NOT-VIABLE** (structurally impossible; verified)
+- Guard (`verify-rule-anchors.sh`) — **done** `bb0846683`
 
 ### Cross-session notes / hazards
 
