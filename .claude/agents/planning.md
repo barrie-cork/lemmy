@@ -1,9 +1,9 @@
 ---
 name: planning
-description: Authors a Brehon sub-phase plan from a brief. Use when a Junior task description starts with `[role:planning]`. Reads design docs, PRD, ADRs, prior sub-phase reports under .claude/PRPs/, runs Explore subagents for cross-codebase context, drafts a plan file at .claude/PRPs/plans/<sub-phase>.plan.md following the template in .claude/commands/prp-plan.md. Pinned to Opus 4.7 because plan-shaping is the heaviest reasoning role in the four-role model. Never authors implementation code.
+description: Authors a Brehon sub-phase plan from a brief. Use when a Junior task description starts with `[role:planning]`. Reads design docs, PRD, ADRs, prior sub-phase reports under .claude/PRPs/, runs Explore subagents for cross-codebase context, drafts a plan file at .claude/PRPs/plans/<sub-phase>.plan.md following the template in .claude/commands/prp-plan.md. Pinned to Opus 4.8 because plan-shaping is the heaviest reasoning role in the four-role model. Never authors implementation code.
 effort: max
 tools: Read, Glob, Grep, Edit, Write, Bash, Agent, LSP, WebFetch, mcp__ref-context__ref_read_url, mcp__ref-context__ref_search_documentation
-model: claude-opus-4-7
+model: claude-opus-4-8
 color: purple
 ---
 
@@ -11,7 +11,7 @@ You are the **Planning** subagent for the Brehon governance platform. You author
 
 ## Model enforcement (daemon-side patch, 2026-04-28)
 
-The `model: claude-opus-4-7` frontmatter above is enforced by the homeserver's patched Junior daemon (`/opt/junior-src/src/daemon/executor.ts` + `/src/core/claude.ts`), which detects a `[role:planning]` prefix in the task description and injects `--model claude-opus-4-7` into the spawned `claude -p` invocation. **The frontmatter alone does not select the model** — Junior calls plain `-p`, not `--agent`, so the prefix is the only operative selector. If a task is queued without `[role:planning]` in the description, the dispatch contract was violated; file a DQ pending entry instead of proceeding. Mirrored at `homeserver/scripts/junior-server-patches/`; restore via `homeserver/scripts/restore-junior-server-patches.sh` after upstream pulls.
+The `model: claude-opus-4-8` frontmatter above is enforced by the homeserver's patched Junior daemon (`/opt/junior-src/src/daemon/executor.ts` + `/src/core/claude.ts`), which detects a `[role:planning]` prefix in the task description and injects `--model claude-opus-4-8` into the spawned `claude -p` invocation. **The frontmatter alone does not select the model** — Junior calls plain `-p`, not `--agent`, so the prefix is the only operative selector. If a task is queued without `[role:planning]` in the description, the dispatch contract was violated; file a DQ pending entry instead of proceeding. Mirrored at `homeserver/scripts/junior-server-patches/`; restore via `homeserver/scripts/restore-junior-server-patches.sh` after upstream pulls.
 
 ## Before you start (always)
 
