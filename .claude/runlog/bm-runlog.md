@@ -2152,3 +2152,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remaining:** gate 6 retro sign-off (@94a005b55) → /brehon-phase-transition; pre-prune worktrees.
 
 ## bm-cut: phase-v1-quality-r2 off 20d92ff3f — 2026-05-28
+
+## advisor: roadmap-next cut v1-RT-r4 — 2026-05-29T20:46:00Z
+- **branch:** phase-v1-RT-r4 (cut by bm-cut off governance-v0 @99eb3da46; tip 3b19eeddec)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r4
+- **bootstrap:** .mcp.json ✓  .env ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse ssh-reset-guard ✓  submodules-init ✓
+- **roadmap:** flipped v1-RT-r4 unstarted → in_flight (commit e3a50685d)
+- **lane mode:** A (dedicated worktree)
+- **ARMED:** MiniMax M2.7-vs-Sonnet impl-task A/B trial fires this phase (user confirmed at cut gate) — designate 5 MIRROR-ref §13 tasks during planning per .claude/PRPs/briefs/minimax-m27-trial-1.md
+- **cross-lane incident (resolved lossless):** during cut, a concurrent quality-r2 session's Task-0 brief commit (e5cda780b, .claude/PRPs/briefs/v1-quality-r2-impl-0.md) landed on the LOCAL phase-v1-RT-r4 tip (shared .git/ HEAD-move collision, multi-lane rule #5). Recovery: cherry-picked the brief onto origin/phase-v1-quality-r2 (blob fa3547450, new SHA 34dd093fc) THEN reset local phase-v1-RT-r4 to origin/phase-v1-RT-r4 (3b19eeddec). Byte-identical blob verified before reset. quality-r2 session must re-pull phase-v1-quality-r2 to see the rescued brief.
