@@ -1,7 +1,9 @@
 # Handover — v1-RT-r4 CR triage (PR #164) — 2026-05-30
 
-**Lane:** Mode A, CWD `brehon-fork-rt-r4`, branch `phase-v1-RT-r4` @ `8abec2d1f`, 42 commits ahead of `governance-v0`.
-**Stage:** post-`bm-pr`, at **gate 3 (CR triage approval)** — awaiting user decision on fix path.
+> **UPDATE 2026-05-30 ~10:40Z (post fix-impl-1 + fix-impl-2 dispatch):** Gate 3 PASSED. fix-impl-1 #523 forked STALE base (`10ffbf4e4`); RECOVERED by cherry-picking ONLY code commit `ba709a53d` → tip `972e27ccf`. `cargo check --workspace --features full` = **CHECK_EXIT_0**. fix-impl-1 applied **cr-1 ✓, cr-4 ✓ (+bonus delete-count race guard), cr-5 ✓** but **SILENTLY DROPPED cr-2 (dup-guard) + cr-3 (scrub) + cr-7** (caught by advisor diff-vs-enumeration spot-check — grep confirmed 0 occurrences of sponsor_allowlist_exists/scrub in handler). governance.rs +4 = benign comment-only ADR-010 carve-out. RESPONSE: FF'd daemon local phase to `972e27ccf` then pushed fix-impl-2 brief → daemon FF'd to **`8de4f1a2c`** → dispatched **fix-impl-2 #524** (cr-2+cr-3+cr-7, 2 files, §2.0 HARD base-check). NEXT: poll #524 → cherry-pick its fix commit (NOT the DQ churn) → laptop check+clippy+e2e → resolve worker DQs on tip as advisor-laptop → push → re-poll CR (set addressed_in) → retro → merge gates. Do NOT merge worker DQ commits (stale-base 1207-line decision-queue.json churn).
+
+**Lane:** Mode A, CWD `brehon-fork-rt-r4`, branch `phase-v1-RT-r4` @ `9f3c2a1b8` (was 8abec2d1f).
+**Stage:** fix-impl-1 cherry-picked; validating on laptop; pre-push.
 **bm-pr task #522:** DONE → opened **PR #164** (base governance-v0, head phase-v1-RT-r4, OPEN, not draft).
 
 ## What's done this session
