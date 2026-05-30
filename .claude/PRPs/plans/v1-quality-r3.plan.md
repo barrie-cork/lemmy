@@ -1,17 +1,20 @@
-# Plan: v1-quality-r3 — EnvVarGuard C4 follow-on sweep + Issue #167 admin_audit_stream DB-URL-at-create fix
+# Plan: v1-quality-r3 — EnvVarGuard C4 follow-on sweep (e2e.rs only)
+
+> **Scope note (split-DQ 630fc36b795c-001, resolved by user 2026-05-30):** Original plan score was 9 (>8 threshold). User chose `split-r3-r3b`. This plan covers the e2e sweep only (T1+T2+retro, `crates/server/tests/e2e.rs`). Issue #167 (`LemmyContext::create` DB-URL capture, context.rs + admin_audit_stream.rs) moves to `v1-quality-r3b.plan.md`.
 
 ## 1. Summary
 
-This sub-phase closes the C4 follow-on env-leak surface deferred from v1-quality-r2 (§19) and fixes Issue #167. Two deliverables: (1) bring the 23 raw `unsafe { std::env::set_var(...) }` calls for `LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS` (12 sites) and `GOVERNANCE_LOG_SIGNING_KEY` (11 sites) in `crates/server/tests/e2e.rs` under the existing `EnvVarGuard` RAII discipline — wrapping test-body sites with scope-held guards and documenting the 2 fixture-`bootstrap()` sites as intentional process-scoped exceptions (option-b); (2) move the `admin_audit_stream` handler's database-URL read from request-time `SETTINGS.get_database_url()` (a lazy `LEMMY_DATABASE_URL` env re-read) to construction-time capture in `LemmyContext::create`, exposed via a `database_url()` accessor (Issue #167, Option A — zero callsite changes). Headline acceptance: `cargo check`/`cargo clippy --no-deps -- -D warnings` clean, the full e2e suite green (gate-4 mandatory for this env-var-management refactor class), and the §15 audit confirming zero unguarded test-body setter sites remain (the 2 bootstrap exceptions documented).
+This sub-phase closes the C4 follow-on env-leak surface deferred from v1-quality-r2 (§19). Deliverable: bring the 23 raw `unsafe { std::env::set_var(...) }` calls for `LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS` (12 sites) and `GOVERNANCE_LOG_SIGNING_KEY` (11 sites) in `crates/server/tests/e2e.rs` under the existing `EnvVarGuard` RAII discipline — wrapping test-body sites with scope-held guards and documenting the 2 fixture-`bootstrap()` sites as intentional process-scoped exceptions (option-b). Headline acceptance: `cargo check`/`cargo clippy --no-deps -- -D warnings` clean, the full e2e suite green (gate-4 mandatory for this env-var-management refactor class), and the §15 audit confirming zero unguarded test-body setter sites remain (the 2 bootstrap exceptions documented). Issue #167 deferred to v1-quality-r3b.
 
 ## 2. Source
 
 - `.claude/PRPs/plans/v1-quality-r2.plan.md` §12 + §19 @ `b3af1f4d6` — the **direct predecessor**. §12 deferred this exact C4 follow-on ("~28 additional `env::set_var` sites set `LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS` + `GOVERNANCE_LOG_SIGNING_KEY` without `EnvVarGuard`") to v1-quality-r3; §19 pre-seeded the planner-DQ. r2 Tasks 4/5 are the canonical MIRROR for the EnvVarGuard hoist + setter-wrap pattern this phase replicates.
 - Canonical sibling plans (per `feedback_read_canonical_before_writing_spec.md`): `.claude/PRPs/plans/v1-quality-r2.plan.md` (EnvVarGuard sweep shape, §15 DoD, §16a stories, T5 multiline-robust Python audit) + `.claude/PRPs/plans/v1-RT-r3.plan.md` (introduced `EnvVarGuard`).
 - `.claude/PRPs/briefs/v1-quality-r3-planning-1.md` — the authoring brief (scope, claimed line numbers, #167 fix shape, #158 exclusion).
-- Resolved clarify DQs (`from: advisor`, `answered_by: advisor`): `a3d0e9941441-039` (#167 = **Option A** internal SETTINGS read, zero callsite changes), `a3d0e9941441-040` (EnvVarGuard **already at test-crate root** e2e.rs:111/116/127 — do NOT re-hoist), `a3d0e9941441-041` (add `feedback_validate_pending_laptop_must_use_wrapper.md` to required reading).
+- Resolved clarify DQs (`from: advisor`, `answered_by: advisor`): `a3d0e9941441-040` (EnvVarGuard **already at test-crate root** e2e.rs:111/116/127 — do NOT re-hoist), `a3d0e9941441-041` (add `feedback_validate_pending_laptop_must_use_wrapper.md` to required reading). (`a3d0e9941441-039` re: #167 Option A now applies to v1-quality-r3b.)
+- **Split DQ:** `630fc36b795c-001` resolved by user 2026-05-30 → `split-r3-r3b`; #167 scope moves to `v1-quality-r3b.plan.md`.
 - Lessons that bind decisions:
-  - `feedback_envvarguard_fixture_lifetime_footgun.md` — the guard-drop-at-`bootstrap()`-return footgun; drives the option-a (test-body wrap, held to fn end) vs option-b (bootstrap site stays raw + SAFETY) split. The original v1-quality-r2 incident was `admin_audit_stream`'s lazy `get_database_url()` re-read — i.e. Issue #167 itself.
+  - `feedback_envvarguard_fixture_lifetime_footgun.md` — the guard-drop-at-`bootstrap()`-return footgun; drives the option-a (test-body wrap, held to fn end) vs option-b (bootstrap site stays raw + SAFETY) split.
   - `feedback_gate4_full_e2e_env_refactor_class.md` — gate-4 full e2e mandatory for env-var-management refactors (compile-only gates cannot catch RAII-lifetime / read-timing regressions).
   - `feedback_fix_impl_pre_locate_e2e_anchors.md` — pre-located verbatim `old_string`/`new_string` anchors mandatory for every e2e.rs Edit (the e2e-edit-hang mitigation).
   - `feedback_planner_enumerate_struct_callsites_for_addfield.md` — drove the §11 `LemmyContext { ... }` struct-literal enumeration for the #167 field-add.
@@ -26,7 +29,7 @@ This sub-phase closes the C4 follow-on env-leak surface deferred from v1-quality
 
    Same defect class as #159/#160 (closed in r2). The `boot_context()` site (e2e.rs:17474/17475) is **already** EnvVarGuard-wrapped (r2 Task 4) — do NOT re-wrap. Tied to **Task 1** (bootstrap exceptions) + **Task 2** (test-body wraps).
 
-2. **`admin_audit_stream` request-time DB-URL re-read (Issue #167).** `crates/api/api/src/governance/admin_audit_stream.rs:125` calls `context.settings().get_database_url()`, which (`crates/utils/src/settings/mod.rs:49-55`) lazily re-reads `LEMMY_DATABASE_URL` from the process env **at request time**. This re-read is exactly the v1-quality-r2 footgun incident: if an `EnvVarGuard` for `LEMMY_DATABASE_URL` has dropped before the request runs, the handler reads the wrong URL. The fix captures the URL **once at `LemmyContext::create` time** (the same SETTINGS read the pool build already makes) and exposes it via `database_url()`. Tied to **Task 3**.
+2. **Issue #167 — deferred to v1-quality-r3b.** The `admin_audit_stream` request-time `get_database_url()` re-read fix (`LemmyContext::create` DB-URL capture) moves to a separate sub-phase per split-DQ `630fc36b795c-001` (user decision 2026-05-30). See `v1-quality-r3b.plan.md`.
 
 ## 4. Solution statement
 
@@ -35,19 +38,17 @@ This sub-phase closes the C4 follow-on env-leak surface deferred from v1-quality
 - **Option-b (Task 1, 2 sites):** the two fixture `bootstrap()` functions — `governance_fixtures::bootstrap` (e2e.rs:827, sites 833/834) and `admin_config_fixtures::bootstrap` (e2e.rs:6138, sites 6146/6147) — have many callers and return `(ContainerAsync, Data<LemmyContext>, String)` (no guard-threading). Wrapping their INIT/GOV sites with a guard that drops at `bootstrap()` return would unset the env vars before the test body runs (the `feedback_envvarguard_fixture_lifetime_footgun.md` footgun). Because both env vars are **constant-valued** (`"1"` and a fixed signing seed) and the test harness runs single-threaded (`--test-threads=1`), leaving them process-scoped is benign. These sites **stay raw `set_var`** but gain a `// SAFETY:` justification comment documenting the intentional process-scoping.
 - **Option-a (Task 2, ~10 test-fn sites):** every other site sits in a `#[tokio::test]` body where a guard naturally outlives the operations that read the env var (the guard binds in the test fn and drops at fn exit). Replace each `unsafe { set_var(INIT); set_var(GOV); }` block with `let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1"); let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", <seed>);`.
 
-**Issue #167 fix (Task 3).** Add a `db_url: String` field to `LemmyContext`; capture `SETTINGS.get_database_url()` inside `LemmyContext::create` (the single struct-literal constructor at context.rs:31); expose `pub fn database_url(&self) -> &str`. Change `admin_audit_stream.rs:125` from `context.settings().get_database_url()` to `context.database_url()`. The read moves from request-time to construction-time — in the e2e fixtures, `LemmyContext::create` is always called while the `LEMMY_DATABASE_URL` `EnvVarGuard` (`_g_db_url`) is alive, so the captured URL is correct.
-
-The reader should predict §11 from this: e2e.rs (Tasks 1, 2), context.rs + admin_audit_stream.rs (Task 3).
+The reader should predict §11 from this: e2e.rs (Tasks 1, 2 only). Issue #167 fix → v1-quality-r3b.
 
 ## 5. Metadata
 
 - **Phase:** `v1-quality-r3`
 - **Branch:** `phase-v1-quality-r3` — bm-cut from `governance-v0` HEAD at task-execution time, post-clarify (clarify DQs already resolved).
 - **Target impl-task model:** `sonnet-4-6` (default)
-- **Estimated tasks:** 5 (Task 0 pre-flight + 3 impl tasks T1/T2/T3 + 1 retro)
+- **Estimated tasks:** 4 (Task 0 pre-flight + 2 impl tasks T1/T2 + 1 retro). Task 3 (#167) → v1-quality-r3b.
 - **Estimated cargo budget:** N/A (validate-pending-laptop; cargo runs on laptop, ~6 GB peak for `cargo test --workspace --features full`; Shape G SUSPENDED through 2026-06-01 per `project_shape_g_suspended_2026_05_16.md`).
 - **Forbidden-window applicability:** non-binding for impl-task dispatch under validate-pending-laptop (cargo runs on laptop, not EliteDesk).
-- **Complexity score:** **9/10** — over the Sonnet `>8` threshold → split-DQ filed (see §5.1 + §19). Recommendation in the DQ: **proceed-as-one** (the +6 is the e2e-edit factor over-weighting bounded, well-anchored mechanical edits per `feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md`; the brief explicitly scoped a single plan; each task is independently serial-gated). Advisor decides at gate-1.
+- **Complexity score:** **7/10** — post-split (split-DQ `630fc36b795c-001`, user chose `split-r3-r3b` 2026-05-30). e2e edits T1+T2 = +6; crates = +1 (lemmy_server only); total 7. Within Sonnet envelope; no further split DQ needed.
 
 ### 5.1 Complexity factor breakdown
 
@@ -57,13 +58,13 @@ Per `feedback_complexity_score_pre_split.md` + `plan.template.md` §5.1. Counts 
 |---|---|---|---|
 | §13 impl tasks above 5 | +1 each | **0** | 3 impl tasks (T1/T2/T3); excludes Task 0 + retro; 3 − 5 < 0 → 0. |
 | Migrations touched | +2 each | **0** | Zero `crates/db_schema/migrations/**` files (confirmed: glob returns none). |
-| Crates touched | +1 each | **+3** | `lemmy_server` (e2e.rs), `lemmy_api_utils` (context.rs), `lemmy_api` (admin_audit_stream.rs). |
+| Crates touched | +1 each | **+1** | `lemmy_server` (e2e.rs only). `lemmy_api_utils` + `lemmy_api` → v1-quality-r3b. |
 | `crates/server/tests/e2e.rs` edits | +3 each | **+6** | T1 + T2 each modify e2e.rs. 2 × +3 = +6. |
 | New ADR-affecting decisions | +2 each | **0** | Supersedes no `99-...md` entry. |
 | Cargo budget peak above 6 GB | +1 per GB | **0** | Validate-pending-laptop, ~6 GB peak (not above). |
-| **Total** | — | **9** | `> 8` Sonnet threshold → split-DQ fired (see §19). |
+| **Total** | — | **7** | Post-split (split-DQ `630fc36b795c-001`). T3 → v1-quality-r3b. |
 
-**Split-DQ filed (pending, `from: planner`, `kind: blocker`).** The natural split boundary is e2e-sweep (T1+T2, the +6 e2e factor) vs #167 (T3, production code in 2 separate crates). Recommendation: **proceed-as-one** — the score is dominated by the flat-+3-per-e2e-task factor, which `feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md` (promoted in r2 §19) flags as over-weighting mechanical anchored edits; each task is single-file / serial-gated and well within Sonnet's demonstrated envelope (r2 T5 ran 13 anchored e2e edits cleanly). Advisor/user decides at gate-1; do not self-resolve.
+**Split-DQ resolved (`630fc36b795c-001`, user 2026-05-30): `split-r3-r3b`.** T3 (#167 fix, 2 non-e2e crates) moves to `v1-quality-r3b.plan.md`. This plan's revised score is 7.
 
 ### 5.2 Per-task complexity ceiling
 
@@ -73,12 +74,13 @@ Target model is Sonnet, so the Sonnet ceiling applies (per template §5.2):
 - `count(distinct crates/<X>/ prefixes in union(creates, modifies)) ≤ 2` crates per task
 - `crates/server/tests/e2e.rs` bundling allowed (Sonnet only)
 
-Verified at §13 task YAML walk-time: T1 = 1 file (e2e.rs), 1 crate (lemmy_server). T2 = 1 file (e2e.rs), 1 crate. T3 = 2 files (context.rs + admin_audit_stream.rs), 2 crates (lemmy_api_utils + lemmy_api). T4 = 1 file (retro report), 0 crates. All within ceiling.
+Verified at §13 task YAML walk-time: T1 = 1 file (e2e.rs), 1 crate (lemmy_server). T2 = 1 file (e2e.rs), 1 crate. T3 (retro) = 1 file, 0 crates. All within ceiling. (Former T3 #167 → v1-quality-r3b.)
 
 ## 6. Relationship to other v1-quality-* sub-phases
 
 - **Predecessor (merged):** `v1-quality-r2` (PR #163, merged 2026-05-29; `b3af1f4d6` promotes its lessons). This phase executes the C4 follow-on r2 §12 explicitly deferred to r3.
 - **Predecessor (merged):** `v1-quality-r1` (PR #145). No overlap.
+- **Immediate successor:** `v1-quality-r3b` — Issue #167 `LemmyContext::create` DB-URL capture (split from this plan; begins after v1-quality-r3 merges).
 - **Successor (possible):** `v1-quality-r4` — only if a 3rd `emit_reputation_event` consumer materialises (Issue #158, see §12) or a new env-leak class is filed.
 - **Concurrent lanes:** confirm at bm-cut time via `git worktree list`; this lane's only file overlap risk is e2e.rs — Task 0 Probe N checks open PRs touching e2e.rs.
 
@@ -87,7 +89,7 @@ Verified at §13 task YAML walk-time: T1 = 1 file (e2e.rs), 1 crate (lemmy_serve
 - **R1** (per `feedback_clippy_test_style.md`): every i32 ↔ i64 comparison uses `i64::from(...)`, never `as` cast. No new arithmetic in this plan; applies only if a guard binding introduces one (it does not).
 - **R5** (per JM-b retro): Task 0 enumerates ALL probes explicitly (Docker preflight + 4 wrapper probes per `.claude/rules/pre-phase-harness-audit.md` + clippy baseline capture + brief re-enumeration counts).
 - **R6** (per JM-b retro): all `cargo clippy` invocations use `--no-deps --features full -- -D warnings`. Verified in §15.
-- **R7** (per JM-b retro): per task that touches a struct or signature, `cargo test --no-run -p lemmy_server --test e2e --features full` runs as a per-task gate. T3's `LemmyContext` field-add qualifies → R7 applies to T3.
+- **R7** (per JM-b retro): per task that touches a struct or signature, `cargo test --no-run -p lemmy_server --test e2e --features full` runs as a per-task gate. No struct/signature changes in r3 (e2e-only sweep) → R7 not applicable to T1/T2. (T3 #167 → v1-quality-r3b where R7 does apply.)
 - **R8** (per `feedback_features_full_p_crate_incompatible.md`): never combine `-p <crate>` with `--features full` except where the crate defines a `full` feature.
 - **R9** (per `feedback_validate_pending_laptop_must_use_wrapper.md` + `feedback_windows_e2e_requires_bat_wrapper.md`): every cargo gate invokes the `scripts/brehon/cargo-*.bat` (Windows) / `.sh` (Linux) wrapper.
 - **R10** (per `cargo-output-capture.md` + `no-cargo-output-paste.md`): all cargo invocations redirect to `.claude/PRPs/debug/<phase>-<task>-<verb>.log` with `> log 2>&1`; exit-code preservation via `$?`; never piped through `tail`/`head`/`grep`.
@@ -106,22 +108,20 @@ Task 1 (option-b: SAFETY-comment the 2 bootstrap footgun sites — keep raw set_
 Task 2 (option-a: wrap ~10 test-body INIT/GOV sites with EnvVarGuard, held to fn end)
   │  modifies crates/server/tests/e2e.rs (10 test fns; multi-line GOV sites 4116/4461/4790/5677/5878)
   ▼
-Task 3 [P] (Issue #167: db_url field + create()-time capture + database_url() accessor; admin_audit_stream callsite)
-  │  modifies crates/api/api_utils/src/context.rs + crates/api/api/src/governance/admin_audit_stream.rs
-  │  ([P] = file-disjoint from T1/T2; in practice no parallel peer — T1/T2 are a serial e2e chain — so dispatched alone)
-  ▼
 [phase-tip] gate-4 full e2e (R12 mandatory) — validate-pending-laptop-e2e
   │
   ▼
-Task 4 (Retro)
+Task 3 (Retro)
   │  creates .claude/PRPs/reports/v1-quality-r3-retro.md
   ▼
 bm-pr / bm-poll-cr / bm-triage / bm-merge (BM session)
+  ▼
+[v1-quality-r3b: Issue #167 fix — begins post-merge]
 ```
 
 **RAII lifetime note (T2):** `EnvVarGuard` stores `(key, prev_value)` and restores on `Drop`. Every `let _g_init = EnvVarGuard::set(...);` binding MUST live in the same scope as (and outlive) the `LemmyContext::create` / first-SETTINGS-access call that reads the env var. The `_g_*` binding (NOT `_`) is load-bearing — `let _ = EnvVarGuard::set(...)` drops the guard immediately. In a test body the guard drops at fn exit, which is correct. The 2 bootstrap sites (T1) are NOT wrapped precisely because a guard there would drop at `bootstrap()` return, before the test body runs.
 
-**#167 read-timing note (T3):** moving the DB-URL read to `create()` time is safe in the e2e fixtures because `LemmyContext::create` is always called *after* `let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);` and *while* that guard is alive (e.g. bootstrap @827: `_g_db_url` at line 839, `create` at line 854). Production `server/src/lib.rs:210` reads from the real env/config, unaffected.
+**#167 read-timing note:** moved to v1-quality-r3b §8.
 
 ## 9. Mandatory reading
 
@@ -129,8 +129,6 @@ For the impl-task subagent before its first Edit:
 
 **Schema/type definitions:**
 - `crates/server/tests/e2e.rs:111-141` — `EnvVarGuard` struct + `impl EnvVarGuard` + `impl Drop`. Already at test-crate root (clarify DQ 040). Do NOT re-hoist. Canonical RAII reference.
-- `crates/api/api_utils/src/context.rs:13-53` — `LemmyContext` struct (fields), `create()` (the single struct-literal constructor at :31), and the `settings()`/accessor pattern T3 mirrors.
-- `crates/utils/src/settings/mod.rs:49-55` — `get_database_url()`; the lazy `LEMMY_DATABASE_URL` env re-read #167 moves to create-time.
 
 **Existing patterns (MIRROR refs):**
 - `crates/server/tests/e2e.rs:17474-17475` — `guards.push(EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1"));` + GOV; the boot_context wrap (already done; do NOT touch). Canonical INIT/GOV guard shape.
@@ -140,7 +138,7 @@ For the impl-task subagent before its first Edit:
 **Adjacent fixtures:**
 - `crates/server/tests/e2e.rs:143` (`mod governance_fixtures`) + `:6110` (`mod admin_config_fixtures`) — the 2 bootstrap-owning modules (T1).
 
-**Lessons:** `feedback_envvarguard_fixture_lifetime_footgun.md` (gates T1/T2 split), `feedback_gate4_full_e2e_env_refactor_class.md` (gates the mandatory e2e gate), `feedback_fix_impl_pre_locate_e2e_anchors.md` (gates every e2e Edit), `feedback_planner_enumerate_struct_callsites_for_addfield.md` (gates T3 field-add), `feedback_validate_pending_laptop_must_use_wrapper.md` (gates §15 wrapper usage).
+**Lessons:** `feedback_envvarguard_fixture_lifetime_footgun.md` (gates T1/T2 split), `feedback_gate4_full_e2e_env_refactor_class.md` (gates the mandatory e2e gate), `feedback_fix_impl_pre_locate_e2e_anchors.md` (gates every e2e Edit), `feedback_validate_pending_laptop_must_use_wrapper.md` (gates §15 wrapper usage).
 
 ## 10. Patterns to mirror
 
@@ -223,79 +221,25 @@ The two `bootstrap()` sites keep their raw `unsafe { set_var(INIT); set_var(GOV)
 
 (`admin_config_fixtures::bootstrap` @6138 defines a local `const SIGNING_SEED_HEX` immediately above its `unsafe {`; keep that const.)
 
-### 10.4 LemmyContext db_url field + accessor (#167 — canonical: context.rs:13-53)
+### 10.4 / 10.5 — moved to v1-quality-r3b
 
-**Mirror:** `crates/api/api_utils/src/context.rs:13-53`
-
-```rust
-// struct (add field):
-pub struct LemmyContext {
-  pool: ActualDbPool,
-  client: Arc<ClientWithMiddleware>,
-  pictrs_client: Arc<ClientWithMiddleware>,
-  secret: Arc<Secret>,
-  rate_limit_cell: RateLimit,
-  db_url: String,                         // NEW (#167): captured once at create() time
-}
-
-// create() (single struct-literal constructor at :31 — add capture + field):
-  pub fn create(
-    pool: ActualDbPool,
-    client: ClientWithMiddleware,
-    pictrs_client: ClientWithMiddleware,
-    secret: Secret,
-    rate_limit_cell: RateLimit,
-  ) -> LemmyContext {
-    LemmyContext {
-      pool,
-      client: Arc::new(client),
-      pictrs_client: Arc::new(pictrs_client),
-      secret: Arc::new(secret),
-      rate_limit_cell,
-      db_url: SETTINGS.get_database_url(),   // NEW: same SETTINGS read the pool build makes
-    }
-  }
-
-// accessor (add next to settings()):
-  pub fn database_url(&self) -> &str {
-    &self.db_url
-  }
-```
-
-`SETTINGS` is already imported (context.rs:7). `create()` signature is **unchanged** (no new parameter) → zero callsite changes (Option A, clarify DQ 039). The single `LemmyContext { ... }` struct-literal is at context.rs:31 — no other construction sites exist in `crates/` (verified §11).
-
-### 10.5 admin_audit_stream callsite (#167 — canonical: admin_audit_stream.rs:125)
-
-**Mirror:** `crates/api/api/src/governance/admin_audit_stream.rs:125`
-
-**Before:** `let db_url = context.settings().get_database_url();`
-**After:** `let db_url = context.database_url();`
-
-The downstream `tokio_postgres::connect(&db_url, NoTls)` takes `&str`; `context.database_url()` returns `&str`, so `&db_url` becomes `db_url` (or keep `let db_url = context.database_url();` and pass `db_url`). Confirm the binding type at impl time — the connect call must receive `&str`.
+Issue #167 patterns (`LemmyContext::create` field-add + `admin_audit_stream.rs` callsite) are in `v1-quality-r3b.plan.md` §10.
 
 ## 11. Files to change
 
 Grouped by crate. Each path verified present in the workspace.
 
 - `crates/server/tests/e2e.rs` (crate `lemmy_server`) — option-b SAFETY comments on 2 bootstrap sites (Task 1) + option-a EnvVarGuard wraps of ~10 test-body INIT/GOV sites (Task 2). NO new tests; all-refactor. Single file, two non-overlapping edit shapes split across T1/T2 for correctness separation.
-- `crates/api/api_utils/src/context.rs` (crate `lemmy_api_utils`) — add `db_url: String` field + `SETTINGS.get_database_url()` capture in `create()` + `database_url()` accessor (Task 3).
-- `crates/api/api/src/governance/admin_audit_stream.rs` (crate `lemmy_api`) — change line 125 callsite to `context.database_url()` (Task 3).
-- `.claude/PRPs/reports/v1-quality-r3-retro.md` — retro (Task 4).
+- `.claude/PRPs/reports/v1-quality-r3-retro.md` — retro (Task 3).
 
-### Struct-field add: all callsites enumerated (mandatory)
-
-Per `feedback_planner_enumerate_struct_callsites_for_addfield.md`. Task 3 adds `db_url: String` to the public `LemmyContext` struct. `grep -rn 'LemmyContext {' crates/` at plan-authoring time returns exactly **one** struct-literal construction site:
-
-- `crates/api/api_utils/src/context.rs:31` — the literal inside `create()`. (The other grep hits are `pub struct LemmyContext {` :13, `impl LemmyContext {` :23, and the `-> LemmyContext {` return-type at :30 — none are construction sites.)
-
-There is **no** `LemmyContext { ... }` literal anywhere else in `crates/` — `create()` is the sole constructor. The 16 `LemmyContext::create(...)` *call* sites (14 in e2e.rs, `server/src/lib.rs:210`, `context.rs:79`) are unaffected because the signature is unchanged (Option A). Therefore the field-add requires editing only `context.rs` — no caller crate compiles-after dependency.
+(`crates/api/api_utils/src/context.rs` + `crates/api/api/src/governance/admin_audit_stream.rs` → v1-quality-r3b.)
 
 ## 12. NOT building in v1-quality-r3
 
 - **Issue #158 — `emit_reputation_event` helper extraction.** EXCLUDED as premature DRY. `grep -rn 'emit_reputation_event' crates/` evidence: a file-private `async fn emit_reputation_event` in `crates/api/api/src/governance/submit_jury_vote.rs:1096` (called 4× **within the same file**: 588/620/664/716) and a **separate** file-private `async fn emit_reputation_event_local` in `crates/api/api/src/governance/admin_emergency_remove.rs:448` (called once at :418). That is **2 implementations across 2 files (with one internal caller cluster), not 3+ independent consumers** of a shared helper — extracting a shared crate-level helper now would be speculative abstraction. Defer until a genuine 3rd consumer materialises. (r2 §12 already filed the `kind: "log"` deferral DQ for #158; this plan does not re-file it.)
 - **Re-hoisting / re-wrapping `boot_context()` (e2e.rs:17474/17475).** Already EnvVarGuard-wrapped in r2 Task 4. Out of scope; do NOT touch.
 - **`LEMMY_DATABASE_URL` setter sweep.** Already closed in r2 (Issue #160). The 2 bootstrap sites' `_g_db_url` guards are pre-existing and stay.
-- **New `create()` parameter for #167.** Rejected (Option B, clarify DQ 039) — adds an unused-parameter burden to 16 callsites for zero benefit.
+- **Issue #167 — deferred to v1-quality-r3b** (split-DQ `630fc36b795c-001`). Context.rs + admin_audit_stream.rs edits are out of scope for this plan.
 
 ---
 
@@ -339,9 +283,7 @@ grep -n "^mod governance_fixtures {" crates/server/tests/e2e.rs   # EXPECT: line
 echo "INIT raw set_var sites:"; grep -c 'std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS"' crates/server/tests/e2e.rs   # EXPECT: 13 (12 raw + 0... see note)
 echo "GOV via set_var (any form):"; python3 -c "import re; print(len(re.findall(r'std::env::set_var\(\s*\"GOVERNANCE_LOG_SIGNING_KEY\"', open('crates/server/tests/e2e.rs').read())))"   # EXPECT: 11
 
-# Probe 7 — #167 targets present
-grep -n "get_database_url" crates/api/api/src/governance/admin_audit_stream.rs   # EXPECT: line ~125
-grep -n "LemmyContext {" crates/api/api_utils/src/context.rs   # EXPECT: single literal at :31
+# Probe 7 — confirm no concurrent e2e.rs PR open (context for #167 targets → v1-quality-r3b pre-flight)
 
 # Probe 8 — clippy baseline on the e2e target (capture; must be clean before T1)
 cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-quality-r3-audit-clippy-baseline.log 2>&1"
@@ -466,51 +408,7 @@ tail -5 .claude/PRPs/debug/v1-quality-r3-task2-audit.log
 
 **Commit subject:** `refactor(e2e): wrap test-body LEMMY_INITIALIZE + GOVERNANCE_LOG setters with EnvVarGuard (task 2)`.
 
-### Task 3 [P]: Issue #167 — capture DB URL at LemmyContext::create, expose via accessor
-
-**ACTION:** add a `db_url: String` field to `LemmyContext`, populate it from `SETTINGS.get_database_url()` inside `create()`, expose `database_url(&self) -> &str`, and change `admin_audit_stream.rs:125` to read from `context.database_url()`.
-
-**FILES:**
-
-```yaml
-creates: []
-modifies:
-  - crates/api/api_utils/src/context.rs                        # add db_url field + create()-time capture + database_url() accessor
-  - crates/api/api/src/governance/admin_audit_stream.rs        # line 125: context.settings().get_database_url() -> context.database_url()
-requires: []
-```
-
-> **`[P]` note:** Task 3's `union(creates, modifies)` (context.rs + admin_audit_stream.rs) shares **zero** paths with T1/T2 (e2e.rs), so it is file-disjoint and marked `[P]`. In practice there is no parallel cohort peer — T1→T2 form a serial e2e chain and the retro depends on all — so the advisor dispatches Task 3 in its own slot. The `[P]` documents disjointness, not an executable cohort.
-
-**IMPLEMENT (file 1 of 2):** in `crates/api/api_utils/src/context.rs` — (a) add `db_url: String` to the `LemmyContext` struct (after `rate_limit_cell`); (b) add `db_url: SETTINGS.get_database_url(),` to the `LemmyContext { ... }` literal in `create()` (:31); (c) add `pub fn database_url(&self) -> &str { &self.db_url }` adjacent to `settings()`. Per §10.4. `SETTINGS` already imported (:7); signature unchanged.
-
-**IMPLEMENT (file 2 of 2):** in `crates/api/api/src/governance/admin_audit_stream.rs:125`, change `let db_url = context.settings().get_database_url();` → `let db_url = context.database_url();`. Per §10.5. Confirm the downstream `tokio_postgres::connect(...)` receives `&str` (adjust `&db_url` vs `db_url` so the type matches — `database_url()` already returns `&str`).
-
-**MIRROR:** §10.4 (context.rs field+accessor) + §10.5 (admin_audit_stream callsite).
-
-**GOTCHA:** R7 applies — this changes the `LemmyContext` struct shape, so `cargo test --no-run -p lemmy_server --test e2e --features full` must pass (all 16 `create()` callsites still compile because the signature is unchanged — Option A). The read now happens at `create()` time; in the e2e fixtures this is always while `_g_db_url` is alive (see §8 read-timing note), so no behavioural regression — but this is exactly why the gate-4 full e2e (R12) is mandatory.
-
-**VALIDATE (story-checkpoint feeds §16a Story 2):**
-
-```bash
-cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-quality-r3-task3-check.log 2>&1"
-echo "check exit: $?"
-cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-quality-r3-task3-clippy.log 2>&1"
-echo "clippy exit: $?"
-cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features full > .claude/PRPs/debug/v1-quality-r3-task3-test-norun.log 2>&1"
-echo "test-norun exit: $?"
-
-# Brief-Scope output check — #167 fix shape present, lazy re-read removed from the handler
-grep -n "pub fn database_url" crates/api/api_utils/src/context.rs            # EXPECT: 1 hit
-grep -n "db_url: SETTINGS.get_database_url()" crates/api/api_utils/src/context.rs   # EXPECT: 1 hit
-grep -n "context.database_url()" crates/api/api/src/governance/admin_audit_stream.rs   # EXPECT: 1 hit
-grep -n "context.settings().get_database_url()" crates/api/api/src/governance/admin_audit_stream.rs   # EXPECT: 0 hits
-# EXPECT: check/clippy/test-norun exit 0; first 3 greps 1 hit each; last grep 0 hits.
-```
-
-**Commit subject:** `fix(governance): read admin_audit_stream DB URL from LemmyContext, captured at create-time (closes #167, task 3)`.
-
-### Task 4: Retro
+### Task 3: Retro
 
 **FILES:**
 
@@ -519,13 +417,13 @@ creates:
   - .claude/PRPs/reports/v1-quality-r3-retro.md
 modifies: []
 requires:
-  - task: 3
+  - task: 2
     reason: "Retro authored after all impl tasks land + phase-tip e2e passes; signals collected from the live phase branch + PR feedback."
 ```
 
 **Goal:** author retro per `feedback_retro_not_report.md` + `feedback_four_role_retro_signals.md`. One H2 per role (Advisor / Planning / Impl / BM) with signals + lessons. Promote any new lessons to `.claude/lessons/feedback_*.md` in the same retro commit.
 
-**ACTION:** write `.claude/PRPs/reports/v1-quality-r3-retro.md`: header (phase, PR#, merge SHA, dates); §1 what surprised us (per-role); §2 what to change (per-role; high-confidence only); §3 what to carry forward; §4 per-task complexity score (`<files>/<commits>/<runtime-min>/<max-log-silence-min>` per task) per `feedback_retro_task_complexity_score.md`; §5 lessons promoted; §6 four-role retro signals table. Specifically capture: did the option-a/option-b split (T1 vs T2) prevent the footgun-confusion it was designed to prevent? did the score-9 split-DQ resolve proceed-as-one, and was that the right call (feeds the e2e-edit-factor-over-weight lesson)?
+**ACTION:** write `.claude/PRPs/reports/v1-quality-r3-retro.md`: header (phase, PR#, merge SHA, dates); §1 what surprised us (per-role); §2 what to change (per-role; high-confidence only); §3 what to carry forward; §4 per-task complexity score (`<files>/<commits>/<runtime-min>/<max-log-silence-min>` per task) per `feedback_retro_task_complexity_score.md`; §5 lessons promoted; §6 four-role retro signals table. Specifically capture: did the option-a/option-b split (T1 vs T2) prevent the footgun-confusion it was designed to prevent? Was the score-9 `split-r3-r3b` user decision the right call vs proceed-as-one? (feeds the e2e-edit-factor-over-weight lesson).
 
 **MIRROR:** `.claude/PRPs/reports/v1-quality-r2-retro.md`.
 
@@ -547,10 +445,10 @@ grep -cE "^## (Advisor|Planning|Impl|BM)" .claude/PRPs/reports/v1-quality-r3-ret
 
 Layer-by-layer:
 
-- **Unit (compile-time):** `cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full"` — after T1, T2, T3.
-- **Lint:** `cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"` — after T1, T2, T3.
-- **Test target compile (R7):** `cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features full"` — after T3 (struct shape change).
-- **e2e execution (R12 — MANDATORY, phase-tip):** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"` — ONCE post-T3. ~26 min on laptop. Raised as `kind: "validate-pending-laptop-e2e"`. Required because this is an env-var-management refactor class (`feedback_gate4_full_e2e_env_refactor_class.md`) — compile-only gates cannot catch RAII-lifetime / read-timing regressions (T2 guard scoping + T3 read-timing).
+- **Unit (compile-time):** `cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full"` — after T1, T2.
+- **Lint:** `cmd //c "scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings"` — after T1, T2.
+- **Test target compile (R7):** N/A — no struct shape change in r3 (e2e.rs edits only). R7 applies to v1-quality-r3b (T3 `LemmyContext` field-add).
+- **e2e execution (R12 — MANDATORY, phase-tip):** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"` — ONCE post-T2. ~26 min on laptop. Raised as `kind: "validate-pending-laptop-e2e"`. Required because this is an env-var-management refactor class (`feedback_gate4_full_e2e_env_refactor_class.md`) — compile-only gates cannot catch RAII-lifetime regressions (T2 guard scoping).
 - **Migration round-trip:** N/A (no migrations).
 
 ## 15. Validation commands (DoD)
@@ -573,13 +471,9 @@ echo "exit: $?"
 # EXPECT: exit 0
 ```
 
-### 15.3 Test target compile (R7 — task3)
+### 15.3 Test target compile (R7) — N/A for r3
 
-```bash
-cmd //c "scripts\\brehon\\cargo-test.bat --test e2e --no-run -p lemmy_server --features full > .claude/PRPs/debug/v1-quality-r3-task3-test-norun.log 2>&1"
-echo "exit: $?"
-# EXPECT: exit 0
-```
+No struct/signature change in this plan (e2e.rs edits only). R7 test-norun gate applies to v1-quality-r3b (LemmyContext field-add).
 
 ### 15.4 e2e execution (R12 mandatory — phase-tip)
 
@@ -594,16 +488,15 @@ Raised as `kind: "validate-pending-laptop-e2e"` from T3's worker; advisor runs o
 - [ ] R1: no new `i32 ↔ i64` comparisons.
 - [ ] R5: Task 0 enumerates all probes (Probes 0–8, N).
 - [ ] R6: all clippy invocations use `--no-deps --features full -- -D warnings`.
-- [ ] R7: `cargo test --no-run` runs after T3 (struct shape change).
+- [ ] R7: N/A for r3 (no struct shape change; applies to v1-quality-r3b).
 - [ ] R8: never `-p <crate>` with `--features full` (the per-crate Probe 1/2 use `lemmy_db_schema`/`lemmy_utils` which the wrapper handles; workspace gates use `--workspace --features full`).
 - [ ] R9: every cargo gate invokes the `.bat`/`.sh` wrapper.
 - [ ] R10: every cargo invocation redirects to a `.claude/PRPs/debug/` file; exit via `$?`.
 - [ ] R11: every e2e.rs Edit in T1/T2 has pre-located verbatim anchors in the brief.
 - [ ] R12: full e2e executed once post-T3 and passed.
 - [ ] §15-audit (T2): exactly 2 INIT + 2 GOV raw setter sites remain (the 2 documented bootstrap exceptions), each SAFETY-commented; zero unguarded test-body sites.
-- [ ] #167: `context.database_url()` accessor present; `admin_audit_stream.rs` no longer calls `context.settings().get_database_url()`.
-- [ ] No edits to files outside §11 (live edits: e2e.rs + context.rs + admin_audit_stream.rs + retro).
-- [ ] Issue **#167** has a closing PR reference at merge time; **#158** remains open (premature-DRY, §12).
+- [ ] No edits to files outside §11 (live edits: e2e.rs + retro only). context.rs + admin_audit_stream.rs → v1-quality-r3b.
+- [ ] Issue **#158** remains open (premature-DRY, §12). **#167** deferred to v1-quality-r3b.
 
 ### 15.6 DoD per workflow (Shape G)
 
@@ -613,10 +506,10 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
 
 ## 16. Acceptance criteria
 
-- [ ] All 3 impl tasks (T1, T2, T3) completed in dependency order (T1→T2→T3).
-- [ ] §15.1 (cargo check) exit 0 after T1, T2, T3.
-- [ ] §15.2 (cargo clippy `--no-deps -- -D warnings`) exit 0 after T1, T2, T3.
-- [ ] §15.3 (cargo test --no-run) exit 0 after T3.
+- [ ] All 2 impl tasks (T1, T2) completed in dependency order (T1→T2). T3 (#167) → v1-quality-r3b.
+- [ ] §15.1 (cargo check) exit 0 after T1, T2.
+- [ ] §15.2 (cargo clippy `--no-deps -- -D warnings`) exit 0 after T1, T2.
+- [ ] §15.3 (cargo test --no-run) N/A for r3.
 - [ ] §15.4 (full e2e, R12) exit 0 phase-tip — base test count, 0 fail.
 - [ ] §15.5 cross-cutting verification — all boxes ticked.
 - [ ] §16a stories — all stories `[done]`.
@@ -637,23 +530,16 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
   - `crates/server/tests/e2e.rs`: the §15.4 audit prints OK — exactly 2 INIT + 2 GOV raw `std::env::set_var` sites remain (the 2 bootstrap fns), each with a `// SAFETY:` comment; zero unguarded test-body sites.
   - `crates/server/tests/e2e.rs`: `governance_fixtures::bootstrap` (@~827) and `admin_config_fixtures::bootstrap` (@~6138) each carry the §10.3 process-scoping SAFETY justification.
 
-### Story 2: admin_audit_stream reads the DB URL captured at LemmyContext::create, not a request-time env re-read (Issue #167 fixed)
-
-- **Composing tasks:** Task 3 (barrier — not in a cohort with T1/T2).
-- **Checkpoint command:** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full"` (the same phase-tip run also exercises the admin_audit_stream path).
-- **Expected output:** admin-audit-stream e2e test(s) pass; full suite 0 failed.
-- **Brief-Scope outputs to verify:**
-  - `crates/api/api_utils/src/context.rs` contains `db_url: String` field, `db_url: SETTINGS.get_database_url()` in `create()`, and `pub fn database_url(&self) -> &str`.
-  - `crates/api/api/src/governance/admin_audit_stream.rs` calls `context.database_url()` and contains zero `context.settings().get_database_url()` calls.
-
 > **Verification mapping:** `/brehon-verify` iterates this section, runs each Story's checkpoint against the worktree branch, and confirms each Brief-Scope output exists + matches its structural pattern. Phantoms trigger the catch-fire procedure.
+
+> **Story 2 (Issue #167):** moved to v1-quality-r3b §16a.
 
 ---
 
 ## 17. Completion checklist
 
 - [ ] Task 0 audit complete (all probes confirmed).
-- [ ] Task 1..3 committed; retro (Task 4) committed.
+- [ ] Task 1..2 committed; retro (Task 3) committed.
 - [ ] §15 validation green at every gate (incl. mandatory full e2e, R12).
 - [ ] §16a stories all `[done]`.
 - [ ] PR opened by BM session against `governance-v0` with `--repo barrie-cork/lemmy`.
@@ -670,24 +556,23 @@ NOT APPLICABLE. Shape G SUSPENDED through 2026-06-01. All cargo gates run via va
 | A test-body site is wrapped with a guard that drops before `LemmyContext::create`/SETTINGS-access reads the var | LOW | HIGH | §10.2 binds `_g_init`/`_g_gov` in the test fn body (drops at fn exit, after all reads). R12 full e2e catches any mis-scoped guard (read-timing regression). |
 | A bootstrap site is mistakenly wrapped (T1/T2 confusion) → guard drops at `bootstrap()` return, unsetting var before test body | MED | HIGH | T1 and T2 are **separate tasks** with separate briefs; T1's GOTCHA + §10.3 explicitly forbid wrapping. The §15.4 audit asserts exactly 2 bootstrap raw sites remain (mis-wrapping one drops the count to <2 → audit FAIL). |
 | Multi-line GOV setter sites (4116/4461/4790/5677/5878) missed by a line-based grep | MED | MED | §15.4 audit uses `\s*` after `set_var(` to match multi-line forms; Probe 6 uses the same regex. The line-based brief grep is explicitly NOT the audit. |
-| #167 read-timing change regresses a non-fixture caller (`server/src/lib.rs:210`) | LOW | MED | Production caller reads from real env/config at startup (unchanged semantics); only the *handler* re-read is removed. R12 full e2e + R7 test-norun cover the e2e path. |
 | e2e.rs Edit-hang on the ~17.6k-line file (worker stalls mid-edit) | MED | MED | R11: every Edit has pre-located verbatim anchors (the canonical hang mitigation); T2's ~10 edits are bounded (r2 T5 ran 13 anchored edits cleanly). |
-| Complexity score 9 > 8 → unnecessary split churn | LOW | LOW | §5.1 split-DQ recommends proceed-as-one with rationale (e2e-edit-factor over-weight); advisor decides at gate-1. |
+| Complexity split churn (r3 → r3b boundary) | LOW | LOW | Split-DQ resolved by user; r3b begins post-merge. The boundary is clean (zero file overlap). |
 
 ---
 
 ## 19. Notes
 
-- **Split-DQ (pending, `from: planner`, `kind: blocker`):** complexity score **9** exceeds the Sonnet `>8` threshold. Filed asking the advisor to choose split (boundary: r3 = e2e sweep T1+T2; r3b = #167 T3) vs proceed-as-one. **Planner recommendation: proceed-as-one** — the +6 is the flat-`+3`-per-e2e-task factor that `feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md` (promoted in r2 §19) flags as over-weighting bounded, well-anchored mechanical edits; the brief explicitly scoped a single plan; each task is single-file (T1/T2) or 2-file/2-crate (T3) and serial-gated. Do NOT self-resolve — advisor/user decides at gate-1.
+- **Split-DQ resolved (`630fc36b795c-001`, user 2026-05-30):** user chose `split-r3-r3b`. This plan (r3) covers e2e sweep only (T1+T2+retro). `v1-quality-r3b.plan.md` covers Issue #167 (T3, context.rs + admin_audit_stream.rs). Planner had recommended proceed-as-one; the split decision is now load-bearing — include it in the retro §2 signals (did the split add unnecessary churn or was it warranted?).
 - **`kind: "log"` pre-seed (resolved, `answered_by: planner`):** the option-b decision for the 2 bootstrap sites (keep raw `set_var` + SAFETY rather than wrap) is recorded as a planner log so the impl agent and a future env-leak phase know it was deliberate, not an oversight. Rationale: constant-valued vars + many-caller `bootstrap()` + `--test-threads=1` → benign process-scoping; wrapping would re-introduce the fixture-lifetime footgun.
 - **GOVERNANCE_LOG_SIGNING_KEY count clarification:** the brief's claimed 11 GOV sites are correct, but **5 are multi-line** `set_var(` calls (name on its own line, literal hex value): 4116, 4461, 4790, 5677, 5878. A naive single-line `grep "set_var" | grep -v EnvVarGuard` (as the brief's draft DoD suggested) MISSES these 5. This plan's §15.4 audit + Task 0 Probe 6 use a `\s*`-tolerant regex instead. Flagged so the impl brief uses the robust audit.
 - **EnvVarGuard already at root:** confirmed via clarify DQ 040 + Probe 5 (struct @111, before first mod @143). No hoist task (unlike r2 Task 4).
-- **#167 is the r2 footgun incident itself:** `feedback_envvarguard_fixture_lifetime_footgun.md` records that the original v1-quality-r2 trigger was `admin_audit_stream`'s lazy `get_database_url()` re-read. This phase finally fixes the root cause (capture-at-create) rather than just guarding the setters.
+- **#167 root cause:** the `feedback_envvarguard_fixture_lifetime_footgun.md` lesson records that the original v1-quality-r2 trigger was `admin_audit_stream`'s lazy `get_database_url()` re-read. v1-quality-r3b fixes that root cause (capture-at-create); this plan closes the test-side leak surface (guarding the setters).
 
 ---
 
 ## 20. Confidence score
 
-- **Plan correctness:** 9/10 — all 23 sites + line numbers re-verified on the branch tip; #167 fix shape confirmed by clarify DQ + single-struct-literal enumeration. The −1 is residual uncertainty on exact per-module `use super::EnvVarGuard;` needs (resolved per-site at impl time).
+- **Plan correctness:** 9/10 — all 23 e2e.rs sites + line numbers re-verified on the branch tip. The −1 is residual uncertainty on exact per-module `use super::EnvVarGuard;` needs (resolved per-site at impl time). #167 scope moves to v1-quality-r3b.
 - **Cargo budget:** 9/10 — validate-pending-laptop, ~6 GB peak; no migration round-trips.
 - **Test coverage:** 9/10 — R12 mandatory full e2e is the right gate for this refactor class; the §15.4 audit mechanically proves the sweep completeness incl. the multi-line sites.
