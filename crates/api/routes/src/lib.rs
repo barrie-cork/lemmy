@@ -39,6 +39,7 @@ use lemmy_api::{
     admin_emergency_remove::flag_bad_faith_emergency_report,
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
+    admin_sponsor_allowlist,
     admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
     decline_jury_assignment::decline_jury_assignment,
     get_case::get_case,
@@ -520,6 +521,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
               .service(
                 scope("/emergency-remove")
                   .route("/flag-bad-faith", post().to(flag_bad_faith_emergency_report)),
+              )
+              .service(
+                scope("/sponsor-allowlist")
+                  .route("/add", post().to(admin_sponsor_allowlist::add))
+                  .route("/remove", post().to(admin_sponsor_allowlist::remove)),
               ),
           ),
       ),
