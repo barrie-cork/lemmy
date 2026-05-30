@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "65b95cc574c8-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T22:48:42Z",
+      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 wrapped all test-body INIT/GOV sites (10 fns, Edits A-J); T1 documented 2 bootstrap exceptions. Phase tip at cca087156e2bf18b2032c2d1807bc9a0452e537e. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class).",
+      "branch": "junior/role-impl-task-v1-quality-r3-task-2-envvarguard-wrap-test-body-setter-sites-see-claude-prps-briefs-v1-quality-r3-im-532",
+      "phase_task": "2",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "planner",
