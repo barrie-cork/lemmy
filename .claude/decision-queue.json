@@ -4579,6 +4579,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "9b0beeacb0d4-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-30T00:55:00Z",
+      "question": "Shape G re-enabled 2026-05-30 (one day ahead of the 2026-06-01 plan) at user direction — record the action for the audit trail.",
+      "options": [
+        "re-enabled all three workflows + reverted suspension prose",
+        "n/a — log entry"
+      ],
+      "context": "User directed 'activate shape g if not already too late' on 2026-05-30. Verified all 3 workflows still disabled_manually, then re-enabled via gh api PUT: adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) — all now active. Reverted SHAPE-G-SUSPENDED prose from .claude/agents/impl-task.md + .claude/PRPs/templates/impl-task-brief.template.md (validate-pending workflow path restored as default for Shape-G plans; Pre-Shape-G validate-pending-laptop path retained). Could not read exact remaining Actions minutes (billing API needs 'user' OAuth scope); suspension baseline was ~2800/3000 at 2026-05-16. Risk accepted by user: a run before the monthly reset still draws from the prior allocation. DQ #229 (the original re-enable reminder) was already a resolved log entry, not a pending blocker — no pending entry needed resolving. Supersedes the active state in project_shape_g_suspended_2026_05_16 memory.",
+      "answer": "Shape G active as of 2026-05-30 00:55 UTC. Three workflows re-enabled; suspension prose reverted in two harness files. From this point impl-task workers on Shape-G plans write kind: 'validate-pending' + capture workflow_run_id again; ci-watcher polls. Next monitor: watch the first Shape-G workflow run for minutes consumption against the cap.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T00:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-038"
     }
   ]
 }

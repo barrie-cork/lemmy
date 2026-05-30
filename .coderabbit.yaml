@@ -45,6 +45,46 @@ reviews:
     - "!scripts/brehon/*.bat"
     - "!.woodpecker.yml"
 
+  # Global review focus. The Linux build (local Docker mirror of CI + the
+  # cargo-validate workflows) is the authority on COMPILATION; clippy is the
+  # authority on lints. CodeRabbit's value is the semantic layer those cannot
+  # see. These directives encode three documented CR-failure lessons so the
+  # reviewer spends its budget on real blindspots, not compile-adjacent noise.
+  instructions: |
+    You are a SEMANTIC reviewer, not a compiler. The Linux build already
+    proves this code compiles and the clippy gate proves it is lint-clean —
+    do NOT report type errors, trait-bound errors, missing-import, or syntax
+    issues as defects, and never state with confidence that code "will not
+    compile". If something looks type-wrong, frame it as a question, not a
+    blocking finding.
+
+    NEVER suggest a method substitution on a Diesel query-builder expression
+    unless you can cite the specific trait that makes the replacement valid.
+    Diesel's trait surface makes seemingly-equivalent swaps non-equivalent:
+    `.get(0)` → `.first()` BROKE `LimitDsl` in a past PR (#132). Treat
+    `.first()`, `.get(0)`, iterator-adapter swaps, and `.into()` changes on
+    Diesel expressions as OFF-LIMITS unless trait-justified.
+
+    Spend your review budget on what compilation and clippy CANNOT catch:
+    - Swallowed/ignored errors: a `Result` mapped to `()`, `let _ =` on a
+      fallible call, `.ok()` that discards an error that should surface, an
+      `unwrap_or_default()` masking a real failure path.
+    - Missing transaction boundaries: a handler doing 2+ DB writes that must
+      be atomic but uses separate `context.pool()` calls instead of one
+      `conn.run_transaction(|conn| async move { ... }.boxed())`. Reference:
+      crates/api/api/src/community/ban.rs.
+    - JSONB byte-determinism: any Rust-side recomputation of a hash/digest of
+      a value Postgres produced. Postgres `jsonb::text` renders `{"n": 1}`
+      (spaces); serde_json compact renders `{"n":1}` (no spaces). Re-hashing
+      a Diesel-loaded value through serde_json will MISMATCH the trigger's
+      hash. Flag any such round-trip; the correct pattern reads PG's own
+      `payload::text` via raw `sql_query`.
+    - Semantic ADR violations per the path-specific instructions below.
+
+    Severity labels reflect SEMANTIC impact, not surface. A swallowed error in
+    a governance write is critical even if it is one line; a style nit is a nit
+    even if it spans many lines.
+
   # Tighter review on governance-owned code. Each block cites the ADR(s) it
   # is enforcing so the CodeRabbit summary traces back to the same source of
   # truth as `.github/ai-review-prompts/adr-rubric.md`.
@@ -59,6 +99,12 @@ reviews:
           that removes it or introduces non-exhaustive matches elsewhere.
         - No direct PII in governance_log payloads (ADR-015): usernames,
           emails, display names. Only actor_pseudonym.
+        - JSONB hash determinism: if any code recomputes a hash/digest of a
+          governance_log payload, it MUST read Postgres's own `payload::text`
+          rendering (raw sql_query), not re-serialise a Diesel-loaded value
+          through serde_json — the byte sequences differ (PG `{"n": 1}` vs
+          serde `{"n":1}`) and break the hash chain. Flag serde_json round-trips
+          in any hash/signature context.
 
     - path: "crates/db_views/governance_case/**"
       instructions: |
@@ -112,6 +158,16 @@ reviews:
           (ADR-010 — v2 scope).
         - Integration tests hit a real Postgres. Flag any test that mocks
           the DB.
+        - Atomicity: any handler with 2+ DB writes that must succeed-or-fail
+          together MUST wrap them in a single `conn.run_transaction(|conn|
+          async move { ... }.boxed())` — separate `context.pool()` calls per
+          insert do NOT share a transaction. submit_jury_vote (5+ writes) is
+          the canonical case. Auth/read-only checks go BEFORE the transaction.
+          Flag multi-write handlers that lack a shared transaction.
+        - Silent failures: flag any fallible governance call whose error is
+          discarded (`let _ =`, `.ok()`, `unwrap_or_default()` on a real
+          failure path). A governance write that can fail silently is a
+          critical finding regardless of line count.
 
     - path: "crates/api/api_crud/src/governance/**"
       instructions: |

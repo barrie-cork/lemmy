@@ -4,23 +4,13 @@ When multiple Brehon sub-phases (`phase-v1-*`) are concurrently active, each pha
 
 ## Why this rule exists
 
-Per `.claude/PRPs/reports/v1-RT-r1-halt-retro.md` (commit `ffa2876e3`) L4 + user
-decision 2026-05-11 (option a — worktree-per-lane). When two advisor sessions
-operate on the same on-disk checkout (e.g. `C:/Users/barri/Developer/brehon-fork`)
-and both write `.claude/decision-queue.json` on different phase branches, the
-shared file path produces:
-
-- Working-tree races (checkout of phase-A modifies the file; checkout of
-  phase-B sees stale state).
-- Merge conflicts on every phase-branch reconcile cycle (3 cycles in
-  v1-RT-r1 alone, ~4 hours wallclock overhead).
-- Cross-lane DQ id collisions (each session computes `next_id` against its
-  own working-tree view).
-- Reflog HEAD-move surprises across sessions sharing the same `.git/`.
-
-Per-worktree isolation removes the root cause: `.claude/decision-queue.json`
-becomes a per-worktree file path, and each phase branch has exactly one
-human-side writer.
+Two advisor sessions on the same on-disk checkout, both writing
+`.claude/decision-queue.json` on different phase branches, race the shared
+file path (working-tree races, reconcile merge conflicts, cross-lane DQ id
+collisions, reflog HEAD-move surprises). Per-worktree isolation makes the DQ
+a per-worktree file with exactly one human-side writer per phase branch. Full
+failure-mode narrative + v1-RT-r1 retro evidence: `.claude/refs/multi-lane-mechanics.md`
+§"Why this rule exists".
 
 ## Layout
 
@@ -283,50 +273,17 @@ Full post-v3 historical context: `.claude/refs/multi-lane-mechanics.md` §"Workt
 
 ## PMD is cross-lane shared, NOT per-lane isolated
 
-The decision-queue is deliberately **per-lane isolated** (each worktree
-owns its own `.claude/decision-queue.json` — see §"Layout" + §"Hard
-refusals" #2). The **project-memory DB (PMD) is the exact opposite**:
-lessons, retros, and patterns are **global knowledge** that every lane
-must read and write to a **single canonical store**.
-
-The canonical PMD is **`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`**
-(the canonical checkout's `.project-memory/`, never a per-worktree copy).
-
-### Hard invariant
-
-Every worktree's `.mcp.json` (gitignored — holds API keys) MUST set the
-`project-memory` server's `PROJECT_MEMORY_DB` to the **absolute canonical
-path above** — NEVER a relative `.project-memory/memory.db` (that
-resolves against the per-worktree `PROJECT_ROOT` and strands writes in a
-lane-local DB) and NEVER a `brehon-fork-<lane>/.project-memory/...` path.
-
-The tracked `.mcp.json.example` template encodes this with a
-`_comment_pmd_cross_lane` guard key. When bootstrapping a new lane
-worktree's `.mcp.json` from the template, the absolute canonical
-`PROJECT_MEMORY_DB` carries over verbatim — only `PROJECT_ROOT` changes
-per worktree.
-
-### Why this invariant is load-bearing
-
-The Stop hook `.claude/hooks/retro-check.sh` resolves the PMD via
-`git rev-parse --git-common-dir` → which from **any** worktree points at
-the **canonical** `brehon-fork/.git`, so the hook always reads
-`brehon-fork/.project-memory/memory.db`. If a lane's MCP writes retros
-to its own lane-local DB instead, the hook can never see them: the agent
-writes genuine retros and the hook false-blocks indefinitely (observed
-on v1-ship-1: ~27+ false Stop-hook blocks across the phase; all 21
-v1-ship-1 retros stranded in `brehon-fork-ship-1/.project-memory/memory.db`,
-invisible to the canonical-DB-reading hook). Pinning every lane's MCP to
-the canonical absolute path makes MCP-writes and hook-reads converge.
-
-The hook file is **NOT** the thing to fix here — its git-common-dir
-resolution is correct (it intentionally lands on the canonical shared
-DB). The defect class is always MCP-side: a relative or per-lane
-`PROJECT_MEMORY_DB`. Never edit the hook to "fix" a stranded-retro
-symptom; fix the offending lane's `.mcp.json`.
-
-See `.claude/lessons/feedback_pmd_cross_lane_canonical_db.md` for the
-full incident + the diagnosis recipe.
+The decision-queue is deliberately **per-lane isolated** (each worktree owns
+its own `.claude/decision-queue.json`); the **PMD is the exact opposite** —
+lessons/retros/patterns are global knowledge every lane reads + writes to one
+canonical store: **`C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`**
+(absolute, never relative, never per-lane). The full invariant — the
+`.mcp.json` `PROJECT_MEMORY_DB` rule, the retro-check.sh git-common-dir
+mechanism, the v1-ship-1 stranded-retro incident, and the "fix the MCP not the
+hook" rule — is the always-resident `.claude/rules/pmd-invariants.md` §1
+"Canonical PMD path"; the lesson is `feedback_pmd_cross_lane_canonical_db.md`.
+(This section is a pointer to avoid duplicating pmd-invariants.md #1, which is
+also always-loaded.)
 
 ## Daemon side (EliteDesk)
 
