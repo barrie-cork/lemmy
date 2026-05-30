@@ -22,6 +22,7 @@ pub mod admin_dashboard_html;
 pub mod admin_emergency_remove;
 pub mod admin_reputation_stats;
 pub mod admin_rule_sets;
+pub mod admin_sponsor_allowlist;
 pub mod admin_trigger_appeal_rejury;
 pub mod appeal_window_expiry;
 pub(crate) mod audit_projection;
