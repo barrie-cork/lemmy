@@ -8276,7 +8276,8 @@ async fn admin_audit_stream_forbidden_for_non_admin() -> lemmy_utils::error::Lem
   use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
   use lemmy_utils::error::LemmyErrorType;
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   let (_, user_view) =
     admin_config_fixtures::seed_user(&context, instance.id, "sse_nonadmin", false).await?;
@@ -8300,7 +8301,8 @@ async fn admin_audit_stream_enforces_per_admin_cap() -> lemmy_utils::error::Lemm
   use actix_web::http::StatusCode;
   use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   // Unique username avoids PersonId collision with other SSE tests in
   // the same process (module-static HashSet leaks across tests per plan
@@ -8371,7 +8373,8 @@ async fn admin_audit_stream_emits_frame_on_config_change() -> lemmy_utils::error
   use lemmy_api_common::governance::AdminSetConfig;
   use std::{future::poll_fn, pin::Pin, time::Duration as StdDuration};
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   // Unique username avoids PersonId collision with the other SSE tests
   // (the module-static cap HashSet persists across tests in the same
