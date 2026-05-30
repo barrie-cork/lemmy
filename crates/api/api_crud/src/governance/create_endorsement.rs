@@ -34,7 +34,7 @@
 
 use actix_web::web::{Data, Json};
 use chrono::{DateTime, Duration, Utc};
-use diesel::{ExpressionMethods, QueryDsl, dsl::count_star, insert_into};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, dsl::count_star, insert_into};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_api::governance::{
   actor_pseudonym_helper,
@@ -47,6 +47,7 @@ use lemmy_db_schema::source::{
   governance::{
     endorsement::{Endorsement, EndorsementInsertForm},
     reputation_event::ReputationEventInsertForm,
+    sponsor_allowlist::sponsor_allowlist_exists,
     surety::SuretyInsertForm,
   },
   person::Person,
@@ -54,7 +55,7 @@ use lemmy_db_schema::source::{
 use lemmy_db_schema_file::{
   PersonId,
   enums::ReputationDimension,
-  schema::{endorsement, person, reputation_event, surety},
+  schema::{endorsement, person, reputation_event, reputation_snapshot as rs_snapshot, surety},
 };
 use lemmy_db_views_local_user::LocalUserView;
 use lemmy_diesel_utils::{connection::get_conn, traits::Crud};
@@ -83,6 +84,9 @@ const MAX_ACTIVE_SURETIES_PER_SPONSEE: i64 = 2;
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum SponsorGateStrategy {
   Age,
+  AgeOrSurety,
+  Reputation,
+  Allowlist,
   Open,
   Closed,
   Unknown(String),
@@ -92,6 +96,9 @@ impl SponsorGateStrategy {
   fn parse(s: &str) -> Self {
     match s {
       "age" => Self::Age,
+      "age_or_surety" => Self::AgeOrSurety,
+      "reputation" => Self::Reputation,
+      "allowlist" => Self::Allowlist,
       "open" => Self::Open,
       "closed" => Self::Closed,
       other => Self::Unknown(other.to_string()),
@@ -102,6 +109,9 @@ impl SponsorGateStrategy {
   fn label(&self) -> &str {
     match self {
       Self::Age => "age",
+      Self::AgeOrSurety => "age_or_surety",
+      Self::Reputation => "reputation",
+      Self::Allowlist => "allowlist",
       Self::Open => "open",
       Self::Closed => "closed",
       Self::Unknown(s) => s.as_str(),
@@ -166,6 +176,53 @@ async fn process_endorsement(
     SponsorGateStrategy::Open => { /* bypass age gate */ }
     SponsorGateStrategy::Age => {
       enforce_age_gate(conn, &mut config, sponsor_id).await?;
+    }
+    SponsorGateStrategy::AgeOrSurety => {
+      // Pass if age gate clears OR the caller has at least one active surety
+      // (i.e. someone has vouched for them: sponsored_id = caller, revoked_at IS NULL).
+      if enforce_age_gate(conn, &mut config, sponsor_id).await.is_err() {
+        let surety_count: i64 = surety::table
+          .filter(surety::sponsored_id.eq(sponsor_id))
+          .filter(surety::revoked_at.is_null())
+          .select(count_star())
+          .get_result(conn)
+          .await?;
+        if surety_count == 0 {
+          return Err(LemmyErrorType::NotFound.into());
+        }
+      }
+    }
+    SponsorGateStrategy::Reputation => {
+      // Community-scoped when data.community_id.is_some(); instance-wide otherwise.
+      let can_sponsor: Option<bool> = match data.community_id {
+        Some(cid) => {
+          rs_snapshot::table
+            .filter(rs_snapshot::person_id.eq(sponsor_id))
+            .filter(rs_snapshot::community_id.eq(cid))
+            .select(rs_snapshot::can_sponsor)
+            .first::<bool>(conn)
+            .await
+            .optional()?
+        }
+        None => {
+          rs_snapshot::table
+            .filter(rs_snapshot::person_id.eq(sponsor_id))
+            .filter(rs_snapshot::community_id.is_null())
+            .select(rs_snapshot::can_sponsor)
+            .first::<bool>(conn)
+            .await
+            .optional()?
+        }
+      };
+      if !can_sponsor.unwrap_or(false) {
+        return Err(LemmyErrorType::NotFound.into());
+      }
+    }
+    SponsorGateStrategy::Allowlist => {
+      // Community row (community_id = Some(c)) or instance-wide (community_id IS NULL).
+      if !sponsor_allowlist_exists(sponsor_id, data.community_id, conn).await? {
+        return Err(LemmyErrorType::NotFound.into());
+      }
     }
     SponsorGateStrategy::Unknown(s) => {
       warn!("unknown sponsor_gate_strategy '{s}' — falling back to 'age'");
