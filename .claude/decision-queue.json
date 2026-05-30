@@ -4820,6 +4820,57 @@
       "approved_by": null,
       "approved_at": null,
       "id": "7b5cf201d6fa-001"
+    },
+    {
+      "id": "a3d0e9941441-039",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "Issue #167 fix shape: should LemmyContext::create call SETTINGS.get_database_url() internally (no new parameter) or require the caller to pass the URL as a new parameter?",
+      "options": [
+        "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally at construction — no callsite changes",
+        "option-b: add db_url: String parameter to LemmyContext::create — all 3 callsites (context.rs:79, server/lib.rs:210, e2e.rs:854+) pass the URL explicitly"
+      ],
+      "context": "build_db_pool() already reads SETTINGS.get_database_url_with_options() at construction time. LemmyContext::create receives only the pool (ActualDbPool), not the URL. Option-a is lower-risk: construction captures the URL from SETTINGS once, stores as String field, exposes via context.database_url(). Option-b ripples into all LemmyContext::create callsites. All callsites already have SETTINGS available at call time.",
+      "answer": "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally — captures the URL once at construction time (same read SETTINGS makes during pool build), stores as db_url: String field, exposes via pub fn database_url(&self) -> &str accessor. Zero callsite changes. Evidence: crates/diesel_utils/src/connection.rs:177-185 shows build_db_pool() reads SETTINGS.get_database_url_with_options() at pool-build time; the same SETTINGS reference is available inside LemmyContext::create. Option-b adds an unused parameter burden to 2+ non-e2e callsites (server/lib.rs:210, context.rs:79, and multiple e2e.rs sites). Source: crates/api/api_utils/src/context.rs:24-38 (create signature), crates/server/src/lib.rs:181+210 (caller), github issue #167 §Proposed fix option A.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-040",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "EnvVarGuard current location in e2e.rs: is it already at test-crate root (before any mod *_fixtures block), or still nested inside v1_rt_r3_fixtures?",
+      "options": [
+        "option-a: already at test-crate root (T4 of v1-quality-r2 hoisted it)",
+        "option-b: still inside v1_rt_r3_fixtures module"
+      ],
+      "context": "T4 of v1-quality-r2 was supposed to hoist EnvVarGuard from v1_rt_r3_fixtures to test-crate root. The brief says to verify before dispatching T3-equivalent.",
+      "answer": "option-a: EnvVarGuard is already at test-crate root. Grep confirms: struct EnvVarGuard at e2e.rs:111, impl EnvVarGuard at e2e.rs:116, impl Drop for EnvVarGuard at e2e.rs:127 — all before any mod *_fixtures block. The v1_rt_r3_fixtures module at e2e.rs:148 uses  (line 149), confirming it references the root-level struct, not a module-internal one. Do NOT re-hoist. Source: grep output e2e.rs lines 111-149.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-041",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "The planning brief §4 cites wrapper discipline for DoD but does not explicitly list feedback_validate_pending_laptop_must_use_wrapper.md in §3 Required reading. Should it be added?",
+      "options": [
+        "option-a: add to §3 Required reading — planner must cite it in §15 DoD cargo commands",
+        "option-b: omit — the wrapper discipline is covered by other §3 citations"
+      ],
+      "context": "The advisor-orchestrator §2.4 file-class table requires feedback_validate_pending_laptop_must_use_wrapper.md in briefs that include cargo-test commands in DoD. The planning brief needs this so the plan includes wrapper-prefixed cargo commands in §15.",
+      "answer": "option-a: add feedback_validate_pending_laptop_must_use_wrapper.md to brief §3 Required reading. Source: advisor-orchestrator.md §2.4 file-class table row for validate-pending-laptop; the brief will be edited to add this citation. The planner must include wrapper-prefixed commands in plan §15 DoD for Windows laptop execution.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
