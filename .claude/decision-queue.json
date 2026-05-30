@@ -1,6 +1,24 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "v1-quality-r3 complexity score is 9 (>8 Sonnet threshold). Split into r3 (e2e sweep T1+T2) + r3b (#167 T3), or proceed-as-one?",
+      "options": [
+        "proceed-as-one",
+        "split-r3-r3b"
+      ],
+      "context": "Score 9 = impl-tasks 0 + crates +3 (lemmy_server, lemmy_api_utils, lemmy_api) + e2e edits +6 (T1+T2). The +6 is the flat-+3-per-e2e-task factor that feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md (promoted in r2 §19) flags as over-weighting bounded, well-anchored mechanical edits. The brief explicitly scoped a single plan; each task is single-file (T1/T2) or 2-file/2-crate (T3) and serial-gated. Planner recommends proceed-as-one. Advisor/user decides at gate-1; do NOT self-resolve.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "630fc36b795c-001"
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
@@ -4871,6 +4889,23 @@
       "resolved_at": "2026-05-30T20:15:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Why are the 2 fixture bootstrap() set_var sites (e2e.rs:833/834 governance_fixtures, 6146/6147 admin_config_fixtures) kept as raw set_var + SAFETY comment (option-b) instead of EnvVarGuard-wrapped?",
+      "options": [
+        "option-b-raw-plus-safety",
+        "option-a-wrap"
+      ],
+      "context": "Wrapping a guard inside bootstrap() (which does not return it) drops the guard at function return, unsetting the env var before the test body runs (feedback_envvarguard_fixture_lifetime_footgun.md). For these 2 sites the vars are constant-valued, bootstrap() has many callers, and tests run --test-threads=1, so leaving them raw is benign process-scoping. Recorded as deliberate so impl and a future env-leak phase do not mistake it for an oversight.",
+      "answer": "option-b-raw-plus-safety. The 2 bootstrap sites stay raw with a SAFETY comment (Task 1); only test-body sites get EnvVarGuard wraps held to fn end (Task 2). Wrapping the bootstrap sites would re-introduce the fixture-lifetime footgun.",
+      "answered_by": "planner",
+      "resolved_at": "2026-05-30T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "630fc36b795c-002"
     }
   ]
 }
