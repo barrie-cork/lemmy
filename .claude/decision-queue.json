@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "77a6a1be5dc4-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T10:00:00Z",
-      "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 extended SponsorGateStrategy with AgeOrSurety/Reputation/Allowlist + dispatch arms in create_endorsement.rs. Local (EliteDesk) cargo check and clippy both exit 0. Validation uses --workspace per feedback_features_full_p_crate_incompatible (api_crud must use workspace scope).",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/validate-t3.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/validate-t3-clippy.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-3-strategy-enum-dispatch-in-create-endorsement-rs-see-claude-prps-briefs-rt-r4-impl-518",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4642,6 +4615,32 @@
       "answer": "pass — workspace check + clippy clean. T2 DTOs compile correctly.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-30T01:49:01Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "77a6a1be5dc4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T10:00:00Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 extended SponsorGateStrategy with AgeOrSurety/Reputation/Allowlist + dispatch arms in create_endorsement.rs. Local (EliteDesk) cargo check and clippy both exit 0. Validation uses --workspace per feedback_features_full_p_crate_incompatible (api_crud must use workspace scope).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/validate-t3.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/validate-t3-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-3-strategy-enum-dispatch-in-create-endorsement-rs-see-claude-prps-briefs-rt-r4-impl-518",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T3 strategy enum+dispatch compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T02:44:16Z",
       "approved_by": null,
       "approved_at": null
     }
