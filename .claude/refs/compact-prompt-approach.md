@@ -90,14 +90,30 @@ right and still under/over-preserve in practice. Only a real compaction tells yo
   Four fixes folded in: (1) explicit exclusion clause naming the auto-loaded corpus — the biggest
   lever, ~80% of available improvement; (2) de-laned priority 1; (3) committed-files-as-pointers;
   (4) verbatim-keep made explicit for user messages + next-action.
+- **2026-05-30 (second assessment, real v1-quality-r3 compaction — `/context` run before).** Both
+  tests PASS. **Priority test:** surfaced the active thread (v1-quality-r3, Mode B, in-flight),
+  the exact next-action ("poll #528, gate-1 on completion"), and user messages verbatim.
+  **Duplication test:** "correctly omitted the four-role model, DQ schema, branch conventions —
+  all auto-loaded" → the exclusion clause works; the ~300–500-token duplication from the prior
+  assessment is gone. **Partly answers open-question #1** (the exclusion clause DOES suppress the
+  auto-loaded-facts restatement; whether a literal "Technical Concepts" *header* still emits is
+  still unconfirmed — the assessment didn't mention one, weak evidence it's suppressed too).
+  **One gap, NOT a prompt defect:** the next-action "poll #528" went stale because #528 finished
+  *during* compaction — a fundamental point-in-time limit of any summary, unfixable by wording.
+  Fix landed: priority 2 now marks the next-action as a **hypothesis to re-verify on resume**
+  (re-check live TaskList/DQ/PR state before executing). This is a 2× recurrence with v1-RT-r2
+  (PMD #502: "Resumed from compacted context; task #430 was already in-flight") → promoted into
+  `feedback_thin_wakeup_prompts_verify_live_state.md` (compaction-resume is the same family as
+  ScheduleWakeup-resume: a resume-context written before the awaited work resolves).
 
 ## Open questions for future tuning
 
-- Does the exclusion clause actually suppress the default template's Technical-Concepts section,
-  or does the harness append the default skeleton regardless of custom-prompt instructions? The
-  2026-05-30 assessment hypothesised the custom text is *appended to*, not *replacing*, the
-  default skeleton — needs confirmation by inspecting whether a post-fix compaction still emits a
-  "Technical Concepts" header.
+- **(partly answered 2026-05-30)** Does the exclusion clause suppress the default template's
+  Technical-Concepts section? The second assessment confirms the auto-loaded *facts* (four-role
+  model, DQ schema, branch conventions) are no longer restated. STILL open: whether the harness
+  emits a literal "Technical Concepts" *header* regardless of custom-prompt instructions (i.e.
+  custom text appended-to vs replacing the default skeleton). Confirm by inspecting a future
+  compaction's section headers directly.
 - Is there a hard length ceiling the summary is compressed to? If so, suppressing duplication
   should free room for MORE active-thread detail — measure whether priority-1 fidelity improves
   after the exclusion clause lands.
