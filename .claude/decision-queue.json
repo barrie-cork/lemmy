@@ -1,6 +1,7 @@
 {
   "schema_version": 3,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "from": "planner",
       "kind": "blocker",
@@ -11,15 +12,13 @@
         "split-r3-r3b"
       ],
       "context": "Score 9 = impl-tasks 0 + crates +3 (lemmy_server, lemmy_api_utils, lemmy_api) + e2e edits +6 (T1+T2). The +6 is the flat-+3-per-e2e-task factor that feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md (promoted in r2 §19) flags as over-weighting bounded, well-anchored mechanical edits. The brief explicitly scoped a single plan; each task is single-file (T1/T2) or 2-file/2-crate (T3) and serial-gated. Planner recommends proceed-as-one. Advisor/user decides at gate-1; do NOT self-resolve.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "split-r3-r3b (per user 2026-05-30): r3 = e2e sweep (T1+T2, crates/server/tests/e2e.rs only); r3b = Issue #167 fix (T3, context.rs + admin_audit_stream.rs). Plan file must be revised to r3 scope only; a separate v1-quality-r3b.plan.md will cover T3.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-30T21:00:00Z",
       "approved_by": null,
       "approved_at": null,
       "id": "630fc36b795c-001"
-    }
-  ],
-  "resolved": [
+    },
     {
       "from": "impl",
       "kind": "blocker",

@@ -189,6 +189,8 @@ If any gate fails, **STOP and surface to advisor via DQ.** Do not patch around `
 
 Plus any DQ #N references if you raised one mid-task.
 
+**Verification-only tasks (Task 0, audit-probe tasks, anchor-drift sentinels):** for each probe, paste the **actual tool output** (Bash stdout, Grep result, Read excerpt), not a ✓/✗ summary. A checkmark without output is fabrication-equivalent — the advisor cannot distinguish "right by work" from "right by luck". 1× incident: v1-rt-r3-followup Task 0 (#504) asserted Probes 8/9/10 PASS in thinking with zero measuring tool calls; advisor re-ran all three on the lane worktree (happened to be correct). Post-condition re-verify is the only reliable catch.
+
 ## 7. Why this brief differs from the plan (if applicable)
 
 Document any overrides:

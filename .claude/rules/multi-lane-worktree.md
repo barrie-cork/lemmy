@@ -161,6 +161,27 @@ across phases.
 **Mode A skip:** if you're in Mode A, this whole section doesn't
 apply — author the brief on the phase branch directly.
 
+### Mode A — trunk-authorship from a phase lane (bm-merge brief + lesson edits)
+
+When a lane session is locked to `phase-v1-<lane>` (Hard refusal #1) but must commit to
+`governance-v0` (e.g. a bm-merge brief, a lesson edit, a rule amendment), use the
+**daemon-temp-worktree SSH path**:
+
+```bash
+ssh homeserver "cd /srv/<repo> \
+  && git worktree add /tmp/brehon-gov-tmp governance-v0 \
+  && cd /tmp/brehon-gov-tmp \
+  && <author brief / edit file> \
+  && git add <file> \
+  && git commit -m 'chore(advisor): <subject>' \
+  && git push origin governance-v0 \
+  && git worktree remove /tmp/brehon-gov-tmp"
+```
+
+The canonical example is the v1-RT-r3 bm-merge brief commit `621bc7115` — authored via this
+path because the lane session was on `phase-v1-RT-r3` and could not checkout `governance-v0`.
+1× this class; promoting as the documented procedure to prevent ad-hoc re-invention per lane.
+
 ## Lifecycle
 
 Three steps, fire once per lane:
