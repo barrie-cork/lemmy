@@ -4596,6 +4596,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-038"
+    },
+    {
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T14:58:00Z",
+      "question": "Laptop advisor: validate quality-r2 Task 5 (EnvVarGuard wrap 13 LEMMY_DATABASE_URL sites, closes #160) — recovered via cherry-pick after #524 cross-lane cancel. PASS or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 (#160) was implemented by Junior #524 (worker branch tip 4e5ec7748) before that task was erroneously cancelled by the rt-r4 session (cross-lane mistake; #524 was quality-r2's, not rt-r4's). The code commit f0b24f577 survived on origin + a recovery ref. Recovered by cherry-picking ONLY the code commit (NOT the worker's 947-line DQ-churn commit 4e5ec7748) onto phase-v1-quality-r2 tip badd5622f -> 077dadd61. Diff verified: 13 EnvVarGuard::set additions, 13 unsafe set_var(LEMMY_DATABASE_URL) removals, 2 use super::EnvVarGuard additions (governance_fixtures + admin_config_fixtures) — matches brief v1-quality-r2-impl-5.md exactly. Audit: 0 unsafe set_var LEMMY_DATABASE_URL sites remain outside boot_context (site 14, handled by T4).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --test e2e --no-run --workspace --features full\""
+      ],
+      "branch": "phase-v1-quality-r2",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full = CHECK_EXIT_0 (0 errors); cargo clippy --workspace --features full --no-deps -D warnings = CLIPPY_EXIT_0 (0 warnings); cargo test --test e2e --no-run --workspace --features full = E2E_NORUN_EXIT_0 (e2e target compiled clean). Audit: grep set_var(LEMMY_DATABASE_URL) = 0 outside boot_context.",
+      "failed_commands": null,
+      "answer": "pass — recovered T5 cherry-pick 077dadd61 validates clean: check + clippy + e2e-no-run all exit 0; unsafe-site audit 0. The #524 cross-lane-cancel loss is fully healed; T5 is back on the phase branch.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T14:58:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "7b5cf201d6fa-001"
     }
   ]
 }
