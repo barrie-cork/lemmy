@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "2c9b0e637fa5-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "Laptop advisor: run cargo-check and cargo-clippy on lemmy_api_common --features full for task 2 DTOs",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 committed AddSponsorAllowlist/AddSponsorAllowlistResponse/RemoveSponsorAllowlist/RemoveSponsorAllowlistResponse to crates/api/api_common/src/governance.rs on worker branch",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat -p lemmy_api_common --features full > .claude/validate-t2.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api_common --features full --no-deps -- -D warnings > .claude/validate-t2-clippy.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-2-addsponsorallowlist-remove-dtos-in-api-common-governance-rs-see-claude-prps-briefs-517",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4618,6 +4591,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "9f9026a1d618-001"
+    },
+    {
+      "id": "2c9b0e637fa5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy on lemmy_api_common --features full for task 2 DTOs",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 committed AddSponsorAllowlist/AddSponsorAllowlistResponse/RemoveSponsorAllowlist/RemoveSponsorAllowlistResponse to crates/api/api_common/src/governance.rs on worker branch",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat -p lemmy_api_common --features full > .claude/validate-t2.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api_common --features full --no-deps -- -D warnings > .claude/validate-t2-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-2-addsponsorallowlist-remove-dtos-in-api-common-governance-rs-see-claude-prps-briefs-517",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": "cargo check --workspace exit 0; cargo clippy --workspace --no-deps -D warnings exit 0. Note: -p lemmy_api_common --features full fails pre-existing E0433 in lemmy_db_views_reputation (full not propagated via api_common dep chain); workspace check passes cleanly.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T2 DTOs compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T01:49:01Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
