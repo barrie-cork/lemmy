@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "3c87676f024d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T10:00:00Z",
-      "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 5 registered /admin/sponsor-allowlist/{add,remove} routes in crates/api/routes/src/lib.rs. Worker ran cargo check + clippy --workspace --features full --no-deps both exit 0 locally.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-5-route-registration-for-admin-sponsor-allowlist-in-routes-lib-rs-see-claude-prps-brie-520",
-      "phase_task": "task 5",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4696,6 +4669,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "59c3c67e8737-001"
+    },
+    {
+      "id": "3c87676f024d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T10:00:00Z",
+      "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 registered /admin/sponsor-allowlist/{add,remove} routes in crates/api/routes/src/lib.rs. Worker ran cargo check + clippy --workspace --features full --no-deps both exit 0 locally.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-5-route-registration-for-admin-sponsor-allowlist-in-routes-lib-rs-see-claude-prps-brie-520",
+      "phase_task": "task 5",
+      "answer": "pass — workspace check + clippy clean. T5 route registration compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T04:29:50Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null
     }
   ]
 }
