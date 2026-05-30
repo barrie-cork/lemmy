@@ -1,6 +1,7 @@
 # v1-RT-r4 runlog
 
 ## bm: cut phase-v1-RT-r4 off governance-v0 @ 99eb3da46 — 2026-05-29T19:28:06Z
+
 - **branch:** phase-v1-RT-r4
 - **off:** governance-v0 @ 99eb3da46
 - **plan:** n/a — roadmap-next cut, plan TBD

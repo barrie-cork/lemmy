@@ -4622,7 +4622,7 @@
       "id": "77a6a1be5dc4-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T10:00:00Z",
+      "timestamp": "2026-05-30T02:43:16Z",
       "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
       "options": [
         "pass",
@@ -4674,7 +4674,7 @@
       "id": "3c87676f024d-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T10:00:00Z",
+      "timestamp": "2026-05-30T04:28:50Z",
       "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
       "options": [
         "pass",
