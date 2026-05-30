@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "validate task 4 cargo check+clippy: option a (already passed locally) or option b (re-run on laptop)?",
-      "options": [
-        "a-already-passed-locally",
-        "b-re-run-on-laptop"
-      ],
-      "context": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -- -D warnings exit 0. task 4 commit f06c38a02.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-4-admin-sponsor-allowlist-handlers-mod-decl-see-claude-prps-briefs-rt-r4-impl-4-md-519",
-      "phase_task": "4",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "59c3c67e8737-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "impl",
@@ -4670,6 +4643,32 @@
       "resolved_at": "2026-05-30T02:44:16Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "validate task 4 cargo check+clippy: option a (already passed locally) or option b (re-run on laptop)?",
+      "options": [
+        "a-already-passed-locally",
+        "b-re-run-on-laptop"
+      ],
+      "context": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -- -D warnings exit 0. task 4 commit f06c38a02.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-4-admin-sponsor-allowlist-handlers-mod-decl-see-claude-prps-briefs-rt-r4-impl-4-md-519",
+      "phase_task": "4",
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T4 admin handlers compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T03:38:08Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "59c3c67e8737-001"
     }
   ]
 }
