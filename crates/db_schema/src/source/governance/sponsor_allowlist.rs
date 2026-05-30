@@ -1,7 +1,7 @@
 use crate::newtypes::{CommunityId, SponsorAllowlistId};
 use chrono::{DateTime, Utc};
 #[cfg(feature = "full")]
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 #[cfg(feature = "full")]
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use lemmy_db_schema_file::PersonId;
@@ -78,24 +78,25 @@ pub async fn sponsor_allowlist_exists(
   community_id: Option<CommunityId>,
   conn: &mut AsyncPgConnection,
 ) -> LemmyResult<bool> {
+  use diesel::dsl::{exists, select};
   let found = match community_id {
     Some(cid) => {
-      sponsor_allowlist::table
-        .filter(sponsor_allowlist::person_id.eq(person_id))
-        .filter(sponsor_allowlist::community_id.eq(cid))
-        .first::<SponsorAllowlist>(conn)
-        .await
-        .optional()?
-        .is_some()
+      select(exists(
+        sponsor_allowlist::table
+          .filter(sponsor_allowlist::person_id.eq(person_id))
+          .filter(sponsor_allowlist::community_id.eq(cid)),
+      ))
+      .get_result::<bool>(conn)
+      .await?
     }
     None => {
-      sponsor_allowlist::table
-        .filter(sponsor_allowlist::person_id.eq(person_id))
-        .filter(sponsor_allowlist::community_id.is_null())
-        .first::<SponsorAllowlist>(conn)
-        .await
-        .optional()?
-        .is_some()
+      select(exists(
+        sponsor_allowlist::table
+          .filter(sponsor_allowlist::person_id.eq(person_id))
+          .filter(sponsor_allowlist::community_id.is_null()),
+      ))
+      .get_result::<bool>(conn)
+      .await?
     }
   };
   Ok(found)

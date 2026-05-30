@@ -16,6 +16,7 @@
 use crate::governance::{
   actor_pseudonym_helper,
   governance_log::{self, ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED, ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED},
+  redaction::scrub_json,
 };
 use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
@@ -26,7 +27,8 @@ use lemmy_api_common::governance::{
 };
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::source::governance::sponsor_allowlist::{
-  SponsorAllowlist, SponsorAllowlistInsertForm, sponsor_allowlist_delete, sponsor_allowlist_insert,
+  SponsorAllowlist, SponsorAllowlistInsertForm, sponsor_allowlist_delete, sponsor_allowlist_exists,
+  sponsor_allowlist_insert,
 };
 use lemmy_db_schema_file::schema::sponsor_allowlist;
 use lemmy_db_views_local_user::LocalUserView;
@@ -66,6 +68,15 @@ pub async fn add(
   let conn = &mut get_conn(pool).await?;
   let allowlist_id = conn
     .run_transaction(async move |conn| {
+      // Reject duplicates — UNIQUE(community_id, person_id) treats NULL community_id
+      // as distinct, so the DB does not block instance-wide duplicates on its own.
+      if sponsor_allowlist_exists(person_id, community_id, conn).await? {
+        return Err(LemmyErrorType::Unknown(
+          "sponsor_allowlist row already exists for this person/community".to_string(),
+        )
+        .into());
+      }
+
       let form = SponsorAllowlistInsertForm {
         community_id,
         person_id,
@@ -86,7 +97,7 @@ pub async fn add(
       governance_log::append(
         &mut conn.into(),
         ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED,
-        payload,
+        scrub_json(&payload),
         Some(admin_pseudonym.clone()),
       )
       .await?;
@@ -172,7 +183,7 @@ pub async fn remove(
       governance_log::append(
         &mut conn.into(),
         ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED,
-        payload,
+        scrub_json(&payload),
         Some(admin_pseudonym.clone()),
       )
       .await?;
