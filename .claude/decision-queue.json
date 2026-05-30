@@ -25,31 +25,6 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
-    },
-    {
-      "id": "65b95cc574c8-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-30T22:48:42Z",
-      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T2 wrapped all test-body INIT/GOV sites (10 fns, Edits A-J); T1 documented 2 bootstrap exceptions. Phase tip at cca087156e2bf18b2032c2d1807bc9a0452e537e. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class).",
-      "branch": "junior/role-impl-task-v1-quality-r3-task-2-envvarguard-wrap-test-body-setter-sites-see-claude-prps-briefs-v1-quality-r3-im-532",
-      "phase_task": "2",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
     }
   ],
   "resolved": [
@@ -4971,6 +4946,31 @@
       "answer": "impl-self-resolved: 800-char audit passes (0 unsafe-without-SAFETY sites); count 2+2 correct; implementation is sound. Recommend: future briefs use 800+ char window for has_safety() when SAFETY comment blocks are multi-line. Proceeding with commit.",
       "answered_by": "impl-self-resolved",
       "resolved_at": "2026-05-30T22:47:32Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "65b95cc574c8-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T22:48:42Z",
+      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 wrapped all test-body INIT/GOV sites (10 fns, Edits A-J); T1 documented 2 bootstrap exceptions. Phase tip at cca087156e2bf18b2032c2d1807bc9a0452e537e. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class).",
+      "branch": "junior/role-impl-task-v1-quality-r3-task-2-envvarguard-wrap-test-body-setter-sites-see-claude-prps-briefs-v1-quality-r3-im-532",
+      "phase_task": "2",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Duplicate of 4b129a8b08f1-001 (two job runs for the same T2 task). Advisor resolved as duplicate; 4b129a8b08f1-001 is the live e2e gate entry.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T23:21:47Z",
       "approved_by": null,
       "approved_at": null
     }
