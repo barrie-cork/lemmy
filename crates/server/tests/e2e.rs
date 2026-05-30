@@ -108,11 +108,45 @@ async fn template_dump_capture() -> lemmy_utils::error::LemmyResult<()> {
   Ok(())
 }
 
+struct EnvVarGuard {
+  key: &'static str,
+  prev: Option<String>,
+}
+
+impl EnvVarGuard {
+  fn set(key: &'static str, value: &str) -> Self {
+    let prev = std::env::var(key).ok();
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    unsafe {
+      std::env::set_var(key, value);
+    }
+    Self { key, prev }
+  }
+}
+
+impl Drop for EnvVarGuard {
+  fn drop(&mut self) {
+    // SAFETY: same justification — single-threaded test runner.
+    unsafe {
+      match &self.prev {
+        Some(prev) => std::env::set_var(self.key, prev),
+        None => std::env::remove_var(self.key),
+      }
+    }
+  }
+}
+
 // ============================================================================
 // Phase 1 — governance schema + hash-chain trigger smoke tests
 // ============================================================================
 
 mod governance_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
+  use super::EnvVarGuard;
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection};
   use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
@@ -802,9 +836,7 @@ mod governance_fixtures {
 
     let (container, host_port) = start_postgres().await?;
     let db_url = db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -2540,9 +2572,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   // -- 2. Spin up Postgres and apply the full schema. -------------------
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -3320,9 +3350,7 @@ async fn sponsor_liability_with_founder_multiplier() -> lemmy_utils::error::Lemm
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
     governance_fixtures::apply_all_schema(&mut sync_conn)?;
@@ -4092,9 +4120,7 @@ async fn all_mvp_endpoints_return_non_404() -> lemmy_utils::error::LemmyResult<(
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4439,9 +4465,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> lemmy_utils::error::Lemm
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4770,9 +4794,7 @@ async fn governance_events_notify_fires() -> lemmy_utils::error::LemmyResult<()>
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4903,9 +4925,7 @@ async fn underscore_prefix_usernames_still_register() -> lemmy_utils::error::Lem
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -5039,10 +5059,7 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // Build A's pool+context fully before swapping env to B — the pool reads
   // env at construction and a multi-thread runtime could interleave
   // otherwise. See plan §TWO_DB_TEST_PATTERN + §12 R1.
-  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &url_a);
-  }
+  let _g_db_url_a = EnvVarGuard::set("LEMMY_DATABASE_URL", &url_a);
   let pool_a: ActualDbPool = build_db_pool_for_tests();
   let client_a = client_builder(&SETTINGS).build()?;
   let middleware_client_a = ClientBuilder::new(client_a).build();
@@ -5088,10 +5105,7 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // NOTE: LEMMY_DATABASE_URL is left set to url_b at test exit — mirrors
   // e2e.rs:2195+ pattern; test-infra cleanup is a v1 item per DQ-6.4
   // resolved id 34 (see phase-6 completion report carry-forwards).
-  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &url_b);
-  }
+  let _g_db_url_b = EnvVarGuard::set("LEMMY_DATABASE_URL", &url_b);
   let pool_b: ActualDbPool = build_db_pool_for_tests();
   let client_b = client_builder(&SETTINGS).build()?;
   let middleware_client_b = ClientBuilder::new(client_b).build();
@@ -5667,9 +5681,7 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> lemmy_utils::error::
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -5870,9 +5882,7 @@ async fn declining_juror_not_picked_as_own_replacement() -> lemmy_utils::error::
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -6098,6 +6108,12 @@ async fn declining_juror_not_picked_as_own_replacement() -> lemmy_utils::error::
 // well under 30s on a warm host.
 
 mod admin_config_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
+  use super::EnvVarGuard;
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection};
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
@@ -6133,9 +6149,7 @@ mod admin_config_fixtures {
 
     let (container, host_port) = super::governance_fixtures::start_postgres().await?;
     let db_url = super::governance_fixtures::db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -8262,7 +8276,8 @@ async fn admin_audit_stream_forbidden_for_non_admin() -> lemmy_utils::error::Lem
   use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
   use lemmy_utils::error::LemmyErrorType;
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   let (_, user_view) =
     admin_config_fixtures::seed_user(&context, instance.id, "sse_nonadmin", false).await?;
@@ -8286,7 +8301,8 @@ async fn admin_audit_stream_enforces_per_admin_cap() -> lemmy_utils::error::Lemm
   use actix_web::http::StatusCode;
   use lemmy_api::governance::admin_audit_stream::admin_audit_stream;
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   // Unique username avoids PersonId collision with other SSE tests in
   // the same process (module-static HashSet leaks across tests per plan
@@ -8357,7 +8373,8 @@ async fn admin_audit_stream_emits_frame_on_config_change() -> lemmy_utils::error
   use lemmy_api_common::governance::AdminSetConfig;
   use std::{future::poll_fn, pin::Pin, time::Duration as StdDuration};
 
-  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let (_container, context, db_url) = admin_config_fixtures::bootstrap().await?;
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
   // Unique username avoids PersonId collision with the other SSE tests
   // (the module-static cap HashSet persists across tests in the same
@@ -8533,6 +8550,11 @@ async fn admin_audit_stream_emits_frame_on_config_change() -> lemmy_utils::error
 // applies upstream of the fallback and the snapshot fields still land.
 
 mod v1_jm_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use chrono::{Duration as ChronoDuration, Utc};
   use diesel::{Connection as _, PgConnection};
   use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -10452,6 +10474,11 @@ async fn submit_jury_vote_concurrent_votes_decide_exactly_once()
 // workers hang on Edit calls into this 9000+ line file).
 
 mod v1_jm_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use actix_web::web::Json;
   use diesel::{ExpressionMethods, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
@@ -11660,6 +11687,11 @@ async fn constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spo
 }
 
 mod v1_sl_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::web::Json;
   use chrono::{DateTime, Duration, Utc};
@@ -12691,6 +12723,11 @@ mod v1_sl_b_fixtures {
 }
 
 mod v1_sl_c_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use chrono::{Duration, Utc};
   use diesel::{ExpressionMethods, QueryDsl, insert_into, update};
@@ -13569,6 +13606,11 @@ mod v1_sl_c_fixtures {
 }
 
 mod v1_sl_d_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use actix_web::web::{Data, Json};
@@ -14430,6 +14472,11 @@ mod v1_sl_d_fixtures {
 }
 
 mod v1_sl_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use actix_web::web::{Data, Json};
@@ -15397,6 +15444,11 @@ mod v1_sl_e_fixtures {
 }
 
 mod v1_federation_inbound_a_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use diesel::ExpressionMethods;
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
@@ -15460,6 +15512,11 @@ mod v1_federation_inbound_a_fixtures {
 }
 
 mod v1_ship_2_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::{App, test, web::Data};
   use chrono::{Duration, Utc};
@@ -16190,6 +16247,11 @@ async fn admin_audit_html_forbidden_for_non_admin() -> lemmy_utils::error::Lemmy
 }
 
 mod v1_federation_inbound_b_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use activitypub_federation::traits::Activity as ActivityTrait;
@@ -16522,6 +16584,11 @@ mod v1_federation_inbound_b_fixtures {
 }
 
 mod v1_federation_inbound_e_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use activitypub_federation::config::FederationConfig;
   use activitypub_federation::traits::Activity as ActivityTrait;
@@ -16703,6 +16770,11 @@ mod v1_federation_inbound_e_fixtures {
 }
 
 mod v1_ship_3_fixtures {
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use super::*;
   use actix_web::web::{Data, Json};
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
@@ -16754,9 +16826,7 @@ mod v1_ship_3_fixtures {
 
     let (_container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
       governance_fixtures::apply_all_schema(&mut sync_conn)?;
@@ -17121,8 +17191,15 @@ mod v1_rt_r3_fixtures {
   //!
   //! Advisor-authored carve-out per cycle-count §5.3 hard-refusal on Junior dispatch
   //! (DQ a3d0e9941441-033). One-time exception to "advisor never authors crates/**".
+  //!
+  //! **Process-env safety constraint:** every test in this module mutates
+  //! process-wide env vars (e.g. `LEMMY_DATABASE_URL`, `BREHON_DISABLE_*`).
+  //! Safety of those mutations is contingent on the Cargo runner flag
+  //! `--test-threads=1`. Running these tests with concurrent threads is
+  //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
 
   use super::*;
+  use super::EnvVarGuard;
   use actix_web::web::{Data, Json};
   use chrono::{Datelike, Utc};
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
@@ -17176,39 +17253,6 @@ mod v1_rt_r3_fixtures {
   use lemmy_db_schema::newtypes::ModerationCaseId;
   use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
   use reqwest_middleware::ClientBuilder;
-
-  /// RAII guard for an environment variable. Set via `EnvVarGuard::set`
-  /// before the operation that depends on the env var; on Drop (success,
-  /// `?` short-circuit, panic), the previous value is restored — closing
-  /// the leak-via-`?` defect class flagged by Axis 3 of the e2e
-  /// code-quality audit (`.claude/PRPs/reports/e2e-rs-code-quality-audit-2026-05-26.md`).
-  struct EnvVarGuard {
-    key: &'static str,
-    prev: Option<String>,
-  }
-
-  impl EnvVarGuard {
-    fn set(key: &'static str, value: &str) -> Self {
-      let prev = std::env::var(key).ok();
-      // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-      unsafe {
-        std::env::set_var(key, value);
-      }
-      Self { key, prev }
-    }
-  }
-
-  impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
-      // SAFETY: same justification — single-threaded test runner.
-      unsafe {
-        match &self.prev {
-          Some(prev) => std::env::set_var(self.key, prev),
-          None => std::env::remove_var(self.key),
-        }
-      }
-    }
-  }
 
   /// Seed one person/local_user pair. Mirror governance_fixtures::seed_user
   /// at e2e.rs:835 but takes the optional admin flag and returns only the
@@ -17422,20 +17466,16 @@ mod v1_rt_r3_fixtures {
     Data<LemmyContext>,
     activitypub_federation::config::FederationConfig<LemmyContext>,
     String,
+    Vec<EnvVarGuard>,
   )> {
     const SIGNING_SEED_HEX: &str =
       "0000000000000000000000000000000000000000000000000000000000000001";
-    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-    unsafe {
-      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-    }
+    let mut guards: Vec<EnvVarGuard> = Vec::with_capacity(3);
+    guards.push(EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1"));
+    guards.push(EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX));
     let (container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
-    // SAFETY: tests run with --test-threads=1.
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    guards.push(EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url));
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
       governance_fixtures::apply_all_schema(&mut sync_conn)?;
@@ -17463,7 +17503,7 @@ mod v1_rt_r3_fixtures {
       .build()
       .await
       .map_err(|e| anyhow::anyhow!("{e}"))?;
-    Ok((container, context, federation_config, db_url))
+    Ok((container, context, federation_config, db_url, guards))
   }
 
   // ============================================================
@@ -17580,7 +17620,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_activity_cron_emits_plus_one_per_active_user() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act1.example.com").await?;
 
@@ -17635,7 +17675,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_activity_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act2.example.com").await?;
 
@@ -17675,7 +17715,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_dormancy_cron_emits_minus_two_per_dormant_user() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm1.example.com").await?;
 
@@ -17719,7 +17759,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_dormancy_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm2.example.com").await?;
 
@@ -17760,7 +17800,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn vote_outcome_emits_plus_one_for_majority_aligned_jurors() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo1.example.com").await?;
     let federation_context = federation_config.to_request_data();
@@ -17824,7 +17864,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn vote_outcome_emits_nothing_for_minority_jurors() -> LemmyResult<()> {
     // Distinct test focus: minority jurors get zero rows under VoteOutcome.
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo2.example.com").await?;
     let federation_context = federation_config.to_request_data();
@@ -17868,7 +17908,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_returns_403_for_non_admin() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf1.example.com").await?;
@@ -17894,7 +17934,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_returns_400_for_non_emergency_remove_status() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf2.example.com").await?;
@@ -17927,7 +17967,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_admin_on_emergency_remove_case_emits_minus_one() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf3.example.com").await?;
@@ -17985,7 +18025,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn evidence_cited_heuristic_emits_plus_one_when_rationale_above_threshold(
   ) -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_ec1.example.com").await?;
     let federation_context = federation_config.to_request_data();
