@@ -19,7 +19,7 @@
 | MiniMax Anthropic-compat endpoint (`https://api.minimax.io/anthropic/v1/messages`) | ✅ live; returns Anthropic Messages shape incl. `thinking` blocks + `cache_read_input_tokens` |
 | `MINIMAX_API_KEY` in `.env` | ✅ present + **funded** (HTTP 200, 2026-05-29; the original key was rotated after a transcript-exposure incident) |
 | Target sub-phase | **v1-RT-r4** (sponsor-allowlist handlers) — user choice 2026-05-29 |
-| 5 trial-task designation | ⏳ pending — done when v1-RT-r4's plan §13 lands (see §3) |
+| 5 trial-task designation | ✅ **DESIGNATED 2026-05-29** — Tasks 1, 2, 3, 4, 5 (see §3 below) |
 
 **Decisive new evidence (2026-05-29) that this is worth running:** first-party
 benchmark chart at `.claude/PRPs/reports/image.png` shows M2.7 lands at
@@ -118,18 +118,26 @@ Record into a results file `.claude/PRPs/reports/minimax-m27-trial-results.md`
 - Mixed/ambiguous at n=5 → extend to n=8-10 before deciding, OR stay Sonnet
   (conservative default). Do NOT switch on a coin-flip.
 
-## 3. Task designation (do this when v1-RT-r4's plan lands)
+## 3. Task designation (DONE 2026-05-29)
 
-v1-RT-r4 is unstarted (no plan yet). When its plan §13 is authored:
-1. Pick 5 §13 tasks that are MIRROR-ref-heavy + single-file + cargo-gated. The
-   sponsor-allowlist add/remove handlers + their ENTRY_KIND emits + e2e tests
-   are the natural candidates (mirror RT-r3's `flag-bad-faith` handler shape +
-   the `admin_*` capability-check pattern).
-2. Note the 5 task numbers in §0 of this file + the results file.
-3. **Do NOT let the trial gate v1-RT-r4 shipping.** The trial runs ALONGSIDE
-   the real phase (real tasks ship normally; ab-test branches are extra runs).
-   If the trial adds too much wall-clock, run fewer arms or defer the MiniMax
-   arm to a later phase — never block the real lane on trial data.
+v1-RT-r4 plan shipped at `d6f441713`. Designated tasks (all MIRROR-ref-heavy,
+single/two-file, cargo-gated — confirmed against plan §13):
+
+| Task | File(s) | MIRROR ref | Why ideal |
+|---|---|---|---|
+| Task 1 | `sponsor_allowlist.rs` (1 file) | `federation_peer.rs:55-94` | inline db-helpers, exact shape |
+| Task 2 | `api_common/governance.rs` (1 file) | `governance.rs:444/465` | DTO derive stack, exact copy |
+| Task 3 | `create_endorsement.rs` (1 file) | `create_endorsement.rs:78-192` | enum/parse/label/3 arms |
+| Task 4 | `admin_sponsor_allowlist.rs` + `mod.rs` (2 files) | `admin_config.rs:383-558` | handler step ordering mirror |
+| Task 5 | `routes/lib.rs` (1 file) | admin scope `:493-507` | route registration |
+
+Task 6 excluded (advisor-executed, not a Junior dispatch).
+Task 7 excluded (18k-line e2e.rs — anchor drift makes it higher-variance for a model trial).
+
+Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (created at trial start).
+
+**Do NOT let the trial gate v1-RT-r4 shipping.** Trial runs ALONGSIDE the real
+phase on throwaway `ab-test/*` branches; real tasks dispatch normally.
 
 ## 4. If the trial passes — permanent cutover mechanics (NOT part of the trial)
 

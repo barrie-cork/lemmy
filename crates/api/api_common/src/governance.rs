@@ -10,12 +10,16 @@
 //     `AdminListRuleSets`, `AdminDashboard*`, …) — admin backstops, not
 //     user-facing. Approved as out-of-scope of the 11-endpoint count by
 //     plan §11.2 GOTCHA + Phase 5b/5c decision notes.
+//   - `AddSponsorAllowlist`, `AddSponsorAllowlistResponse`,
+//     `RemoveSponsorAllowlist`, `RemoveSponsorAllowlistResponse` — v1-RT-r4
+//     admin sponsor-allowlist endpoints; not a v0 user-facing endpoint.
+//     Approved as out-of-scope per v1-RT-r4 plan §16 (admin backstop).
 //
 // New non-Admin DTOs added here that don't correspond to one of the 11
 // require a new carve-out entry above. Closes #40.
 
 use chrono::{DateTime, Utc};
-use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId};
+use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId, SponsorAllowlistId};
 use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
@@ -748,4 +752,41 @@ pub struct PerCommunityActiveRuleSet {
   /// `rule_set.active_version_id` config row (allowed by design — v1-AD-c
   /// never seeds the key).
   pub active_version_id: Option<i32>,
+}
+
+// ── Group E: Admin sponsor-allowlist (v1-RT-r4) ───────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AddSponsorAllowlist {
+  pub person_id: PersonId,
+  pub community_id: Option<CommunityId>,
+  pub note: Option<String>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AddSponsorAllowlistResponse {
+  pub allowlist_id: SponsorAllowlistId,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RemoveSponsorAllowlist {
+  pub person_id: PersonId,
+  pub community_id: Option<CommunityId>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RemoveSponsorAllowlistResponse {
+  pub success: bool,
 }

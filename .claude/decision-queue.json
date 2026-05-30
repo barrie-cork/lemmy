@@ -4525,6 +4525,203 @@
       "id": "a3d0e9941441-037"
     },
     {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:00Z",
+      "question": "RT-r4 age_or_surety strategy needs a surety table with sponsored_id + revoked_at. Does it exist with those columns, or must RT-r4 add them?",
+      "options": [
+        "exists-use-as-is",
+        "needs-migration-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies age_or_surety passes if EXISTS (surety WHERE sponsored_id = caller AND revoked_at IS NULL). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-use-as-is. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/surety.rs:17 defines `pub struct Surety` (diesel table_name = surety, line 12) with `sponsored_id: PersonId` (:20) and `revoked_at: Option<DateTime<Utc>>` (:23). The PRD §5.4 OR-EXISTS clause is implementable verbatim — no migration needed. Planner writes the age_or_surety arm reading the existing age-gate helper (create_endorsement.rs:328) plus a new surety-existence query against this table.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:30Z",
+      "question": "RT-r4 reputation strategy needs reputation_snapshot.can_sponsor as a readable column. Does it exist as a real column with a read path, or is it computed-only?",
+      "options": [
+        "exists-readable-column",
+        "computed-only-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies the reputation strategy passes if reputation_snapshot.can_sponsor is true for the caller (community-scoped if community_id provided, else instance-scoped). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-readable-column. Verified 2026-05-29 against phase-v1-RT-r4 tree: can_sponsor is a `pub can_sponsor: bool` column on the reputation_snapshot struct (reputation_snapshot.rs:31 and :46 — both the row and a view variant). Read paths exist at crates/api/api/src/governance/reputation_snapshot.rs, crates/db_views/reputation/src/impls.rs, crates/db_views/reputation/src/lib.rs, admin_reputation_stats.rs, admin_dashboard_html.rs. The reputation strategy reads the caller's snapshot (community-scoped or instance via community_id NULL) and gates on can_sponsor. Per PRD §5.4 this flips an existing computed-but-unread boolean (Phase 5a task 53, gated on thresholds.endorsement_strength default 25) to strategy-readable. No migration needed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:41:00Z",
+      "question": "RT-r4 allowlist strategy + admin add/remove endpoints need sponsor_allowlist db-layer helpers (insert/delete/exists). Did RT-r1 ship them, or must RT-r4 add them?",
+      "options": [
+        "exists-reuse",
+        "absent-rt-r4-adds-them"
+      ],
+      "context": "Brief rt-r4-planning-1 §2.1 deliverable (b) is conditional on whether RT-r1 shipped insert/delete/exists query fns for the sponsor_allowlist table (it shipped the table + struct + InsertForm). Determines whether deliverable (b) is a real §13 task.",
+      "answer": "absent-rt-r4-adds-them. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/sponsor_allowlist.rs contains ONLY the struct SponsorAllowlist + SponsorAllowlistInsertForm (no impl block, no query fns); grep for sponsor_allowlist/SponsorAllowlist across crates/db_views/ + crates/db_schema/src/impls/ returns ZERO matches. RT-r1 shipped the table + struct + InsertForm but NO query helpers. CONSEQUENCE: brief deliverable (b) is a REAL §13 task — RT-r4 must add insert(row) / delete(by person+community or by id) / is_allowlisted(person, community) helpers. Mirror an existing governance db-helper insert/delete/exists shape (e.g. the surety or reputation_event impls). These are Rust query fns, NOT a migration (the table already exists). The allowlist strategy arm (deliverable a) and both admin endpoints (deliverable c) requires: this helper task — planner threads the requires: dependency so the cohort dependency-check passes.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:41:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-003"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "v1-RT-r4 complexity score is 10 (>8 Sonnet split threshold): split into RT-r4a (db+DTO+strategy) / RT-r4b (handler+routes+e2e), or proceed as one plan?",
+      "options": [
+        "proceed-as-one",
+        "split-into-RT-r4a-RT-r4b"
+      ],
+      "context": "Mechanical section 5.1 score = 10 (RT-r3-calibrated): impl tasks above 5 = +2 (7 impl tasks: db-helpers, DTOs, strategy-arms, admin-handlers, routes, registry, e2e); crates touched = +5 (lemmy_db_schema, lemmy_api_common, lemmy_api_crud, lemmy_api, lemmy_api_routes); e2e edit = +3 (one e2e.rs file). Migrations 0, ADR-affecting 0 (conforms to ADR-008/ADR-015, no new OQ delta), cargo-budget 0 (Shape-G/laptop). Planner recommends PROCEED-AS-ONE: one cohesive feature (sponsor-gate strategy completion + allowlist admin surface) with a tight serial dependency chain (strategy/handler/routes/e2e all consume the db-helper + DTO base); splitting adds a phase boundary, a second bm-cut, a second retro, and a cross-phase brief-visibility sync for ~7 small tasks. Per-task ceilings all hold (<=4 files / <=2 crates each). RT-r3 shipped at 7; RT precedent ships single-feature plans at this size. Plan authored proceed-as-one per brief section 2 (one plan file) + section 4.1a (no planner-initiated split); this DQ surfaces the score for the gate-1 plan-approval decision.",
+      "answer": "PROCEED-AS-ONE. Rationale: cohesive single-feature (strategy extension + allowlist admin), tight serial dependency chain (strategy/handler/routes/e2e all consume db-helper + DTO), per-task ceilings all hold (<=4 files / <=2 crates each), RT-r3 shipped at 7 with comparable surface. Splitting adds a phase boundary, second bm-cut, second retro, and cross-phase brief-visibility sync overhead for ~7 small tasks — negative net value. Planner recommendation affirmed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T21:05:13.993715Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9f9026a1d618-001"
+    },
+    {
+      "id": "2c9b0e637fa5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy on lemmy_api_common --features full for task 2 DTOs",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 committed AddSponsorAllowlist/AddSponsorAllowlistResponse/RemoveSponsorAllowlist/RemoveSponsorAllowlistResponse to crates/api/api_common/src/governance.rs on worker branch",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat -p lemmy_api_common --features full > .claude/validate-t2.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api_common --features full --no-deps -- -D warnings > .claude/validate-t2-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-2-addsponsorallowlist-remove-dtos-in-api-common-governance-rs-see-claude-prps-briefs-517",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": "cargo check --workspace exit 0; cargo clippy --workspace --no-deps -D warnings exit 0. Note: -p lemmy_api_common --features full fails pre-existing E0433 in lemmy_db_views_reputation (full not propagated via api_common dep chain); workspace check passes cleanly.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T2 DTOs compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T01:49:01Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "77a6a1be5dc4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T02:43:16Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 extended SponsorGateStrategy with AgeOrSurety/Reputation/Allowlist + dispatch arms in create_endorsement.rs. Local (EliteDesk) cargo check and clippy both exit 0. Validation uses --workspace per feedback_features_full_p_crate_incompatible (api_crud must use workspace scope).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/validate-t3.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/validate-t3-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-3-strategy-enum-dispatch-in-create-endorsement-rs-see-claude-prps-briefs-rt-r4-impl-518",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T3 strategy enum+dispatch compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T02:44:16Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "validate task 4 cargo check+clippy: option a (already passed locally) or option b (re-run on laptop)?",
+      "options": [
+        "a-already-passed-locally",
+        "b-re-run-on-laptop"
+      ],
+      "context": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -- -D warnings exit 0. task 4 commit f06c38a02.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-4-admin-sponsor-allowlist-handlers-mod-decl-see-claude-prps-briefs-rt-r4-impl-4-md-519",
+      "phase_task": "4",
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T4 admin handlers compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T03:38:08Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "59c3c67e8737-001"
+    },
+    {
+      "id": "3c87676f024d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T04:28:50Z",
+      "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 registered /admin/sponsor-allowlist/{add,remove} routes in crates/api/routes/src/lib.rs. Worker ran cargo check + clippy --workspace --features full --no-deps both exit 0 locally.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-5-route-registration-for-admin-sponsor-allowlist-in-routes-lib-rs-see-claude-prps-brie-520",
+      "phase_task": "task 5",
+      "answer": "pass — workspace check + clippy clean. T5 route registration compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T04:29:50Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null
+    },
+    {
+      "id": "7075011a227d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T05:02:24Z",
+      "question": "Run e2e test suite for RT-r4 Task 7 fixtures — pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 appended mod v1_rt_r4_fixtures to crates/server/tests/e2e.rs: 7 tests covering age_or_surety pass+deny, reputation pass+deny, allowlist pass+deny, admin add/remove round-trip with governance log verification.",
+      "commands": [
+        "./scripts/brehon/cargo-test.sh --workspace --test e2e"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-7-e2e-fixtures-for-sponsor-gate-strategies-admin-allowlist-see-claude-prps-briefs-rt-521",
+      "phase_task": 7,
+      "result": "pass",
+      "log_slice": "test result: ok. 126 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 2506.52s — E2E_EXIT_0",
+      "failed_commands": null,
+      "answer": "pass — all 126 e2e tests pass including new v1_rt_r4_fixtures. E2E_EXIT_0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T06:24:35Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": "3c903b3418cb-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
