@@ -65,6 +65,9 @@ async fn process_trigger_rejury(
     .first(conn)
     .await?;
 
+  // TODO(type-state): single-variant guard — cleanest type-state candidate; replace with
+  // GovernanceCase<Appealed>::try_from(case) — see
+  // .claude/lessons/feedback_governance_type_state_handlers.md
   match case.status {
     CaseStatus::Appealed => {} // proceed
     CaseStatus::Open

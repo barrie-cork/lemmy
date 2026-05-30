@@ -119,6 +119,9 @@ async fn process_assignment(
     .await?;
 
   // 2. Exhaustive status match per [99 ADR-013].
+  // TODO(type-state): replace with GovernanceCase<PreJuryAssignable> wrapping
+  // Open/ThresholdMet/EmergencyRemove — see
+  // .claude/lessons/feedback_governance_type_state_handlers.md
   match case.status {
     CaseStatus::Open | CaseStatus::ThresholdMet | CaseStatus::EmergencyRemove => {}
     CaseStatus::JurySelection

@@ -71,6 +71,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 | `crates/db_schema/migrations/**` (any new migration) | `feedback_lemmy_migration_runner.md`, `feedback_postgres_jsonb_canonicalization.md` (if JSONB) |
 | Any new test under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
 | Any handler under `crates/api/**/src/**` doing 2+ DB writes | `feedback_multi_write_handlers_need_transactions.md` |
+| Any new file under `crates/api/api/src/governance/**` that loads `ModerationCase` from DB and matches on `case.status` before proceeding | `feedback_governance_type_state_handlers.md` |
 | Any `#[cfg(feature = "full")]` gate | `feedback_features_full_workspace_only.md`, `feedback_features_full_p_crate_incompatible.md` |
 | Any `pg_advisory_xact_lock` or void PG function call | `feedback_pg_advisory_xact_lock_void_decode.md` |
 | Any newtype under `crates/db_schema/src/newtypes/` | `feedback_newtype_locations_lemmy_db_schema_vs_file.md` |
