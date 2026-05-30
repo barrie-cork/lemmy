@@ -67,11 +67,14 @@ two-system mental model manually: when touching "project memory", address System
 
 ## 3. No write-time embedding (yet — see item 4.2-spec)
 
-Every `memory_write_eval` writes the FTS5 row but NOT the vector; `backfill.js` must run
-between write and the next hybrid search OR the search degrades silently to FTS5-only.
-Mitigations: session-retro inline backfill (laptop-only); weekly-review §1b safety-net
-(Junior + safety net for missed). The `mcp-write-time-embedding.md` spec ships in v1-rls-r1;
-the patch ships separately.
+Every `memory_write` / `memory_write_eval` writes the FTS5 row but NOT the vector; the
+Ollama backfill must run between write and the next hybrid search OR the search degrades
+silently to FTS5-only. **Topology note (2026-05-30+):** under the HTTP-daemon topology
+the interactive `backfill.js` step is RETIRED from session-retro — new writes land in the
+HTTP server's store (FTS5-searchable immediately), and the weekly-review §1b sweep is now
+the *sole* embedding pass. FTS5-only recall is acceptable in the interim because brief
+injection matches on exact file-class keywords, not semantic similarity. The
+`mcp-write-time-embedding.md` spec ships in v1-rls-r1; the patch ships separately.
 
 **Why this is non-negotiable:** Source inspection of `dist/index.js` (2026-05-16) confirmed
 that `memory_write`, `memory_write_eval`, `memory_promote_to_file`, and `memory_update`
@@ -85,15 +88,18 @@ Eight PMD memories were found unembedded at one audit point — five of them fro
 that simply did not know the backfill step existed, because the gap is silent by design.
 
 **How to apply:** `enforcement: PENDING — see .claude/PRPs/specs/mcp-write-time-embedding.md +
-future MCPs/project-memory-mcp PR`; until the write-time embedding patch ships, run
-`backfill.js` after every interactive laptop `memory_write_eval`; the weekly-review Step 1b
-safety-net covers the Junior daemon-side gap.
+future MCPs/project-memory-mcp PR`. Under the HTTP topology the interactive enforcement point
+is gone: lessons auto-sync to the HTTP server via the `lesson-pmd-sync.sh` PostToolUse hook
+(FTS5-immediate), and the weekly-review Step 1b sweep is the sole embedding backfill. Do NOT
+re-add an inline `backfill.js` call to session-retro — it targets the wrong (daemon-local)
+store under HTTP and was retired 2026-05-31.
 
 **See also:**
 
-- `.claude/lessons/feedback_pmd_backfill_after_write.md` — no-write-time-embedding invariant
-  source, the `dist/index.js` inspection, and the two enforcement points (session-retro Step
-  5.5 + weekly-review Step 1b).
+- `.claude/lessons/feedback_pmd_retro_check_http_store_split.md` — HTTP-topology split that
+  retired the env-var/`backfill.js` interactive path.
+- `.claude/lessons/feedback_pmd_backfill_after_write.md` — original no-write-time-embedding
+  invariant source and the `dist/index.js` inspection (stdio-era; backfill is now weekly-only).
 - `.claude/PRPs/specs/mcp-write-time-embedding.md` — the patch contract (v1-rls-r1 ships
   the spec; the actual `dist/index.js` patch is a separate `MCPs/project-memory-mcp` PR).
 

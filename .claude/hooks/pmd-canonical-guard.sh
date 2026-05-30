@@ -1,27 +1,57 @@
 #!/usr/bin/env bash
-# SessionStart hook: WARN if this lane's .mcp.json PROJECT_MEMORY_DB diverges
-# from the canonical cross-lane path. Per
-# feedback_mcp_canonical_pmd_path_enforce_at_session_start.md.
-# Deployed to .claude/hooks/pmd-canonical-guard.sh on server repos.
+# SessionStart hook: guard PMD configuration at session start.
+#
+# HTTP topology (2026-05-30+): project-memory MCP is an HTTP daemon at
+# localhost:11435. The env-var PROJECT_MEMORY_DB path check is no longer
+# applicable (HTTP configs have no env section). This hook now has two modes:
+#
+#   HTTP mode  (.mcp.json has type=http for project-memory):
+#     → checks that the HTTP server is reachable; WARNs if not.
+#     → the old env-var divergence check is SKIPPED (no env section to read).
+#
+#   stdio mode (.mcp.json has command/args/env for project-memory, legacy):
+#     → runs the original PROJECT_MEMORY_DB canonical-path divergence check.
+#
+# Both modes exit 0 always (WARN-not-FAIL). Per
+# feedback_mcp_canonical_pmd_path_enforce_at_session_start.md +
+# feedback_pmd_retro_check_http_store_split.md.
 #
 # Event: SessionStart
 # Timeout: 5000
-#
-# Exit 0 = continue (always; this hook is WARN-not-FAIL per the lesson's
-# WARN-vs-FAIL rationale — a configuration error fixed by editing .mcp.json
-# and restarting; blocking tool calls would frustrate, not fix).
-#
-# CWD reliance: reads .mcp.json from CWD root. Callers that need to test a
-# sentinel path must cd to a directory containing a sentinel .mcp.json before
-# invoking (Task 10 dogfood sub-run (b) does exactly this).
 
 set -euo pipefail
 
 # --- .mcp.json absence handling ---
-# Absence is safe: some lanes resolve canonical by default (no explicit .mcp.json).
 if [ ! -f ".mcp.json" ]; then
   exit 0
 fi
+
+# --- Detect HTTP vs stdio topology ---
+PMD_TYPE=$(python3 -c "
+import json,io
+d=json.load(io.open('.mcp.json',encoding='utf-8'))
+s=d.get('mcpServers',d).get('project-memory',{})
+print(s.get('type','stdio'))
+" 2>/dev/null || echo "stdio")
+
+if [ "$PMD_TYPE" = "http" ]; then
+  # HTTP mode: check server reachability only
+  PMD_URL=$(python3 -c "
+import json,io
+d=json.load(io.open('.mcp.json',encoding='utf-8'))
+s=d.get('mcpServers',d).get('project-memory',{})
+print(s.get('url',''))
+" 2>/dev/null || true)
+  if [ -z "$PMD_URL" ]; then
+    echo "pmd-canonical-guard WARN: HTTP topology but no url found in .mcp.json project-memory config" >&2
+    exit 0
+  fi
+  if ! curl -s -m3 -o /dev/null "$PMD_URL" 2>/dev/null; then
+    echo "pmd-canonical-guard WARN: PMD HTTP server unreachable at $PMD_URL — memory_search_hybrid and memory_write will fail this session" >&2
+  fi
+  exit 0
+fi
+# stdio mode falls through to the original PROJECT_MEMORY_DB divergence check below
 
 # --- Compute canonical target ---
 # Mirror retro-check.sh lines 32-41: derive from git-common-dir so the guard

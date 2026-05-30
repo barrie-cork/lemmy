@@ -72,9 +72,32 @@ HTTP server's internal DB on the laptop. The hook MUST be updated (not the MCP c
 because the MCP is correctly configured. The prior "never edit the hook" guidance does
 NOT apply to the HTTP topology.
 
+## Lesson sync under HTTP topology (added 2026-05-31)
+
+The same store-split breaks `sync-lessons-to-pmd.sh`: it writes directly to a
+SQLite file via `PROJECT_MEMORY_DB`, which under HTTP is the daemon-local store
+the HTTP server never reads. Lessons authored via Write/Edit therefore never
+reached the HTTP PMD. Fix: `.claude/hooks/lesson-pmd-sync.sh` (PostToolUse,
+Edit|Write matcher) auto-calls `memory_write` (or `memory_update` if a row for
+that file_path already exists, via `memory_get_file_context`) against the HTTP
+server whenever a `feedback_*.md` / `reference_*.md` lesson with valid
+frontmatter is saved.
+
+Two traps found building it (both verified by live test 2026-05-31):
+1. **`${VAR@Q}` is NOT valid python.** Bash parameter-transform quoting emits
+   `'it'\''s'` which breaks the python payload builder on any lesson containing
+   an apostrophe. Pass values through the ENVIRONMENT (`os.environ`), never
+   interpolate shell values into python source.
+2. **`memory_search` (FTS5) misses filename-only queries** — querying the
+   basename returned "No memories found", so the idempotency check failed and
+   spawned duplicates. Use `memory_get_file_context` (looks up BY file_path)
+   for the dedup key, pick the lowest id if duplicates exist so re-edits
+   converge on one canonical row.
+
 ## See also
 
 - feedback_pmd_cross_lane_canonical_db.md -- canonical-path invariant predecessor
 - feedback_pmd_two_memory_systems_distinction.md -- System 1 vs System 2 (HTTP server IS System 2)
 - .claude/hooks/retro-check.sh v4 -- the updated hook implementing Option A
+- .claude/hooks/lesson-pmd-sync.sh -- the lesson auto-sync hook (this section)
 - .claude/rules/pmd-invariants.md S1 -- updated with HTTP topology subsection
