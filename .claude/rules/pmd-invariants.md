@@ -32,6 +32,14 @@ within seconds of session-start, not after a phase of stranding.
   v1-ship-1 incident detail, and the diagnosis recipe.
 - `.claude/rules/multi-lane-worktree.md` §"PMD is cross-lane shared, NOT per-lane isolated"
 
+**Current topology (HTTP server, 2026-05-30+):** The PMD MCP server is now an HTTP
+daemon (`http://localhost:11435/mcp` on the laptop; Tailscale-reachable at
+`http://100.104.171.26:11435/mcp` from the daemon). The `PROJECT_MEMORY_DB` /
+`PROJECT_ROOT` env-var mechanism is superseded — the HTTP server manages the canonical
+DB server-side. `pmd-canonical-guard.sh` is now a no-op for env-var path checking but
+its SessionStart invocation is harmless. See `feedback_pmd_retro_check_http_store_split.md`
+for the retro-check.sh enforcement gap this topology change created.
+
 ## 2. Two systems, one source of truth
 
 System 1 (auto-loaded markdown under `~/.claude/projects/.../memory/`) and System 2
