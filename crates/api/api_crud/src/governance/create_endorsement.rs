@@ -180,16 +180,21 @@ async fn process_endorsement(
     SponsorGateStrategy::AgeOrSurety => {
       // Pass if age gate clears OR the caller has at least one active surety
       // (i.e. someone has vouched for them: sponsored_id = caller, revoked_at IS NULL).
-      if enforce_age_gate(conn, &mut config, sponsor_id).await.is_err() {
-        let surety_count: i64 = surety::table
-          .filter(surety::sponsored_id.eq(sponsor_id))
-          .filter(surety::revoked_at.is_null())
-          .select(count_star())
-          .get_result(conn)
-          .await?;
-        if surety_count == 0 {
-          return Err(LemmyErrorType::NotFound.into());
+      // Only fall through to surety on a gate-denial (NotFound); DB/config errors propagate.
+      match enforce_age_gate(conn, &mut config, sponsor_id).await {
+        Ok(()) => {}
+        Err(e) if e.error_type == LemmyErrorType::NotFound => {
+          let surety_count: i64 = surety::table
+            .filter(surety::sponsored_id.eq(sponsor_id))
+            .filter(surety::revoked_at.is_null())
+            .select(count_star())
+            .get_result(conn)
+            .await?;
+          if surety_count == 0 {
+            return Err(LemmyErrorType::NotFound.into());
+          }
         }
+        Err(e) => return Err(e),
       }
     }
     SponsorGateStrategy::Reputation => {

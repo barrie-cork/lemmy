@@ -18116,6 +18116,7 @@ mod v1_rt_r4_fixtures {
     governance::{
       governance_config::GovernanceConfigInsertForm,
       reputation_snapshot::ReputationSnapshotInsertForm,
+      sponsor_allowlist::sponsor_allowlist_exists,
       surety::SuretyInsertForm,
     },
     instance::Instance,
@@ -18123,7 +18124,7 @@ mod v1_rt_r4_fixtures {
   use lemmy_db_schema_file::schema::{
     governance_config, governance_log, reputation_snapshot as rs_table, surety,
   };
-  use lemmy_utils::error::LemmyResult;
+  use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 
   // ──────────────────────────── helpers ────────────────────────────
 
@@ -18198,13 +18199,18 @@ mod v1_rt_r4_fixtures {
     set_gate_strategy(&mut conn, "age_or_surety").await?;
     drop(conn);
 
-    let result = create_endorsement(
+    let err = create_endorsement(
       Json(CreateEndorsement { person_id: sponsee_id, community_id: None }),
       context.clone(),
       sponsor_view,
     )
-    .await;
-    assert!(result.is_err(), "age_or_surety: fresh sponsor with no surety should be denied");
+    .await
+    .expect_err("age_or_surety: fresh sponsor with no surety should be denied");
+    assert!(
+      matches!(&err.error_type, LemmyErrorType::NotFound),
+      "age_or_surety deny: expected LemmyErrorType::NotFound, got {:?}",
+      err.error_type,
+    );
     Ok(())
   }
 
@@ -18264,13 +18270,18 @@ mod v1_rt_r4_fixtures {
     set_gate_strategy(&mut conn, "reputation").await?;
     drop(conn);
 
-    let result = create_endorsement(
+    let err = create_endorsement(
       Json(CreateEndorsement { person_id: sponsee_id, community_id: None }),
       context.clone(),
       sponsor_view,
     )
-    .await;
-    assert!(result.is_err(), "reputation: sponsor with no snapshot should be denied");
+    .await
+    .expect_err("reputation: sponsor with no snapshot should be denied");
+    assert!(
+      matches!(&err.error_type, LemmyErrorType::NotFound),
+      "reputation deny: expected LemmyErrorType::NotFound, got {:?}",
+      err.error_type,
+    );
     Ok(())
   }
 
@@ -18324,13 +18335,18 @@ mod v1_rt_r4_fixtures {
     set_gate_strategy(&mut conn, "allowlist").await?;
     drop(conn);
 
-    let result = create_endorsement(
+    let err = create_endorsement(
       Json(CreateEndorsement { person_id: sponsee_id, community_id: None }),
       context.clone(),
       sponsor_view,
     )
-    .await;
-    assert!(result.is_err(), "allowlist: sponsor not on allowlist should be denied");
+    .await
+    .expect_err("allowlist: sponsor not on allowlist should be denied");
+    assert!(
+      matches!(&err.error_type, LemmyErrorType::NotFound),
+      "allowlist deny: expected LemmyErrorType::NotFound, got {:?}",
+      err.error_type,
+    );
     Ok(())
   }
 
@@ -18384,6 +18400,10 @@ mod v1_rt_r4_fixtures {
       .get_result(&mut conn)
       .await?;
     assert_eq!(remove_count, 1, "exactly one sponsor_allowlist_removed governance log entry");
+
+    // Verify the underlying row was actually deleted, not just the log entry.
+    let still_exists = sponsor_allowlist_exists(person_id, None, &mut conn).await?;
+    assert!(!still_exists, "sponsor_allowlist row must be absent after remove");
 
     Ok(())
   }

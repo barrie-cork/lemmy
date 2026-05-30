@@ -152,9 +152,14 @@ pub async fn remove(
             .optional()?
         }
       }
-      .ok_or_else(|| LemmyErrorType::Unknown("sponsor_allowlist row not found".to_string()))?;
+      .ok_or(LemmyErrorType::NotFound)?;
 
-      sponsor_allowlist_delete(row.id, conn).await?;
+      // Check deleted count — guards against a concurrent remove race where the
+      // row disappears between the SELECT and DELETE inside the same tx.
+      let deleted = sponsor_allowlist_delete(row.id, conn).await?;
+      if deleted == 0 {
+        return Err(LemmyErrorType::NotFound.into());
+      }
 
       let payload = json!({
         "allowlist_id":                   row.id.0,

@@ -10,6 +10,10 @@
 //     `AdminListRuleSets`, `AdminDashboard*`, …) — admin backstops, not
 //     user-facing. Approved as out-of-scope of the 11-endpoint count by
 //     plan §11.2 GOTCHA + Phase 5b/5c decision notes.
+//   - `AddSponsorAllowlist`, `AddSponsorAllowlistResponse`,
+//     `RemoveSponsorAllowlist`, `RemoveSponsorAllowlistResponse` — v1-RT-r4
+//     admin sponsor-allowlist endpoints; not a v0 user-facing endpoint.
+//     Approved as out-of-scope per v1-RT-r4 plan §16 (admin backstop).
 //
 // New non-Admin DTOs added here that don't correspond to one of the 11
 // require a new carve-out entry above. Closes #40.
