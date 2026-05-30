@@ -3,16 +3,22 @@
 **Sub-phase:** v1-RT-r4
 **Phase branch:** `phase-v1-RT-r4`
 **PR:** #164
-**Merge SHA:** _PENDING — gate 5 not yet passed_
-**Merged:** _PENDING_
-**Phase wall-clock:** 2026-05-29 (cut) → 2026-05-30 (CR cycle)
-**Phase tip (pre-merge):** `33c04155b` (both fix-impls cherry-picked)
+**Merge SHA:** `04a5e98fb` (`Merge pull request #164 from barrie-cork/phase-v1-RT-r4`; parents `0ae2bf62f` trunk + `27619ccc6` merged phase tip)
+**Merged:** 2026-05-30 via `gh pr merge 164 --merge --admin` (gate 5 confirmed by user; `--admin` override of a billing-blocked check — see below)
+**Phase wall-clock:** 2026-05-29 (cut) → 2026-05-30 (CR cycle + merge)
+**Phase tip (pre-merge):** `27619ccc6` (both fix-impls cherry-picked + governance-v0 merged forward; pre-merge code tip `33c04155b`)
 
-> **DRAFT — finalize after local e2e (`bgor8c85j`) confirms E2E_EXIT_0 and gate 5 merge passes.** Sections marked PENDING depend on the e2e result + merge.
+> **SHIPPED.** e2e GREEN + gate 5 confirmed + merge-forward done + merged to `governance-v0` @ `04a5e98fb`. Awaiting user gate-6 retro sign-off → `/brehon-phase-transition`.
+
+**Final validation (all green on merged tip `27619ccc6`):**
+- Full e2e: `test result: ok. 126 passed; 0 failed; 5 ignored` — `E2E_EXIT_0` (2544.69s, laptop, 0 billed; gate-4 choice "Local").
+- Merge-forward: 28 `governance-v0` commits merged into `phase-v1-RT-r4` (Shape-G re-enable, CR-tuning, harness refactors, quality-r2 briefs, cargo-linux.sh). Only conflict was `.claude/decision-queue.json` (per-lane DQ vs trunk DQ) — resolved as a **provably-lossless 3-way union** (`.claude/PRPs/debug/dq-merge-union.py`): resolved 221 base + 9 ours-only + 2 theirs-only = **232 merged**, 0 dropped, 0 dup (assertion-verified). `origin/governance-v0` was an ancestor of the phase tip pre-merge.
+- cargo check on merged tree: `CHECK_EXIT_0` (1m05s). clippy + check already exit 0 on `33c04155b` pre-merge.
+- PR #164 checks at merge: **CodeRabbit re-review PASS**; **Red-flag diff scan (adr-compliance) FAIL** — billing-blocked (`"account payments have failed / spending limit needs increasing"`, job refused to start in 3s; no diff scanned, no ADR rule evaluated). User chose admin-override merge: the failure is infrastructure-only, not a code/ADR signal; ADR-compliance was already verified inline during CR triage (cr-6 the only ADR-adjacent finding, a verified false-positive). **Follow-up:** GitHub Actions billing needs resolving — the merged-forward Shape-G workflows will keep failing-to-start until then (see Open follow-ups).
 
 ## TL;DR
 
-v1-RT-r4 shipped three new `SponsorGateStrategy` arms (`age_or_surety`, `reputation`, `allowlist`) in `create_endorsement` plus the admin `POST /api/v4/governance/admin/sponsor-allowlist/{add,remove}` endpoints (firing the two RT-r1 pre-landed consts `ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED`). 7 impl tasks (1-7) delivered serially (user directive: "one task at a time" after an early OOM), all validated; `/brehon-verify` PASS both stories. **CodeRabbit posted 16 line findings** (NOT the "6" the headline implied) — every claim verified against source. 3 genuine majors surfaced: cr-1 (silent-failure in AgeOrSurety error handling), cr-2 (duplicate instance-wide allowlist rows via NULL-distinct UNIQUE), cr-3 (ADR-015 un-scrubbed user `note` in governance-log payload). Fixed across 2 fix-impl cycles + advisor-mechanical (cr-10 DQ timestamps, cr-11 runlog MD022). **Two advisor-side incidents this CR cycle, both recovered losslessly:** (1) **fix-impl-1 silently dropped cr-2/cr-3/cr-7** — caught by advisor diff-vs-enumeration spot-check (grep-confirmed 0 occurrences) → fix-impl-2 closed them. (2) **daemon-local-stale + cross-lane cancel chain** — daemon auto-finalize-merged stale commits onto a diverged-local phase branch; advisor mis-tracked task IDs and cancelled #524 (a quality-r2 task, not rt-r4) — work was safe on origin; recovery ref made; surfaced. Headline acceptance: 6 strategy/admin stories ✓; cargo check + clippy clean on final tip; e2e _PENDING_.
+v1-RT-r4 shipped three new `SponsorGateStrategy` arms (`age_or_surety`, `reputation`, `allowlist`) in `create_endorsement` plus the admin `POST /api/v4/governance/admin/sponsor-allowlist/{add,remove}` endpoints (firing the two RT-r1 pre-landed consts `ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED`). 7 impl tasks (1-7) delivered serially (user directive: "one task at a time" after an early OOM), all validated; `/brehon-verify` PASS both stories. **CodeRabbit posted 16 line findings** (NOT the "6" the headline implied) — every claim verified against source. 3 genuine majors surfaced: cr-1 (silent-failure in AgeOrSurety error handling), cr-2 (duplicate instance-wide allowlist rows via NULL-distinct UNIQUE), cr-3 (ADR-015 un-scrubbed user `note` in governance-log payload). Fixed across 2 fix-impl cycles + advisor-mechanical (cr-10 DQ timestamps, cr-11 runlog MD022). **Two advisor-side incidents this CR cycle, both recovered losslessly:** (1) **fix-impl-1 silently dropped cr-2/cr-3/cr-7** — caught by advisor diff-vs-enumeration spot-check (grep-confirmed 0 occurrences) → fix-impl-2 closed them. (2) **daemon-local-stale + cross-lane cancel chain** — daemon auto-finalize-merged stale commits onto a diverged-local phase branch; advisor mis-tracked task IDs and cancelled #524 (a quality-r2 task, not rt-r4) — work was safe on origin; recovery ref made; surfaced. Headline acceptance: 6 strategy/admin stories ✓; cargo check + clippy clean on final tip; **e2e 126 passed / 0 failed ✓**; merged to `governance-v0` @ `04a5e98fb` (admin-override past a billing-blocked CI check).
 
 ## Four-role retro signals (per `feedback_four_role_retro_signals.md`)
 
@@ -95,10 +101,11 @@ Validate-pending-laptop cycles (impl→advisor-laptop) for tasks 1-7 + fix-impls
 | Story A — 3 new SponsorGateStrategy arms gate endorsement | ✓ (verify) | create_endorsement.rs enum+parse+label+3 dispatch arms; sponsor_allowlist_exists wired; `/brehon-verify` 6 strategy tests PASS |
 | Story B — admin allowlist add/remove maintenance | ✓ (verify) | admin_sponsor_allowlist.rs add/remove; routes registered; registry rows active; round-trip test PASS |
 | CR majors (cr-1 silent-fail, cr-2 dup-rows, cr-3 ADR-015 scrub) | ✓ | fixed + verified on `33c04155b`; cargo check + clippy exit 0 |
-| Full e2e on final fix tip | _PENDING_ | `bgor8c85j` running (`.claude/validate-fix2-e2e.log`); expect E2E_EXIT_0 |
+| Full e2e on final fix tip | ✓ | `126 passed; 0 failed; 5 ignored` — `E2E_EXIT_0` on merged tip `27619ccc6` (`.claude/validate-fix2-e2e.log`) |
 
 ## Open follow-ups (not blocking trunk)
 
+- **GitHub Actions billing blocked** (NEW, surfaced at merge) — the Shape-G workflows re-enabled this morning (`9bd933fe2`) now fail-to-start with `"account payments have failed / spending limit needs increasing"`. PR #164's adr-compliance check failed on this (3s, no scan). The Shape-G re-enable DQ (`a3d0e9941441-038`) flagged the prior-allocation risk; this is that risk realized. **Action: user resolves Settings → Billing & plans, OR re-suspend Shape-G per `project_shape_g_suspended_2026_05_16` runbook until the monthly reset.** Until resolved, every Shape-G workflow run on any branch fails-to-start.
 - **cr-9** — fix stale `.coderabbit.yaml` 11-endpoint rule (root cause of recurring v1-DTO false positives). File issue.
 - **cr-12** — e2e HTTP-path coverage (suite-wide). File issue.
 - **What-to-change #1** — cancel-pre-flight show_task discipline + candidate guard. Promote to `advisor-orchestrator.md`.
@@ -107,10 +114,10 @@ Validate-pending-laptop cycles (impl→advisor-laptop) for tasks 1-7 + fix-impls
 ## Sign-off
 
 - Plan §13 tasks shipped: ✓
-- Headline acceptance criteria pass: ✓ (Stories A+B via verify) / e2e _PENDING_
-- CR triage: 0 open fix-in-pr, 8 done, 1 rebut, 1 wont-fix, 2 carry-forward; recommendation `approve` once e2e green
-- PR #164 merged via `--merge`: _PENDING (gate 5)_
-- Advisor post-condition verification: _PENDING_
-- Retro authored: ✓ (this file; finalize e2e + merge SHA after gate 5)
+- Headline acceptance criteria pass: ✓ (Stories A+B via verify; full e2e 126 passed / 0 failed)
+- CR triage: 0 open fix-in-pr, 8 done, 1 rebut, 1 wont-fix, 2 carry-forward; recommendation `approve` — e2e green ✓
+- PR #164 merged via `--merge --admin`: ✓ @ `04a5e98fb` (gate 5 confirmed; `--admin` override of billing-blocked adr-compliance check, infrastructure-only)
+- Advisor post-condition verification: ✓ — merge SHA `04a5e98fb` read from git (parents `0ae2bf62f` + `27619ccc6`); PR state `closed`; `origin/governance-v0` advanced `0ae2bf62f..04a5e98fb`
+- Retro authored: ✓ (this file)
 
-**DRAFT — awaiting local e2e result, then gate 5 merge confirm, then user sign-off (gate 6) → `/brehon-phase-transition`.**
+**SHIPPED to `governance-v0` @ `04a5e98fb`. Awaiting user gate-6 retro sign-off → `/brehon-phase-transition` → Mode A lane teardown.**
