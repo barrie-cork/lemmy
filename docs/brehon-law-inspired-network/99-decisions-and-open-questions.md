@@ -94,7 +94,7 @@ Lightweight Architecture Decision Records. Each has: ID, title, date, status, co
   - Human-in-the-loop for every cross-instance sanction
   - Contained blast radius of peer compromise
 - **Alternatives considered:** Auto-apply from trusted peers (rejected — "trusted" is exactly what changes during compromise), delayed auto-apply with manual override (rejected — creates exactly the silent governance capture path we're protecting against).
-- **Enacted in:** [03-architecture.md](03-architecture.md) §8.2, [04-data-model-and-api.md](04-data-model-and-api.md) §11, [06-security-and-threat-model.md](06-security-and-threat-model.md) §5
+- **Enacted in:** [03-architecture.md](03-architecture.md) §8.2, [04-data-model-and-api.md](04-data-model-and-api.md) §9 (federation surface — inbound advisory-only), [06-security-and-threat-model.md](06-security-and-threat-model.md) §5
 
 ### ADR-007 — MVP uses simplified jury parameters (5 jurors, quorum 3, simple majority)
 

@@ -161,6 +161,30 @@ Both phases use the same single-entry mutation pattern. Cohort
 advancement waits on both phases per the cohort dispatch rule in
 `.claude/rules/advisor-orchestrator.md`.
 
+## Polling-loop routing per kind (canonical detail)
+
+> Relocated from `decision-queue.md` on 2026-05-29 (context-budget redesign B2).
+> This is advisor-loop MECHANISM — read only when the advisor processes a DQ entry
+> during orchestration (the `/auto-phase`, `/check-dq`, `/start-brehon` skills carry
+> the routing in their bodies). The rule file keeps a one-line pointer here. The
+> advisor-side commit-subject pattern + the surfacing decision tree (advisor-answer
+> / catch-fire / user-relay) live in `advisor-orchestrator.md` §"DQ triage decision
+> tree".
+
+The advisor's polling loop reads `decision-queue.json` and routes by `(kind, status)` pair.
+
+- `(blocker, pending)` — surface to user via the DQ triage decision tree (advisor-answer / catch-fire / user-relay). The Junior task that raised it is gated on a resolution.
+- `(blocker, resolved)` — historical record only. No action.
+- `(log, resolved)` — harvest at retro time. No mid-loop action.
+- `(log, pending)` — **schema breach** (per Hard refusals: log entries always go to resolved). Surface as catch-fire.
+- `(clarify, pending)` — advisor's own backlog from `/brehon-clarify`. If mode=user-relay, surface to user via AskUserQuestion. The planning task is gated until every clarify-pending on the brief is resolved.
+- `(clarify, resolved)` — historical record. No action.
+- `(validate-pending, pending)` — two cases:
+  - **Pre-mutation** (`result == null`): advisor dispatches a `[role:ci-watcher]` Junior task with brief filled from the entry's `workflow_run_id` + `branch` + `phase_task`. The originating impl-task (Phase 1) or the cohort barrier (Phase 2) stays gated until ci-watcher mutates the entry. Per `advisor-orchestrator.md` Stage-shape "Each impl-task complete (under Shape G)".
+  - **Post-mutation, failure** (`result ∈ {"fail", "cancelled", "timed_out", "gh_unauth", "run_not_found"}`): advisor runs the §G4 classifier (per `advisor-orchestrator.md` "§G4 classifier" sub-section). Allowlist match → auto-queue narrow fix-impl-task. Non-allowlist → catch-fire to user with `log_slice` + `failed_jobs`.
+- `(validate-pending, resolved)` — post-mutation success (`result == "pass"`). Advisor advances the §13-task pipeline (cohort check / Phase-2 e2e dispatch). No mid-loop user surfacing.
+- `(validate-result | validate-failed, *)` — DEPRECATED kinds, historical only. Treat `(validate-result, resolved)` as success-pass equivalent of `(validate-pending, resolved)`; no mid-loop action. Per Hard refusal #7, no session writes new entries with these kinds.
+
 ## See also
 
 - `.claude/rules/decision-queue.md` — live schema, kind enum,

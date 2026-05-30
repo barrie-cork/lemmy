@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T19:10:00Z",
+  "last_updated_at": "2026-05-29T20:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -260,11 +260,16 @@
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
         "v1-RT-r4": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "admin_sponsor_allowlist.rs add/remove handlers; fires ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED",
           "registry_evidence": "2 RT-r1 pre-landed consts name v1-RT-r4 as their fire site",
           "plan": null,
-          "blocker": "no plan written yet"
+          "blocker": "no plan written yet — /roadmap-next cut the branch + lane worktree; planning is the next step",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r4",
+          "in_flight_since": "2026-05-29",
+          "phase_branch": "phase-v1-RT-r4",
+          "lane_mode": "A",
+          "note": "Cut via /roadmap-next 2026-05-29 off governance-v0 @99eb3da46 (branch tip 3b19eeddec). ARMED: MiniMax M2.7-vs-Sonnet impl-task A/B trial fires this phase (user confirmed at cut gate) — designate 5 MIRROR-ref §13 tasks during planning per .claude/PRPs/briefs/minimax-m27-trial-1.md; cutover is impl-task-only as its own follow-up sub-phase. Cross-lane note: a concurrent quality-r2 session shares the canonical .git/; during this cut a quality-r2 Task-0 brief commit (e5cda780b) landed on the local RT-r4 tip and was rescued to origin/phase-v1-quality-r2 (blob fa3547450) then RT-r4 reset to origin — lossless."
         },
         "v1-RT-r5": {
           "status": "unstarted",

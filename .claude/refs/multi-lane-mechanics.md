@@ -112,6 +112,31 @@ HUMAN-SIDE laptop checkout only.
 Multi-lane adoption is complete as of v1-RT-r1 (2026-05-11). New lanes
 are bootstrapped at bm-cut time per §"Lifecycle" above.
 
+## Why this rule exists
+
+> Relocated from `.claude/rules/multi-lane-worktree.md` on 2026-05-29
+> (context-budget redesign B3). The rule file keeps only a one-line
+> rationale + pointer here; the full failure-mode narrative lives below.
+> 0 Pi/Claude-side heading citations — pure rationale, safe to externalise.
+
+Per `.claude/PRPs/reports/v1-RT-r1-halt-retro.md` (commit `ffa2876e3`) L4 + user
+decision 2026-05-11 (option a — worktree-per-lane). When two advisor sessions
+operate on the same on-disk checkout (e.g. `C:/Users/barri/Developer/brehon-fork`)
+and both write `.claude/decision-queue.json` on different phase branches, the
+shared file path produces:
+
+- Working-tree races (checkout of phase-A modifies the file; checkout of
+  phase-B sees stale state).
+- Merge conflicts on every phase-branch reconcile cycle (3 cycles in
+  v1-RT-r1 alone, ~4 hours wallclock overhead).
+- Cross-lane DQ id collisions (each session computes `next_id` against its
+  own working-tree view).
+- Reflog HEAD-move surprises across sessions sharing the same `.git/`.
+
+Per-worktree isolation removes the root cause: `.claude/decision-queue.json`
+becomes a per-worktree file path, and each phase branch has exactly one
+human-side writer.
+
 ## See also
 
 - `.claude/rules/multi-lane-worktree.md` — layout, session-start

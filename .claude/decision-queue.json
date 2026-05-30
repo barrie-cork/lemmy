@@ -4720,6 +4720,51 @@
       "resolved_at": "2026-05-30T06:24:35Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "3c903b3418cb-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T10:00:00Z",
+      "question": "Run local cargo check/clippy/test-norun gates for task 3 (fixtures doc-comment audit) on laptop. Commit 1f337dddb on worker branch.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "14 doc-comment edits applied to crates/server/tests/e2e.rs (Shape NO-DOC x13 + Shape APPEND x1). cargo-check and cargo-clippy pass on daemon. Gate 3 brief command `--test e2e --no-run -p lemmy_server --features full` fails with known incompatibility (feedback_features_full_p_crate_incompatible.md); corrected to `--workspace --features full` which exits 0. Submodule init required on daemon worktree before gates. Python audit: OK — all 14 fixtures modules cite --test-threads=1 in doc-comment.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --test e2e --no-run --workspace --features full",
+        "python3 -c \"import re; content=open('crates/server/tests/e2e.rs').read(); found=[m.group(1) for m in re.finditer(r'mod (\\w+_fixtures)\\s*\\{', content) if '--test-threads=1' in content[content.index(m.group(0)):content.index(m.group(0))+1500]]; print(f'OK — all {len(found)} fixtures modules cite --test-threads=1 in doc-comment' if len(found)==14 else f'FAIL: only {len(found)}/14')\""
+      ],
+      "branch": "junior/role-impl-task-v1-quality-r2-task-3-fixtures-doc-comment-audit-see-claude-prps-briefs-v1-quality-r2-impl-3-md-511",
+      "phase_task": 3,
+      "answer": "All 4 validate-pending-laptop gates passed on laptop: cargo-check exit 0, cargo-clippy exit 0, cargo-test --no-run exit 0, python audit 14/14 fixtures modules cite --test-threads=1.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T22:02:14Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-30T00:55:00Z",
+      "question": "Shape G re-enabled 2026-05-30 (one day ahead of the 2026-06-01 plan) at user direction — record the action for the audit trail.",
+      "options": [
+        "re-enabled all three workflows + reverted suspension prose",
+        "n/a — log entry"
+      ],
+      "context": "User directed 'activate shape g if not already too late' on 2026-05-30. Verified all 3 workflows still disabled_manually, then re-enabled via gh api PUT: adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) — all now active. Reverted SHAPE-G-SUSPENDED prose from .claude/agents/impl-task.md + .claude/PRPs/templates/impl-task-brief.template.md (validate-pending workflow path restored as default for Shape-G plans; Pre-Shape-G validate-pending-laptop path retained). Could not read exact remaining Actions minutes (billing API needs 'user' OAuth scope); suspension baseline was ~2800/3000 at 2026-05-16. Risk accepted by user: a run before the monthly reset still draws from the prior allocation. DQ #229 (the original re-enable reminder) was already a resolved log entry, not a pending blocker — no pending entry needed resolving. Supersedes the active state in project_shape_g_suspended_2026_05_16 memory.",
+      "answer": "Shape G active as of 2026-05-30 00:55 UTC. Three workflows re-enabled; suspension prose reverted in two harness files. From this point impl-task workers on Shape-G plans write kind: 'validate-pending' + capture workflow_run_id again; ci-watcher polls. Next monitor: watch the first Shape-G workflow run for minutes consumption against the cap.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T00:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-038"
     }
   ]
 }

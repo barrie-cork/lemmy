@@ -251,7 +251,7 @@ From [chat1.md](chat1.md) §18–§19 and the team's own experience. Put these i
 
 ### Do not overbuild reputation in v1
 
-Only the four counters and two booleans from [04-data-model-and-api.md](04-data-model-and-api.md) §13. Everything else is derived later. It is tempting to build elaborate multi-factor scoring before you have any real data. Resist this.
+Only the four counters and two booleans from [04-data-model-and-api.md](04-data-model-and-api.md) §3 (`ReputationSnapshot`). Everything else is derived later. It is tempting to build elaborate multi-factor scoring before you have any real data. Resist this.
 
 ### Do not embed governance logic in `crates/server`
 
