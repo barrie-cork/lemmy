@@ -2568,13 +2568,8 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   // -- 1. Set env vars BEFORE any Lemmy code touches `SETTINGS`. --------
   // Deterministic 32-byte ed25519 seed: 31 zero bytes + 0x01.
   const SIGNING_SEED_HEX: &str = "0000000000000000000000000000000000000000000000000000000000000001";
-  // SAFETY: tests run with --test-threads=1 so no concurrent env mutation;
-  // these vars are read by SETTINGS (LazyLock) and the governance log
-  // signer at first call.
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
 
   // -- 2. Spin up Postgres and apply the full schema. -------------------
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
@@ -3349,11 +3344,8 @@ async fn sponsor_liability_with_founder_multiplier() -> lemmy_utils::error::Lemm
   use reqwest_middleware::ClientBuilder;
 
   const SIGNING_SEED_HEX: &str = "0000000000000000000000000000000000000000000000000000000000000001";
-  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -4117,13 +4109,8 @@ async fn all_mvp_endpoints_return_non_404() -> lemmy_utils::error::LemmyResult<(
   use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var(
-      "GOVERNANCE_LOG_SIGNING_KEY",
-      "0000000000000000000000000000000000000000000000000000000000000001",
-    );
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -4462,13 +4449,8 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> lemmy_utils::error::Lemm
   use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var(
-      "GOVERNANCE_LOG_SIGNING_KEY",
-      "0000000000000000000000000000000000000000000000000000000000000001",
-    );
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -4791,13 +4773,8 @@ async fn governance_events_notify_fires() -> lemmy_utils::error::LemmyResult<()>
   use tokio::sync::mpsc;
   use tokio_postgres::{AsyncMessage, NoTls, Notification};
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var(
-      "GOVERNANCE_LOG_SIGNING_KEY",
-      "0000000000000000000000000000000000000000000000000000000000000001",
-    );
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -4926,9 +4903,7 @@ async fn underscore_prefix_usernames_still_register() -> lemmy_utils::error::Lem
   };
   use reqwest_middleware::ClientBuilder;
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -5049,11 +5024,8 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // config-file load. Both DBs share the same signing key — fine for v0
   // since the test only reads each chain locally.
   const SIGNING_SEED_HEX: &str = "0000000000000000000000000000000000000000000000000000000000000001";
-  // SAFETY: tests run with --test-threads=1 so no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
 
   // -- 1. Boot container A + apply schema. ------------------------------
   let (_container_a, port_a) = governance_fixtures::start_postgres().await?;
@@ -5678,13 +5650,8 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> lemmy_utils::error::
   use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var(
-      "GOVERNANCE_LOG_SIGNING_KEY",
-      "0000000000000000000000000000000000000000000000000000000000000001",
-    );
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -5879,13 +5846,8 @@ async fn declining_juror_not_picked_as_own_replacement() -> lemmy_utils::error::
   use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
 
-  unsafe {
-    std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    std::env::set_var(
-      "GOVERNANCE_LOG_SIGNING_KEY",
-      "0000000000000000000000000000000000000000000000000000000000000001",
-    );
-  }
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
@@ -16832,11 +16794,8 @@ mod v1_ship_3_fixtures {
   async fn two_sponsors_lose_endorsement_strength_on_sanction() -> LemmyResult<()> {
     const SIGNING_SEED_HEX: &str =
       "0000000000000000000000000000000000000000000000000000000000000001";
-    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-    unsafe {
-      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-    }
+    let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
 
     let (_container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
