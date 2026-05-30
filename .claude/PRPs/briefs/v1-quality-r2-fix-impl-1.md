@@ -13,7 +13,7 @@ re-reads that env var LAZILY (via `Settings::get_database_url()`) AFTER bootstra
 `admin_audit_stream_emits_frame_on_config_change`, `admin_audit_stream_enforces_per_admin_cap`.
 
 Full RCA: `.claude/PRPs/debug/qr2-envguard-rca.md`. Architectural follow-up (resolve LISTEN URL from `context`,
-not the env var) is tracked separately in issue **#168** — OUT OF SCOPE here.
+not the env var) is tracked separately in issue **#167** — OUT OF SCOPE here.
 
 ## Scope
 
@@ -41,7 +41,7 @@ disambiguate from the identical line in Edit 2.
     // this fixture returns, to open its raw tokio_postgres LISTEN connection. A
     // function-scoped RAII guard drops the var on return and breaks that lazy
     // re-read (the v1-quality-r2 e2e regression). Restores pre-#160 behaviour.
-    // The architectural fix (resolve the LISTEN URL from `context`) is issue #168.
+    // The architectural fix (resolve the LISTEN URL from `context`) is issue #167.
     // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
     unsafe {
       std::env::set_var("LEMMY_DATABASE_URL", &db_url);
@@ -68,7 +68,7 @@ disambiguate from Edit 1.
     // this fixture returns, to open its raw tokio_postgres LISTEN connection. A
     // function-scoped RAII guard drops the var on return and breaks that lazy
     // re-read (the v1-quality-r2 e2e regression). Restores pre-#160 behaviour.
-    // The architectural fix (resolve the LISTEN URL from `context`) is issue #168.
+    // The architectural fix (resolve the LISTEN URL from `context`) is issue #167.
     // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
     unsafe {
       std::env::set_var("LEMMY_DATABASE_URL", &db_url);
@@ -80,7 +80,7 @@ disambiguate from Edit 1.
   whole test body).
 - `boot_context()` (v1_rt_r3_fixtures) — already returns its guards correctly.
 - Any caller destructure — return types are unchanged, so callers compile as-is.
-- `admin_audit_stream.rs` or any production code — that's issue #168.
+- `admin_audit_stream.rs` or any production code — that's issue #167.
 
 ## Required reading
 

@@ -61,7 +61,7 @@ after bootstrap returns, so the var must outlive bootstrap — i.e. process-life
 +    // function-scoped RAII guard drops the var on return and breaks that lazy
 +    // re-read (the v1-quality-r2 e2e regression). This restores the pre-#160
 +    // process-lifetime behaviour. The architectural fix (resolve the LISTEN URL
-+    // from `context`, not the env var) is tracked in issue #168.
++    // from `context`, not the env var) is tracked in issue #167.
 +    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
 +    unsafe {
 +      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
@@ -78,5 +78,5 @@ boot_context) so it will NOT become dead code — no `dead_code` warning expecte
 
 ## Verdict
 T5 regression. Minimal restore = 2 edits in e2e.rs (same file T5 owns), zero caller churn, provably pre-#160 behaviour.
-Architectural follow-up (DB URL from `context`) tracked in **issue #168** (filed on trunk `c328d9d34`). Advisor
+Architectural follow-up (DB URL from `context`) tracked in **issue #167**. Advisor
 dispatches a fix-impl-task; advisor never authors crate code.
