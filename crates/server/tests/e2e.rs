@@ -146,6 +146,7 @@ mod governance_fixtures {
   //! Safety of those mutations is contingent on the Cargo runner flag
   //! `--test-threads=1`. Running these tests with concurrent threads is
   //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
+  use super::EnvVarGuard;
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection, RunQueryDsl, connection::SimpleConnection};
   use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
@@ -835,9 +836,7 @@ mod governance_fixtures {
 
     let (container, host_port) = start_postgres().await?;
     let db_url = db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -2573,9 +2572,7 @@ async fn report_to_modlog_golden_path() -> lemmy_utils::error::LemmyResult<()> {
   // -- 2. Spin up Postgres and apply the full schema. -------------------
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -3353,9 +3350,7 @@ async fn sponsor_liability_with_founder_multiplier() -> lemmy_utils::error::Lemm
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
     governance_fixtures::apply_all_schema(&mut sync_conn)?;
@@ -4125,9 +4120,7 @@ async fn all_mvp_endpoints_return_non_404() -> lemmy_utils::error::LemmyResult<(
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4472,9 +4465,7 @@ async fn ineligible_user_cannot_be_picked_for_jury() -> lemmy_utils::error::Lemm
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4803,9 +4794,7 @@ async fn governance_events_notify_fires() -> lemmy_utils::error::LemmyResult<()>
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -4936,9 +4925,7 @@ async fn underscore_prefix_usernames_still_register() -> lemmy_utils::error::Lem
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -5072,10 +5059,7 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // Build A's pool+context fully before swapping env to B — the pool reads
   // env at construction and a multi-thread runtime could interleave
   // otherwise. See plan §TWO_DB_TEST_PATTERN + §12 R1.
-  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &url_a);
-  }
+  let _g_db_url_a = EnvVarGuard::set("LEMMY_DATABASE_URL", &url_a);
   let pool_a: ActualDbPool = build_db_pool_for_tests();
   let client_a = client_builder(&SETTINGS).build()?;
   let middleware_client_a = ClientBuilder::new(client_a).build();
@@ -5121,10 +5105,7 @@ async fn sanction_notice_round_trip() -> lemmy_utils::error::LemmyResult<()> {
   // NOTE: LEMMY_DATABASE_URL is left set to url_b at test exit — mirrors
   // e2e.rs:2195+ pattern; test-infra cleanup is a v1 item per DQ-6.4
   // resolved id 34 (see phase-6 completion report carry-forwards).
-  // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &url_b);
-  }
+  let _g_db_url_b = EnvVarGuard::set("LEMMY_DATABASE_URL", &url_b);
   let pool_b: ActualDbPool = build_db_pool_for_tests();
   let client_b = client_builder(&SETTINGS).build()?;
   let middleware_client_b = ClientBuilder::new(client_b).build();
@@ -5700,9 +5681,7 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> lemmy_utils::error::
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -5903,9 +5882,7 @@ async fn declining_juror_not_picked_as_own_replacement() -> lemmy_utils::error::
 
   let (_container, host_port) = governance_fixtures::start_postgres().await?;
   let db_url = governance_fixtures::db_url(host_port);
-  unsafe {
-    std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-  }
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
   {
     let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -6136,6 +6113,7 @@ mod admin_config_fixtures {
   //! Safety of those mutations is contingent on the Cargo runner flag
   //! `--test-threads=1`. Running these tests with concurrent threads is
   //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
+  use super::EnvVarGuard;
   use actix_web::web::Data;
   use diesel::{Connection as _, PgConnection};
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
@@ -6171,9 +6149,7 @@ mod admin_config_fixtures {
 
     let (container, host_port) = super::governance_fixtures::start_postgres().await?;
     let db_url = super::governance_fixtures::db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -16847,9 +16823,7 @@ mod v1_ship_3_fixtures {
 
     let (_container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
       governance_fixtures::apply_all_schema(&mut sync_conn)?;
