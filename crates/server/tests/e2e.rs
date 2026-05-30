@@ -829,6 +829,13 @@ mod governance_fixtures {
     Data<LemmyContext>,
     String,
   )> {
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    // These two env vars are intentionally process-scoped (NOT EnvVarGuard-wrapped):
+    // both are constant-valued ("1" / fixed signing seed) and bootstrap() has many
+    // callers across this test module — wrapping here would drop the guard at
+    // bootstrap() return, unsetting the var before the test body runs (see
+    // feedback_envvarguard_fixture_lifetime_footgun.md). LEMMY_DATABASE_URL IS
+    // guarded (per-call value) at the _g_db_url binding below.
     unsafe {
       std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
       std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
@@ -6142,6 +6149,13 @@ mod admin_config_fixtures {
   )> {
     const SIGNING_SEED_HEX: &str =
       "0000000000000000000000000000000000000000000000000000000000000001";
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    // These two env vars are intentionally process-scoped (NOT EnvVarGuard-wrapped):
+    // both are constant-valued ("1" / fixed signing seed) and bootstrap() has many
+    // callers across this test module — wrapping here would drop the guard at
+    // bootstrap() return, unsetting the var before the test body runs (see
+    // feedback_envvarguard_fixture_lifetime_footgun.md). LEMMY_DATABASE_URL IS
+    // guarded (per-call value) at the _g_db_url binding below.
     unsafe {
       std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
       std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
