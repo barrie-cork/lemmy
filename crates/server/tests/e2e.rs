@@ -108,6 +108,34 @@ async fn template_dump_capture() -> lemmy_utils::error::LemmyResult<()> {
   Ok(())
 }
 
+struct EnvVarGuard {
+  key: &'static str,
+  prev: Option<String>,
+}
+
+impl EnvVarGuard {
+  fn set(key: &'static str, value: &str) -> Self {
+    let prev = std::env::var(key).ok();
+    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
+    unsafe {
+      std::env::set_var(key, value);
+    }
+    Self { key, prev }
+  }
+}
+
+impl Drop for EnvVarGuard {
+  fn drop(&mut self) {
+    // SAFETY: same justification — single-threaded test runner.
+    unsafe {
+      match &self.prev {
+        Some(prev) => std::env::set_var(self.key, prev),
+        None => std::env::remove_var(self.key),
+      }
+    }
+  }
+}
+
 // ============================================================================
 // Phase 1 — governance schema + hash-chain trigger smoke tests
 // ============================================================================
@@ -17194,6 +17222,7 @@ mod v1_rt_r3_fixtures {
   //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
 
   use super::*;
+  use super::EnvVarGuard;
   use actix_web::web::{Data, Json};
   use chrono::{Datelike, Utc};
   use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
@@ -17247,39 +17276,6 @@ mod v1_rt_r3_fixtures {
   use lemmy_db_schema::newtypes::ModerationCaseId;
   use lemmy_db_schema::source::governance::moderation_case::ModerationCaseInsertForm;
   use reqwest_middleware::ClientBuilder;
-
-  /// RAII guard for an environment variable. Set via `EnvVarGuard::set`
-  /// before the operation that depends on the env var; on Drop (success,
-  /// `?` short-circuit, panic), the previous value is restored — closing
-  /// the leak-via-`?` defect class flagged by Axis 3 of the e2e
-  /// code-quality audit (`.claude/PRPs/reports/e2e-rs-code-quality-audit-2026-05-26.md`).
-  struct EnvVarGuard {
-    key: &'static str,
-    prev: Option<String>,
-  }
-
-  impl EnvVarGuard {
-    fn set(key: &'static str, value: &str) -> Self {
-      let prev = std::env::var(key).ok();
-      // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-      unsafe {
-        std::env::set_var(key, value);
-      }
-      Self { key, prev }
-    }
-  }
-
-  impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
-      // SAFETY: same justification — single-threaded test runner.
-      unsafe {
-        match &self.prev {
-          Some(prev) => std::env::set_var(self.key, prev),
-          None => std::env::remove_var(self.key),
-        }
-      }
-    }
-  }
 
   /// Seed one person/local_user pair. Mirror governance_fixtures::seed_user
   /// at e2e.rs:835 but takes the optional admin flag and returns only the
@@ -17493,20 +17489,16 @@ mod v1_rt_r3_fixtures {
     Data<LemmyContext>,
     activitypub_federation::config::FederationConfig<LemmyContext>,
     String,
+    Vec<EnvVarGuard>,
   )> {
     const SIGNING_SEED_HEX: &str =
       "0000000000000000000000000000000000000000000000000000000000000001";
-    // SAFETY: tests run with --test-threads=1; no concurrent env mutation.
-    unsafe {
-      std::env::set_var("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-      std::env::set_var("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-    }
+    let mut guards: Vec<EnvVarGuard> = Vec::with_capacity(3);
+    guards.push(EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1"));
+    guards.push(EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX));
     let (container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
-    // SAFETY: tests run with --test-threads=1.
-    unsafe {
-      std::env::set_var("LEMMY_DATABASE_URL", &db_url);
-    }
+    guards.push(EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url));
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
       governance_fixtures::apply_all_schema(&mut sync_conn)?;
@@ -17534,7 +17526,7 @@ mod v1_rt_r3_fixtures {
       .build()
       .await
       .map_err(|e| anyhow::anyhow!("{e}"))?;
-    Ok((container, context, federation_config, db_url))
+    Ok((container, context, federation_config, db_url, guards))
   }
 
   // ============================================================
@@ -17651,7 +17643,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_activity_cron_emits_plus_one_per_active_user() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act1.example.com").await?;
 
@@ -17706,7 +17698,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_activity_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_act2.example.com").await?;
 
@@ -17746,7 +17738,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_dormancy_cron_emits_minus_two_per_dormant_user() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm1.example.com").await?;
 
@@ -17790,7 +17782,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn participation_dormancy_cron_idempotent_across_same_iso_week() -> LemmyResult<()> {
     let _guard = EnvVarGuard::set("BREHON_DISABLE_PARTICIPATION_JOB", "1");
-    let (_container, context, _federation_context, db_url) = boot_context().await?;
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_dorm2.example.com").await?;
 
@@ -17831,7 +17823,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn vote_outcome_emits_plus_one_for_majority_aligned_jurors() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo1.example.com").await?;
     let federation_context = federation_config.to_request_data();
@@ -17895,7 +17887,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn vote_outcome_emits_nothing_for_minority_jurors() -> LemmyResult<()> {
     // Distinct test focus: minority jurors get zero rows under VoteOutcome.
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_vo2.example.com").await?;
     let federation_context = federation_config.to_request_data();
@@ -17939,7 +17931,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_returns_403_for_non_admin() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf1.example.com").await?;
@@ -17965,7 +17957,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_returns_400_for_non_emergency_remove_status() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf2.example.com").await?;
@@ -17998,7 +17990,7 @@ mod v1_rt_r3_fixtures {
 
   #[tokio::test(flavor = "multi_thread")]
   async fn flag_bad_faith_admin_on_emergency_remove_case_emits_minus_one() -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let federation_context = federation_config.to_request_data();
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_fbf3.example.com").await?;
@@ -18056,7 +18048,7 @@ mod v1_rt_r3_fixtures {
   #[tokio::test(flavor = "multi_thread")]
   async fn evidence_cited_heuristic_emits_plus_one_when_rationale_above_threshold(
   ) -> LemmyResult<()> {
-    let (_container, context, federation_config, db_url) = boot_context().await?;
+    let (_container, context, federation_config, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
     let instance = Instance::read_or_create(&mut context.pool(), "v1_rt_r3_ec1.example.com").await?;
     let federation_context = federation_config.to_request_data();
