@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "4b129a8b08f1-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-30T23:01:26Z",
-      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T2 wrapped all 10 test-body INIT/GOV sites with EnvVarGuard; T1 documented 2 bootstrap exceptions with SAFETY comments. Phase tip at bf3f7201d. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class.md).",
-      "branch": "phase-v1-quality-r3",
-      "phase_task": "2",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "planner",
@@ -4971,6 +4945,31 @@
       "answer": "Duplicate of 4b129a8b08f1-001 (two job runs for the same T2 task). Advisor resolved as duplicate; 4b129a8b08f1-001 is the live e2e gate entry.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-30T23:21:47Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "4b129a8b08f1-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T23:01:26Z",
+      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 wrapped all 10 test-body INIT/GOV sites with EnvVarGuard; T1 documented 2 bootstrap exceptions with SAFETY comments. Phase tip at bf3f7201d. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class.md).",
+      "branch": "phase-v1-quality-r3",
+      "phase_task": "2",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
+      ],
+      "result": "pass",
+      "log_slice": "126 passed; 0 failed; 5 ignored; finished in 2716.29s",
+      "failed_commands": null,
+      "answer": "e2e gate passed: 126/0/5, E2E_EXIT_0, 2716s. Advisor-laptop run 2026-05-31.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T00:23:46Z",
       "approved_by": null,
       "approved_at": null
     }
