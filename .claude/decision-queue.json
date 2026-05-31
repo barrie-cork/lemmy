@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "8004604aa973-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T18:00:00Z",
+      "question": "Run cargo-check on phase-v1-RT-r5 after Tasks 1+2+3 rollup implementation",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Tasks 1+2 cherry-picked from unreachable commits (fadc38ac3, 0c6752aa9) which were authored by advisor on abandoned #549/#550 worker branches. Task 3 adds ROLLUP_CRON_RUNNING guard + reputation_rollup_cron registration to scheduled_tasks.rs. cargo-check --workspace --features full passed locally in this worktree.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-3-rollup-cron-scheduled-tasks-see-claude-prps-briefs-v1-rt-r5-impl-3-md-553",
+      "phase_task": "3",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
