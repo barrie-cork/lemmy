@@ -17184,7 +17184,7 @@ mod v1_rt_r3_fixtures {
   use super::EnvVarGuard;
   use actix_web::web::{Data, Json};
   use chrono::{Datelike, Utc};
-  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl, insert_into};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use lemmy_api::governance::{
     accept_jury_assignment::accept_jury_assignment,
@@ -17237,7 +17237,8 @@ mod v1_rt_r3_fixtures {
   use reqwest_middleware::ClientBuilder;
   use lemmy_api::governance::reputation_snapshot::run_snapshot_batch;
   use lemmy_db_schema::source::governance::federation_inbox_nonce::{
-    FederationInboxNonce, FederationInboxNonceInsertForm,
+    delete_older_than as federation_inbox_nonce_delete_older_than,
+    FederationInboxNonceInsertForm,
   };
   use lemmy_db_schema_file::schema::{federation_inbox_nonce, reputation_snapshot};
 
@@ -18148,15 +18149,14 @@ mod v1_rt_r3_fixtures {
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
 
     {
-      FederationInboxNonce::insert(
-        &mut async_conn,
-        &FederationInboxNonceInsertForm {
+      insert_into(federation_inbox_nonce::table)
+        .values(&FederationInboxNonceInsertForm {
           peer_instance: "test.example".to_string(),
           activity_id: "probe-a-nonce-1".to_string(),
-        },
-      )
-      .await?;
-      federation_inbox_nonce::delete_older_than(0, &mut async_conn).await?;
+        })
+        .execute(&mut async_conn)
+        .await?;
+      federation_inbox_nonce_delete_older_than(0, &mut async_conn).await?;
       let count: i64 = federation_inbox_nonce::table
         .filter(federation_inbox_nonce::activity_id.eq("probe-a-nonce-1"))
         .count()
@@ -18167,14 +18167,13 @@ mod v1_rt_r3_fixtures {
 
     {
       let _guard = EnvVarGuard::set("BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB", "1");
-      FederationInboxNonce::insert(
-        &mut async_conn,
-        &FederationInboxNonceInsertForm {
+      insert_into(federation_inbox_nonce::table)
+        .values(&FederationInboxNonceInsertForm {
           peer_instance: "test.example".to_string(),
           activity_id: "probe-b-nonce-1".to_string(),
-        },
-      )
-      .await?;
+        })
+        .execute(&mut async_conn)
+        .await?;
       let count: i64 = federation_inbox_nonce::table
         .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1"))
         .count()
