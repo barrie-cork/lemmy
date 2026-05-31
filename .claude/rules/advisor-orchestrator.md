@@ -82,6 +82,8 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 
 Brief commit body lists which mandatory lessons fired and why (one line each). The §2.3 hybrid search still runs after the table check — catches non-mechanical / cross-cutting lessons. // 2026-05-09 c-2 fix-impl-1 lapse: same E0277 LemmyError class as cycle-1; brief omitted lesson. Maintenance: when a new mechanical-fix pattern enters the §G4 allowlist (§5.3) and correlates with a file class, add a row here.
 
+**Pre-Shape-G validate-pending-laptop constraint (mandatory for all impl-task briefs under pre-Shape-G plans):** Every impl-task brief §4 MUST include: "Write the `validate-pending-laptop` DQ entry with `commands: [\"./scripts/brehon/cargo-check.sh --workspace --features full\"]`, commit + push, then **stop**. Do NOT run `cargo-check.sh` yourself — validation is delegated to the laptop advisor." Workers running cargo on the daemon cause file-lock contention across concurrent cohort members (v1-RT-r5 Cohort A: ~45 min serialized wait). Lesson: `feedback_validate_pending_laptop_write_then_stop.md`.
+
 ### 2.5 Plan §5 complexity-score awareness
 
 When the next pending §13 task is cargo-class (DoD names `cargo check`, `cargo clippy --workspace`, or `cargo test --workspace`) AND plan §5.1 complexity score `> 8`:
@@ -173,6 +175,8 @@ Update the per-phase metrics file at `.claude/PRPs/audit-metrics/<phase>.json`. 
 `compute-metrics.sh` for per-sub-phase calibration.
 
 ## 4. Cohort dispatch
+
+**Cross-lane total cap (hard, pre-dispatch gate):** Before queuing ANY Junior task, call `list_tasks(status="running")` and count. If count ≥ 2 → defer; do NOT dispatch until a slot frees. This applies even to size-1 cohorts and even when the running tasks are on different lanes/phases — all daemon worktrees share one `.git/index.lock`. Cap is 2 total, not 2 per lane. Per `feedback_cohort_shared_git_index_contention.md` §"Cross-lane total cap". (v1-RT-r5 incident: 3 concurrent workers → ~2h lock contention vs expected ~30 min.)
 
 Per `.claude/PRPs/templates/plan.template.md` §13 (`[P]` markers) + `feedback_parallel_cohort_dispatch.md`. When a §13 task carries `[P]` and is the next pending, advisor computes the **cohort** — consecutive `[P]`-marked tasks until a non-`[P]` boundary. Task 0 is always non-`[P]`. The dispatch is gated by five checks that can degrade a cohort to serial or defer it: YAML file-overlap, `requires:` dependency, pre-Shape-G memory budget, shared-`.git/index.lock` hazard (daemon single-`.git/`, cohort ≥3), and forbidden-window. Cohort members are queued simultaneously, advance only when ALL reach `complete` + validated, then a handover-trailer aggregation seeds the next cohort's brief §3a.
 

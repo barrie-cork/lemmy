@@ -1,6 +1,57 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "81ae24440317-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T16:35:00Z",
+      "question": "Run cargo-check on phase-v1-RT-r5 after Task 1 commit fadc38ac3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (rollup compute + batch) committed manually by advisor after worker stuck in cargo loop. commit fadc38ac3 on junior worktree branch for #549.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-1-rollup-compute-batch-in-reputation-snapshot-rs-see-claude-prps-briefs-v1-rt-r5-i-549",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "81ae24440317-003",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T16:36:00Z",
+      "question": "Run cargo-check on phase-v1-RT-r5 after Task 2 commit 0c6752aa9",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (AdminReputationRollup DTOs) committed manually by advisor after worker stuck in cargo loop. commit 0c6752aa9 on junior worktree branch for #550.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-2-rollup-dtos-in-api-common-governance-rs-see-claude-prps-briefs-v1-rt-r5-impl-2-md-550",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
