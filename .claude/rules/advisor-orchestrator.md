@@ -71,6 +71,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 | `crates/db_schema/migrations/**` (any new migration) | `feedback_lemmy_migration_runner.md`, `feedback_postgres_jsonb_canonicalization.md` (if JSONB) |
 | Any new test under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
 | Any handler under `crates/api/**/src/**` doing 2+ DB writes | `feedback_multi_write_handlers_need_transactions.md` |
+| Any new file under `crates/api/api/src/governance/**` that loads `ModerationCase` from DB and matches on `case.status` before proceeding | `feedback_governance_type_state_handlers.md` |
 | Any `#[cfg(feature = "full")]` gate | `feedback_features_full_workspace_only.md`, `feedback_features_full_p_crate_incompatible.md` |
 | Any `pg_advisory_xact_lock` or void PG function call | `feedback_pg_advisory_xact_lock_void_decode.md` |
 | Any newtype under `crates/db_schema/src/newtypes/` | `feedback_newtype_locations_lemmy_db_schema_vs_file.md` |
@@ -107,6 +108,7 @@ Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on
 - **bm-poll-cr complete** → `bm-triage` (draft auto).
 - **Triage drafted** → gate 3 (CR triage) → fix-in-PR impl-tasks.
 - **bm-pr complete → before gate 5** → merge-forward check (`git log origin/governance-v0 ^phase-v1-<phase>`); non-empty → checkout + merge + push.
+- **Junior task on `governance-v0` reports `done`** → the daemon's finalize-merge is **daemon-local-first, origin-push-second**. Look in this order, NOT origin-first: (1) `ssh homeserver "cd /srv/brehon-fork && git log governance-v0 -1 --oneline"` (the merge lands here first), (2) `git ls-remote origin governance-v0` (did the daemon push yet?). Daemon-local ahead of origin = daemon hasn't pushed → `ssh homeserver "cd /srv/brehon-fork && git push origin governance-v0"`, then pull locally. Checking origin first shows a stale pre-merge tip and triggers a multi-probe hunt. Per `feedback_finalize_merge_where_to_look_first.md`.
 - **No critical findings open** → `/brehon-verify` ✓ → gate 5 (merge confirm) → `bm-merge`.
 - **bm-merge complete** → author retro → gate 6 (retro sign-off) → `/brehon-phase-transition`.
 

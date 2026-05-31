@@ -132,6 +132,9 @@ pub async fn run_grace_check_batch(context: &LemmyContext) -> LemmyResult<GraceC
 
   // Outer batch query — NO transaction here. Snapshot of cases past their
   // grace_expires_at; per-case tx revalidates with FOR UPDATE.
+  // TODO(type-state): currently uses filter-query pattern (not exhaustive match); harden
+  // to exhaustive match first, then wrap per-case as GovernanceCase<SponsorLiabilityPending>
+  // inside the for-loop — see .claude/lessons/feedback_governance_type_state_handlers.md
   let candidates: Vec<ModerationCase> = moderation_case::table
     .filter(moderation_case::status.eq(CaseStatus::SponsorLiabilityPending))
     .filter(moderation_case::grace_expires_at.le(Some(now)))
