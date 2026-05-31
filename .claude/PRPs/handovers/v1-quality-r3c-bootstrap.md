@@ -15,7 +15,7 @@ purpose: Bootstrap the v1-quality-r3c advisor session. Read the RESUME block fir
 ## Session-start ritual (do these first)
 
 1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane. Note: stale worktrees `brehon-fork-quality-r2-validate`, `brehon-fork-quality-r3b`, `brehon-fork-rt-r4` may still be listed — those are the user's to remove, not yours to act on.
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `228857f9c` (see §"Git state at handoff"); if drifted, check `git log --oneline 228857f9c..governance-v0` and update mental model before acting.
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `69addb7d4` (updated 2026-05-31 at v1-RT-r5 transition; `228857f9c` was the original handoff hash — v1-RT-r5 merged since then); if drifted, check `git log --oneline 69addb7d4..governance-v0` and update mental model before acting.
 3. Read `.claude/decision-queue.json` for any pending entries since handoff. At handoff: 0 pending entries.
 4. Check `cat .claude/governance-log/retro-bypass.jsonl 2>/dev/null | tail -5` — per `feedback_outcome_not_cause_check_retro_bypass.md` (this was skipped at r3b session start; do it here first).
 5. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_v1_quality_r3c.md` is the running-state scratchpad. Read `workflow_state_v1_quality_r3b.md` once at session start for carry-forward (CLOSED record), then do not re-read.
