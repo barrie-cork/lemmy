@@ -605,7 +605,14 @@ pub async fn compute_rollup_snapshot(
 
   let denominator = contributing.len();
   if denominator == 0 {
-    // All communities banned; no instance-wide standing to roll up.
+    // All communities banned; delete stale rollup row if it exists.
+    diesel::delete(
+      reputation_snapshot::table
+        .filter(reputation_snapshot::person_id.eq(person_id))
+        .filter(reputation_snapshot::community_id.is_null()),
+    )
+    .execute(conn)
+    .await?;
     return Ok(None);
   }
   let denom_i64 = denominator as i64;
@@ -675,15 +682,7 @@ pub async fn compute_rollup_snapshot(
   let trusted_reporter = i64::from(reporting_accuracy) >= threshold_reporting_accuracy;
   let can_sponsor = i64::from(endorsement_strength) >= threshold_endorsement_strength;
 
-  // 8. Load existing rollup row for capability-flip detection.
-  let old_snapshot: Option<ReputationSnapshot> = reputation_snapshot::table
-    .filter(reputation_snapshot::person_id.eq(person_id))
-    .filter(reputation_snapshot::community_id.is_null())
-    .first::<ReputationSnapshot>(conn)
-    .await
-    .optional()?;
-
-  // 9. Upsert rollup row (community_id = None, shared write path :770).
+  // Form computed from steps 1-7 values; no DB writes needed before the transaction.
   let form = ReputationSnapshotInsertForm {
     person_id,
     community_id: None,
@@ -695,45 +694,60 @@ pub async fn compute_rollup_snapshot(
     trusted_reporter,
     can_sponsor,
   };
-  let new_snapshot = upsert_snapshot(conn, &form, now).await?;
 
-  // 10. Emit ROLLUP_RECOMPUTED. Actor = None (system/cron, ADR-015 §10).
-  //     Payload carries raw person_id per the registry payload shape.
-  governance_log::append(
-    &mut (&mut *conn).into(),
-    governance_log::ENTRY_KIND_ROLLUP_RECOMPUTED,
-    json!({
-      "person_id": person_id.0,
-      "contributing_community_count": denominator,
-      "rollup_dimensions": {
-        "reporting_accuracy": reporting_accuracy,
-        "jury_reliability": jury_reliability,
-        "participation_consistency": participation_consistency,
-        "endorsement_strength": endorsement_strength,
-      },
-      "recomputed_at": now.to_rfc3339(),
-    }),
-    None,
-  )
-  .await?;
+  // Steps 8-11: read old snapshot, upsert, and emit log entries atomically.
+  conn
+    .run_transaction(async move |conn| {
+      // 8. Load existing rollup row for capability-flip detection.
+      let old_snapshot: Option<ReputationSnapshot> = reputation_snapshot::table
+        .filter(reputation_snapshot::person_id.eq(person_id))
+        .filter(reputation_snapshot::community_id.is_null())
+        .first::<ReputationSnapshot>(conn)
+        .await
+        .optional()?;
 
-  // 11. Emit CAPABILITY_CHANGED per flip. snapshot_community_id: null (rollup row).
-  let changes = detect_capability_changes(old_snapshot.as_ref(), &new_snapshot);
-  for change in &changes {
-    governance_log::append(
-      &mut (&mut *conn).into(),
-      governance_log::ENTRY_KIND_CAPABILITY_CHANGED,
-      json!({
-        "dimension_flipped": change.dimension.as_str(),
-        "direction": change.direction.as_str(),
-        "snapshot_community_id": Option::<i32>::None,
-      }),
-      None,
-    )
-    .await?;
-  }
+      // 9. Upsert rollup row (community_id = None, shared write path :770).
+      let new_snapshot = upsert_snapshot(conn, &form, now).await?;
 
-  Ok(Some(new_snapshot))
+      // 10. Emit ROLLUP_RECOMPUTED. Actor = None (system/cron, ADR-015 §10).
+      //     Payload carries raw person_id per the registry payload shape.
+      governance_log::append(
+        &mut (&mut *conn).into(),
+        governance_log::ENTRY_KIND_ROLLUP_RECOMPUTED,
+        json!({
+          "person_id": person_id.0,
+          "contributing_community_count": denominator,
+          "rollup_dimensions": {
+            "reporting_accuracy": reporting_accuracy,
+            "jury_reliability": jury_reliability,
+            "participation_consistency": participation_consistency,
+            "endorsement_strength": endorsement_strength,
+          },
+          "recomputed_at": now.to_rfc3339(),
+        }),
+        None,
+      )
+      .await?;
+
+      // 11. Emit CAPABILITY_CHANGED per flip. snapshot_community_id: null (rollup row).
+      let changes = detect_capability_changes(old_snapshot.as_ref(), &new_snapshot);
+      for change in &changes {
+        governance_log::append(
+          &mut (&mut *conn).into(),
+          governance_log::ENTRY_KIND_CAPABILITY_CHANGED,
+          json!({
+            "dimension_flipped": change.dimension.as_str(),
+            "direction": change.direction.as_str(),
+            "snapshot_community_id": Option::<i32>::None,
+          }),
+          None,
+        )
+        .await?;
+      }
+
+      Ok(Some(new_snapshot))
+    })
+    .await
 }
 
 /// Tick of the scheduled rollup batch job. Finds persons with at least one
@@ -757,6 +771,9 @@ pub async fn run_rollup_batch(context: &LemmyContext) -> LemmyResult<RollupBatch
       "job.snapshot_batch_chunk_size out of range for usize: {chunk_size}"
     ))
   })?;
+
+  // Guard: chunks(0) panics. Treat 0 as 1 to prevent panic on misconfiguration.
+  let chunk_size_usize = if chunk_size_usize == 0 { 1 } else { chunk_size_usize };
 
   let candidates = load_rollup_candidates(pool).await?;
   let mut outcome = RollupBatchOutcome {
