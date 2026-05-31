@@ -63,10 +63,6 @@ zero inline Python. Authoring fragments via the Write tool also avoids
 the Windows backslash-path mangling class (see
 `feedback_windows_backslash_path_dq_via_write_fragment.md`).
 
-### Next-id calculation (pre-v3 — historical only)
-
-Pre-v3 used `max(all_ids, default=0) + 1` spanning live + archives. **Abolished** for new v3 writes (Hard refusal #9) — raises `TypeError` on mixed int/string ids. Do **not** copy this recipe; the v3 composite-id mechanism structurally eliminates the cross-lane race (`feedback_cohort_dq_id_collision.md`) + the DQ #50 collision incident (`e9fa1e01a`). Full pre-v3 historical context: `.claude/refs/dq-mechanics.md` §"Pre-v3 next-id calculation".
-
 ### What does NOT get archived
 
 Pending entries (never), entries cited by name in any active rule/lesson/brief/template (move the citation first), entries from the active sub-phase or its predecessor. Detail: `.claude/refs/dq-mechanics.md` §"What does NOT get archived".

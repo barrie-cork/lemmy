@@ -240,13 +240,13 @@ When a new pending entry appears in `decision-queue.json`:
 
 ### 5.5 Retro-bypass observability
 
-Per RLS-PMD review §4.7 + autonomy-readiness criterion 5.2 + `.claude/PRPs/plans/v1-rls-r1.plan.md` Task 7. The Stop hook `.claude/hooks/retro-check.sh` fail-open path (3-attempt cap, load-bearing for true loops) emits a JSONL `retro_bypass` record to `.claude/governance-log/retro-bypass.jsonl` on every fail-open. Fields per the kind registry at `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
+Stop hook `.claude/hooks/retro-check.sh` fail-open path emits `retro_bypass` JSONL to `.claude/governance-log/retro-bypass.jsonl`. Fields: `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
 
-**Consumer:** the JSONL trail is consumed by future audit reads (weekly-review Step 2c is the retro-corpus sweep over `.claude/PRPs/reports/*.md`, not the JSONL; a dedicated JSONL-rate audit step would be added in a future sub-phase if a `retro_bypass` rate trend becomes load-bearing). **Autonomy signal:** the rate of `retro_bypass` entries per week should be monotonically decreasing. Rising rate → calibration-honesty regression; surface in the next phase retro.
+- **Autonomy signal:** `retro_bypass` rate/week must be monotonically decreasing; rising rate → surface at next retro
+- **Advisor-side:** passive at session-start; rate trend is part of four-role retro signals per `feedback_four_role_retro_signals.md`
+- **Orchestration anomaly first-check:** check `.claude/governance-log/retro-bypass.jsonl` BEFORE diagnosing code/DQ causes — hook fail-open is often the proximate cause
 
-**Advisor-side action:** none required at session-start (the trail is passive). At retro time, the rate trend is part of the four-role retro signals (Advisor role) per `feedback_four_role_retro_signals.md`. See `feedback_retro_bypass_governance_log.md`.
-
-**Orchestration failure first-check (2026-05-31):** when an orchestration anomaly is observed (task reported done but expected artefact absent, retro not found, wrong branch state), check `.claude/governance-log/retro-bypass.jsonl` BEFORE diagnosing code or DQ causes — a hook fail-open is often the proximate cause, not a process error.
+See `feedback_retro_bypass_governance_log.md`.
 
 ### 5.6 Catch-fire procedures
 

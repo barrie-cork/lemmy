@@ -93,7 +93,7 @@ Mirrors the `code-audit` and `post-task-retro` precedents. Call `memory_write_ev
 - `source_ref`: current branch.
 - `content`: 5–8 lines. Top 3 wins by token impact, total estimated savings, the "what changed since last audit" delta line, one-line Pi-boundary check confirmation.
 
-This eval also satisfies the Stop-hook retro requirement (per `.claude/rules/post-task-retro.md`).
+This eval also satisfies the Stop-hook retro requirement (per `.claude/rules/universal-guards.md` §4).
 
 ## Phase 7: Completion checklist + dogfood
 
