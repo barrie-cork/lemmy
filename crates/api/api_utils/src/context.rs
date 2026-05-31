@@ -18,6 +18,11 @@ pub struct LemmyContext {
   pictrs_client: Arc<ClientWithMiddleware>,
   secret: Arc<Secret>,
   rate_limit_cell: RateLimit,
+  /// Database URL captured at construction time from `SETTINGS.get_database_url()`.
+  /// Read this (via `database_url()`) instead of re-reading `LEMMY_DATABASE_URL`
+  /// from the live process environment — the env var may be unset by the time a
+  /// handler runs (the test EnvVarGuard drops at fixture return). See issue #167.
+  db_url: String,
 }
 
 impl LemmyContext {
@@ -28,12 +33,14 @@ impl LemmyContext {
     secret: Secret,
     rate_limit_cell: RateLimit,
   ) -> LemmyContext {
+    let db_url = SETTINGS.get_database_url();
     LemmyContext {
       pool,
       client: Arc::new(client),
       pictrs_client: Arc::new(pictrs_client),
       secret: Arc::new(secret),
       rate_limit_cell,
+      db_url,
     }
   }
   pub fn pool(&self) -> DbPool<'_> {
@@ -56,6 +63,9 @@ impl LemmyContext {
   }
   pub fn rate_limit_cell(&self) -> &RateLimit {
     &self.rate_limit_cell
+  }
+  pub fn database_url(&self) -> &str {
+    &self.db_url
   }
 
   /// Initialize a context for use in tests which blocks federation network calls.

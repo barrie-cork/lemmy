@@ -122,8 +122,8 @@ pub async fn admin_audit_stream(
     set.insert(admin_id);
   }
 
-  let db_url = context.settings().get_database_url();
-  let (pg_client, pg_conn) = match tokio_postgres::connect(&db_url, NoTls).await {
+  let db_url = context.database_url();
+  let (pg_client, pg_conn) = match tokio_postgres::connect(db_url, NoTls).await {
     Ok(pair) => pair,
     Err(e) => {
       active_sse_admins().lock().await.remove(&admin_id);
