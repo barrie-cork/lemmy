@@ -34,9 +34,6 @@ The slug becomes the Junior worktree branch name. Each task gets its own worktre
 
 ### 2.2 Brief shape
 
-**bm-task brief completeness gate (run before every bm-task brief commit):**
-`bash scripts/brehon/bm-brief-check.sh <brief-path>` — exits non-zero if §1/§2/§4/§5, HANDOVER trailer, `--repo barrie-cork/lemmy`, or `governance-v0` base are missing. Do NOT commit a bm-task brief that fails this check; fix the gap first. New from 2026-05-31.
-
 Four sections, in order:
 
 1. **Role + dispatch line** — `[role:planning|impl-task|bm-task|ci-watcher] <one-line summary>`. Must match the format the matching subagent reads.
@@ -85,6 +82,8 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 
 Brief commit body lists which mandatory lessons fired and why (one line each). The §2.3 hybrid search still runs after the table check — catches non-mechanical / cross-cutting lessons. // 2026-05-09 c-2 fix-impl-1 lapse: same E0277 LemmyError class as cycle-1; brief omitted lesson. Maintenance: when a new mechanical-fix pattern enters the §G4 allowlist (§5.3) and correlates with a file class, add a row here.
 
+**Pre-Shape-G validate-pending-laptop constraint (mandatory for all impl-task briefs under pre-Shape-G plans):** Every impl-task brief §4 MUST include: "Write the `validate-pending-laptop` DQ entry with `commands: [\"./scripts/brehon/cargo-check.sh --workspace --features full\"]`, commit + push, then **stop**. Do NOT run `cargo-check.sh` yourself — validation is delegated to the laptop advisor." Workers running cargo on the daemon cause file-lock contention across concurrent cohort members (v1-RT-r5 Cohort A: ~45 min serialized wait). Lesson: `feedback_validate_pending_laptop_write_then_stop.md`.
+
 ### 2.5 Plan §5 complexity-score awareness
 
 When the next pending §13 task is cargo-class (DoD names `cargo check`, `cargo clippy --workspace`, or `cargo test --workspace`) AND plan §5.1 complexity score `> 8`:
@@ -117,17 +116,6 @@ Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on
 - **bm-merge complete** → author retro → gate 6 (retro sign-off) → `/brehon-phase-transition`.
 
 Advisor never auto-merges or auto-resolves ADR-affecting DQ.
-
-**BM post-dispatch 3-signal check (mandatory — fires within 1 poll tick after every BM `done`):**
-Per `pattern_bm_false_success_advisor_post_condition_catch.md` — BM Juniors report `result:success` on false completions (5× confirmed). Call the tool directly; do NOT spawn a subagent. Catch-fire if any check fails.
-
-| Verb | Post-condition (must hold) | Catch-fire signal |
-|---|---|---|
-| `bm-cut` | `git ls-remote origin refs/heads/phase-<phase>` returns non-empty | Branch absent or push failed |
-| `bm-pr` | `gh pr view <N> --repo barrie-cork/lemmy --json state` = `OPEN`; base = `governance-v0`; not draft | PR absent, draft, or wrong base |
-| `bm-poll-cr` | findings YAML on target branch; all `bucket` fields blank (`""`); `last_poll_at` updated | YAML absent, stale, or pre-bucketed |
-| `bm-triage` | all findings carry one of 5 canonical buckets (no placeholders); counters regenerated | Any `"REVIEW_LATER"` or missing bucket |
-| `bm-merge` | `gh pr view <N> --repo barrie-cork/lemmy --json state,mergedAt` = MERGED + non-null `mergedAt`; `chore(bm): merge` commit on `governance-v0` | PR open, runlog commit absent |
 
 ### 3.2 Mandatory user gates
 
@@ -240,13 +228,13 @@ When a new pending entry appears in `decision-queue.json`:
 
 ### 5.5 Retro-bypass observability
 
-Stop hook `.claude/hooks/retro-check.sh` fail-open path emits `retro_bypass` JSONL to `.claude/governance-log/retro-bypass.jsonl`. Fields: `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
+Per RLS-PMD review §4.7 + autonomy-readiness criterion 5.2 + `.claude/PRPs/plans/v1-rls-r1.plan.md` Task 7. The Stop hook `.claude/hooks/retro-check.sh` fail-open path (3-attempt cap, load-bearing for true loops) emits a JSONL `retro_bypass` record to `.claude/governance-log/retro-bypass.jsonl` on every fail-open. Fields per the kind registry at `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md`.
 
-- **Autonomy signal:** `retro_bypass` rate/week must be monotonically decreasing; rising rate → surface at next retro
-- **Advisor-side:** passive at session-start; rate trend is part of four-role retro signals per `feedback_four_role_retro_signals.md`
-- **Orchestration anomaly first-check:** check `.claude/governance-log/retro-bypass.jsonl` BEFORE diagnosing code/DQ causes — hook fail-open is often the proximate cause
+**Consumer:** the JSONL trail is consumed by future audit reads (weekly-review Step 2c is the retro-corpus sweep over `.claude/PRPs/reports/*.md`, not the JSONL; a dedicated JSONL-rate audit step would be added in a future sub-phase if a `retro_bypass` rate trend becomes load-bearing). **Autonomy signal:** the rate of `retro_bypass` entries per week should be monotonically decreasing. Rising rate → calibration-honesty regression; surface in the next phase retro.
 
-See `feedback_retro_bypass_governance_log.md`.
+**Advisor-side action:** none required at session-start (the trail is passive). At retro time, the rate trend is part of the four-role retro signals (Advisor role) per `feedback_four_role_retro_signals.md`. See `feedback_retro_bypass_governance_log.md`.
+
+**Orchestration failure first-check (2026-05-31):** when an orchestration anomaly is observed (task reported done but expected artefact absent, retro not found, wrong branch state), check `.claude/governance-log/retro-bypass.jsonl` BEFORE diagnosing code or DQ causes — a hook fail-open is often the proximate cause, not a process error.
 
 ### 5.6 Catch-fire procedures
 
@@ -278,7 +266,6 @@ Independent of §6.1/§6.2, two invariants for all `Agent` tool dispatch:
 
 - **Brief like a smart colleague who just walked into the room.** Sub-agents see no parent conversation. Include: what you're trying to accomplish, what you've ruled out, the surrounding context that lets the sub-agent make judgment calls. Terse command-style prompts produce shallow generic work.
 - **Trust but verify.** Sub-agent reports describe what they *intended* to do, not necessarily what they did. For any edit to a tracked file, verify via §6.2 grep. For any code change, run the relevant validation (`cargo check`, the test, the lint) before assuming the change is sound.
-- **Single-lookup anti-pattern (never do this):** For any single MCP read (`mcp__junior-brehon__show_task`, `list_tasks`, `gh pr view`, `git ls-remote`), call the tool **directly from the advisor session**. NEVER spawn a `bm-task` or general-purpose `Agent` for a single-lookup read — `bm-task` has no MCP tools in `-p` mode; a general-purpose Agent costs 10–60k tokens for a 2-line result. This session confirmed: spawning bm-task for `show_task` burned 59k tokens and 30s to return "I cannot complete this request." (2026-05-31).
 
 ## See also
 
