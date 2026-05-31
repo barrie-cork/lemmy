@@ -25,6 +25,32 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "d48b29c61f65-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "Should the laptop run the e2e suite for v1-RT-r5 Task 5?",
+      "options": [
+        "run-e2e-locally",
+        "dispatch-gha"
+      ],
+      "context": "Task 5 (4 e2e tests in mod v1_rt_r5_fixtures) committed on branch junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560. OOM risk prevents running cargo on the daemon. Delegating to laptop per pre-Shape-G convention.",
+      "commands": [
+        "./scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server",
+        "./scripts/brehon/cargo-test.sh --test e2e -p lemmy_server -- v1_rt_r5_fixtures 2>&1"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560",
+      "phase_task": 5,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
@@ -2959,28 +2985,27 @@
       "id": "81ae24440317-001"
     },
     {
-      "id": "d48b29c61f65-001",
+      "id": "b686f19f7a6f-001",
       "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-31T00:00:00Z",
-      "question": "Should the laptop run the e2e suite for v1-RT-r5 Task 5?",
-      "options": [
-        "run-e2e-locally",
-        "dispatch-gha"
-      ],
-      "context": "Task 5 (4 e2e tests in mod v1_rt_r5_fixtures) committed on branch junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560. OOM risk prevents running cargo on the daemon. Delegating to laptop per pre-Shape-G convention.",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T12:00:00Z",
+      "phase_task": "fix-impl-1",
+      "branch": "phase-v1-RT-r5",
       "commands": [
-        "./scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server",
-        "./scripts/brehon/cargo-test.sh --test e2e -p lemmy_server -- v1_rt_r5_fixtures 2>&1"
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
-      "branch": "junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560",
-      "phase_task": 5,
       "result": "pass",
-      "log_slice": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 97.01s",
+      "log_slice": "Finished dev profile [unoptimized] target(s) in 1m 05s",
       "failed_commands": null,
-      "answer": "laptop e2e: 4/4 passed (97s). Crud import fix applied. compile gate pass. E2E_EXIT_0.",
+      "question": "Validate fix-impl-1 CR fixes via cargo-check on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "4 CR fixes in reputation_snapshot.rs and admin_reputation_rollup.rs: tx wrap (steps 8-11), stale delete on denominator==0, chunks(0) guard, ORDER BY. Committed as f6725c0a7.",
+      "answer": "cargo-check --workspace --features full passed. transaction fix (run_transaction->transaction) applied by advisor-laptop. CHECK_EXIT_0.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-31T20:41:37Z",
+      "resolved_at": "2026-05-31T21:28:21Z",
       "approved_by": null,
       "approved_at": null
     }

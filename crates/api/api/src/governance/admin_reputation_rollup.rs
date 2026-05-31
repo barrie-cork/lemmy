@@ -43,6 +43,7 @@ pub async fn admin_reputation_rollup(
   let contributing: Vec<ReputationSnapshot> = reputation_snapshot::table
     .filter(reputation_snapshot::person_id.eq(person_id))
     .filter(reputation_snapshot::community_id.is_not_null())
+    .order(reputation_snapshot::community_id.asc())
     .load::<ReputationSnapshot>(conn)
     .await?;
 
