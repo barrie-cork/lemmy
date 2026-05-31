@@ -176,6 +176,8 @@ Update the per-phase metrics file at `.claude/PRPs/audit-metrics/<phase>.json`. 
 
 ## 4. Cohort dispatch
 
+**Cross-lane total cap (hard, pre-dispatch gate):** Before queuing ANY Junior task, call `list_tasks(status="running")` and count. If count ≥ 2 → defer; do NOT dispatch until a slot frees. This applies even to size-1 cohorts and even when the running tasks are on different lanes/phases — all daemon worktrees share one `.git/index.lock`. Cap is 2 total, not 2 per lane. Per `feedback_cohort_shared_git_index_contention.md` §"Cross-lane total cap". (v1-RT-r5 incident: 3 concurrent workers → ~2h lock contention vs expected ~30 min.)
+
 Per `.claude/PRPs/templates/plan.template.md` §13 (`[P]` markers) + `feedback_parallel_cohort_dispatch.md`. When a §13 task carries `[P]` and is the next pending, advisor computes the **cohort** — consecutive `[P]`-marked tasks until a non-`[P]` boundary. Task 0 is always non-`[P]`. The dispatch is gated by five checks that can degrade a cohort to serial or defer it: YAML file-overlap, `requires:` dependency, pre-Shape-G memory budget, shared-`.git/index.lock` hazard (daemon single-`.git/`, cohort ≥3), and forbidden-window. Cohort members are queued simultaneously, advance only when ALL reach `complete` + validated, then a handover-trailer aggregation seeds the next cohort's brief §3a.
 
 **Full mechanism — the 9-step sequence, the five degrade/refuse checks verbatim, handover aggregation, and the Shape-G cohort flow — is in `.claude/refs/auto-phase.md` §"Cohort dispatch mechanism (canonical detail)".** It fires only inside `/auto-phase` `impl-cohort-N` (which reads it JIT). Read that section before acting on any cohort decision outside `/auto-phase`.

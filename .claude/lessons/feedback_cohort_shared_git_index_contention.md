@@ -61,10 +61,32 @@ the manual SSH tar step. Track in `homeserver/scripts/restore-junior-server-patc
 or as an upstream feature request in the Junior MCP repo. Until shipped, the SSH pre-cancel
 tar is the mitigation.
 
+## Cross-lane total cap (added 2026-05-31)
+
+The ≥3 rule above applies within a single cohort. The same ambient `.git/index.lock`
+resource is shared across ALL concurrent Junior workers on the daemon regardless of which
+lane or phase dispatched them.
+
+**Rule: never have more than 2 Junior workers running on the EliteDesk daemon at the same
+time, counting across ALL lanes and phases.**
+
+Before dispatching a new cohort (or even a single task), check total running tasks:
+
+```bash
+mcp__junior-brehon__list_tasks(status="running")  # count result
+```
+
+If count ≥ 2 → defer dispatch until a running task completes. Do not dispatch even a
+size-1 cohort if 2 workers are already active.
+
+**v1-RT-r5 incident (2026-05-31):** #548 (quality-r3c planning, governance-v0) was already
+running when #549 + #550 (RT-r5 Cohort A) were dispatched, bringing the total to 3. All
+three hit cargo file-lock contention; #549 and #550 logged no output for 40+ min despite
+processes being alive. Total wall-clock cost: ~2h vs expected ~30 min.
+
 ## Not applicable to
 
 - Mode A lane worktrees on the laptop (each has its own `.git/`; no shared lock)
-- Cohorts of size ≤2 (low-probability; empirically safe)
 - GitHub Actions runners (each job runs in an isolated checkout)
 
 ## See also
