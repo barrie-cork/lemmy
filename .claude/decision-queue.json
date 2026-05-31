@@ -25,110 +25,9 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
-    },
-    {
-      "id": "d48b29c61f65-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-31T00:00:00Z",
-      "question": "Should the laptop run the e2e suite for v1-RT-r5 Task 5?",
-      "options": [
-        "run-e2e-locally",
-        "dispatch-gha"
-      ],
-      "context": "Task 5 (4 e2e tests in mod v1_rt_r5_fixtures) committed on branch junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560. OOM risk prevents running cargo on the daemon. Delegating to laptop per pre-Shape-G convention.",
-      "commands": [
-        "./scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server",
-        "./scripts/brehon/cargo-test.sh --test e2e -p lemmy_server -- v1_rt_r5_fixtures 2>&1"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560",
-      "phase_task": 5,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
     }
   ],
   "resolved": [
-    {
-      "id": "81ae24440317-004",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T17:37:00Z",
-      "question": "Run cargo-check on rt-r5-validate-cohort-b after Tasks 1+2+3+4",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 (rollup cron 846c59717) + Task 4 (admin endpoint aad577418) committed manually by advisor after workers stuck in D-state. Validated on rt-r5-validate-cohort-b (T1+T2+T3+T4 merged).",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "rt-r5-validate-cohort-b",
-      "phase_task": "3+4",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-b. Tasks 1+2+3+4 all pass.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-31T17:40:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "81ae24440317-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T16:35:00Z",
-      "question": "Run cargo-check on phase-v1-RT-r5 after Task 1 commit fadc38ac3",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 (rollup compute + batch) committed manually by advisor after worker stuck in cargo loop. commit fadc38ac3 on junior worktree branch for #549.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r5-task-1-rollup-compute-batch-in-reputation-snapshot-rs-see-claude-prps-briefs-v1-rt-r5-i-549",
-      "phase_task": 1,
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-31T17:15:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "81ae24440317-003",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T16:36:00Z",
-      "question": "Run cargo-check on phase-v1-RT-r5 after Task 2 commit 0c6752aa9",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 (AdminReputationRollup DTOs) committed manually by advisor after worker stuck in cargo loop. commit 0c6752aa9 on junior worktree branch for #550.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r5-task-2-rollup-dtos-in-api-common-governance-rs-see-claude-prps-briefs-v1-rt-r5-impl-2-md-550",
-      "phase_task": 2,
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-31T17:15:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
     {
       "id": 14,
       "from": "impl",
@@ -784,6 +683,837 @@
       "id_v1": 338,
       "approved_by": "user",
       "approved_at": "2026-05-21T23:39:23Z"
+    },
+    {
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Edit C.3 old_string in brief §2.4 does not exist in the plan file. Advisor must provide correct old_string for the cr-6 mitigation-text update (line ~672). Should advisor (a) provide correct old_string for the existing edge-case timestamp row at line 672, or (b) confirm cr-6 is already satisfied by Edit A alone?",
+      "options": [
+        "option-a: brief old_string was wrong; correct old_string is the `dq-lint-durations.sh regex misses...` row at line 672 — advisor provides updated old/new pair for a follow-up edit",
+        "option-b: cr-6 is already satisfied by Edit A (ValueError handler now makes the mitigation text accurate as-is); no plan edit needed for cr-6"
+      ],
+      "context": "Brief §2.4 Edit C.3 old_string: '| Negative-duration lint fires on a legitimately-resolved entry (false positive) | LOW | LOW | ...'. This text does NOT exist in v1-quality-r2a.plan.md. rg returns 0 results for 'Negative-duration lint'. The risks table at line 672 has: '| dq-lint-durations.sh regex misses an edge-case timestamp format | LOW | MED | Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison |'. Brief instructions: if text does not match, raise blocker DQ — do NOT improvise. The other 4 edits (A, B, C.1, C.2) applied successfully; all worker self-tests exit 0.",
+      "answer": "option-a: brief old_string was wrong; advisor 2026-05-29 verified actual line 672 risks-table row reads 'dq-lint-durations.sh regex misses an edge-case timestamp format ... Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison'. fix-impl-2 brief §2.2 provides the correct old_string targeting this row. Updated mitigation text spells out the parse() ValueError wrapper added by Edit A in fix-impl-1 commit 8621a84bb.",
+      "answered_by": "impl-self-resolved",
+      "approved_by": null,
+      "resolved_at": "2026-05-29T01:57:20Z",
+      "id": "745da950edad-001"
+    },
+    {
+      "id": "79db52a6e3be-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Run laptop cargo gates for fix-impl-1 comment fixes in e2e.rs: (a) cargo check --workspace --features full, (b) cargo clippy --workspace --features full --no-deps -D warnings, (c) targeted e2e test run.",
+      "options": [
+        "pass — all three commands exit 0 + TEST_EXIT_0",
+        "fail — one or more commands exit non-zero"
+      ],
+      "context": "Commit 84526e6e2 on worktree branch fixes stale explanatory comments at Sites A+B in e2e.rs (comment-only, no assertion or test-logic change). Shape G suspended until 2026-06-01; laptop runs the cargo gates.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": "fix-impl-1",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; targeted e2e report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine TEST_EXIT_0, \"test result: ok. 2 passed; 0 failed\" in 84.21s. fix-impl-1 is comment-only (CR #162 cr-10/cr-11) — assertions/vec untouched, runtime unchanged; the 2 Site A/B tests stay green. Targeted 2-test run is sufficient regression coverage for a //-comment edit.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T17:43:30Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "v1-RT-r4 complexity score is 10 (>8 Sonnet split threshold): split into RT-r4a (db+DTO+strategy) / RT-r4b (handler+routes+e2e), or proceed as one plan?",
+      "options": [
+        "proceed-as-one",
+        "split-into-RT-r4a-RT-r4b"
+      ],
+      "context": "Mechanical section 5.1 score = 10 (RT-r3-calibrated): impl tasks above 5 = +2 (7 impl tasks: db-helpers, DTOs, strategy-arms, admin-handlers, routes, registry, e2e); crates touched = +5 (lemmy_db_schema, lemmy_api_common, lemmy_api_crud, lemmy_api, lemmy_api_routes); e2e edit = +3 (one e2e.rs file). Migrations 0, ADR-affecting 0 (conforms to ADR-008/ADR-015, no new OQ delta), cargo-budget 0 (Shape-G/laptop). Planner recommends PROCEED-AS-ONE: one cohesive feature (sponsor-gate strategy completion + allowlist admin surface) with a tight serial dependency chain (strategy/handler/routes/e2e all consume the db-helper + DTO base); splitting adds a phase boundary, a second bm-cut, a second retro, and a cross-phase brief-visibility sync for ~7 small tasks. Per-task ceilings all hold (<=4 files / <=2 crates each). RT-r3 shipped at 7; RT precedent ships single-feature plans at this size. Plan authored proceed-as-one per brief section 2 (one plan file) + section 4.1a (no planner-initiated split); this DQ surfaces the score for the gate-1 plan-approval decision.",
+      "answer": "PROCEED-AS-ONE. Rationale: cohesive single-feature (strategy extension + allowlist admin), tight serial dependency chain (strategy/handler/routes/e2e all consume db-helper + DTO), per-task ceilings all hold (<=4 files / <=2 crates each), RT-r3 shipped at 7 with comparable surface. Splitting adds a phase boundary, second bm-cut, second retro, and cross-phase brief-visibility sync overhead for ~7 small tasks — negative net value. Planner recommendation affirmed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T21:05:13.993715Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9f9026a1d618-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "Task 1 Sites A+B cargo validation — check, clippy, targeted e2e (report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine); await advisor-laptop mutation",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 commit 834f9d85d on worktree branch; Edit 1.1 rep_total 4->7 @L2949; Edit 1.2 vote_outcome_recorded insert @L11208-11209; regression guards L2959/L2967 untouched. Shape G suspended per DQ #229 until 2026-06-01.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": 1,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task1-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task1-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "all three gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0 (panic::Location false-alarm cleared under --features full); targeted e2e report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine TEST_EXIT_0, \"test result: ok. 2 passed; 0 failed\" in 89.96s. Runtime confirms rep_total=7 and vote_outcome_recorded insertion match RT-r3 emit semantics.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T15:27:28Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "cdb6bab5fef8-001"
+    },
+    {
+      "id": "e9ed653cfd0a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T00:00:00Z",
+      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-3",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 3ddcef334 (daemon worktree, Mode B per Hard refusal #2). (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 (zero negative-duration entries; new fail-closed parser does not regress the existing clean DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0. Worker §2.5 step 9 NEGATIVE gate already validated fail-closed semantics: bad timestamp emits 'DQ-LINT FAIL: entry \"test-malformed-001\" timestamp=\"not-an-iso-date\" is not a valid ISO-8601 timestamp' and exits 1. Lane Q-r2a fix-impl-3 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-new-1 + cr-new-2 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-05-29T09:15:00Z"
+    },
+    {
+      "id": "237cd769325e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T01:57:51Z",
+      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
+      "branch": "phase-v1-quality-r2",
+      "phase_task": "v1-quality-r2a-fix-impl-2",
+      "commands": [
+        "bash scripts/brehon/dq-lint-durations.sh",
+        "bash scripts/brehon/precheck.sh"
+      ],
+      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 530da702f. (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 in ~20ms (zero negative-duration entries on the phase-branch DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0 in ~17ms (REPO_ROOT-derivation works correctly; sibling-script invocation succeeds). Gates run via SSH on /srv/brehon-fork (daemon worktree on phase-v1-quality-r2) per Mode B mobile remote-control. Lane Q-r2a fix-impl-2 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-3..cr-8 → bm-merge.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T02:01:30Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "3c903b3418cb-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-29T10:00:00Z",
+      "question": "Run local cargo check/clippy/test-norun gates for task 3 (fixtures doc-comment audit) on laptop. Commit 1f337dddb on worker branch.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "14 doc-comment edits applied to crates/server/tests/e2e.rs (Shape NO-DOC x13 + Shape APPEND x1). cargo-check and cargo-clippy pass on daemon. Gate 3 brief command `--test e2e --no-run -p lemmy_server --features full` fails with known incompatibility (feedback_features_full_p_crate_incompatible.md); corrected to `--workspace --features full` which exits 0. Submodule init required on daemon worktree before gates. Python audit: OK — all 14 fixtures modules cite --test-threads=1 in doc-comment.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --test e2e --no-run --workspace --features full",
+        "python3 -c \"import re; content=open('crates/server/tests/e2e.rs').read(); found=[m.group(1) for m in re.finditer(r'mod (\\w+_fixtures)\\s*\\{', content) if '--test-threads=1' in content[content.index(m.group(0)):content.index(m.group(0))+1500]]; print(f'OK — all {len(found)} fixtures modules cite --test-threads=1 in doc-comment' if len(found)==14 else f'FAIL: only {len(found)}/14')\""
+      ],
+      "branch": "junior/role-impl-task-v1-quality-r2-task-3-fixtures-doc-comment-audit-see-claude-prps-briefs-v1-quality-r2-impl-3-md-511",
+      "phase_task": 3,
+      "answer": "All 4 validate-pending-laptop gates passed on laptop: cargo-check exit 0, cargo-clippy exit 0, cargo-test --no-run exit 0, python audit 14/14 fixtures modules cite --test-threads=1.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T22:02:14Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:56Z",
+      "question": "Brief §2.2 (this lane) and bootstrap §1 give conflicting assertion-site tables — bootstrap claims a single rep_count==4 fix to 7 at report_to_modlog_golden_path; §2.2 shows THREE assertions (rep_total==4 @2949, jury_rep_count==3 @2959, reporter_rep_count==1 @2967) and data-dependent deltas. Which table does the planner trust?",
+      "options": [
+        "Trust brief §2.2 (verified at lane tip 2026-05-29); treat bootstrap §1 table as superseded",
+        "Trust bootstrap §1 table (rep_count==7)"
+      ],
+      "context": "Bootstrap §1 predates the falsifiable-hypothesis re-verification recorded in workflow_state_v1_rt_r3_followup.md (2026-05-29). Brief §2.2 line numbers re-confirmed at phase-v1-rt-r3-followup tip via grep + Read.",
+      "answer": "Trust brief §2.2 — verified at lane tip. The bootstrap §1 table and its 'rep_count == 7' rows are SUPERSEDED by the brief §2.2 table and by workflow_state_v1_rt_r3_followup.md's 2026-05-29 re-verification block (which the bootstrap itself flags as authoritative-on-conflict). Confirmed at lane tip phase-v1-rt-r3-followup: report_to_modlog_golden_path (fn at crates/server/tests/e2e.rs:2485) carries THREE related assertions — rep_total==4 (line 2949, the actual total-count assertion, named rep_total not rep_count which is why a grep for 'rep_count' missed it), jury_rep_count==3 (line 2959, JuryReliability dimension), reporter_rep_count==1 (line 2967, ReportingAccuracy dimension). There is NO single 'rep_count==4' to bump to 7 at this site. Per feedback_plan_drift_metadata_cross_check.md and feedback_runbook_audit_drift_post_event_check.md (every handover claim is a hypothesis; verify against the code).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:56Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-034"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:57Z",
+      "question": "For Site B (governance_log_sequence_matches_prd_state_machine, expected_prefix vec @11201), RT-r3 added TWO new emit kinds (vote_outcome_recorded + evidence_quality_recorded). Does the planner insert BOTH into the expected sequence, or only the kinds the golden-path scenario actually triggers?",
+      "options": [
+        "Insert ONLY the kinds the golden-path scenario triggers; derive from the baseline panic 'got {sequence:?}' output",
+        "Insert both vote_outcome_recorded and evidence_quality_recorded unconditionally"
+      ],
+      "context": "Sequence is 'first-occurrence per kind'. vote_outcome_recorded fires when ≥1 juror aligns with the majority (always true on a decided case). evidence_quality_recorded fires only if the case seeds case_evidence AND rationale ≥256 chars (Source 4a precondition).",
+      "answer": "Insert ONLY the kinds the golden-path scenario actually triggers — derive the exact set + ordering from the e2e baseline panic output (.claude/v1-rt-r3-followup-e2e-baseline.log shows 'got {sequence:?}' on the failing assert at line 11215). Static analysis at lane tip corroborates: neither governance_log_sequence_matches_prd_state_machine (fn lines 11054-11218) nor report_to_modlog_golden_path references the case_evidence table — they set jury_vote.rationale but Source 4a (submit_jury_vote.rs:730) requires BOTH a case_evidence row AND a winning_rationale ≥ participation.evidence_cited_rationale_threshold_chars (default 256). So evidence_quality_recorded almost certainly does NOT fire in the golden-path scenario, and vote_outcome_recorded almost certainly DOES (the panel decides, so ≥1 juror aligns with the majority). But the baseline output is the authority, NOT this static reasoning — the planner copies the actual ordering from the panic. Per feedback_plan_drift_metadata_cross_check.md + the brief §2.3 baseline-as-authority rule.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:57Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-035"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T12:55:58Z",
+      "question": "crates/server/tests/e2e.rs is a high-traffic shared file (RT-r3 just shipped to it; redaction-r1 lane is concurrently active). Does this lane's 4-assertion edit risk a file-ownership collision with another active lane?",
+      "options": [
+        "No collision — this lane is the sole active writer of e2e.rs; proceed",
+        "Collision risk — coordinate before editing"
+      ],
+      "context": "Three worktrees active: rt-r3-followup (this), redaction-r1 (DEFERRED at gate-4), rt-r3 (shipped, stale worktree). Need to confirm no concurrent e2e.rs edits land while this lane is open.",
+      "answer": "No collision — this lane is the sole active writer of crates/server/tests/e2e.rs among the active lanes. Verified 2026-05-29: (1) `git diff governance-v0...phase-v1-redaction-r1 --stat -- crates/server/tests/e2e.rs` is EMPTY — redaction-r1's deferral is at a gate-4 e2e *run*, not e2e *edits*; it has zero e2e.rs delta vs trunk. (2) `git log governance-v0..phase-v1-RT-r3 -- crates/server/tests/e2e.rs` is EMPTY — RT-r3 is fully merged; no unmerged e2e delta; its worktree is stale (pending prune). The lane Mode A worktree (brehon-fork-rt-r3-followup) has its own .git/, sidestepping the daemon shared-index contention class entirely (feedback_cohort_shared_git_index_contention.md applies only to daemon single-.git/ cohorts). Watchpoint for the advisor (already in brief §7 / bootstrap §7): if redaction-r1 resumes and lands e2e.rs edits while this lane is open, re-baseline before bm-pr. Per the brief §4 NEGATIVE-test gate.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T12:55:58Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-036"
+    },
+    {
+      "id": "be594e67e072-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-29T15:34:11Z",
+      "question": "Advisor-laptop: run check/clippy/WHOLE-binary-e2e for v1-rt-r3-followup task 2 (Sites C+D rep_count 4->7). Expect 119 passed; 0 failed; 5 ignored.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 commit d57b755c9 on worktree branch (phase tip carries Tasks 1+2). Shape G suspended; advisor-laptop runs the three commands below.",
+      "branch": "phase-v1-rt-r3-followup",
+      "phase_task": 2,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-check.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task2-clippy.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log\""
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; whole-binary e2e (cargo test --workspace --test e2e --features full, no filter) E2E_EXIT_0, \"test result: ok. 119 passed; 0 failed; 5 ignored\" in 2392.77s. Pre-fix baseline was 115 passed/4 failed/5 ignored; the 4 RT-r3-stale tests (report_to_modlog_golden_path, governance_log_sequence_matches_prd_state_machine, submit_jury_vote_preserves_v0_decided_for_no_sponsor_target, submit_jury_vote_no_action_skips_liability_machinery) are now green with NO regression of the 115 prior-green tests (NEGATIVE-test gate satisfied). All impl complete.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-29T16:29:08Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T19:25:00Z",
+      "question": "v1-quality-r2 re-scope (3-issue r2-half): do the plan's enumerated e2e.rs anchor counts (11 boot_context refs / 14 LEMMY_DATABASE_URL setters / 14 *_fixtures modules) still hold against current governance-v0 after rt-r3-followup merged + with Lane A redaction-r1 concurrently editing e2e.rs, such that T3/T4/T5 are dispatchable without re-planning?",
+      "options": [
+        "anchors-hold-dispatch-ready",
+        "anchors-drifted-refresh-before-bm-cut"
+      ],
+      "answer": "anchors-hold-dispatch-ready. Empirical re-enumeration on governance-v0 @74197312d (advisor, 2026-05-29): `rg -c boot_context` = 11 (1 decl + 10 callsites, matches plan §11); `rg -c env::set_var(\"LEMMY_DATABASE_URL\")` = 14 (matches plan §3: 13 in-scope for T5 + 1 in boot_context for T4); `rg -c '^mod \\w+_fixtures \\{'` = 14 (matches plan §10.7); EnvVarGuard still at e2e.rs:~17185 inside v1_rt_r3_fixtures (NOT yet hoisted — T4 target intact); e2e.rs = 18,095 lines. Lane A redaction-r1 has NOT merged anything to governance-v0 that shifts these counts. The plan's LINE NUMBERS are stale (rt-r3-followup's Site-B vote_outcome_recorded insert + other merges shifted lines) but the COUNTS and text-anchorable targets are intact, and R11 mandates verbatim text anchors in the T3/T4/T5 briefs regardless of line numbers. The plan was already clarified pre-r2a (a3d0e994...-034/035/036); the re-scope only removed the 2 shipped tasks (T1/T2) without altering the substance of T3/T4/T5. Clarify gate SATISFIED: plan is dispatch-ready. Task 0 Probe 8 re-runs this same enumeration against the actual phase-branch tip post-bm-cut as the in-band guard (per r2a lesson: pre-flight enumerates what the plan names).",
+      "context": "Re-scope path = edit-in-place (user choice 2026-05-29). The load-bearing clarify risk for a re-scoped e2e.rs-heavy plan is anchor drift from concurrent lanes; this clarify pass is the empirical falsification of that risk per feedback_falsifiable_hypothesis_before_structural_fix.md + feedback_runbook_audit_drift_post_event_check.md. A full coverage-question clarify pass is low-value here (plan exists, scope is mechanical EnvVarGuard wraps with v1-RT-r3 canonical pattern, already clarified pre-r2a). Plan @74197312d.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T19:25:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-037"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:00Z",
+      "question": "RT-r4 age_or_surety strategy needs a surety table with sponsored_id + revoked_at. Does it exist with those columns, or must RT-r4 add them?",
+      "options": [
+        "exists-use-as-is",
+        "needs-migration-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies age_or_surety passes if EXISTS (surety WHERE sponsored_id = caller AND revoked_at IS NULL). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-use-as-is. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/surety.rs:17 defines `pub struct Surety` (diesel table_name = surety, line 12) with `sponsored_id: PersonId` (:20) and `revoked_at: Option<DateTime<Utc>>` (:23). The PRD §5.4 OR-EXISTS clause is implementable verbatim — no migration needed. Planner writes the age_or_surety arm reading the existing age-gate helper (create_endorsement.rs:328) plus a new surety-existence query against this table.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:40:30Z",
+      "question": "RT-r4 reputation strategy needs reputation_snapshot.can_sponsor as a readable column. Does it exist as a real column with a read path, or is it computed-only?",
+      "options": [
+        "exists-readable-column",
+        "computed-only-blocker"
+      ],
+      "context": "PRD v1-reputation-tuning §5.4 specifies the reputation strategy passes if reputation_snapshot.can_sponsor is true for the caller (community-scoped if community_id provided, else instance-scoped). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
+      "answer": "exists-readable-column. Verified 2026-05-29 against phase-v1-RT-r4 tree: can_sponsor is a `pub can_sponsor: bool` column on the reputation_snapshot struct (reputation_snapshot.rs:31 and :46 — both the row and a view variant). Read paths exist at crates/api/api/src/governance/reputation_snapshot.rs, crates/db_views/reputation/src/impls.rs, crates/db_views/reputation/src/lib.rs, admin_reputation_stats.rs, admin_dashboard_html.rs. The reputation strategy reads the caller's snapshot (community-scoped or instance via community_id NULL) and gates on can_sponsor. Per PRD §5.4 this flips an existing computed-but-unread boolean (Phase 5a task 53, gated on thresholds.endorsement_strength default 25) to strategy-readable. No migration needed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:40:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-29T20:41:00Z",
+      "question": "RT-r4 allowlist strategy + admin add/remove endpoints need sponsor_allowlist db-layer helpers (insert/delete/exists). Did RT-r1 ship them, or must RT-r4 add them?",
+      "options": [
+        "exists-reuse",
+        "absent-rt-r4-adds-them"
+      ],
+      "context": "Brief rt-r4-planning-1 §2.1 deliverable (b) is conditional on whether RT-r1 shipped insert/delete/exists query fns for the sponsor_allowlist table (it shipped the table + struct + InsertForm). Determines whether deliverable (b) is a real §13 task.",
+      "answer": "absent-rt-r4-adds-them. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/sponsor_allowlist.rs contains ONLY the struct SponsorAllowlist + SponsorAllowlistInsertForm (no impl block, no query fns); grep for sponsor_allowlist/SponsorAllowlist across crates/db_views/ + crates/db_schema/src/impls/ returns ZERO matches. RT-r1 shipped the table + struct + InsertForm but NO query helpers. CONSEQUENCE: brief deliverable (b) is a REAL §13 task — RT-r4 must add insert(row) / delete(by person+community or by id) / is_allowlisted(person, community) helpers. Mirror an existing governance db-helper insert/delete/exists shape (e.g. the surety or reputation_event impls). These are Rust query fns, NOT a migration (the table already exists). The allowlist strategy arm (deliverable a) and both admin endpoints (deliverable c) requires: this helper task — planner threads the requires: dependency so the cohort dependency-check passes.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-29T20:41:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "de57d6ce31bc-003"
+    },
+    {
+      "id": "2c9b0e637fa5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy on lemmy_api_common --features full for task 2 DTOs",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 committed AddSponsorAllowlist/AddSponsorAllowlistResponse/RemoveSponsorAllowlist/RemoveSponsorAllowlistResponse to crates/api/api_common/src/governance.rs on worker branch",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat -p lemmy_api_common --features full > .claude/validate-t2.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api_common --features full --no-deps -- -D warnings > .claude/validate-t2-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-2-addsponsorallowlist-remove-dtos-in-api-common-governance-rs-see-claude-prps-briefs-517",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": "cargo check --workspace exit 0; cargo clippy --workspace --no-deps -D warnings exit 0. Note: -p lemmy_api_common --features full fails pre-existing E0433 in lemmy_db_views_reputation (full not propagated via api_common dep chain); workspace check passes cleanly.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T2 DTOs compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T01:49:01Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "validate task 4 cargo check+clippy: option a (already passed locally) or option b (re-run on laptop)?",
+      "options": [
+        "a-already-passed-locally",
+        "b-re-run-on-laptop"
+      ],
+      "context": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -- -D warnings exit 0. task 4 commit f06c38a02.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-4-admin-sponsor-allowlist-handlers-mod-decl-see-claude-prps-briefs-rt-r4-impl-4-md-519",
+      "phase_task": "4",
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T4 admin handlers compile correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T03:38:08Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "59c3c67e8737-001"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "v1-quality-r3 complexity score is 9 (>8 Sonnet threshold). Split into r3 (e2e sweep T1+T2) + r3b (#167 T3), or proceed-as-one?",
+      "options": [
+        "proceed-as-one",
+        "split-r3-r3b"
+      ],
+      "context": "Score 9 = impl-tasks 0 + crates +3 (lemmy_server, lemmy_api_utils, lemmy_api) + e2e edits +6 (T1+T2). The +6 is the flat-+3-per-e2e-task factor that feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md (promoted in r2 §19) flags as over-weighting bounded, well-anchored mechanical edits. The brief explicitly scoped a single plan; each task is single-file (T1/T2) or 2-file/2-crate (T3) and serial-gated. Planner recommends proceed-as-one. Advisor/user decides at gate-1; do NOT self-resolve.",
+      "answer": "split-r3-r3b (per user 2026-05-30): r3 = e2e sweep (T1+T2, crates/server/tests/e2e.rs only); r3b = Issue #167 fix (T3, context.rs + admin_audit_stream.rs). Plan file must be revised to r3 scope only; a separate v1-quality-r3b.plan.md will cover T3.",
+      "answered_by": "user",
+      "resolved_at": "2026-05-30T21:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "630fc36b795c-001"
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Why are the 2 fixture bootstrap() set_var sites (e2e.rs:833/834 governance_fixtures, 6146/6147 admin_config_fixtures) kept as raw set_var + SAFETY comment (option-b) instead of EnvVarGuard-wrapped?",
+      "options": [
+        "option-b-raw-plus-safety",
+        "option-a-wrap"
+      ],
+      "context": "Wrapping a guard inside bootstrap() (which does not return it) drops the guard at function return, unsetting the env var before the test body runs (feedback_envvarguard_fixture_lifetime_footgun.md). For these 2 sites the vars are constant-valued, bootstrap() has many callers, and tests run --test-threads=1, so leaving them raw is benign process-scoping. Recorded as deliberate so impl and a future env-leak phase do not mistake it for an oversight.",
+      "answer": "option-b-raw-plus-safety. The 2 bootstrap sites stay raw with a SAFETY comment (Task 1); only test-body sites get EnvVarGuard wraps held to fn end (Task 2). Wrapping the bootstrap sites would re-introduce the fixture-lifetime footgun.",
+      "answered_by": "planner",
+      "resolved_at": "2026-05-30T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "630fc36b795c-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T00:00:00Z",
+      "question": "Run laptop cargo gates for task 4 (EnvVarGuard hoist + boot_context refactor). Commit 6dd926ed9 on worker branch.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "EnvVarGuard hoisted to test-crate root; use super::EnvVarGuard added in mod v1_rt_r3_fixtures; boot_context return type extended to 5-tuple with Vec<EnvVarGuard>; 10 callsites updated. cargo-check --workspace --features full exits 0 on daemon. Edit B anchor extended to include doc-comment block before struct (brief anchor omitted the doc-comment, which would have left it dangling). Submodule init required in this worktree.",
+      "commands": [
+        "bash scripts/brehon/cargo-check.sh --workspace --features full",
+        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
+        "bash scripts/brehon/cargo-test.sh --test e2e --no-run --workspace --features full",
+        "python3 -c \"content=open('crates/server/tests/e2e.rs').read(); assert 'struct EnvVarGuard' in content[:5000], 'FAIL: EnvVarGuard not at crate root'; assert 'Vec<EnvVarGuard>,' in content, 'FAIL: boot_context not 5-tuple'; assert 'use super::EnvVarGuard;' in content, 'FAIL: use super::EnvVarGuard missing'; print('OK: EnvVarGuard at crate root + boot_context 5-tuple + use super::EnvVarGuard in mod v1_rt_r3_fixtures')\""
+      ],
+      "branch": "junior/role-impl-task-v1-quality-r2-task-4-envvarguard-hoist-boot-context-refactor-see-claude-prps-briefs-v1-quality-r-516",
+      "phase_task": 4,
+      "answer": "All 4 T4 gates PASS on laptop (worktree brehon-fork-quality-r2-validate @ 7466d2706): cargo-check --workspace --features full 12m58s; cargo-clippy --workspace --features full --no-deps -- -D warnings 6m42s (clean); cargo-test --test e2e --no-run --workspace --features full 19m35s (e2e binary compiled); Python structural check OK (EnvVarGuard at crate root + boot_context 5-tuple + use super::EnvVarGuard). BONUS: cargo-linux.sh Linux container check --workspace --features full 16m50s clean (free deploy-target proof). T4 validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T01:55:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9b0beeacb0d4-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-30T00:55:00Z",
+      "question": "Shape G re-enabled 2026-05-30 (one day ahead of the 2026-06-01 plan) at user direction — record the action for the audit trail.",
+      "options": [
+        "re-enabled all three workflows + reverted suspension prose",
+        "n/a — log entry"
+      ],
+      "context": "User directed 'activate shape g if not already too late' on 2026-05-30. Verified all 3 workflows still disabled_manually, then re-enabled via gh api PUT: adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) — all now active. Reverted SHAPE-G-SUSPENDED prose from .claude/agents/impl-task.md + .claude/PRPs/templates/impl-task-brief.template.md (validate-pending workflow path restored as default for Shape-G plans; Pre-Shape-G validate-pending-laptop path retained). Could not read exact remaining Actions minutes (billing API needs 'user' OAuth scope); suspension baseline was ~2800/3000 at 2026-05-16. Risk accepted by user: a run before the monthly reset still draws from the prior allocation. DQ #229 (the original re-enable reminder) was already a resolved log entry, not a pending blocker — no pending entry needed resolving. Supersedes the active state in project_shape_g_suspended_2026_05_16 memory.",
+      "answer": "Shape G active as of 2026-05-30 00:55 UTC. Three workflows re-enabled; suspension prose reverted in two harness files. From this point impl-task workers on Shape-G plans write kind: 'validate-pending' + capture workflow_run_id again; ci-watcher polls. Next monitor: watch the first Shape-G workflow run for minutes consumption against the cap.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T00:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-038"
+    },
+    {
+      "id": "77a6a1be5dc4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T02:43:16Z",
+      "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 extended SponsorGateStrategy with AgeOrSurety/Reputation/Allowlist + dispatch arms in create_endorsement.rs. Local (EliteDesk) cargo check and clippy both exit 0. Validation uses --workspace per feedback_features_full_p_crate_incompatible (api_crud must use workspace scope).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/validate-t3.log 2>&1\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/validate-t3-clippy.log 2>&1\""
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-3-strategy-enum-dispatch-in-create-endorsement-rs-see-claude-prps-briefs-rt-r4-impl-518",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null,
+      "answer": "pass — workspace check + clippy clean. T3 strategy enum+dispatch compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T02:44:16Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "3c87676f024d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T04:28:50Z",
+      "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 registered /admin/sponsor-allowlist/{add,remove} routes in crates/api/routes/src/lib.rs. Worker ran cargo check + clippy --workspace --features full --no-deps both exit 0 locally.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-5-route-registration-for-admin-sponsor-allowlist-in-routes-lib-rs-see-claude-prps-brie-520",
+      "phase_task": "task 5",
+      "answer": "pass — workspace check + clippy clean. T5 route registration compiles correctly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T04:29:50Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
+      "failed_commands": null
+    },
+    {
+      "id": "7075011a227d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T05:02:24Z",
+      "question": "Run e2e test suite for RT-r4 Task 7 fixtures — pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 appended mod v1_rt_r4_fixtures to crates/server/tests/e2e.rs: 7 tests covering age_or_surety pass+deny, reputation pass+deny, allowlist pass+deny, admin add/remove round-trip with governance log verification.",
+      "commands": [
+        "./scripts/brehon/cargo-test.sh --workspace --test e2e"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r4-task-7-e2e-fixtures-for-sponsor-gate-strategies-admin-allowlist-see-claude-prps-briefs-rt-521",
+      "phase_task": 7,
+      "result": "pass",
+      "log_slice": "test result: ok. 126 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 2506.52s — E2E_EXIT_0",
+      "failed_commands": null,
+      "answer": "pass — all 126 e2e tests pass including new v1_rt_r4_fixtures. E2E_EXIT_0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T06:24:35Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-30T14:58:00Z",
+      "question": "Laptop advisor: validate quality-r2 Task 5 (EnvVarGuard wrap 13 LEMMY_DATABASE_URL sites, closes #160) — recovered via cherry-pick after #524 cross-lane cancel. PASS or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 (#160) was implemented by Junior #524 (worker branch tip 4e5ec7748) before that task was erroneously cancelled by the rt-r4 session (cross-lane mistake; #524 was quality-r2's, not rt-r4's). The code commit f0b24f577 survived on origin + a recovery ref. Recovered by cherry-picking ONLY the code commit (NOT the worker's 947-line DQ-churn commit 4e5ec7748) onto phase-v1-quality-r2 tip badd5622f -> 077dadd61. Diff verified: 13 EnvVarGuard::set additions, 13 unsafe set_var(LEMMY_DATABASE_URL) removals, 2 use super::EnvVarGuard additions (governance_fixtures + admin_config_fixtures) — matches brief v1-quality-r2-impl-5.md exactly. Audit: 0 unsafe set_var LEMMY_DATABASE_URL sites remain outside boot_context (site 14, handled by T4).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --test e2e --no-run --workspace --features full\""
+      ],
+      "branch": "phase-v1-quality-r2",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full = CHECK_EXIT_0 (0 errors); cargo clippy --workspace --features full --no-deps -D warnings = CLIPPY_EXIT_0 (0 warnings); cargo test --test e2e --no-run --workspace --features full = E2E_NORUN_EXIT_0 (e2e target compiled clean). Audit: grep set_var(LEMMY_DATABASE_URL) = 0 outside boot_context.",
+      "failed_commands": null,
+      "answer": "pass — recovered T5 cherry-pick 077dadd61 validates clean: check + clippy + e2e-no-run all exit 0; unsafe-site audit 0. The #524 cross-lane-cancel loss is fully healed; T5 is back on the phase branch.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-30T14:58:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "7b5cf201d6fa-001"
+    },
+    {
+      "id": "a3d0e9941441-039",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "Issue #167 fix shape: should LemmyContext::create call SETTINGS.get_database_url() internally (no new parameter) or require the caller to pass the URL as a new parameter?",
+      "options": [
+        "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally at construction — no callsite changes",
+        "option-b: add db_url: String parameter to LemmyContext::create — all 3 callsites (context.rs:79, server/lib.rs:210, e2e.rs:854+) pass the URL explicitly"
+      ],
+      "context": "build_db_pool() already reads SETTINGS.get_database_url_with_options() at construction time. LemmyContext::create receives only the pool (ActualDbPool), not the URL. Option-a is lower-risk: construction captures the URL from SETTINGS once, stores as String field, exposes via context.database_url(). Option-b ripples into all LemmyContext::create callsites. All callsites already have SETTINGS available at call time.",
+      "answer": "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally — captures the URL once at construction time (same read SETTINGS makes during pool build), stores as db_url: String field, exposes via pub fn database_url(&self) -> &str accessor. Zero callsite changes. Evidence: crates/diesel_utils/src/connection.rs:177-185 shows build_db_pool() reads SETTINGS.get_database_url_with_options() at pool-build time; the same SETTINGS reference is available inside LemmyContext::create. Option-b adds an unused parameter burden to 2+ non-e2e callsites (server/lib.rs:210, context.rs:79, and multiple e2e.rs sites). Source: crates/api/api_utils/src/context.rs:24-38 (create signature), crates/server/src/lib.rs:181+210 (caller), github issue #167 §Proposed fix option A.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-040",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "EnvVarGuard current location in e2e.rs: is it already at test-crate root (before any mod *_fixtures block), or still nested inside v1_rt_r3_fixtures?",
+      "options": [
+        "option-a: already at test-crate root (T4 of v1-quality-r2 hoisted it)",
+        "option-b: still inside v1_rt_r3_fixtures module"
+      ],
+      "context": "T4 of v1-quality-r2 was supposed to hoist EnvVarGuard from v1_rt_r3_fixtures to test-crate root. The brief says to verify before dispatching T3-equivalent.",
+      "answer": "option-a: EnvVarGuard is already at test-crate root. Grep confirms: struct EnvVarGuard at e2e.rs:111, impl EnvVarGuard at e2e.rs:116, impl Drop for EnvVarGuard at e2e.rs:127 — all before any mod *_fixtures block. The v1_rt_r3_fixtures module at e2e.rs:148 uses  (line 149), confirming it references the root-level struct, not a module-internal one. Do NOT re-hoist. Source: grep output e2e.rs lines 111-149.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-041",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-30T20:15:00Z",
+      "question": "The planning brief §4 cites wrapper discipline for DoD but does not explicitly list feedback_validate_pending_laptop_must_use_wrapper.md in §3 Required reading. Should it be added?",
+      "options": [
+        "option-a: add to §3 Required reading — planner must cite it in §15 DoD cargo commands",
+        "option-b: omit — the wrapper discipline is covered by other §3 citations"
+      ],
+      "context": "The advisor-orchestrator §2.4 file-class table requires feedback_validate_pending_laptop_must_use_wrapper.md in briefs that include cargo-test commands in DoD. The planning brief needs this so the plan includes wrapper-prefixed cargo commands in §15.",
+      "answer": "option-a: add feedback_validate_pending_laptop_must_use_wrapper.md to brief §3 Required reading. Source: advisor-orchestrator.md §2.4 file-class table row for validate-pending-laptop; the brief will be edited to add this citation. The planner must include wrapper-prefixed commands in plan §15 DoD for Windows laptop execution.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T20:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "65b95cc574c8-001",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-05-30T22:47:32Z",
+      "question": "brief audit window (400 chars) too small for T1's 7-line SAFETY comment blocks; modified 800-char window passes cleanly",
+      "options": [
+        "widen-audit-window-to-800-in-future-briefs",
+        "no-action-impl-is-correct"
+      ],
+      "context": "v1-quality-r3 T2: cargo-check=exit0, clippy=exit0. Python audit with 400-char has_safety() window fails for lines 840/841 and 6122/6123 (bootstrap exceptions) because T1's SAFETY justification block is ~573 chars above the set_var calls. Modified audit with 800-char window: all 4 sites have SAFETY, count=2 INIT+2 GOV (correct). All 10 test-body sites wrapped. Implementation is correct. Audit window miscalibrated in the brief, not in the impl. Self-resolving as log — would-advisor-agree test: yes, 800-char evidence is unambiguous.",
+      "answer": "impl-self-resolved: 800-char audit passes (0 unsafe-without-SAFETY sites); count 2+2 correct; implementation is sound. Recommend: future briefs use 800+ char window for has_safety() when SAFETY comment blocks are multi-line. Proceeding with commit.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-05-30T22:47:32Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "65b95cc574c8-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T22:48:42Z",
+      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 wrapped all test-body INIT/GOV sites (10 fns, Edits A-J); T1 documented 2 bootstrap exceptions. Phase tip at cca087156e2bf18b2032c2d1807bc9a0452e537e. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class).",
+      "branch": "junior/role-impl-task-v1-quality-r3-task-2-envvarguard-wrap-test-body-setter-sites-see-claude-prps-briefs-v1-quality-r3-im-532",
+      "phase_task": "2",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Duplicate of 4b129a8b08f1-001 (two job runs for the same T2 task). Advisor resolved as duplicate; 4b129a8b08f1-001 is the live e2e gate entry.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-30T23:21:47Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "4b129a8b08f1-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-30T23:01:26Z",
+      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 wrapped all 10 test-body INIT/GOV sites with EnvVarGuard; T1 documented 2 bootstrap exceptions with SAFETY comments. Phase tip at bf3f7201d. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class.md).",
+      "branch": "phase-v1-quality-r3",
+      "phase_task": "2",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
+      ],
+      "result": "pass",
+      "log_slice": "126 passed; 0 failed; 5 ignored; finished in 2716.29s",
+      "failed_commands": null,
+      "answer": "e2e gate passed: 126/0/5, E2E_EXIT_0, 2716s. Advisor-laptop run 2026-05-31.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T00:23:46Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "052f0d5c016d-001",
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "v1-quality-r3b #167 fix shape: the planning brief §2/§4 mandate option-b (add db_url field/param to LemmyContext::create, enumerate + update all callsites, accessor db_url()), but the resolved clarify DQ a3d0e9941441-039 that the brief §3 cites as authority chose option-a (create() reads SETTINGS internally, ZERO callsite changes, accessor database_url()). Which shape should the plan follow?",
+      "options": [
+        "option-a (follow resolved DQ a3d0e9941441-039): LemmyContext::create reads SETTINGS.get_database_url() internally at construction, stores db_url: String, exposes pub fn database_url(&self) -> &str. Zero callsite changes. admin_audit_stream.rs:125 uses context.database_url(). Plan §10 has no callsite-enumeration task.",
+        "option-b (follow brief §2/§4 prose): add db_url: String param to LemmyContext::create, update all callsites (context.rs:79, server/lib.rs:210, ~14 e2e.rs sites), accessor pub fn db_url(&self) -> &str. Plan §10 enumerates and edits every callsite."
+      ],
+      "context": "The brief is internally inconsistent: §2 labels the work 'Issue #167, Option A' and §3 item 3 names resolved DQ a3d0e9941441-039 as 'the advisor's direction for Option A', but §2/§4 bullet prose describes option-b mechanics (add param, enumerate callsites, db_url() accessor). The resolved clarify DQ explicitly REJECTS option-b ('adds an unused parameter burden to 2+ non-e2e callsites') with evidence (connection.rs:177-185 reads SETTINGS at pool-build time; same SETTINGS available inside create()). Per decision-queue.md, resolved clarify DQs are authoritative and non-re-litigable. RECOMMENDATION: option-a. The two shapes produce materially different plans (callsite-enumeration task present vs absent; accessor name database_url() vs db_url()), so I am not guessing — escalating per brief §4 'if a blocker arises, write a kind:blocker DQ, commit+push, and stop. Do not guess.' If advisor confirms the brief prose was stale boilerplate, I proceed with option-a; if advisor intends option-b, confirm and I follow the brief.",
+      "answer": "option-a: LemmyContext::create reads SETTINGS.get_database_url() internally at construction and stores db_url: String. Zero callsite changes to create() params. Expose pub fn database_url(&self) -> &str accessor. admin_audit_stream.rs:125 uses context.database_url(). Brief §2/§4 callsite-enumeration prose was stale boilerplate — the resolved clarify DQ a3d0e9941441-039 is authoritative. Proceed with option-a shape.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T03:07:27Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T12:12:25Z",
+      "question": "bm-cut brief asks to commit runlog on governance-v0, but Junior worktree is isolated + bm-cut.md Phase 5 says commit on phase branch. Which is correct?",
+      "options": [
+        "commit on phase-v1-quality-r3b per bm-cut.md procedure",
+        "commit on governance-v0 per brief"
+      ],
+      "context": "Phase branch phase-v1-quality-r3b cut and pushed successfully. Runlog creation blocked by worktree isolation and conflicting brief vs procedure.",
+      "answer": "Option A: commit on phase-v1-quality-r3b per bm-cut.md Phase 5. The brief incorrectly specified governance-v0. Procedure wins over brief wording. The runlog entry should be appended to .claude/runlog/v1-quality-r3b-runlog.md committed on phase-v1-quality-r3b.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T12:20:00Z",
+      "id": "8b6f7907b575-001"
+    },
+    {
+      "id": "a3d0e9941441-042",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-31T14:02:12Z",
+      "question": "Plan v1-quality-r3b §16a Story 1 says EnvVarGuard count is exactly 1; correct value is 14.",
+      "options": [
+        "correct §16a wording to say 14 not 1"
+      ],
+      "context": "Brief §6 validation gate correctly says EXPECT: 14 (17 − 3 band-aids). The 13 other LEMMY_DATABASE_URL guards are legitimate test-body guards for non-audit-stream tests. Story 1 passes; this is a spec-prose inaccuracy only. Fix in plan file before archiving.",
+      "answer": "File as advisory lesson; planner to correct §16a wording in a follow-up chore commit.",
+      "answered_by": "advisor-self-resolved",
+      "resolved_at": "2026-05-31T14:02:12Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "Does Task 1 pass e2e? Run cargo-test.bat --workspace --test e2e --features full and report result.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T1 fix(governance): capture DB URL at LemmyContext::create. cargo check + clippy both exit 0. grep gates pass. DQ raised after commit f41cf8932.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3b-task1-e2e.log 2>&1\""
+      ],
+      "branch": "phase-v1-quality-r3b",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": "test result: ok. 126 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 2788.32s",
+      "failed_commands": null,
+      "answer": "e2e pass — 126/0/5; admin_audit_stream_* all ok; E2E_EXIT_0",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T13:51:24Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "be6ddc108436-001"
+    },
+    {
+      "id": "a3d0e9941441-043",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "v1-quality-r3c brief: what is the correct test shape for BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB guard test? The brief says \"call the scheduler tick\" but the cleanup runs in an inline scheduler closure with no standalone function.",
+      "options": [
+        "option-a: call delete_older_than() directly with window_days=1 and a seeded old row; set guard and assert row is NOT deleted (direct DB-function probe)",
+        "option-b: invoke the scheduler closure indirectly via a test harness; assert no DB mutations"
+      ],
+      "context": "Confirmed by reading scheduled_tasks.rs:396-461: the cleanup calls federation_inbox_nonce::delete_older_than(window_days_i64, conn) inline in a scheduler closure. delete_older_than is at crates/db_schema/src/source/governance/federation_inbox_nonce.rs:37. FederationInboxNonceInsertForm at line 30 has peer_instance: String + activity_id: String fields. delete_older_than deletes rows with seen_at < now()-window_days.",
+      "answer": "option-a: The guard test must call delete_older_than() directly (not via the scheduler) because the scheduler closure is not callable from test context. Test shape: (1) seed a FederationInboxNonceInsertForm row with seen_at = now()-30days via diesel INSERT; (2) set EnvVarGuard BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB=1; (3) call delete_older_than(1, &mut conn) directly — since the guard is checked OUTSIDE the function (in the closure body above the delete_older_than call), the test cannot test the guard via the function call alone; instead the test should mirror the guard check inline: if std::env::var(...)==\"1\" { skip assertion }; alternatively, the test tests the FUNCTION in isolation (seeded row is deleted when gate is not set; not deleted when gate is set AND we skip the call). RECOMMENDED: two tests — (a) gate=unset + call => row deleted; (b) gate=set + call => still call the function (guard is in the scheduler, not the function) but the test verifies the function deletes when called — then separately test the guard at integration level by asserting the scheduler path is not exercised. SIMPLEST viable test: one test that sets the guard and verifies no rows are deleted from federation_inbox_nonce (by directly querying the count) after a simulated scheduler tick interval. The plan §13 IMPLEMENT should describe this shape explicitly, citing federation_inbox_nonce.rs:30 for the insert form and :37 for delete_older_than.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "81ae24440317-004",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T17:37:00Z",
+      "question": "Run cargo-check on rt-r5-validate-cohort-b after Tasks 1+2+3+4",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 (rollup cron 846c59717) + Task 4 (admin endpoint aad577418) committed manually by advisor after workers stuck in D-state. Validated on rt-r5-validate-cohort-b (T1+T2+T3+T4 merged).",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "rt-r5-validate-cohort-b",
+      "phase_task": "3+4",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-b. Tasks 1+2+3+4 all pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:40:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "81ae24440317-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T16:35:00Z",
+      "question": "Run cargo-check on phase-v1-RT-r5 after Task 1 commit fadc38ac3",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (rollup compute + batch) committed manually by advisor after worker stuck in cargo loop. commit fadc38ac3 on junior worktree branch for #549.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-1-rollup-compute-batch-in-reputation-snapshot-rs-see-claude-prps-briefs-v1-rt-r5-i-549",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:15:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "81ae24440317-003",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T16:36:00Z",
+      "question": "Run cargo-check on phase-v1-RT-r5 after Task 2 commit 0c6752aa9",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (AdminReputationRollup DTOs) committed manually by advisor after worker stuck in cargo loop. commit 0c6752aa9 on junior worktree branch for #550.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-2-rollup-dtos-in-api-common-governance-rs-see-claude-prps-briefs-v1-rt-r5-impl-2-md-550",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:15:00Z",
+      "approved_by": null,
+      "approved_at": null
     },
     {
       "id": "ship3clarify01-001",
@@ -2270,704 +3000,6 @@
       "id": "dd6012873857-001"
     },
     {
-      "from": "impl",
-      "kind": "blocker",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "Edit C.3 old_string in brief §2.4 does not exist in the plan file. Advisor must provide correct old_string for the cr-6 mitigation-text update (line ~672). Should advisor (a) provide correct old_string for the existing edge-case timestamp row at line 672, or (b) confirm cr-6 is already satisfied by Edit A alone?",
-      "options": [
-        "option-a: brief old_string was wrong; correct old_string is the `dq-lint-durations.sh regex misses...` row at line 672 — advisor provides updated old/new pair for a follow-up edit",
-        "option-b: cr-6 is already satisfied by Edit A (ValueError handler now makes the mitigation text accurate as-is); no plan edit needed for cr-6"
-      ],
-      "context": "Brief §2.4 Edit C.3 old_string: '| Negative-duration lint fires on a legitimately-resolved entry (false positive) | LOW | LOW | ...'. This text does NOT exist in v1-quality-r2a.plan.md. rg returns 0 results for 'Negative-duration lint'. The risks table at line 672 has: '| dq-lint-durations.sh regex misses an edge-case timestamp format | LOW | MED | Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison |'. Brief instructions: if text does not match, raise blocker DQ — do NOT improvise. The other 4 edits (A, B, C.1, C.2) applied successfully; all worker self-tests exit 0.",
-      "answer": "option-a: brief old_string was wrong; advisor 2026-05-29 verified actual line 672 risks-table row reads 'dq-lint-durations.sh regex misses an edge-case timestamp format ... Python fromisoformat handles all valid ISO-8601; non-ISO timestamps surface as None and skip the comparison'. fix-impl-2 brief §2.2 provides the correct old_string targeting this row. Updated mitigation text spells out the parse() ValueError wrapper added by Edit A in fix-impl-1 commit 8621a84bb.",
-      "answered_by": "impl-self-resolved",
-      "approved_by": null,
-      "resolved_at": "2026-05-29T01:57:20Z",
-      "id": "745da950edad-001"
-    },
-    {
-      "id": "79db52a6e3be-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "Run laptop cargo gates for fix-impl-1 comment fixes in e2e.rs: (a) cargo check --workspace --features full, (b) cargo clippy --workspace --features full --no-deps -D warnings, (c) targeted e2e test run.",
-      "options": [
-        "pass — all three commands exit 0 + TEST_EXIT_0",
-        "fail — one or more commands exit non-zero"
-      ],
-      "context": "Commit 84526e6e2 on worktree branch fixes stale explanatory comments at Sites A+B in e2e.rs (comment-only, no assertion or test-logic change). Shape G suspended until 2026-06-01; laptop runs the cargo gates.",
-      "branch": "phase-v1-rt-r3-followup",
-      "phase_task": "fix-impl-1",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-fiximpl1-e2e.log\""
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; targeted e2e report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine TEST_EXIT_0, \"test result: ok. 2 passed; 0 failed\" in 84.21s. fix-impl-1 is comment-only (CR #162 cr-10/cr-11) — assertions/vec untouched, runtime unchanged; the 2 Site A/B tests stay green. Targeted 2-test run is sufficient regression coverage for a //-comment edit.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-29T17:43:30Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "v1-RT-r4 complexity score is 10 (>8 Sonnet split threshold): split into RT-r4a (db+DTO+strategy) / RT-r4b (handler+routes+e2e), or proceed as one plan?",
-      "options": [
-        "proceed-as-one",
-        "split-into-RT-r4a-RT-r4b"
-      ],
-      "context": "Mechanical section 5.1 score = 10 (RT-r3-calibrated): impl tasks above 5 = +2 (7 impl tasks: db-helpers, DTOs, strategy-arms, admin-handlers, routes, registry, e2e); crates touched = +5 (lemmy_db_schema, lemmy_api_common, lemmy_api_crud, lemmy_api, lemmy_api_routes); e2e edit = +3 (one e2e.rs file). Migrations 0, ADR-affecting 0 (conforms to ADR-008/ADR-015, no new OQ delta), cargo-budget 0 (Shape-G/laptop). Planner recommends PROCEED-AS-ONE: one cohesive feature (sponsor-gate strategy completion + allowlist admin surface) with a tight serial dependency chain (strategy/handler/routes/e2e all consume the db-helper + DTO base); splitting adds a phase boundary, a second bm-cut, a second retro, and a cross-phase brief-visibility sync for ~7 small tasks. Per-task ceilings all hold (<=4 files / <=2 crates each). RT-r3 shipped at 7; RT precedent ships single-feature plans at this size. Plan authored proceed-as-one per brief section 2 (one plan file) + section 4.1a (no planner-initiated split); this DQ surfaces the score for the gate-1 plan-approval decision.",
-      "answer": "PROCEED-AS-ONE. Rationale: cohesive single-feature (strategy extension + allowlist admin), tight serial dependency chain (strategy/handler/routes/e2e all consume db-helper + DTO), per-task ceilings all hold (<=4 files / <=2 crates each), RT-r3 shipped at 7 with comparable surface. Splitting adds a phase boundary, second bm-cut, second retro, and cross-phase brief-visibility sync overhead for ~7 small tasks — negative net value. Planner recommendation affirmed.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T21:05:13.993715Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "9f9026a1d618-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "Task 1 Sites A+B cargo validation — check, clippy, targeted e2e (report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine); await advisor-laptop mutation",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 commit 834f9d85d on worktree branch; Edit 1.1 rep_total 4->7 @L2949; Edit 1.2 vote_outcome_recorded insert @L11208-11209; regression guards L2959/L2967 untouched. Shape G suspended per DQ #229 until 2026-06-01.",
-      "branch": "phase-v1-rt-r3-followup",
-      "phase_task": 1,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task1-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task1-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full -- report_to_modlog_golden_path governance_log_sequence_matches_prd_state_machine > .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log 2>&1 && echo TEST_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log || echo TEST_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task1-sites-ab.log\""
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "all three gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0 (panic::Location false-alarm cleared under --features full); targeted e2e report_to_modlog_golden_path + governance_log_sequence_matches_prd_state_machine TEST_EXIT_0, \"test result: ok. 2 passed; 0 failed\" in 89.96s. Runtime confirms rep_total=7 and vote_outcome_recorded insertion match RT-r3 emit semantics.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-29T15:27:28Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "cdb6bab5fef8-001"
-    },
-    {
-      "id": "e9ed653cfd0a-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T00:00:00Z",
-      "question": "validate-pending-laptop for v1-quality-r2a fix-impl-3",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-3 committed: fail-closed timestamp parsing, plan update, debug-json timestamp fix",
-      "branch": "phase-v1-quality-r2",
-      "phase_task": "v1-quality-r2a-fix-impl-3",
-      "commands": [
-        "bash scripts/brehon/dq-lint-durations.sh",
-        "bash scripts/brehon/precheck.sh"
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 3ddcef334 (daemon worktree, Mode B per Hard refusal #2). (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 (zero negative-duration entries; new fail-closed parser does not regress the existing clean DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0. Worker §2.5 step 9 NEGATIVE gate already validated fail-closed semantics: bad timestamp emits 'DQ-LINT FAIL: entry \"test-malformed-001\" timestamp=\"not-an-iso-date\" is not a valid ISO-8601 timestamp' and exits 1. Lane Q-r2a fix-impl-3 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-new-1 + cr-new-2 → bm-merge.",
-      "answered_by": "advisor-laptop",
-      "approved_by": null,
-      "approved_at": null,
-      "resolved_at": "2026-05-29T09:15:00Z"
-    },
-    {
-      "id": "237cd769325e-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T01:57:51Z",
-      "question": "Run dq-lint-durations.sh and precheck.sh on laptop for v1-quality-r2a fix-impl-2 (cr-6 plan text update)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-2 plan-text edit on .claude/PRPs/plans/v1-quality-r2a.plan.md line 672 (risks-table row). Zero Rust changes. Validation is bash-only.",
-      "branch": "phase-v1-quality-r2",
-      "phase_task": "v1-quality-r2a-fix-impl-2",
-      "commands": [
-        "bash scripts/brehon/dq-lint-durations.sh",
-        "bash scripts/brehon/precheck.sh"
-      ],
-      "answer": "PASS — both bash gates exit 0 on phase-v1-quality-r2 @ 530da702f. (1) bash scripts/brehon/dq-lint-durations.sh → exit 0 in ~20ms (zero negative-duration entries on the phase-branch DQ). (2) bash scripts/brehon/precheck.sh → '[precheck] OK', exit 0 in ~17ms (REPO_ROOT-derivation works correctly; sibling-script invocation succeeds). Gates run via SSH on /srv/brehon-fork (daemon worktree on phase-v1-quality-r2) per Mode B mobile remote-control. Lane Q-r2a fix-impl-2 ready for bm-poll-cr re-poll → PR #161 addressed_in updates for cr-3..cr-8 → bm-merge.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-29T02:01:30Z",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "3c903b3418cb-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-29T10:00:00Z",
-      "question": "Run local cargo check/clippy/test-norun gates for task 3 (fixtures doc-comment audit) on laptop. Commit 1f337dddb on worker branch.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "14 doc-comment edits applied to crates/server/tests/e2e.rs (Shape NO-DOC x13 + Shape APPEND x1). cargo-check and cargo-clippy pass on daemon. Gate 3 brief command `--test e2e --no-run -p lemmy_server --features full` fails with known incompatibility (feedback_features_full_p_crate_incompatible.md); corrected to `--workspace --features full` which exits 0. Submodule init required on daemon worktree before gates. Python audit: OK — all 14 fixtures modules cite --test-threads=1 in doc-comment.",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --test e2e --no-run --workspace --features full",
-        "python3 -c \"import re; content=open('crates/server/tests/e2e.rs').read(); found=[m.group(1) for m in re.finditer(r'mod (\\w+_fixtures)\\s*\\{', content) if '--test-threads=1' in content[content.index(m.group(0)):content.index(m.group(0))+1500]]; print(f'OK — all {len(found)} fixtures modules cite --test-threads=1 in doc-comment' if len(found)==14 else f'FAIL: only {len(found)}/14')\""
-      ],
-      "branch": "junior/role-impl-task-v1-quality-r2-task-3-fixtures-doc-comment-audit-see-claude-prps-briefs-v1-quality-r2-impl-3-md-511",
-      "phase_task": 3,
-      "answer": "All 4 validate-pending-laptop gates passed on laptop: cargo-check exit 0, cargo-clippy exit 0, cargo-test --no-run exit 0, python audit 14/14 fixtures modules cite --test-threads=1.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-29T22:02:14Z",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T12:55:56Z",
-      "question": "Brief §2.2 (this lane) and bootstrap §1 give conflicting assertion-site tables — bootstrap claims a single rep_count==4 fix to 7 at report_to_modlog_golden_path; §2.2 shows THREE assertions (rep_total==4 @2949, jury_rep_count==3 @2959, reporter_rep_count==1 @2967) and data-dependent deltas. Which table does the planner trust?",
-      "options": [
-        "Trust brief §2.2 (verified at lane tip 2026-05-29); treat bootstrap §1 table as superseded",
-        "Trust bootstrap §1 table (rep_count==7)"
-      ],
-      "context": "Bootstrap §1 predates the falsifiable-hypothesis re-verification recorded in workflow_state_v1_rt_r3_followup.md (2026-05-29). Brief §2.2 line numbers re-confirmed at phase-v1-rt-r3-followup tip via grep + Read.",
-      "answer": "Trust brief §2.2 — verified at lane tip. The bootstrap §1 table and its 'rep_count == 7' rows are SUPERSEDED by the brief §2.2 table and by workflow_state_v1_rt_r3_followup.md's 2026-05-29 re-verification block (which the bootstrap itself flags as authoritative-on-conflict). Confirmed at lane tip phase-v1-rt-r3-followup: report_to_modlog_golden_path (fn at crates/server/tests/e2e.rs:2485) carries THREE related assertions — rep_total==4 (line 2949, the actual total-count assertion, named rep_total not rep_count which is why a grep for 'rep_count' missed it), jury_rep_count==3 (line 2959, JuryReliability dimension), reporter_rep_count==1 (line 2967, ReportingAccuracy dimension). There is NO single 'rep_count==4' to bump to 7 at this site. Per feedback_plan_drift_metadata_cross_check.md and feedback_runbook_audit_drift_post_event_check.md (every handover claim is a hypothesis; verify against the code).",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T12:55:56Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-034"
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T12:55:57Z",
-      "question": "For Site B (governance_log_sequence_matches_prd_state_machine, expected_prefix vec @11201), RT-r3 added TWO new emit kinds (vote_outcome_recorded + evidence_quality_recorded). Does the planner insert BOTH into the expected sequence, or only the kinds the golden-path scenario actually triggers?",
-      "options": [
-        "Insert ONLY the kinds the golden-path scenario triggers; derive from the baseline panic 'got {sequence:?}' output",
-        "Insert both vote_outcome_recorded and evidence_quality_recorded unconditionally"
-      ],
-      "context": "Sequence is 'first-occurrence per kind'. vote_outcome_recorded fires when ≥1 juror aligns with the majority (always true on a decided case). evidence_quality_recorded fires only if the case seeds case_evidence AND rationale ≥256 chars (Source 4a precondition).",
-      "answer": "Insert ONLY the kinds the golden-path scenario actually triggers — derive the exact set + ordering from the e2e baseline panic output (.claude/v1-rt-r3-followup-e2e-baseline.log shows 'got {sequence:?}' on the failing assert at line 11215). Static analysis at lane tip corroborates: neither governance_log_sequence_matches_prd_state_machine (fn lines 11054-11218) nor report_to_modlog_golden_path references the case_evidence table — they set jury_vote.rationale but Source 4a (submit_jury_vote.rs:730) requires BOTH a case_evidence row AND a winning_rationale ≥ participation.evidence_cited_rationale_threshold_chars (default 256). So evidence_quality_recorded almost certainly does NOT fire in the golden-path scenario, and vote_outcome_recorded almost certainly DOES (the panel decides, so ≥1 juror aligns with the majority). But the baseline output is the authority, NOT this static reasoning — the planner copies the actual ordering from the panic. Per feedback_plan_drift_metadata_cross_check.md + the brief §2.3 baseline-as-authority rule.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T12:55:57Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-035"
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T12:55:58Z",
-      "question": "crates/server/tests/e2e.rs is a high-traffic shared file (RT-r3 just shipped to it; redaction-r1 lane is concurrently active). Does this lane's 4-assertion edit risk a file-ownership collision with another active lane?",
-      "options": [
-        "No collision — this lane is the sole active writer of e2e.rs; proceed",
-        "Collision risk — coordinate before editing"
-      ],
-      "context": "Three worktrees active: rt-r3-followup (this), redaction-r1 (DEFERRED at gate-4), rt-r3 (shipped, stale worktree). Need to confirm no concurrent e2e.rs edits land while this lane is open.",
-      "answer": "No collision — this lane is the sole active writer of crates/server/tests/e2e.rs among the active lanes. Verified 2026-05-29: (1) `git diff governance-v0...phase-v1-redaction-r1 --stat -- crates/server/tests/e2e.rs` is EMPTY — redaction-r1's deferral is at a gate-4 e2e *run*, not e2e *edits*; it has zero e2e.rs delta vs trunk. (2) `git log governance-v0..phase-v1-RT-r3 -- crates/server/tests/e2e.rs` is EMPTY — RT-r3 is fully merged; no unmerged e2e delta; its worktree is stale (pending prune). The lane Mode A worktree (brehon-fork-rt-r3-followup) has its own .git/, sidestepping the daemon shared-index contention class entirely (feedback_cohort_shared_git_index_contention.md applies only to daemon single-.git/ cohorts). Watchpoint for the advisor (already in brief §7 / bootstrap §7): if redaction-r1 resumes and lands e2e.rs edits while this lane is open, re-baseline before bm-pr. Per the brief §4 NEGATIVE-test gate.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T12:55:58Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-036"
-    },
-    {
-      "id": "be594e67e072-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-29T15:34:11Z",
-      "question": "Advisor-laptop: run check/clippy/WHOLE-binary-e2e for v1-rt-r3-followup task 2 (Sites C+D rep_count 4->7). Expect 119 passed; 0 failed; 5 ignored.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 commit d57b755c9 on worktree branch (phase tip carries Tasks 1+2). Shape G suspended; advisor-laptop runs the three commands below.",
-      "branch": "phase-v1-rt-r3-followup",
-      "phase_task": 2,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-check.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/v1-rt-r3-followup-task2-clippy.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-rt-r3-followup-task2-e2e-full.log\""
-      ],
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "all 3 gates pass: cargo check --workspace --features full CHECK_EXIT_0; cargo clippy --workspace --features full -D warnings CLIPPY_EXIT_0; whole-binary e2e (cargo test --workspace --test e2e --features full, no filter) E2E_EXIT_0, \"test result: ok. 119 passed; 0 failed; 5 ignored\" in 2392.77s. Pre-fix baseline was 115 passed/4 failed/5 ignored; the 4 RT-r3-stale tests (report_to_modlog_golden_path, governance_log_sequence_matches_prd_state_machine, submit_jury_vote_preserves_v0_decided_for_no_sponsor_target, submit_jury_vote_no_action_skips_liability_machinery) are now green with NO regression of the 115 prior-green tests (NEGATIVE-test gate satisfied). All impl complete.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-29T16:29:08Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T19:25:00Z",
-      "question": "v1-quality-r2 re-scope (3-issue r2-half): do the plan's enumerated e2e.rs anchor counts (11 boot_context refs / 14 LEMMY_DATABASE_URL setters / 14 *_fixtures modules) still hold against current governance-v0 after rt-r3-followup merged + with Lane A redaction-r1 concurrently editing e2e.rs, such that T3/T4/T5 are dispatchable without re-planning?",
-      "options": [
-        "anchors-hold-dispatch-ready",
-        "anchors-drifted-refresh-before-bm-cut"
-      ],
-      "answer": "anchors-hold-dispatch-ready. Empirical re-enumeration on governance-v0 @74197312d (advisor, 2026-05-29): `rg -c boot_context` = 11 (1 decl + 10 callsites, matches plan §11); `rg -c env::set_var(\"LEMMY_DATABASE_URL\")` = 14 (matches plan §3: 13 in-scope for T5 + 1 in boot_context for T4); `rg -c '^mod \\w+_fixtures \\{'` = 14 (matches plan §10.7); EnvVarGuard still at e2e.rs:~17185 inside v1_rt_r3_fixtures (NOT yet hoisted — T4 target intact); e2e.rs = 18,095 lines. Lane A redaction-r1 has NOT merged anything to governance-v0 that shifts these counts. The plan's LINE NUMBERS are stale (rt-r3-followup's Site-B vote_outcome_recorded insert + other merges shifted lines) but the COUNTS and text-anchorable targets are intact, and R11 mandates verbatim text anchors in the T3/T4/T5 briefs regardless of line numbers. The plan was already clarified pre-r2a (a3d0e994...-034/035/036); the re-scope only removed the 2 shipped tasks (T1/T2) without altering the substance of T3/T4/T5. Clarify gate SATISFIED: plan is dispatch-ready. Task 0 Probe 8 re-runs this same enumeration against the actual phase-branch tip post-bm-cut as the in-band guard (per r2a lesson: pre-flight enumerates what the plan names).",
-      "context": "Re-scope path = edit-in-place (user choice 2026-05-29). The load-bearing clarify risk for a re-scoped e2e.rs-heavy plan is anchor drift from concurrent lanes; this clarify pass is the empirical falsification of that risk per feedback_falsifiable_hypothesis_before_structural_fix.md + feedback_runbook_audit_drift_post_event_check.md. A full coverage-question clarify pass is low-value here (plan exists, scope is mechanical EnvVarGuard wraps with v1-RT-r3 canonical pattern, already clarified pre-r2a). Plan @74197312d.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T19:25:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-037"
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T20:40:00Z",
-      "question": "RT-r4 age_or_surety strategy needs a surety table with sponsored_id + revoked_at. Does it exist with those columns, or must RT-r4 add them?",
-      "options": [
-        "exists-use-as-is",
-        "needs-migration-blocker"
-      ],
-      "context": "PRD v1-reputation-tuning §5.4 specifies age_or_surety passes if EXISTS (surety WHERE sponsored_id = caller AND revoked_at IS NULL). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
-      "answer": "exists-use-as-is. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/surety.rs:17 defines `pub struct Surety` (diesel table_name = surety, line 12) with `sponsored_id: PersonId` (:20) and `revoked_at: Option<DateTime<Utc>>` (:23). The PRD §5.4 OR-EXISTS clause is implementable verbatim — no migration needed. Planner writes the age_or_surety arm reading the existing age-gate helper (create_endorsement.rs:328) plus a new surety-existence query against this table.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T20:40:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "de57d6ce31bc-001"
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T20:40:30Z",
-      "question": "RT-r4 reputation strategy needs reputation_snapshot.can_sponsor as a readable column. Does it exist as a real column with a read path, or is it computed-only?",
-      "options": [
-        "exists-readable-column",
-        "computed-only-blocker"
-      ],
-      "context": "PRD v1-reputation-tuning §5.4 specifies the reputation strategy passes if reputation_snapshot.can_sponsor is true for the caller (community-scoped if community_id provided, else instance-scoped). Brief rt-r4-planning-1 §5 flagged this as a planner grep-verify.",
-      "answer": "exists-readable-column. Verified 2026-05-29 against phase-v1-RT-r4 tree: can_sponsor is a `pub can_sponsor: bool` column on the reputation_snapshot struct (reputation_snapshot.rs:31 and :46 — both the row and a view variant). Read paths exist at crates/api/api/src/governance/reputation_snapshot.rs, crates/db_views/reputation/src/impls.rs, crates/db_views/reputation/src/lib.rs, admin_reputation_stats.rs, admin_dashboard_html.rs. The reputation strategy reads the caller's snapshot (community-scoped or instance via community_id NULL) and gates on can_sponsor. Per PRD §5.4 this flips an existing computed-but-unread boolean (Phase 5a task 53, gated on thresholds.endorsement_strength default 25) to strategy-readable. No migration needed.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T20:40:30Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "de57d6ce31bc-002"
-    },
-    {
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-29T20:41:00Z",
-      "question": "RT-r4 allowlist strategy + admin add/remove endpoints need sponsor_allowlist db-layer helpers (insert/delete/exists). Did RT-r1 ship them, or must RT-r4 add them?",
-      "options": [
-        "exists-reuse",
-        "absent-rt-r4-adds-them"
-      ],
-      "context": "Brief rt-r4-planning-1 §2.1 deliverable (b) is conditional on whether RT-r1 shipped insert/delete/exists query fns for the sponsor_allowlist table (it shipped the table + struct + InsertForm). Determines whether deliverable (b) is a real §13 task.",
-      "answer": "absent-rt-r4-adds-them. Verified 2026-05-29 against phase-v1-RT-r4 tree: crates/db_schema/src/source/governance/sponsor_allowlist.rs contains ONLY the struct SponsorAllowlist + SponsorAllowlistInsertForm (no impl block, no query fns); grep for sponsor_allowlist/SponsorAllowlist across crates/db_views/ + crates/db_schema/src/impls/ returns ZERO matches. RT-r1 shipped the table + struct + InsertForm but NO query helpers. CONSEQUENCE: brief deliverable (b) is a REAL §13 task — RT-r4 must add insert(row) / delete(by person+community or by id) / is_allowlisted(person, community) helpers. Mirror an existing governance db-helper insert/delete/exists shape (e.g. the surety or reputation_event impls). These are Rust query fns, NOT a migration (the table already exists). The allowlist strategy arm (deliverable a) and both admin endpoints (deliverable c) requires: this helper task — planner threads the requires: dependency so the cohort dependency-check passes.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-29T20:41:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "de57d6ce31bc-003"
-    },
-    {
-      "id": "2c9b0e637fa5-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "Laptop advisor: run cargo-check and cargo-clippy on lemmy_api_common --features full for task 2 DTOs",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 committed AddSponsorAllowlist/AddSponsorAllowlistResponse/RemoveSponsorAllowlist/RemoveSponsorAllowlistResponse to crates/api/api_common/src/governance.rs on worker branch",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat -p lemmy_api_common --features full > .claude/validate-t2.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat -p lemmy_api_common --features full --no-deps -- -D warnings > .claude/validate-t2-clippy.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-2-addsponsorallowlist-remove-dtos-in-api-common-governance-rs-see-claude-prps-briefs-517",
-      "phase_task": 2,
-      "result": "pass",
-      "log_slice": "cargo check --workspace exit 0; cargo clippy --workspace --no-deps -D warnings exit 0. Note: -p lemmy_api_common --features full fails pre-existing E0433 in lemmy_db_views_reputation (full not propagated via api_common dep chain); workspace check passes cleanly.",
-      "failed_commands": null,
-      "answer": "pass — workspace check + clippy clean. T2 DTOs compile correctly.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T01:49:01Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "validate task 4 cargo check+clippy: option a (already passed locally) or option b (re-run on laptop)?",
-      "options": [
-        "a-already-passed-locally",
-        "b-re-run-on-laptop"
-      ],
-      "context": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -- -D warnings exit 0. task 4 commit f06c38a02.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-4-admin-sponsor-allowlist-handlers-mod-decl-see-claude-prps-briefs-rt-r4-impl-4-md-519",
-      "phase_task": "4",
-      "result": "pass",
-      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
-      "failed_commands": null,
-      "answer": "pass — workspace check + clippy clean. T4 admin handlers compile correctly.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T03:38:08Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "59c3c67e8737-001"
-    },
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "v1-quality-r3 complexity score is 9 (>8 Sonnet threshold). Split into r3 (e2e sweep T1+T2) + r3b (#167 T3), or proceed-as-one?",
-      "options": [
-        "proceed-as-one",
-        "split-r3-r3b"
-      ],
-      "context": "Score 9 = impl-tasks 0 + crates +3 (lemmy_server, lemmy_api_utils, lemmy_api) + e2e edits +6 (T1+T2). The +6 is the flat-+3-per-e2e-task factor that feedback_plan_complexity_e2e_edit_factor_overweights_doc_only_tasks.md (promoted in r2 §19) flags as over-weighting bounded, well-anchored mechanical edits. The brief explicitly scoped a single plan; each task is single-file (T1/T2) or 2-file/2-crate (T3) and serial-gated. Planner recommends proceed-as-one. Advisor/user decides at gate-1; do NOT self-resolve.",
-      "answer": "split-r3-r3b (per user 2026-05-30): r3 = e2e sweep (T1+T2, crates/server/tests/e2e.rs only); r3b = Issue #167 fix (T3, context.rs + admin_audit_stream.rs). Plan file must be revised to r3 scope only; a separate v1-quality-r3b.plan.md will cover T3.",
-      "answered_by": "user",
-      "resolved_at": "2026-05-30T21:00:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "630fc36b795c-001"
-    },
-    {
-      "from": "planner",
-      "kind": "log",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "Why are the 2 fixture bootstrap() set_var sites (e2e.rs:833/834 governance_fixtures, 6146/6147 admin_config_fixtures) kept as raw set_var + SAFETY comment (option-b) instead of EnvVarGuard-wrapped?",
-      "options": [
-        "option-b-raw-plus-safety",
-        "option-a-wrap"
-      ],
-      "context": "Wrapping a guard inside bootstrap() (which does not return it) drops the guard at function return, unsetting the env var before the test body runs (feedback_envvarguard_fixture_lifetime_footgun.md). For these 2 sites the vars are constant-valued, bootstrap() has many callers, and tests run --test-threads=1, so leaving them raw is benign process-scoping. Recorded as deliberate so impl and a future env-leak phase do not mistake it for an oversight.",
-      "answer": "option-b-raw-plus-safety. The 2 bootstrap sites stay raw with a SAFETY comment (Task 1); only test-body sites get EnvVarGuard wraps held to fn end (Task 2). Wrapping the bootstrap sites would re-introduce the fixture-lifetime footgun.",
-      "answered_by": "planner",
-      "resolved_at": "2026-05-30T00:00:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "630fc36b795c-002"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T00:00:00Z",
-      "question": "Run laptop cargo gates for task 4 (EnvVarGuard hoist + boot_context refactor). Commit 6dd926ed9 on worker branch.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "EnvVarGuard hoisted to test-crate root; use super::EnvVarGuard added in mod v1_rt_r3_fixtures; boot_context return type extended to 5-tuple with Vec<EnvVarGuard>; 10 callsites updated. cargo-check --workspace --features full exits 0 on daemon. Edit B anchor extended to include doc-comment block before struct (brief anchor omitted the doc-comment, which would have left it dangling). Submodule init required in this worktree.",
-      "commands": [
-        "bash scripts/brehon/cargo-check.sh --workspace --features full",
-        "bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings",
-        "bash scripts/brehon/cargo-test.sh --test e2e --no-run --workspace --features full",
-        "python3 -c \"content=open('crates/server/tests/e2e.rs').read(); assert 'struct EnvVarGuard' in content[:5000], 'FAIL: EnvVarGuard not at crate root'; assert 'Vec<EnvVarGuard>,' in content, 'FAIL: boot_context not 5-tuple'; assert 'use super::EnvVarGuard;' in content, 'FAIL: use super::EnvVarGuard missing'; print('OK: EnvVarGuard at crate root + boot_context 5-tuple + use super::EnvVarGuard in mod v1_rt_r3_fixtures')\""
-      ],
-      "branch": "junior/role-impl-task-v1-quality-r2-task-4-envvarguard-hoist-boot-context-refactor-see-claude-prps-briefs-v1-quality-r-516",
-      "phase_task": 4,
-      "answer": "All 4 T4 gates PASS on laptop (worktree brehon-fork-quality-r2-validate @ 7466d2706): cargo-check --workspace --features full 12m58s; cargo-clippy --workspace --features full --no-deps -- -D warnings 6m42s (clean); cargo-test --test e2e --no-run --workspace --features full 19m35s (e2e binary compiled); Python structural check OK (EnvVarGuard at crate root + boot_context 5-tuple + use super::EnvVarGuard). BONUS: cargo-linux.sh Linux container check --workspace --features full 16m50s clean (free deploy-target proof). T4 validated.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T01:55:00Z",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "9b0beeacb0d4-001"
-    },
-    {
-      "from": "advisor",
-      "kind": "log",
-      "timestamp": "2026-05-30T00:55:00Z",
-      "question": "Shape G re-enabled 2026-05-30 (one day ahead of the 2026-06-01 plan) at user direction — record the action for the audit trail.",
-      "options": [
-        "re-enabled all three workflows + reverted suspension prose",
-        "n/a — log entry"
-      ],
-      "context": "User directed 'activate shape g if not already too late' on 2026-05-30. Verified all 3 workflows still disabled_manually, then re-enabled via gh api PUT: adr-compliance (262402017), cargo-validate-workspace (267337786), cargo-validate-migration (267337787) — all now active. Reverted SHAPE-G-SUSPENDED prose from .claude/agents/impl-task.md + .claude/PRPs/templates/impl-task-brief.template.md (validate-pending workflow path restored as default for Shape-G plans; Pre-Shape-G validate-pending-laptop path retained). Could not read exact remaining Actions minutes (billing API needs 'user' OAuth scope); suspension baseline was ~2800/3000 at 2026-05-16. Risk accepted by user: a run before the monthly reset still draws from the prior allocation. DQ #229 (the original re-enable reminder) was already a resolved log entry, not a pending blocker — no pending entry needed resolving. Supersedes the active state in project_shape_g_suspended_2026_05_16 memory.",
-      "answer": "Shape G active as of 2026-05-30 00:55 UTC. Three workflows re-enabled; suspension prose reverted in two harness files. From this point impl-task workers on Shape-G plans write kind: 'validate-pending' + capture workflow_run_id again; ci-watcher polls. Next monitor: watch the first Shape-G workflow run for minutes consumption against the cap.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-30T00:55:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-038"
-    },
-    {
-      "id": "77a6a1be5dc4-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T02:43:16Z",
-      "question": "Laptop advisor: run cargo-check and cargo-clippy --workspace --features full for task 3 strategy enum/dispatch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 extended SponsorGateStrategy with AgeOrSurety/Reputation/Allowlist + dispatch arms in create_endorsement.rs. Local (EliteDesk) cargo check and clippy both exit 0. Validation uses --workspace per feedback_features_full_p_crate_incompatible (api_crud must use workspace scope).",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/validate-t3.log 2>&1\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings > .claude/validate-t3-clippy.log 2>&1\""
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-3-strategy-enum-dispatch-in-create-endorsement-rs-see-claude-prps-briefs-rt-r4-impl-518",
-      "phase_task": 3,
-      "result": "pass",
-      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
-      "failed_commands": null,
-      "answer": "pass — workspace check + clippy clean. T3 strategy enum+dispatch compiles correctly.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T02:44:16Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "3c87676f024d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T04:28:50Z",
-      "question": "Laptop advisor: run cargo check + clippy for task 5 route registration",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 5 registered /admin/sponsor-allowlist/{add,remove} routes in crates/api/routes/src/lib.rs. Worker ran cargo check + clippy --workspace --features full --no-deps both exit 0 locally.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-5-route-registration-for-admin-sponsor-allowlist-in-routes-lib-rs-see-claude-prps-brie-520",
-      "phase_task": "task 5",
-      "answer": "pass — workspace check + clippy clean. T5 route registration compiles correctly.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T04:29:50Z",
-      "approved_by": null,
-      "approved_at": null,
-      "result": "pass",
-      "log_slice": "cargo check --workspace --features full exit 0; cargo clippy --workspace --features full --no-deps -D warnings exit 0.",
-      "failed_commands": null
-    },
-    {
-      "id": "7075011a227d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-30T05:02:24Z",
-      "question": "Run e2e test suite for RT-r4 Task 7 fixtures — pass or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 7 appended mod v1_rt_r4_fixtures to crates/server/tests/e2e.rs: 7 tests covering age_or_surety pass+deny, reputation pass+deny, allowlist pass+deny, admin add/remove round-trip with governance log verification.",
-      "commands": [
-        "./scripts/brehon/cargo-test.sh --workspace --test e2e"
-      ],
-      "branch": "junior/role-impl-task-v1-rt-r4-task-7-e2e-fixtures-for-sponsor-gate-strategies-admin-allowlist-see-claude-prps-briefs-rt-521",
-      "phase_task": 7,
-      "result": "pass",
-      "log_slice": "test result: ok. 126 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 2506.52s — E2E_EXIT_0",
-      "failed_commands": null,
-      "answer": "pass — all 126 e2e tests pass including new v1_rt_r4_fixtures. E2E_EXIT_0.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T06:24:35Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "advisor",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-30T14:58:00Z",
-      "question": "Laptop advisor: validate quality-r2 Task 5 (EnvVarGuard wrap 13 LEMMY_DATABASE_URL sites, closes #160) — recovered via cherry-pick after #524 cross-lane cancel. PASS or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 5 (#160) was implemented by Junior #524 (worker branch tip 4e5ec7748) before that task was erroneously cancelled by the rt-r4 session (cross-lane mistake; #524 was quality-r2's, not rt-r4's). The code commit f0b24f577 survived on origin + a recovery ref. Recovered by cherry-picking ONLY the code commit (NOT the worker's 947-line DQ-churn commit 4e5ec7748) onto phase-v1-quality-r2 tip badd5622f -> 077dadd61. Diff verified: 13 EnvVarGuard::set additions, 13 unsafe set_var(LEMMY_DATABASE_URL) removals, 2 use super::EnvVarGuard additions (governance_fixtures + admin_config_fixtures) — matches brief v1-quality-r2-impl-5.md exactly. Audit: 0 unsafe set_var LEMMY_DATABASE_URL sites remain outside boot_context (site 14, handled by T4).",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --test e2e --no-run --workspace --features full\""
-      ],
-      "branch": "phase-v1-quality-r2",
-      "phase_task": 5,
-      "result": "pass",
-      "log_slice": "cargo check --workspace --features full = CHECK_EXIT_0 (0 errors); cargo clippy --workspace --features full --no-deps -D warnings = CLIPPY_EXIT_0 (0 warnings); cargo test --test e2e --no-run --workspace --features full = E2E_NORUN_EXIT_0 (e2e target compiled clean). Audit: grep set_var(LEMMY_DATABASE_URL) = 0 outside boot_context.",
-      "failed_commands": null,
-      "answer": "pass — recovered T5 cherry-pick 077dadd61 validates clean: check + clippy + e2e-no-run all exit 0; unsafe-site audit 0. The #524 cross-lane-cancel loss is fully healed; T5 is back on the phase branch.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-30T14:58:30Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "7b5cf201d6fa-001"
-    },
-    {
-      "id": "a3d0e9941441-039",
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-30T20:15:00Z",
-      "question": "Issue #167 fix shape: should LemmyContext::create call SETTINGS.get_database_url() internally (no new parameter) or require the caller to pass the URL as a new parameter?",
-      "options": [
-        "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally at construction — no callsite changes",
-        "option-b: add db_url: String parameter to LemmyContext::create — all 3 callsites (context.rs:79, server/lib.rs:210, e2e.rs:854+) pass the URL explicitly"
-      ],
-      "context": "build_db_pool() already reads SETTINGS.get_database_url_with_options() at construction time. LemmyContext::create receives only the pool (ActualDbPool), not the URL. Option-a is lower-risk: construction captures the URL from SETTINGS once, stores as String field, exposes via context.database_url(). Option-b ripples into all LemmyContext::create callsites. All callsites already have SETTINGS available at call time.",
-      "answer": "option-a: LemmyContext::create calls SETTINGS.get_database_url() internally — captures the URL once at construction time (same read SETTINGS makes during pool build), stores as db_url: String field, exposes via pub fn database_url(&self) -> &str accessor. Zero callsite changes. Evidence: crates/diesel_utils/src/connection.rs:177-185 shows build_db_pool() reads SETTINGS.get_database_url_with_options() at pool-build time; the same SETTINGS reference is available inside LemmyContext::create. Option-b adds an unused parameter burden to 2+ non-e2e callsites (server/lib.rs:210, context.rs:79, and multiple e2e.rs sites). Source: crates/api/api_utils/src/context.rs:24-38 (create signature), crates/server/src/lib.rs:181+210 (caller), github issue #167 §Proposed fix option A.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-30T20:15:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "a3d0e9941441-040",
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-30T20:15:00Z",
-      "question": "EnvVarGuard current location in e2e.rs: is it already at test-crate root (before any mod *_fixtures block), or still nested inside v1_rt_r3_fixtures?",
-      "options": [
-        "option-a: already at test-crate root (T4 of v1-quality-r2 hoisted it)",
-        "option-b: still inside v1_rt_r3_fixtures module"
-      ],
-      "context": "T4 of v1-quality-r2 was supposed to hoist EnvVarGuard from v1_rt_r3_fixtures to test-crate root. The brief says to verify before dispatching T3-equivalent.",
-      "answer": "option-a: EnvVarGuard is already at test-crate root. Grep confirms: struct EnvVarGuard at e2e.rs:111, impl EnvVarGuard at e2e.rs:116, impl Drop for EnvVarGuard at e2e.rs:127 — all before any mod *_fixtures block. The v1_rt_r3_fixtures module at e2e.rs:148 uses  (line 149), confirming it references the root-level struct, not a module-internal one. Do NOT re-hoist. Source: grep output e2e.rs lines 111-149.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-30T20:15:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "a3d0e9941441-041",
-      "from": "advisor",
-      "kind": "clarify",
-      "timestamp": "2026-05-30T20:15:00Z",
-      "question": "The planning brief §4 cites wrapper discipline for DoD but does not explicitly list feedback_validate_pending_laptop_must_use_wrapper.md in §3 Required reading. Should it be added?",
-      "options": [
-        "option-a: add to §3 Required reading — planner must cite it in §15 DoD cargo commands",
-        "option-b: omit — the wrapper discipline is covered by other §3 citations"
-      ],
-      "context": "The advisor-orchestrator §2.4 file-class table requires feedback_validate_pending_laptop_must_use_wrapper.md in briefs that include cargo-test commands in DoD. The planning brief needs this so the plan includes wrapper-prefixed cargo commands in §15.",
-      "answer": "option-a: add feedback_validate_pending_laptop_must_use_wrapper.md to brief §3 Required reading. Source: advisor-orchestrator.md §2.4 file-class table row for validate-pending-laptop; the brief will be edited to add this citation. The planner must include wrapper-prefixed commands in plan §15 DoD for Windows laptop execution.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-30T20:15:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "65b95cc574c8-001",
-      "from": "impl",
-      "kind": "log",
-      "timestamp": "2026-05-30T22:47:32Z",
-      "question": "brief audit window (400 chars) too small for T1's 7-line SAFETY comment blocks; modified 800-char window passes cleanly",
-      "options": [
-        "widen-audit-window-to-800-in-future-briefs",
-        "no-action-impl-is-correct"
-      ],
-      "context": "v1-quality-r3 T2: cargo-check=exit0, clippy=exit0. Python audit with 400-char has_safety() window fails for lines 840/841 and 6122/6123 (bootstrap exceptions) because T1's SAFETY justification block is ~573 chars above the set_var calls. Modified audit with 800-char window: all 4 sites have SAFETY, count=2 INIT+2 GOV (correct). All 10 test-body sites wrapped. Implementation is correct. Audit window miscalibrated in the brief, not in the impl. Self-resolving as log — would-advisor-agree test: yes, 800-char evidence is unambiguous.",
-      "answer": "impl-self-resolved: 800-char audit passes (0 unsafe-without-SAFETY sites); count 2+2 correct; implementation is sound. Recommend: future briefs use 800+ char window for has_safety() when SAFETY comment blocks are multi-line. Proceeding with commit.",
-      "answered_by": "impl-self-resolved",
-      "resolved_at": "2026-05-30T22:47:32Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "65b95cc574c8-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-30T22:48:42Z",
-      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T2 wrapped all test-body INIT/GOV sites (10 fns, Edits A-J); T1 documented 2 bootstrap exceptions. Phase tip at cca087156e2bf18b2032c2d1807bc9a0452e537e. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class).",
-      "branch": "junior/role-impl-task-v1-quality-r3-task-2-envvarguard-wrap-test-body-setter-sites-see-claude-prps-briefs-v1-quality-r3-im-532",
-      "phase_task": "2",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "Duplicate of 4b129a8b08f1-001 (two job runs for the same T2 task). Advisor resolved as duplicate; 4b129a8b08f1-001 is the live e2e gate entry.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-30T23:21:47Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "4b129a8b08f1-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-30T23:01:26Z",
-      "question": "Run full e2e gate (R12) for v1-quality-r3 at phase tip — env-var-management refactor class mandatory",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T2 wrapped all 10 test-body INIT/GOV sites with EnvVarGuard; T1 documented 2 bootstrap exceptions with SAFETY comments. Phase tip at bf3f7201d. Full e2e mandatory per gate4 rule (feedback_gate4_full_e2e_env_refactor_class.md).",
-      "branch": "phase-v1-quality-r3",
-      "phase_task": "2",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-quality-r3-e2e.log 2>&1 && echo E2E_EXIT_0 >> .claude/PRPs/debug/v1-quality-r3-e2e.log || echo E2E_EXIT_NONZERO >> .claude/PRPs/debug/v1-quality-r3-e2e.log\""
-      ],
-      "result": "pass",
-      "log_slice": "126 passed; 0 failed; 5 ignored; finished in 2716.29s",
-      "failed_commands": null,
-      "answer": "e2e gate passed: 126/0/5, E2E_EXIT_0, 2716s. Advisor-laptop run 2026-05-31.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-05-31T00:23:46Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "052f0d5c016d-001",
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-31T00:00:00Z",
-      "question": "v1-quality-r3b #167 fix shape: the planning brief §2/§4 mandate option-b (add db_url field/param to LemmyContext::create, enumerate + update all callsites, accessor db_url()), but the resolved clarify DQ a3d0e9941441-039 that the brief §3 cites as authority chose option-a (create() reads SETTINGS internally, ZERO callsite changes, accessor database_url()). Which shape should the plan follow?",
-      "options": [
-        "option-a (follow resolved DQ a3d0e9941441-039): LemmyContext::create reads SETTINGS.get_database_url() internally at construction, stores db_url: String, exposes pub fn database_url(&self) -> &str. Zero callsite changes. admin_audit_stream.rs:125 uses context.database_url(). Plan §10 has no callsite-enumeration task.",
-        "option-b (follow brief §2/§4 prose): add db_url: String param to LemmyContext::create, update all callsites (context.rs:79, server/lib.rs:210, ~14 e2e.rs sites), accessor pub fn db_url(&self) -> &str. Plan §10 enumerates and edits every callsite."
-      ],
-      "context": "The brief is internally inconsistent: §2 labels the work 'Issue #167, Option A' and §3 item 3 names resolved DQ a3d0e9941441-039 as 'the advisor's direction for Option A', but §2/§4 bullet prose describes option-b mechanics (add param, enumerate callsites, db_url() accessor). The resolved clarify DQ explicitly REJECTS option-b ('adds an unused parameter burden to 2+ non-e2e callsites') with evidence (connection.rs:177-185 reads SETTINGS at pool-build time; same SETTINGS available inside create()). Per decision-queue.md, resolved clarify DQs are authoritative and non-re-litigable. RECOMMENDATION: option-a. The two shapes produce materially different plans (callsite-enumeration task present vs absent; accessor name database_url() vs db_url()), so I am not guessing — escalating per brief §4 'if a blocker arises, write a kind:blocker DQ, commit+push, and stop. Do not guess.' If advisor confirms the brief prose was stale boilerplate, I proceed with option-a; if advisor intends option-b, confirm and I follow the brief.",
-      "answer": "option-a: LemmyContext::create reads SETTINGS.get_database_url() internally at construction and stores db_url: String. Zero callsite changes to create() params. Expose pub fn database_url(&self) -> &str accessor. admin_audit_stream.rs:125 uses context.database_url(). Brief §2/§4 callsite-enumeration prose was stale boilerplate — the resolved clarify DQ a3d0e9941441-039 is authoritative. Proceed with option-a shape.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-31T03:07:27Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "bm",
-      "kind": "blocker",
-      "timestamp": "2026-05-31T12:12:25Z",
-      "question": "bm-cut brief asks to commit runlog on governance-v0, but Junior worktree is isolated + bm-cut.md Phase 5 says commit on phase branch. Which is correct?",
-      "options": [
-        "commit on phase-v1-quality-r3b per bm-cut.md procedure",
-        "commit on governance-v0 per brief"
-      ],
-      "context": "Phase branch phase-v1-quality-r3b cut and pushed successfully. Runlog creation blocked by worktree isolation and conflicting brief vs procedure.",
-      "answer": "Option A: commit on phase-v1-quality-r3b per bm-cut.md Phase 5. The brief incorrectly specified governance-v0. Procedure wins over brief wording. The runlog entry should be appended to .claude/runlog/v1-quality-r3b-runlog.md committed on phase-v1-quality-r3b.",
-      "answered_by": "advisor",
-      "resolved_at": "2026-05-31T12:20:00Z",
-      "id": "8b6f7907b575-001"
-    },
-    {
       "from": "advisor",
       "kind": "clarify",
       "timestamp": "2026-05-31T14:45:00Z",
@@ -3006,6 +3038,32 @@
       "answer": "cargo-check --workspace --features full passed. transaction fix (run_transaction->transaction) applied by advisor-laptop. CHECK_EXIT_0.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-31T21:28:21Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "d48b29c61f65-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "Should the laptop run the e2e suite for v1-RT-r5 Task 5?",
+      "options": [
+        "run-e2e-locally",
+        "dispatch-gha"
+      ],
+      "context": "Task 5 (4 e2e tests in mod v1_rt_r5_fixtures) committed on branch junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560. OOM risk prevents running cargo on the daemon. Delegating to laptop per pre-Shape-G convention.",
+      "commands": [
+        "./scripts/brehon/cargo-test.sh --test e2e --no-run -p lemmy_server",
+        "./scripts/brehon/cargo-test.sh --test e2e -p lemmy_server -- v1_rt_r5_fixtures 2>&1"
+      ],
+      "branch": "junior/role-impl-task-v1-rt-r5-task-5-e2e-see-claude-prps-briefs-v1-rt-r5-impl-task5-e2e-md-560",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "laptop e2e: 4/4 passed (97s). Already validated. Moving to resolved on merge-forward.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T22:16:32Z",
       "approved_by": null,
       "approved_at": null
     }

@@ -162,6 +162,11 @@ applicable) pushed to its worker branch, and the daemon finalize-merge (where
 applicable) advancing `phase-<phase>` tip. Advisor session resumes at the next
 stage-shape transition per `.claude/rules/advisor-orchestrator.md` §3.1.
 
+**Advisor post-condition (mandatory, within 1 poll tick):** run the verb's 3-signal
+check from the table in `advisor-orchestrator.md` §3.1 "BM post-dispatch 3-signal
+check". Do NOT advance the stage on BM `done` alone — `result:success` is a
+hypothesis. Catch-fire to user if any signal fails.
+
 ---
 
 ## Template usage notes (delete this section when authoring a real brief)

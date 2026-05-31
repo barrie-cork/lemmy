@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-31T14:30:00Z",
+  "last_updated_at": "2026-05-31T12:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -275,11 +275,8 @@
           "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
           "registry_evidence": "ENTRY_KIND_ROLLUP_RECOMPUTED row names v1-RT-r5 scheduled_tasks.rs (pending)",
           "plan": null,
-          "blocker": "no plan written yet",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r5",
-          "in_flight_since": "2026-05-31",
-          "lane_mode": "A",
-          "note": "bm-cut ran at 560eda9b1; roadmap flip deferred from /roadmap-next; applied inline by /auto-roadmap"
+          "in_flight_since": "2026-05-31"
         }
       },
       "known_followups": [
@@ -575,9 +572,10 @@
       {
         "lane": "RT (Reputation Tuning)",
         "items": [
-          "v1-RT-r5 (in_flight — bm-cut done, plan pending)"
+          "v1-RT-r4",
+          "v1-RT-r5"
         ],
-        "rationale": "RT-r4 shipped 2026-05-30 (PR #164). RT-r5 (rollup cron) in_flight — bm-cut ran at 560eda9b1, plan not yet authored. Last unstarted RT sub-phase."
+        "rationale": "RT-r3 shipped 2026-05-28 (PR #155). Ship landed emit paths but left downstream e2e assertions stale -> v1-rt-r3-followup SHIPPED 2026-05-29 (PR #162, merge 28518605b; whole-binary e2e 119/0/5; retro signed off). RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted; RT-r4 is the next RT-lane work (also the MiniMax-M2.7 A/B trial phase)."
       },
       {
         "lane": "quality (Quality / QA)",
@@ -599,18 +597,21 @@
     ]
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "v1-RT-r5 in_flight (bm-cut done at 560eda9b1; plan not yet authored). Last RT sub-phase — rollup cron + ENTRY_KIND_ROLLUP_RECOMPUTED. After RT-r5 ships, RT lane closes.",
-    "state_as_of_2026_05_31": {
+    "next_logical_sub_phase": "v1-RT-r3 is in_flight — planning task #463 done, plan on trunk. Run plan-approval gate (DoD smoke + watchpoint check) then queue bm-cut. After RT-r3 ships, drive RT-r4 (sponsor-allowlist) then RT-r5 (rollup cron) to close the RT lane.",
+    "state_as_of_2026_05_25": {
       "shipped_since_last_roadmap_update": [
-        "v1-RT-r4 (PR #164, 2026-05-30)",
-        "v1-quality-r3 (PR #169, 2026-05-31)"
+        "v1-RT-r2 (PR #150, 2026-05-24)",
+        "v1-ship-3 (PR #149, 2026-05-24)",
+        "v1-deps-r1 (PR #153, 2026-05-25)"
       ],
       "in_flight": [
-        "v1-RT-r5 (bm-cut done; plan pending)",
-        "v1-quality-r3b (unstarted in roadmap)"
+        "v1-RT-r3 (plan-approval gate; bm-cut not yet run)"
       ],
-      "unstarted": []
+      "unstarted": [
+        "v1-RT-r4 (sponsor-allowlist)",
+        "v1-RT-r5 (rollup cron)"
+      ]
     },
-    "rationale_for_RT_r5_next": "RT-r4 shipped 2026-05-30. RT-r5 is the final RT sub-phase (rollup cron). Lane closure after this ships."
+    "rationale_for_RT_r3_next": "SR lane fully shipped (ship-1 through ship-3). deps-r1 shipped. RT-r3 is the active in-flight lane — four emitter paths wired, no new migrations, complexity 7/10. Natural next step after plan approval."
   }
 }

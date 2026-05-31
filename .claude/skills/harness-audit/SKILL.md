@@ -25,19 +25,38 @@ Evidence-based audit of what loads at Claude Code session start in this repo. Pr
 3. **Read `.mcp.json`.** Capture the list of configured MCP servers (just names, not configs). The report notes which are loaded at startup.
 4. **Print one-line snapshot:** `env: claude-code | settings.skillListingBudgetFraction=<v> | mcp=<server1,server2,…> | pi=<present|absent>`.
 5. **Concurrent-session check.** Run `git log governance-v0..HEAD --oneline --since="60 minutes ago"` (or `git log governance-v0 --oneline --since="60 minutes ago"` if already on governance-v0). If any commits appear that are not yours (author ≠ current git user), surface them in the env snapshot line: `⚠ concurrent-session activity: <N> commits in last 60 min (<sha-short> <subject>, …)`. This is observation only — do NOT stop the audit. Recurrence ≥3× (per `feedback_parallel_agents_one_worktree_per_agent`, `feedback_parallel_agent_diff_collision_detection`, 2026-05-09 empirical b8225be3e..479408a98) justifies the standing probe.
+6. **Deterministic frontmatter classification (the SCOPED/ALWAYS source of truth).** Do NOT delegate classification to the Phase 1 subagent's reading judgment — it has misclassified files by prose-reading in TWO consecutive audits (2026-05-09 `governance-log-entry-kind-registry.md`; 2026-05-31 `multi-lane-worktree.md`, both reported SCOPED but ALWAYS-loading). A file is SCOPED **only** if line 1 is exactly `---` AND a `paths:` key appears inside the closing `---`. Anything else — including a file that merely mentions "paths" in prose, or whose line 1 is a `#` heading — is ALWAYS. Produce the canonical classification mechanically:
+
+   ```bash
+   for f in .claude/rules/*.md; do
+     if [ "$(head -1 "$f")" = "---" ] && head -20 "$f" | awk '/^---$/{c++} c==1 && /^paths:/{found=1} END{exit !found}'; then
+       echo "SCOPED  $f"
+     else
+       echo "ALWAYS  $f"
+     fi
+   done
+   ```
+
+   This table is the authority. Phase 1's subagent records line/char counts against it; Phase 3 scores only the files this step marks ALWAYS. If the subagent's reported class disagrees with this grep, the grep wins and the disagreement is logged as a subagent-drift note in the report.
 
 ## Phase 1: Inventory auto-load (delegated to Explore subagent)
 
 Read-heavy probes belong in a subagent — keep parent context small. Per `.claude/lessons/feedback_subagent_delegation_for_multi_probe_commands.md`.
 
-Launch ONE `Explore` agent with this self-contained prompt (do not paraphrase the frontmatter-detection instruction — it codifies the lesson from the 2026-05-09 c-2 audit miss):
+Launch ONE `Explore` agent with this self-contained prompt. **Paste the Phase 0 Step 6 classification table into the prompt where `<paste classification table>` appears** — the subagent records counts against that authority, it does NOT re-derive the class by reading (prose-reading mis-classified files in two prior audits):
 
-> Working directory: `<repo-root>`. Inventory every file under `.claude/rules/` and report load classification.
+> Working directory: `<repo-root>`. Inventory every file under `.claude/rules/` and report size against a pre-computed load classification.
+>
+> Here is the authoritative SCOPED/ALWAYS classification (computed mechanically by grep — treat it as fixed, do NOT override it by reading the file):
+>
+> ```
+> <paste classification table>
+> ```
 >
 > For each `.claude/rules/*.md`:
-> 1. **Read first 10 lines** to detect frontmatter. A file whose line 1 starts with `---` and contains a `paths:` block in the frontmatter is **SCOPED** — it auto-loads only when the session Reads a file matching the listed paths. A file without that frontmatter is **ALWAYS** — it auto-loads at every session start.
-> 2. Record line count + character count.
-> 3. Classify ALWAYS vs SCOPED.
+> 1. Record line count + character count.
+> 2. Copy the `class` (ALWAYS or SCOPED) verbatim from the table above.
+> 3. As a cross-check only: read the first 10 lines. If your reading suggests a different class than the table (e.g. you see `---` + `paths:` on a file the table marked ALWAYS, or vice-versa), do NOT change the class — instead add a `⚠ class-mismatch` note for that row. The grep table is authoritative; a mismatch means the grep or the file is malformed and a human must look.
 >
 > Also inventory:
 > - `CLAUDE.md` (root) and `.claude/CLAUDE.md` — line count + character count.
@@ -93,12 +112,13 @@ Mirrors the `code-audit` and `post-task-retro` precedents. Call `memory_write_ev
 - `source_ref`: current branch.
 - `content`: 5–8 lines. Top 3 wins by token impact, total estimated savings, the "what changed since last audit" delta line, one-line Pi-boundary check confirmation.
 
-This eval also satisfies the Stop-hook retro requirement (per `.claude/rules/post-task-retro.md`).
+This eval also satisfies the Stop-hook retro requirement (per `.claude/rules/universal-guards.md` §4).
 
 ## Phase 7: Completion checklist + dogfood
 
 - [ ] Phase 0 env snapshot printed
-- [ ] Phase 1 Explore subagent ran; ranked inventory table emitted
+- [ ] Phase 0 Step 6 deterministic classification grep ran; table is the authority for Phase 1 + Phase 3
+- [ ] Phase 1 Explore subagent ran with the classification table pasted in; ranked inventory table emitted; any `⚠ class-mismatch` rows surfaced
 - [ ] Phase 2 cross-references counted
 - [ ] Phase 3 composite scores computed via `helpers/scoring-matrix.md`
 - [ ] Phase 4 three buckets emitted with explicit recommendations + Pi-impact grep per high-confidence row
@@ -114,4 +134,6 @@ Per `.claude/lessons/feedback_dogfood_slash_command_specs.md`, every new skill s
 - Phase 2 would have detected that `decision-queue.md` Recipes 1–3 had no external citations to bodies (only to "Recipe 2 self-resolved" tags), making them a high-confidence extract candidate (matched the actual Pass 1b of that trim).
 - Phase 4 "Out of scope" would have surfaced `.claude/rules/branch-manager.md` and `no-cargo-output-paste.md` as Pi-shared paths that must not be trimmed (matched the actual Pi-boundary check during that trim).
 
-If a future audit run does NOT match the prior trim's findings (e.g. classifies a SCOPED file as compression candidate), the skill body has drifted — file a `.claude/decision-queue.json` entry citing this dogfood block.
+**Regression case (2026-05-31) — why Phase 0 Step 6 now exists.** The prose-reading frontmatter instruction in the Phase 1 subagent prompt was NOT sufficient: the 2026-05-31 audit's subagent classified `multi-lane-worktree.md` as SCOPED, but the file has no `---`/`paths:` frontmatter (line 1 is `# Multi-lane worktree discipline`) and ALWAYS-loads — confirmed at 5.5k tokens in a clean `/context`. It was the 3rd-largest always-load file and stayed invisible to compression scoring across BOTH the 2026-05-29 and 2026-05-31 runs. Root cause: classification was a model judgment call inside a read-heavy subagent. The fix moves classification to a deterministic parent-side grep (Phase 0 Step 6); the subagent now only records counts and flags mismatches. After this fix, the dogfood expectation is: a clean `head -1` + `paths:` grep over `.claude/rules/*.md` must reproduce the exact SCOPED set, and any file the subagent flags `⚠ class-mismatch` is a grep/file-malformation case for a human, never a silently-accepted reclassification.
+
+If a future audit run does NOT match the prior trim's findings (e.g. classifies a SCOPED file as compression candidate, OR the Phase 0 grep set disagrees with the Phase 1 subagent's recorded classes without a logged mismatch note), the skill body has drifted — file a `.claude/decision-queue.json` entry citing this dogfood block.

@@ -2198,3 +2198,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **verified:** gh api branch endpoint confirmed (see Phase 4 output)
 - **next:** advisor authors planning brief for v1-RT-r5; impl-task briefs follow plan approval
 - **Notes:** Zero inline/review-level CR findings. Single pre-merge warning (cr-1, low severity) from Description check — PR body does not follow repo template. All code changes (EnvVarGuard C4 sweep) were accepted without comment. Recommendation is approve since no critical/major open findings.
+
+## advisor: roadmap-next cut v1-RT-r5 — 2026-05-31T12:45Z
+- **branch:** phase-v1-RT-r5 (off governance-v0 @ 5f0bd4b48)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r5
+- **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse hook ✓
+- **roadmap:** flipped v1-RT-r5 unstarted → in_flight
