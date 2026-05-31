@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "T3 fix-impl-1: cargo-check --workspace --features full after moving DISABLE_* tests to v1_rt_r3_fixtures",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Moved test_brehon_disable_snapshot_job and test_brehon_disable_fed_replay_cleanup_job from v1_rt_r4_fixtures to v1_rt_r3_fixtures; added missing imports (run_snapshot_batch, FederationInboxNonce, FederationInboxNonceInsertForm, federation_inbox_nonce schema, reputation_snapshot schema). Awaiting laptop cargo-check validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": "3-fix",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b023b623a5ce-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
