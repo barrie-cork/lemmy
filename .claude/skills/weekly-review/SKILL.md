@@ -188,6 +188,17 @@ If zero evals: note "No evals this week — check retro rule deployment."
 3. Clean orphaned `.junior/worktrees/job-*` directories
 4. Flag review-status branches older than 7 days
 
+### 4b. Homeserver disk headroom check
+
+Run: `ssh homeserver "df -h /srv /var/log /tmp | tail -n +2"`
+
+If any mount is ≥75% used:
+- `/srv`: Junior worktree buildup → `ssh homeserver "ls -lt /srv/brehon-fork/.junior/worktrees/ | head -20"` to identify stale worktrees; reap via `git worktree remove --force` for done tasks.
+- `/var/log`: systemd journal → `journalctl --disk-usage`; trim with `journalctl --vacuum-size=500M` if >500 MB.
+- `/tmp`: cargo tmp artefacts → `du -sh /tmp/cargo-*` or similar; safe to remove if no cargo is running.
+
+Surface to user if any mount ≥90% — do not auto-remediate at that level.
+
 ### 5. Write summary + append metrics
 
 **Summary memory:**

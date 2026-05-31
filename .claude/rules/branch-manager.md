@@ -203,7 +203,7 @@ calls until the user requests a `/bm-*` command.
 
 ## Failure modes the BM is responsible for catching
 
-Push race with impl mid-commit (retry), `gh pr create` exists-already (fall through to `gh pr edit`), CR zero-findings on PR open >30 min (warn + ask user), `/prp-review` cargo step fail (writes critical finding into YAML), finding SHA disappears after force-push (bucket back to `fix-in-pr`).
+Push race with impl mid-commit OR bot-author (Dependabot, GH Actions auto-commit) — always `git fetch origin <branch>` immediately before `git push`; retry once on rejection before escalating, `gh pr create` exists-already (fall through to `gh pr edit`), CR zero-findings on PR open >30 min (warn + ask user), `/prp-review` cargo step fail (writes critical finding into YAML), finding SHA disappears after force-push (bucket back to `fix-in-pr`).
 
 Full recovery procedures per case: `.claude/refs/bm-mechanics.md` §"Failure modes".
 

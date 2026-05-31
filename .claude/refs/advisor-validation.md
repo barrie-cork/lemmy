@@ -148,6 +148,15 @@ cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>`
 — entry reverts to pre-2026-04-28 shape (`workflow_run_id: <id>`,
 `local_log_path: null`); ci-watcher queued as for Phase 1.
 
+### Falsification check (pre-fix, post-fail)
+
+Before raising a fix-impl-task after a `validate-pending-laptop` fail:
+
+1. Re-read the log slice. Identify the **proximate error** (the line `cargo` or the test printed) vs the **assumed root cause** (what you think caused it).
+2. If the assumed cause names a specific file, function, or env var: `grep` for it in the actual log; confirm it appears in the failure path, not just in a different context.
+3. Check `entry.commands[]` — confirm the command that failed is the one you think failed (multi-command chains can mask which command triggered the non-zero exit).
+4. If the proximate error does NOT match the assumed root cause, surface the discrepancy to the user before queuing a fix. Per `feedback_falsifiable_hypothesis_before_structural_fix.md` + §5.4 DQ falsifiable-hypothesis gate.
+
 ### Windows invocation (mandatory — 2026-05-09 RCA)
 
 Use `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test
