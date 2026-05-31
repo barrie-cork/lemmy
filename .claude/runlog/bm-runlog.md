@@ -2185,4 +2185,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** approve (only low/nit in fix-in-pr)
 - **YAML:** .claude/PRPs/reviews/pr-169-findings.yaml
 - **walkthrough_summary:** "Estimated effort: 2 (Simple), ~8 min. 2 files reviewed (e2e.rs, decision-queue.json). Zero actionable findings. 4 checks passed (Title, Docstring Coverage, Linked Issues, Out of Scope). 1 warning: Description check — PR body missing template sections. Possibly related issues: #156, #159; related PR: #168."
+
+---
+
+## bm: cut phase-v1-RT-r5 off governance-v0 @ 5f0bd4b48 — 2026-05-31T1238Z
+
+- **branch:** phase-v1-RT-r5
+- **off:** governance-v0 @ 5f0bd4b48
+- **plan:** n/a — plan not yet authored; cut is ahead-of-planning per /roadmap-next (v1-RT-r5: Reputation Tuning rollup cron; fires ENTRY_KIND_ROLLUP_RECOMPUTED)
+- **plan-override:** user explicitly instructed to skip plan-file existence check; plan will be authored separately
+- **pushed:** yes — origin/phase-v1-RT-r5 (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed (see Phase 4 output)
+- **next:** advisor authors planning brief for v1-RT-r5; impl-task briefs follow plan approval
 - **Notes:** Zero inline/review-level CR findings. Single pre-merge warning (cr-1, low severity) from Description check — PR body does not follow repo template. All code changes (EnvVarGuard C4 sweep) were accepted without comment. Recommendation is approve since no critical/major open findings.
