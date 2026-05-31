@@ -21,12 +21,13 @@ findings:
     (Phase, DoD, ADR matrix, rollback)'
   cr_url: https://github.com/barrie-cork/lemmy/pull/169#issuecomment-4585258423
   adr: null
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: pr-body-edit-2026-05-31
+  rationale: PR body updated via gh pr edit to add Phase checkbox, DoD checklist,
+    ADR impact matrix, and rollback strategy sections.
   notes: 'Resolution: Fill in required template sections: select Phase checkbox, complete
     DoD checklist with exit codes, complete ADR impact matrix for all rows, document
-    rollback strategy.'
+    rollback strategy. Fixed 2026-05-31 via gh pr edit 169.'
 merged_at: null
 merge_commit: null
 final_recommendation: null
@@ -50,8 +51,8 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 1
-    done: 0
+    open: 0
+    done: 1
     rebutted: 0
     carry_forward: 0
     wont_fix: 0
