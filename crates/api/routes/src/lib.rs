@@ -37,6 +37,7 @@ use lemmy_api::{
     admin_dashboard::admin_dashboard,
     admin_dashboard_html::{admin_audit_html, admin_dashboard_html},
     admin_emergency_remove::flag_bad_faith_emergency_report,
+    admin_reputation_rollup::admin_reputation_rollup,
     admin_reputation_stats::admin_reputation_stats,
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     admin_sponsor_allowlist,
@@ -500,6 +501,7 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
                 post().to(admin_trigger_appeal_rejury),
               )
               .route("/reputation-stats", get().to(admin_reputation_stats))
+              .route("/reputation/rollup", get().to(admin_reputation_rollup))
               .route("/dashboard", get().to(admin_dashboard))
               .route("/dashboard/view", get().to(admin_dashboard_html))
               .service(
