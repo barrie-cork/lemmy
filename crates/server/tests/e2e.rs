@@ -4226,6 +4226,18 @@ async fn all_mvp_endpoints_return_non_404() -> lemmy_utils::error::LemmyResult<(
       "",
       &[200, 400, 401],
     ),
+    (
+      "POST",
+      "/api/v4/governance/admin/sponsor-allowlist/add",
+      r#"{"actor_id":1}"#,
+      &[200, 400, 401, 403, 422],
+    ),
+    (
+      "POST",
+      "/api/v4/governance/admin/sponsor-allowlist/remove",
+      r#"{"actor_id":1}"#,
+      &[200, 400, 401, 403, 422],
+    ),
   ];
 
   for (method, path, body, allowed) in endpoints {
@@ -18417,314 +18429,69 @@ mod v1_rt_r4_fixtures {
 
     Ok(())
   }
-}
 
-mod v1_rt_r5_fixtures {
-  //! v1-RT-r5 instance-wide reputation rollup cron + admin endpoint e2e.
-  //! 4 stories / 4 tests per plan §16a:
-  //!   Story 1 — weekly cron materialises integer-mean rollup row (1 test)
-  //!   Story 2 — banned communities excluded from rollup (1 test)
-  //!   Story 3 — admin endpoint returns rollup + contributing; rejects non-admin (1 test)
-  //!   Story 4 — ROLLUP_RECOMPUTED governance-log entry emitted (1 test)
-  //! Case A error shape: outer `LemmyResult<()>` + helpers `LemmyResult<T>`.
-
-  use super::*;
-  use actix_web::web::Query;
-  use diesel::{ExpressionMethods, QueryDsl};
-  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-  use lemmy_api::governance::{
-    admin_reputation_rollup::admin_reputation_rollup,
-    reputation_snapshot::run_rollup_batch,
-  };
-  use lemmy_api_common::governance::AdminReputationRollup;
-  use lemmy_api_utils::context::LemmyContext;
-  use lemmy_db_schema::{
-    newtypes::ModerationCaseId,
-    source::{
-      community::{Community, CommunityInsertForm},
-      governance::{
-        moderation_case::ModerationCaseInsertForm,
-        reputation_snapshot::{ReputationSnapshot, ReputationSnapshotInsertForm},
-        sanction::SanctionInsertForm,
-      },
-      instance::Instance,
-    },
-  };
-  use lemmy_db_schema_file::{
-    InstanceId,
-    enums::{SanctionAction, SanctionScope},
-    schema::{governance_log, moderation_case, reputation_snapshot as rs_table, sanction},
-  };
-  use lemmy_diesel_utils::traits::Crud;
-  use lemmy_utils::error::{LemmyErrorType, LemmyResult};
-
-  async fn seed_named_community(
-    ctx: &LemmyContext,
-    instance_id: InstanceId,
-    name: &str,
-  ) -> LemmyResult<Community> {
-    let form = CommunityInsertForm::new(
-      instance_id,
-      name.to_string(),
-      format!("Community {name}"),
-      format!("{name}-pubkey"),
-    );
-    Community::create(&mut ctx.pool(), &form).await
-  }
-
-  // ──────────────────────────── Story 1 ────────────────────────────
-
-  /// Weekly cron materialises an integer-mean rollup row from 2 per-community
-  /// snapshots. Seed values are even so integer truncation does not affect the
-  /// expected means: (10+30)/2=20, (20+40)/2=30, (30+50)/2=40, (40+60)/2=50.
   #[tokio::test(flavor = "multi_thread")]
-  async fn cron_materialises_integer_mean_rollup() -> LemmyResult<()> {
-    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
-    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  async fn test_brehon_disable_snapshot_job() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_SNAPSHOT_JOB", "1");
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
 
-    let (user_id, _) =
-      governance_fixtures::seed_user(&context, instance.id, "rt5_s1_user", false).await?;
-    let comm_a = seed_named_community(&context, instance.id, "rt5_s1_comm_a").await?;
-    let comm_b = seed_named_community(&context, instance.id, "rt5_s1_comm_b").await?;
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm_a.id),
-        reporting_accuracy: 10,
-        jury_reliability: 20,
-        participation_consistency: 30,
-        endorsement_strength: 40,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm_b.id),
-        reporting_accuracy: 30,
-        jury_reliability: 40,
-        participation_consistency: 50,
-        endorsement_strength: 60,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-    drop(conn);
-
-    let outcome = run_rollup_batch(&context).await?;
-    assert_eq!(outcome.candidates, 1, "one candidate (user with 2 community snapshots)");
-    assert_eq!(outcome.rows_written, 1, "one rollup row written");
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    let rollups: Vec<ReputationSnapshot> = rs_table::table
-      .filter(rs_table::person_id.eq(user_id))
-      .filter(rs_table::community_id.is_null())
-      .load::<ReputationSnapshot>(&mut conn)
-      .await?;
-    assert_eq!(rollups.len(), 1, "exactly one instance-wide rollup row");
-    let r = &rollups[0];
-    assert_eq!(r.reporting_accuracy, 20, "rollup reporting_accuracy: (10+30)/2");
-    assert_eq!(r.jury_reliability, 30, "rollup jury_reliability: (20+40)/2");
-    assert_eq!(r.participation_consistency, 40, "rollup participation_consistency: (30+50)/2");
-    assert_eq!(r.endorsement_strength, 50, "rollup endorsement_strength: (40+60)/2");
-    assert!(r.community_id.is_none(), "rollup row must have community_id IS NULL");
-
-    Ok(())
-  }
-
-  // ──────────────────────────── Story 2 ────────────────────────────
-
-  /// Banned community is excluded from numerator, denominator, and contributing
-  /// count. Active sanction (target_person_id + target_community_id + active=true)
-  /// causes comm_b to be excluded; rollup = comm_a values (denominator=1).
-  #[tokio::test(flavor = "multi_thread")]
-  async fn banned_community_excluded_from_rollup() -> LemmyResult<()> {
-    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
-    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-
-    let (user_id, _) =
-      governance_fixtures::seed_user(&context, instance.id, "rt5_s2_user", false).await?;
-    let comm_a = seed_named_community(&context, instance.id, "rt5_s2_comm_a").await?;
-    let comm_b = seed_named_community(&context, instance.id, "rt5_s2_comm_b").await?;
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm_a.id),
-        reporting_accuracy: 10,
-        jury_reliability: 10,
-        participation_consistency: 10,
-        endorsement_strength: 10,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm_b.id),
-        reporting_accuracy: 50,
-        jury_reliability: 50,
-        participation_consistency: 50,
-        endorsement_strength: 50,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-
-    // Active sanction banning the user from comm_b.
-    let case_id: i32 = diesel::insert_into(moderation_case::table)
-      .values(&ModerationCaseInsertForm::default())
-      .returning(moderation_case::id)
-      .get_result::<i32>(&mut conn)
-      .await?;
-    diesel::insert_into(sanction::table)
-      .values(&SanctionInsertForm {
-        case_id: ModerationCaseId(case_id),
-        scope: SanctionScope::Community,
-        action: SanctionAction::CommunityExclusion,
-        target_person_id: Some(user_id),
-        target_community_id: Some(comm_b.id),
-        active: Some(true),
-        ..Default::default()
-      })
-      .execute(&mut conn)
-      .await?;
-    drop(conn);
-
-    let outcome = run_rollup_batch(&context).await?;
-    assert_eq!(outcome.rows_written, 1, "one rollup row written (comm_b excluded)");
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    let rollups: Vec<ReputationSnapshot> = rs_table::table
-      .filter(rs_table::person_id.eq(user_id))
-      .filter(rs_table::community_id.is_null())
-      .load::<ReputationSnapshot>(&mut conn)
-      .await?;
-    assert_eq!(rollups.len(), 1, "exactly one rollup row");
-    let r = &rollups[0];
-    // Only comm_a contributes (denominator=1); rollup = comm_a values exactly.
-    assert_eq!(r.reporting_accuracy, 10, "banned comm_b excluded: reporting_accuracy = comm_a value");
-    assert_eq!(r.jury_reliability, 10, "banned comm_b excluded: jury_reliability = comm_a value");
-    assert_eq!(r.participation_consistency, 10, "banned comm_b excluded: participation_consistency = comm_a value");
-    assert_eq!(r.endorsement_strength, 10, "banned comm_b excluded: endorsement_strength = comm_a value");
-
-    Ok(())
-  }
-
-  // ──────────────────────────── Story 3 ────────────────────────────
-
-  /// Admin endpoint returns the rollup snapshot + contributing per-community
-  /// rows. Non-admin is rejected with NotAnAdmin.
-  #[tokio::test(flavor = "multi_thread")]
-  async fn admin_endpoint_returns_rollup_and_rejects_non_admin() -> LemmyResult<()> {
-    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
-    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-
-    let (user_id, user_view) =
-      governance_fixtures::seed_user(&context, instance.id, "rt5_s3_user", false).await?;
-    let (_admin_id, admin_view) =
-      governance_fixtures::seed_user(&context, instance.id, "rt5_s3_admin", true).await?;
-    let comm = seed_named_community(&context, instance.id, "rt5_s3_comm").await?;
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm.id),
-        reporting_accuracy: 5,
-        jury_reliability: 5,
-        participation_consistency: 5,
-        endorsement_strength: 5,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-    drop(conn);
-
-    run_rollup_batch(&context).await?;
-
-    // Admin call must return rollup + contributing rows.
-    let resp = admin_reputation_rollup(
-      Query(AdminReputationRollup { person_id: user_id }),
-      context.clone(),
-      admin_view,
-    )
-    .await?
-    .into_inner();
-    assert!(resp.rollup.is_some(), "admin endpoint must return the rollup row");
-    assert_eq!(resp.contributing.len(), 1, "one contributing per-community snapshot");
-
-    // Non-admin call must be rejected.
-    let err = admin_reputation_rollup(
-      Query(AdminReputationRollup { person_id: user_id }),
-      context.clone(),
-      user_view,
-    )
-    .await
-    .expect_err("non-admin must be rejected");
-    assert!(
-      matches!(&err.error_type, LemmyErrorType::NotAnAdmin),
-      "expected NotAnAdmin, got {:?}",
-      err.error_type,
-    );
-
-    Ok(())
-  }
-
-  // ──────────────────────────── Story 4 ────────────────────────────
-
-  /// run_rollup_batch emits exactly one `rollup_recomputed` governance-log
-  /// entry per person processed.
-  #[tokio::test(flavor = "multi_thread")]
-  async fn governance_log_emits_rollup_recomputed() -> LemmyResult<()> {
-    let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
-    let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
-
-    let (user_id, _) =
-      governance_fixtures::seed_user(&context, instance.id, "rt5_s4_user", false).await?;
-    let comm = seed_named_community(&context, instance.id, "rt5_s4_comm").await?;
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    diesel::insert_into(rs_table::table)
-      .values(&ReputationSnapshotInsertForm {
-        person_id: user_id,
-        community_id: Some(comm.id),
-        reporting_accuracy: 5,
-        jury_reliability: 5,
-        participation_consistency: 5,
-        endorsement_strength: 5,
-        jury_eligible: false,
-        trusted_reporter: false,
-        can_sponsor: false,
-      })
-      .execute(&mut conn)
-      .await?;
-    drop(conn);
-
-    run_rollup_batch(&context).await?;
-
-    let mut conn = AsyncPgConnection::establish(&db_url).await?;
-    let count: i64 = governance_log::table
-      .filter(governance_log::entry_kind.eq("rollup_recomputed"))
+    let before: i64 = reputation_snapshot::table
       .count()
-      .get_result(&mut conn)
+      .get_result(&mut async_conn)
       .await?;
-    assert_eq!(count, 1, "exactly one rollup_recomputed governance-log entry");
+
+    reputation_snapshot::run_snapshot_batch(&context).await?;
+
+    let after: i64 = reputation_snapshot::table
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert_eq!(before, after, "BREHON_DISABLE_SNAPSHOT_JOB guard must prevent snapshot writes");
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_brehon_disable_fed_replay_cleanup_job() -> LemmyResult<()> {
+    let (_container, _context, _federation_context, db_url, _env_guards) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    {
+      FederationInboxNonce::insert(
+        &mut async_conn,
+        &FederationInboxNonceInsertForm {
+          peer_instance: "test.example".to_string(),
+          activity_id: "probe-a-nonce-1".to_string(),
+        },
+      )
+      .await?;
+      federation_inbox_nonce::delete_older_than(0, &mut async_conn).await?;
+      let count: i64 = federation_inbox_nonce::table
+        .filter(federation_inbox_nonce::activity_id.eq("probe-a-nonce-1"))
+        .count()
+        .get_result(&mut async_conn)
+        .await?;
+      assert_eq!(count, 0, "delete_older_than(0) must remove the row when gate is unset");
+    }
+
+    {
+      let _guard = EnvVarGuard::set("BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB", "1");
+      FederationInboxNonce::insert(
+        &mut async_conn,
+        &FederationInboxNonceInsertForm {
+          peer_instance: "test.example".to_string(),
+          activity_id: "probe-b-nonce-1".to_string(),
+        },
+      )
+      .await?;
+      let count: i64 = federation_inbox_nonce::table
+        .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1"))
+        .count()
+        .get_result(&mut async_conn)
+        .await?;
+      assert_eq!(count, 1, "row must survive when BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB is set");
+    }
 
     Ok(())
   }
