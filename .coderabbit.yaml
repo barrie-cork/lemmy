@@ -138,10 +138,11 @@ reviews:
 
     - path: "crates/api/api_common/src/governance.rs"
       instructions: |
-        Phase 3 DTO scope check. v0 is EXACTLY 11 endpoints per ADR-010 and
-        05-mvp-and-delivery-plan.md §2. Flag new DTOs that do not map to one
-        of those 11. RevokeEndorsement DTO is allowed even though the
-        endpoint is deferred to v1 (explicit Phase 3 task 35 exception).
+        DTO scope check. v0 shipped exactly 11 endpoints per ADR-010 and
+        05-mvp-and-delivery-plan.md §2. v1 extends this under OQ-020 and
+        the v1 PRDs — new endpoints that have a corresponding v1 PRD story
+        are sanctioned. Flag DTOs that map to NO v0 or v1 PRD story.
+        RevokeEndorsement DTO is allowed (Phase 3 task 35 exception).
         Flag business logic inside DTO impls — DTOs are shape-only.
 
     - path: "crates/api/api/src/governance/**"
