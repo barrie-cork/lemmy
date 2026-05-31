@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "cargo-check validation for task 2 (sponsor-allowlist e2e sweep)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "test(e2e): added 2 sponsor-allowlist entries to all_mvp_endpoints_return_non_404 array in crates/server/tests/e2e.rs. Awaiting laptop cargo-check to confirm no compile errors.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "91629186d44c-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
