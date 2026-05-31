@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-31T01:10:00Z",
+  "last_updated_at": "2026-05-31T12:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -271,11 +271,12 @@
           "note": "Shipped 2026-05-30. Teardown lane brehon-fork-rt-r4 pending."
         },
         "v1-RT-r5": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
           "registry_evidence": "ENTRY_KIND_ROLLUP_RECOMPUTED row names v1-RT-r5 scheduled_tasks.rs (pending)",
           "plan": null,
-          "blocker": "no plan written yet"
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r5",
+          "in_flight_since": "2026-05-31"
         }
       },
       "known_followups": [
