@@ -37,42 +37,59 @@
 
 ## §3. Required reading
 
-Before writing the plan, read these in order:
+The advisor has pre-populated key research results below to save context. Read the listed files; skip the greps (results are given).
 
-1. **Plan template:** `.claude/PRPs/templates/plan.template.md` — follow every section; pay attention to §5 complexity scoring, §13 task format, §15 DoD commands, §16a story-to-task mapping.
+### §3a. Pre-populated research (do NOT re-run these greps)
 
-2. **Prior plan (MIRROR reference for plan shape):** `.claude/PRPs/plans/v1-quality-r3.plan.md` — especially §3 (scope note), §5 (complexity score), §10 (implementation detail), §13 (task list format), §15 (DoD commands). Note: that plan explicitly defers Issue #167 to this plan via `a3d0e9941441-039`.
+**Option A shape (from resolved DQ `052f0d5c016d-001` + `a3d0e9941441-039`):**
+- `LemmyContext::create(...)` calls `SETTINGS.get_database_url()` INTERNALLY and stores as `db_url: String` field on the struct.
+- Zero new parameters added to `create(...)`.
+- New accessor: `pub fn database_url(&self) -> &str { &self.db_url }` (named `database_url`, not `db_url`).
+- `admin_audit_stream.rs:125` changes from `context.settings().get_database_url()` to `context.database_url()`.
+- `Settings::get_database_url()` reads `LEMMY_DATABASE_URL` from the live env at call time (confirmed). Capturing at `create()` time (before guards drop) fixes the test footgun.
 
-3. **Resolved clarify DQ for #167 shape:** read `.claude/decision-queue.json` — find the resolved entry `id: "a3d0e9941441-039"` (or in archive if not present) — it records the advisor's direction for Option A.
+**`LemmyContext::create` call sites (full enumeration — 16 sites, 2 non-test + 14 in e2e.rs):**
+```
+crates/api/api_utils/src/context.rs:79      ← inside create() itself (self-call factory)
+crates/server/src/lib.rs:210                ← main server startup
+crates/server/tests/e2e.rs:861
+crates/server/tests/e2e.rs:2602
+crates/server/tests/e2e.rs:3366
+crates/server/tests/e2e.rs:4148
+crates/server/tests/e2e.rs:4472
+crates/server/tests/e2e.rs:4796
+crates/server/tests/e2e.rs:4925
+crates/server/tests/e2e.rs:5050  (context_a)
+crates/server/tests/e2e.rs:5096  (context_b)
+crates/server/tests/e2e.rs:5673
+crates/server/tests/e2e.rs:5869
+crates/server/tests/e2e.rs:6159
+crates/server/tests/e2e.rs:16816
+crates/server/tests/e2e.rs:17464
+```
+Note: `context.rs:79` is the factory function itself — it reads `SETTINGS.get_database_url()` internally and passes nothing extra. The other 15 sites pass arguments to `create()`; since we add ZERO new params (Option A), they need NO change. Only the factory body changes.
 
-4. **Current `context.rs` (read the full file):**  
-   `crates/api/api_utils/src/context.rs`  
-   Note: `LemmyContext::create` currently takes 5 params (pool, client, pictrs_client, secret, rate_limit_cell) and returns `LemmyContext`. The struct has no `db_url` field yet. `context.settings()` returns `&'static Settings` from the `SETTINGS` global.
+**`admin_audit_stream` e2e test anchors (pre-located):**
+- `admin_audit_stream_forbidden_for_non_admin` starts at line **8251**; `EnvVarGuard` band-aid at line **8256**
+- `admin_audit_stream_enforces_per_admin_cap` starts at line **8276**; `EnvVarGuard` band-aid at line **8281**
+- `admin_audit_stream_emits_frame_on_config_change` starts at line **8344**; `EnvVarGuard` band-aid at line **8353**
 
-5. **Current `admin_audit_stream.rs` (read lines 100–160):**  
-   `crates/api/api/src/governance/admin_audit_stream.rs`  
-   Line 125: `let db_url = context.settings().get_database_url();` — this reads `LEMMY_DATABASE_URL` from the live process env. Line 126: `tokio_postgres::connect(&db_url, NoTls).await` — this is the LISTEN connection that fails after the env-var guard drops in tests.
+T1 e2e edit: remove the 3 `let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);` lines (lines 8256, 8281, 8353). These were the v1-quality-r2-fix-impl-1 band-aids, superseded by the architectural fix.
 
-6. **All `LemmyContext::create` call sites (enumerate before writing §10):**  
-   Run: `grep -rn "LemmyContext::create" crates/ --include="*.rs"`  
-   The plan §10 must list every call site and describe the required change at each (add the `db_url` argument). This is the `feedback_planner_enumerate_struct_callsites_for_addfield.md` discipline — every call site must be named before any task is dispatched.
+**Lesson injections (file-class, already evaluated — include in plan §14):**
+- `feedback_lemmy_error_no_std_error.md` — any new code uses `LemmyResult<()>` with `?`
+- `feedback_fix_impl_pre_locate_e2e_anchors.md` — impl-task brief must cite lines 8256/8281/8353 verbatim
+- `feedback_rust_visibility_cross_crate.md` — accessor must be `pub` (called from different crate)
+- `feedback_envvarguard_fixture_lifetime_footgun.md` — plan §10 must explain why capture-at-create eliminates the footgun
+- `feedback_multi_write_handlers_need_transactions.md` — no new DB writes in this fix; note this in §10
 
-7. **`Settings::get_database_url()` source (understand the env-read path):**  
-   Run: `grep -rn "fn get_database_url" crates/ --include="*.rs"` then read the function body. Confirms whether it reads the env var at call time (expected: yes, from `SETTINGS` which is a `Lazy<Settings>` initialized at startup from env). The fix captures this value at `LemmyContext::create` time (before any guards are dropped) rather than re-reading at LISTEN-connect time.
+### §3b. Required reads (small, load-bearing)
 
-8. **The `admin_audit_stream` e2e test block (pre-locate verbatim anchors):**  
-   Run: `grep -n "admin_audit_stream\|fn forbidden_for_non_admin\|fn enforces_per_admin_cap\|fn emits_frame_on_config_change" crates/server/tests/e2e.rs | head -20`  
-   The plan §10 must record the exact line numbers of the three test functions so the impl-task brief can pre-locate them. The e2e test update (remove the explicit `EnvVarGuard::set(LEMMY_DATABASE_URL, ...)` guards from the 3 test bodies — they were the band-aid fix in v1-quality-r2-fix-impl-1) is part of T1's scope.
+1. **Plan template:** `.claude/PRPs/templates/plan.template.md` — follow every section; §5 complexity scoring, §13 task format, §15 DoD commands, §16a story map.
 
-9. **Mandatory lessons (file-class injection per `advisor-orchestrator.md` §2.4):**
-   - `feedback_multi_write_handlers_need_transactions.md` — confirm: does the #167 fix introduce any new DB writes? (Expected: no — handler-only refactor. But the planner must confirm.)
-   - `feedback_lemmy_error_no_std_error.md` — any new handler code must use `LemmyResult<()>` with `?`.
-   - `feedback_fix_impl_pre_locate_e2e_anchors.md` — mandatory for any e2e.rs edit; the plan §13 T1 brief constraint must require pre-location of verbatim anchors.
-   - `feedback_rust_visibility_cross_crate.md` — the new `db_url` accessor must be `pub` (visible from `lemmy_api` which imports `lemmy_api_utils`).
-   - `feedback_envvarguard_fixture_lifetime_footgun.md` — the #167 fix is the proper architectural resolution of the footgun; the plan §10 must explain why capturing at `create()` eliminates the footgun.
-   - `feedback_envvarguard_audit_window.md` — if any audit script in the DoD checks for `get_database_url` absence, use a file-content grep (not a windowed scan).
+2. **Current `context.rs`:** `crates/api/api_utils/src/context.rs` — read the full file to understand the struct definition, existing fields, `create()` signature, and where to add `db_url: String` and the accessor.
 
-10. **Canonical sibling plan for format (read one more):** `.claude/PRPs/plans/v1-RT-r3.plan.md` — skim section headers to confirm §1–§20 shape matches template. The r3b plan must have the same structure.
+3. **Current `admin_audit_stream.rs` lines 115–135:** `crates/api/api/src/governance/admin_audit_stream.rs` — read just these 20 lines to see the exact `get_database_url()` call at line 125 you will replace.
 
 ---
 
