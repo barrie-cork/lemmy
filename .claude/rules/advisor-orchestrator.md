@@ -101,7 +101,7 @@ Mechanical: read score, read top factor, add citation. No DQ, no escalation.
 Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on each completion. Full state-transition contract (with Phase 1/Phase 2 multi-paragraph detail): `.claude/refs/auto-phase.md` §"Stage-shape orchestration (canonical contract)".
 
 - **Brief authored, no planning task yet** → `/brehon-clarify` → resolve clarify-DQ → queue planning.
-- **Planning complete** → §3.4 + §3.5 → gate 1 (plan approval) → queue `bm-cut`.
+- **Planning complete** → §3.4 + §3.5 + §3.5a → gate 1 (plan approval) → queue `bm-cut`.
 - **bm-cut complete** → §4 cohort dispatch.
 - **impl-task complete (pre-Shape-G, ≤v1-JM-d)** → cohort barrier → next cohort or `chore(lint):` → `bm-pr`.
 - **impl-task complete (Shape G, ≥v1-JM-e)** → Phase 1 ci-watcher (workspace check) → Phase 2 e2e (advisor-driven). Cohort advancement waits on BOTH `result: "pass"`. Detail in refs.
@@ -141,6 +141,14 @@ Per `feedback_pre_phase_dod_smoke_test.md` + `feedback_plan_dod_dry_run_at_write
 ### 3.5 Watchpoint specificity gate (pre-plan-approval)
 
 Per `feedback_advisor_watchpoint_specificity.md`. Every watchpoint in plan §4 must cite a specific table, file, or `schema.rs` line. Concept-only watchpoints ("watch for trait drift" without naming the trait) → file DQ requesting revision before approval.
+
+### 3.5a MiniMax trial designation (pre-plan-approval)
+
+After §3.5 watchpoint gate, before surfacing to user. Walk every `[role:impl-task]` task in the plan's §13 against the five qualifying criteria in `.claude/PRPs/briefs/minimax-m27-trial-1.md` §0.1 (not-e2e, MIRROR-ref-heavy, ≤2 files, cargo-gated DoD). For each task record one row in the §3 designation table in the runbook — `✅` or `❌` with a one-line reason on miss. Count the cumulative total (including prior-phase rows already in the table). Report the count in the plan-approval surface: `MiniMax trial: N/5 qualifying tasks accumulated`.
+
+When cumulative count reaches ≥5: note in the plan-approval surface that the trial fires this phase — dispatch both arms per §2.3 of the runbook alongside the real impl tasks. When count < 5: no action beyond recording the rows.
+
+Mechanical — no DQ, no user gate. The only output is the updated §3 table row(s) and the count line in the plan-approval surface.
 
 ### 3.6 Canonical-schema-first gate (pre-spec-authorship)
 

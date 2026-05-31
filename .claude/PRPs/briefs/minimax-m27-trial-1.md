@@ -133,19 +133,20 @@ Record into a results file `.claude/PRPs/reports/minimax-m27-trial-results.md`
 - Mixed/ambiguous at n=5 → extend to n=8-10 before deciding, OR stay Sonnet
   (conservative default). Do NOT switch on a coin-flip.
 
-## 3. Task designation (rolling — applied at plan-review time)
+## 3. Task designation (rolling — auto-populated by advisor at plan approval)
 
-At plan approval for any impl sub-phase, walk the §13 task list and mark each task against §0.1 criteria. Record the designation here (append a row per phase):
+The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan approval (after the watchpoint gate, before surfacing to user). That step walks the §13 task list against §0.1 criteria and appends rows here. The running ✅ count is reported in the plan-approval surface as `MiniMax trial: N/5 qualifying tasks accumulated`.
+
+**Do not fill this table manually** — the §3.5a step owns it.
 
 | Phase | Task | File(s) | MIRROR ref | Qualifies? | Notes |
 |---|---|---|---|---|---|
 | v1-RT-r4 | Tasks 1–5 | see original designation 2026-05-29 | various | ✅ all 5 | NOT RUN — serial dispatch forced |
 | v1-RT-r5 | Task 5 | `e2e.rs` | — | ❌ | e2e excluded |
 
-**Template row for the next phase (fill in at plan approval):**
-`| <phase> | Task N | <file(s)> | <mirror ref> | ✅/❌ | <one-line reason if ❌> |`
+**Running total: 0 ✅ qualifying** (RT-r4 tasks were designated but not run; count resets to 0 for the rolling trigger going forward).
 
-When a phase accumulates ≥5 ✅ rows → proceed to §2.3 dispatch sequence.
+When cumulative ✅ count reaches ≥5 → proceed to §2.3 dispatch sequence alongside the real phase.
 
 Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (pre-exists; append a new `##` section per phase run).
 
