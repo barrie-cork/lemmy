@@ -1,6 +1,7 @@
 {
   "schema_version": 3,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": "81ae24440317-002",
       "from": "impl",
@@ -17,12 +18,12 @@
       ],
       "branch": "junior/role-impl-task-v1-rt-r5-task-1-rollup-compute-batch-in-reputation-snapshot-rs-see-claude-prps-briefs-v1-rt-r5-i-549",
       "phase_task": 1,
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:15:00Z",
       "approved_by": null,
       "approved_at": null
     },
@@ -42,17 +43,15 @@
       ],
       "branch": "junior/role-impl-task-v1-rt-r5-task-2-rollup-dtos-in-api-common-governance-rs-see-claude-prps-briefs-v1-rt-r5-impl-2-md-550",
       "phase_task": 2,
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-a branch (Tasks 1+2 merged). Validated laptop-side by advisor.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:15:00Z",
       "approved_by": null,
       "approved_at": null
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": 14,
       "from": "impl",
