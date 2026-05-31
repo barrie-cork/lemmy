@@ -24,6 +24,7 @@ use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
 };
+use lemmy_db_schema::source::governance::reputation_snapshot::ReputationSnapshot;
 use lemmy_db_views_reputation::ReputationSummaryView;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -789,4 +790,31 @@ pub struct RemoveSponsorAllowlist {
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 pub struct RemoveSponsorAllowlistResponse {
   pub success: bool,
+}
+
+// ── Group F: Admin reputation rollup (v1-RT-r5) ───────────────────────
+
+/// Request payload for `GET /api/v4/governance/admin/reputation/rollup`.
+/// `person_id` identifies the person whose instance-wide rollup row and
+/// contributing per-community snapshots are returned.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminReputationRollup {
+  pub person_id: PersonId,
+}
+
+/// Response from `GET /api/v4/governance/admin/reputation/rollup`.
+/// `rollup` is `None` if no instance-wide snapshot exists yet for this
+/// person (cron has not yet run, or all their communities are banned).
+/// `contributing` is the ordered set of per-community snapshots (non-NULL
+/// `community_id`) that fed the rollup computation; may be empty if the
+/// person has no per-community rows.
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminReputationRollupResponse {
+  pub rollup: Option<ReputationSnapshot>,
+  pub contributing: Vec<ReputationSnapshot>,
 }
