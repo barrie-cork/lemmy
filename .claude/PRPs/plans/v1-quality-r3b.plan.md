@@ -97,6 +97,18 @@ fixture-internal guard at `e2e.rs:6128` stays (it is what makes the capture see 
 testcontainer URL). From §4 alone the reader can predict §11: `context.rs`,
 `admin_audit_stream.rs`, `e2e.rs`.
 
+## 4a. Watchpoints
+
+| Watchpoint | File:location | What to watch for |
+|---|---|---|
+| `LemmyContext` struct gains `db_url` field | `crates/api/api_utils/src/context.rs:12-21` | Field present and correctly typed `db_url: String`; `create()` captures from `SETTINGS.get_database_url()` before struct literal |
+| `database_url()` accessor visible cross-crate | `crates/api/api_utils/src/context.rs` (new method) | Accessor is `pub fn database_url(&self) -> &str`; NOT `pub(crate)` — called from `lemmy_api` |
+| Handler switches to captured URL | `crates/api/api/src/governance/admin_audit_stream.rs:125-126` | `get_database_url()` replaced by `context.database_url()`; `&db_url` → `db_url` (no `&`) at line 126 |
+| Fixture-internal guard preserved | `crates/server/tests/e2e.rs:6128` | `EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url)` line at :6128 **must not be removed** — it is what makes the capture see the testcontainer URL |
+| Only 3 band-aids removed in e2e | `crates/server/tests/e2e.rs:8256/8281/8353` | Exactly those 3 lines deleted; no other `EnvVarGuard` lines touched |
+
+---
+
 ## 5. Metadata
 
 - **Phase:** `v1-quality-r3b`
@@ -546,8 +558,8 @@ echo "exit: $?"   # EXPECT: exit 0
 
 - [ ] `grep -c "get_database_url" crates/api/api/src/governance/admin_audit_stream.rs` returns `0`
 - [ ] `grep -c "context.database_url()" crates/api/api/src/governance/admin_audit_stream.rs` returns `1`
-- [ ] `grep -c 'EnvVarGuard::set("LEMMY_DATABASE_URL"' crates/server/tests/e2e.rs` returns `1`
-      (only the fixture-internal guard at :6128 remains; the 3 band-aids are gone)
+- [ ] `grep -c 'EnvVarGuard::set("LEMMY_DATABASE_URL"' crates/server/tests/e2e.rs` returns `14`
+      (17 total − 3 band-aids removed = 14; the fixture-internal guard at :6128 plus 13 unrelated test guards remain)
 - [ ] `crates/api/api_utils/src/context.rs` contains `pub fn database_url(&self) -> &str`
 - [ ] R5: Task 0 enumerated all probes (0–8)
 - [ ] R6: all clippy invocations use `--no-deps --features full` uniformly
@@ -609,7 +621,7 @@ echo "exit: $?"   # EXPECT: exit 0
 |---|---|---|---|
 | Forgetting the `&`-drop at `admin_audit_stream.rs:126` (`E0277` on `&&str`) | MED | LOW | §10.2 GOTCHA spells out the exact edit; §15.1 catches it |
 | Unused `db_url` binding after guard removal → clippy `-D warnings` fail | MED | LOW | §10.3 GOTCHA mandates rename to `_db_url`; §15.2 catches it |
-| Editing the wrong/extra `EnvVarGuard` line (removing fixture-internal :6128) | LOW | HIGH | §10.3 + §15.5 assert exactly ONE guard remains (the :6128 fixture one); breaking it makes all e2e fail loudly |
+| Editing the wrong/extra `EnvVarGuard` line (removing fixture-internal :6128) | LOW | HIGH | §10.3 + §15.5 assert exactly 14 guards remain (17 − 3 band-aids; :6128 is among them); removing :6128 drops count to 13 and makes all e2e fail loudly |
 | Blind edit hangs the worker on the ~17k-line `e2e.rs` | LOW | MED | §10.3 verbatim anchors with disambiguating fn-context per `feedback_fix_impl_pre_locate_e2e_anchors.md` |
 | Capture sees stale env if a future caller constructs context before setting `LEMMY_DATABASE_URL` | LOW | MED | Production sets the env before startup (`lib.rs:210`); fixture sets it before `create()` (:6128) — both correct today; noted in §19 |
 
