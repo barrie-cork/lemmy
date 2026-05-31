@@ -182,6 +182,33 @@ The canonical example is the v1-RT-r3 bm-merge brief commit `621bc7115` — auth
 path because the lane session was on `phase-v1-RT-r3` and could not checkout `governance-v0`.
 1× this class; promoting as the documented procedure to prevent ad-hoc re-invention per lane.
 
+### Single-file pull from governance-v0 into a phase lane (Mode A, laptop)
+
+When a phase lane needs one specific governance-v0 artifact (e.g. a new DQ archive file,
+a rule amendment, a template) **without** inheriting all of governance-v0's diverged content
+(which would conflict on `v1-roadmap.json`), use surgical checkout — NOT a full merge:
+
+```bash
+# Step 1: ensure the file is on origin (commit + push on governance-v0 first).
+# Step 2: in the phase lane worktree, fetch and checkout just the file.
+git fetch origin governance-v0
+git checkout FETCH_HEAD -- .claude/<target-file>
+git commit -m "chore(decision-queue): pull <slug> from governance-v0"
+```
+
+**Why not `git merge origin/governance-v0`:** a full merge inherits every governance-v0
+divergence including `v1-roadmap.json`, which always conflicts with an active phase branch
+(the phase branch has current roadmap state; governance-v0 carries an older snapshot).
+Surgical checkout is lossless and conflict-free.
+
+**Ordering constraint:** `git push origin governance-v0` MUST precede the fetch on the
+phase lane worktree. A commit that exists only locally is invisible to another worktree's
+`git fetch`; `FETCH_HEAD` will point at the pre-commit origin tip and the file won't be found.
+
+Canonical example: 2026-05-31 DQ archive pull into `phase-v1-RT-r5` (commits `066791558` +
+`283f56ad5`); full merge attempted first, conflicted on roadmap, aborted; surgical checkout
+succeeded cleanly.
+
 ## Lifecycle
 
 Three steps, fire once per lane:
