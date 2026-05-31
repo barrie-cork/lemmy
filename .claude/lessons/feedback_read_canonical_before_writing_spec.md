@@ -18,6 +18,10 @@ When authoring any spec, template, or rule that prescribes the shape of an artif
 
 **Symptom to recognise in retrospect:** an in-place Edit on the plan file mid-implementation that renames section numbers or rewires schema references. If you find yourself doing that, the parent miss was "didn't read a canonical example before writing the spec."
 
+**For code-change specs: read the target source first (added 2026-05-31).** When the spec prescribes a change to *source code* (not an artifact's prose shape) — e.g. an MCP server patch, a hook rewrite, a handler change — read the actual target source files BEFORE writing the spec, not after. The code's real shape determines the minimal change; speccing against an imagined shape produces over-engineered or wrong-surface contracts.
+
+Incident (2026-05-31): authoring `mcp-pmd-read-pheromone.md` (a spec to add recency/frequency ranking to the project-memory MCP). Reading `MCPs/project-memory-mcp/src/db.ts` + `src/tools/search.ts` FIRST revealed that all three search handlers already end with `ORDER BY importance DESC, updated_at DESC` (both static — reads leave zero trace) and that RRF already does the relevance ranking. That single fact dictated the entire minimal design: the new "pheromone" boost rides ON TOP of RRF as a bounded tertiary term, never fighting it — two columns + one UPDATE-on-read + one ORDER BY term, no background cron. A back-of-envelope formula written without reading the code would have fought the relevance engine and over-built. The difference between an "interesting idea" and a 320-line minimal-surface contract was reading the source first.
+
 **Brehon-specific application:**
 
 - **Advisor session** authoring a new rule, command, lesson, or template under `.claude/`: before writing, `Glob .claude/{rules,commands,lessons,PRPs/templates}/` for sibling artifacts of the same class; Read 1-2; cite at the top of the new file. Per `.claude/rules/advisor-orchestrator.md` "Canonical-schema-first gate".

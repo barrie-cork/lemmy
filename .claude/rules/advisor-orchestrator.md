@@ -108,6 +108,7 @@ Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on
 - **bm-poll-cr complete** → `bm-triage` (draft auto).
 - **Triage drafted** → gate 3 (CR triage) → fix-in-PR impl-tasks.
 - **bm-pr complete → before gate 5** → merge-forward check (`git log origin/governance-v0 ^phase-v1-<phase>`); non-empty → checkout + merge + push.
+- **Junior task on `governance-v0` reports `done`** → the daemon's finalize-merge is **daemon-local-first, origin-push-second**. Look in this order, NOT origin-first: (1) `ssh homeserver "cd /srv/brehon-fork && git log governance-v0 -1 --oneline"` (the merge lands here first), (2) `git ls-remote origin governance-v0` (did the daemon push yet?). Daemon-local ahead of origin = daemon hasn't pushed → `ssh homeserver "cd /srv/brehon-fork && git push origin governance-v0"`, then pull locally. Checking origin first shows a stale pre-merge tip and triggers a multi-probe hunt. Per `feedback_finalize_merge_where_to_look_first.md`.
 - **No critical findings open** → `/brehon-verify` ✓ → gate 5 (merge confirm) → `bm-merge`.
 - **bm-merge complete** → author retro → gate 6 (retro sign-off) → `/brehon-phase-transition`.
 
