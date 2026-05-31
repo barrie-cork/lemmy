@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T00:00:00Z",
-      "question": "cargo-check workspace after T3 guard tests added",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "impl-3 added test_brehon_disable_snapshot_job + test_brehon_disable_fed_replay_cleanup_job to e2e.rs in v1_rt_r4_fixtures; needs laptop cargo-check before merge",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-v1-quality-r3c",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "3342d066519a-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1529,6 +1503,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "91629186d44c-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "cargo-check workspace after T3 guard tests added",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-3 added test_brehon_disable_snapshot_job + test_brehon_disable_fed_replay_cleanup_job to e2e.rs in v1_rt_r4_fixtures; needs laptop cargo-check before merge",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check --workspace --features full: exit 0 on laptop (2m 40s). T3 validate-pending-laptop: pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T22:43:05Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "3342d066519a-001"
     }
   ]
 }
