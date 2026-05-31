@@ -1,24 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "052f0d5c016d-001",
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-05-31T00:00:00Z",
-      "question": "v1-quality-r3b #167 fix shape: the planning brief §2/§4 mandate option-b (add db_url field/param to LemmyContext::create, enumerate + update all callsites, accessor db_url()), but the resolved clarify DQ a3d0e9941441-039 that the brief §3 cites as authority chose option-a (create() reads SETTINGS internally, ZERO callsite changes, accessor database_url()). Which shape should the plan follow?",
-      "options": [
-        "option-a (follow resolved DQ a3d0e9941441-039): LemmyContext::create reads SETTINGS.get_database_url() internally at construction, stores db_url: String, exposes pub fn database_url(&self) -> &str. Zero callsite changes. admin_audit_stream.rs:125 uses context.database_url(). Plan §10 has no callsite-enumeration task.",
-        "option-b (follow brief §2/§4 prose): add db_url: String param to LemmyContext::create, update all callsites (context.rs:79, server/lib.rs:210, ~14 e2e.rs sites), accessor pub fn db_url(&self) -> &str. Plan §10 enumerates and edits every callsite."
-      ],
-      "context": "The brief is internally inconsistent: §2 labels the work 'Issue #167, Option A' and §3 item 3 names resolved DQ a3d0e9941441-039 as 'the advisor's direction for Option A', but §2/§4 bullet prose describes option-b mechanics (add param, enumerate callsites, db_url() accessor). The resolved clarify DQ explicitly REJECTS option-b ('adds an unused parameter burden to 2+ non-e2e callsites') with evidence (connection.rs:177-185 reads SETTINGS at pool-build time; same SETTINGS available inside create()). Per decision-queue.md, resolved clarify DQs are authoritative and non-re-litigable. RECOMMENDATION: option-a. The two shapes produce materially different plans (callsite-enumeration task present vs absent; accessor name database_url() vs db_url()), so I am not guessing — escalating per brief §4 'if a blocker arises, write a kind:blocker DQ, commit+push, and stop. Do not guess.' If advisor confirms the brief prose was stale boilerplate, I proceed with option-a; if advisor intends option-b, confirm and I follow the brief.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "from": "planner",
@@ -4988,6 +4970,23 @@
       "answer": "e2e gate passed: 126/0/5, E2E_EXIT_0, 2716s. Advisor-laptop run 2026-05-31.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-05-31T00:23:46Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "052f0d5c016d-001",
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "v1-quality-r3b #167 fix shape: the planning brief §2/§4 mandate option-b (add db_url field/param to LemmyContext::create, enumerate + update all callsites, accessor db_url()), but the resolved clarify DQ a3d0e9941441-039 that the brief §3 cites as authority chose option-a (create() reads SETTINGS internally, ZERO callsite changes, accessor database_url()). Which shape should the plan follow?",
+      "options": [
+        "option-a (follow resolved DQ a3d0e9941441-039): LemmyContext::create reads SETTINGS.get_database_url() internally at construction, stores db_url: String, exposes pub fn database_url(&self) -> &str. Zero callsite changes. admin_audit_stream.rs:125 uses context.database_url(). Plan §10 has no callsite-enumeration task.",
+        "option-b (follow brief §2/§4 prose): add db_url: String param to LemmyContext::create, update all callsites (context.rs:79, server/lib.rs:210, ~14 e2e.rs sites), accessor pub fn db_url(&self) -> &str. Plan §10 enumerates and edits every callsite."
+      ],
+      "context": "The brief is internally inconsistent: §2 labels the work 'Issue #167, Option A' and §3 item 3 names resolved DQ a3d0e9941441-039 as 'the advisor's direction for Option A', but §2/§4 bullet prose describes option-b mechanics (add param, enumerate callsites, db_url() accessor). The resolved clarify DQ explicitly REJECTS option-b ('adds an unused parameter burden to 2+ non-e2e callsites') with evidence (connection.rs:177-185 reads SETTINGS at pool-build time; same SETTINGS available inside create()). Per decision-queue.md, resolved clarify DQs are authoritative and non-re-litigable. RECOMMENDATION: option-a. The two shapes produce materially different plans (callsite-enumeration task present vs absent; accessor name database_url() vs db_url()), so I am not guessing — escalating per brief §4 'if a blocker arises, write a kind:blocker DQ, commit+push, and stop. Do not guess.' If advisor confirms the brief prose was stale boilerplate, I proceed with option-a; if advisor intends option-b, confirm and I follow the brief.",
+      "answer": "option-a: LemmyContext::create reads SETTINGS.get_database_url() internally at construction and stores db_url: String. Zero callsite changes to create() params. Expose pub fn database_url(&self) -> &str accessor. admin_audit_stream.rs:125 uses context.database_url(). Brief §2/§4 callsite-enumeration prose was stale boilerplate — the resolved clarify DQ a3d0e9941441-039 is authoritative. Proceed with option-a shape.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T03:07:27Z",
       "approved_by": null,
       "approved_at": null
     }
