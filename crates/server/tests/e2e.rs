@@ -18429,4 +18429,70 @@ mod v1_rt_r4_fixtures {
 
     Ok(())
   }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_brehon_disable_snapshot_job() -> LemmyResult<()> {
+    let _guard = EnvVarGuard::set("BREHON_DISABLE_SNAPSHOT_JOB", "1");
+    let (_container, context, _federation_context, db_url, _env_guards) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    let before: i64 = reputation_snapshot::table
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+
+    reputation_snapshot::run_snapshot_batch(&context).await?;
+
+    let after: i64 = reputation_snapshot::table
+      .count()
+      .get_result(&mut async_conn)
+      .await?;
+    assert_eq!(before, after, "BREHON_DISABLE_SNAPSHOT_JOB guard must prevent snapshot writes");
+
+    Ok(())
+  }
+
+  #[tokio::test(flavor = "multi_thread")]
+  async fn test_brehon_disable_fed_replay_cleanup_job() -> LemmyResult<()> {
+    let (_container, _context, _federation_context, db_url, _env_guards) = boot_context().await?;
+    let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+    {
+      FederationInboxNonce::insert(
+        &mut async_conn,
+        &FederationInboxNonceInsertForm {
+          peer_instance: "test.example".to_string(),
+          activity_id: "probe-a-nonce-1".to_string(),
+        },
+      )
+      .await?;
+      federation_inbox_nonce::delete_older_than(0, &mut async_conn).await?;
+      let count: i64 = federation_inbox_nonce::table
+        .filter(federation_inbox_nonce::activity_id.eq("probe-a-nonce-1"))
+        .count()
+        .get_result(&mut async_conn)
+        .await?;
+      assert_eq!(count, 0, "delete_older_than(0) must remove the row when gate is unset");
+    }
+
+    {
+      let _guard = EnvVarGuard::set("BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB", "1");
+      FederationInboxNonce::insert(
+        &mut async_conn,
+        &FederationInboxNonceInsertForm {
+          peer_instance: "test.example".to_string(),
+          activity_id: "probe-b-nonce-1".to_string(),
+        },
+      )
+      .await?;
+      let count: i64 = federation_inbox_nonce::table
+        .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1"))
+        .count()
+        .get_result(&mut async_conn)
+        .await?;
+      assert_eq!(count, 1, "row must survive when BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB is set");
+    }
+
+    Ok(())
+  }
 }

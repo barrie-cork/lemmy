@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "cargo-check workspace after T3 guard tests added",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-3 added test_brehon_disable_snapshot_job + test_brehon_disable_fed_replay_cleanup_job to e2e.rs in v1_rt_r4_fixtures; needs laptop cargo-check before merge",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 3,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "3342d066519a-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
