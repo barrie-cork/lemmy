@@ -51,6 +51,31 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "b686f19f7a6f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T12:00:00Z",
+      "phase_task": "fix-impl-1",
+      "branch": "phase-v1-RT-r5",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "question": "Validate fix-impl-1 CR fixes via cargo-check on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "4 CR fixes in reputation_snapshot.rs and admin_reputation_rollup.rs: tx wrap (steps 8-11), stale delete on denominator==0, chunks(0) guard, ORDER BY. Committed as f6725c0a7.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
