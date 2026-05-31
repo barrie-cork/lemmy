@@ -1396,6 +1396,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "be6ddc108436-001"
+    },
+    {
+      "id": "a3d0e9941441-043",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "v1-quality-r3c brief: what is the correct test shape for BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB guard test? The brief says \"call the scheduler tick\" but the cleanup runs in an inline scheduler closure with no standalone function.",
+      "options": [
+        "option-a: call delete_older_than() directly with window_days=1 and a seeded old row; set guard and assert row is NOT deleted (direct DB-function probe)",
+        "option-b: invoke the scheduler closure indirectly via a test harness; assert no DB mutations"
+      ],
+      "context": "Confirmed by reading scheduled_tasks.rs:396-461: the cleanup calls federation_inbox_nonce::delete_older_than(window_days_i64, conn) inline in a scheduler closure. delete_older_than is at crates/db_schema/src/source/governance/federation_inbox_nonce.rs:37. FederationInboxNonceInsertForm at line 30 has peer_instance: String + activity_id: String fields. delete_older_than deletes rows with seen_at < now()-window_days.",
+      "answer": "option-a: The guard test must call delete_older_than() directly (not via the scheduler) because the scheduler closure is not callable from test context. Test shape: (1) seed a FederationInboxNonceInsertForm row with seen_at = now()-30days via diesel INSERT; (2) set EnvVarGuard BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB=1; (3) call delete_older_than(1, &mut conn) directly — since the guard is checked OUTSIDE the function (in the closure body above the delete_older_than call), the test cannot test the guard via the function call alone; instead the test should mirror the guard check inline: if std::env::var(...)==\"1\" { skip assertion }; alternatively, the test tests the FUNCTION in isolation (seeded row is deleted when gate is not set; not deleted when gate is set AND we skip the call). RECOMMENDED: two tests — (a) gate=unset + call => row deleted; (b) gate=set + call => still call the function (guard is in the scheduler, not the function) but the test verifies the function deletes when called — then separately test the guard at integration level by asserting the scheduler path is not exercised. SIMPLEST viable test: one test that sets the guard and verifies no rows are deleted from federation_inbox_nonce (by directly querying the count) after a simulated scheduler tick interval. The plan §13 IMPLEMENT should describe this shape explicitly, citing federation_inbox_nonce.rs:30 for the insert form and :37 for delete_older_than.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
