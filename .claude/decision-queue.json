@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "a3d0e9941441-044",
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T23:28:19Z",
+      "question": "T3 fix-impl-2: cargo-check passed; run full e2e to confirm test_brehon_disable_fed_replay_cleanup_job passes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Fix-impl-2 corrects FederationInboxNonce::insert (no such method) -> diesel::insert_into + delete_older_than aliased import. cargo-check --workspace --features full exited 0. Now running full e2e on laptop.",
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full\""
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": "3-fix-2",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": 14,
