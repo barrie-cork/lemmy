@@ -123,3 +123,5 @@ migrations/.diesel_lock
 # DQ schema-v3 session-id cache (per-CC-session, gitignored per v1-dq-schema-r1)
 .claude/.dq-session-id
 .claude/memory/memory.db.pre-migration-*
+# pre-commit-session-guard session intent file (per-CC-session, gitignored)
+.claude/.staged-intent

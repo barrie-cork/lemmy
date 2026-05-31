@@ -40,3 +40,7 @@ and the structure aligned with exemplars listed in `handover.md`
 §"Canonical exemplars" — without a separate manual cross-check. Future
 sessions should treat such mid-session rule loads as confirmatory signals
 about action correctness, not interruptions.
+
+## Chars/token ratio (empirical, 2026-05-29)
+
+Measured on the brehon-fork always-load corpus via harness-audit: **3.3 chars/token**. Use this when estimating how many tokens a file consumes. Prior estimates used 2.4 (character-only heuristic) or 4.0 (GPT-era default) — both are inaccurate for this codebase's mix of markdown + rule prose.

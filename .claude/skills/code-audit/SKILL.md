@@ -60,6 +60,10 @@ Run `wc -l` for line counts, then the appropriate linter. Use the ruff variant d
 | Bash | `shellcheck --format json <files>` | | Per-file warning counts + codes |
 | TypeScript | `npx tsc --noEmit 2>&1` | | Type errors per file |
 | PHP | `find . -name "*.php" -exec php -l {} \;` | | Syntax errors |
+| Rust | `cargo clippy --workspace -- -D warnings 2>&1` | | Compiler errors + lint violations; bucket `critical` on compile error, `major` on clippy deny |
+
+> **Rust const-block caveat:** `longest-fn` metrics over-report for `const` blocks and macro expansions. Flag the finding as `medium` (not `critical`) when the longest function body is entirely inside a `const` block or macro.
+> **Rust deferral guidance:** if `cargo clippy` fails to compile (dependency issue, missing feature flag), record as `validate: blocked` rather than a finding — do not attempt to fix compilation as part of the audit.
 
 Collect: `{file, language, lines, linter_violations}` for every file.
 
