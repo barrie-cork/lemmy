@@ -3,6 +3,31 @@
   "pending": [],
   "resolved": [
     {
+      "id": "81ae24440317-004",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T17:37:00Z",
+      "question": "Run cargo-check on rt-r5-validate-cohort-b after Tasks 1+2+3+4",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 (rollup cron 846c59717) + Task 4 (admin endpoint aad577418) committed manually by advisor after workers stuck in D-state. Validated on rt-r5-validate-cohort-b (T1+T2+T3+T4 merged).",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "rt-r5-validate-cohort-b",
+      "phase_task": "3+4",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: exit 0 on rt-r5-validate-cohort-b. Tasks 1+2+3+4 all pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T17:40:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": "81ae24440317-002",
       "from": "impl",
       "kind": "validate-pending-laptop",
