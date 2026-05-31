@@ -115,6 +115,20 @@ impl Drop for ParticipationCronRunningGuard {
   }
 }
 
+// Concurrency guard for the weekly Brehon reputation-rollup cron tick
+// (PRD §5.5 — instance-wide rollup). Runs AFTER the participation cron
+// per PRD §5.2 cron ordering. Mirrors PARTICIPATION_CRON_RUNNING /
+// ParticipationCronRunningGuard above.
+static ROLLUP_CRON_RUNNING: AtomicBool = AtomicBool::new(false);
+
+struct RollupCronRunningGuard;
+
+impl Drop for RollupCronRunningGuard {
+  fn drop(&mut self) {
+    ROLLUP_CRON_RUNNING.store(false, Ordering::Release);
+  }
+}
+
 /// Schedules various cleanup tasks for lemmy in a background thread
 pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
   // https://github.com/mdsherry/clokwerk/issues/38
@@ -509,6 +523,50 @@ pub async fn setup(context: Data<LemmyContext>) -> LemmyResult<()> {
         lemmy_api::governance::participation_cron::run_dormancy_batch(&context)
           .await
           .inspect_err(|e| warn!("Failed to run participation dormancy batch: {e}"))
+          .ok();
+      }
+    });
+
+  // v1-RT-r5 reputation rollup cron (PRD §5.5 — instance-wide rollup).
+  // Runs AFTER the participation cron per PRD §5.2 cron ordering.
+  // Interval read from `job.rollup_interval_days` (default 7, minimum 1).
+  // Disabled in tests via BREHON_DISABLE_ROLLUP_JOB=1.
+  let context_rollup = context.reset_request_count();
+  let rollup_pool = &mut context.pool();
+  let raw_rollup_interval_days_i64: i64 = lemmy_api::governance::config::get_int(
+    &mut lemmy_api::governance::config::ConfigCache::new(),
+    rollup_pool,
+    lemmy_api::governance::config::Scope::Instance,
+    "job.rollup_interval_days",
+  )
+  .await
+  .unwrap_or(7);
+  let rollup_interval_days_i64 = raw_rollup_interval_days_i64.max(1);
+  if raw_rollup_interval_days_i64 < 1 {
+    warn!(
+      "rollup_cron: invalid rollup_interval_days={raw_rollup_interval_days_i64}; clamped to 1"
+    );
+  }
+  let rollup_interval_days: u32 = u32::try_from(rollup_interval_days_i64).unwrap_or(7);
+  scheduler
+    .every(CTimeUnits::days(rollup_interval_days))
+    .run(move || {
+      let context = context_rollup.reset_request_count();
+      async move {
+        if std::env::var("BREHON_DISABLE_ROLLUP_JOB").as_deref() == Ok("1") {
+          return;
+        }
+        if ROLLUP_CRON_RUNNING
+          .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+          .is_err()
+        {
+          warn!("rollup_cron: previous batch still running, skipping this tick");
+          return;
+        }
+        let _guard = RollupCronRunningGuard;
+        lemmy_api::governance::reputation_snapshot::run_rollup_batch(&context)
+          .await
+          .inspect_err(|e| warn!("rollup_cron: batch error: {e}"))
           .ok();
       }
     });
