@@ -1,6 +1,22 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T12:12:25Z",
+      "question": "bm-cut brief asks to commit runlog on governance-v0, but Junior worktree is isolated + bm-cut.md Phase 5 says commit on phase branch. Which is correct?",
+      "options": [
+        "commit on phase-v1-quality-r3b per bm-cut.md procedure",
+        "commit on governance-v0 per brief"
+      ],
+      "context": "Phase branch phase-v1-quality-r3b cut and pushed successfully. Runlog creation blocked by worktree isolation and conflicting brief vs procedure.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "id": "8b6f7907b575-001"
+    }
+  ],
   "resolved": [
     {
       "from": "planner",
