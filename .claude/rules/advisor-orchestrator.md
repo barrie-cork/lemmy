@@ -34,6 +34,9 @@ The slug becomes the Junior worktree branch name. Each task gets its own worktre
 
 ### 2.2 Brief shape
 
+**bm-task brief completeness gate (run before every bm-task brief commit):**
+`bash scripts/brehon/bm-brief-check.sh <brief-path>` — exits non-zero if §1/§2/§4/§5, HANDOVER trailer, `--repo barrie-cork/lemmy`, or `governance-v0` base are missing. Do NOT commit a bm-task brief that fails this check; fix the gap first. New from 2026-05-31.
+
 Four sections, in order:
 
 1. **Role + dispatch line** — `[role:planning|impl-task|bm-task|ci-watcher] <one-line summary>`. Must match the format the matching subagent reads.
@@ -114,6 +117,17 @@ Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on
 - **bm-merge complete** → author retro → gate 6 (retro sign-off) → `/brehon-phase-transition`.
 
 Advisor never auto-merges or auto-resolves ADR-affecting DQ.
+
+**BM post-dispatch 3-signal check (mandatory — fires within 1 poll tick after every BM `done`):**
+Per `pattern_bm_false_success_advisor_post_condition_catch.md` — BM Juniors report `result:success` on false completions (5× confirmed). Call the tool directly; do NOT spawn a subagent. Catch-fire if any check fails.
+
+| Verb | Post-condition (must hold) | Catch-fire signal |
+|---|---|---|
+| `bm-cut` | `git ls-remote origin refs/heads/phase-<phase>` returns non-empty | Branch absent or push failed |
+| `bm-pr` | `gh pr view <N> --repo barrie-cork/lemmy --json state` = `OPEN`; base = `governance-v0`; not draft | PR absent, draft, or wrong base |
+| `bm-poll-cr` | findings YAML on target branch; all `bucket` fields blank (`""`); `last_poll_at` updated | YAML absent, stale, or pre-bucketed |
+| `bm-triage` | all findings carry one of 5 canonical buckets (no placeholders); counters regenerated | Any `"REVIEW_LATER"` or missing bucket |
+| `bm-merge` | `gh pr view <N> --repo barrie-cork/lemmy --json state,mergedAt` = MERGED + non-null `mergedAt`; `chore(bm): merge` commit on `governance-v0` | PR open, runlog commit absent |
 
 ### 3.2 Mandatory user gates
 
@@ -264,6 +278,7 @@ Independent of §6.1/§6.2, two invariants for all `Agent` tool dispatch:
 
 - **Brief like a smart colleague who just walked into the room.** Sub-agents see no parent conversation. Include: what you're trying to accomplish, what you've ruled out, the surrounding context that lets the sub-agent make judgment calls. Terse command-style prompts produce shallow generic work.
 - **Trust but verify.** Sub-agent reports describe what they *intended* to do, not necessarily what they did. For any edit to a tracked file, verify via §6.2 grep. For any code change, run the relevant validation (`cargo check`, the test, the lint) before assuming the change is sound.
+- **Single-lookup anti-pattern (never do this):** For any single MCP read (`mcp__junior-brehon__show_task`, `list_tasks`, `gh pr view`, `git ls-remote`), call the tool **directly from the advisor session**. NEVER spawn a `bm-task` or general-purpose `Agent` for a single-lookup read — `bm-task` has no MCP tools in `-p` mode; a general-purpose Agent costs 10–60k tokens for a 2-line result. This session confirmed: spawning bm-task for `show_task` burned 59k tokens and 30s to return "I cannot complete this request." (2026-05-31).
 
 ## See also
 

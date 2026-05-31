@@ -63,8 +63,8 @@ Low complexity, low risk, clean execution — well within the advisor-session en
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] **Harvest plan with embedded verification greps**: promote format to `.claude/PRPs/templates/retro-harvest-plan.template.md` — 1× this session + 1× Tier-1 batch (threshold met)
-- [ ] **Add `feedback_outcome_not_cause_check_retro_bypass.md` to MEMORY.md index** — trivial two-line edit, worth doing inline
+- [x] **Harvest plan with embedded verification greps**: promote format to `.claude/PRPs/templates/retro-harvest-plan.template.md` — 1× this session + 1× Tier-1 batch (threshold met) — **DONE `031504199`**
+- [x] **Add `feedback_outcome_not_cause_check_retro_bypass.md` to MEMORY.md index** — trivial two-line edit, worth doing inline — **DONE during retro step (MEMORY.md line 70)**
 
 ---
 

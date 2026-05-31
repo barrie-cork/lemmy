@@ -2186,3 +2186,9 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **YAML:** .claude/PRPs/reviews/pr-169-findings.yaml
 - **walkthrough_summary:** "Estimated effort: 2 (Simple), ~8 min. 2 files reviewed (e2e.rs, decision-queue.json). Zero actionable findings. 4 checks passed (Title, Docstring Coverage, Linked Issues, Out of Scope). 1 warning: Description check — PR body missing template sections. Possibly related issues: #156, #159; related PR: #168."
 - **Notes:** Zero inline/review-level CR findings. Single pre-merge warning (cr-1, low severity) from Description check — PR body does not follow repo template. All code changes (EnvVarGuard C4 sweep) were accepted without comment. Recommendation is approve since no critical/major open findings.
+
+## advisor: roadmap-next cut v1-RT-r5 — 2026-05-31T12:45Z
+- **branch:** phase-v1-RT-r5 (off governance-v0 @ 5f0bd4b48)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r5
+- **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse hook ✓
+- **roadmap:** flipped v1-RT-r5 unstarted → in_flight
