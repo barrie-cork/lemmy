@@ -1,25 +1,40 @@
-# Trial runbook: MiniMax M2.7 vs Sonnet 4.6 on impl-task — fire at v1-RT-r4
+# Trial runbook: MiniMax M2.7 vs Sonnet 4.6 on impl-task — ARMED, fires on next qualifying phase
 
 > **Not a Junior dispatch brief.** This is an advisor-session runbook for an A/B
 > trial, not a `[role:*]` task. It tells the advisor how to run a 5-task
-> MiniMax-M2.7-vs-Sonnet-4.6 bake-off on throwaway branches during v1-RT-r4,
-> measure it, and decide whether to switch the impl-task role to MiniMax.
+> MiniMax-M2.7-vs-Sonnet-4.6 bake-off on throwaway branches, measure it, and
+> decide whether to switch the impl-task role to MiniMax.
 > Canonical-schema reference: there is no prior trial-runbook sibling; shape
 > borrows §2/§3/§4 ordering from `.claude/PRPs/briefs/v1-RT-r3-planning-1.md`.
 
-## 0. Status (2026-05-29)
+## 0. Status (2026-05-31 — ARMED, rolling trigger)
 
-**READY TO FIRE — gated only on v1-RT-r4 opening + task designation.**
+**ARMED — fires automatically on the next qualifying impl-task dispatch (rolling trigger, 2026-05-31).**
+
+The trial no longer targets a single named phase. Instead it fires on the **first phase that has ≥5 qualifying impl-tasks** (§0.1 below). The advisor applies the trial criteria at brief-authorship time for every `[role:impl-task]` dispatch going forward; e2e tasks and judgment-heavy tasks self-exclude.
+
+### 0.1 Qualifying task criteria (advisor checks at brief-authorship time)
+
+A task qualifies for a MiniMax arm iff ALL of:
+1. `[role:impl-task]` dispatch (not planning, bm, ci-watcher)
+2. NOT an e2e task — brief slug does NOT contain `e2e` and the task's primary file is NOT `crates/server/tests/e2e.rs`
+3. MIRROR-ref-heavy — plan §13 cites a specific `MIRROR:` line range in an existing file
+4. ≤2 files modified (single/two-file handler shape)
+5. Cargo-gated — plan task DoD names `cargo-check` or `cargo-clippy` as the validate step
+
+When ≥5 qualifying tasks accumulate in a phase, run both arms. Fewer than 5 → accrue to the next phase (do not run a partial trial; insufficient n).
+
+### 0.2 Precondition checklist (all green as of 2026-05-31)
 
 | Precondition | State |
 |---|---|
-| Daemon `envOverrides` plumbing (`executor.ts:313`) | ✅ present; `Object.assign(childEnv, overrides)` runs AFTER `--model` role injection → envOverrides win (verified 2026-05-29) |
-| `junior task add --env-override KEY=VALUE` | ✅ CLI v1.0.2 exposes it (repeatable) |
-| `scripts/brehon/queue-minimax-task.sh` | ✅ parameterized `MINIMAX_MODEL` (default `MiniMax-M2.7`), reads key from `.env`, refuses non-`ab-test/*` branches, redacts key |
-| MiniMax Anthropic-compat endpoint (`https://api.minimax.io/anthropic/v1/messages`) | ✅ live; returns Anthropic Messages shape incl. `thinking` blocks + `cache_read_input_tokens` |
-| `MINIMAX_API_KEY` in `.env` | ✅ present + **funded** (HTTP 200, 2026-05-29; the original key was rotated after a transcript-exposure incident) |
-| Target sub-phase | **v1-RT-r4** (sponsor-allowlist handlers) — user choice 2026-05-29 |
-| 5 trial-task designation | ✅ **DESIGNATED 2026-05-29** — Tasks 1, 2, 3, 4, 5 (see §3 below) |
+| Daemon `envOverrides` plumbing (`executor.ts:313`) | ✅ present; verified 2026-05-29 |
+| `junior task add --env-override KEY=VALUE` | ✅ CLI v1.0.2 |
+| `scripts/brehon/queue-minimax-task.sh` | ✅ ready; `MINIMAX_MODEL` default `MiniMax-M2.7` |
+| MiniMax endpoint (`https://api.minimax.io/anthropic/v1/messages`) | ✅ live; HTTP 200 verified 2026-05-31 |
+| `MINIMAX_API_KEY` in `.env` | ✅ funded (HTTP 200, 2026-05-31) |
+| Target sub-phase | **rolling** — first phase with ≥5 qualifying tasks |
+| Trial history | v1-RT-r4 NOT RUN (serial dispatch forced); v1-RT-r5 NOT RUN (only 1 qualifying task — Task 5 is e2e, excluded) |
 
 **Decisive new evidence (2026-05-29) that this is worth running:** first-party
 benchmark chart at `.claude/PRPs/reports/image.png` shows M2.7 lands at
@@ -118,26 +133,23 @@ Record into a results file `.claude/PRPs/reports/minimax-m27-trial-results.md`
 - Mixed/ambiguous at n=5 → extend to n=8-10 before deciding, OR stay Sonnet
   (conservative default). Do NOT switch on a coin-flip.
 
-## 3. Task designation (DONE 2026-05-29)
+## 3. Task designation (rolling — applied at plan-review time)
 
-v1-RT-r4 plan shipped at `d6f441713`. Designated tasks (all MIRROR-ref-heavy,
-single/two-file, cargo-gated — confirmed against plan §13):
+At plan approval for any impl sub-phase, walk the §13 task list and mark each task against §0.1 criteria. Record the designation here (append a row per phase):
 
-| Task | File(s) | MIRROR ref | Why ideal |
-|---|---|---|---|
-| Task 1 | `sponsor_allowlist.rs` (1 file) | `federation_peer.rs:55-94` | inline db-helpers, exact shape |
-| Task 2 | `api_common/governance.rs` (1 file) | `governance.rs:444/465` | DTO derive stack, exact copy |
-| Task 3 | `create_endorsement.rs` (1 file) | `create_endorsement.rs:78-192` | enum/parse/label/3 arms |
-| Task 4 | `admin_sponsor_allowlist.rs` + `mod.rs` (2 files) | `admin_config.rs:383-558` | handler step ordering mirror |
-| Task 5 | `routes/lib.rs` (1 file) | admin scope `:493-507` | route registration |
+| Phase | Task | File(s) | MIRROR ref | Qualifies? | Notes |
+|---|---|---|---|---|---|
+| v1-RT-r4 | Tasks 1–5 | see original designation 2026-05-29 | various | ✅ all 5 | NOT RUN — serial dispatch forced |
+| v1-RT-r5 | Task 5 | `e2e.rs` | — | ❌ | e2e excluded |
 
-Task 6 excluded (advisor-executed, not a Junior dispatch).
-Task 7 excluded (18k-line e2e.rs — anchor drift makes it higher-variance for a model trial).
+**Template row for the next phase (fill in at plan approval):**
+`| <phase> | Task N | <file(s)> | <mirror ref> | ✅/❌ | <one-line reason if ❌> |`
 
-Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (created at trial start).
+When a phase accumulates ≥5 ✅ rows → proceed to §2.3 dispatch sequence.
 
-**Do NOT let the trial gate v1-RT-r4 shipping.** Trial runs ALONGSIDE the real
-phase on throwaway `ab-test/*` branches; real tasks dispatch normally.
+Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (pre-exists; append a new `##` section per phase run).
+
+**Do NOT let the trial gate any phase's shipping.** Trial runs ALONGSIDE the real phase on throwaway `ab-test/*` branches; real tasks dispatch normally.
 
 ## 4. If the trial passes — permanent cutover mechanics (NOT part of the trial)
 
