@@ -22,13 +22,15 @@ Add exactly **4 `#[tokio::test(flavor = "multi_thread")]` tests** inside that mo
 
 **Do NOT touch any other file.** All runtime is in Tasks 1–4.
 
-**Commit once** after all 4 tests pass the `--no-run` compile gate: single
-commit with subject `feat(e2e): Task 5 — reputation rollup e2e tests (v1-RT-r5)`.
+**Commit once** after writing all 4 tests (no compile gate on daemon — see below):
+single commit with subject `feat(e2e): Task 5 — reputation rollup e2e tests (v1-RT-r5)`.
 
 **Write `validate-pending-laptop-e2e`** DQ entry with
-`commands: ["./scripts/brehon/cargo-test.sh --workspace --features full --test e2e"]`
-plus a `--no-run` compile gate first; commit + push; then **stop**.
-Do NOT run cargo-test yourself — validation is delegated to the laptop advisor.
+`commands: ["./scripts/brehon/cargo-test.sh --no-run --workspace --features full --test e2e", "./scripts/brehon/cargo-test.sh --workspace --features full --test e2e"]`
+commit + push; then **stop immediately**.
+**DO NOT run any cargo command yourself** — no `--no-run`, no compile check, nothing.
+All cargo runs (compile gate + e2e) are delegated to the laptop advisor. Running cargo
+on the daemon risks OOM kill (16 GB box, swap exhausted by full workspace builds).
 
 ## 3. Required reading
 
@@ -285,7 +287,7 @@ After committing the tests, write a DQ entry:
   "phase_task": "5",
   "branch": "phase-v1-RT-r5",
   "commands": [
-    "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e",
+    "./scripts/brehon/cargo-test.sh --no-run --workspace --features full --test e2e",
     "./scripts/brehon/cargo-test.sh --workspace --features full --test e2e"
   ]
 }
@@ -299,7 +301,7 @@ append safely. Commit + push.
 
 - **Case A error shape everywhere:** `LemmyResult<()>` + bare `?`, no
   `Box<dyn Error>`.
-- **Do NOT run `cargo-test.sh` yourself** — write the DQ entry, commit, push, STOP.
+- **Do NOT run ANY cargo command** — no `--no-run`, no compile check, no test. Write the DQ entry, commit, push, STOP. Cargo runs on the laptop advisor only (OOM risk on 16 GB daemon).
 - **No edits outside `crates/server/tests/e2e.rs`** — all impl is in Tasks 1–4.
 - **Unique instance hostnames** per test to avoid cross-test DB collision.
 - **EnvVarGuard::set("BREHON_DISABLE_ROLLUP_JOB", "1")** in Story 1 (prevent
