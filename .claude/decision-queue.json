@@ -1,6 +1,22 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T17:07:30Z",
+      "question": "bm-cut brief §4 requires runlog write to governance-v0, but worktree-guard blocks writes outside worktree and bm-cut.md Phase 5 directs commit on phase branch. Which path: (a) commit on phase-v1-quality-r3c per bm-cut.md script, or (b) advisor relocate runlog to governance-v0 post-merge?",
+      "options": [
+        "commit runlog on phase branch (bm-cut.md Phase 5)",
+        "defer runlog to post-merge (advisor relocates)"
+      ],
+      "context": "bm-cut complete: phase-v1-quality-r3c cut @ 7c4fc33ed, verified on origin. Runlog content prepared; cannot be written due to worktree isolation. Brief and script conflict on commit target (governance-v0 vs phase-v1-quality-r3c).",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "id": "8aca794fb044-002"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
