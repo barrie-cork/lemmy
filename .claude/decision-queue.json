@@ -1,47 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "bm",
-      "kind": "blocker",
-      "timestamp": "2026-05-31T17:07:30Z",
-      "question": "bm-cut brief §4 requires runlog write to governance-v0, but worktree-guard blocks writes outside worktree and bm-cut.md Phase 5 directs commit on phase branch. Which path: (a) commit on phase-v1-quality-r3c per bm-cut.md script, or (b) advisor relocate runlog to governance-v0 post-merge?",
-      "options": [
-        "commit runlog on phase branch (bm-cut.md Phase 5)",
-        "defer runlog to post-merge (advisor relocates)"
-      ],
-      "context": "bm-cut complete: phase-v1-quality-r3c cut @ 7c4fc33ed, verified on origin. Runlog content prepared; cannot be written due to worktree isolation. Brief and script conflict on commit target (governance-v0 vs phase-v1-quality-r3c).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "id": "8aca794fb044-002"
-    },
-    {
-      "id": "70ce7590e3ed-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T17:31:53Z",
-      "question": "Validate T1 .coderabbit.yaml edit: confirm EXACTLY 11 is removed",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 committed 12ae96be2; .coderabbit.yaml edited to remove EXACTLY 11 count assertion and replace with v1-aware OQ-020 caveat. grep -c validation shows 0 matches locally.",
-      "commands": [
-        "grep -c 'EXACTLY 11' .coderabbit.yaml"
-      ],
-      "branch": "phase-v1-quality-r3c",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1452,6 +1411,46 @@
       "answer": "option-a: The guard test must call delete_older_than() directly (not via the scheduler) because the scheduler closure is not callable from test context. Test shape: (1) seed a FederationInboxNonceInsertForm row with seen_at = now()-30days via diesel INSERT; (2) set EnvVarGuard BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB=1; (3) call delete_older_than(1, &mut conn) directly — since the guard is checked OUTSIDE the function (in the closure body above the delete_older_than call), the test cannot test the guard via the function call alone; instead the test should mirror the guard check inline: if std::env::var(...)==\"1\" { skip assertion }; alternatively, the test tests the FUNCTION in isolation (seeded row is deleted when gate is not set; not deleted when gate is set AND we skip the call). RECOMMENDED: two tests — (a) gate=unset + call => row deleted; (b) gate=set + call => still call the function (guard is in the scheduler, not the function) but the test verifies the function deletes when called — then separately test the guard at integration level by asserting the scheduler path is not exercised. SIMPLEST viable test: one test that sets the guard and verifies no rows are deleted from federation_inbox_nonce (by directly querying the count) after a simulated scheduler tick interval. The plan §13 IMPLEMENT should describe this shape explicitly, citing federation_inbox_nonce.rs:30 for the insert form and :37 for delete_older_than.",
       "answered_by": "advisor",
       "resolved_at": "2026-05-31T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T17:07:30Z",
+      "question": "bm-cut brief §4 requires runlog write to governance-v0, but worktree-guard blocks writes outside worktree and bm-cut.md Phase 5 directs commit on phase branch. Which path: (a) commit on phase-v1-quality-r3c per bm-cut.md script, or (b) advisor relocate runlog to governance-v0 post-merge?",
+      "options": [
+        "commit runlog on phase branch (bm-cut.md Phase 5)",
+        "defer runlog to post-merge (advisor relocates)"
+      ],
+      "context": "bm-cut complete: phase-v1-quality-r3c cut @ 7c4fc33ed, verified on origin. Runlog content prepared; cannot be written due to worktree isolation. Brief and script conflict on commit target (governance-v0 vs phase-v1-quality-r3c).",
+      "answer": "Option (b): BM wrote runlog to governance-v0 directly (commit 2de6ed422 on daemon). Runlog target conflict is moot — runlog exists on governance-v0, which is the advisor-preferred location. Closing.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T17:57:09Z",
+      "id": "8aca794fb044-002"
+    },
+    {
+      "id": "70ce7590e3ed-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T17:31:53Z",
+      "question": "Validate T1 .coderabbit.yaml edit: confirm EXACTLY 11 is removed",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 committed 12ae96be2; .coderabbit.yaml edited to remove EXACTLY 11 count assertion and replace with v1-aware OQ-020 caveat. grep -c validation shows 0 matches locally.",
+      "commands": [
+        "grep -c 'EXACTLY 11' .coderabbit.yaml"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — advisor verified grep -c EXACTLY 11 .coderabbit.yaml = 0 on origin/phase-v1-quality-r3c (session 2026-05-31). T1 post-condition confirmed clean. Worker commit 12ae96be2 content identical to advisor-direct 35008c74f.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T17:57:09Z",
       "approved_by": null,
       "approved_at": null
     }
