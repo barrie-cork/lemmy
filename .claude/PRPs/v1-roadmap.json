@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-29T20:45:00Z",
+  "last_updated_at": "2026-05-31T01:10:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -260,16 +260,15 @@
           "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
         "v1-RT-r4": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "admin_sponsor_allowlist.rs add/remove handlers; fires ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED",
-          "registry_evidence": "2 RT-r1 pre-landed consts name v1-RT-r4 as their fire site",
-          "plan": null,
-          "blocker": "no plan written yet — /roadmap-next cut the branch + lane worktree; planning is the next step",
+          "pr": 164,
+          "merge_commit": "04a5e98fb",
+          "merged_at": "2026-05-30",
+          "done_at": "2026-05-30",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r4",
-          "in_flight_since": "2026-05-29",
-          "phase_branch": "phase-v1-RT-r4",
           "lane_mode": "A",
-          "note": "Cut via /roadmap-next 2026-05-29 off governance-v0 @99eb3da46 (branch tip 3b19eeddec). ARMED: MiniMax M2.7-vs-Sonnet impl-task A/B trial fires this phase (user confirmed at cut gate) — designate 5 MIRROR-ref §13 tasks during planning per .claude/PRPs/briefs/minimax-m27-trial-1.md; cutover is impl-task-only as its own follow-up sub-phase. Cross-lane note: a concurrent quality-r2 session shares the canonical .git/; during this cut a quality-r2 Task-0 brief commit (e5cda780b) landed on the local RT-r4 tip and was rescued to origin/phase-v1-quality-r2 (blob fa3547450) then RT-r4 reset to origin — lossless."
+          "note": "Shipped 2026-05-30. Teardown lane brehon-fork-rt-r4 pending."
         },
         "v1-RT-r5": {
           "status": "unstarted",
@@ -449,24 +448,38 @@
           ]
         },
         "v1-quality-r2": {
-          "status": "in_flight",
-          "scope": "Remaining 3 of 5 PR #155 carry-forwards NOT shipped in r2a: #156 (fixtures-module --test-threads=1 doc-comment audit, 13 of 14 modules), #159 (boot_context env-leak via early-? -> EnvVarGuard), #160 (14 LEMMY_DATABASE_URL setter sites across 13 fixtures modules -> EnvVarGuard). Original full-scope v1-quality-r2 plan (4-issue bundle) is on trunk as historical context; r2a narrowed it to 2 at gate-1.",
+          "status": "done",
+          "scope": "Remaining 3 of 5 PR #155 carry-forwards: #156 (fixtures --test-threads=1 doc audit), #159 (boot_context EnvVarGuard), #160 (14 LEMMY_DATABASE_URL setter sites EnvVarGuard). Shipped 2026-05-30.",
+          "pr": 168,
+          "merge_commit": "f98ee77a6",
+          "merged_at": "2026-05-30",
+          "plan": ".claude/PRPs/plans/v1-quality-r2.plan.md",
+          "retro": ".claude/PRPs/reports/v1-quality-r2-retro.md",
+          "done_at": "2026-05-30"
+        },
+        "v1-quality-r3": {
+          "status": "done",
+          "scope": "EnvVarGuard C4 sweep — 23 raw set_var sites in e2e.rs: 2 bootstrap SAFETY comments (option-b) + 10 test-body wraps. Closes carry-forward from qr2 retro.",
+          "pr": 169,
+          "merge_commit": "a23ac216f",
+          "merged_at": "2026-05-31T01:03:26Z",
+          "plan": ".claude/PRPs/plans/v1-quality-r3.plan.md",
+          "retro": ".claude/PRPs/reports/v1-quality-r3-retro.md",
+          "verify": ".claude/PRPs/reports/v1-quality-r3-verify.md",
+          "done_at": "2026-05-31",
+          "note": "adr-compliance runner failure at merge; unblocked via owner-acknowledge + gh pr merge --admin. Local scan exit 0."
+        },
+        "v1-quality-r3b": {
+          "status": "unstarted",
+          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Possible: BREHON_DISABLE_* sites sweep.",
           "pr": null,
-          "merge_commit": null,
-          "plan_historical": ".claude/PRPs/plans/v1-quality-r2.plan.md (original 4-issue full-scope; superseded by r2a narrowing — re-scope to remaining 3 before dispatch)",
-          "open_issues": [
-            156,
-            159,
-            160
-          ],
-          "note": "ACTIVE 2026-05-29 (Mode TBD at bm-cut). Scope = the 3 remaining PR#155 carry-forwards NOT shipped in r2a: #156 (fixtures --test-threads=1 doc audit, 14 modules), #159 (boot_context EnvVarGuard), #160 (LEMMY_DATABASE_URL setter sites EnvVarGuard). r2a (PR #161) shipped #157 + deferred #158 off the same original bundle (user gate-1 chose split r2a=T1+T2 / r2=T3+T4+T5). Plan .claude/PRPs/plans/v1-quality-r2.plan.md re-scoped in place to T0/T3/T4/T5/T6 (T1/T2 marked SHIPPED-in-r2a). No phase-v1-quality-r2 branch cut yet; bm-cut pending post-clarify.",
-          "activated_at": "2026-05-29"
+          "plan": null
         }
       },
       "known_followups": [
         "quality-r1 worktree at C:/Users/barri/Developer/brehon-fork-quality-r1 is stale (branch merged); user to git worktree remove when ready"
       ],
-      "evidence_summary": "r1 (PR #145) shipped. r2a (PR #161, 2 of 5 PR#155 carry-forwards: #157 closed + #158 deferred) shipped 2026-05-29. Remaining 3 carry-forwards (#156/#159/#160 — fixtures doc audit + 2 EnvVarGuard retrofits) tracked as v1-quality-r2, unstarted."
+      "evidence_summary": "r1 (PR #145) + r2a (PR #161) + r2 (PR #168, 2026-05-30) + r3 (PR #169, 2026-05-31, EnvVarGuard C4 sweep 23 sites) all shipped. Next: v1-quality-r3b (Issue #167 LemmyContext::create DB URL from context)."
     },
     "deps": {
       "name": "Deps (Cargo dependency bumps)",
@@ -566,9 +579,9 @@
       {
         "lane": "quality (Quality / QA)",
         "items": [
-          "v1-quality-r2 (unstarted — remaining 3 of 5 PR#155 carry-forwards: #156, #159, #160)"
+          "v1-quality-r3b (unstarted — Issue #167: LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional)"
         ],
-        "rationale": "v1-quality-r2a (PR #161) shipped 2026-05-29: closed #157 + deferred #158. The other 3 carry-forwards (#156 fixtures doc audit, #159+#160 EnvVarGuard retrofits) remain open + unstarted under v1-quality-r2 (re-scoped from the original 4-issue full-scope plan)."
+        "rationale": "v1-quality-r2 (PR #168) shipped 2026-05-30. v1-quality-r3 (PR #169) shipped 2026-05-31 (EnvVarGuard C4 sweep, 23 sites). Next: #167 fix (LemmyContext::create) as v1-quality-r3b."
       }
     ],
     "in_flight_outside_roadmap": [],
