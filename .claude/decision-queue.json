@@ -5004,6 +5004,23 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-31T12:20:00Z",
       "id": "8b6f7907b575-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-05-31T14:45:00Z",
+      "question": "RT-r5 rollup computation: should reputation_rollup_cron reuse recompute_snapshot(person_id, None) or use a dedicated weighted-average-of-per-community-snapshots helper?",
+      "options": [
+        "reuse-recompute-snapshot-none",
+        "dedicated-rollup-aggregation-helper"
+      ],
+      "context": "Brief rt-r5-planning-1.md §5 flags this as the planner's key open question. Verified against code 2026-05-31: recompute_snapshot(conn, person_id, None, cache) at reputation_snapshot.rs:222 SUMS EVENTS via load_live_events (rs.rs:682), which filters reputation_event.community_id IS NULL — i.e. instance-scoped events only (founder seeds + instance-wide deltas). It does NOT aggregate per-community snapshots. PRD §5.5 specifies rollup.dimension = sum(per_community_snapshot.dimension * weight) / sum(weight) — a weighted AVERAGE of per-community SNAPSHOT rows, categorically different from an instance-scoped event-sum.",
+      "answer": "dedicated-rollup-aggregation-helper. The rollup cron MUST NOT reuse recompute_snapshot(person_id, None) — that function event-sums instance-scoped reputation_event rows (community_id IS NULL), which is NOT the PRD §5.5 rollup (weighted average of per-community snapshot dimension values). The plan must introduce a dedicated aggregation path that: (1) loads all per-community snapshots for a person (reputation_snapshot WHERE person_id=$1 AND community_id IS NOT NULL); (2) for each of the 4 dimensions, computes sum(snapshot.dimension * weight) / sum(weight) with weight=1 per community (job.rollup_equal_weights=true default); (3) excludes banned-from communities from the denominator per OQ-V1-02 (active sanction with target_community_id set, scope Community) using the load_person_context sanction-detection pattern at reputation_snapshot.rs:736-768 as the canonical filter shape; (4) writes the result via upsert_snapshot (reputation_snapshot.rs:770) with community_id=None — reusing upsert_snapshot is correct (the WRITE path is shared); only the COMPUTE path must be rollup-specific. The capability-flip detection (detect_capability_changes + ENTRY_KIND_CAPABILITY_CHANGED with snapshot_community_id:null) and the ENTRY_KIND_ROLLUP_RECOMPUTED emit fire on the rollup row. Source: PRD §5.5 (weighted-average spec) cross-checked against reputation_snapshot.rs:222/682/736/770 (recompute_snapshot event-sum semantics). Planner: do NOT pass community_id=None to recompute_snapshot expecting a rollup; author a distinct helper (e.g. compute_rollup_snapshot or upsert_rollup_snapshot) that does the weighted average then delegates to upsert_snapshot for the write.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T14:45:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "81ae24440317-001"
     }
   ]
 }
