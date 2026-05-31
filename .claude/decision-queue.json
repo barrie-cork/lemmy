@@ -1355,6 +1355,22 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-31T12:20:00Z",
       "id": "8b6f7907b575-001"
+    },
+    {
+      "id": "a3d0e9941441-042",
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-05-31T14:02:12Z",
+      "question": "Plan v1-quality-r3b §16a Story 1 says EnvVarGuard count is exactly 1; correct value is 14.",
+      "options": [
+        "correct §16a wording to say 14 not 1"
+      ],
+      "context": "Brief §6 validation gate correctly says EXPECT: 14 (17 − 3 band-aids). The 13 other LEMMY_DATABASE_URL guards are legitimate test-body guards for non-audit-stream tests. Story 1 passes; this is a spec-prose inaccuracy only. Fix in plan file before archiving.",
+      "answer": "File as advisory lesson; planner to correct §16a wording in a follow-up chore commit.",
+      "answered_by": "advisor-self-resolved",
+      "resolved_at": "2026-05-31T14:02:12Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
