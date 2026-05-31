@@ -4226,6 +4226,18 @@ async fn all_mvp_endpoints_return_non_404() -> lemmy_utils::error::LemmyResult<(
       "",
       &[200, 400, 401],
     ),
+    (
+      "POST",
+      "/api/v4/governance/admin/sponsor-allowlist/add",
+      r#"{"actor_id":1}"#,
+      &[200, 400, 401, 403, 422],
+    ),
+    (
+      "POST",
+      "/api/v4/governance/admin/sponsor-allowlist/remove",
+      r#"{"actor_id":1}"#,
+      &[200, 400, 401, 403, 422],
+    ),
   ];
 
   for (method, path, body, allowed) in endpoints {
