@@ -36,6 +36,41 @@ is likely populated by backfill script runs against a downloaded snapshot, or hi
 writes from before the HTTP topology migration. It is NOT a live sync of the HTTP server.
 Writes from Junior workers (via HTTP MCP) do NOT appear in it.
 
+## CORRECTION (2026-05-31 forensic re-investigation) — it IS a lagged replica
+
+The "NOT a live sync" claim above was **incomplete**. Direct forensics (SSH probes,
+`feedback_verify_automated_reviewer_claims_against_compiler.md` discipline) found the
+daemon-local sqlite carries rows with the **same IDs as the laptop HTTP-server canonical
+DB** (e.g. ID 683 "PMD validation probe" is a row written THIS session via the HTTP MCP;
+18 `junior/*`-source retro rows present, IDs 680–689 matching the laptop sequence). It is
+a **downstream replica with sync latency**, not an independent store.
+
+The actual writers, confirmed:
+- **`pmd-snapshot.timer`** (systemd, hourly) — `sqlite3 .backup` copies the canonical DB
+  down to the daemon (+ `/srv/backups/pmd/brehon-fork/{hourly,daily,weekly}/`). This is
+  what populates the daemon-local file. **READ-only w.r.t. the source.**
+- **`memory-backfill.timer`** (systemd, every 5 min) — fills `memory_vectors` (embeddings)
+  for the daemon-local file via Ollama. Writes vectors only, never `memories` rows.
+  Currently a no-op (all rows vectorized).
+- **No independent `memory_write` writer exists** — `ps`, systemd env, and the daemon
+  `.mcp.json` (HTTP-only) all confirm nothing inserts `memories` rows locally.
+
+**Why Probe 6 saw the row "absent immediately":** the hourly snapshot simply had not run
+in the seconds between the HTTP write and the probe's local read. The absence was
+**snapshot latency**, not permanent divergence. A re-check after the next snapshot would
+have found the row. The Option-A HTTP-first fix is still correct (it eliminates the
+latency window entirely), but the old sqlite-only hook was **lagged, not broken** — it
+finds retros once the snapshot syncs them down, and it fails *open* during the lag window
+(3× retry then allow), so no work is lost.
+
+**Deployment status (2026-05-31):** the Option-A fix (`d5df9df4b`) is on `governance-v0`
+but the daemon checkout sits on `phase-v1-quality-r3` (a lane branch cut before the fix),
+so the daemon's *running* hook is still the sqlite3-only version. This is **normal
+multi-lane lag, not a deploy failure** — the fix rides onto the daemon's branch at the
+lane's next trunk-forward merge (bm-merge cadence). Force-deploying out-of-band is NOT
+warranted for a self-healing, fail-open latency issue. Per the daemon-local-first
+finalize discipline (`feedback_finalize_merge_where_to_look_first.md`).
+
 ## The fix (Option A -- HTTP MCP session protocol)
 
 retro-check.sh now queries the HTTP server via the MCP session protocol when .mcp.json
