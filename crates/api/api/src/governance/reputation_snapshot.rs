@@ -131,6 +131,14 @@ pub struct SnapshotBatchOutcome {
   pub chunk_size: usize,
 }
 
+/// Summary of a single `run_rollup_batch` tick.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RollupBatchOutcome {
+  pub candidates: usize,
+  pub rows_written: usize,
+  pub skipped_empty: usize,
+}
+
 // -- Core calculator --------------------------------------------------------
 
 /// Compare old vs new snapshot and return the set of boolean transitions
@@ -525,6 +533,259 @@ pub async fn run_snapshot_batch(context: &LemmyContext) -> LemmyResult<SnapshotB
     total = outcome.pairs_processed,
     chunks = outcome.chunks,
     expired = outcome.expired_founders,
+  );
+  Ok(outcome)
+}
+
+// -- Rollup batch -----------------------------------------------------------
+
+/// Return distinct `PersonId` values that have at least one per-community
+/// snapshot row, ordered by `person_id ASC` for deterministic chunking.
+async fn load_rollup_candidates(
+  pool: &mut lemmy_diesel_utils::connection::DbPool<'_>,
+) -> LemmyResult<Vec<PersonId>> {
+  let conn = &mut get_conn(pool).await?;
+  let rows: Vec<PersonId> = reputation_snapshot::table
+    .filter(reputation_snapshot::community_id.is_not_null())
+    .select(reputation_snapshot::person_id)
+    .distinct()
+    .order_by(reputation_snapshot::person_id.asc())
+    .load::<PersonId>(conn)
+    .await?;
+  Ok(rows)
+}
+
+/// Compute the instance-wide rollup snapshot for one person.
+///
+/// Equal-weighted integer mean of non-banned per-community snapshot
+/// dimensions, written as a `reputation_snapshot` row with
+/// `community_id IS NULL`. Returns `None` and writes nothing when the
+/// contributing denominator is 0 (all communities banned or none exist).
+pub async fn compute_rollup_snapshot(
+  conn: &mut AsyncPgConnection,
+  person_id: PersonId,
+  cache: &mut ConfigCache,
+) -> LemmyResult<Option<ReputationSnapshot>> {
+  let now = Utc::now();
+
+  // 1. Load all per-community snapshots for this person.
+  let per_community: Vec<ReputationSnapshot> = reputation_snapshot::table
+    .filter(reputation_snapshot::person_id.eq(person_id))
+    .filter(reputation_snapshot::community_id.is_not_null())
+    .load::<ReputationSnapshot>(conn)
+    .await?;
+
+  if per_community.is_empty() {
+    return Ok(None);
+  }
+
+  // 2. Load banned community_ids: communities where the person has an active
+  //    community-scoped sanction. OQ-V1-02: excluded from numerator AND
+  //    denominator AND contributing count.
+  let banned_cids: Vec<CommunityId> = sanction::table
+    .filter(sanction::target_person_id.eq(person_id))
+    .filter(sanction::active.eq(true))
+    .filter(sanction::target_community_id.is_not_null())
+    .select(sanction::target_community_id)
+    .distinct()
+    .load::<Option<CommunityId>>(conn)
+    .await?
+    .into_iter()
+    .flatten()
+    .collect();
+
+  // 3. Contributing snapshots = per-community minus banned communities.
+  let contributing: Vec<&ReputationSnapshot> = per_community
+    .iter()
+    .filter(|s| {
+      s.community_id
+        .map_or(false, |cid| !banned_cids.contains(&cid))
+    })
+    .collect();
+
+  let denominator = contributing.len();
+  if denominator == 0 {
+    // All communities banned; no instance-wide standing to roll up.
+    return Ok(None);
+  }
+  let denom_i64 = denominator as i64;
+
+  // 4. Equal-weighted integer mean per dimension (i32 division, truncates toward zero).
+  //    GOTCHA: e2e mean assertions MUST use the same integer truncation.
+  let reporting_accuracy = (contributing
+    .iter()
+    .map(|s| i64::from(s.reporting_accuracy))
+    .sum::<i64>()
+    / denom_i64) as i32;
+  let jury_reliability = (contributing
+    .iter()
+    .map(|s| i64::from(s.jury_reliability))
+    .sum::<i64>()
+    / denom_i64) as i32;
+  let participation_consistency = (contributing
+    .iter()
+    .map(|s| i64::from(s.participation_consistency))
+    .sum::<i64>()
+    / denom_i64) as i32;
+  let endorsement_strength = (contributing
+    .iter()
+    .map(|s| i64::from(s.endorsement_strength))
+    .sum::<i64>()
+    / denom_i64) as i32;
+
+  // 5. Config thresholds (mirrors recompute_snapshot :264-291).
+  let threshold_jury_reliability = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.jury_reliability",
+  )
+  .await?;
+  let threshold_reporting_accuracy = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.reporting_accuracy",
+  )
+  .await?;
+  let threshold_endorsement_strength = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "thresholds.endorsement_strength",
+  )
+  .await?;
+  let jury_age_requirement_days = config::get_int(
+    cache,
+    &mut (&mut *conn).into(),
+    Scope::Instance,
+    "jury.age_requirement_days",
+  )
+  .await?;
+
+  // 6. Instance-wide active sanctions + published_at (mirror :736-768).
+  //    community_filter=None counts ALL active sanctions against the person.
+  let (published_at, active_sanctions) = load_person_context(conn, person_id, None).await?;
+  let account_age_days = (now - published_at).num_days();
+
+  // 7. Capability booleans (mirror :352-357; R1: i64::from for i32 comparisons).
+  let jury_eligible = i64::from(jury_reliability) >= threshold_jury_reliability
+    && account_age_days >= jury_age_requirement_days
+    && active_sanctions == 0;
+  let trusted_reporter = i64::from(reporting_accuracy) >= threshold_reporting_accuracy;
+  let can_sponsor = i64::from(endorsement_strength) >= threshold_endorsement_strength;
+
+  // 8. Load existing rollup row for capability-flip detection.
+  let old_snapshot: Option<ReputationSnapshot> = reputation_snapshot::table
+    .filter(reputation_snapshot::person_id.eq(person_id))
+    .filter(reputation_snapshot::community_id.is_null())
+    .first::<ReputationSnapshot>(conn)
+    .await
+    .optional()?;
+
+  // 9. Upsert rollup row (community_id = None, shared write path :770).
+  let form = ReputationSnapshotInsertForm {
+    person_id,
+    community_id: None,
+    reporting_accuracy,
+    jury_reliability,
+    participation_consistency,
+    endorsement_strength,
+    jury_eligible,
+    trusted_reporter,
+    can_sponsor,
+  };
+  let new_snapshot = upsert_snapshot(conn, &form, now).await?;
+
+  // 10. Emit ROLLUP_RECOMPUTED. Actor = None (system/cron, ADR-015 §10).
+  //     Payload carries raw person_id per the registry payload shape.
+  governance_log::append(
+    &mut (&mut *conn).into(),
+    governance_log::ENTRY_KIND_ROLLUP_RECOMPUTED,
+    json!({
+      "person_id": person_id.0,
+      "contributing_community_count": denominator,
+      "rollup_dimensions": {
+        "reporting_accuracy": reporting_accuracy,
+        "jury_reliability": jury_reliability,
+        "participation_consistency": participation_consistency,
+        "endorsement_strength": endorsement_strength,
+      },
+      "recomputed_at": now.to_rfc3339(),
+    }),
+    None,
+  )
+  .await?;
+
+  // 11. Emit CAPABILITY_CHANGED per flip. snapshot_community_id: null (rollup row).
+  let changes = detect_capability_changes(old_snapshot.as_ref(), &new_snapshot);
+  for change in &changes {
+    governance_log::append(
+      &mut (&mut *conn).into(),
+      governance_log::ENTRY_KIND_CAPABILITY_CHANGED,
+      json!({
+        "dimension_flipped": change.dimension.as_str(),
+        "direction": change.direction.as_str(),
+        "snapshot_community_id": Option::<i32>::None,
+      }),
+      None,
+    )
+    .await?;
+  }
+
+  Ok(Some(new_snapshot))
+}
+
+/// Tick of the scheduled rollup batch job. Finds persons with at least one
+/// per-community snapshot, computes the equal-weighted instance-wide rollup
+/// per person, and writes the result as a `community_id IS NULL` row.
+///
+/// Errors never panic; the scheduler logs and retries on the next tick.
+pub async fn run_rollup_batch(context: &LemmyContext) -> LemmyResult<RollupBatchOutcome> {
+  let pool = &mut context.pool();
+  let mut cache = ConfigCache::new();
+
+  let chunk_size = config::get_int(
+    &mut cache,
+    pool,
+    Scope::Instance,
+    "job.snapshot_batch_chunk_size",
+  )
+  .await?;
+  let chunk_size_usize = usize::try_from(chunk_size).map_err(|_e| {
+    LemmyErrorType::Unknown(format!(
+      "job.snapshot_batch_chunk_size out of range for usize: {chunk_size}"
+    ))
+  })?;
+
+  let candidates = load_rollup_candidates(pool).await?;
+  let mut outcome = RollupBatchOutcome {
+    candidates: candidates.len(),
+    rows_written: 0,
+    skipped_empty: 0,
+  };
+
+  if candidates.is_empty() {
+    info!("governance: rollup batch tick — no candidates");
+    return Ok(outcome);
+  }
+
+  for chunk in candidates.chunks(chunk_size_usize) {
+    let mut chunk_cache = ConfigCache::new();
+    let conn = &mut get_conn(pool).await?;
+    for &person_id in chunk {
+      match compute_rollup_snapshot(conn, person_id, &mut chunk_cache).await? {
+        Some(_) => outcome.rows_written += 1,
+        None => outcome.skipped_empty += 1,
+      }
+    }
+  }
+
+  info!(
+    "governance: rollup batch tick — candidates={candidates}, written={written}, skipped={skipped}",
+    candidates = outcome.candidates,
+    written = outcome.rows_written,
+    skipped = outcome.skipped_empty,
   );
   Ok(outcome)
 }
