@@ -30,7 +30,8 @@
 | Phase 4 — Appeal flow | ✅ PASS | Appeal filed by defendant, case→Appealed, appeal jury assembled, governance_log 15 entries |
 | Phase 5 — Endorsement | ✅ PASS | admin→reporter1, endorsement_created logged, double-endorse blocked (cooldown) |
 | Phase 6 — Log integrity | ✅ PASS | 15/15 entry_hash present, full hash chain valid, 10/15 actor_pseudonym |
-| Phase 7–9 | ⏳ PENDING | Not started |
+| Phase 7 — Admin endpoints | ✅ PASS | reputation-stats, dashboard, config GET/write/audit, rule-sets, rollup all verified; config write produces governance_log entry with actor_pseudonym + signature |
+| Phase 8–9 | ⏳ PENDING | Not started |
 
 ### Known bugs fixed (discovered session 1)
 
@@ -46,8 +47,11 @@
 7. **`decision` enum is lowercase** — `"warning"` not `"Warning"`. Same applies to all jury decision values (`noaction`, `advisorylabel`, `remove`, `ban`, `emergencyremove`).
 8. **Jury eligibility requires `accepted_application=true`** — admin account starts with `accepted_application=false` on a fresh instance. Fix: `UPDATE local_user SET accepted_application=true WHERE person_id=2` before assigning jury.
 9. **`panel_size` must be ≤ eligible juror count** — on a single-user instance with only admin eligible, set `panel_size=1` and `quorum=1` in the `governance_config` table. Otherwise assign-jury returns `not_found`.
-10. **`onboarding.sponsor_min_account_age_days=30` blocks endorsement on fresh instance** — admin account is new (created at stack boot); age gate fires and returns `not_found`. Fix: `UPDATE governance_config SET value_int=0 WHERE scope='instance' AND key='onboarding.sponsor_min_account_age_days'`. Also set `onboarding.sponsor_min_endorsement_strength=0`.
-11. **Appeal `target_person_id` not set for post-targeted cases** — when a report targets a post (`target_type=post`), `target_person_id` remains NULL. The appeal handler checks `target_person_id == caller_id` for the defendant path — it never resolves `target_post.creator_id`. Workaround: manually set `UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID` before appealing.
+10. **`GET /admin/rule-sets` requires `?community_id=N` query param** — omitting it returns `missing field community_id`. `GET /admin/reputation/rollup` requires `?person_id=N`. Neither param is documented in the route descriptions.
+11. **`POST /admin/config` requires `reason` field** — non-empty string; omitting it returns `missing field value`. Body shape: `{"key","value_type","value":<raw JSON>,"scope","reason"}`. The `value` field is a raw JSON value, not the `value_int`/`value_text` split used in the DB schema.
+12. **Non-ASCII characters in POST body cause JSON deserialization errors** — e.g. em-dash `—` in a `reason` string triggers `invalid unicode code point`. Use ASCII-only strings in all API bodies.
+13. **`onboarding.sponsor_min_account_age_days=30` blocks endorsement on fresh instance** — admin account is new (created at stack boot); age gate fires and returns `not_found`. Fix: `UPDATE governance_config SET value_int=0 WHERE scope='instance' AND key='onboarding.sponsor_min_account_age_days'`. Also set `onboarding.sponsor_min_endorsement_strength=0`.
+14. **Appeal `target_person_id` not set for post-targeted cases** — when a report targets a post (`target_type=post`), `target_person_id` remains NULL. The appeal handler checks `target_person_id == caller_id` for the defendant path — it never resolves `target_post.creator_id`. Workaround: manually set `UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID` before appealing.
 
 All requests use `Authorization: Bearer <jwt>` from a login call unless marked public.
 

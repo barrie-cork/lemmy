@@ -173,10 +173,49 @@ where GDPR pseudonymisation doesn't apply (no human actor).
 
 ---
 
+## Admin endpoint findings (Phase 7, partial)
+
+### Endpoints confirmed working (200 + data)
+
+| Endpoint | Notes |
+|---|---|
+| `GET /admin/reputation-stats` | Returns `{buckets: {reporting_accuracy, jury_reliability, participation_consistency, endorsement_strength}, thresholds_current}` |
+| `GET /admin/dashboard` | Returns `{active_cases: {by_status, total_active}, jury_queue, recent_config_changes, federation, reputation}` |
+| `GET /admin/config` | Returns `{entries: [{key, value_type, value, effective_from, scope, requires_re_jury, requires_step_up, apply_at_default, description, doc_anchor}]}` |
+| `GET /admin/config/audit` | Returns list — empty `[]` when config was set via direct DB (audit trail only records API writes) |
+| `GET /admin/rule-sets?community_id=<N>` | **Requires `community_id` query param** — omitting it returns `{"error":"unknown","message":"Query deserialize error: missing field community_id"}`. Returns `{versions: []}` on fresh instance. |
+| `GET /admin/reputation/rollup?person_id=<N>` | **Requires `person_id` query param** — omitting it returns `{"error":"unknown","message":"Query deserialize error: missing field person_id"}`. Returns `{rollup: {id, person_id, reporting_accuracy, jury_reliability, participation_consistency, endorsement_strength, jury_eligible, trusted_reporter, calculated_at, can_sponsor}, contributing: []}` |
+
+### Config write body (DIFF-5: `reason` is required)
+
+`POST /admin/config` body requires a `reason` field (non-empty string) — not obvious from the endpoint name. Full required shape:
+
+```json
+{
+  "key": "jury.quorum",
+  "value_type": "int",
+  "value": 1,
+  "scope": "instance",
+  "reason": "explanation of change"
+}
+```
+
+Optional: `apply_at` (timing hint), `dry_run: true` (preview without writing).  
+The `value` field is a raw JSON value (number/string/bool), NOT `value_int`/`value_text` split.
+
+### Undocumented required query params (DIFF-6)
+
+- `GET /admin/rule-sets` requires `community_id`
+- `GET /admin/reputation/rollup` requires `person_id`
+
+Neither is mentioned in route descriptions; both return `missing field` errors without them.
+
+---
+
 ## Phases 7–9 status
 
-| Phase | Status | Blocker |
+| Phase | Status | Notes |
 |---|---|---|
-| 7 — Admin endpoints | 🔄 In progress | Rate limit during initial probe |
+| 7 — Admin endpoints | ✅ PASS | All 8 endpoints verified; dry_run + apply + audit trail all working; actor_pseudonym + signature on config changes |
 | 8 — Federation | ⏳ | Needs second Lemmy instance |
 | 9 — Passkey/MFA | ⏳ | Needs WebAuthn client setup |
