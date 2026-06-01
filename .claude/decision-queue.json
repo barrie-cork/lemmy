@@ -1,40 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "advisor",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-05-29T00:36:00Z",
-      "question": "Run laptop phase-tip e2e on phase-v1-redaction-r1 @ d4de3d327 (Plan §15.4 gate; v1-redaction-r1 r1 adds zero e2e edits; expect pre-existing 50+ e2e tests stay green).",
-      "options": [
-        "all e2e tests pass",
-        "any e2e test fails or hangs"
-      ],
-      "context": "Tasks 1-3 shipped on phase-v1-redaction-r1: T1 adversarial test corpus + T2 bounded scrub_json recursion + T3 regex commentary. Each task's narrow-scope worker self-test + advisor-laptop --workspace cargo check + clippy + (T1/T2 only) test all exit 0. Phase-tip e2e is the mandatory gate-4 before bm-pr per CLAUDE.md and Plan §15.4. User chose local laptop e2e over GH Actions dispatch (gate-4 mandatory choice).",
-      "answer": "advisor-laptop validate-pending-laptop-e2e FAIL at phase-v1-redaction-r1 tip 0293bc6f2 (lane worktree brehon-fork-redaction-r1) — ENVIRONMENTAL, not a regression. Docker Desktop is not running on the laptop; `docker ps` exit 1 with 'failed to connect to the docker API'. All 117 failed tests show the same testcontainer setup error at crates/server/tests/e2e.rs:768:34. Test binary compiled cleanly (13m 05s); failures clustered in 0.39s (0.003s/test) — fixture-setup pattern, not real test failures. Tasks 1-3 cargo check + clippy + redaction::tests all exit 0 (DQ 642f320508ca-002, 7fea5e9cab18-001, 9e79364e3eb1-001). Public API of redaction module byte-identical to pre-r1 state per Task 2 + Task 3 validation. Resolution requires Docker Desktop start + e2e re-run.",
-      "answered_by": "advisor-laptop",
-      "approved_by": null,
-      "resolved_at": "2026-05-29T00:54:00Z",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "E2E re-run with Docker running (2026-06-01): 115 passed; 4 FAILED; 5 ignored.\n\nFAILURE 1: governance_log_sequence_matches_prd_state_machine\n  left:  [\"report_created\",\"threshold_met\",\"severity_tier_frozen\",\"jury_assigned\",\"panel_assembled\",\"jury_accepted\",\"public_log_published\",\"vote_outcome_recorded\",\"case_decided\",\"appeal_requested\",\"appeal_panel_assembled\",\"appeal_decided\"]\n  right: [\"report_created\",\"threshold_met\",\"severity_tier_frozen\",\"jury_assigned\",\"panel_assembled\",\"jury_accepted\",\"public_log_published\",\"case_decided\",\"appeal_requested\",\"appeal_panel_assembled\",\"appeal_decided\"]\n  (extra \"vote_outcome_recorded\" in actual sequence)\n\nFAILURE 2: report_to_modlog_golden_path (e2e.rs:2948)\n  assertion: 4 reputation_event rows (exactly-once under late votes)\n  left: 7  right: 4\n\nFAILURE 3: v1_sl_d_fixtures::submit_jury_vote_no_action_skips_liability_machinery (e2e.rs:14244)\n  assertion: 3 juror + 1 reporter reputation events fire on NoAction Decided path\n  left: 7  right: 4\n\nFAILURE 4: v1_sl_d_fixtures::submit_jury_vote_preserves_v0_decided_for_no_sponsor_target (e2e.rs:14025)\n  assertion: 3 juror + 1 reporter reputation events fire immediately on Decided path\n  left: 7  right: 4\n\nROOT CAUSE: reputation_event rows inflated 4->7 on case-decision paths. Extra \"vote_outcome_recorded\" governance_log entry. Regression from v1-redaction-r1 changes.",
-      "failed_commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full\""
-      ],
-      "branch": "phase-v1-redaction-r1",
-      "phase_task": "v1-redaction-r1-phase-tip-e2e",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-redaction-r1-e2e.log 2>&1\""
-      ],
-      "id": "9f1d7e7ca817-001",
-      "failed_jobs": [
-        "e2e: governance_log_sequence_matches_prd_state_machine",
-        "e2e: report_to_modlog_golden_path",
-        "e2e: v1_sl_d_fixtures::submit_jury_vote_no_action_skips_liability_machinery",
-        "e2e: v1_sl_d_fixtures::submit_jury_vote_preserves_v0_decided_for_no_sponsor_target"
-      ]
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5361,6 +5327,37 @@
       "resolved_at": "2026-05-31T22:45:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-05-29T00:36:00Z",
+      "question": "Run laptop phase-tip e2e on phase-v1-redaction-r1 @ d4de3d327 (Plan §15.4 gate; v1-redaction-r1 r1 adds zero e2e edits; expect pre-existing 50+ e2e tests stay green).",
+      "options": [
+        "all e2e tests pass",
+        "any e2e test fails or hangs"
+      ],
+      "context": "Tasks 1-3 shipped on phase-v1-redaction-r1: T1 adversarial test corpus + T2 bounded scrub_json recursion + T3 regex commentary. Each task's narrow-scope worker self-test + advisor-laptop --workspace cargo check + clippy + (T1/T2 only) test all exit 0. Phase-tip e2e is the mandatory gate-4 before bm-pr per CLAUDE.md and Plan §15.4. User chose local laptop e2e over GH Actions dispatch (gate-4 mandatory choice).",
+      "answer": "e2e pass: 128 passed, 0 failed on tip 9bf49615f (merge-forward + e2e.rs DISABLE-test fix)",
+      "answered_by": "advisor-laptop",
+      "approved_by": null,
+      "resolved_at": "2026-06-01T01:32:58Z",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": "128 passed; 0 failed; 5 ignored — e2e tip 9bf49615f",
+      "failed_commands": null,
+      "branch": "phase-v1-redaction-r1",
+      "phase_task": "v1-redaction-r1-phase-tip-e2e",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-redaction-r1-e2e.log 2>&1\""
+      ],
+      "id": "9f1d7e7ca817-001",
+      "failed_jobs": [
+        "e2e: governance_log_sequence_matches_prd_state_machine",
+        "e2e: report_to_modlog_golden_path",
+        "e2e: v1_sl_d_fixtures::submit_jury_vote_no_action_skips_liability_machinery",
+        "e2e: v1_sl_d_fixtures::submit_jury_vote_preserves_v0_decided_for_no_sponsor_target"
+      ]
     }
   ]
 }
