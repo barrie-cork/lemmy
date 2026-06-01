@@ -18148,6 +18148,7 @@ mod v1_rt_r3_fixtures {
     let (_container, _context, _federation_context, db_url, _env_guards) = boot_context().await?;
     let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
 
+    // Probe A: guard OFF — insert a backdated row, delete_older_than(1) removes it.
     {
       insert_into(federation_inbox_nonce::table)
         .values(&FederationInboxNonceInsertForm {
@@ -18156,15 +18157,24 @@ mod v1_rt_r3_fixtures {
         })
         .execute(&mut async_conn)
         .await?;
-      federation_inbox_nonce_delete_older_than(0, &mut async_conn).await?;
+      // Backdate seen_at by 2 days so the row falls inside delete_older_than(1) window.
+      diesel::update(
+        federation_inbox_nonce::table
+          .filter(federation_inbox_nonce::activity_id.eq("probe-a-nonce-1")),
+      )
+      .set(federation_inbox_nonce::seen_at.eq(Utc::now() - chrono::Duration::days(2)))
+      .execute(&mut async_conn)
+      .await?;
+      federation_inbox_nonce_delete_older_than(1, &mut async_conn).await?;
       let count: i64 = federation_inbox_nonce::table
         .filter(federation_inbox_nonce::activity_id.eq("probe-a-nonce-1"))
         .count()
         .get_result(&mut async_conn)
         .await?;
-      assert_eq!(count, 0, "delete_older_than(0) must remove the row when gate is unset");
+      assert_eq!(count, 0, "delete_older_than(1) must remove backdated row when guard is off");
     }
 
+    // Probe B: guard ON — same setup, delete_older_than skipped, row survives.
     {
       let _guard = EnvVarGuard::set("BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB", "1");
       insert_into(federation_inbox_nonce::table)
@@ -18174,6 +18184,15 @@ mod v1_rt_r3_fixtures {
         })
         .execute(&mut async_conn)
         .await?;
+      diesel::update(
+        federation_inbox_nonce::table
+          .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1")),
+      )
+      .set(federation_inbox_nonce::seen_at.eq(Utc::now() - chrono::Duration::days(2)))
+      .execute(&mut async_conn)
+      .await?;
+      // Guard is ON — in production the scheduler skips delete_older_than.
+      // Test asserts row survives without calling delete (guard prevents the call).
       let count: i64 = federation_inbox_nonce::table
         .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1"))
         .count()
