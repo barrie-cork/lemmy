@@ -1,10 +1,10 @@
 ---
 phase: v1-quality-r3b
-plan: .claude/PRPs/plans/v1-quality-r3b.plan.md   # not yet authored
+plan: .claude/PRPs/plans/v1-quality-r3b.plan.md   # not yet authored — GH #167 LemmyContext::database_url() refactor
 phase_branch: phase-v1-quality-r3b                  # not yet created until bm-cut
 worktree: C:/Users/barri/Developer/brehon-fork-quality-r3b   # created at bm-cut; until then canonical brehon-fork
-authored: 2026-05-31
-authored_by: advisor (canonical brehon-fork / governance-v0 session)
+authored: 2026-06-01
+authored_by: advisor (canonical brehon-fork / governance-v0 session — updated at v1-redaction-r1 transition)
 purpose: Bootstrap the v1-quality-r3b advisor session. Read the RESUME block first; it is the entry point.
 ---
 
@@ -15,9 +15,11 @@ purpose: Bootstrap the v1-quality-r3b advisor session. Read the RESUME block fir
 ## Session-start ritual (do these first)
 
 1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane.
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `32aa45a60` (see §"Git state at handoff"); if drifted, `git -C C:/Users/barri/Developer/brehon-fork log --oneline 32aa45a60..governance-v0` and update your mental model before acting.
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `49dd95685` (see §"Git state at handoff"); if drifted, `git -C C:/Users/barri/Developer/brehon-fork log --oneline 49dd95685..governance-v0` and update your mental model before acting.
 3. Read `.claude/decision-queue.json` for any pending entries since handoff; compare against the §"Decision-queue snapshot" below (empty at handoff).
-4. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_v1_quality_r3b.md` is the running-state scratchpad. Read `workflow_state_v1_quality_r3.md` once at this session's start for carry-forward context, then do not re-read.
+4. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_v1_quality_r3b_new.md` is the running-state scratchpad. Read `workflow_state_v1_redaction_r1.md` once at this session's start for carry-forward context, then do not re-read.
+5. Check `mcp__junior-brehon__list_hooks` — hook ID 1 must exist; recreate if absent per `feedback_daemon_telegram_completion_hook.md`.
+6. Check `cat .claude/governance-log/retro-bypass.jsonl 2>/dev/null | tail -5` for hook fail-open events.
 
 ## Next concrete action
 
@@ -40,7 +42,12 @@ v1-quality-r3b delivers **Issue #167**: refactor the `admin_audit_stream` handle
 
 **Not easier:** This crosses into production code (`crates/api/`), not just `e2e.rs` — it gets a full CR semantic review. The shape of the fix needs the planner to decide: does `context.settings().get_database_url()` actually read the live env var, or is it a baked value from startup? If it reads live env, the fix must substitute a pool-derived URL or a settings field cached at startup. That decision is load-bearing and must be explicit in the plan. The e2e test for `admin_audit_stream` must be updated to assert the LISTEN connection works without the env var set — the fix is only complete if the test validates the new path.
 
-## 3. Lessons from v1-quality-r3 that apply to v1-quality-r3b
+## 3. Lessons from v1-quality-r3/v1-redaction-r1 that apply to v1-quality-r3b
+
+**From v1-redaction-r1 (new since prior bootstrap authorship):**
+- `feedback_merge_forward_clippy_debt_from_trunk.md` — after any merge-forward pulling quality-r* commits, run `cargo clippy --workspace --features full --no-deps -- -D warnings` before queueing the next Junior task.
+- `feedback_merge_forward_e2e_conflict_default_to_governance.md` — for e2e.rs merge-forward conflicts where the phase branch made no test-logic changes, take governance-v0 side.
+- bm-merge pre-dispatch: run `git ls-remote origin governance-v0` immediately before `create_task` and compare to the brief's `base_sha`. If SHA differs, update the brief first.
 
 **Advisor discipline:**
 - `feedback_envvarguard_audit_window.md` — any audit script checking multi-line blocks must be sized to accommodate the full block height, not a fixed char count. Apply when authoring the DoD audit step.
@@ -107,28 +114,28 @@ Phase-specific additions:
 
 ## 8. Archive after v1-quality-r3b
 
-Run `/brehon-phase-transition v1-quality-r3b <next-quality-slice>` (likely `v1-quality-r3c` or whatever Issue #158 or next-quality-item is named). This skill will: close `workflow_state_v1_quality_r3b.md`, delete `workflow_state_v1_quality_r3.md` (the two-ago record at that point), create the next skeleton, write the next bootstrap file, update brehon-fork MEMORY.md, commit on governance-v0. This bootstrap file stays in `.claude/PRPs/handovers/` as its own archive — git history is the archive; no move.
+Run `/brehon-phase-transition v1-quality-r3b <next-quality-slice>`. This skill will: close `workflow_state_v1_quality_r3b_new.md`, delete `workflow_state_v1_redaction_r1.md` (the two-ago record at that point), create the next skeleton, write the next bootstrap file, update brehon-fork MEMORY.md, commit on governance-v0. This bootstrap file stays in `.claude/PRPs/handovers/` as its own archive — git history is the archive; no move.
 
 ---
 
 ## Git state at handoff (captured literally — do not paraphrase)
 
-- governance-v0 HEAD: `32aa45a60` (captured 2026-05-31) — `chore(advisor): roadmap — v1-quality-r3 done + v1-RT-r4 done + v1-quality-r3b unstarted`
+- governance-v0 HEAD: `49dd95685` (captured 2026-06-01) — `docs(retro): v1-redaction-r1 — GDPR scrubber hardening retro + 2 lessons`
 - Phase branch HEAD: not yet created (branch `phase-v1-quality-r3b` cut at bm-cut)
-- Recent governance-v0 commits (`git -C C:/Users/barri/Developer/brehon-fork log --oneline -5 governance-v0`):
+- Recent governance-v0 commits:
 
   ```
-  32aa45a60 chore(advisor): roadmap — v1-quality-r3 done + v1-RT-r4 done + v1-quality-r3b unstarted
-  a4956a850 docs(retro): v1-quality-r3 retro — adr-compliance UNSTABLE block + audit-window lesson
-  a23ac216f Merge pull request #169 from barrie-cork/phase-v1-quality-r3
-  06c52ad5b chore(ci): retrigger adr-compliance check — acknowledge bypass posted
-  f40dca07f chore(advisor): v1-quality-r3 bm-merge brief — PR #169 merge gate confirmed
+  49dd95685 docs(retro): v1-redaction-r1 — GDPR scrubber hardening retro + 2 lessons
+  e66fd1a38 chore(runlog): commit bm-triage runlog + stray untracked artifacts (v1-quality-r3c closeout)
+  beee2095c chore(brehon): close v1-quality-r3c, bootstrap v1-redaction-r1
+  851ce382d docs(templates): bm-merge verb-constraint — daemon-local ref freshness check (v1-quality-r3c CF-3)
+  df7a76de1 docs(lessons): bm-merge daemon-local ref staleness + update-ref vs reset-hard (v1-quality-r3c CF-1/CF-4)
   ```
 
 ## Decision-queue snapshot at handoff
 
 ```decision-queue-snapshot
-(empty at handoff — 0 pending entries on governance-v0 at 2026-05-31)
+(empty at handoff — 0 pending entries on governance-v0 at 2026-06-01)
 ```
 
 ## Stop-and-ask tripwires
