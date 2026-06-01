@@ -334,6 +334,7 @@ Admin enforcement is **in the handlers** (capability checks reading `reputation_
 | POST | `/governance/admin/close-case` | `admin_close_case` |
 | POST | `/governance/admin/trigger-appeal-rejury` | `admin_trigger_appeal_rejury` |
 | GET | `/governance/admin/reputation-stats` | `admin_reputation_stats` |
+| GET | `/governance/admin/reputation/rollup` | `admin_reputation_rollup` |
 | GET | `/governance/admin/dashboard` | `admin_dashboard` |
 | GET | `/governance/admin/dashboard/view` | `admin_dashboard_html` |
 | POST | `/governance/admin/config` | `admin_set_config` |
@@ -530,6 +531,10 @@ change accompanies this reconciliation pass.
 - **DIFF-5 — `POST /admin/config` requires a non-empty `reason`; `value` is a
   raw JSON scalar.** Not `value_int`/`value_text` split fields — a single
   `value` carrying the JSON scalar, plus a mandatory `reason` string.
-- **DIFF-6 — admin GETs require their scoping id.** `GET /admin/rule-sets`
-  requires `community_id`; `GET /admin/reputation/rollup` requires `person_id`.
-  Omitting them is a client error, not an unscoped "list all".
+- **DIFF-6 — some admin GETs require their scoping id.** `GET /governance/admin/rule-sets`
+  requires `community_id` (`AdminListRuleSetsRequest.community_id`); `GET /governance/admin/reputation/rollup`
+  requires `person_id` (`AdminReputationRollup.person_id`). Omitting them is a client error,
+  not an unscoped "list all". **Do not confuse `/reputation/rollup` (per-person, `person_id`
+  required) with the sibling `GET /governance/admin/reputation-stats`, whose `community_id`
+  is *optional*** (absent → instance-wide stats). Both routes exist in code (`routes/src/lib.rs:503-504`);
+  the §7 table above now lists both.

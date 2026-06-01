@@ -9739,6 +9739,77 @@ async fn admin_emergency_remove_case_has_severity_tier_severe()
   Ok(())
 }
 
+/// ADR-017 — `emergency_remove_open_case` resolves the post author into
+/// `target_person_id`, so an emergency-removed author is a first-class
+/// defendant. Exercises the new in-transaction `post::table.find(id)
+/// .select(post::creator_id)` block (the existing emergency-remove tests
+/// use a Community target, which hits the `None` arm and never runs it).
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_emergency_remove_post_sets_author_defendant()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::admin_emergency_remove::{
+    EmergencyRemoveTarget, emergency_remove_open_case,
+  };
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    post::{Post, PostInsertForm},
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let (admin_id, _) =
+    governance_fixtures::seed_user(&context, instance.id, "admin_er_post", true).await?;
+  let (author_id, _) =
+    governance_fixtures::seed_user(&context, instance.id, "er_post_author", false).await?;
+
+  let post = Post::create(
+    &mut context.pool(),
+    &PostInsertForm::new("adr017 er post".into(), author_id, community.id),
+  )
+  .await?;
+
+  let case_id = emergency_remove_open_case(
+    &mut context.pool(),
+    admin_id,
+    EmergencyRemoveTarget::Post(post.id),
+    Some(community.id),
+    "ADR-017 emergency-remove author-defendant test".to_string(),
+  )
+  .await?;
+
+  let mut conn = AsyncPgConnection::establish(&db_url).await?;
+  let row: (CaseTargetType, Option<PersonId>, CaseStatus) = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select((
+      moderation_case::target_type,
+      moderation_case::target_person_id,
+      moderation_case::status,
+    ))
+    .first(&mut conn)
+    .await?;
+  assert_eq!(row.0, CaseTargetType::Post, "emergency-remove case targets the post");
+  assert_eq!(
+    row.1,
+    Some(author_id),
+    "ADR-017: emergency_remove_open_case resolves target_person_id to the post author (creator_id)",
+  );
+  assert_eq!(
+    row.2,
+    CaseStatus::EmergencyRemove,
+    "emergency_remove opens case with status = EmergencyRemove (ADR-013)",
+  );
+  Ok(())
+}
+
 /// PR #95 cr-3 + cr-4 — emergency-remove with a seedable juror pool seats
 /// the full Severe-tier panel, persists `selected_under_constraints` per
 /// juror, and emits both `severity_tier_frozen` and the extended
