@@ -177,6 +177,23 @@ polling loop applies different routing per kind.
   sole content is e2e (testcontainers + Docker required); same shape
   + same mutation + same `e2e_filter` field, separate kind only for
   clarity in DQ scans.
+  Variant: `kind: "validate-pending-laptop-linux"` for the
+  **Linux-deploy-target compile proof** via `scripts/brehon/cargo-linux.sh`
+  (Docker `rust:1.95` mirror of CI — the free local replacement for
+  Shape G's one irreplaceable job). Same shape + same mutation
+  (`answered_by: "advisor-laptop"`, pass→resolved / fail→pending for
+  §G4) as the base kind. `commands` is the cargo-linux.sh invocation,
+  e.g. `["./scripts/brehon/cargo-linux.sh check --workspace --features full"]`;
+  no `e2e_filter`. **Scope (the Option-2 trigger, 2026-06-01): raise
+  this kind ONLY when the impl-task's diff touches `Cargo.toml` /
+  `Cargo.lock` / `migrations/**`, OR introduces `cfg(unix)` /
+  `cfg(target_os)` / path-separator-shaped code** — i.e. where
+  Windows-green ≠ Linux-green is actually plausible. Pure
+  governance-logic Rust compiles identically on both targets; do NOT
+  raise this kind for such PRs (it adds ceremony, not coverage). This
+  kind gates `bm-pr` (see `bm-pr.md` Phase-1 + `advisor-orchestrator.md`
+  §3.1 + §5.2). Rationale + the manual-command-is-not-a-gate lesson:
+  `feedback_linux_compile_proof_is_a_gate.md`.
   Writer: **impl-task** (Pre-Shape-G plans only). The advisor
   laptop session reads this entry and runs the commands locally; no
   Junior subagent is dispatched (the laptop IS the runner).

@@ -170,6 +170,8 @@ Capture each to `.claude/PRPs/debug/<phase>-task<N>-<probe>.log`. All exit-0.
 2. `bash scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings > .claude/PRPs/debug/<phase>-task<N>-clippy.log 2>&1` → exit 0.
 3. `<additional gate per plan>` → exit 0.
 
+**Linux-compile gate (diff-scoped — include ONLY if this task's files match the trigger):** if this task touches `Cargo.toml` / `Cargo.lock` / `migrations/**`, OR adds `cfg(unix)` / `cfg(target_os)` / path-separator-shaped code, ALSO write a `kind: "validate-pending-laptop-linux"` DQ entry with `commands: ["./scripts/brehon/cargo-linux.sh check --workspace --features full"]`, commit + push, then **stop** — the laptop advisor runs the Linux compile and mutates the entry. Do NOT run `cargo-linux.sh` on the daemon (NO CARGO ON ELITEDESK). Pure governance-logic tasks (no dep/migration/cfg change) compile identically on Windows and Linux — **omit this gate** for those; it adds ceremony, not coverage. This gate blocks `bm-pr` Phase-1d. Per `feedback_linux_compile_proof_is_a_gate.md`.
+
 Per `feedback_pipes_mask_exit_codes.md`, never pipe cargo through tail/head/grep when you need to know if it succeeded — capture full output, then check exit code, then tail the file separately.
 
 If any gate fails, **STOP and surface to advisor via DQ.** Do not patch around `cargo-check` or `clippy` failures by `#[allow]`-spamming — fix the root cause.
