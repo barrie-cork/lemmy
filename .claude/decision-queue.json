@@ -17,7 +17,7 @@
       "resolved_at": "2026-05-29T00:54:00Z",
       "workflow_run_id": null,
       "result": "fail",
-      "log_slice": "running 124 tests\ntest result: FAILED. 2 passed; 117 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.39s\nEvery failed test exits at testcontainer setup with:\n  Error: LemmyError { message: Unknown(\"failed to create a container: Error in the hyper legacy client: client error (Connect)\"), caller: crates\\\\server\\\\tests\\\\e2e.rs:768:34 }\nRoot cause: Docker Desktop not running on laptop. `docker ps` exit 1: 'failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine'.\nFalsification: cargo built test binary cleanly in 13m 05s; all 124 tests reached runtime; failures clustered in 0.39s with identical environmental error message; pattern is fixture-setup not code regression.",
+      "log_slice": "E2E re-run with Docker running (2026-06-01): 115 passed; 4 FAILED; 5 ignored.\n\nFAILURE 1: governance_log_sequence_matches_prd_state_machine\n  left:  [\"report_created\",\"threshold_met\",\"severity_tier_frozen\",\"jury_assigned\",\"panel_assembled\",\"jury_accepted\",\"public_log_published\",\"vote_outcome_recorded\",\"case_decided\",\"appeal_requested\",\"appeal_panel_assembled\",\"appeal_decided\"]\n  right: [\"report_created\",\"threshold_met\",\"severity_tier_frozen\",\"jury_assigned\",\"panel_assembled\",\"jury_accepted\",\"public_log_published\",\"case_decided\",\"appeal_requested\",\"appeal_panel_assembled\",\"appeal_decided\"]\n  (extra \"vote_outcome_recorded\" in actual sequence)\n\nFAILURE 2: report_to_modlog_golden_path (e2e.rs:2948)\n  assertion: 4 reputation_event rows (exactly-once under late votes)\n  left: 7  right: 4\n\nFAILURE 3: v1_sl_d_fixtures::submit_jury_vote_no_action_skips_liability_machinery (e2e.rs:14244)\n  assertion: 3 juror + 1 reporter reputation events fire on NoAction Decided path\n  left: 7  right: 4\n\nFAILURE 4: v1_sl_d_fixtures::submit_jury_vote_preserves_v0_decided_for_no_sponsor_target (e2e.rs:14025)\n  assertion: 3 juror + 1 reporter reputation events fire immediately on Decided path\n  left: 7  right: 4\n\nROOT CAUSE: reputation_event rows inflated 4->7 on case-decision paths. Extra \"vote_outcome_recorded\" governance_log entry. Regression from v1-redaction-r1 changes.",
       "failed_commands": [
         "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full\""
       ],
@@ -26,7 +26,13 @@
       "commands": [
         "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/v1-redaction-r1-e2e.log 2>&1\""
       ],
-      "id": "9f1d7e7ca817-001"
+      "id": "9f1d7e7ca817-001",
+      "failed_jobs": [
+        "e2e: governance_log_sequence_matches_prd_state_machine",
+        "e2e: report_to_modlog_golden_path",
+        "e2e: v1_sl_d_fixtures::submit_jury_vote_no_action_skips_liability_machinery",
+        "e2e: v1_sl_d_fixtures::submit_jury_vote_preserves_v0_decided_for_no_sponsor_target"
+      ]
     }
   ],
   "resolved": [
