@@ -104,7 +104,7 @@ Add verb-specific reading from this table — fill in only the row(s) that apply
 | `bm-pr` | Body MUST include §Summary + §Validation + §Plan reference + §Issues addressed (closes-N where applicable). Title under 70 chars. **Phase-1d Linux gate:** if the diff touches `Cargo.toml`/`Cargo.lock`/`migrations/**` or adds `cfg(unix)`/`cfg(target_os)`, STOP unless a `validate-pending-laptop-linux` DQ is at `result:pass` (per `bm-pr.md` Phase-1d). bm-task only checks — never runs cargo/Docker. |
 | `bm-poll-cr` | Update findings YAML IN PLACE preserving stable finding IDs + four-bucket layout. Advance `last_poll_at` (ISO 8601 UTC) + `poll_count`. Counters regenerate on every write. For new findings, assign fresh `id` slugs (`cr-new-3`, `cr-new-4`, etc.). |
 | `bm-triage` | Apply ONLY the advisor-approved bucket decisions listed in §3 of the brief. Do NOT improvise additional bucket assignments. Counters regenerate. |
-| `bm-merge` | Pre-merge gate verification (§3 of the brief lists what to verify). If any gate fails, raise `kind: "blocker"` DQ and stop. |
+| `bm-merge` | Pre-merge gate verification (§3 of the brief lists what to verify). If any gate fails, raise `kind: "blocker"` DQ and stop. **Daemon-local ref freshness (mandatory pre-dispatch by advisor):** before queuing this task, run `ssh homeserver "cd /srv/brehon-fork && git log governance-v0 -1 --oneline"` and compare to `origin/governance-v0`. If behind, fast-forward: `git fetch origin governance-v0 && git update-ref refs/heads/governance-v0 origin/governance-v0` (never `reset --hard` — hook blocks it). Per `feedback_bm_merge_daemon_local_ref_staleness.md`. |
 
 **Commit subject discipline:**
 
