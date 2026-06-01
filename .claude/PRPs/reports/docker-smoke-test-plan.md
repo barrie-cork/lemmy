@@ -4,7 +4,36 @@
 **UI:** `http://localhost:1236`  
 **Admin credentials:** `lemmy` / `lemmylemmy`  
 **Date authored:** 2026-06-01  
-**Last updated:** 2026-06-01 (rate limit + registration constraints added from live DB)
+**Last updated:** 2026-06-01 (rate limit + registration constraints + session-2 live state)
+
+## Session state (2026-06-01, session 2)
+
+| Item | Value |
+|---|---|
+| Stack uptime | ~3 hours, all 5 containers healthy |
+| Admin JWT | `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaXNzIjoibG9jYWxob3N0IiwiaWF0IjoxNzgwMzI4NDkyLCJleHAiOjE3ODA5MzMyOTJ9.vWXSVZr-FAFTpiN0baDdBwVKI4LpUshBtZAlsLheqQQ` (sub=1, exp ~2026-06-08) |
+| Reporter1 JWT | `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaXNzIjoibG9jYWxob3N0IiwiaWF0IjoxNzgwMzI4NDk2LCJleHAiOjE3ODA5MzMyOTZ9.emHslA57L_NhvsZ29QfoF3StuUCxjTl99gHzXmj_4_Y` (sub=2, exp ~2026-06-08) |
+| Communities | **0** — none exist yet; must create one before Phase 3 |
+| Governance modlog | Empty (`[]`) — no cases yet |
+| Rate limits | Fully clear as of 2026-06-01 16:52 IST |
+
+### Phase completion status
+
+| Phase | Status | Notes |
+|---|---|---|
+| Phase 0 — Boot health | ✅ PASS | All containers up, migrations ran, site responds |
+| Phase 1 — Auth baseline | ✅ PASS | Admin JWT issued, reporter1 registered + approved |
+| Phase 2 — Reputation baseline | ✅ PASS | `/reputation/me` returns 200 with `['view']` fields, modlog `[]` |
+| Phase 3 — Case lifecycle | ⏳ PENDING | Blocked last session on rate limits. Ready to run. |
+| Phase 4–9 | ⏳ PENDING | Not started |
+
+### Known bugs fixed (discovered session 1)
+
+1. **Community ID** — fresh instance has 0 communities; `community_id=2` does not exist. Fix: `GET /api/v4/community/list` to discover, OR create a community first via admin.
+2. **`target_type` case** — enum expects lowercase `"post"` not `"Post"`. Error was: `unknown variant 'Post', expected one of 'post', 'comment', 'person', 'community', 'remote_instance'`.
+3. **Registration approval endpoint** — correct call is `PUT /api/v4/admin/registration_application/approve` with body `{"id": N, "approve": true}`, NOT a path-param style URL.
+4. **`/api/v4/admin/registration_application/list` with `?unread_only=true`** — returned empty even when application existed; use without that filter.
+5. **modlog response shape** — returns a JSON array `[]` directly, not `{"entries": []}`. Parse as list, not dict.
 
 All requests use `Authorization: Bearer <jwt>` from a login call unless marked public.
 
@@ -112,17 +141,31 @@ curl -s http://localhost:8536/api/v4/governance/reputation/me \
 
 This is the main integration flow. Run steps in order; each step depends on the previous.
 
+### 3.0 Create a community (prerequisite — fresh instance has none)
+
+```bash
+# Create a community to post into
+COMM_RESP=$(curl -s -X POST http://localhost:8536/api/v4/community \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"governance-test","title":"Governance Test Community","nsfw":false}')
+COMM_ID=$(echo $COMM_RESP | python -c "import sys,json; print(json.load(sys.stdin)['community_view']['community']['id'])")
+echo "COMM_ID=$COMM_ID"
+```
+
 ### 3.1 Create a post to report
 
 **Rate limit:** post creation is throttled at 6 per 10 min. Create this post once and reuse the ID across test runs — don't recreate it each time.
 
 ```bash
-# Use the auto-created "main" community (id=2 on fresh instance)
-# Use ADMIN_JWT here to avoid reporter1 approval dependency
+# Discover community id (or use COMM_ID from 3.0)
+COMM_ID=$(curl -s http://localhost:8536/api/v4/community/list \
+  -H "Authorization: Bearer $ADMIN_JWT" | python -c "import sys,json; print(json.load(sys.stdin)['communities'][0]['community']['id'])")
+
 curl -s -X POST http://localhost:8536/api/v4/post \
   -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test post for governance","community_id":2,"nsfw":false}' | jq .post_view.post.id
+  -d "{\"name\":\"Test post for governance\",\"community_id\":$COMM_ID,\"nsfw\":false}" | python -c "import sys,json; print('POST_ID:', json.load(sys.stdin)['post_view']['post']['id'])"
 # Save as POST_ID — reuse this ID for the full session
 ```
 
@@ -133,7 +176,7 @@ curl -s -X POST http://localhost:8536/api/v4/governance/report \
   -H "Authorization: Bearer $REPORTER_JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "target_type": "Post",
+    "target_type": "post",
     "target_id": '$POST_ID',
     "reason_code": "spam",
     "description": "smoke test report"
