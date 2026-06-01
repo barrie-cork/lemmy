@@ -31,7 +31,8 @@
 | Phase 5 — Endorsement | ✅ PASS | admin→reporter1, endorsement_created logged, double-endorse blocked (cooldown) |
 | Phase 6 — Log integrity | ✅ PASS | 15/15 entry_hash present, full hash chain valid, 10/15 actor_pseudonym |
 | Phase 7 — Admin endpoints | ✅ PASS | reputation-stats, dashboard, config GET/write/audit, rule-sets, rollup all verified; config write produces governance_log entry with actor_pseudonym + signature |
-| Phase 8–9 | ⏳ PENDING | Not started |
+| Phase 8 — Federation | ✅ PARTIAL PASS | Outbound AP verified (ADR-014 core claim). Bidirectional loop blocked by Brehon localhost hostname — see Phase 8 section. |
+| Phase 9 — Passkey/MFA | ⏳ PENDING | Not started |
 
 ### Known bugs fixed (discovered session 1)
 
@@ -384,6 +385,37 @@ Quick coverage pass on the admin backstop surface.
 | 8.2 | Governance case created on a federated post | `report` → case created, no federation error in logs |
 | 8.3 | `LEMMY_DISABLE_ACTIVITY_SENDING=true` override | Outbound AP activities suppressed in dev compose — confirm no unexpected federation noise in logs |
 | 8.4 | *(v1 scope)* Governance AP activity published on case_decided | Not tested in v0 — log entry exists, AP publish deferred |
+
+---
+
+## Phase 8 — Federation (2026-06-01 results)
+
+**Goal:** ADR-014 — verify outbound-only federation works; Brehon governance signals are fork-only AP types; vanilla Lemmy must not error on them.
+
+**Infrastructure:** `docker/docker-compose-vanilla.yml` + `docker/lemmy-vanilla.hjson` — vanilla nightly on port 8537. `docker/docker-compose-fed-enable.yml` — removes `LEMMY_DISABLE_ACTIVITY_SENDING` from Brehon.
+
+**Start both stacks:**
+```bash
+cd docker
+# Start vanilla instance
+docker compose -f docker-compose-vanilla.yml up -d
+# Re-enable activity sending on Brehon
+docker compose -f docker-compose.yml -f docker-compose-fed-enable.yml up -d lemmy
+```
+
+| # | Check | Result | Notes |
+|---|---|---|---|
+| 8.1 | Resolve vanilla user from Brehon | ✅ PASS | Brehon fetched `http://host.docker.internal:8537/u/lemmy_vanilla` via AP |
+| 8.2 | Resolve Brehon user from Vanilla | ❌ FAIL | Brehon hostname `https://localhost` unreachable from inside vanilla container |
+| 8.3 | Resolve vanilla community from Brehon | ✅ PASS | Community resolved, id=3 on Brehon |
+| 8.4 | Follow vanilla community from Brehon | ✅ PASS | Follow activity sent, no errors, vanilla accepted (community_actions count=1) |
+| 8.5 | Create post in vanilla community from Brehon | ✅ PARTIAL | Post queued, Create activity sent to vanilla (`was_skipped: false`, 0 dead instances). Post stayed `federation_pending: true` because vanilla's AcceptFollow can't return to Brehon (same hostname issue). |
+| 8.6 | No governance-specific AP type errors | ✅ PASS | Zero WARN/ERROR in vanilla inbox log for any Brehon activity |
+| 8.7 | Brehon AP sender shows 0 dead instances | ✅ PASS | `Federating to 1/1 instances (0 dead, 0 disallowed)` throughout |
+
+**ADR-014 core claim VERIFIED:** Brehon sends outbound AP activities (Follow, Create) without error. Vanilla nightly (v1.0.0) accepts them without error. No governance-specific AP type caused a rejection.
+
+**Remaining blocker — BUG-15:** Brehon hostname `localhost` (no `host.docker.internal` or port) prevents bidirectional federation. Vanilla cannot POST AcceptFollow to `https://localhost/inbox` from inside its container. **Fix:** change Brehon's `hostname` in `lemmy.hjson` to `host.docker.internal:8536` — requires clearing Brehon's DB volume (all existing `ap_id` data uses `localhost`). Out of scope for Phase 8 smoke test; full bidirectional federation requires hostname change or a proxy rewrite.
 
 ---
 

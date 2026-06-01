@@ -1,0 +1,26 @@
+{
+  // Vanilla Lemmy instance for Phase 8 federation smoke test.
+  // Runs on port 8537 alongside the Brehon stack on 8536.
+  // Uses host.docker.internal to reach the Brehon instance from within Docker.
+
+  hostname: "host.docker.internal:8537"
+  bind: "0.0.0.0"
+  port: 8537
+  tls_enabled: false
+
+  setup: {
+    admin_username: "lemmy_vanilla"
+    admin_password: "lemmylemmy"
+    site_name: "lemmy-vanilla"
+  }
+
+  database: {
+    connection: "postgres://lemmy:password@postgres-vanilla:5432/lemmy"
+  }
+
+  pictrs: {
+    url: "http://pictrs-vanilla:8080/"
+    api_key: "my-pictrs-key"
+  }
+
+}

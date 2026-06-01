@@ -1,0 +1,69 @@
+# docker-compose-vanilla.yml
+# Minimal vanilla Lemmy instance for Phase 8 federation smoke testing.
+# Run alongside the primary Brehon stack (docker/docker-compose.yml).
+#
+# Usage:
+#   docker compose -f docker/docker-compose-vanilla.yml up -d
+#   docker compose -f docker/docker-compose-vanilla.yml down
+#
+# The vanilla instance listens on localhost:8537.
+# The Brehon instance is on localhost:8536.
+# Both communicate via host.docker.internal (Docker Desktop on Windows/Mac).
+#
+# Before running Phase 8 federation tests:
+# 1. Remove LEMMY_DISABLE_ACTIVITY_SENDING=true from docker/docker-compose.yml
+#    (or override via: docker compose -f docker-compose.yml -f docker-compose-fed-enable.yml up -d)
+# 2. Configure federation allowlists on both instances (see phase-8 smoke test steps).
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "4"
+
+services:
+  lemmy-vanilla:
+    image: dessalines/lemmy:nightly
+    hostname: lemmy-vanilla
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=warn,lemmy_server=debug,lemmy_apub=debug
+      - LEMMY_CONFIG_LOCATION=/config/config.hjson
+      - LEMMY_DATABASE_URL=postgres://lemmy:password@postgres-vanilla:5432/lemmy
+    volumes:
+      - ./lemmy-vanilla.hjson:/config/config.hjson:Z
+    depends_on:
+      - postgres-vanilla
+      - pictrs-vanilla
+    ports:
+      - "8537:8537"
+    extra_hosts:
+      # Allows this container to reach the Brehon instance at localhost:8536 on the host
+      - "host.docker.internal:host-gateway"
+    logging: *default-logging
+
+  pictrs-vanilla:
+    image: asonix/pictrs:0.5.17-pre.9
+    hostname: pictrs-vanilla
+    environment:
+      - PICTRS__SERVER__API_KEY=my-pictrs-key
+      - PICTRS__MEDIA__VIDEO_CODEC=vp9
+    user: 991:991
+    volumes:
+      - ./volumes/pictrs-vanilla:/mnt:Z
+    restart: unless-stopped
+    logging: *default-logging
+
+  postgres-vanilla:
+    image: pgautoupgrade/pgautoupgrade:18.4-alpine
+    hostname: postgres-vanilla
+    environment:
+      - POSTGRES_USER=lemmy
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=lemmy
+    volumes:
+      - ./volumes/postgres-vanilla:/var/lib/postgresql:Z
+    ports:
+      - "5434:5432"
+    restart: unless-stopped
+    logging: *default-logging
