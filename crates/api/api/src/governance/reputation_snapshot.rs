@@ -599,7 +599,7 @@ pub async fn compute_rollup_snapshot(
     .iter()
     .filter(|s| {
       s.community_id
-        .map_or(false, |cid| !banned_cids.contains(&cid))
+        .is_some_and(|cid| !banned_cids.contains(&cid))
     })
     .collect();
 
@@ -615,30 +615,42 @@ pub async fn compute_rollup_snapshot(
     .await?;
     return Ok(None);
   }
-  let denom_i64 = denominator as i64;
+  let denom_i64 = i64::try_from(denominator).unwrap_or(i64::MAX);
 
   // 4. Equal-weighted integer mean per dimension (i32 division, truncates toward zero).
   //    GOTCHA: e2e mean assertions MUST use the same integer truncation.
-  let reporting_accuracy = (contributing
-    .iter()
-    .map(|s| i64::from(s.reporting_accuracy))
-    .sum::<i64>()
-    / denom_i64) as i32;
-  let jury_reliability = (contributing
-    .iter()
-    .map(|s| i64::from(s.jury_reliability))
-    .sum::<i64>()
-    / denom_i64) as i32;
-  let participation_consistency = (contributing
-    .iter()
-    .map(|s| i64::from(s.participation_consistency))
-    .sum::<i64>()
-    / denom_i64) as i32;
-  let endorsement_strength = (contributing
-    .iter()
-    .map(|s| i64::from(s.endorsement_strength))
-    .sum::<i64>()
-    / denom_i64) as i32;
+  let reporting_accuracy = i32::try_from(
+    contributing
+      .iter()
+      .map(|s| i64::from(s.reporting_accuracy))
+      .sum::<i64>()
+      / denom_i64,
+  )
+  .unwrap_or(i32::MAX);
+  let jury_reliability = i32::try_from(
+    contributing
+      .iter()
+      .map(|s| i64::from(s.jury_reliability))
+      .sum::<i64>()
+      / denom_i64,
+  )
+  .unwrap_or(i32::MAX);
+  let participation_consistency = i32::try_from(
+    contributing
+      .iter()
+      .map(|s| i64::from(s.participation_consistency))
+      .sum::<i64>()
+      / denom_i64,
+  )
+  .unwrap_or(i32::MAX);
+  let endorsement_strength = i32::try_from(
+    contributing
+      .iter()
+      .map(|s| i64::from(s.endorsement_strength))
+      .sum::<i64>()
+      / denom_i64,
+  )
+  .unwrap_or(i32::MAX);
 
   // 5. Config thresholds (mirrors recompute_snapshot :264-291).
   let threshold_jury_reliability = config::get_int(

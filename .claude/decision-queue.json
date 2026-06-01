@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "74ae9c10e50b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-01T00:00:00Z",
+      "question": "Run cargo clippy --workspace --features full --no-deps -- -D warnings on worker branch for v1-redaction-r1 fix-impl-1 (6 clippy lints in reputation_snapshot.rs)",
+      "options": [
+        "all clippy lints pass",
+        "any clippy lint remains"
+      ],
+      "context": "fix-impl-1 fixes 6 pre-existing clippy lints in reputation_snapshot.rs that were surfaced by the merge-forward bringing in RT-r5: 1x map_or(false,...)->is_some_and, 1x usize-as-i64->i64::try_from, 4x i64-as-i32->i32::try_from. Pure mechanical conversion; no logic change.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "branch": "junior/role-impl-task-v1-redaction-r1-fix-impl-1-clippy-lints-see-claude-prps-briefs-v1-redaction-r1-fix-impl-1-md-564",
+      "phase_task": "v1-redaction-r1-fix-impl-1",
+      "commands": [
+        "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
+      ]
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
