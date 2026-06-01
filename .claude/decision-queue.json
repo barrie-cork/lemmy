@@ -6,17 +6,17 @@
       "from": "advisor",
       "kind": "validate-pending-laptop",
       "timestamp": "2026-05-31T23:28:19Z",
-      "question": "T3 fix-impl-2: cargo-check passed; run full e2e to confirm test_brehon_disable_fed_replay_cleanup_job passes",
+      "question": "T3 fix-impl-3: full e2e after test logic fix — delete_older_than backdate pattern",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "Fix-impl-2 corrects FederationInboxNonce::insert (no such method) -> diesel::insert_into + delete_older_than aliased import. cargo-check --workspace --features full exited 0. Now running full e2e on laptop.",
+      "context": "fix-impl-2 fixed compile errors. fix-impl-3 fixes test assertion: delete_older_than(0) returns early; now uses diesel::update to backdate seen_at then calls delete_older_than(1). cargo-check passed. Running e2e.",
       "commands": [
         "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full\""
       ],
       "branch": "phase-v1-quality-r3c",
-      "phase_task": "3-fix-2",
+      "phase_task": "3-fix-3",
       "result": null,
       "log_slice": null,
       "failed_commands": null,
