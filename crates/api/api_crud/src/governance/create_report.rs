@@ -394,22 +394,26 @@ async fn resolve_target(
   match target_type {
     CaseTargetType::Post => {
       let post_id = PostId(target_id);
-      Post::read(&mut context.pool(), post_id).await?;
+      // ADR-017: the post author is a first-class defendant. Populate
+      // `target_person_id` with the content author's `creator_id` so the
+      // author has a Defendant path for appeal/sanction/reputation/liability.
+      let post = Post::read(&mut context.pool(), post_id).await?;
       Ok(TargetRefs {
         target_post_id: Some(post_id),
         target_comment_id: None,
-        target_person_id: None,
+        target_person_id: Some(post.creator_id),
         target_community_id: None,
         target_remote_url: None,
       })
     }
     CaseTargetType::Comment => {
       let comment_id = CommentId(target_id);
-      Comment::read(&mut context.pool(), comment_id).await?;
+      // ADR-017: the comment author is a first-class defendant (see Post arm).
+      let comment = Comment::read(&mut context.pool(), comment_id).await?;
       Ok(TargetRefs {
         target_post_id: None,
         target_comment_id: Some(comment_id),
-        target_person_id: None,
+        target_person_id: Some(comment.creator_id),
         target_community_id: None,
         target_remote_url: None,
       })

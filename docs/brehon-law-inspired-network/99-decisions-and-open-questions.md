@@ -309,6 +309,34 @@ Lightweight Architecture Decision Records. Each has: ID, title, date, status, co
   - Future companion doc `08-cross-app-governance.md` (deferred — written when M1 sub-PRD is scheduled and the protocol-level detail is concrete)
   - Future ADR-017 onward (each new app integration cites this contract)
 
+### ADR-017 — Post/comment authors are first-class governance defendants
+
+- **Date:** 2026-06-01
+- **Status:** Accepted
+- **Context:** A `moderation_case` records *who/what* is under governance via a `target_type` discriminator plus the matching FK column (`target_post_id` / `target_comment_id` / `target_person_id` / `target_community_id`). Through v0, post- and comment-targeted cases left `target_person_id` **NULL** — only person-targeted cases populated it. But every downstream consumer that asks "who is the affected person?" reads `target_person_id`: the appeal handler resolves the **defendant** via `case.target_person_id == Some(caller_id)`, the sanction row inherits `target_person_id`, reputation ban-math counts sanctions keyed on it, and sponsor-liability fires only when it is `Some(_)`. The consequence is a confirmed bug (smoke-test BUG-1): **a post or comment author cannot appeal a case against their own content** — `POST /governance/appeal` returns `not_found` because the author has no defendant path. More broadly, the content author — the person actually accountable for the content — was invisible to the governance machinery for post/comment cases.
+- **Decision:** For post- and comment-targeted cases, `target_person_id` is populated with the **content author's `creator_id`**, making the author the first-class defendant for appeal, sanction, reputation, and sponsor-liability purposes. The case remains dual-populated (`target_post_id`/`target_comment_id` *and* `target_person_id` both set) — the post/comment FK still identifies the specific content (and is what federation resolves the AP URL from); `target_person_id` identifies the accountable person. Population happens at three sites:
+  1. **Report-creation** (`create_report.rs::resolve_target`, Post/Comment arms) — write-time, forward.
+  2. **Emergency removal** (`admin_emergency_remove.rs`) — the admin-override takedown path also resolves the author, so an author can appeal an emergency takedown. (The case `creator_id` here is the acting admin, not a reporter; the author is the *target*, not the creator.)
+  3. **Historical backfill** — a reversible, status-scoped migration populates the existing terminal tail (see Consequences for the scope constraint).
+- **Consequences:**
+  - **Goal achieved:** post/comment authors get a Defendant appeal path — BUG-1 fixed with no change to the appeal handler itself (the existing `target_person_id == Some(caller_id)` check just works once the column is populated).
+  - **Sponsor-liability now applies to authors:** when an author's content is sanctioned, the author's sponsors (sureties) enter the grace window / bear the reputation delta. This is the most significant behaviour change — previously post/comment sanctions never touched sponsors. (`submit_jury_vote.rs` §8.5; the prior "GOTCHA-56h skip silently" carve-out no longer applies.)
+  - **Reputation ban-math now counts post/comment sanctions** for the author's community-ban calculation.
+  - **The author is excluded from juries on their own content** (`admin_assign_jury.rs` juror-exclusion set), closing a fairness gap.
+  - **Federation is unaffected:** `publish_sanction_notice.rs` resolves the ActivityPub URL directly from `target_post_id`/`target_comment_id` and ignores `target_person_id`.
+  - **Migration scope is load-bearing for reversibility (ADR-010):** jury panel size and juror exclusion read `target_person_id` only at jury-assignment time, which fires exclusively from `Open` / `ThresholdMet` / `EmergencyRemove` and atomically freezes `panel_size_snapshot`. The backfill therefore **excludes** those three statuses so it cannot retroactively resize an in-flight or already-seated jury; only post/comment cases past jury assignment (frozen panels) are backfilled. Hard-deleted content nulls its FK (`ON DELETE SET NULL`), so orphaned cases fall out of the backfill and stay NULL — correct.
+  - **No PII implication (ADR-015):** `target_person_id` is an integer FK to `person`, never a direct identifier; the governance log and `actor_pseudonym` mapping are untouched.
+- **Alternatives considered:**
+  - **Localized read-time fix in `request_appeal.rs` (rejected):** resolve the author on the fly when the case is post/comment-targeted and the caller matches. Fixes only the appeal bug with zero blast radius, but leaves the data model inconsistent — sanction/reputation/liability would still treat post/comment cases as having no affected person, so the author is a defendant for appeal but not for anything else. The decision is explicitly to make the author a genuine, system-wide defendant.
+  - **Forward-only (no backfill) (rejected as default, kept as fallback):** ship only the handler change so new cases are correct and leave history NULL. Chosen only if the terminal post/comment tail is empty at deploy time; otherwise the historical appeal bug persists for already-decided cases.
+  - **Community-targeted defendant semantics (out of scope):** a community has no single author, so there is no natural person to name as defendant. Deferred to a separate ADR if ever wanted.
+- **Enacted in:**
+  - [04-data-model-and-api.md](04-data-model-and-api.md) (`target_person_id` semantics: populated with content author for post/comment cases)
+  - `crates/api/api_crud/src/governance/create_report.rs` (`resolve_target` Post/Comment arms)
+  - `crates/api/api/src/governance/admin_emergency_remove.rs` (author resolution for emergency takedowns)
+  - `migrations/<ts>_backfill_author_defendant/` (status-scoped reversible backfill)
+  - `crates/api/api_crud/src/governance/request_appeal.rs` (defendant path — verified, no change required)
+
 ---
 
 ## Open Questions
@@ -684,3 +712,6 @@ OQ-028 (named governance-profile bundles for v1 tuning rollout) opened. Captures
 
 **2026-05-23** — *99*
 ADR-016 added: Brehon is a cross-app governance backplane; federated app planes. Codifies the three-component federation contract (B-fetch evidence retrieval; B-publish sanction events; B-actor portable IDs) and reframes the V2 messaging PRD as the first reference integration (M1/M2/M3 — renamed from V2a/V2b/V2c to end the ADR-010 v2 naming collision). ADR-004 amended (header) to note the extension. Four new OQs opened — OQ-ADR016-01 (B-fetch SPI), OQ-ADR016-02 (B-publish schema), OQ-ADR016-03 (B-actor link UX), OQ-ADR016-04 (sanction translation per app). PRD edit and design-doc updates (03 §4, 06 §2.2/§7, 07 §1.2/§5) deferred to M1 schedule time. Rejected alternatives: per-app signed-evidence (forks every app), Brehon-as-super-admin via app admin APIs (blast radius + trust gate), advisory-only sanctions (undermines cross-app value), OIDC IdP (Brehon as identity SPOF), per-app-identity-no-roll-up (parallel silos).
+
+**2026-06-01** — *99, 04*
+ADR-017 added: post/comment authors are first-class governance defendants. Post/comment-targeted `moderation_case` rows now populate `target_person_id` with the content author's `creator_id` (at report-creation, emergency-removal, and via a status-scoped reversible backfill), fixing smoke-test BUG-1 (post/comment authors could not appeal — `POST /governance/appeal` returned `not_found`). System-wide consequence (not a localized patch): the author becomes the affected person for appeal, sanction inheritance, reputation ban-math, sponsor-liability, and juror-exclusion. Federation is unaffected (AP URL resolves from `target_post_id`). Backfill excludes `Open`/`ThresholdMet`/`EmergencyRemove` so it cannot retroactively resize an in-flight or seated jury (ADR-010 reversibility). No PII implication (integer FK only, ADR-015). Rejected alternatives: localized read-time appeal-only fix (leaves data model inconsistent), community-targeted defendant semantics (no single author — deferred). Enacted in `create_report.rs`, `admin_emergency_remove.rs`, the backfill migration, and 04 (`target_person_id` semantics).

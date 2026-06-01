@@ -1123,6 +1123,11 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
+  // ADR-017 author-as-defendant backfill (1 migration, bump 19 → 20).
+  // Data-only backfill of moderation_case.target_person_id; reverting it
+  // (down.sql nulls the backfilled rows) is a no-op on empty governance
+  // tables, so it slots cleanly into the newest-first revert window.
+  "2026-06-01-000000-0000_backfill_author_defendant",
   // v1-federation-inbound-a (1 migration, bump 18 → 19)
   "2026-05-17-000000-0000_add_federation_inbound_v1",
   // v1-RT-r1 (4 migrations, bump 14 → 18)
@@ -5802,6 +5807,386 @@ async fn appeal_inside_window_succeeds_expired_rejects() -> lemmy_utils::error::
   assert!(
     resp_b.is_err(),
     "GH #34: appeal with appeal_window_expires_at in past must fail (window expired)",
+  );
+
+  Ok(())
+}
+
+// ============================================================================
+// ADR-017 — post/comment authors are first-class governance defendants
+// ============================================================================
+//
+// Smoke-test BUG-1: a post (or comment) author could not appeal a case
+// against their own content. `request_appeal` resolves the Defendant via
+// `case.target_person_id == Some(caller_id)`, but post/comment-targeted
+// cases left `target_person_id` NULL through v0, so the author had no
+// defendant path and `POST /governance/appeal` returned NotFound.
+//
+// Per ADR-017, `create_report.rs::resolve_target` now populates
+// `target_person_id` with the content author's `creator_id` for post and
+// comment cases. This test seeds a Decided post-targeted case and a Decided
+// comment-targeted case (both with `target_person_id = content author`),
+// asserts the author can appeal each, and asserts a non-author is still
+// denied (NotFound) — preserving the §12.4 spoofing-protection invariant.
+
+#[tokio::test(flavor = "multi_thread")]
+async fn post_comment_author_appeal_succeeds_nonauthor_denied()
+-> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::{Data, Json};
+  use chrono::{Duration, Utc};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_common::governance::RequestAppeal;
+  use lemmy_api_crud::governance::request_appeal::request_appeal;
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    comment::{Comment, CommentInsertForm},
+    governance::moderation_case::ModerationCaseInsertForm,
+    instance::Instance,
+    post::{Post, PostInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
+  use lemmy_utils::{error::LemmyErrorType, rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
+
+  {
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret {
+    id: 0,
+    jwt_secret: String::new().into(),
+  };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+
+  // Author of the post, author of the comment, and an unrelated third party.
+  let (post_author, post_author_view) =
+    governance_fixtures::seed_user(&context, instance.id, "adr017_post_author", false).await?;
+  let (comment_author, comment_author_view) =
+    governance_fixtures::seed_user(&context, instance.id, "adr017_comment_author", false).await?;
+  let (_nonauthor, nonauthor_view) =
+    governance_fixtures::seed_user(&context, instance.id, "adr017_nonauthor", false).await?;
+
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
+
+  // Real content rows so target_post_id / target_comment_id satisfy their FKs.
+  let post = Post::create(
+    &mut context.pool(),
+    &PostInsertForm::new("adr017 post".into(), post_author, community.id),
+  )
+  .await?;
+  let comment = Comment::create(
+    &mut context.pool(),
+    &CommentInsertForm::new(comment_author, post.id, community.id, "adr017 comment".into()),
+    None,
+  )
+  .await?;
+  assert_eq!(post.creator_id, post_author, "sanity: post author");
+  assert_eq!(comment.creator_id, comment_author, "sanity: comment author");
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // Decided post-targeted case: target_person_id = the post's author (ADR-017).
+  let post_case_form = ModerationCaseInsertForm {
+    community_id: None,
+    creator_id: None,
+    target_type: CaseTargetType::Post,
+    target_post_id: Some(post.id),
+    target_comment_id: None,
+    target_person_id: Some(post_author),
+    target_community_id: None,
+    target_remote_url: None,
+    reason_code: "adr017_post".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Decided,
+    threshold_score: 1,
+    ..Default::default()
+  };
+  let post_case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&post_case_form)
+      .get_result(&mut async_conn)
+      .await?;
+
+  // Decided comment-targeted case: target_person_id = the comment's author.
+  let comment_case_form = ModerationCaseInsertForm {
+    target_type: CaseTargetType::Comment,
+    target_post_id: None,
+    target_comment_id: Some(comment.id),
+    target_person_id: Some(comment_author),
+    reason_code: "adr017_comment".to_string(),
+    ..post_case_form.clone()
+  };
+  let comment_case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&comment_case_form)
+      .get_result(&mut async_conn)
+      .await?;
+
+  // Both cases need a future appeal window + a panel_size_snapshot (the same
+  // post-insert stamp the appeal_inside_window test uses; the direct insert
+  // path bypasses admin_assign_jury which would otherwise stamp these).
+  let future = Utc::now() + Duration::days(1);
+  for case_id in [post_case.id, comment_case.id] {
+    diesel::update(moderation_case::table.filter(moderation_case::id.eq(case_id)))
+      .set((
+        moderation_case::appeal_window_expires_at.eq(Some(future)),
+        moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+      ))
+      .execute(&mut async_conn)
+      .await?;
+  }
+
+  // Post author appeals their own post case → succeeds.
+  let post_resp = request_appeal(
+    Json(RequestAppeal {
+      case_id: post_case.id,
+      reason: "i am the post author".to_string(),
+    }),
+    context.clone(),
+    post_author_view,
+  )
+  .await?
+  .into_inner();
+  assert!(
+    post_resp.appeal_id.0 > 0,
+    "ADR-017: post author must be able to appeal a case against their own post",
+  );
+
+  // Comment author appeals their own comment case → succeeds.
+  let comment_resp = request_appeal(
+    Json(RequestAppeal {
+      case_id: comment_case.id,
+      reason: "i am the comment author".to_string(),
+    }),
+    context.clone(),
+    comment_author_view,
+  )
+  .await?
+  .into_inner();
+  assert!(
+    comment_resp.appeal_id.0 > 0,
+    "ADR-017: comment author must be able to appeal a case against their own comment",
+  );
+
+  // A non-author appealing a post case is still denied with NotFound
+  // (§12.4 spoofing protection — caller is neither defendant nor reporter).
+  // The first post case already flipped Decided → Appealed when its author
+  // appealed above, so assert against a fresh Decided post case here.
+  let spoof_case_form = ModerationCaseInsertForm {
+    reason_code: "adr017_spoof".to_string(),
+    ..post_case_form
+  };
+  let spoof_case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&spoof_case_form)
+      .get_result(&mut async_conn)
+      .await?;
+  diesel::update(moderation_case::table.filter(moderation_case::id.eq(spoof_case.id)))
+    .set((
+      moderation_case::appeal_window_expires_at.eq(Some(future)),
+      moderation_case::panel_size_snapshot.eq(Some(5_i32)),
+    ))
+    .execute(&mut async_conn)
+    .await?;
+
+  let err = request_appeal(
+    Json(RequestAppeal {
+      case_id: spoof_case.id,
+      reason: "i am not the author".to_string(),
+    }),
+    context.clone(),
+    nonauthor_view,
+  )
+  .await
+  .expect_err("ADR-017: a non-author must not be able to appeal another's post case");
+  assert!(
+    matches!(err.error_type, LemmyErrorType::NotFound),
+    "ADR-017: non-author appeal must be denied with NotFound, got {:?}",
+    err.error_type,
+  );
+
+  Ok(())
+}
+
+// ============================================================================
+// ADR-017 — backfill migration round-trip
+// ============================================================================
+//
+// The status-scoped backfill (migrations/2026-06-01-000000-0000_backfill_
+// author_defendant) populates moderation_case.target_person_id for the
+// post/comment-targeted historical tail, EXCLUDING the three pre-jury-
+// assignment statuses (Open / ThresholdMet / EmergencyRemove) so it can
+// never retroactively resize an in-flight or seated jury (ADR-010).
+//
+// This mirrors the phase1 round-trip harness: a vanilla container, the real
+// `schema_setup::run` runner (raw diesel CLI is blocked by forbid_diesel_cli),
+// reverting/re-applying the one backfill migration. It asserts:
+//   - after up:   a Decided post case gets target_person_id = post.creator_id
+//   - after up:   an Open post case is left NULL (status-scope proof)
+//   - after down: both are NULL again (reversibility)
+
+#[tokio::test(flavor = "multi_thread")]
+async fn backfill_author_defendant_round_trip() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Data;
+  use diesel::QueryDsl;
+  use diesel_async::{AsyncConnection as _, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::{context::LemmyContext, request::client_builder};
+  use lemmy_db_schema::source::{
+    governance::moderation_case::ModerationCaseInsertForm,
+    instance::Instance,
+    post::{Post, PostInsertForm},
+    secret::Secret,
+  };
+  use lemmy_db_schema_file::{
+    PersonId,
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, build_db_pool_for_tests},
+    schema_setup::{self, Options},
+    traits::Crud,
+  };
+  use lemmy_utils::{rate_limit::RateLimit, settings::SETTINGS};
+  use reqwest_middleware::ClientBuilder;
+
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", "0000000000000000000000000000000000000000000000000000000000000001");
+
+  let (_container, host_port) = governance_fixtures::start_postgres_vanilla()
+    .await
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
+
+  // Apply the full migration set via the real runner (records migrations so
+  // revert(limit 1) targets the backfill cleanly).
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  let pool: ActualDbPool = build_db_pool_for_tests();
+  let client = client_builder(&SETTINGS).build()?;
+  let middleware_client = ClientBuilder::new(client).build();
+  let secret = Secret {
+    id: 0,
+    jwt_secret: String::new().into(),
+  };
+  let rate_limit = RateLimit::with_debug_config();
+  let context = Data::new(LemmyContext::create(
+    pool,
+    middleware_client.clone(),
+    middleware_client,
+    secret,
+    rate_limit,
+  ));
+
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let (author, _author_view) =
+    governance_fixtures::seed_user(&context, instance.id, "adr017_rt_author", false).await?;
+  let community = governance_fixtures::seed_community(&context, instance.id).await?;
+  let post = Post::create(
+    &mut context.pool(),
+    &PostInsertForm::new("adr017 rt post".into(), author, community.id),
+  )
+  .await?;
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+
+  // Two post-targeted cases with target_person_id intentionally NULL: one
+  // Decided (must be backfilled) and one Open (must be left NULL).
+  let base = ModerationCaseInsertForm {
+    community_id: None,
+    creator_id: None,
+    target_type: CaseTargetType::Post,
+    target_post_id: Some(post.id),
+    target_comment_id: None,
+    target_person_id: None,
+    target_community_id: None,
+    target_remote_url: None,
+    reason_code: "adr017_rt_decided".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Decided,
+    threshold_score: 1,
+    ..Default::default()
+  };
+  let decided_case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&base)
+      .get_result(&mut async_conn)
+      .await?;
+  let open_form = ModerationCaseInsertForm {
+    reason_code: "adr017_rt_open".to_string(),
+    status: CaseStatus::Open,
+    ..base
+  };
+  let open_case: lemmy_db_schema::source::governance::moderation_case::ModerationCase =
+    diesel::insert_into(moderation_case::table)
+      .values(&open_form)
+      .get_result(&mut async_conn)
+      .await?;
+
+  // Re-apply the backfill: revert it (no-op on these NULL rows) then run it.
+  schema_setup::run(Options::default().revert().limit(1), &db_url)?;
+  schema_setup::run(Options::default().run(), &db_url)?;
+
+  let decided_after: Option<PersonId> = moderation_case::table
+    .find(decided_case.id)
+    .select(moderation_case::target_person_id)
+    .first(&mut async_conn)
+    .await?;
+  let open_after: Option<PersonId> = moderation_case::table
+    .find(open_case.id)
+    .select(moderation_case::target_person_id)
+    .first(&mut async_conn)
+    .await?;
+  assert_eq!(
+    decided_after,
+    Some(author),
+    "ADR-017 up.sql: Decided post case must be backfilled with the post author",
+  );
+  assert_eq!(
+    open_after, None,
+    "ADR-017 up.sql: Open post case must be left NULL (status-scope proof)",
+  );
+
+  // Down: nulls the backfilled value again.
+  schema_setup::run(Options::default().revert().limit(1), &db_url)?;
+  let decided_reverted: Option<PersonId> = moderation_case::table
+    .find(decided_case.id)
+    .select(moderation_case::target_person_id)
+    .first(&mut async_conn)
+    .await?;
+  assert_eq!(
+    decided_reverted, None,
+    "ADR-017 down.sql: backfilled target_person_id must be restored to NULL",
   );
 
   Ok(())

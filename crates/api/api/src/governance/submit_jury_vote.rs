@@ -458,8 +458,12 @@ async fn process_vote(
     .await?;
 
     // 8.5. Sponsor-liability path-kind branch (v1-SL-d).
-    // Only Person-target cases can have active sureties; Post/Comment-target
-    // cases have `target_person_id = None` (GOTCHA-56h) and skip silently.
+    // Fires for any case whose `target_person_id` resolves to a defendant.
+    // Per ADR-017, post/comment-targeted cases now carry the content author
+    // in `target_person_id`, so an author's sureties bear liability when the
+    // author's content is sanctioned (the GOTCHA-56h "skip silently" carve-out
+    // no longer applies). Community-targeted cases still have no single
+    // defendant and skip via the `None` arm.
     if let Some(target_id) = case_row.target_person_id {
       let deltas = sponsor_liability::compute_sponsor_liability(
         conn,
