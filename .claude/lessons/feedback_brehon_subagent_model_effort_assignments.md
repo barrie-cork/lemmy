@@ -1,3 +1,9 @@
+---
+name: Brehon subagent model + effort assignments
+description: Canonical model/effort tier per role — BM=Haiku/low, impl=Sonnet/medium, planning=Opus/xhigh, ci-watcher=Haiku/default. Confirm dispatch string matches before queuing.
+type: feedback
+---
+
 # Brehon subagent model + effort assignments
 
 ## Canonical assignments (current as of 2026-05-31)
