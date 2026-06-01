@@ -415,7 +415,17 @@ docker compose -f docker-compose.yml -f docker-compose-fed-enable.yml up -d lemm
 
 **ADR-014 core claim VERIFIED:** Brehon sends outbound AP activities (Follow, Create) without error. Vanilla nightly (v1.0.0) accepts them without error. No governance-specific AP type caused a rejection.
 
-**Remaining blocker — BUG-15:** Brehon hostname `localhost` (no `host.docker.internal` or port) prevents bidirectional federation. Vanilla cannot POST AcceptFollow to `https://localhost/inbox` from inside its container. **Fix:** change Brehon's `hostname` in `lemmy.hjson` to `host.docker.internal:8536` — requires clearing Brehon's DB volume (all existing `ap_id` data uses `localhost`). Out of scope for Phase 8 smoke test; full bidirectional federation requires hostname change or a proxy rewrite.
+**Remaining blocker — BUG-15 (root cause corrected 2026-06-02):** Bidirectional federation is **not achievable with the current two-instances-on-one-host topology**, and the originally-proposed fix (`hostname: host.docker.internal:8536` + DB wipe) is *wrong* — it trades one blocker for a worse one.
+
+Investigation (2026-06-02) established:
+
+1. **The DB wipe was never needed.** Lemmy's `Claims::validate` (`crates/api/api_utils/src/claims.rs:26-35`) uses `Validation::default()` and never checks the JWT `iss` claim — only `sub`, signature, `exp`, and the `login_token` table. Existing JWTs survive any hostname change. The `iss` field is informational.
+
+2. **Two compounding config issues exist, both fixable:** (a) hostname `localhost` is unreachable cross-container; (b) `tls_enabled` defaults to `true` (`crates/utils/src/settings/structs.rs:39` `#[default(true)]`), so Brehon's `ap_id`s generate as `https://` even though Brehon serves plain HTTP behind the nginx proxy. A surgical SQL rewrite of the 5 local rows (2 person + 1 community + 2 post + site `ap_id`/`inbox_url`) plus `hostname` + `tls_enabled:false` makes the actor/inbox endpoints reachable — *verified*: after the change, `curl` from inside the vanilla container successfully fetched `http://host.docker.internal:8536/u/lemmy` with a valid `Person` actor.
+
+3. **But the change introduces a fatal domain collision.** Lemmy keys federated instances by **port-stripped domain** (`Settings::get_hostname_without_port`, `crates/utils/src/settings/mod.rs:71-81` — "removes the port"). Setting Brehon's hostname to `host.docker.internal:8536` makes its domain `host.docker.internal` — **identical** to vanilla's domain (vanilla hostname `host.docker.internal:8537` → domain `host.docker.internal`). Each instance then treats the other as *itself*. Confirmed empirically: vanilla's `instance` table holds a single row `host.docker.internal` (its own), and `resolve_object` for `http://host.docker.internal:8536/u/lemmy` fails silently (`resolve_object_failed`, no fetch attempted) because vanilla resolves the domain to its own local instance and finds no local user `lemmy`. The original Phase 8 outbound resolution worked *precisely because* `localhost` ≠ `host.docker.internal` gave the two instances distinct domains.
+
+**Correct fix (deferred — out of smoke-test scope):** adopt the upstream `docker/federation/` topology — distinct **container hostnames** (`lemmy-alpha:8541`, `lemmy-beta:8551`, … as in `docker/federation/docker-compose.yml`) on a shared Docker network, NOT the same host with different ports. That gives each instance a unique port-stripped domain. ADR-014's core claim (outbound-only AP, governance types don't error on vanilla) is **already verified** via Phase 8.1/8.3–8.7; full bidirectional federation requires the distinct-hostname rebuild and is not needed to validate v0.
 
 ---
 
