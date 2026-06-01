@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "a3d0e9941441-044",
-      "from": "advisor",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-05-31T23:28:19Z",
-      "question": "T3 fix-impl-3: full e2e after test logic fix — delete_older_than backdate pattern",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-2 fixed compile errors. fix-impl-3 fixes test assertion: delete_older_than(0) returns early; now uses diesel::update to backdate seen_at then calls delete_older_than(1). cargo-check passed. Running e2e.",
-      "commands": [
-        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full\""
-      ],
-      "branch": "phase-v1-quality-r3c",
-      "phase_task": "3-fix-3",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -1579,6 +1553,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "b023b623a5ce-001"
+    },
+    {
+      "id": "a3d0e9941441-044",
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T23:28:19Z",
+      "question": "T3 fix-impl-3: full e2e after test logic fix — delete_older_than backdate pattern",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 fixed compile errors. fix-impl-3 fixes test assertion: delete_older_than(0) returns early; now uses diesel::update to backdate seen_at then calls delete_older_than(1). cargo-check passed. Running e2e.",
+      "commands": [
+        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full\""
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": "3-fix-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass: e2e ran 128/0/5 (128 passed, 0 failed, 5 skipped). E2E_EXIT_NONZERO is bat-wrapper artifact; test result line is authoritative per feedback_windows_e2e_requires_bat_wrapper.md.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-01T09:18:43Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
