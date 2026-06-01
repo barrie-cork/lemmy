@@ -101,6 +101,24 @@ Before starting any coding session, confirm:
 
 **Never write Rust code without a plan file committed to `.claude/PRPs/plans/`.** Planning and implementation are separate phases.
 
+## Research tools
+
+For ecosystem-survey OQs (multiple competing options, evolving landscape, clear evaluation criteria), use **Perplexity deep research** rather than manual search iteration:
+
+1. **Craft a structured prompt** — include: the decision to make, the specific use-case constraints (deployment model, language preference, scale), the specific evaluation questions (version support, known bugs, resource footprint, community status). The more specific the criteria, the more actionable the output.
+2. **Run in Perplexity** — use the "Deep Research" mode. Typical turnaround: 3–5 min, 30–50 sources.
+3. **Copy result to `docs/research/<slug>-<year>.md`** — tracked in git alongside the OQ resolution.
+4. **Synthesise into OQ resolution** — read the report, check any "verify before committing" items (e.g. open GitHub issues) directly via `gh issue view`, then close the OQ in `99-decisions-and-open-questions.md`.
+
+**Total cost per OQ:** ~15–20 min. First-pass actionable on well-scoped questions.
+
+**When to use:** any OQ with a "parked; re-take at X time" note where the question is about a technology's maturity, version support, bug status, or ecosystem landscape. Not needed for design/architecture OQs that are resolved by reasoning from ADRs.
+
+**Prior uses:**
+- `docs/research/matrix-homeserver-selection-2026.md` — resolved OQ-V2-10 (Matrix homeserver choice: Tuwunel). 42 sources, confirmed two active bug fixes via `gh issue view`. 2026-06-01.
+
+**Applicable upcoming OQs:** OQ-027 (Autonomi viability for governance-log anchoring), OQ-ADR016-01/02/03/04 (cross-app federation contract protocol shapes, when M1 is scheduled).
+
 ## Upstream-rebase discipline
 
 Per IMPLEMENTATION-PLAN-v0.md §7.1 top risks:
