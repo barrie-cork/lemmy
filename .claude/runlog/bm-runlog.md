@@ -2204,3 +2204,32 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r5
 - **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse hook ✓
 - **roadmap:** flipped v1-RT-r5 unstarted → in_flight
+
+## bm: poll-cr #172 — 2026-06-01T10:10:00Z
+- **PR:** #172 (fix(governance,e2e): CodeRabbit v0-scope rule + sponsor-allowlist sweep + BREHON_DISABLE_* guards)
+- **head SHA:** 0216babc (first poll — no prior SHA)
+- **CR comments seen:** 6 total (1 review-level / 4 inline / 1 issue)
+- **Actionable findings ingested:** 5 (1 from walkthrough pre-merge check)
+- **New findings this poll:** 5 (cr-1 through cr-5)
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 3/0/0 | medium 0/0/0 | low 2/0/0 | nit 0/0/0
+- **Recommendation:** request-changes (3 open major findings)
+- **YAML:** .claude/PRPs/reviews/pr-172-findings.yaml (committed + pushed, 9e1254dce)
+- **Notes:** Diff contains .claude/decision-queue.json + .claude/PRPs/briefs/v1-quality-r3c-fix-impl-2.md + .coderabbit.yaml (no crates/ or tests/ changes in this PR). All 4 inline findings target files inside the diff. cr-4 (major): brief specifies incorrect Probe A logic — fresh row means fed_nonce_delete won't delete it, making the test a vacuous pass; brief needs backdated row + count==0 assertion. cr-2 (major): \\b backspace corruption confirmed by CR verification script (2 affected resolved entries). walkthrough_summary: "Estimated review effort 2/Simple, ~10 min; change-cohort: documentation/config."
+
+## bm: merge PR #172 — 2026-06-01T10:27:12Z
+
+- **PR:** #172 (fix(governance,e2e): CodeRabbit v0-scope rule + sponsor-allowlist sweep + BREHON_DISABLE_* guards)
+- **base ← head:** governance-v0 ← phase-v1-quality-r3c
+- **merge sha:** c1ba108dc84ad005e66ec8e5823d6e427029a513
+- **remote branch deleted?** yes
+- **trunk position:** c1ba108dc (Merge pull request #172 from barrie-cork/phase-v1-quality-r3c)
+- **findings YAML archived:** .claude/PRPs/reviews/pr-172-findings.yaml
+## bm: triage — 2026-06-01T10:09:30Z
+- **PR:** #172
+- **Buckets:** fix-in-pr 1 | rebut 0 | carry-forward 0 | done 0 | wont-fix 4
+- **Comment posted?** NOT POSTED — confirmation gate deferred to parent (impl) session; AskUserQuestion not available inside BM subagent. Draft at .claude/PRPs/reviews/pr-172-comment.md.
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
+- **cr-2 falsifiable-hypothesis gate:** CONFIRMED real. json.load of origin/phase-v1-quality-r3c:.claude/decision-queue.json (SHA 0216babc) decodes 2 string values as 'scripts\x08rehon' — \b escape collapses path. OVERRODE brief pre-classification (raw-text probe mis-falsified as NO_BACKSPACE; decoded test is decisive). cr-2 stays fix-in-pr.
+- **cr-1/cr-3/cr-4/cr-5:** wont-fix per advisor pre-classification — rationales written to YAML (historical resolved DQ row / planning-brief lint / superseded planning brief test-logic / custom PR-body convention).

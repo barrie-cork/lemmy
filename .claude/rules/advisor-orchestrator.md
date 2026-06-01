@@ -100,13 +100,15 @@ Mechanical: read score, read top factor, add citation. No DQ, no escalation.
 
 Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on each completion. Full state-transition contract (with Phase 1/Phase 2 multi-paragraph detail): `.claude/refs/auto-phase.md` §"Stage-shape orchestration (canonical contract)".
 
+- **Pre-impl HEAD check (post-2026-06-01):** before executing any user-requested implementation ("implement X", "make change Y"), run `git show HEAD --stat` and verify the named changes are not already present. A prior handover session may have bundled them. If all target files are already at the desired state, confirm with the user before re-deriving. Cost: ~5s; saves ~15 min of no-op edits.
+
 - **Brief authored, no planning task yet** → `/brehon-clarify` → resolve clarify-DQ → queue planning.
 - **Planning complete** → §3.4 + §3.5 + §3.5a → gate 1 (plan approval) → queue `bm-cut`.
 - **bm-cut complete** → §4 cohort dispatch.
 - **impl-task complete (pre-Shape-G, ≤v1-JM-d)** → cohort barrier → next cohort or `chore(lint):` → `bm-pr`.
 - **impl-task complete (Shape G, ≥v1-JM-e)** → Phase 1 ci-watcher (workspace check) → Phase 2 e2e (advisor-driven). Cohort advancement waits on BOTH `result: "pass"`. Detail in refs.
 - **ci-watcher complete** → `pass` advances; `fail/cancelled/timed_out` → §5.3 §G4 classifier.
-- **All §16a stories `[done]`** → `/brehon-verify` → phantom = catch-fire; else `bm-pr`.
+- **All §16a stories `[done]`** → `/brehon-verify` → phantom = catch-fire; else `bm-pr`. **Linux-compile gate (diff-scoped):** before queueing `bm-pr`, if the phase diff vs `governance-v0` touches `Cargo.toml`/`Cargo.lock`/`migrations/**` or adds `cfg(unix)`/`cfg(target_os)`/path-sep code, ensure a `validate-pending-laptop-linux` DQ for this branch is at `result:pass` (raise it + run `scripts/brehon/cargo-linux.sh check --workspace --features full` via the §5.2 handler if absent). `bm-pr` Phase-1d STOPs otherwise. Pure-logic diffs skip the gate (Option-2 scope, 2026-06-01). Per `feedback_linux_compile_proof_is_a_gate.md`.
 - **bm-pr complete** → CodeRabbit polls → `bm-poll-cr`.
 - **bm-poll-cr complete** → `bm-triage` (draft auto).
 - **Triage drafted** → gate 3 (CR triage) → fix-in-PR impl-tasks.
@@ -210,7 +212,7 @@ User may authorise a forbidden-window run. Procedure (file DQ citing the user's 
 
 ### 5.2 validate-pending-laptop handler
 
-When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e`) entry appears in `pending[]`, the advisor runs the §15 commands locally. Full pre-flight, sequence, Phase-2 e2e advisor-driven flow, escape hatch, Windows invocation: `.claude/refs/advisor-validation.md` §"validate-pending-laptop handler".
+When a `kind: "validate-pending-laptop"` (or `*-laptop-e2e` / `*-laptop-linux`) entry appears in `pending[]`, the advisor runs the entry's `commands` locally. Full pre-flight, sequence, Phase-2 e2e advisor-driven flow, escape hatch, Windows invocation: `.claude/refs/advisor-validation.md` §"validate-pending-laptop handler". For `*-laptop-linux` the command is the `scripts/brehon/cargo-linux.sh` invocation (Docker `rust:1.95` Linux compile proof — Docker-daemon preflight per the wrapper's own check); mutation is identical to the other variants (`answered_by: "advisor-laptop"`, pass→resolved / fail→pending for §G4).
 
 Mutation shape, log-slice rules, kind enum, §G4 fail handling: `.claude/rules/decision-queue.md` §"ci-watcher mutation pattern" + §"Two-phase validation under Shape G" (mutation identical; `answered_by: "advisor-laptop"` instead of `"ci-watcher"`).
 

@@ -55,6 +55,7 @@ gh pr list --repo barrie-cork/lemmy --head $(git branch --show-current) --json n
 | No commits ahead of `governance-v0` | **STOP**: "No commits to PR." |
 | Plan names retro as pre-bm-pr barrier AND retro missing | **STOP**: "Plan §13 names retro as pre-bm-pr barrier; missing at `.claude/PRPs/reports/<phase>-retro.md`. Author + commit retro first." Per `feedback_phase_retro_gate_enforcement.md`. |
 | Pre-bm-pr retro exists but mtime ≤ halt-retro mtime | **STOP**: "Halt-retro is mid-phase artifact, not phase-close retro. Author Task N phase-close retro before bm-pr." |
+| Diff touches `Cargo.toml`/`Cargo.lock`/`migrations/**` or `cfg(unix)`/`cfg(target_os)` AND no `validate-pending-laptop-linux` DQ at `result:pass` for this branch | **STOP**: "Linux-deploy-target compile proof required for dep/migration/cfg diffs; no passing `validate-pending-laptop-linux` DQ found. The lane session must run `scripts/brehon/cargo-linux.sh check --workspace --features full` and flip the DQ to pass first." Per Phase-1c below + `feedback_linux_compile_proof_is_a_gate.md`. |
 | PR already exists for this branch | **EDIT** existing body via `gh pr edit` (skip to Phase 4) |
 
 **Retro gate (mandatory inline check before authoring PR body; plan-aware):**
@@ -182,6 +183,71 @@ fi
 ```
 
 When the gate fires, surface user gate 4 (the local-vs-dispatch choice per `.claude/rules/advisor-orchestrator.md` §3.2). On pass-result lands → re-run this Phase 1c → proceed to Phase 2.
+
+---
+
+## Phase 1d — Linux-deploy-target compile gate (diff-scoped)
+
+Per `feedback_linux_compile_proof_is_a_gate.md`. The laptop's native cargo
+proves the **Windows** build; `scripts/brehon/cargo-linux.sh` proves the
+**Linux deploy-target** build (Docker `rust:1.95` mirror of CI — the free
+local replacement for Shape G's one irreplaceable job). For most PRs these
+agree, so the gate is **diff-scoped**: it fires only when Windows-green ≠
+Linux-green is actually plausible — a diff touching `Cargo.toml` /
+`Cargo.lock` / `migrations/**`, or introducing `cfg(unix)` /
+`cfg(target_os)` / path-separator-shaped code. Pure governance-logic Rust
+compiles identically on both targets and skips the gate (Option-2 scope,
+locked 2026-06-01).
+
+When the gate fires, a `validate-pending-laptop-linux` DQ entry for this
+branch must be at `result: "pass"` — produced by the lane session running
+`cargo-linux.sh` and the advisor-laptop handler mutating the entry (per
+`advisor-orchestrator.md` §5.2). `bm-task` (Haiku, no cargo/Docker) only
+**checks** for the passing entry; it never runs the compile itself.
+
+```bash
+PHASE_BRANCH=$(git branch --show-current)
+
+# Detect whether this branch's diff vs governance-v0 is in the Linux-gate scope.
+git fetch origin governance-v0 --quiet
+CHANGED=$(git diff origin/governance-v0...HEAD --name-only)
+LINUX_GATE=0
+echo "$CHANGED" | grep -qE '^(Cargo\.toml|Cargo\.lock|migrations/)' && LINUX_GATE=1
+# cfg(unix)/cfg(target_os)/path-sep additions anywhere in the crates/ diff
+# (added lines only — grep the diff body for the OS-divergence signatures).
+if git diff origin/governance-v0...HEAD -- 'crates/**' | grep -qE '^\+.*(cfg\(unix|cfg\(windows|cfg\(target_os|std::path::MAIN_SEPARATOR)'; then
+  LINUX_GATE=1
+fi
+
+if [ "$LINUX_GATE" = "1" ]; then
+  # Require a passing validate-pending-laptop-linux DQ for this branch.
+  LINUX_PASS=$(python <<'PYEOF'
+import json, io
+d = json.load(io.open('.claude/decision-queue.json', encoding='utf-8'))
+def ok(e):
+    return (e.get('kind') == 'validate-pending-laptop-linux'
+            and e.get('result') == 'pass')
+# A passing entry may already be in resolved[] (mutation moves pass→resolved).
+hits = [e for e in (d.get('pending', []) + d.get('resolved', [])) if ok(e)]
+print('pass' if hits else 'missing')
+PYEOF
+)
+  if [ "$LINUX_PASS" != "pass" ]; then
+    echo "STOP: diff is Linux-gate-scoped (dep/migration/cfg) but no validate-pending-laptop-linux DQ at result:pass for $PHASE_BRANCH."
+    echo "      The lane session must run: scripts/brehon/cargo-linux.sh check --workspace --features full"
+    echo "      then the advisor-laptop handler mutates the DQ to pass. See advisor-orchestrator.md §5.2."
+    exit 1
+  fi
+  echo "INFO: Linux-gate-scoped diff + passing validate-pending-laptop-linux DQ found — gate cleared."
+else
+  echo "INFO: diff not Linux-gate-scoped (no dep/migration/cfg change) — Linux compile gate not required."
+fi
+```
+
+The gate is conservative-by-default: when in doubt about whether a diff is
+in-scope, the lane can raise the DQ + run `cargo-linux.sh` anyway (a green
+Linux compile is never wrong, only sometimes redundant). The cost is ~4 min
+warm Docker; the failure it prevents is a Linux-only break reaching merge.
 
 ---
 

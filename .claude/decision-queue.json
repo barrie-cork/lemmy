@@ -5384,6 +5384,171 @@
       "commands": [
         "./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings"
       ]
+    },
+    {
+      "from": "bm",
+      "kind": "blocker",
+      "timestamp": "2026-05-31T17:07:30Z",
+      "question": "bm-cut brief §4 requires runlog write to governance-v0, but worktree-guard blocks writes outside worktree and bm-cut.md Phase 5 directs commit on phase branch. Which path: (a) commit on phase-v1-quality-r3c per bm-cut.md script, or (b) advisor relocate runlog to governance-v0 post-merge?",
+      "options": [
+        "commit runlog on phase branch (bm-cut.md Phase 5)",
+        "defer runlog to post-merge (advisor relocates)"
+      ],
+      "context": "bm-cut complete: phase-v1-quality-r3c cut @ 7c4fc33ed, verified on origin. Runlog content prepared; cannot be written due to worktree isolation. Brief and script conflict on commit target (governance-v0 vs phase-v1-quality-r3c).",
+      "answer": "Option (b): BM wrote runlog to governance-v0 directly (commit 2de6ed422 on daemon). Runlog target conflict is moot — runlog exists on governance-v0, which is the advisor-preferred location. Closing.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T17:57:09Z",
+      "id": "8aca794fb044-002"
+    },
+    {
+      "id": "70ce7590e3ed-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T17:31:53Z",
+      "question": "Validate T1 .coderabbit.yaml edit: confirm EXACTLY 11 is removed",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 committed 12ae96be2; .coderabbit.yaml edited to remove EXACTLY 11 count assertion and replace with v1-aware OQ-020 caveat. grep -c validation shows 0 matches locally.",
+      "commands": [
+        "grep -c 'EXACTLY 11' .coderabbit.yaml"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — advisor verified grep -c EXACTLY 11 .coderabbit.yaml = 0 on origin/phase-v1-quality-r3c (session 2026-05-31). T1 post-condition confirmed clean. Worker commit 12ae96be2 content identical to advisor-direct 35008c74f.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T17:57:09Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "b2e9c3a7a422-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T19:00:00Z",
+      "question": "T2 cargo validation gate: cargo-check --workspace --features full on phase-v1-quality-r3c after sponsor-allowlist e2e array entries",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task #558 worker ran cargo-check before pushing. Worker branch reaped on cancel before push. User confirmed cargo-check passed. Entry reconstructed by advisor from recovery evidence.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — user confirmed cargo-check --workspace --features full exit 0 on worker #558 before cancel. e2e.rs array-only change; no compilation units affected.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T19:20:23Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "cargo-check validation for task 2 (sponsor-allowlist e2e sweep)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "test(e2e): added 2 sponsor-allowlist entries to all_mvp_endpoints_return_non_404 array in crates/server/tests/e2e.rs. Awaiting laptop cargo-check to confirm no compile errors.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — cargo-check --workspace --features full exit 0 on phase-v1-quality-r3c tip (advisor laptop, 3m46s).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-05-31T20:02:07Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "91629186d44c-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "cargo-check workspace after T3 guard tests added",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "impl-3 added test_brehon_disable_snapshot_job + test_brehon_disable_fed_replay_cleanup_job to e2e.rs in v1_rt_r4_fixtures; needs laptop cargo-check before merge",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check --workspace --features full: exit 0 on laptop (2m 40s). T3 validate-pending-laptop: pass.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T22:43:05Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "3342d066519a-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "question": "T3 fix-impl-1: cargo-check --workspace --features full after moving DISABLE_* tests to v1_rt_r3_fixtures",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Moved test_brehon_disable_snapshot_job and test_brehon_disable_fed_replay_cleanup_job from v1_rt_r4_fixtures to v1_rt_r3_fixtures; added missing imports (run_snapshot_batch, FederationInboxNonce, FederationInboxNonceInsertForm, federation_inbox_nonce schema, reputation_snapshot schema). Awaiting laptop cargo-check validation.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": "3-fix",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-check --workspace --features full exited 0 on laptop (governance-v0 canonical checkout with phase-v1-quality-r3c e2e.rs checked out). Fix-impl-1 imports compile cleanly.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-05-31T23:18:11Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b023b623a5ce-001"
+    },
+    {
+      "id": "a3d0e9941441-044",
+      "from": "advisor",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-05-31T23:28:19Z",
+      "question": "T3 fix-impl-3: full e2e after test logic fix — delete_older_than backdate pattern",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 fixed compile errors. fix-impl-3 fixes test assertion: delete_older_than(0) returns early; now uses diesel::update to backdate seen_at then calls delete_older_than(1). cargo-check passed. Running e2e.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full\""
+      ],
+      "branch": "phase-v1-quality-r3c",
+      "phase_task": "3-fix-3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass: e2e ran 128/0/5 (128 passed, 0 failed, 5 skipped). E2E_EXIT_NONZERO is bat-wrapper artifact; test result line is authoritative per feedback_windows_e2e_requires_bat_wrapper.md.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-01T09:18:43Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }

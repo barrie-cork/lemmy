@@ -19,6 +19,11 @@ name: cargo-test-e2e
 #   (b) PC is unavailable, or
 #   (c) cross-environment reproducibility is the question.
 #
+# This workflow uses cargo-nextest (process-per-test isolation) so
+# --test-threads=1 is not needed. Concurrency is capped via
+# .config/nextest.toml `threads-required=4` (2 concurrent containers
+# on an 8-core runner). Wall-clock: ~12 min vs ~26 min for serial.
+#
 # To dispatch:
 #   gh workflow run cargo-test-e2e.yml --repo barrie-cork/lemmy --ref phase-v1-<phase>
 #
@@ -81,10 +86,13 @@ jobs:
           restore-keys: |
             cargo-e2e-${{ runner.os }}-
 
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest --locked
+
       - name: Compile e2e test target
         run: cargo test --workspace --features full --test e2e --no-run
 
-      - name: Run e2e (single-threaded; testcontainers per test)
+      - name: Run e2e (nextest; process-per-test isolation)
         env:
           RUST_BACKTRACE: 1
-        run: cargo test --workspace --features full --test e2e -- --test-threads=1
+        run: cargo nextest run --workspace --features full --test e2e --profile ci

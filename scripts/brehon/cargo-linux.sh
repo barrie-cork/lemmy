@@ -36,6 +36,16 @@
 #
 # Requires: Docker Desktop running with linux/x86_64 containers. Verify with
 #     docker info --format '{{.OSType}}'   # must print: linux
+#
+# GATE, not just a command (2026-06-01): this script's green run is a
+# `bm-pr` precondition for any PR whose diff touches Cargo.toml / Cargo.lock
+# / migrations/** or adds cfg(unix)/cfg(target_os)/path-sep code — the
+# diff-scoped Linux-deploy-target compile gate. The lane session runs it,
+# the advisor-laptop handler mutates a `validate-pending-laptop-linux` DQ to
+# pass, and `bm-pr` Phase-1d STOPs without that passing entry. Pure-logic
+# PRs skip the gate (Win-green == Linux-green). See
+# .claude/lessons/feedback_linux_compile_proof_is_a_gate.md +
+# .claude/rules/decision-queue.md "validate-pending-laptop-linux".
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
