@@ -1,9 +1,9 @@
 # Verify report — v1-redaction-r1
 
-**Run at:** 2026-06-01T~14:00Z  
-**Phase branch:** `phase-v1-redaction-r1` @ `cbf01834a`  
+**Run at:** 2026-06-01T~14:00Z (updated 2026-06-01 post-fix-impl-1)  
+**Phase branch:** `phase-v1-redaction-r1` @ `df5bf3558`  
 **Plan:** `.claude/PRPs/plans/v1-redaction-r1.plan.md`  
-**Outcome summary:** 4 stories: 3✓ 1✗-regression(pre-existing) 0✗-phantom 0[malformed]
+**Outcome summary:** 4 stories: 4✓ 0✗-regression 0✗-phantom 0[malformed]
 
 ---
 
@@ -63,11 +63,10 @@
   - ✓ Per-regex `//` comments present above `mention_regex` and `email_regex`
   - ✓ Targeted clippy `-p lemmy_db_schema --features full --no-deps -- -D warnings`: exit **0** — redaction.rs changes are clean
 - **Checkpoint (plan §16a):** `cargo-clippy.bat --workspace --features full --no-deps -- -D warnings`
-  - Exit: **non-zero** ✗
-  - Errors: 6 errors in `crates/api/api/src/governance/reputation_snapshot.rs` (lines 601, 626-641) — `map_or` simplification + `as_conversions` lint
-  - **Assessment: PRE-EXISTING REGRESSION.** `reputation_snapshot.rs` was last modified by v1-RT-r5 (commits `8c47522bf`, `f6725c0a7`), which is already on `governance-v0`. v1-redaction-r1 made zero changes to this file. The lint failure pre-dates this phase.
-  - Targeted clippy against `lemmy_db_schema` (the scope of this phase) exits 0 — v1-redaction-r1 has introduced no new lint failures.
-- **Outcome:** ✗ regression (pre-existing; not caused by v1-redaction-r1; details in Required Actions below)
+  - Exit: **0** ✓ (post-fix-impl-1 @ `df5bf3558`)
+  - Fix-impl-1 commit `df5bf3558` (cherry-picked from Junior task #564 worker branch) resolves 6 pre-existing lints in `reputation_snapshot.rs`: `map_or(false, ...)` → `is_some_and(...)` + 5 `as` casts → `try_from().unwrap_or(MAX)`
+  - Log: `.claude/PRPs/debug/v1-redaction-r1-clippy-fix-impl-1.log`
+- **Outcome:** ✓
 
 ---
 
@@ -89,16 +88,9 @@
 
 ## Required actions
 
-### Story 3 pre-existing regression
+### Story 3 — RESOLVED
 
-`crates/api/api/src/governance/reputation_snapshot.rs` has 6 clippy lint errors (`map_or` + `as_conversions`) introduced by v1-RT-r5. The workspace clippy checkpoint for Story 3 fails.
-
-**Assessment:** This is not a v1-redaction-r1 regression. The phase-specific scope (redaction.rs in lemmy_db_schema) is clean. Options:
-- (a) File a fix-in-PR impl-task to fix the 6 `reputation_snapshot.rs` clippy issues before merge
-- (b) Narrow the Story 3 checkpoint command to `-p lemmy_db_schema` in the plan and accept this as a plan refinement
-- (c) Treat as a carry-forward issue for v1-quality-r3c (which already has quality work in progress)
-
-**Recommendation:** option (c) — this is pre-existing baseline noise that predates v1-redaction-r1. The phase's own changes are clean. Surface to user for gate decision.
+fix-impl-1 (#564) fixed 6 pre-existing lints in `reputation_snapshot.rs`. Workspace clippy now clean. No further action.
 
 ### Story 4 plan-inconsistency
 
