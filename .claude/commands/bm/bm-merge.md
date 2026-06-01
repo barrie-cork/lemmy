@@ -425,6 +425,51 @@ local sense only.)
 
 ---
 
+## Phase 8.5 — Bootstrap handover tombstone
+
+After the runlog append (Phase 8) and BEFORE Phase 9 output:
+
+```bash
+# Check if a bootstrap handover exists for this phase
+PHASE_SLUG=$(gh pr view {N} --repo barrie-cork/lemmy --json headRefName -q '.headRefName | split("-") | .[1:]' | tr -d '\n')
+# Bootstrap handovers follow the pattern: .claude/PRPs/handovers/<phase>-bootstrap.md
+ls .claude/PRPs/handovers/ | grep -i "bootstrap"
+```
+
+If a matching `<phase>-bootstrap.md` exists under `.claude/PRPs/handovers/`:
+
+1. Append the following block to the end of the file:
+
+```markdown
+---
+## STATUS: SHIPPED
+
+- **PR:** #{N} merged at {ISO timestamp}
+- **Merge SHA:** {sha}
+- **Tombstoned by:** bm-merge Phase 8.5 post-condition
+- **This handover is stale.** Do NOT use the RESUME block above as a
+  basis for action — the phase is complete. Delete this file or archive it.
+```
+
+2. Commit the tombstone:
+
+```bash
+git add .claude/PRPs/handovers/<phase>-bootstrap.md
+git commit -m "chore(bm): tombstone handover — <phase> shipped (PR #{N})"
+git push origin governance-v0
+```
+
+If NO matching bootstrap handover exists: skip silently — no action required.
+
+**Why:** bootstrap handovers authored before a phase runs are sometimes stale
+by the time the next session opens them. Appending a tombstone at merge time
+converts the handover from a potential-re-derive-trigger into an explicit
+"this is done" marker. Rooted in 2026-06-01 state-reconciliation session where
+a stale bootstrap caused a full no-op planning-brief authorship (pre-impl HEAD
+check was the only catch). See `session-retro-2026-06-01-state-reconciliation-v2.md`.
+
+---
+
 ## Phase 9 — Output
 
 ```markdown
@@ -437,6 +482,7 @@ local sense only.)
 ### Cleanup done
 - Remote branch `origin/{head}` deleted ✓
 - Findings YAML archived with `merged_at` + `merge_commit` ✓
+- Bootstrap handover tombstoned (if existed) ✓
 
 ### What you may want to do next
 - `git branch -D {head}` — remove local branch (BM does NOT auto-delete local)

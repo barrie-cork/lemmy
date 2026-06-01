@@ -165,6 +165,58 @@ Skip this step on server repos (lessons are only written on TH via /reflect).
 
 **Invoke-by-reference:** `.claude/skills/retro-harvest/SKILL.md` contains the full sweep and currency-triage logic (STALE/LIVE/SUPERSEDED). This Step 2c is the cadence call point — invoke the retro-harvest skill here for the complete sweep procedure.
 
+### 2d. MEMORY.md ACTIVE-line drift check
+
+**Why:** MEMORY.md "Active workflow state" lines stay after the phases they
+describe have shipped, if the closing session didn't clean them. Stale ACTIVE
+lines cause the next session to treat completed phases as in-flight, wasting
+~45 min on no-op re-derivation. (2026-06-01 incident: 3 ACTIVE lines for
+r3b/r3c/redaction-r1 still present after all three shipped; 2026-05-31:
+role-customization workflow state drift.) Per
+`.claude/lessons/feedback_bootstrap_handover_verified_at.md`.
+
+Run laptop-side (requires `v1-roadmap.json` to be readable):
+
+```bash
+# Extract phase slugs from ACTIVE lines in MEMORY.md
+MEMORY_INDEX="C:/Users/barri/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md"
+ROADMAP=".claude/PRPs/v1-roadmap.json"
+
+# Pull every "ACTIVE:" line slug — heuristic: first word after "ACTIVE: [" up to "]"
+python -c "
+import re, json, sys
+mem = open(r'$MEMORY_INDEX', encoding='utf-8').read()
+roadmap = json.load(open(r'$ROADMAP', encoding='utf-8'))
+
+# Flatten all sub_phases from all lanes
+all_phases = {}
+for lane in roadmap.get('lanes', {}).values():
+    for slug, phase in lane.get('sub_phases', {}).items():
+        all_phases[slug] = phase.get('status', 'unknown')
+
+actives = re.findall(r'ACTIVE[^:]*:\s*\[([^\]]+)\]', mem)
+stale = []
+for a in actives:
+    # Try to find matching slug by substring
+    for slug, status in all_phases.items():
+        if slug in a.lower().replace('-','_') or slug.replace('-','_') in a.lower().replace('-','_'):
+            if status in ('done', 'cancelled', 'skipped'):
+                stale.append((a[:60], slug, status))
+if stale:
+    print('STALE ACTIVE LINES (phase shipped but still listed as ACTIVE):')
+    for line, slug, status in stale:
+        print(f'  [{line}] → roadmap status={status}')
+    sys.exit(2)
+else:
+    print('ACTIVE-line drift check: all clean')
+"
+```
+
+If the script exits 2, list the stale entries in the weekly report and
+manually remove them from MEMORY.md. **Do NOT auto-remove** — check that
+there is no concurrent lane work for that entry first. This step is
+advisory; do not fail the weekly-review run on exit 2.
+
 ### 3. Aggregate eval metrics
 
 Search for eval memories from the past 7 days:
