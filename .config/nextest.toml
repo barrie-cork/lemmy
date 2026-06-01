@@ -5,20 +5,27 @@
 # Each test gets its own process — `LazyLock` re-initializes per
 # process and `LEMMY_DATABASE_URL` can differ per test.
 #
-# threads-required caps Docker-Desktop concurrency to avoid OOM /
-# socket exhaustion. Each `pgautoupgrade:18-alpine` container uses
-# ~150-300 MB; with 64 GB RAM, the bottleneck is Docker's named-pipe
-# concurrency on Windows, not RAM.
+# threads-required caps Docker Desktop concurrency. Each
+# `pgautoupgrade:18-alpine` container uses ~150-300 MB. The laptop has
+# 64 GB RAM so memory is not the constraint — the limit is Docker
+# Desktop's named-pipe concurrency on Windows.
 #
-# Tune `threads-required` by measuring under load: start at 4
-# (effectively 2 concurrent containers on an 8-core machine), raise
-# to 8 if Docker is comfortable, lower to 2 if socket exhaustion or
-# OOM appears.
+# Current setting: threads-required = 4 → 2 concurrent containers on
+# an 8-core machine (test-threads=num-cpus=8, 8÷4=2). This is
+# conservative. Raise to 2 (threads-required=4 unchanged, but increase
+# test-threads via CLI) or lower threads-required to 2 (→ 4 concurrent)
+# if Docker is comfortable. Measured wall-clock with threads-required=4:
+# ~12 min for 41 tests at ~22s per test. RAM is NOT the bottleneck.
+#
+# If socket exhaustion or container-start failures appear: lower to
+# threads-required = 8 (→ 1 concurrent on 8-core). If Docker handles
+# more: lower to threads-required = 2 (→ 4 concurrent).
 #
 # Background:
 #   - Perplexity research 2026-05-02 (saved at
 #     C:\Users\barri\Downloads\I maintain a Rust monorepo*.md)
 #   - feedback_local_validation_cycle_2026_05_02.md (this commit)
+#   - feedback_e2e_nextest_filter_groups.md — scoped -E filter groups
 
 [profile.default]
 # 60s slow-test threshold; terminate after 3× (180s). Container
