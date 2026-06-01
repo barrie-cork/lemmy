@@ -419,16 +419,20 @@ docker compose -f docker-compose.yml -f docker-compose-fed-enable.yml up -d lemm
 
 ---
 
-## Phase 9 — Passkey MFA (needs second device or browser profile)
+## Phase 9 — TOTP MFA ✅ PASS (2026-06-01)
 
-**Prerequisite:** a second machine/browser that can respond to a WebAuthn ceremony.
+**Note:** Lemmy uses TOTP (`totp-rs`, RFC 6238 SHA1) — not WebAuthn passkeys. No second device needed; tested fully via API.
 
-| # | Check | Pass condition |
-|---|---|---|
-| 9.1 | Register a passkey on admin account via UI | WebAuthn registration ceremony completes, key stored |
-| 9.2 | Log out, log back in with passkey | WebAuthn assertion ceremony succeeds, JWT issued |
-| 9.3 | Governance endpoint still works post-passkey login | `GET /reputation/me` → 200 |
-| 9.4 | Wrong device / cancelled ceremony → rejected | 401 returned, no session created |
+| # | Check | Result | Notes |
+|---|---|---|---|
+| 9.1 | Generate TOTP secret | ✅ | `POST /api/v4/account/auth/totp/generate` returns `otpauth://` URL |
+| 9.1b | Enable TOTP with valid token | ✅ | `POST /api/v4/account/auth/totp/edit` `{enabled:true}` → `{enabled:true}` |
+| 9.2a | Login without TOTP token (should fail) | ✅ | Returns `missing_totp_token` error |
+| 9.2b | Login with valid TOTP token | ✅ | JWT issued; TOTP token computed via Python HMAC-SHA1 |
+| 9.3 | Governance endpoint works post-TOTP login | ✅ | `GET /api/v4/governance/reputation/me` → 200 with reputation view |
+| 9.4 | Wrong TOTP token rejected | ✅ | `000000` → `incorrect_totp_token` HTTP 400 |
+
+TOTP disabled after test to restore clean stack state.
 
 ---
 
