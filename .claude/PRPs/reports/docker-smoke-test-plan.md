@@ -4,8 +4,39 @@
 **UI:** `http://localhost:1236`  
 **Admin credentials:** `lemmy` / `lemmylemmy`  
 **Date authored:** 2026-06-01  
+**Last updated:** 2026-06-01 (rate limit + registration constraints added from live DB)
 
 All requests use `Authorization: Bearer <jwt>` from a login call unless marked public.
+
+---
+
+## Lemmy constraints (live values from this instance)
+
+These are the actual limits running in the Docker stack — not defaults from docs.
+
+| Bucket | Max requests | Window |
+|---|---|---|
+| `message` (general API) | 180 | 60 s |
+| `post` (create post/comment) | 6 | 600 s (10 min) |
+| `register` (new account) | 10 | 3600 s (1 hr) |
+| `search` | 60 | 600 s |
+| `comment` | 6 | 600 s |
+
+**Registration mode: `RequireApplication`** — new accounts need admin approval before their JWT works for write operations. Workaround for testing: use admin account for all reporter actions, OR pre-approve the application via admin UI/API before running governance steps.
+
+**Auth endpoint (v4):** `POST /api/v4/account/auth/login` — NOT `/api/v4/user/login` (that's v3, returns 404).
+
+**Register endpoint (v4):** `POST /api/v4/account/auth/register`
+
+**Community creation:** open (not admin-only) — any approved user can create communities.
+
+### Testing strategy given these constraints
+
+1. **Never run more than ~150 API calls in a 60s window** from one IP — the general bucket (180/60s) is the easiest to hit. Space governance calls with a 1–2s sleep between steps.
+2. **Auth bucket is separate and stricter** — login/register calls share a different bucket. If you hit 429 on login, wait the full reset window before retrying (check `x-ratelimit-reset` header).
+3. **Post creation is heavily throttled** (6 per 10 min) — create test posts at the start of a session and reuse their IDs. Don't recreate for every test run.
+4. **Use admin JWT for all write operations** in single-user testing — avoids the RequireApplication approval dance. Register reporter1 once, approve via admin, then reuse.
+5. **Save JWTs across phases** — store in shell variables or `/tmp/` file; re-login only if token expires (~1 week default).
 
 ---
 
@@ -28,23 +59,34 @@ Confirm the stack came up correctly before touching any governance endpoint.
 
 Get a JWT for subsequent calls. Create a second user to act as reporter/juror.
 
+**Note:** registration mode is `RequireApplication` — reporter1 needs admin approval before their JWT works for write operations. Admin-approve via `POST /api/v4/admin/registration_application/{id}/approve` or via the UI at http://localhost:1236.
+
 ```bash
-# Login as admin
-curl -s -X POST http://localhost:8536/api/v4/user/login \
+# Login as admin (correct v4 path)
+curl -s -X POST http://localhost:8536/api/v4/account/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username_or_email":"lemmy","password":"lemmylemmy"}' | jq .jwt
 
-# Register a second user (reporter)
-curl -s -X POST http://localhost:8536/api/v4/user/register \
+# Register a second user (reporter) — answer field required by RequireApplication mode
+curl -s -X POST http://localhost:8536/api/v4/account/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username":"reporter1","password":"password123","password_verify":"password123","show_nsfw":false}' | jq .jwt
+  -d '{"username":"reporter1","password":"Password123!","password_verify":"Password123!","show_nsfw":false,"answer":"smoke test"}' | jq .jwt
+
+# Admin: approve reporter1's application (get application id first)
+curl -s http://localhost:8536/api/v4/admin/registration_application/list \
+  -H "Authorization: Bearer $ADMIN_JWT" | jq '.registration_applications[0].registration_application.id'
+# Then approve:
+curl -s -X PUT "http://localhost:8536/api/v4/admin/registration_application/$APP_ID/approve" \
+  -H "Authorization: Bearer $ADMIN_JWT" -H "Content-Type: application/json" -d '{}'
 ```
 
 | # | Check | Pass condition |
 |---|---|---|
 | 1.1 | Admin JWT issued | Non-null string returned |
-| 1.2 | reporter1 JWT issued | Non-null string returned |
-| 1.3 | GET /api/v4/site with admin JWT | `my_user.local_user_view.person.name == "lemmy"` |
+| 1.2 | reporter1 registered | 200 (JWT may be null until approved — that's expected) |
+| 1.3 | reporter1 application approved | Admin approval API returns 200 |
+| 1.4 | reporter1 JWT issued post-approval | Login returns non-null JWT |
+| 1.5 | GET /api/v4/site with admin JWT | `my_user.local_user_view.person.name == "lemmy"` |
 
 ---
 
@@ -72,13 +114,16 @@ This is the main integration flow. Run steps in order; each step depends on the 
 
 ### 3.1 Create a post to report
 
+**Rate limit:** post creation is throttled at 6 per 10 min. Create this post once and reuse the ID across test runs — don't recreate it each time.
+
 ```bash
-# Need a community first — use the auto-created "main" community (id=2 on fresh instance)
+# Use the auto-created "main" community (id=2 on fresh instance)
+# Use ADMIN_JWT here to avoid reporter1 approval dependency
 curl -s -X POST http://localhost:8536/api/v4/post \
-  -H "Authorization: Bearer $REPORTER_JWT" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
   -d '{"name":"Test post for governance","community_id":2,"nsfw":false}' | jq .post_view.post.id
-# Save as POST_ID
+# Save as POST_ID — reuse this ID for the full session
 ```
 
 ### 3.2 Create a governance report
