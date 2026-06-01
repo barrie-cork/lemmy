@@ -4,7 +4,7 @@
 **UI:** `http://localhost:1236`  
 **Admin credentials:** `lemmy` / `lemmylemmy`  
 **Date authored:** 2026-06-01  
-**Last updated:** 2026-06-01 (rate limit + registration constraints + session-2 live state)
+**Last updated:** 2026-06-01 (session-3: Phase 3 PASS + Phase 4 PASS, appeal bug documented)
 
 ## Session state (2026-06-01, session 2)
 
@@ -13,9 +13,11 @@
 | Stack uptime | ~3 hours, all 5 containers healthy |
 | Admin JWT | `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaXNzIjoibG9jYWxob3N0IiwiaWF0IjoxNzgwMzI4NDkyLCJleHAiOjE3ODA5MzMyOTJ9.vWXSVZr-FAFTpiN0baDdBwVKI4LpUshBtZAlsLheqQQ` (sub=1, exp ~2026-06-08) |
 | Reporter1 JWT | `eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaXNzIjoibG9jYWxob3N0IiwiaWF0IjoxNzgwMzI4NDk2LCJleHAiOjE3ODA5MzMyOTZ9.emHslA57L_NhvsZ29QfoF3StuUCxjTl99gHzXmj_4_Y` (sub=2, exp ~2026-06-08) |
-| Communities | **0** — none exist yet; must create one before Phase 3 |
-| Governance modlog | Empty (`[]`) — no cases yet |
-| Rate limits | Fully clear as of 2026-06-01 16:52 IST |
+| Communities | 2 — `governancetest` (id=2) created in session 2 |
+| Governance modlog | 15 entries — full lifecycle through appeal complete |
+| Rate limits | Clear as of session-3 start |
+| Case id=1 | Status=`Appealed` (appeal filed, appeal jury assembled) |
+| governance_log | 15 entries, hash chain intact, appeal_panel_assembled is newest |
 
 ### Phase completion status
 
@@ -24,8 +26,9 @@
 | Phase 0 — Boot health | ✅ PASS | All containers up, migrations ran, site responds |
 | Phase 1 — Auth baseline | ✅ PASS | Admin JWT issued, reporter1 registered + approved |
 | Phase 2 — Reputation baseline | ✅ PASS | `/reputation/me` returns 200 with `['view']` fields, modlog `[]` |
-| Phase 3 — Case lifecycle | ⏳ PENDING | Blocked last session on rate limits. Ready to run. |
-| Phase 4–9 | ⏳ PENDING | Not started |
+| Phase 3 — Case lifecycle | ✅ PASS | Community created, post created, report filed, jury assigned+accepted, vote→Decided, governance_log 12 entries, hash chain intact |
+| Phase 4 — Appeal flow | ✅ PASS | Appeal filed by defendant, case→Appealed, appeal jury assembled, governance_log 15 entries |
+| Phase 5–9 | ⏳ PENDING | Not started |
 
 ### Known bugs fixed (discovered session 1)
 
@@ -34,6 +37,14 @@
 3. **Registration approval endpoint** — correct call is `PUT /api/v4/admin/registration_application/approve` with body `{"id": N, "approve": true}`, NOT a path-param style URL.
 4. **`/api/v4/admin/registration_application/list` with `?unread_only=true`** — returned empty even when application existed; use without that filter.
 5. **modlog response shape** — returns a JSON array `[]` directly, not `{"entries": []}`. Parse as list, not dict.
+
+### Known bugs fixed (discovered session 2–3)
+
+6. **Community names must be alphanumeric + underscore only** — `governance-test` is invalid (hyphen rejected). Use `governancetest` or `governance_test`.
+7. **`decision` enum is lowercase** — `"warning"` not `"Warning"`. Same applies to all jury decision values (`noaction`, `advisorylabel`, `remove`, `ban`, `emergencyremove`).
+8. **Jury eligibility requires `accepted_application=true`** — admin account starts with `accepted_application=false` on a fresh instance. Fix: `UPDATE local_user SET accepted_application=true WHERE person_id=2` before assigning jury.
+9. **`panel_size` must be ≤ eligible juror count** — on a single-user instance with only admin eligible, set `panel_size=1` and `quorum=1` in the `governance_config` table. Otherwise assign-jury returns `not_found`.
+10. **Appeal `target_person_id` not set for post-targeted cases** — when a report targets a post (`target_type=post`), `target_person_id` remains NULL. The appeal handler checks `target_person_id == caller_id` for the defendant path — it never resolves `target_post.creator_id`. Workaround: manually set `UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID` before appealing.
 
 All requests use `Authorization: Bearer <jwt>` from a login call unless marked public.
 
@@ -148,7 +159,7 @@ This is the main integration flow. Run steps in order; each step depends on the 
 COMM_RESP=$(curl -s -X POST http://localhost:8536/api/v4/community \
   -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
-  -d '{"name":"governance-test","title":"Governance Test Community","nsfw":false}')
+  -d '{"name":"governancetest","title":"Governance Test Community","nsfw":false}')
 COMM_ID=$(echo $COMM_RESP | python -c "import sys,json; print(json.load(sys.stdin)['community_view']['community']['id'])")
 echo "COMM_ID=$COMM_ID"
 ```
@@ -239,7 +250,7 @@ On a fresh single-user instance the admin is the only eligible juror. Submit vot
 curl -s -X POST http://localhost:8536/api/v4/governance/jury/vote \
   -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
-  -d '{"case_id":'$CASE_ID',"decision":"Warning","rationale":"smoke test vote 1"}'
+  -d '{"case_id":'$CASE_ID',"decision":"warning","rationale":"smoke test vote 1"}'
 
 # (Repeat for votes 2 and 3 — quorum of 3 triggers decision)
 ```
@@ -271,9 +282,16 @@ curl -s "http://localhost:8536/api/v4/governance/cases?status=Decided" \
 
 Continues from Phase 3 (case in `Decided` state).
 
+**IMPORTANT:** The appeal must be filed by the **defendant** (the sanctioned party, i.e. the post author for post-targeted cases). The appeal handler checks `target_person_id == caller.person_id`. For post-targeted cases `target_person_id` is NULL — see Bug #10 above; set it manually first.
+
+Reporter1 can only appeal if `winning_decision` is `NoAction` or `AdvisoryLabel`. For `Warning`/`Remove`/`Ban` outcomes only the defendant can appeal.
+
 ```bash
+# Prerequisite: set target_person_id if targeting a post (see Bug #10)
+# docker exec docker-postgres-1 psql -U lemmy -d lemmy -c "UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID"
+
 curl -s -X POST http://localhost:8536/api/v4/governance/appeal \
-  -H "Authorization: Bearer $REPORTER_JWT" \
+  -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
   -d '{"case_id":'$CASE_ID',"reason":"I dispute this decision — smoke test appeal"}' | jq .
 ```
