@@ -45,12 +45,22 @@ session is strong fresh evidence, not a new lesson.
   checkout that hook is present-but-unwired in `settings.local.json` — it did not fire; the manual
   `sync-lessons-to-pmd.sh` did the indexing. The skill's stated automation is aspirational here, not
   actual — a `settings.local.json` non-propagation gap (`feedback_settings_local_json_worktree_bootstrap.md`).
+  **Fixed 2026-06-02:** `PostToolUse` (matcher `Edit|Write`) now wired → `lesson-pmd-sync.sh` (JSON validated).
+- **My own retro carried an unfalsified hypothesis (caught at execution time).** §What-to-change #1
+  (the sync counter "bug") was logged from the opaque `imported: 0` summary WITHOUT a falsification
+  pass. On execution (2026-06-02) I falsified it in ~5 min — grep showed only the safe `$((x+1))`
+  form, an isolated bash test showed that form doesn't trip `set -e`, and a full INSERT+increment
+  simulation returned `imported=1`. There was no bug. The irony is sharp: I committed the exact
+  `feedback_falsifiable_hypothesis_before_structural_fix.md` failure mode *inside the retro that was
+  cataloguing summary-distrust*. The discipline must extend to my OWN proposals, not just to harness
+  output — a retro's structural-fix items are hypotheses too, and must carry a falsification before
+  they're acted on.
 
 ## What to change
 
 | # | Change | Expected effect | Cost | Recurrence |
 |---|---|---|---|---|
-| 1 | Fix the `imported`/`skipped` counter in `scripts/sync-lessons-to-pmd.sh` — under `set -e` the `imported=$((imported + 1))` arithmetic mis-tallies (reports 0 when rows demonstrably insert). One-line fix (`|| true` on the arith, or `set +e` around the loop body). | Script summary becomes trustworthy → no future SQLite+MCP cross-check needed to confirm a sync worked | minor | 1× this session, but the script is invoked by session-retro Step 5.5 historically → recurring blast radius |
+| 1 | ~~Fix the `imported`/`skipped` counter in `sync-lessons-to-pmd.sh`~~ **WITHDRAWN 2026-06-02 — misdiagnosis.** Falsified during execution: the script uses the SAFE `imported=$((imported + 1))` form throughout (no `((x++))`, no `let` — grep-confirmed), which does NOT trip `set -e` (isolated bash test confirmed `$((x+1))` survives, only `((x++))` aborts on a 0 result). The full INSERT-then-increment sequence was simulated under `set -euo pipefail` → `imported=1`, exit 0. The original `imported: 0` reading was a **misread of an opaque summary against an already-populated DB** (the row id 762 had inserted; the dry-run correctly reports "0 would-import, 189 already in DB"). There is no bug. Lesson: I logged a structural-fix proposal from an opaque summary WITHOUT falsifying it — the exact `feedback_falsifiable_hypothesis_before_structural_fix.md` failure mode, committed in the very retro cataloguing summary-distrust. | — (no change — there was no defect) | — | misdiagnosis, withdrawn |
 | 2 | Make `sync-lessons-to-pmd.sh` write via the `memory_write` MCP tool (HTTP daemon) instead of raw `sqlite3 INSERT`, per `pmd-invariants.md` #1. The session-retro skill body already says the SQLite path is "superseded" and lessons MUST go via `memory_write` — but this standalone script still does raw SQLite. The two contradict. | Eliminates the latent strand-risk the moment the HTTP daemon and SQLite file diverge (they happened to coincide this session; that's luck, not guarantee) | medium | 1× here + standing contradiction with the documented topology (≥1 prior in `feedback_pmd_retro_check_http_store_split.md`) |
 | 3 | When running a backgrounded build/test whose truth is a `&& echo SENTINEL` tail, **always read the sentinel, never the harness exit-summary** — and state that explicitly in the closing report. (Already my practice; codify as the default so it survives compaction.) | No false-green from a piped/wrapped exit code — the exact failure class `cargo-output-capture.md` + `feedback_task_notification_exit_summary_unreliable.md` warn about | minor (habit) | 4× this session (the four summaries above); ≥3× in prior memory (promoted pattern) |
 
@@ -88,16 +98,22 @@ Neither flags a watchdog/envelope concern.
 
 ## Decisions to revisit
 
-- The standing contradiction between session-retro Step 5.5 ("lessons MUST go via `memory_write`; SQLite path superseded") and `sync-lessons-to-pmd.sh` (still raw `sqlite3`). It happened to be harmless this session because the two stores coincided — but that's not guaranteed. Worth a focused fix (§What-to-change #2) rather than relying on coincidence.
+- The standing contradiction between session-retro Step 5.5 ("lessons MUST go via `memory_write`; SQLite path superseded") and `sync-lessons-to-pmd.sh` (still raw `sqlite3`). **Resolved structurally 2026-06-02 by wiring the `lesson-pmd-sync.sh` PostToolUse hook** (the MCP-write path) — the standalone SQLite script is now a fallback, not the primary path. The script-via-MCP rewrite is no longer urgent; the hook supersedes it for interactive sessions.
 - PR #176 CodeRabbit four-bucket triage is the one open downstream item — user's call to trigger; not a retro decision.
 
 ---
 
+## Execution log (2026-06-02 — user asked to implement all three §What-to-change items)
+
+- **#1 (sync counter fix) — WITHDRAWN, no defect.** Falsified the hypothesis before editing: grep showed only the `set -e`-safe `$((x+1))` form; isolated bash test + full INSERT-then-increment simulation both confirmed correct counting. The original `imported: 0` was a misread against an already-populated DB, not a bug. No change made. (Meta-lesson recorded in §What surprised us.)
+- **#2 (wire `lesson-pmd-sync.sh`) — DONE.** Added `PostToolUse` (matcher `Edit|Write`) → `bash .claude/hooks/lesson-pmd-sync.sh` to `.claude/settings.local.json`; JSON validated; `.mcp.json` confirmed to carry `project-memory.url` (HTTP topology) so the hook's precondition holds. Takes effect next session (hooks load at SessionStart). This is the real fix that supersedes both #1's phantom and the script-via-MCP item.
+- **#3 (sentinel-over-summary) — DISCIPLINE, no code.** Already covered by promoted patterns; proved its worth again this very leg (distrust of `imported: 0` is what falsified #1). Nothing to implement.
+
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] §What-to-change #1 (sync counter bug): fix in `scripts/sync-lessons-to-pmd.sh` directly — mechanical, no lesson needed.
-- [ ] §What-to-change #2 (sync via MCP not SQLite): update `scripts/sync-lessons-to-pmd.sh`. **VERIFIED this session:** the `lesson-pmd-sync.sh` hook file exists but is **NOT wired** in this canonical checkout's `.claude/settings.local.json` (grep returned nothing) — so it did NOT auto-fire for this lesson; the manual `sync-lessons-to-pmd.sh` run was the actual indexing path. Two sub-actions: (a) wire `lesson-pmd-sync.sh` as a PostToolUse hook in the canonical `settings.local.json` so future lessons auto-index (this is the `feedback_settings_local_json_worktree_bootstrap.md` non-propagation class — the skill body *assumes* it's wired but it isn't here); (b) once wired + verified, either fix the standalone script to use `memory_write` MCP, or retire it in favour of the hook.
-- [ ] §What-to-change #3 (sentinel-over-summary): already covered by `pattern_verify_before_trusting_shell_output.md` + `feedback_task_notification_exit_summary_unreliable.md` + `cargo-output-capture.md` — no new lesson; this session is corroborating evidence only.
+- [x] §What-to-change #2 (wire lesson-pmd-sync hook): **executed** — `.claude/settings.local.json` PostToolUse added.
+- [ ] §What surprised: "my own retro item was an unfalsified hypothesis" — recurrence is 1× here; if a 2nd retro-self-misdiagnosis appears, promote `feedback_falsify_own_retro_proposals.md` (extend `feedback_falsifiable_hypothesis_before_structural_fix.md` to cover the author's own retro items). Single-instance for now — recorded, not promoted.
+- [ ] §What-to-change #3 (sentinel-over-summary): already covered by `pattern_verify_before_trusting_shell_output.md` + `feedback_task_notification_exit_summary_unreliable.md` + `cargo-output-capture.md` — no new lesson; corroborating evidence only.
 
 ---
 
