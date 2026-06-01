@@ -81,6 +81,12 @@ This is the implementation reference. It holds migrations, tables, enums, Diesel
 
 > **Cumulative config-seed count invariant:** 34 (v1-AD seed at #7) + 27 (#16) + 27 (#21) + 13 (#25) + 26 (#29) = **127**, plus 11 federation-inbound (#30) = **138** instance-scoped rows seeded across the lifecycle. The reputation-snapshot/recompute job and admin-config handler assert subsets of these counts (`EXPECTED_SEED_COUNT_V1_*` consts in `crates/api/api/src/governance/config.rs`).
 
+### ADR-017 author-as-defendant backfill
+
+| # | Migration dir | What it does |
+|---|---|---|
+| 31 | `2026-06-01-000000_backfill_author_defendant` | **Data-only backfill** (no DDL). Sets `moderation_case.target_person_id` to the content author's `creator_id` for the historical post/comment-targeted tail (ADR-017), making the author a first-class defendant. **Status-scoped:** excludes `Open`/`ThresholdMet`/`EmergencyRemove` (the three statuses from which a jury can still be sized) so it cannot retroactively resize an in-flight or seated jury (ADR-010). PascalCase enum literals (`'Post'`/`'Comment'` + status tokens) per the verbatim DB convention. Reversible: `down.sql` nulls only rows whose value still equals the content author. |
+
 ---
 
 ## 2. Enums
@@ -137,6 +143,7 @@ All governance enums live in `crates/db_schema_file/src/enums.rs` as Rust `enum`
 ### Core case workflow
 
 - **`moderation_case.rs` → `ModerationCase`** (table `moderation_case`). The central artefact. Fields: `id`, `community_id: Option<CommunityId>`, `creator_id: Option<PersonId>`, `target_type: CaseTargetType`, `target_post_id/comment_id/person_id/community_id: Option<…>`, `target_remote_url: Option<String>`, `reason_code: String`, `severity: CaseSeverity`, `status: CaseStatus`, `threshold_score: i64`, `opened_at`, `decided_at: Option<…>`, `closed_at: Option<…>`. **v1 additions:** `applied_config_snapshot: Option<Value>` (v1-AD-a), `rule_set_version_id: Option<RuleSetVersionId>` (v1-AD-a/c), `severity_tier: SeverityTier` + `status_tier: CaseStatusTier` + `panel_size_snapshot/quorum_snapshot/threshold_count_snapshot: Option<i32>` + `appeal_window_expires_at: Option<…>` (v1-JM-a), `winning_decision: Option<JuryDecision>` (v1-JM-d), `grace_expires_at: Option<…>` + `liability_escape_reason: Option<Value>` (v1-SL-a). InsertForm + `AsChangeset` (snapshot/tier writes flow through `update().set()`).
+  > **`target_person_id` semantics (ADR-017).** For person-targeted cases this is the reported person. **For `Post`/`Comment`-targeted cases it is now the content author's `creator_id`** — the case is dual-populated (`target_post_id`/`target_comment_id` *and* `target_person_id` both set). This makes the author a first-class defendant for appeal (`request_appeal` resolves the defendant via `target_person_id == caller`), sanction inheritance (`submit_jury_vote` §8.5), reputation ban-math, sponsor-liability, and juror exclusion. Populated at report-creation (`create_report::resolve_target`), emergency-removal (`admin_emergency_remove`), and for history via migration #31. Federation is agnostic — `publish_sanction_notice` resolves the AP URL from `target_post_id`/`target_comment_id`, never `target_person_id`. Community-targeted cases leave it NULL (no single author).
 - **`case_evidence.rs` → `CaseEvidence`** — `case_id`, `uploader_id`, `storage_key`, `sha256`, `mime_type`, `visibility: EvidenceVisibility`, `created_at`.
 - **`sanction.rs` → `Sanction`** — `case_id`, `scope: SanctionScope`, `action: SanctionAction`, `target_*: Option<…>`, `starts_at`, `ends_at: Option<…>`, `active: bool` (InsertForm `Option<bool>`).
 - **`appeal.rs` → `Appeal`** — `case_id`, `requester_id`, `reason`, `status: AppealStatus`, `created_at`, `decided_at: Option<…>`. **v1-JM-d:** `requester_role: AppealRequesterRole`, `panel_size_snapshot: Option<i32>`, `threshold_count_snapshot: Option<i32>` (NULL until `select_appeal_panel` runs).
@@ -489,3 +496,40 @@ Registered in `scheduled_tasks::setup`; `crates/server/src/governance.rs::schedu
 - **Entry-kind registry (authoritative):** `.claude/rules/governance-log-entry-kind-registry.md`
 - **Harness-observability JSONL sidecar (NOT product):** [governance-log-kinds-jsonl.md](governance-log-kinds-jsonl.md)
 - **v1 PRDs (design intent — secondary to code):** `.claude/PRPs/prds/v1-*.prd.md`
+
+---
+
+## 14. API behaviour notes (Docker smoke-test reconciliation — CODE WINS)
+
+End-to-end Docker smoke testing surfaced six API behaviours that differ from
+a naive reading of the DTOs/routes above. They are **intended** behaviour and
+recorded here so callers (and future doc readers) aren't surprised. No code
+change accompanies this reconciliation pass.
+
+- **DIFF-1 — governance enums serialize lowercase over JSON.** The Postgres
+  enum literal is PascalCase (`'Post'`, `'Warning'`) per the `verbatim` DB
+  convention (§2), but the serde/wire representation is snake_case/lowercase
+  (`"post"`, `"warning"`). **Both are correct at their own layer:** SQL
+  (including migrations) must use the PascalCase DB token; API request/response
+  bodies use the lowercase serde token. Conflating them silently matches
+  nothing (this is exactly why migration #31's status filter uses `'Open'`,
+  not `'open'`).
+- **DIFF-2 — `GET /governance/modlog` returns summarised `public_case_log`
+  rows, not raw `governance_log`.** The public modlog is the redacted
+  case-summary surface (ADR-015 scrubbed). Hash-chain / pseudonym audit of the
+  raw append-only log is a DB-level or future admin-only endpoint concern, not
+  this route.
+- **DIFF-3 — double-endorse returns `not_found`, not a true idempotency
+  conflict.** A repeat endorsement within the 48h cooldown
+  (`liability.revoke_rate_limit_per_day`) surfaces as `not_found` rather than a
+  semantic `conflict`/`already_endorsed`. **Known wart (opaque error).**
+  *Future:* return `conflict`/`already_endorsed`. No code change this pass.
+- **DIFF-4 — `modlog` returns a bare JSON array on success, a dict on
+  rate-limit.** Callers must handle both shapes (array = results; object =
+  rate-limit envelope).
+- **DIFF-5 — `POST /admin/config` requires a non-empty `reason`; `value` is a
+  raw JSON scalar.** Not `value_int`/`value_text` split fields — a single
+  `value` carrying the JSON scalar, plus a mandatory `reason` string.
+- **DIFF-6 — admin GETs require their scoping id.** `GET /admin/rule-sets`
+  requires `community_id`; `GET /admin/reputation/rollup` requires `person_id`.
+  Omitting them is a client error, not an unscoped "list all".

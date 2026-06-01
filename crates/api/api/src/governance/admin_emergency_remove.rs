@@ -145,13 +145,35 @@ async fn process_emergency_remove(
     EmergencyRemoveTarget::Comment(id) => (None, Some(id), None),
     EmergencyRemoveTarget::Community(id) => (None, None, Some(id)),
   };
+  // ADR-017: post/comment authors are first-class defendants. Resolve the
+  // content author so the emergency-removed author has a Defendant path
+  // (appeal/sanction/reputation/liability). Read via the in-transaction
+  // `conn` (not `context.pool()`) to avoid pool re-entrancy inside the tx;
+  // the rows were just flagged `removed = true` above but `find` is by PK.
+  let target_person_id: Option<PersonId> = match target {
+    EmergencyRemoveTarget::Post(id) => Some(
+      post::table
+        .find(id)
+        .select(post::creator_id)
+        .first(conn)
+        .await?,
+    ),
+    EmergencyRemoveTarget::Comment(id) => Some(
+      comment::table
+        .find(id)
+        .select(comment::creator_id)
+        .first(conn)
+        .await?,
+    ),
+    EmergencyRemoveTarget::Community(_) => None,
+  };
   let form = ModerationCaseInsertForm {
     community_id,
     creator_id: Some(admin_id),
     target_type: target.case_target_type(),
     target_post_id,
     target_comment_id,
-    target_person_id: None,
+    target_person_id,
     target_community_id,
     target_remote_url: None,
     reason_code: "emergency_remove".to_string(),
