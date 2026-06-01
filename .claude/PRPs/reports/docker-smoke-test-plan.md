@@ -4,7 +4,7 @@
 **UI:** `http://localhost:1236`  
 **Admin credentials:** `lemmy` / `lemmylemmy`  
 **Date authored:** 2026-06-01  
-**Last updated:** 2026-06-01 (session-3: Phase 3 PASS + Phase 4 PASS, appeal bug documented)
+**Last updated:** 2026-06-01 (session-3: Phase 3–6 PASS, 10 bugs documented)
 
 ## Session state (2026-06-01, session 2)
 
@@ -28,7 +28,9 @@
 | Phase 2 — Reputation baseline | ✅ PASS | `/reputation/me` returns 200 with `['view']` fields, modlog `[]` |
 | Phase 3 — Case lifecycle | ✅ PASS | Community created, post created, report filed, jury assigned+accepted, vote→Decided, governance_log 12 entries, hash chain intact |
 | Phase 4 — Appeal flow | ✅ PASS | Appeal filed by defendant, case→Appealed, appeal jury assembled, governance_log 15 entries |
-| Phase 5–9 | ⏳ PENDING | Not started |
+| Phase 5 — Endorsement | ✅ PASS | admin→reporter1, endorsement_created logged, double-endorse blocked (cooldown) |
+| Phase 6 — Log integrity | ✅ PASS | 15/15 entry_hash present, full hash chain valid, 10/15 actor_pseudonym |
+| Phase 7–9 | ⏳ PENDING | Not started |
 
 ### Known bugs fixed (discovered session 1)
 
@@ -44,7 +46,8 @@
 7. **`decision` enum is lowercase** — `"warning"` not `"Warning"`. Same applies to all jury decision values (`noaction`, `advisorylabel`, `remove`, `ban`, `emergencyremove`).
 8. **Jury eligibility requires `accepted_application=true`** — admin account starts with `accepted_application=false` on a fresh instance. Fix: `UPDATE local_user SET accepted_application=true WHERE person_id=2` before assigning jury.
 9. **`panel_size` must be ≤ eligible juror count** — on a single-user instance with only admin eligible, set `panel_size=1` and `quorum=1` in the `governance_config` table. Otherwise assign-jury returns `not_found`.
-10. **Appeal `target_person_id` not set for post-targeted cases** — when a report targets a post (`target_type=post`), `target_person_id` remains NULL. The appeal handler checks `target_person_id == caller_id` for the defendant path — it never resolves `target_post.creator_id`. Workaround: manually set `UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID` before appealing.
+10. **`onboarding.sponsor_min_account_age_days=30` blocks endorsement on fresh instance** — admin account is new (created at stack boot); age gate fires and returns `not_found`. Fix: `UPDATE governance_config SET value_int=0 WHERE scope='instance' AND key='onboarding.sponsor_min_account_age_days'`. Also set `onboarding.sponsor_min_endorsement_strength=0`.
+11. **Appeal `target_person_id` not set for post-targeted cases** — when a report targets a post (`target_type=post`), `target_person_id` remains NULL. The appeal handler checks `target_person_id == caller_id` for the defendant path — it never resolves `target_post.creator_id`. Workaround: manually set `UPDATE moderation_case SET target_person_id=<post_author_person_id> WHERE id=$CASE_ID` before appealing.
 
 All requests use `Authorization: Bearer <jwt>` from a login call unless marked public.
 
@@ -309,8 +312,14 @@ curl -s -X POST http://localhost:8536/api/v4/governance/appeal \
 
 Test the endorsement/reputation signal path independently of the case flow.
 
+**IMPORTANT:** The endorser must have account age ≥ `onboarding.sponsor_min_account_age_days` (default: 30 days). On a fresh instance, lower it to 0 first — see Bug #10.
+
 ```bash
-# Admin endorses reporter1
+# Prerequisite: lower age gate for smoke testing (DB patch)
+# docker exec docker-postgres-1 psql -U lemmy -d lemmy -c "UPDATE governance_config SET value_int=0 WHERE scope='instance' AND key='onboarding.sponsor_min_account_age_days'"
+# docker exec docker-postgres-1 psql -U lemmy -d lemmy -c "UPDATE governance_config SET value_int=0 WHERE scope='instance' AND key='onboarding.sponsor_min_endorsement_strength'"
+
+# Admin endorses reporter1 (person_id=4)
 curl -s -X POST http://localhost:8536/api/v4/governance/endorsement \
   -H "Authorization: Bearer $ADMIN_JWT" \
   -H "Content-Type: application/json" \
