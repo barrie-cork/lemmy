@@ -64,22 +64,26 @@ echo PQ_LIB_DIR=%PQ_LIB_DIR%
 echo ---
 cd /d "%~dp0..\.."
 
-REM ---- BREHON_USE_NEXTEST=1 dispatch path --------------------------------
-REM When BREHON_USE_NEXTEST=1 is set, redirect through cargo-nextest. Per
-REM Perplexity research 2026-05-02 + .config/nextest.toml: nextest's
-REM process-per-test isolates LazyLock<Settings>, so the --test-threads=1
-REM guard below is unnecessary under nextest. Concurrency caps are in
-REM .config/nextest.toml (threads-required).
+REM ---- Nextest dispatch (default) -----------------------------------------
+REM nextest is the default runner for e2e tests because its process-per-test
+REM model isolates LazyLock<Settings> across tests, eliminating the
+REM --test-threads=1 constraint. Concurrency caps live in .config/nextest.toml
+REM (threads-required=4 for the e2e binary → 2 concurrent containers on 8-core).
+REM
+REM Set BREHON_NO_NEXTEST=1 to fall back to plain `cargo test` (legacy path,
+REM still injects --test-threads=1 for e2e). Useful for debugging dump
+REM suspicion, measuring same-runner baseline, or when cargo-nextest is absent.
 REM
 REM Note: nextest invocation form is `cargo nextest run <args>` — the
 REM `run` subcommand is added here automatically.
-if "%BREHON_USE_NEXTEST%"=="1" (
+if not "%BREHON_NO_NEXTEST%"=="1" (
     where cargo-nextest >nul 2>&1
     if errorlevel 1 (
-        echo CARGO_NEXTEST_NOT_INSTALLED: run `cargo install cargo-nextest` first.
+        echo CARGO_NEXTEST_NOT_INSTALLED: install via `cargo install cargo-nextest`
+        echo   or set BREHON_NO_NEXTEST=1 to fall back to plain cargo test.
         exit /b 1
     )
-    echo BREHON_USE_NEXTEST: dispatching through cargo nextest run
+    echo BREHON_NEXTEST: dispatching through cargo nextest run
     "%USERPROFILE%\.cargo\bin\cargo.exe" nextest run %*
     exit /b !errorlevel!
 )

@@ -159,6 +159,13 @@ polling loop applies different routing per kind.
   "impl"`, `answered_by: null`. Required fields at write time:
   `commands` (string array, the §15 DoD lines verbatim including
   scope flags + `--features full`), `branch`, `phase_task`.
+  Optional field at write time: `e2e_filter` (string | null) — a
+  nextest `-E` filterset expression scoping the e2e run to the tests
+  relevant to this task. When present and non-null, the advisor
+  appends `-E "<value>"` to the e2e command. Omit or set null for
+  a full suite run (merge-gate, snapshot tasks, or any task whose
+  scope is unknown). See `.claude/lessons/feedback_e2e_nextest_filter_groups.md`
+  for the canonical group → filter expression table.
   Required nullable fields populated by advisor-laptop on mutation:
   `result` (null), `log_slice` (null), `failed_commands` (null).
   Mutation: advisor-laptop sets `result: "pass" | "fail"`, populates
@@ -168,7 +175,8 @@ polling loop applies different routing per kind.
   `resolved[]`; on fail stays in `pending[]` for §G4 triage.
   Variant: `kind: "validate-pending-laptop-e2e"` for entries whose
   sole content is e2e (testcontainers + Docker required); same shape
-  + same mutation, separate kind only for clarity in DQ scans.
+  + same mutation + same `e2e_filter` field, separate kind only for
+  clarity in DQ scans.
   Writer: **impl-task** (Pre-Shape-G plans only). The advisor
   laptop session reads this entry and runs the commands locally; no
   Junior subagent is dispatched (the laptop IS the runner).

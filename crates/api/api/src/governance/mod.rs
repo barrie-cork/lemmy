@@ -20,6 +20,7 @@ pub mod admin_config;
 pub mod admin_dashboard;
 pub mod admin_dashboard_html;
 pub mod admin_emergency_remove;
+pub mod admin_reputation_rollup;
 pub mod admin_reputation_stats;
 pub mod admin_rule_sets;
 pub mod admin_sponsor_allowlist;
