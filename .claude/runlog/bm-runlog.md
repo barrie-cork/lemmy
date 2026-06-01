@@ -2225,3 +2225,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **remote branch deleted?** yes
 - **trunk position:** c1ba108dc (Merge pull request #172 from barrie-cork/phase-v1-quality-r3c)
 - **findings YAML archived:** .claude/PRPs/reviews/pr-172-findings.yaml
+## bm: triage — 2026-06-01T10:09:30Z
+- **PR:** #172
+- **Buckets:** fix-in-pr 1 | rebut 0 | carry-forward 0 | done 0 | wont-fix 4
+- **Comment posted?** NOT POSTED — confirmation gate deferred to parent (impl) session; AskUserQuestion not available inside BM subagent. Draft at .claude/PRPs/reviews/pr-172-comment.md.
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
+- **cr-2 falsifiable-hypothesis gate:** CONFIRMED real. json.load of origin/phase-v1-quality-r3c:.claude/decision-queue.json (SHA 0216babc) decodes 2 string values as 'scripts\x08rehon' — \b escape collapses path. OVERRODE brief pre-classification (raw-text probe mis-falsified as NO_BACKSPACE; decoded test is decisive). cr-2 stays fix-in-pr.
+- **cr-1/cr-3/cr-4/cr-5:** wont-fix per advisor pre-classification — rationales written to YAML (historical resolved DQ row / planning-brief lint / superseded planning brief test-logic / custom PR-body convention).
