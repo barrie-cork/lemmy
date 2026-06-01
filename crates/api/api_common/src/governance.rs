@@ -10,16 +10,21 @@
 //     `AdminListRuleSets`, `AdminDashboard*`, …) — admin backstops, not
 //     user-facing. Approved as out-of-scope of the 11-endpoint count by
 //     plan §11.2 GOTCHA + Phase 5b/5c decision notes.
+//   - `AddSponsorAllowlist`, `AddSponsorAllowlistResponse`,
+//     `RemoveSponsorAllowlist`, `RemoveSponsorAllowlistResponse` — v1-RT-r4
+//     admin sponsor-allowlist endpoints; not a v0 user-facing endpoint.
+//     Approved as out-of-scope per v1-RT-r4 plan §16 (admin backstop).
 //
 // New non-Admin DTOs added here that don't correspond to one of the 11
 // require a new carve-out entry above. Closes #40.
 
 use chrono::{DateTime, Utc};
-use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId};
+use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId, SponsorAllowlistId};
 use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
 };
+use lemmy_db_schema::source::governance::reputation_snapshot::ReputationSnapshot;
 use lemmy_db_views_reputation::ReputationSummaryView;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -748,4 +753,68 @@ pub struct PerCommunityActiveRuleSet {
   /// `rule_set.active_version_id` config row (allowed by design — v1-AD-c
   /// never seeds the key).
   pub active_version_id: Option<i32>,
+}
+
+// ── Group E: Admin sponsor-allowlist (v1-RT-r4) ───────────────────────
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AddSponsorAllowlist {
+  pub person_id: PersonId,
+  pub community_id: Option<CommunityId>,
+  pub note: Option<String>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AddSponsorAllowlistResponse {
+  pub allowlist_id: SponsorAllowlistId,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RemoveSponsorAllowlist {
+  pub person_id: PersonId,
+  pub community_id: Option<CommunityId>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct RemoveSponsorAllowlistResponse {
+  pub success: bool,
+}
+
+// ── Group F: Admin reputation rollup (v1-RT-r5) ───────────────────────
+
+/// Request payload for `GET /api/v4/governance/admin/reputation/rollup`.
+/// `person_id` identifies the person whose instance-wide rollup row and
+/// contributing per-community snapshots are returned.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminReputationRollup {
+  pub person_id: PersonId,
+}
+
+/// Response from `GET /api/v4/governance/admin/reputation/rollup`.
+/// `rollup` is `None` if no instance-wide snapshot exists yet for this
+/// person (cron has not yet run, or all their communities are banned).
+/// `contributing` is the ordered set of per-community snapshots (non-NULL
+/// `community_id`) that fed the rollup computation; may be empty if the
+/// person has no per-community rows.
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminReputationRollupResponse {
+  pub rollup: Option<ReputationSnapshot>,
+  pub contributing: Vec<ReputationSnapshot>,
 }

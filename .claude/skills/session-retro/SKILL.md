@@ -1,6 +1,6 @@
 ---
 name: session-retro
-description: Write a session-level retrospective after a meaningful pi or Claude Code session — three canonical sections (What surprised us / What to change / What to carry forward), three-signal scoring of skills/agents/commands invoked, automation-opportunity proposals, optional promotion to .claude/lessons/. Make sure to use this skill whenever the user says /reflect, "write a retro", "post-mortem", "what did we learn", "how did that go", or wraps up a non-trivial session — even when they don't explicitly use the word "retro." Cross-harness (loaded by both Claude Code natively and pi via .pi/settings.json skills array) so retros from either harness accumulate in the same .claude/PRPs/reports/ corpus and findings promote into the same .claude/lessons/ lesson library. Distinct from `post-task-retro` (per-Junior-task eval memory + 30-min hook enforcement) and from sub-phase retros at .claude/PRPs/reports/v1-*-retro.md (per-role four-role structure, much heavier scope). Use this for the in-between case: an ad-hoc session that touched several files, dispatched skills/subagents, or surfaced a friction pattern worth carrying forward.
+description: Session-level retrospective after a meaningful pi/Claude Code session — sections (What surprised us / What to change / What to carry forward), three-signal scoring of skills/agents/commands, automation proposals, optional promotion to .claude/lessons/. Use whenever the user says /reflect, "write a retro", "post-mortem", "what did we learn", "how did that go", or wraps up a non-trivial session — even without the word "retro." Cross-harness (Claude Code + pi). Distinct from `post-task-retro` (per-Junior-task eval + hook) and sub-phase retros at .claude/PRPs/reports/v1-*-retro.md (four-role, heavier). The in-between case: an ad-hoc session that touched several files, dispatched subagents, or surfaced a friction pattern.
 ---
 
 # Session Retrospective
@@ -221,72 +221,47 @@ Skip this step if PMD is unset (`start-pi.sh` may not have wired it
 on pi side; `.claude/scripts/setup-memory.sh` may not have run on
 Claude Code side). Don't fabricate the path.
 
-## Step 5.5 — Backfill PMD embeddings (MANDATORY if Step 5 wrote an eval OR §3 promoted a new lesson)
+## Step 5.5 — Write lesson to PMD (MANDATORY if §3 promoted a new lesson)
 
-**The PMD MCP server has NO write-time embedding** (verified by
-source inspection of `dist/index.js` — zero embed/ollama refs). A
-`memory_write_eval` from Step 5, AND any new
-`.claude/lessons/feedback_*.md` a §3 promotion created + synced via
-`scripts/sync-lessons-to-pmd.sh`, land as **text-only rows**.
-`memory_search_hybrid` silently degrades to FTS5 for unembedded rows
-— the semantic-recall advantage (+62.7% R@10) is absent until
-`backfill.js` embeds them. This recurred 2026-05-16 (8 unembedded
-rows incl. entries from concurrent sessions that skipped the
-backfill — see `feedback_pmd_backfill_after_write.md`).
+**HTTP topology (2026-05-30+):** The PMD is an HTTP daemon at
+`http://localhost:11435/mcp`. The `PROJECT_MEMORY_DB` env-var path and
+`sync-lessons-to-pmd.sh` / `backfill.js` approach is **superseded** — those
+write to daemon-local SQLite which is a separate store the HTTP server never
+reads. New lessons MUST be written via `memory_write` MCP tool call.
 
-If Step 5 wrote an eval, OR §3 promoted a new lesson that was synced
-to PMD, run the backfill before Step 6:
+**This is now automated** via `.claude/hooks/lesson-pmd-sync.sh` (PostToolUse
+hook wired in `settings.local.json`): every time a `feedback_*.md` or
+`reference_*.md` lesson file is written or edited with valid YAML frontmatter,
+the hook auto-calls `memory_write` against the HTTP server. No manual step
+needed for interactive sessions.
 
-> **CANONICAL DB — MANDATORY (per `feedback_pmd_cross_lane_canonical_db.md`
-> + the 2026-05-18 stranding incident).** The PMD is cross-lane shared;
-> the single canonical store is
-> `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`. A
-> **relative** `.project-memory/memory.db` resolves against the
-> per-worktree `PROJECT_ROOT`, so when this retro runs from a *lane
-> worktree* (`brehon-fork-<lane>`) the sync + backfill + verify all hit
-> a **lane-local** DB the Stop hook and `memory_search_hybrid` never
-> read — the retro discipline then *becomes* the stranding vector it
-> exists to close (this exact regression: v1-ship-1-r2, 5 lessons +
-> 21 retros stranded). Always pass the **explicit absolute canonical
-> path** below — `--db <canonical>` to the sync, `PROJECT_MEMORY_DB=
-> <canonical>` to the backfill, the canonical path to the verify —
-> NEVER the relative form, regardless of which checkout the retro runs
-> from. Set once and reuse:
+If the hook was not wired (lane worktree without a copied `settings.local.json`
+per the bootstrap checklist), or the HTTP server was unreachable when the lesson
+was written, promote it manually with `memory_write`:
 
-```bash
-CANON_PMD="C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db"
-
-# 1. (only if a new lesson was promoted) sync it into PMD first.
-#    --db <canonical> is mandatory from a lane worktree (the script's
-#    legacy fallback is lane-local and WILL strand — see 53b1a52c1).
-#    --strict makes a lane-local resolution a HARD FAIL (exit 3) rather
-#    than a non-fatal WARN this automated retro step might not surface
-#    — defence-in-depth on the explicit --db (per the same incident's
-#    "What to change" #3). If this exits 3, the --db path above is
-#    wrong; fix it and re-run — do NOT proceed to backfill.
-bash scripts/sync-lessons-to-pmd.sh --db "$CANON_PMD" --strict
-
-# 2. Precondition check — Ollama reachable (silent-degrade trap):
-curl -s -m5 http://homeserver:11434/api/tags >/dev/null \
-  && echo "ollama OK" || echo "OLLAMA UNREACHABLE — backfill will FTS5-degrade; note in §6"
-
-# 3. Backfill (idempotent on (memory_id, model) — only unembedded rows).
-#    PROJECT_MEMORY_DB MUST be the absolute canonical path, NOT relative.
-OLLAMA_URL=http://homeserver:11434 \
-PROJECT_MEMORY_DB="$CANON_PMD" \
-PROJECT_ROOT=C:/Users/barri/Developer/brehon-fork \
-  node C:/Users/barri/Developer/MCPs/project-memory-mcp/dist/scripts/backfill.js --verbose
-
-# 4. Verify 0 missing — against the CANONICAL DB (not a lane-local copy):
-python -c "import sqlite3; c=sqlite3.connect(r'C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db'); print('MISSING vectors:', c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]); c.close()"
+```
+Use the MCP tool memory_write with:
+  memory_type: "pattern"
+  title: <lesson frontmatter name:>
+  content: <lesson frontmatter description: + body>
+  file_path: ".claude/lessons/<filename>"
+  source_ref: <current git SHA>
+  tags: "lesson,feedback"   (or "lesson,reference")
+  importance: 3
 ```
 
-Skip ONLY if Step 5 was skipped AND §3 promoted no new lesson (nothing
-new to embed). If Ollama is unreachable, the rows stay FTS5-only —
-note it in the Step 6 surface so the user knows semantic search is
-degraded until the next backfill. Per
-`.claude/lessons/feedback_pmd_backfill_after_write.md` +
-`.claude/lessons/feedback_pmd_cross_lane_canonical_db.md`.
+Verify the lesson is reachable:
+```
+memory_search_hybrid(query: "<distinctive term from lesson>", limit: 3)
+```
+Expected: the new lesson appears in results.
+
+**Step 5.5 is SKIPPED if:** Step 5 was skipped AND §3 promoted no new lesson.
+
+**Embedding note:** The HTTP server still has no write-time embedding — new rows
+are FTS5-searchable immediately but semantic recall (+62.7% R@10) requires the
+weekly Ollama backfill. This is acceptable; FTS5 is sufficient for brief injection
+(exact keyword match on file-class triggers). Per `feedback_pmd_backfill_after_write.md`.
 
 ## Step 6 — Surface to user
 

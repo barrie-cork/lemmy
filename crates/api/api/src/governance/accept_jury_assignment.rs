@@ -107,6 +107,9 @@ async fn process_accept(
   //    All other (role, status) combinations — including EmergencyRemove
   //    per ADR-013 — return NotFound so callers cannot infer internal state.
   //    Both arms enumerate CaseStatus exhaustively per ADR-013 (no `_ =>`).
+  // TODO(type-state): replace dual-role match with GovernanceCase<JurySelection> /
+  // GovernanceCase<Appealed> try_from after role dispatch — see
+  // .claude/lessons/feedback_governance_type_state_handlers.md
   match role {
     JuryAssignmentRole::Original => match case.status {
       CaseStatus::JurySelection | CaseStatus::InReview => {}

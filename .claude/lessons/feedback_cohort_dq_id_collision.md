@@ -1,3 +1,8 @@
+---
+name: Cohort DQ id collision — parallel workers fork next_id from the same phase tip
+description: Feedback rule (SUPERSEDED by schema-v3 composite ids) — parallel [P] cohort workers each compute next_id=max(all_ids)+1 from isolated worktree views at the same phase tip, so all pick the identical DQ id; mitigations were advisor pre-reservation of N ids or post-collision renumber recovery
+type: feedback
+---
 # Cohort DQ id collision — workers fork next_id from the same phase tip
 
 ## Status (post-v1-dq-schema-r1, 2026-05-21)

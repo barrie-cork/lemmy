@@ -118,6 +118,73 @@ The DQ #50 collision incident (`e9fa1e01a`) and the recurring
 cross-lane race documented in `feedback_cohort_dq_id_collision.md` are
 both structurally eliminated by the v3 composite-id mechanism.
 
+## Deprecated kinds (historical-only — do not use for new writes)
+
+`kind: "validate-result"` and `kind: "validate-failed"` are DEPRECATED
+2026-04-28 by option 2 (single-entry mutation). No session writes them.
+Schema-v2 readers tolerate historical entries (DQ #74 on `governance-v0`
+carries `validate-result`; paired with manually-migrated DQ #73 at
+`30597b436`). See decision-queue.md Hard refusal #7.
+
+**Note on enum values:** GitHub's workflow `conclusion` API returns
+`timed_out` (with underscore). `run_not_found` covers garbage-collected
+or wrong-branch runs; ci-watcher's pre-flight check mutates the paired
+entry with this result and exits 0.
+
+## Two-phase validation under Shape G (option (b), locked 2026-04-28)
+
+> Shape G is SUSPENDED until 2026-06-01 (minutes exhausted; the
+> validate-pending-laptop handler is active in the interim). This section
+> documents the locked Shape-G dispatch flow for when it re-enables.
+
+Per `cargo-test-e2e.yml` triggering on push to `phase-v1-*` only (not
+`junior/*` worktree branches — option (b) defers e2e to the phase-branch
+tip; saves ~80% of e2e runs across a sub-phase):
+
+- **Phase 1 (workspace check on `junior/*`):** impl-task writes a
+  `validate-pending` entry referencing the `cargo-validate-workspace.yml`
+  run id. Goes to `pending`, `from: "impl"`. Advisor queues a ci-watcher
+  to mutate it.
+- **Phase 2 (e2e on `phase-v1-*`):** after Junior's daemon finalize-
+  merges the impl-task worktree branch into the phase branch, the
+  advisor's polling loop detects the new phase-branch tip on next
+  `git fetch`. The push to `phase-v1-*` triggers `cargo-test-e2e.yml`.
+  The advisor captures the e2e workflow_run_id via `gh run list --repo
+  barrie-cork/lemmy --branch phase-v1-<phase> --workflow cargo-test-e2e
+  --limit 1 --json databaseId`, and writes a NEW `validate-pending`
+  entry, `from: "advisor"` (commit subject `chore(advisor): raise e2e
+  validate-pending for phase-v1-<phase> tip <sha>` per
+  `^(chore|docs)\((advisor|decision-queue)\)`). Advisor queues a second
+  ci-watcher to mutate it.
+
+Both phases use the same single-entry mutation pattern. Cohort
+advancement waits on both phases per the cohort dispatch rule in
+`.claude/rules/advisor-orchestrator.md`.
+
+## Polling-loop routing per kind (canonical detail)
+
+> Relocated from `decision-queue.md` on 2026-05-29 (context-budget redesign B2).
+> This is advisor-loop MECHANISM — read only when the advisor processes a DQ entry
+> during orchestration (the `/auto-phase`, `/check-dq`, `/start-brehon` skills carry
+> the routing in their bodies). The rule file keeps a one-line pointer here. The
+> advisor-side commit-subject pattern + the surfacing decision tree (advisor-answer
+> / catch-fire / user-relay) live in `advisor-orchestrator.md` §"DQ triage decision
+> tree".
+
+The advisor's polling loop reads `decision-queue.json` and routes by `(kind, status)` pair.
+
+- `(blocker, pending)` — surface to user via the DQ triage decision tree (advisor-answer / catch-fire / user-relay). The Junior task that raised it is gated on a resolution.
+- `(blocker, resolved)` — historical record only. No action.
+- `(log, resolved)` — harvest at retro time. No mid-loop action.
+- `(log, pending)` — **schema breach** (per Hard refusals: log entries always go to resolved). Surface as catch-fire.
+- `(clarify, pending)` — advisor's own backlog from `/brehon-clarify`. If mode=user-relay, surface to user via AskUserQuestion. The planning task is gated until every clarify-pending on the brief is resolved.
+- `(clarify, resolved)` — historical record. No action.
+- `(validate-pending, pending)` — two cases:
+  - **Pre-mutation** (`result == null`): advisor dispatches a `[role:ci-watcher]` Junior task with brief filled from the entry's `workflow_run_id` + `branch` + `phase_task`. The originating impl-task (Phase 1) or the cohort barrier (Phase 2) stays gated until ci-watcher mutates the entry. Per `advisor-orchestrator.md` Stage-shape "Each impl-task complete (under Shape G)".
+  - **Post-mutation, failure** (`result ∈ {"fail", "cancelled", "timed_out", "gh_unauth", "run_not_found"}`): advisor runs the §G4 classifier (per `advisor-orchestrator.md` "§G4 classifier" sub-section). Allowlist match → auto-queue narrow fix-impl-task. Non-allowlist → catch-fire to user with `log_slice` + `failed_jobs`.
+- `(validate-pending, resolved)` — post-mutation success (`result == "pass"`). Advisor advances the §13-task pipeline (cohort check / Phase-2 e2e dispatch). No mid-loop user surfacing.
+- `(validate-result | validate-failed, *)` — DEPRECATED kinds, historical only. Treat `(validate-result, resolved)` as success-pass equivalent of `(validate-pending, resolved)`; no mid-loop action. Per Hard refusal #7, no session writes new entries with these kinds.
+
 ## See also
 
 - `.claude/rules/decision-queue.md` — live schema, kind enum,

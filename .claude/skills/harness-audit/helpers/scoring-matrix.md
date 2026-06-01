@@ -20,6 +20,8 @@ Helper for `harness-audit` Phase 3. Read just-in-time when applying the formula.
 | Citation drag | 0.10 | `1.0 - min(external_citations / 20, 1.0)` | Many citations = renaming risk; high citation count REDUCES the score (less safe to touch) |
 | Pi-shared | 0.05 | `0.0 if pi_shared, else 1.0` | Pi-shared paths get composite ≈ 0 from this term; never compress |
 
+> **Budget estimation (separate from composite score):** when sizing context-window usage, use **3.3 chars/token** as the empirically-validated ratio (measured 2026-05-29 via harness-audit on the brehon-fork always-load corpus). The Size scoring formula above uses `chars / 8000` as a normalisation divisor (not a token estimate) — keep that unchanged. The 3.3 ratio applies only when calculating "how many tokens does this file cost" for pre-session budget planning.
+
 **Composite = (sum of factor × weight) × 10**, range 0–10.
 
 A file with `class == SCOPED` (factor weight 0.40 contributes 0.0) has a hard ceiling of composite 6.0. So all compression candidates with composite ≥ 6.0 are necessarily ALWAYS-load. SCOPED files top out at 6.0 even at max size + max redundancy + zero citations + Pi-safe — by design.

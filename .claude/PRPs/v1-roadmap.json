@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-28T16:30:00Z",
+  "last_updated_at": "2026-05-31T12:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -213,7 +213,7 @@
       "status": "partial",
       "capstone": null,
       "lane_meta_retro": null,
-      "evidence_summary": "r1 (PR #126) + r2 (PR #150) shipped. r3 in_flight (plan done, bm-cut pending). r4 + r5 unstarted.",
+      "evidence_summary": "r1 (PR #126) + r2 (PR #150) + r3 (PR #155) shipped. r3-followup in_flight (e2e-assertion fix from r3 ship miss; lane cut 2026-05-29). r4 + r5 unstarted.",
       "sub_phases": {
         "v1-RT-r1": {
           "status": "done",
@@ -234,28 +234,49 @@
           "retro": ".claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md"
         },
         "v1-RT-r3": {
-          "status": "in_flight",
+          "status": "done",
           "scope": "scheduled_tasks weekly-active + dormancy cron + submit_jury_vote vote-outcome + evidence-cited emitters + flag-bad-faith admin endpoint; fires PARTICIPATION_CRON_TICK + VOTE_OUTCOME_RECORDED + EVIDENCE_QUALITY_RECORDED",
           "registry_evidence": "3 RT-r1 pre-landed consts name v1-RT-r3 as their fire site",
+          "pr": 155,
+          "merge_commit": "5ebd8ae23",
+          "merged_at": "2026-05-28T17:37:24Z",
           "plan": ".claude/PRPs/plans/v1-RT-r3.plan.md",
-          "phase_branch": "phase-v1-RT-r3",
-          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3",
-          "in_flight_since": "2026-05-24",
-          "stage": "plan-approval-gate (planning task #463 done; bm-cut not yet run)"
+          "retro": ".claude/PRPs/reports/v1-RT-r3-retro.md",
+          "done_at": "2026-05-28",
+          "notes": "Task 4 (e2e tests) hit cycle-count §5.3 HARD REFUSAL after 4 fix-impl attempts; resolved via advisor-side authorship. Ship landed e2e EMIT paths (996765cae) but left 4 downstream e2e assertions stale -> follow-up sub-phase v1-rt-r3-followup. Local worktree C:/Users/barri/Developer/brehon-fork-rt-r3 NOT yet pruned (origin branch deleted post-merge); prune after v1-rt-r3-followup ships."
+        },
+        "v1-rt-r3-followup": {
+          "status": "done",
+          "scope": "Fix downstream e2e assertions left stale by v1-RT-r3 ship (996765cae added vote_outcome_recorded + evidence_cited emit paths without updating reputation_event count assertions + governance_log sequence expectation in crates/server/tests/e2e.rs). Pure test-fix lane; e2e is the only gate.",
+          "pr": 162,
+          "merge_commit": "28518605b",
+          "plan": ".claude/PRPs/plans/v1-rt-r3-followup.plan.md",
+          "phase_branch": "phase-v1-rt-r3-followup",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r3-followup",
+          "in_flight_since": "2026-05-29",
+          "done_at": "2026-05-29",
+          "stage": "MERGED 2026-05-29: PR #162 -> governance-v0 @28518605b (verified state=MERGED, mergedAt 18:07:35Z, phase branch deleted on origin). Shipped: 4 stale e2e assertions current with RT-r3 vote-outcome emit (Task1 A+B 834f9d85d rep_total 4->7 + vote_outcome_recorded; Task2 C+D d57b755c9 rep_count 4->7; fix-impl-1 84526e6e2 stale-comment fixes per CR cr-10/cr-11). Headline whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression). /brehon-verify 3/3 ✓. CR triaged 13 findings 0 blocking (9 wont-fix MD-nits + 2 fix-in-pr done + 2 rebut); CR advisory/non-blocking, re-review skipped on free-tier comment-only commit (user-approved proceed). Retro @94a005b55 + 2 lessons promoted (feedback_emit_added_requires_full_e2e_gate NEW + feedback_junior_worker_e2e_edit_hang promoted/reconciled). REMAINING: gate 6 retro sign-off (surfacing) -> /brehon-phase-transition; pre-prune workflow_state_v1_quality_r2a.md + worktrees brehon-fork-rt-r3 (now) + brehon-fork-rt-r3-followup (defer — active CWD). 4 structural carry-forwards in retro §3 (finalize-no-push 4x = daemon-push-after-finalize candidate; Task-0 fabrication; daemon worktree bootstrap; PMD-MCP HTTP doc drift).",
+          "lane_mode": "A",
+          "bootstrap": ".claude/PRPs/handovers/v1-rt-r3-followup-bootstrap.md"
         },
         "v1-RT-r4": {
-          "status": "unstarted",
+          "status": "done",
           "scope": "admin_sponsor_allowlist.rs add/remove handlers; fires ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED/REMOVED",
-          "registry_evidence": "2 RT-r1 pre-landed consts name v1-RT-r4 as their fire site",
-          "plan": null,
-          "blocker": "no plan written yet"
+          "pr": 164,
+          "merge_commit": "04a5e98fb",
+          "merged_at": "2026-05-30",
+          "done_at": "2026-05-30",
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r4",
+          "lane_mode": "A",
+          "note": "Shipped 2026-05-30. Teardown lane brehon-fork-rt-r4 pending."
         },
         "v1-RT-r5": {
-          "status": "unstarted",
+          "status": "in_flight",
           "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
           "registry_evidence": "ENTRY_KIND_ROLLUP_RECOMPUTED row names v1-RT-r5 scheduled_tasks.rs (pending)",
           "plan": null,
-          "blocker": "no plan written yet"
+          "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r5",
+          "in_flight_since": "2026-05-31"
         }
       },
       "known_followups": [
@@ -411,21 +432,55 @@
             "clippy 8 errors (DQ 922c8bae61db-001)"
           ]
         },
-        "v1-quality-r2": {
-          "status": "unstarted",
-          "deferred_until": "post-v1-RT-r3 merge (4 of 5 issues reference RT-r3-only code: EnvVarGuard, v1_rt_r3_fixtures module, emit_reputation_event helper)",
-          "scope": "Bundle of 5 PR #155 carry-forward issues: (T1, #157) DQ negative-duration lint + one-shot sweep; (T2, #156) audit fixtures-module process-env safety doc-comments; (T3, #158) extract emit_reputation_event shared helper to dedupe local vs federated paths; (T4, #159) wrap boot_context env mutations in EnvVarGuard; (T5, #160) wrap LEMMY_DATABASE_URL setter in EnvVarGuard (companion to T4).",
-          "issues": [156, 157, 158, 159, 160],
-          "source_pr": 155,
-          "background": "5 carry-forward issues filed 2026-05-28 from PR #155 (v1-RT-r3 BM triage). #157 is the only issue independent of RT-r3 (pure scripts + JSON). #156 references the v1_rt_r3_fixtures module not on governance-v0. #158/#159/#160 reference EnvVarGuard + emit_reputation_event symbols that only exist on phase-v1-RT-r3 (tip 1e2f536a3 as of 2026-05-28). All 5 issue bodies explicitly target 'v1-quality-r2' as the bundling sub-phase. User decision 2026-05-28: defer authoring brief + cutting phase branch until RT-r3 ships; add roadmap entry only.",
-          "depends_on": [
-            "v1-RT-r3"
+        "v1-quality-r2a": {
+          "status": "done",
+          "scope": "Narrowed-at-gate-1 subset of the original v1-quality-r2 bundle: 2 of 5 PR #155 carry-forwards — #157 (DQ negative-duration lint + bulk sweep + precheck wiring) + #158 deferral DQ (emit_reputation_event helper extraction deferred per premature-DRY gate). Shipped on the phase-v1-quality-r2 branch (no rename; plan filename signals scope).",
+          "pr": 161,
+          "merge_commit": "8b2e5b1ef",
+          "merged_at": "2026-05-29T10:05:18Z",
+          "plan": ".claude/PRPs/plans/v1-quality-r2a.plan.md",
+          "retro": ".claude/PRPs/reports/v1-quality-r2a-retro.md",
+          "done_at": "2026-05-29",
+          "issues_closed": [
+            157
+          ],
+          "issues_deferred": [
+            158
           ]
+        },
+        "v1-quality-r2": {
+          "status": "done",
+          "scope": "Remaining 3 of 5 PR #155 carry-forwards: #156 (fixtures --test-threads=1 doc audit), #159 (boot_context EnvVarGuard), #160 (14 LEMMY_DATABASE_URL setter sites EnvVarGuard). Shipped 2026-05-30.",
+          "pr": 168,
+          "merge_commit": "f98ee77a6",
+          "merged_at": "2026-05-30",
+          "plan": ".claude/PRPs/plans/v1-quality-r2.plan.md",
+          "retro": ".claude/PRPs/reports/v1-quality-r2-retro.md",
+          "done_at": "2026-05-30"
+        },
+        "v1-quality-r3": {
+          "status": "done",
+          "scope": "EnvVarGuard C4 sweep — 23 raw set_var sites in e2e.rs: 2 bootstrap SAFETY comments (option-b) + 10 test-body wraps. Closes carry-forward from qr2 retro.",
+          "pr": 169,
+          "merge_commit": "a23ac216f",
+          "merged_at": "2026-05-31T01:03:26Z",
+          "plan": ".claude/PRPs/plans/v1-quality-r3.plan.md",
+          "retro": ".claude/PRPs/reports/v1-quality-r3-retro.md",
+          "verify": ".claude/PRPs/reports/v1-quality-r3-verify.md",
+          "done_at": "2026-05-31",
+          "note": "adr-compliance runner failure at merge; unblocked via owner-acknowledge + gh pr merge --admin. Local scan exit 0."
+        },
+        "v1-quality-r3b": {
+          "status": "unstarted",
+          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Possible: BREHON_DISABLE_* sites sweep.",
+          "pr": null,
+          "plan": null
         }
       },
       "known_followups": [
         "quality-r1 worktree at C:/Users/barri/Developer/brehon-fork-quality-r1 is stale (branch merged); user to git worktree remove when ready"
-      ]
+      ],
+      "evidence_summary": "r1 (PR #145) + r2a (PR #161) + r2 (PR #168, 2026-05-30) + r3 (PR #169, 2026-05-31, EnvVarGuard C4 sweep 23 sites) all shipped. Next: v1-quality-r3b (Issue #167 LemmyContext::create DB URL from context)."
     },
     "deps": {
       "name": "Deps (Cargo dependency bumps)",
@@ -517,18 +572,17 @@
       {
         "lane": "RT (Reputation Tuning)",
         "items": [
-          "v1-RT-r3 (in_flight — Task 4 catch-fire 2026-05-26; advisor-side authorship in flight per handover)",
           "v1-RT-r4",
           "v1-RT-r5"
         ],
-        "rationale": "RT-r2 shipped 2026-05-24. RT-r3 in_flight on phase-v1-RT-r3 — Task 4 (e2e tests) hit cycle-count §5.3 HARD REFUSAL after 4 fix-impl attempts; user authorised advisor-side authorship. RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted."
+        "rationale": "RT-r3 shipped 2026-05-28 (PR #155). Ship landed emit paths but left downstream e2e assertions stale -> v1-rt-r3-followup SHIPPED 2026-05-29 (PR #162, merge 28518605b; whole-binary e2e 119/0/5; retro signed off). RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted; RT-r4 is the next RT-lane work (also the MiniMax-M2.7 A/B trial phase)."
       },
       {
         "lane": "quality (Quality / QA)",
         "items": [
-          "v1-quality-r2 (unstarted — gated on RT-r3 ship)"
+          "v1-quality-r3b (unstarted — Issue #167: LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional)"
         ],
-        "rationale": "5 PR #155 carry-forward issues (#156-#160) bundled into v1-quality-r2. 4 of 5 reference RT-r3-only code; queue planning task only after RT-r3 merges to governance-v0."
+        "rationale": "v1-quality-r2 (PR #168) shipped 2026-05-30. v1-quality-r3 (PR #169) shipped 2026-05-31 (EnvVarGuard C4 sweep, 23 sites). Next: #167 fix (LemmyContext::create) as v1-quality-r3b."
       }
     ],
     "in_flight_outside_roadmap": [],

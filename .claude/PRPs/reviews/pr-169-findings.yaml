@@ -1,0 +1,69 @@
+schema_version: 1
+pr: 169
+title: 'refactor(e2e): v1-quality-r3 — EnvVarGuard C4 sweep (23 raw set_var sites)'
+head: phase-v1-quality-r3
+base: governance-v0
+opened_at: '2026-05-31T00:26:52Z'
+last_poll_at: '2026-05-31T00:41:52Z'
+poll_count: 1
+last_polled_head_sha: 17366ec164dd7f51b8353f77f6dd693146e558b2
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-05-31T00:27:04Z'
+  file: null
+  line: null
+  summary: 'CR pre-merge-check: Description check — PR body missing template sections
+    (Phase, DoD, ADR matrix, rollback)'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/169#issuecomment-4585258423
+  adr: null
+  bucket: done
+  addressed_in: pr-body-edit-2026-05-31
+  rationale: PR body updated via gh pr edit to add Phase checkbox, DoD checklist,
+    ADR impact matrix, and rollback strategy sections.
+  notes: 'Resolution: Fill in required template sections: select Phase checkbox, complete
+    DoD checklist with exit codes, complete ADR impact matrix for all rows, document
+    rollback strategy. Fixed 2026-05-31 via gh pr edit 169.'
+merged_at: null
+merge_commit: null
+final_recommendation: null
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 1
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 1
+    claude: 0
+    user: 0
+  total: 1

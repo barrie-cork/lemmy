@@ -3,9 +3,12 @@ name: memory-prune
 description: >
   Prune stale, duplicate, and superseded entries from MEMORY.md (user auto-memory index).
   Use when: user says "prune memory", "clean up MEMORY.md", "memory is too big", "trim stale entries",
-  or when /context shows memory files > 25% of context budget. Also use after a phase ships or closes
-  (entries referencing the closed phase are pruning candidates). Surfaces findings first, applies only
-  after user confirmation.
+  or when MEMORY.md is over its byte budget (~24.4 KB — the SessionStart warning fires). Also use
+  after a phase ships or closes (entries referencing the closed phase are pruning candidates).
+  Surfaces findings first, applies only after user confirmation. NOTE: this skill prunes MEMORY.md
+  ONLY. If /context shows the whole Memory-files bucket is heavy (> ~25% of the ~200K effective
+  working window, i.e. > ~50K tokens — see "Budget framing" below), MEMORY.md is usually NOT the
+  culprit (it is ~10% of the auto-load); the rules corpus is. Route that to `harness-audit`, not here.
 ---
 
 # Memory Prune
@@ -15,20 +18,79 @@ apply fixes only after user confirmation.
 
 ## Why this skill exists
 
-MEMORY.md is auto-loaded into every Claude Code session. It has a 200-line hard limit (lines past 200
-are silently truncated). Each line costs ~35 tokens. Stale entries displace useful context and can
-mislead future sessions with outdated claims. Regular pruning keeps the index under budget and
+MEMORY.md is auto-loaded into every Claude Code session. Stale entries displace useful context and
+can mislead future sessions with outdated claims. Regular pruning keeps the index under budget and
 accurate.
+
+**The binding limit is BYTES, not lines** (corrected 2026-05-29 after empirical observation — see
+below). The harness loads MEMORY.md up to a **byte budget of ~24.4 KB (24400 bytes)**; past that it
+**silently truncates** and emits a SessionStart warning like `MEMORY.md is 25.2KB (limit: 24.4KB) —
+index entries are too long. Only part of it was loaded.` There is *also* a soft ~200-line ceiling
+(~35 tokens/line), but at normal entry density (~135 bytes/line) the byte budget binds FIRST — a
+file can be truncated at ~180 lines of average-length entries while still being "under" 200 lines.
+
+**Why this correction was made:** on 2026-05-29 the file was 186 lines (under 200) but 25375 bytes —
+the harness truncated it and warned, while a lines-only gate would have reported 14 lines of
+headroom. A skill that measures only lines is blind to the limit that actually truncates the file.
+This is the `feedback_context_trim_verify_empirically.md` / `pattern_test_against_reality_not_syntax`
+class: the documented limit (lines) did not match observed load behavior (bytes). **Always measure
+both; gate on bytes.**
+
+## Budget framing — "% of budget" means the 200K working window, NOT the 1M ceiling
+
+The model's hard context ceiling is 1M tokens (`opus-4-8[1m]`), but **the effective working budget
+is ~200K** — sessions compact or restart around 200K because reasoning/recall quality degrades past
+it (per user, 2026-05-29). So any "% of budget" trigger in this skill or its description means **% of
+~200K, not % of 1M.** "Memory files > 25% of budget" = **> ~50K tokens** (25% of 200K), NOT 250K.
+Anchoring to 1M is the trap: it makes a real problem (memory/rules at 30% of the window you actually
+operate in) read as "harmless 6%."
+
+**Two separate budgets, do not conflate:**
+
+1. **MEMORY.md's own byte budget (~24.4 KB hard).** This skill's primary job. Mechanical, fires a
+   SessionStart truncation warning. Prune MEMORY.md → fixes it.
+2. **The whole session-start auto-load (`/context` "Memory files" bucket).** Measured 2026-05-29 at
+   **~59K tokens ≈ 30% of the 200K window**, broken down as: **rules corpus `.claude/rules/*.md` ~51K
+   (≈86%)**, MEMORY.md ~6.3K (≈11%), CLAUDE.md ~1.8K (≈3%). **MEMORY.md is a small minority of the
+   auto-load.** When `/context` shows the bucket heavy, pruning MEMORY.md barely moves it — the lever
+   is the **rules corpus**. Route budget-pressure cases to the `harness-audit` skill (it scores
+   rule-compression / externalization candidates) + this skill's Step 3.5 rule-side cut gate. Do NOT
+   try to solve a 30%-of-window auto-load problem by trimming MEMORY.md here; you'd remove useful
+   index entries and the budget needle wouldn't move.
+
+Recompute the rules-vs-MEMORY split when invoked (the rules corpus grows): `find .claude/rules -name
+'*.md' -exec cat {} + | wc -c` vs MEMORY.md `wc -c`, divide by 4 for tokens, compare to 200000.
 
 ## Step 1: Read current state
 
-Read the MEMORY.md index file. Note the current line count. If over 190 lines, flag urgency.
+Read the MEMORY.md index file. Measure **both** dimensions and record them:
+
+```bash
+MEM=~/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md
+wc -c "$MEM"   # BYTES — the binding limit (budget ~24400)
+wc -l "$MEM"   # lines  — secondary ceiling (~200)
+```
+
+**Urgency gate (gate on bytes first):**
+
+| Bytes | Lines | Verdict |
+|---|---|---|
+| > 24400 | (any) | **OVER — truncating now.** Prune is mandatory; SessionStart already warned. |
+| 22000–24400 | (any) | Near budget — prune proactively. |
+| < 22000 | > 190 | Line-pressure even though bytes OK (many terse entries) — prune or compress. |
+| < 22000 | < 190 | Healthy — prune only stale/duplicate/superseded entries, no urgency. |
+
+A file can be OVER on bytes while UNDER on lines (e.g. 186 lines / 25375 bytes). **Bytes win** —
+report the byte overage as the headline, lines as secondary.
 
 The file location is the user-scope auto-memory index. In this project it lives at:
 `~/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/MEMORY.md`
 
 Also note the "Historical" section at the bottom — entries moved there are recoverable by filename
-but no longer auto-loaded.
+but no longer auto-loaded. **Moving a long entry to Historical reclaims its full byte cost** from the
+auto-loaded budget; shortening an entry in place reclaims only the trimmed bytes. When the file is
+OVER on bytes, prefer (a) shortening the longest entries and (b) moving stale long entries to
+Historical — both directly attack the byte overage; removing short entries barely moves it.
 
 ## Step 2: Classify every entry
 
@@ -40,7 +102,7 @@ Walk each line in MEMORY.md. For each entry, classify into one of:
 | **Duplicate** | Same `.md` file referenced from two different lines, OR two entries covering the same topic where one subsumes the other | Remove the weaker/older entry |
 | **Superseded** | A newer entry explicitly replaces this one (e.g. "SUSPENDED" supersedes "SHIPPED") | Remove the older entry |
 | **Redundant with rules** | The entry's signal is fully covered by an auto-loaded `.claude/rules/*.md` file | Remove (the rule IS the enforcement; the memory adds nothing) |
-| **Verbose** | Entry line exceeds ~200 chars and can be shortened without losing the retrieval hook | Shorten in place |
+| **Verbose** | Entry line exceeds ~200 chars (≈200 bytes) and can be shortened without losing the retrieval hook | Shorten in place (when OVER on bytes, this is a PRIMARY lever, not optional polish — target the longest entries first; detail belongs in the linked `.md` file, the index line is just a retrieval hook) |
 | **Keep** | Still load-bearing — references active work, encodes a decision not in any rule, or is a promoted pattern | No action |
 
 To check whether a memory is redundant with rules, grep the rules directory for the key concept.
@@ -57,8 +119,9 @@ Present a table to the user:
 ```
 ## Memory Prune Findings
 
-Current: <N> lines (limit: 200)
-Post-prune estimate: <M> lines
+Current: <BYTES> bytes (budget: 24400 — the binding limit) / <N> lines (ceiling: 200)
+Post-prune estimate: <BYTES'> bytes / <M> lines
+Headline: <"OVER budget by X bytes — truncating" | "under budget, X bytes headroom">
 
 | # | Line | Entry (short) | Classification | Reason |
 |---|------|---------------|----------------|--------|
@@ -68,6 +131,9 @@ Post-prune estimate: <M> lines
 
 Entries marked Keep: <count> (not shown)
 ```
+
+Lead with the byte figure (it's what truncates the file); show lines second. If OVER on bytes,
+state the overage and that prune is mandatory.
 
 Group by classification. List "Keep" count but don't enumerate them — the user cares about what's
 being removed, not what stays.
@@ -178,8 +244,12 @@ On confirmation, apply the edits:
 1. **Remove/shorten** entries from their current sections
 2. **Move to Historical** — append removed entries to the "Historical" section at the bottom,
    grouped by date: `- archived <date>: <comma-separated list of filenames with one-word reason>`
-3. **Verify** line count is under 200 after all edits
-4. **Report** final line count and estimated token savings (~35 tokens per line removed)
+3. **Verify** the file is under BOTH limits after all edits — `wc -c "$MEM"` < 24400 (hard) AND
+   `wc -l "$MEM"` < 200 (secondary). If still over 24400 bytes, the prune is incomplete: do another
+   pass on the longest remaining entries (shorten in place or move to Historical) until under budget.
+   A pass that lands under 200 lines but over 24400 bytes has NOT solved the truncation.
+4. **Report** final bytes + lines (e.g. `23980 bytes / 184 lines — under budget by 420 bytes`) and
+   estimated savings (bytes reclaimed; ~35 tokens per line removed as a secondary figure).
 
 ## Edge cases
 

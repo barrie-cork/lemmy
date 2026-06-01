@@ -63,10 +63,6 @@ zero inline Python. Authoring fragments via the Write tool also avoids
 the Windows backslash-path mangling class (see
 `feedback_windows_backslash_path_dq_via_write_fragment.md`).
 
-### Next-id calculation (pre-v3 — historical only)
-
-Pre-v3 used `max(all_ids, default=0) + 1` spanning live + archives. **Abolished** for new v3 writes (Hard refusal #9) — raises `TypeError` on mixed int/string ids. Do **not** copy this recipe; the v3 composite-id mechanism structurally eliminates the cross-lane race (`feedback_cohort_dq_id_collision.md`) + the DQ #50 collision incident (`e9fa1e01a`). Full pre-v3 historical context: `.claude/refs/dq-mechanics.md` §"Pre-v3 next-id calculation".
-
 ### What does NOT get archived
 
 Pending entries (never), entries cited by name in any active rule/lesson/brief/template (move the citation first), entries from the active sub-phase or its predecessor. Detail: `.claude/refs/dq-mechanics.md` §"What does NOT get archived".
@@ -140,8 +136,8 @@ polling loop applies different routing per kind.
   + pushed and is awaiting out-of-band cargo validation on GitHub
   Actions (Shape G, per `v1-validate-agent.plan.md` §4 + §10.7). Goes
   to `pending` with `from: "impl"` (or `from: "advisor"` for the
-  Phase-2 e2e dispatch — see "Two-phase validation under Shape G"
-  below), `answered_by: null`. Required fields at write time:
+  Phase-2 e2e dispatch — see `.claude/refs/dq-mechanics.md`
+  §"Two-phase validation under Shape G"), `answered_by: null`. Required fields at write time:
   `workflow_run_id` (integer, captured via `gh run list --branch
   <branch> --limit 1 --json databaseId`), `branch`, `phase_task` (the
   §13 task number). Required nullable fields at write time (populated
@@ -193,46 +189,11 @@ what was raised, not the current state.
 "gh_unauth" | "run_not_found"`. `timed_out` uses the underscore
 spelling to mirror GitHub's workflow `conclusion` API.
 
-This option-2 pattern supersedes the historical two-entry design
-(impl-task writes validate-pending; ci-watcher writes a sibling
-validate-result or validate-failed). The two-entry pattern was
-killed because nothing migrated the paired pending → resolved when
-ci-watcher wrote a new entry — DQ #73 was orphaned for ~7 hours
-before manual cleanup at `30597b436`. Single-entry mutation makes
-the inconsistency impossible.
-
-### Deprecated kinds (historical-only — do not use for new writes)
-
-`kind: "validate-result"` and `kind: "validate-failed"` are DEPRECATED 2026-04-28 by option 2 (single-entry mutation). No session writes them. Schema-v2 readers tolerate historical entries (DQ #74 on `governance-v0` carries `validate-result`; paired with manually-migrated DQ #73 at `30597b436`). See Hard refusal #7.
-
-> **Note on enum values:** GitHub's workflow `conclusion` API returns `timed_out` (with underscore). `run_not_found` covers garbage-collected or wrong-branch runs; ci-watcher's pre-flight check mutates the paired entry with this result and exits 0.
-
-### Two-phase validation under Shape G (option (b), locked 2026-04-28)
-
-Per `cargo-test-e2e.yml` triggering on push to `phase-v1-*` only
-(not `junior/*` worktree branches — option (b) defers e2e to the
-phase-branch tip; saves ~80% of e2e runs across a sub-phase):
-
-- **Phase 1 (workspace check on `junior/*`):** impl-task writes a
-  `validate-pending` entry referencing the
-  `cargo-validate-workspace.yml` run id. Goes to `pending`,
-  `from: "impl"`. Advisor queues a ci-watcher to mutate it.
-- **Phase 2 (e2e on `phase-v1-*`):** after Junior's daemon finalize-
-  merges the impl-task worktree branch into the phase branch, the
-  advisor's polling loop detects the new phase-branch tip on next
-  `git fetch`. The push to `phase-v1-*` triggers
-  `cargo-test-e2e.yml`. The advisor captures the e2e workflow_run_id
-  via `gh run list --repo barrie-cork/lemmy --branch
-  phase-v1-<phase> --workflow cargo-test-e2e --limit 1 --json
-  databaseId`, and writes a NEW `validate-pending` entry,
-  `from: "advisor"` (the advisor commit subject is `chore(advisor):
-  raise e2e validate-pending for phase-v1-<phase> tip <sha>` per
-  `^(chore|docs)\((advisor|decision-queue)\)`). Advisor queues a
-  second ci-watcher to mutate it.
-
-Both phases use the same single-entry mutation pattern. Cohort
-advancement waits on both phases per the cohort dispatch rule in
-`.claude/rules/advisor-orchestrator.md`.
+This option-2 single-entry mutation supersedes the historical two-entry
+design (the abandoned design + the DQ #73 orphan incident that motivated
+the switch, plus the deprecated `validate-result`/`validate-failed` kinds
+and the two-phase Shape-G flow — **Shape G SUSPENDED until 2026-06-01**):
+`.claude/refs/dq-mechanics.md` §"Deprecated kinds" + §"Two-phase validation under Shape G".
 
 Use `kind: "log"` instead of writing a `LESSON:` commit-trailer when
 the finding is gated to a specific question/decision pattern. Use a
@@ -250,42 +211,7 @@ the file.
 
 ### Polling-loop routing per kind
 
-The advisor's polling loop reads `decision-queue.json` and routes by
-`(kind, status)` pair. Per-kind routing matrix is canonical here; the
-advisor-side commit-subject pattern + the surfacing rule
-(advisor-answer / catch-fire / user-relay decision tree) lives in
-`.claude/rules/advisor-orchestrator.md` §5.4 "DQ triage decision tree".
-
-- `(blocker, pending)` — surface to user via the DQ triage decision
-  tree (advisor-answer / catch-fire / user-relay). The Junior task
-  that raised it is gated on a resolution.
-- `(blocker, resolved)` — historical record only. No action.
-- `(log, resolved)` — harvest at retro time. No mid-loop action.
-- `(log, pending)` — **schema breach** (per Hard refusals: log entries
-  always go to resolved). Surface as catch-fire.
-- `(clarify, pending)` — advisor's own backlog from `/brehon-clarify`.
-  If mode=user-relay, surface to user via AskUserQuestion. The
-  planning task is gated until every clarify-pending on the brief is
-  resolved.
-- `(clarify, resolved)` — historical record. No action.
-- `(validate-pending, pending)` — two cases:
-  - **Pre-mutation** (`result == null`): advisor dispatches a
-    `[role:ci-watcher]` Junior task with brief filled from the
-    entry's `workflow_run_id` + `branch` + `phase_task`. The
-    originating impl-task (Phase 1) or the cohort barrier (Phase 2)
-    stays gated until ci-watcher mutates the entry. Per
-    `advisor-orchestrator.md` Stage-shape "Each impl-task complete
-    (under Shape G)".
-  - **Post-mutation, failure** (`result ∈ {"fail", "cancelled",
-    "timed_out", "gh_unauth", "run_not_found"}`): advisor runs the
-    §G4 classifier (per `advisor-orchestrator.md` "§G4 classifier"
-    sub-section). Allowlist match → auto-queue narrow
-    fix-impl-task. Non-allowlist → catch-fire to user with
-    `log_slice` + `failed_jobs`.
-- `(validate-pending, resolved)` — post-mutation success (`result ==
-  "pass"`). Advisor advances the §13-task pipeline (cohort check
-  / Phase-2 e2e dispatch). No mid-loop user surfacing.
-- `(validate-result | validate-failed, *)` — DEPRECATED kinds, historical only. Treat `(validate-result, resolved)` as success-pass equivalent of `(validate-pending, resolved)`; no mid-loop action. Per Hard refusal #7, no session writes new entries with these kinds.
+The advisor's polling loop reads `decision-queue.json` and routes by `(kind, status)` pair. **The full per-kind routing matrix is in `.claude/refs/dq-mechanics.md` §"Polling-loop routing per kind (canonical detail)"** — it's advisor-loop mechanism the orchestration skills (`/auto-phase`, `/check-dq`, `/start-brehon`) carry in their bodies. Quick shape: `(blocker, pending)` → surface via the DQ triage tree; `(log, pending)` → schema breach, catch-fire; `(clarify, pending)` → gates planning; `(validate-pending, pending)` pre-mutation → dispatch ci-watcher, post-mutation-failure → §G4 classifier; `resolved` variants → advance pipeline / historical. The advisor-side commit-subject pattern + surfacing decision tree live in `advisor-orchestrator.md` §"DQ triage decision tree".
 
 ## Recipes (copy-pasteable)
 
@@ -307,7 +233,7 @@ These are the recurring failure modes the audit and Phase-6 #37 incident produce
 4. **NEVER skip the mid-task commit + push** for a Junior worktree write. Without the push, the entry is trapped on the worktree until Junior's finalize step. The advisor cannot see it. (See "Mid-task visibility" below for the full mechanism.)
 5. **NEVER ask open-ended questions.** Always provide at least two concrete `options`. "What should I do?" is not a question; "should I take option-A (use feature X) or option-B (use feature Y) given <evidence>" is.
 6. **NEVER write `kind: "clarify"` from a non-advisor session.** That kind is advisor-only — produced by `/brehon-clarify` at the pre-planning gate. A Junior subagent that writes `kind: "clarify"` has misunderstood the workflow (impl-task ambiguity → `kind: "blocker"` from `from: "impl"`; brief ambiguity at planning time is the advisor's responsibility, not the planner's).
-7. **NEVER write `kind: "validate-result" | "validate-failed"` from any session.** Those kinds are DEPRECATED (option 2 supersedes; PMD #156, locked 2026-04-28). ci-watcher mutates the existing `validate-pending` entry in place by matching `workflow_run_id` — populates `result` + `log_slice` + `failed_jobs` + `answer` + `answered_by: "ci-watcher"` + `resolved_at`; moves `pending[]` → `resolved[]` only on `result: "pass"`. The entry's `kind` stays `"validate-pending"` (kind records what was raised, not current state). impl-task writes new `validate-pending` entries (Phase 1, `from: "impl"`); advisor writes new `validate-pending` entries for the Phase-2 e2e dispatch (`from: "advisor"`); ci-watcher MUTATES — never writes a new entry. Hard refusal applies to all sessions, including ci-watcher itself.
+7. **NEVER write `kind: "validate-result" | "validate-failed"` from any session.** Those kinds are DEPRECATED (option 2 supersedes; locked 2026-04-28). Applies to all sessions, ci-watcher included: ci-watcher MUTATES the existing `validate-pending` entry in place (never writes a new entry) per the §"ci-watcher mutation pattern" contract above. impl-task writes new `validate-pending` entries (Phase 1); advisor writes them for the Phase-2 e2e dispatch.
 
 ## After writing a question
 
@@ -380,13 +306,8 @@ non-`chore(advisor|decision-queue):` / non-`docs(advisor|decision-queue):`
 subject, that is a process breach and must be corrected via a
 `docs(attribution):` follow-up commit. The match is on commit-subject
 pattern, not author identity — solo-dev single-author repos cannot rely
-on author as a discriminator.
-
-**Why this rule exists:** Phase 6 DQ #37 (governance_log relocation) was
-self-attributed by an impl-side session under the advisor label and
-committed without advisor review. The refactor stands — invariants hold
-— but was logged as advisor-approved when it was not. This rule is the
-process fix. See `docs(phase-6): correct DQ #37 attribution`.
+on author as a discriminator. (Origin incident: Phase 6 DQ #37 self-attributed
+under the advisor label — corrected via `docs(phase-6): correct DQ #37 attribution`.)
 
 ## Concurrency
 
@@ -477,16 +398,8 @@ identity determines which `from` value is valid:
   `/brehon-clarify` (`kind: "clarify"`, see "kind: clarify" above).
   **The advisor is the only writer of `kind: "clarify"`.**
 
-None of the Junior subagents may write `answered_by: "advisor"` or
-`answered_by: "user"`. Those labels are reserved for commits authored
-by the persistent advisor session (label: `advisor`) or for entries
-where the advisor relayed a user reply in-channel (label: `user`).
-None of the Junior subagents may write `kind: "clarify"` — that kind
-is advisor-only by design (clarify gates planning before any Junior
-task runs). impl-task writes `kind: "validate-pending"` for Phase 1
-(workspace check on `junior/*`); the advisor writes `kind:
-"validate-pending"` for Phase 2 (e2e on `phase-v1-*` post-finalize-
-merge); ci-watcher MUTATES existing `validate-pending` entries (does
-not write new ones). The deprecated `kind: "validate-result" |
-"validate-failed"` MUST NOT be written by any session. This rule
-applies to both foreground and Junior-dispatched invocations.
+See "Attribution integrity" above for the hard rules on which labels
+each role may write. Hard refusals #6 and #7 above cover `kind:
+"clarify"` and the deprecated `kind: "validate-result" |
+"validate-failed"` — those apply to all sessions including all
+subagents listed here.

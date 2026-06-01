@@ -8,9 +8,18 @@ description: >
 
 # Weekly Review
 
-Lightweight health check: prune, aggregate, clean, promote anything post-task-retro missed. Runs as a Junior task Sunday 02:00 UTC.
+Lightweight health check: prune, aggregate, clean, promote anything post-task-retro missed.
 
 Primary pattern detection now happens in post-task-retro (auto-promotion on 3+ confirmations). This skill is a backup sweep and metrics aggregator.
+
+> **Execution context (HTTP-topology split, 2026-05-31).** Most steps
+> (prune, metrics, branch cleanup, lesson-frontmatter lint) can run as a
+> Junior task on the daemon. **Step 1b (PMD embedding backfill) is the
+> exception — it MUST run on the laptop** because the live PMD store is
+> the laptop's canonical `.project-memory/memory.db` (what the HTTP
+> server starts with), and SQLite is not network-accessible. Run Step 1b
+> laptop-side (interactive or laptop cron); the rest may stay daemon-side.
+> Details in Step 1b's callout.
 
 ## Steps
 
@@ -24,45 +33,95 @@ Primary pattern detection now happens in post-task-retro (auto-promotion on 3+ c
 
 **Why:** the PMD MCP server has NO write-time embedding (verified by
 source inspection — `dist/index.js` has zero embed/ollama refs).
-Every `memory_write` / `memory_write_eval` from `post-task-retro`
-(Junior-side) and every `sync-lessons-to-pmd.sh` run inserts
-**text-only rows**. `memory_search_hybrid` silently degrades to FTS5
+Every `memory_write` / `memory_write_eval` (from `post-task-retro`,
+the `lesson-pmd-sync.sh` hook, or any interactive write) inserts a
+**text-only row**. `memory_search_hybrid` silently degrades to FTS5
 for unembedded rows — the +62.7% semantic-recall advantage is absent
-until `backfill.js` embeds them. `post-task-retro` CANNOT run the
-backfill inline (its `memory_write_eval` must be the absolute final
-action before exit per its Stop-hook contract; a post-eval backfill
-would violate that + risk the Junior watchdog). So weekly-review is
-the enforcement point for the Junior-side DB. Per
+until the Ollama backfill embeds them. So weekly-review is the
+embedding enforcement point. Per
 `.claude/lessons/feedback_pmd_backfill_after_write.md`.
 
-This runs as a Junior task on the EliteDesk daemon — use daemon-side
-paths (the MCP install location differs from the laptop's; locate
-`backfill.js` dynamically) and localhost Ollama. Non-fatal on
-failure (log + continue; this is a safety-net sweep, not a gate):
+> **MUST run on the LAPTOP, not inside the daemon Junior task
+> (corrected 2026-05-31).** Under the HTTP-daemon topology the live
+> PMD store is the canonical laptop DB
+> `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db` —
+> that is the exact `PROJECT_MEMORY_DB` the HTTP server starts with
+> (see `MCPs/project-memory-mcp/scripts/start-pmd-http-server.ps1`
+> line 33). `backfill.js` shares the server's `getDbPath()` resolution,
+> so pointing it at that path embeds the *live* store. The OLD step ran
+> backfill on the daemon against `/srv/brehon-fork/.project-memory/memory.db`
+> — a **dead/stale store** the HTTP server never reads (Junior writes
+> go over HTTP to the laptop, never to that file). The daemon run
+> embedded the wrong DB and reported "MISSING after backfill: 0" =
+> false confidence while the live store's rows stayed unembedded
+> (the store-split: `feedback_pmd_retro_check_http_store_split.md`).
+> SQLite is not network-accessible and the server exposes no backfill
+> endpoint, so this step CANNOT be delegated to the daemon — it runs
+> where the DB file and the Ollama-reachable network live: the laptop.
+
+Run this **laptop-side** (interactive weekly-review, or a laptop cron),
+NOT as part of the daemon Junior task. Non-fatal on failure (log +
+continue; safety-net sweep, not a gate). Bash form:
 
 ```bash
-DB="/srv/brehon-fork/.project-memory/memory.db"
-# Locate backfill.js on the daemon (install path is not fixed):
-BF="$(find /srv /home /usr/local/lib -maxdepth 6 -name backfill.js -path '*project-memory*' 2>/dev/null | head -1)"
-MISS="$(python3 -c "import sqlite3;c=sqlite3.connect('$DB');print(c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()" 2>/dev/null || echo ERR)"
-echo "PMD unembedded rows: $MISS"
-if [ -n "$BF" ] && [ "$MISS" != "0" ] && [ "$MISS" != "ERR" ]; then
-  if curl -s -m5 http://localhost:11434/api/tags >/dev/null 2>&1; then
-    OLLAMA_URL=http://localhost:11434 PROJECT_MEMORY_DB="$DB" PROJECT_ROOT=/srv/brehon-fork \
+DB="C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db"
+BF="C:/Users/barri/Developer/MCPs/project-memory-mcp/dist/scripts/backfill.js"
+OLLAMA="http://homeserver:11434"   # same endpoint the HTTP server uses (start script line 36)
+
+MISS="$(python -c "import sqlite3;c=sqlite3.connect(r'$DB');print(c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()" 2>/dev/null || echo ERR)"
+echo "PMD unembedded rows (live store): $MISS"
+if [ -f "$BF" ] && [ "$MISS" != "0" ] && [ "$MISS" != "ERR" ]; then
+  if curl -s -m5 "$OLLAMA/api/tags" >/dev/null 2>&1; then
+    OLLAMA_URL="$OLLAMA" PROJECT_MEMORY_DB="$DB" PROJECT_ROOT=C:/Users/barri/Developer/brehon-fork \
       node "$BF" --verbose 2>&1 | tail -5
-    # Verify:
-    python3 -c "import sqlite3;c=sqlite3.connect('$DB');print('MISSING after backfill:',c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()"
+    python -c "import sqlite3;c=sqlite3.connect(r'$DB');print('MISSING after backfill:',c.execute('SELECT COUNT(*) FROM memories m WHERE NOT EXISTS (SELECT 1 FROM memory_vectors v WHERE v.memory_id=m.id)').fetchone()[0]);c.close()"
   else
-    echo "WARN: daemon Ollama unreachable — $MISS rows stay FTS5-only; log + continue (non-fatal)"
+    echo "WARN: Ollama unreachable at $OLLAMA — $MISS rows stay FTS5-only; log + continue (non-fatal). Tailscale down or homeserver Ollama stopped."
   fi
-elif [ -z "$BF" ]; then
-  echo "WARN: backfill.js not found on daemon — cannot embed; surface in weekly-review report"
+elif [ ! -f "$BF" ]; then
+  echo "WARN: backfill.js not at $BF — cannot embed; surface in weekly-review report"
 fi
 ```
 
 Log the before/after missing-count in the weekly-review report. If
-`backfill.js` can't be located or Ollama is down, that is itself a
-finding to surface (semantic search is degrading week-over-week).
+Ollama is down (Tailscale or homeserver Ollama stopped) or `backfill.js`
+is missing, that is itself a finding to surface — semantic search is
+degrading week-over-week until the next successful backfill.
+
+### 1c. Lesson frontmatter sweep (silently-skipped-lesson backstop)
+
+**Why:** PMD ingestion requires a leading `---\n…\n---\n` frontmatter
+block with a non-empty `name:`. A lesson authored without it is SILENTLY
+SKIPPED and is invisible to `memory_search_hybrid` recall — forever, with
+no signal. On 2026-05-29, 8 lessons were found in this state, unindexed
+for weeks. Under the HTTP topology (2026-05-31+), the live ingestion path
+is the `lesson-pmd-sync.sh` PostToolUse hook (auto-`memory_write` to the
+HTTP server) — it ALSO requires valid frontmatter, so a no-frontmatter
+lesson is skipped by both the hook and the legacy `sync-lessons-to-pmd.sh`.
+The author-time `lesson-frontmatter-reminder.sh` hook catches the common
+case; this sweep is the backstop for files that slip in via direct git
+operations (a `git mv`, a manual editor write, a merge) that fire no
+PostToolUse hook. Per `feedback_lessons_need_frontmatter_for_pmd_sync.md`.
+
+Runs on the daemon side. Non-fatal (log + continue; this is a
+safety-net sweep, not a gate):
+
+```bash
+# Sweep every synced lesson file. Exit 2 if any would be skipped by the sync.
+bash scripts/brehon/lesson-frontmatter-lint.sh
+RC=$?
+if [ "$RC" -eq 2 ]; then
+  echo "WEEKLY-REVIEW FINDING: one or more lessons lack PMD-sync frontmatter (see BROKEN lines above)."
+  echo "These are invisible to memory_search_hybrid until fixed. Surface in the weekly summary."
+elif [ "$RC" -eq 0 ]; then
+  echo "lesson frontmatter sweep: all clean"
+fi
+```
+
+If the sweep reports BROKEN files, list them in the weekly-review
+report under findings. **Do NOT auto-fix** — frontmatter content
+(`name`/`description`) is a human authoring decision; surface the file
+list so the maintainer adds the right metadata, then re-runs the sync.
 
 ### 2. Promote candidates (backup sweep)
 
@@ -128,6 +187,17 @@ If zero evals: note "No evals this week — check retro rule deployment."
 2. Delete branches for completed/merged/failed Junior tasks
 3. Clean orphaned `.junior/worktrees/job-*` directories
 4. Flag review-status branches older than 7 days
+
+### 4b. Homeserver disk headroom check
+
+Run: `ssh homeserver "df -h /srv /var/log /tmp | tail -n +2"`
+
+If any mount is ≥75% used:
+- `/srv`: Junior worktree buildup → `ssh homeserver "ls -lt /srv/brehon-fork/.junior/worktrees/ | head -20"` to identify stale worktrees; reap via `git worktree remove --force` for done tasks.
+- `/var/log`: systemd journal → `journalctl --disk-usage`; trim with `journalctl --vacuum-size=500M` if >500 MB.
+- `/tmp`: cargo tmp artefacts → `du -sh /tmp/cargo-*` or similar; safe to remove if no cargo is running.
+
+Surface to user if any mount ≥90% — do not auto-remediate at that level.
 
 ### 5. Write summary + append metrics
 

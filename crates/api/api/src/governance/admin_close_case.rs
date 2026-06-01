@@ -62,6 +62,9 @@ async fn process_close(
     .first(conn)
     .await?;
 
+  // TODO(type-state): inverted guard (reject Closed only, accept all others) — model as
+  // GovernanceCase<NotYetClosed> via exhaustive allow-list TryFrom covering 12 variants —
+  // see .claude/lessons/feedback_governance_type_state_handlers.md
   match case.status {
     CaseStatus::Open
     | CaseStatus::ThresholdMet

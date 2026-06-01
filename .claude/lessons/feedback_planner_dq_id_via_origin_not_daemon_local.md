@@ -1,3 +1,8 @@
+---
+name: Planner DQ id collisions via stale daemon-local trunk — compute next_id over origin
+description: Feedback rule — a planning Junior task computes next_id from daemon-local decision-queue.json, which collides with the advisor's recent origin DQ writes when daemon-local trunk is stale; advisor must git fetch origin + fast-forward daemon-local trunk before dispatching any DQ-writing task in a session that advanced trunk
+type: feedback
+---
 # feedback: planner DQ id collisions via daemon-local-trunk staleness
 
 ## TL;DR

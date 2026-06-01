@@ -31,7 +31,7 @@ Perform a senior-engineer-level code review on a Brehon PR:
 
 - `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — the 15 ADRs (hard) and 12 OQs
 - `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements (§4), risk register (§7)
-- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — authoritative table/struct/enum/DTO definitions
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — authoritative table/struct/enum/DTO definitions (LIVING; current v0+v1 schema from live code, CODE WINS on discrepancy)
 - `docs/brehon-law-inspired-network/06-security-and-threat-model.md` — threat table to cross-check security-relevant changes
 - Fork-local `CLAUDE.md` — pinned upstream SHA
 
@@ -212,7 +212,7 @@ For each file, read the full file (not just the diff) so you understand surround
 - [ ] `up.sql` and `down.sql` both exist
 - [ ] `down.sql` cleanly reverses `up.sql` (drop in reverse dependency order)
 - [ ] Enum types created before tables that reference them (migration ordering)
-- [ ] Indexes match [04 §1.5](docs/brehon-law-inspired-network/04-data-model-and-api.md)
+- [ ] Indexes match [04 §1](docs/brehon-law-inspired-network/04-data-model-and-api.md) (per-migration index lists)
 - [ ] Postgres triggers, if added, have tests
 - [ ] DB grants on `governance_log` still deny UPDATE/DELETE to the app role
 

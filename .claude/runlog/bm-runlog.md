@@ -2119,3 +2119,88 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ## bm-cut: phase-v1-redaction-r1 off 321c848fc — 2026-05-28
 
 ## bm-cut: phase-v1-quality-r2 off 27c235a20 — 2026-05-28
+
+## advisor: bm-cut phase-v1-rt-r3-followup off 9ef77896d — 2026-05-29
+- **branch:** phase-v1-rt-r3-followup
+- **off:** governance-v0 @ 9ef77896d (chore(brehon): close v1-quality-r2a, bootstrap v1-rt-r3-followup)
+- **plan:** .claude/PRPs/plans/v1-rt-r3-followup.plan.md (not yet authored — plan follows e2e baseline)
+- **pushed:** yes — origin/phase-v1-rt-r3-followup (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed @ 9ef77896d
+- **mode:** Mode A — lane worktree C:/Users/barri/Developer/brehon-fork-rt-r3-followup created + bootstrapped (submodule init + .mcp.json/.env/settings.local.json copied)
+- **execution:** advisor-side local cut (NOT Junior bm-task) — Mode A precedent per `/roadmap-next`-style RT-r3 cut (bm-runlog 2022); avoids daemon finalize-merge + CC v2.1.119 runlog-gate hazards (bm-cut.md Phase 8). Lane not in v1-roadmap.json so /roadmap-next not directly usable; mechanics done manually.
+- **next:** e2e baseline run on lane tip (capture real failing tests + real reputation_event counts) → author plan against real numbers → /brehon-clarify → planning Junior
+
+## bm-pr: PR #162 OPEN (advisor-side) — 2026-05-29
+- **PR:** #162 — v1-rt-r3-followup → governance-v0
+- **head:** phase-v1-rt-r3-followup @ 7b324abe8
+- **base:** governance-v0 @ 381882942
+- **dispatch:** advisor-side inline (user chose via AskUserQuestion; lane was cut advisor-side, 4-line test diff)
+- **post-condition verify:** state=OPEN, isDraft=false, baseRefName=governance-v0, mergeable=MERGEABLE ✓
+- **PR diff (three-dot):** crates/server/tests/e2e.rs (12 ins/9 del) + phase-branch .claude/ artifacts; scope-discipline clean (0 lines in crates/api|db_schema|routes + migrations/)
+- **validation:** check CHECK_EXIT_0 + clippy CLIPPY_EXIT_0 + whole-binary e2e 119 passed/0 failed/5 ignored
+- **next:** CodeRabbit auto-review → bm-poll-cr → bm-triage → gate 3 (4-bucket counts)
+
+## bm-merge: PR #162 MERGED (advisor-side) — 2026-05-29T18:07:35Z
+- **PR:** #162 (now MERGED) — v1-rt-r3-followup → governance-v0
+- **merge_commit:** 28518605bee21eb656dff0cb2030ad7036d0532d
+- **base:** governance-v0 · **head:** phase-v1-rt-r3-followup (deleted via --delete-branch)
+- **method:** --merge (NOT squash — task-per-commit history load-bearing per phase-branch.md)
+- **dispatch:** advisor-side (user confirmed gate 5 via AskUserQuestion)
+- **post-condition verify:** state=MERGED ✓, mergedAt=2026-05-29T18:07:35Z (non-null) ✓, mergeCommit.oid valid 40-char ✓, origin phase branch deleted ✓
+- **CR triage:** 13 findings, 0 blocking, recommendation=approve, final_recommendation=approve. 9 wont-fix (MD-nits on .claude/ prose), 2 done (cr-10/cr-11 e2e stale comments → fix-impl-1 84526e6e2), 2 rebut (scope + Copilot summary). CR advisory/non-blocking; free-tier skipped re-review of comment-only commit (user approved proceed).
+- **gates:** /brehon-verify 3/3 stories ✓; whole-binary e2e 119 passed/0 failed/5 ignored (pre-fix 115/4/5, zero regression).
+- **remaining:** gate 6 retro sign-off (@94a005b55) → /brehon-phase-transition; pre-prune worktrees.
+
+## bm-cut: phase-v1-quality-r2 off 20d92ff3f — 2026-05-28
+
+## advisor: roadmap-next cut v1-RT-r4 — 2026-05-29T20:46:00Z
+- **branch:** phase-v1-RT-r4 (cut by bm-cut off governance-v0 @99eb3da46; tip 3b19eeddec)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r4
+- **bootstrap:** .mcp.json ✓  .env ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse ssh-reset-guard ✓  submodules-init ✓
+- **roadmap:** flipped v1-RT-r4 unstarted → in_flight (commit e3a50685d)
+- **lane mode:** A (dedicated worktree)
+- **ARMED:** MiniMax M2.7-vs-Sonnet impl-task A/B trial fires this phase (user confirmed at cut gate) — designate 5 MIRROR-ref §13 tasks during planning per .claude/PRPs/briefs/minimax-m27-trial-1.md
+- **cross-lane incident (resolved lossless):** during cut, a concurrent quality-r2 session's Task-0 brief commit (e5cda780b, .claude/PRPs/briefs/v1-quality-r2-impl-0.md) landed on the LOCAL phase-v1-RT-r4 tip (shared .git/ HEAD-move collision, multi-lane rule #5). Recovery: cherry-picked the brief onto origin/phase-v1-quality-r2 (blob fa3547450, new SHA 34dd093fc) THEN reset local phase-v1-RT-r4 to origin/phase-v1-RT-r4 (3b19eeddec). Byte-identical blob verified before reset. quality-r2 session must re-pull phase-v1-quality-r2 to see the rescued brief.
+
+2026-05-29T19:58Z | advisor | meta | handover-written | file=.claude/PRPs/handovers/advisor-2026-05-29-quality-r2-task0-running.md branch=governance-v0 head=03ea231bb
+
+2026-05-29T20:03Z | advisor | meta | cold-resume | handover=advisor-2026-05-29-quality-r2-task0-running.md drift=none (gov-v0 advanced 03ea231bb→cf3a410b9 via concurrent RT-r4 session — expected); Task #509 still running (~16min); DQ pending=0; phase-v1-quality-r2@34dd093fc
+
+2026-05-29T20:04Z | advisor | verify | task-0-pass | Task #509 done (ALL PASS, 9 probes). Probe 8 anchors=11/14/14 EXACT; no PR touches e2e.rs (no serialize). No commit, no blocker DQ. Retro note: dispatched brief v1-quality-r2-impl-0.md present on phase branch but worker reported recovery via plan §13 (Mode-B authoring deviation — for retro).
+
+2026-05-29T20:1xZ | advisor | brief | t3-authored | .claude/PRPs/briefs/v1-quality-r2-impl-3.md committed gov-v0@149a14b9d (14 verbatim e2e.rs anchor pairs, R11; §2.4 e2e lessons injected; doc_lazy_continuation-safe). Mode-B sync: daemon local phase ref was STALE 99eb3da46 → realigned to origin 34dd093fc → merged gov-v0 → pushed phase-v1-quality-r2@8963d44cf (e2e.rs untouched by merge, anchors hold). Daemon worktree restored to gov-v0.
+
+2026-05-29T20:1xZ | advisor | dispatch | t3-queued | Task #511 [role:impl-task] v1-quality-r2 task 3 base=phase-v1-quality-r2. NOT a MiniMax trial task (default Sonnet). Expects: 14 doc edits → daemon check/clippy/test-norun/audit → validate-pending-laptop DQ → advisor runs gates on laptop (Shape G suspended through 2026-06-01).
+
+## bm-cut: phase-v1-quality-r3 off c970d6628 — 2026-05-30
+
+## bm: poll-cr — 2026-05-31T00:42:00Z
+- **PR:** #169
+- **head SHA:** 17366ec1 (first poll — no prior SHA)
+- **CR comments seen:** 1 total (0 review / 0 inline / 1 issue)
+- **Actionable findings ingested:** 1 (1 from walkthrough/pre-merge check)
+- **New findings this poll:** 1 (cr-1)
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 0/0/0 | major 0/0/0 | medium 0/0/0 | low 1/0/0 | nit 0/0/0
+- **Recommendation:** approve (only low/nit in fix-in-pr)
+- **YAML:** .claude/PRPs/reviews/pr-169-findings.yaml
+- **walkthrough_summary:** "Estimated effort: 2 (Simple), ~8 min. 2 files reviewed (e2e.rs, decision-queue.json). Zero actionable findings. 4 checks passed (Title, Docstring Coverage, Linked Issues, Out of Scope). 1 warning: Description check — PR body missing template sections. Possibly related issues: #156, #159; related PR: #168."
+
+---
+
+## bm: cut phase-v1-RT-r5 off governance-v0 @ 5f0bd4b48 — 2026-05-31T1238Z
+
+- **branch:** phase-v1-RT-r5
+- **off:** governance-v0 @ 5f0bd4b48
+- **plan:** n/a — plan not yet authored; cut is ahead-of-planning per /roadmap-next (v1-RT-r5: Reputation Tuning rollup cron; fires ENTRY_KIND_ROLLUP_RECOMPUTED)
+- **plan-override:** user explicitly instructed to skip plan-file existence check; plan will be authored separately
+- **pushed:** yes — origin/phase-v1-RT-r5 (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed (see Phase 4 output)
+- **next:** advisor authors planning brief for v1-RT-r5; impl-task briefs follow plan approval
+- **Notes:** Zero inline/review-level CR findings. Single pre-merge warning (cr-1, low severity) from Description check — PR body does not follow repo template. All code changes (EnvVarGuard C4 sweep) were accepted without comment. Recommendation is approve since no critical/major open findings.
+
+## advisor: roadmap-next cut v1-RT-r5 — 2026-05-31T12:45Z
+- **branch:** phase-v1-RT-r5 (off governance-v0 @ 5f0bd4b48)
+- **worktree:** C:/Users/barri/Developer/brehon-fork-rt-r5
+- **bootstrap:** .mcp.json ✓  pmd-canonical-guard ✓  multi-lane-check ✓  PreToolUse hook ✓
+- **roadmap:** flipped v1-RT-r5 unstarted → in_flight

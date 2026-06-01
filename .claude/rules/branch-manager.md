@@ -13,6 +13,7 @@ that operationalise this rule are:
 - `.claude/PRPs/reviews/SCHEMA.md` — the YAML findings-file schema
 - `.claude/rules/phase-branch.md` — phase-branch discipline (BM enforces)
 - `.claude/rules/gh-pr-fork-target.md` — `--repo barrie-cork/lemmy` rule
+- `.claude/PRPs/templates/bm-task-brief.template.md` — canonical brief template (promoted 2026-05-29, post 3× recurrence across all 7 verbs). The template encodes the 14 always-apply hard refusals + the verb-specific per-row cheat sheets (scope, required reading, constraints). Sibling-pattern check (`feedback_read_canonical_before_writing_spec.md`) still required — `ls -t .claude/PRPs/briefs/*-bm-<verb>-*.md | head -2` for the SAME verb before filling in the template.
 
 ## Why this role exists
 
@@ -202,7 +203,7 @@ calls until the user requests a `/bm-*` command.
 
 ## Failure modes the BM is responsible for catching
 
-Push race with impl mid-commit (retry), `gh pr create` exists-already (fall through to `gh pr edit`), CR zero-findings on PR open >30 min (warn + ask user), `/prp-review` cargo step fail (writes critical finding into YAML), finding SHA disappears after force-push (bucket back to `fix-in-pr`).
+Push race with impl mid-commit OR bot-author (Dependabot, GH Actions auto-commit) — always `git fetch origin <branch>` immediately before `git push`; retry once on rejection before escalating, `gh pr create` exists-already (fall through to `gh pr edit`), CR zero-findings on PR open >30 min (warn + ask user), `/prp-review` cargo step fail (writes critical finding into YAML), finding SHA disappears after force-push (bucket back to `fix-in-pr`).
 
 Full recovery procedures per case: `.claude/refs/bm-mechanics.md` §"Failure modes".
 

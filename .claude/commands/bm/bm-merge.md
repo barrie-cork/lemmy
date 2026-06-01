@@ -214,6 +214,7 @@ gh pr view {N} --repo barrie-cork/lemmy --json mergeStateStatus,mergeable
 | `DIRTY` | STOP: "Merge conflicts — resolve on phase branch first" |
 | `UNKNOWN` | RETRY in 10s (GitHub mid-compute), then STOP if still UNKNOWN |
 | `HAS_HOOKS` | OK |
+| `UNSTABLE` | Check which CI check is non-green. If the failing check is `adr-compliance` AND `scripts/brehon/check-adr-compliance.sh` (local scan) exits 0 → note the bypass in a DQ `kind: log` entry, then proceed with `gh pr merge {N} --repo barrie-cork/lemmy --merge --delete-branch --admin`. Otherwise STOP and wait for CI to resolve. (2× observed: quality-r3 PR #169 + quality-r3b PR #170 — adr-compliance `workflow_dispatch` re-trigger unreliable in private repos; local scan is authoritative.) |
 | Other | STOP: "Unexpected merge state — investigate" |
 
 ### 2.3 CI checks all passing

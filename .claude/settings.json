@@ -125,6 +125,26 @@
         ]
       },
       {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/rule-narrative-bloat-reminder.sh",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lesson-frontmatter-reminder.sh",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lesson-pmd-sync.sh",
+            "timeout": 15000
+          }
+        ]
+      },
+      {
         "matcher": ".*",
         "hooks": [
           {

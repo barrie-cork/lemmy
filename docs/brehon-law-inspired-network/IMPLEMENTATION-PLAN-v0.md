@@ -1,24 +1,46 @@
 # IMPLEMENTATION-PLAN-v0.md — Brehon-Law-Inspired Network MVP
 
-**Status:** Phase 0 + 1 complete, Phase 2a ready to start (2026-04-15). Phase 5 reframe applied 2026-04-17 — split into 5a/5b, config-table posture, founder seeding, OQs 004/006/013/014 resolved.
+> **STATUS: v0 SHIPPED (all phases complete, 2026-04-19) — HISTORICAL REFERENCE ONLY.**
+> Every v0 phase below has merged to `governance-v0`. The project has since shipped
+> well into **v1** (Jury Mechanics, Sponsor Liability, Admin Dashboard, Ship Readiness,
+> Federation Inbound, Reputation Tuning, deps, quality). This file is no longer the
+> executable blueprint — it is the **v0 archaeological record**. Its §4 cross-cutting
+> requirements (hash-chain, redaction/pseudonym, EmergencyRemove), §8 OQ→ADR
+> resolutions, and the 11-endpoint task breakdown remain canonical *for v0* and are
+> still cited by planning sessions.
+>
+> **Live work is tracked elsewhere — do NOT plan from this file:**
+> - **`.claude/PRPs/v1-roadmap.json`** — the live lane/sub-phase tracker (status, PRs,
+>   retros, `what_remains`). This is the current "what's left" surface.
+> - **`.claude/PRPs/prds/v1-*.prd.md`** + **`v2-messaging-rtc.prd.md`** — v1/v2 design.
+> - **`docs/brehon-law-inspired-network/04-data-model-and-api.md`** — canonical schema/DTO/route reference (still authoritative).
+
 **Audience:** Solo developer (you)
-**Scope:** v0 only. v1/v2/v3 work referenced from [99 ADR-010](99-decisions-and-open-questions.md) and [05 §7](05-mvp-and-delivery-plan.md) is **out of scope**.
+**Scope (as authored):** v0 only. v1/v2/v3 work referenced from [99 ADR-010](99-decisions-and-open-questions.md) and [05 §7](05-mvp-and-delivery-plan.md) was **out of scope for this document** — and has since shipped/begun under the v1 roadmap above.
+**Phase 5 reframe applied 2026-04-17** — split into 5a/5b/5c, config-table posture, founder seeding, OQs 004/006/013/014 resolved.
 
-## Phase status
+## Phase status — all v0 phases SHIPPED
 
-| Phase | Name | Status | Notes |
+Every phase below merged to `governance-v0` between 2026-04-14 and 2026-04-19.
+Completion dates are from the per-phase completion reports under
+`.claude/PRPs/reports/phase-*-report.md` (the authoritative v0 record — v0 predates
+the PR-per-phase + `v1-roadmap.json` conventions, so most phases shipped via direct
+commits and ralph loops rather than one clean "Merge Phase N" commit).
+
+| Phase | Name | Status | Completion record |
 |---|---|---|---|
-| 0 | Test harness (preflight) | ✅ done 2026-04-14 | `cargo test --test e2e` passes in ~41s. testcontainers + pgautoupgrade:18-alpine. libpq via vcpkg on Windows. |
-| 1 | Schema + Diesel foundation | ✅ done 2026-04-15 | 14 tasks + Level 3 round-trip test + lockfile chore + plan reframe = 18 commits. Merged to `origin/governance-v0` HEAD `94eba51a0`. `phase1_migrations_round_trip` now a permanent test fixture. |
-| 2a | Read models — `governance_case` + `jury_queue` | ⏭ ready | 11 tasks (14–24). Fresh ralph session. Plan generated externally. |
-| 2b | Read models — `governance_modlog` + smoke tests | 🔒 blocked on P2a | 6 tasks (25–30). Smoke tests in task 30 gate the whole Phase 2. |
-| 3 | API common DTOs | 🔒 blocked on P2b | 7 tasks (31–37). |
-| 4 | First 5 endpoints + golden path | 🔒 blocked on P3 | 12 tasks. Human-in-the-loop per Phase 0 assessment. |
-| 5a | Config + reputation infra + founder bootstrap | 🔒 blocked on P4 | 10 tasks (50–60). Introduces `governance_config` table; everything tuneable lives there. Founder seeding CLI + sponsor-liability e2e test anchor the phase. |
-| 5b | Remaining endpoints + observability + capability tests | 🔒 blocked on P5a | 8 tasks (61–69). Ships all 11 MVP endpoints, `admin/reputation-stats` observability, capability-gating e2e. |
-| 6 | Federation (outbound-only) | 🔒 blocked on P5b | 9 tasks (70–78). |
+| 0 | Test harness (preflight) | ✅ shipped 2026-04-14 | `phase-0-test-harness-report.md`. testcontainers + pgautoupgrade; libpq via vcpkg on Windows. |
+| 1 | Schema + Diesel foundation | ✅ shipped 2026-04-15 | 18 commits; merged to `governance-v0` HEAD `94eba51a0`. `phase1_migrations_round_trip` is now a permanent fixture (later bumped per slice). |
+| 2a | Read models — `governance_case` + `jury_queue` | ✅ shipped 2026-04-15 | `phase-2a-governance-case-jury-queue-report.md`. Crates land under `crates/db_views/`. |
+| 2b | Read models — `governance_modlog` + smoke tests | ✅ shipped 2026-04-16 | `phase-2b-governance-modlog-report.md`. Third/final Phase-2 view crate + the 3 cross-crate smoke tests. |
+| 3 | API common DTOs | ✅ shipped 2026-04-16 | `phase-3-api-common-dtos-report.md`. All [04 §5](04-data-model-and-api.md) request/response types compile + exported. |
+| 4 | First 5 endpoints + golden path | ✅ shipped 2026-04-16/17 | Split into 4a (`phase-4a-...-report.md`, routes + first 5 handlers) and 4b (`phase-4b-admin-backstops-and-golden-path-report.md`, admin backstops + `report_to_modlog_golden_path` — **the v0 acceptance test**). |
+| 5a | Config + reputation infra + endorsement | ✅ shipped 2026-04-17 | `phase-5a-complete-report.md`. Introduces `governance_config` (everything tuneable). |
+| 5b | Sponsor-liability + jury gating + founder bootstrap | ✅ shipped 2026-04-18 | `phase-5b-complete-report.md`. Closing commit `f183abfd9`; 13 branch commits. |
+| 5c | Remaining endpoints + observability + capability tests | ✅ shipped 2026-04-18/19 | `phase-5c-complete-report.md`. All 11 MVP endpoints wired; merged via PR #10. |
+| 6 | Federation (outbound-only) | ✅ shipped 2026-04-19 | `phase-6-complete-report.md`. `phase-6` cut @ `3bbf419da`; Merge6 gate green (14 passed / 0 failed / 3 ignored). |
 
-This plan is the executable blueprint for v0. It is keyed to the 11-endpoint MVP scope in [05 §2](05-mvp-and-delivery-plan.md), the 6-step implementation order in [05 §4](05-mvp-and-delivery-plan.md), and the canonical agent prompt at [AGENT-PROMPT-mvp-implementation-plan.md](AGENT-PROMPT-mvp-implementation-plan.md).
+This plan **was** the executable blueprint for v0. It is keyed to the 11-endpoint MVP scope in [05 §2](05-mvp-and-delivery-plan.md), the 6-step implementation order in [05 §4](05-mvp-and-delivery-plan.md), and the canonical agent prompt at [AGENT-PROMPT-mvp-implementation-plan.md](AGENT-PROMPT-mvp-implementation-plan.md). **For current work, start from `.claude/PRPs/v1-roadmap.json`, not here.**
 
 If anything below contradicts an ADR in [99](99-decisions-and-open-questions.md), the ADR wins and the contradiction belongs in §8 of this plan, not in the body.
 

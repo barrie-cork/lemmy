@@ -1,3 +1,8 @@
+---
+name: Postgres TEXT forbids null bytes — pg_advisory_xact_lock composite key construction
+description: Feedback rule — Postgres TEXT family forbids embedded null bytes; a format!("{domain}\x00{table}") key bound to pg_advisory_xact_lock fails at runtime with "invalid byte sequence for encoding UTF8: 0x00", invisible to cargo check/clippy/test --no-run; use a printable separator like ':' instead
+type: feedback
+---
 # Postgres TEXT type forbids null bytes — advisory-lock key construction
 
 **Context:** When constructing a key for `pg_advisory_xact_lock`, you might use a composite string like `format!("{domain}\x00{table_name}")` to separate components. Postgres `TEXT` (and all text-family types) forbids embedded null bytes at the wire level.

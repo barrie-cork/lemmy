@@ -268,6 +268,9 @@ async fn process_vote(
   // states like ThresholdMet / JurySelection / InReview don't trip the
   // guard, and so v1 additions land in the correct default-behaviour
   // category unless explicitly added to the terminal list.
+  // TODO(type-state): terminal-state idempotency guard; model as GovernanceCase<Active>
+  // where Active excludes terminal variants via a CanReceiveVote sealed trait —
+  // see .claude/lessons/feedback_governance_type_state_handlers.md
   if matches!(
     case_row.status,
     CaseStatus::Decided

@@ -26,7 +26,7 @@ Execute the plan end-to-end with rigorous self-validation. You are autonomous.
 ## Brehon Context (read every invocation)
 
 - `docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md` — cross-cutting requirements, test strategy, risk register
-- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — table/enum/struct/route/handler authority
+- `docs/brehon-law-inspired-network/04-data-model-and-api.md` — table/enum/struct/route/handler authority (LIVING; current v0+v1 schema from live code, CODE WINS on discrepancy)
 - `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` — hard constraints
 - Fork-local `CLAUDE.md` — pinned upstream SHA, branch, command list
 

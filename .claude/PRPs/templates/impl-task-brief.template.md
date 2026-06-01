@@ -162,15 +162,7 @@ If during the task you discover something a future impl-task on a related area w
 
 Document any plan-step substitutions, gotchas, or constraints unique to this task. Cite the DQ id that authorised the override.
 
-<!-- SHAPE-G-SUSPENDED until 2026-06-01: impl-task writes validate-pending-laptop (not validate-pending). GH Actions workflows cargo-validate-workspace + cargo-validate-migration disabled. Advisor laptop session runs cargo. See DQ #228. -->
-
 ## 5. Validation gates (per plan §<plan-section> task <N> VALIDATE block)
-
-**Shape-G suspended until 2026-06-01.** After pushing, write a
-`kind: "validate-pending-laptop"` DQ entry (per `.claude/agents/impl-task.md`
-"Pre-Shape-G plans") with the commands below in `commands[]`. Do NOT
-write `kind: "validate-pending"` or capture a `workflow_run_id`.
-The advisor laptop session runs these commands and mutates the entry.
 
 Capture each to `.claude/PRPs/debug/<phase>-task<N>-<probe>.log`. All exit-0.
 
@@ -196,6 +188,8 @@ If any gate fails, **STOP and surface to advisor via DQ.** Do not patch around `
 ```
 
 Plus any DQ #N references if you raised one mid-task.
+
+**Verification-only tasks (Task 0, audit-probe tasks, anchor-drift sentinels):** for each probe, paste the **actual tool output** (Bash stdout, Grep result, Read excerpt), not a ✓/✗ summary. A checkmark without output is fabrication-equivalent — the advisor cannot distinguish "right by work" from "right by luck". 1× incident: v1-rt-r3-followup Task 0 (#504) asserted Probes 8/9/10 PASS in thinking with zero measuring tool calls; advisor re-ran all three on the lane worktree (happened to be correct). Post-condition re-verify is the only reliable catch.
 
 ## 7. Why this brief differs from the plan (if applicable)
 
