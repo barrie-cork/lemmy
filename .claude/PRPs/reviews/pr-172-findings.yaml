@@ -1,0 +1,123 @@
+schema_version: 1
+pr: 172
+title: "fix(governance,e2e): CodeRabbit v0-scope rule + sponsor-allowlist sweep + BREHON_DISABLE_* guards"
+head: phase-v1-quality-r3c
+base: governance-v0
+opened_at: 2026-06-01T09:29:24Z
+last_poll_at: 2026-06-01T10:10:00Z
+poll_count: 1
+last_polled_head_sha: 0216babc99fc80c03da72a1367544e131927d079
+last_polled_fingerprint: 844f5cb172d75749feeb8eebc2e430f17aba1d2d9146aa17a797c677a93f2d13
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: request-changes
+findings:
+  - id: cr-1
+    source: coderabbit
+    severity: major
+    posted_at: 2026-06-01T09:31:58Z
+    file: .claude/decision-queue.json
+    line: 3133
+    summary: "Don't mark reconstructed evidence as a definitive validation pass — entry b2e9c3a7a422-001 shows kind:validate-pending-laptop result:pass but was reconstructed/user-confirmed, not executed; later actual run at line 3152 is the authoritative pass"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/172#discussion_r3333075643
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Suggest changing kind to 'log' or 'superseded', result to 'reconstructed', and adding pointer to later executed validation entry."
+
+  - id: cr-2
+    source: coderabbit
+    severity: major
+    posted_at: 2026-06-01T09:31:58Z
+    file: .claude/decision-queue.json
+    line: 3221
+    summary: "Fix invalid JSON Windows path escaping: scripts\\brehon parses \\b as backspace (0x08); use scripts\\\\brehon in JSON so backslashes are preserved in 2 resolved entries"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/172#discussion_r3333075647
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "CR ran verification script confirming found=2 entries with \\b backspace corruption. See feedback_windows_backslash_path_dq_via_write_fragment.md."
+
+  - id: cr-3
+    source: coderabbit
+    severity: low
+    posted_at: 2026-06-01T09:31:58Z
+    file: .claude/PRPs/briefs/v1-quality-r3c-fix-impl-2.md
+    line: 55
+    summary: "Normalise fenced code blocks to satisfy markdownlint MD031/MD040 — blocks missing surrounding blank lines and explicit language tags; applies to lines 53-55, 60-65, 74-79, 82-87, 94-98, 141-146, 189-191, 195-209"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/172#discussion_r3333075658
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Markdownlint MD031 (blanks-around-fences) + MD040 (fenced-code-language). Add blank lines before/after fences; add rust language tag to Rust test blocks."
+
+  - id: cr-4
+    source: coderabbit
+    severity: major
+    posted_at: 2026-06-01T09:31:58Z
+    file: .claude/PRPs/briefs/v1-quality-r3c-fix-impl-2.md
+    line: 164
+    summary: "Probe A validates non-deleting path rather than cleanup behaviour — brief seeds a fresh row so fed_nonce_delete(1,...) won't remove it; fix by backdating row (seen_at = now - 2 days) and asserting count == 0"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/172#discussion_r3333075660
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Also applies to lines 17-19. Keep guard-on probe (skip-delete path) separate. The brief specifies incorrect test logic that would produce a vacuous pass."
+
+  - id: cr-5
+    source: coderabbit
+    severity: low
+    posted_at: 2026-06-01T09:29:38Z
+    file: null
+    line: null
+    summary: "CR pre-merge-check: Description check — PR description missing required template sections (Phase checkbox, DoD checklist, ADR impact matrix, validation command exit codes, Risk/rollback details)"
+    cr_url: https://github.com/barrie-cork/lemmy/pull/172#issuecomment-4591280108
+    adr: null
+    bucket: fix-in-pr
+    addressed_in: null
+    rationale: null
+    notes: "Resolution: Complete PR template by selecting Phase checkbox, filling DoD checklist, completing ADR impact matrix, providing validation command exit codes, and documenting rollback strategy."
+
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 3
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 2
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 5
+    claude: 0
+    user: 0
+  total: 5
+merged_at: null
+merge_commit: null
+final_recommendation: null
