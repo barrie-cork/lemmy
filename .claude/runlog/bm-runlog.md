@@ -2216,3 +2216,12 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** request-changes (3 open major findings)
 - **YAML:** .claude/PRPs/reviews/pr-172-findings.yaml (committed + pushed, 9e1254dce)
 - **Notes:** Diff contains .claude/decision-queue.json + .claude/PRPs/briefs/v1-quality-r3c-fix-impl-2.md + .coderabbit.yaml (no crates/ or tests/ changes in this PR). All 4 inline findings target files inside the diff. cr-4 (major): brief specifies incorrect Probe A logic — fresh row means fed_nonce_delete won't delete it, making the test a vacuous pass; brief needs backdated row + count==0 assertion. cr-2 (major): \\b backspace corruption confirmed by CR verification script (2 affected resolved entries). walkthrough_summary: "Estimated review effort 2/Simple, ~10 min; change-cohort: documentation/config."
+
+## bm: merge PR #172 — 2026-06-01T10:27:12Z
+
+- **PR:** #172 (fix(governance,e2e): CodeRabbit v0-scope rule + sponsor-allowlist sweep + BREHON_DISABLE_* guards)
+- **base ← head:** governance-v0 ← phase-v1-quality-r3c
+- **merge sha:** c1ba108dc84ad005e66ec8e5823d6e427029a513
+- **remote branch deleted?** yes
+- **trunk position:** c1ba108dc (Merge pull request #172 from barrie-cork/phase-v1-quality-r3c)
+- **findings YAML archived:** .claude/PRPs/reviews/pr-172-findings.yaml
