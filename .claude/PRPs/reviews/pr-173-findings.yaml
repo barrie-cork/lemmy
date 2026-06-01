@@ -1,0 +1,162 @@
+schema_version: 1
+pr: 173
+title: Phase v1-redaction-r1 — harden GDPR identifier-scrubber
+head: phase-v1-redaction-r1
+base: governance-v0
+opened_at: '2026-06-01T10:32:01Z'
+last_poll_at: '2026-06-01T10:49:03Z'
+poll_count: 1
+last_polled_head_sha: 5ca62ccee7b9093eb9f8aebe77cc2ccf8f0842aa
+last_polled_fingerprint: null
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: approve
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-06-01T10:41:42Z'
+  file: .claude/PRPs/briefs/v1-redaction-r1-bm-pr-1.md
+  line: 27
+  summary: 'MD040: fenced code block without language identifier — add ```markdown
+    or ```text'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481439
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: ".claude/ meta-files are not user-facing docs; MD040 lint is noise on\
+    \ planning artifacts."
+  notes: null
+- id: cr-2
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-06-01T10:41:42Z'
+  file: .claude/PRPs/briefs/v1-redaction-r1-bm-pr-1.md
+  line: 38
+  summary: Adversarial test count says '11 tests, 2 ignored' but final suite is 12
+    active + 2 ignored
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481442
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: "Brief is a planning artifact; count phrasing was accurate at time of\
+    \ writing."
+  notes: null
+- id: cr-3
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-06-01T10:41:42Z'
+  file: .claude/PRPs/briefs/v1-redaction-r1-fix-impl-1.md
+  line: 108
+  summary: 'MD040: fenced code block at line 108 has no language tag — add ```text'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481444
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: ".claude/ meta-files are not user-facing docs; MD040 lint is noise on\
+    \ planning artifacts."
+  notes: null
+- id: cr-4
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-06-01T10:41:42Z'
+  file: .claude/PRPs/plans/v1-redaction-r1.plan.md
+  line: 345
+  summary: 'MD040: bare fenced code blocks at lines 345 and 375 — add explicit language
+    tags'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481446
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: ".claude/ meta-files are not user-facing docs; MD040 lint is noise on\
+    \ planning artifacts."
+  notes: Also applies to line 375
+- id: cr-5
+  source: coderabbit
+  severity: nit
+  posted_at: '2026-06-01T10:41:42Z'
+  file: .claude/PRPs/reports/v1-redaction-r1-verify.md
+  line: 80
+  summary: Verify report lists duplicate governance_log.rs entry; spell out three
+    distinct write-site chokepoints
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481450
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: "Verify report named the 3 chokepoints by file:line in the report body;\
+    \ CR is asking for redundant duplication."
+  notes: 'Chokepoints: governance_log.rs:268, submit_jury_vote.rs:527, submit_jury_vote.rs:531'
+- id: cr-6
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-01T10:41:43Z'
+  file: crates/server/tests/e2e.rs
+  line: 18202
+  summary: Probe B sets BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB guard but never invokes
+    cleanup path — guard is untested
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#discussion_r3333481458
+  adr: null
+  bucket: done
+  addressed_in: 'PR #173 (75ecec03d — comment clarifies scheduler-level guard architecture; CR accepted on second pass)'
+  rationale: "The guard BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB is scheduler-level\
+    \ (scheduled_tasks.rs:428), not function-level. delete_older_than has no env-var\
+    \ check. Probe B intentionally does NOT call delete_older_than — it tests the\
+    \ observable outcome of the scheduler skip. Comment updated in commit 75ecec03d\
+    \ to make the architecture explicit. CR self-rebutted on second pass: accepted\
+    \ Probe A + Probe B as sufficient."
+  notes: 'CR second pass accepted the rebuttal — Probe A (delete works when called)
+    + Probe B (scheduler skips call when guard set) together provide sufficient coverage.'
+- id: cr-7
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-01T10:36:01Z'
+  file: null
+  line: null
+  summary: 'CR pre-merge-check: Description check — PR body missing structured template
+    (Phase checkbox, DoD checklist, ADR matrix)'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/173#issuecomment-4591774469#walkthrough
+  adr: null
+  bucket: wont-fix
+  addressed_in: null
+  rationale: "Fork does not use upstream PR template. Pre-merge-check inconclusive\
+    \ is expected noise."
+  notes: 'Resolution: Fill out PR template completely — Phase checkbox, DoD checklist
+    with exit codes, ADR impact matrix (ADR-013, ADR-015), validation command exit
+    codes, rollback strategy.'
+counters:
+  critical:
+    open: 0
+    done: 1
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 1
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 5
+  by_source:
+    coderabbit: 7
+  total: 7
+merged_at: null
+merge_commit: null
+final_recommendation: approve
