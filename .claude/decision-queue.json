@@ -1893,7 +1893,7 @@
       "branch": "phase-v1-federation-inbound-d",
       "phase_task": "phase-2-e2e",
       "commands": [
-        "cmd //c scripts\brehon\\cargo-test.bat --workspace --test e2e --features full"
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full\""
       ],
       "local_log_path": "C:/Users/barri/.claude/logs/e2e-v1-federation-inbound-d-2ad472025.log",
       "result": "pass",
@@ -3218,7 +3218,7 @@
       ],
       "context": "fix-impl-2 fixed compile errors. fix-impl-3 fixes test assertion: delete_older_than(0) returns early; now uses diesel::update to backdate seen_at then calls delete_older_than(1). cargo-check passed. Running e2e.",
       "commands": [
-        "cmd //c \"scripts\brehon\\cargo-test.bat --workspace --test e2e --features full\""
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full\""
       ],
       "branch": "phase-v1-quality-r3c",
       "phase_task": "3-fix-3",
