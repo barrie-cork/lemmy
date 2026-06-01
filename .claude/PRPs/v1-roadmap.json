@@ -475,10 +475,12 @@
           "note": "adr-compliance runner failure at merge; unblocked via owner-acknowledge + gh pr merge --admin. Local scan exit 0."
         },
         "v1-quality-r3b": {
-          "status": "unstarted",
-          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Possible: BREHON_DISABLE_* sites sweep.",
-          "pr": null,
-          "plan": null
+          "status": "done",
+          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Band-aid guards removed from 3 admin_audit_stream e2e tests.",
+          "pr": 170,
+          "plan": ".claude/PRPs/plans/v1-quality-r3b.plan.md",
+          "done_at": "2026-06-01",
+          "retro": "docs/retro: v1-quality-r3b retro — Issue #167 fix shipped (b8a8eaf72)"
         },
         "v1-quality-r3c": {
           "status": "done",
