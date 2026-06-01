@@ -60,6 +60,7 @@ concurrency on a 64 GB machine. Two simultaneous full-suite runs (41 + 41 tests,
 ~8 containers) may contend; serialize those at the bm-merge gate.
 
 ## Full test inventory (as of 2026-06-01, 41 tests in e2e.rs)
+<!-- verified: grep -c '#\[tokio::test\]' crates/server/tests/e2e.rs, 2026-06-01 — re-verify before citing -->
 
 | Line | Function | Group |
 |---|---|---|
@@ -111,3 +112,5 @@ concurrency on a 64 GB machine. Two simultaneous full-suite runs (41 + 41 tests,
 and verify it falls into an existing group (or create a new group + filter
 expression). The anchor for the uniqueness gate in the advisor-orchestrator
 brief-authoring rules applies here too — grep the function name before adding.
+Before citing the test count in a brief, run:
+`grep -c '#[tokio::test]' crates/server/tests/e2e.rs`

@@ -100,6 +100,8 @@ Mechanical: read score, read top factor, add citation. No DQ, no escalation.
 
 Per the c-inherited-dragon plan's stage map. Advisor knows what to queue next on each completion. Full state-transition contract (with Phase 1/Phase 2 multi-paragraph detail): `.claude/refs/auto-phase.md` §"Stage-shape orchestration (canonical contract)".
 
+- **Pre-impl HEAD check (post-2026-06-01):** before executing any user-requested implementation ("implement X", "make change Y"), run `git show HEAD --stat` and verify the named changes are not already present. A prior handover session may have bundled them. If all target files are already at the desired state, confirm with the user before re-deriving. Cost: ~5s; saves ~15 min of no-op edits.
+
 - **Brief authored, no planning task yet** → `/brehon-clarify` → resolve clarify-DQ → queue planning.
 - **Planning complete** → §3.4 + §3.5 + §3.5a → gate 1 (plan approval) → queue `bm-cut`.
 - **bm-cut complete** → §4 cohort dispatch.
