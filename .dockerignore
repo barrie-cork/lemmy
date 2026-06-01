@@ -1,0 +1,31 @@
+# --- build artefacts (the big one: ~59 GB) ---
+target/
+
+# --- git / VCS ---
+.git/
+.gitmodules
+
+# --- project memory & tooling ---
+.project-memory/
+.claude/
+homeserver/
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- docker dev files (not needed inside the image) ---
+docker/volumes/
+docker/*.log
+
+# --- local env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- CI / GitHub config (not needed in image) ---
+.github/
+.coderabbit.yaml
