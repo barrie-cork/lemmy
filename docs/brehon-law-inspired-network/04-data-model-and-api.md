@@ -260,6 +260,8 @@ Request/response types live in `crates/api/api_common/src/governance.rs`. Groupe
   - `ThresholdsSnapshot` → `jury_reliability/reporting_accuracy/endorsement_strength: i64`.
   - `CapabilityCounts` → `jury_eligible_count/trusted_reporter_count/can_sponsor_count: i64`.
   - `FounderEventStats` → `active_count/expired_count: i64`.
+- **`AdminReputationRollup`** → `person_id: PersonId` (**required** — the per-person scoping id; `GET /governance/admin/reputation/rollup`).
+- **`AdminReputationRollupResponse`** → `rollup: Option<ReputationSnapshot>` (instance-wide snapshot, `community_id IS NULL`; `None` until the rollup cron has run or if all the person's communities are banned), `contributing: Vec<ReputationSnapshot>` (the per-community snapshots that fed the rollup; may be empty).
 
 ### Admin config (v1-AD-b)
 
