@@ -1,31 +1,28 @@
 name: cargo-validate-workspace
 
 # Out-of-band cargo validation for Brehon phase branches. Runs
-# `cargo check + clippy + test --no-run` on every push to a
-# `junior/*` worker branch, freeing the EliteDesk Junior worker slot
-# from in-band cargo work (Shape G — see
+# `cargo check + clippy + test --no-run` (Shape G — see
 # .claude/PRPs/plans/v1-validate-agent.plan.md).
 #
-# Trigger pattern is push-only per DQ #66. PR-side status checks
-# come via branch protection rules, configured out-of-band.
-#
-# `phase-v1-*` branches are intentionally NOT triggered here:
-# cargo-test-e2e.yml runs on those, and it does `cargo test --no-run`
-# which already compiles the workspace. Running both = ~60% duplicated
-# build work. Removing phase-v1-* saves ~60 min/month on the Actions
-# bill (per 2026-04-28 minutes-budget audit).
+# TRIGGER: workflow_dispatch ONLY (belt-and-braces, 2026-06-01).
+# This workflow is also disabled_manually at the API level. The
+# auto-on-`junior/*`-push trigger it USED to carry was the entire
+# May 2026 Actions minute-burn (N builds per cohort push) — see
+# project_laptop_canonical_cargo_runner + shape-g-suspended memories.
+# The locked posture (2026-06-01) is: local does all compile/lint/test
+# (laptop-native cargo + scripts/brehon/cargo-linux.sh for the Linux
+# deploy-target proof), CodeRabbit + Copilot review every PR, and Shape
+# G is RESIDUAL — fire it by hand ONLY for a PR-visible green check that
+# external/pilot eyes need. Changing this back to a push trigger
+# re-introduces the burn; do not do so without re-reading those memories.
 
 on:
-  push:
-    branches:
-      - 'junior/*'
-    paths:
-      - 'crates/**'
-      - 'migrations/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - '.github/workflows/cargo-validate-workspace.yml'
+  workflow_dispatch:
+    inputs:
+      ref_to_test:
+        description: 'Branch or SHA to checkout (default: caller-supplied ref / branch HEAD)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -46,6 +43,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # Honour the workflow_dispatch ref_to_test input; empty falls
+          # back to the ref the dispatch targeted (the default checkout).
+          ref: ${{ github.event.inputs.ref_to_test || github.ref }}
           fetch-depth: 1
           # crates/email/translations/ is a submodule pointing to
           # LemmyNet/lemmy-translations; lemmy_email/build.rs reads it

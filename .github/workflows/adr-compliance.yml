@@ -12,15 +12,6 @@ on:
       - 'crates/**'
       - 'migrations/**'
       - 'docs/brehon-law-inspired-network/99-decisions-and-open-questions.md'
-  push:
-    branches:
-      - phase-v1-SL-b
-      - phase-v1-SL-a
-    paths:
-      - 'crates/**'
-      - 'migrations/**'
-      - '.github/scripts/adr-compliance.sh'
-      - '.github/workflows/adr-compliance.yml'
   workflow_dispatch:
     inputs:
       base_ref:

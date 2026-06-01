@@ -1,22 +1,23 @@
 name: cargo-validate-migration
 
 # Out-of-band migration round-trip validation for Brehon phase
-# branches. Runs only when migrations/** changes in a push to a
-# `junior/*` worker branch. Companion to cargo-validate-workspace.yml
-# — see .claude/PRPs/plans/v1-validate-agent.plan.md §10.4.
+# branches. Companion to cargo-validate-workspace.yml — see
+# .claude/PRPs/plans/v1-validate-agent.plan.md §10.4.
 #
-# `phase-v1-*` branches are intentionally NOT triggered here:
-# cargo-test-e2e.yml runs migrations on those branches as part of its
-# testcontainers setup, so running this workflow would duplicate the
-# round-trip exercise.
+# TRIGGER: workflow_dispatch ONLY (belt-and-braces, 2026-06-01).
+# Also disabled_manually at the API level. The auto-on-`junior/*`-push
+# trigger it used to carry contributed to the May 2026 minute-burn; the
+# locked posture is local-first + CR/Copilot, Shape G residual-only (see
+# the matching note in cargo-validate-workspace.yml). Do not restore a
+# push trigger without re-reading project_laptop_canonical_cargo_runner.
 
 on:
-  push:
-    branches:
-      - 'junior/*'
-    paths:
-      - 'migrations/**'
-      - '.github/workflows/cargo-validate-migration.yml'
+  workflow_dispatch:
+    inputs:
+      ref_to_test:
+        description: 'Branch or SHA to checkout (default: caller-supplied ref / branch HEAD)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -34,6 +35,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # Honour the workflow_dispatch ref_to_test input; empty falls
+          # back to the ref the dispatch targeted.
+          ref: ${{ github.event.inputs.ref_to_test || github.ref }}
           # fetch-depth: 0 is required because migrate-roundtrip.sh
           # diffs migrations/ vs origin/governance-v0 — a shallow
           # checkout (default fetch-depth: 1) does not include that
