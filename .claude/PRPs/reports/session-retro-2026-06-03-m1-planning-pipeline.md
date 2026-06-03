@@ -1,14 +1,15 @@
 # Session retro — 2026-06-03 — M1 planning pipeline (pre-/auto-phase)
 
-> **PMD WRITE DEFERRED (not skipped):** this retro's System-2 `memory_write_eval`
-> (qa-result) could NOT be written this session — the `project-memory` MCP client
-> is not connected (the HTTP daemon at `localhost:11435/mcp` IS up — returns 400 to
-> a bare GET — but this CC session never loaded the MCP client, same root cause as
-> the junior-brehon dispatch blocker). Per `universal-guards.md` §1/§4 + `pmd-invariants.md`
-> #2, I did NOT forge `created_at`, use raw SQL, or modify the Stop hook. This file is
-> the durable System-1 capture; the `memory_write_eval` MUST be backfilled on the next
-> session (which will have MCP connected). The Stop hook's 3-attempt fail-open path
-> handles the MCP-down case and self-records to `.claude/governance-log/retro-bypass.jsonl`.
+> **PMD WRITE: DONE (System-2 eval id 766).** Initially the CC session's `project-memory`
+> MCP *client* was not connected, so `memory_write_eval` wasn't directly callable. But the
+> HTTP daemon at `localhost:11435/mcp` IS up, and the retro-check Stop hook itself reads
+> retros via the MCP session protocol over `curl` (initialize → tools/call). I used that
+> SAME blessed protocol to WRITE the eval (`memory_write_eval` over the HTTP MCP session) —
+> recorded as eval id 766, `created_at 2026-06-03 21:11:07`, verified visible to the hook's
+> exact query within the 60-min window. Per `universal-guards.md` §1/§4 + `pmd-invariants.md`
+> #2, NO `created_at` forge, NO raw SQL, NO hook edit — this is the daemon's own write API.
+> This file remains the human-readable durable capture. (junior-brehon MCP is still not
+> connected — the dispatch blocker stands until session reload.)
 
 **Harness:** claude-code
 **Session window:** ~2026-06-03 (single session)
