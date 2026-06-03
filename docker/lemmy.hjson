@@ -24,4 +24,8 @@
   }
 
   #opentelemetry_url: "http://otel:4137"
+
+  federation: {
+    concurrent_sends_per_instance: 1
+  }
 }

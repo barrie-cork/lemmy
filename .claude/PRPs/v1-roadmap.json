@@ -6,7 +6,7 @@
   "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-05-31T12:45:00Z",
+  "last_updated_at": "2026-06-01T12:00:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -210,10 +210,11 @@
     "RT": {
       "name": "Reputation Tuning",
       "prd": ".claude/PRPs/prds/v1-reputation-tuning.prd.md",
-      "status": "partial",
-      "capstone": null,
+      "status": "done",
+      "capstone": "v1-RT-r5",
       "lane_meta_retro": null,
-      "evidence_summary": "r1 (PR #126) + r2 (PR #150) + r3 (PR #155) shipped. r3-followup in_flight (e2e-assertion fix from r3 ship miss; lane cut 2026-05-29). r4 + r5 unstarted.",
+      "shipped_at": "2026-05-31",
+      "evidence_summary": "r1 (PR #126) + r2 (PR #150) + r3 (PR #155) + r3-followup (PR #162) + r4 (PR #164) + r5 (PR #171, 2026-05-31) all shipped. All 6 planned emitter paths live.",
       "sub_phases": {
         "v1-RT-r1": {
           "status": "done",
@@ -271,12 +272,15 @@
           "note": "Shipped 2026-05-30. Teardown lane brehon-fork-rt-r4 pending."
         },
         "v1-RT-r5": {
-          "status": "in_flight",
-          "scope": "reputation_rollup_cron in scheduled_tasks.rs; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
-          "registry_evidence": "ENTRY_KIND_ROLLUP_RECOMPUTED row names v1-RT-r5 scheduled_tasks.rs (pending)",
-          "plan": null,
+          "status": "done",
+          "scope": "reputation_rollup_cron in scheduled_tasks.rs + admin endpoint; fires ENTRY_KIND_ROLLUP_RECOMPUTED",
+          "pr": 171,
+          "merge_commit": "7eed8a9f7",
+          "merged_at": "2026-05-31T22:17:12Z",
           "worktree": "C:/Users/barri/Developer/brehon-fork-rt-r5",
-          "in_flight_since": "2026-05-31"
+          "in_flight_since": "2026-05-31",
+          "done_at": "2026-05-31",
+          "note": "4/4 e2e pass. Worktree brehon-fork-rt-r5 stale (branch merged); prune when convenient."
         }
       },
       "known_followups": [
@@ -471,16 +475,52 @@
           "note": "adr-compliance runner failure at merge; unblocked via owner-acknowledge + gh pr merge --admin. Local scan exit 0."
         },
         "v1-quality-r3b": {
-          "status": "unstarted",
-          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Possible: BREHON_DISABLE_* sites sweep.",
-          "pr": null,
-          "plan": null
+          "status": "done",
+          "scope": "Issue #167: LemmyContext::create — capture DB URL from context, not LEMMY_DATABASE_URL env. Band-aid guards removed from 3 admin_audit_stream e2e tests.",
+          "pr": 170,
+          "plan": ".claude/PRPs/plans/v1-quality-r3b.plan.md",
+          "done_at": "2026-06-01",
+          "retro": "docs/retro: v1-quality-r3b retro — Issue #167 fix shipped (b8a8eaf72)"
+        },
+        "v1-quality-r3c": {
+          "status": "done",
+          "scope": ".coderabbit.yaml v0-scope rule + sponsor-allowlist e2e sweep + BREHON_DISABLE_* guards. CR fix-in-pr: \\b path corruption in 2 DQ resolved entries.",
+          "pr": 172,
+          "merge_commit": "c1ba108dc",
+          "merged_at": "2026-06-01T10:27:12Z",
+          "retro": ".claude/PRPs/reports/v1-quality-r3c-retro.md",
+          "verify": null,
+          "done_at": "2026-06-01"
         }
       },
       "known_followups": [
         "quality-r1 worktree at C:/Users/barri/Developer/brehon-fork-quality-r1 is stale (branch merged); user to git worktree remove when ready"
       ],
-      "evidence_summary": "r1 (PR #145) + r2a (PR #161) + r2 (PR #168, 2026-05-30) + r3 (PR #169, 2026-05-31, EnvVarGuard C4 sweep 23 sites) all shipped. Next: v1-quality-r3b (Issue #167 LemmyContext::create DB URL from context)."
+      "evidence_summary": "r1 (PR #145) + r2a (PR #161) + r2 (PR #168) + r3 (PR #169) + r3c (PR #172, 2026-06-01) all shipped. Next: v1-quality-r3b (Issue #167 LemmyContext::create DB URL from context)."
+    },
+    "redaction": {
+      "name": "GDPR Redaction Hardening",
+      "prd": null,
+      "status": "done",
+      "capstone": "v1-redaction-r1",
+      "lane_meta_retro": null,
+      "shipped_at": "2026-06-01",
+      "user_steered": true,
+      "user_steered_note": "Out-of-band lane; GDPR identifier-scrubber hardening (scrub_json recursion cap + adversarial unit tests + maintenance invariant docs).",
+      "sub_phases": {
+        "v1-redaction-r1": {
+          "status": "done",
+          "scope": "scrub_json MAX_RECURSION_DEPTH cap + adversarial unit test corpus (12 tests, 2 ignored) + maintenance invariants docs in redaction.rs. Clippy fix-impl-1: reputation_snapshot.rs map_or→is_some_and + as_conversions→try_from.",
+          "pr": 173,
+          "merge_commit": "8b8c3f6fe",
+          "merged_at": "2026-06-01T12:00:00Z",
+          "retro": ".claude/PRPs/reports/v1-redaction-r1-verify.md",
+          "verify": ".claude/PRPs/reports/v1-redaction-r1-verify.md",
+          "done_at": "2026-06-01",
+          "plan": ".claude/PRPs/plans/v1-redaction-r1.plan.md"
+        }
+      },
+      "known_followups": []
     },
     "deps": {
       "name": "Deps (Cargo dependency bumps)",
@@ -570,19 +610,11 @@
   "what_remains": {
     "high_priority_unstarted": [
       {
-        "lane": "RT (Reputation Tuning)",
-        "items": [
-          "v1-RT-r4",
-          "v1-RT-r5"
-        ],
-        "rationale": "RT-r3 shipped 2026-05-28 (PR #155). Ship landed emit paths but left downstream e2e assertions stale -> v1-rt-r3-followup SHIPPED 2026-05-29 (PR #162, merge 28518605b; whole-binary e2e 119/0/5; retro signed off). RT-r4 (sponsor-allowlist handlers) + RT-r5 (rollup cron) unstarted; RT-r4 is the next RT-lane work (also the MiniMax-M2.7 A/B trial phase)."
-      },
-      {
         "lane": "quality (Quality / QA)",
         "items": [
           "v1-quality-r3b (unstarted — Issue #167: LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional)"
         ],
-        "rationale": "v1-quality-r2 (PR #168) shipped 2026-05-30. v1-quality-r3 (PR #169) shipped 2026-05-31 (EnvVarGuard C4 sweep, 23 sites). Next: #167 fix (LemmyContext::create) as v1-quality-r3b."
+        "rationale": "v1-quality-r3c (PR #172) shipped 2026-06-01. Remaining: #167 fix (LemmyContext::create) as v1-quality-r3b."
       }
     ],
     "in_flight_outside_roadmap": [],
@@ -597,21 +629,20 @@
     ]
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "v1-RT-r3 is in_flight — planning task #463 done, plan on trunk. Run plan-approval gate (DoD smoke + watchpoint check) then queue bm-cut. After RT-r3 ships, drive RT-r4 (sponsor-allowlist) then RT-r5 (rollup cron) to close the RT lane.",
-    "state_as_of_2026_05_25": {
+    "next_logical_sub_phase": "All major v1 lanes done (JM, SL, AD, RT, SR, federation-inbound, redaction). Remaining: v1-quality-r3b (Issue #167 LemmyContext::create DB URL), deps-r2/r3 (deferred post-v1-ship), and the big question: is v1 ready for pilot/server spin-up?",
+    "state_as_of_2026_06_01": {
       "shipped_since_last_roadmap_update": [
-        "v1-RT-r2 (PR #150, 2026-05-24)",
-        "v1-ship-3 (PR #149, 2026-05-24)",
-        "v1-deps-r1 (PR #153, 2026-05-25)"
+        "v1-RT-r5 (PR #171, 2026-05-31) — reputation rollup cron + admin endpoint",
+        "v1-quality-r3c (PR #172, 2026-06-01) — .coderabbit.yaml v0-scope + BREHON_DISABLE_* guards",
+        "v1-redaction-r1 (PR #173, 2026-06-01) — GDPR scrub_json recursion cap + adversarial tests"
       ],
-      "in_flight": [
-        "v1-RT-r3 (plan-approval gate; bm-cut not yet run)"
-      ],
+      "in_flight": [],
       "unstarted": [
-        "v1-RT-r4 (sponsor-allowlist)",
-        "v1-RT-r5 (rollup cron)"
+        "v1-quality-r3b (Issue #167: LemmyContext::create DB URL)",
+        "v1-deps-r2 (security sweep, deferred post-v1-ship)",
+        "v1-deps-r3 (wasmtime, deferred post-upstream extism release)"
       ]
     },
-    "rationale_for_RT_r3_next": "SR lane fully shipped (ship-1 through ship-3). deps-r1 shipped. RT-r3 is the active in-flight lane — four emitter paths wired, no new migrations, complexity 7/10. Natural next step after plan approval."
+    "rationale": "All 11 v0 endpoints implemented and tested. RT lane fully closed (r1-r5). federation-inbound closed (a-e). redaction-r1 shipped. Remaining items are polish/quality or explicitly deferred. v1 is in pilot-ready shape pending server spin-up validation."
   }
 }

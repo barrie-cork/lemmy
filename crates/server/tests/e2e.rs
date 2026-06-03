@@ -18191,8 +18191,13 @@ mod v1_rt_r3_fixtures {
       .set(federation_inbox_nonce::seen_at.eq(Utc::now() - chrono::Duration::days(2)))
       .execute(&mut async_conn)
       .await?;
-      // Guard is ON — in production the scheduler skips delete_older_than.
-      // Test asserts row survives without calling delete (guard prevents the call).
+      // Guard is ON — the BREHON_DISABLE_FED_REPLAY_CLEANUP_JOB guard lives in the scheduler
+      // closure (scheduled_tasks.rs:428), not inside delete_older_than itself. The scheduler
+      // checks the env var and returns early without calling delete_older_than at all.
+      // Probe B tests the observable outcome: with the guard set, the scheduler never invokes
+      // delete_older_than, so the backdated row survives. Calling delete_older_than directly
+      // here would bypass the guard (the function has no env-var check) and always delete.
+      // Probe A covers that delete_older_than works when invoked; this probe covers the skip.
       let count: i64 = federation_inbox_nonce::table
         .filter(federation_inbox_nonce::activity_id.eq("probe-b-nonce-1"))
         .count()

@@ -1,0 +1,19 @@
+# docker-compose-fed-enable.yml
+# Override that removes LEMMY_DISABLE_ACTIVITY_SENDING for federation testing.
+# Apply on top of the primary stack:
+#
+#   cd docker
+#   docker compose -f docker-compose.yml -f docker-compose-fed-enable.yml up -d lemmy
+#
+# This re-creates only the lemmy service with activity sending enabled.
+# All other services (postgres, pictrs, nginx, lemmy-ui) are unchanged.
+
+services:
+  lemmy:
+    environment:
+      - LEMMY_DISABLE_ACTIVITY_SENDING=false
+      - RUST_LOG=warn,extism=info,lemmy_server=debug,lemmy_api=debug,lemmy_api_common=debug,lemmy_api_crud=debug,lemmy_apub=debug,lemmy_db_schema=debug,lemmy_db_views=debug,lemmy_routes=debug,lemmy_utils=debug,lemmy_websocket=debug
+      - GOVERNANCE_LOG_SIGNING_KEY=e426ca5e6ae5c540abdd68107d4c6290233360aa1022990c1d5d4da1b011d98b
+    extra_hosts:
+      # Allows this container to reach the vanilla instance at host port 8537
+      - "host.docker.internal:host-gateway"

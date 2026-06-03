@@ -1,6 +1,6 @@
 ---
 name: Verify the hypothesis behind a structural-fix DQ before queueing the fix
-description: When a decision-queue entry proposes a structural fix (TypeScript patch, harness change, daemon code-path edit) and names a specific code path as the defect site, the DQ's own RCA is a hypothesis — not a contract. Spend ≤30 min falsifying it BEFORE picking an option-a/b/c routing path. The 2026-05-21 DQ #338 incident burned ~3 hours on a wrong-premise option-a investigation that ≤30 min of grep would have inverted.
+description: When a decision-queue entry OR a handover/bootstrap RESUME line proposes a structural fix (TypeScript patch, harness change, daemon code-path edit, config change) and names a specific code path or mechanism as the defect site, that RCA is a hypothesis — not a contract. Spend ≤30 min falsifying it BEFORE executing. The 2026-05-21 DQ #338 incident burned ~3 hours on a wrong-premise option-a investigation that ≤30 min of grep would have inverted; the 2026-06-02 BUG-15 incident (handover-prescribed `host.docker.internal:8536` hostname fix) was a domain-collision dead-end that ~10 min of reading `get_hostname_without_port` inverted before a needless DB wipe.
 type: feedback
 ---
 
@@ -24,13 +24,17 @@ DQ #338 attributed a destructive `git reset --hard origin/phase-v1-federation-in
 
 ## When to apply
 
-Every time a `(blocker, pending)` DQ proposes a structural fix AND names a specific code path as the defect site. The gate fires AFTER reading the DQ's `question` / `options` / `context` and BEFORE picking a routing path (advisor-answer / catch-fire / user-relay per `.claude/rules/advisor-orchestrator.md` §5.4).
+Two sources of a named-defect hypothesis trigger the gate:
 
-Triggering signatures in the DQ entry:
+**(A) A `(blocker, pending)` DQ** that proposes a structural fix AND names a specific code path as the defect site. The gate fires AFTER reading the DQ's `question` / `options` / `context` and BEFORE picking a routing path (advisor-answer / catch-fire / user-relay per `.claude/rules/advisor-orchestrator.md` §5.4).
 
-- `options[]` includes a structural fix (TypeScript patch, harness change, daemon code-path edit, prompt rewrite, hook change).
-- `context` field names a specific code path (file, function, prompt, script) as the defect site.
-- The fix would touch code outside the current sub-phase scope (harness, daemon, infrastructure).
+**(B) A handover / bootstrap RESUME "next action" line** (`.claude/PRPs/handovers/*.md`) that prescribes a structural or config fix AND names a specific code path or mechanism as the defect site. The gate fires BEFORE executing the prescribed action — a handover's prescription is the *prior session's* hypothesis, written without the resuming session's ability to re-test it, and is exactly as falsifiable as a DQ's RCA. Added 2026-06-02 after the BUG-15 incident: a Phase-8 handover prescribed `hostname: host.docker.internal:8536` + "clear the Brehon DB volume" as the bidirectional-federation fix. ~10 min of reading the actual Lemmy source falsified BOTH the named mechanism (Lemmy keys instances by *port-stripped* domain — `get_hostname_without_port`, `settings/mod.rs:71-81` — so the proposed hostname collides with the remote's domain) AND the destructive precondition (JWT `iss` is never validated — `claims.rs:26-35` — so no DB wipe was needed). Per `feedback_lemmy_federation_domain_collision_one_host` + `feedback_handover_assumptions_need_empirical_verification`.
+
+Triggering signatures (in the DQ entry OR the handover RESUME block):
+
+- `options[]` / "next action" includes a structural or config fix (TypeScript patch, harness change, daemon code-path edit, prompt rewrite, hook change, hostname/config-value change with a destructive precondition like a DB wipe).
+- The `context` / RESUME text names a specific code path or mechanism (file, function, prompt, script, "the X step", "the Y hostname") as the defect site.
+- The fix would touch code/config outside the current sub-phase scope (harness, daemon, infrastructure, deployment config) OR carries an irreversible precondition (volume wipe, force-push, branch delete).
 
 Does NOT fire when:
 
@@ -66,6 +70,7 @@ If steps 1+2+3 confirm the hypothesis: proceed with the originally-picked routin
 - `.claude/lessons/feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md` — the lesson originally written under the falsified hypothesis; rewritten 2026-05-22 with the correct vector after sub-agent forensics.
 - `.claude/lessons/feedback_verify_automated_reviewer_claims_against_compiler.md` — sibling pattern: CR / Copilot trait/type claims are hypotheses; compile-check the proposed change BEFORE triaging.
 - `.claude/lessons/feedback_verify_branch_diff_vs_trunk_before_concluding_code_missing.md` — sibling pattern applied to branch state: a "phantom PR / code is missing" conclusion is a hypothesis; verify `git diff trunk...branch` (content identity, not SHA ancestry) BEFORE re-dispatching. PR #172 2026-06-01.
+- `.claude/lessons/feedback_lemmy_federation_domain_collision_one_host.md` — the BUG-15 incident (2026-06-02) that extended this gate to trigger source (B), handover-prescribed fixes. The handover named the hostname as the defect; reading `get_hostname_without_port` falsified it (domain collision) before a wrong commit + needless DB wipe. PMD #765.
 - DQ #338 (2026-05-21; resolved option-b 2026-05-22) — incident origin; full RCA + structural-fix recipe in the entry's `answer` field.
 - Sub-agent forensic discipline (`Agent` tool with `general-purpose` subagent_type) — the 5-min investigation that returned the smoking-gun transcript citation; preserved ~60 min of laptop-side Windows-path / jsonl-parsing burden that the parent session would have been bad at.
 - `.claude/rules/multi-lane-worktree.md` — the broader pattern (shared `.git/` across worktrees + concurrent sessions) within which the destructive-reset incident occurred.

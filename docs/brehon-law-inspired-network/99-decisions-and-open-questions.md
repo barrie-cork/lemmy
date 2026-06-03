@@ -398,9 +398,14 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Opened:** 2026-04-14
 - **Owner:** TBD (security + domain)
 - **Question:** Are jurors anonymous to each other during deliberation? To the public? To the case target? What about after the decision?
-- **Current lean:** Anonymous to the case target and the public always. Revealed to each other after accepting assignment. Aggregate count is public.
-- **Blocks:** Notification and case-review UI.
-- **Target:** Before OQ-005 resolves.
+- **Resolution (2026-06-01):** Graduated mutual visibility — pseudonym handles are revealed to fellow jurors only at the point of deliberation engagement, not at acceptance. The specific threshold is: a juror's handle (`Juror-<suffix>`) becomes visible to the other jurors **when they enter the jury room AND the room already contains at least one posted comment** (i.e. deliberation has begun). If no comment has been posted yet, the room shows no member handles — handles are revealed as each juror crosses the threshold into an active discussion. A juror who never enters the room never has their handle exposed to others. This preserves the group-property pseudonymity (ADR-015) while making mutual identity a deliberate act of participation rather than an automatic consequence of assignment acceptance.
+  - **To public:** anonymous always (aggregate count only).
+  - **To case target:** anonymous always.
+  - **To fellow jurors:** revealed progressively — handle visible to others only when you enter a room where discussion is already in progress. Symmetric: you see others' handles iff they have also crossed that threshold.
+  - **After decision:** aggregate count public; individual handles remain pseudonymous in the governance log per ADR-015.
+  - **Admin configurability:** the "discussion has begun" threshold (currently: ≥1 posted comment) is admin-configurable per instance. Default = 1 comment. Admin may set to 0 (handles visible on room entry regardless) or a higher count. The `always_pseudonym` pin on jury/appeals rooms (group-property argument, ADR-015) is **not** admin-configurable; only the reveal threshold is.
+- **Blocks:** V2b jury room provisioning (room membership rendering logic).
+- **Was blocking:** Notification and case-review UI (now unblocked — this resolution settles the reveal model).
 
 ### OQ-010 — What keys sign the governance log in production?
 
@@ -604,6 +609,21 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Blocks:** v1.5 general-severity-inference sub-phase only. Does NOT block v1-JM-c (vote tally), v1-JM-d (appeals), or v1-JM-e (capstone) because those paths only READ `moderation_case.severity_tier` — and the NOT NULL DEFAULT 'Minor' at the column level means every case pre-inference-ship remains Minor, which the JM-b cascade handles correctly.
 - **Target:** v1.5 sub-phase. Resolve before any implementer writes the first call-site in `create_report`.
 
+### OQ-V2-10 — Matrix homeserver choice — ✅ RESOLVED 2026-06-01
+
+- **Opened:** 2026-04-19 (v2-messaging-rtc.prd.md)
+- **Owner:** solo dev
+- **Question:** Which Matrix homeserver (Synapse, Conduit, Dendrite) should be deployed as the sidecar for V2 messaging and MatrixRTC?
+- **Resolution:** **Tuwunel** (the official enterprise-backed successor to conduwuit, at `matrix-construct/tuwunel`), with **Synapse** as named fallback. The landscape simplified significantly between OQ open and resolution:
+  - **Dendrite** — archived by Element November 2024, maintenance-only, no MatrixRTC. Eliminated.
+  - **Original Conduit** — effectively abandoned, superseded by Tuwunel and Continuwuity. Eliminated.
+  - **Tuwunel** — Rust + RocksDB (no PostgreSQL), ~200 MB idle, MSC4143/MatrixRTC implemented in v1.4.6 (November 2025), listed Stable on matrix.org, enterprise-funded (Government of Switzerland). Same LiveKit + lk-jwt-service sidecar stack as Synapse. Two critical AS API bugs (issue #465: `ip_source` breaks local appservices; issue #219: `whoami` wrong response code) were both confirmed **closed and fixed** on 2026-06-01 — #219 fixed in late 2025, #465 fixed in v1.7.1 (shipped 2026-05-21).
+  - **Synapse fallback condition:** if Tuwunel AS API issues resurface at V2a schedule time, fall back to Synapse (Python + PostgreSQL, ~2–3 GB stack, MSC4143 experimental with known v1.149–1.150 endpoint bugs — verify fix in target release).
+- **Deployment note:** Tuwunel's #465 loopback bypass (the fix) applies to same-host sidecar deployments. In fully containerised deployments with bridge-network (not `host` mode), AS traffic from a separate container originates from a non-loopback address and the bypass does not trigger. V2a sub-PRD ops section must document this and specify deployment topology (`host` networking or reverse-proxy-routed AS traffic).
+- **Watch item:** MSC4143 is still "unstable" spec — endpoint path changes on finalisation. Both Tuwunel and Synapse will need updates; plan for it, don't block on it.
+- **Research basis:** `docs/research/matrix-homeserver-selection-2026.md` (Perplexity deep research, 2026-06-01, 42 sources).
+- **Blocks resolved:** V2a implementation start (was the primary gate).
+
 ### OQ-ADR016-01 — B-fetch protocol shape and per-app adapter SPI
 
 - **Opened:** 2026-05-23 (ADR-016)
@@ -682,5 +702,19 @@ OQ-027 opened (v2-research): Autonomi as governance-log anchor and evidence-stor
 **2026-04-30** — *99*
 OQ-028 (named governance-profile bundles for v1 tuning rollout) opened. Captures the dogfood-vs-pilot evidence-preservation problem: dev-team usage between v0 ship and the OQ-011 pilot launch produces tuning evidence for OQ-006 / OQ-013 / OQ-019 / OQ-020 / OQ-024 / OQ-025 / OQ-003 / ADR-007, but the dev team is a homogeneous sample. Named profiles preserve the dev-team-vs-pilot comparison rather than collapsing it at first overwrite. Architectural OQs (OQ-002 / OQ-010 / OQ-018 / OQ-026) explicitly excluded — they are not tuning-by-experience choices.
 
+**2026-06-01** — *99, v2-messaging-rtc.prd.md*
+OQ-009 (juror anonymity in decision phase) resolved: graduated mutual visibility — `Juror-<suffix>` handles revealed to fellow jurors only when they enter a room where discussion is already in progress (≥1 posted comment, admin-configurable threshold, default 1). `always_pseudonym` pin remains non-configurable per ADR-015 group-property argument. V2b jury room membership rendering logic now has a concrete spec. OQ-V2-10 (Matrix homeserver choice) resolved: **Tuwunel** (Rust/RocksDB, MSC4143 v1.4.6+), Synapse named fallback. Dendrite eliminated (archived Nov 2024), original Conduit eliminated (abandoned). Both critical AS API blockers confirmed fixed: issue #219 (`whoami` response code) fixed late 2025; issue #465 (`ip_source` breaks local appservices) fixed in Tuwunel v1.7.1 (2026-05-21). Deployment note for V2a sub-PRD: containerised non-host-network topology requires explicit ops handling (bridge traffic is non-loopback). Research basis: `docs/research/matrix-homeserver-selection-2026.md`. V2a is now unblocked from a homeserver-choice perspective. Both resolutions also reflected in v2-messaging-rtc.prd.md OQ table.
+
 **2026-05-23** — *99*
 ADR-016 added: Brehon is a cross-app governance backplane; federated app planes. Codifies the three-component federation contract (B-fetch evidence retrieval; B-publish sanction events; B-actor portable IDs) and reframes the V2 messaging PRD as the first reference integration (M1/M2/M3 — renamed from V2a/V2b/V2c to end the ADR-010 v2 naming collision). ADR-004 amended (header) to note the extension. Four new OQs opened — OQ-ADR016-01 (B-fetch SPI), OQ-ADR016-02 (B-publish schema), OQ-ADR016-03 (B-actor link UX), OQ-ADR016-04 (sanction translation per app). PRD edit and design-doc updates (03 §4, 06 §2.2/§7, 07 §1.2/§5) deferred to M1 schedule time. Rejected alternatives: per-app signed-evidence (forks every app), Brehon-as-super-admin via app admin APIs (blast radius + trust gate), advisory-only sanctions (undermines cross-app value), OIDC IdP (Brehon as identity SPOF), per-app-identity-no-roll-up (parallel silos).
+
+**2026-06-03** — *99, v2-messaging-rtc.prd.md* (M1 schedule-time decisions)
+M1 (chat infrastructure, formerly V2a) is now being scheduled — sub-PRD authoring begins. Two schedule-time decisions taken (user, this session):
+
+1. **OQ-V2-08 (vanilla-Lemmy interop for V2/M-messaging) — RESOLVED: option (a) Brehon↔Brehon only.** V2/M messaging is fork-only, consistent with [ADR-014](#adr-014--federation-interop-with-vanilla-lemmy) (governance signals are fork-only AP types). Vanilla (non-Brehon) Lemmy peers see nothing of the messaging plane — no degraded-mode `Announce` mirror, no room visibility. Rationale: simplest posture, matches the existing fork-only federation discipline, avoids degraded-mode code paths and a separate Matrix-vs-AP federation-trust decision. The rejected option (b) degraded-mode interop is recorded in the PRD OQ table. This was the one remaining hard gate flagged by both 2026-06-01 V2 retros ("resolution required before the M1 integration-test phase"); it is now closed before M1 planning, not deferred to the integration-test task.
+
+2. **M1 scope — DECIDED: chat infrastructure ONLY; all ADR-016 backplane work deferred to M2+.** ADR-016 names M1 "the first reference integration" of the B-fetch/B-publish/B-actor contract, but the umbrella PRD's M1 is pure chat infrastructure (bridge daemon, Tuwunel homeserver, puppeting, 1:1 DM with rich media, manually-provisioned community rooms, admin config panel, `messaging_enabled=false` clean-posture). User decision: M1 implements **only** that chat-infra scope. **No B-fetch adapter, no B-actor link flow, no B-publish/sanction propagation in M1.** Consequence for the ADR-016 OQs: **OQ-ADR016-01** (B-fetch SPI — was tagged "blocks M1") and **OQ-ADR016-03** (B-actor link-flow UX — was tagged "blocks M1") are **re-scoped: they no longer block M1**, since M1 builds neither the MatrixEvidenceAdapter nor the user-facing link flow. OQ-ADR016-01 now first-blocks the M-phase (or app integration) that introduces evidence-fetch; OQ-ADR016-03 first-blocks the phase that introduces the link flow. OQ-ADR016-02 and OQ-ADR016-04 remain M2-targeted as before. Rationale: matches Key-Hypothesis H1 ("prove the bridge architecture works in isolation before wiring governance triggers") and the strict-sequential M1→M2→M3 ordering (user Q10 2026-04-19). The "first reference integration" framing is honoured at M2 (governance-triggered rooms) where the backplane contract first does real work.
+
+3. **OQ-V2-09 (disable-after-enable rollback) ops mechanics** are owned by the M1 sub-PRD per the 2026-06-01 lean (soft pause). The four open sub-questions (bridge shutdown signal, in-flight room handling, active-jury-room-on-disable policy, media/GDPR artefact cleanup runbook) are resolved during M1 sub-PRD authoring.
+
+OQ-V2-08 row in v2-messaging-rtc.prd.md updated to reflect resolution (a).
