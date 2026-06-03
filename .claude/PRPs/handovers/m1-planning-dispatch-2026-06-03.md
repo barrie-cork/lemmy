@@ -58,6 +58,26 @@
 
 ---
 
+## DEFERRED PMD WRITE (backfill on reload — MCP was down)
+
+The 2026-06-03 session retro's System-2 `memory_write_eval` could NOT be written
+(project-memory MCP client not connected; HTTP daemon at localhost:11435 IS up).
+Durable System-1 capture is at `.claude/PRPs/reports/session-retro-2026-06-03-m1-planning-pipeline.md`.
+**On reload, after MCP connects, backfill:**
+```
+memory_write_eval:
+  memory_type: "qa-result"
+  title: "Task retro: M1 planning pipeline (pre-/auto-phase) 2026-06-03"
+  score: 0.62  (goal partial / tests none / clean yes)
+  tags: include "brehon-fork", outcome "partial"
+  body: SCORE 0.62 / CONFIDENCE 0.70 / Goal achieved: partial (/auto-phase M1 needs a
+        plan first; pre-pipeline done to dispatch boundary; dispatch blocked on
+        junior-brehon MCP) / Tests: none / Clean: yes /
+        ROOT_CAUSE: ENVIRONMENTAL — MCP-client-not-loaded (reload fixes).
+```
+(Do NOT forge created_at or use raw SQL — the retro report stands as the record; the
+backfill is the canonical System-2 entry once the client is live.)
+
 ## CROSS-SESSION DEPS / GOTCHAS
 
 - **MCP not connected** is the ONLY blocker. EliteDesk daemon IS active (verified via SSH `systemctl is-active junior@brehon-fork` = active).
