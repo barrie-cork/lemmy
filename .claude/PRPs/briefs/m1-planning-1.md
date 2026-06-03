@@ -203,7 +203,7 @@ The plan §15 DoD and §13 per-task validation gates MUST explicitly design the 
 - Tree A (`services/bridge/`, excluded) needs its OWN validation: a `cargo check`/`cargo test` scoped to `services/bridge/` (run from inside that dir), and the integration tests (`dm_round_trip.rs`) are docker-compose-gated (need live Tuwunel + bridge) — NOT part of the workspace e2e suite.
 - The plan must state which checks are laptop-runnable and which are docker-compose-gated, so the advisor's validation handler knows what to run. **Do not assume the standard validate-pending-laptop cargo flow covers Tree A.**
 
-This is the single most important thing the planner must get right that no prior Brehon phase has faced. If the planner is unsure how the advisor's validation machinery should handle a workspace-excluded daemon, file a `kind: "blocker"` planner DQ rather than guessing.
+**RESOLVED — clarify DQ `a3d0e9941441-045` (user, 2026-06-03): the laptop runs ALL bridge validation.** Per the standing canonical-runner rule (`project_laptop_canonical_cargo_runner.md` — laptop P50 64 GB runs all cargo + e2e; EliteDesk daemon = Junior orchestration only): (a) the bridge `cargo check`/`cargo test` runs ON THE LAPTOP, invoked from inside `services/bridge/` (its own `Cargo.toml`, NOT `cargo --workspace`); (b) the bridge integration tests (`dm_round_trip.rs`, admin-panel restart-persistence) run via docker-compose ON THE LAPTOP (Tuwunel + bridge containers up locally). The planner designs the exact validate-pending DQ shape for the bridge tree — likely a clearly-labelled `validate-pending-laptop` variant whose `commands` array runs the inside-`services/bridge/` cargo check, plus a docker-compose-up + integration-test invocation for the live milestone. The §16a stories MAY split into compile/unit checkpoints (per-task) and live-integration checkpoints (docker-compose-gated); the planner sets the per-task-vs-milestone boundary, but ALL of it runs on the laptop. This stays consistent with the no-cargo-on-EliteDesk hard rule. If the planner is still unsure how to shape the validate-pending entry for a workspace-excluded daemon, file a `kind: "blocker"` planner DQ rather than guessing.
 
 ### 4.3 Decision-queue discipline
 
@@ -254,10 +254,14 @@ What the planner must resolve (→ clarify questions below):
 ## 6. Acceptance for this brief
 
 Brief is queueable when:
-- DQ pending count = 0 OR all pending entries are non-blocking for M1 planning.
-- **Clarify gate COMPLETE** per advisor-orchestrator.md §3.3 — `/brehon-clarify .claude/PRPs/briefs/m1-planning-1.md` run, every clarify-DQ resolved (advisor self-answer with citation, or user-relay).
+- DQ pending count = 0 OR all pending entries are non-blocking for M1 planning. ✅ (pending = 0 at clarify time)
+- **Clarify gate COMPLETE** ✅ per advisor-orchestrator.md §3.3 — `/brehon-clarify .claude/PRPs/briefs/m1-planning-1.md` run 2026-06-03 (advisor-mode). Four clarify-DQ entries resolved, ZERO pending:
+  - `a3d0e9941441-045` (**user**) — bridge validation strategy → laptop runs ALL bridge cargo + docker-compose integration tests. Folded into §4.2 above.
+  - `a3d0e9941441-046` (advisor) — `governance_messaging_config` storage → typed columns mirroring `governance_config.rs:21-32` (NOT JSONB; so `feedback_postgres_jsonb_canonicalization.md` does NOT fire, `feedback_lemmy_migration_runner.md` DOES).
+  - `a3d0e9941441-047` (advisor) — `matrix-sdk-appservice` version → planner pins at plan time (checks crates.io + Tuwunel issue-#219 interaction); citation-only.
+  - `a3d0e9941441-048` (advisor) — cross-phase file overlap → none; M1's crates/ touches are all new additions, no active phase races them.
 - Forbidden-window check at dispatch time (non-binding for planning dispatch).
-- MCP `junior-brehon` connected (dispatch needs `mcp__junior-brehon__create_task`).
+- MCP `junior-brehon` connected (dispatch needs `mcp__junior-brehon__create_task`) — **PENDING: not connected in the clarify session; user must reload the CC session before dispatch.**
 
 Brief is committed to `governance-v0` (planning briefs commit on trunk; no phase branch yet) with subject:
 ```

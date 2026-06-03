@@ -5549,6 +5549,75 @@
       "resolved_at": "2026-06-01T09:18:43Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "M1 bridge (services/bridge/) is workspace-excluded — standard validate-pending-laptop (cargo check --workspace + e2e) doesn't cover it. How does M1's impl phase validate the bridge tree (compile + docker-compose integration tests)?",
+      "options": [
+        "Laptop runs everything (bridge cargo check inside services/bridge/ + docker-compose integration tests on laptop)",
+        "Compile gated per-task; docker-compose integration tests deferred to a manual end-of-phase milestone",
+        "Planner designs + brings options to plan-approval"
+      ],
+      "context": "M1 sub-PRD §2.3 + planning brief §2.3/§4.2 flag the two-tree validation split as load-bearing. The bridge is outside the Brehon workspace; its integration tests (dm_round_trip.rs, restart-persistence) need a live Tuwunel + bridge via docker-compose.",
+      "answer": "Laptop runs everything (per user 2026-06-03). Per the standing canonical-runner rule (project_laptop_canonical_cargo_runner.md — laptop P50 64 GB runs ALL cargo + e2e; EliteDesk daemon = Junior orchestration only). For M1: (1) the bridge tree's `cargo check`/`cargo test` runs ON THE LAPTOP, invoked from inside services/bridge/ (NOT cargo --workspace — the bridge is workspace-excluded with its own Cargo.toml). (2) The bridge integration tests (dm_round_trip.rs round-trip, admin-panel restart-persistence) run via docker-compose ON THE LAPTOP (Tuwunel + bridge containers brought up locally). (3) The planner designs the exact validate-pending DQ shape for the bridge tree — likely a new variant or a clearly-labelled validate-pending-laptop entry whose `commands` array runs the inside-services/bridge/ cargo check and (for the integration milestone) the docker-compose up + test invocation. This stays consistent with the no-cargo-on-EliteDesk hard rule. The 6 §16a acceptance stories may split into compile/unit checkpoints (per-task) and live-integration checkpoints (docker-compose-gated); the planner decides the per-task-vs-milestone boundary but ALL of it runs on the laptop.",
+      "answered_by": "user",
+      "resolved_at": "2026-06-03T00:00:00Z",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-06-03T00:00:00Z",
+      "id": "a3d0e9941441-045"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "Should the new governance_messaging_config table store its identity-policy / lifecycle-policy values as JSONB columns or as typed columns? (Determines whether feedback_postgres_jsonb_canonicalization.md fires in the migration task.)",
+      "options": [
+        "Typed columns mirroring the existing governance_config pattern",
+        "JSONB blob columns"
+      ],
+      "context": "M1 sub-PRD §2 IN-scope #4 introduces governance_messaging_config (admin panel). The existing governance_config is the canonical config-table sibling.",
+      "answer": "Typed columns, mirroring the existing governance_config table. Per crates/db_schema/src/source/governance/governance_config.rs:21-32 + its doc-comment: governance_config uses typed value columns (value_int / value_float / value_bool / value_text) with a CHECK constraint (governance_config_typed) ensuring exactly one is non-NULL per value_type, append-only versioned by valid_from, surfaced via a governance_config_current DISTINCT-ON view. The M1 governance_messaging_config should follow this SAME typed+versioned+append-only shape (NOT JSONB). Consequence for the migration task's file-class lessons: feedback_postgres_jsonb_canonicalization.md does NOT fire (no JSONB); feedback_lemmy_migration_runner.md DOES fire (any new migration → forbid_diesel_cli, use cargo run -p lemmy_diesel_utils --features full). The planner reads governance_config.rs as the canonical migration + Diesel-model sibling and mirrors its structure (Identifiable/Queryable/Selectable derives, skip_serializing_none, no AsChangeset on the insert form since it is append-only). Note: messaging_enabled is a single bool config key → it is a value_bool='false' row under this pattern, not a dedicated column.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-03T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-046"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "The brief says to pin a known-good matrix-sdk-appservice version but doesn't name one. Does the planner pin it, or defer the version choice to impl?",
+      "options": [
+        "Planner pins it at plan time (checks crates.io + Tuwunel issue interaction)",
+        "Defer the version pin to impl"
+      ],
+      "context": "M1 sub-PRD §13 + planning brief §2.1 Tree A name a 'pin a known-good matrix-sdk-appservice version' task; matrix research §Recommendation item 2 flags the Tuwunel issue-#219 whoami interaction to verify against the chosen version.",
+      "answer": "Planner pins it at plan time, as an explicit plan task. The planning brief §2.1 (Tree A) and §5 already make this a plan-time deliverable: the planner (a) checks crates.io for the current matrix-sdk-appservice release + maturity, (b) verifies the Tuwunel issue-#219 (whoami response code) interaction against that version per docs/research/matrix-homeserver-selection-2026.md §Recommendation item 2, (c) writes the pinned version into the plan §13 bridge-skeleton task + the bridge Cargo.toml task. This is a citation-only resolution — no new gate. Rationale: the version pin is part of the plan's reproducibility contract (a watchpoint cites it); deferring to impl leaves the impl-task guessing at a load-bearing external dependency. If at plan time the planner finds the appservice crate is too immature or the #219 interaction is unresolved for all available versions, file a kind:blocker planner DQ rather than pinning a known-broken version.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-03T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-047"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "Does M1's file ownership (new governance_messaging_config migration, new admin handler, new DTO, PM-hook-wiring edit, e2e additions) overlap any in-flight phase's file ownership?",
+      "options": [
+        "No overlap — M1 proceeds",
+        "Overlap exists — file a blocker"
+      ],
+      "context": "Cross-phase invariant check per brehon-clarify axes table. Session-start git worktree list showed only the canonical checkout; DQ pending=0.",
+      "answer": "No overlap — M1 proceeds. Verified 2026-06-03: (1) git worktree list (session start) showed ONLY the canonical brehon-fork checkout on governance-v0 — no active phase-branch worktrees. (2) DQ pending count = 0 (no in-flight phase blockers). (3) Remote phase branches present (phase-v1-RT-r2 on daemon, phase-v1-quality-r3b/r3c on origin) are merged/stale remnants, NOT live worktrees. (4) Roadmap shows Quality/QA and Deps lanes as partial/unstarted FUTURE lanes — none has a live worktree racing M1's files. M1's crates/ touches are all NEW additions: governance_messaging_config (new migration + new Diesel model file), a new admin-config handler file under crates/api/api/src/, new DTOs in crates/api/api_common/src/, a PM-hook-notify edit (crates/api/api_utils/ or private_message/), and e2e.rs additions. None collide with any active phase. The only shared-file risk is crates/server/tests/e2e.rs (append-only across phases) — but no other phase is concurrently editing it. Standard e2e anchor-uniqueness discipline applies at impl time, not a cross-phase blocker now.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-03T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-048"
     }
   ]
 }
