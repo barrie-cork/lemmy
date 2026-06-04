@@ -8,7 +8,10 @@ use crate::config::BridgeConfig;
 /// M1: function module only — no HTTP route registration in this task.
 /// Task 13 exposes this function through the admin router.
 pub async fn create_community_room(config: &BridgeConfig, room_alias: &str) -> Result<String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .context("build HTTP client")?;
     let url = format!("{}/_matrix/client/v3/createRoom", config.tuwunel_url);
     let body = serde_json::json!({
         "room_alias_name": room_alias,
