@@ -34,6 +34,7 @@ use lemmy_api::{
     admin_audit_stream::admin_audit_stream,
     admin_close_case::admin_close_case,
     admin_config::{admin_get_config, admin_get_config_audit, admin_set_config},
+    messaging_config::{admin_get_messaging_config, admin_set_messaging_config},
     admin_dashboard::admin_dashboard,
     admin_dashboard_html::{admin_audit_html, admin_dashboard_html},
     admin_emergency_remove::flag_bad_faith_emergency_report,
@@ -523,6 +524,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
               .service(
                 scope("/emergency-remove")
                   .route("/flag-bad-faith", post().to(flag_bad_faith_emergency_report)),
+              )
+              .service(
+                scope("/messaging-config")
+                  .route("", post().to(admin_set_messaging_config))
+                  .route("", get().to(admin_get_messaging_config)),
               )
               .service(
                 scope("/sponsor-allowlist")
