@@ -4,7 +4,9 @@ description: >
   Prune stale, duplicate, and superseded entries from MEMORY.md (user auto-memory index).
   Use when: user says "prune memory", "clean up MEMORY.md", "memory is too big", "trim stale entries",
   or when MEMORY.md is over its byte budget (~24.4 KB — the SessionStart warning fires). Also use
-  after a phase ships or closes (entries referencing the closed phase are pruning candidates).
+  after a phase ships or closes, and ESPECIALLY at a MILESTONE BOUNDARY (e.g. v1 → M1) — a milestone
+  transition retires a whole class of prior-milestone phase-texture at once and is the highest-yield
+  prune trigger (see Step 2.5). The user signalling "we're on <new-milestone> now" IS this trigger.
   Surfaces findings first, applies only after user confirmation. NOTE: this skill prunes MEMORY.md
   ONLY. If /context shows the whole Memory-files bucket is heavy (> ~25% of the ~200K effective
   working window, i.e. > ~50K tokens — see "Budget framing" below), MEMORY.md is usually NOT the
@@ -111,6 +113,54 @@ If the rule covers it comprehensively, the memory is redundant.
 To check whether a "CLOSED" workflow state entry is stale: if the phase shipped > 7 days ago AND
 no active work references it (no "carry-forward" or "cleanup at next" note), it can move to
 Historical.
+
+## Step 2.5: Milestone-transition sweep (highest-yield prune lever)
+
+**Fires when:** the project has crossed a milestone boundary since the last prune — the user says
+"we're on <M> now", or git/roadmap shows a new milestone branch, or the prior milestone's entries
+dominate MEMORY.md. This is a DIFFERENT axis from Step 2's per-entry staleness: a milestone
+boundary retires a whole *class* of entries at once (prior-milestone phase texture), and it is
+empirically the biggest single lever — a tiny byte-overage can hide a large milestone-archival
+opportunity (2026-06-04 run: 311-byte overage, but the v1→M1 reframe surfaced 5 cuts the
+byte-gate alone would never have prioritised).
+
+**The discriminator that matters — transferable pattern vs phase-pinned texture.** This is the
+single most error-prone call in a milestone prune. Most entries that *cite* a closed-milestone
+phase still encode a pattern that transfers to the new milestone. Cutting them by keyword-match
+("it says v1, we're on M1, delete") destroys durable knowledge. Apply this test to EVERY
+entry that mentions a prior-milestone phase code:
+
+> **Transfer test:** Strip the phase citation from the entry. Does the remaining statement still
+> describe a mechanism, footgun, or pattern that the NEW milestone's work will hit?
+> - **YES → KEEP** (the phase code is just the incident-evidence anchor, not the subject).
+>   Example: "Cohort `[P]` shared `.git/index.lock` contention (RT-r3 cohort-2 cascade)" — strip
+>   "RT-r3 cohort-2"; "cohort `[P]` shares `.git/index.lock`" is true for M1's daemon/cohort work
+>   identically. Keep.
+> - **NO → retire to Historical** (the entry IS phase texture — a scratchpad, a shipped-fix
+>   workflow-state, a closed-phase handoff with no forward mechanism).
+>   Example: "Brehon V1 planning advisor notes — V1 scratchpad" — strip the v1; nothing
+>   general remains, it's a dated planning notebook. Retire.
+
+**Same-codebase caveat (prevents over-cutting):** a milestone transition does NOT make
+domain/tooling lessons stale if the codebase is unchanged. v1 and M1 are the same Lemmy-fork Rust
+on the same Windows laptop + same EliteDesk daemon — so all Cargo/Rust, Windows-wrapper,
+git-worktree, and daemon/cohort lessons transfer **unchanged**. Only retire entries whose *subject*
+(not just citation) is the prior milestone: closed workflow-states, planning scratchpads, phase
+handoffs, and milestone-specific feature notes. When unsure, the entry is one line — KEEP and flag
+in the report rather than risk losing a durable pattern.
+
+**What this sweep typically surfaces (in yield order):**
+1. Closed prior-milestone **workflow-state** entries (COMPLETE/SHIPPED + >7 days) → Historical.
+   These are usually the longest lines, so they pay the most bytes.
+2. Prior-milestone **planning scratchpads / handoffs** (`project_<old>_planning.md`, dated session
+   notes) → Historical. Verify they don't seed the new milestone (`grep` the linked file for the
+   new milestone's name; 2026-06-04: confirmed `project_brehon_v1_planning.md` had zero M1 refs).
+3. Entries the milestone transition made **redundant with a rule** (e.g. a workaround now codified)
+   → remove per Step 2.
+
+Entries that pass the transfer test go untouched regardless of how old the phase citation is.
+Record the sweep's verdict per milestone-citing entry in the Step 3 report (`milestone-retire` vs
+`transfers-keep`) so the user sees the discrimination, not just the cuts.
 
 ## Step 3: Report findings
 
@@ -241,14 +291,37 @@ Ask the user: "Apply these changes?" with options:
 
 On confirmation, apply the edits:
 
-1. **Remove/shorten** entries from their current sections
-2. **Move to Historical** — append removed entries to the "Historical" section at the bottom,
-   grouped by date: `- archived <date>: <comma-separated list of filenames with one-word reason>`
-3. **Verify** the file is under BOTH limits after all edits — `wc -c "$MEM"` < 24400 (hard) AND
-   `wc -l "$MEM"` < 200 (secondary). If still over 24400 bytes, the prune is incomplete: do another
-   pass on the longest remaining entries (shorten in place or move to Historical) until under budget.
-   A pass that lands under 200 lines but over 24400 bytes has NOT solved the truncation.
-4. **Report** final bytes + lines (e.g. `23980 bytes / 184 lines — under budget by 420 bytes`) and
+1. **Use the Edit/Write tool — never shell heredocs / `sed` / `echo >>` — and grep-verify EACH edit
+   landed before trusting it.** MEMORY.md is the user auto-memory index; mangling it with a shell
+   redirect (CRLF, encoding, partial write) corrupts every future session's context. Apply each
+   removal / shorten / Historical-append as an `Edit` (or `Write` for a full rewrite). After each
+   call, the tool returns success or an error — do NOT narrate an edit as "done" until you have seen
+   the success result, AND for any non-trivial edit confirm with `grep -c "<a distinctive phrase
+   from the new text>" "$MEM"` returning ≥1. The byte/line re-measure in step 4 catches a size
+   regression but NOT a no-op edit that changed nothing — a malformed or silently-failed tool call
+   leaves the file unchanged AND under budget, reading as success. Confirm CONTENT, not just size.
+   (2026-06-04 skill-improvement run: three successive tool calls were malformed, silently no-op'd,
+   and were narrated as applied; only `grep -c` of the expected marker per edit exposed it. Grep
+   each edit, every time.)
+2. **Remove/shorten** entries from their current sections.
+3. **Move to Historical** — append removed entries to the "Historical" section at the bottom,
+   grouped by date: `- archived <date>: <comma-separated list of filenames with one-word reason>`.
+
+   **⚠ The Historical/archive line you add IS itself a byte cost — budget for it.** A descriptive
+   archive line can eat most of the savings you just freed; a verbose one can leave the file STILL
+   over budget after a prune that looked sufficient on paper (2026-06-04: a multi-clause archive
+   line landed the file 44 bytes OVER, forcing a second trim pass). Rule of thumb: the archive line
+   should be SHORTER than the shortest entry you removed. Keep it to filenames + a one-word reason
+   each; detail is recoverable from the linked `.md` file and from `git log`, so it does not belong
+   in the index. If a removed entry carried a still-live hook (an expiry date, a deferred-bug
+   pointer), preserve ONLY that hook in the archive line, not the entry's full prose.
+4. **Verify** the file is under BOTH limits AFTER writing the archive line — `wc -c "$MEM"` < 24400
+   (hard) AND `wc -l "$MEM"` < 200 (secondary). Re-measure after the archive append, not before (the
+   archive line is part of the file's final size). If still over 24400 bytes, the prune is
+   incomplete: do another pass on the longest remaining entries (shorten in place, move to
+   Historical, OR trim the archive line you just added) until under budget. A pass that lands under
+   200 lines but over 24400 bytes has NOT solved the truncation.
+5. **Report** final bytes + lines (e.g. `23980 bytes / 184 lines — under budget by 420 bytes`) and
    estimated savings (bytes reclaimed; ~35 tokens per line removed as a secondary figure).
 
 ## Edge cases
