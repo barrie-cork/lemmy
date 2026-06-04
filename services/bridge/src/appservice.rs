@@ -139,15 +139,41 @@ async fn handle_query_room(Path(room_alias): Path<String>) -> impl IntoResponse 
 /// POST /admin/provision-room
 /// Creates a Matrix community room via `provision::create_community_room`.
 /// Body: `{"room_alias": "<alias>"}`. Returns `{"room_id": "<room_id>"}` on success.
+/// cr-009: returns 403 when bridge is in soft-pause (relay_enabled=false).
+/// cr-010: returns 400 when room_alias is absent or empty.
 async fn handle_provision_room(
     State(state): State<Arc<AppState>>,
     Json(body): Json<serde_json::Value>,
-) -> impl IntoResponse {
-    let room_alias = body
+) -> Response {
+    // cr-009: capability check — refuse provisioning when bridge is in soft-pause
+    if !state
+        .relay_enabled
+        .load(std::sync::atomic::Ordering::Relaxed)
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "bridge is in soft-pause; provisioning disabled"})),
+        )
+            .into_response();
+    }
+
+    // cr-010: room_alias is required and must be non-empty
+    let room_alias = match body
         .get("room_alias")
         .and_then(|v| v.as_str())
-        .unwrap_or("brehon-default");
-    match provision::create_community_room(&state.config, room_alias).await {
+        .filter(|s| !s.is_empty())
+    {
+        Some(a) => a.to_owned(),
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "room_alias is required"})),
+            )
+                .into_response();
+        }
+    };
+
+    match provision::create_community_room(&state.config, &room_alias).await {
         Ok(room_id) => (
             StatusCode::OK,
             Json(serde_json::json!({"room_id": room_id})),
