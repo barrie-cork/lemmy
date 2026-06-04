@@ -1,35 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "a6f5689106b9-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-04T00:00:00Z",
-      "branch": "junior/role-impl-task-m1-b-task-6-bridge-notify-wiring-see-claude-prps-briefs-m1-b-impl-6-md-582",
-      "phase_task": 6,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full",
-        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
-      ],
-      "question": "Workspace check + e2e test-target compile for bridge_notify wiring — laptop runs cargo.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 6 created crates/api/api_utils/src/bridge_notify.rs (notify_if_enabled: read messaging_enabled via read_current, false/None→no-op, true→fire-and-forget POST swallowing transport errors), added pub mod bridge_notify to lib.rs (alphabetically first), and called notify_if_enabled alongside plugin_hook_notification at notify.rs:305 (additive, no new hook). Fire-and-forget — NEVER fails the PM path (.ok()/log-and-swallow, never ?). Bridge URL: http://localhost:9009/brehon/notify (documented const per §10.5 — no bridge runs in M1). cargo check --workspace --features full required; e2e --no-run confirms it compiles into the test target. Laptop only.",
-      "result": "fail",
-      "log_slice": "    Checking lemmy_db_views_custom_emoji v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\custom_emoji)\n    Checking lemmy_db_views_jury_queue v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\jury_queue)\n    Checking lemmy_db_views_governance_modlog v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\governance_modlog)\n    Checking lemmy_db_views_post v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\post)\n    Checking lemmy_db_views_person v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\person)\n    Checking lemmy_email v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\email)\n    Checking lemmy_db_views_report_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\report_combined)\n    Checking lemmy_db_views_notification v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\notification)\n    Checking lemmy_db_views_site v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\site)\n    Checking lemmy_db_views_post_comment_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\post_comment_combined)\n    Checking lemmy_db_views_person_liked_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\person_liked_combined)\n    Checking lemmy_db_views_person_content_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\person_content_combined)\n    Checking lemmy_db_views_person_saved_combined v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\db_views\\person_saved_combined)\n    Checking lemmy_api_utils v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\api\\api_utils)\n    Checking lemmy_api_common v1.0.0-test-arm-qemu.0 (C:\\Users\\barri\\Developer\\brehon-fork-validate\\crates\\api\\api_common)\nerror[E0599]: no method named `json` found for struct `reqwest_middleware::RequestBuilder` in the current scope\n  --> crates\\api\\api_utils\\src\\bridge_notify.rs:42:6\n   |\n39 |     if let Err(e) = context\n   |  ___________________-\n40 | |     .client()\n41 | |     .post(BRIDGE_NOTIFY_URL)\n42 | |     .json(&payload)\n   | |     -^^^^ method not found in `reqwest_middleware::RequestBuilder`\n   | |_____|\n   |\n\nFor more information about this error, try `rustc --explain E0599`.\nerror: could not compile `lemmy_api_utils` (lib) due to 1 previous error\nCHECK_EXIT_NONZERO \n",
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "answer": "FAIL (cycle 1): E0599 .json() not found on reqwest_middleware::RequestBuilder at bridge_notify.rs:42. Root cause: workspace Cargo.toml enables reqwest-middleware features=[form] only; RequestBuilder::json is #[cfg(feature=json)] gated. Fix: features=[form,json]. Non-allowlist G4 (Cargo.toml build-config) -> advisor catch-fired to user with validated 1-line fix.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-04T14:09:19.747156Z",
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5803,6 +5774,32 @@
       "answer": "PASS. cmd-0 cargo check --workspace --features full: Finished 1m33s, 0 errors, 0 WARNINGS (the Task-4 private_interfaces warning on GetMessagingConfigQuery is now CLEARED by the pub-struct fold-fix). cmd-1 cargo test --no-run -p lemmy_server --test e2e: Finished test profile 3m23s, 0 errors, 0 warnings. Both green. validate_identity_policy matches plan §10.4 + Unknown(format!) idiom; routes registered. Validated on detached worktree at worker tip c9e7d6b76; FF-promoted to phase-m1-b.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-06-04T13:35:18Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a6f5689106b9-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-6-bridge-notify-wiring-see-claude-prps-briefs-m1-b-impl-6-md-582",
+      "phase_task": 6,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for bridge_notify wiring — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 created crates/api/api_utils/src/bridge_notify.rs (notify_if_enabled: read messaging_enabled via read_current, false/None→no-op, true→fire-and-forget POST swallowing transport errors), added pub mod bridge_notify to lib.rs (alphabetically first), and called notify_if_enabled alongside plugin_hook_notification at notify.rs:305 (additive, no new hook). Fire-and-forget — NEVER fails the PM path (.ok()/log-and-swallow, never ?). Bridge URL: http://localhost:9009/brehon/notify (documented const per §10.5 — no bridge runs in M1). cargo check --workspace --features full required; e2e --no-run confirms it compiles into the test target. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS (cycle 2): advisor applied 1-line Cargo.toml fix per user authorization — reqwest-middleware features [form] -> [form, json] (enables RequestBuilder::json, fixing E0599). Validated on laptop off worker SHA 6b87b45b7 + Cargo.toml fix: cargo check --workspace --features full Finished 13m07s 0err 0warn (CHECK_EXIT_0); cargo test --no-run -p lemmy_server --test e2e Finished 14m50s 0err 0warn (E2E_COMPILE_EXIT_0). Worker bridge_notify.rs code unchanged (idiomatic + correct). Fix lands on phase-m1-b this commit.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T14:41:16.482693+00:00",
       "approved_by": null,
       "approved_at": null
     }
