@@ -63,6 +63,25 @@ fn split_typed_value(
   }
 }
 
+// Rejects any attempt to set a jury/appeals room-type identity_policy to a non-pseudonymous value.
+// Vacuously satisfied in M1 (jury/appeals rooms arrive in M2) — the gate exists NOW so M2 cannot
+// introduce a non-pseudonymous default. ADR-015.
+fn validate_identity_policy(data: &AdminSetMessagingConfig) -> LemmyResult<()> {
+  if data.key == "identity_policy"
+    && (data.scope.starts_with("jury") || data.scope.starts_with("appeal"))
+    && data.value.as_str() != Some("pseudonymous")
+  {
+    return Err(
+      LemmyErrorType::Unknown(format!(
+        "identity_policy for scope `{}` must be `pseudonymous` (ADR-015 — jury/appeals rooms may never be non-pseudonymous)",
+        data.scope
+      ))
+      .into(),
+    );
+  }
+  Ok(())
+}
+
 /// Convert a stored config row back to a typed `serde_json::Value` for wire output.
 fn row_to_value(row: &GovernanceMessagingConfig) -> Value {
   match row.value_type.as_str() {
@@ -92,6 +111,7 @@ pub async fn admin_set_messaging_config(
 ) -> LemmyResult<Json<AdminSetMessagingConfigResponse>> {
   // 1. Admin capability gate (mirrors admin_config.rs:1099 `is_admin` pattern).
   is_admin(&local_user_view)?;
+  validate_identity_policy(&data)?; // §10.4 — ADR-015 pin
 
   let pool = &mut context.pool();
 
@@ -132,7 +152,7 @@ pub async fn admin_set_messaging_config(
 
 /// Query params for the GET endpoint.
 #[derive(Deserialize)]
-struct GetMessagingConfigQuery {
+pub struct GetMessagingConfigQuery {
   scope: String,
   key: String,
 }

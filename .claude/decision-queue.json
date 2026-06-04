@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "67e662ffa639-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-5-identity-policy-validator-routes-see-claude-prps-briefs-m1-b-impl-5-md-580",
+      "phase_task": 5,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for identity-policy validator + route registration — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 added validate_identity_policy (ADR-015 pin) to messaging_config.rs + a call in admin_set_messaging_config before the insert, registered POST+GET /governance/admin/messaging-config in routes/src/lib.rs, and made GetMessagingConfigQuery pub (clears the Task-4 private_interfaces warning). Pure validator (no DB write) + route wiring + 1-char visibility fix. cargo check --workspace --features full required (feature=full route + Diesel gating); e2e --no-run confirms the routes + validator compile into the test target. Expect 0 warnings (the Task-4 private_interfaces warning is fixed here). Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
