@@ -72,9 +72,9 @@ No flags (interactive session; the >55min runtime is wall-clock-with-user-in-loo
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] **Change #1** (execution-ownership + tooling in first plan-question batch): promote to `.claude/lessons/feedback_plan_request_ask_execution_ownership_first.md` (cross-harness lesson). Basis: 1× this session + the Phase-2 local-vs-dispatch late-surfacing class (prior).
-- [ ] **Change #2** (bootstrap-checklist HTTP-PMD verification wording): update `.claude/lessons/feedback_phase_lane_worktree_bootstrap_checklist.md` step 5 directly (it's a checklist, not a lesson-to-promote — just fix the stale step).
-- [ ] **Change #3** (plan-template "who executes" header field): single-instance — record only; promote if it recurs.
+- [x] **Change #1** (execution-ownership + tooling in first plan-question batch): promoted to `.claude/lessons/feedback_plan_request_ask_execution_ownership_first.md` (cross-harness lesson). Basis confirmed ≥2: this session + 2026-05-23 ADR-016 scope-reframe retro (PMD #508). **Done 2026-06-04.**
+- [x] **Change #2** (bootstrap-checklist HTTP-PMD verification wording): updated `.claude/lessons/feedback_phase_lane_worktree_bootstrap_checklist.md` step 5 — added HTTP-daemon-topology PMD verification (`grep '"url".*11435'`) + "absence of PROJECT_MEMORY_DB is correct" note; kept legacy stdio check as historical. **Done 2026-06-04.**
+- [ ] **Change #3** (plan-template "who executes" header field): single-instance — recorded only, NOT promoted (will revisit if it recurs). Note: Change #1's lesson already prescribes weaving a "who executes / with what" field into the plan header, which partly covers this.
 
 ---
 
