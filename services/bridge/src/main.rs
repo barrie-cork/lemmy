@@ -1,7 +1,8 @@
 // Bridge daemon entrypoint.
 //
-// Task 8: skeleton only — AS server and soft-pause poller are STUBS.
-// Real logic wired in Tasks 9 (AS transaction server) and 12 (soft-pause).
+// Task 8: skeleton — AS server and soft-pause poller wired in Tasks 9/12.
+// Task 12: soft_pause::run_poller replaces the TODO stub; relay_enabled
+//   Arc<AtomicBool> wired into AppState so handle_transactions can gate relay.
 //
 // MIRROR: followed axum 0.8 minimal Router + tokio::main skeleton shape.
 // No in-repo sibling; external example shape used per R8 /
@@ -10,14 +11,17 @@
 
 mod appservice;
 mod config;
+mod provision;
 mod puppet;
 mod relay;
+mod soft_pause;
 
 use anyhow::Result;
 use appservice::AppState;
 use config::BridgeConfig;
 use puppet::PuppetMap;
 use std::net::SocketAddr;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -26,11 +30,13 @@ async fn main() -> Result<()> {
     let bridge_port = config.bridge_port;
     let config_arc = Arc::new(config);
     let puppet_map = PuppetMap::new(Arc::clone(&config_arc));
+    let relay_enabled = Arc::new(AtomicBool::new(true));
 
     let app = appservice::router(Arc::new(AppState {
-        config: config_arc,
+        config: Arc::clone(&config_arc),
         puppet_map,
         http_client: reqwest::Client::new(),
+        relay_enabled: Arc::clone(&relay_enabled),
     }));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], bridge_port));
@@ -42,14 +48,10 @@ async fn main() -> Result<()> {
         axum::serve(listener, app).await.expect("axum serve failed");
     });
 
-    // TODO(task 12): replace with real soft-pause poller (soft_pause.rs).
-    let _poller = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
-        loop {
-            interval.tick().await;
-            // soft-pause poll stub
-        }
-    });
+    let _poller = tokio::spawn(soft_pause::run_poller(
+        Arc::clone(&config_arc),
+        Arc::clone(&relay_enabled),
+    ));
 
     serve_handle.await?;
     Ok(())

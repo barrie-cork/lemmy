@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "question": "Task 12 cargo check — run cd services/bridge && cargo check to validate soft_pause.rs + provision.rs + appservice.rs relay_enabled + main.rs wiring",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 12 impl committed (ed229bbce): soft_pause.rs run_poller, provision.rs create_community_room, AppState relay_enabled field, handle_transactions soft-pause guard, main.rs mod wiring. Validation command: cd services/bridge && cargo check (Tree A, inside-bridge, NOT --workspace).",
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "junior/role-impl-task-m1-a-task-12-provision-softpause-see-claude-prps-briefs-m1-a-impl-12-md-593",
+      "phase_task": 12,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "c5d7b8ae42ab-001"
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
