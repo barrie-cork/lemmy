@@ -11,8 +11,8 @@ hs_token: "brehon-hs-dev-token-01"  # dev-only — NOT for production
 sender_localpart: brehon
 namespaces:
   users:
-    - exclusive: false
-      regex: "@brehon_.*"
+    - exclusive: true
+      regex: "@_brehon_.*"
   aliases:
     - exclusive: false
       regex: "#brehon_.*"
