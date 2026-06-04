@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "a6f5689106b9-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-6-bridge-notify-wiring-see-claude-prps-briefs-m1-b-impl-6-md-582",
+      "phase_task": 6,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for bridge_notify wiring — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 created crates/api/api_utils/src/bridge_notify.rs (notify_if_enabled: read messaging_enabled via read_current, false/None→no-op, true→fire-and-forget POST swallowing transport errors), added pub mod bridge_notify to lib.rs (alphabetically first), and called notify_if_enabled alongside plugin_hook_notification at notify.rs:305 (additive, no new hook). Fire-and-forget — NEVER fails the PM path (.ok()/log-and-swallow, never ?). Bridge URL: http://localhost:9009/brehon/notify (documented const per §10.5 — no bridge runs in M1). cargo check --workspace --features full required; e2e --no-run confirms it compiles into the test target. Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
