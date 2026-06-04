@@ -2,14 +2,22 @@
 name: new-lane
 description: >
   Create a fully-harnessed, isolated Brehon lane worktree off a phase branch — worktree +
-  submodules + .mcp.json/.env/settings.local.json wiring + hook verification + citation-integrity
-  check + cold-start handover. Use when: starting a new sub-phase that needs its own worktree,
-  "spin up a lane", "create an isolated branch with full functionality", bootstrapping
-  brehon-fork-<lane>, or any time concurrent Brehon work needs lane isolation from a live lane
-  (e.g. close-out while M1 runs). Codifies feedback_phase_lane_worktree_bootstrap_checklist.md +
-  the v1-closeout-lane-setup-report.md field findings. Do NOT use for: meta-edits on the canonical
-  governance-v0 checkout (no worktree needed); resuming an already-bootstrapped lane (just open the
-  session); the daemon-side per-task worktrees (those are Junior's, not human-side).
+  submodules + .mcp.json/.env/settings.local.json wiring + hook verification (incl. error-state
+  Junior-hook check) + citation-integrity sweep + cold-start handover. Use when the user says any of:
+  "new lane", "spin up a lane", "create an isolated branch", "isolated worktree", "set up a worktree
+  with the full harness / PMD / MCP", "create an isolated branch with full functionality", "new
+  worktree for <phase>", "bootstrap brehon-fork-<lane>", or "lane for <sub-phase>". The STRONGEST
+  trigger: starting a sub-phase that will run CONCURRENTLY with an already-active lane (so it needs
+  its own worktree + DQ to stay isolated) — e.g. a close-out lane while M1 runs, or any second
+  parallel phase. That concurrency need IS the trigger. Codifies
+  feedback_phase_lane_worktree_bootstrap_checklist.md + the v1-closeout-lane-setup-report.md field
+  findings (the 2 gaps it hardens against). Do NOT use for: meta-edits on the canonical governance-v0
+  checkout (no worktree needed — work directly); resuming an ALREADY-bootstrapped lane (just open a
+  session with that CWD — the harness is already wired); the daemon-side per-task worktrees (those are
+  Junior's, created automatically per task, not human-side). NOTE: distinct from roadmap-next, which
+  recommends + cuts the NEXT unstarted sub-phase FROM v1-roadmap.json and flips its status — use
+  roadmap-next when the question is "what's next + cut it"; use new-lane when you already know the
+  lane and just need it bootstrapped (roadmap-next can call this for the wiring).
 ---
 
 # new-lane — bootstrap a fully-harnessed isolated Brehon lane
