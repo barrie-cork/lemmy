@@ -13,6 +13,37 @@
 
 ---
 
+## Session progress & state  (LIVING — newest entry on top)
+
+> Append a dated block each working session. Keep it factual: what shipped, what's gated, what the next concrete action is. This is the resume surface — a fresh session reads this section + the bootstrap handover and knows where it stands.
+
+### State snapshot (as of 2026-06-04, session `d3e7ac99`)
+
+| Axis | Value |
+|---|---|
+| Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `1c7084622` at session open) |
+| Mode | Mode A (dedicated lane worktree) — own CC session, laptop-local |
+| Harness | **GREEN** — Probes 1+2 ✅ exit 0; Probe 3 (e2e `--no-run`) compiling final workspace tier (`lemmy_apub_send` → `lemmy_server` next); Probe 4 (negative exit-code test) chained after. Flag NOT yet set. |
+| M1 gate | **CLOSED** — `phase-m1-b` is **+22 commits** over `governance-v0` (tip `dc5b93ba8`, M1 mid-Task-5, advanced this session). Phases 6–8 GATED; NO-ELITEDESK live. |
+| Phases done | Phase 0 (bootstrap) ✅ |
+| Next action | Finish harness sign-off (await Probe 3/4 → verify Probe 4 returns **non-zero** → `touch .claude/audit-phase-v1-closeout-complete.flag`). Then user picks first phase — recommended **Phase 3 carry-patch audit** (the cost-gauge 🟦 run, read-only, daemon-free). |
+
+**Executable NOW** (laptop-local, no daemon, M1-isolation-safe): Phase 3 audit (cost-gauge first 🟦), Phase 1b/1c/1d hygiene, Phase 2 doc-drift, the **DQ archive** (545 KB / 273 resolved — over BOTH triggers), Phase 4-**T3** (tar-dispute, GitHub UI) + 4-**T4** (wasmtime-log DQ), Phase 5 **decision** (recommend keep-deferred + `/schedule` watch on extism PR #847).
+**BLOCKED until M1 merges:** Phase 4-**T1** (webmention inline, `api_utils/src/utils.rs` — was 🟩 four-role, now needs user decision: defer vs laptop-local impl), 4-**T2** (`[patch.crates-io]` Cargo.toml — M1 overlap), **Phases 6–8** (e2e split / type-state / TODO-sweep — M1 owns those files).
+
+### 2026-06-04 — session `d3e7ac99` (harness verification + lane-setup audit)
+
+- **Harness verified GREEN before any plan work** (per `pre-phase-harness-audit.md` + user instruction "first ensure the harness system is fully working"). Bootstrap artifacts (submodules, `.mcp.json`, `.env`, `settings.local.json`), PMD HTTP daemon (hybrid search round-trips), Junior daemon healthy, all SessionStart hooks wired. Cargo probes 1+2 pass; 3+4 in flight at session close.
+- **GAP 1 fixed — Telegram completion hook was broken.** `list_hooks` showed hook ID 1 `active` but with `LAST ERROR: BuildMessage: ModuleNotFound`, never triggering (daemon restart May 29 left a stale check_fn). Removed ID 1 → recreated as **ID 2** (`junior-task-terminal-notify`), clean. *(Read-only-equivalent daemon op — no task dispatch; honors NO-ELITEDESK.)*
+- **GAP 2 fixed — missing lesson reconstructed.** `feedback_daemon_telegram_completion_hook.md` was cited by always-load `advisor-orchestrator.md` §1 + 4 handovers but absent on disk. Authored it (3-state decision table, recreate-via-natural-language recipe, hook-ID-not-stable note, junior.db-vs-MCP-store topology caveat).
+- **NO-ELITEDESK directive captured** (user, 2026-06-04). Recorded in PMD (`project_closeout_no_elitedesk_m1_active.md`) + MEMORY.md HARD RULE + folded into Phase 4 / cross-cutting guardrails of this plan (commit `1c7084622`).
+- **Lane-setup report authored** — `.claude/PRPs/reports/v1-closeout-lane-setup-report.md` (forward-looking learnings for future isolated-lane bootstraps; TL;DR table, the 2 gaps, daemon-topology finding, cargo-probe table, hygiene baseline, improvement checklist).
+- **Hygiene debt quantified** for Phase 1: DQ **545 KB / 273 resolved** (over both archive triggers), **55 active plan files**, 8 worktree dirs.
+- **Plan validated self-consistent** with the live NO-ELITEDESK directive (Phase 4 lines 151–159 + guardrail line 241 already encode it). Phase 4 is *partially* executable: T3/T4 are laptop-local/daemon-free; only T1/T2 are gated.
+- **Deferred (not done):** MEMORY.md is at 203 lines (+1 from the HARD-RULE add) — a proper prune is **Phase 1c's job** (milestone-prune skill, user-gated), not an ad-hoc trim. Flagged as hygiene item in the setup report.
+
+---
+
 ## Context — why this plan exists
 
 v1 has shipped. Every lane in `.claude/PRPs/v1-roadmap.json` is `done` — JM, SL, AD, RT (r1–r5), SR (ship-1→3), federation-inbound (a–e), redaction-r1, quality (r1→r3c), plus the meta-lanes (validate-agent, rls-r1, dq-schema-r1). All 11 v0 endpoints are implemented and e2e-tested. The codebase is now a mature Lemmy fork (`governance-v0`) carrying a 91-file governance layer woven across 8 crate sub-trees.
