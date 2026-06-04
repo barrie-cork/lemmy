@@ -10,7 +10,10 @@ use crate::config::BridgeConfig;
 /// Runs forever: polls Brehon's read endpoint for messaging_enabled.
 /// Sets `relay_enabled` accordingly. Never panics; logs errors and continues.
 pub async fn run_poller(config: Arc<BridgeConfig>, relay_enabled: Arc<AtomicBool>) {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .expect("build soft_pause HTTP client");
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(10));
     loop {
         interval.tick().await;

@@ -24,6 +24,21 @@ pub type BrehonUserId = String;
 /// Matrix user-id (fully qualified, e.g. @_brehon_alice:tuwunel.local).
 pub type MatrixUserId = String;
 
+/// Encode a Brehon user-id into a valid Matrix MXID localpart.
+/// Matrix localparts allow [a-z0-9._\-=]; other bytes are hex-encoded as =XX.
+fn localpart_escape(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| {
+            let lc = c.to_lowercase().next().unwrap_or(c);
+            if lc.is_ascii_alphanumeric() || matches!(lc, '.' | '_' | '-') {
+                vec![lc]
+            } else {
+                format!("={:02x}", lc as u32).chars().collect()
+            }
+        })
+        .collect()
+}
+
 pub struct PuppetMap {
     inner: Mutex<HashMap<BrehonUserId, MatrixUserId>>,
     config: Arc<BridgeConfig>,
@@ -50,7 +65,7 @@ impl PuppetMap {
         }
 
         // Derive puppet localpart and mxid.
-        let localpart = format!("_brehon_{brehon_user}");
+        let localpart = format!("_brehon_{}", localpart_escape(brehon_user));
         // The homeserver domain is extracted from tuwunel_url.
         // e.g. "http://localhost:8448" → "localhost:8448"
         let server_name = self
@@ -87,17 +102,17 @@ impl PuppetMap {
                 tracing::info!(mxid = %mxid, "puppet registered");
             }
             Err(e) => {
-                // M_USER_IN_USE → puppet already exists, not an error.
                 let err_str = e.to_string();
                 if err_str.contains("M_USER_IN_USE") {
+                    // M_USER_IN_USE → puppet already exists, not an error.
                     tracing::debug!(mxid = %mxid, "puppet already exists, reusing");
                 } else {
-                    tracing::warn!(mxid = %mxid, err = %e, "puppet registration failed; continuing");
+                    return Err(anyhow::anyhow!("puppet registration failed: {}", e));
                 }
             }
         }
 
-        // Cache and return.
+        // Only cache on confirmed-exists or newly-created.
         self.inner
             .lock()
             .unwrap()

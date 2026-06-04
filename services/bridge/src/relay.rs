@@ -76,10 +76,7 @@ pub async fn handle_inbound(
     http_client: &reqwest::Client,
 ) -> Result<()> {
     for event in events {
-        if let Err(e) = relay_matrix_event(event, config, http_client).await {
-            // Log and continue — one failed relay must not drop the whole transaction.
-            tracing::warn!(err = %e, "failed to relay Matrix event to Brehon");
-        }
+        relay_matrix_event(event, config, http_client).await?;
     }
     Ok(())
 }
@@ -165,6 +162,7 @@ async fn relay_matrix_event(
 
     http_client
         .post(&config.brehon_notify_url)
+        .timeout(std::time::Duration::from_secs(10))
         .json(&payload)
         .send()
         .await
