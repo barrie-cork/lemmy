@@ -2237,3 +2237,11 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ## advisor: auto-phase m1-b — 2026-06-04 08:14 UTC
 - gate 1 (plan approval) PASSED: DoD §15.1 check exit 0 + §15.2 clippy exit 0 (vs HEAD); watchpoint gate ✓ (8/8 risks file-specific); MiniMax designation 3/5 (trial fires per user override).
 - dispatched bm-cut Junior #572 for phase-m1-b (Mode B; M1 Tree B, Tasks 0-7). base_branch governance-v0 @ 9c7dac9c4.
+
+## bm: PR opened — 2026-06-04T21:11:01Z
+
+- **PR:** #179 — Phase m1-a — M1 Tree A: Matrix AS bridge (services/bridge/) + Tree C docs (7 tasks)
+- **URL:** https://github.com/barrie-cork/lemmy/pull/179
+- **Base ← Head:** governance-v0 ← phase-m1-a
+- **Body source:** plan + commits
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 179`
