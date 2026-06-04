@@ -31,7 +31,7 @@ services:
       CONDUIT_ALLOW_FEDERATION: "false"
       CONDUIT_ALLOW_REGISTRATION: "true"
       CONDUIT_MAX_REQUEST_SIZE: "20971520"
-      # ip_source is intentionally NOT set — absent so loopback AS works (issue-#465).
+      # ip_source is intentionally NOT set — absent so loopback AS works (https://github.com/girlbossceo/conduit/issues/465).
       # AS tokens matching registration.yaml (dev-only — NOT for production).
       CONDUIT_AS_TOKEN: "brehon-as-dev-token-01"
       CONDUIT_HS_TOKEN: "brehon-hs-dev-token-01"
