@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "908b808091b4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-1-governance-messaging-config-migration-see-claude-prps-briefs-m1-b-impl-1-md-574",
+      "phase_task": 1,
+      "commands": [
+        "./scripts/brehon/migrate-roundtrip.sh"
+      ],
+      "question": "Migration round-trip for governance_messaging_config — laptop runs (Docker + cargo).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 created migrations/2026-06-03-000000-0000_add_governance_messaging_config/{up,down}.sql. Round-trip via migrate-roundtrip.sh (auto-detects new migration vs governance-v0; spins ephemeral pgautoupgrade:18 containers; applies via cargo run -p lemmy_diesel_utils --features full). Docker + cargo required — laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",

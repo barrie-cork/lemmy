@@ -1,0 +1,2 @@
+DROP VIEW governance_messaging_config_current;
+DROP TABLE governance_messaging_config;
