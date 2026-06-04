@@ -1,6 +1,30 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-b-task-3-messaging-config-dtos-see-claude-prps-briefs-m1-b-impl-3-md-576",
+      "phase_task": 3,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for messaging-config DTOs — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added AdminSetMessagingConfig + AdminSetMessagingConfigResponse to api_common/src/governance.rs. Response reuses ConfigValueWithProvenance (NOT the full AdminSetConfigResponse shape — no governance_log_id/preview/applied). ts-rs derive gating mirrors AdminSetConfig sibling. cargo check --workspace --features full required (ts-rs export gating); e2e --no-run confirms the DTO compiles into the test target (plan §15.3 lists Task 3). Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "id": "8067d01486b9-001"
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
