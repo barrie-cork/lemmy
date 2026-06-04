@@ -28,11 +28,12 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::config::BridgeConfig;
+use crate::{config::BridgeConfig, relay};
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
     pub puppet_map: Arc<crate::puppet::PuppetMap>,
+    pub http_client: reqwest::Client,
 }
 
 /// Minimal representation of a Tuwunel transaction body.
@@ -89,8 +90,9 @@ async fn hs_token_auth(
 
 /// PUT /_matrix/app/v1/transactions/{txnId}
 /// Tuwunel pushes all events destined for this AS here.
-/// Logs incoming events for now; relay to Brehon wired in Task 11.
+/// Relays inbound Matrix DMs to Brehon via relay::handle_inbound (Task 11).
 async fn handle_transactions(
+    State(state): State<Arc<AppState>>,
     Path(txn_id): Path<String>,
     Json(body): Json<PushEventsBody>,
 ) -> impl IntoResponse {
@@ -99,7 +101,13 @@ async fn handle_transactions(
         event_count = body.events.len(),
         "received AS transaction"
     );
-    // TODO(task 11): dispatch events through relay::handle_inbound
+    if let Err(e) = relay::handle_inbound(
+        &body.events,
+        &state.config,
+        &state.http_client,
+    ).await {
+        tracing::warn!(err = %e, "relay::handle_inbound error");
+    }
     (StatusCode::OK, Json(serde_json::json!({})))
 }
 

@@ -17,6 +17,9 @@ pub struct BridgeConfig {
     pub bridge_port: u16,
     /// HTTP endpoint for reading Brehon governance state (read-only notify consumer).
     pub brehon_read_url: String,
+    /// HTTP endpoint for Brehon Matrix-to-Brehon relay callbacks
+    /// (the URL the bridge POSTs inbound Matrix DMs to).
+    pub brehon_notify_url: String,
 }
 
 impl BridgeConfig {
@@ -34,6 +37,8 @@ impl BridgeConfig {
                 .context("BRIDGE_PORT must be a valid u16 port number")?,
             brehon_read_url: env::var("BREHON_READ_URL")
                 .context("BREHON_READ_URL env var required")?,
+            brehon_notify_url: env::var("BREHON_NOTIFY_URL")
+                .context("BREHON_NOTIFY_URL env var required")?,
         })
     }
 }
