@@ -83,6 +83,7 @@ impl GovernanceMessagingConfig {
         .filter(governance_messaging_config::scope.eq(scope))
         .filter(governance_messaging_config::key.eq(key))
         .order_by(governance_messaging_config::valid_from.desc())
+        .then_order_by(governance_messaging_config::id.desc())
         .first::<Self>(conn)
         .await
         .optional()?,
