@@ -90,27 +90,37 @@ BASE_BRANCH="${JUNIOR_BASE_BRANCH:-ab-test/minimax-trial}"
 # never lands on disk on the EliteDesk; the daemon stores envOverrides as
 # job-row-scoped JSON in SQLite (not in any plaintext file).
 
-# $1=base-branch  $2=task-description  $3=model. The model is a positional
-# arg (not interpolated into the single-quoted heredoc) so the key+model never
-# leak into the local `ps` argv; both arrive on the EliteDesk argv only.
-REMOTE_CMD=$(cat <<'REMOTE'
-set -euo pipefail
-read -r KEY
-junior task add \
-  --base-branch "$1" \
-  --env-override "ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic" \
-  --env-override "ANTHROPIC_AUTH_TOKEN=${KEY}" \
-  --env-override "ANTHROPIC_MODEL=$3" \
-  "$2"
-REMOTE
-)
+# Single SSH command, ONE stdin source (the key pipe). The non-secret values
+# (base-branch, description, model) are interpolated LOCALLY into the remote
+# command string; the daemon reads ONLY the key from stdin via `read -r KEY`.
+# The key never appears on argv (local `ps` or daemon `ps`) — it lives only in
+# the piped stdin and the env-override the daemon stores in its SQLite job row.
+#
+# BUGFIX 2026-06-04 (m1-b T3 dispatch): the prior form had TWO stdin sources —
+#   printf '%s\n' "$KEY" | ssh ... "bash -s -- ..." <<EOF_REMOTE \n $REMOTE_CMD \n EOF_REMOTE
+# The `<<EOF_REMOTE` heredoc redirect WON over the `printf |` pipe, so ssh's
+# stdin became the REMOTE_CMD body (not the key); `read -r KEY` read the first
+# script line ("set -euo pipefail") as the key, and the `junior task add \`
+# continuation lines parsed as standalone commands → the observed
+# `--base-branch: command not found`. Fix below: a single-line remote command
+# (no heredoc), key piped as the sole stdin. This form was verified working
+# on the m1-b T3 MiniMax dispatch (#577).
+#
+# Quote-safety: DESC/BASE_BRANCH must not contain a single-quote (the dispatch
+# lines never do). Guard explicitly rather than risk a broken remote command.
+case "${DESC}${BASE_BRANCH}" in
+  *\'*) echo "ERROR: description/base-branch must not contain a single-quote (')." >&2; exit 1;;
+esac
 
 echo "queueing task on EliteDesk:"
 echo "  base-branch: ${BASE_BRANCH}"
 echo "  description: ${DESC}"
 echo "  env-overrides: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN=<redacted>, ANTHROPIC_MODEL=${MINIMAX_MODEL}"
 
-printf '%s\n' "${MINIMAX_API_KEY}" | \
-  ssh homeserver "bash -s -- '${BASE_BRANCH}' '${DESC}' '${MINIMAX_MODEL}'" <<EOF_REMOTE
-${REMOTE_CMD}
-EOF_REMOTE
+# The remote command string: base/desc/model are wrapped in single-quotes by
+# this local heredoc-free assembly; `read -r KEY` pulls the key from stdin.
+# `printf | ssh '<cmd>'` — the single-quoted ssh arg is the literal remote
+# command; the daemon's shell sees it after local ${...} expansion.
+REMOTE_CMD="read -r KEY && junior task add --base-branch '${BASE_BRANCH}' --env-override 'ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic' --env-override \"ANTHROPIC_AUTH_TOKEN=\${KEY}\" --env-override 'ANTHROPIC_MODEL=${MINIMAX_MODEL}' '${DESC}'"
+
+printf '%s\n' "${MINIMAX_API_KEY}" | ssh homeserver "${REMOTE_CMD}"
