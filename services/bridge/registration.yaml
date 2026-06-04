@@ -1,0 +1,19 @@
+# Matrix Application Service registration for the Brehon bridge.
+# Loaded by Tuwunel at startup to authorize the bridge AS.
+#
+# Dev-only token pair — NOT for production.
+# Replace as_token and hs_token with randomly generated secrets before
+# deploying to any environment beyond the local docker-compose stack.
+id: brehon-bridge
+url: http://bridge:8080
+as_token: "brehon-as-dev-token-01"  # dev-only — NOT for production
+hs_token: "brehon-hs-dev-token-01"  # dev-only — NOT for production
+sender_localpart: brehon
+namespaces:
+  users:
+    - exclusive: true
+      regex: "@_brehon_.*"
+  aliases:
+    - exclusive: false
+      regex: "#brehon_.*"
+  rooms: []

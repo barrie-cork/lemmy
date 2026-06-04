@@ -1,0 +1,71 @@
+# Docker Compose for Brehon bridge development stack.
+#
+# Usage (integration tests):
+#   cd services/bridge
+#   docker compose up -d
+#   cargo test --test dm_round_trip -- --ignored
+#   docker compose down
+#
+# Federation-disabled posture; ip_source NOT set (issue-#465 loopback fix).
+# Dev-only tokens matching registration.yaml.
+#
+# M1 scope: only Tuwunel is included here. The bridge binary is started
+# separately (e.g. `cargo run` on the host) during integration test setup.
+# A bridge service entry will be added in Task 15 once the Dockerfile exists.
+
+version: "3.9"
+
+services:
+  tuwunel:
+    # Pinned Conduit image for dev/test. Conduit is the upstream of Tuwunel.
+    # To switch to the Tuwunel fork: check ghcr.io/girlbossceo/tuwunel for tags.
+    # Verify the correct image tag before deploying beyond local dev.
+    image: matrixconduit/matrix-conduit:v0.6.0
+    environment:
+      CONDUIT_SERVER_NAME: "localhost"
+      CONDUIT_DATABASE_BACKEND: "sled"
+      # Federation-disabled posture.
+      # Tuwunel issue: some versions require allow_federation=true +
+      # forbidden_remote_server_names=[".*"] instead of allow_federation=false.
+      # Verify against the pinned image at deploy time (Task 9 GOTCHA).
+      CONDUIT_ALLOW_FEDERATION: "false"
+      CONDUIT_ALLOW_REGISTRATION: "true"
+      CONDUIT_MAX_REQUEST_SIZE: "20971520"
+      # ip_source is intentionally NOT set — absent so loopback AS works (https://github.com/girlbossceo/conduit/issues/465).
+      # AS tokens matching registration.yaml (dev-only — NOT for production).
+      CONDUIT_AS_TOKEN: "brehon-as-dev-token-01"
+      CONDUIT_HS_TOKEN: "brehon-hs-dev-token-01"
+    volumes:
+      - tuwunel_data:/var/lib/matrix-conduit
+      # registration.yaml is mounted for reference; Tuwunel loads app services
+      # via app_service_conf_files in its config. Wire this at M2 deploy time
+      # once the Tuwunel config file approach is confirmed for the pinned image.
+      - ./registration.yaml:/etc/conduit/registration.yaml:ro
+    ports:
+      - "8448:8448"
+    networks:
+      - bridge-net
+
+  # Bridge service: Task 15 adds the Dockerfile. Uncomment once available.
+  # bridge:
+  #   build: .
+  #   environment:
+  #     TUWUNEL_URL: "http://tuwunel:8448"
+  #     AS_TOKEN: "brehon-as-dev-token-01"      # dev-only — NOT for production
+  #     HS_TOKEN: "brehon-hs-dev-token-01"      # dev-only — NOT for production
+  #     BRIDGE_PORT: "8080"
+  #     BREHON_READ_URL: "http://host.docker.internal:3000/api/v4/governance/messaging-config"
+  #     BREHON_NOTIFY_URL: "http://host.docker.internal:3000/bridge/notify"
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - bridge-net
+  #   depends_on:
+  #     - tuwunel
+
+networks:
+  bridge-net:
+    driver: bridge
+
+volumes:
+  tuwunel_data:

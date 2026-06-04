@@ -2237,3 +2237,37 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 ## advisor: auto-phase m1-b — 2026-06-04 08:14 UTC
 - gate 1 (plan approval) PASSED: DoD §15.1 check exit 0 + §15.2 clippy exit 0 (vs HEAD); watchpoint gate ✓ (8/8 risks file-specific); MiniMax designation 3/5 (trial fires per user override).
 - dispatched bm-cut Junior #572 for phase-m1-b (Mode B; M1 Tree B, Tasks 0-7). base_branch governance-v0 @ 9c7dac9c4.
+
+## bm: PR opened — 2026-06-04T21:11:01Z
+
+- **PR:** #179 — Phase m1-a — M1 Tree A: Matrix AS bridge (services/bridge/) + Tree C docs (7 tasks)
+- **URL:** https://github.com/barrie-cork/lemmy/pull/179
+- **Base ← Head:** governance-v0 ← phase-m1-a
+- **Body source:** plan + commits
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 179`
+
+## bm: poll-cr — 2026-06-04T21:30:00Z
+- **PR:** #179
+- **head SHA:** 94aca699c (unchanged since bm-cut)
+- **CR comments seen:** 1 review + 18 inline + 1 issue
+- **Actionable findings ingested:** 18
+- **New findings this poll:** 18
+- **Findings addressed since last poll:** 0
+- **Counters:** critical 2 | major 13 | medium 0 | low 3 | nit 0
+- **Recommendation:** pending (triage + user gate required before any fix-in-pr dispatch)
+- **YAML:** .claude/PRPs/reviews/pr-179-findings.yaml
+- **Notes:** CR review complete on m1-a bridge implementation (greenfield crate). 18 findings across R8-context (workspace-excluded bridge uses anyhow, not LemmyResult), security/compliance (ADR-014 capability checks, timeout configurations, sanitisation), and critical path items (relay recipient inference from state_key breaks DM; send_as_puppet stub blocks Brehon→Matrix). All defaults to fix-in-pr; no carry-forward or rebut candidates identified at poll time (re-evaluate at triage gate).
+
+
+## 2026-06-04T22:25Z — bm-triage applied (advisor-inline, task #597 false-positive blocked Edit)
+
+- **Action:** bm-triage applied advisor-inline after task #597 false-positive (findings YAML classified as sensitive file by permission system)
+- **Buckets applied:**
+  - fix-in-pr (11): cr-003, cr-006, cr-008, cr-009, cr-010, cr-011, cr-012, cr-013, cr-014, cr-015, cr-018
+  - rebut (5): cr-001 (BM boundary/advisor content), cr-002 (brief lint), cr-004 (URLs accurate), cr-005 (M1 outbound-only design), cr-007 (mount is functional)
+  - carry-forward (2): cr-016, cr-017 (both have explicit 'M1:' scope comments in relay.rs — Task 13 replacement planned)
+- **Critical open after triage:** 0 (both critical findings are carry-forward)
+- **Major open after triage:** 8 fix-in-pr
+- **Recommendation:** approved
+- **Commit:** b6015557c on phase-m1-a
+- **False-positive note:** Findings YAML at .claude/PRPs/reviews/ blocked by sensitive-file classifier. Same class as WATCH issue_note_sensitive_file_false_positive_debug_dir.md — promote to lesson if recurs.

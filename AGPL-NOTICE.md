@@ -25,6 +25,23 @@ In practice, any operator of a Brehon-fork-derived instance MUST:
 
 Operators running an unmodified release of this fork can satisfy (1) by pointing users to this GitHub repository at the specific commit or tag they are running. Operators who patch the fork further must publish their patches.
 
+## Additional components — bridge daemon + Tuwunel homeserver
+
+The M1 release introduces two additional components deployed alongside the Lemmy fork:
+
+### `services/bridge/` — Brehon Matrix AS bridge
+
+- **What it is:** a Matrix Application Service bridge daemon written in Rust (`crates`: `axum`, `matrix-sdk`, `ruma-appservice-api`).
+- **License:** this component is original Brehon code, authored under AGPL-3.0 (the same license as this repository). Source is in `services/bridge/` in this repository.
+- **AGPL §13 applicability:** the bridge daemon provides a network service (Matrix AS endpoint) and is distributed and deployed as part of the Brehon platform. Operators running this component are subject to the same AGPL §13 source-disclosure obligations as the Lemmy fork. Corresponding source for the bridge daemon is satisfied by publishing this repository at the running commit.
+
+### Tuwunel (Matrix Conduit homeserver) — docker-compose dependency
+
+- **What it is:** a Matrix homeserver (Tuwunel, a fork of [matrix-conduit/conduit](https://github.com/matrix-org/conduit)) used in the bridge docker-compose stack.
+- **License:** Tuwunel / Conduit is licensed under the Apache License 2.0. Brehon does not modify the Tuwunel source; it is used as a pinned Docker image (`matrixconduit/matrix-conduit:v0.6.0`).
+- **AGPL §13 applicability:** Tuwunel is Apache-2.0 licensed, not AGPL. However, operators deploying the Brehon bridge stack (which includes Tuwunel via docker-compose) should be aware that Tuwunel's own license terms govern the homeserver component. The Tuwunel/Conduit source is available at `https://github.com/girlbossceo/conduit` (Tuwunel fork) or `https://github.com/matrix-org/conduit` (upstream Conduit).
+- **No Tuwunel source modifications:** Brehon does not patch the Tuwunel image. The `registration.yaml` and docker-compose configuration files in `services/bridge/` are original Brehon configuration, not Tuwunel source modifications.
+
 ## Weekly upstream rebase log
 
 Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) top-risk mitigations, we rebase `governance-v0` onto `upstream/main` weekly to pick up Lemmy 1.0-beta fixes. Each rebase records the new upstream SHA here so we can diff governance-touching changes across syncs.
