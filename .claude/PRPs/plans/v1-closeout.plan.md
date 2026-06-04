@@ -310,7 +310,48 @@ This phase produces a **decision + (if option 1/3) documented suppressions**, no
 
 ---
 
-## Phase 6 — e2e.rs decomposition  🟦 workflow (plan-the-split) → 🟩 four-role (execute) — **GATED ON M1 MERGE**
+## Phase 6 — e2e.rs decomposition  🟦 workflow (plan-the-split) → execute — **M1 GATE CLEARED 2026-06-04 (m1-a disjoint)**
+
+> ### ▶ PHASE 6 EXECUTION STATE & PLAN (LIVING — self-contained resume surface, 2026-06-04)
+>
+> **Gate:** CLEARED. m1-b merged (`d6d027794`); user confirmed m1-a (Tree A `services/bridge/`) is disjoint from e2e.rs. Phase 6 is GO.
+>
+> **Map artifact (DONE):** `.claude/PRPs/reports/v1-closeout-phase6-e2e-split-manifest.json` — produced by workflow `wi75t6gy7` (16 Sonnet maps + 1 Opus synthesis). Read this FIRST on resume. Source workflow script: `.claude/workflows/phase6-e2e-split-map.js` (reusable).
+>
+> **Ground truth (verified 2026-06-04, e2e.rs git blob `3dc6dc7b6b`):**
+> - `crates/server/tests/e2e.rs` = **18,582 lines**, **135 test functions** (133 `#[tokio::test]`/`#[tokio::test(flavor=…)]` + 3 `#[test]`, minus 1 stacked `traced_test` double-count = 135 fns). **All 135 accounted for in the manifest.** (NB: a naive `grep -c '#[tokio::test]'` UNDERCOUNTS — misses the `(flavor=…)` form. Use `grep -cE '#\[tokio::test'` or the awk fn-counter.)
+> - `mod governance_fixtures` spans **lines 143–922** (closes at 922); file-scope tests begin at **925** (`can_insert_moderation_case`).
+> - Module attrs `#![expect(...)]` at lines **15–36** → go to thin-root. Sanity tests `postgres_container_boots`@45 + `template_dump_capture`@80 → stay in root. `EnvVarGuard`@111–137 → `common`. `SingleI32`@2503 → `common`.
+>
+> **Target shape (9 files), single test binary:**
+> `tests/e2e.rs` (thin root: module attrs + `mod common;` + 7 `mod <domain>;` + the 2 sanity tests, **2 tests**) · `tests/e2e/common/mod.rs` (`pub(crate) mod governance_fixtures` + `EnvVarGuard` + `SingleI32` + `pub(crate) mod jury_seed`, **0 tests**) · `tests/e2e/governance.rs` (**23**) · `tests/e2e/admin_config.rs` (**31**, +4 if it absorbs the admin-HTML tests → 35) · `tests/e2e/jury_mechanics.rs` (jm_b+jm_e, **19**) · `tests/e2e/sponsor_liability.rs` (sl_b+c+d+e+ship_3, **22**) · `tests/e2e/federation.rs` (fed_a+b+e, **9**) · `tests/e2e/ship.rs` (ship_2 +admin-HTML, **10** or 6) · `tests/e2e/reputation.rs` (rt_r3+rt_r4, **19**). Sum = 135.
+>
+> **🔒 LOAD-BEARING STRUCTURAL RULES (violating these breaks the split):**
+> 1. **Keep each `mod *_fixtures` as a SEPARATE inner mod inside its domain file — DO NOT FLATTEN.** Duplicate module-level helpers exist across siblings (`count_log_entries`/`read_log_payload` ×3 in sl_b/c/e; `seed_pending_case` ×2; `bootstrap_with_peer` ×2 in fed_b/e; `build_sanction_notice_with_id` ×2). Flattening → E0428 duplicate-definition. Namespacing via inner mods is the fix.
+> 2. **Single test binary only:** thin-root `tests/e2e.rs` + `tests/e2e/` subdir. NEVER create multiple top-level `tests/*.rs` (that makes separate binaries → breaks the `--test-threads=1` + process-env contract every test relies on).
+> 3. **Refs resolve via `use crate::common::governance_fixtures;`** in each domain file — the 291 bare `governance_fixtures::` refs (+106 `admin_config_fixtures::`, +40 `v1_jm_b_fixtures::`) then need ZERO textual change. Do NOT rewrite them to fully-qualified paths (291 edits = anchor-collision/hang risk).
+> 4. **Visibility:** in `common`, promote currently-module-private-but-cross-referenced items to `pub(crate)`: `start_postgres`, `start_postgres_vanilla`, `db_url`, `apply_all_schema`, `bootstrap`, `seed_jurors`, `schema_sentinel_satisfied`, `pg_template::{ensure_template,MIN_TEMPLATE_DUMP_BYTES}`, `EnvVarGuard`(+`set`), `SingleI32`(+field). They only compiled before because tests were file-scope siblings.
+> 5. **One cross-DOMAIN data dep:** `seed_jury_eligible_snapshots` + `_scoped` + `seed_case` (currently in `v1_jm_b_fixtures`) are used by BOTH jury_mechanics AND sponsor_liability (sl_d/sl_e) → promote to `common::jury_seed` as `pub(crate)`. This is the ONLY helper-move beyond `governance_fixtures`.
+> 6. **Behaviour-preserving ONLY:** copy test bodies verbatim. `seed_person` (7×, all test-body-local or namespaced — safe), `mint_jwt` (2×, different files — safe), `GraceCheckDisableGuard` (sl_e-local, NOT EnvVarGuard — don't unify), nested `mod traits`@5029 (moves with its test). Do NOT refactor/dedupe logic during the split.
+>
+> **DECISIONS (locked, user 2026-06-04):** Driver = **THIS Opus session drives directly**, sub-phase by sub-phase (the "keep inner mods" rule is too load-bearing to delegate; Sonnet still drives Phase 7/8 edits). Validation cadence = **compile (`--no-run`) + nextest `--list` discovery-diff after EACH sub-phase; full ~26-min e2e at 3 checkpoints: after sub-phase 1, after sub-phase 4, after sub-phase 7.** Cargo is **laptop-only** (`project_laptop_canonical_cargo_runner.md`). Recommended ship.rs/admin-HTML mitigation: **move the 4 `admin_dashboard_html_*`/`admin_audit_html_*` tests into admin_config.rs** (eliminates a cross-domain ref) → ship.rs=6, admin_config.rs=35.
+>
+> **GOLDEN BASELINE (in progress):** full e2e run `barlpp2wq` → `.claude/e2e-split-baseline.log` (the before-state `test result:` line + per-test names; ~135 collected, ~129 run + 6 `#[ignore]`, 0 failed). MUST complete + be captured before validating any sub-phase. On resume, if `.claude/e2e-split-baseline.log` ends with `E2E_EXIT_0` and a `test result:` line, the baseline is captured; else re-run: `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > .claude/e2e-split-baseline.log 2>&1 && echo E2E_EXIT_0 >> ... || echo E2E_EXIT_NONZERO >> ..."` (background, ~26 min). Also capture the authoritative inventory: `cargo-test.bat --workspace --test e2e --features full -- --list` (when build dir is free).
+>
+> **SUB-PHASE EXECUTION ORDER (lowest cross-ref first — each = own commit + validation gate):**
+> 1. **common/ + thin-root scaffold** (0 test moves) — create `tests/e2e/common/mod.rs` (governance_fixtures pub(crate) + EnvVarGuard + SingleI32 + jury_seed), convert `tests/e2e.rs` to thin root with `mod common;`, keep the 133 domain tests temporarily in-place (they reference `common::` now). Isolates the visibility rewrite. **→ FULL E2E CHECKPOINT #1.**
+> 2. **federation.rs** (fed_a+b+e, 9 tests) — lowest risk; proves merge-via-inner-mod + multi_thread single-binary contract.
+> 3. **reputation.rs** (rt_r3+rt_r4, 19) — only governance_fixtures cross-refs.
+> 4. **governance.rs** (23, ZERO cross_module_refs) — largest clean domain. **→ FULL E2E CHECKPOINT #2.**
+> 5. **admin_config.rs** (31/35) — self-contained; shared-static audit-stream tests (preserve username-uniqueness).
+> 6. **jury_mechanics.rs** (jm_b+jm_e, 19) — jm_e→jm_b resolves in-file; proves jury_seed for in-file consumer BEFORE sponsor_liability needs it cross-file.
+> 7. **sponsor_liability.rs** (sl_b+c+d+e+ship_3, 22) — LAST/highest risk: most dup helpers + the only cross-domain dep (uses common::jury_seed). **→ FULL E2E CHECKPOINT #3 (final identical-pass-count proof).**
+>
+> **VERIFICATION per sub-phase:** (a) `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --no-run --features full > .claude/e2e-split-sub<N>.log 2>&1"` → exit 0 (compiles); (b) `-- --list` diff vs baseline inventory (identical test set, NEItHER added NOR dropped); (c) `git add` the new file(s) + the e2e.rs deletion-hunk, commit `refactor(e2e): split <domain> into tests/e2e/<domain>.rs (sub-phase N/7)`, push. At a FULL-E2E checkpoint: run the ~26-min suite, diff the `test result:` line vs baseline — MUST be identical pass/fail/ignore counts.
+>
+> **CATCH-FIRE:** any sub-phase where compile fails in a way not covered by the manifest's risks list, OR the `--list` set differs from baseline (a test vanished/duplicated), OR a full-e2e checkpoint shows a different pass count → STOP, surface, do not proceed to the next sub-phase.
+>
+> **STATUS (2026-06-04):** map DONE + manifest saved + committed (`ef79193a5`). Baseline e2e RUNNING (`barlpp2wq`). **Next action: await baseline → capture golden counts → execute sub-phase 1 (common scaffold) → checkpoint #1.** Nothing edited in `crates/` yet (e2e.rs still at `3dc6dc7b6b`).
 
 Goal: break the 18,526-line `crates/server/tests/e2e.rs` monolith into per-domain modules. **This is the single biggest code-side refactor and the one with the hardest M1 conflict** — M1 actively edits `e2e.rs` (adds `m1_*_fixtures` modules). **Does not start until M1 has merged to `governance-v0` and the close-out worktree has rebased onto it.**
 
