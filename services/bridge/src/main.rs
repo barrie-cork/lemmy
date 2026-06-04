@@ -59,8 +59,7 @@ async fn main() -> Result<()> {
         }
         result = poller_handle => {
             match result {
-                Ok(Ok(())) => tracing::info!("soft_pause poller exited cleanly"),
-                Ok(Err(e)) => tracing::error!("soft_pause poller error: {e:#}"),
+                Ok(()) => tracing::info!("soft_pause poller exited cleanly"),
                 Err(e) => tracing::error!("soft_pause poller panicked: {e}"),
             }
         }
