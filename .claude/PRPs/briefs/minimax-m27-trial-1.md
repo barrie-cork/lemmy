@@ -143,10 +143,19 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 |---|---|---|---|---|---|
 | v1-RT-r4 | Tasks 1–5 | see original designation 2026-05-29 | various | ✅ all 5 | NOT RUN — serial dispatch forced |
 | v1-RT-r5 | Task 5 | `e2e.rs` | — | ❌ | e2e excluded |
+| m1-b | Task 1 | `migrations/.../up.sql`+`down.sql` | `add_governance_config/up.sql` | ❌ | criterion 5: DoD is `migrate-roundtrip.sh`, not cargo-check/clippy |
+| m1-b | Task 2 | model+mod.rs+newtypes.rs+schema.rs (4 files) | `governance_config.rs:21-60`; schema.rs:513/1487/1601 | ❌ | criterion 4: 4 files > 2 |
+| m1-b | Task 3 | `api_common/src/governance.rs` (1 file) | `governance.rs:449-498` | ✅ | DTOs; single-file, cargo-gated |
+| m1-b | Task 4 | `messaging_config.rs`+`mod.rs` (2 files) | `admin_config.rs:383/682/747` | ✅ | admin handler; single-write |
+| m1-b | Task 5 | `messaging_config.rs`+`routes/lib.rs` (2 files) | `admin_config.rs:426`; `routes/lib.rs:478-512` | ✅ | validator + route reg |
+| m1-b | Task 6 | `bridge_notify.rs`+`lib.rs`+`notify.rs` (3 files) | `notify.rs:305`; `plugins.rs:48` | ❌ | criterion 4: 3 files > 2 |
+| m1-b | Task 7 | `e2e.rs` | `e2e.rs:6235/6504` | ❌ | criterion 2: e2e |
 
-**Running total: 0 ✅ qualifying** (RT-r4 tasks were designated but not run; count resets to 0 for the rolling trigger going forward).
+**Running total: 3 ✅ qualifying** (m1-b Tasks 3,4,5; RT-r4 designated-not-run reset to 0).
 
-When cumulative ✅ count reaches ≥5 → proceed to §2.3 dispatch sequence alongside the real phase.
+**TRIAL FIRES THIS PHASE — user override 2026-06-04** (`feedback_minimax_trial_run_below_threshold_on_user_override.md`): user waived the ≥5 cumulative gate (*"Run trial for eligble tasks, even if below 5/5… We need to get AB tests result"*). The 3 eligible tasks (m1-b 3,4,5) run BOTH arms per §2.3 on throwaway `ab-test/m1-b-t{3,4,5}-{sonnet,minimax}` branches off `phase-m1-b` AFTER real Tasks 1+2 land (Task 3 `requires:2`, 4 `requires:2,3`, 5 `requires:4`). Real pipeline stays Sonnet on `phase-m1-b`; trial never gates shipping. Results → `minimax-m27-trial-results.md`.
+
+When cumulative ✅ count reaches ≥5 (absent an override) → proceed to §2.3 dispatch sequence alongside the real phase.
 
 Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (pre-exists; append a new `##` section per phase run).
 
