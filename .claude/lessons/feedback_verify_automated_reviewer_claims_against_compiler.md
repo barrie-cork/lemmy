@@ -1,31 +1,39 @@
 ---
-name: Verify automated-reviewer (CodeRabbit/Copilot) trait/type claims against the compiler before acting
-description: CR and Copilot trait/type/lifetime claims are hypotheses, not contracts — run cargo check --workspace before triaging such a finding as fix-in-pr; a confidently-worded review suggestion can break a compile
+name: Verify automated-reviewer (CodeRabbit / Copilot) trait/type/lifetime claims against the compiler before triaging fix-in-pr
+description: CodeRabbit and Copilot findings that assert a trait bound, type, lifetime, or API-shape claim are hypotheses, not contracts. Before triaging such a finding into bucket:fix-in-pr (i.e. before queueing a fix that follows the reviewer's recommendation), compile-check it (cargo check --workspace). A recommendation that compiles wrong is worse than the original — PR#132's CR-recommended .get(0)→.first() broke Diesel's LimitDsl resolution.
 type: feedback
-originSessionId: reconstructed-2026-06-04-v1-closeout-phase1d
 ---
 
-> **Reconstruction note (2026-06-04, v1-closeout Phase 1d):** cited by the always-load rule `.claude/rules/advisor-orchestrator.md` §5.4 (the falsifiable-hypothesis CR-finding variant) and indexed in MEMORY.md, but absent on disk (the GAP-2 broken-citation class). Reconstructed from the §5.4 rule text + the PR#132 Diesel `LimitDsl` incident. Behaviour is unchanged — §5.4 already operationalises it; this file is the cited backing.
+Automated code reviewers — CodeRabbit, GitHub Copilot — produce findings that *sound* authoritative, especially about Rust traits, types, lifetimes, and API shapes ("this should use `.first()` instead of `.get(0)`", "this lifetime is unnecessary", "this trait bound is redundant"). Treat any such claim as a **hypothesis to verify against the compiler**, not a contract to implement. Before triaging the finding into `bucket: fix-in-pr` — i.e. before you queue a fix that applies the reviewer's recommendation — **compile-check it**: `cargo check --workspace` (or the targeted crate). A reviewer recommendation that *compiles wrong*, or changes type-inference in a way the reviewer didn't model, is worse than the code it flagged, because the fix-in-pr commit then ships a regression with a clean-looking provenance ("addressed CR finding").
 
-Rule: a CodeRabbit or Copilot finding that makes a **trait / type / lifetime / API-shape claim** ("use `.first()` instead of `.get(0)`", "this should be `&str` not `String`", "add `#[derive(Eq)]`", "this lifetime is redundant") is a **hypothesis, not a contract**. Before triaging it as `bucket: fix-in-pr` and queueing a fix, **compile-check the claim**: `cargo check --workspace` (or the narrowest crate that covers the cited line). If the suggested change doesn't compile, the finding is wrong — bucket it `rebut` with the compiler error as evidence, do NOT apply it.
+This is the **CR-finding variant** of the falsifiable-hypothesis gate (`.claude/rules/advisor-orchestrator.md` §5.4; `feedback_falsifiable_hypothesis_before_structural_fix.md`): a DQ or finding that names a specific code path as the defect site carries an RCA that is a hypothesis, and the cheap falsification runs *before* the fix path is chosen. For automated reviewers the falsification is a compile, and it's even cheaper than the structural-fix-DQ case — one `cargo check` settles it.
 
-**Why:** automated reviewers reason from pattern-matching over surface syntax, not from your crate's actual trait resolution. They are confidently right about generic idioms and confidently wrong about anything where a local trait impl, a Diesel DSL, a macro expansion, or a feature-gate changes what the types actually are. The wording carries no uncertainty, so a finding that would break the build reads identically to one that improves it — the only discriminator is the compiler.
+## Why this matters (PR#132 incident)
 
-Canonical incident (**PR#132**): CodeRabbit flagged `.get(0)` and recommended the idiomatic `.first()`. Applied blindly, it **broke the Diesel `LimitDsl` query** — in that context `.get(0)` was operating on a Diesel query-builder type where `.first()` resolves to a *different* trait method (`RunQueryDsl::first`, which executes the query) rather than `slice::first`. The "idiomatic cleanup" changed query semantics and failed to compile / changed behaviour. A `cargo check` before triage would have caught it instantly; instead it shipped into the fix-in-pr bucket and had to be reverted. (See also `feedback_audit_trait_derive_validate_field_types.md` for the derive variant: CR/Copilot suggesting `#[derive(Eq, Hash, Ord)]` on a struct containing an `f64` — doesn't compile, `f64` is not `Eq`/`Ord`.)
+PR#132: CodeRabbit flagged a `.get(0)` call and recommended `.first()` — the idiomatic Rust swap, which is correct *in isolation* for slices/Vecs. But the call site was a **Diesel query builder**, where `.get(0)` and `.first()` resolve through different trait paths. Applying the CR recommendation broke Diesel's `LimitDsl` resolution — the "fix" did not compile / changed the query semantics. The recommendation was idiomatically reasonable and contextually wrong, and the only thing that would have caught it before it shipped as a fix-in-pr commit was a `cargo check` against the actual change — which is exactly the gate this lesson exists to enforce.
 
-**How to apply:** during `bm-triage` / CR-finding triage (the four-bucket pass), for every finding tagged trait/type/lifetime/derive/API-shape:
+The trap is that automated-reviewer findings have a **veneer of correctness**: they cite the right lint, use the right vocabulary, and recommend the idiomatic form. That veneer is precisely why the claim slips past triage without verification — it *reads* like a settled fact. But the reviewer does not run the compiler against your tree; it pattern-matches. Trait resolution, type inference, and lifetime elision are context-sensitive in ways a pattern-matcher misses. The compiler is the authority; the reviewer is a lead to check.
 
-1. Identify the narrowest cargo target covering the cited `file:line` (the crate, or `--workspace` if cross-crate).
-2. Apply the suggested change on a throwaway basis (or reason it through against the actual types) and run `cargo check`.
-3. Compiles + behaviour-preserving → `bucket: fix-in-pr`. Doesn't compile, or changes a trait method's meaning (Diesel DSL, `RunQueryDsl` vs `slice`, macro-generated impls) → `bucket: rebut`, paste the compiler error as the rebuttal evidence.
-4. Pure-prose / style / naming findings with no type claim are exempt — they can't break a compile, triage them normally.
+This is the same class as `feedback_audit_trait_derive_validate_field_types.md` (an audit finding that recommended `Eq`/`Hash`/`Ord` derives on a struct with an `f64` field — doesn't compile; validate field types before promoting the finding). In both, an automated/audit recommendation about Rust trait machinery is plausible and wrong, and a compile-check is the discriminator.
 
-This is the same falsifiable-hypothesis discipline `advisor-orchestrator.md` §5.4 applies to structural-fix DQs, narrowed to the automated-reviewer surface: the reviewer's RCA is a claim to test, not an instruction to execute. The compiler is the oracle; the reviewer is a lead.
+## How to apply (advisor, at CR triage)
+
+At `bm-triage` (the four-bucket CR triage, gate 3), when classifying a finding into a bucket:
+
+1. **Identify trait/type/lifetime/API-shape claims.** Any finding that asserts "use trait X", "this type should be Y", "this lifetime/bound is unnecessary", "this method/derive is wrong" is a verifiable-against-compiler claim. (Findings about naming, formatting, comments, docs, or governance semantics are a different class — those don't get a compile-check, they get human judgment.)
+2. **Before bucketing such a claim as `fix-in-pr`, compile-check it.** Apply the recommendation locally (or reason precisely about whether it compiles) and run `cargo check --workspace` (laptop, per `project_laptop_canonical_cargo_runner.md`). If it compiles clean AND preserves semantics → `fix-in-pr` is safe. If it breaks compilation or changes type-inference/query-semantics → **`bucket: rebut`** with the compiler error as the evidence, and post that in the triage comment so the bot is anchored and won't re-flag.
+3. **Never queue a fix-impl that blindly applies a reviewer's trait/type recommendation.** The fix-impl brief must reflect the *verified* change, not the raw recommendation. If the recommendation didn't survive the compile-check, the finding is a rebuttal, not a fix.
+
+The cost is one `cargo check` per trait/type claim (a subset of findings — most CR findings are about other things). The alternative — shipping a fix-in-pr commit that implements a wrong recommendation — costs a regression, a second CR pass, and a fix-the-fix cycle, with the added hazard that the regression carries the clean provenance "addressed CR finding #N" and is therefore *less* likely to be re-scrutinised.
+
+## Generalises to
+
+Any pipeline that ingests recommendations from a non-compiling source (automated reviewer, audit tool, LLM suggestion, a human reviewer reasoning from memory) and acts on them. The recommendation is a hypothesis; the authoritative oracle (here, the compiler; elsewhere, the test suite, the type-checker, the actual runtime) is the contract. Verify against the oracle before committing to the recommendation. Same family as `feedback_falsifiable_hypothesis_before_structural_fix.md` (falsify a structural-fix DQ's RCA before the fix), `feedback_audit_trait_derive_validate_field_types.md` (validate field types before promoting a derive finding), and `feedback_bm_false_success_advisor_post_condition_catch.md` (verify a tool's success claim against the actual post-condition) — in all of them, an authoritative-sounding claim is a lead, and the cheap verification against ground truth is the load-bearing safeguard.
 
 ## See also
 
-- `.claude/rules/advisor-orchestrator.md` §5.4 (falsifiable-hypothesis gate, CR-finding variant — the rule this backs)
-- `feedback_falsifiable_hypothesis_before_structural_fix.md` — the parent discipline (verify a named-defect hypothesis before structural work)
-- `feedback_audit_trait_derive_validate_field_types.md` — the derive-specific variant (`Eq`/`Hash`/`Ord` on `f64` doesn't compile)
-- `feedback_advisor_cr_enum_drift.md` — a related CR-claims-vs-reality case for enum variants
-- `.claude/rules/branch-manager.md` "What BM should refuse" + the four-bucket triage this slots into
+- `.claude/rules/advisor-orchestrator.md` §5.4 (CR-finding variant of the falsifiable-hypothesis gate) — the rule that cites this file.
+- `feedback_falsifiable_hypothesis_before_structural_fix.md` — the parent falsifiable-hypothesis discipline (structural-fix DQs).
+- `feedback_audit_trait_derive_validate_field_types.md` — the sibling: validate field types before promoting an Eq/Hash/Ord derive finding.
+- `feedback_pr_review_triage_pattern.md` + `feedback_coderabbit_triage_four_buckets_confirmed.md` — the four-bucket CR triage this gate plugs into (the compile-check decides `fix-in-pr` vs `rebut`).
+- `feedback_coderabbit_block_merge_critical.md` — the separate rule that Critical findings always block merge (composes with this; this lesson governs how a finding is *verified*, that one governs Critical handling).

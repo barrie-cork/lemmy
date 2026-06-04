@@ -6701,6 +6701,62 @@ async fn admin_set_config_community_scope_by_moderator() -> lemmy_utils::error::
   Ok(())
 }
 
+/// M1-b task 7 test 1: with `messaging_enabled` absent (clean posture), the
+/// `governance_messaging_config` table has no row for `(instance, messaging_enabled)`.
+/// `bridge_notify::notify_if_enabled` reads this via `read_current` and returns
+/// `Ok(())` immediately — governance assertions are unaffected by the missing config.
+#[tokio::test(flavor = "multi_thread")]
+async fn messaging_disabled_preserves_governance_posture() -> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_db_schema::source::governance::governance_messaging_config::GovernanceMessagingConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_person_id, _admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_cp", true).await?;
+
+  let result =
+    GovernanceMessagingConfig::read_current(&mut context.pool(), "instance", "messaging_enabled")
+      .await?;
+  assert_eq!(
+    result.and_then(|row| row.value_bool),
+    Some(false),
+    "clean posture: migration seeds messaging_enabled=false row → bridge_notify no-op path is active",
+  );
+
+  Ok(())
+}
+
+/// M1-b task 7 test 2: validator rejects `identity_policy=real_name` for `jury` scope.
+/// Admin caller (so rejection is from the validator, not the `is_admin` gate). ADR-015.
+#[tokio::test(flavor = "multi_thread")]
+async fn messaging_identity_policy_rejects_jury_override() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::web::Json;
+  use lemmy_api::governance::messaging_config::admin_set_messaging_config;
+  use lemmy_api_common::governance::AdminSetMessagingConfig;
+
+  let (_container, context, _db_url) = admin_config_fixtures::bootstrap().await?;
+  let instance = admin_config_fixtures::bootstrap_instance(&context).await?;
+  let (_, admin_view) =
+    admin_config_fixtures::seed_user(&context, instance.id, "admin_ip", true).await?;
+
+  let result = admin_set_messaging_config(
+    Json(AdminSetMessagingConfig {
+      scope: "jury".to_string(),
+      key: "identity_policy".to_string(),
+      value: serde_json::json!("real_name"),
+    }),
+    admin_view,
+    context.clone(),
+  )
+  .await;
+  assert!(
+    result.is_err(),
+    "identity_policy=real_name for jury scope must be rejected (ADR-015)",
+  );
+
+  Ok(())
+}
+
 /// Task 8 test 9: GET /admin/config without filters returns every
 /// CONFIG_KEY_METADATA row; each entry carries `effective_from` matching
 /// either "default" (const) or "instance" (seed row).

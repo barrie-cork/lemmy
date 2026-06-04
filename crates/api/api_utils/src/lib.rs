@@ -1,3 +1,4 @@
+pub mod bridge_notify;
 pub mod build_response;
 pub mod claims;
 pub mod context;
