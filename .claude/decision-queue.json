@@ -1,6 +1,7 @@
 {
   "schema_version": 3,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -16,18 +17,16 @@
       ],
       "branch": "junior/role-impl-task-m1-a-task-12-provision-softpause-see-claude-prps-briefs-m1-a-impl-12-md-593",
       "phase_task": 12,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "cargo check GREEN (exit 0). 8 dead_code warnings: puppet_map, tuwunel_url, as_token, create_community_room (provision.rs — wired Task 13), BridgeNotifyPayload, BridgeMessageContent, send_as_puppet (relay.rs — used Tasks 12+), ensure_puppet. All expected per brief shape note. Finished in 3.04s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T20:20:00Z",
       "approved_by": null,
       "approved_at": null,
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_commands": null,
       "id": "c5d7b8ae42ab-001"
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": "ship3clarify01-001",
       "kind": "clarify",
