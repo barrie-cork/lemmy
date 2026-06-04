@@ -2233,3 +2233,7 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** request-changes
 - **cr-2 falsifiable-hypothesis gate:** CONFIRMED real. json.load of origin/phase-v1-quality-r3c:.claude/decision-queue.json (SHA 0216babc) decodes 2 string values as 'scripts\x08rehon' — \b escape collapses path. OVERRODE brief pre-classification (raw-text probe mis-falsified as NO_BACKSPACE; decoded test is decisive). cr-2 stays fix-in-pr.
 - **cr-1/cr-3/cr-4/cr-5:** wont-fix per advisor pre-classification — rationales written to YAML (historical resolved DQ row / planning-brief lint / superseded planning brief test-logic / custom PR-body convention).
+
+## advisor: auto-phase m1-b — 2026-06-04 08:14 UTC
+- gate 1 (plan approval) PASSED: DoD §15.1 check exit 0 + §15.2 clippy exit 0 (vs HEAD); watchpoint gate ✓ (8/8 risks file-specific); MiniMax designation 3/5 (trial fires per user override).
+- dispatched bm-cut Junior #572 for phase-m1-b (Mode B; M1 Tree B, Tasks 0-7). base_branch governance-v0 @ 9c7dac9c4.
