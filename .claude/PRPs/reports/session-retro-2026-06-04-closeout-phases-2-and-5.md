@@ -150,6 +150,46 @@ Junior-specific and don't apply to laptop `Workflow` subagents).
   (not `/auto-phase` auto-state, which will never exist for this lane).
 - **Dependabot alert dismissal is a pending user action** (12 wasmtime alerts + the
   T3 tar-dispute). Not a retro item — a tracked obligation surfaced to the user.
+  → *Resolved later this session: see Continuation below.*
+
+---
+
+## Continuation (same session, post-initial-retro) — dismissal execution surfaced 2 new findings
+
+After this retro was first written, the session continued: the user asked to prep +
+run the Dependabot dismissals. That execution leg was NOT pure execution — it surfaced
+two findings worth recording (appended here rather than spawning a near-duplicate v2
+retro, per the skill's anti-over-promotion + "when-not-to-use" discipline):
+
+- **`gh api` Dependabot `dismissed_comment` caps at 280 chars** (learned the hard way:
+  3 rejected attempts at 459 / 306 / 282 chars before a 257-char comment succeeded).
+  Each over-length attempt was a *safe* HTTP 422 — rejected before any state mutation,
+  so no alert was half-dismissed; the per-call exit-check (not piped through `tail`)
+  caught each cleanly. Reusable fact, now in the dismissal-command script header +
+  the deferral decision record. **This validates the cargo-output-capture discipline
+  generalising to `gh api`** — checking each call's exit status individually (vs a
+  piped batch) is what made the failure visible + safe.
+
+- **Phase 4-T3 premise was INVERTED** (the 5th stale-plan-fact this session — see
+  What-to-change #1, count revised 3×→5×). Plan said "astral-tokio-tar 0.6.0 IS the
+  fix release; dispute it." Reality: we pin 0.6.0 which is *vulnerable*; 0.6.1/0.6.2
+  are the fixes. BUT astral-tokio-tar is dev-only (via `testcontainers`, the e2e
+  harness) → zero production exposure. The verify caught that "dispute"
+  (`dismissed_reason: inaccurate`) would have been a *false security claim*. User
+  chose to skip dismissal + bump testcontainers post-M1 (a real fix) over
+  dismiss-as-dev-only. The 7 alerts left open (tar ×3 + rustls-webpki ×3 + idna ×1)
+  are all deliberate — and dismissing the rustls-webpki HIGH #55 would have hidden a
+  real fixable alert, which the cluster-by-cluster verify prevented.
+
+**Outcome of the dismissal leg:** 12 wasmtime alerts dismissed `tolerable_risk`
+(commit `e719081b2`); 18 → 7 open. Session-close housekeeping (commit `a7da7e921`):
+living-state updated, `.claude/workflows/phase2-doc-drift.js` tracked (resolves
+What-to-change #4). Both were pure execution — no further findings.
+
+**Net session arc:** the verify-against-reality pattern fired **5 times** (RT-r2
+annotate→repoint, "13 aarch64 criticals"→12-mixed, dead PR #847, `/schedule` 7-day
+expiry, T3 tar-0.6.0-inversion). That density on a single ~plan-section is the
+strongest possible evidence for promotion candidate #1.
 
 ---
 
@@ -157,9 +197,17 @@ Junior-specific and don't apply to laptop `Workflow` subagents).
 
 - [ ] Change #1 (verify plan-stated external facts before acting): **augment** existing
   `.claude/lessons/feedback_runbook_audit_drift_post_event_check.md` with the
-  "external facts = alert counts / upstream PR-release state / file existence" axis
-  (3× this session; the lesson + `feedback_verify_automated_reviewer_claims_against_compiler`
-  already establish the pattern → meets ≥2 threshold). Cross-harness lesson.
+  "external facts = alert counts / upstream PR-release state / file existence / which-
+  version-is-the-fix" axis (**5× this session** — RT-r2, alert count, dead PR #847,
+  /schedule expiry, T3 tar-version inversion; the lesson +
+  `feedback_verify_automated_reviewer_claims_against_compiler` already establish the
+  pattern → far exceeds ≥2 threshold). Cross-harness lesson. **PMD eval 785 records
+  the evidence.**
+- [ ] (minor) `gh api` Dependabot `dismissed_comment` 280-char limit + the
+  cargo-output-capture-generalises-to-gh-api point (per-call exit-check, not piped
+  batch). Borderline for a lesson; captured in the dismissal-script header + this
+  retro's Continuation. Promote only if a 2nd outbound-batch API hits a similar
+  silent-limit footgun.
 - [ ] Change #2 (update close-out plan stale facts in place): direct edit to
   `.claude/PRPs/plans/v1-closeout.plan.md` Phase 2 + Phase 5 sections. Not a lesson —
   a one-time plan correction.
