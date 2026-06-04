@@ -17,20 +17,32 @@
 
 > Append a dated block each working session. Keep it factual: what shipped, what's gated, what the next concrete action is. This is the resume surface — a fresh session reads this section + the bootstrap handover and knows where it stands.
 
-### State snapshot (as of 2026-06-04, session `f2240f74` — Phases 2+5 shipped via Workflow tool)
+### State snapshot (as of 2026-06-04, session post-M1 — M1 MERGED, trunk integrated, Phases 6–8 UNBLOCKED)
 
 | Axis | Value |
 |---|---|
-| Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `e719081b2`, all pushed) |
+| Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `060bcac15` — the post-M1 merge commit; **all pushed**, 0 behind / 20 ahead origin/gov-v0) |
 | Mode | Mode A (dedicated lane worktree) — own CC session, laptop-local |
 | Harness | **GREEN — SIGNED OFF** (unchanged; flag `.claude/audit-phase-v1-closeout-complete.flag` SET). |
-| M1 gate | **CLOSED** — `phase-m1-b` is **+39 commits** over `governance-v0` (was +29 at this session's start; M1 advanced ~10 commits mid-session, still mid-flight, no trunk merge). Phases 6–8 + Phase 4-T1/T2 GATED; NO-ELITEDESK live. |
-| Phases done | Phase 0 ✅ · harness ✅ · **Phase 1 (all hygiene) ✅** · **Phase 2 (doc-drift) ✅** · **Phase 3 (carry-patch audit + drafts) ✅** · **Phase 5 (wasmtime keep-deferred) ✅** |
-| In progress | — (clean handoff; HEAD `e719081b2`, working tree clean). |
-| Next action | **`/auto-phase` does NOT apply to this lane** (it hard-refuses off `governance-v0` + only drives the four-role Junior pipeline, which is M1-gated). Close-out is a HYBRID: 🟦 phases run via the **`Workflow` tool** (laptop subagents, M1-safe), 🟨 phases run advisor-direct. **Next executable:** Phase 1c MEMORY.md prune already done (line 50); remaining laptop-local = Phase 4-T3 (astral-tokio-tar — user chose bump-post-M1 over dismiss) + nothing else pre-M1. **Re-check M1 gate FIRST each session** (`git log origin/phase-m1-b ^origin/governance-v0 \| wc -l` → 0 = flips, Phases 6–8 + 4-T1/T2 unblock, rebase onto post-M1 trunk before Phase 6). |
+| M1 gate | **🔓 OPEN — M1 SHIPPED.** PR #177 (`phase-m1-b`) merged into `governance-v0` at `d6d027794`. `git log origin/phase-m1-b ^origin/governance-v0` = **EMPTY**. **Phases 6–8 + Phase 4-T1/T2 UNBLOCKED.** Daemon **FREE** (0 active/0 queued, `daemon_status` PID 2120848). **NO-ELITEDESK LIFTS** (M1 released the daemon — close-out may now dispatch Junior). |
+| Phases done | Phase 0 ✅ · harness ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 5 ✅ · **post-M1 trunk integration ✅ (this session)** |
+| In progress | — (clean handoff; HEAD `060bcac15`, working tree clean, pushed). |
+| Next action | **Phase 6 (e2e.rs decomposition).** Integration done — no rebase needed (merged instead, per user decision; see session block below). **DO NOT re-merge/re-rebase** — the lane is already current with post-M1 trunk. Start Phase 6 per plan §"Phase 6": 🟦 Workflow plan-the-split (read-only line-range map of the 18,582-line `crates/server/tests/e2e.rs` per test domain) → 🟩 four-role behaviour-preserving execute. Then Phase 7 (type-state, 6 sites), Phase 8 (TODO sweep + capstone retro). Task list seeded (TaskList: #2 Phase6, #3 Phase7, #4 Phase8 — all unblocked now that #1 is done). |
 
-**Executable NOW** (laptop-local, M1-safe): nothing critical pre-M1 — Phases 1/2/3/5 + DQ archive all DONE. Optional: Phase 4-T3 bump (deferred to post-M1 lockfile-free window by user choice). **Pending USER actions (not blocking):** file Phase 3 PR1 (windows-signal) upstream + Docker-clippy for PR2; 3 retro promotion candidates in `session-retro-2026-06-04-closeout-phases-2-and-5.md`.
-**BLOCKED until M1 merges:** Phase 4-**T1**/**T2** + **Phases 6–8** (e2e split / type-state / TODO-sweep — M1 owns those files). When gate flips: rebase close-out lane onto post-M1 `governance-v0`, verify daemon free via `list_tasks`, then lift NO-ELITEDESK.
+**Targets verified present on the working branch (post-merge, 2026-06-04):** `crates/server/tests/e2e.rs` = **18,582 lines**; **6** `TODO(type-state)` sites (accept_jury_assignment.rs:110, admin_assign_jury.rs:122, admin_close_case.rs:65, admin_trigger_appeal_rejury.rs:68, sponsor_liability_grace.rs:135, submit_jury_vote.rs:271); **17** `TODO(brehon-fork)` markers; M1's `messaging_config.rs` + `governance_messaging_config.rs` merged in cleanly.
+**Executable NOW (M1 unblocked):** Phases 6, 7, 8 + Phase 4-T1/T2 (deps-r2). NO-ELITEDESK lifted → four-role Junior OK; OR laptop-local per `project_laptop_canonical_cargo_runner.md` (cargo still laptop-only — that rule survives M1).
+**Pending USER actions (not blocking, carried from prior session):** file Phase 3 PR1 (windows-signal) upstream + Docker-clippy for PR2; 3 retro promotion candidates in `session-retro-2026-06-04-closeout-phases-2-and-5.md`; rotate MiniMax key after m1-b trial (MEMORY.md pending obligation).
+
+### 2026-06-04 (cont. 5) — post-M1 trunk integration (M1 shipped; merge not rebase)
+
+- **M1 GATE FLIPPED — M1 SHIPPED.** PR #177 (`phase-m1-b`) merged into `governance-v0` at `d6d027794` (`99ad26dc0` = bm-merge-complete tip). `git log origin/phase-m1-b ^origin/governance-v0` empty. Daemon free (`daemon_status`: 0 active/0 queued). **NO-ELITEDESK lifts; Phases 6–8 + 4-T1/T2 unblock.**
+- **Integration = MERGE, not rebase (user decision via AskUserQuestion).** The plan said "rebase onto post-M1 trunk," but all 19 closeout commits are **meta-only** (`.claude/`+`docs/`, zero `crates/` — the direct-commit-on-gov-v0 file set, never a PR). Rebase would rewrite pushed SHAs + force-push (against `no-destructive-defaults.md`). **Chose `git merge origin/governance-v0` → `phase-v1-closeout`** (commit `060bcac15`): resolves the collision once, preserves both histories, no force-push. Lane now 0 behind / 20 ahead origin/gov-v0, pushed.
+- **Cross-session collision resolved (canonical `brehon-fork` M1-advisor session authored overlapping meta-files same day).** 5 files overlapped; 2 identical (no conflict: `feedback_daemon_telegram_completion_hook.md`, `v1-closeout-lane-setup-report.md`); **3 genuinely conflicted**:
+  - **2 lessons** (`feedback_advisor_watchpoint_specificity.md`, `feedback_verify_automated_reviewer_claims_against_compiler.md`) — both sessions **independently reconstructed the same broken-citation lessons** on 2026-06-04. **Resolution (user): took gov-v0's versions** (`--theirs`; richer — they carry worked bad→good examples + the PR#132 `.get(0)`→`.first()` Diesel incident). Closeout's shorter parallel reconstructions dropped. Verified staged blobs == gov-v0 blobs.
+  - **`decision-queue.json`** — gov-v0 had **282** resolved (M1's full history + un-archived legacy int-ids 225–282); closeout had **167** (it archived the legacy ints in Phase 1) + **1 unique** entry `466deb2e9332-001` (Phase-5 wasmtime keep-deferred log). **Resolution: UNION** — gov-v0 as authoritative base (proper schema-v3 shape) + the 1 closeout-unique entry = **283 resolved, 0 pending, 0 duplicate ids**, valid JSON (written `ensure_ascii=False`). The 1 common id with substantive diff (`a192dbab1de8-001`, the M1 split decision) → took gov-v0's (trunk-authoritative, well-formed).
+- **Post-merge sanity GREEN:** working tree clean, no conflict markers, M1's messaging crates present, all Phase 6/7/8 targets confirmed on the working branch (counts above).
+- **⚠️ Cargo is STILL laptop-only** even with NO-ELITEDESK lifted — `project_laptop_canonical_cargo_runner.md` is independent of the M1-daemon-block and survives M1 ship. Phase 6/7 cargo+e2e runs on the laptop (64 GB); Junior may orchestrate but workers write `validate-pending-laptop[-e2e]` + STOP.
+- **NEXT SESSION:** start **Phase 6** directly (integration is DONE — do NOT re-merge). Re-verify M1 gate empty as a 5-sec sanity (`git log origin/phase-m1-b ^origin/governance-v0`), then launch the Phase-6 🟦 plan-the-split workflow (read-only line-range domain map of e2e.rs) per plan §"Phase 6". Task list (#2/#3/#4) seeded + unblocked.
 
 ### 2026-06-04 (cont. 4) — session `f2240f74` (Phases 2+5 shipped; `/auto-phase` correctly refused)
 
