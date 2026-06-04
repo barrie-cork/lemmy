@@ -1,6 +1,31 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-b-task-2-governance-messaging-config-model-newtype-schema-see-claude-prps-briefs-m1-b-impl-2-md-575",
+      "phase_task": 2,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "question": "Workspace check for governance_messaging_config model+newtype+schema — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 added GovernanceMessagingConfig model + MessagingConfigId newtype + schema.rs table macro/joinable/allow_tables. Mirrors governance_config sibling minus value_float. cargo check --workspace --features full required (model must compile in full mode; the #[cfg(feature=full)] Diesel derives only activate under --features full). Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "5d109e344b80-001"
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
