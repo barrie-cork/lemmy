@@ -1,24 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-06-03T00:00:00Z",
-      "question": "M1 complexity scores 23/10 across two disjoint trees. Split into phase-m1-b (Tree B, Brehon-side Tasks 1-7) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14), or proceed as one phase?",
-      "options": [
-        "split",
-        "proceed-as-one"
-      ],
-      "context": "Tree A (services/bridge/, workspace-excluded) and Tree B (Brehon-side, in-workspace) have disjoint validation harnesses (workspace cargo + e2e vs inside-services/bridge cargo + docker-compose), disjoint failure modes, and a one-directional dependency: Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse. Planner recommends split. Metric under-counts Tree A greenfield LOC (see plan section 18-R1).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a192dbab1de8-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5653,6 +5635,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a192dbab1de8-002"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "M1 complexity scores 23/10 across two disjoint trees. Split into phase-m1-b (Tree B, Brehon-side Tasks 1-7) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14), or proceed as one phase?",
+      "options": [
+        "split",
+        "proceed-as-one"
+      ],
+      "context": "Tree A (services/bridge/, workspace-excluded) and Tree B (Brehon-side, in-workspace) have disjoint validation harnesses (workspace cargo + e2e vs inside-services/bridge cargo + docker-compose), disjoint failure modes, and a one-directional dependency: Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse. Planner recommends split. Metric under-counts Tree A greenfield LOC (see plan section 18-R1).",
+      "answer": "split. User chose to split M1 into phase-m1-b (Tree B, Tasks 1-7 — Brehon-side, standard workspace+e2e validation) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14 — inside-services/bridge cargo + docker-compose). Rationale per planner: disjoint validation harnesses, one-directional dependency (Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse), disjoint failure modes; the 23/10 metric under-counts Tree A greenfield LOC (plan §18-R1). Selected via AskUserQuestion gate.",
+      "answered_by": "user",
+      "resolved_at": "2026-06-04T07:54:17Z",
+      "approved_by": "a3d0e9941441",
+      "approved_at": "2026-06-04T07:54:17Z",
+      "id": "a192dbab1de8-001"
     }
   ]
 }
