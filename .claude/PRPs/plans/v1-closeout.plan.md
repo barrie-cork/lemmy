@@ -365,9 +365,11 @@ Why it matters: the monolith is a documented, recurring Junior Edit-hang hazard 
 
 ---
 
-## Phase 7 — Type-state retrofit (6 sites)  🟩 four-role (gated) — **GATED ON M1 MERGE**
+## Phase 7 — Type-state retrofit (6 sites)  🟩 four-role / direct (Sonnet) — **M1 GATE CLEARED 2026-06-04**
 
-Goal: replace ad-hoc `case.status` match-guards with the `GovernanceCase<S>` phantom type-state wrapper at the 6 annotated sites. **Deferred behind M1** — the sites live in `crates/api/api/src/governance/` alongside M1's `mod.rs`/`admin_config.rs`/`messaging_config.rs` edits; sharing the directory + `mod.rs` risks merge conflict.
+> **▶ RECON DONE (2026-06-04): `.claude/PRPs/reports/v1-closeout-phase7-typestate-recon.md`** — read it before executing. All 6 sites mapped + guard shapes + state markers + the scaffold placement decision. Key decisions captured there: (1) scaffold goes in **`crates/api/api/src/governance/state.rs`** (new, sibling to `jury_common.rs`), `#[cfg(feature="full")]`-gated (NOT api_common — lower churn); (2) keep `LemmyErrorType::NotFound` (NOT a new `InvalidCaseState` — behaviour-preserving); (3) **site 6 (`submit_jury_vote.rs:271`) early-returns `Ok(case_decided:true)` NOT an error — a naive TryFrom→Err flips 200→404; it's the one genuine judgement call → surface to user at Phase 7 start**; (4) `CaseStatus` = **12** variants (lesson says 13 — stale, fix at close). Scaffold does NOT exist yet (the `db_views/governance_case` types are unrelated read-model views).
+
+Goal: replace ad-hoc `case.status` match-guards with the `GovernanceCase<S>` phantom type-state wrapper at the 6 annotated sites. **Gate CLEARED** (m1-b merged + integrated; m1-a disjoint). The sites live in `crates/api/api/src/governance/` — M1's Tree-B edits (`mod.rs`/`messaging_config.rs`) are already merged into this lane, so no further M1 conflict.
 
 The 6 `TODO(type-state)` sites (canonical pattern: `feedback_governance_type_state_handlers.md` — `GovernanceCase<S>` + `TryFrom<ModerationCase>` centralising the `CaseStatus` guard):
 - `accept_jury_assignment.rs:110` — dual-role match → `GovernanceCase<JurySelection>`
