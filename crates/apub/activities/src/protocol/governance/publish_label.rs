@@ -10,8 +10,8 @@ use url::Url;
 /// Object-discriminator for `PublishLabel`. See
 /// `publish_sanction_notice.rs` for the rationale.
 ///
-/// TODO(merge-1b): collapse into
-/// `lemmy_apub_objects::protocol::governance::ModerationLabelProtocol`.
+/// v2-cleanup: typed struct `ModerationLabelProtocol` already exists in
+/// `lemmy_apub_objects::protocol::governance` — collapse this stub then.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModerationLabelObjectStub {
@@ -32,9 +32,8 @@ pub enum ModerationLabelKind {
 /// trait impl exist so downstream phases can wire it without churning
 /// the `SharedInboxActivities` registration.
 ///
-/// TODO(merge-1b): replace `object: ModerationLabelObjectStub` with
-/// `object: lemmy_apub_objects::protocol::governance::ModerationLabelProtocol`
-/// once Agent B lands the typed object protocol struct.
+/// v2-cleanup: replace `object: ModerationLabelObjectStub` with
+/// `lemmy_apub_objects::protocol::governance::ModerationLabelProtocol`.
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

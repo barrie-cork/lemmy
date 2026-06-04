@@ -307,9 +307,8 @@ pub async fn build_local_sanction_notice_plan(
   );
 
   // Step 6 — wrap in the Create activity. The wrapper carries
-  // `SanctionNoticeObjectStub` rather than the typed protocol per Agent
-  // C's task 73 — see TODO(merge-1b) in
-  // `protocol/governance/publish_sanction_notice.rs`. Serialise the
+  // `SanctionNoticeObjectStub` rather than the typed protocol (v2-cleanup —
+  // see `protocol/governance/publish_sanction_notice.rs`). Serialise the
   // typed protocol once and copy its fields into the stub's flattened
   // map; preserve the `type` discriminator on `stub.kind`.
   let object_stub = stub_from_protocol(&object_protocol)?;
@@ -549,8 +548,8 @@ fn synthesise_object_id(
 /// serialising your `SanctionNoticeProtocol` with `serde_json::to_value`
 /// and copying into the `Map`."
 ///
-/// TODO(merge-1b): remove this shim when the wrapper switches to
-/// carrying the typed protocol directly.
+/// v2-cleanup: remove this shim when the wrapper switches to
+/// `SanctionNoticeProtocol` directly (see protocol/governance/mod.rs note).
 fn stub_from_protocol(protocol: &SanctionNoticeProtocol) -> LemmyResult<SanctionNoticeObjectStub> {
   let value = serde_json::to_value(protocol)?;
   let mut object_map: Map<String, Value> = match value {

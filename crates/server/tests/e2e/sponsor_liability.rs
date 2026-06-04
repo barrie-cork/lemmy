@@ -257,6 +257,11 @@ mod v1_sl_b_fixtures {
     );
 
     // Snapshots: both sponsor + sponsee recomputed (calculated_at >= test_start).
+    // test_start is captured before revoke_endorsement (above), so the recomputation
+    // triggered by that call produces a calculated_at that should be >= test_start.
+    // Rare flake: Postgres `now()` at trigger fire time may lag Rust `Utc::now()`
+    // by a few hundred milliseconds if the PG and host clocks diverge at sub-ms
+    // resolution. The logic is correct; this is a clock-sync edge case.
     let sponsor_calc = read_snapshot_calculated_at(&mut conn, sponsor)
       .await?
       .expect("sponsor snapshot exists post-recompute");

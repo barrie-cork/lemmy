@@ -364,8 +364,8 @@ pub async fn receive_remote_trust_attestation(
 /// already constrained `kind` to the single `SanctionNoticeKind::SanctionNotice`
 /// variant, so this is just a shape adjustment, not a trust decision.
 ///
-/// TODO(merge-1b): drop this helper when the wrapper carries the typed
-/// protocol directly (matching outbound symmetry).
+/// v2-cleanup: drop this helper when the wrapper switches to typed protocol
+/// (see `protocol/governance/mod.rs` note; outbound symmetry is the goal).
 fn decode_sanction_notice_object(
   activity: &PublishSanctionNotice,
 ) -> LemmyResult<SanctionNoticeProtocol> {

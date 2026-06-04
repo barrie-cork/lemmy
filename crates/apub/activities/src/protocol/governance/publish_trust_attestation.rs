@@ -10,8 +10,8 @@ use url::Url;
 /// Object-discriminator for `PublishTrustAttestation`. See
 /// `publish_sanction_notice.rs` for the rationale.
 ///
-/// TODO(merge-1b): collapse into
-/// `lemmy_apub_objects::protocol::governance::TrustAttestationProtocol`.
+/// v2-cleanup: typed struct `TrustAttestationProtocol` already exists in
+/// `lemmy_apub_objects::protocol::governance` — collapse this stub then.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrustAttestationObjectStub {
@@ -32,9 +32,8 @@ pub enum TrustAttestationKind {
 /// `Announce` envelopes). Plumbed for v0 but no v0 endpoint emits one;
 /// v1 wires this from endorsement creation per plan task 74.
 ///
-/// TODO(merge-1b): replace `object: TrustAttestationObjectStub` with
-/// `object: lemmy_apub_objects::protocol::governance::TrustAttestationProtocol`
-/// once Agent B lands the typed object protocol struct.
+/// v2-cleanup: replace `object: TrustAttestationObjectStub` with
+/// `lemmy_apub_objects::protocol::governance::TrustAttestationProtocol`.
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
