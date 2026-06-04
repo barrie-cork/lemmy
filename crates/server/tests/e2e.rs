@@ -1123,6 +1123,8 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
+  // M1-b governance-messaging (1 migration, bump 19 → 20)
+  "2026-06-03-000000-0000_add_governance_messaging_config",
   // v1-federation-inbound-a (1 migration, bump 18 → 19)
   "2026-05-17-000000-0000_add_federation_inbound_v1",
   // v1-RT-r1 (4 migrations, bump 14 → 18)
