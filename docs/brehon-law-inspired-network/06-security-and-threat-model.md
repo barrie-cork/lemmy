@@ -52,6 +52,16 @@ The code path serving posts/comments/votes must **not** directly finalise sancti
 
 Reference: OWASP Authorization Cheat Sheet, Broken Access Control (A01).
 
+#### 2.2.2 Chat-plane ↔ app-plane boundary (M1 bridge)
+
+The Matrix AS bridge (`services/bridge/`) introduces a third plane — the **chat plane** — sitting between the governance app plane and end-user Matrix clients. The boundary contract:
+
+- The bridge daemon is **outbound-only for governance signals**: it reads `governance_messaging_config` and the `bridge_notify` webhook; it does NOT write to any governance table directly. All governance writes go through the normal Brehon API (`/api/v4/governance/*`).
+- **No cross-plane data flow**: Matrix event payloads (DM text, images, voice notes) are forwarded as-is; they are never parsed as governance evidence and never stored in the Brehon database.
+- **App Service token isolation**: the `as_token` and `hs_token` in `registration.yaml` are bridge-local credentials scoped to the Matrix homeserver. They grant no Brehon API access.
+- **Soft-pause drain is bridge-side only**: when `messaging_enabled = false` the relay stops accepting new events and drains; the governance config itself is not modified by the bridge (read-only consumer).
+- **No federation bypass**: the Tuwunel homeserver in the bridge stack runs with federation disabled (`CONDUIT_ALLOW_FEDERATION=false`). Matrix traffic stays within the local docker-compose network; no external Matrix federation occurs.
+
 #### 2.2.1 Emergency-remove override for illegal content
 
 The jury system cannot be the only removal path for content that must come down immediately regardless of procedural fairness: CSAM, credible threats, doxxing of private individuals, legally-compelled takedowns. Some of these have sub-hour legal response requirements.
@@ -388,6 +398,10 @@ Keep this table updated. Every significant new feature adds rows. Every incident
 | Illegal content (CSAM etc.) | Slow jury response blocks legal compliance | Admin emergency-remove with post-facto jury review | §2.2.1 |
 | Emergency-remove override | Abused by admin to silence legitimate content | Post-facto jury review, meta-cases, peer notification, burst alerts | §4.10 |
 | Personal data in governance log | GDPR right-to-delete conflicts with append-only log | Pseudonymised actor IDs + deletable mapping; redaction service scrubs identifiers from rationale text | §6.1 |
+| Bridge daemon process | Compromised; used to exfiltrate DM content or inject Matrix events as governance evidence | Bridge is read-only consumer of governance config; no Brehon DB write access; AS token scoped to homeserver only; process isolated in docker-compose network | §2.2.2 |
+| Matrix homeserver (Tuwunel) | Hostile payload injected via Matrix client API to reach bridge relay | Schema validate all Matrix events at relay ingress; federation disabled (`allow_federation=false`); homeserver not internet-exposed in dev stack | §2.2.2 |
+| E2EE key material (matrix-sdk) | Mishandled; key leaked via bridge process memory or logs | matrix-sdk manages keys in an isolated SQLite store; bridge does not log event plaintext; no key export API exposed | §2.2.2 |
+| Media artefacts forwarded via bridge | Leaked to unintended recipients or stored permanently outside DM scope | Bridge forwards media event references only; does not re-upload or persist media; Tuwunel media retention follows homeserver policy | §2.2.2 |
 
 ## 8. Priority order for implementation
 

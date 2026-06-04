@@ -1,0 +1,268 @@
+---
+schema_version: 1
+pr: 179
+title: Phase m1-a — M1 Tree A: Matrix AS bridge (services/bridge/) + Tree C docs (7 tasks)
+head: phase-m1-a
+base: governance-v0
+opened_at: 2026-06-04T21:10:19Z
+poll_count: 1
+last_poll_at: 2026-06-04T21:30:00Z
+last_polled_head_sha: 94aca699c136963c2540f2117e749baa70f3f447
+last_polled_fingerprint: null
+recommendation: pending
+findings:
+  - id: cr-001
+    source: coderabbit
+    severity: major
+    summary: Decision-queue commands/answer mismatch (--ignored flag inconsistent)
+    file: .claude/decision-queue.json
+    line: 6043
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986192
+    notes: "Recorded commands include \"-- --ignored\" but answer text says it was omitted; update commands array to match actual execution or revise answer text for consistency."
+    rationale: null
+
+  - id: cr-002
+    source: coderabbit
+    severity: low
+    summary: Markdownlint violations (missing language identifier, blank lines)
+    file: .claude/PRPs/briefs/m1-a-impl-12.md
+    line: 5
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986198
+    notes: "Add language identifier to fenced code block at line 5 and blank lines around headings/fences at lines 15, 19, 22, 33, 75, 83, 85, 91, 105 to clear MD040/MD022/MD031 warnings."
+    rationale: null
+
+  - id: cr-003
+    source: coderabbit
+    severity: major
+    summary: User namespace regex mismatch (@_brehon_ vs @brehon_)
+    file: .claude/PRPs/briefs/m1-a-impl-13.md
+    line: 46
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986200
+    notes: "Registration.yaml uses `@brehon_.*` regex, but bridge code generates `@_brehon_.*` puppet prefix; update regex to `@_brehon_.*` to match puppet MXID pattern and avoid appservice user-query misses."
+    rationale: null
+
+  - id: cr-004
+    source: coderabbit
+    severity: major
+    summary: Incorrect Conduit/Tuwunel GitHub URLs in AGPL-NOTICE.md
+    file: AGPL-NOTICE.md
+    line: 40
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986206
+    notes: "Replace `https://github.com/matrix-org/conduit` (non-existent) and `https://github.com/girlbossceo/conduit` with correct Conduit URL and Tuwunel URL."
+    rationale: null
+
+  - id: cr-005
+    source: coderabbit
+    severity: major
+    summary: Security-threat-model doc claims need verification and clarification
+    file: docs/brehon-law-inspired-network/06-security-and-threat-model.md
+    line: 55
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986213
+    notes: "Clarify bridge polling behavior, bidirectional relay (not 'outbound-only'), and as_token target. Ensure governance_messaging_config wording maps to deployed BREHON_READ_URL path."
+    rationale: null
+
+  - id: cr-006
+    source: coderabbit
+    severity: low
+    summary: "Nitpick: Add Tuwunel issue #465 GitHub URL to docker-compose comment"
+    file: services/bridge/docker-compose.yml
+    line: 34
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986216
+    notes: "Append direct GitHub issue URL to the ip_source comment."
+    rationale: null
+
+  - id: cr-007
+    source: coderabbit
+    severity: low
+    summary: Clarify registration.yaml mount purpose (functional vs documentation-only)
+    file: services/bridge/docker-compose.yml
+    line: 40
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986224
+    notes: "Clarify whether registration.yaml mount is functional in M1 or documentation-only."
+    rationale: null
+
+  - id: cr-008
+    source: coderabbit
+    severity: low
+    summary: Set exclusive=true for puppet user namespace in registration.yaml
+    file: services/bridge/registration.yaml
+    line: 13
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986225
+    notes: "Change puppet user namespace exclusive flag from false to true."
+    rationale: null
+
+  - id: cr-009
+    source: coderabbit
+    severity: major
+    summary: Missing ADR-014 capability checks before admin room provisioning
+    file: services/bridge/src/appservice.rs
+    line: 142
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986232
+    notes: "Add hardcoded capability checks against reputation_snapshot flags before provision; return 403 if capability not set."
+    rationale: null
+
+  - id: cr-010
+    source: coderabbit
+    severity: low
+    summary: Validate room_alias instead of defaulting to brehon-default
+    file: services/bridge/src/appservice.rs
+    line: 146
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986235
+    notes: "Return HTTP 400 for missing/empty room_alias instead of defaulting."
+    rationale: null
+
+  - id: cr-011
+    source: coderabbit
+    severity: major
+    summary: Fix panic-on-serve and improve task supervision in main.rs
+    file: services/bridge/src/main.rs
+    line: 47
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986240
+    notes: "Propagate axum::serve errors; keep JoinHandle for soft_pause poller; use select! for coordinated shutdown."
+    rationale: null
+
+  - id: cr-012
+    source: coderabbit
+    severity: major
+    summary: Add explicit timeout to Matrix createRoom HTTP call
+    file: services/bridge/src/provision.rs
+    line: 11
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986244
+    notes: "Configure reqwest::Client with timeout; apply same to relay.rs outbound calls."
+    rationale: null
+
+  - id: cr-013
+    source: coderabbit
+    severity: major
+    summary: Sanitise brehon_user before deriving Matrix MXID localpart
+    file: services/bridge/src/puppet.rs
+    line: 53
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986249
+    notes: "Add escape/unescape helpers to handle characters outside Matrix localpart set; ensure bijective encoding."
+    rationale: null
+
+  - id: cr-014
+    source: coderabbit
+    severity: major
+    summary: Fix ensure_puppet to avoid caching stale MXID mappings
+    file: services/bridge/src/puppet.rs
+    line: 78
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986255
+    notes: "Only cache when registration succeeds or M_USER_IN_USE; integrate appservice flow for deterministic creation."
+    rationale: null
+
+  - id: cr-015
+    source: coderabbit
+    severity: major
+    summary: Return error when relay fails instead of ACKing transaction
+    file: services/bridge/src/relay.rs
+    line: 78
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986260
+    notes: "Detect relay failures; return Err so transaction is not ACKed and can be retried."
+    rationale: null
+
+  - id: cr-016
+    source: coderabbit
+    severity: critical
+    summary: Fix recipient inference in relay (state_key usage breaks DM relay)
+    file: services/bridge/src/relay.rs
+    line: 97
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986263
+    notes: "infer_brehon_recipient() uses event[state_key] but m.room.message has no state_key; derive from room state or account-data instead."
+    rationale: null
+
+  - id: cr-017
+    source: coderabbit
+    severity: critical
+    summary: send_as_puppet stub is incomplete (Brehon→Matrix delivery non-functional)
+    file: services/bridge/src/relay.rs
+    line: 201
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986268
+    notes: "Returning stub-room without sending; implement real AS client send with idempotency."
+    rationale: null
+
+  - id: cr-018
+    source: coderabbit
+    severity: major
+    summary: Add explicit timeout to soft-pause polling client
+    file: services/bridge/src/soft_pause.rs
+    line: 13
+    posted_at: 2026-06-04T21:24:17Z
+    bucket: fix-in-pr
+    addressed_in: null
+    cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986270
+    notes: "Replace Client::new() with ClientBuilder::timeout(); ensure N < poll interval."
+    rationale: null
+
+counters:
+  critical:
+    open: 2
+    done: 0
+    rebutted: 0
+  major:
+    open: 13
+    done: 0
+    rebutted: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+  low:
+    open: 3
+    done: 0
+    rebutted: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
