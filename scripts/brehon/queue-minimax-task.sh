@@ -121,6 +121,19 @@ echo "  env-overrides: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN=<redacted>, ANTH
 # this local heredoc-free assembly; `read -r KEY` pulls the key from stdin.
 # `printf | ssh '<cmd>'` — the single-quoted ssh arg is the literal remote
 # command; the daemon's shell sees it after local ${...} expansion.
-REMOTE_CMD="read -r KEY && junior task add --base-branch '${BASE_BRANCH}' --env-override 'ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic' --env-override \"ANTHROPIC_AUTH_TOKEN=\${KEY}\" --env-override 'ANTHROPIC_MODEL=${MINIMAX_MODEL}' '${DESC}'"
+#
+# BUGFIX 2026-06-04 (m1-b T4 dispatch): the prior form ran `junior task add`
+# WITHOUT first `cd ${REMOTE_REPO}`. `ssh homeserver` lands in the login
+# default cwd (/home/barrie), where the `junior` CLI resolves to a DIFFERENT
+# daemon instance's DB (/home/barrie/.junior/junior.db — different schema)
+# instead of the brehon daemon at /srv/brehon-fork/.junior/junior.db. The
+# dispatch reported "Task #N queued" from the wrong DB and NO job appeared in
+# the brehon DB (no worktree created → silent no-op for brehon). Fix: `cd`
+# into the brehon repo so the CLI targets the brehon daemon. ALWAYS verify
+# the new job lands in /srv/brehon-fork/.junior/junior.db after dispatch
+# (the CLI's echoed id can be from any junior instance — see
+# issue_note_minimax_dispatch_wrong_daemon_db.md findings A+B).
+REMOTE_REPO="${JUNIOR_REMOTE_REPO:-/srv/brehon-fork}"
+REMOTE_CMD="cd '${REMOTE_REPO}' && read -r KEY && junior task add --base-branch '${BASE_BRANCH}' --env-override 'ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic' --env-override \"ANTHROPIC_AUTH_TOKEN=\${KEY}\" --env-override 'ANTHROPIC_MODEL=${MINIMAX_MODEL}' '${DESC}'"
 
 printf '%s\n' "${MINIMAX_API_KEY}" | ssh homeserver "${REMOTE_CMD}"
