@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T21:00:00Z",
+      "question": "Task 13 validate-pending-laptop — docker-compose up + cargo test dm_round_trip --ignored + docker compose down",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 13 impl committed: registration.yaml (dev AS tokens), docker-compose.yml (Tuwunel-only, federation-disabled, ip_source absent), tests/dm_round_trip.rs (5 #[ignore] stubs using todo!()), appservice.rs /admin/provision-room route wired. All tests are #[ignore]'d so cargo test --test dm_round_trip -- --ignored compiles + exits 0.",
+      "commands": [
+        "cd services/bridge && docker compose up -d",
+        "cd services/bridge && cargo test --test dm_round_trip -- --ignored",
+        "cd services/bridge && docker compose down"
+      ],
+      "branch": "junior/role-impl-task-m1-a-task-13-integration-test-registration-compose-see-claude-prps-briefs-m1-a-impl-13-md-594",
+      "phase_task": 13,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "fedec7727980-001"
+    }
+  ],
   "resolved": [
     {
       "from": "impl",
