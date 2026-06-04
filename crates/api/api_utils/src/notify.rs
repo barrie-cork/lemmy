@@ -303,6 +303,7 @@ async fn notify_private_message_internal(
 
   if is_create {
     plugin_hook_notification(notifications, context).await?;
+    crate::bridge_notify::notify_if_enabled(context, view).await.ok(); // fire-and-forget; never fails PM path (§10.5)
     let site_view = SiteView::read_local(&mut context.pool()).await?;
     if !site_view.local_site.email_notifications_disabled {
       let d = NotificationEmailData::PrivateMessage {
