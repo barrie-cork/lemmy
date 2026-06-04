@@ -24,13 +24,27 @@
 | Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `9924dccc8`) |
 | Mode | Mode A (dedicated lane worktree) — own CC session, laptop-local |
 | Harness | **GREEN — SIGNED OFF.** All 4 probes pass: P1 `lemmy_utils` exit 0; P2 `lemmy_db_schema --features full` exit 0; P3 full e2e `--no-run` compile exit 0 (26m47s, through `lemmy_server`); **P4 negative test exit 101** (non-zero exit-code propagation through the `.bat` shim verified — the critical check). Flag `.claude/audit-phase-v1-closeout-complete.flag` SET. |
-| M1 gate | **CLOSED** — `phase-m1-b` is **+22 commits** over `governance-v0` (tip `dc5b93ba8`, M1 mid-Task-5; re-verified this session, unchanged). Phases 6–8 GATED; NO-ELITEDESK live. |
-| Phases done | Phase 0 (bootstrap) ✅ + harness sign-off ✅ |
-| In progress | **Phase 3 carry-patch audit** — cost-gauge 🟦 workflow `wym9sz191` running (4 candidate-verifier agents → 2 PR-draft agents; laptop harness, daemon-free). Awaiting completion. |
-| Next action | Triage workflow output: confirm the 2 PR drafts (Windows-signal bundle = clean/file-now; clippy-`#[expect]` bundle = likely conditional on upstream toolchain) → surface to user for upstream filing. Then user picks next phase. **In-tree `#___` backfill stays GATED behind M1** (candidates live in `crates/`). |
+| M1 gate | **CLOSED** — `phase-m1-b` is **+25 commits** over `governance-v0` (tip `dc5b93ba8`; re-verified, M1 advancing). Phases 6–8 GATED; NO-ELITEDESK live. |
+| Phases done | Phase 0 (bootstrap) ✅ · harness sign-off ✅ · **Phase 1 (all hygiene) ✅** · **Phase 3 (carry-patch audit + 2 PR drafts) ✅** |
+| In progress | — (between phases; awaiting user direction) |
+| Next action | **User actions pending from Phase 3:** file PR1 (windows-signal) upstream; run Docker clippy check for PR2 (advisor can't push to LemmyNet). **Next executable phase (user's pick):** Phase 2 (doc-drift reconcile, 🟦 daemon-free) recommended, or Phase 4-T3/T4 (laptop-local) or Phase 5 (wasmtime decision). Phase 4-T1/T2 + Phases 6–8 stay M1-gated. |
 
 **Executable NOW** (laptop-local, no daemon, M1-isolation-safe): Phase 3 audit (cost-gauge first 🟦), Phase 1b/1c/1d hygiene, Phase 2 doc-drift, the **DQ archive** (545 KB / 273 resolved — over BOTH triggers), Phase 4-**T3** (tar-dispute, GitHub UI) + 4-**T4** (wasmtime-log DQ), Phase 5 **decision** (recommend keep-deferred + `/schedule` watch on extism PR #847).
 **BLOCKED until M1 merges:** Phase 4-**T1** (webmention inline, `api_utils/src/utils.rs` — was 🟩 four-role, now needs user decision: defer vs laptop-local impl), 4-**T2** (`[patch.crates-io]` Cargo.toml — M1 overlap), **Phases 6–8** (e2e split / type-state / TODO-sweep — M1 owns those files).
+
+### 2026-06-04 (cont. 2) — session `d3e7ac99` (Phase 1 hygiene COMPLETE + Phase 3 drafts delivered)
+
+- **Phase 3 carry-patch audit DONE.** Workflow `wym9sz191` (6 agents, ~531K tok) verified all 4 upstreamable candidates governance-free + still-needed-upstream. 2 PR drafts at `.claude/PRPs/reports/v1-closeout-phase3-carry-patch-audit.md`: **windows-signal = file-now** (clean, conf 0.90-0.95); **clippy-`#[expect]` = verify-first** (run the Docker `rust:1.95` clippy check before filing — the unstable lint may fire on upstream's CI). Key catch: fork working-tree diffs are NOT cherry-pickable (governance-coupled fixture arg + unrelated bundled edits) — the report's `## Changes` isolate clean hunks. **User action pending:** file PR1 upstream (advisor can't push to LemmyNet); in-tree `#___` backfill stays M1-gated.
+- **Phase 1 hygiene COMPLETE** (all sub-parts):
+  - **1a** — 6 orphaned worktree dirs removed (`rm -rf`, user-confirmed, re-inspected at delete-time). The re-inspect guard CAUGHT that `brehon-fork-scratch/sl-b/` was NOT empty (plan misdescribed it) — held 12 ephemeral SL-b files; user-confirmed separate delete. Only canonical + validate (M1) + closeout remain.
+  - **DQ archive** — `dq-archive.sh` (lane `BREHON_REPO=$(pwd)`, cutoff 340, slug `v1-closeout-legacy-int-ids`): 545,916 → 311,894 B (−43%), 273 → 166 resolved. 107 legacy integer-id entries archived; citation guard kept 30 cited-by-rule entries LIVE; 136 composite v3 entries stay live by policy. Commit `865642e8e`.
+  - **1b** — 46 shipped-sub-phase plans `git mv`'d to `completed/`. Active plans **55 → 9** (M1 + close-out + 7 cited-by-live-docs). All quality-r* verified done; deps-r2/r3 have no plan file. Commit `c715d6e7d`.
+  - **1c** — MEMORY.md milestone-prune (user-gated `memory-prune` skill). 25,119 → **24,366 B** (under the 24.4 KB budget) / 203 → **199 lines** (under 200). 7 shorten-in-place edits + CI-section consolidation; same-codebase caveat honored (all Cargo/Rust/Windows/daemon/git lessons KEPT, zero content lost, 160 links intact). *(Outside repo — no commit.)*
+  - **1d** — 2 missing always-load-rule citations reconstructed (`feedback_advisor_watchpoint_specificity.md`, `feedback_verify_automated_reviewer_claims_against_compiler.md`); Step-7 sweep now **0 TIER-1 broken citations**. Commit `b60d99a3a`.
+- **Skill-worth flags** appended to lane-setup report (user request): memory-prune + dq-archive.sh keep-as-is; candidate `carry-patch-upstream-audit` skill (defer to 2nd rebase sweep); citation-integrity GAP (fold into memory-prune Step 3.5); exit-code traps = discipline miss not missing skill. Commit `d7df62046`.
+- **M1 gate re-verified: now +25** (was +22; tip `dc5b93ba8`, M1 advancing). Gate firmly closed, NO-ELITEDESK live.
+- **Phases now DONE:** 0 (bootstrap), harness sign-off, **1 (all hygiene)**, **3 (carry-patch audit + drafts)**.
+- **Executable-now remaining:** Phase 2 (doc-drift reconcile), Phase 4-T3/T4 (laptop-local), Phase 5 (wasmtime decision). **Still M1-gated:** Phase 4-T1/T2, Phases 6–8.
 
 ### 2026-06-04 (cont.) — session `d3e7ac99` (harness sign-off + Phase 3 launch)
 
