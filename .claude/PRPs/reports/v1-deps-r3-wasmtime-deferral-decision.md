@@ -113,18 +113,28 @@ deployment is **low**.
    `crates.io` / `github.com/extism/extism/releases` for a release carrying
    wasmtime ≥ 42; when one lands, adopt it (bump extism, which transitively bumps
    wasmtime, which closes the alerts) instead of forking.
-4. **Dependabot dismissals (user action, GitHub UI)** — dismiss the 12 alerts with
-   the documented reason. Alert numbers + GHSA ids + dismissal-reason text below.
+4. **Dependabot dismissals — DONE 2026-06-04** (via `gh api PATCH .../dependabot/alerts/<N>`,
+   `dismissed_reason: tolerable_risk`). All 12 wasmtime alerts verified dismissed
+   (0 wasmtime open post-dismissal). Live open-alert count: 18 → 7 (the 7 remaining
+   are NOT wasmtime — see below). Note: GitHub's `dismissed_comment` caps at **280
+   chars**; the 257-char comment actually used is below.
 
-## Dependabot dismissal list (for the user — GitHub Security tab)
+## Dependabot dismissal — DONE (audit record)
 
-Dismiss each as **"Risk is tolerable to this project"** with the reason:
-> Extism (ADR-012 plugin host) pins wasmtime 41.0.4 via internal wiggle-macro APIs;
-> bare patch override won't compile. WASM guests are operator-authored governance
-> plugins, not attacker-supplied. The 2 criticals (#43, #46) are aarch64 sandbox
-> escapes — Brehon deploys x86_64 only. Remaining are medium/low requiring
-> attacker-controlled WASM. Deferred to deps-r3; will adopt upstream extism release
-> with wasmtime ≥ 42. See `.claude/PRPs/reports/v1-deps-r3-wasmtime-deferral-decision.md`.
+The 12 wasmtime alerts (#37–#47 + #60) were dismissed 2026-06-04 as
+`tolerable_risk` with this comment (257 chars — GitHub caps `dismissed_comment` at 280):
+> Deferred (deps-r3): extism 1.21.0 pins wasmtime 41.0.4 via wiggle-macros; bare
+> patch won't compile. WASM guests are operator-authored governance plugins
+> (ADR-012). Criticals aarch64-only; we deploy x86_64. See report
+> v1-deps-r3-wasmtime-deferral-decision.md
+
+**NOT dismissed (the 7 still open are deliberate):** astral-tokio-tar ×3 (dev-only,
+via testcontainers — user chose to skip dismissal + bump post-M1 instead) + rustls-webpki
+×3 + idna ×1 (Phase 4-T1/T2 *fixes*, M1-gated — dismissing the rustls-webpki HIGH #55
+would hide a real fixable alert). Per the Phase 4-T3 correction: astral-tokio-tar 0.6.0
+is NOT the fix release (the plan's premise was inverted) — 0.6.1/0.6.2 are the fixes;
+we pin the vulnerable 0.6.0, so "dispute" was wrong. It's dev-only so exposure is nil,
+and the right remedy is a testcontainers bump when M1 frees the lockfile.
 
 | Alert # | GHSA | Severity | Arch scope |
 |---|---|---|---|
