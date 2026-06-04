@@ -1,80 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "branch": "junior/role-impl-task-m1-a-task-8-bridge-skeleton-see-claude-prps-briefs-m1-a-impl-8-md-589",
-      "phase_task": 8,
-      "commands": [
-        "cd services/bridge && cargo check",
-        "cargo tree --workspace 2>/dev/null | grep -c -E 'matrix-sdk|ruma'"
-      ],
-      "question": "Tree-A Task 8: bridge crate compiles inside services/bridge AND workspace pulls zero Matrix deps — laptop runs cargo.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 8 scaffolded services/bridge/{Cargo.toml,src/main.rs,src/config.rs} (matrix-sdk 0.18 + ruma-appservice-api 0.16 + axum 0.8 + tokio; anyhow error; AS-server + soft-pause STUBS with TODO markers) and added exclude=[\"services/bridge\"] to root [workspace]. Ref MCP unavailable (no credits); dep versions follow plan §13 Task 8 pins and DQ a192dbab1de8-002. axum 0.8 from training knowledge. VALIDATE: (1) cd services/bridge && cargo check must be GREEN. (2) cargo tree --workspace grep for matrix-sdk or ruma must return 0 (story 6). NOT --workspace for bridge. NOT --features full.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "9d8da421eca0-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "branch": "junior/role-impl-task-m1-a-task-9-as-transaction-server-see-claude-prps-briefs-m1-a-impl-9-md-590",
-      "phase_task": 9,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "question": "Tree-A Task 9: AS transaction server compiles inside services/bridge — laptop runs cargo check.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 9 added services/bridge/src/appservice.rs (axum router for PUT /_matrix/app/v1/transactions/:txn_id, GET /_matrix/app/v1/users/:user_id, GET /_matrix/app/v1/rooms/:room_alias; hs_token auth via from_fn_with_state middleware; JSON body extraction with serde_json::Value events; per-handler tracing) and updated src/main.rs to mount it (mod appservice; Arc::new(AppState { config: Arc::new(config) })). Deps unchanged from Task 8 (ruma-appservice-api 0.16 + axum 0.8 already in Cargo.toml). VALIDATE: cd services/bridge && cargo check must be GREEN (exit 0). NOT --workspace. NOT --features full.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "216da0ce90a6-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "branch": "junior/role-impl-task-m1-a-task-9-as-transaction-server-see-claude-prps-briefs-m1-a-impl-9-md-590",
-      "phase_task": 9,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "question": "Tree-A Task 9: AS transaction server compiles inside services/bridge — laptop runs cargo check.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 9 added services/bridge/src/appservice.rs (axum router for PUT /_matrix/app/v1/transactions/:txn_id, GET /_matrix/app/v1/users/:user_id, GET /_matrix/app/v1/rooms/:room_alias; hs_token auth via from_fn_with_state middleware; JSON body extraction with serde_json::Value events; per-handler tracing) and updated src/main.rs to mount it (mod appservice; Arc::new(AppState { config: Arc::new(config) })). Deps unchanged from Task 8 (ruma-appservice-api 0.16 + axum 0.8 already in Cargo.toml). VALIDATE: cd services/bridge && cargo check must be GREEN (exit 0). NOT --workspace. NOT --features full.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "216da0ce90a6-002"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5954,6 +5880,79 @@
       "approved_by": null,
       "approved_at": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-a-task-9-as-transaction-server-see-claude-prps-briefs-m1-a-impl-9-md-590",
+      "phase_task": 9,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "question": "Tree-A Task 9: AS transaction server compiles inside services/bridge — laptop runs cargo check.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 9 added services/bridge/src/appservice.rs (axum router for PUT /_matrix/app/v1/transactions/:txn_id, GET /_matrix/app/v1/users/:user_id, GET /_matrix/app/v1/rooms/:room_alias; hs_token auth via from_fn_with_state middleware; JSON body extraction with serde_json::Value events; per-handler tracing) and updated src/main.rs to mount it (mod appservice; Arc::new(AppState { config: Arc::new(config) })). Deps unchanged from Task 8 (ruma-appservice-api 0.16 + axum 0.8 already in Cargo.toml). VALIDATE: cd services/bridge && cargo check must be GREEN (exit 0). NOT --workspace. NOT --features full.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check GREEN (exit 0); 1 dead_code warning (expected — fields used in Tasks 10-13); Finished in 3m 03s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T18:03:16Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "216da0ce90a6-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-a-task-9-as-transaction-server-see-claude-prps-briefs-m1-a-impl-9-md-590",
+      "phase_task": 9,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "question": "Tree-A Task 9: AS transaction server compiles inside services/bridge — laptop runs cargo check.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 9 added services/bridge/src/appservice.rs (axum router for PUT /_matrix/app/v1/transactions/:txn_id, GET /_matrix/app/v1/users/:user_id, GET /_matrix/app/v1/rooms/:room_alias; hs_token auth via from_fn_with_state middleware; JSON body extraction with serde_json::Value events; per-handler tracing) and updated src/main.rs to mount it (mod appservice; Arc::new(AppState { config: Arc::new(config) })). Deps unchanged from Task 8 (ruma-appservice-api 0.16 + axum 0.8 already in Cargo.toml). VALIDATE: cd services/bridge && cargo check must be GREEN (exit 0). NOT --workspace. NOT --features full.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check GREEN (exit 0); 1 dead_code warning (expected — fields used in Tasks 10-13); Finished in 3m 03s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T18:03:16Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "216da0ce90a6-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-a-task-8-bridge-skeleton-see-claude-prps-briefs-m1-a-impl-8-md-589",
+      "phase_task": 8,
+      "commands": [
+        "cd services/bridge && cargo check",
+        "cargo tree --workspace 2>/dev/null | grep -c -E 'matrix-sdk|ruma'"
+      ],
+      "question": "Tree-A Task 8: bridge crate compiles inside services/bridge AND workspace pulls zero Matrix deps — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 8 scaffolded services/bridge/{Cargo.toml,src/main.rs,src/config.rs} (matrix-sdk 0.18 + ruma-appservice-api 0.16 + axum 0.8 + tokio; anyhow error; AS-server + soft-pause STUBS with TODO markers) and added exclude=[\"services/bridge\"] to root [workspace]. Ref MCP unavailable (no credits); dep versions follow plan §13 Task 8 pins and DQ a192dbab1de8-002. axum 0.8 from training knowledge. VALIDATE: (1) cd services/bridge && cargo check must be GREEN. (2) cargo tree --workspace grep for matrix-sdk or ruma must return 0 (story 6). NOT --workspace for bridge. NOT --features full.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check GREEN (exit 0). cargo tree --workspace: 0 matrix-sdk/ruma deps (story-6 invariant satisfied).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T18:04:09Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9d8da421eca0-001"
     }
   ]
 }
