@@ -212,6 +212,63 @@ based on this session:
 
 ---
 
+## Skill-worth flags (surfaced during execution — Phases 1 + 3, 2026-06-04)
+
+What the close-out *execution* (not just bootstrap) surfaced as worth a skill,
+a skill fix, or a new automation. Logged here so the close-out retro (Phase 8)
+can promote the durable ones; none is urgent.
+
+### A. Existing skills that earned their keep (no change needed)
+- **`memory-prune`** — did exactly its job at the v1→M1 boundary (Phase 1c).
+  Its byte-budget framing (bind on bytes, not lines), the transfer-test for
+  milestone cuts, and the "archive line is itself a byte cost" warning all
+  fired correctly. The skill's own caution that a first pass can land *under
+  lines but over bytes* matched reality: pass 1 recovered ~551 B (estimated
+  ~920), needed a pass 2. **Keep as-is.**
+- **`dq-archive.sh`** (script, not skill) — the keep-cited citation guard is
+  the load-bearing safety: it kept 30 cited integer-id entries live that a
+  naive cutoff would have orphaned. **Keep as-is.**
+
+### B. Candidate NEW skill — `carry-patch-upstream-audit` (MEDIUM value)
+Phase 3 ran as an ad-hoc `Workflow` script (4 verify agents → 2 PR-draft
+agents). The shape is **repeatable every upstream rebase**: enumerate
+`TODO(brehon-fork)` markers → classify governance-free vs fork-local →
+diff each candidate against `upstream/main` → draft PRs. Worth promoting to a
+skill IF carry-patch upstreaming becomes a recurring cadence (it will, per
+`feedback_carry_patch_todos.md`). Captured findings the skill should encode:
+- The fork's working-tree diffs are **NOT cherry-pickable** — they bundle
+  unrelated edits + governance-coupled fixture args. A skill must isolate the
+  per-site hunk, never `git diff`-port.
+- An audit's highest value is **refuting the launcher's own hypotheses** (the
+  toolchain-divergence premise was disproven; risk relocated to a different
+  unverifiable fact). Frame verify-agents to falsify, not confirm.
+- **Defer** authoring until the 2nd upstream-rebase carry-patch sweep (1×
+  recurrence so far — promote on the 2nd per the lesson-lifecycle bar).
+
+### C. Skill GAP — no skill detects/repairs broken always-load citations
+GAP-2 (a lesson cited by an always-load rule but absent on disk) was found by
+a hand-run grep sweep, fixed by hand (2 lessons reconstructed in Phase 1d).
+The detector is a one-liner (`grep rule citations | test -f each in lessons/`)
+and the `new-lane` skill's Step 7 already runs it at bootstrap — but there is
+**no skill that re-runs it on demand or repairs the gap**. Options:
+- Cheapest: add the Step-7 sweep to `memory-prune`'s Step 3.5 (it already
+  audits rule-side integrity) as a citation-resolves check.
+- Or a tiny standalone `citation-integrity` skill (sweep → list broken →
+  offer to scaffold a stub lesson from the citing rule's inline text).
+- **Recommend** folding into an existing skill, not a new one — the detector
+  is 1 line; the value is the *reconstruct-from-inline-rule-text* step, which
+  is judgment, not automation.
+
+### D. Cross-cutting automation flag (NOT a skill — a guard)
+Two exit-code-capture traps recurred this session (`| tail` and
+`& echo %errorlevel%` both masked a real `101`). Both are already documented
+lessons (`feedback_pipes_mask_exit_codes.md`,
+`feedback_cmd_c_redirect_exit_code_capture.md`) — so this is a **discipline
+miss, not a missing skill**. No new artifact warranted; flagged for the retro's
+clean-execution score only.
+
+---
+
 ## See also
 
 - `.claude/PRPs/handovers/v1-closeout-bootstrap.md` — the as-designed lane
