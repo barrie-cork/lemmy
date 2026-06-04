@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-a-task-8-bridge-skeleton-see-claude-prps-briefs-m1-a-impl-8-md-589",
+      "phase_task": 8,
+      "commands": [
+        "cd services/bridge && cargo check",
+        "cargo tree --workspace 2>/dev/null | grep -c -E 'matrix-sdk|ruma'"
+      ],
+      "question": "Tree-A Task 8: bridge crate compiles inside services/bridge AND workspace pulls zero Matrix deps — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 8 scaffolded services/bridge/{Cargo.toml,src/main.rs,src/config.rs} (matrix-sdk 0.18 + ruma-appservice-api 0.16 + axum 0.8 + tokio; anyhow error; AS-server + soft-pause STUBS with TODO markers) and added exclude=[\"services/bridge\"] to root [workspace]. Ref MCP unavailable (no credits); dep versions follow plan §13 Task 8 pins and DQ a192dbab1de8-002. axum 0.8 from training knowledge. VALIDATE: (1) cd services/bridge && cargo check must be GREEN. (2) cargo tree --workspace grep for matrix-sdk or ruma must return 0 (story 6). NOT --workspace for bridge. NOT --features full.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9d8da421eca0-001"
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
