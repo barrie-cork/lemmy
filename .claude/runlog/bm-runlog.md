@@ -2258,3 +2258,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **YAML:** .claude/PRPs/reviews/pr-179-findings.yaml
 - **Notes:** CR review complete on m1-a bridge implementation (greenfield crate). 18 findings across R8-context (workspace-excluded bridge uses anyhow, not LemmyResult), security/compliance (ADR-014 capability checks, timeout configurations, sanitisation), and critical path items (relay recipient inference from state_key breaks DM; send_as_puppet stub blocks Brehon→Matrix). All defaults to fix-in-pr; no carry-forward or rebut candidates identified at poll time (re-evaluate at triage gate).
 
+
+## 2026-06-04T22:25Z — bm-triage applied (advisor-inline, task #597 false-positive blocked Edit)
+
+- **Action:** bm-triage applied advisor-inline after task #597 false-positive (findings YAML classified as sensitive file by permission system)
+- **Buckets applied:**
+  - fix-in-pr (11): cr-003, cr-006, cr-008, cr-009, cr-010, cr-011, cr-012, cr-013, cr-014, cr-015, cr-018
+  - rebut (5): cr-001 (BM boundary/advisor content), cr-002 (brief lint), cr-004 (URLs accurate), cr-005 (M1 outbound-only design), cr-007 (mount is functional)
+  - carry-forward (2): cr-016, cr-017 (both have explicit 'M1:' scope comments in relay.rs — Task 13 replacement planned)
+- **Critical open after triage:** 0 (both critical findings are carry-forward)
+- **Major open after triage:** 8 fix-in-pr
+- **Recommendation:** approved
+- **Commit:** b6015557c on phase-m1-a
+- **False-positive note:** Findings YAML at .claude/PRPs/reviews/ blocked by sensitive-file classifier. Same class as WATCH issue_note_sensitive_file_false_positive_debug_dir.md — promote to lesson if recurs.
