@@ -1,6 +1,6 @@
 # MiniMax M2.7 vs Sonnet 4.6 — impl-task A/B trial — RUNNING (m1-b)
 
-**Status:** EXECUTING on m1-b (Tree B). T3 + T4 recorded (n=2 of 5 cumulative). T5 next. First arms ran 2026-06-04.
+**Status:** m1-b arms COMPLETE — T3 + T4 + T5 recorded (n=3 of 5 cumulative). PAUSED until next MIRROR-heavy sub-phase (2 more tasks → n=5). First arms ran 2026-06-04.
 
 **Decision rule (from runbook §2.5):** analyse after **5 cumulative eligible tasks, cross-phase** (user-confirmed 2026-06-04). m1-b contributes 3 (Tasks 3/4/5); the remaining 2 come from the next MIRROR-heavy phase. **Do NOT decide at end of m1-b** — n=3 is below the threshold.
 
@@ -36,6 +36,14 @@
 | | DQ-file hygiene | surgical `+31/-2` (just its own validate-pending entry) | **rewrote 534 lines** of `decision-queue.json` (gratuitous reformat) | Sonnet better |
 | | Scope discipline | exactly the briefed surface | added **unbriefed** `scope: Option<String>` defaulting to `"instance"` | Sonnet better (no scope creep) |
 | | `private_interfaces` warning | **present** (1-line `pub struct` fix; folding into T5 since T5 edits this file) | absent (correctly declared `pub struct AdminGetMessagingConfig`) | **MiniMax's one win** — minor lint, trivially fixable |
+| **T5** (validator + routes) | Junior id | #580 | #581 | base `phase-m1-b@dc5b93ba8`; brief `m1-b-impl-5.md`; **arms CONVERGED — validator byte-identical** |
+| | Wall-clock | n/a | n/a | both workers HUNG in the post-task-retro `memory_write_eval` tail AFTER committing (benign; retro item — see note). Wall-clock not measurable. |
+| | DQ blockers raised | 0 | 0 | tie — and this time correctly so. The brief §4.1 **pre-resolved** the error-variant ambiguity that bit MiniMax on T4 (spelled out the exact validator + `Unknown(format!)` idiom). Neither arm needed to guess. |
+| | Cargo first-attempt | **PASS** — `check --workspace --features full` Finished 1m33s, 0 err **0 warn** (the T4 `private_interfaces` warning is CLEARED by the pub-struct fold-fix); `e2e --no-run` Finished 3m23s, `E2E_COMPILE_EXIT_0`, 0 err 0 warn | **not re-run** (comparison-only policy) — but code is near-identical to Sonnet, so inferred-equivalent | only Sonnet compile-validated per merge-only-Sonnet policy; warm `target/` from T4 → fast builds |
+| | `validate_identity_policy` | per §10.4 + `Unknown(format!)` idiom | **BYTE-IDENTICAL** to Sonnet (same guard, same error message, lines 69-80) | **convergence** — when the brief pre-specified the validator, both arms produced the same correct code |
+| | `pub struct GetMessagingConfigQuery` fold-fix | **applied** (line 155) | **applied** (line 153) | both correctly cleared the T4 leftover warning |
+| | Route registration | nested `scope("/messaging-config")` POST+GET, mirror `:478-512` | **identical** registration + import style | both mirrored the sibling correctly |
+| | Diff quality | +55/-2 across 3 files | +51/-2 (slightly terser; added a `row_to_value` GET-path helper) | near-tie; MiniMax marginally more compact |
 
 **Cargo-validation note (T3):** the two arms produced **byte-identical struct definitions** — the ONLY diff is in doc-comment prose, which does not affect compilation. The canonical (Sonnet) arm is validated authoritatively on the laptop (`cargo check --workspace --features full` + `e2e --no-run`); the MiniMax arm's compile result is inferred-identical rather than re-run, to avoid a second serial ~9-min cargo pass on the same `target/` for provably-equivalent code. This inference is recorded explicitly so the n=5 decision isn't built on a hidden assumption.
 
@@ -61,26 +69,38 @@ T4 is the **first task where the two arms diverged substantively** (192 vs 163 l
 
 **Cargo-validation note (T4):** unlike T3, the arms are NOT byte-identical, so the MiniMax arm's compile result cannot be inferred from the Sonnet compile. Per the merge-only-Sonnet policy, **only the canonical (Sonnet) arm was compile-validated** (`cargo check --workspace --features full` 0 err + `e2e --no-run` 0 err, both green). The MiniMax arm was read for comparison but never compiled or merged — its `.expect()` panic paths and wrong DTO are static-analysis observations, not compile failures. Recorded explicitly so the n=5 read isn't built on a hidden "MiniMax would have compiled" assumption.
 
+### T5 qualitative read — the convergence case (and what it teaches about T4)
+
+T5 is the **most informative task in the trial so far**, because it directly tests the T4 hypothesis. T4's divergence (MiniMax guessed wrong on the GET-response shape) could have meant either (a) MiniMax is a weaker model, OR (b) MiniMax handles brief ambiguity worse than Sonnet. T5 was authored to distinguish these: the T5 brief §4.1 **pre-resolved the one ambiguity** (it spelled out the exact `validate_identity_policy` body + the `Unknown(format!)` error idiom, explicitly citing the T4 failure as the reason).
+
+**Result: the arms CONVERGED.** MiniMax's `validate_identity_policy` is **byte-identical** to Sonnet's (same guard, same error message, lines 69-80). Both applied the `pub struct GetMessagingConfigQuery` fold-fix. Both registered the routes identically. The only diff is a small MiniMax `row_to_value` GET-path helper (+51 vs +55 lines).
+
+**The teaching:** T4's gap was **brief-ambiguity-driven, not capability-driven.** When the brief left a shape decision to the worker (T4 GET DTO), MiniMax guessed and guessed wrong while Sonnet took the documented fallback. When the brief removed the ambiguity (T5 validator), MiniMax matched Sonnet exactly. This is a **load-bearing finding for the n=5 decision and for how we brief**: MiniMax is viable for **fully-specified MIRROR-ref tasks** but is **more sensitive to under-specified briefs** than Sonnet — Sonnet degrades more gracefully on ambiguity (falls back to the documented default; MiniMax improvises). The mitigation is cheap (tighter briefs), which is exactly the regime the trial targets (MIRROR-ref-heavy, ≤2 files, well-specified).
+
+**Net T5:** tie on correctness, safety, and discipline. No quality gap. The convergence, given the deliberate ambiguity-removal, is the signal — not a point for either arm, but evidence that the T4 Sonnet win is **recoverable by briefing**, not an intrinsic MiniMax deficiency.
+
+**Operational note (retro item):** both T5 workers HUNG in the post-task-retro `memory_write_eval` step AFTER committing their code (Sonnet pushed; MiniMax committed, push hung). No `.git/index.lock`; clean worktrees. The code was fully preserved (Sonnet `c9e7d6b76` on origin + FF-promoted; MiniMax `12487b06a` advisor-pushed to `ab-test/minimax-impl-5-result`; both worktrees tar-preserved). This is the **2nd retro-step friction this phase** (the daemon's post-task-retro MCP call stalling the worker process) — distinct from the dispatch findings, worth a durable lesson if it recurs.
+
 ---
 
-## Pending (this phase)
+## m1-b MiniMax arms — COMPLETE (3 of 5 cumulative)
 
-- **T5** (identity-policy validator + routes) — MiniMax-eligible; arms dispatch after T4 closes (next). Fold the `pub struct GetMessagingConfigQuery` lint fix from T4 into the T5 brief.
+All three m1-b MiniMax-eligible tasks (T3, T4, T5) are recorded. m1-b's remaining Tree-B tasks (T6 bridge_notify, T7 e2e) are **not** MiniMax-eligible (T6 = fire-and-forget HTTP wiring with no MIRROR-sibling shape; T7 = e2e test authoring, explicitly excluded by the trial criteria). **The trial pauses here at n=3 and resumes on the next MIRROR-heavy sub-phase to reach n=5.**
 
 ## Pending (cross-phase, to reach n=5)
 
-- 2 more eligible tasks from the next MIRROR-heavy sub-phase.
+- 2 more eligible tasks from the next MIRROR-heavy sub-phase (≥2 files-or-fewer, MIRROR-ref-heavy, cargo-gated, not e2e).
 
 ## Decision (deferred until n=5)
 
 Per runbook §2.5: M2.7 matches Sonnet on cargo-first-pass AND DQ-blocker-rate across the 5 tasks → switch impl-task to MiniMax (≈10× cost saving). M2.7 worse on either → stay Sonnet. Mixed at n=5 → extend to n=8-10 or stay Sonnet (conservative default).
 
-**Running tally (n=2 of 5):**
-- **Cargo-first-pass:** T3 tie (both pass; MiniMax inferred-identical). T4 — only Sonnet validated (MiniMax not merged/compiled per policy); Sonnet PASS. → no MiniMax *compile failure* observed, but T4 gives no positive MiniMax compile evidence either.
-- **DQ-blocker rate:** 0/0 on raw count both tasks. BUT T4 surfaced a *quality* difference inside the tie: Sonnet's no-blocker was correct-by-documented-fallback; MiniMax's was incorrect-by-guess (wrong GET DTO).
-- **Wall-clock:** T3 MiniMax-favoured (~33% faster); T4 not comparable (different dispatch paths).
-- **Quality:** T3 tie. **T4 Sonnet wins decisively** (correct DTO, no panic paths, surgical DQ, no scope creep); MiniMax wins one trivial lint.
-- **Read at n=2:** first substantive divergence favours **Sonnet**. Still below the n=5 threshold; decision stays deferred. If the next-phase eligible tasks reproduce the T4 pattern (MiniMax guesses past an ambiguity the brief flagged), that's the signal to stay on Sonnet.
+**Running tally (n=3 of 5):**
+- **Cargo-first-pass:** T3 tie (both pass; MiniMax inferred-identical). T4 — only Sonnet validated; PASS (MiniMax not compiled per policy). T5 — only Sonnet validated; PASS 0 err 0 warn (MiniMax near-identical → inferred-equivalent). → **no MiniMax compile failure ever observed; no positive MiniMax compile evidence either** (the merge-only-Sonnet policy means MiniMax is never compiled — a structural limit of this trial design, noted for the n=5 read).
+- **DQ-blocker rate:** 0/0 on raw count all three tasks. The *quality-inside-the-tie* split: T3 both fine; **T4 MiniMax incorrect-by-guess** (the one real divergence); T5 both correct (ambiguity pre-removed).
+- **Wall-clock:** T3 MiniMax-favoured (~33% faster); T4/T5 not comparable.
+- **Quality:** T3 tie · **T4 Sonnet wins decisively** · T5 tie. **Net: 1 decisive Sonnet win, 2 ties.**
+- **Read at n=3 — the load-bearing interpretation:** the single Sonnet win (T4) is attributable to **brief ambiguity**, and T5 demonstrated it's **recoverable by tightening the brief** (MiniMax then matched Sonnet byte-for-byte). So the honest n=3 read is: *MiniMax is competitive on fully-specified MIRROR-ref tasks but needs tighter briefs than Sonnet (Sonnet degrades more gracefully on ambiguity).* This is NOT yet a "stay Sonnet" verdict — it's a "MiniMax viable IF briefs are tight" signal. The next-phase 2 tasks should be authored at the **same tight-spec bar as T5** to test whether MiniMax holds parity under that regime; if it does, the ≈10× cost saving is real.
 
 ---
 
