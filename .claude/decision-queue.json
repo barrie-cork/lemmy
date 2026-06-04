@@ -1,6 +1,29 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "28587574e16f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T10:00:00Z",
+      "question": "fix-impl-2 cargo check — run cd services/bridge && cargo check to validate cr-009/cr-010/cr-011 fixes in appservice.rs + main.rs",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2 committed (056e11104): cr-009 capability check (relay_enabled gate on provision), cr-010 room_alias validation (400 on missing/empty), cr-011 tokio::select! shutdown (axum serve error propagation + poller JoinHandle tracked). Validation command: cd services/bridge && cargo check.",
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m1-a",
+      "phase_task": "fix-impl-2",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "from": "impl",

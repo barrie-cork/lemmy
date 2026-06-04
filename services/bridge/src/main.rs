@@ -44,15 +44,26 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    let serve_handle = tokio::spawn(async move {
-        axum::serve(listener, app).await.expect("axum serve failed");
-    });
-
-    let _poller = tokio::spawn(soft_pause::run_poller(
+    // cr-011: track poller JoinHandle so panics surface; use select! for
+    // coordinated shutdown (either component exiting stops the other).
+    let poller_handle = tokio::spawn(soft_pause::run_poller(
         Arc::clone(&config_arc),
         Arc::clone(&relay_enabled),
     ));
 
-    serve_handle.await?;
+    tokio::select! {
+        result = axum::serve(listener, app) => {
+            if let Err(e) = result {
+                tracing::error!("axum serve error: {e:#}");
+            }
+        }
+        result = poller_handle => {
+            match result {
+                Ok(Ok(())) => tracing::info!("soft_pause poller exited cleanly"),
+                Ok(Err(e)) => tracing::error!("soft_pause poller error: {e:#}"),
+                Err(e) => tracing::error!("soft_pause poller panicked: {e}"),
+            }
+        }
+    }
     Ok(())
 }
