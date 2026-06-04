@@ -138,7 +138,17 @@ MEMORY.md is over budget (202 lines, limit 200; SessionStart WARN fires). A v1�
 ### 1d. Lesson-corpus sweep (optional, advisory)  🟦 workflow
 194 lessons in `.claude/lessons/`. Not pruning code lessons (they're load-bearing), but a workflow can surface **superseded/duplicate** pairs (e.g. the historically-cited-but-never-authored slugs the rules already note) for the user to decide. Read-only audit → report; no auto-delete.
 
-**Outputs:** empty stale-worktree set; shipped plans archived; MEMORY.md under budget; (optional) lesson-dedup report.
+**SEED — broken citations in ALWAYS-LOAD rules (verified 2026-06-04, via the `new-lane` skill's Step-7 citation-integrity sweep).** This is the concrete starting point for the lesson-corpus audit — distinct from dedup. The sweep (`grep -rhoE '(feedback|reference)_[a-z0-9_]+\.md' .claude/rules/ | sort -u | while read f; do [ -f ".claude/lessons/$f" ] || echo "$f"; done`) found **3 always-load-rule citations resolving to files that do NOT exist in `.claude/lessons/`** — every session inherits these broken pointers (the GAP-2 class from `v1-closeout-lane-setup-report.md`, now generalised). All three are cited by the always-load rule `.claude/rules/advisor-orchestrator.md`:
+
+| Missing lesson | Cited at (always-load) | Status / action |
+|---|---|---|
+| `feedback_advisor_watchpoint_specificity.md` | `advisor-orchestrator.md` §3.5 (watchpoint-specificity gate — load-bearing plan-approval gate) | **Author it** — the gate's behaviour is documented inline in §3.5 + indexed in MEMORY.md; reconstruct the lesson from those + git history of watchpoint DQs. |
+| `feedback_verify_automated_reviewer_claims_against_compiler.md` | `advisor-orchestrator.md` §5.4 (falsifiable-hypothesis CR-finding variant — compile-check before triaging a CR trait/type claim) | **Author it** — content sketched inline in §5.4 + the PR#132 `.get(0)`→`.first()` Diesel incident; reconstruct from there. |
+| `feedback_daemon_telegram_completion_hook.md` | `advisor-orchestrator.md` §1 (Telegram completion hook check) | **Likely already resolved** — reconstructed as a draft this session (GAP 2 fix in the close-out worktree); confirm it's committed to `governance-v0`, else author from the draft. |
+
+Remediation is **authoring 2–3 short lessons** (≤ TIER-2 risk, `.claude/lessons/` only — meta-work, direct-commit per `phase-branch.md`), NOT a workflow fan-out — but the Phase-1d workflow should *also* re-run the Step-7 sweep at completion to confirm zero TIER-1 breaks remain, and surface the ~14 TIER-2 (handover) breaks as a separate lower-priority list. The `new-lane` skill Step 7 splits TIER-1/TIER-2 and carries this ~3+14 baseline so future lanes flag only *new* drift.
+
+**Outputs:** empty stale-worktree set; shipped plans archived; MEMORY.md under budget; (optional) lesson-dedup report; **3 TIER-1 broken always-load-rule citations resolved (lessons authored); Step-7 sweep re-run shows 0 TIER-1 breaks.**
 
 ---
 
