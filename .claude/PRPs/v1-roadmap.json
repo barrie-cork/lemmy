@@ -232,7 +232,7 @@
           "merge_commit": "3b36b4e61",
           "merged_at": "2026-05-24T07:15:53Z",
           "plan": ".claude/PRPs/plans/v1-RT-r2.plan.md",
-          "retro": ".claude/PRPs/reports/session-retro-2026-05-25-v1-deps-r1.md"
+          "retro": ".claude/PRPs/reports/v1-RT-r2-retro.md"
         },
         "v1-RT-r3": {
           "status": "done",
