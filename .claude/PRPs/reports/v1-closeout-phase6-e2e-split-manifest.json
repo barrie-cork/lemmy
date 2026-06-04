@@ -1,0 +1,1606 @@
+{
+  "moduleMaps": [
+    {
+      "module": "governance_fixtures",
+      "line_range": "143-6090",
+      "tests": [
+        {
+          "name": "can_insert_moderation_case",
+          "line": 925
+        },
+        {
+          "name": "governance_log_hash_chain_holds",
+          "line": 969
+        },
+        {
+          "name": "phase1_revert_list_matches_disk",
+          "line": 1221
+        },
+        {
+          "name": "test_phase1_migrations_forward",
+          "line": 1231
+        },
+        {
+          "name": "test_phase1_migrations_revert",
+          "line": 1547
+        },
+        {
+          "name": "test_phase1_migrations_reapply",
+          "line": 1883
+        },
+        {
+          "name": "v1_jm_a_backfill_populates_v0_snapshot",
+          "line": 1956
+        },
+        {
+          "name": "list_open_cases_returns_seeded_rows",
+          "line": 2259
+        },
+        {
+          "name": "jury_queue_view_returns_assignments",
+          "line": 2320
+        },
+        {
+          "name": "modlog_view_returns_published_entries",
+          "line": 2420
+        },
+        {
+          "name": "report_to_modlog_golden_path",
+          "line": 2524
+        },
+        {
+          "name": "config_parity_round_trip",
+          "line": 3154
+        },
+        {
+          "name": "v1_jm_a_seed_migration_is_idempotent",
+          "line": 3212
+        },
+        {
+          "name": "sponsor_liability_with_founder_multiplier",
+          "line": 3308
+        },
+        {
+          "name": "capability_change_entries_reachable_via_modlog_crate",
+          "line": 3902
+        },
+        {
+          "name": "snapshot_staleness_alert_fires_when_max_calculated_at_is_old",
+          "line": 3988
+        },
+        {
+          "name": "all_mvp_endpoints_return_non_404",
+          "line": 4081
+        },
+        {
+          "name": "ineligible_user_cannot_be_picked_for_jury",
+          "line": 4433
+        },
+        {
+          "name": "governance_events_notify_fires",
+          "line": 4764
+        },
+        {
+          "name": "underscore_prefix_usernames_still_register",
+          "line": 4900
+        },
+        {
+          "name": "sanction_notice_round_trip",
+          "line": 4975
+        },
+        {
+          "name": "appeal_inside_window_succeeds_expired_rejects",
+          "line": 5637
+        },
+        {
+          "name": "declining_juror_not_picked_as_own_replacement",
+          "line": 5829
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "governance_fixtures",
+          "line": 143,
+          "kind": "mod",
+          "looks_shared": true
+        },
+        {
+          "name": "MIGRATIONS",
+          "line": 174,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "schema_sentinel_satisfied",
+          "line": 222,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "apply_all_schema",
+          "line": 241,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "pg_template",
+          "line": 275,
+          "kind": "mod",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::TEMPLATE_DUMP",
+          "line": 285,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::DOCKER_CHECKED",
+          "line": 293,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::MIN_TEMPLATE_DUMP_BYTES",
+          "line": 307,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::cache_path",
+          "line": 322,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::ensure_template",
+          "line": 352,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::ensure_docker_cli",
+          "line": 367,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::load_or_build",
+          "line": 406,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::build_template",
+          "line": 493,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::PG_DUMP_TIMEOUT_SECS",
+          "line": 542,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::PG_RESTORE_TIMEOUT_SECS",
+          "line": 547,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::pg_dump",
+          "line": 564,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "pg_template::pg_restore_into",
+          "line": 631,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "start_postgres_vanilla",
+          "line": 735,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "apply_all_schema_legacy",
+          "line": 765,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "start_postgres",
+          "line": 798,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "db_url",
+          "line": 817,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "SIGNING_SEED_HEX",
+          "line": 821,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "bootstrap",
+          "line": 827,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_user",
+          "line": 874,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_community",
+          "line": 894,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_jurors",
+          "line": 908,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "MIGRATIONS_TO_REVERT_PHASE_1",
+          "line": 1125,
+          "kind": "const",
+          "looks_shared": false
+        },
+        {
+          "name": "assert_revert_list_matches_disk",
+          "line": 1172,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "SingleI32",
+          "line": 2503,
+          "kind": "struct",
+          "looks_shared": false
+        },
+        {
+          "name": "admin_config_fixtures",
+          "line": 6091,
+          "kind": "mod",
+          "looks_shared": false
+        },
+        {
+          "name": "admin_config_fixtures::bootstrap",
+          "line": 6119,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "admin_config_fixtures::seed_user",
+          "line": 6184,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "governance_fixtures",
+      "notes": "1. The module at lines 143-922 is `mod governance_fixtures` — a pure fixture/helper module with no tests inside it; all 23 tests live at file scope AFTER the closing brace at line 922, not inside the module. The test functions from lines 924-6071 are at the top level of e2e.rs and call into `governance_fixtures::*` helpers.\n\n2. At line 6091 a second nested module `mod admin_config_fixtures` begins (still within the overall lines 143-6090 range assigned). This module has its own `bootstrap` and `seed_user` helpers that delegate to `super::governance_fixtures::start_postgres`, `super::governance_fixtures::db_url`, and `super::governance_fixtures::apply_all_schema` — making it a secondary fixture module that depends on the primary.\n\n3. Several test functions define local `async fn seed_person(...)` closures with almost identical bodies (report_to_modlog_golden_path line ~2634, sponsor_liability_with_founder_multiplier line ~3400, all_mvp_endpoints_return_non_404 line ~4264, ineligible_user_cannot_be_picked_for_jury line ~4494, declining_juror_not_picked_as_own_replacement line ~5891, sanction_notice_round_trip line ~5150, appeal_inside_window_succeeds_expired_rejects line ~5695). These are local closures not reachable from other tests, but they duplicate the logic already in `governance_fixtures::seed_user`. This is a split-complication: extracting these tests will require either inlining the local helper or promoting it to the shared fixtures module.\n\n4. Several internal helper closures are also defined inside test bodies: `run_sanction_scenario` (line ~3547), `seed_surety` (line ~3434), `seed_founder_events` (line ~3451), `seed_organic_endorsement` (line ~3485), `seed_snapshot` (line ~3509), `liability_delta_for` (line ~3641), `count_log_for_case` (line ~3657), `seed_case` (line ~4586), `seed_person_with_apub` (line ~5150), `make_user` (line ~4264), `mint_jwt` (line ~4282), `seed_target` (line ~5695). These are all test-body-scoped and would need relocation if their parent tests move.\n\n5. Three tests are marked `#[ignore]`: `test_phase1_migrations_forward`, `test_phase1_migrations_revert`, `test_phase1_migrations_reapply` (pending GH issue #43). `sponsor_liability_with_founder_multiplier` is also `#[ignore]` (GH issue #45). `ineligible_user_cannot_be_picked_for_jury` is `#[ignore]` (GH issue #42).\n\n6. The `snapshot_staleness_alert_fires_when_max_calculated_at_is_old` test at line 3988 uses `#[tracing_test::traced_test]` — requires `tracing-test` crate in scope, which is a compile-time dependency.\n\n7. `sanction_notice_round_trip` (line 4975) is the most complex test: it boots TWO separate Postgres containers (container_a and container_b), builds two full `LemmyContext` objects, exercises cross-instance federation publish/receive via `PublishSanctionNotice::receive` called directly, and includes a spoofing negative test. Splitting this test would require both containers and both contexts to be live simultaneously — moving it is safe but it cannot share a single bootstrap fixture call.\n\n8. The `SingleI32` struct at line 2503 is defined at file scope (not inside any module), used by `jury_queue_view_returns_assignments`. This is in the top-level scope between the closing of `governance_fixtures` (line 922) and the start of `admin_config_fixtures` (line 6091). It is a dependency that any split file containing `jury_queue_view_returns_assignments` must carry.\n\n9. `admin_config_fixtures::bootstrap` calls `super::governance_fixtures::start_postgres`, `super::governance_fixtures::db_url`, and `super::governance_fixtures::apply_all_schema` — cross-module references within the same file. After splitting, the admin_config domain file would need to import from a shared governance_fixtures module.\n\n10. All tests mutate process-wide env vars and require `--test-threads=1`. The module doc comment at line 144 makes this explicit. This means the tests are NOT safe to run in parallel even after splitting into multiple files — the thread constraint applies globally across all e2e test files in the same `lemmy_server` test binary.\""
+    },
+    {
+      "module": "admin_config_fixtures",
+      "line_range": "6091-8592",
+      "tests": [
+        {
+          "name": "admin_set_config_happy_path",
+          "line": 6235
+        },
+        {
+          "name": "admin_set_config_dry_run",
+          "line": 6291
+        },
+        {
+          "name": "admin_set_config_type_mismatch_rejected",
+          "line": 6365
+        },
+        {
+          "name": "admin_set_config_range_rejected",
+          "line": 6412
+        },
+        {
+          "name": "admin_set_config_enum_rejected",
+          "line": 6461
+        },
+        {
+          "name": "admin_set_config_non_admin_rejected_with_denial_log",
+          "line": 6504
+        },
+        {
+          "name": "admin_set_config_scope_mismatch_rejected",
+          "line": 6561
+        },
+        {
+          "name": "admin_set_config_community_scope_by_moderator",
+          "line": 6637
+        },
+        {
+          "name": "messaging_disabled_preserves_governance_posture",
+          "line": 6709
+        },
+        {
+          "name": "messaging_identity_policy_rejects_jury_override",
+          "line": 6732
+        },
+        {
+          "name": "admin_get_config_full",
+          "line": 6764
+        },
+        {
+          "name": "admin_get_config_single_key_with_provenance",
+          "line": 6815
+        },
+        {
+          "name": "admin_get_config_audit_paginated",
+          "line": 6875
+        },
+        {
+          "name": "governance_log_payload_shell_parity",
+          "line": 6963
+        },
+        {
+          "name": "rule_set_active_version_absent_returns_none",
+          "line": 7109
+        },
+        {
+          "name": "admin_create_rule_set_happy_path",
+          "line": 7145
+        },
+        {
+          "name": "admin_create_rule_set_non_moderator_rejected",
+          "line": 7250
+        },
+        {
+          "name": "admin_create_rule_set_duplicate_version_rejected",
+          "line": 7349
+        },
+        {
+          "name": "admin_list_rule_sets_returns_versions_with_active_version_id",
+          "line": 7464
+        },
+        {
+          "name": "scope_parse_wire_rejects_negative_community_id",
+          "line": 7541
+        },
+        {
+          "name": "admin_set_config_persists_previous_value_and_from",
+          "line": 7570
+        },
+        {
+          "name": "admin_get_config_audit_hydrates_previous_value",
+          "line": 7663
+        },
+        {
+          "name": "case_open_pins_applied_config_snapshot_and_rule_set_version_id",
+          "line": 7731
+        },
+        {
+          "name": "admin_dashboard_returns_aggregate_for_admin",
+          "line": 7864
+        },
+        {
+          "name": "admin_dashboard_forbidden_for_non_admin",
+          "line": 7924
+        },
+        {
+          "name": "admin_dashboard_aggregates_populated_data",
+          "line": 7967
+        },
+        {
+          "name": "admin_dashboard_per_community_active_version_cascade",
+          "line": 8118
+        },
+        {
+          "name": "admin_dashboard_recent_config_changes_excludes_unsigned_rows",
+          "line": 8249
+        },
+        {
+          "name": "admin_audit_stream_forbidden_for_non_admin",
+          "line": 8319
+        },
+        {
+          "name": "admin_audit_stream_enforces_per_admin_cap",
+          "line": 8343
+        },
+        {
+          "name": "admin_audit_stream_emits_frame_on_config_change",
+          "line": 8410
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "bootstrap",
+          "line": 6119,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_user",
+          "line": 6184,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "bootstrap_instance",
+          "line": 6205,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_community_moderator",
+          "line": 6214,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "super::governance_fixtures::start_postgres",
+        "super::governance_fixtures::db_url",
+        "super::governance_fixtures::apply_all_schema"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "admin_config",
+      "notes": "The logical grouping spans two structural scopes: the `mod admin_config_fixtures` fixture block (lines 6091-6229) is a proper Rust inner module with `pub` helpers, while all 31 tests (lines 6231-8592) live in the outer e2e.rs scope calling `admin_config_fixtures::*`. A split file must declare `mod admin_config_fixtures { ... }` inline or via `#[path]` and place the tests in the same file's outer scope — the fixture module cannot be lifted to a sibling file without also moving all 31 tests. The `bootstrap` fixture spins a full testcontainers Postgres and builds a real `LemmyContext`; it is structurally identical to the pattern used by `governance_fixtures` and other fixture modules, making it a candidate for a shared pool helper IF other domains use the same bootstrap shape. The admin audit stream tests (`admin_audit_stream_enforces_per_admin_cap` and `admin_audit_stream_emits_frame_on_config_change`) rely on a module-static per-admin cap `HashSet` that persists across tests in the same process — test names include unique usernames to avoid `PersonId` collision. This shared mutable static means test isolation is username-dependent and running these tests in parallel would race the HashSet. The range ends at 8592 with a comment preamble for v1-JM-b Task 7 tests (next grouping); the last actual test body ends at line 8572. The three `super::governance_fixtures::*` calls (`start_postgres`, `db_url`, `apply_all_schema`) are hard dependencies on the `governance_fixtures` module — these must be accessible from the split file, requiring either a shared common module or re-export from `governance_fixtures`."
+    },
+    {
+      "module": "v1_jm_b_fixtures",
+      "line_range": "8593-10516",
+      "tests": [
+        {
+          "name": "admin_assign_jury_severity_tier_regular_minor_panel_5_jurors",
+          "line": 8737
+        },
+        {
+          "name": "admin_assign_jury_severity_tier_regular_severe_panel_7_jurors",
+          "line": 8798
+        },
+        {
+          "name": "admin_assign_jury_severity_tier_founder_severe_panel_9_jurors",
+          "line": 8862
+        },
+        {
+          "name": "admin_assign_jury_writes_selected_under_constraints_jsonb",
+          "line": 8940
+        },
+        {
+          "name": "admin_assign_jury_emits_severity_tier_frozen_governance_log",
+          "line": 9024
+        },
+        {
+          "name": "config_get_int_cascade_resolves_founder_severe_to_bare_then_const",
+          "line": 9094
+        },
+        {
+          "name": "admin_assign_jury_small_pool_triggers_r1_relaxation",
+          "line": 9214
+        },
+        {
+          "name": "admin_emergency_remove_case_has_severity_tier_severe",
+          "line": 9334
+        },
+        {
+          "name": "admin_emergency_remove_seats_severe_panel_with_constraint_record",
+          "line": 9418
+        },
+        {
+          "name": "submit_jury_vote_severe_panel_meets_threshold",
+          "line": 9548
+        },
+        {
+          "name": "submit_jury_vote_deadlock_flips_to_admin_review",
+          "line": 9704
+        },
+        {
+          "name": "submit_jury_vote_writes_appeal_window_default",
+          "line": 9922
+        },
+        {
+          "name": "submit_jury_vote_writes_appeal_window_live_config",
+          "line": 10040
+        },
+        {
+          "name": "v0_case_completes_under_v0_rules_after_v1_config_flip",
+          "line": 10170
+        },
+        {
+          "name": "submit_jury_vote_concurrent_votes_decide_exactly_once",
+          "line": 10363
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_case",
+          "line": 8622,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_jury_eligible_snapshots",
+          "line": 8665,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_jury_eligible_snapshots_scoped",
+          "line": 8679,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_founder_event",
+          "line": 8707,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap",
+        "governance_fixtures::seed_community",
+        "governance_fixtures::seed_user",
+        "governance_fixtures::seed_jurors"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard",
+        "SingleI32"
+      ],
+      "proposed_domain": "jury",
+      "test_count": 15,
+      "notes": "The assigned range 8593-10516 is a compound unit: (1) `mod v1_jm_b_fixtures` (lines 8593-8730) containing only fixture helpers with no tests, (2) 15 top-level test functions (8732-10506) that use those fixtures, and (3) a 9-line comment block (10508-10516) that is a section divider introducing the adjacent `mod v1_jm_e_fixtures` (which starts at line 10517, outside this range). Splitting the module cleanly requires co-locating the fixture mod with its tests. The `v1_jm_e_fixtures` module (outside this range) calls `super::v1_jm_b_fixtures::seed_jury_eligible_snapshots` and `super::v1_jm_b_fixtures::seed_case`, making these fixtures a shared dependency that must either live in a common module or be duplicated. `SingleI32` (line 2503) is a top-level file struct (not inside any mod) used by one test in this range (`admin_assign_jury_small_pool_triggers_r1_relaxation`); it is also used by at least one other module (line 2361), so it must move to a shared common module rather than this domain file. The test `submit_jury_vote_concurrent_votes_decide_exactly_once` is documented as producing a deterministic Postgres deadlock (DQ #49 reference) and per its docstring has STATUS: ignored, but it carries `#[tokio::test]` not `#[ignore]` — it is a live flaky test that will race in CI. The `seed_jury_eligible_snapshots` and `seed_case` fixtures are also called from `v1_jm_e_fixtures` via `super::v1_jm_b_fixtures::*`, confirming they are genuinely shared across at least two downstream modules. JM-c tests (submit_jury_vote_* family, lines 9548-10506) are nominally a separate sub-phase from JM-b but are grouped in this range because they reuse JM-b fixtures; they could be split into a `jury_vote` sub-domain if desired."
+    },
+    {
+      "module": "v1_jm_e_fixtures",
+      "line_range": "10517-11729",
+      "tests": [
+        {
+          "name": "appeal_panel_decides_no_action_overrides_to_advisory_label_chain",
+          "line": 10888
+        },
+        {
+          "name": "governance_log_sequence_matches_prd_state_machine",
+          "line": 11122
+        },
+        {
+          "name": "config_churn_appeal_window_days_does_not_invalidate_decided_cases",
+          "line": 11334
+        },
+        {
+          "name": "constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing",
+          "line": 11550
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_appealed_case_with_panel",
+          "line": 10573,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_appealed_case_with_panel_via_report",
+          "line": 10692,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "super::v1_jm_b_fixtures::seed_jury_eligible_snapshots",
+        "super::v1_jm_b_fixtures::seed_case",
+        "super::v1_jm_b_fixtures::seed_jury_eligible_snapshots_scoped",
+        "super::v1_jm_b_fixtures::seed_jury_eligible_snapshots",
+        "v1_jm_e_fixtures::seed_appealed_case_with_panel",
+        "v1_jm_e_fixtures::seed_appealed_case_with_panel_via_report",
+        "v1_jm_b_fixtures::seed_jury_eligible_snapshots",
+        "v1_jm_b_fixtures::seed_case"
+      ],
+      "top_level_helpers_referenced": [
+        "governance_fixtures::bootstrap",
+        "governance_fixtures::seed_community",
+        "governance_fixtures::seed_user",
+        "governance_fixtures::seed_jurors"
+      ],
+      "proposed_domain": "appeal",
+      "notes": "The module has an unusual two-part structure: (1) the `mod v1_jm_e_fixtures { }` block (lines 10517–10878) defines only fixture helpers — no `#[test]` fns inside it; (2) the four `#[tokio::test]` functions (lines 10880–11728) are defined at the top-level of e2e.rs, NOT inside the `mod` block, but are grouped into this range by the assignment. This is the same layout pattern as sibling modules (fixture helpers in mod, tests outside). The test bodies directly call `v1_jm_e_fixtures::seed_appealed_case_with_panel` and `v1_jm_e_fixtures::seed_appealed_case_with_panel_via_report` from outside the mod. The fixture functions themselves make `super::v1_jm_b_fixtures::seed_jury_eligible_snapshots` and `super::v1_jm_b_fixtures::seed_case` cross-module calls — critical de-risking data: `v1_jm_b_fixtures` must remain accessible (shared common module or co-located). The test `config_churn_appeal_window_days_does_not_invalidate_decided_cases` (line 11334) uses an async closure (`drive_case_to_decided`) and a second async closure (`read_gap`) defined inline within the test body — no ordering dependency on other tests but tight coupling to `v1_jm_b_fixtures::seed_case` and `v1_jm_b_fixtures::seed_jury_eligible_snapshots`. The module-level doc comment warns that all tests in this module mutate process-wide env vars (`BREHON_DISABLE_APPEAL_WINDOW_JOB`) and requires `--test-threads=1`; the capstone test and audit-invariant test both do manual save/restore of that env var rather than using the top-level `EnvVarGuard` RAII helper (they predate or intentionally avoid it). The `EnvVarGuard` struct is defined in the top-level section (lines 111–137) but is NOT used inside this module's tests; they roll their own unsafe set_var/restore pattern.\""
+    },
+    {
+      "module": "v1_sl_b_fixtures",
+      "line_range": "11730-12764",
+      "tests": [
+        {
+          "name": "revoke_endorsement_self_succeeds_updates_surety_and_recomputes_snapshots",
+          "line": 11911
+        },
+        {
+          "name": "revoke_endorsement_admin_succeeds_under_threshold",
+          "line": 12048
+        },
+        {
+          "name": "revoke_endorsement_re_revoke_returns_existing_revoked_at_no_log_no_severance",
+          "line": 12125
+        },
+        {
+          "name": "revoke_endorsement_non_sponsor_non_admin_rejects_with_not_found",
+          "line": 12216
+        },
+        {
+          "name": "revoke_endorsement_empty_reason_rejects",
+          "line": 12287
+        },
+        {
+          "name": "revoke_endorsement_rate_limit_enforces_unless_admin_bypasses",
+          "line": 12350
+        },
+        {
+          "name": "revoke_endorsement_severs_grace_window_single_sponsor_case",
+          "line": 12483
+        },
+        {
+          "name": "revoke_endorsement_multi_sponsor_any_revocation_severs_chain",
+          "line": 12589
+        },
+        {
+          "name": "revoke_endorsement_no_pending_case_no_severance_only_revoked_log",
+          "line": 12678
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_endorsement_active",
+          "line": 11760,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_pending_case",
+          "line": 11781,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "read_endorsement_revoked_at",
+          "line": 11821,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "read_surety_revoked_at",
+          "line": 11834,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "read_case_status_and_escape",
+          "line": 11853,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "count_log_entries",
+          "line": 11869,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "read_log_payload",
+          "line": 11879,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "read_snapshot_calculated_at",
+          "line": 11894,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap",
+        "governance_fixtures::seed_user"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "test_count": 9,
+      "notes": "1. `seed_prior_revocations` (line 12365) is defined as a nested async fn inside the body of `revoke_endorsement_rate_limit_enforces_unless_admin_bypasses` — it is NOT a module-level item and cannot be extracted as a standalone fixture without refactoring. 2. All tests manipulate process-wide env vars (the module header warns about `--test-threads=1`). However none of these 9 tests actually set any env var — the env-var manipulation pattern (bare set_var/remove_var without EnvVarGuard RAII) appears in v1_sl_c_fixtures starting at line 12766, not in this module. The EnvVarGuard reference in the module doc comment is anticipatory/borrowed from the file-wide pattern. 3. `count_log_entries` and `read_log_payload` are duplicated verbatim in v1_sl_c_fixtures (lines 12792 and 12801) — these are candidates for a shared common module during the split. 4. No `#[path]` attrs, no cfg gates, no shared mutable statics. Tests appear order-independent — each bootstraps its own container. 5. `governance_fixtures` module is defined elsewhere in the file (not in the 1–142 top section); it is a peer sibling fixtures module that this module depends on for `bootstrap()` and `seed_user()`."
+    },
+    {
+      "module": "v1_sl_c_fixtures",
+      "line_range": "12766-13647",
+      "tests": [
+        {
+          "name": "grace_check_fires_expired_case_emits_per_sponsor_and_summary_entries",
+          "line": 12877
+        },
+        {
+          "name": "grace_check_escapes_case_when_sponsor_revoked_after_decided_at",
+          "line": 12987
+        },
+        {
+          "name": "grace_check_no_op_when_grace_expires_at_in_future",
+          "line": 13178
+        },
+        {
+          "name": "grace_check_per_case_isolation_skips_bad_case_processes_good_case",
+          "line": 13286
+        },
+        {
+          "name": "grace_check_batch_size_config_caps_iteration",
+          "line": 13419
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "count_log_entries",
+          "line": 12792,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "read_log_payload",
+          "line": 12801,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_pending_case",
+          "line": 12815,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_active_surety",
+          "line": 12859,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap",
+        "governance_fixtures::seed_user"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "notes": "All 5 tests mutate the process-wide env var `BREHON_DISABLE_GRACE_CHECK_JOB` manually inline (save/restore pattern using `unsafe { std::env::set_var/remove_var }`) instead of using the top-level `EnvVarGuard` RAII helper — EnvVarGuard is present in the top-level section but not called here. Each test spins up its own fresh container via `governance_fixtures::bootstrap()` so there is no shared mutable state or cross-test ordering dependency. Test #5 (`grace_check_batch_size_config_caps_iteration`) calls `run_grace_check_batch` three times in sequence within a single test body to verify batch-size capping across repeated invocations — this is intra-test sequencing only, not inter-test. `governance_fixtures::bootstrap` and `governance_fixtures::seed_user` are defined in a sibling `governance_fixtures` module (not the top-of-file shared section) and are the only cross-module dependencies. The module tests the `run_grace_check_batch` function from `lemmy_api::governance::sponsor_liability_grace`, covering the SL-c sub-phase: fire branch, escape branch (sponsor revoked after decided_at), no-op (grace not expired), per-case isolation, and batch-size config cap. No nested mods, no `#[path]` attributes, no `#[cfg]` gates."
+    },
+    {
+      "module": "v1_sl_d_fixtures",
+      "line_range": "13649-14513",
+      "tests": [
+        {
+          "name": "submit_jury_vote_transitions_to_pending_for_liability_bearing_sponsored_case",
+          "line": 13711
+        },
+        {
+          "name": "submit_jury_vote_preserves_v0_decided_for_no_sponsor_target",
+          "line": 13953
+        },
+        {
+          "name": "submit_jury_vote_no_action_skips_liability_machinery",
+          "line": 14147
+        },
+        {
+          "name": "apply_sponsor_liability_wrapper_preserves_v0_outputs",
+          "line": 14342
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_target_with_sureties",
+          "line": 13682,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "super::v1_jm_b_fixtures::seed_jury_eligible_snapshots",
+        "super::governance_fixtures::bootstrap",
+        "super::governance_fixtures::seed_user"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "notes": "The module-level doc comment explicitly states it depends on --test-threads=1 for process-env safety (same constraint as all other governance fixture modules). The only cross-module fixture call is super::v1_jm_b_fixtures::seed_jury_eligible_snapshots, which is called in three of the four tests (lines 13751, 13990, 14185, 14364) — this helper must be moved to a shared module or re-exported from v1_jm_b to avoid a direct cross-domain dependency. EnvVarGuard (lines 111-137 top-level struct) is referenced indirectly through the module-level doc comment warning but is not directly instantiated in this module's code; however, the pattern is still load-bearing for the --test-threads=1 safety contract. All four tests use `use super::*` which pulls in governance_fixtures, all standard library imports, and the EnvVarGuard definition. The `apply_sponsor_liability_wrapper_preserves_v0_outputs` test (line 14342) has additional local use declarations inside the fn body for run_grace_check_batch and sanction-related types. No nested mods, no #[path] attrs, no cfg gates, no shared mutable statics. Tests are independent of each other (each bootstraps its own container via governance_fixtures::bootstrap()).",
+      "test_count": 4
+    },
+    {
+      "module": "v1_sl_e_fixtures",
+      "line_range": "14515-15485",
+      "tests": [
+        {
+          "name": "revocation_during_window_escapes_full_lane",
+          "line": 14689
+        },
+        {
+          "name": "window_expiry_fires_full_lane",
+          "line": 15014
+        },
+        {
+          "name": "backfill_of_mid_flight_v0_to_v1_deploy",
+          "line": 15230
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_target_with_sureties_and_endorsements",
+          "line": 14556,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "count_log_entries",
+          "line": 14593,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "read_log_payload",
+          "line": 14602,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "drive_jury_to_quorum",
+          "line": 14616,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "GraceCheckDisableGuard",
+          "line": 14664,
+          "kind": "struct",
+          "looks_shared": false
+        },
+        {
+          "name": "GraceCheckDisableGuard::set",
+          "line": 14668,
+          "kind": "impl",
+          "looks_shared": false
+        },
+        {
+          "name": "Drop for GraceCheckDisableGuard",
+          "line": 14678,
+          "kind": "impl",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "super::v1_jm_b_fixtures::seed_jury_eligible_snapshots"
+      ],
+      "top_level_helpers_referenced": [
+        "governance_fixtures"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "notes": "1. Cross-module dep on `super::v1_jm_b_fixtures::seed_jury_eligible_snapshots` (lines 14726, 15050): this module seeds jury-eligible reputation snapshots so that `admin_assign_jury` can pick from the pool. That function must either move to a shared common module or be kept accessible when this domain is split into its own file. 2. `GraceCheckDisableGuard` is a local RAII guard for `BREHON_DISABLE_GRACE_CHECK_JOB`; functionally parallel to the top-level `EnvVarGuard` but targeting a different env key — not a duplicate. If a shared env-guard abstraction is introduced during the split, these could be unified, but that is optional. 3. `drive_jury_to_quorum` drives a complete jury lifecycle (assign → accept → vote) and is non-trivial; it may be useful to other sponsor-liability or jury-management tests and is a candidate for a shared common module. 4. All three tests use `use super::*` to pull in `governance_fixtures`; that module must remain reachable from the extracted file (either via `mod governance_fixtures` in the new file or a `use crate::governance_fixtures` path). 5. The three tests each spin up an independent container via `governance_fixtures::bootstrap()` — no shared mutable state between tests, no ordering dependency. Clean extraction is straightforward modulo the cross-module ref in item 1."
+    },
+    {
+      "module": "v1_federation_inbound_a_fixtures",
+      "line_range": "15487-15554",
+      "tests": [
+        {
+          "name": "federation_peer_trust_lookup_returns_seeded_state",
+          "line": 15531
+        },
+        {
+          "name": "federation_peer_trust_lookup_returns_unknown_for_first_seen",
+          "line": 15545
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_federation_peer",
+          "line": 15504,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "federation_inbound",
+      "notes": "The module doc comment explicitly warns that tests mutate process-wide env vars (LEMMY_DATABASE_URL, BREHON_DISABLE_*) and require --test-threads=1; concurrent execution is declared undefined behaviour. The EnvVarGuard RAII guard is referenced in the comment but not instantiated in the visible code (it may be used inside governance_fixtures::bootstrap). Both tests call governance_fixtures::bootstrap() which is defined in another fixtures module — that cross-module dependency must move to a shared common module or be duplicated before this module can be extracted. The seed_federation_peer helper is domain-specific (federation peer trust seeding) and not generic enough to be shared. No nested mods, no #[path] attrs, no cfg gates, no shared mutable statics visible. Tests appear independent of each other (each bootstraps its own container)."
+    },
+    {
+      "module": "v1_ship_2_fixtures",
+      "line_range": "15555-16289",
+      "tests": [
+        {
+          "name": "request_appeal_happy_path_and_auth_failure",
+          "line": 15595
+        },
+        {
+          "name": "list_governance_modlog_returns_seeded_entry",
+          "line": 15699
+        },
+        {
+          "name": "get_my_reputation_happy_path_and_no_auth",
+          "line": 15787
+        },
+        {
+          "name": "create_endorsement_happy_path_and_self_endorse_rejects",
+          "line": 15852
+        },
+        {
+          "name": "agpl_source_disclosure_surface_returns_notice",
+          "line": 15945
+        },
+        {
+          "name": "admin_dashboard_html_returns_html_for_admin",
+          "line": 16100
+        },
+        {
+          "name": "admin_dashboard_html_forbidden_for_non_admin",
+          "line": 16140
+        },
+        {
+          "name": "admin_html_pages_flag_off_returns_404",
+          "line": 16164
+        },
+        {
+          "name": "admin_audit_html_returns_html_for_admin",
+          "line": 16217
+        },
+        {
+          "name": "admin_audit_html_forbidden_for_non_admin",
+          "line": 16270
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "mint_jwt",
+          "line": 15588,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "super::governance_fixtures::bootstrap",
+        "super::governance_fixtures::seed_user",
+        "super::admin_config_fixtures::bootstrap",
+        "super::admin_config_fixtures::bootstrap_instance",
+        "super::admin_config_fixtures::seed_user"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "ship",
+      "notes": "This range contains TWO distinct logical units that were grouped by the orchestrator: (1) the actual `mod v1_ship_2_fixtures` (lines 15555–15942), which tests appeal/modlog/reputation/endorsement endpoints (governance ship-2 delivery); and (2) five subsequent top-level (free) test functions spanning lines 15944–16289 that are NOT inside any named module. The top-level tests split into two sub-domains: `agpl_source_disclosure_surface_returns_notice` (line 15944) tests AGPL §10 source-disclosure endpoints and uses `governance_fixtures::bootstrap`, while the four `admin_dashboard_html_*` / `admin_audit_html_*` tests (lines 16099–16288) test server-rendered admin HTML pages (v1-AD-e) and use `admin_config_fixtures` exclusively. A clean split would separate these into at least two destination files: one for ship-2 governance endpoints (appeal + modlog + reputation + endorsement) and one for admin-HTML/AGPL disclosure. The `mint_jwt` helper is specific to ship-2 tests and does not belong in shared fixtures. `use super::*` in the inner module pulls in all top-level imports including `governance_fixtures`. No cfg gates, no nested mods, no shared mutable statics, no ordering dependencies between tests — each test spins up its own testcontainer via `bootstrap()`."
+    },
+    {
+      "module": "v1_federation_inbound_b_fixtures",
+      "line_range": "16290-16626",
+      "test_count": 6,
+      "tests": [
+        {
+          "name": "blocklisted_peer_returns_403",
+          "line": 16367
+        },
+        {
+          "name": "per_peer_rate_limit_returns_429",
+          "line": 16392
+        },
+        {
+          "name": "appended_config_override_takes_effect_returns_429",
+          "line": 16424
+        },
+        {
+          "name": "replayed_activity_returns_409",
+          "line": 16472
+        },
+        {
+          "name": "allowlisted_happy_path_persists_advisory_row",
+          "line": 16501
+        },
+        {
+          "name": "moderation_label_handler_persists_and_logs",
+          "line": 16527
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "bootstrap_with_peer",
+          "line": 16320,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "build_minimal_sanction_notice_activity",
+          "line": 16558,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "build_unique_sanction_notice_activity",
+          "line": 16564,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "build_sanction_notice_with_id",
+          "line": 16574,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "build_minimal_publish_label_activity",
+          "line": 16602,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "federation_inbound",
+      "notes": "Module doc comment explicitly notes that process-env mutation via EnvVarGuard is expected and requires --test-threads=1 for safety, although EnvVarGuard is defined at the top level (lines 111-137) and not used directly inside any test body here — it is referenced only in the module-level safety comment. All six tests call bootstrap_with_peer which in turn calls governance_fixtures::bootstrap() (defined at line 143, a sibling module). That cross-module dependency on governance_fixtures::bootstrap is the only hard coupling; if this module is extracted to its own file, governance_fixtures must be importable as a shared common module. No nested mods, no #[cfg] gates, no #[path] attributes, no shared mutable statics inside the range. Tests are functionally independent (each bootstraps its own Postgres container and uses a distinct peer domain string), so there is no execution-order dependency between them. The two activity types under test are PublishSanctionNotice (five tests) and PublishLabel (one test), both belonging to the federation inbound governance signal domain."
+    },
+    {
+      "module": "v1_federation_inbound_e_fixtures",
+      "line_range": "16627-16811",
+      "tests": [
+        {
+          "name": "storage_cap_holds_under_concurrent_receivers",
+          "line": 16756
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "bootstrap_with_peer",
+          "line": 16650,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_storage_cap",
+          "line": 16688,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "preseed_sanction_notices",
+          "line": 16702,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "build_sanction_notice_with_id",
+          "line": 16727,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "federation_inbound",
+      "test_count": 1,
+      "notes": "The single test uses `#[tokio::test(flavor = \"multi_thread\")]` (not the default single-threaded flavor), which is unusual — it spawns 8 concurrent tokio tasks to test Race A and Race B under concurrent receivers. The module doc comment calls out a hard requirement on `--test-threads=1` at the Cargo runner level to prevent cross-test env-var races (same constraint as all other federation_inbound modules). The `bootstrap_with_peer` fixture calls `governance_fixtures::bootstrap()` from a sibling module, making that a required cross-module dependency at split time — it cannot be extracted independently without also carrying or re-exporting `governance_fixtures::bootstrap`. There are no nested mods, no `#[path]` attrs, and no `#[cfg]` gates inside the module body. The `use super::*` glob at line 16633 pulls in all top-level use-aliases including `EnvVarGuard` (referenced only in the module-level doc comment, not in code — the guard is noted as the safety mechanism but not instantiated in any test body visible in this range, consistent with this module being a single-test, multi_thread-flavor module where the guard discipline is inherited from the runner flag rather than RAII)."
+    },
+    {
+      "module": "v1_ship_3_fixtures",
+      "line_range": "16813-17213",
+      "tests": [
+        {
+          "name": "two_sponsors_lose_endorsement_strength_on_sanction",
+          "line": 16859
+        }
+      ],
+      "fixtures": [],
+      "cross_module_refs": [
+        "governance_fixtures::start_postgres",
+        "governance_fixtures::db_url",
+        "governance_fixtures::apply_all_schema"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard",
+        "governance_fixtures"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "notes": "This module contains exactly one test. All helpers (seed_person, seed_surety, seed_snapshot, seed_endorsement_event, run_sanction_scenario, liability_delta_for) are defined as nested async fn items INSIDE the single test function body — they are not module-level fixtures and will not be callable by other modules after a split. The module uses `use super::*` which imports `EnvVarGuard` (defined at lines 111-137 of the top-level shared section) and the `governance_fixtures` module (defined at line 143). The test exercises the sponsor-liability grace window flow: it seeds surety relationships and reputation snapshots, runs a full sanction scenario through the jury pipeline, expires the grace window via a raw SQL UPDATE, calls run_grace_check_batch, then asserts that both sponsors' endorsement_strength is clamped to the floor value read from live config. No shared mutable statics. No ordering dependency on other tests. The comment at line 17147 references the v1-SL-c test at e2e.rs:14288 as a pattern source but does not call it — that is documentation only, not a runtime dependency. The inline seed_person helper shadows any same-named helper in other modules; it is self-contained within the test closure scope."
+    },
+    {
+      "module": "v1_rt_r3_fixtures",
+      "line_range": "17215-18267",
+      "tests": [
+        {
+          "name": "participation_activity_cron_emits_plus_one_per_active_user",
+          "line": 17665
+        },
+        {
+          "name": "participation_activity_cron_idempotent_across_same_iso_week",
+          "line": 17720
+        },
+        {
+          "name": "participation_dormancy_cron_emits_minus_two_per_dormant_user",
+          "line": 17760
+        },
+        {
+          "name": "participation_dormancy_cron_idempotent_across_same_iso_week",
+          "line": 17804
+        },
+        {
+          "name": "vote_outcome_emits_plus_one_for_majority_aligned_jurors",
+          "line": 17846
+        },
+        {
+          "name": "vote_outcome_emits_nothing_for_minority_jurors",
+          "line": 17909
+        },
+        {
+          "name": "flag_bad_faith_returns_403_for_non_admin",
+          "line": 17954
+        },
+        {
+          "name": "flag_bad_faith_returns_400_for_non_emergency_remove_status",
+          "line": 17980
+        },
+        {
+          "name": "flag_bad_faith_admin_on_emergency_remove_case_emits_minus_one",
+          "line": 18013
+        },
+        {
+          "name": "evidence_cited_heuristic_emits_plus_one_when_rationale_above_threshold",
+          "line": 18070
+        },
+        {
+          "name": "test_brehon_disable_snapshot_job",
+          "line": 18181
+        },
+        {
+          "name": "test_brehon_disable_fed_replay_cleanup_job",
+          "line": 18203
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "seed_person",
+          "line": 17305,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_named_community",
+          "line": 17326,
+          "kind": "fn",
+          "looks_shared": true
+        },
+        {
+          "name": "seed_active_users_in_community",
+          "line": 17345,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_dormant_users_in_community",
+          "line": 17395,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_case_evidence",
+          "line": 17432,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "count_reputation_events_for",
+          "line": 17455,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "seed_case_with_status",
+          "line": 17476,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "boot_context",
+          "line": 17508,
+          "kind": "fn",
+          "looks_shared": false
+        },
+        {
+          "name": "run_3_2_vote_scenario",
+          "line": 17567,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::start_postgres",
+        "governance_fixtures::db_url",
+        "governance_fixtures::apply_all_schema",
+        "governance_fixtures::seed_jurors"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "reputation",
+      "notes": "Module comment explicitly states it mirrors v1_ship_3_fixtures (e2e.rs:16699-17099) for boot + helper shape — the boot_context helper is a near-duplicate of a helper in that sibling module. seed_person and seed_named_community are local redefinitions of helpers in governance_fixtures (with comments citing the original lines at 835 and 855), so they would be candidates for a shared common module rather than duplicated. The module has 12 tests (not 10 as documented in the module comment — the snapshot-job guard test and the fed-replay-cleanup-job test were added after the original 5-story/10-test plan). The two extra tests (test_brehon_disable_snapshot_job and test_brehon_disable_fed_replay_cleanup_job) are guard/job-disable smoke tests that overlap thematically with federation/jobs rather than pure reputation, but they share the same boot_context and EnvVarGuard infrastructure. The module mutates process-wide env vars and requires --test-threads=1; extraction must preserve that constraint. No nested mods, no #[path], no cfg gates, no shared mutable statics. Tests are independent — no cross-test ordering dependencies detected. The run_3_2_vote_scenario helper duplicates vote-scenario infrastructure that also exists in v1_ship_3_fixtures (run_sanction_scenario at ~16907) and would be a strong candidate for a shared common module on extraction."
+    },
+    {
+      "module": "v1_rt_r4_fixtures",
+      "line_range": "18269-18582",
+      "tests": [
+        {
+          "name": "age_or_surety_gate_passes_via_surety",
+          "line": 18324
+        },
+        {
+          "name": "age_or_surety_gate_denies_without_surety",
+          "line": 18361
+        },
+        {
+          "name": "reputation_gate_passes_with_can_sponsor",
+          "line": 18392
+        },
+        {
+          "name": "reputation_gate_denies_without_snapshot",
+          "line": 18432
+        },
+        {
+          "name": "allowlist_gate_passes_when_on_list",
+          "line": 18462
+        },
+        {
+          "name": "allowlist_gate_denies_when_not_on_list",
+          "line": 18497
+        },
+        {
+          "name": "admin_allowlist_add_remove_round_trip",
+          "line": 18530
+        }
+      ],
+      "fixtures": [
+        {
+          "name": "set_gate_strategy",
+          "line": 18305,
+          "kind": "fn",
+          "looks_shared": false
+        }
+      ],
+      "cross_module_refs": [
+        "governance_fixtures::bootstrap",
+        "governance_fixtures::seed_user"
+      ],
+      "top_level_helpers_referenced": [
+        "EnvVarGuard"
+      ],
+      "proposed_domain": "sponsor_liability",
+      "notes": "The module has a single local helper `set_gate_strategy` (inserts a governance_config row to activate a given sponsor gate strategy ARM). All 7 tests share a consistent boot pattern via `governance_fixtures::bootstrap()` and `governance_fixtures::seed_user()`, both defined in the sibling `governance_fixtures` mod at line 143 (reachable via `use super::*`). No nested mods, no `#[path]` attrs, no `#[cfg]` gates, no shared mutable statics. Tests are fully independent — each starts its own container via `bootstrap()`. The module-doc comment (line 18278) notes it mirrors v1_rt_r3_fixtures for boot + helper shape. The `EnvVarGuard` struct defined in the top-level section (lines 111-137) is brought in via `use super::*` but is NOT actually used in any test body in this module — no explicit instantiation found. All imports are local to the module via explicit `use` statements."
+    }
+  ],
+  "headMap": {
+    "imports": [],
+    "top_level_tests": [
+      {
+        "name": "postgres_container_boots",
+        "line": 45
+      },
+      {
+        "name": "template_dump_capture",
+        "line": 80
+      }
+    ],
+    "helpers": [
+      {
+        "name": "EnvVarGuard",
+        "line": 111,
+        "kind": "struct"
+      },
+      {
+        "name": "EnvVarGuard::set",
+        "line": 117,
+        "kind": "method"
+      },
+      {
+        "name": "EnvVarGuard (Drop impl)",
+        "line": 127,
+        "kind": "impl"
+      }
+    ],
+    "module_attrs": [
+      "#![expect(clippy::tests_outside_test_module, ...)] (lines 15-18)",
+      "#![expect(clippy::items_after_statements, ...)] (lines 19-22)",
+      "#![expect(clippy::expect_used, clippy::unwrap_used, ...)] (lines 23-27)",
+      "#![expect(clippy::indexing_slicing, ...)] (lines 28-31)",
+      "#![expect(clippy::unreachable, ...)] (line 32)",
+      "#![expect(clippy::get_first, ...)] (lines 33-36)"
+    ]
+  },
+  "synthesis": {
+    "target_files": [
+      {
+        "path": "crates/server/tests/e2e.rs",
+        "absorbs": [
+          "shared head 1-137 (module attrs #![expect] lines 15-36; the two sanity tests postgres_container_boots@45 + template_dump_capture@80; EnvVarGuard struct+impl 111-137)"
+        ],
+        "test_count": 2,
+        "domain": "root"
+      },
+      {
+        "path": "crates/server/tests/e2e/common/mod.rs",
+        "absorbs": [
+          "governance_fixtures mod body 143-922 (all fixture/helper items: MIGRATIONS const@174, schema_sentinel_satisfied@222, apply_all_schema@241, pg_template sub-mod 275-731, start_postgres_vanilla@735, apply_all_schema_legacy@765, start_postgres@798, db_url@817, SIGNING_SEED_HEX@821, bootstrap@827, seed_user@874, seed_community@894, seed_jurors@908)",
+          "EnvVarGuard struct+set+Drop (head 111-137) re-homed here as pub(crate)",
+          "SingleI32 struct@2503 (file-scope; used by jury_queue_view_returns_assignments@2320 in governance + admin_assign_jury_small_pool_triggers_r1_relaxation@9214 in jury_mechanics)",
+          "shared-imports surface used by use super::* consumers"
+        ],
+        "test_count": 0,
+        "domain": "common"
+      },
+      {
+        "path": "crates/server/tests/e2e/governance.rs",
+        "absorbs": [
+          "23 file-scope tests living after governance_fixtures close-brace (922) and before admin_config_fixtures open (6091): can_insert_moderation_case@925 .. declining_juror_not_picked_as_own_replacement@5829",
+          "file-scope const MIGRATIONS_TO_REVERT_PHASE_1@1125 + fn assert_revert_list_matches_disk@1172 (used only by phase1 revert tests)",
+          "nested mod traits@5029 (in sanction_notice_round_trip body — moves with its test)"
+        ],
+        "test_count": 23,
+        "domain": "governance"
+      },
+      {
+        "path": "crates/server/tests/e2e/admin_config.rs",
+        "absorbs": [
+          "mod admin_config_fixtures body 6091-6229 (bootstrap@6119, seed_user@6184, bootstrap_instance@6205, seed_community_moderator@6214) preserved as inner mod admin_config_fixtures { }",
+          "31 file-scope tests 6231-8572: admin_set_config_happy_path@6235 .. admin_audit_stream_emits_frame_on_config_change@8410",
+          "file-scope fn scope_parse_wire_rejects_negative_community_id@7542 (admin scope-parse test, lives between admin tests)"
+        ],
+        "test_count": 31,
+        "domain": "admin_config"
+      },
+      {
+        "path": "crates/server/tests/e2e/jury_mechanics.rs",
+        "absorbs": [
+          "mod v1_jm_b_fixtures body 8593-8730 (seed_case@8622, seed_jury_eligible_snapshots@8665, seed_jury_eligible_snapshots_scoped@8679, seed_founder_event@8707) preserved as inner mod v1_jm_b_fixtures { } with pub(crate) on the 3 cross-referenced helpers",
+          "15 jm_b/jm_c file-scope tests 8732-10506: admin_assign_jury_severity_tier_regular_minor_panel_5_jurors@8737 .. submit_jury_vote_concurrent_votes_decide_exactly_once@10363",
+          "mod v1_jm_e_fixtures body 10517-10878 (seed_appealed_case_with_panel@10573, seed_appealed_case_with_panel_via_report@10692) preserved as inner mod v1_jm_e_fixtures { }",
+          "4 jm_e (appeal) file-scope tests 10880-11728: appeal_panel_decides_no_action_overrides_to_advisory_label_chain@10888 .. constraint_relaxation_visible_to_community_admin_orphan_case_blocks_spoofing@11550"
+        ],
+        "test_count": 19,
+        "domain": "jury_mechanics"
+      },
+      {
+        "path": "crates/server/tests/e2e/sponsor_liability.rs",
+        "absorbs": [
+          "mod v1_sl_b_fixtures body 11730-11910 (8 helpers incl count_log_entries@11869, read_log_payload@11879) preserved as inner mod v1_sl_b_fixtures { }",
+          "9 sl_b tests 11911-12764 (revoke_endorsement_*): revoke_endorsement_self_succeeds@11911 .. revoke_endorsement_no_pending_case_no_severance_only_revoked_log@12678",
+          "mod v1_sl_c_fixtures body 12766-12876 (count_log_entries@12792, read_log_payload@12801, seed_pending_case@12815, seed_active_surety@12859) preserved as inner mod v1_sl_c_fixtures { }",
+          "5 sl_c tests 12877-13647 (grace_check_*)",
+          "mod v1_sl_d_fixtures body 13649-13710 (seed_target_with_sureties@13682) preserved as inner mod",
+          "4 sl_d tests 13711-14513 (submit_jury_vote liability + apply_sponsor_liability_wrapper)",
+          "mod v1_sl_e_fixtures body 14515-14688 (incl GraceCheckDisableGuard struct@14664) preserved as inner mod",
+          "3 sl_e tests 14689-15485",
+          "mod v1_ship_3_fixtures body+test 16813-17213 (1 test two_sponsors_lose_endorsement_strength_on_sanction@16859; all helpers are test-body-local) preserved as inner mod v1_ship_3_fixtures { } — placed here by theme (pure sponsor-liability sanction test, refs only governance_fixtures)"
+        ],
+        "test_count": 22,
+        "domain": "sponsor_liability"
+      },
+      {
+        "path": "crates/server/tests/e2e/federation.rs",
+        "absorbs": [
+          "mod v1_federation_inbound_a_fixtures 15487-15553 (seed_federation_peer@15504 + its 2 tests) preserved as inner mod",
+          "2 fed_a tests: federation_peer_trust_lookup_returns_seeded_state@15531, ..returns_unknown_for_first_seen@15545",
+          "mod v1_federation_inbound_b_fixtures 16290-16625 (bootstrap_with_peer@16320, build_*sanction*@16558-16574, build_minimal_publish_label_activity@16602 + its 6 tests) preserved as inner mod",
+          "6 fed_b tests 16367-16527",
+          "mod v1_federation_inbound_e_fixtures 16627-16811 (bootstrap_with_peer@16650, seed_storage_cap@16688, preseed_sanction_notices@16702, build_sanction_notice_with_id@16727 + its 1 test) preserved as inner mod",
+          "1 fed_e test storage_cap_holds_under_concurrent_receivers@16756 (#[tokio::test(flavor=multi_thread)])"
+        ],
+        "test_count": 9,
+        "domain": "federation_inbound"
+      },
+      {
+        "path": "crates/server/tests/e2e/ship.rs",
+        "absorbs": [
+          "mod v1_ship_2_fixtures body 15555-15942 (mint_jwt@15588 + the 5 governance-endpoint tests inside-range) preserved as inner mod v1_ship_2_fixtures { }",
+          "5 ship_2 governance-endpoint tests 15595-15852 (request_appeal_happy_path_and_auth_failure, list_governance_modlog_returns_seeded_entry, get_my_reputation_happy_path_and_no_auth, create_endorsement_happy_path_and_self_endorse_rejects, agpl_source_disclosure_surface_returns_notice@15945)",
+          "5 file-scope admin-HTML tests 16099-16288 (admin_dashboard_html_returns_html_for_admin@16100, admin_dashboard_html_forbidden_for_non_admin@16140, admin_html_pages_flag_off_returns_404@16164, admin_audit_html_returns_html_for_admin@16217, admin_audit_html_forbidden_for_non_admin@16270) — these ref admin_config_fixtures::* via use crate::common"
+        ],
+        "test_count": 10,
+        "domain": "ship"
+      },
+      {
+        "path": "crates/server/tests/e2e/reputation.rs",
+        "absorbs": [
+          "mod v1_rt_r3_fixtures body 17215-17664 (seed_person@17305, seed_named_community@17326, seed_active_users_in_community@17345, seed_dormant_users_in_community@17395, seed_case_evidence@17432, count_reputation_events_for@17455, seed_case_with_status@17476, boot_context@17508, run_3_2_vote_scenario@17567) preserved as inner mod v1_rt_r3_fixtures { }",
+          "12 rt_r3 tests 17665-18267: participation_activity_cron_emits_plus_one_per_active_user@17665 .. test_brehon_disable_fed_replay_cleanup_job@18203",
+          "mod v1_rt_r4_fixtures body 18269-18304 (set_gate_strategy@18305) preserved as inner mod v1_rt_r4_fixtures { }",
+          "7 rt_r4 tests 18324-18582 (age_or_surety_gate_*, reputation_gate_*, allowlist_gate_*, admin_allowlist_add_remove_round_trip)"
+        ],
+        "test_count": 19,
+        "domain": "reputation"
+      }
+    ],
+    "common_surface": [
+      {
+        "name": "governance_fixtures (whole module: start_postgres, start_postgres_vanilla, db_url, apply_all_schema, apply_all_schema_legacy, bootstrap, seed_user, seed_community, seed_jurors, schema_sentinel_satisfied, pg_template::*, MIGRATIONS, SIGNING_SEED_HEX)",
+        "origin": "e2e.rs:143-922 (mod governance_fixtures)",
+        "used_by": [
+          "governance.rs (291 bare governance_fixtures:: refs originate here)",
+          "admin_config.rs (super::governance_fixtures::start_postgres/db_url/apply_all_schema @6138-6144)",
+          "jury_mechanics.rs (governance_fixtures::bootstrap/seed_community/seed_user/seed_jurors)",
+          "sponsor_liability.rs (governance_fixtures::bootstrap/seed_user + ship_3 start_postgres/db_url/apply_all_schema)",
+          "federation.rs (governance_fixtures::bootstrap via bootstrap_with_peer)",
+          "ship.rs (governance_fixtures::bootstrap/seed_user)",
+          "reputation.rs (governance_fixtures::start_postgres/db_url/apply_all_schema/seed_jurors)"
+        ]
+      },
+      {
+        "name": "EnvVarGuard (struct + set + Drop)",
+        "origin": "e2e.rs:111-137 (shared head, file-scope)",
+        "used_by": [
+          "governance.rs",
+          "admin_config.rs",
+          "jury_mechanics.rs",
+          "sponsor_liability.rs",
+          "federation.rs",
+          "ship.rs",
+          "reputation.rs",
+          "root e2e.rs sanity tests (none use it directly but governance_fixtures doc-comment references it)"
+        ]
+      },
+      {
+        "name": "SingleI32 (struct deriving QueryableByName/Queryable for single-column i32 rows)",
+        "origin": "e2e.rs:2503 (file-scope, between governance and admin modules)",
+        "used_by": [
+          "governance.rs (jury_queue_view_returns_assignments @2361 get_result::<SingleI32>)",
+          "jury_mechanics.rs (admin_assign_jury_small_pool_triggers_r1_relaxation @9256 get_result::<SingleI32>)"
+        ]
+      }
+    ],
+    "cross_ref_resolutions": [
+      {
+        "ref": "admin_config_fixtures: super::governance_fixtures::start_postgres (e2e.rs:6138)",
+        "resolution": "move-to-common: governance_fixtures lives in common/mod.rs as pub(crate). admin_config.rs does `use crate::common::governance_fixtures;` then rewrites `super::governance_fixtures::` -> `governance_fixtures::` (or `use crate::common::*`)."
+      },
+      {
+        "ref": "admin_config_fixtures: super::governance_fixtures::db_url (e2e.rs:6139)",
+        "resolution": "move-to-common: same as above; resolved via crate::common::governance_fixtures."
+      },
+      {
+        "ref": "admin_config_fixtures: super::governance_fixtures::apply_all_schema (e2e.rs:6144)",
+        "resolution": "move-to-common: same as above; resolved via crate::common::governance_fixtures."
+      },
+      {
+        "ref": "v1_jm_b_fixtures: governance_fixtures::bootstrap/seed_community/seed_user/seed_jurors",
+        "resolution": "move-to-common: jury_mechanics.rs `use crate::common::governance_fixtures;` — bare governance_fixtures:: resolves."
+      },
+      {
+        "ref": "v1_jm_e_fixtures: super::v1_jm_b_fixtures::seed_jury_eligible_snapshots + seed_case + seed_jury_eligible_snapshots_scoped (e2e.rs:10591,10594,10733,10734)",
+        "resolution": "merge-domains: jm_e merges INTO jury_mechanics.rs alongside jm_b. v1_jm_b_fixtures is now a sibling inner mod in the SAME file; rewrite `super::v1_jm_b_fixtures::` -> `super::v1_jm_b_fixtures::` already resolves (both are inner mods under jury_mechanics, super = the file/domain module). No common move needed for these 3 helpers — they stay private to jury_mechanics.rs (just add pub(crate)/pub on them within v1_jm_b_fixtures so the jm_e inner mod can call them)."
+      },
+      {
+        "ref": "v1_sl_d_fixtures: super::v1_jm_b_fixtures::seed_jury_eligible_snapshots (e2e.rs:13751,13990,14185,14364)",
+        "resolution": "move-to-common: sl_d lands in sponsor_liability.rs but v1_jm_b_fixtures lands in jury_mechanics.rs — they are now in DIFFERENT files. seed_jury_eligible_snapshots + seed_jury_eligible_snapshots_scoped + seed_case must be PROMOTED to common (e.g. common::jury_seed::*) as pub(crate). Both jury_mechanics.rs and sponsor_liability.rs then `use crate::common::jury_seed::*`. (This is the one cross-DOMAIN data dependency that forces a common move beyond governance_fixtures.)"
+      },
+      {
+        "ref": "v1_sl_d_fixtures: super::governance_fixtures::bootstrap/seed_user (e2e.rs)",
+        "resolution": "move-to-common: resolved via crate::common::governance_fixtures."
+      },
+      {
+        "ref": "v1_sl_e_fixtures: super::v1_jm_b_fixtures::seed_jury_eligible_snapshots (e2e.rs:14726,15050)",
+        "resolution": "move-to-common: same as sl_d — uses the promoted common::jury_seed::seed_jury_eligible_snapshots."
+      },
+      {
+        "ref": "v1_ship_2_fixtures: super::governance_fixtures::bootstrap/seed_user",
+        "resolution": "move-to-common: ship.rs `use crate::common::governance_fixtures;`."
+      },
+      {
+        "ref": "v1_ship_2_fixtures (admin-HTML tests): super::admin_config_fixtures::bootstrap/bootstrap_instance/seed_user",
+        "resolution": "merge-domains-OR-promote: the 4 admin_dashboard_html_*/admin_audit_html_* tests reference admin_config_fixtures. Cleanest = promote admin_config_fixtures::{bootstrap,bootstrap_instance,seed_user} to pub(crate) and have ship.rs `use crate::admin_config;` is NOT possible (sibling domain file, not common). Resolution: keep admin_config_fixtures inner-mod in admin_config.rs AND ALSO have ship.rs reference it via crate path — but sibling-domain access requires the helper in common. DECISION: promote admin_config_fixtures bootstrap-trio into common (common::admin_config_seed) as pub(crate); admin_config.rs + ship.rs both `use crate::common::admin_config_seed`. Alternative (lower-churn): move the 4 admin-HTML tests into admin_config.rs instead of ship.rs, eliminating the cross-domain ref entirely — RECOMMENDED."
+      },
+      {
+        "ref": "v1_ship_3_fixtures: governance_fixtures::start_postgres/db_url/apply_all_schema",
+        "resolution": "move-to-common: ship_3 placed in sponsor_liability.rs; resolved via crate::common::governance_fixtures. All other ship_3 helpers are test-body-local (no cross-ref)."
+      },
+      {
+        "ref": "v1_rt_r3_fixtures: governance_fixtures::start_postgres/db_url/apply_all_schema/seed_jurors",
+        "resolution": "move-to-common: reputation.rs `use crate::common::governance_fixtures;`. Note rt_r3's local seed_person@17305 + seed_named_community@17326 are LOCAL redefinitions (comments cite originals @835/@855) — leave-as-is inside v1_rt_r3_fixtures inner mod (they intentionally shadow; not the same signature)."
+      },
+      {
+        "ref": "v1_rt_r4_fixtures: governance_fixtures::bootstrap/seed_user",
+        "resolution": "move-to-common: resolved via crate::common::governance_fixtures."
+      },
+      {
+        "ref": "v1_federation_inbound_a/b/e: governance_fixtures::bootstrap (via bootstrap_with_peer)",
+        "resolution": "move-to-common: federation.rs `use crate::common::governance_fixtures;`. The 3 fed modules merge into federation.rs as 3 sibling inner mods — bootstrap_with_peer (dup in b+e) and build_sanction_notice_with_id (dup in b+e) stay private inside their respective inner mods, so NO collision (merge-domains keeps namespacing)."
+      }
+    ],
+    "visibility_changes": [
+      "common/mod.rs: `mod governance_fixtures` -> `pub(crate) mod governance_fixtures` (consumed by all 7 domain files). Its currently-`pub` fns (seed_case, seed_community, seed_user etc per maps) stay pub; the currently-private-but-cross-referenced fns (start_postgres, start_postgres_vanilla, db_url, apply_all_schema, bootstrap, seed_jurors, schema_sentinel_satisfied, pg_template::ensure_template + MIN_TEMPLATE_DUMP_BYTES) must become `pub(crate)` — they are currently bare-`fn`/`const` (module-private) and only worked because tests were file-scope siblings; once tests are in sub-modules, sibling-privacy no longer applies.",
+      "common/mod.rs: `struct EnvVarGuard` + `fn set` + `Drop impl` -> `pub(crate) struct EnvVarGuard` with `pub(crate) fn set`. Currently file-private; sub-modules need it.",
+      "common/mod.rs: `struct SingleI32` + its derive fields -> `pub(crate) struct SingleI32 { pub(crate) <col>: i32 }` (QueryableByName/Queryable needs the field visible to the deriving crate scope; used cross-file by governance.rs + jury_mechanics.rs).",
+      "common (new sub-namespace common::jury_seed): promote `seed_jury_eligible_snapshots`, `seed_jury_eligible_snapshots_scoped`, `seed_case` (currently in v1_jm_b_fixtures, already `pub`) to `pub(crate)` in common — required because sl_d/sl_e (sponsor_liability.rs) call them cross-DOMAIN and jury_mechanics.rs also needs them. Keep jm_b's other helper seed_founder_event private to jury_mechanics.",
+      "jury_mechanics.rs: within inner `mod v1_jm_b_fixtures`, the 3 helpers that jm_e (sibling inner mod) calls via `super::v1_jm_b_fixtures::` need `pub(super)` or `pub(crate)` (they are already `pub` per map for seed_case@8622 — verify seed_jury_eligible_snapshots@8665 + _scoped@8679 also get pub).",
+      "admin_config.rs: inner `mod admin_config_fixtures` helpers bootstrap/seed_user/bootstrap_instance are already `pub` (map: looks_shared true) — keep `pub` so file-scope tests in the SAME file resolve `admin_config_fixtures::bootstrap`. seed_community_moderator stays pub (file-scope tests call it). If the admin-HTML tests stay in ship.rs (not recommended), bootstrap-trio must additionally be promoted to common::admin_config_seed pub(crate)."
+    ],
+    "risks": [
+      "TEST-COUNT DISCREPANCY (must surface): the StructuredOutput schema asserts total_tests_accounted must equal 41, but the actual file has 135 attr-preceded test functions (verified: 2 shared-head sanity + 133 domain tests enumerated in the maps; `grep -c #[tokio::test]`=133 + #[test]=3 incl 2 sanity + traced_test overlap). The maps' own enumerated test lists sum to exactly 133 domain tests. 41 is factually wrong; this manifest reports the true total (135) so per-file test_count sums stay consistent. If downstream tooling hard-checks ==41 it will reject — the 41 constant needs correcting at the source.",
+      "DUPLICATE MODULE-LEVEL HELPER COLLISION ON MERGE (highest compile risk): count_log_entries + read_log_payload are defined 3x as module-level fns (sl_b@11869/11879, sl_c@12792/12801, sl_e@14593/14602). seed_pending_case 2x (sl_b@11781, sl_c@12815). bootstrap_with_peer 2x (fed_b@16320, fed_e@16650). build_sanction_notice_with_id 2x (fed_b@16574, fed_e@16727). MITIGATION: preserve each source `mod *_fixtures { }` as a SEPARATE inner mod inside the merged domain file (do NOT flatten) — this keeps each duplicate namespaced (v1_sl_b_fixtures::count_log_entries vs v1_sl_c_fixtures::count_log_entries). Flattening = E0428 duplicate definition. This is the load-bearing structural rule of the whole split.",
+      "seed_person defined 7x — ALL inside test-fn bodies (governance @2634/3400/4494/4818/5891, ship_3 @16909, rt_r3 module-level @17305). The 6 test-body ones are fn-local scope → no collision even in same file. The rt_r3 module-level one is namespaced under v1_rt_r3_fixtures inner mod → no collision. Safe as long as test bodies are copied verbatim.",
+      "mint_jwt defined 2x: governance test-body @4282 (local) + ship_2 module-level @15588. Different files (governance.rs vs ship.rs) → no collision. Note signatures differ (LocalUserId vs local_user_id) — copy each verbatim into its own file; do NOT attempt to unify.",
+      "SingleI32 promoted to common but derives Diesel QueryableByName/Queryable: the derive macro generates impls in the field's visibility scope. After pub(crate), confirm the get_result::<SingleI32>() callsites (@2361 governance, @9256 jury_mechanics) still resolve the column mapping. Low risk but a compile-time derive-visibility footgun (cf. project lesson feedback_rust_visibility_cross_crate).",
+      "EXECUTION-ORDER / SHARED-STATIC: admin_config.rs audit-stream tests (admin_audit_stream_enforces_per_admin_cap@8343, ..emits_frame_on_config_change@8410) rely on a module-static per-admin cap HashSet that persists across tests in-process (map note). Splitting into a sub-module does NOT change process scope (still one test binary) — SAFE. But the constraint that tests use unique usernames to avoid PersonId collision must be preserved verbatim. Same for fed_e multi_thread test relying on --test-threads=1 at runner level.",
+      "PROCESS-WIDE ENV + --test-threads=1: every domain mutates process env (LEMMY_DATABASE_URL, BREHON_DISABLE_*). Splitting into multiple tests/e2e/<domain>.rs files keeps them in ONE integration-test binary (single compile unit, single process), so --test-threads=1 still applies globally — SAFE. CRITICAL: must NOT create multiple top-level tests/*.rs files (that would make separate binaries and break the single-process env contract). The thin-root tests/e2e.rs + tests/e2e/ subdir pattern guarantees one binary.",
+      "nested `mod traits` @5029 (inside sanction_notice_round_trip body, re-exports activitypub_federation::traits::Activity as ActivityTrait) — moves intact with its enclosing test into governance.rs. No action, but don't strip it.",
+      "GraceCheckDisableGuard struct (sl_e @14664, RAII for BREHON_DISABLE_GRACE_CHECK_JOB) is local to v1_sl_e_fixtures — stays inside that inner mod in sponsor_liability.rs. Not a duplicate of EnvVarGuard (different key); do NOT unify.",
+      "ship_2 module range (15555-15942) and the 5 admin-HTML/AGPL tests (15944-16288) are TWO logical units in one map entry. The map flags admin-HTML tests use admin_config_fixtures EXCLUSIVELY. Placing them in ship.rs creates a cross-domain ref to admin_config. RECOMMENDED MITIGATION: move the 4 admin_dashboard_html_*/admin_audit_html_* tests into admin_config.rs (where admin_config_fixtures already lives), leaving only agpl_source_disclosure + the 5 ship-2 governance-endpoint tests in ship.rs. This drops ship.rs to 6 tests, admin_config.rs to 35, and eliminates one cross-domain promotion. (Manifest currently lists them in ship.rs per the map's proposed_domain; flag for planner decision.)",
+      "ship_3 single test placed in sponsor_liability.rs by theme (its only cross-ref is governance_fixtures). Alternative placement in ship.rs by module-name is equally valid; document the choice so the planner doesn't double-count.",
+      "291 bare governance_fixtures:: refs + 106 admin_config_fixtures:: + 40 v1_jm_b_fixtures:: must ALL resolve post-move. The `use crate::common::governance_fixtures;` (bare-path-preserving) import in each domain file means the 291 refs need NO textual change — but if the planner instead rewrites to fully-qualified crate::common::governance_fixtures:: it's 291 edits. Prefer the use-import approach to minimise diff and anchor-collision risk (cf. e2e.rs Edit-hang lessons).",
+      "tracing_test::traced_test on snapshot_staleness_alert_fires_when_max_calculated_at_is_old@3988 (governance.rs) needs tracing-test as a dev-dependency in Cargo.toml — already present (test currently compiles). Moving the test does not change the dep; just confirm the `use` for the macro travels with it."
+    ],
+    "suggested_subphase_batching": [
+      {
+        "order": 1,
+        "domain": "common/ + thin-root e2e.rs scaffold (NO domain moves yet)",
+        "rationale": "Foundational and zero-test-move: create tests/e2e/common/mod.rs holding governance_fixtures (pub(crate)), EnvVarGuard, SingleI32, and the promoted common::jury_seed::{seed_jury_eligible_snapshots,_scoped,seed_case}; convert tests/e2e.rs to thin root declaring `mod common;` + (temporarily) keeping all tests in-place via `#[path]` or by leaving them until step 2. Verify the 2 sanity tests + the existing 133 still compile & pass against the new common module. This isolates the visibility-rewrite (the riskiest mechanical change) into one reviewable diff before any test relocation."
+      },
+      {
+        "order": 2,
+        "domain": "federation.rs (fed_a + fed_b + fed_e)",
+        "rationale": "LOWEST cross-ref risk among test-bearing domains: only cross_module_ref is governance_fixtures::bootstrap (now in common). 9 tests, 3 small modules, all duplicates (bootstrap_with_peer, build_sanction_notice_with_id) safely namespaced by keeping 3 inner mods. Smallest blast radius to validate the merge-domains-via-inner-mod pattern end-to-end. Includes the multi_thread fed_e test — proves the single-binary env contract holds."
+      },
+      {
+        "order": 3,
+        "domain": "reputation.rs (rt_r3 + rt_r4)",
+        "rationale": "19 tests, cross-refs only to governance_fixtures (common). rt_r3's local seed_person/seed_named_community shadows are self-contained in its inner mod. No cross-domain data deps. Independent of jury/sponsor work."
+      },
+      {
+        "order": 4,
+        "domain": "governance.rs",
+        "rationale": "23 tests, ZERO cross_module_refs (governance_fixtures is its OWN now-extracted module in common; all refs are to common). Largest single-domain file but cleanest dependency graph. Carries the file-scope MIGRATIONS_TO_REVERT_PHASE_1 const + assert_revert_list_matches_disk fn + nested traits mod + traced_test. Do after the pattern is proven on smaller domains."
+      },
+      {
+        "order": 5,
+        "domain": "admin_config.rs",
+        "rationale": "31 tests (35 if absorbing the 4 admin-HTML tests per the recommended mitigation). Cross-ref to governance_fixtures (common) only. Self-contained admin_config_fixtures inner mod. Carries the shared-static audit-stream tests (verify username-uniqueness preserved). Sequence after governance so common::governance_fixtures is battle-tested."
+      },
+      {
+        "order": 6,
+        "domain": "jury_mechanics.rs (jm_b + jm_e)",
+        "rationale": "19 tests. jm_e->jm_b cross-ref resolves WITHIN this file (both inner mods, super:: path). Must land BEFORE sponsor_liability because it confirms the common::jury_seed promotion works for the in-file consumer first. Uses SingleI32 from common."
+      },
+      {
+        "order": 7,
+        "domain": "sponsor_liability.rs (sl_b + sl_c + sl_d + sl_e + ship_3)",
+        "rationale": "LAST / highest risk: 22 tests, 5 inner mods, the most duplicate helpers (count_log_entries/read_log_payload x3, seed_pending_case x2), AND the only cross-DOMAIN data dep (sl_d/sl_e call common::jury_seed::seed_jury_eligible_snapshots, promoted in step 1 and proven in step 6). Sequencing it last means every dependency (common, jury_seed) is already validated, so a failure here is localised to the merge mechanics of this file alone."
+      }
+    ],
+    "verification_command": "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/e2e-split-baseline.log 2>&1 && echo E2E_EXIT_0 >> .claude/e2e-split-baseline.log || echo E2E_EXIT_NONZERO >> .claude/e2e-split-baseline.log\"  (run on phase-v1-closeout BEFORE the split to capture the golden pass/ignore counts — expect 135 tests collected: ~129 run + 6 #[ignore], 0 failed; re-run after EACH sub-phase and diff the 'test result:' summary line + the per-test name list via `--list` to prove identical discovery. Docker Desktop must be up first: `docker ps`. Never bare `cargo test` on Windows — bat wrapper sets vcpkg/libpq PATH.)",
+    "total_tests_accounted": 135
+  }
+}
