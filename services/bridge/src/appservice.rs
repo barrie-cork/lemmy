@@ -34,6 +34,7 @@ pub struct AppState {
     pub config: Arc<BridgeConfig>,
     pub puppet_map: Arc<crate::puppet::PuppetMap>,
     pub http_client: reqwest::Client,
+    pub relay_enabled: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Minimal representation of a Tuwunel transaction body.
@@ -91,24 +92,28 @@ async fn hs_token_auth(
 /// PUT /_matrix/app/v1/transactions/{txnId}
 /// Tuwunel pushes all events destined for this AS here.
 /// Relays inbound Matrix DMs to Brehon via relay::handle_inbound (Task 11).
+/// Returns 200 immediately with no relay when soft-pause is active.
 async fn handle_transactions(
     State(state): State<Arc<AppState>>,
     Path(txn_id): Path<String>,
     Json(body): Json<PushEventsBody>,
-) -> impl IntoResponse {
+) -> Response {
+    if !state
+        .relay_enabled
+        .load(std::sync::atomic::Ordering::Relaxed)
+    {
+        tracing::info!("relay paused — messaging_enabled=false");
+        return (StatusCode::OK, Json(serde_json::json!({}))).into_response();
+    }
     tracing::info!(
         txn_id = %txn_id,
         event_count = body.events.len(),
         "received AS transaction"
     );
-    if let Err(e) = relay::handle_inbound(
-        &body.events,
-        &state.config,
-        &state.http_client,
-    ).await {
+    if let Err(e) = relay::handle_inbound(&body.events, &state.config, &state.http_client).await {
         tracing::warn!(err = %e, "relay::handle_inbound error");
     }
-    (StatusCode::OK, Json(serde_json::json!({})))
+    (StatusCode::OK, Json(serde_json::json!({}))).into_response()
 }
 
 /// GET /_matrix/app/v1/users/{userId}
