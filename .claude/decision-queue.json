@@ -3432,6 +3432,23 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-23T12:30:00Z",
       "source": "config.rs:831 DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE=-50; config.rs:835 DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR=0; sponsor_liability.rs:348 clamped-delta math; e2e.rs:3773 existing tests use seed 100"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-06-04T15:10:00Z",
+      "question": "v1 close-out Phase 5 (deps-r3): what to do with the 12 open wasmtime-family Dependabot alerts that extism 1.21.0 transitively pins (wasmtime 41.0.4)?",
+      "options": [
+        "keep-deferred + document + watch extism releases + dismiss alerts",
+        "fork-and-patch extism to wasmtime >=42 now (high ADR-012 risk)"
+      ],
+      "context": "Ground-truth verified 2026-06-04: 12 (not 13) open wasmtime alerts — 2 critical (GHSA-xx5w #46, GHSA-jhxm #43) are aarch64-only sandbox escapes (Brehon deploys x86_64 only per docker-compose.yml), remaining 10 are medium/low (one x86_64: GHSA-qqfj #40; rest arch-neutral/Winch). All require attacker-controlled WASM; Brehon's WASM guests are operator-authored governance plugins (ADR-012), not attacker-supplied → low real exposure. extism 1.21.0 (our pin, newest crate) already shipped the wasmtime-41 bump via PR #897; the plan's named watch target PR #847 is CLOSED/stale/wrong-direction. No live upstream PR bumps to wasmtime >=42. Closing alerts needs forking extism (pins wasmtime via internal wiggle-macro APIs; bare [patch.crates-io] won't compile) — 1-3 days, high ADR-012 risk, not justified by exposure.",
+      "answer": "Keep deferred (user decision, ADR-012 risk gate, 2026-06-04). Full rationale + the two corrected plan premises + the 12-alert dismissal table in .claude/PRPs/reports/v1-deps-r3-wasmtime-deferral-decision.md. Actions: (1) decision doc authored; (2) /schedule watch set on extism RELEASES (not the dead PR #847) to adopt the moment a wasmtime>=42 release ships; (3) user dismisses the 12 alerts in the GitHub Security tab with the documented 'risk tolerable' reason. Revisit trigger: upstream extism release carrying wasmtime>=42 → bump extism, re-run laptop cargo+e2e+cargo-linux gate, confirm alerts clear, remove dismissals. Forking extism is the fallback only if upstream stalls past pilot AND the threat model changes (Brehon begins executing non-operator WASM).",
+      "answered_by": "user",
+      "resolved_at": "2026-06-04T15:10:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "466deb2e9332-001"
     }
   ]
 }
