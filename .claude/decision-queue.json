@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "a9a0325ee9f3-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-a-task-10-puppet-on-first-contact-see-claude-prps-briefs-m1-a-impl-10-md-591",
+      "phase_task": 10,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "question": "Tree-A Task 10: puppet-on-first-contact compiles inside services/bridge — laptop runs cargo check.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 10 created services/bridge/src/puppet.rs (PuppetMap + ensure_puppet via matrix-sdk Client) and added mod puppet + PuppetMap field to AppState. VALIDATE: cd services/bridge && cargo check must be GREEN (exit 0). NOT --workspace. NOT --features full.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
