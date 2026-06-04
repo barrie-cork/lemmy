@@ -11,6 +11,7 @@
 mod appservice;
 mod config;
 mod puppet;
+mod relay;
 
 use anyhow::Result;
 use appservice::AppState;
@@ -29,6 +30,7 @@ async fn main() -> Result<()> {
     let app = appservice::router(Arc::new(AppState {
         config: config_arc,
         puppet_map,
+        http_client: reqwest::Client::new(),
     }));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], bridge_port));
