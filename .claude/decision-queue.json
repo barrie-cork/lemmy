@@ -5637,6 +5637,32 @@
       "id": "a192dbab1de8-002"
     },
     {
+      "id": "908b808091b4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-1-governance-messaging-config-migration-see-claude-prps-briefs-m1-b-impl-1-md-574",
+      "phase_task": 1,
+      "commands": [
+        "./scripts/brehon/migrate-roundtrip.sh"
+      ],
+      "question": "Migration round-trip for governance_messaging_config — laptop runs (Docker + cargo).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 created migrations/2026-06-03-000000-0000_add_governance_messaging_config/{up,down}.sql. Round-trip via migrate-roundtrip.sh (auto-detects new migration vs governance-v0; spins ephemeral pgautoupgrade:18 containers; applies via cargo run -p lemmy_diesel_utils --features full). Docker + cargo required — laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS — migrate-roundtrip.sh exit 0. Forward apply (container 1) exit 0; idempotent fresh-container replay (container 2) exit 0. lemmy_diesel_utils built (2m53s) + ran twice clean. 1 new migration (governance_messaging_config). Log: .claude/runlog/m1-b-task1-migrate-roundtrip-20260604T094254Z.log",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T09:48:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a192dbab1de8-001",
       "from": "planner",
       "kind": "blocker",
       "timestamp": "2026-06-03T00:00:00Z",
@@ -5646,12 +5672,214 @@
         "proceed-as-one"
       ],
       "context": "Tree A (services/bridge/, workspace-excluded) and Tree B (Brehon-side, in-workspace) have disjoint validation harnesses (workspace cargo + e2e vs inside-services/bridge cargo + docker-compose), disjoint failure modes, and a one-directional dependency: Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse. Planner recommends split. Metric under-counts Tree A greenfield LOC (see plan section 18-R1).",
-      "answer": "split. User chose to split M1 into phase-m1-b (Tree B, Tasks 1-7 — Brehon-side, standard workspace+e2e validation) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14 — inside-services/bridge cargo + docker-compose). Rationale per planner: disjoint validation harnesses, one-directional dependency (Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse), disjoint failure modes; the 23/10 metric under-counts Tree A greenfield LOC (plan §18-R1). Selected via AskUserQuestion gate.",
+      "answer": "split — per user gate decision 2026-06-04T07:00:00Z (auto-state user_gate_history): split M1 into phase-m1-b (Tree B, Tasks 0-7) shipped first, then phase-m1-a (Tree A bridge daemon + Tree C docs). The phase-m1-b branch exists because of this decision.",
       "answered_by": "user",
-      "resolved_at": "2026-06-04T07:54:17Z",
-      "approved_by": "a3d0e9941441",
-      "approved_at": "2026-06-04T07:54:17Z",
-      "id": "a192dbab1de8-001"
+      "resolved_at": "2026-06-04T09:48:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-b-task-2-governance-messaging-config-model-newtype-schema-see-claude-prps-briefs-m1-b-impl-2-md-575",
+      "phase_task": 2,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "question": "Workspace check for governance_messaging_config model+newtype+schema — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 added GovernanceMessagingConfig model + MessagingConfigId newtype + schema.rs table macro/joinable/allow_tables. Mirrors governance_config sibling minus value_float. cargo check --workspace --features full required (model must compile in full mode; the #[cfg(feature=full)] Diesel derives only activate under --features full). Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — cargo check --workspace --features full Finished dev profile in 9m08s, 0 errors 0 warnings. Validated on laptop against phase-m1-b@8499c6c9a (worker 4039b72ca).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T10:27:48.986724Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "5d109e344b80-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m1-b-task-3-messaging-config-dtos-see-claude-prps-briefs-m1-b-impl-3-md-576",
+      "phase_task": 3,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for messaging-config DTOs — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added AdminSetMessagingConfig + AdminSetMessagingConfigResponse to api_common/src/governance.rs. Response reuses ConfigValueWithProvenance (NOT the full AdminSetConfigResponse shape — no governance_log_id/preview/applied). ts-rs derive gating mirrors AdminSetConfig sibling. cargo check --workspace --features full required (ts-rs export gating); e2e --no-run confirms the DTO compiles into the test target (plan §15.3 lists Task 3). Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — both commands green on laptop. cargo check --workspace --features full Finished dev 3m22s, 0 err 0 warn. cargo test --no-run -p lemmy_server --test e2e Finished test 21m57s, E2E_COMPILE_EXIT_0. AdminSetMessagingConfig + AdminSetMessagingConfigResponse compile clean incl ts-rs gating + e2e test target.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T11:18:42Z",
+      "id": "8067d01486b9-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T11:36:52Z",
+      "branch": "junior/role-impl-task-m1-b-task-4-messaging-config-handler-see-claude-prps-briefs-m1-b-impl-4-md-578",
+      "phase_task": 4,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for messaging-config handler — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 created crates/api/api/src/governance/messaging_config.rs (admin_set_messaging_config + admin_get_messaging_config + local split_typed_value minus float arm) and added pub mod messaging_config to mod.rs. SINGLE write, NO run_transaction, NO governance_log append (plan §10.3 GOTCHA). value_type derived from JSON shape (no metadata registry in M1). cargo check --workspace --features full required (feature=full Diesel gating); e2e --no-run confirms the handler compiles into the test target. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS. cmd-0 cargo check --workspace --features full: 0 errors, 1 warning (private_interfaces on GetMessagingConfigQuery, line 135 — non-blocking; fold pub-struct fix into Task 5). cmd-1 cargo test --no-run -p lemmy_server --test e2e: Finished test profile in 27m35s, 0 errors, 2 warnings (same private_interfaces). Both green. Validated on detached worktree at worker tip 4f18ec3c3; FF-promoted to phase-m1-b.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T12:43:43Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "ad90f93383be-001"
+    },
+    {
+      "id": "67e662ffa639-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-5-identity-policy-validator-routes-see-claude-prps-briefs-m1-b-impl-5-md-580",
+      "phase_task": 5,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for identity-policy validator + route registration — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 added validate_identity_policy (ADR-015 pin) to messaging_config.rs + a call in admin_set_messaging_config before the insert, registered POST+GET /governance/admin/messaging-config in routes/src/lib.rs, and made GetMessagingConfigQuery pub (clears the Task-4 private_interfaces warning). Pure validator (no DB write) + route wiring + 1-char visibility fix. cargo check --workspace --features full required (feature=full route + Diesel gating); e2e --no-run confirms the routes + validator compile into the test target. Expect 0 warnings (the Task-4 private_interfaces warning is fixed here). Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS. cmd-0 cargo check --workspace --features full: Finished 1m33s, 0 errors, 0 WARNINGS (the Task-4 private_interfaces warning on GetMessagingConfigQuery is now CLEARED by the pub-struct fold-fix). cmd-1 cargo test --no-run -p lemmy_server --test e2e: Finished test profile 3m23s, 0 errors, 0 warnings. Both green. validate_identity_policy matches plan §10.4 + Unknown(format!) idiom; routes registered. Validated on detached worktree at worker tip c9e7d6b76; FF-promoted to phase-m1-b.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T13:35:18Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a6f5689106b9-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-6-bridge-notify-wiring-see-claude-prps-briefs-m1-b-impl-6-md-582",
+      "phase_task": 6,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for bridge_notify wiring — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 created crates/api/api_utils/src/bridge_notify.rs (notify_if_enabled: read messaging_enabled via read_current, false/None→no-op, true→fire-and-forget POST swallowing transport errors), added pub mod bridge_notify to lib.rs (alphabetically first), and called notify_if_enabled alongside plugin_hook_notification at notify.rs:305 (additive, no new hook). Fire-and-forget — NEVER fails the PM path (.ok()/log-and-swallow, never ?). Bridge URL: http://localhost:9009/brehon/notify (documented const per §10.5 — no bridge runs in M1). cargo check --workspace --features full required; e2e --no-run confirms it compiles into the test target. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS (cycle 2): advisor applied 1-line Cargo.toml fix per user authorization — reqwest-middleware features [form] -> [form, json] (enables RequestBuilder::json, fixing E0599). Validated on laptop off worker SHA 6b87b45b7 + Cargo.toml fix: cargo check --workspace --features full Finished 13m07s 0err 0warn (CHECK_EXIT_0); cargo test --no-run -p lemmy_server --test e2e Finished 14m50s 0err 0warn (E2E_COMPILE_EXIT_0). Worker bridge_notify.rs code unchanged (idiomatic + correct). Fix lands on phase-m1-b this commit.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T14:41:16.482693+00:00",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "7cc201fb4de1-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "question": "Validate task 7 e2e tests: messaging_disabled_preserves_governance_posture + messaging_identity_policy_rejects_jury_override",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 added two e2e tests to crates/server/tests/e2e.rs: clean-posture invariant (read_current returns None) + identity-policy rejection (validator rejects jury/real_name). Validation delegated to laptop per validate-pending-laptop write-then-stop constraint.",
+      "commands": [
+        "./scripts/brehon/cargo-test.sh --test e2e -p lemmy_server messaging_disabled_preserves_governance_posture messaging_identity_policy_rejects_jury_override"
+      ],
+      "branch": "junior/role-impl-task-m1-b-task-7-e2e-tests-clean-posture-identity-policy-reject-see-claude-prps-briefs-m1-b-impl-7-md-583",
+      "phase_task": 7,
+      "e2e_filter": null,
+      "answer": "PASS (cycle 2): advisor fixed test1 assertion per user authorization — assert!(result.is_none()) -> assert_eq!(result.and_then(|row| row.value_bool), Some(false)) (clean posture = migration-seeded messaging_enabled=false row exists, not absent). Both e2e tests pass on laptop: messaging_identity_policy_rejects_jury_override PASS 45.8s + messaging_disabled_preserves_governance_posture PASS 46.2s (E2E_RUN_EXIT_0, 2 passed). Test2 was always green (validator works); only test1's expectation was wrong. Fix lands this commit.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T15:11:48.859350+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "8aca794fb044-003",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-04T15:15:25.550999+00:00",
+      "question": "Linux-deploy-target compile proof for phase-m1-b (M1 migration + Cargo.toml json feature in diff) — Docker rust:1.95 mirror of CI.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "phase-m1-b diff vs governance-v0 touches migrations/** (new governance_messaging_config table) + Cargo.toml (reqwest-middleware json feature). Linux-compile gate binding per feedback_linux_compile_proof_is_a_gate.md — gates bm-pr. Advisor runs cargo-linux.sh locally (laptop Docker).",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m1-b",
+      "phase_task": "linux-gate",
+      "answer": "PASS: cargo-linux.sh check --workspace --features full (Docker rust:1.95 Linux mirror of CI) Finished dev profile in 23m28s, 0 errors 0 warnings. M1 migration (governance_messaging_config) + Cargo.toml reqwest-middleware json feature both compile clean on Linux deploy target. Linux-compile gate satisfied — bm-pr unblocked (feedback_linux_compile_proof_is_a_gate).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T15:42:16.507294+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "5697aa4cce1d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "question": "Does the fix(db_schema) tie-breaker commit compile cleanly across the workspace?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Single additive line in governance_messaging_config.rs: .then_order_by(governance_messaging_config::id.desc()). Committed as 4e194b68b on worker branch.",
+      "branch": "junior/role-impl-task-m1-b-fix-impl-1-read-current-deterministic-tie-breaker-cr-f2-see-claude-prps-briefs-m1-b-fix-imp-586",
+      "phase_task": "fix-1",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS: CR F2 fix (read_current deterministic tie-breaker, .then_order_by(id.desc())) validated. cargo check --workspace --features full Finished 1m27s, 0 errors 0 warnings (CHECK_EXIT_0). 1-insertion change; query-only so no e2e re-run needed. CR finding F2 resolved.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T16:33:44.599203+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": null
     }
   ]
 }

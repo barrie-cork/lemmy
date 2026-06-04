@@ -500,6 +500,30 @@ pub struct ConfigValueWithProvenance {
   pub effective_from: String,
 }
 
+/// Request payload for `POST /api/v4/governance/admin/messaging-config`.
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminSetMessagingConfig {
+  pub scope: String,
+  pub key: String,
+  pub value: serde_json::Value,
+}
+
+/// Response from `POST /api/v4/governance/admin/messaging-config`.
+///
+/// Returns the previous and new effective values after a single-write
+/// update (no governance_log append, no dry-run — plan §10.3 + §12).
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct AdminSetMessagingConfigResponse {
+  pub previous: ConfigValueWithProvenance,
+  pub new: ConfigValueWithProvenance,
+}
+
 /// Request payload for `GET /api/v4/governance/admin/config`.
 ///
 /// With no params: returns every key in `CONFIG_KEY_METADATA`. With `key`:

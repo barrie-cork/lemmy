@@ -10,6 +10,7 @@ pub mod federation_inbox_nonce;
 pub mod federation_peer;
 pub mod governance_config;
 pub mod governance_log;
+pub mod governance_messaging_config;
 pub mod jury_assignment;
 pub mod jury_constraint_violation_log;
 pub mod jury_pool;

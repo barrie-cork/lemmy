@@ -48,6 +48,7 @@ use lemmy_api::{
     list_cases::list_cases,
     list_modlog::list_modlog,
     list_my_jury_queue::list_my_jury_queue,
+    messaging_config::{admin_get_messaging_config, admin_set_messaging_config},
     submit_jury_vote::submit_jury_vote,
   },
   local_user::{
@@ -509,6 +510,11 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
                   .route("", post().to(admin_set_config))
                   .route("", get().to(admin_get_config))
                   .route("/audit", get().to(admin_get_config_audit)),
+              )
+              .service(
+                scope("/messaging-config")
+                  .route("", post().to(admin_set_messaging_config))
+                  .route("", get().to(admin_get_messaging_config)),
               )
               .service(
                 scope("/rule-sets")
