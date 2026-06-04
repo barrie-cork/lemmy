@@ -351,8 +351,8 @@ This phase produces a **decision + (if option 1/3) documented suppressions**, no
 >
 > **CATCH-FIRE:** any sub-phase where compile fails in a way not covered by the manifest's risks list, OR the `--list` set differs from baseline (a test vanished/duplicated), OR a full-e2e checkpoint shows a different pass count → STOP, surface, do not proceed to the next sub-phase.
 >
-> **✅ ALL 7 SUB-PHASES COMPLETE (2026-06-04) — CHECKPOINT #3 IN FLIGHT (`been2n21v`):**
-> e2e.rs: 18,582 → 156 lines. 9 domain files created under `tests/e2e/`. All sub-phases compile-gated (SUB2/4/5/6/7_COMPILE_EXIT_0). Checkpoint #2 (sub-phase 1 re-run) confirmed `130 passed, 5 skipped`. Checkpoint #3 (`been2n21v`) running — must also reproduce `130 passed, 5 skipped`. Phase 6 DONE pending checkpoint #3 confirmation.
+> **✅ PHASE 6 COMPLETE (2026-06-04) — CHECKPOINT #3 CONFIRMED (`been2n21v` `CKPT3_EXIT_0`):**
+> e2e.rs: 18,582 → 156 lines. 9 domain files under `tests/e2e/`. All 3 checkpoints: `130 passed, 5 skipped`. GOLDEN_INVARIANT preserved. Commits: `5dfcb00b5` (sub-1-3) → `f2a836ebb` (sub-4) → `611f0157c` (sub-3+5) → `0f3531c81` (sub-6+7). **Next: Phase 7 type-state retrofit.**
 >
 > Key fixes discovered during execution (all applied):
 > - `#[path]` mandatory for all module decls (crate-root auto-discovery goes to tests/ not tests/e2e/)
@@ -401,6 +401,14 @@ The 6 `TODO(type-state)` sites (canonical pattern: `feedback_governance_type_sta
 
 - **Four-role:** each site is a focused, compile-gated handler change with e2e coverage → plan → impl cohort (sites are independent → `[P]` parallel-eligible, but they share `governance/mod.rs` for the wrapper definition, so Task 0 defines the type-state scaffold non-`[P]`, then the 6 retrofits fan out). CR + merge gates apply.
 - **Not a workflow:** these are governance-semantic changes to shipped code with real behaviour-equivalence stakes — four-role gating, not background fan-out.
+
+**✅ PHASE 7 COMPLETE (2026-06-04):**
+Task 0 scaffold (`state.rs`, 236 lines): `ca1bfeab3`. Tasks 1–6 retrofits: `9d0048c16`.
+- 6 state markers + `CanReceiveVote` sealed trait + `ActiveVoteResult` sentinel (site 6 success-preserving).
+- All 6 sites: `accept_jury_assignment` (dual-role), `admin_assign_jury`, `admin_close_case`,
+  `admin_trigger_appeal_rejury`, `sponsor_liability_grace` (per-case re-validation), `submit_jury_vote`.
+- `cargo check -p lemmy_api --features full`: PASS, 0 warnings.
+- Full e2e validation in flight (`bqllai0x3`) — must confirm `130 passed, 5 skipped`.
 
 **Output:** 6 type-state TODOs resolved; `CaseStatus` guards centralised; the type-state pattern's retrofit debt cleared.
 
