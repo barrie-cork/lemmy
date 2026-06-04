@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "8aca794fb044-003",
-      "from": "advisor",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-04T15:15:25.550999+00:00",
-      "question": "Linux-deploy-target compile proof for phase-m1-b (M1 migration + Cargo.toml json feature in diff) — Docker rust:1.95 mirror of CI.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "phase-m1-b diff vs governance-v0 touches migrations/** (new governance_messaging_config table) + Cargo.toml (reqwest-middleware json feature). Linux-compile gate binding per feedback_linux_compile_proof_is_a_gate.md — gates bm-pr. Advisor runs cargo-linux.sh locally (laptop Docker).",
-      "commands": [
-        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
-      ],
-      "branch": "phase-m1-b",
-      "phase_task": "linux-gate",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5849,6 +5823,31 @@
       "answer": "PASS (cycle 2): advisor fixed test1 assertion per user authorization — assert!(result.is_none()) -> assert_eq!(result.and_then(|row| row.value_bool), Some(false)) (clean posture = migration-seeded messaging_enabled=false row exists, not absent). Both e2e tests pass on laptop: messaging_identity_policy_rejects_jury_override PASS 45.8s + messaging_disabled_preserves_governance_posture PASS 46.2s (E2E_RUN_EXIT_0, 2 passed). Test2 was always green (validator works); only test1's expectation was wrong. Fix lands this commit.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-06-04T15:11:48.859350+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "8aca794fb044-003",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-04T15:15:25.550999+00:00",
+      "question": "Linux-deploy-target compile proof for phase-m1-b (M1 migration + Cargo.toml json feature in diff) — Docker rust:1.95 mirror of CI.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "phase-m1-b diff vs governance-v0 touches migrations/** (new governance_messaging_config table) + Cargo.toml (reqwest-middleware json feature). Linux-compile gate binding per feedback_linux_compile_proof_is_a_gate.md — gates bm-pr. Advisor runs cargo-linux.sh locally (laptop Docker).",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m1-b",
+      "phase_task": "linux-gate",
+      "answer": "PASS: cargo-linux.sh check --workspace --features full (Docker rust:1.95 Linux mirror of CI) Finished dev profile in 23m28s, 0 errors 0 warnings. M1 migration (governance_messaging_config) + Cargo.toml reqwest-middleware json feature both compile clean on Linux deploy target. Linux-compile gate satisfied — bm-pr unblocked (feedback_linux_compile_proof_is_a_gate).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T15:42:16.507294+00:00",
       "approved_by": null,
       "approved_at": null,
       "result": "pass",
