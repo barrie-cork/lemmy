@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T11:36:52Z",
+      "branch": "junior/role-impl-task-m1-b-task-4-messaging-config-handler-see-claude-prps-briefs-m1-b-impl-4-md-578",
+      "phase_task": 4,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-test.sh --no-run -p lemmy_server --test e2e"
+      ],
+      "question": "Workspace check + e2e test-target compile for messaging-config handler — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 created crates/api/api/src/governance/messaging_config.rs (admin_set_messaging_config + admin_get_messaging_config + local split_typed_value minus float arm) and added pub mod messaging_config to mod.rs. SINGLE write, NO run_transaction, NO governance_log append (plan §10.3 GOTCHA). value_type derived from JSON shape (no metadata registry in M1). cargo check --workspace --features full required (feature=full Diesel gating); e2e --no-run confirms the handler compiles into the test target. Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "ad90f93383be-001"
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
