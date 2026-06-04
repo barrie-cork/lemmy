@@ -17,19 +17,28 @@
 
 > Append a dated block each working session. Keep it factual: what shipped, what's gated, what the next concrete action is. This is the resume surface — a fresh session reads this section + the bootstrap handover and knows where it stands.
 
-### State snapshot (as of 2026-06-04, session `d3e7ac99`)
+### State snapshot (as of 2026-06-04, session `d3e7ac99` — post-compact continuation)
 
 | Axis | Value |
 |---|---|
-| Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `1c7084622` at session open) |
+| Lane / branch | `brehon-fork-closeout` / `phase-v1-closeout` (HEAD `9924dccc8`) |
 | Mode | Mode A (dedicated lane worktree) — own CC session, laptop-local |
-| Harness | **GREEN** — Probes 1+2 ✅ exit 0; Probe 3 (e2e `--no-run`) compiling final workspace tier (`lemmy_apub_send` → `lemmy_server` next); Probe 4 (negative exit-code test) chained after. Flag NOT yet set. |
-| M1 gate | **CLOSED** — `phase-m1-b` is **+22 commits** over `governance-v0` (tip `dc5b93ba8`, M1 mid-Task-5, advanced this session). Phases 6–8 GATED; NO-ELITEDESK live. |
-| Phases done | Phase 0 (bootstrap) ✅ |
-| Next action | Finish harness sign-off (await Probe 3/4 → verify Probe 4 returns **non-zero** → `touch .claude/audit-phase-v1-closeout-complete.flag`). Then user picks first phase — recommended **Phase 3 carry-patch audit** (the cost-gauge 🟦 run, read-only, daemon-free). |
+| Harness | **GREEN — SIGNED OFF.** All 4 probes pass: P1 `lemmy_utils` exit 0; P2 `lemmy_db_schema --features full` exit 0; P3 full e2e `--no-run` compile exit 0 (26m47s, through `lemmy_server`); **P4 negative test exit 101** (non-zero exit-code propagation through the `.bat` shim verified — the critical check). Flag `.claude/audit-phase-v1-closeout-complete.flag` SET. |
+| M1 gate | **CLOSED** — `phase-m1-b` is **+22 commits** over `governance-v0` (tip `dc5b93ba8`, M1 mid-Task-5; re-verified this session, unchanged). Phases 6–8 GATED; NO-ELITEDESK live. |
+| Phases done | Phase 0 (bootstrap) ✅ + harness sign-off ✅ |
+| In progress | **Phase 3 carry-patch audit** — cost-gauge 🟦 workflow `wym9sz191` running (4 candidate-verifier agents → 2 PR-draft agents; laptop harness, daemon-free). Awaiting completion. |
+| Next action | Triage workflow output: confirm the 2 PR drafts (Windows-signal bundle = clean/file-now; clippy-`#[expect]` bundle = likely conditional on upstream toolchain) → surface to user for upstream filing. Then user picks next phase. **In-tree `#___` backfill stays GATED behind M1** (candidates live in `crates/`). |
 
 **Executable NOW** (laptop-local, no daemon, M1-isolation-safe): Phase 3 audit (cost-gauge first 🟦), Phase 1b/1c/1d hygiene, Phase 2 doc-drift, the **DQ archive** (545 KB / 273 resolved — over BOTH triggers), Phase 4-**T3** (tar-dispute, GitHub UI) + 4-**T4** (wasmtime-log DQ), Phase 5 **decision** (recommend keep-deferred + `/schedule` watch on extism PR #847).
 **BLOCKED until M1 merges:** Phase 4-**T1** (webmention inline, `api_utils/src/utils.rs` — was 🟩 four-role, now needs user decision: defer vs laptop-local impl), 4-**T2** (`[patch.crates-io]` Cargo.toml — M1 overlap), **Phases 6–8** (e2e split / type-state / TODO-sweep — M1 owns those files).
+
+### 2026-06-04 (cont.) — session `d3e7ac99` (harness sign-off + Phase 3 launch)
+
+- **Harness signed off — all 4 probes green.** Probe 3 (full e2e `--no-run` compile) finished exit 0 in 26m47s (caught by a still-armed Monitor across the `/compact`). Probe 4 (negative test, `--features nonexistent_xyz`) ran directly → **exit 101**, confirming the `cargo-test.bat` shim propagates non-zero exit codes (the whole point of P4). *Two exit-capture traps hit + avoided en route:* `| tail` masked the wrapper exit (`feedback_pipes_mask_exit_codes.md`), and `& echo %errorlevel%` evaluated before the backgrounded cmd finished — the authoritative read is a bare, unpiped, non-backgrounded invocation. Flag `.claude/audit-phase-v1-closeout-complete.flag` set (gitignored runtime artifact).
+- **M1 gate re-verified** at session resume: still **+22**, tip `dc5b93ba8` unchanged → gate firmly closed, NO-ELITEDESK still live.
+- **Phase 3 (carry-patch audit) STARTED** — the plan's designated first 🟦 cost-gauge workflow. Launched `wym9sz191` (laptop harness, daemon-free, M1-safe): 4 candidate-verifier agents (one per upstreamable hunk: 2× Windows-signal in `server/src/lib.rs:55,284`, 2× clippy-`#[expect]` removal in `pagination.rs:236` + `vote/impls.rs:130`) → 2 PR-draft agents (Windows-signal bundle + clippy-expect bundle).
+- **Marker-count drift caught** (`feedback_runbook_audit_drift_post_event_check.md`): the plan's "11 `TODO(brehon-fork)` markers" is now **17 in-tree** (`grep -rn "TODO(brehon-fork)" crates/`). The extra 6 are all `membership_state`/Phase-5a-task-51 governance-coupled (fork-local-forever, the ❌ class the plan named conceptually as "×7") **plus** 2 governance-internal TODOs the plan didn't list (`admin_emergency_remove.rs:74,120` "wire to canonical remove helper", `admin_reputation_stats.rs:12` "audit-log admin queries") — neither is an upstreaming candidate. **The upstreamable set is unchanged: 4 markers → 2 PRs.** The post-M1 annotation step's in-tree count is 17, not 11.
+- **Pre-launch ground truth gathered** (read-only, daemon-free): `upstream` remote confirmed (`LemmyNet/lemmy`); fetched `upstream/main` (tip `159911a37`); **verified upstream/main STILL has bare `tokio::signal::unix` with no `#[cfg(not(windows))]` guard** (lines 56/285/286/289) → the Windows-signal carry-patch is genuinely still-needed upstream, not already-fixed. Toolchain pinned `1.95` (the clippy-`#[expect]` candidates are tied to this → the workflow flags the upstream-toolchain-mismatch caveat).
 
 ### 2026-06-04 — session `d3e7ac99` (harness verification + lane-setup audit)
 
