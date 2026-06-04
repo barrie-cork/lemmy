@@ -12,7 +12,7 @@ This is the implementation reference. It holds migrations, tables, enums, Diesel
 
 ## 1. Migrations (dependency order)
 
-**22 governance migrations** (the `2026-04-15` enum migration through `2026-05-17` federation-inbound), plus governance-relevant constraint/seed migrations. All reuse Lemmy's integer ID style and add FKs to `person`, `community`, `post`, `comment`, `instance`, and existing moderation targets. Every migration has `up.sql` + `down.sql`. Migrations that use `ALTER TYPE ... ADD VALUE` carry a `-- no-transaction` header (Postgres refuses to use a new enum value inside the creating transaction).
+**31 governance migrations** (the `2026-04-15` enum migration through `2026-05-17` federation-inbound), plus governance-relevant constraint/seed migrations. All reuse Lemmy's integer ID style and add FKs to `person`, `community`, `post`, `comment`, `instance`, and existing moderation targets. Every migration has `up.sql` + `down.sql`. Migrations that use `ALTER TYPE ... ADD VALUE` carry a `-- no-transaction` header (Postgres refuses to use a new enum value inside the creating transaction).
 
 ### v0 core (Phase 1–4)
 
