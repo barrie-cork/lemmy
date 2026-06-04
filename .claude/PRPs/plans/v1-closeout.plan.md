@@ -50,6 +50,13 @@
 
 **Do NOT auto-pick** (per `feedback_advisor_instruction_mismatch_stop_and_ask.md` — explicit instruction conflicts a recorded rule). Trunk integration is committed/pushed; nothing is lost by pausing here.
 
+### Model tiering for Phases 6–8 (user decision 2026-06-04)
+
+- **🟦 Workflow MAPPING/AUDIT agents → Sonnet** (`model: 'sonnet'`): the read-and-extract fan-out (e2e module maps, TODO-cluster reads in Phase 8) is structured extraction — Sonnet handles it well at much lower cost than Opus across a 15–20-agent fan-out.
+- **🟦 Workflow SYNTHESIS agent → Opus** (omit `model:` → inherits main-loop Opus): the split-manifest / triage-ledger synthesis needs cross-dependency reasoning (cross-ref resolution, visibility, batching) — the one place Opus materially de-risks.
+- **EXECUTION arm (actual code edits: e2e relocation, 6 type-state retrofits, TODO fixes) → Sonnet**: matches the four-role `impl-task` convention (Sonnet 4.6, pattern-following from MIRROR refs / the canonical manifest). Cargo+e2e validation runs **laptop-local** regardless (`project_laptop_canonical_cargo_runner.md`).
+- Applied to `phase6-e2e-split-map.js` (16 Sonnet maps + 1 Opus synthesis). Reuse the same tiering in the Phase-8 audit workflow.
+
 ### 2026-06-04 (cont. 5) — post-M1 trunk integration (M1-b shipped; merge not rebase)
 
 - **M1-b GATE FLIPPED — M1 Tree B SHIPPED.** PR #177 (`phase-m1-b`) merged into `governance-v0` at `d6d027794` (`99ad26dc0` = bm-merge-complete tip). `git log origin/phase-m1-b ^origin/governance-v0` empty. Daemon free (`daemon_status`: 0 active/0 queued). The plan's literal M1-isolation gate (keyed on `phase-m1-b`) is satisfied → Phases 6–8 are **code-conflict-clear**. **⚠️ Whether NO-ELITEDESK is fully lifted is OPEN** — m1-a (Tree A) is the user-chosen next phase per the MEMORY.md HARD RULE; see §"⚠️ OPEN SEQUENCING QUESTION" above. (m1-a not started: no branch, no PR.)

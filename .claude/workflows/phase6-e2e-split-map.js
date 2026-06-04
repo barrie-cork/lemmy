@@ -97,7 +97,7 @@ Produce a precise structural map of this module:
 6. notes: anything that complicates a clean extraction — nested mods, #[path] attrs, cfg gates, shared mutable statics, or tests that depend on execution order or other tests' side effects.
 
 This is READ-ONLY. Do not edit anything. Return the structured map.`,
-    { label: `map:${m.name}`, phase: 'Map modules', schema: MODULE_SCHEMA }
+    { label: `map:${m.name}`, phase: 'Map modules', schema: MODULE_SCHEMA, model: 'sonnet' }
   )
 ))
 
@@ -115,6 +115,7 @@ Return as structured data.`,
   {
     label: 'map:head',
     phase: 'Map shared head',
+    model: 'sonnet',
     schema: {
       type: 'object',
       required: ['imports', 'top_level_tests', 'helpers', 'module_attrs'],
