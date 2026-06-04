@@ -148,9 +148,17 @@ Audit complete (this planning pass): 11 `TODO(brehon-fork)` markers → **4 upst
 
 ---
 
-## Phase 4 — Deferred security: deps-r2  🟩 four-role (gated)
+## Phase 4 — Deferred security: deps-r2  🟩 four-role (gated) — ⛔ BLOCKED: NO-ELITEDESK while M1 active
 
-Goal: retire 6 of 18 open Dependabot alerts. Precondition `v1-ship-complete` is satisfied (v1 shipped). Fully scoped greenfield brief exists: `.claude/PRPs/briefs/v1-deps-r2-planning-1.md`. **This is a `crates/`-touching, cargo-gated lane → four-role pipeline, NOT a workflow** (needs CR review + merge confirm; and it touches `Cargo.toml`/lockfile/`crates/api/api_utils/src/utils.rs`, which Phase 0's deferral rule says wait-for-M1 only if it overlaps M1's touch-set — confirm overlap before dispatch).
+> **NO-ELITEDESK directive (user, 2026-06-04 — `project_closeout_no_elitedesk_m1_active.md`):** while the close-out lane runs, the EliteDesk daemon (`junior@brehon-fork`) is **owned by M1** (`phase-m1-b`) — **zero close-out Junior dispatch**. Phase 4 as specced is 🟩 four-role (Junior `bm-cut`/planning/impl-task/ci-watcher on the daemon) → **that is blocked.** Read-only daemon queries (`list_tasks`, `daemon_status`) are still fine. Holds until `phase-m1-b` merges to `governance-v0`.
+>
+> **When Phase 4 comes up, SURFACE to user — do NOT auto-pick** (per the directive):
+> - **(a) Defer Phase 4 entirely** until M1 ships and the daemon frees (cleanest; security fixes land later). Phase 4 then runs normal four-role.
+> - **(b) Run deps-r2 laptop-local** — advisor/subagent writes the Rust, laptop cargo+e2e validates (per `project_laptop_canonical_cargo_runner.md`), CR review on the PR, NO Junior dispatch. Honors no-EliteDesk but loses the four-role gating granularity.
+>
+> Either way, T2's `[patch.crates-io]` Cargo.toml edit also stays gated behind M1 merge (overlap risk, per the approval decision). T3 (Dependabot dispute, GitHub UI) and T4 (wasmtime log DQ) are laptop-local and unaffected by the daemon block — they can run anytime.
+
+Goal: retire 6 of 18 open Dependabot alerts. Precondition `v1-ship-complete` is satisfied (v1 shipped). Fully scoped greenfield brief exists: `.claude/PRPs/briefs/v1-deps-r2-planning-1.md`. **This is a `crates/`-touching, cargo-gated lane** (needs CR review + merge confirm; touches `Cargo.toml`/lockfile/`crates/api/api_utils/src/utils.rs`). Originally specced 🟩 four-role, but the NO-ELITEDESK directive above blocks daemon dispatch — see the two options.
 
 Four tasks (from the brief):
 - **T1** — inline webmention replacement (~70 LOC reqwest impl in `crates/api/api_utils/src/utils.rs`), drops the rustls-webpki 0.101.7 chain → closes 3 alerts (1 High).
@@ -160,7 +168,8 @@ Four tasks (from the brief):
 
 - **M1-overlap check before dispatch:** T1 touches `api_utils/src/utils.rs`; M1 touches `api_utils/src/{notify,plugins,bridge_notify,lib}.rs` — *different files in the same crate*. Low collision risk, but **confirm via `git diff` of M1's actual touch-set at dispatch time** and prefer to sequence Phase 4 *after* M1 merges if any doubt. The `[patch.crates-io]` addition to root `Cargo.toml` is the riskier overlap (M1 may edit Cargo.toml) → safest to gate T2 behind M1.
 - **Watchpoints (from brief):** re-enumerate webmention callsites (`rg "webmention::|send_webmention" crates/` must = 6); re-verify the 18-alert total at lane-cut (Dependabot may have re-counted).
-- **Pipeline:** `bm-cut` → planning (brief already exists; clarify pass) → impl cohort (T1, T2 serial — both edit build config) → laptop cargo+e2e validation → CR triage → merge confirm.
+- **Pipeline (option a, post-M1 four-role):** `bm-cut` → planning (brief already exists; clarify pass) → impl cohort (T1, T2 serial — both edit build config) → laptop cargo+e2e validation → CR triage → merge confirm.
+- **Pipeline (option b, laptop-local, no daemon):** advisor/subagent writes T1 Rust on `phase-v1-closeout` → laptop `cargo-check.bat`/`cargo-test.bat` validate → open PR → CR review → merge confirm. No `bm-cut`/Junior; T2 still gated behind M1.
 
 **Output:** 6 Dependabot alerts retired; `[patch.crates-io]` established; wasmtime deferral logged.
 
@@ -229,6 +238,7 @@ Goal: triage the remaining ~38 governance `TODO/FIXME/XXX/HACK` markers (the non
 ## Cross-cutting guardrails (apply to every phase)
 
 - **M1-isolation invariant (the prime directive):** no Phase touches a file in M1's implement-set (`e2e.rs`, `governance/{mod,messaging_config,admin_config}.rs`, `db_schema/{newtypes,schema, …/governance/…}`, `api_utils/{notify,plugins,bridge_notify,lib}.rs`, `Cargo.toml`) until `git log origin/governance-v0 ^phase-m1-b` is empty (M1 merged). Phases 0–5 are structured to respect this *by construction* (they touch `.claude/`, `docs/`, filesystem, and non-overlapping `crates/` only — with the T1/T2 caveat flagged in Phase 4).
+- **NO-ELITEDESK invariant (2026-06-04 user directive — `project_closeout_no_elitedesk_m1_active.md`):** while close-out runs, M1 owns the EliteDesk daemon — **zero close-out Junior dispatch** (no `bm-cut`/planning/impl-task/ci-watcher tasks on `junior@brehon-fork`). Close-out is **laptop-local only**: 🟦 workflow phases run via the laptop `Workflow` tool (subagents in the laptop harness, not the daemon); 🟨 manual/advisor phases are laptop-local; **Phase 4 (the one 🟩 four-role phase) is BLOCKED → surface options to user** (defer vs laptop-local impl). Read-only daemon queries (`list_tasks`, `daemon_status`, `list_hooks`) are fine. Holds until `phase-m1-b` merges. Reinforces (does not replace) the laptop-canonical-cargo-runner rule.
 - **Lane discipline:** all close-out work in `brehon-fork-closeout`; its own DQ; canonical `brehon-fork` does meta-edits only (`multi-lane-worktree.md`). One session, one CWD, one lane.
 - **No-destructive-defaults:** the only `rm -rf` is Phase 1a (six verified-empty dirs) — inspect-then-confirm, one dir at a time, with explicit user go-ahead.
 - **Workflow opt-in & cost:** user opt-in is given; each 🟦 launch still shows its approval prompt; first run scoped small to gauge burn; user can stop any run.
