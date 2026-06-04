@@ -6717,9 +6717,10 @@ async fn messaging_disabled_preserves_governance_posture() -> lemmy_utils::error
   let result =
     GovernanceMessagingConfig::read_current(&mut context.pool(), "instance", "messaging_enabled")
       .await?;
-  assert!(
-    result.is_none(),
-    "no governance_messaging_config row → clean posture; bridge_notify no-op path is active",
+  assert_eq!(
+    result.and_then(|row| row.value_bool),
+    Some(false),
+    "clean posture: migration seeds messaging_enabled=false row → bridge_notify no-op path is active",
   );
 
   Ok(())
