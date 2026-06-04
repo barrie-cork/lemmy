@@ -1,49 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "908b808091b4-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-04T00:00:00Z",
-      "branch": "junior/role-impl-task-m1-b-task-1-governance-messaging-config-migration-see-claude-prps-briefs-m1-b-impl-1-md-574",
-      "phase_task": 1,
-      "commands": [
-        "./scripts/brehon/migrate-roundtrip.sh"
-      ],
-      "question": "Migration round-trip for governance_messaging_config — laptop runs (Docker + cargo).",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 created migrations/2026-06-03-000000-0000_add_governance_messaging_config/{up,down}.sql. Round-trip via migrate-roundtrip.sh (auto-detects new migration vs governance-v0; spins ephemeral pgautoupgrade:18 containers; applies via cargo run -p lemmy_diesel_utils --features full). Docker + cargo required — laptop only.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "a192dbab1de8-001",
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-06-03T00:00:00Z",
-      "question": "M1 complexity scores 23/10 across two disjoint trees. Split into phase-m1-b (Tree B, Brehon-side Tasks 1-7) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14), or proceed as one phase?",
-      "options": [
-        "split",
-        "proceed-as-one"
-      ],
-      "context": "Tree A (services/bridge/, workspace-excluded) and Tree B (Brehon-side, in-workspace) have disjoint validation harnesses (workspace cargo + e2e vs inside-services/bridge cargo + docker-compose), disjoint failure modes, and a one-directional dependency: Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse. Planner recommends split. Metric under-counts Tree A greenfield LOC (see plan section 18-R1).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "ship3clarify01-001",
@@ -5678,6 +5635,48 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a192dbab1de8-002"
+    },
+    {
+      "id": "908b808091b4-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "branch": "junior/role-impl-task-m1-b-task-1-governance-messaging-config-migration-see-claude-prps-briefs-m1-b-impl-1-md-574",
+      "phase_task": 1,
+      "commands": [
+        "./scripts/brehon/migrate-roundtrip.sh"
+      ],
+      "question": "Migration round-trip for governance_messaging_config — laptop runs (Docker + cargo).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 created migrations/2026-06-03-000000-0000_add_governance_messaging_config/{up,down}.sql. Round-trip via migrate-roundtrip.sh (auto-detects new migration vs governance-v0; spins ephemeral pgautoupgrade:18 containers; applies via cargo run -p lemmy_diesel_utils --features full). Docker + cargo required — laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "PASS — migrate-roundtrip.sh exit 0. Forward apply (container 1) exit 0; idempotent fresh-container replay (container 2) exit 0. lemmy_diesel_utils built (2m53s) + ran twice clean. 1 new migration (governance_messaging_config). Log: .claude/runlog/m1-b-task1-migrate-roundtrip-20260604T094254Z.log",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-04T09:48:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a192dbab1de8-001",
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-03T00:00:00Z",
+      "question": "M1 complexity scores 23/10 across two disjoint trees. Split into phase-m1-b (Tree B, Brehon-side Tasks 1-7) shipped first, then phase-m1-a (Tree A bridge daemon Tasks 8-13 + Tree C docs Task 14), or proceed as one phase?",
+      "options": [
+        "split",
+        "proceed-as-one"
+      ],
+      "context": "Tree A (services/bridge/, workspace-excluded) and Tree B (Brehon-side, in-workspace) have disjoint validation harnesses (workspace cargo + e2e vs inside-services/bridge cargo + docker-compose), disjoint failure modes, and a one-directional dependency: Tree A consumes Tree B's bridge_notify HTTP contract + governance_messaging_config schema, never the reverse. Planner recommends split. Metric under-counts Tree A greenfield LOC (see plan section 18-R1).",
+      "answer": "split — per user gate decision 2026-06-04T07:00:00Z (auto-state user_gate_history): split M1 into phase-m1-b (Tree B, Tasks 0-7) shipped first, then phase-m1-a (Tree A bridge daemon + Tree C docs). The phase-m1-b branch exists because of this decision.",
+      "answered_by": "user",
+      "resolved_at": "2026-06-04T09:48:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
