@@ -35,6 +35,7 @@ pub mod get_case;
 pub mod get_my_reputation;
 pub mod governance_log;
 pub mod jury_common;
+pub mod state;
 pub mod list_cases;
 pub mod list_modlog;
 pub mod list_my_jury_queue;
