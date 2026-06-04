@@ -2019,18 +2019,22 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 13 JM-a + JM-d Task 1 + SL-b + RT-r1 + federation-inbound-a
+  // Step 2: revert the 14 M1-b + JM-a + JM-d Task 1 + SL-b + RT-r1 + federation-inbound-a
   //         migrations LIFO:
-  //   - 1 federation-inbound-a migration: 2026-05-17-000000 (newest; slot 1)
+  //   - 1 M1-b migration: 2026-06-03-000000_add_governance_messaging_config (newest; slot 1)
+  //   - 1 federation-inbound-a migration: 2026-05-17-000000 (slot 2)
   //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
   //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
   //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
   //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
+  // The window must reach back through 2026-04-23-000000 (jury_mechanics_enums,
+  // which creates the severity_tier enum the step-3 assertions probe).
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
   // not fire. Limit must rise with each new phase that adds migrations
   // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a).
-  schema_setup::run(Options::default().revert().limit(13), &db_url)?;
+  // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a;
+  // 13→14 here for M1-b governance-messaging).
+  schema_setup::run(Options::default().revert().limit(14), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'

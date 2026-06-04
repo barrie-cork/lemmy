@@ -1,4 +1,25 @@
 {
+  "_golden_baseline_2026_06_04": {
+    "run_id": "bubaswabv (--no-fail-fast)",
+    "result": "130 tests run: 130 passed, 5 skipped (E2E_EXIT_0)",
+    "total_tests": 135,
+    "run_tests": 130,
+    "ignored_skipped": 5,
+    "ignored_names": [
+      "test_phase1_migrations_forward (issue #43)",
+      "test_phase1_migrations_revert (issue #43)",
+      "test_phase1_migrations_reapply (issue #43)",
+      "ineligible_user_cannot_be_picked_for_jury (issue #45 / #42)"
+    ],
+    "ignored_note": "nextest reports exactly '5 tests skipped'; 4 named above + 1 more #[ignore]d (the exact 5th name is inert — the count is the guard)",
+    "pre_split_fixes": [
+      "drift-1 (commit 0c08dee4f): MIGRATIONS_TO_REVERT_PHASE_1 grown 19->20 (M1-b messaging_config) — fixed phase1_revert_list_matches_disk",
+      "drift-2 (this commit): v1_jm_a_backfill revert().limit(13)->14 (M1-b shifted jury_mechanics_enums to slot 14) — fixed severity_tier-absent assertion"
+    ],
+    "canonical_log": ".claude/e2e-split-baseline.log",
+    "inventory": ".claude/e2e-baseline-inventory.txt",
+    "GOLDEN_INVARIANT": "every full-e2e checkpoint during the split MUST reproduce '130 passed, 5 skipped' with the identical 130-name run-set"
+  },
   "moduleMaps": [
     {
       "module": "governance_fixtures",
