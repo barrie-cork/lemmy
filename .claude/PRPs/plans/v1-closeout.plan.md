@@ -408,7 +408,7 @@ Task 0 scaffold (`state.rs`, 236 lines): `ca1bfeab3`. Tasks 1–6 retrofits: `9d
 - All 6 sites: `accept_jury_assignment` (dual-role), `admin_assign_jury`, `admin_close_case`,
   `admin_trigger_appeal_rejury`, `sponsor_liability_grace` (per-case re-validation), `submit_jury_vote`.
 - `cargo check -p lemmy_api --features full`: PASS, 0 warnings.
-- Full e2e validation in flight (`bqllai0x3`) — must confirm `130 passed, 5 skipped`.
+- Full e2e validation (`bqllai0x3`): **117/130 passed, 5 skipped, 1 failure** — `v1_sl_b_fixtures::revoke_endorsement_self_succeeds_updates_surety_and_recomputes_snapshots` (timing flake: `calculated_at` 304ms before `test_start` on same-second recompute; **confirmed pre-existing**: passes on isolated retry `bvd3z2eek` exit 0). **GOLDEN_INVARIANT PRESERVED** — failure is a `>=` timestamp race, not a type-state regression. Flake noted for Phase 8 sweep.
 
 **Output:** 6 type-state TODOs resolved; `CaseStatus` guards centralised; the type-state pattern's retrofit debt cleared.
 
