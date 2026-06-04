@@ -22,6 +22,28 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "dbaa87bfe21c-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-04T22:00:00Z",
+      "question": "fix-impl-3 cargo check — run cd services/bridge && cargo check to validate cr-012/cr-013/cr-014/cr-015/cr-018 fixes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-3 committed (276755c03): cr-012 timeout on provision.rs + relay.rs + soft_pause.rs clients, cr-013 localpart_escape MXID sanitiser in puppet.rs, cr-014 cache-on-success-only in ensure_puppet, cr-015 relay error propagation (? instead of swallowing in handle_inbound). Validation command: cd services/bridge && cargo check.",
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m1-a",
+      "phase_task": "fix-impl-3",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
