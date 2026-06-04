@@ -12,6 +12,7 @@ use crate::governance::{
   actor_pseudonym_helper,
   admin_assign_jury::{seat_appeal_panel, select_appeal_panel},
   config::ConfigCache,
+  state::{Appealed, GovernanceCase},
 };
 use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
@@ -20,7 +21,7 @@ use lemmy_api_common::governance::{AdminTriggerAppealRejury, AdminTriggerAppealR
 use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::source::governance::{appeal::Appeal, moderation_case::ModerationCase};
 use lemmy_db_schema_file::{
-  enums::{CaseStatus, JuryAssignmentRole},
+  enums::JuryAssignmentRole,
   schema::{appeal, jury_assignment, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
@@ -65,25 +66,8 @@ async fn process_trigger_rejury(
     .first(conn)
     .await?;
 
-  // TODO(type-state): single-variant guard — cleanest type-state candidate; replace with
-  // GovernanceCase<Appealed>::try_from(case) — see
-  // .claude/lessons/feedback_governance_type_state_handlers.md
-  match case.status {
-    CaseStatus::Appealed => {} // proceed
-    CaseStatus::Open
-    | CaseStatus::ThresholdMet
-    | CaseStatus::JurySelection
-    | CaseStatus::InReview
-    | CaseStatus::Decided
-    | CaseStatus::EmergencyRemove
-    | CaseStatus::AdminReview
-    | CaseStatus::Closed
-    // PRD §3.3 + ADR-013: appeal rejury only valid on Appealed cases;
-    // sponsor-liability lifecycle is orthogonal to the appeal lifecycle.
-    | CaseStatus::SponsorLiabilityPending
-    | CaseStatus::SponsorLiabilityFired
-    | CaseStatus::SponsorLiabilityEscaped => return Err(LemmyErrorType::NotFound.into()),
-  }
+  // Type-state guard: Appealed only per [99 ADR-013].
+  let case = GovernanceCase::<Appealed>::try_from(case)?.inner;
 
   // Idempotency: reject if appeal panel already seated for this case.
   let existing_appeal_assignments: i64 = jury_assignment::table

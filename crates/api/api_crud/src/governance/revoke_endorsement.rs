@@ -288,8 +288,9 @@ async fn process_revocation(
       // that lands, fall through to any_revocation behaviour for cases
       // where the operator selected "majority_revocation". See
       // .claude/runlog/advisor-relays/adhoc-sl-c-baseline-sponsor-count.md.
-      // TODO(v1-SL-c): restore majority threshold once
-      // moderation_case.baseline_sponsor_count column lands.
+      // v2-deferred: majority threshold requires moderation_case.baseline_sponsor_count
+      // (v1-SL-c never shipped this column). Until then, treat majority_revocation
+      // identically to any_revocation. Tracked: OQ-V1-SL-01.
       "majority_revocation" => true,
       // "any_revocation" (default) + unknown/NULL fallback (defensive — no error)
       _ => true,

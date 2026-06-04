@@ -50,7 +50,9 @@ use crate::governance::{
     ENTRY_KIND_SPONSOR_LIABILITY_PENDING,
     ENTRY_KIND_VOTE_OUTCOME_RECORDED,
   },
-  redaction, sponsor_liability,
+  redaction,
+  sponsor_liability,
+  state::{Active, ActiveVoteResult, GovernanceCase},
 };
 use activitypub_federation::config::Data;
 use actix_web::web::Json;
@@ -268,29 +270,20 @@ async fn process_vote(
   // states like ThresholdMet / JurySelection / InReview don't trip the
   // guard, and so v1 additions land in the correct default-behaviour
   // category unless explicitly added to the terminal list.
-  // TODO(type-state): terminal-state idempotency guard; model as GovernanceCase<Active>
-  // where Active excludes terminal variants via a CanReceiveVote sealed trait —
-  // see .claude/lessons/feedback_governance_type_state_handlers.md
-  if matches!(
-    case_row.status,
-    CaseStatus::Decided
-      | CaseStatus::Closed
-      | CaseStatus::Appealed
-      | CaseStatus::EmergencyRemove
-      | CaseStatus::AdminReview
-      // PRD §3.3 row 7 + ADR-013: sponsor-liability states short-circuit same as
-      // Decided/Closed — case has progressed past vote-tally; new vote should
-      // return case_decided: true.
-      | CaseStatus::SponsorLiabilityPending
-      | CaseStatus::SponsorLiabilityFired
-      | CaseStatus::SponsorLiabilityEscaped
-  ) {
-    return Ok(SubmitJuryVoteResponse {
-      vote_recorded: true,
-      case_decided: true,
-      decision: None,
-    });
-  }
+  // Terminal-state idempotency guard (site 6 — success-preserving sentinel).
+  // GovernanceCase::<Active>::try_active_vote returns AlreadyDecided on terminal
+  // states (Decided/Closed/Appealed/EmergencyRemove/AdminReview/SponsorLiability*)
+  // preserving Ok(case_decided:true) semantics — NOT a 404.
+  let case_row = match GovernanceCase::<Active>::try_active_vote(case_row) {
+    ActiveVoteResult::AlreadyDecided => {
+      return Ok(SubmitJuryVoteResponse {
+        vote_recorded: true,
+        case_decided: true,
+        decision: None,
+      });
+    }
+    ActiveVoteResult::Active(c) => c.inner,
+  };
 
   // 7. Count submitted votes. If under quorum, done.
   //

@@ -11,10 +11,11 @@
 //! Layer 2). Advisor may rewire to typed structs after the layer-2 merge
 //! if it improves type safety.
 //!
-//! TODO(merge-1b): once Agent B has landed
-//! `lemmy_apub_objects::protocol::governance::{SanctionNoticeProtocol,
-//! TrustAttestationProtocol, ModerationLabelProtocol}`, replace
-//! `serde_json::Value` on each `object` field with the typed struct.
+//! v2-cleanup: the typed protocol structs (`SanctionNoticeProtocol`,
+//! `TrustAttestationProtocol`, `ModerationLabelProtocol`) exist in
+//! `lemmy_apub_objects::protocol::governance::*` (landed `aa159a0f4`).
+//! Replacing the `serde_json::Value` stub fields with the typed structs
+//! is deferred to v2 (requires Activity-Protocol layer refactor).
 
 pub mod publish_label;
 pub mod publish_sanction_notice;

@@ -18,11 +18,10 @@ use url::Url;
 /// pass-through semantics until merge-1b replaces this with the typed
 /// object struct from Agent B.
 ///
-/// TODO(merge-1b): collapse this discriminator into
+/// v2-cleanup: collapse this discriminator into
 /// `lemmy_apub_objects::protocol::governance::SanctionNoticeProtocol`
-/// once Agent B lands the typed struct (which carries the same
-/// `type = "SanctionNotice"` discriminator natively via its own
-/// kind!-style enum).
+/// (already exists; carries the same `type = "SanctionNotice"` discriminator
+/// natively via its own kind!-style enum).
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SanctionNoticeObjectStub {
@@ -53,9 +52,8 @@ pub enum SanctionNoticeKind {
 /// won't match this variant in the `SharedInboxActivities` untagged
 /// dispatch.
 ///
-/// TODO(merge-1b): replace `object: SanctionNoticeObjectStub` with
-/// `object: lemmy_apub_objects::protocol::governance::SanctionNoticeProtocol`
-/// once Agent B lands the typed object protocol struct.
+/// v2-cleanup: replace `object: SanctionNoticeObjectStub` with
+/// `lemmy_apub_objects::protocol::governance::SanctionNoticeProtocol`.
 #[skip_serializing_none]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

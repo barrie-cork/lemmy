@@ -37,6 +37,7 @@ use crate::governance::{
     ENTRY_KIND_SEVERITY_TIER_FROZEN,
   },
   jury_common::panel_has_sponsor_majority_cluster,
+  state::{GovernanceCase, PreJuryAssignable},
 };
 use actix_web::web::{Data, Json};
 use diesel::{
@@ -118,24 +119,8 @@ async fn process_assignment(
     .first(conn)
     .await?;
 
-  // 2. Exhaustive status match per [99 ADR-013].
-  // TODO(type-state): replace with GovernanceCase<PreJuryAssignable> wrapping
-  // Open/ThresholdMet/EmergencyRemove — see
-  // .claude/lessons/feedback_governance_type_state_handlers.md
-  match case.status {
-    CaseStatus::Open | CaseStatus::ThresholdMet | CaseStatus::EmergencyRemove => {}
-    CaseStatus::JurySelection
-    | CaseStatus::InReview
-    | CaseStatus::Decided
-    | CaseStatus::Appealed
-    | CaseStatus::Closed
-    | CaseStatus::AdminReview
-    // PRD §3.3 + ADR-013: jury assignment only valid on Open/ThresholdMet/EmergencyRemove;
-    // sponsor-liability lifecycle is post-decision.
-    | CaseStatus::SponsorLiabilityPending
-    | CaseStatus::SponsorLiabilityFired
-    | CaseStatus::SponsorLiabilityEscaped => return Err(LemmyErrorType::NotFound.into()),
-  }
+  // 2. Type-state guard: Open | ThresholdMet | EmergencyRemove per [99 ADR-013].
+  let case = GovernanceCase::<PreJuryAssignable>::try_from(case)?.inner;
 
   // 3. Compute the status tier BEFORE any other &mut *conn borrow. The JM-a DEFAULT is Regular — if
   //    that's the snapshot, compute eagerly; otherwise trust the backfilled value.

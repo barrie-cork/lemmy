@@ -33,7 +33,6 @@ pub struct FederationInboxNonceInsertForm {
 }
 
 #[cfg(feature = "full")]
-// TODO(v1-federation-inbound-b): wired by replay-cleanup cron
 pub async fn delete_older_than(
   window_days: i64,
   conn: &mut AsyncPgConnection,

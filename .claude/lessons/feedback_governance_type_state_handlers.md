@@ -43,24 +43,26 @@ Handler signature becomes:
 async fn accept_vote(case: GovernanceCase<InReview>, …) -> LemmyResult<()>
 ```
 
-**Why:** `CaseStatus` has 13 variants (v1 will add more). Every new handler that
+**Why:** `CaseStatus` has **12** variants (confirmed 2026-06-04 at `crates/db_schema_file/src/enums.rs:393`;
+the prior "13" count was stale — `CaseStatusTier` is a separate enum). Every new handler that
 re-implements a runtime guard is a future diff site when a new variant lands.
 The phantom wrapper centralises the check: add a variant → update one `TryFrom` match
 per state that accepts it, not every handler that touches `case.status`.
 
 **How to apply:**
-1. New handler gates on exactly 1–2 variants → define state marker(s) in
-   `crates/api_common/src/governance/state.rs`; call `GovernanceCase::try_from`
-   immediately after the DB load.
-2. Dual-role handlers (Original vs Appeal) → dispatch on `JuryAssignmentRole` FIRST
-   (existing pattern in `accept_jury_assignment.rs:110`), then `try_from` the
-   appropriate state type for each arm.
-3. Do NOT retrofit existing handlers in the same task — add
-   `// TODO(type-state): …` at the guard site (see existing annotations) and reference
-   this lesson. Retrofit is tracked separately.
-4. Return type stays `LemmyResult<()>`; no new error crates needed. If
-   `LemmyErrorType::InvalidCaseState` is missing, add it to the enum in
-   `crates/utils/src/error.rs` before using it here.
+1. New handler gates on exactly 1–2 variants → add a state marker to
+   `crates/api/api/src/governance/state.rs` (the scaffold — NOT api_common; see Phase 7 recon
+   for the placement rationale); call `GovernanceCase::try_from` immediately after the DB load.
+2. Dual-role handlers (Original vs Appeal) → dispatch on `JuryAssignmentRole` FIRST, then
+   `try_from` the appropriate state type per arm (pattern: `accept_jury_assignment.rs`).
+3. **Site 6 pattern (success-not-error):** if the guard should return `Ok(...)` (not Err) on
+   the rejected branch, use the `ActiveVoteResult` sentinel pattern:
+   `GovernanceCase::<Active>::try_active_vote(case)` returns `AlreadyDecided` (map to Ok) or
+   `Active(c)` (proceed). Do NOT use a plain `TryFrom` — that flips a 200 into a 404.
+4. Return type stays `LemmyResult<()>`; keep `LemmyErrorType::NotFound` (NOT a new
+   `InvalidCaseState` — would change HTTP status and leak internal state).
+5. All 6 v1 `TODO(type-state)` sites were retrofitted in Phase 7 (2026-06-04, commits
+   `ca1bfeab3` + `9d0048c16`). New handlers MUST use this pattern from day 1.
 
 File-class trigger: any new file under `crates/api/api/src/governance/` that loads
 a `ModerationCase` from DB and matches on `case.status` before proceeding.
