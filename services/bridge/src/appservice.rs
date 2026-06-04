@@ -32,6 +32,7 @@ use crate::config::BridgeConfig;
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
+    pub puppet_map: Arc<crate::puppet::PuppetMap>,
 }
 
 /// Minimal representation of a Tuwunel transaction body.

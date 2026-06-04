@@ -10,10 +10,12 @@
 
 mod appservice;
 mod config;
+mod puppet;
 
 use anyhow::Result;
 use appservice::AppState;
 use config::BridgeConfig;
+use puppet::PuppetMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -21,9 +23,12 @@ use std::sync::Arc;
 async fn main() -> Result<()> {
     let config = BridgeConfig::from_env()?;
     let bridge_port = config.bridge_port;
+    let config_arc = Arc::new(config);
+    let puppet_map = PuppetMap::new(Arc::clone(&config_arc));
 
     let app = appservice::router(Arc::new(AppState {
-        config: Arc::new(config),
+        config: config_arc,
+        puppet_map,
     }));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], bridge_port));
