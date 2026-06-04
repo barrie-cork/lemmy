@@ -222,6 +222,22 @@ Procedure:
 
 Must be explicit — quarantines do not expire automatically. Same change-control procedure as §5.4 in reverse.
 
+### 5.6 Bridge chat-plane soft-pause posture
+
+When the governance admin sets `messaging_enabled = false` in `governance_messaging_config` (via the admin panel or API), the bridge relay enters a **soft-pause** state:
+
+| State | Bridge relay behaviour | User-visible effect |
+|---|---|---|
+| `messaging_enabled = true` (normal) | Accepts and forwards all DM events; puppet users respond | Chat plane fully operational |
+| `messaging_enabled = false` (soft-pause) | Drains in-flight events; stops accepting new inbound Matrix events; puppet users go idle | No new DMs delivered; existing sessions preserved |
+| Resuming (`true` again) | Relay resumes without process restart; reads config from Brehon API on next poll cycle | Chat plane resumes; no message loss for events sent during drain |
+
+**Operator notes:**
+- Soft-pause does NOT disconnect puppet Matrix accounts or invalidate AS registration.
+- Events queued at the homeserver during pause are NOT consumed until resume — they accumulate in the Tuwunel queue and are delivered in order on resume.
+- Soft-pause is config-driven (no bridge process restart required). Hard-stop requires `docker compose down`.
+- The bridge polls `BREHON_READ_URL` for the messaging config; poll interval is set in bridge startup config. A pause takes effect within one poll cycle of the config change.
+
 ## 6. User recovery and reintegration
 
 The system is explicitly restorative (see [01-vision-and-principles.md](01-vision-and-principles.md) §4, principle 5). Every sanction below the top tier has a documented path back.
