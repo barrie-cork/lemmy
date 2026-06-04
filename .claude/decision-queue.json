@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "8aca794fb044-003",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-04T15:15:25.550999+00:00",
+      "question": "Linux-deploy-target compile proof for phase-m1-b (M1 migration + Cargo.toml json feature in diff) — Docker rust:1.95 mirror of CI.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "phase-m1-b diff vs governance-v0 touches migrations/** (new governance_messaging_config table) + Cargo.toml (reqwest-middleware json feature). Linux-compile gate binding per feedback_linux_compile_proof_is_a_gate.md — gates bm-pr. Advisor runs cargo-linux.sh locally (laptop Docker).",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m1-b",
+      "phase_task": "linux-gate",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "ship3clarify01-001",
