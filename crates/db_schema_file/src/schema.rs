@@ -525,6 +525,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    governance_messaging_config (id) {
+        id -> Int4,
+        scope -> Text,
+        key -> Text,
+        value_type -> Text,
+        value_int -> Nullable<Int8>,
+        value_bool -> Nullable<Bool>,
+        value_text -> Nullable<Text>,
+        valid_from -> Timestamptz,
+        updated_by -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     governance_log (id) {
         id -> Int8,
         prev_hash -> Bytea,
@@ -1485,6 +1499,7 @@ diesel::joinable!(federation_blocklist -> instance (instance_id));
 diesel::joinable!(federation_peer -> instance (instance_id));
 diesel::joinable!(federation_queue_state -> instance (instance_id));
 diesel::joinable!(governance_config -> person (updated_by));
+diesel::joinable!(governance_messaging_config -> person (updated_by));
 diesel::joinable!(instance_actions -> instance (instance_id));
 diesel::joinable!(instance_actions -> person (person_id));
 diesel::joinable!(jury_assignment -> moderation_case (case_id));
@@ -1599,6 +1614,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   federation_blocklist,
   federation_queue_state,
   governance_config,
+  governance_messaging_config,
   instance,
   instance_actions,
   jury_assignment,
