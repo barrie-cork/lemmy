@@ -7,7 +7,7 @@
 //!
 //! Status match is exhaustive per [99 ADR-013]; no `_ =>` catchall.
 
-use crate::governance::{actor_pseudonym_helper, governance_log};
+use crate::governance::{actor_pseudonym_helper, governance_log, state::{GovernanceCase, NotYetClosed}};
 use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl, SelectableHelper, update};
 use diesel_async::RunQueryDsl;
@@ -62,25 +62,9 @@ async fn process_close(
     .first(conn)
     .await?;
 
-  // TODO(type-state): inverted guard (reject Closed only, accept all others) — model as
-  // GovernanceCase<NotYetClosed> via exhaustive allow-list TryFrom covering 12 variants —
-  // see .claude/lessons/feedback_governance_type_state_handlers.md
-  match case.status {
-    CaseStatus::Open
-    | CaseStatus::ThresholdMet
-    | CaseStatus::JurySelection
-    | CaseStatus::InReview
-    | CaseStatus::Decided
-    | CaseStatus::Appealed
-    | CaseStatus::EmergencyRemove
-    | CaseStatus::AdminReview
-    // PRD §3.3 + ADR-013: admins may force-close terminal liability states for
-    // ops purposes (e.g. scheduler stuck in SponsorLiabilityPending).
-    | CaseStatus::SponsorLiabilityPending
-    | CaseStatus::SponsorLiabilityFired
-    | CaseStatus::SponsorLiabilityEscaped => {}
-    CaseStatus::Closed => return Err(LemmyErrorType::NotFound.into()),
-  }
+  // Type-state guard: all variants except Closed (admins may force-close any
+  // non-closed case, including terminal liability states, per PRD §3.3 + ADR-013).
+  GovernanceCase::<NotYetClosed>::try_from(case)?;
 
   update(moderation_case::table.filter(moderation_case::id.eq(data.case_id)))
     .set((

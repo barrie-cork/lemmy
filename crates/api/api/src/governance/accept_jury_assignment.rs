@@ -30,6 +30,7 @@ use crate::governance::{
   actor_pseudonym_helper,
   governance_log::{self, ENTRY_KIND_JURY_ACCEPTED},
   jury_common::shares_active_sponsor,
+  state::{Appealed, GovernanceCase, JurySelection},
 };
 use actix_web::web::{Data, Json};
 use chrono::Utc;
@@ -40,7 +41,7 @@ use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
 use lemmy_db_schema_file::{
   PersonId,
-  enums::{CaseStatus, JuryAssignmentRole, JuryAssignmentStatus},
+  enums::{JuryAssignmentRole, JuryAssignmentStatus},
   schema::{jury_assignment, moderation_case},
 };
 use lemmy_db_views_local_user::LocalUserView;
@@ -99,54 +100,14 @@ async fn process_accept(
     .await?;
 
   // 3. Guard: accept is only valid while the case is in a status the role
-  //    expects. Original-role jurors accept while the case is in
-  //    JurySelection or InReview (the original-jury lifecycle, per Phase 5c
-  //    task 64). Appeal-role jurors accept while the case is in Appealed
-  //    (the appeal-jury lifecycle introduced by JM-d's `seat_appeal_panel`,
-  //    mirroring the role-dispatch JM-c added to `submit_jury_vote`).
-  //    All other (role, status) combinations — including EmergencyRemove
-  //    per ADR-013 — return NotFound so callers cannot infer internal state.
-  //    Both arms enumerate CaseStatus exhaustively per ADR-013 (no `_ =>`).
-  // TODO(type-state): replace dual-role match with GovernanceCase<JurySelection> /
-  // GovernanceCase<Appealed> try_from after role dispatch — see
-  // .claude/lessons/feedback_governance_type_state_handlers.md
-  match role {
-    JuryAssignmentRole::Original => match case.status {
-      CaseStatus::JurySelection | CaseStatus::InReview => {}
-      CaseStatus::Open
-      | CaseStatus::ThresholdMet
-      | CaseStatus::Decided
-      | CaseStatus::Appealed
-      | CaseStatus::Closed
-      | CaseStatus::EmergencyRemove
-      | CaseStatus::AdminReview
-      // PRD §3.3 + ADR-013: original-jury cases are pre-Decided;
-      // sponsor-liability lifecycle is post-Decided.
-      | CaseStatus::SponsorLiabilityPending
-      | CaseStatus::SponsorLiabilityFired
-      | CaseStatus::SponsorLiabilityEscaped => {
-        return Err(LemmyErrorType::NotFound.into());
-      }
-    },
-    JuryAssignmentRole::Appeal => match case.status {
-      CaseStatus::Appealed => {}
-      CaseStatus::Open
-      | CaseStatus::JurySelection
-      | CaseStatus::InReview
-      | CaseStatus::ThresholdMet
-      | CaseStatus::Decided
-      | CaseStatus::Closed
-      | CaseStatus::EmergencyRemove
-      | CaseStatus::AdminReview
-      // PRD §3.3 + ADR-013: appeal-jury seated only on Appealed cases;
-      // sponsor-liability lifecycle is post-Decided.
-      | CaseStatus::SponsorLiabilityPending
-      | CaseStatus::SponsorLiabilityFired
-      | CaseStatus::SponsorLiabilityEscaped => {
-        return Err(LemmyErrorType::NotFound.into());
-      }
-    },
-  }
+  //    expects. Dispatch on role first (existing pattern); then type-state
+  //    guard centralises the exhaustive CaseStatus check per ADR-013.
+  //    Original: JurySelection | InReview; Appeal: Appealed only.
+  //    All other (role, status) combinations return NotFound (behaviour-preserving).
+  let case = match role {
+    JuryAssignmentRole::Original => GovernanceCase::<JurySelection>::try_from(case)?.inner,
+    JuryAssignmentRole::Appeal => GovernanceCase::<Appealed>::try_from(case)?.inner,
+  };
 
   // 4. Conflict 1: caller is not the case creator (v0 "first reporter"
   //    proxy; mask as 404 per the pseudo-403 convention used across

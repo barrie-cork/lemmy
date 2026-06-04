@@ -65,6 +65,7 @@ use crate::governance::{
     self, ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED, ENTRY_KIND_SPONSOR_LIABILITY_FIRED,
   },
   sponsor_liability,
+  state::{GovernanceCase, SponsorLiabilityPending as SponsorLiabilityPendingState},
 };
 
 /// Outcome of a single `run_grace_check_batch` invocation.
@@ -400,9 +401,11 @@ async fn fire_or_escape_case_inner(
     .await?;
 
   // Step 2: re-check status (defence against scheduler-vs-handler race).
-  if re_loaded.status != CaseStatus::SponsorLiabilityPending {
-    return Ok(PerCaseOutcome::Skipped);
-  }
+  // Type-state guard: SponsorLiabilityPending only; all other variants → Skipped.
+  let re_loaded = match GovernanceCase::<SponsorLiabilityPendingState>::try_from(re_loaded) {
+    Ok(c) => c.inner,
+    Err(_) => return Ok(PerCaseOutcome::Skipped),
+  };
 
   let target_person_id = match re_loaded.target_person_id {
     Some(pid) => pid,
