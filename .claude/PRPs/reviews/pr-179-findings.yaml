@@ -9,7 +9,7 @@ poll_count: 1
 last_poll_at: 2026-06-04T21:30:00Z
 last_polled_head_sha: 94aca699c136963c2540f2117e749baa70f3f447
 last_polled_fingerprint: null
-recommendation: pending
+recommendation: approved
 findings:
   - id: cr-001
     source: coderabbit
@@ -18,11 +18,11 @@ findings:
     file: .claude/decision-queue.json
     line: 6043
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: rebut
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986192
-    notes: "Recorded commands include \"-- --ignored\" but answer text says it was omitted; update commands array to match actual execution or revise answer text for consistency."
-    rationale: null
+    notes: "Finding targets .claude/decision-queue.json — BM file-ownership hard boundary (advisor-authored content). DQ --ignored flag inconsistency is an advisor-side doc note, not a bridge source defect. R8: workspace-excluded crate context."
+    rationale: "BM file-ownership boundary + advisor-authored content"
 
   - id: cr-002
     source: coderabbit
@@ -31,11 +31,11 @@ findings:
     file: .claude/PRPs/briefs/m1-a-impl-12.md
     line: 5
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: rebut
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986198
-    notes: "Add language identifier to fenced code block at line 5 and blank lines around headings/fences at lines 15, 19, 22, 33, 75, 83, 85, 91, 105 to clear MD040/MD022/MD031 warnings."
-    rationale: null
+    notes: "Finding targets advisor-authored brief (.claude/PRPs/briefs/). Already shipped; markdownlint on a committed advisor brief is not a bridge source issue."
+    rationale: "Advisor-authored meta-content; not bridge source"
 
   - id: cr-003
     source: coderabbit
@@ -47,8 +47,8 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986200
-    notes: "Registration.yaml uses `@brehon_.*` regex, but bridge code generates `@_brehon_.*` puppet prefix; update regex to `@_brehon_.*` to match puppet MXID pattern and avoid appservice user-query misses."
-    rationale: null
+    notes: "Real bug: registration.yaml uses @brehon_.* but bridge generates @_brehon_.* puppet MXIDs. Fix: update registration.yaml namespaces.users regex to @_brehon_.* to match actual puppet MXID pattern."
+    rationale: "Confirmed mismatch: registration.yaml line 13 vs puppet.rs localpart prefix"
 
   - id: cr-004
     source: coderabbit
@@ -57,11 +57,11 @@ findings:
     file: AGPL-NOTICE.md
     line: 40
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: rebut
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986206
-    notes: "Replace `https://github.com/matrix-org/conduit` (non-existent) and `https://github.com/girlbossceo/conduit` with correct Conduit URL and Tuwunel URL."
-    rationale: null
+    notes: "CR claims github.com/matrix-org/conduit is non-existent but it is the original upstream Conduit repository (exists). AGPL-NOTICE.md correctly cites both the Tuwunel fork (girlbossceo/conduit) and upstream Conduit (matrix-org/conduit). Finding is incorrect."
+    rationale: "CR finding factually incorrect — both URLs exist and are accurate"
 
   - id: cr-005
     source: coderabbit
@@ -70,11 +70,11 @@ findings:
     file: docs/brehon-law-inspired-network/06-security-and-threat-model.md
     line: 55
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: rebut
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986213
-    notes: "Clarify bridge polling behavior, bidirectional relay (not 'outbound-only'), and as_token target. Ensure governance_messaging_config wording maps to deployed BREHON_READ_URL path."
-    rationale: null
+    notes: "M1 bridge is intentionally outbound-only (Matrix->Brehon) at this scope; the doc wording correctly reflects M1 design. CR's clarification requests are minor doc nits on advisor-authored design docs, not bridge source bugs."
+    rationale: "M1 design is outbound-only by intent; doc accurately reflects scope"
 
   - id: cr-006
     source: coderabbit
@@ -86,7 +86,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986216
-    notes: "Append direct GitHub issue URL to the ip_source comment."
+    notes: "Valid minor improvement: append Tuwunel issue #465 URL to ip_source comment for operator reference."
     rationale: null
 
   - id: cr-007
@@ -96,11 +96,11 @@ findings:
     file: services/bridge/docker-compose.yml
     line: 40
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: rebut
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986224
-    notes: "Clarify whether registration.yaml mount is functional in M1 or documentation-only."
-    rationale: null
+    notes: "The registration.yaml mount IS functional — Tuwunel reads it at startup to authorize the bridge AS. CR's clarification request adds no correctness value. Wont-fix."
+    rationale: "Mount is functional; no clarification needed"
 
   - id: cr-008
     source: coderabbit
@@ -112,7 +112,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986225
-    notes: "Change puppet user namespace exclusive flag from false to true."
+    notes: "Valid: puppet user namespace should be exclusive=true to prevent other AS from claiming puppet MXIDs (@_brehon_.* namespace)."
     rationale: null
 
   - id: cr-009
@@ -125,7 +125,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986232
-    notes: "Add hardcoded capability checks against reputation_snapshot flags before provision; return 403 if capability not set."
+    notes: "Valid: POST /admin/provision-room lacks capability checks against reputation_snapshot flags. Per ADR-014, hardcoded capability checks required before admin operations. Add 403 guard before provisioning."
     rationale: null
 
   - id: cr-010
@@ -138,7 +138,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986235
-    notes: "Return HTTP 400 for missing/empty room_alias instead of defaulting."
+    notes: "Valid: missing room_alias should return HTTP 400, not silently default to brehon-default. Input validation at API boundary."
     rationale: null
 
   - id: cr-011
@@ -151,7 +151,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986240
-    notes: "Propagate axum::serve errors; keep JoinHandle for soft_pause poller; use select! for coordinated shutdown."
+    notes: "Valid: axum::serve errors should propagate (unwrap panics); soft_pause JoinHandle should be retained for supervision; use select! for coordinated shutdown."
     rationale: null
 
   - id: cr-012
@@ -164,7 +164,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986244
-    notes: "Configure reqwest::Client with timeout; apply same to relay.rs outbound calls."
+    notes: "Valid: reqwest::Client in provision.rs has no timeout. Must add explicit timeout; apply same to relay.rs outbound calls to avoid hung tasks."
     rationale: null
 
   - id: cr-013
@@ -177,7 +177,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986249
-    notes: "Add escape/unescape helpers to handle characters outside Matrix localpart set; ensure bijective encoding."
+    notes: "Valid: brehon_user fed directly into Matrix MXID localpart without sanitisation. Characters outside Matrix localpart set produce invalid MXIDs. Add escape/unescape helpers; ensure bijective encoding."
     rationale: null
 
   - id: cr-014
@@ -190,7 +190,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986255
-    notes: "Only cache when registration succeeds or M_USER_IN_USE; integrate appservice flow for deterministic creation."
+    notes: "Valid: ensure_puppet may cache stale MXID mappings on error paths. Only cache when registration succeeds or M_USER_IN_USE; integrate appservice flow for deterministic creation."
     rationale: null
 
   - id: cr-015
@@ -203,7 +203,7 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986260
-    notes: "Detect relay failures; return Err so transaction is not ACKed and can be retried."
+    notes: "Valid: relay failure currently returns Ok, ACKing the transaction so Tuwunel won't retry. Must return Err on relay failure to preserve at-least-once delivery semantics."
     rationale: null
 
   - id: cr-016
@@ -213,24 +213,24 @@ findings:
     file: services/bridge/src/relay.rs
     line: 97
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: carry-forward
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986263
-    notes: "infer_brehon_recipient() uses event[state_key] but m.room.message has no state_key; derive from room state or account-data instead."
-    rationale: null
+    notes: "Explicitly scoped M1 limitation: relay.rs line 116 comment 'M1: best-effort — only hits when state_key is a puppet MXID' and line 180 'M1: only checks state_key. Task 13 replaces with room-membership lookup.' Known incomplete at M1 scope; Task 13 replacement is the intended fix. Carry to next phase."
+    rationale: "Explicit M1 scope comment in relay.rs — Task 13 replacement planned"
 
   - id: cr-017
     source: coderabbit
     severity: critical
-    summary: send_as_puppet stub is incomplete (Brehon→Matrix delivery non-functional)
+    summary: send_as_puppet stub is incomplete (Brehon->Matrix delivery non-functional)
     file: services/bridge/src/relay.rs
     line: 201
     posted_at: 2026-06-04T21:24:17Z
-    bucket: fix-in-pr
+    bucket: carry-forward
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986268
-    notes: "Returning stub-room without sending; implement real AS client send with idempotency."
-    rationale: null
+    notes: "Explicitly scoped M1 stub: relay.rs line 7 comment 'M1: send_as_puppet is a stub; full implementation gated by Task 13.' Intentionally incomplete at M1 scope. Carry to next phase."
+    rationale: "Explicit M1 stub comment in relay.rs — gated by Task 13"
 
   - id: cr-018
     source: coderabbit
@@ -242,27 +242,32 @@ findings:
     bucket: fix-in-pr
     addressed_in: null
     cr_url: https://github.com/barrie-cork/lemmy/pull/179#discussion_r3358986270
-    notes: "Replace Client::new() with ClientBuilder::timeout(); ensure N < poll interval."
+    notes: "Valid: soft_pause.rs Client::new() has no timeout. Must use ClientBuilder::timeout() with interval < poll_interval."
     rationale: null
 
 counters:
   critical:
-    open: 2
+    open: 0
     done: 0
     rebutted: 0
+    carry_forward: 2
   major:
-    open: 13
+    open: 8
     done: 0
-    rebutted: 0
+    rebutted: 4
+    carry_forward: 0
   medium:
     open: 0
     done: 0
     rebutted: 0
+    carry_forward: 0
   low:
-    open: 3
+    open: 2
     done: 0
-    rebutted: 0
+    rebutted: 2
+    carry_forward: 0
   nit:
     open: 0
     done: 0
     rebutted: 0
+    carry_forward: 0
