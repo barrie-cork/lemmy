@@ -22,13 +22,13 @@ use axum::{
     http::StatusCode,
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, put},
+    routing::{get, post, put},
     Json, Router,
 };
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{config::BridgeConfig, relay};
+use crate::{config::BridgeConfig, provision, relay};
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
@@ -136,8 +136,36 @@ async fn handle_query_room(Path(room_alias): Path<String>) -> impl IntoResponse 
     (StatusCode::OK, Json(serde_json::json!({})))
 }
 
+/// POST /admin/provision-room
+/// Creates a Matrix community room via `provision::create_community_room`.
+/// Body: `{"room_alias": "<alias>"}`. Returns `{"room_id": "<room_id>"}` on success.
+async fn handle_provision_room(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let room_alias = body
+        .get("room_alias")
+        .and_then(|v| v.as_str())
+        .unwrap_or("brehon-default");
+    match provision::create_community_room(&state.config, room_alias).await {
+        Ok(room_id) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"room_id": room_id})),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!(err = %e, "provision failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+    }
+}
+
 /// Build the AS transaction router with hs_token auth middleware applied to
-/// all three endpoints.
+/// all four endpoints.
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
@@ -149,6 +177,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/_matrix/app/v1/rooms/:room_alias",
             get(handle_query_room),
         )
+        .route("/admin/provision-room", post(handle_provision_room))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             hs_token_auth,
