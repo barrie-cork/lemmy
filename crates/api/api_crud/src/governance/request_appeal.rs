@@ -28,7 +28,11 @@ use lemmy_api::governance::{
   governance_log::{self, ENTRY_KIND_APPEAL_REQUESTED},
 };
 use lemmy_api_common::governance::{RequestAppeal, RequestAppealResponse};
-use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
+use lemmy_api_utils::{
+  bridge_notify::governance_case_after_transition,
+  context::LemmyContext,
+  utils::check_local_user_valid,
+};
 use lemmy_db_schema::{
   newtypes::AppealId,
   source::governance::{
@@ -60,6 +64,14 @@ pub async fn request_appeal(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
+  // Pre-txn: capture case for hook. process_appeal re-loads it inside the txn.
+  let case_for_hook: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+  let old_status = case_for_hook.status;
+
   let data_for_tx = data.clone();
   let pseudonym_for_tx = caller_pseudonym.clone();
 
@@ -68,6 +80,11 @@ pub async fn request_appeal(
       process_appeal(conn, caller_id, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
+
+  // Site 8: fire hook after txn committed (Decided/SponsorLiabilityPending → Appealed).
+  governance_case_after_transition(&context, &case_for_hook, Some(old_status), CaseStatus::Appealed)
+    .await
+    .ok();
 
   Ok(Json(RequestAppealResponse {
     appeal_id,
