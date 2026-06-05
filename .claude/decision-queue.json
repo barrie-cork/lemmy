@@ -17,11 +17,13 @@
         "fail"
       ],
       "context": "Task 8 added 3 deterministic e2e tests (2 append_room_event wrapper tests + 1 suppression test). Hook-fires test deferred to Task 9 (needs BRIDGE_NOTIFY_URL seam — log DQ raised as 1dcd6a201003-001). Tests append to governance.rs after admin_emergency_remove_post_sets_author_defendant.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
+      "result": "fail",
+      "log_slice": "e2e test binary failed to compile (cargo exit 101): 11 errors = 9x E0428 (duplicate definitions) + 2x E0599 (CaseStatus::Active no such variant). ROOT CAUSE (pre-existing trunk corruption, NOT Task 8): botched BUG-1 cherry-pick 6f4947b48 re-injected ~2100 lines of pre-decomposition content into crates/server/tests/e2e.rs after it was decomposed to a 156-line include! host (0f3531c81). governance-v0 e2e-uncompilable since 2026-06-05 13:43. The 2x E0599 are a SEPARATE Task-8 bug (m2_hook_suppressed test uses CaseStatus::Active; valid: Open). Full diagnosis + 4 compiler-verified fixes: .claude/PRPs/debug/e2e-rs-botched-cherry-pick-corruption.md. FIXES DESIGNED BUT NOT APPLIED (deferred to a fresh session per user 2026-06-05). DO NOT mark this DQ pass until the 4 fixes land and the m2_ e2e suite compiles+passes.",
+      "failed_commands": [
+        "./scripts/brehon/cargo-test.bat --workspace --test e2e m2_ 2>&1"
+      ],
+      "answer": "FAIL — e2e uncompilable due to pre-existing trunk corruption (botched cherry-pick 6f4947b48) + a separate Task-8 CaseStatus::Active bug. Entry STAYS PENDING. Next session: apply the 4 fixes on phase-m2-core-hook per .claude/PRPs/debug/e2e-rs-botched-cherry-pick-corruption.md, then re-run m2_ e2e; mutate to pass only when the suite compiles + passes.",
+      "answered_by": "advisor-laptop",
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null,
