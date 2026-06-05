@@ -6118,6 +6118,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "466deb2e9332-001"
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-06-04T00:00:00Z",
+      "question": "v1-deps-r2 scope reconciliation at un-deferral: the frozen brief (2026-05-25) specced 4 tasks closing 6 of 18 alerts; live re-verification (2026-06-04) collapses this to 1 actionable task closing 3 of 6 open alerts. Record for advisor harvest.",
+      "options": [
+        "author-T1-only-plan-with-reconciliation",
+        "re-litigate-brief-as-blocker"
+      ],
+      "context": "Live ground truth (gh api dependabot/alerts + cargo tree + git): 6 OPEN alerts (astral-tokio-tar #57/#58/#65, rustls-webpki #49/#50/#55), NOT 18. T1 KEPT — cargo tree -i rustls-webpki@0.101.7 proves the chain reaches the workspace solely via webmention 0.6.0; removing it closes #49/#50/#55 (1 HIGH). T2 DROPPED — no idna Dependabot alert exists in any state, so its premise is moot. T3 NOT IN PLAN — user chose to skip the astral-tokio-tar bump post-M1 (dev-only via testcontainers); #57/#58/#65 stay open deliberately. T4 NOT IN PLAN — wasmtime DONE at e719081b2. Plan authored as T1-only with §2.1 reconciliation table per the brief's explicit re-verify mandate.",
+      "answer": "Authored .claude/PRPs/plans/v1-deps-r2.plan.md as a 1-impl-task plan (Task 0 pre-flight / Task 1 inline-webmention+drop-dep / Task 2 retro), complexity 1/10, confidence 8.5/10. The 4->1 collapse is conformant with the brief's own instruction ('Re-verify all scope assumptions ... every as-of-2026-05-25 claim is a hypothesis'), not scope-cutting. ADVISOR ACTIONS NEEDED: (1) surface the dispatch-mode choice to the user at plan-approval — defer-until-m1-a vs laptop-local-now — do NOT auto-pick, per close-out plan NO-ELITEDESK directive lines 273-277/431-432; (2) plan section 5.1 score 1 is well under the split threshold so no split-DQ; (3) at retro, harvest the live-re-verify-caught-3-stale-premises signal as a Planning lesson.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-04T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "df5e346cfb13-001"
     }
   ]
 }
