@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m2-core-hook-task-4-entry-kind-room-consts-shim-registry-see-claude-prps-briefs-m2-core-hook-imp-616",
+      "phase_task": 4,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_db_schema --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full"
+      ],
+      "question": "Workspace check for 10 ENTRY_KIND_ROOM_* consts in governance_log.rs + shim re-export — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added 10 ENTRY_KIND_ROOM_* string consts to crates/db_schema/src/source/governance/governance_log.rs (M2 room kinds block after ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED) and re-exported all 10 from crates/api/api/src/governance/governance_log.rs shim (alphabetical between ROLLUP_RECOMPUTED and RULE_SET_VERSION_CREATED). No migration. No Cargo.toml change. Registry doc update deferred to advisor (harness gap DQ #235). Brief consts differ from plan consts — brief is authoritative per §4.0 (see log DQ).",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "workflow_run_id": null,
+      "id": "426fb6eb6b0d-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6177,6 +6204,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-050"
+    },
+    {
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-05T19:00:00Z",
+      "question": "Two observations from Task 4: (1) registry doc needs advisor update; (2) brief consts differ from plan consts.",
+      "options": [
+        "advisor updates registry + reconciles const list",
+        "advisor confirms brief list is final and updates registry accordingly"
+      ],
+      "context": "(1) .claude/rules/governance-log-entry-kind-registry.md could not be updated — harness gap DQ #235 blocks Junior workers from writing .claude/**. Advisor must add the M2 room kinds section (10 rows) + bump total 55->65 per the brief §4.2 table. (2) Brief §4.0 lists different consts than plan Task 4: brief uses ROOM_ARCHIVED, ROOM_BRIDGE_ERROR, ROOM_CREATED, ROOM_DECISION_RELAYED, ROOM_IDENTITY_REVEALED, ROOM_LIFECYCLE_EVENT, ROOM_MEMBER_ADDED, ROOM_MEMBER_REMOVED, ROOM_RECORDING_UPLOADED, ROOM_TRANSCRIPT_READY. Plan uses ROOM_CREATED, ROOM_MEMBER_JOINED, ROOM_MEMBER_LEFT, ROOM_CLOSED, ROOM_ARCHIVED, ROOM_DELETED, ROOM_IDENTITY_REVEALED, ROOM_EMERGENCY_PROVISIONED, ROOM_APPEAL_PROVISIONED, ROOM_RECORDING_UPLOADED. Brief says 'authoritative' (§4.0). Implemented brief's list.",
+      "answer": "Implemented brief §4.0 consts as authoritative. Advisor must: (a) update registry doc with M2 section + 55->65 bump; (b) reconcile brief vs plan const list if needed.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-05T19:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "426fb6eb6b0d-002"
     }
   ]
 }
