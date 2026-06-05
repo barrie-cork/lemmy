@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "2d68a42b53cd-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-7-wire-hook-at-cron-sites-9-12-see-claude-prps-briefs-m2-core-hook-impl-7-md-614",
+      "phase_task": 7,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
+        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
+      ],
+      "question": "Workspace check for governance_case_after_transition wired at cron sites 9-11 + site 12 — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 wired governance_case_after_transition at: site9=appeal_window_expiry (accumulate-then-fire after loop), sites10+11=sponsor_liability_grace fire_or_escape_case_inner (after each per-case run_transaction, old=SponsorLiabilityPending), site12=revoke_endorsement process_revocation (accumulate escaped cases inside closure, fire after run_transaction returns at handler level). All outside txn boundaries. Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "262f6fd132fe-001",
