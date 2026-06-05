@@ -235,6 +235,7 @@ Layer-by-layer:
 - **Lint:** `cargo clippy --workspace --features full --no-deps -- -D warnings`
 - **Test target compile:** `cargo test --no-run -p lemmy_server --test e2e` (R7 — per task that touches a struct or re-export)
 - **e2e execution:** `cargo test --test e2e -p lemmy_server [test_name]` (Task <N>)
+  - **GOLDEN_INVARIANT check (bm-merge gate):** always add `-- --no-fail-fast` so a timing flake does not short-circuit counting. Expected: `130 passed, 5 skipped`. Without `--no-fail-fast`, a single flake exits early and the reported count is artificially low.
 - **Migration round-trip:** `bash scripts/brehon/migrate-roundtrip.sh <id>__<name>` (when migrations are touched)
 
 ---

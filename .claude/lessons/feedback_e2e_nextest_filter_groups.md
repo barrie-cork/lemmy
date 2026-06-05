@@ -50,7 +50,7 @@ area the task touches:
 - Task edits grace-check cron → `test(~grace_check) or test(~apply_sponsor)` (6 tests)
 - Task edits migration → `test(~migration) or test(~snapshot) or test(~backfill)` (7 tests)
 - Task touches multiple areas OR scope is unclear → omit `e2e_filter` (full suite)
-- bm-merge gate → always full suite (omit `e2e_filter`)
+- bm-merge gate → always full suite (omit `e2e_filter`); add `-- --no-fail-fast` so a timing flake does not short-circuit the count — GOLDEN_INVARIANT requires `130 passed, 5 skipped`, not an early-exit partial count
 
 ## Multi-lane safety
 
