@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "61d96bf8b2d6-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T00:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-1-bridge-payload-dto-see-claude-prps-briefs-m2-core-hook-impl-1-md-607",
+      "phase_task": 1,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "question": "Workspace check for the bridge-notify discriminated-union DTO — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 added BridgeNotifyPayload (serde tagged enum, type_ tag) + CaseTransitionEvent + PrivateMessagePayload to api_common/src/governance.rs. Serde-only (NO ts-rs — bridge consumer, not TS client). CaseStatus imported from lemmy_db_schema_file::enums. cargo check --workspace --features full required (governance enum reachability under full). Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
