@@ -202,6 +202,8 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
+  // BUG-1 author-defendant backfill (1 migration, bump 20 → 21)
+  "2026-06-01-000000-0000_backfill_author_defendant",
   // v1-federation-inbound-a (1 migration, bump 18 → 19)
   "2026-05-17-000000-0000_add_federation_inbound_v1",
   // v1-RT-r1 (4 migrations, bump 14 → 18)
@@ -5361,7 +5363,7 @@ async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::Lem
     target_type: CaseTargetType::Person,
     reason_code: "test_suppression".to_string(),
     severity: CaseSeverity::Low,
-    status: CaseStatus::Active,
+    status: CaseStatus::Open,
     threshold_score: 1,
     ..Default::default()
   };
@@ -5374,7 +5376,7 @@ async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::Lem
   governance_case_after_transition(
     &context,
     &case,
-    Some(CaseStatus::Active),
+    Some(CaseStatus::Open),
     CaseStatus::ThresholdMet,
   )
   .await?;
