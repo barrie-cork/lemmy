@@ -1,27 +1,327 @@
 {
-  "$schema_version": 2,
-  "$schema_v2_changes": "Adds optional per-sub-phase fields { worktree, in_flight_since, done_at } populated by /roadmap-next + /auto-roadmap skill pair. Adds top-level optional field { last_updated_at } bumped on every skill-driven mutation. Pre-existing v1 entries are unchanged; absent fields are treated as null. Forward-only.",
+  "$schema_version": 3,
+  "$schema_v3_changes": "REWRITE 2026-06-05 (user: 'rewrite roadmap to be M1/M2/M3-specific; v1 is shipped and done'). The file is re-centered from a v1-lane tracker onto the M-track (M1/M2/M3 messaging milestones). The new ACTIVE tracker is the top-level `milestones` block (M1 done, M2/M3 forward). v1 is CLOSED; its full per-lane history is collapsed into `v1_shipped` AND retained at top-level `lanes` + `meta_lanes` for /roadmap-next + /auto-roadmap back-compat (those skills hard-read `r['lanes'][...]['sub_phases']` — see `_tooling_compat_note`). The M-track does NOT use /roadmap-next (which cuts unstarted v1 sub-phases via a lane worktree); it uses /prp-prd -> planning -> /auto-phase. Filename retained as v1-roadmap.json so the skills resolve the same path. Schema-v2 per-sub-phase fields { worktree, in_flight_since, done_at } and top-level last_updated_at carry forward. Forward-only.",
+  "_tooling_compat_note": "Top-level `lanes` + `meta_lanes` are the v1-era structure /roadmap-next (Phase 1 candidate scan + Phase 8 mutation) and /auto-roadmap (lane-key derivation + done-flip) hard-depend on. They are PRESERVED here verbatim from schema-v2 so those skills do not KeyError. Only v1-quality-r3b remains `unstarted` in `lanes` — the one v1 sub-phase still cuttable via /roadmap-next. FOLLOW-UP: when the M-track is driven through these skills (M2/M3 sub-phase cutting), either extend both skills to read `milestones` or migrate the M-track into the `lanes` shape. Until then, M-track work goes via /prp-prd + /auto-phase, and `milestones` is the source of truth for M1/M2/M3 status.",
   "generated_at": "2026-05-22",
+  "rewritten_at": "2026-06-05",
   "generated_by": "advisor session (canonical brehon-fork checkout)",
-  "scope": "v1 PRD lanes only; v0 substrate predates this file; v2 PRDs out of scope",
+  "scope": "M-track messaging milestones (M1/M2/M3) per umbrella `.claude/PRPs/prds/v2-messaging-rtc.prd.md` + ADR-016 backplane. v1 is shipped/closed (archived in `v1_shipped`); v0 substrate predates this file.",
   "trunk_branch": "governance-v0",
-  "trunk_tip_at_authoring": "e9caf8933",
-  "last_updated_at": "2026-06-01T12:00:00Z",
+  "trunk_tip_at_rewrite": "1aeb7fbed",
+  "last_updated_at": "2026-06-05T10:30:00Z",
   "status_legend": {
-    "done": "every planned sub-phase merged to governance-v0; lane meta-retro or capstone retro on trunk",
+    "done": "every planned sub-phase merged to governance-v0; lane/milestone meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
     "partial": "some sub-phases merged; remaining sub-phases planned but not yet branched or in-flight",
     "unstarted": "PRD exists; no sub-phase planned or merged",
+    "needs_prd": "milestone is the next forward work but its sub-PRD has not been authored yet (gate before planning)",
     "skipped": "user instructed to exclude from this roadmap (currently being implemented elsewhere)"
   },
   "evidence_legend": {
     "pr": "PR number merged into governance-v0",
     "retro": "path to sub-phase retro on trunk",
     "verify": "path to /brehon-verify report on trunk",
-    "meta_retro": "path to lane meta-retro on trunk (strong signal lane closed)",
+    "meta_retro": "path to lane/milestone meta-retro on trunk (strong signal closed)",
     "worktree": "absolute path to lane-dedicated worktree (set by /roadmap-next; cleared on user `git worktree remove` post-merge)",
     "in_flight_since": "ISO date when /roadmap-next flipped status unstarted -> in_flight",
     "done_at": "ISO date when /auto-roadmap flipped status in_flight -> done"
+  },
+  "milestones": {
+    "M1": {
+      "name": "Chat Infrastructure (bridge + Tuwunel + 1:1 DM + admin config)",
+      "former_name": "V2a / C1",
+      "prd": ".claude/PRPs/prds/m1-chat-infrastructure.prd.md",
+      "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
+      "status": "done",
+      "shipped_at": "2026-06-04",
+      "scope": "Matrix homeserver (Tuwunel) + greenfield workspace-EXCLUDED Rust application-service bridge daemon at services/bridge/ + puppeting + 1:1 DM with rich media (text/image/voice) + manually-provisioned community rooms + governance_messaging_config admin panel + ADR-015 identity-policy validator (structurally rejects jury/appeals overrides) + clean-disable/soft-pause posture. NO ADR-016 backplane work (deferred to M2 per user 2026-06-03). Hash-chain: NO.",
+      "key_hypothesis": "H1 — the mautrix-style application-service bridge pattern adapts to the Lemmy/Brehon model; bridge architecture proven in isolation before wiring governance triggers.",
+      "evidence_summary": "Two trees shipped: Tree B (m1-b, config+API+validator+notify) PR #177 merged 2026-06-04; Tree A (m1-a, services/bridge/ AS bridge, 7 impl tasks + 11 CR fixes) PR #179 merged 2026-06-04. Both retros on trunk. services/bridge/ exists on governance-v0; cargo build --workspace pulls zero Matrix deps (story 6 holds).",
+      "sub_phases": {
+        "m1-b": {
+          "status": "done",
+          "former_name": "M1 Tree B (in-binary: config table + admin API + identity-policy validator + bridge_notify)",
+          "scope": "governance_messaging_config migration + model/newtype/schema + DTOs + admin config handler + ADR-015 identity-policy validator + routes + fire-and-forget bridge_notify HTTP wiring + e2e (clean posture + identity-policy reject)",
+          "pr": 177,
+          "merge_commit": "d6d027794",
+          "plan": ".claude/PRPs/plans/m1.plan.md",
+          "plan_note": "m1.plan.md §13 Tasks 1-7 = Tree B; Tasks 8-13 = Tree A (m1-a). Tasks 14 (Tree C docs) + 15 (retro) fold into m1-a.",
+          "retro": ".claude/PRPs/reports/m1-b-retro.md",
+          "verify": ".claude/PRPs/reports/m1-b-verify.md",
+          "notes": "2 §G4 fixes; MiniMax trial arm 3/5; CR 1-fix/2-rebut. Shipped before m1-a (Tree A consumes Tree B's bridge_notify HTTP contract + config table; never the reverse).",
+          "done_at": "2026-06-04"
+        },
+        "m1-a": {
+          "status": "done",
+          "former_name": "M1 Tree A (greenfield services/bridge/ Matrix application-service bridge) + Tree C docs",
+          "scope": "services/bridge/ crate skeleton + workspace exclusion + AS transaction server (axum + ruma-appservice-api) + puppet-on-first-contact + 1:1 DM relay + manual room provisioning + soft-pause drain + docker-compose/registration.yaml + dm_round_trip integration test. Tree C docs (06 §2.2.2 threat rows, 07 §5.6 soft-pause, AGPL-NOTICE) advisor-authored.",
+          "pr": 179,
+          "merge_commit": "47c799827",
+          "plan": ".claude/PRPs/plans/m1-a.plan.md",
+          "plan_note": "Pointer plan — reuses m1.plan.md §13 Tasks 8-13. Reuse path chosen by user 2026-06-04 (skip re-plan; Tree A approved at M1 gate-1).",
+          "retro": ".claude/PRPs/reports/m1-a-retro.md",
+          "verify": null,
+          "notes": "7 impl tasks (8-14) serial requires:-chain, no [P]. 11 CR fixes across 3 fix-impl tasks (cr-003/006/008/009/010/011/012/013/014/015/018). Merge-forward into governance-v0 + phase-v1-closeout. Matrix-sdk 0.18 + ruma-appservice-api 0.16 + axum. Lane mode B.",
+          "done_at": "2026-06-04"
+        }
+      },
+      "known_followups": [
+        "OQ-V2-09 ops sub-questions (bridge shutdown signal, in-flight room handling, active-jury-room-on-disable policy, media/GDPR cleanup runbook) — resolved during M1 sub-PRD authoring per 2026-06-01 soft-pause lean; verify they were carried into the shipped runbook (07 §5.6) at M2 schedule time."
+      ]
+    },
+    "M2": {
+      "name": "Governance-Triggered Rooms (jury/appeal/emergency) + ADR-016 backplane",
+      "former_name": "V2b / C2",
+      "prd": null,
+      "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
+      "status": "needs_prd",
+      "depends_on": [
+        "M1"
+      ],
+      "scope": "Room-provisioning service that log-tails governance_log and creates/archives rooms on case-state transitions. Metadata-only hash-chain emission of the 11 Room::* entry kinds (Created, MembershipChanged, Archived, Tombstoned, ChairTransferred, ChairOverride, MuteAll, RecordingUploaded, EmergencyCreated, SpunOut, LifecycleApplied) — content inside rooms NEVER hashed. First real exercise of the ADR-016 backplane contract (B-fetch evidence adapter, B-publish sanction events, B-actor portable IDs). Jury room pinned always_pseudonym (ADR-015); graduated mutual visibility per OQ-009 (Juror-<suffix> revealed to fellow jurors only when discussion already in progress). Reported party / reporters / admins / visitors NEVER invited to jury rooms (deliberate stage-separation).",
+      "key_hypothesis": "H2 (C2/V2b) — a log-tailing room-provisioning service can create a jury room within 5s of CaseStatus::JurySelection, idempotent across bridge restart, with correct Room::* hash-chain entries.",
+      "acceptance_signals": [
+        "CaseStatus::JurySelection transition -> jury room provisioned in <5s (integration test hooking admin_assign_jury via governance_log tail)",
+        "Six+ Room::* entries land on hash chain with correct schema (read governance_log WHERE entry_kind LIKE 'room_%' after one case lifecycle)",
+        "Bridge restart resumes provisioning without duplicate Room::Created (last-seen log row id; idempotent by case_id)",
+        "emergency_remove provisions emergency room in <2s (integration test on admin_emergency_remove)"
+      ],
+      "oq_gates": {
+        "OQ-ADR016-02": {
+          "topic": "B-publish event schema + subscriber contract",
+          "status": "parked — target: resolve at M2 schedule time",
+          "blocks": "M2 sanction propagation + first non-Matrix app integration ADR",
+          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-02"
+        },
+        "OQ-ADR016-04": {
+          "topic": "sanction translation semantics — what 'muted globally' means in each app's primitives",
+          "status": "parked — target: resolve at M2 schedule time",
+          "blocks": "M2 (governance-triggered rooms emitting sanctions); per-app integration ADR for any second app",
+          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-04"
+        },
+        "OQ-ADR016-01": {
+          "topic": "B-fetch protocol shape + per-app adapter SPI",
+          "status": "parked — no longer blocks M1; first-blocks the M-phase that introduces evidence-fetch (likely M2 if M2 includes a MatrixEvidenceAdapter; else later)",
+          "blocks": "first evidence-fetch integration",
+          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-01"
+        },
+        "OQ-ADR016-03": {
+          "topic": "B-actor link-flow UX + mapping integrity (sign-claim to prevent re-pointing)",
+          "status": "parked — no longer blocks M1; first-blocks the phase that introduces the user-facing Brehon-link flow (likely M2)",
+          "blocks": "first B-actor link flow",
+          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md OQ-ADR016-03"
+        }
+      },
+      "resolved_gates": {
+        "OQ-009": "Resolved 2026-06-01 — graduated mutual visibility for juror handles (concrete spec for jury-room membership rendering).",
+        "OQ-V2-08": "Resolved 2026-06-03 — Brehon<->Brehon only (messaging plane is fork-only; vanilla peers see nothing).",
+        "ADR-013": "emergency_remove provisions emergency room in <2s — no enum/handler change; M2 adds a log-tailing consumer only."
+      },
+      "design_doc_extensions_due_at_m2": [
+        "03 §4 — backplane contract details (deferred from ADR-016 to M-phase that builds it)",
+        "06 §2.2 — extend plane-boundary wording for the chat/RTC plane + ADR-016 app planes",
+        "06 §7 — threat-table rows for B-fetch adapter, B-publish subscriber, B-actor mapping compromise",
+        "07 §1.2 — federation fetch worker carries per-app B-fetch adapters",
+        "07 §5 — operator runbook for connected-app onboarding"
+      ],
+      "next_action": "Author M2 sub-PRD via /prp-prd (or prp-core:prp-prd) from the umbrella PRD §V2b + ADR-016. Resolve OQ-ADR016-02 + OQ-ADR016-04 (and -01/-03 if M2 scope includes evidence-fetch/link-flow) at PRD-write time. Then planning brief -> /brehon-clarify -> planning Junior -> plan file -> /auto-phase m2-<x>."
+    },
+    "M3": {
+      "name": "Town Halls with Mic-Passing (MatrixRTC / LiveKit / Element Call)",
+      "former_name": "V2c / C3",
+      "prd": null,
+      "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
+      "status": "needs_prd",
+      "depends_on": [
+        "M1",
+        "M2"
+      ],
+      "scope": "MatrixRTC stage-mode + chair controls (promote/demote) + raised-hand queue + cross-instance emergency-mute + recording-as-governance-artefact. Adds LiveKit Server + LiveKit JWT service + Element Call front-end (shipped via separate URL).",
+      "key_hypothesis": "H3 (C3/V2c) — the MatrixRTC stack (LiveKit + JWT service + Element Call) supports chair-controlled stage-mode mic-passing and cross-instance emergency-mute at single-event operator cost commensurate with the accepted Matrix federation model.",
+      "acceptance_signals": [
+        "Stage-mode town hall: chair sequences 4 mic-passes (promote/demote 4 users) within one session without manual intervention (LiveKit integration test + Element Call E2E)",
+        "Recording lands as MP4 with hash-chain entry (query governance_log WHERE entry_kind = 'room_recording_uploaded')",
+        "Emergency-mute drops all publishers in <500ms including cross-instance participants (multi-instance test rig; timing at publisher client)"
+      ],
+      "oq_gates": {
+        "OQ-V2-04": {
+          "topic": "recording storage",
+          "status": "parked for M3 sub-PRD per umbrella PRD §OQ table",
+          "candidates": "separate MinIO/S3 store, pict-rs extension, or Matrix media repo with hash-chained URL",
+          "ledger": "docs/brehon-law-inspired-network/99-decisions-and-open-questions.md / v2-messaging-rtc.prd.md OQ-V2-04"
+        }
+      },
+      "resolved_gates": {
+        "OQ-V2-06": "Resolved 2026-04-17 — room-global mute-all (cross-instance emergency-mute scope).",
+        "OQ-V2-07": "Resolved 2026-04-17 — instance-local RTC cost model. Document expected cost in M3 delivery plan before rollout.",
+        "OQ-019": "Low-intersection — only relevant if M3 recording-as-artefact emits reputation events; research §3.4.3 C3.6 currently emits none. Non-blocking."
+      },
+      "threat_model_extensions_due_at_m3": [
+        "06 §7 rows for: LiveKit SFU compromise, recording artefact leak via pict-rs path confusion, E2EE key mishandling in bridge (some seeded at M1 Tree C — verify coverage)"
+      ],
+      "next_action": "Schedule AFTER M2 ships. Author M3 sub-PRD via /prp-prd from umbrella PRD §V2c. Resolve OQ-V2-04 (recording storage) at PRD-write time. Document LiveKit operational cost before rollout."
+    }
+  },
+  "what_remains": {
+    "active_m_track": [
+      "M2 sub-PRD authoring (status: needs_prd) — the immediate next planning unit. Gates: OQ-ADR016-02 + OQ-ADR016-04.",
+      "M3 sub-PRD authoring (status: needs_prd) — scheduled after M2 ships. Gate: OQ-V2-04."
+    ],
+    "v1_polish_and_deferred": [
+      {
+        "id": "v1-quality-r3b",
+        "status": "unstarted",
+        "scope": "Issue #167 — LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional",
+        "priority": "low (polish; v1 functionally complete)",
+        "note": "v1-quality-r3c (PR #172) shipped 2026-06-01; this is the remaining quality follow-up."
+      },
+      {
+        "id": "v1-deps-r3",
+        "status": "deferred",
+        "scope": "wasmtime bump — deferred pending upstream extism release with wasmtime>=42 (ADR-012 gate). Closes 12 deferred Dependabot alerts.",
+        "trigger": "upstream extism release with wasmtime>=42 -> bump, not fork. Re-check crates.io extism each milestone. PR #847 (extism) is dead — do not watch it.",
+        "watch": "watch_extism_wasmtime_42_adopt (PMD)"
+      }
+    ],
+    "open_prs_to_resolve": [
+      "PR #176 — fix(governance): post/comment authors first-class defendants (BUG-1, ADR-017). NOTE: BUG-1 was cherry-picked to governance-v0 @ 6f4947b48 (HEAD lineage); confirm whether #176 is now redundant/superseded before merge or close.",
+      "PR #174 — deps(api_tests): bump npm-all group (7 updates). Dependabot; triage + merge or close."
+    ],
+    "deferred_specs": [
+      "mcp-pmd-read-pheromone.md + mcp-write-time-embedding.md — CO-SHIP as one PR; bundle when the embedding patch is scheduled; implement between milestones (per MEMORY 2026-05-31).",
+      "Telegram->Claude wakeup bridge (reverse of hook ID 1) — deferred feature, no urgency, implement at a convenient session."
+    ],
+    "time_bound_obligations": [
+      "ROTATE MiniMax API key — exposed in transcript 2026-06-04 (list_tasks echoes envOverrides). Rotate once m1-b T3/T4/T5 trial arms validated (precondition met). Tracked in m1-b.json pending_end_of_phase_actions. User rotates self via console.",
+      "Tier-2 batch-1 retro harvest — 7 doc/rule/skill edits; plan at C:/Users/barri/.claude/plans/create-a-plan-to-cheeky-flute.md; base 675db1963."
+    ],
+    "documentation_drift_followups": [
+      "Propagate the V2a/V2b/V2c -> M1/M2/M3 rename through the umbrella v2-messaging-rtc.prd.md body (still uses V2a/V2b/V2c in places per ADR-016 enacted-in note).",
+      "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) annotated (pending) in governance-log-entry-kind-registry.md — flip to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly.",
+      "RT-r2 retro path in v1_shipped points at deps-r1 retro (placeholder) — update if a dedicated RT-r2 retro file is authored."
+    ],
+    "banked_post_brehon": [
+      "Portable harness for next Rust app — extract brehon-fork harness into reusable rust-harness package. Trigger: ONLY after Brehon ships (fork quiescent). Plan: C:/Users/barri/.claude/plans/the-harnes-system-we-ethereal-comet.md. ~8.5 days."
+    ],
+    "high_priority_unstarted": [
+      {
+        "lane": "quality",
+        "sub_phase": "v1-quality-r3b",
+        "scope": "Issue #167 — LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional",
+        "rationale": "Only remaining unstarted v1 sub-phase. Low priority — v1 functionally complete. Cuttable via /roadmap-next. M-track (M2/M3) is the strategic next work and uses /prp-prd + /auto-phase instead."
+      }
+    ]
+  },
+  "implementation_steering": {
+    "next_logical_sub_phase": "Author the M2 sub-PRD (governance-triggered rooms). M1 (chat infrastructure) is fully shipped — bridge proven in isolation per H1. M2 is where the ADR-016 backplane first does real work and where Room::* hash-chain emission begins. M2 sub-PRD does not exist yet (status: needs_prd); it must be authored via /prp-prd before any planning brief. Gates to resolve at PRD-write time: OQ-ADR016-02 (B-publish schema) + OQ-ADR016-04 (sanction translation). M3 (town halls / RTC) follows M2; strict-sequential M1->M2->M3 ordering (user Q10 2026-04-19).",
+    "state_as_of_2026_06_05": {
+      "milestone_status": "M1 done (PRs #177 m1-b, #179 m1-a). M2 needs_prd. M3 needs_prd (after M2).",
+      "v1": "CLOSED — all lanes + meta-lanes shipped; close-out Phases 0-8 done (PR #182 deps-r2 webmention inline merged 2026-06-05 @ 772684e1f). See v1_shipped block.",
+      "trunk_head": "1aeb7fbed (BUG-1 first-class-defendant cherry-pick + AdminReputationRollup DTO doc)",
+      "open_prs": [
+        "#176 (BUG-1 — likely superseded by cherry-pick; verify)",
+        "#174 (Dependabot npm)"
+      ],
+      "remaining_v1_polish": [
+        "v1-quality-r3b (#167)",
+        "v1-deps-r3 (wasmtime, upstream-gated)"
+      ]
+    },
+    "rationale": "v1 delivered all 11 v0 endpoints + the governance machinery (jury, sponsor-liability, appeals/sanctions, reputation, federation-inbound, redaction). M1 added the chat-infrastructure plane and proved the bridge architecture. The messaging track now advances M1->M2->M3. M2 is gated only on authoring its sub-PRD + resolving two parked ADR-016 backplane OQs — no code blocker. The remaining v1 items are polish (#167) or upstream-gated (wasmtime), neither blocking the M-track."
+  },
+  "v1_shipped": {
+    "_note": "v1 is CLOSED. Full per-sub-phase detail (scope, merge_commit, plan, retro, verify) lived in schema-v2 of this file and remains recoverable via `git log` on this path + the cited retros. Collapsed here to capstone-level pointers on the 2026-06-05 M-track rewrite. CODE on governance-v0 WINS over any drift here.",
+    "summary": "All 11 v0 endpoints + v1 governance machinery shipped across 8 PRD lanes + 5 meta-lanes + a close-out. Pilot-ready pending server spin-up validation.",
+    "lanes": {
+      "JM": {
+        "name": "Jury Mechanics",
+        "status": "done",
+        "capstone": "v1-JM-e",
+        "sub_phases": "a,b,c,d,e",
+        "shipped_at": "2026-05-02",
+        "prd": ".claude/PRPs/prds/v1-jury-mechanics.prd.md",
+        "key_prs": [
+          92,
+          95,
+          97,
+          98
+        ]
+      },
+      "SL": {
+        "name": "Sponsor Liability",
+        "status": "done",
+        "sub_phases": "a,b,c(c-1,c-2),d",
+        "prd": ".claude/PRPs/prds/v1-sponsor-liability.prd.md",
+        "meta_retro": "see .claude/PRPs/reports/ v1-SL-*-retro.md"
+      },
+      "AD": {
+        "name": "Appeals / Sanctions (Admin)",
+        "status": "done",
+        "sub_phases": "a..e",
+        "prd": ".claude/PRPs/prds/v1-appeals-sanctions.prd.md"
+      },
+      "RT": {
+        "name": "Reputation Tuning",
+        "status": "done",
+        "sub_phases": "r1..r5",
+        "capstone": "v1-RT-r5 (PR #171 — reputation rollup cron + admin endpoint, 2026-05-31)",
+        "prd": ".claude/PRPs/prds/v1-reputation-tuning.prd.md"
+      },
+      "SR": {
+        "name": "Sanction / Restoration",
+        "status": "done",
+        "prd": ".claude/PRPs/prds/v1-sanction-restoration.prd.md",
+        "note": "Restorative-mechanics-v1 (RESTORATION_COMPLETED fire site) tracked as a v2-scope follow-on PRD."
+      },
+      "federation_inbound": {
+        "name": "Federation Inbound",
+        "status": "done",
+        "sub_phases": "a..e",
+        "prd": ".claude/PRPs/prds/v1-federation-inbound.prd.md"
+      },
+      "quality": {
+        "name": "Quality / QA",
+        "status": "partial",
+        "shipped": [
+          "r1",
+          "r2",
+          "r3c (PR #172, 2026-06-01)"
+        ],
+        "remaining": "v1-quality-r3b (Issue #167 — see what_remains)"
+      },
+      "redaction": {
+        "name": "GDPR Redaction",
+        "status": "done",
+        "capstone": "v1-redaction-r1 (PR #173, 2026-06-01 — scrub_json recursion cap + adversarial tests)"
+      },
+      "deps": {
+        "name": "Dependency / Security Sweeps",
+        "status": "done",
+        "shipped": [
+          "deps-r1",
+          "deps-r2 (PR #182, 2026-06-05 — inline webmention sender, drop rustls-webpki 0.101.7 chain)"
+        ],
+        "remaining": "deps-r3 (wasmtime, upstream-extism-gated — see what_remains)"
+      }
+    },
+    "meta_lanes": {
+      "v1-validate-agent": "done",
+      "v1-rls-r1": "done",
+      "v1-dq-schema-r1": "done",
+      "v1-retro-followups-r1": "done",
+      "brehon-conformance-audit": "done"
+    },
+    "closeout": {
+      "status": "done",
+      "shipped_at": "2026-06-05",
+      "scope": "Phases 0-8: e2e decomposition, type-state retrofit, TODO sweep, deps-r2 security sweep, BUG-1 first-class-defendant fix (ADR-017).",
+      "key_prs": [
+        181,
+        182
+      ],
+      "trunk_head_at_closeout": "1aeb7fbed",
+      "note": "PR #181 (closeout Phases 6-8) merged 2026-06-04; PR #182 (deps-r2 webmention) merged 2026-06-05. BUG-1/ADR-017 cherry-picked to governance-v0 @ 6f4947b48."
+    }
   },
   "lanes": {
     "JM": {
@@ -611,43 +911,5 @@
       "pr": 141,
       "merge_commit": "7cfc21c23"
     }
-  },
-  "what_remains": {
-    "high_priority_unstarted": [
-      {
-        "lane": "quality (Quality / QA)",
-        "items": [
-          "v1-quality-r3b (unstarted — Issue #167: LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional)"
-        ],
-        "rationale": "v1-quality-r3c (PR #172) shipped 2026-06-01. Remaining: #167 fix (LemmyContext::create) as v1-quality-r3b."
-      }
-    ],
-    "in_flight_outside_roadmap": [],
-    "documentation_drift_followups": [
-      "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) still annotated (pending) in .claude/rules/governance-log-entry-kind-registry.md table rows — should be flipped to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly.",
-      "RT-r2 retro path in this roadmap points to deps-r1 retro (placeholder) — update if a dedicated RT-r2 retro file is authored."
-    ],
-    "v2_out_of_scope": [
-      "v2-messaging-rtc.prd.md (Matrix + LiveKit messaging)",
-      "Restorative-mechanics-v1 PRD (owns RESTORATION_COMPLETED fire site)",
-      "JM v2: sanction-override on appeal, step_up_token enforcement, appeal-panel concurrency tests"
-    ]
-  },
-  "implementation_steering": {
-    "next_logical_sub_phase": "All major v1 lanes done (JM, SL, AD, RT, SR, federation-inbound, redaction). Remaining: v1-quality-r3b (Issue #167 LemmyContext::create DB URL), deps-r2/r3 (deferred post-v1-ship), and the big question: is v1 ready for pilot/server spin-up?",
-    "state_as_of_2026_06_01": {
-      "shipped_since_last_roadmap_update": [
-        "v1-RT-r5 (PR #171, 2026-05-31) — reputation rollup cron + admin endpoint",
-        "v1-quality-r3c (PR #172, 2026-06-01) — .coderabbit.yaml v0-scope + BREHON_DISABLE_* guards",
-        "v1-redaction-r1 (PR #173, 2026-06-01) — GDPR scrub_json recursion cap + adversarial tests"
-      ],
-      "in_flight": [],
-      "unstarted": [
-        "v1-quality-r3b (Issue #167: LemmyContext::create DB URL)",
-        "v1-deps-r2 (security sweep, deferred post-v1-ship)",
-        "v1-deps-r3 (wasmtime, deferred post-upstream extism release)"
-      ]
-    },
-    "rationale": "All 11 v0 endpoints implemented and tested. RT lane fully closed (r1-r5). federation-inbound closed (a-e). redaction-r1 shipped. Remaining items are polish/quality or explicitly deferred. v1 is in pilot-ready shape pending server spin-up validation."
   }
 }
