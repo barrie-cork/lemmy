@@ -59,7 +59,7 @@ use std::{collections::HashSet, sync::LazyLock};
 use tracing::Instrument;
 use url::{ParseError, Url};
 use urlencoding::encode;
-use webmention::{Webmention, WebmentionError};
+use reqwest::header::LINK;
 
 pub const AUTH_COOKIE_NAME: &str = "jwt";
 
@@ -982,17 +982,59 @@ pub fn send_webmention(post: Post, community: &Community, context: Data<LemmyCon
       if context.is_valid_ip(&url).await.is_err() {
         return Ok(());
       }
-      let mut webmention = Webmention::new::<Url>(post.ap_id.clone().into(), url.clone().into())?;
-      webmention.set_checked(true);
-      match webmention
+      let source: Url = post.ap_id.clone().into();
+      let target: Url = url.clone().into();
+
+      // Discover webmention endpoint via Link header (W3C spec §3.1.2).
+      let resp = context
+        .client()
+        .get(target.as_str())
+        .send()
+        .instrument(tracing::info_span!("Fetching webmention target"))
+        .await?;
+
+      // Parse `<url>; rel="webmention"` from Link headers (W3C spec §3.1.2 allows multiple).
+      let endpoint = resp.headers().get_all(LINK).iter().find_map(|v| {
+        let hdr = v.to_str().ok()?;
+        hdr.split(',').find_map(|part| {
+          let mut href = None;
+          let mut is_webmention = false;
+          for seg in part.split(';') {
+            let seg = seg.trim();
+            if seg.starts_with('<') && seg.ends_with('>') {
+              href = Some(seg[1..seg.len() - 1].to_owned());
+            } else if seg.eq_ignore_ascii_case("rel=\"webmention\"")
+              || seg.eq_ignore_ascii_case("rel=webmention")
+            {
+              is_webmention = true;
+            }
+          }
+          if is_webmention { href } else { None }
+        })
+      });
+
+      let Some(endpoint_str) = endpoint else {
+        // No webmention endpoint discovered — silently succeed per W3C spec §3.1.2.
+        return Ok(());
+      };
+
+      let endpoint_url = target
+        .join(&endpoint_str)
+        .with_lemmy_type(UntranslatedError::CouldntSendWebmention.into())?;
+
+      let params = [("source", source.as_str()), ("target", target.as_str())];
+      context
+        .client()
+        .post(endpoint_url.as_str())
+        .form(&params)
         .send()
         .instrument(tracing::info_span!("Sending webmention"))
         .await
-      {
-        Err(WebmentionError::NoEndpointDiscovered(_)) => Ok(()),
-        Ok(_) => Ok(()),
-        Err(e) => Err(e).with_lemmy_type(UntranslatedError::CouldntSendWebmention.into()),
-      }
+        .with_lemmy_type(UntranslatedError::CouldntSendWebmention.into())?
+        .error_for_status()
+        .with_lemmy_type(UntranslatedError::CouldntSendWebmention.into())?;
+
+      Ok(())
     });
   };
 }
