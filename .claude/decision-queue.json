@@ -6416,6 +6416,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "1dcd6a201003-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-05T23:39:27Z",
+      "branch": "phase-m2-core-hook",
+      "phase_task": 9,
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "question": "Linux-deploy-target compile proof for phase-m2-core-hook before bm-pr (diff touches Cargo.toml + Cargo.lock — lemmy_api_common added to api_utils).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Diff-scoped Linux-compile gate (advisor-orchestrator §3.1 + §5.2). The m2-core-hook diff vs governance-v0 adds lemmy_api_common as a workspace dep of api_utils (Cargo.toml + Cargo.lock), triggering the gate. cargo-linux.sh mirrors CI via Docker rust:1.95.",
+      "result": "pass",
+      "log_slice": "cargo check --workspace --features full GREEN on Docker rust:1.95 Linux target. Finished dev profile in 16m 55s, 0 errors. Full workspace incl. lemmy_api_common->api_utils dep add and crates/server compiles clean on the Linux deploy target. Log: %LOCALAPPDATA%/Temp/m2-linux-check.log.",
+      "failed_commands": null,
+      "answer": "PASS — phase-m2-core-hook compiles clean on the Linux deploy target (Docker rust:1.95, cargo check --workspace --features full, 0 errors, 16m55s). Diff-scoped Linux gate satisfied; bm-pr Phase-1d gate clear.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T23:39:27Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "f06ed49af84a-001"
     }
   ]
 }
