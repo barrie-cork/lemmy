@@ -5,10 +5,10 @@
 ## RESUME block
 
 - **Current sub-phase:** `m2-core-hook` (M2-core in-binary slice). Plan: `.claude/PRPs/plans/m2-core-transition-hook.plan.md` (APPROVED by user 2026-06-05).
-- **State-machine stage:** Task 1 DONE + MERGED (phase-m2-core-hook @ `0662ffc6e`, DQ `61d96bf8b2d6-001` resolved pass). **Task 2 BOTH ARMS RUNNING: #609 Sonnet (canonical, base phase-m2-core-hook) + #610 MiniMax (base ab-test/m2-t2-minimax, never merges).** Task 1 AB result: both arms produced byte-for-byte identical diffs; Sonnet 2m26s, MiniMax 2m20s.
+- **State-machine stage:** Tasks 1+2 DONE + MERGED. **Task 3 BOTH ARMS RUNNING: #611 Sonnet (canonical, base phase-m2-core-hook) + #612 MiniMax (base ab-test/m2-t3-minimax, never merges).** Task 2 AB: #609 Sonnet done (2m58s, pass); #610 MiniMax failed 4s (model 404). Task 1 AB: identical diffs, both pass.
 - **Lane mode:** Mode B (drive from canonical `brehon-fork` / `governance-v0`; base_branch=`phase-m2-core-hook`; impl briefs author on trunk + SSH-merge into phase branch).
-- **Last trunk commit:** `a308c891d` (Task-2 brief) on `governance-v0`; phase branch tip `0662ffc6e` (brief synced).
-- **VERIFIED_AT:** `0662ffc6e` (phase-m2-core-hook @ origin; daemon-local synced; ab-test/m2-t2-minimax base created off same tip).
+- **Last trunk commit:** `9d89e5ca4` (Task-3 brief) on `governance-v0`; phase branch tip `af6cf8c8c` (brief synced; DQ 262f6fd132fe-001 resolved pass @ f08b2d9a3).
+- **VERIFIED_AT:** `af6cf8c8c` (phase-m2-core-hook @ origin; ab-test/m2-t3-minimax base created off same tip).
 
 ## Plan task → dispatch map
 
@@ -47,6 +47,8 @@ Plan has Tasks 0–9. Pre-Shape-G: every impl-task writes a `validate-pending-la
 
 ## Next concrete action
 
-Poll #609 + #610 → on both `done`: read validate-pending-laptop DQ from #609, run `./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full` on laptop, mutate DQ (pass→resolved), merge #609 into phase-m2-core-hook, record AB delta vs #610, then author + dispatch Task 3 (governance_case_after_transition fn, same file, requires:2, MiniMax-qualifying).
+Poll #611 + #612 → on both done: read validate-pending-laptop DQ from #611 (phase_task=3), run `./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full` on laptop (apply bridge_notify.rs + governance.rs from phase tip to working tree), mutate DQ pass→resolved on phase branch, push daemon merge of #611 to origin, record AB delta vs #612, then author + dispatch Tasks 4 and 6+7 per dependency order.
 
-**Task 3 base:** must be the phase-m2-core-hook tip AFTER Task 2 merges (Task 3 requires:2 — modifies same file `bridge_notify.rs`). Do NOT dispatch Task 3 until Task 2 Sonnet arm is merged.
+**⚠️ POINT-IN-TIME — re-verify before acting:** #611/#612 may be done by next session. Check `show_task 611` + `show_task 612` first.
+
+**Task 4 base:** governance-v0 (3 files, NOT MiniMax). **Tasks 6+7 base:** phase-m2-core-hook AFTER Task 3 merges (requires:3).
