@@ -165,20 +165,15 @@
   "what_remains": {
     "active_m_track": [
       "M2 sub-PRD authoring (status: needs_prd) — the immediate next planning unit. Gates: OQ-ADR016-02 + OQ-ADR016-04.",
-      "M3 sub-PRD authoring (status: needs_prd) — scheduled after M2 ships. Gate: OQ-V2-04."
+      "M3 sub-PRD authoring (status: needs_prd) — scheduled after M2 ships. Gate: OQ-V2-04.",
+      "NOTE: no unstarted v1 sub-phases remain (v1-quality-r3b shipped PR #170; deps-r3 is upstream-gated). The M-track is the sole active forward work."
     ],
     "v1_polish_and_deferred": [
-      {
-        "id": "v1-quality-r3b",
-        "status": "unstarted",
-        "scope": "Issue #167 — LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional",
-        "priority": "low (polish; v1 functionally complete)",
-        "note": "v1-quality-r3c (PR #172) shipped 2026-06-01; this is the remaining quality follow-up."
-      },
       {
         "id": "v1-deps-r3",
         "status": "deferred",
         "scope": "wasmtime bump — deferred pending upstream extism release with wasmtime>=42 (ADR-012 gate). Closes 12 deferred Dependabot alerts.",
+        "priority": "low (upstream-gated)",
         "trigger": "upstream extism release with wasmtime>=42 -> bump, not fork. Re-check crates.io extism each milestone. PR #847 (extism) is dead — do not watch it.",
         "watch": "watch_extism_wasmtime_42_adopt (PMD)"
       }
@@ -203,14 +198,7 @@
     "banked_post_brehon": [
       "Portable harness for next Rust app — extract brehon-fork harness into reusable rust-harness package. Trigger: ONLY after Brehon ships (fork quiescent). Plan: C:/Users/barri/.claude/plans/the-harnes-system-we-ethereal-comet.md. ~8.5 days."
     ],
-    "high_priority_unstarted": [
-      {
-        "lane": "quality",
-        "sub_phase": "v1-quality-r3b",
-        "scope": "Issue #167 — LemmyContext::create DB URL from context; BREHON_DISABLE_* sweep optional",
-        "rationale": "Only remaining unstarted v1 sub-phase. Low priority — v1 functionally complete. Cuttable via /roadmap-next. M-track (M2/M3) is the strategic next work and uses /prp-prd + /auto-phase instead."
-      }
-    ]
+    "high_priority_unstarted": []
   },
   "implementation_steering": {
     "next_logical_sub_phase": "Author the M2 sub-PRD (governance-triggered rooms). M1 (chat infrastructure) is fully shipped — bridge proven in isolation per H1. M2 is where the ADR-016 backplane first does real work and where Room::* hash-chain emission begins. M2 sub-PRD does not exist yet (status: needs_prd); it must be authored via /prp-prd before any planning brief. Gates to resolve at PRD-write time: OQ-ADR016-02 (B-publish schema) + OQ-ADR016-04 (sanction translation). M3 (town halls / RTC) follows M2; strict-sequential M1->M2->M3 ordering (user Q10 2026-04-19).",
@@ -223,8 +211,7 @@
         "#174 (Dependabot npm)"
       ],
       "remaining_v1_polish": [
-        "v1-quality-r3b (#167)",
-        "v1-deps-r3 (wasmtime, upstream-gated)"
+        "v1-deps-r3 (wasmtime, upstream-extism-gated — only deferred v1 item)"
       ]
     },
     "rationale": "v1 delivered all 11 v0 endpoints + the governance machinery (jury, sponsor-liability, appeals/sanctions, reputation, federation-inbound, redaction). M1 added the chat-infrastructure plane and proved the bridge architecture. The messaging track now advances M1->M2->M3. M2 is gated only on authoring its sub-PRD + resolving two parked ADR-016 backplane OQs — no code blocker. The remaining v1 items are polish (#167) or upstream-gated (wasmtime), neither blocking the M-track."
@@ -281,13 +268,16 @@
       },
       "quality": {
         "name": "Quality / QA",
-        "status": "partial",
+        "status": "done",
         "shipped": [
           "r1",
           "r2",
-          "r3c (PR #172, 2026-06-01)"
+          "r2a",
+          "r3",
+          "r3b (PR #170, Issue #167)",
+          "r3c (PR #172)"
         ],
-        "remaining": "v1-quality-r3b (Issue #167 — see what_remains)"
+        "remaining": "none"
       },
       "redaction": {
         "name": "GDPR Redaction",
@@ -721,7 +711,7 @@
     "quality": {
       "name": "Quality / QA",
       "prd": null,
-      "status": "partial",
+      "status": "done",
       "user_steered": true,
       "user_steered_note": "User instructed 2026-05-22: quality is a meta-lane driven out-of-band; not /roadmap-next-cut. Recurring r-cycles may appear. 2026-05-28: r2 added bundling 5 PR #155 carry-forward issues; gated on RT-r3 ship (4 of 5 reference RT-r3-only code).",
       "sub_phases": {
