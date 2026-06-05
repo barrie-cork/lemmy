@@ -51,6 +51,7 @@ use lemmy_api::governance::{
 };
 use lemmy_api_common::governance::{RevokeEndorsement, RevokeEndorsementResponse};
 use lemmy_api_utils::{
+  bridge_notify::governance_case_after_transition,
   context::LemmyContext,
   utils::{check_local_user_valid, is_admin},
 };
@@ -138,7 +139,7 @@ pub async fn revoke_endorsement(
 
   // is_admin_caller + bypass_recorded + caller_id are Copy; moved by value.
   // data_for_tx + pseudonym_for_tx are move'd per §4 GOTCHA closure scoping.
-  let outcome = conn
+  let (outcome, escaped_cases) = conn
     .run_transaction(async |conn| {
       process_revocation(
         conn,
@@ -151,6 +152,18 @@ pub async fn revoke_endorsement(
       .await
     })
     .await?;
+
+  // Site 12: fire hooks after the transaction — outside txn boundary (ADR-012).
+  for case in &escaped_cases {
+    governance_case_after_transition(
+      &*context,
+      case,
+      Some(CaseStatus::SponsorLiabilityPending),
+      CaseStatus::SponsorLiabilityEscaped,
+    )
+    .await
+    .ok();
+  }
 
   Ok(Json(outcome))
 }
@@ -165,7 +178,7 @@ async fn process_revocation(
   is_admin_caller: bool,
   bypass_recorded: bool,
   data: RevokeEndorsement,
-) -> LemmyResult<RevokeEndorsementResponse> {
+) -> LemmyResult<(RevokeEndorsementResponse, Vec<ModerationCase>)> {
   let mut config = ConfigCache::new();
 
   // Step 1: load endorsement FOR UPDATE.
@@ -187,11 +200,14 @@ async fn process_revocation(
   // Step 3: idempotency (PRD §5.4) — re-revocation is a no-op for
   // authorised callers (was Step 1.5 pre-cr-5).
   if let Some(existing_revoked_at) = row.revoked_at {
-    return Ok(RevokeEndorsementResponse {
-      endorsement_id: row.id,
-      revoked_at: existing_revoked_at,
-      liability_chain_severed_for_cases: vec![],
-    });
+    return Ok((
+      RevokeEndorsementResponse {
+        endorsement_id: row.id,
+        revoked_at: existing_revoked_at,
+        liability_chain_severed_for_cases: vec![],
+      },
+      vec![],
+    ));
   }
 
   let now: DateTime<Utc> = Utc::now();
@@ -253,6 +269,7 @@ async fn process_revocation(
     .await?;
 
   let mut severed: Vec<ModerationCaseId> = vec![];
+  let mut escaped_cases: Vec<ModerationCase> = vec![];
   for case in &pending_cases {
     // Per DQ #142: per-case read inside the loop. ConfigCache deduplicates
     // duplicate-community reads automatically (cases may belong to different
@@ -325,6 +342,7 @@ async fn process_revocation(
       )
       .await?;
       severed.push(case.id);
+      escaped_cases.push(case.clone());
     }
   }
 
@@ -362,9 +380,12 @@ async fn process_revocation(
   )
   .await?;
 
-  Ok(RevokeEndorsementResponse {
-    endorsement_id: row.id,
-    revoked_at: now,
-    liability_chain_severed_for_cases: severed,
-  })
+  Ok((
+    RevokeEndorsementResponse {
+      endorsement_id: row.id,
+      revoked_at: now,
+      liability_chain_severed_for_cases: severed,
+    },
+    escaped_cases,
+  ))
 }

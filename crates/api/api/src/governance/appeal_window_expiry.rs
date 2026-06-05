@@ -9,7 +9,7 @@
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, dsl::update};
 use diesel_async::RunQueryDsl;
-use lemmy_api_utils::context::LemmyContext;
+use lemmy_api_utils::{bridge_notify::governance_case_after_transition, context::LemmyContext};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
 use lemmy_db_schema_file::{enums::CaseStatus, schema::moderation_case};
 use lemmy_diesel_utils::connection::get_conn;
@@ -52,6 +52,7 @@ pub async fn run_appeal_window_expiry_batch(
     .load(conn)
     .await?;
 
+  let mut pending_hooks: Vec<(ModerationCase, CaseStatus)> = Vec::new();
   for case in &candidates {
     update(moderation_case::table.filter(moderation_case::id.eq(case.id)))
       .set((
@@ -74,7 +75,15 @@ pub async fn run_appeal_window_expiry_batch(
     )
     .await?;
 
+    pending_hooks.push((case.clone(), CaseStatus::Closed));
     outcome.cases_processed += 1;
+  }
+
+  // Fire hooks after loop — DB work complete, not inside a transaction.
+  for (case, new_status) in pending_hooks {
+    governance_case_after_transition(context, &case, Some(CaseStatus::Decided), new_status)
+      .await
+      .ok();
   }
 
   if !candidates.is_empty() {
