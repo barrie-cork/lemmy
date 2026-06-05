@@ -3,6 +3,26 @@
   "pending": [],
   "resolved": [
     {
+      "id": "a3d0e9941441-049",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-05T07:15:00Z",
+      "question": "Linux compile proof for phase-v1-deps-r2 Cargo.toml change (Phase-1d gate).",
+      "options": ["pass", "fail"],
+      "context": "Diff touches crates/api/api_utils/Cargo.toml (drops webmention 0.6.0). Running cargo-linux.sh check --workspace --features full via Docker rust:1.95. Phase-1d gate blocks bm-pr until result:pass.",
+      "answer": "pass — cargo check --workspace --features full EXIT 0 on phase-v1-deps-r2 tip d5e909a2b via Docker rust:1.95 (Linux). Zero errors. rustls-webpki@0.101.7 absent from dep graph. Note: first two runs failed due to wrong worktree (governance-v0 mounted) and missing submodule; third run from brehon-fork-deps-r2-linux worktree with submodule initialized succeeded.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T09:05:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": ["./scripts/brehon/cargo-linux.sh check --workspace --features full"],
+      "branch": "phase-v1-deps-r2",
+      "phase_task": "task-1",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
       "from": "impl",
       "kind": "validate-pending-laptop",
       "timestamp": "2026-06-04T00:00:00Z",
