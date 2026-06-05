@@ -63,7 +63,11 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
-use lemmy_api_utils::{context::LemmyContext, utils::check_local_user_valid};
+use lemmy_api_utils::{
+  bridge_notify::governance_case_after_transition,
+  context::LemmyContext,
+  utils::check_local_user_valid,
+};
 use lemmy_db_schema::{
   newtypes::{CommunityId, ModerationCaseId},
   source::governance::{
@@ -133,6 +137,14 @@ pub async fn submit_jury_vote(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
+  // Pre-txn: capture case for hook. process_vote re-loads it inside the txn with FOR UPDATE.
+  let pre_txn_case: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+  let pre_txn_status = pre_txn_case.status;
+
   let vote_data = data.clone();
   let pseudonym_for_tx = juror_pseudonym.clone();
   // Clone the Data<LemmyContext> handle (cheap Arc clone) so the
@@ -147,6 +159,23 @@ pub async fn submit_jury_vote(
       process_vote(conn, juror_id, pseudonym_for_tx, vote_data, &context_for_tx).await
     })
     .await?;
+
+  // Sites 2-6: fire hook once post-txn if a status transition occurred.
+  // Query post-txn status to detect which branch fired (deadlock → AdminReview,
+  // SL-pending → SponsorLiabilityPending, decided → Decided, appeal paths).
+  let post_txn_status = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(moderation_case::status)
+    .first::<CaseStatus>(conn)
+    .await
+    .ok();
+  if let Some(new_status) = post_txn_status {
+    if new_status != pre_txn_status {
+      governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
+        .await
+        .ok();
+    }
+  }
 
   Ok(Json(outcome))
 }

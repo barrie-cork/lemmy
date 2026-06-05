@@ -49,7 +49,11 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AdminAssignJury, AdminAssignJuryResponse};
-use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
+use lemmy_api_utils::{
+  bridge_notify::governance_case_after_transition,
+  context::LemmyContext,
+  utils::is_admin,
+};
 use lemmy_db_schema::{
   newtypes::{AppealId, ModerationCaseId},
   source::governance::{
@@ -89,6 +93,14 @@ pub async fn admin_assign_jury(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
+  // Pre-txn: capture case for hook. process_assignment re-loads inside the txn.
+  let case_for_hook: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+  let old_status = case_for_hook.status;
+
   let data_for_tx = data;
   let pseudonym_for_tx = admin_pseudonym.clone();
 
@@ -97,6 +109,11 @@ pub async fn admin_assign_jury(
       process_assignment(conn, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
+
+  // Site 1: fire hook after txn committed (Open/ThresholdMet/EmergencyRemove → JurySelection).
+  governance_case_after_transition(&context, &case_for_hook, Some(old_status), CaseStatus::JurySelection)
+    .await
+    .ok();
 
   Ok(Json(outcome))
 }
