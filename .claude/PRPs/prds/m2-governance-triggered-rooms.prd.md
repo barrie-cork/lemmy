@@ -178,10 +178,10 @@ The 10 M2-core `Room::*` entry kinds are a **zero-migration** addition (`entry_k
 
 | # | Phase | Description | Status | Depends | PRP Plan |
 |---|---|---|---|---|---|
-| 1 | **M2-core hook** | `governance_case_after_transition` notification + ~8 transition-site wiring + extend `bridge_notify` payload | pending | M1 | - |
-| 2 | **M2-core entry kinds** | 10 `ENTRY_KIND_ROOM_*` consts + shim re-export + registry-doc section | pending | - | - |
+| 1 | **M2-core hook** | `governance_case_after_transition` notification + transition-site wiring (11 sites, not ~8) + extend `bridge_notify` to a discriminated-union payload | planned | M1 | [`m2-core-transition-hook.plan.md`](../plans/m2-core-transition-hook.plan.md) |
+| 2 | **M2-core entry kinds** | 10 `ENTRY_KIND_ROOM_*` consts + shim re-export + registry-doc section | planned | - | [`m2-core-transition-hook.plan.md`](../plans/m2-core-transition-hook.plan.md) |
 | 3 | **M2-core provisioning** | `services/bridge/` room-provisioning service (jury/appeal/emergency/event/spin-out) + `bridge_room` table + OQ-009 reveal + idempotency | pending | 1, 2 | - |
-| 4 | **M2-core hash-chain emission** | bridge calls back into `append()` to write the 10 `Room::*` entries; restart-idempotency | pending | 2, 3 | - |
+| 4 | **M2-core hash-chain emission** | binary-side `append_room_event()` wrapper PLANNED in m2-core-transition-hook plan (in-binary slice); bridge daemon's `append()` callback + restart-idempotency = bridge-side plan | binary-side planned | 2, 3 | [`m2-core-transition-hook.plan.md`](../plans/m2-core-transition-hook.plan.md) (binary-side wrapper only) |
 | 5 | **M2-core e2e + clean-posture** | integration tests (jury <5s, emergency <2s, 10 entries, restart-no-dup, `messaging_enabled=false` clean) | pending | 1-4 | - |
 | 6 | **M2-late B-publish** (GATED) | sanction event publish + Matrix subscriber translation | pending | OQ-ADR016-02, OQ-ADR016-04 | - |
 | 7 | **M2-late B-actor** (GATED, optional) | portable-ID linkage replacing bridge-local puppet map | pending | OQ-ADR016-03 | - |
