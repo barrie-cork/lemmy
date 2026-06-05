@@ -5,7 +5,7 @@
 ## RESUME block
 
 - **Current sub-phase:** `m2-core-hook` (M2-core in-binary slice). Plan: `.claude/PRPs/plans/m2-core-transition-hook.plan.md` (APPROVED by user 2026-06-05).
-- **State-machine stage:** bm-cut dispatched (Task #606, base `governance-v0`). Awaiting completion → verify branch → dispatch Task 0.
+- **State-machine stage:** bm-cut DONE (#606, phase-m2-core-hook @ 70a603f1b, runlog advisor-written after worker gate-block). Task 0 DONE (advisor-inline; found 12th site `revoke_endorsement.rs:308`, DQ `a3d0e9941441-050`, plan amended → bf8b6d97c). **Task 1 BOTH ARMS RUNNING: #607 Sonnet (canonical, base phase-m2-core-hook) + #608 MiniMax (base ab-test/m2-t1-minimax, never merges).** Awaiting both → validate-pending-laptop DQ from #607 → run cargo on laptop → merge #607 → record AB delta.
 - **Lane mode:** Mode B (drive from canonical `brehon-fork` / `governance-v0`; base_branch=`phase-m2-core-hook`; impl briefs author on trunk + SSH-merge into phase branch).
 - **Last trunk commit:** `a92ff2d4e` (bm-cut brief) on `governance-v0`; daemon-local synced to same.
 - **VERIFIED_AT:** `a92ff2d4e` (daemon-local trunk + origin + local all in sync; bm-cut brief present daemon-side).
