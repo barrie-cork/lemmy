@@ -8,14 +8,19 @@
       "kind": "validate-pending-laptop-linux",
       "timestamp": "2026-06-05T07:15:00Z",
       "question": "Linux compile proof for phase-v1-deps-r2 Cargo.toml change (Phase-1d gate).",
-      "options": ["pass", "fail"],
+      "options": [
+        "pass",
+        "fail"
+      ],
       "context": "Diff touches crates/api/api_utils/Cargo.toml (drops webmention 0.6.0). Running cargo-linux.sh check --workspace --features full via Docker rust:1.95. Phase-1d gate blocks bm-pr until result:pass.",
       "answer": "pass — cargo check --workspace --features full EXIT 0 on phase-v1-deps-r2 tip d5e909a2b via Docker rust:1.95 (Linux). Zero errors. rustls-webpki@0.101.7 absent from dep graph. Note: first two runs failed due to wrong worktree (governance-v0 mounted) and missing submodule; third run from brehon-fork-deps-r2-linux worktree with submodule initialized succeeded.",
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-06-05T09:05:00Z",
       "approved_by": null,
       "approved_at": null,
-      "commands": ["./scripts/brehon/cargo-linux.sh check --workspace --features full"],
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
       "branch": "phase-v1-deps-r2",
       "phase_task": "task-1",
       "result": "pass",
@@ -6155,6 +6160,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "df5e346cfb13-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-06-05T18:05:00Z",
+      "question": "Task 0 transition-site re-enumeration: does the plan's 11-site table match HEAD?",
+      "options": [
+        "amend-plan-to-12-sites",
+        "proceed-with-11"
+      ],
+      "context": "Task 0 (re-enumerate before wiring) found a 12th production CaseStatus transition the original Explore agent MISSED: revoke_endorsement.rs:308 (.set(status.eq(SponsorLiabilityEscaped)) inside process_revocation's run_transaction at :142). It fires SponsorLiabilityPending -> SponsorLiabilityEscaped when a sponsor revokes during the grace window; loops over pending_cases like the cron sites. In api_crud. The plan's 11-site table (sites 1-11) + latent fire_or_escape_case.rs:297 (no prod callers) did not list it. This is exactly the research-section-8.5 'missed site = correctness bug' risk Task 0 exists to catch.",
+      "answer": "AMEND: add revoke_endorsement.rs:308 as transition site 12 (the SL-escape-on-revoke path). Wiring (plan Task 6/8) must fire governance_case_after_transition(ctx, &case, Some(SponsorLiabilityPending), SponsorLiabilityEscaped) after the run_transaction at :142, once per escaped case in the loop (mirror cron-site accumulation). Plan + dispatch handover amended accordingly. Total production transition statements = 12 (was 11); +latent site 13 (fire_or_escape_case, still no prod callers, still not wired unless via shared helper).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-05T18:05:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-050"
     }
   ]
 }
