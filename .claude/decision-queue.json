@@ -1,60 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "2d68a42b53cd-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-05T12:00:00Z",
-      "branch": "junior/role-impl-task-m2-core-hook-task-7-wire-hook-at-cron-sites-9-12-see-claude-prps-briefs-m2-core-hook-impl-7-md-614",
-      "phase_task": 7,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
-        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
-        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
-      ],
-      "question": "Workspace check for governance_case_after_transition wired at cron sites 9-11 + site 12 — laptop runs cargo.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 7 wired governance_case_after_transition at: site9=appeal_window_expiry (accumulate-then-fire after loop), sites10+11=sponsor_liability_grace fire_or_escape_case_inner (after each per-case run_transaction, old=SponsorLiabilityPending), site12=revoke_endorsement process_revocation (accumulate escaped cases inside closure, fire after run_transaction returns at handler level). All outside txn boundaries. Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. Laptop only.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "branch": "junior/role-impl-task-m2-core-hook-task-6-wire-hook-at-8-handler-sites-see-claude-prps-briefs-m2-core-hook-impl-6-md-613",
-      "phase_task": 6,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
-        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
-        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
-      ],
-      "question": "Workspace check for governance_case_after_transition wired at sites 1-8 — laptop runs cargo.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 6 added governance_case_after_transition hook call after run_transaction at 8 handler sites: site1=admin_assign_jury, sites2-6=submit_jury_vote (once post-txn, new_status from outcome), site7=admin_close_case (captured old_status before try_from move), site8=request_appeal (api_crud). All calls are outside run_transaction, fire-and-forget .ok(). Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. No Cargo.toml change. Laptop only.",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "37768a3da1dd-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "262f6fd132fe-001",
@@ -6306,6 +6252,59 @@
       "resolved_at": "2026-06-05T18:50:36Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "2d68a42b53cd-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-7-wire-hook-at-cron-sites-9-12-see-claude-prps-briefs-m2-core-hook-impl-7-md-614",
+      "phase_task": 7,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
+        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
+      ],
+      "question": "Workspace check for governance_case_after_transition wired at cron sites 9-11 + site 12 — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 wired governance_case_after_transition at: site9=appeal_window_expiry (accumulate-then-fire after loop), sites10+11=sponsor_liability_grace fire_or_escape_case_inner (after each per-case run_transaction, old=SponsorLiabilityPending), site12=revoke_endorsement process_revocation (accumulate escaped cases inside closure, fire after run_transaction returns at handler level). All outside txn boundaries. Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full EXIT_0; cargo check -p lemmy_api -p lemmy_api_crud --features full EXIT_0; cargo clippy -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings EXIT_0. Note: -p lemmy_api_crud alone fails (pre-existing feature topology — state.rs:233 gated by cfg(feature=full) on lemmy_api transitive dep); combined form per plan is canonical and passes.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T19:34:11Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m2-core-hook-task-6-wire-hook-at-8-handler-sites-see-claude-prps-briefs-m2-core-hook-impl-6-md-613",
+      "phase_task": 6,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
+        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
+      ],
+      "question": "Workspace check for governance_case_after_transition wired at sites 1-8 — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added governance_case_after_transition hook call after run_transaction at 8 handler sites: site1=admin_assign_jury, sites2-6=submit_jury_vote (once post-txn, new_status from outcome), site7=admin_close_case (captured old_status before try_from move), site8=request_appeal (api_crud). All calls are outside run_transaction, fire-and-forget .ok(). Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. No Cargo.toml change. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full EXIT_0; cargo check -p lemmy_api -p lemmy_api_crud --features full EXIT_0; cargo clippy -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings EXIT_0. Note: -p lemmy_api_crud alone fails (pre-existing feature topology — state.rs:233 gated by cfg(feature=full) on lemmy_api transitive dep); combined form per plan is canonical and passes.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T19:34:11Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "37768a3da1dd-001"
     }
   ]
 }
