@@ -56,7 +56,11 @@ pub use lemmy_db_schema::source::governance::governance_log::{
   ENTRY_KIND_JURY_DECLINED, ENTRY_KIND_JURY_REPLACEMENT_SELECTED, ENTRY_KIND_JURY_VOTED,
   ENTRY_KIND_PANEL_ASSEMBLED, ENTRY_KIND_PARTICIPATION_CRON_TICK, ENTRY_KIND_PUBLIC_LOG_PUBLISHED,
   ENTRY_KIND_REPORT_CREATED, ENTRY_KIND_REPUTATION_DELTA, ENTRY_KIND_RESTORATION_COMPLETED,
-  ENTRY_KIND_ROLLUP_RECOMPUTED, ENTRY_KIND_RULE_SET_VERSION_CREATED, ENTRY_KIND_SANCTION_CREATED,
+  ENTRY_KIND_ROLLUP_RECOMPUTED, ENTRY_KIND_ROOM_ARCHIVED, ENTRY_KIND_ROOM_BRIDGE_ERROR,
+  ENTRY_KIND_ROOM_CREATED, ENTRY_KIND_ROOM_DECISION_RELAYED, ENTRY_KIND_ROOM_IDENTITY_REVEALED,
+  ENTRY_KIND_ROOM_LIFECYCLE_EVENT, ENTRY_KIND_ROOM_MEMBER_ADDED, ENTRY_KIND_ROOM_MEMBER_REMOVED,
+  ENTRY_KIND_ROOM_RECORDING_UPLOADED, ENTRY_KIND_ROOM_TRANSCRIPT_READY,
+  ENTRY_KIND_RULE_SET_VERSION_CREATED, ENTRY_KIND_SANCTION_CREATED,
   ENTRY_KIND_SEVERITY_TIER_FROZEN, ENTRY_KIND_SPONSOR_ALLOWLIST_ADDED,
   ENTRY_KIND_SPONSOR_ALLOWLIST_REMOVED, ENTRY_KIND_SPONSOR_LIABILITY_APPLIED,
   ENTRY_KIND_SPONSOR_LIABILITY_CLAMPED, ENTRY_KIND_SPONSOR_LIABILITY_ESCAPED,
@@ -64,3 +68,63 @@ pub use lemmy_db_schema::source::governance::governance_log::{
   ENTRY_KIND_THRESHOLD_MET, ENTRY_KIND_VOTE_OUTCOME_RECORDED, GovernanceLog,
   GovernanceLogInsertForm, append,
 };
+
+#[cfg(feature = "full")]
+use {
+  lemmy_diesel_utils::connection::DbPool,
+  lemmy_utils::error::{LemmyErrorType, LemmyResult},
+};
+
+/// Payload for a Room lifecycle event written by the bridge daemon via
+/// [`append_room_event`]. Integer and opaque-token fields only — no raw
+/// usernames, emails, or display names (`scrub_json` inside `append` strips
+/// those; bridge daemon owns pseudonym resolution).
+///
+/// NOTE: `matrix_room_id` uses the Matrix `!room:server` sigil form which
+/// may match the `scrub_json` URL/mention regex. Pass an opaque non-sigil
+/// token (e.g. the bare room localpart) when round-trip fidelity is
+/// required (ADR-008).
+#[derive(Debug, serde::Serialize)]
+pub struct RoomEventPayload {
+  pub case_id: i32,
+  pub matrix_room_id: Option<String>,
+  pub lifecycle_stage: String,
+  pub member_count: Option<i32>,
+}
+
+/// The 10 allowed `entry_kind` values for [`append_room_event`].
+/// Any kind not in this set is rejected (ADR-008 integrity gate).
+#[cfg(feature = "full")]
+const ROOM_KINDS: &[&str] = &[
+  ENTRY_KIND_ROOM_ARCHIVED,
+  ENTRY_KIND_ROOM_BRIDGE_ERROR,
+  ENTRY_KIND_ROOM_CREATED,
+  ENTRY_KIND_ROOM_DECISION_RELAYED,
+  ENTRY_KIND_ROOM_IDENTITY_REVEALED,
+  ENTRY_KIND_ROOM_LIFECYCLE_EVENT,
+  ENTRY_KIND_ROOM_MEMBER_ADDED,
+  ENTRY_KIND_ROOM_MEMBER_REMOVED,
+  ENTRY_KIND_ROOM_RECORDING_UPLOADED,
+  ENTRY_KIND_ROOM_TRANSCRIPT_READY,
+];
+
+/// Typed, kind-validated path to the governance log for Room lifecycle events.
+///
+/// Accepts only the 10 `ENTRY_KIND_ROOM_*` kinds (ADR-008 integrity gate —
+/// the bridge can only write Room::* kinds through this wrapper, never
+/// arbitrary entry kinds). Serialises `payload` to JSON and delegates to
+/// [`append`], which runs `scrub_json` and the hash-chain + signing steps.
+#[cfg(feature = "full")]
+pub async fn append_room_event(
+  pool: &mut DbPool<'_>,
+  kind: &str,
+  payload: RoomEventPayload,
+  actor_pseudonym: Option<String>,
+) -> LemmyResult<GovernanceLog> {
+  if !ROOM_KINDS.contains(&kind) {
+    return Err(LemmyErrorType::Unknown(format!("not a room entry kind: {kind}")).into());
+  }
+  let value = serde_json::to_value(&payload)
+    .map_err(|e| LemmyErrorType::Unknown(format!("RoomEventPayload serialisation failed: {e}")))?;
+  append(pool, kind, value, actor_pseudonym).await
+}

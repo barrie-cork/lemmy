@@ -3,31 +3,6 @@
   "pending": [],
   "resolved": [
     {
-      "id": "262f6fd132fe-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-05T10:30:00Z",
-      "branch": "junior/role-impl-task-m2-core-hook-task-2-bridge-notify-pm-refactor-onto-union-see-claude-prps-briefs-m2-core-hook-impl-2-609",
-      "phase_task": 2,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
-      ],
-      "question": "Workspace check for bridge_notify.rs PM refactor onto tagged union — laptop runs cargo.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 replaced inline Payload struct in notify_if_enabled with BridgeNotifyPayload::PrivateMessage from api_common. Added lemmy_api_common dep to api_utils/Cargo.toml. Wire format gains type_:private_message discriminator. cargo check -p lemmy_api_utils --features full. Laptop only.",
-      "result": "pass",
-      "log_slice": "cargo check -p lemmy_api_utils --features full: EXIT 0. Task 2 refactor (BridgeNotifyPayload::PrivateMessage, api_common dep added) compiles cleanly on laptop.",
-      "failed_commands": null,
-      "answer": "pass — cargo check -p lemmy_api_utils --features full EXIT 0 on Task 2 tip (bridge_notify.rs PM path onto tagged union, lemmy_api_common dep added to api_utils/Cargo.toml). Laptop advisor-laptop validated.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-05T18:24:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
       "id": "a3d0e9941441-049",
       "from": "advisor",
       "kind": "validate-pending-laptop-linux",
@@ -6202,6 +6177,99 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-050"
+    },
+    {
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-05T19:00:00Z",
+      "question": "Two observations from Task 4: (1) registry doc needs advisor update; (2) brief consts differ from plan consts.",
+      "options": [
+        "advisor updates registry + reconciles const list",
+        "advisor confirms brief list is final and updates registry accordingly"
+      ],
+      "context": "(1) .claude/rules/governance-log-entry-kind-registry.md could not be updated — harness gap DQ #235 blocks Junior workers from writing .claude/**. Advisor must add the M2 room kinds section (10 rows) + bump total 55->65 per the brief §4.2 table. (2) Brief §4.0 lists different consts than plan Task 4: brief uses ROOM_ARCHIVED, ROOM_BRIDGE_ERROR, ROOM_CREATED, ROOM_DECISION_RELAYED, ROOM_IDENTITY_REVEALED, ROOM_LIFECYCLE_EVENT, ROOM_MEMBER_ADDED, ROOM_MEMBER_REMOVED, ROOM_RECORDING_UPLOADED, ROOM_TRANSCRIPT_READY. Plan uses ROOM_CREATED, ROOM_MEMBER_JOINED, ROOM_MEMBER_LEFT, ROOM_CLOSED, ROOM_ARCHIVED, ROOM_DELETED, ROOM_IDENTITY_REVEALED, ROOM_EMERGENCY_PROVISIONED, ROOM_APPEAL_PROVISIONED, ROOM_RECORDING_UPLOADED. Brief says 'authoritative' (§4.0). Implemented brief's list.",
+      "answer": "Implemented brief §4.0 consts as authoritative. Advisor must: (a) update registry doc with M2 section + 55->65 bump; (b) reconcile brief vs plan const list if needed.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-05T19:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "426fb6eb6b0d-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m2-core-hook-task-4-entry-kind-room-consts-shim-registry-see-claude-prps-briefs-m2-core-hook-imp-616",
+      "phase_task": 4,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_db_schema --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full"
+      ],
+      "question": "Workspace check for 10 ENTRY_KIND_ROOM_* consts in governance_log.rs + shim re-export — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added 10 ENTRY_KIND_ROOM_* string consts to crates/db_schema/src/source/governance/governance_log.rs (M2 room kinds block after ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED) and re-exported all 10 from crates/api/api/src/governance/governance_log.rs shim (alphabetical between ROLLUP_RECOMPUTED and RULE_SET_VERSION_CREATED). No migration. No Cargo.toml change. Registry doc update deferred to advisor (harness gap DQ #235). Brief consts differ from plan consts — brief is authoritative per §4.0 (see log DQ).",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_db_schema --features full: EXIT_0; cargo check -p lemmy_api --features full: EXIT_0. Task 4 ENTRY_KIND_ROOM consts + shim compile clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T20:11:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "workflow_run_id": null,
+      "id": "426fb6eb6b0d-001"
+    },
+    {
+      "id": "499fafa897f5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "question": "Validate task-5 append_room_event wrapper compiles clean: cargo check --workspace --features full.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Added append_room_event() + RoomEventPayload + ROOM_KINDS to crates/api/api/src/governance/governance_log.rs. Calls the re-exported append(); uses serde_json::to_value for serialisation; gated #[cfg(feature = full)]. Task-5 of m2-core-transition-hook plan.",
+      "answer": "cargo check -p lemmy_api --features full: EXIT_0. append_room_event wrapper + RoomEventPayload compile clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T20:32:17Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-core-hook-task-5-add-append-room-event-wrapper-see-claude-prps-briefs-m2-core-hook-impl-5-md-617",
+      "phase_task": "task-5",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "262f6fd132fe-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T10:30:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-2-bridge-notify-pm-refactor-onto-union-see-claude-prps-briefs-m2-core-hook-impl-2-609",
+      "phase_task": 2,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
+      ],
+      "question": "Workspace check for bridge_notify.rs PM refactor onto tagged union — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 replaced inline Payload struct in notify_if_enabled with BridgeNotifyPayload::PrivateMessage from api_common. Added lemmy_api_common dep to api_utils/Cargo.toml. Wire format gains type_:private_message discriminator. cargo check -p lemmy_api_utils --features full. Laptop only.",
+      "result": "pass",
+      "log_slice": "cargo check -p lemmy_api_utils --features full: EXIT 0. Task 2 refactor (BridgeNotifyPayload::PrivateMessage, api_common dep added) compiles cleanly on laptop.",
+      "failed_commands": null,
+      "answer": "pass — cargo check -p lemmy_api_utils --features full EXIT 0 on Task 2 tip (bridge_notify.rs PM path onto tagged union, lemmy_api_common dep added to api_utils/Cargo.toml). Laptop advisor-laptop validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T18:24:00Z",
+      "approved_by": null,
+      "approved_at": null
     },
     {
       "id": "61d96bf8b2d6-001",

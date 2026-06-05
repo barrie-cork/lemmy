@@ -233,6 +233,20 @@ pub const ENTRY_KIND_FEDERATION_INBOUND_PERSIST_FAILED: &str = "federation_inbou
 pub const ENTRY_KIND_FEDERATION_LABEL_RECEIVED: &str = "federation_label_received";
 pub const ENTRY_KIND_FEDERATION_PEER_TRUST_CHANGED: &str = "federation_peer_trust_changed";
 
+// M2 room kinds (10) — zero-migration; entry_kind is TEXT
+// Call sites land in the bridge-side plan (pending) per the pre-landed-const
+// exemption. The append_room_event wrapper (Task 5) provides the typed gated path.
+pub const ENTRY_KIND_ROOM_CREATED: &str = "room_created";
+pub const ENTRY_KIND_ROOM_ARCHIVED: &str = "room_archived";
+pub const ENTRY_KIND_ROOM_MEMBER_ADDED: &str = "room_member_added";
+pub const ENTRY_KIND_ROOM_MEMBER_REMOVED: &str = "room_member_removed";
+pub const ENTRY_KIND_ROOM_RECORDING_UPLOADED: &str = "room_recording_uploaded";
+pub const ENTRY_KIND_ROOM_TRANSCRIPT_READY: &str = "room_transcript_ready";
+pub const ENTRY_KIND_ROOM_IDENTITY_REVEALED: &str = "room_identity_revealed";
+pub const ENTRY_KIND_ROOM_DECISION_RELAYED: &str = "room_decision_relayed";
+pub const ENTRY_KIND_ROOM_BRIDGE_ERROR: &str = "room_bridge_error";
+pub const ENTRY_KIND_ROOM_LIFECYCLE_EVENT: &str = "room_lifecycle_event";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
