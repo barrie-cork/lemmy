@@ -272,14 +272,31 @@ elif command -v write-role-signal &>/dev/null; then
 fi
 
 # --- Emit signal via CLI, or fall back to JSONL queue ---
-# JSONL queue lives next to the worker worktree (or daemon main checkout if
-# worker_dir resolution failed). On EliteDesk the CLI requires a local
-# PROJECT_MEMORY_DB but the canonical PMD lives on the laptop — so EliteDesk
-# expectedly takes the JSONL path. A drain script on the laptop rsyncs
-# /srv/brehon-fork/.claude/role-signal-queue.jsonl and ingests into the
-# canonical PMD. Per .claude/PRPs/handovers/role-customization-2026-05-24-session3.md
-# §3 architecture decision (lossless async queue + drain).
-QUEUE_DIR="${WORKER_DIR}/.claude"
+# JSONL queue MUST live in the main checkout's .claude/, NOT the worker
+# worktree's .claude/. Worker worktrees are reaped by the daemon finalize
+# step; a worktree-local queue file disappears before the laptop drain
+# script can collect it. The main checkout persists indefinitely.
+#
+# Derive main-checkout root via `git rev-parse --git-common-dir`: for a
+# worktree this returns the main repo's .git/ dir (e.g.
+# /srv/brehon-fork/.git); stripping the trailing /.git gives the root.
+# Falls back to WORKER_DIR if git is unavailable or the command fails.
+MAIN_CHECKOUT_ROOT=""
+if command -v git &>/dev/null; then
+  # --git-common-dir may return a relative path (e.g. ../../../.git) when
+  # called from inside a worktree. Resolve to absolute via a subshell cd.
+  _GIT_COMMON=$(git -C "$WORKER_DIR" rev-parse --git-common-dir 2>/dev/null || true)
+  if [ -n "$_GIT_COMMON" ]; then
+    _GIT_COMMON_ABS=$(cd "$WORKER_DIR" && cd "$_GIT_COMMON" 2>/dev/null && pwd || true)
+    if [ -n "$_GIT_COMMON_ABS" ]; then
+      MAIN_CHECKOUT_ROOT="${_GIT_COMMON_ABS%/.git}"
+    fi
+  fi
+fi
+if [ -z "$MAIN_CHECKOUT_ROOT" ] || [ ! -d "$MAIN_CHECKOUT_ROOT" ]; then
+  MAIN_CHECKOUT_ROOT="$WORKER_DIR"
+fi
+QUEUE_DIR="${MAIN_CHECKOUT_ROOT}/.claude"
 QUEUE_FILE="${QUEUE_DIR}/role-signal-queue.jsonl"
 mkdir -p "$QUEUE_DIR" 2>/dev/null || true
 
