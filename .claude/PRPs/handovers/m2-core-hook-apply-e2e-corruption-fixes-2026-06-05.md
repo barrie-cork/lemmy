@@ -85,3 +85,14 @@ BUG-1's revert-list entry landed in the dead duplicate, never reaching `governan
 - `CaseStatus` variants read from `crates/db_schema_file/src/enums.rs:393` (no `Active`).
 - Revert-list drift: disk newest-2 = [messaging_config 06-03, backfill_author_defendant 06-01]; canonical list missing the 06-01 entry.
 - DQ `1dcd6a201003-002` mutated to `result: fail`, stays pending, this session.
+
+---
+
+## DECISIONS BAKED IN (user-confirmed 2026-06-05, fresh session pre-flight)
+
+A short canonical session opened in `brehon-fork` (governance-v0) by mistake, surfaced the lane + Fix-#4 questions to the user, recorded the answers here, then stopped (did NOT touch the phase branch). The reopened `brehon-fork-m2` session does NOT need to re-ask:
+
+1. **Lane / CWD:** user will reopen the working session with **CWD = `C:/Users/barri/Developer/brehon-fork/brehon-fork-m2`** (Mode A, dedicated lane worktree). Do all work there. Do NOT drive from canonical.
+2. **Fix #4 (`CaseStatus::Active` → `Open`):** apply **INLINE** (user chose pragmatic), bundled with Fixes #2/#3 in the repair — no Junior fix-impl-task dispatch. Rationale: 2-token change, and #2/#3 are also `crates/tests` edits in the same cohesive corruption-repair commit; routing one line through a full Junior cycle is disproportionate. (Four-role note acknowledged + user-waived for this bundled repair.)
+
+**VERIFIED current phase tip (re-checked this pre-flight): `a12838ab5`** (`chore(decision-queue): advisor-laptop FAIL DQ …`) — two commits past the doc's stated `fcc57549e` (the retro + the DQ-fail commit, both authored after the doc body). `e2e.rs` confirmed still corrupt at **2256 lines** (last-good target = 156). Nothing else moved. The 4 fixes + the `0f3531c81` restore SHA are all still valid against this tip.
