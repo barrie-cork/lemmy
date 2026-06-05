@@ -8,7 +8,7 @@
 # runs AFTER the `--model` role injection, 2026-05-29):
 #
 #   ANTHROPIC_BASE_URL   = https://api.minimax.io/anthropic
-#   ANTHROPIC_AUTH_TOKEN = <key from .env>
+#   ANTHROPIC_API_KEY    = <key from .env>
 #   ANTHROPIC_MODEL      = ${MINIMAX_MODEL:-MiniMax-M2.7}
 #
 # This is the MiniMax ARM of the M2.7-vs-Sonnet A/B trial. The Sonnet CONTROL
@@ -115,7 +115,7 @@ esac
 echo "queueing task on EliteDesk:"
 echo "  base-branch: ${BASE_BRANCH}"
 echo "  description: ${DESC}"
-echo "  env-overrides: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN=<redacted>, ANTHROPIC_MODEL=${MINIMAX_MODEL}"
+echo "  env-overrides: ANTHROPIC_BASE_URL, ANTHROPIC_API_KEY=<redacted>, ANTHROPIC_MODEL=${MINIMAX_MODEL}"
 
 # The remote command string: base/desc/model are wrapped in single-quotes by
 # this local heredoc-free assembly; `read -r KEY` pulls the key from stdin.
@@ -134,6 +134,6 @@ echo "  env-overrides: ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN=<redacted>, ANTH
 # (the CLI's echoed id can be from any junior instance — see
 # issue_note_minimax_dispatch_wrong_daemon_db.md findings A+B).
 REMOTE_REPO="${JUNIOR_REMOTE_REPO:-/srv/brehon-fork}"
-REMOTE_CMD="cd '${REMOTE_REPO}' && read -r KEY && junior task add --base-branch '${BASE_BRANCH}' --env-override 'ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic' --env-override \"ANTHROPIC_AUTH_TOKEN=\${KEY}\" --env-override 'ANTHROPIC_MODEL=${MINIMAX_MODEL}' '${DESC}'"
+REMOTE_CMD="cd '${REMOTE_REPO}' && read -r KEY && junior task add --base-branch '${BASE_BRANCH}' --env-override 'ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic' --env-override \"ANTHROPIC_API_KEY=\${KEY}\" --env-override 'ANTHROPIC_MODEL=${MINIMAX_MODEL}' '${DESC}'"
 
 printf '%s\n' "${MINIMAX_API_KEY}" | ssh homeserver "${REMOTE_CMD}"
