@@ -7,8 +7,8 @@
   "generated_by": "advisor session (canonical brehon-fork checkout)",
   "scope": "M-track messaging milestones (M1/M2/M3) per umbrella `.claude/PRPs/prds/v2-messaging-rtc.prd.md` + ADR-016 backplane. v1 is shipped/closed (archived in `v1_shipped`); v0 substrate predates this file.",
   "trunk_branch": "governance-v0",
-  "trunk_tip_at_rewrite": "81174ef98",
-  "last_updated_at": "2026-06-05T11:30:00Z",
+  "trunk_tip_at_rewrite": "ba4a7163d",
+  "last_updated_at": "2026-06-05T16:45:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane/milestone meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -183,12 +183,13 @@
     ],
     "v1_polish_and_deferred": [
       {
-        "id": "v1-deps-r3",
-        "status": "done",
-        "resolved_by": "upstream extism 1.30.0 (pulls wasmtime 43.0.2 >= 42) via dependabot cargo-all PR #183, merged 2026-06-05",
-        "scope": "wasmtime bump (ADR-012 gate). Closed all 13 deferred wasmtime Dependabot alerts automatically — NO fork of extism needed; the watched upstream-release path resolved it.",
-        "note": "This was the only deferred v1 item. With it resolved, v1 has zero open deferred work. PR #847 (extism) was the dead upstream watch — superseded by the actual 1.30.0 release.",
-        "closed_at": "2026-06-05"
+        "id": "v1-deps-r3 / deps-r4",
+        "status": "reopened",
+        "history": "extism 1.30.0 (PR #183) briefly pulled wasmtime 43.0.2 and auto-closed 13 alerts — BUT 1.30.0 is UNBUILDABLE (wasmtime 43 no_std refactor dropped std::error::Error impl extism relies on; 42 E0277 in Docker server build). Reverted to extism 1.21.0 / wasmtime 41.0.4 @ d12aed221 (2026-06-05).",
+        "current_state": "lockfile: extism 1.21.0 / wasmtime 41.0.4. The 13 wasmtime alerts (aarch64-only per MEMORY) RE-OPEN with the revert. Tracked as deps-r4.",
+        "trigger": "NEXT extism release that pairs wasmtime>=42 AND keeps the std::error::Error impl (or extism adapts to wasmtime 43 no_std). Re-check crates.io extism each milestone. Do NOT re-bump to 1.30.0 — it is known-unbuildable.",
+        "priority": "low (aarch64-only alerts; Brehon deploys x86_64). NOT a pilot blocker.",
+        "watch": "watch_extism_wasmtime_42_adopt (PMD) — RE-OPEN this watch"
       }
     ],
     "open_prs_to_resolve": [
@@ -246,9 +247,9 @@
         "#174 (Dependabot npm)"
       ],
       "remaining_v1_polish": [
-        "NONE — v1-deps-r3 wasmtime gate resolved by upstream extism 1.30.0 (PR #183); zero open v1 work."
+        "v1-deps-r3/deps-r4 REOPENED — extism 1.30.0/wasmtime 43 reverted (unbuildable) @ d12aed221; lockfile back to extism 1.21.0/wasmtime 41.0.4; 13 aarch64-only alerts re-open. Not a pilot blocker."
       ],
-      "dependabot": "4 alerts remain (astral-tokio-tar #65/#57/#58, idna #33) — all pre-existing deps-r2-scope, non-wasmtime. 13 wasmtime alerts auto-closed by extism 1.30.0."
+      "dependabot": "wasmtime alerts RE-OPENED after the extism 1.30.0 revert (d12aed221). Plus the 4 pre-existing (astral-tokio-tar #65/#57/#58, idna #33)."
     },
     "rationale": "v1 delivered all 11 v0 endpoints + the governance machinery (jury, sponsor-liability, appeals/sanctions, reputation, federation-inbound, redaction). M1 added the chat-infrastructure plane and proved the bridge architecture. The messaging track now advances M1->M2->M3. M2 is gated only on authoring its sub-PRD + resolving two parked ADR-016 backplane OQs — no code blocker. v1 is now FULLY closed including the previously-deferred wasmtime gate (extism 1.30.0 / PR #183 pulled wasmtime 43.0.2, auto-closing 13 alerts without a fork). The M-track (M2 sub-PRD) is the sole open work."
   },
