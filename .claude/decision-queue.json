@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "262f6fd132fe-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T10:30:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-2-bridge-notify-pm-refactor-onto-union-see-claude-prps-briefs-m2-core-hook-impl-2-609",
+      "phase_task": 2,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
+      ],
+      "question": "Workspace check for bridge_notify.rs PM refactor onto tagged union — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 replaced inline Payload struct in notify_if_enabled with BridgeNotifyPayload::PrivateMessage from api_common. Added lemmy_api_common dep to api_utils/Cargo.toml. Wire format gains type_:private_message discriminator. cargo check -p lemmy_api_utils --features full. Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",

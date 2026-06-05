@@ -34,6 +34,7 @@ full = [
 ]
 
 [dependencies]
+lemmy_api_common = { workspace = true }
 lemmy_db_schema = { workspace = true }
 lemmy_db_schema_file = { workspace = true }
 lemmy_db_views_community = { workspace = true }

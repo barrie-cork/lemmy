@@ -1,4 +1,5 @@
 use crate::context::LemmyContext;
+use lemmy_api_common::governance::{BridgeNotifyPayload, PrivateMessagePayload};
 use lemmy_db_schema::source::governance::governance_messaging_config::GovernanceMessagingConfig;
 use lemmy_db_views_private_message::PrivateMessageView;
 use lemmy_utils::error::LemmyResult;
@@ -25,17 +26,11 @@ pub async fn notify_if_enabled(
     return Ok(());
   }
   // fire-and-forget POST; bridge being down must NOT break PM delivery (plan §10.5)
-  #[derive(serde::Serialize)]
-  struct Payload {
-    private_message_id: i32,
-    creator_id: i32,
-    recipient_id: i32,
-  }
-  let payload = Payload {
+  let payload = BridgeNotifyPayload::PrivateMessage(PrivateMessagePayload {
     private_message_id: view.private_message.id.0,
     creator_id: view.creator.id.0,
     recipient_id: view.recipient.id.0,
-  };
+  });
   if let Err(e) = context
     .client()
     .post(BRIDGE_NOTIFY_URL)
