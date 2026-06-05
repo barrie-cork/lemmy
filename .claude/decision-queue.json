@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-05T20:50:30Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-8-add-e2e-tests-for-append-room-event-and-hook-suppression-see-claude-prps-briefs-618",
+      "phase_task": 8,
+      "commands": [
+        "./scripts/brehon/cargo-test.bat --workspace --test e2e m2_ 2>&1"
+      ],
+      "e2e_filter": "test(m2_)",
+      "question": "e2e tests for m2_append_room_event_writes_chain_entry, m2_append_room_event_rejects_non_room_kind, m2_hook_suppressed_when_messaging_disabled — laptop runs cargo test.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 8 added 3 deterministic e2e tests (2 append_room_event wrapper tests + 1 suppression test). Hook-fires test deferred to Task 9 (needs BRIDGE_NOTIFY_URL seam — log DQ raised as 1dcd6a201003-001). Tests append to governance.rs after admin_emergency_remove_post_sets_author_defendant.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1dcd6a201003-002"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6245,6 +6272,151 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "id": "262f6fd132fe-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T10:30:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-2-bridge-notify-pm-refactor-onto-union-see-claude-prps-briefs-m2-core-hook-impl-2-609",
+      "phase_task": 2,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
+      ],
+      "question": "Workspace check for bridge_notify.rs PM refactor onto tagged union — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 replaced inline Payload struct in notify_if_enabled with BridgeNotifyPayload::PrivateMessage from api_common. Added lemmy_api_common dep to api_utils/Cargo.toml. Wire format gains type_:private_message discriminator. cargo check -p lemmy_api_utils --features full. Laptop only.",
+      "result": "pass",
+      "log_slice": "cargo check -p lemmy_api_utils --features full: EXIT 0. Task 2 refactor (BridgeNotifyPayload::PrivateMessage, api_common dep added) compiles cleanly on laptop.",
+      "failed_commands": null,
+      "answer": "pass — cargo check -p lemmy_api_utils --features full EXIT 0 on Task 2 tip (bridge_notify.rs PM path onto tagged union, lemmy_api_common dep added to api_utils/Cargo.toml). Laptop advisor-laptop validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T18:24:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "61d96bf8b2d6-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T00:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-1-bridge-payload-dto-see-claude-prps-briefs-m2-core-hook-impl-1-md-607",
+      "phase_task": 1,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "question": "Workspace check for the bridge-notify discriminated-union DTO — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 added BridgeNotifyPayload (serde tagged enum, type_ tag) + CaseTransitionEvent + PrivateMessagePayload to api_common/src/governance.rs. Serde-only (NO ts-rs — bridge consumer, not TS client). CaseStatus imported from lemmy_db_schema_file::enums. cargo check --workspace --features full required (governance enum reachability under full). Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "pass — cargo check --workspace --features full EXIT 0 on phase-m2-core-hook tip 116f7c55d (Task 1 BridgeNotifyPayload DTO added to api_common/governance.rs). Zero errors, finished in 2m14s. serde tagged enum + CaseStatus import clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T18:08:37Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "f7e2e72b3098-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-3-governance-case-after-transition-fn-see-claude-prps-briefs-m2-core-hook-impl-3-m-611",
+      "phase_task": 3,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
+      ],
+      "question": "Workspace check for governance_case_after_transition fn in bridge_notify.rs — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added governance_case_after_transition to bridge_notify.rs: same config gate as notify_if_enabled, builds BridgeNotifyPayload::CaseTransition(CaseTransitionEvent{...}) from ModerationCase fields. Added CaseTransitionEvent to existing api_common import; added ModerationCase + CaseStatus imports from lemmy_db_schema/lemmy_db_schema_file. No Cargo.toml change. CaseTargetType has no Display impl — used format!(\"{:?}\", case.target_type) for String conversion. cargo check -p lemmy_api_utils --features full. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api_utils --features full EXIT 0. governance_case_after_transition fn compiles with all transitive types from phase-m2-core-hook tip.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T18:50:36Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "2d68a42b53cd-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-7-wire-hook-at-cron-sites-9-12-see-claude-prps-briefs-m2-core-hook-impl-7-md-614",
+      "phase_task": 7,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
+        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
+      ],
+      "question": "Workspace check for governance_case_after_transition wired at cron sites 9-11 + site 12 — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 wired governance_case_after_transition at: site9=appeal_window_expiry (accumulate-then-fire after loop), sites10+11=sponsor_liability_grace fire_or_escape_case_inner (after each per-case run_transaction, old=SponsorLiabilityPending), site12=revoke_endorsement process_revocation (accumulate escaped cases inside closure, fire after run_transaction returns at handler level). All outside txn boundaries. Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full EXIT_0; cargo check -p lemmy_api -p lemmy_api_crud --features full EXIT_0; cargo clippy -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings EXIT_0. Note: -p lemmy_api_crud alone fails (pre-existing feature topology — state.rs:233 gated by cfg(feature=full) on lemmy_api transitive dep); combined form per plan is canonical and passes.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T19:34:11Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "branch": "junior/role-impl-task-m2-core-hook-task-6-wire-hook-at-8-handler-sites-see-claude-prps-briefs-m2-core-hook-impl-6-md-613",
+      "phase_task": 6,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_crud --features full",
+        "./scripts/brehon/cargo-clippy.sh -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings"
+      ],
+      "question": "Workspace check for governance_case_after_transition wired at sites 1-8 — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added governance_case_after_transition hook call after run_transaction at 8 handler sites: site1=admin_assign_jury, sites2-6=submit_jury_vote (once post-txn, new_status from outcome), site7=admin_close_case (captured old_status before try_from move), site8=request_appeal (api_crud). All calls are outside run_transaction, fire-and-forget .ok(). Import: lemmy_api_utils::bridge_notify::governance_case_after_transition. No Cargo.toml change. Laptop only.",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full EXIT_0; cargo check -p lemmy_api -p lemmy_api_crud --features full EXIT_0; cargo clippy -p lemmy_api -p lemmy_api_crud --features full --no-deps -- -D warnings EXIT_0. Note: -p lemmy_api_crud alone fails (pre-existing feature topology — state.rs:233 gated by cfg(feature=full) on lemmy_api transitive dep); combined form per plan is canonical and passes.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-05T19:34:11Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "37768a3da1dd-001"
+    },
+    {
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-05T20:50:30Z",
+      "question": "Test seam needed: BRIDGE_NOTIFY_URL is hardcoded in bridge_notify.rs — no env-var override for tests.",
+      "options": [
+        "add BRIDGE_NOTIFY_URL env-var override",
+        "add a test-only mock server fixture"
+      ],
+      "context": "governance_case_after_transition POSTs to http://localhost:9009/brehon/notify (hardcoded const). The suppression test (messaging_enabled=false) is deterministic. The fires test (messaging_enabled=true) requires either: (a) env-var override so tests can point to a mock server, or (b) a wiremock/httpmock fixture. Recommending option (a): read BRIDGE_NOTIFY_URL from env with fallback to the hardcoded const, then point tests at a one-shot mock server (like governance_events_notify_fires uses PG NOTIFY). This is a Task 9 scope item.",
+      "answer": "file as advisor lesson; propose BRIDGE_NOTIFY_URL env-var override as a follow-on Task 9",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-05T20:50:30Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1dcd6a201003-001"
     }
   ]
 }
