@@ -150,8 +150,16 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m1-b | Task 5 | `messaging_config.rs`+`routes/lib.rs` (2 files) | `admin_config.rs:426`; `routes/lib.rs:478-512` | ✅ | validator + route reg |
 | m1-b | Task 6 | `bridge_notify.rs`+`lib.rs`+`notify.rs` (3 files) | `notify.rs:305`; `plugins.rs:48` | ❌ | criterion 4: 3 files > 2 |
 | m1-b | Task 7 | `e2e.rs` | `e2e.rs:6235/6504` | ❌ | criterion 2: e2e |
+| m2-core-hook | Task 1 | `api_common/src/governance.rs` (1 file) | `db_views/site/src/api.rs:762-770` (tagged enum) | ✅ | DTO; single-file, cargo-gated |
+| m2-core-hook | Task 2 | `bridge_notify.rs` (1 file) | `bridge_notify.rs:13-49` | ✅ | refactor PM path onto tagged union |
+| m2-core-hook | Task 3 | `bridge_notify.rs` (1 file) | `bridge_notify.rs:13-49` | ✅ | add `governance_case_after_transition` sibling fn |
+| m2-core-hook | Task 4 | db_schema log + api shim + registry doc (3 files) | `governance_log.rs:220-234` | ❌ | criterion 4: 3 files > 2 |
+| m2-core-hook | Task 5 | `api/governance/governance_log.rs` (1 file) | `inbox.rs:721`; `governance_log.rs:255-314` | ✅ | `append_room_event` wrapper |
+| m2-core-hook | Task 6 | 5 handler files | `notify.rs:285-306` | ❌ | criterion 4: 5 files > 2 |
+| m2-core-hook | Task 7 | `appeal_window_expiry.rs`+`sponsor_liability_grace.rs` (2 files) | `notify.rs:285-306` + commit-boundary notes | ✅ | cron-site hook wiring |
+| m2-core-hook | Task 8 | `e2e/governance.rs` | — | ❌ | criterion 2: e2e |
 
-**Running total: 3 ✅ qualifying** (m1-b Tasks 3,4,5; RT-r4 designated-not-run reset to 0).
+**Running total: 8 ✅ qualifying** (m1-b Tasks 3,4,5 = 3; m2-core-hook Tasks 1,2,3,5,7 = 5). **Crosses the ≥5 threshold** — trial fires this phase per §0.1 (the rolling trigger is now met without needing the prior user override).
 
 **TRIAL FIRES THIS PHASE — user override 2026-06-04** (`feedback_minimax_trial_run_below_threshold_on_user_override.md`): user waived the ≥5 cumulative gate (*"Run trial for eligble tasks, even if below 5/5… We need to get AB tests result"*). The 3 eligible tasks (m1-b 3,4,5) run BOTH arms per §2.3 on throwaway `ab-test/m1-b-t{3,4,5}-{sonnet,minimax}` branches off `phase-m1-b` AFTER real Tasks 1+2 land (Task 3 `requires:2`, 4 `requires:2,3`, 5 `requires:4`). Real pipeline stays Sonnet on `phase-m1-b`; trial never gates shipping. Results → `minimax-m27-trial-results.md`.
 
