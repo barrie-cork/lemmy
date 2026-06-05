@@ -546,15 +546,20 @@
           "background": "Dependabot PR #136 (opened 2026-05-18) bundled all 12 bumps; investigation 2026-05-23 found 2 breaking changes requiring 42-file mechanical rewrite + trait-resolution pre-flight. User chose deferred sub-phase over fix-in-PR'ing the Dependabot branch."
         },
         "v1-deps-r2": {
-          "status": "unstarted",
-          "deferred_until": "post-v1-ship",
+          "status": "done",
           "scope": "Security-alert sweep retiring 6/18 open Dependabot alerts: (T1) inline webmention crate replacement to drop rustls 0.21 / rustls-webpki 0.101.7 chain (3 alerts inc 1 High); (T2) fork rlidwka/mdurl.rs to barrie-cork/mdurl + bump idna 0.3→1.1 + [patch.crates-io] (1 medium alert); (T3) dispute astral-tokio-tar 0.6.0 advisories as already-fixed (2 alerts via Dependabot dismissal); (T4) defer wasmtime to v1-deps-r3 with documented Dependabot suppressions on all 13 alerts (aarch64-only criticals, Brehon deploys x86_64).",
           "brief": ".claude/PRPs/briefs/v1-deps-r2-planning-1.md",
           "background": "Investigation 2026-05-25 (Perplexity research) confirmed every vulnerable transitive crate is already at its latest upstream version, so the 18 alerts are not closable by cargo update. User decision 2026-05-25: defer until after v1 ships. The 18 alerts are non-blocking for pilot launch; the 1 High is on outbound webmention TLS cert parsing (low real-world exposure); the 2 wasmtime criticals are aarch64-only.",
           "depends_on": [
             "v1-deps-r1",
             "v1-ship-complete"
-          ]
+          ],
+          "pr": 182,
+          "merge_commit": "772684e1f",
+          "merged_at": "2026-06-05T10:01:51Z",
+          "done_at": "2026-06-05",
+          "retro": ".claude/PRPs/reports/v1-deps-r2-retro.md",
+          "plan": ".claude/PRPs/plans/v1-deps-r2.plan.md"
         },
         "v1-deps-r3": {
           "status": "unstarted",
