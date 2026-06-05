@@ -8,7 +8,7 @@
   "scope": "M-track messaging milestones (M1/M2/M3) per umbrella `.claude/PRPs/prds/v2-messaging-rtc.prd.md` + ADR-016 backplane. v1 is shipped/closed (archived in `v1_shipped`); v0 substrate predates this file.",
   "trunk_branch": "governance-v0",
   "trunk_tip_at_rewrite": "81174ef98",
-  "last_updated_at": "2026-06-05T10:45:00Z",
+  "last_updated_at": "2026-06-05T11:30:00Z",
   "status_legend": {
     "done": "every planned sub-phase merged to governance-v0; lane/milestone meta-retro or capstone retro on trunk",
     "in_flight": "at least one phase branch active in a worktree or PR open; user has explicit knowledge it is being driven",
@@ -72,9 +72,9 @@
     "M2": {
       "name": "Governance-Triggered Rooms (jury/appeal/emergency) + ADR-016 backplane",
       "former_name": "V2b / C2",
-      "prd": null,
+      "prd": ".claude/PRPs/prds/m2-governance-triggered-rooms.prd.md",
       "umbrella_prd": ".claude/PRPs/prds/v2-messaging-rtc.prd.md",
-      "status": "needs_prd",
+      "status": "unstarted",
       "depends_on": [
         "M1"
       ],
@@ -124,7 +124,20 @@
         "07 §1.2 — federation fetch worker carries per-app B-fetch adapters",
         "07 §5 — operator runbook for connected-app onboarding"
       ],
-      "next_action": "Author M2 sub-PRD via /prp-prd (or prp-core:prp-prd) from the umbrella PRD §V2b + ADR-016. Resolve OQ-ADR016-02 + OQ-ADR016-04 (and -01/-03 if M2 scope includes evidence-fetch/link-flow) at PRD-write time. Then planning brief -> /brehon-clarify -> planning Junior -> plan file -> /auto-phase m2-<x>."
+      "next_action": "M2-core: run /prp-plan .claude/PRPs/prds/m2-governance-triggered-rooms.prd.md (picks Phase 1). No OQ blockers for M2-core. M2-late: resolve OQ-ADR016-02 + OQ-ADR016-04 first.",
+      "scope_decision": "ROOMS-FIRST (user 2026-06-05): M2-core = room provisioning + 10 Room::* hash-chain entries + governance_case_after_transition hook (needs NO sanction OQs). M2-late = B-publish/B-actor sanction propagation, GATED on OQ-ADR016-02 + OQ-ADR016-04.",
+      "phases": {
+        "m2-core": {
+          "status": "unstarted",
+          "phases": "1-5 (hook, entry kinds, provisioning, hash-chain emission, e2e)",
+          "blocking": "none beyond M1 (shipped) — ready for /prp-plan now"
+        },
+        "m2-late": {
+          "status": "gated",
+          "phases": "6-7 (B-publish, B-actor)",
+          "blocking": "OQ-ADR016-02 + OQ-ADR016-04 (+ OQ-ADR016-03 for B-actor)"
+        }
+      }
     },
     "M3": {
       "name": "Town Halls with Mic-Passing (MatrixRTC / LiveKit / Element Call)",
@@ -164,7 +177,7 @@
   },
   "what_remains": {
     "active_m_track": [
-      "M2 sub-PRD authoring (status: needs_prd) — the immediate next planning unit. Gates: OQ-ADR016-02 + OQ-ADR016-04.",
+      "M2-core sub-PRD AUTHORED 2026-06-05 (.claude/PRPs/prds/m2-governance-triggered-rooms.prd.md, rooms-first scope) — ready for /prp-plan, no OQ blockers. M2-late (sanction propagation) gated on OQ-ADR016-02 + OQ-ADR016-04.",
       "M3 sub-PRD authoring (status: needs_prd) — scheduled after M2 ships. Gate: OQ-V2-04.",
       "NOTE: v1 is fully closed — zero unstarted sub-phases, zero deferred work (deps-r3 resolved by extism 1.30.0 / PR #183). The M-track is the sole active forward work."
     ],
@@ -193,7 +206,8 @@
     "documentation_drift_followups": [
       "Propagate the V2a/V2b/V2c -> M1/M2/M3 rename through the umbrella v2-messaging-rtc.prd.md body (still uses V2a/V2b/V2c in places per ADR-016 enacted-in note).",
       "SL ENTRY_KIND markers (PENDING/FIRED/ESCAPED/REVOKED) annotated (pending) in governance-log-entry-kind-registry.md — flip to (active) to mirror JM-e's pattern at line 140. Low-priority; code emits correctly.",
-      "RT-r2 retro path in v1_shipped points at deps-r1 retro (placeholder) — update if a dedicated RT-r2 retro file is authored."
+      "RT-r2 retro path in v1_shipped points at deps-r1 retro (placeholder) — update if a dedicated RT-r2 retro file is authored.",
+      "Doc 04 (data-model) does not yet reflect the governance_messaging_config table (M1-b shipped it) nor the M2 Room::* entry kinds. Update 04 + 06 §2.2/§7 (plane boundary + bridge/room/B-fetch/B-publish/B-actor threat rows) at M2 plan time. CODE WINS meanwhile."
     ],
     "banked_post_brehon": [
       "Portable harness for next Rust app — extract brehon-fork harness into reusable rust-harness package. Trigger: ONLY after Brehon ships (fork quiescent). Plan: C:/Users/barri/.claude/plans/the-harnes-system-we-ethereal-comet.md. ~8.5 days."
@@ -222,7 +236,7 @@
     }
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "Author the M2 sub-PRD (governance-triggered rooms). M1 (chat infrastructure) is fully shipped — bridge proven in isolation per H1. M2 is where the ADR-016 backplane first does real work and where Room::* hash-chain emission begins. M2 sub-PRD does not exist yet (status: needs_prd); it must be authored via /prp-prd before any planning brief. Gates to resolve at PRD-write time: OQ-ADR016-02 (B-publish schema) + OQ-ADR016-04 (sanction translation). M3 (town halls / RTC) follows M2; strict-sequential M1->M2->M3 ordering (user Q10 2026-04-19).",
+    "next_logical_sub_phase": "Run /prp-plan on the M2-core sub-PRD (.claude/PRPs/prds/m2-governance-triggered-rooms.prd.md) — Phase 1 (governance_case_after_transition hook). M2-core is unblocked (no OQ gates); it adds the case-transition hook + room provisioning + 10 Room::* hash-chain entries. M2-late (B-publish sanction propagation) is gated on OQ-ADR016-02 + OQ-ADR016-04. M3 (town halls/RTC) follows M2.",
     "state_as_of_2026_06_05": {
       "milestone_status": "M1 done (PRs #177 m1-b, #179 m1-a). M2 needs_prd. M3 needs_prd (after M2).",
       "v1": "CLOSED — all lanes + meta-lanes shipped; close-out Phases 0-8 done (PR #182 deps-r2 webmention inline merged 2026-06-05 @ 772684e1f). See v1_shipped block.",
