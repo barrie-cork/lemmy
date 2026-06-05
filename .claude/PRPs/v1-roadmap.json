@@ -213,7 +213,32 @@
     "banked_post_brehon": [
       "Portable harness for next Rust app — extract brehon-fork harness into reusable rust-harness package. Trigger: ONLY after Brehon ships (fork quiescent). Plan: C:/Users/barri/.claude/plans/the-harnes-system-we-ethereal-comet.md. ~8.5 days."
     ],
-    "high_priority_unstarted": [],
+    "high_priority_unstarted": [
+      {
+        "id": "gov-plugins-r1",
+        "title": "Brehon governance Wasm plugin(s) + v0-governance hook call sites",
+        "status": "unstarted",
+        "noted_at": "2026-06-05",
+        "noted_by": "advisor (pilot spin-up session)",
+        "context": "ADR-012 designates Extism plugins as the home for governance hooks. The Extism HOST is fully present in the fork (crates/api/api_utils/src/plugins.rs: plugin_hook_before rewrite path + plugin_hook_after observe path; docker-compose.yml:36 mounts ./plugins -> /plugins; lemmy.hjson plugins[] drives loading). But NO Brehon governance plugin exists and NO v0-governance (jury/case/reputation) hook call sites are wired — the only hook call sites in-tree are the 7 PRIVATE-MESSAGE hooks reserved for the V2 Matrix bridge (pm-plugin-hooks-stable.md), which are NOT the v0 governance flow. So on the running pilot, docker/plugins/ is empty and every hook short-circuits (function_exists -> false). Governance hooks do not fire.",
+        "scope": [
+          "Decide which v0 governance handler(s) need before/after hook call sites (jury panel formation, case status transitions, reputation snapshot updates) — ADR-012 says ADD new hook names, never repurpose the reserved PM hooks.",
+          "Add the new hook call sites in the relevant crates/api/** handlers (crates/** change -> needs a plan file per CLAUDE.md; cannot be done as a config tweak).",
+          "Author the governance plugin as a separate Wasm artifact against the Extism PDK (Rust -> wasm32, exports functions named after the new hooks); hash it (prod enforces WasmMetadata hash check, plugins.rs:196; debug skips).",
+          "Mount: drop the .wasm in docker/plugins/ + add a plugins[] entry to docker/lemmy.hjson (local path or HTTP URL) + restart lemmy."
+        ],
+        "validation_demo_path": "Fast wiring proof (NOT Brehon governance): the federation config already references LemmyNet/lemmy-plugins go_replace_words.wasm (docker/federation/lemmy_epsilon.hjson:17). Adding it to lemmy.hjson plugins[] proves the host loads + a before-hook rewrites content. Useful smoke test before building the real governance plugin.",
+        "trigger": "User-initiated; not blocking the pilot (community-seeding + browsing are pure vanilla Lemmy and work now). This is a deliberate plan-worthy phase, not a wrap-up item.",
+        "priority": "medium",
+        "refs": [
+          "ADR-012 (Extism plugin host)",
+          "crates/api/api_utils/src/plugins.rs",
+          ".claude/rules/pm-plugin-hooks-stable.md (reserved PM hooks — do NOT repurpose)",
+          "docker/docker-compose.yml:36 (plugins mount)",
+          "docker/lemmy.hjson (plugins[] config — currently absent)"
+        ]
+      }
+    ],
     "known_dependabot_alerts": {
       "_note": "As of 2026-06-05, 4 Dependabot alerts remain on the default branch (3 moderate, 1 low). All pre-existing + dispositioned in deps-r2 scope; NONE are wasmtime (those 13 closed via extism 1.30.0 / PR #183).",
       "alerts": [
