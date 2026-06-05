@@ -1,6 +1,10 @@
 use crate::context::LemmyContext;
-use lemmy_api_common::governance::{BridgeNotifyPayload, PrivateMessagePayload};
-use lemmy_db_schema::source::governance::governance_messaging_config::GovernanceMessagingConfig;
+use lemmy_api_common::governance::{BridgeNotifyPayload, CaseTransitionEvent, PrivateMessagePayload};
+use lemmy_db_schema::source::governance::{
+  governance_messaging_config::GovernanceMessagingConfig,
+  moderation_case::ModerationCase,
+};
+use lemmy_db_schema_file::enums::CaseStatus;
 use lemmy_db_views_private_message::PrivateMessageView;
 use lemmy_utils::error::LemmyResult;
 
@@ -39,6 +43,44 @@ pub async fn notify_if_enabled(
     .await
   {
     tracing::warn!("bridge notify failed (bridge may be down — non-fatal): {e}");
+  }
+  Ok(())
+}
+
+/// Fire-and-forget notify to the Matrix bridge when a moderation case transitions status.
+/// Reads `messaging_enabled`; false → no-op. True → POST CaseTransition event to bridge.
+/// NEVER fails the governance path — transport errors are swallowed (plan §10.5, ADR-012).
+pub async fn governance_case_after_transition(
+  context: &LemmyContext,
+  case: &ModerationCase,
+  old_status: Option<CaseStatus>,
+  new_status: CaseStatus,
+) -> LemmyResult<()> {
+  let pool = &mut context.pool();
+  let enabled = match GovernanceMessagingConfig::read_current(pool, "instance", "messaging_enabled")
+    .await?
+  {
+    Some(row) => row.value_bool.unwrap_or(false),
+    None => false,
+  };
+  if !enabled {
+    return Ok(());
+  }
+  let payload = BridgeNotifyPayload::CaseTransition(CaseTransitionEvent {
+    case_id: case.id.0,
+    old_status,
+    new_status,
+    community_id: case.community_id.map(|c| c.0),
+    target_type: format!("{:?}", case.target_type),
+  });
+  if let Err(e) = context
+    .client()
+    .post(BRIDGE_NOTIFY_URL)
+    .json(&payload)
+    .send()
+    .await
+  {
+    tracing::warn!("bridge notify (case transition) failed (bridge may be down — non-fatal): {e}");
   }
   Ok(())
 }

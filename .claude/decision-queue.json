@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "f7e2e72b3098-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "branch": "junior/role-impl-task-m2-core-hook-task-3-governance-case-after-transition-fn-see-claude-prps-briefs-m2-core-hook-impl-3-m-611",
+      "phase_task": 3,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full"
+      ],
+      "question": "Workspace check for governance_case_after_transition fn in bridge_notify.rs — laptop runs cargo.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added governance_case_after_transition to bridge_notify.rs: same config gate as notify_if_enabled, builds BridgeNotifyPayload::CaseTransition(CaseTransitionEvent{...}) from ModerationCase fields. Added CaseTransitionEvent to existing api_common import; added ModerationCase + CaseStatus imports from lemmy_db_schema/lemmy_db_schema_file. No Cargo.toml change. CaseTargetType has no Display impl — used format!(\"{:?}\", case.target_type) for String conversion. cargo check -p lemmy_api_utils --features full. Laptop only.",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "262f6fd132fe-001",
