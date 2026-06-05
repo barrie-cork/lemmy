@@ -5,10 +5,10 @@
 ## RESUME block
 
 - **Current sub-phase:** `m2-core-hook` (M2-core in-binary slice). Plan: `.claude/PRPs/plans/m2-core-transition-hook.plan.md` (APPROVED by user 2026-06-05).
-- **State-machine stage:** bm-cut DONE (#606, phase-m2-core-hook @ 70a603f1b, runlog advisor-written after worker gate-block). Task 0 DONE (advisor-inline; found 12th site `revoke_endorsement.rs:308`, DQ `a3d0e9941441-050`, plan amended → bf8b6d97c). **Task 1 BOTH ARMS RUNNING: #607 Sonnet (canonical, base phase-m2-core-hook) + #608 MiniMax (base ab-test/m2-t1-minimax, never merges).** Awaiting both → validate-pending-laptop DQ from #607 → run cargo on laptop → merge #607 → record AB delta.
+- **State-machine stage:** Task 1 DONE + MERGED (phase-m2-core-hook @ `0662ffc6e`, DQ `61d96bf8b2d6-001` resolved pass). **Task 2 BOTH ARMS RUNNING: #609 Sonnet (canonical, base phase-m2-core-hook) + #610 MiniMax (base ab-test/m2-t2-minimax, never merges).** Task 1 AB result: both arms produced byte-for-byte identical diffs; Sonnet 2m26s, MiniMax 2m20s.
 - **Lane mode:** Mode B (drive from canonical `brehon-fork` / `governance-v0`; base_branch=`phase-m2-core-hook`; impl briefs author on trunk + SSH-merge into phase branch).
-- **Last trunk commit:** `a92ff2d4e` (bm-cut brief) on `governance-v0`; daemon-local synced to same.
-- **VERIFIED_AT:** `a92ff2d4e` (daemon-local trunk + origin + local all in sync; bm-cut brief present daemon-side).
+- **Last trunk commit:** `a308c891d` (Task-2 brief) on `governance-v0`; phase branch tip `0662ffc6e` (brief synced).
+- **VERIFIED_AT:** `0662ffc6e` (phase-m2-core-hook @ origin; daemon-local synced; ab-test/m2-t2-minimax base created off same tip).
 
 ## Plan task → dispatch map
 
@@ -47,4 +47,6 @@ Plan has Tasks 0–9. Pre-Shape-G: every impl-task writes a `validate-pending-la
 
 ## Next concrete action
 
-Poll Task #606 → on `done`: (1) `git ls-remote origin refs/heads/phase-m2-core-hook` non-empty; (2) verify daemon-local `governance-v0` not spuriously merged (§8 hazard — recover via `git update-ref refs/heads/governance-v0 origin/governance-v0` if so); (3) author Task-0 brief (impl-task, Mode B, no cargo), SSH-merge trunk→phase, dispatch.
+Poll #609 + #610 → on both `done`: read validate-pending-laptop DQ from #609, run `./scripts/brehon/cargo-check.sh -p lemmy_api_utils --features full` on laptop, mutate DQ (pass→resolved), merge #609 into phase-m2-core-hook, record AB delta vs #610, then author + dispatch Task 3 (governance_case_after_transition fn, same file, requires:2, MiniMax-qualifying).
+
+**Task 3 base:** must be the phase-m2-core-hook tip AFTER Task 2 merges (Task 3 requires:2 — modifies same file `bridge_notify.rs`). Do NOT dispatch Task 3 until Task 2 Sonnet arm is merged.
