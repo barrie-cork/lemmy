@@ -1,1 +1,2 @@
 bm: bm-cut complete — phase-m2-core-hook cut from governance-v0 @ a92ff2d4e (advisor-written; worker runlog write blocked by .claude/** sensitive-file gate per brief §8)
+bm: bm-pr complete — PR #184 opened phase-m2-core-hook → governance-v0 @ 4828e7c68 (38 commits; e2e DQ 1dcd6a201003-002 pass, Linux DQ f06ed49af84a-001 pass, /brehon-verify ✓ no phantoms). CodeRabbit auto-review pending. (advisor-inline bm-pr — AUTO-class, no Junior dispatch)
