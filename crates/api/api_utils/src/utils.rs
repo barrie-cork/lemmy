@@ -993,28 +993,25 @@ pub fn send_webmention(post: Post, community: &Community, context: Data<LemmyCon
         .instrument(tracing::info_span!("Fetching webmention target"))
         .await?;
 
-      // Parse `<url>; rel="webmention"` from Link header (may be multi-valued).
-      let endpoint = resp
-        .headers()
-        .get(LINK)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|hdr| {
-          hdr.split(',').find_map(|part| {
-            let mut href = None;
-            let mut is_webmention = false;
-            for seg in part.split(';') {
-              let seg = seg.trim();
-              if seg.starts_with('<') && seg.ends_with('>') {
-                href = Some(seg[1..seg.len() - 1].to_owned());
-              } else if seg.eq_ignore_ascii_case("rel=\"webmention\"")
-                || seg.eq_ignore_ascii_case("rel=webmention")
-              {
-                is_webmention = true;
-              }
+      // Parse `<url>; rel="webmention"` from Link headers (W3C spec §3.1.2 allows multiple).
+      let endpoint = resp.headers().get_all(LINK).iter().find_map(|v| {
+        let hdr = v.to_str().ok()?;
+        hdr.split(',').find_map(|part| {
+          let mut href = None;
+          let mut is_webmention = false;
+          for seg in part.split(';') {
+            let seg = seg.trim();
+            if seg.starts_with('<') && seg.ends_with('>') {
+              href = Some(seg[1..seg.len() - 1].to_owned());
+            } else if seg.eq_ignore_ascii_case("rel=\"webmention\"")
+              || seg.eq_ignore_ascii_case("rel=webmention")
+            {
+              is_webmention = true;
             }
-            if is_webmention { href } else { None }
-          })
-        });
+          }
+          if is_webmention { href } else { None }
+        })
+      });
 
       let Some(endpoint_str) = endpoint else {
         // No webmention endpoint discovered — silently succeed per W3C spec §3.1.2.
@@ -1025,7 +1022,7 @@ pub fn send_webmention(post: Post, community: &Community, context: Data<LemmyCon
         .join(&endpoint_str)
         .with_lemmy_type(UntranslatedError::CouldntSendWebmention.into())?;
 
-      let params = [("source", encode(source.as_str())), ("target", encode(target.as_str()))];
+      let params = [("source", source.as_str()), ("target", target.as_str())];
       context
         .client()
         .post(endpoint_url.as_str())
