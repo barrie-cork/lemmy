@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "499fafa897f5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-05T12:00:00Z",
+      "question": "Validate task-5 append_room_event wrapper compiles clean: cargo check --workspace --features full.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Added append_room_event() + RoomEventPayload + ROOM_KINDS to crates/api/api/src/governance/governance_log.rs. Calls the re-exported append(); uses serde_json::to_value for serialisation; gated #[cfg(feature = full)]. Task-5 of m2-core-transition-hook plan.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-core-hook-task-5-add-append-room-event-wrapper-see-claude-prps-briefs-m2-core-hook-impl-5-md-617",
+      "phase_task": "task-5",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
