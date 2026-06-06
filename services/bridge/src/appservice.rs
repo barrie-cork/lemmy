@@ -28,13 +28,15 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{config::BridgeConfig, provision, relay};
+use crate::{config::BridgeConfig, provision, relay, room_provisioner};
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
     pub puppet_map: Arc<crate::puppet::PuppetMap>,
     pub http_client: reqwest::Client,
     pub relay_enabled: Arc<std::sync::atomic::AtomicBool>,
+    /// Path to the SQLite database file for bridge_room state.
+    pub bridge_db_path: String,
 }
 
 /// Minimal representation of a Tuwunel transaction body.
@@ -190,8 +192,21 @@ async fn handle_provision_room(
     }
 }
 
+/// POST /brehon/room-event
+/// Accepts a BridgeNotifyPayload envelope; dispatches jury room provisioning
+/// fire-and-forget for CaseTransition variants. Returns 200 immediately (R3).
+async fn handle_room_event(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<room_provisioner::RoomEventPayload>,
+) -> impl IntoResponse {
+    if let room_provisioner::RoomEventPayload::CaseTransition(event) = payload {
+        tokio::spawn(room_provisioner::handle_transition(state, event));
+    }
+    Json(serde_json::json!({}))
+}
+
 /// Build the AS transaction router with hs_token auth middleware applied to
-/// all four endpoints.
+/// all five endpoints.
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
@@ -204,6 +219,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(handle_query_room),
         )
         .route("/admin/provision-room", post(handle_provision_room))
+        .route("/brehon/room-event", post(handle_room_event))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             hs_token_auth,
