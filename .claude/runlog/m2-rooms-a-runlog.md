@@ -32,3 +32,18 @@
 - advisor: T2 impl brief authored + synced to phase branch. /precheck PASS. Junior #625 dispatched.
 - advisor: #625 done (8.5 min). Bridge cargo check PASS (exit 0, 6 dead_code warnings, no errors, 3m14s). f0d76f99a08f-001 resolved. phase-m2-rooms-a @ cb2e34b2a.
 - NEXT: author + dispatch T3 (hash-chain emission via append_room_event).
+
+## 2026-06-06 — T3 PASS
+
+- advisor: T3 brief authored + synced. /precheck PASS. Junior #626 dispatched.
+- advisor: #626 done (16 min). Bridge cargo check PASS (exit 0, 7 dead_code warnings). DQ 797f00a77338-001 resolved. phase-m2-rooms-a @ a655a1da2.
+- NEXT: author + dispatch T4a (workspace room-event route + bridge_auth).
+
+## 2026-06-06 — T4a §G4 fix cycle 1
+
+- advisor: T4a brief authored + synced. /precheck PASS. Junior #627 dispatched.
+- advisor: #627 done (9 min). Workspace cargo check FAIL — E0277: RoomEventPayload missing serde::Deserialize. phase-m2-rooms-a @ 1ca0cd627.
+- advisor: §G4 classify: (E0277, governance_log.rs) cycle 1 → allowlist match → narrow fix-impl. DQ 0566bc2d61f0-001 mutated result:fail, stays pending.
+- advisor: fix-impl brief authored (m2-rooms-a-fix-impl-4a-cargo.md), synced to phase @ 895c643f4. /precheck PASS.
+- advisor: dispatched fix-impl as Junior #629 (running, base_branch=phase-m2-rooms-a).
+- NEXT: poll #629 → validate-pending-laptop DQ → run workspace cargo on laptop → pass → T4b brief.
