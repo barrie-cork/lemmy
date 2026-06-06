@@ -862,7 +862,7 @@ pub struct CaseTransitionEvent {
   pub old_status: Option<CaseStatus>,
   pub new_status: CaseStatus,
   pub community_id: Option<i32>,
-  pub target_type: String,
+  pub target_type: CaseTargetType,
 }
 
 /// Discriminated union of bridge-notify events. `type_` tag distinguishes

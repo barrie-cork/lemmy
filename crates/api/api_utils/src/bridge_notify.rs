@@ -71,7 +71,7 @@ pub async fn governance_case_after_transition(
     old_status,
     new_status,
     community_id: case.community_id.map(|c| c.0),
-    target_type: format!("{:?}", case.target_type),
+    target_type: case.target_type,
   });
   if let Err(e) = context
     .client()
