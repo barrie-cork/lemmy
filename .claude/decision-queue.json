@@ -6578,6 +6578,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "b2fcddebf2f8-001"
+    },
+    {
+      "id": "a3d0e9941441-056",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-06T23:20:47Z",
+      "question": "What should enqueue_sanction_event do when Sanction.target_person_id is None (post/comment/community-targeted sanction, no subject person)?",
+      "options": [
+        "option-a: skip delivery silently (tracing::debug) — no subject pseudonym to resolve",
+        "option-b: return an error / log warn — treat as unexpected"
+      ],
+      "context": "Sanction.target_person_id is Option<PersonId> (nullable, sanction.rs:25). The B-publish event schema requires subject_brehon_actor_id (a person pseudonym). When the sanction targets a post, comment, or community (not a person), there is no PersonId to look up via actor_pseudonym_helper. Brief WP-1 did not address this case.",
+      "answer": "option-a: skip delivery silently (tracing::debug log) and return early from enqueue_sanction_event when target_person_id is None. The B-publish contract (OQ-ADR016-02) requires a subject_brehon_actor_id — a non-person sanction has no meaningful cross-app propagation target. Added to brief §4 Constraints (stop-and-ask if code tries to emit for null target_person_id).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-06T23:20:47Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
