@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "Does workspace cargo check pass after adding bridge_auth.rs + room_event_handler.rs?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T4a complete: bridge_auth.rs bearer guard + handle_room_event handler + mod.rs + routes wired. Workspace toolchain.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "4a",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "0566bc2d61f0-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
