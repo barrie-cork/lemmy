@@ -1,6 +1,43 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "a3d0e9941441-052",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-06T09:00:00Z",
+      "question": "WP-1: How does the bridge authenticate to the new binary-side POST /governance/room-event callback endpoint? Option-a: shared secret (env var BRIDGE_CALLBACK_SECRET) checked server-side; option-b: bridge passes Lemmy admin JWT (requires the bridge to hold admin credentials in .env); option-c: the endpoint is unauthenticated but bound to localhost/internal network only.",
+      "options": [
+        "option-a: shared BRIDGE_CALLBACK_SECRET checked in the handler (no Lemmy admin JWT needed)",
+        "option-b: bridge holds admin JWT in .env and sends Authorization header",
+        "option-c: unauthenticated, localhost-only binding"
+      ],
+      "context": "admin_get_messaging_config (the brehon_read_url endpoint) already requires is_admin JWT. The bridge's soft_pause.rs polls that endpoint without any auth header (bare GET), which would fail is_admin — suggesting either the endpoint was not yet tested against a real server, or there is a separate unauthenticated endpoint. No unauthenticated bridge-callback route exists in crates/api/routes/src/lib.rs. The Phase 4 room-event callback needs an explicit auth decision before the planner can spec the handler.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-053",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-06T09:00:01Z",
+      "question": "WP-2: The bridge_room table provides restart-idempotency (no duplicate Room::Created per case_id) — which persistence store should it use? Option-a: rusqlite (embedded SQLite file, add rusqlite to services/bridge/Cargo.toml); option-b: sqlx with SQLite feature (adds sqlx dep); option-c: in-memory HashMap<case_id, BridgeRoom> (no SQLite dep, but lost on restart — restart-idempotency handled purely by replaying from last_seen_governance_log_row_id via binary API query on startup).",
+      "options": [
+        "option-a: rusqlite embedded SQLite file (persistent, simple, no async overhead)",
+        "option-b: sqlx-sqlite (async, matches Lemmy toolchain style but adds heavy dep to bridge)",
+        "option-c: in-memory HashMap + replay from binary governance_log on startup (no new dep, restart-safe if replay is fast)"
+      ],
+      "context": "services/bridge/Cargo.toml has no SQLite dep (matrix-sdk, ruma-appservice-api, axum, tokio, reqwest, serde, serde_json, tracing, anyhow only). Phase 5 acceptance criterion requires no duplicate Room::Created on bridge restart. Option-c is viable if the binary exposes a GET /governance/room-events?case_id=X endpoint that returns already-written Room::* log entries so the bridge can skip re-provisioning on startup. This endpoint does not exist yet either, so option-c would add a second binary route. Option-a is the lightest path for the bridge crate itself.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6441,6 +6478,23 @@
       "approved_by": null,
       "approved_at": null,
       "id": "f06ed49af84a-001"
+    },
+    {
+      "id": "a3d0e9941441-051",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-06T09:00:02Z",
+      "question": "WP-4: What integration test approach should Phase 5 use for the bridge test suite? The existing services/bridge/tests/dm_round_trip.rs uses #[ignore] + docker-compose-gated tests (all todo!()). Option-a: follow the same #[ignore] + docker-compose pattern for room provisioning tests (deferred until docker stack is wired, same as M1); option-b: use mockito/wiremock mock HTTP servers for both the Matrix homeserver calls and the Brehon binary callback — allows CI-runnable tests without Docker.",
+      "options": [
+        "option-a: #[ignore] + docker-compose (consistent with M1 dm_round_trip pattern; tests are marked ignored, run manually with docker compose up)",
+        "option-b: mock HTTP servers (mockito or wiremock) — CI-runnable without Docker, but lower fidelity on Matrix API correctness"
+      ],
+      "context": "services/bridge/tests/dm_round_trip.rs is entirely todo!() stubs with #[ignore]. The brief requires <5s jury room and <2s emergency room timing assertions — these are hard to assert reliably against a mock but are real acceptance criteria. The PRD does not specify CI vs manual-only for bridge integration tests. M1 left tests as #[ignore] stubs; m2-rooms-a Phase 5 is the first real bridge test content.",
+      "answer": "option-a: follow the existing #[ignore] + docker-compose pattern. The dm_round_trip.rs stubs establish this as the canonical bridge-test shape (services/bridge/tests/dm_round_trip.rs). Phase 5 tests use #[ignore = \"requires docker-compose stack\"] and run manually with docker compose up. The <5s / <2s timing assertions are meaningful only against a real Tuwunel homeserver anyway. CI-runnable bridge tests are M3 scope if the docker-compose stack is added to GH Actions.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-06T09:00:02Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
