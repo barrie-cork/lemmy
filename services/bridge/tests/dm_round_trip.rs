@@ -38,13 +38,18 @@ async fn dm_voice_round_trip() {
 #[tokio::test]
 #[ignore = "requires docker-compose stack"]
 async fn soft_pause_enable_disable_cycle() {
-    // Criterion #4: enable → disable → enable cycle via brehon_read_url mock.
-    // 1. Assert relay is initially enabled (messaging_enabled=true)
-    // 2. Flip messaging_enabled=false via Brehon admin API / mock
-    // 3. Assert relay drains to idle and stops accepting new events
-    // 4. Flip messaging_enabled=true
-    // 5. Assert relay resumes without process restart
-    todo!("implement soft-pause cycle test")
+    // T4b/T5: bearer-authed poll now uses /governance/bridge/messaging-status.
+    // This test asserts the 401 bug is fixed (T4b) and the cycle works end-to-end.
+    //
+    // 1. Verify bridge is started with BRIDGE_CALLBACK_SECRET set
+    // 2. Assert initial relay_enabled=true (messaging_enabled=true in Brehon)
+    // 3. POST to /governance/admin/messaging-config to set messaging_enabled=false
+    // 4. Wait ≤20s for soft_pause poller to detect change (10s interval + margin)
+    // 5. Assert relay_enabled=false (POST /brehon/room-event returns 403)
+    // 6. POST to restore messaging_enabled=true
+    // 7. Wait ≤20s for poller to re-enable
+    // 8. Assert relay_enabled=true (POST /brehon/room-event returns 200)
+    todo!("implement soft-pause bearer-auth cycle test — no 401 expected")
 }
 
 #[tokio::test]
