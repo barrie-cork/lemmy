@@ -120,7 +120,7 @@ If adding a parameter to `select_eligible_jurors` causes compile errors at other
 ## 4. Constraints
 
 1. **Three separate commits** — one per fix, in order D, E, F. Commit subjects: `fix(governance): reconcile panel_has_sponsor_majority_cluster semantics — closes #188`, `fix(governance): geographic_diversity_score denominator — closes #189`, `fix(governance): tag replacement/appeal relaxation audit context — closes #190`.
-2. **DoD per commit:** after each commit run `cargo check --workspace --features full` (via `./scripts/brehon/cargo-check.sh --workspace --features full`). All three must exit 0.
+2. **DO NOT run cargo check at any point.** Cargo validation is delegated entirely to the laptop advisor. Running cargo on the daemon causes watchdog timeouts. This constraint overrides any instinct to verify compilation locally.
 3. **Write a `validate-pending-laptop` DQ entry** after the third commit with `commands: ["./scripts/brehon/cargo-check.sh --workspace --features full"]`, `branch: <worker branch name>`, `phase_task: "governance-fix-med-1"`. Commit + push the DQ entry, then **stop**. Do NOT run cargo-check yourself after writing the DQ.
 4. **No `answered_by: "advisor"` in DQ entries** from this worker session.
 5. **Fix D SQL change**: the self-join adds `s2.sponsored_id = ANY($1)` — the bind receives the same array bound twice. Check if Diesel `sql_query` supports `$1` referenced twice in the same query; if not, use a subquery or a CTE to avoid the double-bind constraint.
