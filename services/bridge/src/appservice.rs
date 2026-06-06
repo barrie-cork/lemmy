@@ -35,6 +35,7 @@ pub struct AppState {
     pub puppet_map: Arc<crate::puppet::PuppetMap>,
     pub http_client: reqwest::Client,
     pub relay_enabled: Arc<std::sync::atomic::AtomicBool>,
+    pub oq009_reveal_threshold: Arc<std::sync::atomic::AtomicI64>,
     /// Path to the SQLite database file for bridge_room state.
     pub bridge_db_path: String,
 }

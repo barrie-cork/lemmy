@@ -23,7 +23,7 @@ use appservice::AppState;
 use config::BridgeConfig;
 use puppet::PuppetMap;
 use std::net::SocketAddr;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicI64};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
     let config_arc = Arc::new(config);
     let puppet_map = PuppetMap::new(Arc::clone(&config_arc));
     let relay_enabled = Arc::new(AtomicBool::new(true));
+    let oq009_reveal_threshold = Arc::new(AtomicI64::new(1));
 
     let bridge_db_path = std::env::var("BRIDGE_DB_PATH")
         .unwrap_or_else(|_| "bridge.db".to_string());
@@ -42,6 +43,7 @@ async fn main() -> Result<()> {
         puppet_map,
         http_client: reqwest::Client::new(),
         relay_enabled: Arc::clone(&relay_enabled),
+        oq009_reveal_threshold: Arc::clone(&oq009_reveal_threshold),
         bridge_db_path,
     }));
 
@@ -55,6 +57,7 @@ async fn main() -> Result<()> {
     let poller_handle = tokio::spawn(soft_pause::run_poller(
         Arc::clone(&config_arc),
         Arc::clone(&relay_enabled),
+        Arc::clone(&oq009_reveal_threshold),
     ));
 
     tokio::select! {

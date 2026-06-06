@@ -122,7 +122,7 @@ async fn provision_jury_room(state: Arc<AppState>, event: CaseTransitionEvent) {
     };
 
     // OQ-009: determine reveal state based on room event count
-    let threshold = oq009_threshold();
+    let threshold = state.oq009_reveal_threshold.load(std::sync::atomic::Ordering::Relaxed) as usize;
     let room_has_messages = query_room_event_count(&state, &room_id).await >= threshold;
 
     // (d) invite each juror puppet with OQ-009 display name
@@ -325,7 +325,7 @@ async fn provision_appeal_room(state: Arc<AppState>, event: CaseTransitionEvent)
     };
 
     // OQ-009: determine reveal state for appeal jurors
-    let threshold = oq009_threshold();
+    let threshold = state.oq009_reveal_threshold.load(std::sync::atomic::Ordering::Relaxed) as usize;
     let room_has_messages = query_room_event_count(&state, &room_id).await >= threshold;
 
     // Invite appeals panel jurors from event.juror_pseudonyms
