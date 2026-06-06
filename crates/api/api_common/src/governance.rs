@@ -842,3 +842,34 @@ pub struct AdminReputationRollupResponse {
   pub rollup: Option<ReputationSnapshot>,
   pub contributing: Vec<ReputationSnapshot>,
 }
+
+// M2 bridge-notify payload (governance-triggered rooms)
+
+/// Payload mirrored to the Matrix bridge for a private-message event.
+/// (Lifted verbatim from bridge_notify.rs's prior inline struct; Task 2 refactors the producer.)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PrivateMessagePayload {
+  pub private_message_id: i32,
+  pub creator_id: i32,
+  pub recipient_id: i32,
+}
+
+/// Payload mirrored to the Matrix bridge when a moderation case changes status.
+/// Integer + enum fields only — no usernames/emails (the bridge owns pseudonym resolution).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CaseTransitionEvent {
+  pub case_id: i32,
+  pub old_status: Option<CaseStatus>,
+  pub new_status: CaseStatus,
+  pub community_id: Option<i32>,
+  pub target_type: CaseTargetType,
+}
+
+/// Discriminated union of bridge-notify events. `type_` tag distinguishes
+/// the variants on the wire (serde internally-tagged, snake_case).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type_", rename_all = "snake_case")]
+pub enum BridgeNotifyPayload {
+  PrivateMessage(PrivateMessagePayload),
+  CaseTransition(CaseTransitionEvent),
+}

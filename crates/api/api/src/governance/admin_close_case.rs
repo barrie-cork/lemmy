@@ -12,7 +12,11 @@ use actix_web::web::{Data, Json};
 use diesel::{ExpressionMethods, NullableExpressionMethods, QueryDsl, SelectableHelper, update};
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{AdminCloseCase, AdminCloseCaseResponse};
-use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
+use lemmy_api_utils::{
+  bridge_notify::governance_case_after_transition,
+  context::LemmyContext,
+  utils::is_admin,
+};
 use lemmy_db_schema::source::governance::moderation_case::ModerationCase;
 use lemmy_db_schema_file::{enums::CaseStatus, schema::moderation_case};
 use lemmy_db_views_local_user::LocalUserView;
@@ -38,6 +42,15 @@ pub async fn admin_close_case(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
+  // Pre-txn: capture case for hook. process_close re-loads it inside the txn.
+  // CaseStatus is Copy so old_status survives the try_from move at process_close:67.
+  let case_for_hook: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(data.case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+  let old_status = case_for_hook.status;
+
   let data_for_tx = data.clone();
   let pseudonym_for_tx = admin_pseudonym.clone();
 
@@ -46,6 +59,11 @@ pub async fn admin_close_case(
       process_close(conn, pseudonym_for_tx, data_for_tx).await
     })
     .await?;
+
+  // Site 7: fire hook after txn committed (any non-Closed → Closed).
+  governance_case_after_transition(&context, &case_for_hook, Some(old_status), CaseStatus::Closed)
+    .await
+    .ok();
 
   Ok(Json(outcome))
 }

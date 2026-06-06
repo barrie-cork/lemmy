@@ -202,6 +202,8 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
+  // BUG-1 author-defendant backfill (1 migration, bump 20 → 21)
+  "2026-06-01-000000-0000_backfill_author_defendant",
   // v1-federation-inbound-a (1 migration, bump 18 → 19)
   "2026-05-17-000000-0000_add_federation_inbound_v1",
   // v1-RT-r1 (4 migrations, bump 14 → 18)
@@ -5236,6 +5238,149 @@ async fn admin_emergency_remove_post_sets_author_defendant()
     CaseStatus::EmergencyRemove,
     "emergency_remove opens case with status = EmergencyRemove (ADR-013)",
   );
+  Ok(())
+}
+
+// ============================================================================
+// M2-core-hook — Task 8: governance_case_after_transition hook e2e tests
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn m2_append_room_event_writes_chain_entry() -> lemmy_utils::error::LemmyResult<()> {
+  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api::governance::governance_log::{
+    ENTRY_KIND_ROOM_CREATED, RoomEventPayload, append_room_event,
+  };
+  use lemmy_db_schema_file::schema::governance_log;
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set(
+    "GOVERNANCE_LOG_SIGNING_KEY",
+    "0000000000000000000000000000000000000000000000000000000000000001",
+  );
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
+
+  {
+    use diesel::{Connection as _, pg::PgConnection};
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+
+  let payload = RoomEventPayload {
+    case_id: 1,
+    matrix_room_id: Some("local-room-abc123".to_string()),
+    lifecycle_stage: "created".to_string(),
+    member_count: Some(5),
+  };
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+  let entry = append_room_event(&mut pool, ENTRY_KIND_ROOM_CREATED, payload, None).await?;
+
+  assert_eq!(
+    entry.entry_kind, "room_created",
+    "m2: append_room_event wrote correct entry_kind"
+  );
+  assert!(
+    !entry.prev_hash.is_empty(),
+    "m2: hash-chain prev_hash is populated"
+  );
+
+  let mut conn_verify = AsyncPgConnection::establish(&db_url).await?;
+  let count: i64 = governance_log::table
+    .filter(governance_log::entry_kind.eq("room_created"))
+    .count()
+    .get_result(&mut conn_verify)
+    .await?;
+  assert_eq!(count, 1, "m2: exactly one room_created governance_log row");
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn m2_append_room_event_rejects_non_room_kind() -> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection};
+  use lemmy_api::governance::governance_log::{RoomEventPayload, append_room_event};
+  use lemmy_diesel_utils::connection::DbPool;
+
+  let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+  let _g_gov = EnvVarGuard::set(
+    "GOVERNANCE_LOG_SIGNING_KEY",
+    "0000000000000000000000000000000000000000000000000000000000000001",
+  );
+
+  let (_container, host_port) = governance_fixtures::start_postgres().await?;
+  let db_url = governance_fixtures::db_url(host_port);
+  let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
+
+  {
+    use diesel::{Connection as _, pg::PgConnection};
+    let mut sync_conn = PgConnection::establish(&db_url)?;
+    governance_fixtures::apply_all_schema(&mut sync_conn)?;
+  }
+
+  let payload = RoomEventPayload {
+    case_id: 1,
+    matrix_room_id: None,
+    lifecycle_stage: "test".to_string(),
+    member_count: None,
+  };
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let mut pool: DbPool<'_> = (&mut async_conn).into();
+  let result = append_room_event(&mut pool, "report_created", payload, None).await;
+  assert!(result.is_err(), "m2: non-room kind must be rejected");
+  let err_str = format!("{:?}", result.unwrap_err());
+  assert!(
+    err_str.contains("not a room entry kind"),
+    "m2: error message contains expected text, got: {err_str}"
+  );
+
+  Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::bridge_notify::governance_case_after_transition;
+  use lemmy_db_schema::source::governance::moderation_case::{
+    ModerationCase, ModerationCaseInsertForm,
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let case_form = ModerationCaseInsertForm {
+    target_type: CaseTargetType::Person,
+    reason_code: "test_suppression".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Open,
+    threshold_score: 1,
+    ..Default::default()
+  };
+  let case: ModerationCase = diesel::insert_into(moderation_case::table)
+    .values(&case_form)
+    .get_result(&mut async_conn)
+    .await?;
+
+  // messaging_enabled is absent (no row in governance_messaging_config) → false → no-op
+  governance_case_after_transition(
+    &context,
+    &case,
+    Some(CaseStatus::Open),
+    CaseStatus::ThresholdMet,
+  )
+  .await?;
+
   Ok(())
 }
 

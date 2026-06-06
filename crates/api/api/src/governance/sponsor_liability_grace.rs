@@ -43,7 +43,7 @@ use diesel::{
   dsl::min,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use lemmy_api_utils::context::LemmyContext;
+use lemmy_api_utils::{bridge_notify::governance_case_after_transition, context::LemmyContext};
 use lemmy_db_schema::{
   newtypes::{CommunityId, ModerationCaseId},
   source::governance::moderation_case::ModerationCase,
@@ -167,8 +167,30 @@ pub async fn run_grace_check_batch(context: &LemmyContext) -> LemmyResult<GraceC
       })
       .await;
     match case_outcome {
-      Ok(PerCaseOutcome::Fired) => outcome.fired += 1,
-      Ok(PerCaseOutcome::Escaped) => outcome.escaped += 1,
+      Ok(PerCaseOutcome::Fired) => {
+        // Site 10: fire hook after per-case txn — outside the transaction boundary.
+        governance_case_after_transition(
+          context,
+          &case,
+          Some(CaseStatus::SponsorLiabilityPending),
+          CaseStatus::SponsorLiabilityFired,
+        )
+        .await
+        .ok();
+        outcome.fired += 1;
+      }
+      Ok(PerCaseOutcome::Escaped) => {
+        // Site 11: fire hook after per-case txn — outside the transaction boundary.
+        governance_case_after_transition(
+          context,
+          &case,
+          Some(CaseStatus::SponsorLiabilityPending),
+          CaseStatus::SponsorLiabilityEscaped,
+        )
+        .await
+        .ok();
+        outcome.escaped += 1;
+      }
       Ok(PerCaseOutcome::Skipped) => outcome.skipped += 1,
       Err(e) => {
         warn!(
