@@ -48,7 +48,7 @@ impl BridgeConfig {
             brehon_room_event_url: std::env::var("BREHON_ROOM_EVENT_URL")
                 .unwrap_or_else(|_| "http://localhost:8536/governance/room-event".to_string()),
             bridge_callback_secret: std::env::var("BRIDGE_CALLBACK_SECRET")
-                .expect("BRIDGE_CALLBACK_SECRET must be set"),
+                .context("BRIDGE_CALLBACK_SECRET env var required")?,
             legal_contact_mxid: std::env::var("LEGAL_CONTACT_MXID")
                 .unwrap_or_else(|_| "@legal:localhost".to_string()),
         })

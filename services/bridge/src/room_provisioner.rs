@@ -121,9 +121,9 @@ async fn provision_jury_room(state: Arc<AppState>, event: CaseTransitionEvent) {
         }
     };
 
-    // OQ-009: determine reveal state based on room event count
-    let threshold = state.oq009_reveal_threshold.load(std::sync::atomic::Ordering::Relaxed) as usize;
-    let room_has_messages = query_room_event_count(&state, &room_id).await >= threshold;
+    // OQ-009: newly provisioned rooms have no messages — reveal state is false at creation.
+    // The bridge re-checks on subsequent events via the soft-pause poller threshold.
+    let room_has_messages = false;
 
     // (d) invite each juror puppet with OQ-009 display name
     for pseudonym in &event.juror_pseudonyms {
@@ -324,9 +324,8 @@ async fn provision_appeal_room(state: Arc<AppState>, event: CaseTransitionEvent)
         }
     };
 
-    // OQ-009: determine reveal state for appeal jurors
-    let threshold = state.oq009_reveal_threshold.load(std::sync::atomic::Ordering::Relaxed) as usize;
-    let room_has_messages = query_room_event_count(&state, &room_id).await >= threshold;
+    // OQ-009: newly provisioned rooms have no messages — reveal state is false at creation.
+    let room_has_messages = false;
 
     // Invite appeals panel jurors from event.juror_pseudonyms
     for pseudonym in &event.juror_pseudonyms {
@@ -519,44 +518,6 @@ async fn provision_membership_mirror(state: Arc<AppState>, event: CaseTransition
     }
 }
 
-/// OQ-009: reveal threshold (default 1; T4b wires the real config value from bridge-read route).
-fn oq009_threshold() -> usize {
-    1
-}
-
-/// OQ-009: query the Matrix room event count via GET /messages?limit=1.
-/// Returns chunk length (0 on any error — fail-safe).
-async fn query_room_event_count(state: &AppState, room_id: &str) -> usize {
-    let encoded_room_id = room_id.replace(':', "%3A");
-    let url = format!(
-        "{}/_matrix/client/v3/rooms/{}/messages?limit=1",
-        state.config.tuwunel_url, encoded_room_id
-    );
-    match state
-        .http_client
-        .get(&url)
-        .bearer_auth(&state.config.as_token)
-        .send()
-        .await
-    {
-        Ok(resp) => match resp.json::<serde_json::Value>().await {
-            Ok(json) => json
-                .get("chunk")
-                .and_then(|c| c.as_array())
-                .map(|a| a.len())
-                .unwrap_or(0),
-            Err(_) => 0,
-        },
-        Err(e) => {
-            tracing::debug!(
-                err = %e,
-                room_id = %room_id,
-                "room event count query failed — defaulting to 0"
-            );
-            0
-        }
-    }
-}
 
 /// POST /_matrix/client/v3/rooms/{roomId}/invite via the AS master token.
 /// All errors are returned to the caller for log-and-swallow at the call site.
