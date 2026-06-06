@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "m2-rooms-a Task 1 validate-pending-laptop: cd services/bridge && cargo check",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 complete: rusqlite dep added to bridge/Cargo.toml, BridgeConfig extended with 3 fields (brehon_room_event_url, bridge_callback_secret, legal_contact_mxid), bridge_room.rs store created with open/lookup/upsert/set_watermark, mod bridge_room added to main.rs. Waiting for laptop cargo check.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "id": "7d593d3bc09f-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6536,6 +6510,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-054"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-rooms-a Task 1 validate-pending-laptop: cd services/bridge && cargo check",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 complete: rusqlite dep added to bridge/Cargo.toml, BridgeConfig extended with 3 fields (brehon_room_event_url, bridge_callback_secret, legal_contact_mxid), bridge_room.rs store created with open/lookup/upsert/set_watermark, mod bridge_room added to main.rs. Waiting for laptop cargo check.",
+      "answer": "cargo check exit 0 after rusqlite 0.32->0.37 bump. libsqlite3-sys conflict with matrix-sdk-sqlite resolved by unifying version. WP-6 zero-Matrix-deps=0. advisor-laptop 2026-06-06.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T03:01:11Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "7d593d3bc09f-001"
     }
   ]
 }
