@@ -52,4 +52,7 @@
 - advisor: #630 done (5 min). Workspace cargo check PASS (EXIT:0, 1m43s). DQ 9d80b96935d9-001 resolved. phase-m2-rooms-a @ 1aa743526.
 - advisor: T5 brief authored (m2-rooms-a-impl-5.md), synced to phase @ 747e52a11. /precheck PASS (Sat 07:54 UTC, 10 GB, SYNC).
 - advisor: dispatched T5 as Junior #631 (running, base_branch=phase-m2-rooms-a).
-- NEXT: poll #631 → validate-pending-laptop DQ → `cd services/bridge && cargo check` on laptop → pass → T6 brief (e2e tests).
+- advisor: #631 done (4 min). Bridge cargo check PASS (EXIT:0, 3.02s, 8 dead_code warnings). DQ ecc4ade814f2-001 resolved. phase-m2-rooms-a @ c6de68a2c.
+- advisor: T6 brief authored (m2-rooms-a-impl-6.md), synced to phase @ ac2306363. /precheck PASS (Sat 08:03 UTC, SYNC).
+- advisor: dispatched T6 as Junior #632 (running, base_branch=phase-m2-rooms-a).
+- NEXT: poll #632 → validate-pending-laptop DQ → `cd services/bridge && cargo test --no-run` on laptop → pass → bm-pr.
