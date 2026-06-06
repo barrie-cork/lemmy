@@ -84,7 +84,7 @@ use {
 /// may match the `scrub_json` URL/mention regex. Pass an opaque non-sigil
 /// token (e.g. the bare room localpart) when round-trip fidelity is
 /// required (ADR-008).
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct RoomEventPayload {
   pub case_id: i32,
   pub matrix_room_id: Option<String>,

@@ -1,11 +1,17 @@
 use crate::context::LemmyContext;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
+use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{BridgeNotifyPayload, CaseTransitionEvent, PrivateMessagePayload};
-use lemmy_db_schema::source::governance::{
-  governance_messaging_config::GovernanceMessagingConfig,
-  moderation_case::ModerationCase,
+use lemmy_db_schema::{
+  newtypes::ModerationCaseId,
+  source::governance::{
+    governance_messaging_config::GovernanceMessagingConfig,
+    moderation_case::ModerationCase,
+  },
 };
 use lemmy_db_schema_file::enums::CaseStatus;
 use lemmy_db_views_private_message::PrivateMessageView;
+use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
 
 /// Default HTTP endpoint for the Matrix bridge notify path (plan §10.5).
@@ -47,6 +53,24 @@ pub async fn notify_if_enabled(
   Ok(())
 }
 
+/// Fetch pseudonyms for all jurors assigned to a case, via
+/// `jury_assignment INNER JOIN actor_pseudonym ON person_id`. Returns only
+/// `actor_pseudonym.pseudonym` values (ADR-015 — no real identities).
+async fn fetch_juror_pseudonyms(
+  pool: &mut DbPool<'_>,
+  case_id: ModerationCaseId,
+) -> LemmyResult<Vec<String>> {
+  use lemmy_db_schema_file::schema::{actor_pseudonym, jury_assignment};
+  let conn = &mut get_conn(pool).await?;
+  let rows = jury_assignment::table
+    .inner_join(actor_pseudonym::table.on(actor_pseudonym::person_id.eq(jury_assignment::person_id)))
+    .filter(jury_assignment::case_id.eq(case_id))
+    .select(actor_pseudonym::pseudonym)
+    .load::<String>(conn)
+    .await?;
+  Ok(rows)
+}
+
 /// Fire-and-forget notify to the Matrix bridge when a moderation case transitions status.
 /// Reads `messaging_enabled`; false → no-op. True → POST CaseTransition event to bridge.
 /// NEVER fails the governance path — transport errors are swallowed (plan §10.5, ADR-012).
@@ -66,12 +90,18 @@ pub async fn governance_case_after_transition(
   if !enabled {
     return Ok(());
   }
+  let juror_pseudonyms = if matches!(new_status, CaseStatus::JurySelection) {
+    fetch_juror_pseudonyms(pool, case.id).await?
+  } else {
+    Vec::new()
+  };
   let payload = BridgeNotifyPayload::CaseTransition(CaseTransitionEvent {
     case_id: case.id.0,
     old_status,
     new_status,
     community_id: case.community_id.map(|c| c.0),
     target_type: case.target_type,
+    juror_pseudonyms,
   });
   if let Err(e) = context
     .client()

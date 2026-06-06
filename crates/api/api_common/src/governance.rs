@@ -855,7 +855,8 @@ pub struct PrivateMessagePayload {
 }
 
 /// Payload mirrored to the Matrix bridge when a moderation case changes status.
-/// Integer + enum fields only — no usernames/emails (the bridge owns pseudonym resolution).
+/// Integer + enum fields plus pre-resolved pseudonyms — no real usernames/emails
+/// (the bridge owns the `Juror-<suffix>` rendering).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CaseTransitionEvent {
   pub case_id: i32,
@@ -863,6 +864,13 @@ pub struct CaseTransitionEvent {
   pub new_status: CaseStatus,
   pub community_id: Option<i32>,
   pub target_type: CaseTargetType,
+  /// Pre-resolved pseudonymous juror handles for jury-bound transitions
+  /// (e.g. JurySelection). Empty for non-jury transitions. These are
+  /// `actor_pseudonym.pseudonym` values ONLY — never real usernames/emails
+  /// (ADR-015); the binary resolves to pseudonyms so the bridge never sees a
+  /// real identity. The bridge renders each as `Juror-<suffix>`.
+  #[serde(default)]
+  pub juror_pseudonyms: Vec<String>,
 }
 
 /// Discriminated union of bridge-notify events. `type_` tag distinguishes
