@@ -1,5 +1,5 @@
 use crate::context::LemmyContext;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl};
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{BridgeNotifyPayload, CaseTransitionEvent, PrivateMessagePayload};
 use lemmy_db_schema::{
