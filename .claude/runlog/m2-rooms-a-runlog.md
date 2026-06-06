@@ -46,4 +46,7 @@
 - advisor: §G4 classify: (E0277, governance_log.rs) cycle 1 → allowlist match → narrow fix-impl. DQ 0566bc2d61f0-001 mutated result:fail, stays pending.
 - advisor: fix-impl brief authored (m2-rooms-a-fix-impl-4a-cargo.md), synced to phase @ 895c643f4. /precheck PASS.
 - advisor: dispatched fix-impl as Junior #629 (running, base_branch=phase-m2-rooms-a).
-- NEXT: poll #629 → validate-pending-laptop DQ → run workspace cargo on laptop → pass → T4b brief.
+- advisor: #629 done (2.5 min). Workspace cargo check PASS (EXIT:0, 2m04s). DQ 025c517a5e70-001 resolved. phase-m2-rooms-a @ 5ec6d4bcb.
+- advisor: T4b brief authored (m2-rooms-a-impl-4b.md), synced to phase @ 19d0e478f. /precheck PASS (Sat 07:38 UTC, 9.9 GB, SYNC).
+- advisor: dispatched T4b as Junior #630 (running, base_branch=phase-m2-rooms-a).
+- NEXT: poll #630 → validate-pending-laptop DQ → workspace cargo → pass → T5 brief (bridge callback wiring + soft_pause fix).
