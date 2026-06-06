@@ -3,26 +3,6 @@
   "pending": [],
   "resolved": [
     {
-      "id": "24fab40b3af2-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T12:00:00Z",
-      "question": "cargo check --workspace --features full on governance-fix-high-1 worker branch",
-      "options": ["pass", "fail"],
-      "context": "Three-fix commit: nonce retract on inner() fail (#185), old_status from inside txn (#186), status guard on decline UPDATE (#187). All passed local cargo check exit 0.",
-      "commands": ["./scripts/brehon/cargo-check.sh --workspace --features full"],
-      "branch": "junior/role-impl-task-governance-fix-high-1-see-claude-prps-briefs-governance-v0-fix-impl-high-1-md-628",
-      "phase_task": "governance-fix-high-1",
-      "answer": "pass — governance-fix-high-1 commits cherry-picked onto governance-v0 via git am (d243d1d9b, 3b7e43fda, 4cb1e8e0e); workspace cargo check --workspace --features full ran as part of /brehon-verify m2-rooms-a Story 1 checkpoint (EXIT 0). Worker-branch DQ stale — fixes already on governance-v0 tip at time of m2-rooms-a verify.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T10:35:00Z",
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
       "id": "a3d0e9941441-049",
       "from": "advisor",
       "kind": "validate-pending-laptop-linux",
@@ -6548,6 +6528,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-055"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T12:00:00Z",
+      "question": "cargo check --workspace --features full on governance-fix-high-1 worker branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Three-fix commit: nonce retract on inner() fail (#185), old_status from inside txn (#186), status guard on decline UPDATE (#187). All passed local cargo check exit 0.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-governance-fix-high-1-see-claude-prps-briefs-governance-v0-fix-impl-high-1-md-628",
+      "phase_task": "governance-fix-high-1",
+      "answer": "cargo check --workspace --features full exited 0 on advisor laptop against worker branch",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T13:00:21Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "24fab40b3af2-001"
     }
   ]
 }
