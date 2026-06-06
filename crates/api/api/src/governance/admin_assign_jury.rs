@@ -887,15 +887,19 @@ async fn sample_panel(
 struct DistinctCommunityRow {
   #[diesel(sql_type = BigInt)]
   distinct_count: i64,
+  #[diesel(sql_type = BigInt)]
+  history_count: i64,
 }
 
 /// v1-JM-b PRD §5.3 Phase 3 soft geographic-diversity score. Returns the
-/// fraction `COUNT(DISTINCT moderation_case.community_id) / panel_size`
-/// across the sample's prior jury-assignment history: `0.0` when every
-/// sampled juror has only served one community (or no community at all —
-/// the bootstrapping case); up to `1.0` when every juror has served a
-/// distinct community. Used as a re-roll tiebreaker in Phase 2 of
-/// [`select_eligible_jurors`].
+/// fraction `COUNT(DISTINCT moderation_case.community_id) / history_count`
+/// where `history_count` is the count of jurors in the sample that have at
+/// least one prior assignment. Using jurors-with-history as the denominator
+/// avoids biasing toward panels with more experienced jurors: a panel where
+/// only 2/5 have history but those 2 served entirely distinct communities
+/// correctly scores 1.0 rather than 0.4. Returns `0.0` when no juror in the
+/// sample has prior history (bootstrapping case). Used as a re-roll
+/// tiebreaker in Phase 2 of [`select_eligible_jurors`].
 ///
 /// Per PRD §OQ-V1-JM-02 lean, the full timezone-aware heuristic is v1.5;
 /// v1-JM-b ships this community-distinct stub and gets the soft-bias
@@ -903,7 +907,7 @@ struct DistinctCommunityRow {
 #[expect(
   clippy::as_conversions,
   clippy::cast_precision_loss,
-  reason = "distinct_count is COUNT(DISTINCT community_id) and sample.len() ≤ jury.panel_size (≤ 20 per PRD §5.3); neither approaches 2^53"
+  reason = "distinct_count is COUNT(DISTINCT community_id) and history_count is COUNT(DISTINCT person_id with history); both ≤ jury.panel_size (≤ 20 per PRD §5.3); neither approaches 2^53"
 )]
 async fn geographic_diversity_score(
   conn: &mut diesel_async::AsyncPgConnection,
@@ -914,7 +918,8 @@ async fn geographic_diversity_score(
   }
   let ids_bind: Vec<i32> = sample.iter().map(|p| p.0).collect();
   let row: DistinctCommunityRow = sql_query(
-    "SELECT COUNT(DISTINCT mc.community_id) AS distinct_count \
+    "SELECT COUNT(DISTINCT mc.community_id) AS distinct_count, \
+            COUNT(DISTINCT ja.person_id) AS history_count \
      FROM jury_assignment ja \
      INNER JOIN moderation_case mc ON mc.id = ja.case_id \
      WHERE ja.person_id = ANY($1) \
@@ -923,7 +928,10 @@ async fn geographic_diversity_score(
   .bind::<Array<Integer>, _>(ids_bind)
   .get_result(conn)
   .await?;
-  Ok((row.distinct_count as f64) / (sample.len() as f64))
+  if row.history_count == 0 {
+    return Ok(0.0);
+  }
+  Ok((row.distinct_count as f64) / (row.history_count as f64))
 }
 
 /// Emit a constraint-relaxation audit inside the caller's
