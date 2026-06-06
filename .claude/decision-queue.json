@@ -29,6 +29,33 @@
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
       "id": "0566bc2d61f0-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "Does bridge cargo check pass after T5 callback wiring + bearer auth + OQ-009 threshold?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T5 complete: soft_pause bearer header + oq009_reveal_threshold Arc<AtomicI64> wired into AppState + run_poller; room_provisioner reads from state. Bridge toolchain only.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "5",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "ecc4ade814f2-001"
     }
   ],
   "resolved": [
