@@ -10,6 +10,7 @@
 // relied on training knowledge of axum 0.8 minimal server pattern).
 
 mod appservice;
+mod bridge_room;
 mod config;
 mod provision;
 mod puppet;
