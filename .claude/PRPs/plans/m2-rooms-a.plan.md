@@ -168,6 +168,14 @@ Sonnet target → ceiling `≤ 4` files / `≤ 2` crates per task; e2e edits in
 their own task. Every §13 task satisfies this:
 
 - T1: 4 files (bridge_room.rs, config.rs, Cargo.toml, main.rs), 1 crate. ✅
+- T1w: 2 files (`api_common/governance.rs`, `api_utils/bridge_notify.rs`) +
+  0-1 (`db_schema` read method IFF no existing fetch is reachable — see T1w
+  IMPLEMENT file 3), so 2-3 files / 2-3 crates. ✅ (at the ceiling; this is
+  the workspace half of the juror-sourcing seam — kept SEPARATE from the
+  bridge consumer T2 precisely because the two cross the toolchain boundary:
+  T1w is `--workspace --features full`, T2 is `cd services/bridge && cargo
+  check`, and §15 / R8 forbid mixing the two validation profiles on one
+  task — same split rationale as T4 → T4a/T4b.)
 - T2: 3 files (room_provisioner.rs, appservice.rs, main.rs), 1 crate. ✅
 - T3: 1 file (room_provisioner.rs extend), 1 crate. ✅
 - T4a: 4 files (room_event_handler.rs, bridge_auth.rs, governance/mod.rs,
@@ -408,6 +416,21 @@ async fn poll_once(client: &reqwest::Client, url: &str) -> Result<bool> {
 - `services/bridge/tests/dm_round_trip.rs` — un-`todo!()` the
   `soft_pause_enable_disable_cycle` test (T6).
 
+**`crates/api/api_common` + `crates/api/api_utils` (workspace) — T1w (DQ -055):**
+
+- `crates/api/api_common/src/governance.rs` — add `pub juror_pseudonyms:
+  Vec<String>` to `CaseTransitionEvent` (lines ~860-866) + doc-comment note
+  (pre-resolved pseudonyms only, ADR-015); consider `#[serde(default)]` (T1w).
+- `crates/api/api_utils/src/bridge_notify.rs` — populate `juror_pseudonyms`
+  in `governance_case_after_transition` (lines 53-90) for jury-bound
+  `new_status`, from `jury_assignment ⨝ actor_pseudonym`; empty otherwise
+  (T1w).
+- *(conditional, T1w IMPLEMENT file 3)* a by-case juror-pseudonym read
+  method — REUSE `crates/api/api/src/governance/actor_pseudonym_helper.rs` if
+  reachable from `api_utils`; else add to the `db_schema` source model
+  (`JuryAssignment`). Resolve the `api_utils → api` dep-direction question at
+  author time; raise a blocker DQ if no legal path exists.
+
 **`crates/api/api` (workspace):**
 
 - `crates/api/api/src/governance/bridge_auth.rs` — **NEW**:
@@ -438,6 +461,20 @@ binary, not a library). Adding three fields requires updating only
 constructed solely via `from_env`; every other reference is `&BridgeConfig`
 borrow.)
 
+`CaseTransitionEvent` (T1w, DQ -055) is constructed at exactly one site:
+`governance_case_after_transition()` in
+`crates/api/api_utils/src/bridge_notify.rs:69`. The planner MUST confirm with
+`rg "CaseTransitionEvent\s*\{" crates/` before authoring T1w — if the rg
+returns more than the one `bridge_notify.rs` literal, every additional
+construction site needs the new field (a struct-literal without
+`juror_pseudonyms` won't compile unless `#[serde(default)]` + a `..Default`
+is used, which `CaseTransitionEvent` does NOT derive). Consumers are: the
+serde round-trip on the bridge (`services/bridge/src/` deserialization in T2)
+and any test that builds the event. R7 (test-target compile after struct
+change) applies — run `cargo test --no-run` on the touched workspace scope
+after T1w. Expected callsite count: 1 producer (`bridge_notify.rs:69`) + N
+test fixtures (enumerate at author time).
+
 ## 12. NOT building in m2-rooms-a
 
 - **B-publish sanction propagation / B-actor portable-ID linkage** —
@@ -461,10 +498,23 @@ borrow.)
 ## 13. Step-by-step tasks
 
 Execute in dependency order. One commit per task. All tasks are non-`[P]`
-(serial): T2→T1, T3→T2, T4b→T4a, T5→{T2,T4a,T4b}, T6→{T3,T5} form a tight
-dependency chain, and T1↔T4a — though file-disjoint — sit either side of
-that chain; serial dispatch keeps the daemon at ≤1 running worker and avoids
-shared `.git/index.lock` contention for a marginal 1-task parallelism gain.
+(serial): T1w→T1, T2→T1w, T3→T2, T4b→T4a, T5→{T2,T4a,T4b}, T6→{T3,T5} form a
+tight dependency chain, and T1↔T4a — though file-disjoint — sit either side
+of that chain; serial dispatch keeps the daemon at ≤1 running worker and
+avoids shared `.git/index.lock` contention for a marginal 1-task parallelism
+gain.
+
+> **Amendment 2026-06-06 (DQ `a3d0e9941441-055`, option-a):** Task 1w (NEW,
+> workspace-side) was inserted between T1 and T2 to close the juror-sourcing
+> gap. The original T2 step (d) ("invite the 5 jurors as `Juror-<suffix>`")
+> was unimplementable: `CaseTransitionEvent` carried no juror identities and
+> the bridge has no workspace-DB access, so the bridge had no way to learn
+> *which* jurors to invite. T1w augments the payload at the binary producer
+> (matching the M1 `relay.rs` `brehon_sender`/`brehon_recipient`
+> payload-carries-identities precedent); T2 now consumes the new
+> `juror_pseudonyms` field. T1w is the ONLY `--workspace --features full`
+> task that touches `crates/**` for a data reason (T4a/T4b are the route
+> tasks); it must ship before T2 so the field exists to deserialize.
 
 > **Pre-Shape-G validation:** every impl-task writes a `validate-pending-
 > laptop` DQ entry, commits, pushes, and STOPS. The laptop advisor runs the
@@ -577,6 +627,99 @@ entry with `commands: ["cd services/bridge && cargo check"]`, `branch:
 "phase-m2-rooms-a"`, `phase_task: 1`; commit + push; STOP. Do NOT run cargo
 on the daemon. Laptop advisor confirms exit 0 + the zero-Matrix-deps gate.
 
+### Task 1w: Augment `CaseTransitionEvent` with `juror_pseudonyms` (workspace producer)
+
+> **NEW (DQ `a3d0e9941441-055`, option-a).** Workspace-side task — the ONLY
+> `crates/**` data-shape change in this plan. Closes the T2 juror-sourcing
+> gap: the bridge cannot learn which jurors to invite because the payload it
+> receives carries no identities and the bridge has no workspace-DB access.
+> This task makes the binary producer resolve `jury_assignment ⨝
+> actor_pseudonym` for jury-bound transitions and push the pseudonyms into
+> the event, exactly as the M1 DM-relay pushes `brehon_sender`/
+> `brehon_recipient` (`services/bridge/src/relay.rs:28-36`).
+
+**ACTION:** add a `juror_pseudonyms: Vec<String>` field to
+`CaseTransitionEvent`; populate it at the binary producer
+(`governance_case_after_transition`) for jury-bound transitions from the
+existing `jury_assignment ⨝ actor_pseudonym` data; non-jury transitions leave
+it empty (no fetch).
+
+**FILES:**
+
+```yaml
+modifies:
+  - crates/api/api_common/src/governance.rs   # +pub juror_pseudonyms: Vec<String> on CaseTransitionEvent + doc-comment
+  - crates/api/api_utils/src/bridge_notify.rs # populate juror_pseudonyms for jury-bound new_status; else empty
+creates:
+  # 0 or 1 — ONLY if no existing by-case juror-pseudonym fetch is reachable from the producer's crate (see IMPLEMENT file 3)
+  # - crates/db_schema/src/source/governance/jury_assignment.rs  (extend with a read method) OR an api-side helper
+requires:
+  - task: 1
+    reason: serial dispatch (file-disjoint from T1 but keeps daemon at ≤1 worker); no logical dep on T1's bridge changes
+```
+
+**IMPLEMENT (file 1 of 2):** in `crates/api/api_common/src/governance.rs`,
+add `pub juror_pseudonyms: Vec<String>` to `CaseTransitionEvent` (after
+`target_type`, the last field, lines ~860-866). Derive-clean on
+`Vec<String>` (all of `Debug, Clone, Serialize, Deserialize, PartialEq`
+hold). Update the struct doc-comment: the field carries **pre-resolved
+pseudonymous handles** (e.g. the `Juror-<suffix>` source pseudonyms), NEVER
+usernames/emails/display-names — so the ADR-015 "no real identities cross to
+the bridge" invariant is preserved (the binary resolves to *pseudonyms*; the
+bridge still owns the `Juror-<suffix>` rendering). For non-jury transitions
+the vec is empty. Consider `#[serde(default)]` so older/empty producers
+deserialize cleanly.
+
+**IMPLEMENT (file 2 of 2):** in `crates/api/api_utils/src/bridge_notify.rs`
+`governance_case_after_transition` (lines 53-90), **conditionally** populate
+`juror_pseudonyms`. The function already holds `let pool = &mut
+context.pool();` (line 60) and already does an async DB read before
+constructing the payload (`GovernanceMessagingConfig::read_current`, lines
+60-66) — this fetch mirrors that shape. Gate the fetch on `new_status` being
+a jury-bound transition (the C2.1 path — `CaseStatus::JurySelection` and any
+status under which a jury room is live per the PRD C2.1 scenario; enumerate
+the exact set against the `CaseStatus` enum, do NOT fetch for every
+transition). For jury-bound transitions, fetch the pseudonyms for
+`case.id` and set them; otherwise `juror_pseudonyms: Vec::new()`.
+
+**IMPLEMENT (file 3 — CONDITIONAL, planner resolves at author time):** the
+fetch is `jury_assignment(case_id → person_id)` ⨝ `actor_pseudonym(person_id
+→ pseudonym)` → `Vec<String>`. **Before adding any new code, check
+`crates/api/api/src/governance/actor_pseudonym_helper.rs` for an existing
+by-case juror-pseudonym fetch and reuse it.** CRATE-DIRECTION CAUTION:
+`bridge_notify.rs` is in `api_utils`; `actor_pseudonym_helper.rs` is in
+`api`. Verify `api_utils → api` is a legal dependency edge (it may not be —
+`api` typically depends on `api_utils`, not the reverse). If the helper is
+NOT reachable from `api_utils`, put the read on the `db_schema` source model
+(a method on `JuryAssignment` returning the joined pseudonyms), which BOTH
+crates may call. Resolve this dep-direction question explicitly here; if
+neither path is legal without a new dep edge, raise a `kind: blocker` DQ
+rather than inventing one.
+
+**MIRROR:** `crates/api/api_utils/src/bridge_notify.rs:60-66` (existing async
+DB read before payload construction — the shape to follow for the new fetch);
+`services/bridge/src/relay.rs:28-36` (`BridgeNotifyPayload` carries
+`brehon_sender`/`brehon_recipient` — the payload-carries-identities
+precedent); `crates/db_schema/src/source/governance/jury_assignment.rs:21-24`
++ `actor_pseudonym.rs:20-21` (the join source models).
+
+**GOTCHA:** ADR-015 is load-bearing — resolve to `actor_pseudonym.pseudonym`
+ONLY; if any path would put a real username/email/display-name into
+`juror_pseudonyms`, STOP and raise a blocker. R3 (non-blocking notify) still
+holds: this adds one indexed `case_id` read for jury transitions only — if a
+fan-out / N+1 appears, surface it. R1 (zero-Matrix-deps) UNAFFECTED — the
+field is pure `Vec<String>`, no Matrix types. R2 (zero workspace migrations)
+UNAFFECTED — `jury_assignment` + `actor_pseudonym` already exist (v1-JM-b);
+no schema change. This is workspace Rust → validation is `--workspace
+--features full` (§15.2), NOT `cd services/bridge && cargo check`.
+
+**VALIDATE (write-then-stop, R4):** write a `validate-pending-laptop` DQ
+entry with `commands: ["./scripts/brehon/cargo-check.sh --workspace
+--features full"]`, `branch: "phase-m2-rooms-a"`, `phase_task: "1w"`; commit
++ push; STOP. Do NOT run cargo on the daemon. Laptop advisor confirms exit 0
++ the zero-Matrix-deps gate (`cargo tree --workspace | grep -cE
+'matrix-sdk|ruma'` == 0).
+
 ### Task 2: `room_provisioner.rs` — C2.1 jury room core path + idempotency
 
 **ACTION:** create the provisioner module; wire a `POST /brehon/room-event`
@@ -595,6 +738,8 @@ modifies:
 requires:
   - task: 1
     reason: provisioner uses BridgeConfig new fields + bridge_room::lookup/upsert
+  - task: 1w
+    reason: deserializes the new CaseTransitionEvent.juror_pseudonyms field; the field must exist on the wire before T2 reads it
 ```
 
 **IMPLEMENT (file 1 of 3):** create
@@ -604,11 +749,15 @@ path (transition into jury selection): (a) check `relay_enabled` soft-pause
 gate (§10.4) — skip if false; (b) `bridge_room::lookup(case_id, "jury")` —
 if a row exists, skip (idempotency: `Room::Created` fires exactly once per
 `case_id`+`room_type` even across restart); (c) call
-`provision::create_community_room` (extended) for the jury room; (d) resolve
-each assigned juror via `PuppetMap::ensure_puppet` and invite as
-`Juror-<suffix>`; (e) `bridge_room::upsert` the new room state. NO
-reporter/reported/admin in a jury room (ADR-015). Deserialize the
-`CaseTransition` variant of the payload the binary sends.
+`provision::create_community_room` (extended) for the jury room; (d) **for
+each pseudonym in `event.juror_pseudonyms`** (populated by the binary
+producer in T1w — the bridge does NOT compute these; ADR-015 keeps real
+identities binary-side), call `PuppetMap::ensure_puppet(&pseudonym)` and
+invite as `Juror-<suffix>`. If `event.juror_pseudonyms` is empty on a
+jury-bound transition, log + skip the invite loop (the producer fetch
+returned nothing — non-fatal, ADR-012); (e) `bridge_room::upsert` the new
+room state. NO reporter/reported/admin in a jury room (ADR-015). Deserialize
+the `CaseTransition` variant of the payload the binary sends.
 
 **IMPLEMENT (file 2 of 3):** in `services/bridge/src/appservice.rs`, add a
 `POST /brehon/room-event` route (handler `handle_room_event`) that
@@ -626,7 +775,10 @@ room_provisioner;`.
 **MIRROR:** `services/bridge/src/appservice.rs:144-191`
 (`handle_provision_room`, soft-pause gate); `services/bridge/src/provision.rs`
 (`create_community_room`); `services/bridge/src/puppet.rs`
-(`PuppetMap::ensure_puppet`).
+(`PuppetMap::ensure_puppet`); `services/bridge/src/relay.rs:28-36` +
+relay-handler use of `payload.brehon_sender`/`brehon_recipient` (the
+payload-carries-identities consume pattern — T2's juror loop is the same
+shape over `event.juror_pseudonyms`).
 
 **GOTCHA:** R3 — the notify handler MUST return before any Matrix call. Use
 `tokio::spawn`; the provisioner owns its own error handling (log + swallow,
@@ -939,7 +1091,7 @@ echo "exit: $?"
 # EXPECT: exit 0
 ```
 
-### 15.2 Workspace static analysis (T4a, T4b)
+### 15.2 Workspace static analysis (T1w, T4a, T4b)
 
 ```bash
 ./scripts/brehon/cargo-check.sh --workspace --features full > /tmp/m2-rooms-a-ws-check.log 2>&1
@@ -960,7 +1112,7 @@ cargo tree --workspace 2>/dev/null | grep -cE 'matrix-sdk|ruma'
 # Bridge (T1,T2,T3,T5,T6):
 cd services/bridge && cargo clippy -- -D warnings > /tmp/m2-rooms-a-bridge-clippy.log 2>&1
 echo "exit: $?"   # EXPECT: exit 0
-# Workspace (T4a,T4b):
+# Workspace (T1w,T4a,T4b):
 ./scripts/brehon/cargo-clippy.sh --workspace --features full --no-deps -- -D warnings > /tmp/m2-rooms-a-ws-clippy.log 2>&1
 echo "exit: $?"   # EXPECT: exit 0
 ```
@@ -991,13 +1143,19 @@ echo "exit: $?"
       produces no duplicate `Room::Created`.
 - [ ] Registry const count stays 65 (no new `ENTRY_KIND_*` — this plan
       consumes the existing 10, adds none).
+- [ ] T1w: `CaseTransitionEvent.juror_pseudonyms` carries ONLY
+      `actor_pseudonym.pseudonym` values (ADR-015 — no real
+      usernames/emails/display-names reach the bridge); the producer fetch is
+      gated to jury-bound `new_status` (empty vec otherwise); no workspace
+      migration added (R2 holds); `cargo tree --workspace | grep -cE
+      'matrix-sdk|ruma'` still 0 (R1 holds — the field is pure `Vec<String>`).
 
 ---
 
 ## 16. Acceptance criteria
 
-- [ ] All 9 tasks (T0, T1, T2, T3, T4a, T4b, T5, T6, retro) completed in
-      dependency order.
+- [ ] All 10 tasks (T0, T1, T1w, T2, T3, T4a, T4b, T5, T6, retro) completed
+      in dependency order.
 - [ ] §15.1/15.2 (cargo check) exit 0 after every task (bridge / workspace
       per task).
 - [ ] §15.3 (zero-Matrix-deps) == 0 after every task.
@@ -1024,13 +1182,21 @@ echo "exit: $?"
 
 ### Story 1: Bridge provisions governance rooms with enforced pseudonymity
 
-- **Composing tasks:** Task 1, Task 2, Task 3
-- **Checkpoint command:** `cd services/bridge && cargo check && cargo tree
+- **Composing tasks:** Task 1, Task 1w, Task 2, Task 3
+- **Checkpoint command:** `./scripts/brehon/cargo-check.sh --workspace
+  --features full && cd services/bridge && cargo check && cargo tree
   --workspace 2>/dev/null | grep -cE 'matrix-sdk|ruma'`
-- **Expected output:** `cargo check` exit 0; grep count `0`
+- **Expected output:** workspace `cargo check` exit 0 (T1w field compiles);
+  bridge `cargo check` exit 0; grep count `0`
 - **Brief-Scope outputs to verify** (`/brehon-verify`):
+  - `crates/api/api_common/src/governance.rs` `CaseTransitionEvent` contains
+    `juror_pseudonyms: Vec<String>` (T1w)
+  - `crates/api/api_utils/src/bridge_notify.rs`
+    `governance_case_after_transition` populates `juror_pseudonyms` for
+    jury-bound transitions (T1w)
   - `services/bridge/src/room_provisioner.rs` exists, contains
-    `handle_transition` + match arms for the C2.1–C2.6 scenarios
+    `handle_transition` + match arms for the C2.1–C2.6 scenarios, and its
+    jury-invite loop sources from `event.juror_pseudonyms`
   - `services/bridge/src/bridge_room.rs` exists, contains `lookup` + `upsert`
   - `services/bridge/Cargo.toml` contains `rusqlite`
   - `services/bridge/src/config.rs` `BridgeConfig` contains
