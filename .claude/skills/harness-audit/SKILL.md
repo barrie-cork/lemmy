@@ -95,6 +95,8 @@ For every "high-confidence" recommendation, the report includes:
 - Estimated tokens saved (chars saved ÷ 4).
 - Pi-Coding impact check (grep `.pi/` and `AGENTS.md` for the file's path; report hit count). Zero hits = Pi-safe; non-zero = surface for review before recommending.
 
+**Delete-ledger note (regression-guard contract).** When a high-confidence recommendation is a **file deletion** (rule consolidated elsewhere, not a frontmatter-scope or extract), the report MUST state that applying it requires appending the deleted basename to `.claude/refs/harness-deleted-rules.txt` — the tombstone ledger read by the SessionStart hook `.claude/hooks/harness-regression-guard.sh`. Without the ledger entry, the guard cannot catch a silent re-add (the failure mode harness-audit-2026-06-07 found: the cross-repo sync tool re-shipped 4 consolidated rules; undetected 3 days). The audit itself stays read-only — it records the required ledger line in the report; the user appends it when they apply the deletion.
+
 ## Phase 5: Write the report
 
 Read `helpers/report-template.md` just-in-time. Fill all `<…>` placeholders. Write to `.claude/PRPs/reports/harness-audit-<UTC-date>.md`. Do NOT commit — leave for the user to review and stage.

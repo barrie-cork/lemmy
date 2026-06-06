@@ -38,6 +38,8 @@ Per `feedback_settings_local_json_worktree_bootstrap.md`, `.claude/settings.loca
    }
    ```
 
+   On the **canonical** `brehon-fork` checkout (governance-v0), the `SessionStart` array additionally wires `session-start-multi-lane-check.sh` and `harness-regression-guard.sh`. The regression-guard (added 2026-06-07 per harness-audit-2026-06-07) WARNs if a rule on the delete-ledger `.claude/refs/harness-deleted-rules.txt` reappears as an always-load file — catching silent re-adds by the cross-repo sync tool. It is canonical-checkout-scoped (guards the brehon-fork-only `universal-guards.md` consolidation); phase lanes do not require it unless they do harness-budget work.
+
 7. Open Claude Code in the new worktree CWD. Verify the SessionStart banner shows no `pmd-canonical-guard.sh` WARN. A WARN means the `.mcp.json` `PROJECT_MEMORY_DB` still points at a wrong path — fix it and restart the MCP before writing any retros.
 
 8. **(NEW — v1-federation-inbound-c session 2026-05-21)** Programmatic verification that step 6 actually landed. Step 7 catches `.mcp.json` mispoints (the guard fires and surfaces a WARN); it does NOT catch the case where the wiring itself is missing (no WARN appears because the guard never ran). The two failure modes are distinct: mispointed PMD = guard ran + surfaced; missing wiring = guard never ran + silence. Run from the new lane CWD:
