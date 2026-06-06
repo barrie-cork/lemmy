@@ -6810,6 +6810,33 @@
       "failed_jobs": null,
       "failed_commands": null,
       "id": "d07588989c3c-001"
+    },
+    {
+      "id": "718fc6683a8e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T19:00:00Z",
+      "question": "Does `cd services/bridge && cargo check` pass after cr-5/6/7 fixes?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "CR fix-1: config.rs .expect()->context, room_provisioner oq009 provision-always-false + remove dead oq009_threshold/query_room_event_count fns. Bridge toolchain only. Worker (#635) cancelled due to OOM; advisor applied fixes directly and ran cargo check on laptop.",
+      "answer": "pass — cd services/bridge && cargo check exit 0 on laptop (521e949e3)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T19:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "cr-fix-1",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null
     }
   ]
 }
