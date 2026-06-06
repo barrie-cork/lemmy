@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-rooms-a Task 1 validate-pending-laptop: cd services/bridge && cargo check",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 complete: rusqlite dep added to bridge/Cargo.toml, BridgeConfig extended with 3 fields (brehon_room_event_url, bridge_callback_secret, legal_contact_mxid), bridge_room.rs store created with open/lookup/upsert/set_watermark, mod bridge_room added to main.rs. Waiting for laptop cargo check.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "7d593d3bc09f-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
