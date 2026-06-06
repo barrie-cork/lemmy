@@ -29,33 +29,6 @@
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
       "id": "0566bc2d61f0-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does workspace cargo check pass after adding bridge_read.rs messaging-status route?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T4b complete: bridge_read.rs bearer-authed GET /governance/bridge/messaging-status, BridgeStatus{messaging_enabled,oq009_reveal_threshold}. Workspace toolchain.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "4b",
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "9d80b96935d9-001"
     }
   ],
   "resolved": [
@@ -6756,6 +6729,33 @@
       "log_slice": null,
       "failed_jobs": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "Does workspace cargo check pass after adding bridge_read.rs messaging-status route?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T4b complete: bridge_read.rs bearer-authed GET /governance/bridge/messaging-status, BridgeStatus{messaging_enabled,oq009_reveal_threshold}. Workspace toolchain.",
+      "answer": "Workspace cargo check passed (EXIT:0, 1m43s). bridge_read.rs messaging-status route compiles clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T07:51:16Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "4b",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "9d80b96935d9-001"
     }
   ]
 }
