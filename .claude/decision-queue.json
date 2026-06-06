@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T06:18:35Z",
+      "question": "Does bridge cargo check pass after adding room_provisioner.rs?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T2 complete: room_provisioner.rs created (handle_transition, jury path), POST /brehon/room-event route added to appservice.rs, mod room_provisioner in main.rs. Bridge toolchain only.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "2",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "f0d76f99a08f-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
