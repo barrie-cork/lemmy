@@ -38,8 +38,8 @@
         "fail"
       ],
       "context": "Fix-impl for DQ 6ad0b18d9dac-001: added diesel + diesel-async workspace deps to crates/api/api_utils/Cargo.toml. Commit on phase-m2-rooms-a.",
-      "answer": null,
-      "answered_by": null,
+      "answer": "cargo check failed: JoinOnDsl missing from use diesel block in bridge_notify.rs. Fix: add JoinOnDsl to use diesel::{ExpressionMethods, QueryDsl}",
+      "answered_by": "advisor-laptop",
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null,
@@ -49,10 +49,12 @@
       "branch": "phase-m2-rooms-a",
       "phase_task": "1w-fix",
       "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
+      "result": "fail",
+      "log_slice": "error[E0599]: no method named `on` found for struct actor_pseudonym::table\n  help: trait JoinOnDsl not in scope\n  help: use diesel::JoinOnDsl;\nerror: could not compile lemmy_api_utils due to 1 previous error",
       "failed_jobs": null,
-      "failed_commands": null,
+      "failed_commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
       "id": "f99a71bc9ed4-001"
     }
   ],
