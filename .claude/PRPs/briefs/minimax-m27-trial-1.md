@@ -158,8 +158,15 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m2-core-hook | Task 6 | 5 handler files | `notify.rs:285-306` | ❌ | criterion 4: 5 files > 2 |
 | m2-core-hook | Task 7 | `appeal_window_expiry.rs`+`sponsor_liability_grace.rs` (2 files) | `notify.rs:285-306` + commit-boundary notes | ✅ | cron-site hook wiring |
 | m2-core-hook | Task 8 | `e2e/governance.rs` | — | ❌ | criterion 2: e2e |
+| m2-rooms-a | Task 1 | bridge_room.rs+config.rs+Cargo.toml+main.rs (4 files) | `config.rs:9-44` | ❌ | criterion 4: 4 files > 2 |
+| m2-rooms-a | Task 2 | room_provisioner.rs+appservice.rs+main.rs (3 files) | `appservice.rs:144-191` | ❌ | criterion 4: 3 files > 2 |
+| m2-rooms-a | Task 3 | room_provisioner.rs (1 file) | `appservice.rs:144-158`; `messaging_config.rs:69-83` | ✅ | single-file extend, MIRROR-heavy |
+| m2-rooms-a | Task 4a | bridge_auth.rs+room_event_handler.rs+mod.rs+routes/lib.rs (4 files) | `messaging_config.rs:160-183`; `appservice.rs:52-90` | ❌ | criterion 4: 4 files > 2 |
+| m2-rooms-a | Task 4b | bridge_read.rs+mod.rs+lib.rs (3 files) | `messaging_config.rs:160-183` | ❌ | criterion 4: 3 files > 2 |
+| m2-rooms-a | Task 5 | room_provisioner.rs+soft_pause.rs (2 files) | `soft_pause.rs:34-41`; `bridge_notify.rs:38-45` | ✅ | 2-file, MIRROR-heavy, bearer-add |
+| m2-rooms-a | Task 6 | room_provisioning.rs+dm_round_trip.rs (2 files) | `dm_round_trip.rs` `#[ignore]` pattern | ✅ | test-compile gated; `cargo test --no-run` |
 
-**Running total: 8 ✅ qualifying** (m1-b Tasks 3,4,5 = 3; m2-core-hook Tasks 1,2,3,5,7 = 5). **Crosses the ≥5 threshold** — trial fires this phase per §0.1 (the rolling trigger is now met without needing the prior user override).
+**Running total: 11 ✅ qualifying** (m1-b Tasks 3,4,5 = 3; m2-core-hook Tasks 1,2,3,5,7 = 5). **Crosses the ≥5 threshold** — trial fires this phase per §0.1 (the rolling trigger is now met without needing the prior user override).
 
 **TRIAL FIRES THIS PHASE — user override 2026-06-04** (`feedback_minimax_trial_run_below_threshold_on_user_override.md`): user waived the ≥5 cumulative gate (*"Run trial for eligble tasks, even if below 5/5… We need to get AB tests result"*). The 3 eligible tasks (m1-b 3,4,5) run BOTH arms per §2.3 on throwaway `ab-test/m1-b-t{3,4,5}-{sonnet,minimax}` branches off `phase-m1-b` AFTER real Tasks 1+2 land (Task 3 `requires:2`, 4 `requires:2,3`, 5 `requires:4`). Real pipeline stays Sonnet on `phase-m1-b`; trial never gates shipping. Results → `minimax-m27-trial-results.md`.
 
