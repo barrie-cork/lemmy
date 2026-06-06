@@ -1,3 +1,9 @@
+---
+name: Trace the data-flow precedent before proposing how to supply missing data
+description: When a plan step assumes a consumer has a piece of data it does not actually receive, trace how that same consumer obtains its OTHER data today BEFORE proposing any mechanism to supply the missing data. The precedent both confirms the gap is real and dictates the shape of the correct fix. Origin m2-rooms-a T2 2026-06-06 (DQ a3d0e9941441-055): CaseTransitionEvent carried no juror identities but plan §13 T2 required inviting jurors; the M1 relay.rs binary-pushes-identities precedent confirmed the gap and showed augment-the-payload (not a new GET-back route) was the precedent-consistent fix. Fires at brief-authoring/plan-gap-detection time in the advisor session.
+type: feedback
+---
+
 # Trace the data-flow precedent before proposing how to supply missing data
 
 **Class:** advisor session discipline (plan-gap detection + seam design)
