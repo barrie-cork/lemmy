@@ -1,90 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "m2-rooms-a Task 1w validate-pending-laptop: cargo check --workspace --features full",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1w complete: CaseTransitionEvent gains juror_pseudonyms (serde default), bridge_notify.rs adds fetch_juror_pseudonyms free fn (jury_assignment INNER JOIN actor_pseudonym) + populates for JurySelection. Workspace toolchain. Waiting for laptop --workspace --features full check.",
-      "answer": "cargo check failed: diesel + diesel_async not declared in api_utils/Cargo.toml (E0432 x2); E0599 cascade (missing trait imports). Fix: add workspace deps to Cargo.toml. use block is correct.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w",
-      "result": "fail",
-      "log_slice": "error[E0432]: unresolved import `diesel`\n --> crates/api/api_utils/src/bridge_notify.rs:2:5\nerror[E0432]: unresolved import `diesel_async`\n --> crates/api/api_utils/src/bridge_notify.rs:3:5\nerror[E0599]: no method named `inner_join` (QueryDsl not in scope)\nerror[E0599]: no method named `on` (JoinOnDsl not in scope)\nerror[E0599]: ExpressionMethods not in scope (2x)\nerror: could not compile `lemmy_api_utils` (lib) due to 6 previous errors\nROOT: diesel + diesel_async missing from crates/api/api_utils/Cargo.toml",
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "id": "6ad0b18d9dac-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does workspace cargo check pass after adding diesel deps to api_utils?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Fix-impl for DQ 6ad0b18d9dac-001: added diesel + diesel-async workspace deps to crates/api/api_utils/Cargo.toml. Commit on phase-m2-rooms-a.",
-      "answer": "cargo check failed: JoinOnDsl missing from use diesel block in bridge_notify.rs. Fix: add JoinOnDsl to use diesel::{ExpressionMethods, QueryDsl}",
-      "answered_by": "advisor-laptop",
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w-fix",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "error[E0599]: no method named `on` found for struct actor_pseudonym::table\n  help: trait JoinOnDsl not in scope\n  help: use diesel::JoinOnDsl;\nerror: could not compile lemmy_api_utils due to 1 previous error",
-      "failed_jobs": null,
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "id": "f99a71bc9ed4-001"
-    },
-    {
-      "id": "ee6325ec1c71-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T05:58:20Z",
-      "question": "Does workspace cargo check pass after adding JoinOnDsl to bridge_notify.rs?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Fix-impl-2: added JoinOnDsl to use diesel block in bridge_notify.rs. This was the last remaining E0599 after fix-impl-1 added the Cargo.toml deps.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w-fix-2",
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6619,6 +6535,89 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "7d593d3bc09f-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-rooms-a Task 1w validate-pending-laptop: cargo check --workspace --features full",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1w complete: CaseTransitionEvent gains juror_pseudonyms (serde default), bridge_notify.rs adds fetch_juror_pseudonyms free fn (jury_assignment INNER JOIN actor_pseudonym) + populates for JurySelection. Workspace toolchain. Waiting for laptop --workspace --features full check.",
+      "answer": "cargo check failed: diesel + diesel_async not declared in api_utils/Cargo.toml (E0432 x2); E0599 cascade (missing trait imports). Fix: add workspace deps to Cargo.toml. use block is correct.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T06:08:41Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "1w",
+      "result": "fail",
+      "log_slice": "error[E0432]: unresolved import `diesel`\n --> crates/api/api_utils/src/bridge_notify.rs:2:5\nerror[E0432]: unresolved import `diesel_async`\n --> crates/api/api_utils/src/bridge_notify.rs:3:5\nerror[E0599]: no method named `inner_join` (QueryDsl not in scope)\nerror[E0599]: no method named `on` (JoinOnDsl not in scope)\nerror[E0599]: ExpressionMethods not in scope (2x)\nerror: could not compile `lemmy_api_utils` (lib) due to 6 previous errors\nROOT: diesel + diesel_async missing from crates/api/api_utils/Cargo.toml",
+      "failed_commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "id": "6ad0b18d9dac-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "Does workspace cargo check pass after adding diesel deps to api_utils?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Fix-impl for DQ 6ad0b18d9dac-001: added diesel + diesel-async workspace deps to crates/api/api_utils/Cargo.toml. Commit on phase-m2-rooms-a.",
+      "answer": "cargo check failed: JoinOnDsl missing from use diesel block in bridge_notify.rs. Fix: add JoinOnDsl to use diesel::{ExpressionMethods, QueryDsl}",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T06:08:41Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "1w-fix",
+      "workflow_run_id": null,
+      "result": "fail",
+      "log_slice": "error[E0599]: no method named `on` found for struct actor_pseudonym::table\n  help: trait JoinOnDsl not in scope\n  help: use diesel::JoinOnDsl;\nerror: could not compile lemmy_api_utils due to 1 previous error",
+      "failed_jobs": null,
+      "failed_commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "id": "f99a71bc9ed4-001"
+    },
+    {
+      "id": "ee6325ec1c71-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T05:58:20Z",
+      "question": "Does workspace cargo check pass after adding JoinOnDsl to bridge_notify.rs?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Fix-impl-2: added JoinOnDsl to use diesel block in bridge_notify.rs. This was the last remaining E0599 after fix-impl-1 added the Cargo.toml deps.",
+      "answer": "cargo check --workspace --features full: PASS. All 3 fixes applied: diesel dep (Cargo.toml), diesel-async dep (Cargo.toml), JoinOnDsl in use block.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T06:08:41Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "1w-fix-2",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null
     }
   ]
 }
