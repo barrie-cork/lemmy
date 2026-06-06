@@ -11,8 +11,8 @@
         "fail"
       ],
       "context": "Task 1w complete: CaseTransitionEvent gains juror_pseudonyms (serde default), bridge_notify.rs adds fetch_juror_pseudonyms free fn (jury_assignment INNER JOIN actor_pseudonym) + populates for JurySelection. Workspace toolchain. Waiting for laptop --workspace --features full check.",
-      "answer": null,
-      "answered_by": null,
+      "answer": "cargo check failed: diesel + diesel_async not declared in api_utils/Cargo.toml (E0432 x2); E0599 cascade (missing trait imports). Fix: add workspace deps to Cargo.toml. use block is correct.",
+      "answered_by": "advisor-laptop",
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null,
@@ -21,9 +21,11 @@
       ],
       "branch": "phase-m2-rooms-a",
       "phase_task": "1w",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
+      "result": "fail",
+      "log_slice": "error[E0432]: unresolved import `diesel`\n --> crates/api/api_utils/src/bridge_notify.rs:2:5\nerror[E0432]: unresolved import `diesel_async`\n --> crates/api/api_utils/src/bridge_notify.rs:3:5\nerror[E0599]: no method named `inner_join` (QueryDsl not in scope)\nerror[E0599]: no method named `on` (JoinOnDsl not in scope)\nerror[E0599]: ExpressionMethods not in scope (2x)\nerror: could not compile `lemmy_api_utils` (lib) due to 6 previous errors\nROOT: diesel + diesel_async missing from crates/api/api_utils/Cargo.toml",
+      "failed_commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
       "id": "6ad0b18d9dac-001"
     }
   ],
