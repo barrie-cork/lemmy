@@ -53,17 +53,25 @@ pub(crate) async fn shares_active_sponsor(
   Ok(row.present)
 }
 
-/// Returns `true` when `>50%` of the supplied panel shares a single active
+/// Returns `true` when `>50%` of the supplied panel shares a common upstream
 /// sponsor. PRD §5.1 hard constraint — used by v1-JM-b's 3-phase
 /// select_eligible_jurors as the Phase-2 re-roll trigger and by later
 /// sub-phases as the cross-juror cluster invariant.
 ///
-/// Implementation: one grouped self-join on `surety`, producing the max
-/// cluster size across all sponsors that cover at least one panel member.
+/// "Shares a common upstream sponsor" is the same pairwise relation as
+/// [`shares_active_sponsor`]: two members A and B are in the same cluster
+/// when any `surety` row exists for both with the same `sponsor_id`. This
+/// function counts, for each sponsor, how many panel members share that
+/// sponsor — matching the pairwise semantics via a self-join on `surety`
+/// — and checks whether the largest such cluster reaches a majority.
+///
 /// Majority threshold is `(len/2)+1` for the common odd panel sizes (5/7/9).
 /// `len < 2` returns `Ok(false)` because a one-person panel cannot have a
 /// majority cluster by definition (and the `(1/2)+1 = 1` threshold would
 /// always be satisfied by one sponsor covering that lone member).
+///
+/// Note: PostgreSQL allows `$1` to appear multiple times in a prepared
+/// statement; both positions in the WHERE clause bind to the same array.
 pub(crate) async fn panel_has_sponsor_majority_cluster(
   conn: &mut AsyncPgConnection,
   person_ids: &[PersonId],
@@ -75,11 +83,14 @@ pub(crate) async fn panel_has_sponsor_majority_cluster(
 
   let row: ClusterCountRow = sql_query(
     "SELECT COALESCE(MAX(c), 0) AS max_shared FROM ( \
-       SELECT s.sponsor_id, COUNT(DISTINCT s.sponsored_id) AS c \
-       FROM surety s \
-       WHERE s.sponsored_id = ANY($1) \
-         AND s.revoked_at IS NULL \
-       GROUP BY s.sponsor_id \
+       SELECT s1.sponsor_id, COUNT(DISTINCT s1.sponsored_id) AS c \
+       FROM surety s1 \
+       JOIN surety s2 ON s1.sponsor_id = s2.sponsor_id \
+       WHERE s1.sponsored_id = ANY($1) \
+         AND s2.sponsored_id = ANY($1) \
+         AND s1.revoked_at IS NULL \
+         AND s2.revoked_at IS NULL \
+       GROUP BY s1.sponsor_id \
      ) t",
   )
   .bind::<Array<Integer>, _>(ids_bind)
