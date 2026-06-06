@@ -191,7 +191,7 @@ async fn process_assignment(
   //    unfiltered shape if the strict filter under-fills after the R1 cooldown relaxation and
   //    `jury.fallback_on_small_pool` is true.
   let (eligible, constraint_record) =
-    select_eligible_jurors(conn, &case, panel_size, None, &mut cache).await?;
+    select_eligible_jurors(conn, &case, panel_size, None, &mut cache, None).await?;
   let eligible_count = i64::try_from(eligible.len())
     .map_err(|_e| LemmyErrorType::Unknown("eligible count overflow".to_string()))?;
   if eligible_count < panel_size {
@@ -463,12 +463,19 @@ impl ConstraintRecord {
 /// `panel_size` argument is computed by the caller (via
 /// `config::get_int_cascade` in v1-JM-b Task 5, or via `get_int` on
 /// `jury.panel_size` for the v0-compatible callers).
+///
+/// `context` tags relaxation audit rows with a call-site label so audit
+/// readers can distinguish replacement/appeal re-relaxations from the
+/// original panel-assembly relaxations. Pass `None` for original assembly,
+/// `Some("replacement")` for decline-replacement picks, and
+/// `Some("appeal")` for appeal-panel assembly.
 pub(crate) async fn select_eligible_jurors(
   conn: &mut diesel_async::AsyncPgConnection,
   case: &ModerationCase,
   panel_size: i64,
   exclude_person_ids: Option<&[PersonId]>,
   cache: &mut ConfigCache,
+  context: Option<&'static str>,
 ) -> LemmyResult<(Vec<PersonId>, ConstraintRecord)> {
   // Constraint toggles — JM-a seeded defaults cover every key.
   let cooldown_enabled = config::get_bool(
@@ -594,10 +601,12 @@ pub(crate) async fn select_eligible_jurors(
       case,
       "no_recent_juror_repeat",
       JuryConstraintRelaxationReason::SmallPool,
-      json!({
-        "phase": "pool_build",
-        "dropped_constraint_name": "no_recent_juror_repeat",
-      }),
+      context.map_or_else(
+        || json!({"phase": "pool_build", "dropped_constraint_name": "no_recent_juror_repeat"}),
+        |ctx| {
+          json!({"phase": "pool_build", "dropped_constraint_name": "no_recent_juror_repeat", "context": ctx})
+        },
+      ),
       i32::try_from(pool.len()).unwrap_or(i32::MAX),
       i32::try_from(panel_size).unwrap_or(i32::MAX),
     )
@@ -705,10 +714,14 @@ pub(crate) async fn select_eligible_jurors(
       case,
       "geographic_diversity_preferred",
       JuryConstraintRelaxationReason::ClusterPressure,
-      json!({
-        "phase": "panel_sample",
-        "dropped_constraint_name": "geographic_diversity_preferred",
-      }),
+      context.map_or_else(
+        || {
+          json!({"phase": "panel_sample", "dropped_constraint_name": "geographic_diversity_preferred"})
+        },
+        |ctx| {
+          json!({"phase": "panel_sample", "dropped_constraint_name": "geographic_diversity_preferred", "context": ctx})
+        },
+      ),
       i32::try_from(pool.len()).unwrap_or(i32::MAX),
       i32::try_from(panel_size).unwrap_or(i32::MAX),
     )
@@ -749,10 +762,14 @@ pub(crate) async fn select_eligible_jurors(
     case,
     "no_majority_from_same_sponsor_cluster",
     JuryConstraintRelaxationReason::ClusterPressureExhausted,
-    json!({
-      "phase": "panel_sample",
-      "dropped_constraint_name": "no_majority_from_same_sponsor_cluster",
-    }),
+    context.map_or_else(
+      || {
+        json!({"phase": "panel_sample", "dropped_constraint_name": "no_majority_from_same_sponsor_cluster"})
+      },
+      |ctx| {
+        json!({"phase": "panel_sample", "dropped_constraint_name": "no_majority_from_same_sponsor_cluster", "context": ctx})
+      },
+    ),
     i32::try_from(pool.len()).unwrap_or(i32::MAX),
     i32::try_from(panel_size).unwrap_or(i32::MAX),
   )
@@ -1149,6 +1166,7 @@ pub async fn select_appeal_panel(
     i64::from(appeal_panel_size),
     Some(&original_juror_ids),
     cache,
+    Some("appeal"),
   )
   .await?;
 
