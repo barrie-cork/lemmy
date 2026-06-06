@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "cargo check --workspace --features full on governance-fix-med-1 worker branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Three-fix commit series: Fix D reconciles panel_has_sponsor_majority_cluster semantics with self-join SQL (#188), Fix E corrects geographic_diversity_score denominator to history_count (#189), Fix F adds context param to select_eligible_jurors to tag replacement/appeal relaxation audit rows (#190). All three cargo checks passed exit 0 locally.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-governance-fix-med-1-see-claude-prps-briefs-governance-v0-fix-impl-med-1-md-636",
+      "phase_task": "governance-fix-med-1",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b2fcddebf2f8-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",

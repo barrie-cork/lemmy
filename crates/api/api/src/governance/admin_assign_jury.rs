@@ -191,7 +191,7 @@ async fn process_assignment(
   //    unfiltered shape if the strict filter under-fills after the R1 cooldown relaxation and
   //    `jury.fallback_on_small_pool` is true.
   let (eligible, constraint_record) =
-    select_eligible_jurors(conn, &case, panel_size, None, &mut cache).await?;
+    select_eligible_jurors(conn, &case, panel_size, None, &mut cache, None).await?;
   let eligible_count = i64::try_from(eligible.len())
     .map_err(|_e| LemmyErrorType::Unknown("eligible count overflow".to_string()))?;
   if eligible_count < panel_size {
@@ -463,12 +463,19 @@ impl ConstraintRecord {
 /// `panel_size` argument is computed by the caller (via
 /// `config::get_int_cascade` in v1-JM-b Task 5, or via `get_int` on
 /// `jury.panel_size` for the v0-compatible callers).
+///
+/// `context` tags relaxation audit rows with a call-site label so audit
+/// readers can distinguish replacement/appeal re-relaxations from the
+/// original panel-assembly relaxations. Pass `None` for original assembly,
+/// `Some("replacement")` for decline-replacement picks, and
+/// `Some("appeal")` for appeal-panel assembly.
 pub(crate) async fn select_eligible_jurors(
   conn: &mut diesel_async::AsyncPgConnection,
   case: &ModerationCase,
   panel_size: i64,
   exclude_person_ids: Option<&[PersonId]>,
   cache: &mut ConfigCache,
+  context: Option<&'static str>,
 ) -> LemmyResult<(Vec<PersonId>, ConstraintRecord)> {
   // Constraint toggles — JM-a seeded defaults cover every key.
   let cooldown_enabled = config::get_bool(
@@ -594,10 +601,12 @@ pub(crate) async fn select_eligible_jurors(
       case,
       "no_recent_juror_repeat",
       JuryConstraintRelaxationReason::SmallPool,
-      json!({
-        "phase": "pool_build",
-        "dropped_constraint_name": "no_recent_juror_repeat",
-      }),
+      context.map_or_else(
+        || json!({"phase": "pool_build", "dropped_constraint_name": "no_recent_juror_repeat"}),
+        |ctx| {
+          json!({"phase": "pool_build", "dropped_constraint_name": "no_recent_juror_repeat", "context": ctx})
+        },
+      ),
       i32::try_from(pool.len()).unwrap_or(i32::MAX),
       i32::try_from(panel_size).unwrap_or(i32::MAX),
     )
@@ -705,10 +714,14 @@ pub(crate) async fn select_eligible_jurors(
       case,
       "geographic_diversity_preferred",
       JuryConstraintRelaxationReason::ClusterPressure,
-      json!({
-        "phase": "panel_sample",
-        "dropped_constraint_name": "geographic_diversity_preferred",
-      }),
+      context.map_or_else(
+        || {
+          json!({"phase": "panel_sample", "dropped_constraint_name": "geographic_diversity_preferred"})
+        },
+        |ctx| {
+          json!({"phase": "panel_sample", "dropped_constraint_name": "geographic_diversity_preferred", "context": ctx})
+        },
+      ),
       i32::try_from(pool.len()).unwrap_or(i32::MAX),
       i32::try_from(panel_size).unwrap_or(i32::MAX),
     )
@@ -749,10 +762,14 @@ pub(crate) async fn select_eligible_jurors(
     case,
     "no_majority_from_same_sponsor_cluster",
     JuryConstraintRelaxationReason::ClusterPressureExhausted,
-    json!({
-      "phase": "panel_sample",
-      "dropped_constraint_name": "no_majority_from_same_sponsor_cluster",
-    }),
+    context.map_or_else(
+      || {
+        json!({"phase": "panel_sample", "dropped_constraint_name": "no_majority_from_same_sponsor_cluster"})
+      },
+      |ctx| {
+        json!({"phase": "panel_sample", "dropped_constraint_name": "no_majority_from_same_sponsor_cluster", "context": ctx})
+      },
+    ),
     i32::try_from(pool.len()).unwrap_or(i32::MAX),
     i32::try_from(panel_size).unwrap_or(i32::MAX),
   )
@@ -887,15 +904,19 @@ async fn sample_panel(
 struct DistinctCommunityRow {
   #[diesel(sql_type = BigInt)]
   distinct_count: i64,
+  #[diesel(sql_type = BigInt)]
+  history_count: i64,
 }
 
 /// v1-JM-b PRD §5.3 Phase 3 soft geographic-diversity score. Returns the
-/// fraction `COUNT(DISTINCT moderation_case.community_id) / panel_size`
-/// across the sample's prior jury-assignment history: `0.0` when every
-/// sampled juror has only served one community (or no community at all —
-/// the bootstrapping case); up to `1.0` when every juror has served a
-/// distinct community. Used as a re-roll tiebreaker in Phase 2 of
-/// [`select_eligible_jurors`].
+/// fraction `COUNT(DISTINCT moderation_case.community_id) / history_count`
+/// where `history_count` is the count of jurors in the sample that have at
+/// least one prior assignment. Using jurors-with-history as the denominator
+/// avoids biasing toward panels with more experienced jurors: a panel where
+/// only 2/5 have history but those 2 served entirely distinct communities
+/// correctly scores 1.0 rather than 0.4. Returns `0.0` when no juror in the
+/// sample has prior history (bootstrapping case). Used as a re-roll
+/// tiebreaker in Phase 2 of [`select_eligible_jurors`].
 ///
 /// Per PRD §OQ-V1-JM-02 lean, the full timezone-aware heuristic is v1.5;
 /// v1-JM-b ships this community-distinct stub and gets the soft-bias
@@ -903,7 +924,7 @@ struct DistinctCommunityRow {
 #[expect(
   clippy::as_conversions,
   clippy::cast_precision_loss,
-  reason = "distinct_count is COUNT(DISTINCT community_id) and sample.len() ≤ jury.panel_size (≤ 20 per PRD §5.3); neither approaches 2^53"
+  reason = "distinct_count is COUNT(DISTINCT community_id) and history_count is COUNT(DISTINCT person_id with history); both ≤ jury.panel_size (≤ 20 per PRD §5.3); neither approaches 2^53"
 )]
 async fn geographic_diversity_score(
   conn: &mut diesel_async::AsyncPgConnection,
@@ -914,7 +935,8 @@ async fn geographic_diversity_score(
   }
   let ids_bind: Vec<i32> = sample.iter().map(|p| p.0).collect();
   let row: DistinctCommunityRow = sql_query(
-    "SELECT COUNT(DISTINCT mc.community_id) AS distinct_count \
+    "SELECT COUNT(DISTINCT mc.community_id) AS distinct_count, \
+            COUNT(DISTINCT ja.person_id) AS history_count \
      FROM jury_assignment ja \
      INNER JOIN moderation_case mc ON mc.id = ja.case_id \
      WHERE ja.person_id = ANY($1) \
@@ -923,7 +945,10 @@ async fn geographic_diversity_score(
   .bind::<Array<Integer>, _>(ids_bind)
   .get_result(conn)
   .await?;
-  Ok((row.distinct_count as f64) / (sample.len() as f64))
+  if row.history_count == 0 {
+    return Ok(0.0);
+  }
+  Ok((row.distinct_count as f64) / (row.history_count as f64))
 }
 
 /// Emit a constraint-relaxation audit inside the caller's
@@ -1141,6 +1166,7 @@ pub async fn select_appeal_panel(
     i64::from(appeal_panel_size),
     Some(&original_juror_ids),
     cache,
+    Some("appeal"),
   )
   .await?;
 

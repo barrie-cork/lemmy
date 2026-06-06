@@ -174,6 +174,7 @@ async fn process_decline(
     panel_size,
     Some(&exclude_person_ids),
     &mut cache,
+    Some("replacement"),
   )
   .await?;
   let replacement_id = replacements.into_iter().next();

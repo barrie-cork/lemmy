@@ -247,7 +247,7 @@ async fn process_emergency_remove(
   )?;
 
   let (eligible, record) =
-    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache)
+    admin_assign_jury::select_eligible_jurors(conn, &case_row, panel_size, None, &mut cache, None)
       .await?;
 
   // 3a. Snapshot the resolved tier + counts onto the case row. Mirrors
