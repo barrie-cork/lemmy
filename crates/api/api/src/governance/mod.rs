@@ -28,6 +28,7 @@ pub mod admin_trigger_appeal_rejury;
 pub mod appeal_window_expiry;
 pub(crate) mod audit_projection;
 pub mod bridge_auth;
+pub mod bridge_read;
 pub mod case_open_snapshot;
 pub mod config;
 pub mod decline_jury_assignment;
