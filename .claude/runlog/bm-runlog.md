@@ -2271,3 +2271,10 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** approved
 - **Commit:** b6015557c on phase-m1-a
 - **False-positive note:** Findings YAML at .claude/PRPs/reviews/ blocked by sensitive-file classifier. Same class as WATCH issue_note_sensitive_file_false_positive_debug_dir.md — promote to lesson if recurs.
+
+## bm: PR opened — 2026-06-06T00:00:00Z
+- **PR:** #191 — Phase m2-rooms-a — M2 Matrix room provisioning + hash-chain emission (bridge + workspace, 8 tasks)
+- **URL:** https://github.com/barrie-cork/lemmy/pull/191
+- **Base ← Head:** governance-v0 ← phase-m2-rooms-a
+- **Body source:** plan + commit log
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 191`
