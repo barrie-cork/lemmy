@@ -32,3 +32,13 @@
 - advisor: T2 impl brief authored + synced to phase branch. /precheck PASS. Junior #625 dispatched.
 - advisor: #625 done (8.5 min). Bridge cargo check PASS (exit 0, 6 dead_code warnings, no errors, 3m14s). f0d76f99a08f-001 resolved. phase-m2-rooms-a @ cb2e34b2a.
 - NEXT: author + dispatch T3 (hash-chain emission via append_room_event).
+
+## 2026-06-06 — T3→T6 + bm-pr + CR triage
+
+- advisor: T3 #626 PASS (16 min). T4a #627 §G4 fix #629 PASS. T4b #630 PASS. T5 #631 PASS. T6 #632 PASS. All 8 tasks done. phase-m2-rooms-a @ 76e2f2f2d.
+- advisor: /brehon-verify m2-rooms-a — all 3 stories (report 65f059f62). governance-v0 divergence resolved (governance-fix-high-1 cherry-picked via git am).
+- advisor: PR #191 opened (bm-pr #633, 3.5 min): https://github.com/barrie-cork/lemmy/pull/191
+- advisor: DQ 24fab40b3af2-001 resolved (stale worker-branch validate-pending-laptop; fixes already on gov-v0).
+- advisor: CR 6 actionable comments → 8 findings: fix-in-pr 3 (cr-5/6/7), rebut 5 (cr-1/2/3/4/8). Gate 3 APPROVED.
+- advisor: cr-fix-1 brief authored (m2-rooms-a-fix-impl-cr-1.md). /precheck PASS (Sat 13:05 UTC, 4.7 GB, SYNC). Junior #635 dispatched.
+- NEXT: poll #635 → validate-pending-laptop DQ → `cd services/bridge && cargo check` on laptop → pass → bm-merge.
