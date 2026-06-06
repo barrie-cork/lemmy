@@ -1,6 +1,25 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "advisor",
+      "kind": "blocker",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-rooms-a T2 jury-room provisioning is unimplementable as scoped: the CaseTransitionEvent the bridge receives carries only case_id/old_status/new_status/community_id/target_type (no juror identities), the bridge has no DB access, and plan §13 T2 step (d) requires inviting 'the 5 assigned jurors as Juror-<suffix>'. How should the bridge learn which jurors to invite?",
+      "options": [
+        "option-a: augment CaseTransitionEvent with juror_pseudonyms: Vec<String> populated at notify-fire time from jury_assignment ⨝ actor_pseudonym (matches the M1 relay.rs precedent where the binary sends brehon_sender/brehon_recipient in the payload). Re-scope T2 to add crates/api/api_common/src/governance.rs + crates/api/api_utils/src/bridge_notify.rs, changing T2's validation to --workspace --features full (crosses the bridge-only toolchain boundary the plan drew).",
+        "option-b: bridge fetches jurors via a NEW GET /governance/bridge/case/{id}/jurors bearer-authed route; fold into T4b. Keeps T2 bridge-side but adds a 3rd binary route + a network round-trip on the provisioning path and contradicts the no-GET-back M1 model.",
+        "option-c: re-scope so the binary computes jurors and the existing append_room_event / notify path carries them another way (planner to specify)."
+      ],
+      "context": "Verified against phase-m2-rooms-a HEAD 56de6da77: CaseTransitionEvent (crates/api/api_common/src/governance.rs:860-866) has integer/enum fields only — its doc-comment explicitly says 'no usernames/emails (the bridge owns pseudonym resolution)'. PuppetMap::ensure_puppet(brehon_user: &str) needs a per-juror identity string. jury_assignment (case_id→person_id) ⨝ actor_pseudonym (person_id→pseudonym: String) is the only source of Juror-<suffix> handles, and both tables are workspace-side (no bridge access). The M1 DM-relay precedent (services/bridge/src/relay.rs:28-36 BridgeNotifyPayload) has the binary push brehon_sender/brehon_recipient into the payload; the bridge never GETs identities back. None of the 4 clarify-DQs (a3d0e9941441-051/-052/-053/-054) addressed juror sourcing. The headline acceptance criterion (plan §1, §16a Story 1) 'exactly the 5 assigned jurors appear as Juror-<suffix>' cannot be met as the plan is scoped. Advisor declines to decide this seam in a brief because it changes T2 scope + crosses the deliberate bridge-only/workspace toolchain split (plan §5.2, R8). Surfacing to planner per user direction 2026-06-06.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-055"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
