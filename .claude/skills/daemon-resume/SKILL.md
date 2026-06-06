@@ -35,7 +35,7 @@ Run this skill as the first task when re-enabling a paused Junior daemon. It val
 ### 3. Shared skills verification
 
 1. List `.claude/skills/` — confirm post-task-retro and weekly-review exist
-2. List `.claude/rules/` — confirm post-task-retro.md rule exists
+2. List `.claude/rules/` — confirm `universal-guards.md` exists (on brehon-fork it consolidates circuit-breaker + escalation + integrator + post-task-retro; the standalone files are intentionally absent here and excluded from sync per `sync-shared-skills.sh` RULE_EXCLUDE)
 3. If any are missing, note: "Shared skills/rules out of sync — run sync-shared-skills.sh from Mac"
 
 ### 4. MCP config check
