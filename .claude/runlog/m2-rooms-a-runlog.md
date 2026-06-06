@@ -64,4 +64,6 @@
 - advisor: governance-v0 divergence resolved — daemon had governance-fix-high-1 (nonce retract, old_status txn, decline guard) unpushed; 5 commits cherry-picked via `git am` onto laptop, pushed to origin, daemon synced. gov-v0 @ e1b48d266.
 - advisor: bm-pr brief authored (m2-rooms-a-bm-pr-1.md), gov-v0 @ 2a9461a45. /precheck PASS (Sat 08:50 UTC, 9.8 GB, SYNC).
 - advisor: dispatched bm-pr as Junior #633 (running, base_branch=governance-v0).
-- NEXT: poll #633 → PR URL → bm-poll-cr after ~10min → bm-triage → CR triage gate → bm-merge.
+- advisor: #633 done (3.5 min). PR #191 opened: https://github.com/barrie-cork/lemmy/pull/191 (Phase m2-rooms-a — M2 Matrix room provisioning + hash-chain emission). Base governance-v0 ← phase-m2-rooms-a @ 76e2f2f2d. Note: pr-191-findings.yaml write BLOCKED by sensitive-file classifier (3rd recurrence — MEMORY.md action-needed).
+- advisor: DQ 24fab40b3af2-001 (governance-fix-high-1 validate-pending-laptop) resolved as pass — stale worker-branch DQ; fixes already on gov-v0 via git am cherry-picks; /brehon-verify Story 1 cargo check EXIT 0 confirms.
+- NEXT: bm-poll-cr after ~10min → bm-triage → CR triage gate (user gate 3) → bm-merge.
