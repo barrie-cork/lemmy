@@ -96,7 +96,7 @@ subscriber in m2-late scope is the bridge (Matrix).
 | File | Anchor | Purpose |
 |---|---|---|
 | `crates/api/api/src/governance/submit_jury_vote.rs:453-472` | `if let Some((scope, action)) = map_decision_to_sanction(winning_decision)` block | Emission point — `enqueue_sanction_event` call goes here, after the `"sanction_created"` log append at ~472 |
-| `crates/db_schema_file/src/enums.rs:560-577` | `SanctionAction` enum | Source for the `SanctionAction → SanctionKind` mapping. Seven variants: Label, VisibilityReduction, TemporaryRestriction, ContentRemoval, CommunityExclusion, InstanceSuspension, FederationQuarantineRecommendation, Restoration |
+| `crates/db_schema_file/src/enums.rs:560-577` | `SanctionAction` enum | Source for the `SanctionAction → SanctionKind` mapping. **Eight variants** (clarify DQ resolved 2026-06-07): Label, VisibilityReduction, TemporaryRestriction, ContentRemoval, CommunityExclusion, InstanceSuspension, FederationQuarantineRecommendation, Restoration. WP-1 mapping covers all 8. |
 | `crates/api/api/src/governance/bridge_auth.rs:6-18` | `verify_bridge_secret` fn | Existing BRIDGE_CALLBACK_SECRET bearer-auth pattern — mirror for new bridge endpoint |
 | `crates/api/api/src/governance/room_event_handler.rs` | `handle_room_event` fn | T4a pattern: bridge_auth first line, then body |
 | `crates/api/routes/src/lib.rs:481-484` | `scope("/governance")` block | Pattern for new governance route registration; new bridge endpoint goes at POST `/brehon/sanction-event` on the BRIDGE side (axum), NOT here |

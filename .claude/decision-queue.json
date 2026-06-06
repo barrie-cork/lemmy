@@ -6595,6 +6595,23 @@
       "resolved_at": "2026-06-06T23:20:47Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "a3d0e9941441-057",
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-06T23:23:52Z",
+      "question": "SanctionAction enum has 7 or 8 variants? Brief §2 anchor said 7; actual enums.rs:560 has 8 (Label, VisibilityReduction, TemporaryRestriction, ContentRemoval, CommunityExclusion, InstanceSuspension, FederationQuarantineRecommendation, Restoration). WP-1 mapping covers all 8 (last 2 → None skip). Which count is correct for the exhaustive match?",
+      "options": [
+        "8 variants — brief corrected",
+        "7 variants — Restoration is not a real variant"
+      ],
+      "context": "Verified via grep SanctionAction crates/db_schema_file/src/enums.rs:560-577. Eight variants present. WP-1 mapping table in brief already handles all 8 correctly (FederationQuarantineRecommendation→none, Restoration→none). Brief anchor row said 7 — corrected to 8 in the brief.",
+      "answer": "8 variants — verified from enums.rs:560-577 (grep output 2026-06-07). Brief anchor corrected. WP-1 mapping covers all 8 exhaustively: 6 map to SanctionKind variants, 2 (FederationQuarantineRecommendation, Restoration) skip delivery silently. Planner must use exhaustive match with no wildcard arm.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-06T23:23:52Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
