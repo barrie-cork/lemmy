@@ -42,6 +42,7 @@ use lemmy_api::{
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     admin_sponsor_allowlist,
     admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
+    bridge_read::get_bridge_messaging_status,
     decline_jury_assignment::decline_jury_assignment,
     get_case::get_case,
     get_my_reputation::get_my_reputation,
@@ -49,6 +50,7 @@ use lemmy_api::{
     list_modlog::list_modlog,
     list_my_jury_queue::list_my_jury_queue,
     messaging_config::{admin_get_messaging_config, admin_set_messaging_config},
+    room_event_handler::handle_room_event,
     submit_jury_vote::submit_jury_vote,
   },
   local_user::{
@@ -478,6 +480,8 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
       .service(
         scope("/governance")
           .wrap(rate_limit.post())
+          .route("/room-event", post().to(handle_room_event))
+          .route("/bridge/messaging-status", get().to(get_bridge_messaging_status))
           .route("/report", post().to(create_report))
           .route("/endorsement", post().to(create_endorsement))
           .route("/endorsement/revoke", post().to(revoke_endorsement))

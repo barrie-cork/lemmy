@@ -20,6 +20,12 @@ pub struct BridgeConfig {
     /// HTTP endpoint for Brehon Matrix-to-Brehon relay callbacks
     /// (the URL the bridge POSTs inbound Matrix DMs to).
     pub brehon_notify_url: String,
+    /// URL for POST /governance/room-event (binary callback).
+    pub brehon_room_event_url: String,
+    /// Bearer secret for bridge<->binary auth (BRIDGE_CALLBACK_SECRET).
+    pub bridge_callback_secret: String,
+    /// MXID for legal contact in emergency rooms.
+    pub legal_contact_mxid: String,
 }
 
 impl BridgeConfig {
@@ -39,6 +45,12 @@ impl BridgeConfig {
                 .context("BREHON_READ_URL env var required")?,
             brehon_notify_url: env::var("BREHON_NOTIFY_URL")
                 .context("BREHON_NOTIFY_URL env var required")?,
+            brehon_room_event_url: std::env::var("BREHON_ROOM_EVENT_URL")
+                .unwrap_or_else(|_| "http://localhost:8536/governance/room-event".to_string()),
+            bridge_callback_secret: std::env::var("BRIDGE_CALLBACK_SECRET")
+                .expect("BRIDGE_CALLBACK_SECRET must be set"),
+            legal_contact_mxid: std::env::var("LEGAL_CONTACT_MXID")
+                .unwrap_or_else(|_| "@legal:localhost".to_string()),
         })
     }
 }
