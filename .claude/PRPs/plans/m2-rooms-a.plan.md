@@ -168,14 +168,19 @@ Sonnet target → ceiling `≤ 4` files / `≤ 2` crates per task; e2e edits in
 their own task. Every §13 task satisfies this:
 
 - T1: 4 files (bridge_room.rs, config.rs, Cargo.toml, main.rs), 1 crate. ✅
-- T1w: 2 files (`api_common/governance.rs`, `api_utils/bridge_notify.rs`) +
-  0-1 (`db_schema` read method IFF no existing fetch is reachable — see T1w
-  IMPLEMENT file 3), so 2-3 files / 2-3 crates. ✅ (at the ceiling; this is
-  the workspace half of the juror-sourcing seam — kept SEPARATE from the
-  bridge consumer T2 precisely because the two cross the toolchain boundary:
-  T1w is `--workspace --features full`, T2 is `cd services/bridge && cargo
-  check`, and §15 / R8 forbid mixing the two validation profiles on one
-  task — same split rationale as T4 → T4a/T4b.)
+- T1w: 3 files (`api_common/governance.rs`, `api_utils/bridge_notify.rs`,
+  `db_schema/.../jury_assignment.rs` — the by-case juror read method, REQUIRED
+  per the resolved IMPLEMENT file 3). Crate count: the read method on the
+  `db_schema` source model makes it 3 crates (`api_common` + `api_utils` +
+  `db_schema`), which is OVER the ≤2-crate ceiling. **Mitigation (keeps it ≤2
+  crates):** put the join as a free fn in `api_utils` using the `db_schema`
+  *schema types* (the producer's crate already imports `lemmy_db_schema` +
+  `lemmy_db_schema_file`), so only `api_common` + `api_utils` are touched. ✅
+  with mitigation. This is the workspace half of the juror-sourcing seam —
+  kept SEPARATE from the bridge consumer T2 precisely because the two cross
+  the toolchain boundary: T1w is `--workspace --features full`, T2 is `cd
+  services/bridge && cargo check`, and §15 / R8 forbid mixing the two
+  validation profiles on one task — same split rationale as T4 → T4a/T4b.
 - T2: 3 files (room_provisioner.rs, appservice.rs, main.rs), 1 crate. ✅
 - T3: 1 file (room_provisioner.rs extend), 1 crate. ✅
 - T4a: 4 files (room_event_handler.rs, bridge_auth.rs, governance/mod.rs,
@@ -425,11 +430,14 @@ async fn poll_once(client: &reqwest::Client, url: &str) -> Result<bool> {
   in `governance_case_after_transition` (lines 53-90) for jury-bound
   `new_status`, from `jury_assignment ⨝ actor_pseudonym`; empty otherwise
   (T1w).
-- *(conditional, T1w IMPLEMENT file 3)* a by-case juror-pseudonym read
-  method — REUSE `crates/api/api/src/governance/actor_pseudonym_helper.rs` if
-  reachable from `api_utils`; else add to the `db_schema` source model
-  (`JuryAssignment`). Resolve the `api_utils → api` dep-direction question at
-  author time; raise a blocker DQ if no legal path exists.
+- a by-case juror-pseudonym read method (REQUIRED, T1w IMPLEMENT file 3).
+  Dep-direction RESOLVED at the 2026-06-06 gate: `api_utils` does NOT depend
+  on `api`, so `actor_pseudonym_helper.rs` is unreachable — the join goes
+  EITHER on `crates/db_schema/src/source/governance/jury_assignment.rs` (3
+  crates) OR as a free fn in `crates/api/api_utils/src/` using `db_schema`
+  schema types (2 crates — the ≤2-crate-ceiling-preserving option). Mirror
+  the Diesel shape at `actor_pseudonym_helper.rs:26-30` +
+  `.inner_join(jury_assignment::table)` filtered by `case_id`.
 
 **`crates/api/api` (workspace):**
 
@@ -649,10 +657,11 @@ it empty (no fetch).
 ```yaml
 modifies:
   - crates/api/api_common/src/governance.rs   # +pub juror_pseudonyms: Vec<String> on CaseTransitionEvent + doc-comment
-  - crates/api/api_utils/src/bridge_notify.rs # populate juror_pseudonyms for jury-bound new_status; else empty
-creates:
-  # 0 or 1 — ONLY if no existing by-case juror-pseudonym fetch is reachable from the producer's crate (see IMPLEMENT file 3)
-  # - crates/db_schema/src/source/governance/jury_assignment.rs  (extend with a read method) OR an api-side helper
+  - crates/api/api_utils/src/bridge_notify.rs # populate juror_pseudonyms for jury-bound new_status; else empty. Per the resolved dep-direction (gate 2026-06-06), the by-case join helper lives HERE as a free fn (using db_schema schema types) to stay ≤2 crates — OR see the modifies-alt below for the 3-crate option.
+  # REQUIRED by-case juror read method (IMPLEMENT file 3) — ONE of:
+  #   (a) free fn in bridge_notify.rs / api_utils using db_schema schema types  → 2 crates (preferred, ≤ceiling)
+  #   (b) read method on crates/db_schema/src/source/governance/jury_assignment.rs → 3 crates (over ceiling; only if planner prefers it on the model)
+  # actor_pseudonym_helper.rs (api crate) is NOT reachable from api_utils — confirmed at the gate; do NOT reuse it.
 requires:
   - task: 1
     reason: serial dispatch (file-disjoint from T1 but keeps daemon at ≤1 worker); no logical dep on T1's bridge changes
@@ -682,19 +691,30 @@ the exact set against the `CaseStatus` enum, do NOT fetch for every
 transition). For jury-bound transitions, fetch the pseudonyms for
 `case.id` and set them; otherwise `juror_pseudonyms: Vec::new()`.
 
-**IMPLEMENT (file 3 — CONDITIONAL, planner resolves at author time):** the
-fetch is `jury_assignment(case_id → person_id)` ⨝ `actor_pseudonym(person_id
-→ pseudonym)` → `Vec<String>`. **Before adding any new code, check
-`crates/api/api/src/governance/actor_pseudonym_helper.rs` for an existing
-by-case juror-pseudonym fetch and reuse it.** CRATE-DIRECTION CAUTION:
-`bridge_notify.rs` is in `api_utils`; `actor_pseudonym_helper.rs` is in
-`api`. Verify `api_utils → api` is a legal dependency edge (it may not be —
-`api` typically depends on `api_utils`, not the reverse). If the helper is
-NOT reachable from `api_utils`, put the read on the `db_schema` source model
-(a method on `JuryAssignment` returning the joined pseudonyms), which BOTH
-crates may call. Resolve this dep-direction question explicitly here; if
-neither path is legal without a new dep edge, raise a `kind: blocker` DQ
-rather than inventing one.
+**IMPLEMENT (file 3 — REQUIRED; dep-direction RESOLVED at the 2026-06-06
+re-approval gate):** add a new by-case juror-pseudonym read method. The fetch
+is `jury_assignment(case_id → person_id)` ⨝ `actor_pseudonym(person_id →
+pseudonym)` → `Vec<String>`. **The crate-direction question is settled, with
+evidence — do NOT re-investigate:** `lemmy_api_utils/Cargo.toml` depends on
+`lemmy_api_common` + `lemmy_db_schema` but **NOT** on `lemmy_api`, so the
+existing `crates/api/api/src/governance/actor_pseudonym_helper.rs` (in the
+`api` crate) is **NOT reachable** from the producer in `api_utils`. Therefore
+the read method goes on the **`db_schema` source model**
+(`crates/db_schema/src/source/governance/jury_assignment.rs`, currently has
+NO read methods — verified at the gate), which `api_utils` CAN call
+(`lemmy_db_schema = { workspace = true }`). No new dep edge is needed; no
+blocker. **Reference pattern** (mirror this Diesel shape):
+`actor_pseudonym_helper.rs:26-30` does
+`actor_pseudonym::table.filter(actor_pseudonym::person_id.eq(person_id)).select(actor_pseudonym::pseudonym)`
+— the new method does the same with an `.inner_join(jury_assignment::table)`
+filtered by `jury_assignment::case_id.eq(case_id)`, selecting
+`actor_pseudonym::pseudonym`, returning `Vec<String>`. (NOTE: this makes T1w
+a 3-file workspace task: `governance.rs` + `bridge_notify.rs` +
+`jury_assignment.rs` — still within the §5.2 ≤4-file / ≤2-crate ceiling, 2
+crates: `api_common`+`api_utils`+`db_schema` = 3 crates → AT the crate
+boundary; if the planner deems 3 crates over the comfort line, the read
+method may instead live as a free fn in `api_utils` itself using the
+`db_schema` schema types, keeping it to 2 crates. Either is acceptable.)
 
 **MIRROR:** `crates/api/api_utils/src/bridge_notify.rs:60-66` (existing async
 DB read before payload construction — the shape to follow for the new fetch);
