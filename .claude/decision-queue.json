@@ -4,31 +4,6 @@
     {
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T12:00:00Z",
-      "question": "cargo check --workspace --features full on governance-fix-high-1 worker branch",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Three-fix commit: nonce retract on inner() fail (#185), old_status from inside txn (#186), status guard on decline UPDATE (#187). All passed local cargo check exit 0.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "junior/role-impl-task-governance-fix-high-1-see-claude-prps-briefs-governance-v0-fix-impl-high-1-md-628",
-      "phase_task": "governance-fix-high-1",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "24fab40b3af2-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
       "timestamp": "2026-06-06T00:00:00Z",
       "question": "cargo check --workspace --features full on governance-fix-med-1 worker branch",
       "options": [
@@ -6579,6 +6554,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-055"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T12:00:00Z",
+      "question": "cargo check --workspace --features full on governance-fix-high-1 worker branch",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Three-fix commit: nonce retract on inner() fail (#185), old_status from inside txn (#186), status guard on decline UPDATE (#187). All passed local cargo check exit 0.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-governance-fix-high-1-see-claude-prps-briefs-governance-v0-fix-impl-high-1-md-628",
+      "phase_task": "governance-fix-high-1",
+      "answer": "cargo check --workspace --features full exited 0 on advisor laptop against worker branch",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T13:00:21Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "24fab40b3af2-001"
     }
   ]
 }

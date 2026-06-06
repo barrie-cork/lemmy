@@ -33,26 +33,21 @@
 - advisor: #625 done (8.5 min). Bridge cargo check PASS (exit 0, 6 dead_code warnings, no errors, 3m14s). f0d76f99a08f-001 resolved. phase-m2-rooms-a @ cb2e34b2a.
 - NEXT: author + dispatch T3 (hash-chain emission via append_room_event).
 
-## 2026-06-06 — T3 PASS
+## 2026-06-06 — T3→T6 + bm-pr + CR triage
 
-- advisor: T3 brief authored + synced. /precheck PASS. Junior #626 dispatched.
-- advisor: #626 done (16 min). Bridge cargo check PASS (exit 0, 7 dead_code warnings). DQ 797f00a77338-001 resolved. phase-m2-rooms-a @ a655a1da2.
-- NEXT: author + dispatch T4a (workspace room-event route + bridge_auth).
+- advisor: T3 #626 PASS (16 min). T4a #627 §G4 fix #629 PASS. T4b #630 PASS. T5 #631 PASS. T6 #632 PASS. All 8 tasks done. phase-m2-rooms-a @ 76e2f2f2d.
+- advisor: /brehon-verify m2-rooms-a — all 3 stories (report 65f059f62). governance-v0 divergence resolved (governance-fix-high-1 cherry-picked via git am).
+- advisor: PR #191 opened (bm-pr #633, 3.5 min): https://github.com/barrie-cork/lemmy/pull/191
+- advisor: DQ 24fab40b3af2-001 resolved (stale worker-branch validate-pending-laptop; fixes already on gov-v0).
+- advisor: CR 6 actionable comments → 8 findings: fix-in-pr 3 (cr-5/6/7), rebut 5 (cr-1/2/3/4/8). Gate 3 APPROVED.
+- advisor: cr-fix-1 brief authored (m2-rooms-a-fix-impl-cr-1.md). /precheck PASS (Sat 13:05 UTC, 4.7 GB, SYNC). Junior #635 dispatched.
+- NEXT: poll #635 → validate-pending-laptop DQ → `cd services/bridge && cargo check` on laptop → pass → bm-merge.
 
-## 2026-06-06 — T4a §G4 fix cycle 1
+## 2026-06-06 — cr-fix-1 recovered + PASS → gate 5 ready
 
-- advisor: T4a brief authored + synced. /precheck PASS. Junior #627 dispatched.
-- advisor: #627 done (9 min). Workspace cargo check FAIL — E0277: RoomEventPayload missing serde::Deserialize. phase-m2-rooms-a @ 1ca0cd627.
-- advisor: §G4 classify: (E0277, governance_log.rs) cycle 1 → allowlist match → narrow fix-impl. DQ 0566bc2d61f0-001 mutated result:fail, stays pending.
-- advisor: fix-impl brief authored (m2-rooms-a-fix-impl-4a-cargo.md), synced to phase @ 895c643f4. /precheck PASS.
-- advisor: dispatched fix-impl as Junior #629 (running, base_branch=phase-m2-rooms-a).
-- advisor: #629 done (2.5 min). Workspace cargo check PASS (EXIT:0, 2m04s). DQ 025c517a5e70-001 resolved. phase-m2-rooms-a @ 5ec6d4bcb.
-- advisor: T4b brief authored (m2-rooms-a-impl-4b.md), synced to phase @ 19d0e478f. /precheck PASS (Sat 07:38 UTC, 9.9 GB, SYNC).
-- advisor: dispatched T4b as Junior #630 (running, base_branch=phase-m2-rooms-a).
-- advisor: #630 done (5 min). Workspace cargo check PASS (EXIT:0, 1m43s). DQ 9d80b96935d9-001 resolved. phase-m2-rooms-a @ 1aa743526.
-- advisor: T5 brief authored (m2-rooms-a-impl-5.md), synced to phase @ 747e52a11. /precheck PASS (Sat 07:54 UTC, 10 GB, SYNC).
-- advisor: dispatched T5 as Junior #631 (running, base_branch=phase-m2-rooms-a).
-- advisor: #631 done (4 min). Bridge cargo check PASS (EXIT:0, 3.02s, 8 dead_code warnings). DQ ecc4ade814f2-001 resolved. phase-m2-rooms-a @ c6de68a2c.
-- advisor: T6 brief authored (m2-rooms-a-impl-6.md), synced to phase @ ac2306363. /precheck PASS (Sat 08:03 UTC, SYNC).
-- advisor: dispatched T6 as Junior #632 (running, base_branch=phase-m2-rooms-a).
-- NEXT: poll #632 → validate-pending-laptop DQ → `cd services/bridge && cargo test --no-run` on laptop → pass → bm-pr.
+- advisor: #635 cancelled (OOM risk: swap 48 Ki, load 38, D-state claude process). Worktree tar preserved at daemon /tmp/job-635-recovery-1780772061.tar.gz.
+- advisor: Recovered fixes from tar — confirmed config.rs Fix1, room_provisioner.rs Fix2+Fix3 all present.
+- advisor: Applied all 3 fixes directly on laptop m2rooms-a worktree. Bridge cargo check EXIT 0 (521e949e3).
+- advisor: DQ 718fc6683a8e-001 written + resolved (result:pass, answered_by:advisor-laptop). phase-m2-rooms-a @ e048b7ba8.
+- advisor: pr-191-findings.yaml updated: cr-5/6/7 → bucket:done (addressed_in:521e949e3). open_critical=0, fix-in-pr=0.
+- NEXT: bm-merge (gate 5 — no open critical findings, fix-in-pr=0).
