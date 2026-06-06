@@ -49,4 +49,7 @@
 - advisor: #629 done (2.5 min). Workspace cargo check PASS (EXIT:0, 2m04s). DQ 025c517a5e70-001 resolved. phase-m2-rooms-a @ 5ec6d4bcb.
 - advisor: T4b brief authored (m2-rooms-a-impl-4b.md), synced to phase @ 19d0e478f. /precheck PASS (Sat 07:38 UTC, 9.9 GB, SYNC).
 - advisor: dispatched T4b as Junior #630 (running, base_branch=phase-m2-rooms-a).
-- NEXT: poll #630 → validate-pending-laptop DQ → workspace cargo → pass → T5 brief (bridge callback wiring + soft_pause fix).
+- advisor: #630 done (5 min). Workspace cargo check PASS (EXIT:0, 1m43s). DQ 9d80b96935d9-001 resolved. phase-m2-rooms-a @ 1aa743526.
+- advisor: T5 brief authored (m2-rooms-a-impl-5.md), synced to phase @ 747e52a11. /precheck PASS (Sat 07:54 UTC, 10 GB, SYNC).
+- advisor: dispatched T5 as Junior #631 (running, base_branch=phase-m2-rooms-a).
+- NEXT: poll #631 → validate-pending-laptop DQ → `cd services/bridge && cargo check` on laptop → pass → T6 brief (e2e tests).
