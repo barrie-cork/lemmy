@@ -93,18 +93,10 @@ pub async fn admin_assign_jury(
   let pool = &mut context.pool();
   let conn = &mut get_conn(pool).await?;
 
-  // Pre-txn: capture case for hook. process_assignment re-loads inside the txn.
-  let case_for_hook: ModerationCase = moderation_case::table
-    .filter(moderation_case::id.eq(data.case_id))
-    .select(ModerationCase::as_select())
-    .first(conn)
-    .await?;
-  let old_status = case_for_hook.status;
-
   let data_for_tx = data;
   let pseudonym_for_tx = admin_pseudonym.clone();
 
-  let outcome = conn
+  let (outcome, case_for_hook, old_status) = conn
     .run_transaction(async |conn| {
       process_assignment(conn, pseudonym_for_tx, data_for_tx).await
     })
@@ -124,7 +116,7 @@ async fn process_assignment(
   conn: &mut diesel_async::AsyncPgConnection,
   admin_pseudonym: String,
   data: AdminAssignJury,
-) -> LemmyResult<AdminAssignJuryResponse> {
+) -> LemmyResult<(AdminAssignJuryResponse, ModerationCase, CaseStatus)> {
   // ConfigCache lives for the whole assignment transaction. Same shape as
   // submit_jury_vote::process_vote.
   let mut cache = ConfigCache::new();
@@ -135,6 +127,9 @@ async fn process_assignment(
     .select(ModerationCase::as_select())
     .first(conn)
     .await?;
+  // Capture hook args inside the txn so old_status is not stale (#186).
+  let case_for_hook = case.clone();
+  let old_status = case.status;
 
   // 2. Type-state guard: Open | ThresholdMet | EmergencyRemove per [99 ADR-013].
   let case = GovernanceCase::<PreJuryAssignable>::try_from(case)?.inner;
@@ -293,10 +288,14 @@ async fn process_assignment(
   )
   .await?;
 
-  Ok(AdminAssignJuryResponse {
-    case_id: data.case_id,
-    assigned_person_ids: eligible,
-  })
+  Ok((
+    AdminAssignJuryResponse {
+      case_id: data.case_id,
+      assigned_person_ids: eligible,
+    },
+    case_for_hook,
+    old_status,
+  ))
 }
 
 /// Narrow `ceil(f64)` to a non-negative `i32` under the PRD §10 panel_size

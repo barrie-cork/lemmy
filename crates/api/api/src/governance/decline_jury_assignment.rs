@@ -96,15 +96,29 @@ async fn process_decline(
     .first(conn)
     .await?;
 
-  // 3. Flip status → Declined; stamp responded_at.
+  // 3. Flip status → Declined; stamp responded_at. The filter includes
+  //    status = Selected | Accepted to guard against concurrent flips (#187).
+  //    If rows_affected == 0 the row was concurrently modified; return NotFound.
   let now = Utc::now();
-  update(jury_assignment::table.filter(jury_assignment::id.eq(assignment.id)))
-    .set((
-      jury_assignment::status.eq(JuryAssignmentStatus::Declined),
-      jury_assignment::responded_at.eq(Some(now)),
-    ))
-    .execute(conn)
-    .await?;
+  let rows_affected = update(
+    jury_assignment::table
+      .filter(jury_assignment::id.eq(assignment.id))
+      .filter(
+        jury_assignment::status
+          .eq(JuryAssignmentStatus::Selected)
+          .or(jury_assignment::status.eq(JuryAssignmentStatus::Accepted)),
+      ),
+  )
+  .set((
+    jury_assignment::status.eq(JuryAssignmentStatus::Declined),
+    jury_assignment::responded_at.eq(Some(now)),
+  ))
+  .execute(conn)
+  .await?;
+
+  if rows_affected == 0 {
+    return Err(LemmyErrorType::NotFound.into());
+  }
 
   // 4. Log the decline. `reason` rides in the payload and is auto-scrubbed
   //    by `append` (via scrub_json inside `governance_log::append`).
