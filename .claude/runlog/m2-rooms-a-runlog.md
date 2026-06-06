@@ -42,3 +42,12 @@
 - advisor: CR 6 actionable comments → 8 findings: fix-in-pr 3 (cr-5/6/7), rebut 5 (cr-1/2/3/4/8). Gate 3 APPROVED.
 - advisor: cr-fix-1 brief authored (m2-rooms-a-fix-impl-cr-1.md). /precheck PASS (Sat 13:05 UTC, 4.7 GB, SYNC). Junior #635 dispatched.
 - NEXT: poll #635 → validate-pending-laptop DQ → `cd services/bridge && cargo check` on laptop → pass → bm-merge.
+
+## 2026-06-06 — cr-fix-1 recovered + PASS → gate 5 ready
+
+- advisor: #635 cancelled (OOM risk: swap 48 Ki, load 38, D-state claude process). Worktree tar preserved at daemon /tmp/job-635-recovery-1780772061.tar.gz.
+- advisor: Recovered fixes from tar — confirmed config.rs Fix1, room_provisioner.rs Fix2+Fix3 all present.
+- advisor: Applied all 3 fixes directly on laptop m2rooms-a worktree. Bridge cargo check EXIT 0 (521e949e3).
+- advisor: DQ 718fc6683a8e-001 written + resolved (result:pass, answered_by:advisor-laptop). phase-m2-rooms-a @ e048b7ba8.
+- advisor: pr-191-findings.yaml updated: cr-5/6/7 → bucket:done (addressed_in:521e949e3). open_critical=0, fix-in-pr=0.
+- NEXT: bm-merge (gate 5 — no open critical findings, fix-in-pr=0).
