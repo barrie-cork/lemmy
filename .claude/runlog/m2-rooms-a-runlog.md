@@ -51,3 +51,13 @@
 - advisor: DQ 718fc6683a8e-001 written + resolved (result:pass, answered_by:advisor-laptop). phase-m2-rooms-a @ e048b7ba8.
 - advisor: pr-191-findings.yaml updated: cr-5/6/7 → bucket:done (addressed_in:521e949e3). open_critical=0, fix-in-pr=0.
 - NEXT: bm-merge (gate 5 — no open critical findings, fix-in-pr=0).
+
+## 2026-06-06 — bm-merge COMPLETE
+
+- advisor: gate 5 confirmed (user: "yes"). bm-merge brief authored (`m2-rooms-a-bm-merge-1.md`, gov-v0 `0598e8ed3`).
+- advisor: bm-task #637 dispatched. Worker performed daemon-local finalize merge (task branch → daemon governance-v0, merge commit `9a878d10e`). Note: worker did NOT call `gh pr merge` (used daemon finalize pattern only).
+- advisor: daemon governance-v0 pushed to origin (`205ba2399`). Phase-m2-rooms-a content confirmed on origin/governance-v0 (30 files, 1189 insertions).
+- advisor: PR #191 closed (CONFLICTING state post-push; content already on gov-v0 via daemon merge). Head branch `phase-m2-rooms-a` deleted from origin.
+- advisor: laptop canonical worktree pulled to `205ba2399`. m2-rooms-a COMPLETE.
+- bm: COMPLETE — merge SHA `9a878d10e` (daemon-local), origin tip `205ba2399`. Phase branch deleted.
+- NEXT: gate 6 — author m2-rooms-a retro → retro sign-off → /brehon-phase-transition.
