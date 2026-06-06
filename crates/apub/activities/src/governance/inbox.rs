@@ -603,8 +603,19 @@ where
   }
   nonce_result?;
 
-  // All gates passed — delegate to the Phase-6 (or new label) handler.
-  inner(activity, context).await
+  // All gates passed — delegate to handler. On failure, retract the nonce
+  // so AP can redeliver correctly (#185).
+  let result = inner(activity, context).await;
+  if result.is_err() {
+    let _ = diesel::delete(
+      federation_inbox_nonce::table
+        .filter(federation_inbox_nonce::peer_instance.eq(&peer_domain))
+        .filter(federation_inbox_nonce::activity_id.eq(&activity_id)),
+    )
+    .execute(conn)
+    .await;
+  }
+  result
 }
 
 /// Write one `federation_inbox_dropped_log` row and one `governance_log` entry
