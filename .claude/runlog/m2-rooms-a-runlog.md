@@ -26,3 +26,9 @@
 - advisor: #624 done (92s). Cargo check PASS (exit 0, 44 lines, no warnings, 5m35s). All 3 T1w fixes applied: diesel dep, diesel-async dep, JoinOnDsl use.
 - advisor: DQ entries resolved: 6ad0b18d9dac-001 (1w fail), f99a71bc9ed4-001 (1w-fix fail), ee6325ec1c71-001 (1w-fix-2 PASS→resolved). phase-m2-rooms-a @ ad537051b.
 - NEXT: author + dispatch T2 (bridge consumer — room_provisioner.rs reads event.juror_pseudonyms).
+
+## 2026-06-06 — T2 PASS
+
+- advisor: T2 impl brief authored + synced to phase branch. /precheck PASS. Junior #625 dispatched.
+- advisor: #625 done (8.5 min). Bridge cargo check PASS (exit 0, 6 dead_code warnings, no errors, 3m14s). f0d76f99a08f-001 resolved. phase-m2-rooms-a @ cb2e34b2a.
+- NEXT: author + dispatch T3 (hash-chain emission via append_room_event).
