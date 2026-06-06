@@ -29,33 +29,6 @@
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
       "id": "0566bc2d61f0-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does `cd services/bridge && cargo test --no-run` pass after adding room_provisioning.rs tests?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T6 complete: room_provisioning.rs (5 #[ignore] tests) + dm_round_trip.rs soft_pause_enable_disable_cycle un-stubbed. Bridge test compile.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo test --no-run"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "6",
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "d07588989c3c-001"
     }
   ],
   "resolved": [
@@ -6810,6 +6783,33 @@
       "failed_jobs": null,
       "failed_commands": null,
       "id": "ecc4ade814f2-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "Does `cd services/bridge && cargo test --no-run` pass after adding room_provisioning.rs tests?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T6 complete: room_provisioning.rs (5 #[ignore] tests) + dm_round_trip.rs soft_pause_enable_disable_cycle un-stubbed. Bridge test compile.",
+      "answer": "Bridge cargo test --no-run passed (EXIT:0, 4m56s). room_provisioning.rs + dm_round_trip.rs both compiled. 3 test executables.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T08:15:21Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo test --no-run"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "6",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "d07588989c3c-001"
     }
   ]
 }
