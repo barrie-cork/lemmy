@@ -18,3 +18,11 @@
 - advisor: /precheck PASS (Sat 05:47 UTC, daemon at 27287022c, 8.7 GB free).
 - advisor: dispatched fix-impl as Junior #623 (running, base_branch=phase-m2-rooms-a).
 - NEXT: poll #623 → validate-pending-laptop DQ → run cargo on laptop → pass → T2 brief.
+
+## 2026-06-06 — T1w PASS (§G4 fix cycle complete)
+
+- advisor: #623 done (2.5 min). Cargo check FAIL cycle 2 — 1 error remaining: JoinOnDsl not in use diesel block (E0599). DQ f99a71bc9ed4-001 mutated result:fail.
+- advisor: §G4 cycle 2 (E0599, bridge_notify.rs) → allowlist → fix-impl-2 brief authored, synced, #624 dispatched.
+- advisor: #624 done (92s). Cargo check PASS (exit 0, 44 lines, no warnings, 5m35s). All 3 T1w fixes applied: diesel dep, diesel-async dep, JoinOnDsl use.
+- advisor: DQ entries resolved: 6ad0b18d9dac-001 (1w fail), f99a71bc9ed4-001 (1w-fix fail), ee6325ec1c71-001 (1w-fix-2 PASS→resolved). phase-m2-rooms-a @ ad537051b.
+- NEXT: author + dispatch T2 (bridge consumer — room_provisioner.rs reads event.juror_pseudonyms).
