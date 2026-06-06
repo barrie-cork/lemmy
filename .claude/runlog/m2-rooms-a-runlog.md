@@ -56,3 +56,12 @@
 - advisor: T6 brief authored (m2-rooms-a-impl-6.md), synced to phase @ ac2306363. /precheck PASS (Sat 08:03 UTC, SYNC).
 - advisor: dispatched T6 as Junior #632 (running, base_branch=phase-m2-rooms-a).
 - NEXT: poll #632 → validate-pending-laptop DQ → `cd services/bridge && cargo test --no-run` on laptop → pass → bm-pr.
+
+## 2026-06-06 — bm-pr dispatched
+
+- advisor: T6 #632 done (4 min). Bridge cargo test --no-run PASS (EXIT:0). DQ d07588989c3c-001 resolved. phase-m2-rooms-a @ 76e2f2f2d.
+- advisor: /brehon-verify m2-rooms-a — all 3 stories ✓ (workspace check + route count + bridge compile). Report @ `.claude/PRPs/reports/m2-rooms-a-verify.md` (65f059f62).
+- advisor: governance-v0 divergence resolved — daemon had governance-fix-high-1 (nonce retract, old_status txn, decline guard) unpushed; 5 commits cherry-picked via `git am` onto laptop, pushed to origin, daemon synced. gov-v0 @ e1b48d266.
+- advisor: bm-pr brief authored (m2-rooms-a-bm-pr-1.md), gov-v0 @ 2a9461a45. /precheck PASS (Sat 08:50 UTC, 9.8 GB, SYNC).
+- advisor: dispatched bm-pr as Junior #633 (running, base_branch=governance-v0).
+- NEXT: poll #633 → PR URL → bm-poll-cr after ~10min → bm-triage → CR triage gate → bm-merge.
