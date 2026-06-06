@@ -15,6 +15,7 @@ mod config;
 mod provision;
 mod puppet;
 mod relay;
+mod room_provisioner;
 mod soft_pause;
 
 use anyhow::Result;
@@ -33,11 +34,15 @@ async fn main() -> Result<()> {
     let puppet_map = PuppetMap::new(Arc::clone(&config_arc));
     let relay_enabled = Arc::new(AtomicBool::new(true));
 
+    let bridge_db_path = std::env::var("BRIDGE_DB_PATH")
+        .unwrap_or_else(|_| "bridge.db".to_string());
+
     let app = appservice::router(Arc::new(AppState {
         config: Arc::clone(&config_arc),
         puppet_map,
         http_client: reqwest::Client::new(),
         relay_enabled: Arc::clone(&relay_enabled),
+        bridge_db_path,
     }));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], bridge_port));
