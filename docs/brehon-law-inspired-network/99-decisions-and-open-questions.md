@@ -664,11 +664,16 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 ### OQ-ADR016-02 — B-publish event schema and subscriber contract
 
 - **Opened:** 2026-05-23 (ADR-016)
-- **Owner:** TBD (backend + federation)
+- **Resolved:** 2026-06-07 (m2-late pre-planning gate)
+- **Owner:** advisor (backend + federation)
 - **Question:** What is the schema Brehon publishes sanction events in, and what guarantees does it offer subscribers? Sub-questions: (a) transport — webhook delivery (HTTP POST per subscriber URL), ActivityPub-style outbox (apps pull from Brehon's outbox), or pub/sub broker (Brehon writes to NATS/Redis/etc., apps consume)? (b) event schema — does Brehon emit one universal event with a `sanction_kind` field, or app-specific events the subscriber filters? (c) delivery guarantees — at-least-once (subscribers idempotent), at-most-once (events lost on subscriber outage), or exactly-once with retry queue? (d) how does a subscriber prove to Brehon it's authorised to receive events about a particular user (the user's Brehon-link-flow established consent — what token / signed claim flows where)?
-- **Current lean:** (a) Webhook delivery per subscriber URL — lowest operational complexity, matches HTTP-everywhere posture; pub/sub broker deferred until subscriber count justifies it. (b) One universal event schema with `sanction_kind`, `subject_brehon_actor_id`, `effective_from`, `effective_until`, `governance_log_entry_hash`; the subscriber decides how to translate `sanction_kind` into local primitives (OQ-ADR016-04). (c) At-least-once with subscriber-side idempotency on `governance_log_entry_hash`. (d) At link-flow time (OQ-ADR016-03), the app receives a signed claim binding `app_local_id` ↔ `brehon_actor_id`; the app presents this claim when subscribing to events about that user.
-- **Blocks:** M1 sub-PRD if M1 includes any sanction propagation (likely deferred to M2 — governance-triggered rooms). Blocks first non-Matrix app integration ADR.
-- **Target:** Resolve at M2 schedule time.
+- **Resolution:** Lean adopted as-written, with one m2-late Phase 6 scoping clarification on (d).
+  - **(a) Transport:** Webhook delivery per subscriber URL. Lowest operational complexity; pub/sub broker deferred until subscriber count justifies it.
+  - **(b) Event schema:** One universal event with fields: `sanction_kind` (enum), `subject_brehon_actor_id` (string), `effective_from` (ISO-8601), `effective_until` (ISO-8601 | null), `governance_log_entry_hash` (hex). The subscriber translates `sanction_kind` into local primitives per OQ-ADR016-04.
+  - **(c) Delivery:** At-least-once; subscriber-side idempotency keyed on `governance_log_entry_hash`.
+  - **(d) Subscriber auth — Phase 6 (bridge-as-subscriber):** The bridge uses the existing `BRIDGE_CALLBACK_SECRET` bearer token pattern (established in m2-rooms-a, commit `521e949e3`). For future non-bridge subscribers, they present a signed link-claim from the B-actor link-flow (OQ-ADR016-03) when registering. Phase 6 scope contains only the bridge subscriber; no link-claim auth mechanism is required in m2-late.
+- **Blocks:** First non-Matrix app integration ADR (resolved for m2-late Matrix scope).
+- **Was blocked on:** nothing — lean was self-sufficient for m2-late Phase 6 scope.
 
 ### OQ-ADR016-03 — B-actor link-flow UX and mapping integrity
 
@@ -682,17 +687,26 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 ### OQ-ADR016-04 — Sanction translation semantics per app
 
 - **Opened:** 2026-05-23 (ADR-016)
-- **Owner:** TBD (backend + domain)
+- **Resolved:** 2026-06-07 (m2-late pre-planning gate)
+- **Owner:** advisor (backend + domain)
 - **Question:** When Brehon publishes a sanction of `sanction_kind = "mute_global_7d"` (or similar), how does each app translate that into its local moderation primitives? Sub-questions: (a) is there a universal vocabulary of sanction kinds Brehon emits, and apps document which ones they implement, or does Brehon emit app-agnostic intent ("reduce reach", "prevent posting", "remove voice") that each subscriber maps? (b) what's the minimum primitive set every connected app must implement to be a "Brehon-governed app" (e.g. block-post, mute-voice, hide-content), and what's optional? (c) how are partial-applicability sanctions handled — e.g. "demonetise" makes sense in PeerTube but not in Matrix; does Matrix's subscriber ignore it, log it, or fail-loud? (d) how does Brehon's audit trail reflect what each app actually did with a sanction (the subscriber acknowledges, Brehon logs per-app application status)?
-- **Current lean:** (a) Universal vocabulary — fixed enum of sanction kinds in Brehon, with semver-style expansion. (b) Minimum: `prevent_post`, `mute_voice`, `hide_content`, `restrict_reach`. Beyond that, app-specific extensions. (c) Subscribers receive every event and ignore (with logged "not applicable") for sanction kinds outside their primitives — Brehon's audit reflects the partial-applicability. (d) Subscribers POST acknowledgement back to Brehon (`{ event_hash, applied: true|false, reason, applied_at }`); Brehon stores per-event per-app application status as governance_log entries.
-- **Blocks:** M2 sub-PRD (governance-triggered rooms emitting sanctions); per-app integration ADR for any second app.
-- **Target:** Resolve at M2 schedule time.
+- **Resolution:** Lean adopted as-written.
+  - **(a) Vocabulary:** Universal fixed enum (`SanctionKind`) in Brehon with semver-style expansion. Apps declare which variants they implement.
+  - **(b) Minimum primitive set:** `prevent_post`, `mute_voice`, `hide_content`, `restrict_reach`. All four are mandatory for a "Brehon-governed app". Beyond these, app-specific extensions are allowed but not required.
+  - **(c) Partial applicability:** Subscribers receive all events; ignore (with "not_applicable" log entry) any `sanction_kind` outside their declared primitives. Brehon's audit reflects per-app application status — partial coverage is not a protocol error.
+  - **(d) Acknowledgement:** Subscribers POST `{ event_hash, applied: true|false, reason: String, applied_at: ISO-8601 }` back to Brehon's acknowledgement endpoint. Brehon stores per-event per-app status as governance_log entries.
+  - **Matrix-specific translation (m2-late Phase 6 reference):** `prevent_post` → user power level set below `events_default` across all provisioned rooms; `mute_voice` → power level below voice event threshold; `hide_content` → redact pending events + power level drop; `restrict_reach` → power level reduction (room visibility not changed; Matrix has no native reach-restriction primitive).
+- **Blocks:** Per-app integration ADR for any second app (resolved for m2-late Matrix scope).
+- **Was blocked on:** nothing — lean was self-sufficient once the minimum primitive set is codified.
 
 ---
 
 ## Changelog
 
 Append-only record of spec changes. When any of the numbered docs gets a non-trivial revision, add an entry here.
+
+**2026-06-07** — *99*
+OQ-ADR016-02 and OQ-ADR016-04 resolved at m2-late pre-planning gate. Both adopted their documented leans. OQ-ADR016-02(d) scoped for m2-late Phase 6: bridge-subscriber uses `BRIDGE_CALLBACK_SECRET` bearer auth (existing pattern); link-claim auth for future non-bridge subscribers deferred to first non-Matrix integration ADR. OQ-ADR016-04 resolved with Matrix-specific translation table for the four minimum primitives. Phase 7 (B-actor) and OQ-ADR016-03 are out of m2-late scope — user-confirmed 2026-06-07. Unblocks m2-late Phase 6 planning.
 
 **2026-04-14** — *All docs*
 Initial creation from chat1.md + chat2.md. Captured brainstorming into dev-team-facing docs.

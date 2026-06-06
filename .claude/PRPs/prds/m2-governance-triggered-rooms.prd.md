@@ -259,4 +259,4 @@ The 10 M2-core `Room::*` entry kinds are a **zero-migration** addition (`entry_k
 ---
 
 *Generated: 2026-06-05*
-*Status: DRAFT — M2-core ready for `/prp-plan`; M2-late gated on OQ-ADR016-02 + OQ-ADR016-04.*
+*Status: DRAFT — M2-core SHIPPED (PR #191, 2026-06-06). M2-late Phase 6 (B-publish sanction propagation) UNBLOCKED — OQ-ADR016-02 + OQ-ADR016-04 resolved 2026-06-07. Phase 7 (B-actor) OUT OF SCOPE — user-confirmed 2026-06-07; OQ-ADR016-03 deferred.*
