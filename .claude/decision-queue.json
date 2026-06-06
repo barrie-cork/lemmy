@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T06:46:38Z",
-      "question": "Does bridge cargo check pass after C2.2-C2.6 + OQ-009 + always_pseudonym?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T3 complete: extended room_provisioner.rs with 5 room scenarios, OQ-009 reveal, always_pseudonym enforcement.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "3",
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "797f00a77338-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6673,6 +6645,33 @@
       "failed_jobs": null,
       "failed_commands": null,
       "id": "f0d76f99a08f-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-06T06:46:38Z",
+      "question": "Does bridge cargo check pass after C2.2-C2.6 + OQ-009 + always_pseudonym?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T3 complete: extended room_provisioner.rs with 5 room scenarios, OQ-009 reveal, always_pseudonym enforcement.",
+      "answer": "Bridge cargo check passed: 0 errors, 7 warnings (dead_code only). T3 C2.2-C2.6 + OQ-009 + always_pseudonym compiles clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-06T06:55:35Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cd services/bridge && cargo check"
+      ],
+      "branch": "phase-m2-rooms-a",
+      "phase_task": "3",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null,
+      "id": "797f00a77338-001"
     }
   ]
 }
