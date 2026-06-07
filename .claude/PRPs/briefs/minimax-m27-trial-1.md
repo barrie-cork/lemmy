@@ -1,4 +1,4 @@
-# Trial runbook: MiniMax M2.7 vs Sonnet 4.6 on impl-task — ARMED, fires on next qualifying phase
+# Trial runbook: MiniMax M3 vs Sonnet 4.6 on impl-task — ARMED, fires on next qualifying phase
 
 > **Not a Junior dispatch brief.** This is an advisor-session runbook for an A/B
 > trial, not a `[role:*]` task. It tells the advisor how to run a 5-task
@@ -30,9 +30,9 @@ When ≥5 qualifying tasks accumulate in a phase, run both arms. Fewer than 5 �
 |---|---|
 | Daemon `envOverrides` plumbing (`executor.ts:313`) | ✅ present; verified 2026-05-29 |
 | `junior task add --env-override KEY=VALUE` | ✅ CLI v1.0.2 |
-| `scripts/brehon/queue-minimax-task.sh` | ✅ ready; `MINIMAX_MODEL` default `MiniMax-M2.7` |
-| MiniMax endpoint (`https://api.minimax.io/anthropic/v1/messages`) | ✅ live; HTTP 200 verified 2026-05-31 |
-| `MINIMAX_API_KEY` in `.env` | ✅ funded (HTTP 200, 2026-05-31) |
+| `scripts/brehon/queue-minimax-task.sh` | ✅ ready; `MINIMAX_MODEL` default updated to `MiniMax-M3` (2026-06-07) |
+| MiniMax endpoint (`https://api.minimax.io/anthropic/v1/messages`) | ✅ live; HTTP 200 verified 2026-05-31 (M2.7); M3 endpoint needs pre-flight verify |
+| `MINIMAX_API_KEY` in `.env` | ⚠️ key present but needs rotation (see project_minimax_key_rotate_after_m1b_trial.md); M3 pre-flight verify needed before first arm |
 | Target sub-phase | **rolling** — first phase with ≥5 qualifying tasks |
 | Trial history | v1-RT-r4 NOT RUN (serial dispatch forced); v1-RT-r5 NOT RUN (only 1 qualifying task — Task 5 is e2e, excluded) |
 
@@ -44,15 +44,13 @@ M2.7 56.2; M2.7 ahead on Multi-SWE 52.7 vs 50.3 + Toolathlon 46.3 vs 44.8) at
 one thing the chart cannot: does that parity hold **inside our harness** (MIRROR
 refs, cargo gate, our DQ-blocker rate) on **Rust**, not SWE-bench Python.
 
-**Why M2.7 and not M2.5:** the same chart shows M2.7 ≥ M2.5 on every panel at
-identical price (MLE-Bench-lite 66.6 vs 51.5; GDPval-AA 50 vs 35). M2.5 is not
-an arm. A dedicated M2.5-vs-M2.7 bake-off is a *contingent follow-up* only —
-run it iff M2.7 clears the Sonnet bar AND you specifically distrust the
-vendor-reported chart. (`MINIMAX_MODEL=MiniMax-M2.5 queue-minimax-task.sh ...`)
+**Why M3 and not M2.7:** upgraded per user instruction 2026-06-07; M3 is the
+current flagship model per the MiniMax platform docs (`MiniMax-M3` model ID).
+M2.7 remains available as a fallback override (`MINIMAX_MODEL=MiniMax-M2.7`).
 
 ## 1. The question this trial gates
 
-Binary: **is MiniMax M2.7 good enough to replace Sonnet 4.6 on the impl-task
+Binary: **is MiniMax M3 good enough to replace Sonnet 4.6 on the impl-task
 role?** NOT "which MiniMax is better" (chart settles that). The cutover is
 worth ~10× on the highest-token-volume Junior role; the risk is recovery
 cycles from worse code. The trial measures whether the cheap model holds
@@ -76,7 +74,7 @@ candidate.
   control baseline is essentially free — but run it on the SAME 5 designated
   tasks (on `ab-test/sonnet-<N>` branches) so the comparison is task-matched,
   not historical-average.
-- **MiniMax arm (M2.7):** `scripts/brehon/queue-minimax-task.sh "<dispatch line>"`
+- **MiniMax arm (M3):** `scripts/brehon/queue-minimax-task.sh "<dispatch line>"`
   from a branch matching `ab-test/*`. The script injects the three env
   overrides; `executor.ts:313` makes them win over the Sonnet role-pin.
 
@@ -112,7 +110,7 @@ For each of the 5 designated tasks N:
 
 ### 2.4 Metrics per task (the comparison table)
 
-Record into a results file `.claude/PRPs/reports/minimax-m27-trial-results.md`
+Record into a results file `.claude/PRPs/reports/minimax-m3-trial-results.md`
 (create at trial start):
 
 | Metric | How measured | Proxy for |
@@ -125,10 +123,10 @@ Record into a results file `.claude/PRPs/reports/minimax-m27-trial-results.md`
 
 ### 2.5 Decision rule
 
-- M2.7 **matches** Sonnet on cargo-first-pass AND DQ-blocker rate across the 5
-  tasks → **switch impl-task to MiniMax M2.7** (see §4 for the permanent-cutover
+- M3 **matches** Sonnet on cargo-first-pass AND DQ-blocker rate across the 5
+  tasks → **switch impl-task to MiniMax M3** (see §4 for the permanent-cutover
   mechanics). The ~10× saving justifies it.
-- M2.7 **raises** the DQ-blocker rate or fails the cargo gate more often →
+- M3 **raises** the DQ-blocker rate or fails the cargo gate more often →
   **stay Sonnet.** Recovery cycles cost more than the token saving buys.
 - Mixed/ambiguous at n=5 → extend to n=8-10 before deciding, OR stay Sonnet
   (conservative default). Do NOT switch on a coin-flip.
@@ -180,7 +178,7 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 
 When cumulative ✅ count reaches ≥5 (absent an override) → proceed to §2.3 dispatch sequence alongside the real phase.
 
-Results file: `.claude/PRPs/reports/minimax-m27-trial-results.md` (pre-exists; append a new `##` section per phase run).
+Results file: `.claude/PRPs/reports/minimax-m3-trial-results.md` (create at trial start; append a new `##` section per phase run).
 
 **Do NOT let the trial gate any phase's shipping.** Trial runs ALONGSIDE the real phase on throwaway `ab-test/*` branches; real tasks dispatch normally.
 
@@ -202,7 +200,7 @@ of impl-task to MiniMax means editing the daemon patch, not just frontmatter:
   `feedback_brehon_anthropic_only.md` from "Anthropic-only" to "Anthropic +
   MiniMax-for-impl" (else a future advisor treats live MiniMax as drift).
 - This is a follow-up sub-phase of its own (`v1-minimax-cutover` or similar) —
-  scope it then; do NOT bundle into v1-RT-r4.
+  scope it then; do NOT bundle into the shipping phase.
 
 ## 5. Required reading (for the advisor running the trial)
 
@@ -231,7 +229,7 @@ of impl-task to MiniMax means editing the daemon patch, not just frontmatter:
   script reads it at runtime + redacts it from all output.
 - **NEVER run the MiniMax arm via MCP `create_task`** (it drops env_override) —
   always the SSH CLI script.
-- **NEVER block v1-RT-r4 shipping on trial completion** — trial is parallel,
+- **NEVER block any phase's shipping on trial completion** — trial is parallel,
   optional, and abortable.
 - **NEVER switch impl-task to MiniMax mid-phase** — cutover is its own
   follow-up sub-phase after the 5-task data is in + reviewed.

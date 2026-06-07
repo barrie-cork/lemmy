@@ -9,17 +9,15 @@
 #
 #   ANTHROPIC_BASE_URL   = https://api.minimax.io/anthropic
 #   ANTHROPIC_API_KEY    = <key from .env>
-#   ANTHROPIC_MODEL      = ${MINIMAX_MODEL:-MiniMax-M2.7}
+#   ANTHROPIC_MODEL      = ${MINIMAX_MODEL:-MiniMax-M3}
 #
-# This is the MiniMax ARM of the M2.7-vs-Sonnet A/B trial. The Sonnet CONTROL
+# This is the MiniMax ARM of the M3-vs-Sonnet A/B trial. The Sonnet CONTROL
 # arm is just a normal `[role:impl-task]` dispatch (daemon pins claude-sonnet-4-6
 # via the role-prefix patch) — do NOT use this script for the control arm.
 #
-# Model selection (default MiniMax-M2.7): the trial pins M2.7, NOT M2.5. The
-# 2026-05-29 first-party benchmark chart (.claude/PRPs/reports/image.png) shows
-# M2.7 beats M2.5 on every panel (SWE-Bench-Pro 56.2 vs 55.4; MLE-Bench-lite
-# 66.6 vs 51.5; etc) at identical price ($0.30/$1.20 per M), so M2.5 is not an
-# arm. Override only for a deliberate follow-up bake-off: MINIMAX_MODEL=MiniMax-M2.5.
+# Model selection (default MiniMax-M3): the trial pins M3 (upgraded from M2.7
+# 2026-06-07 per user instruction). Override only for a deliberate bake-off
+# against an older variant: MINIMAX_MODEL=MiniMax-M2.7.
 #
 # Per .claude/PRPs/briefs/minimax-m27-trial-1.md (the trial runbook) +
 # C:\Users\barri\.claude\projects\C--Users-barri-Developer-brehon-fork\memory\
@@ -45,12 +43,12 @@
 #   curl -s -m25 -o /dev/null -w '%{http_code}\n' https://api.minimax.io/anthropic/v1/messages \
 #     -H 'content-type: application/json' -H 'anthropic-version: 2023-06-01' \
 #     -H "x-api-key: ${KEY}" \
-#     -d '{"model":"MiniMax-M2.7","max_tokens":16,"messages":[{"role":"user","content":"PONG"}]}'
+#     -d '{"model":"MiniMax-M3","max_tokens":16,"messages":[{"role":"user","content":"PONG"}]}'
 #   # Expect 200. A 500 with {"error":{"message":"insufficient balance (1008)"}} == top up the account.
 
 set -euo pipefail
 
-MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M2.7}"
+MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M3}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_FILE="${REPO_ROOT}/.env"
