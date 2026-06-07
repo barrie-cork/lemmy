@@ -36,7 +36,10 @@ mod m2_late_fixtures {
     schema::{governance_log, sanction_event as sanction_event_dsl},
   };
   use lemmy_db_views_local_user::LocalUserView;
-  use lemmy_diesel_utils::connection::{ActualDbPool, DbPool, build_db_pool_for_tests};
+  use lemmy_diesel_utils::{
+    connection::{ActualDbPool, DbPool, build_db_pool_for_tests},
+    traits::Crud,
+  };
   use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
   use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -175,7 +178,7 @@ mod m2_late_fixtures {
       let lu_form = LocalUserInsertForm {
         admin: Some(is_admin),
         accepted_application: Some(true),
-        ..LocalUserInsertForm::test_form(person.id, &format!("{name}_pass"))
+        ..LocalUserInsertForm::test_form(person.id)
       };
       LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
       Ok(person.id)
