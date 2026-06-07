@@ -6774,6 +6774,31 @@
       "resolved_at": "2026-06-07T16:10:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "c3deadfbe610-004",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T16:30:00Z",
+      "question": "T6 laptop cargo check: does `--workspace --features full` pass after adding seed_sanction_subscriber invocation in start_lemmy_server?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T6 applied advisor-side. Single insertion in crates/server/src/lib.rs: if let Ok(url) = std::env::var(BRIDGE_SANCTION_CALLBACK_URL) { seed_sanction_subscriber(&url, pool).await? } after scheduled_tasks spawn block. Build-t6-check1.log: Finished dev profile EXIT_0.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 6,
+      "result": "pass",
+      "log_slice": "Checking lemmy_server v1.0.0-test-arm-qemu.0\nFinished `dev` profile [unoptimized] target(s) in 1m 57s\nEXIT_0",
+      "failed_commands": null,
+      "answer": "pass — workspace cargo check clean after advisor-side T6 insertion",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T16:30:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
