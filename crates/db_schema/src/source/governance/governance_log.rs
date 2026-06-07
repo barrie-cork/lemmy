@@ -247,6 +247,14 @@ pub const ENTRY_KIND_ROOM_DECISION_RELAYED: &str = "room_decision_relayed";
 pub const ENTRY_KIND_ROOM_BRIDGE_ERROR: &str = "room_bridge_error";
 pub const ENTRY_KIND_ROOM_LIFECYCLE_EVENT: &str = "room_lifecycle_event";
 
+// m2-late-1 additions: B-publish sanction propagation (Task 3). Call sites
+// land in Task 4 enqueue_sanction_event (sanction_publisher.rs) per the
+// pre-landed-const exemption. SANCTION_PUBLISHED fires when ≥1 subscriber
+// received the event; SANCTION_EVENT_DELIVERY_FAILED fires when all
+// subscriber POSTs fail.
+pub const ENTRY_KIND_SANCTION_PUBLISHED: &str = "sanction_published";
+pub const ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED: &str = "sanction_event_delivery_failed";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
