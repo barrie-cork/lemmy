@@ -1,6 +1,24 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-late complexity score is 13/10 (Sonnet split threshold is >8). Split into m2-late-1 (T0-T4, additive machinery, sub-score ~5) + m2-late-2 (T5-T9, wire-live + e2e + retro, sub-score ~6), or proceed as one 10-task plan?",
+      "options": [
+        "split",
+        "proceed-as-one"
+      ],
+      "context": "Plan .claude/PRPs/plans/m2-late.plan.md scores 13 (impl-above-5 +3, migrations +2, crates +5, e2e +3). Clean seam at T4/T5: T0-T4 produce additive publisher machinery that compiles but is never called (behaviour unchanged); T5-T9 wire the spawn site live, add startup seed, bridge endpoint, e2e, retro. Both sub-scores under 8. Per feedback_complexity_score_pre_split.md the planner files this for advisor/user decision.",
+      "answer": null,
+      "answered_by": null,
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": null,
+      "id": "f58698282815-001"
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6612,6 +6630,23 @@
       "resolved_at": "2026-06-06T23:23:52Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-06-06T00:00:01Z",
+      "question": "Where does the sanction-subscriber seed live: in the api publisher module or invoked from lemmy_server startup?",
+      "options": [
+        "logic-in-publisher-invoked-from-startup",
+        "all-in-startup"
+      ],
+      "context": "Brief WP-4 names the seed but §7's task sketch is ambiguous on placement. Resolved by planner: seed LOGIC lives in crates/api/api/src/governance/sanction_publisher.rs::seed_sanction_subscriber (T4, idempotent ON CONFLICT upsert reading BRIDGE_SANCTION_CALLBACK_URL + BRIDGE_CALLBACK_SECRET); it is INVOKED from lemmy_server startup crates/server/src/lib.rs async region AFTER migrations run (T6). Keeps DB logic in the api crate (testable) while the composition root owns invocation order.",
+      "answer": "logic-in-publisher-invoked-from-startup: seed fn in api crate sanction_publisher.rs (T4), called from crates/server/src/lib.rs startup after migrations (T6). Documented in plan section 19.",
+      "answered_by": "planner",
+      "approved_by": null,
+      "approved_at": null,
+      "resolved_at": "2026-06-06T00:00:01Z",
+      "id": "f58698282815-002"
     }
   ]
 }
