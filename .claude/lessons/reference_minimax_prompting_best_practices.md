@@ -1,8 +1,7 @@
 ---
-name: reference-minimax-prompting-best-practices
+name: MiniMax M-series prompting best practices
 description: MiniMax M-series (M2.7/M3) official prompting best practices — apply when authoring any brief or preamble for a MiniMax-arm impl-task dispatch.
-metadata:
-  type: reference
+type: reference
 ---
 
 MiniMax's official prompting best practices (source: `https://platform.minimax.io/docs/token-plan/prompting-best-practices`, fetched 2026-06-07). The page does **not** version-differentiate — one practice set covers all "Token Plan" models (M2.7, M3); there is no M2.7-vs-M3 selection guidance on it. Apply these whenever building a brief, runbook, or per-dispatch wrapper for a MiniMax arm (see [[minimax-trial-runbook]] §preamble).

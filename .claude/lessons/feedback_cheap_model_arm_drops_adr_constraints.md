@@ -1,8 +1,7 @@
 ---
-name: cheap-model-arm-drops-adr-constraints
+name: Cheap-model arm drops ADR constraints
 description: A cheaper model arm (MiniMax) silently dropped a hard ADR constraint that the brief listed but did not make load-bearing — enforce ADR gates at brief-author time, verify-gate time, and in any cheap-model preamble.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 When dispatching a cheaper-model arm (or any model) on an impl-task whose file sits under an ADR-pinned path, a constraint that is merely *named* in the brief can be *rationalised away* by the model. The brief must make the constraint **load-bearing**: name the ADR, name the specific gate function + callsite, state WHY it can't be deferred, and require it as a DoD line.
