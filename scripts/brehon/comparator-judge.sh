@@ -65,15 +65,28 @@ if [[ ! -f "${CONTROL_PLAN}" ]]; then
 fi
 
 TRACE="${CHALLENGER_DIR}/trace.jsonl"
+TRACE_OPTIONAL=false
 if [[ ! -f "${TRACE}" ]]; then
-  echo "ERROR: challenger trace not found: ${TRACE}" >&2; exit 2
+  # Allow judge to run without trace if token-signals.json already exists.
+  if [[ -n "${RESULTS_DIR}" && -f "${RESULTS_DIR}/token-signals.json" ]]; then
+    echo "  WARN: trace.jsonl not found locally; using pre-computed token-signals.json"
+    TRACE_OPTIONAL=true
+  else
+    echo "ERROR: challenger trace not found: ${TRACE}" >&2
+    echo "  hint: copy trace.jsonl from the runner host, or pre-generate token-signals.json" >&2
+    exit 2
+  fi
 fi
 
-# Check if challenger produced a plan file (under output/).
+# Check if challenger produced a plan file.
+# Look first in output/ (standard), then directly in the challenger dir (recovered run).
 CHALLENGER_PLAN=""
 if [[ -d "${CHALLENGER_DIR}/output" ]]; then
-  # Take the first .plan.md file found
   CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}/output" -name '*.plan.md' | head -1)"
+fi
+if [[ -z "${CHALLENGER_PLAN}" ]]; then
+  # Fallback: check for plan directly in challenger dir (recovered/interrupted runs)
+  CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}" -maxdepth 1 -name '*.plan.md' | head -1)"
 fi
 
 # Locate this script's directory to call siblings.
@@ -107,12 +120,16 @@ echo "  plan-found:    ${CHALLENGER_PLAN:-NONE (run incomplete)}"
 echo "  judge model:   ${MODEL}"
 echo "  results:       ${RESULTS_DIR}"
 
-# Extract token signals from the challenger trace.
-echo "  extracting token signals from trace..."
-META_FILE="${CHALLENGER_DIR}/meta.json"
-META_FLAG=""
-[[ -f "${META_FILE}" ]] && META_FLAG="--meta ${META_FILE}"
-"${TOKEN_EXTRACT}" "${TRACE}" ${META_FLAG} > "${RESULTS_DIR}/token-signals.json"
+# Extract token signals from the challenger trace (skip if pre-computed).
+if [[ "${TRACE_OPTIONAL}" == false ]]; then
+  echo "  extracting token signals from trace..."
+  META_FILE="${CHALLENGER_DIR}/meta.json"
+  META_FLAG=""
+  [[ -f "${META_FILE}" ]] && META_FLAG="--meta ${META_FILE}"
+  "${TOKEN_EXTRACT}" "${TRACE}" ${META_FLAG} > "${RESULTS_DIR}/token-signals.json"
+else
+  echo "  using pre-computed token-signals.json (no local trace)"
+fi
 
 # If no challenger plan was produced (run incomplete or failed), we grade the
 # challenger as a partial run. The judge still scores what exists — if there's

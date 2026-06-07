@@ -15,7 +15,7 @@
 #
 # Emits a JSON object of gate results to stdout.
 
-set -uo pipefail
+set -euo pipefail
 
 PLAN="${1:-}"
 REPO="${2:-$(pwd)}"
@@ -25,46 +25,66 @@ if [[ -z "${PLAN}" || ! -f "${PLAN}" ]]; then
   exit 2
 fi
 
-# Gate 1: section completeness — count canonical '## ' headers (target: 20-section schema).
-SECTIONS=$(grep -c '^## ' "${PLAN}" 2>/dev/null || echo 0)
+# All counting done in Python to avoid bash grep-pipe exit-code traps
+# (grep -c returns exit 1 on 0 matches, which || echo 0 doubles the output
+# in a pipeline — use re.findall instead, always exits 0).
+python3 - "${PLAN}" <<'PYEOF'
+import re, sys, json
 
-# Gate 2: watchpoint specificity — §4 watchpoints must cite a file/table/line.
-# Heuristic: lines in the watchpoints area referencing a path (crates/, .rs, a table name) or schema.rs:NN.
-WATCHPOINT_CITES=$(grep -iE 'watch' "${PLAN}" 2>/dev/null | grep -cE 'crates/|\.rs|schema\.rs|migrations/|[a-z_]+\.[a-z_]+' 2>/dev/null; true)
+plan_path = sys.argv[1]
+with open(plan_path, encoding='utf-8', errors='replace') as f:
+    text = f.read()
+lines = text.splitlines()
 
-# Gate 3: ADR-015 preservation — the plan must name the pseudonym gate + a callsite, not just "respects ADR-015".
-ADR015_NAMED=$(grep -cE 'actor_pseudonym|ADR-015|pseudonym' "${PLAN}" 2>/dev/null || echo 0)
-ADR015_CALLSITE=$(grep -cE 'actor_pseudonym\.(pseudonym|get_or_create)|validate_identity_policy' "${PLAN}" 2>/dev/null || echo 0)
+# Gate 1: section completeness — count '## ' headers (target: 20-section schema).
+sections = sum(1 for l in lines if re.match(r'^## ', l))
 
-# Gate 4: §13 task decomposition present + MIRROR refs.
-TASK_COUNT=$(grep -cE '^### Task [0-9]+|^### T[0-9]+|^#### Task' "${PLAN}" 2>/dev/null || echo 0)
-MIRROR_REFS=$(grep -cE 'MIRROR|SOURCE:.*:[0-9]' "${PLAN}" 2>/dev/null || echo 0)
+# Gate 2: watchpoint specificity — lines mentioning "watch" that also cite a
+# concrete artefact (file path, .rs, table name, schema.rs:NN).
+watch_lines = [l for l in lines if re.search(r'watch', l, re.I)]
+watchpoint_cites = sum(
+    1 for l in watch_lines
+    if re.search(r'crates/|\.rs|schema\.rs|migrations/|[a-z_]+\.[a-z_]+', l)
+)
 
-# Gate 5: §16a stories present (if the schema uses them) + checkpoint commands.
-STORY_COUNT=$(grep -ciE 'story|§16a|checkpoint' "${PLAN}" 2>/dev/null || echo 0)
+# Gate 3: ADR-015 — must name the pseudonym gate + include a concrete callsite.
+adr015_named = len(re.findall(r'actor_pseudonym|ADR-015|pseudonym', text, re.I))
+adr015_callsite = len(re.findall(
+    r'actor_pseudonym\.(pseudonym|get_or_create)|validate_identity_policy', text
+))
 
-# Gate 6: §15 DoD command shape — every validation line should be a runnable cargo/diesel command.
-# Count cargo/diesel commands; flag the -p+--features full footgun.
-CARGO_CMDS=$(grep -cE 'cargo (check|clippy|test|build|run)|diesel migration' "${PLAN}" 2>/dev/null || echo 0)
-P_FEATURES_FOOTGUN=$(grep -cE 'cargo (check|clippy|test).*-p .*--features full' "${PLAN}" 2>/dev/null || echo 0)
+# Gate 4: §13 task decomposition + MIRROR refs.
+task_count = len(re.findall(r'^### Task \d+|^### T\d+|^#### Task', text, re.M))
+mirror_refs = len(re.findall(r'MIRROR|SOURCE:.*:\d', text))
 
-# Gate 7: T1-preemption SIGNAL (code-detectable portion) — does the plan mention
-# validate-pending / lane mode / Mode A / Mode B / worktree at all? (The QUALITY
-# of preemption is the LLM judge's job; this is just presence.)
-T1_SIGNAL=$(grep -ciE 'validate-pending|lane mode|mode a|mode b|worktree|trunk.*phase sync' "${PLAN}" 2>/dev/null || echo 0)
+# Gate 5: §16a stories + checkpoint commands.
+story_signal = len(re.findall(r'story|§16a|checkpoint', text, re.I))
 
-{
-  printf '{'
-  printf '"plan":"%s",' "${PLAN}"
-  printf '"sections":%s,' "${SECTIONS}"
-  printf '"watchpoint_cites":%s,' "${WATCHPOINT_CITES}"
-  printf '"adr015_named":%s,' "${ADR015_NAMED}"
-  printf '"adr015_callsite":%s,' "${ADR015_CALLSITE}"
-  printf '"task_count":%s,' "${TASK_COUNT}"
-  printf '"mirror_refs":%s,' "${MIRROR_REFS}"
-  printf '"story_signal":%s,' "${STORY_COUNT}"
-  printf '"cargo_cmds":%s,' "${CARGO_CMDS}"
-  printf '"p_features_footgun":%s,' "${P_FEATURES_FOOTGUN}"
-  printf '"t1_preemption_signal":%s' "${T1_SIGNAL}"
-  printf '}\n'
+# Gate 6: §15 DoD — cargo/diesel commands; flag -p+--features full footgun.
+cargo_cmds = len(re.findall(
+    r'cargo (?:check|clippy|test|build|run)|diesel migration', text
+))
+p_features_footgun = len(re.findall(
+    r'cargo (?:check|clippy|test).*-p .*--features full', text
+))
+
+# Gate 7: T1-preemption signal — presence of validate-pending / lane-mode terms.
+t1_signal = len(re.findall(
+    r'validate-pending|lane mode|mode a|mode b|worktree|trunk.*phase sync', text, re.I
+))
+
+result = {
+    "plan": plan_path,
+    "sections": sections,
+    "watchpoint_cites": watchpoint_cites,
+    "adr015_named": adr015_named,
+    "adr015_callsite": adr015_callsite,
+    "task_count": task_count,
+    "mirror_refs": mirror_refs,
+    "story_signal": story_signal,
+    "cargo_cmds": cargo_cmds,
+    "p_features_footgun": p_features_footgun,
+    "t1_preemption_signal": t1_signal,
 }
+print(json.dumps(result))
+PYEOF
