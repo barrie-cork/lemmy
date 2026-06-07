@@ -1685,6 +1685,8 @@ diesel::allow_tables_to_appear_in_same_query!(
   reputation_snapshot,
   rule_set_version,
   sanction,
+  sanction_event,
+  sanction_subscriber,
   site,
   site_language,
   sponsor_allowlist,
@@ -1696,8 +1698,5 @@ diesel::allow_tables_to_appear_in_same_query!(
   federation_inbox_nonce,
   federation_peer,
   remote_moderation_label,
-  // m2-late-1 additions:
-  sanction_event,
-  sanction_subscriber,
 );
 diesel::allow_tables_to_appear_in_same_query!(custom_emoji, custom_emoji_keyword,);

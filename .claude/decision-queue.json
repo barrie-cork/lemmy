@@ -6724,6 +6724,31 @@
       "result": "pass",
       "log_slice": "Finished `dev` profile [unoptimized] target(s) in 6m 56s",
       "failed_commands": null
+    },
+    {
+      "id": "282a5cbdfaa8-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T14:03:01Z",
+      "question": "Does task 4 (sanction_publisher.rs) compile workspace-wide with --features full?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 created crates/api/api/src/governance/sanction_publisher.rs (enqueue_sanction_event, seed_sanction_subscriber, SanctionEventPayload, SanctionContext) and added pub mod sanction_publisher to mod.rs. Two advisor-side fixes applied: OptionalExtension import added to diesel use block; ctx.pool() bound to named let mut pool variables (3 sites, E0716). reqwest in api Cargo.toml.",
+      "answer": "pass — cargo-check.bat --workspace --features full exit 0 after advisor-laptop fixes (OptionalExtension + pool binding). Finished 1m 16s.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T14:25:06Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 4,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
