@@ -51,6 +51,7 @@ use crate::governance::{
     ENTRY_KIND_VOTE_OUTCOME_RECORDED,
   },
   redaction,
+  sanction_publisher::enqueue_sanction_event,
   sponsor_liability,
   state::{Active, ActiveVoteResult, GovernanceCase},
 };
@@ -58,8 +59,8 @@ use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use chrono::{DateTime, Duration, Utc};
 use diesel::{
-  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star,
-  insert_into, update,
+  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, SelectableHelper,
+  dsl::count_star, insert_into, update,
 };
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
@@ -76,7 +77,7 @@ use lemmy_db_schema::{
     moderation_case::ModerationCase,
     public_case_log::PublicCaseLogInsertForm,
     reputation_event::ReputationEventInsertForm,
-    sanction::SanctionInsertForm,
+    sanction::{Sanction, SanctionInsertForm},
   },
 };
 use lemmy_db_schema_file::{
@@ -174,6 +175,29 @@ pub async fn submit_jury_vote(
       governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
         .await
         .ok();
+    }
+  }
+
+  // Post-tx re-query: find the active sanction written in this transaction.
+  // Re-query is used instead of threading the sanction through process_vote's
+  // 5 return sites — mirrors governance_case_after_transition pattern (:163-178).
+  let post_tx_pool = &mut context.pool();
+  let post_tx_conn = &mut get_conn(post_tx_pool).await?;
+  let published: Option<Sanction> = sanction::table
+    .filter(sanction::case_id.eq(data.case_id))
+    .filter(sanction::active.eq(true))
+    .first::<Sanction>(post_tx_conn)
+    .await
+    .optional()?;
+
+  if let Some(sanction) = published {
+    if sanction.target_person_id.is_some() {
+      let ctx = context.clone();
+      tokio::spawn(async move {
+        if let Err(e) = enqueue_sanction_event(sanction, ctx).await {
+          tracing::warn!("sanction publish failed: {e}");
+        }
+      });
     }
   }
 
