@@ -50,6 +50,8 @@ The lesson: when a plan asserts an external fact, the plan author captured it at
 **Generalises to:** Any pre-written audit, migration checklist, multi-step setup doc, OR plan body authored before execution. The longer the gap between writing and running, the more drift accumulates — and EXTERNAL facts (upstream PRs/releases, dependency-advisory counts, which-version-is-the-fix) drift on the *upstream's* clock, not the repo's, so a plan that's "fresh" by repo-commit time can still cite a months-stale external fact. Post-event verification is mandatory if the gap was > 1 day for local facts, and **always** for external facts regardless of plan age.
 
 **Related lessons:**
+- `feedback_spec_deploy_facts_are_hypotheses.md` — the deploy/runtime-section specialization: a spec's PIDs, restart commands, process-manager names, and row counts are stale-on-arrival hypotheses; verify against the live system before acting (2026-06-07 read-pheromone session, 2× recurrence from one spec).
+- `feedback_diff_baseline_before_cross_host_copy.md` — same class applied to cross-host deploy: "host A is a copy of host B" is a hypothesis; diff the target's baseline before a partial file-copy (same 2026-06-07 session).
 - `feedback_plan_drift_metadata_cross_check.md` — same class (plan claim vs reality diverges between write and execute time)
 - `feedback_test_scripts_against_real_targets.md` — test scripts against real input, not mental models
 - `feedback_verify_automated_reviewer_claims_against_compiler.md` — sibling: CR/Copilot trait/type claims are hypotheses, compile-check before acting (same "external assertion ≠ fact" discipline)
