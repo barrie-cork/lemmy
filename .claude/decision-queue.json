@@ -6749,6 +6749,31 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "id": "c3deadfbe610-003",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T16:10:00Z",
+      "question": "T5 laptop cargo check: does `--workspace --features full` pass after wiring enqueue_sanction_event spawn site in submit_jury_vote.rs and fixing SanctionContext to use activitypub_federation::config::Data?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T5 applied advisor-side (worker #647 cancelled — stuck in reasoning loop, 40+ min zero tool calls). Two fixes: E0599 pool.get() → get_conn pattern; E0308 SanctionContext actix_web::Data → activitypub_federation::config::Data. Build-t5-check3.log: Finished dev profile EXIT_0.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": "Checking lemmy_api v1.0.0-test-arm-qemu.0\nChecking lemmy_server v1.0.0-test-arm-qemu.0\nFinished `dev` profile [unoptimized] target(s) in 22.59s\nEXIT_0",
+      "failed_commands": null,
+      "answer": "pass — workspace cargo check clean after advisor-side pool binding fix + SanctionContext type fix",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T16:10:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
