@@ -1,0 +1,35 @@
+{
+  "experiment_id": "planning-001",
+  "role": "planning",
+  "subject": "m2-late re-plan (B-publish sanction propagation)",
+  "task_input": ".claude/PRPs/briefs/m2-late-planning-1.md",
+  "base_commit": "bfe25a15c",
+  "base_rationale": "ancestor of the plan commit 689ff688d; has the clarified brief + prp-plan template but NOT the existing plan -> challenger cannot peek at the Opus ground truth",
+  "control": {
+    "id": "control", "is_incumbent": true,
+    "runner": "claude-code", "harness": ".claude/",
+    "model": "claude-opus-4-8", "thinking": "max",
+    "artifact": ".claude/PRPs/plans/m2-late.plan.md",
+    "note": "GROUND TRUTH — already authored + committed (689ff688d), validated by m2-late-1 executing against it. NOT re-run."
+  },
+  "challenger": {
+    "id": "challenger",
+    "runner": "pi", "harness": ".pi/",
+    "prompt_template": ".pi/prompts/prp-plan.md",
+    "provider": "openai-codex", "model": "openai-codex/gpt-5.5:xhigh",
+    "dispatch": "scripts/brehon/run-comparator.sh"
+  },
+  "rubric": "planning",
+  "ships": "control",
+  "fairness": "challenger gets SAME brief, SAME harness, NO hindsight (T1 incident happened after Opus plan; not given to challenger). Scoring Q: did either plan pre-empt the T1 validate-pending lane failure from the brief alone?",
+  "scoring_dimensions": [
+    "plan completeness (20-section schema)",
+    "watchpoint specificity (cite-a-table gate)",
+    "ADR-constraint preservation (ADR-015 pseudonym + callsite + rationale)",
+    "§13 task decomposition + MIRROR refs",
+    "§16a story coverage",
+    "DoD smoke-test executability (§15 commands)",
+    "T1-preemption (did it foresee mode-A/mode-B lane / validate-pending failure)",
+    "token + wall-clock cost"
+  ]
+}

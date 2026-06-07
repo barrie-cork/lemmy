@@ -176,30 +176,93 @@ Sandboxing applies asymmetrically — the two runners isolate differently:
    (each arm's worktree gets its own commit trail = the trace), but the runner
    should NOT let those commits reach a shared branch. Per-arm worktree isolates
    them.
-4. **Sibling-worktree placement:** sandboxes live OUTSIDE
-   `/srv/brehon-fork/.junior/worktrees/` so they don't trip the (Claude-side)
-   guard or get reaped by the daemon's cancel handler.
+4. **Worktree placement = `~/comparator-worktrees/`** (NOT `/srv/`-sibling, NOT
+   `/tmp`). Three reasons: (a) `/srv/` is root-owned — a sibling path fails
+   "Permission denied" (caught 2026-06-07 first launch); (b) OUTSIDE
+   `/srv/brehon-fork/.junior/worktrees/` so it doesn't trip the Claude-side
+   worktree-guard or the daemon cancel-reaper; (c) **forensic salvage** — `/tmp`
+   is volatile (reboot/tmpwatch-reaped); `~/comparator-worktrees/` persists, so a
+   CRASHED run's partial plan + worktree state survive for inspection (user
+   rationale 2026-06-07). Override via `COMPARATOR_WT_DIR`.
+5. **Forensic survival on crash:** clean runs remove the worktree FS at teardown
+   but KEEP the `ab-cell/<exp>-<arm>` branch ref (committed `auto(pi)` trail
+   survives in git). Crashed runs never reach teardown → the worktree stays under
+   `~/comparator-worktrees/` with whatever the model wrote. Belt + braces.
 
-## 6. Trace + output capture (per arm)
+## 6. Trace + output capture — FULL forensic (per user 2026-06-07)
 
-Two artifacts per arm, written to `.claude/PRPs/comparator/runs/<experiment-id>/<arm-id>/`:
+Capture must serve BOTH goals: (a) good comparison, (b) data to improve the
+challenger model's future performance. So we capture the complete forensic
+record, not just a result. All under
+`.claude/PRPs/comparator/runs/<experiment-id>/<arm-id>/`:
 
-| Artifact | What | Source |
+| Artifact | What | Source / how |
 |---|---|---|
-| **trace** | the agent's full tool-call / reasoning transcript | Pi session log (headless run stdout/jsonl) + the worktree's `auto(pi)` commit trail |
-| **output** | the produced artifact | the role's deliverable: `plan.md` (planning), `git diff` (impl/bugfix), findings (review) |
-| **metrics** | token in/out, $cost, wall-clock, thinking budget | parsed from Pi run summary |
+| **trace.jsonl** | the COMPLETE `--mode json` event stream — `message_update` (assistant reasoning blocks), `tool_execution_start/end` (args + results), `compaction_start/end` (272K-pressure signal), `agent_end`, per-message token accounting | `pi --mode json` stdout, redirected (not piped — exit-code safety) |
+| **session file** | Pi's replay-ready session (drop `--no-session`, use `--session-dir`) | enables a future tuned run to replay against the same state |
+| **output/** | the produced plan file(s) (`git diff` vs base_commit, `.claude/PRPs/plans/`) | copied from the worktree post-run |
+| **replay-bundle/** | the EXACT inputs the arm saw: resolved system prompt, injected `AGENTS.md` + `PROJECT_CONTEXT.md`, the brief, the expanded `prp-plan` template, model+thinking+version | snapshot at dispatch time → reproducibility (eval best-practice) |
+| **meta.json** | run-level facts: model, version, base_commit, wall-clock, pi_exit, plans_produced, compaction_count, peak token usage | runner-computed |
 
-`observation-capture.sh` is a model — but it's Claude-Code-event-shaped; the
-comparator needs a Pi-side capture (Pi run already emits a session log; the
-runner tees it). No LLM in the capture path — pure observation.
+Pi's `--mode json` schema (verified from EliteDesk `docs/json.md`) emits exactly
+these event types — reasoning is in `message_update`, tokens in the
+AssistantMessage, context pressure in `compaction_start/end`. `observation-capture.sh`
+is Claude-Code-event-shaped and does NOT apply; the json stream IS the capture.
 
-## 7. Per-role scoring rubrics
+## 7. Eval methodology — follows Anthropic eval best-practices (per user 2026-06-07)
 
-Scoring is the science. Each role has objective + judged dimensions. The judged
-dimensions are scored by a **separate neutral judge agent** (a third model, or
-the advisor) reading both outputs blind to which arm produced which — never an arm
-scoring itself.
+Per `platform.claude.com/docs/.../develop-tests`. Three principles bind the eval:
+
+1. **Three grading tiers, most-reliable-per-dimension** (best-practice ranking:
+   code > human > LLM):
+   - **Code-based (deterministic)** for objective gates — fastest + most reliable,
+     NO LLM: all 20 §-sections present (`grep '^## '`), every §15 DoD command
+     executable (run it, capture exit), ADR-015 callsite exists
+     (`grep validate_identity_policy`/pseudonym in the write path), §16a stories
+     present. These are pass/fail, machine-graded.
+   - **LLM-judge (Likert 1–5)** ONLY for nuanced dimensions — task-decomposition
+     quality, T1-preemption reasoning, watchpoint *usefulness* (beyond mere
+     citation). Each with explicit 1-vs-5 anchors defined BEFORE grading.
+2. **Judge = a THIRD model, never an arm.** Best-practice (stated twice in the
+   docs): "use a different model to evaluate than the model used to generate."
+   Neither Opus (control) nor GPT-5.5 (challenger) judges. **For this experiment
+   (planning-001) the judge is MiniMax M3** (user 2026-06-07) — neither arm, no
+   stake in GPT-5.5-vs-Opus, Pi-native (`MINIMAX_API_KEY`→provider `minimax`).
+   Judge runs **blind to arm identity** (outputs labelled A/B, randomized) and
+   **position-swapped** (grade A-then-B and B-then-A; average) to kill ordering
+   bias. **Judge-selection rule (consistency):** the judge must differ from BOTH
+   arms — so when a future experiment makes MiniMax M3 a challenger, a different
+   judge (Gemini / Sonnet) is required then. MiniMax-as-judge is valid only while
+   M3 is not an arm.
+3. **Judge reasons THEN scores.** "Encourage reasoning: ask the LLM to think
+   first, then output the score." Judge emits `<thinking>` (evidence from the
+   trace + plan) then `<result>` (the score) — reasoning discarded from the tally
+   but kept in the eval artifact as the divergence evidence.
+
+**Reference-based where possible:** the Opus plan + the REAL T1 outcome are
+ground-truth anchors. T1-preemption is graded against what actually happened
+(did the plan foresee the mode-A/mode-B lane / validate-pending failure).
+
+**n=1 honesty:** this first experiment is ONE planning task = a data point, not a
+verdict. The report states this explicitly; a routing decision needs n≥5 paired
+tasks (spec §8). Sample-size discipline per the best-practice "prioritize volume."
+
+### Eval artifacts produced (the 4 deliverables, per user)
+
+1. **Per-dimension divergence report** — each rubric dimension: challenger score
+   vs Opus-ground-truth, with the specific trace/plan evidence for the gap.
+2. **Failure-mode → fix map** — each gap tagged by cause (`brief-ambiguity` /
+   `missed-harness-file` / `reasoning-gap` / `harness-mismatch` /
+   `context-pressure`) → a concrete next-run fix. The model-improvement deliverable.
+3. **Token/cost phase breakdown** — exploration vs generation token split, peak
+   context (272K concern + any compaction events), $-comparable cost vs Opus
+   (noting the subscription-vs-API asymmetry).
+4. **Replay-ready prompt+context bundle** — §6's `replay-bundle/`, so a tuned
+   re-run measures improvement deltas against identical inputs.
+
+### Per-role scoring rubrics
+
+Each role has objective (code-graded) + judged (LLM, 1–5) dimensions.
 
 ### Planning rubric
 | Dimension | Type | How measured |

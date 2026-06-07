@@ -111,9 +111,14 @@ fi
 
 # ---- sandbox worktree (spec §5) ----
 CELL_BRANCH="ab-cell/${EXPERIMENT}-${ARM}"
-# Sibling to the repo, NOT under .junior/worktrees/.
-WT_PARENT="$(dirname "${REPO}")"
-WT_PATH="${WT_PARENT}/$(basename "${REPO}")-abcell-${EXPERIMENT}-${ARM}"
+# Place worktrees under a USER-WRITABLE dir, NOT a sibling of /srv/brehon-fork:
+# /srv/ is root-owned (CLAUDE.md: "Creating directories under /srv/ needs sudo"),
+# so a sibling path fails with "Permission denied". Use ~/comparator-worktrees/,
+# which is also OUTSIDE /srv/brehon-fork/.junior/worktrees/ (avoids the daemon
+# cancel-reaper + the Claude-shaped worktree-guard) per spec §5.
+WT_PARENT="${COMPARATOR_WT_DIR:-${HOME}/comparator-worktrees}"
+mkdir -p "${WT_PARENT}"
+WT_PATH="${WT_PARENT}/abcell-${EXPERIMENT}-${ARM}"
 
 if [[ "${PWD}" == "${REPO}" || "${PWD}" == "${REPO}/"* ]]; then
   : # we cd into the worktree below; the live repo is only the worktree source
@@ -125,12 +130,15 @@ if [[ -e "${WT_PATH}" ]]; then
   exit 1
 fi
 
-# ---- results dir (spec §6) ----
+# ---- results dir (spec §6 — FULL forensic capture) ----
 RESULTS_DIR="${REPO}/.claude/PRPs/comparator/runs/${EXPERIMENT}/${ARM}"
 mkdir -p "${RESULTS_DIR}"
-TRACE_FILE="${RESULTS_DIR}/trace.jsonl"
+TRACE_FILE="${RESULTS_DIR}/trace.jsonl"      # full --mode json event stream
 META_FILE="${RESULTS_DIR}/meta.json"
-PI_LOG="${RESULTS_DIR}/pi-run.log"
+PI_LOG="${RESULTS_DIR}/pi-run.log"           # stderr
+SESSION_DIR="${RESULTS_DIR}/session"          # replay-ready Pi session file
+REPLAY_DIR="${RESULTS_DIR}/replay-bundle"     # exact inputs the arm saw
+mkdir -p "${SESSION_DIR}" "${REPLAY_DIR}"
 
 echo "comparator arm:"
 echo "  experiment:      ${EXPERIMENT}"
@@ -172,6 +180,22 @@ fi
 TEMPLATE_NAME="$(basename "${PROMPT_TEMPLATE}" .md)"
 PI_MESSAGE="/${TEMPLATE_NAME} ${TASK}"
 
+# ---- replay bundle: snapshot the EXACT inputs the arm sees (spec §6, eval reproducibility) ----
+# So a future tuned re-run can be measured against identical inputs.
+cp "${WT_PATH}/${PROMPT_TEMPLATE}" "${REPLAY_DIR}/prompt-template.md" 2>/dev/null || true
+cp "${WT_PATH}/${TASK}" "${REPLAY_DIR}/task-input.md" 2>/dev/null || true
+cp "${WT_PATH}/AGENTS.md" "${REPLAY_DIR}/AGENTS.md" 2>/dev/null || true
+cp "${WT_PATH}/.pi/PROJECT_CONTEXT.md" "${REPLAY_DIR}/PROJECT_CONTEXT.md" 2>/dev/null || true
+{
+  echo "experiment=${EXPERIMENT}"
+  echo "arm=${ARM}"
+  echo "model=${MODEL}"
+  echo "pi_message=${PI_MESSAGE}"
+  echo "harness=${HARNESS}"
+  echo "base_commit=${BASE_COMMIT}"
+  echo "pi_version=$(pi --version 2>/dev/null | head -1)"
+} > "${REPLAY_DIR}/run-inputs.txt"
+
 START_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
@@ -183,7 +207,7 @@ set +e
   cd "${WT_PATH}"
   timeout "${TIMEOUT}" pi -p \
     --mode json \
-    --no-session \
+    --session-dir "${SESSION_DIR}" \
     --model "${MODEL}" \
     --prompt-template "${PROMPT_TEMPLATE}" \
     ${HARNESS_FLAG} \
@@ -191,6 +215,16 @@ set +e
 ) > "${TRACE_FILE}" 2> "${PI_LOG}"
 PI_EXIT=$?
 set -e
+
+# ---- forensic signals from the trace (spec §6 + §7 token/cost + 272K pressure) ----
+# Count compaction events (272K context-pressure signal) and capture token totals.
+COMPACTION_COUNT=0
+if command -v jq >/dev/null 2>&1 && [[ -s "${TRACE_FILE}" ]]; then
+  COMPACTION_COUNT=$(grep -c '"type":"compaction_start"' "${TRACE_FILE}" 2>/dev/null || echo 0)
+  # Best-effort token totals from the json stream (AssistantMessage usage fields).
+  jq -s '[.[] | select(.type=="message_end" or .type=="agent_end")] | length' \
+    "${TRACE_FILE}" > "${RESULTS_DIR}/.msg_count" 2>/dev/null || true
+fi
 
 END_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_EPOCH="$(date +%s)"
@@ -229,17 +263,23 @@ PLAN_COUNT="$(printf '%s\n' "${CHANGED_PLANS}" | grep -c . || true)"
   printf '"wall_seconds":%s,' "${WALL_S}"
   printf '"pi_exit":%s,' "${PI_EXIT}"
   printf '"plans_produced":%s,' "${PLAN_COUNT:-0}"
+  printf '"compaction_count":%s,' "${COMPACTION_COUNT:-0}"
   printf '"trace":"%s",' "${TRACE_FILE}"
+  printf '"session_dir":"%s",' "${SESSION_DIR}"
+  printf '"replay_bundle":"%s",' "${REPLAY_DIR}"
   printf '"pi_log":"%s"' "${PI_LOG}"
   printf '}\n'
 } > "${META_FILE}"
 
 echo "arm complete:"
-echo "  pi exit:        ${PI_EXIT}"
-echo "  wall seconds:   ${WALL_S}"
-echo "  plans produced: ${PLAN_COUNT:-0}"
-echo "  trace:          ${TRACE_FILE}"
-echo "  meta:           ${META_FILE}"
+echo "  pi exit:          ${PI_EXIT}"
+echo "  wall seconds:     ${WALL_S}"
+echo "  plans produced:   ${PLAN_COUNT:-0}"
+echo "  compactions:      ${COMPACTION_COUNT:-0}  (>0 = hit 272K context pressure)"
+echo "  trace:            ${TRACE_FILE}"
+echo "  session:          ${SESSION_DIR}"
+echo "  replay-bundle:    ${REPLAY_DIR}"
+echo "  meta:             ${META_FILE}"
 
 # ---- teardown (spec §5: never merge, remove the throwaway worktree) ----
 # Keep the branch ref locally for forensic git-diff but remove the worktree FS.
