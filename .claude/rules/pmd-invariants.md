@@ -8,7 +8,9 @@ Every worktree's `.mcp.json` `PROJECT_MEMORY_DB` MUST be
 `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db` — never relative, never
 per-lane. Detection: `bash .claude/hooks/pmd-canonical-guard.sh`.
 
-**Current topology (HTTP server, 2026-05-30+):** PMD MCP is an HTTP daemon (`http://localhost:11435/mcp`; Tailscale `http://100.104.171.26:11435/mcp`). `PROJECT_MEMORY_DB` env-var mechanism superseded — server manages DB server-side. Guard hook invocation is harmless no-op.
+**Current topology (HTTP server, 2026-05-30+):** PMD MCP is an HTTP daemon (`http://localhost:11435/mcp`; Tailscale `http://100.104.171.26:11435/mcp`). The `PROJECT_MEMORY_DB` **env-var wiring mechanism** is superseded — the server resolves its own DB path server-side; you no longer set `PROJECT_MEMORY_DB` in `.mcp.json`. Guard hook invocation is harmless no-op.
+
+**What is NOT superseded — the file-path sync still reaches the live store (verified 2026-06-07):** the daemon's DB is the same on-disk `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`. A `sqlite3`-CLI writer that targets that file — i.e. `scripts/sync-lessons-to-pmd.sh` — DOES land rows the live HTTP daemon serves (FTS5-searchable immediately; semantic vector waits for the weekly backfill per invariant #3). So for **lesson-file import**, the sync script remains the canonical path; do NOT additionally `memory_write` the same lesson (that produces a duplicate row — incident 2026-06-07: redundant #883 had to be pruned after #882 from the sync). The "wrong daemon-local store" caveat (`feedback_pmd_retro_check_http_store_split.md`) applies to the EliteDesk-side store split and to the retired interactive `backfill.js`, NOT to the laptop file-path lesson sync.
 
 See also: `feedback_pmd_cross_lane_canonical_db.md`, `feedback_pmd_retro_check_http_store_split.md`, `multi-lane-worktree.md` §"PMD is cross-lane shared".
 
