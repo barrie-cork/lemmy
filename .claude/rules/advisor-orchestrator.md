@@ -74,6 +74,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 | Any new test under `crates/*/tests/**` returning `Result<(), Box<dyn Error>>` | `feedback_lemmy_error_no_std_error.md` |
 | Any handler under `crates/api/**/src/**` doing 2+ DB writes | `feedback_multi_write_handlers_need_transactions.md` |
 | Any new file under `crates/api/api/src/governance/**` that loads `ModerationCase` from DB and matches on `case.status` before proceeding | `feedback_governance_type_state_handlers.md` |
+| Any handler under `crates/api/api/src/governance/**` or `crates/apub/activities/src/governance/**` that enforces an ADR gate (ADR-013 EmergencyRemove, ADR-015 `identity_policy`/pseudonymity, etc.) — triggers the §2.4a load-bearing ADR clause | `feedback_cheap_model_arm_drops_adr_constraints.md` (+ `reference_minimax_prompting_best_practices.md` if MiniMax/cheap-model arm) |
 | Any `#[cfg(feature = "full")]` gate | `feedback_features_full_workspace_only.md`, `feedback_features_full_p_crate_incompatible.md` |
 | Any `pg_advisory_xact_lock` or void PG function call | `feedback_pg_advisory_xact_lock_void_decode.md` |
 | Any newtype under `crates/db_schema/src/newtypes/` | `feedback_newtype_locations_lemmy_db_schema_vs_file.md` |
@@ -84,6 +85,16 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 Brief commit body lists which mandatory lessons fired and why (one line each). The §2.3 hybrid search still runs after the table check — catches non-mechanical / cross-cutting lessons. // 2026-05-09 c-2 fix-impl-1 lapse: same E0277 LemmyError class as cycle-1; brief omitted lesson. Maintenance: when a new mechanical-fix pattern enters the §G4 allowlist (§5.3) and correlates with a file class, add a row here.
 
 **Pre-Shape-G validate-pending-laptop constraint (mandatory for all impl-task briefs under pre-Shape-G plans):** Every impl-task brief §4 MUST include: "Write the `validate-pending-laptop` DQ entry with `commands: [\"./scripts/brehon/cargo-check.sh --workspace --features full\"]`, commit + push, then **stop**. Do NOT run `cargo-check.sh` yourself — validation is delegated to the laptop advisor." Workers running cargo on the daemon cause file-lock contention across concurrent cohort members (v1-RT-r5 Cohort A: ~45 min serialized wait). Lesson: `feedback_validate_pending_laptop_write_then_stop.md`.
+
+### 2.4a ADR-constraint load-bearing clause (mandatory; all impl-task briefs touching an ADR-pinned path)
+
+When an impl-task's file list includes any handler under an ADR-pinned path — `crates/api/api/src/governance/**` or `crates/apub/activities/src/governance/**` that enforces an ADR gate (ADR-013 `EmergencyRemove`, ADR-015 pseudonymity / `identity_policy`, ADR-011 source-disclosure, etc.) — the brief §4 MUST make the constraint **load-bearing**, not merely named:
+
+1. **Name the ADR + the specific gate** — fn name + callsite (`validate_identity_policy(&data)?; // §10.4 — ADR-015 pin`), not "respects ADR-015".
+2. **State WHY it can't be deferred** — one sentence (per MiniMax best-practice #1: "explain why a constraint matters" — a constraint with no rationale is one a model may trade away).
+3. **Require it as a DoD line** — "DoD: `grep validate_identity_policy <file>` returns BOTH the definition AND a callsite in the write path."
+
+No judgment call — file under an ADR-pinned governance path + enforces a gate → clause goes in. The §3 mandatory lesson injection adds `feedback_cheap_model_arm_drops_adr_constraints.md` to Required reading. **Doubly mandatory for any MiniMax/cheap-model arm dispatch** (the m1-b task-4 arm dropped the ADR-015 gate because the brief named but didn't enforce it — `.claude/PRPs/reports/minimax-ab-m1b-task3-task4.md`). Per `feedback_cheap_model_arm_drops_adr_constraints.md` + `reference_minimax_prompting_best_practices.md`.
 
 ### 2.5 Plan §5 complexity-score awareness
 

@@ -103,6 +103,21 @@ Capture exit code separately (per `feedback_pipes_mask_exit_codes.md`). Any non-
 
 **Forbidden-window check:** if the checkpoint command is cargo-class and current UTC is in a forbidden window, defer verify to the next safe minute and log the deferral. Verify is not impl-task — it doesn't carry an `impl-task` task-0 pre-flight — but it consumes the same EliteDesk resources, so the same window discipline applies.
 
+#### Step 4b-adr: ADR-gate definition-AND-callsite check (mandatory when the story diff touches an ADR-pinned governance handler)
+
+When a story's output files include any handler under `crates/api/api/src/governance/**` or `crates/apub/activities/src/governance/**` that enforces an ADR gate, assert the required gate fn is both **defined** AND **called** in the changed file — a defined-but-uncalled (or absent) gate is a silent governance drop that cargo + CR triage do NOT catch. Per `feedback_cheap_model_arm_drops_adr_constraints.md` (m1-b task-4 arm dropped `validate_identity_policy` while still compiling clean).
+
+```bash
+# Example for the ADR-015 identity-policy pin on a messaging-config-shaped handler:
+GATE=validate_identity_policy   # from the plan §16a story / brief §4 ADR clause
+FILE=crates/api/api/src/governance/messaging_config.rs
+defs=$(rg -c "fn ${GATE}" "$FILE");  calls=$(rg -c "${GATE}\(" "$FILE")
+# calls counts both def-line and callsites; require calls > defs (>=1 real callsite)
+test "${defs:-0}" -ge 1 && test "${calls:-0}" -gt "${defs:-0}" && echo "ADR-GATE OK" || echo "ADR-GATE MISSING-CALLSITE"
+```
+
+The required `GATE` fn name comes from the brief §4 ADR clause (per `advisor-orchestrator.md` §2.4a). `MISSING-CALLSITE` (or fn absent) → **✗ phantom-adr** for the story (treat as catch-fire: a hard ADR constraint was dropped). If the story's diff touches no ADR-pinned handler, skip this sub-step silently.
+
 #### Step 4c: Story outcome
 
 For each story, classify as:
@@ -110,6 +125,7 @@ For each story, classify as:
 - **✓** all outputs present + structural patterns matched + checkpoint exit 0
 - **✗ regression** outputs present + structural patterns matched + **checkpoint exit non-zero** (suspected regression CR triage missed)
 - **✗ phantom** any output absent, empty, or structural-pattern-failing (V1+ plans: any §13 `creates:` entry absent or empty in layer 1; pre-V1 plans: any descriptor-pattern failing in layer 2)
+- **✗ phantom-adr** story diff touches an ADR-pinned governance handler but the required ADR gate fn is absent or defined-without-callsite (Step 4b-adr) — a silent governance constraint drop; catch-fire
 - **[malformed]** plan §16a entry under-specified, OR §13 FILES YAML drifts from §16a Brief-Scope outputs — needs planner retrofit
 
 ### Step 5: Write verify report

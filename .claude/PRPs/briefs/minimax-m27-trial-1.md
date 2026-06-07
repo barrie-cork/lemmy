@@ -108,6 +108,16 @@ For each of the 5 designated tasks N:
    pipeline (could reuse whichever arm's output is sound, but default: re-run
    clean on the phase branch so provenance is unambiguous).
 
+### 2.3a MiniMax-arm prompt preamble (mandatory — prepend to every MiniMax-arm dispatch)
+
+The MiniMax arm's task description (and any wrapper system prompt) MUST prepend the harness-tuned form of MiniMax's own best practices (full set: `reference_minimax_prompting_best_practices.md`). The non-negotiable three, ordered by the failure they prevent:
+
+1. **"Explain WHY each constraint matters."** For any ADR/governance constraint in the brief, the dispatch states the rationale, not just the rule — MiniMax's #1 best practice, and the direct fix for the m1-b task-4 ADR-015 drop (`.claude/PRPs/reports/minimax-ab-m1b-task3-task4.md`). A constraint with no rationale is one the arm may trade away.
+2. **"You may refuse / raise a blocker — do NOT silently scope out a constraint you cannot satisfy."** Explicit permission to refuse + DQ-blocker path instead of rationalising a gate to a later task.
+3. **"The task is at the END of this prompt; context and constraints come first."** Long-context ordering — MiniMax's largest single quality lever.
+
+Plus: labelled sections (Task/Context/Constraints/Output), cite the MIRROR ref as a concrete example (examples > rules), concrete output contract (the exact fn/struct shape expected). The §2.4a-style ADR clause (`advisor-orchestrator.md`) is doubly mandatory for the arm. Per `feedback_cheap_model_arm_drops_adr_constraints.md`.
+
 ### 2.4 Metrics per task (the comparison table)
 
 Record into a results file `.claude/PRPs/reports/minimax-m3-trial-results.md`
@@ -130,6 +140,36 @@ Record into a results file `.claude/PRPs/reports/minimax-m3-trial-results.md`
   **stay Sonnet.** Recovery cycles cost more than the token saving buys.
 - Mixed/ambiguous at n=5 → extend to n=8-10 before deciding, OR stay Sonnet
   (conservative default). Do NOT switch on a coin-flip.
+
+**Cutover is task-shape-scoped, not all-or-nothing (revised 2026-06-07 per m1-b AB data).**
+The m1-b A/B pair (n=2; `.claude/PRPs/reports/minimax-ab-m1b-task3-task4.md`) showed the
+result is NOT binary: MiniMax reached parity on a pure pattern-follow DTO task (task 3) but
+dropped a hard ADR-015 gate + used clippy-denied `.expect()` on a handler-with-embedded-
+constraint task (task 4). So the decision rule is two-tier:
+- **Safe MiniMax lane:** pure pattern-following — DTOs, boilerplate, MIRROR-ref-heavy, NO
+  embedded ADR/governance logic. Switch these even on the current thin evidence.
+- **Sonnet-or-hardened lane:** any handler that enforces an ADR gate or carries non-mechanical
+  logic. Requires §2.3a preamble + §2.4a ADR clause + the §4b-adr verify gate — or just stay
+  Sonnet. Do NOT route these to MiniMax on cost alone.
+
+### 2.6 M2.7 vs M3 selection on EliteDesk (open — needs trialing)
+
+`queue-minimax-task.sh` defaults to `MiniMax-M3` (2026-06-07); `MINIMAX_MODEL=MiniMax-M2.7`
+is the fallback override. We do NOT yet have a calibrated threshold for *when* to prefer one
+over the other on the daemon — the official docs (`reference_minimax_prompting_best_practices.md`)
+do not version-differentiate. Candidate axes a future trial should measure (extend the §2.4
+table with a `model_version` column and run M2.7 + M3 arms side-by-side on the SAME tasks):
+- **Task complexity / token volume:** is M3's extra capability load-bearing only above some
+  plan §5 complexity score, or on multi-file (>2) tasks? (M2.7 may suffice — and be cheaper/
+  faster — for the simplest DTO lane.)
+- **Constraint-following:** does M3 hold the ADR-015-class gate that M2.7 (or this M-arm)
+  dropped? Re-run the task-4 shape against both versions.
+- **Latency / EliteDesk resource cost:** wall-clock + peak RAM per version on the daemon —
+  M3 may be slower; if M2.7 matches quality on the simple lane, prefer it there.
+- **Cost delta:** confirm the per-M token pricing of M3 vs M2.7 (the ~10×-vs-Sonnet figure
+  is for M2.7; M3 pricing must be re-checked before a cost-based default).
+Until trialed, default `MiniMax-M3` for arms; treat the version choice as an explicit,
+recordable decision per dispatch, not a silent default. Further trialing is expected and fine.
 
 ## 3. Task designation (rolling — auto-populated by advisor at plan approval)
 
