@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "c3deadfbe610-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T13:40:00Z",
+      "question": "Validate m2-late-1 Task 2 (Diesel models + newtype) on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 created sanction_event.rs + sanction_subscriber.rs Diesel models, SanctionEventId newtype in newtypes.rs, and pub mod entries in governance/mod.rs. schema.rs hand-extended in T1. Laptop must run cargo-check --workspace --features full to validate.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "001f1c47c5dc-001",
