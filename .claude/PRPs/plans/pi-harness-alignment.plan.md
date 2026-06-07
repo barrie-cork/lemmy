@@ -1,6 +1,6 @@
 # Plan — Pi harness alignment + compaction + PMD access
 
-**Status:** BANKED — author complete, execute in a fresh session.
+**Status:** EXECUTED — `81f3d2b60` on `governance-v0` 2026-06-07. All streams complete except B3 (deferred until re-run shows B1+B2 insufficient) and open questions 1+3 (B1 field names verified; re-run question left to user).
 **Authored:** 2026-06-07 (advisor session, `governance-v0`).
 **Trigger to execute:** next convenient session; no hard dependency. Independent of
 the m2-late phase lane. Best done when the comparator is otherwise idle.
