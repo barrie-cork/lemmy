@@ -85,11 +85,71 @@ pick a different judge.
 - ✅ MiniMax auth + endpoint verified (this note).
 - ✅ Comparator substrate already committed: `run-comparator.sh`,
   `comparator-code-gates.sh`, spec, `planning-001.json` (commits 9e4aa2ad2, 276032aa3).
-- ⏳ planning-001 CHALLENGER run still in flight on the daemon (see
-  `runs/planning-001/challenger/` — trace growing, 370 reads / 66 bash, no
-  meta.json yet = not finalized). Eval can't run until this finishes AND the
-  7 pieces exist.
-- ❌ The 7 eval-harness pieces — your build.
+- ✅ planning-001 CHALLENGER run COMPLETE (with caveats — see below). Plan
+  recovered + code-gates run. Gradeable artifacts pulled to laptop at
+  `.claude/PRPs/comparator/runs/planning-001/` (114K; trace stays daemon-local).
+- ❌ The 7 eval-harness pieces — your build. The judge step (MiniMax) is the
+  last missing leg; code-gates already done (`eval/gates-*.json`).
+
+## planning-001 challenger OUTCOME (read before building the judge)
+
+**Outcome: `context_overflow_wedge_after_plan_committed`.** GPT-5.5 committed a
+complete 736-line / 17-section / 9-task plan to its `ab-cell` branch, THEN blew
+past its 272K context window on a later action and the run died. Two findings,
+both primary:
+
+1. **272K overflow (the headline result).** GPT-5.5 re-read the harness
+   inefficiently — 587 `read` calls, 144× on `crates/server/tests/e2e/governance.rs`,
+   82× on the implementation plan, 1039 `bash` calls. Trace hit 263 MB. The model
+   returned `"Your input exceeds the context window of this model"` (3×). **This is
+   the context-management finding the experiment was designed to surface** — the
+   Brehon planning corpus is too large for GPT-5.5's 272K when the model re-reads
+   rather than caches. The routing recommendation should weigh this heavily.
+
+2. **`.pi/extensions/lemmy-hooks.ts` is NOT reload-safe (harness bug for YOU).**
+   When Pi triggered `compaction_start reason:overflow` → `ctx.reload()`, the
+   Brehon hook threw `"This extension ctx is stale after session replacement or
+   reload"` (lemmy-hooks.ts:289 + :323) and cascaded the failure. Fix per Pi's
+   own error text: move post-replacement work into `withSession` and use the ctx
+   passed to it; don't use a captured ctx after `ctx.reload()`. **This will bite
+   the eval cells too** — the eval `.pi/agents/eval.md` (#5) must not rely on the
+   same captured-ctx pattern.
+
+### Deterministic code-gate scores (challenger vs Opus control)
+
+| Gate | GPT-5.5 | Opus 4.8 | Note |
+|---|---|---|---|
+| sections | 17 | 21 | Opus richer structure |
+| adr015_named | 16 | 11 | GPT-5.5 names it more |
+| adr015_callsite | 4 | 7 | Opus binds it to callsites (load-bearing per §2.4a) |
+| task_count | 9 | 10 | ~par |
+| mirror_refs | 5 | 9 | Opus mirrors more canonical sources |
+| **story_signal (§16a)** | **0** | **10** | **decisive — GPT-5.5 omitted §16a stories entirely** |
+| cargo_cmds | 8 | 17 | Opus more DoD-complete |
+| p_features_footgun | 0 | 1 | GPT-5.5 cleaner here (Opus has 1 `-p+--features full`) |
+| **t1_preemption_signal** | **0** | **16** | **decisive — GPT-5.5 made NO mention of lane-mode / validate-pending / Mode-A/B** |
+
+Two decisive deterministic gaps (§16a stories, T1-preemption) plus the overflow.
+The judge (MiniMax) adds the nuanced dimensions: task-decomposition quality,
+watchpoint specificity (the gates' `watchpoint_cites` grep mis-fires — both read
+0, so the judge must score this), ADR-015-callsite *quality* not just count.
+
+### `comparator-code-gates.sh` BUG to fix in your harness
+
+The script's `|| echo 0` fallbacks fire INSIDE the `printf '%s'` for some gates,
+emitting a stray `\n0` that produces **invalid JSON** (e.g.
+`"watchpoint_cites":0\n0,`). See `eval/gates-*-raw.json`. Replace the
+`$(... || echo 0)` pattern with a variable assigned beforehand
+(`X=$(...); X=${X:-0}`) so the value is a clean integer before `printf`.
+
+### Run artifacts (laptop)
+
+- `runs/planning-001/challenger/meta.json` — full outcome + both findings
+- `runs/planning-001/challenger/challenger-output-plan.md` — the gradeable plan
+- `runs/planning-001/eval/control-opus-plan.md` — the Opus ground-truth (from `phase-m2-late-1`)
+- `runs/planning-001/eval/gates-{challenger,control}-raw.json` — code-gate output
+- Daemon-only (too big for git): `trace.jsonl` (263 MB), `session/`, `pi-run.log`,
+  `ab-cell/planning-001-challenger` branch (the plan's source-of-truth commits).
 
 ## Related
 - `.claude/PRPs/specs/pi-model-comparator.spec.md` — methodology (§7 judge, §8 routing)
