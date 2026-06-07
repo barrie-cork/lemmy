@@ -47,6 +47,7 @@ pub mod redaction;
 pub mod reputation_snapshot;
 pub mod room_event_handler;
 pub mod sanction_kind_map;
+pub mod sanction_publisher;
 pub mod sponsor_liability;
 pub mod sponsor_liability_grace;
 pub mod submit_jury_vote;
