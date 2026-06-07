@@ -87,17 +87,24 @@ bigger lever is the context-window declaration, not the summary prompt.**
 
 Three sub-decisions:
 
-- **B1 (highest value): declare the real context window.** Pi's `contextWindow:
-  0` for `openai-codex/gpt-5.5` means the *threshold* compaction never fired
-  pre-emptively. Find where Pi sets per-model `contextWindow` and either (a)
-  register GPT-5.5's true window (272K for the codex variant), or (b) set a
-  conservative `reserveTokens` large enough that the degenerate-math case still
-  triggers early. Without a real window, NO `reserveTokens` value helps — the
-  threshold is `contextTokens > 0 - reserveTokens` which is always true OR never
-  consulted depending on the code path. **Resolve which** by reading
-  `shouldCompact` callers and how `contextWindow` is populated (lazily from
-  last-assistant usage vs. model metadata). This is the root fix; without it,
-  any model whose window Pi doesn't know will overflow.
+- **B1 (highest value, CHEAP — verified vs official docs https://pi.dev/docs/latest/models):**
+  declare the real context window in a **`models.json`** file
+  (`~/.pi/agent/models.json` global, or project `.pi/models.json`). Pi resolves a
+  model's `contextWindow` from this config; the bundled-source `contextWindow: 0`
+  I saw at runtime is just the undeclared-default sentinel, and the official docs
+  confirm a **per-model `contextWindow` field** (docs default 128000 if a model
+  entry omits it). **The fix is a config entry, not extension surgery:**
+  ```json
+  { "id": "openai-codex/gpt-5.5", "contextWindow": 272000, "maxTokens": <N> }
+  ```
+  With the real 272K declared, the trigger `contextTokens > contextWindow -
+  reserveTokens` fires **pre-emptively** (`reason:"threshold"`) instead of
+  reactively after the provider's overflow error (`reason:"overflow"`, the wedge
+  signature). This is the root fix; any model whose window Pi doesn't know
+  defaults to 128000 (too low for some) or behaves degenerately. **Verify the
+  exact `models.json` field names at execution** (`id` / `contextWindow` /
+  `maxTokens`) against `docs/latest/models` — the file "reloads each time you
+  open `/model`".
 
 - **B2 (medium value): tune `keepRecentTokens` / `reserveTokens` for planning.**
   Planning tasks re-read large canonical files (the challenger read
@@ -136,14 +143,33 @@ Pi has no MCP. Two viable patterns (README explicitly names both):
   READMEs"), no extension complexity, works headless. Cons: the agent must know
   to call it (prompt-level wiring in `.pi/prompts/*` + a `.pi/skills/pmd/`
   README).
-- **C2 — PMD-as-extension.** A `.pi/extensions/pmd.ts` that registers PMD
-  search/write as native Pi tools via the extension tool-registration API. Pros:
-  surfaces as first-class tools. Cons: more code, must be reload-safe (see
-  Stream A lesson), and the extension API for adding tools needs verification.
+- **C2 — PMD-as-extension (API verified vs official docs https://pi.dev/docs/latest/extensions).**
+  A `.pi/extensions/pmd.ts` that registers PMD search/write as native Pi tools.
+  The API is concrete and confirmed:
+  ```typescript
+  pi.registerTool({
+    name: "pmd_search", label: "PMD Search",
+    description: "...", parameters: Type.Object({ query: Type.String() }),
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const r = await fetch("http://100.104.171.26:11435/mcp",
+        { method: "POST", body: JSON.stringify(...), signal: ctx.signal });
+      return { content: [{ type: "text", text: ... }] };
+    },
+  });
+  ```
+  Extensions make HTTP calls via standard `fetch(url, {signal: ctx.signal})`
+  (abort-aware). Pros: surfaces as first-class tools the LLM sees in the system
+  prompt; the `ctx.signal` pattern is inherently reload-safe (no captured ctx).
+  Cons: more code than C1; PMD is an MCP HTTP server (JSON-RPC, possibly
+  stateful initialize handshake) — the extension may need to speak MCP, not plain
+  REST.
 
-**Decision gate:** start with **C1** (lower risk, philosophy-aligned). The PMD
-HTTP API shape is the same one `.mcp.json` uses — verify the MCP HTTP protocol
-(JSON-RPC over HTTP) is curl-able, or whether a thin Node client is needed.
+**Decision gate:** the official docs make **C2 more attractive than first
+thought** — `registerTool` + `fetch(signal)` is clean and reload-safe. Still,
+**start with C1** (lower risk, philosophy-aligned, no MCP-protocol handshake to
+implement). The PMD HTTP API shape is the same one `.mcp.json` uses — verify the
+MCP HTTP protocol (JSON-RPC over HTTP, initialize/session) is curl-able from a
+shell script, or whether a thin Node client (→ C2) is needed.
 **Confound note for the comparator:** until PMD access exists for Pi, every
 comparator result carries an asterisk — the challenger plans without lessons the
 control had. Either (a) wire C1 before the next experiment, or (b) explicitly
@@ -207,17 +233,29 @@ DQ/follow-ups for judgment calls.
 - C1: a Pi `bash`-tool call to `pmd-query.sh` returns lesson hits.
 - D: audit report committed; mechanical fixes done; judgment calls filed.
 
+## Doc-verification note (2026-06-07)
+
+All bundled `docs/*.md` claims were cross-checked against the official docs at
+**https://pi.dev/docs/latest** and matched (compaction formula, settings schema
+with no MCP key, `session_before_compact` hook, "No MCP" stance). **Bundled docs
+on the daemon are trustworthy as primary;** official is the tiebreaker for
+config-surface specifics. The one thing official added: the **`models.json`
+per-model `contextWindow` override** (B1 above), which the bundled runtime only
+exposed as the `0` sentinel. Official pages to re-read at execution:
+`/docs/latest/{compaction,models,extensions,settings,custom-provider}`.
+
 ## Open questions (resolve at execution time)
 
-1. **B1 mechanism** — is `contextWindow` settable per-model in `.pi/settings.json`
-   (e.g. an `enabledModels`/model-override block), or only via extension? Read
-   `docs/models.md` + how `openai-codex` provider populates it.
-2. **C protocol** — is the PMD MCP HTTP endpoint plain JSON-RPC curl-able, or
-   does it need a stateful MCP handshake (initialize/session)? If stateful, C1
-   needs a thin Node client, tilting toward C2.
-3. **Comparator re-run** — once C1 lands, should planning-001 be re-run with PMD
-   access for a clean (non-confounded) result, or kept as-is with the handicap
-   documented? (n=1 either way; the overflow finding stands regardless.)
+1. **B1 field names** — RESOLVED to a config approach: declare `contextWindow` per
+   model in `models.json`. Verify exact field names (`id`/`contextWindow`/
+   `maxTokens`) + global-vs-project precedence against `/docs/latest/models`.
+2. **C protocol** — is the PMD MCP HTTP endpoint plain JSON-RPC curl-able from a
+   shell script (→ C1), or does it need a stateful MCP handshake
+   (initialize/session) better handled by a `registerTool` + `fetch` extension
+   (→ C2)? This is the C1-vs-C2 decider.
+3. **Comparator re-run** — once PMD access lands, should planning-001 be re-run
+   with PMD access for a clean (non-confounded) result, or kept as-is with the
+   handicap documented? (n=1 either way; the overflow finding stands regardless.)
 
 ## Related
 
