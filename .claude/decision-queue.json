@@ -6879,6 +6879,23 @@
       "resolved_at": "2026-06-07T20:12:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "966d30acaaea-002",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-07T21:47:54Z",
+      "question": "retro-check.sh v4 SQLite fallback bypassed by PROJECT_MEMORY_DB Windows path",
+      "options": [
+        "unset PROJECT_MEMORY_DB in Junior daemon systemd environment",
+        "set PROJECT_MEMORY_DB to /srv/brehon-fork/.project-memory/memory.db in daemon env"
+      ],
+      "context": "Stop hook retro-check.sh checks PROJECT_MEMORY_DB env var first. When set to C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db (Windows path inherited from Claude Code on laptop via ssh/systemd env), Linux [ -f ] fails -> _HAVE_SQLITE=0, skipping the git-common-dir fallback that would resolve to /srv/brehon-fork/.project-memory/memory.db. The HTTP check also fails because FTS5 pheromone-locked top-20 (IDs 857-904, read_count 65-80+) are all from prior sessions, outside the 30-min window. New entries (923-928, all with correct source_ref) cannot break into top-20. Fix: remove PROJECT_MEMORY_DB from daemon env or point it to the Linux SQLite path.",
+      "answer": "File as lesson; advisor should unset or correct PROJECT_MEMORY_DB in Junior daemon environment (systemd unit or /etc/environment)",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-07T21:47:54Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
