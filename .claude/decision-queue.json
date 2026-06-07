@@ -11,7 +11,7 @@
         "pass",
         "fail"
       ],
-      "context": "m2-late-1 T1 complete: ROOT migration 2026-06-07-000000-0000_add_sanction_event (sanction_kind enum + sanction_event + sanction_subscriber tables), SanctionKind enum added to enums.rs. schema.rs regen + workspace check delegated to laptop. Runner regenerates schema.rs; if it changes, advisor commits the regen.",
+      "context": "m2-late-1 T1 complete: ROOT migration 2026-06-07-000000-0000_add_sanction_event (sanction_kind enum + sanction_event + sanction_subscriber tables), SanctionKind enum added to enums.rs. schema.rs regen + workspace check delegated to laptop. Runner regenerates schema.rs; if it changes, advisor commits the regen. RESUME: see .claude/PRPs/handovers/m2-late-1-t1-validate-resume.md for the VERIFIED turnkey plan (hand-edit schema.rs per fork convention — do NOT run print-schema; do NOT run the literal `-- migration run` command, it bails; 4 verbatim insertions + migrate-roundtrip + workspace check).",
       "answer": null,
       "answered_by": null,
       "resolved_at": null,

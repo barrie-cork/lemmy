@@ -21,9 +21,13 @@ purpose: Bootstrap the m2-late advisor session. Read the RESUME block first; it 
 
 ## Next concrete action
 
-**This phase is GATED.** Resolve OQ-ADR016-02 (B-publish event schema) + OQ-ADR016-04 (sanction translation) from `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` §"ADR-016 OQs". The PRD lean decisions are at `.claude/PRPs/prds/m2-governance-triggered-rooms.prd.md` §"OQ-ADR016-02/03/04". Check if those lean decisions are now actionable (ecosystem research, counterparty availability). If yes: resolve OQs in the doc, author `.claude/PRPs/briefs/m2-late-planning-1.md`, run `/brehon-clarify`, then queue planning Junior.
+> **⚠️ STALE-FRONTMATTER NOTICE (updated 2026-06-07):** the frontmatter above predates phase start and is NO LONGER accurate. The phase has STARTED: branch `phase-m2-late-1` exists, the plan `.claude/PRPs/plans/m2-late.plan.md` is authored, and Task 1 (sanction_event migration + SanctionKind enum) is COMMITTED. The OQ-gating described below was resolved before bm-cut. Ignore the "not yet created / not yet authored" frontmatter.
 
-If OQs are NOT yet resolvable: this session should focus on other work (governance-fix tasks, role-customization, other gated phases). Do not author a planning brief for a gated phase.
+**CURRENT STATE: validating Task 1.** There is ONE pending DQ: `001f1c47c5dc-001` (`validate-pending-laptop`). 
+
+**→ Read `.claude/PRPs/handovers/m2-late-1-t1-validate-resume.md` FIRST — it is the verified, turnkey resume plan.** It contains the 4 remaining steps (hand-edit schema.rs → migrate-roundtrip → workspace cargo-check → mutate the DQ to pass) with grep-verified verbatim insertions. Two critical do-NOTs baked into that handover: (1) do NOT run `diesel print-schema` — the fork convention is HAND-EDIT schema.rs (fed-in-a/v1-AD-a/v1-SL-a precedent); the `diesel_ltree.patch` path is a red herring for this task. (2) do NOT run the DQ's literal `cargo run ... -- migration run` command — `diesel_utils/main.rs` bails on any arg.
+
+(Original gating note, now historical: this phase WAS gated on OQ-ADR016-02 + OQ-ADR016-04; those were resolved before the plan was authored. No action needed.)
 
 ---
 
