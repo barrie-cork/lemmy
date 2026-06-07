@@ -1,0 +1,22 @@
+{
+  "id": "7b8c3f13026e-001",
+  "from": "impl",
+  "kind": "validate-pending-laptop",
+  "timestamp": "2026-06-07T11:00:00Z",
+  "question": "Does the workspace compile after adding governance-log consts + sanction_kind_map (task 3)?",
+  "options": ["pass", "fail"],
+  "context": "m2-late-1 T3 complete: ENTRY_KIND_SANCTION_PUBLISHED + ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED consts added to db_schema governance_log.rs; pub use re-exports added to api shim; sanction_kind_map.rs created with exhaustive SanctionAction→Option<SanctionKind> map; pub mod sanction_kind_map added to governance/mod.rs. Note: workspace --features full compile requires T1 DQ to be resolved first (migration runner must regenerate schema.rs with sql_types::SanctionKind).",
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null,
+  "approved_by": null,
+  "approved_at": null,
+  "commands": ["./scripts/brehon/cargo-check.sh --workspace --features full"],
+  "branch": "phase-m2-late-1",
+  "phase_task": "3",
+  "workflow_run_id": null,
+  "result": null,
+  "log_slice": null,
+  "failed_jobs": null,
+  "failed_commands": null
+}
