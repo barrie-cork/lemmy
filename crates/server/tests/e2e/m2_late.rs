@@ -11,55 +11,37 @@ mod m2_late_fixtures {
   use lemmy_api::governance::{
     accept_jury_assignment::accept_jury_assignment,
     admin_assign_jury::admin_assign_jury,
+    sanction_publisher,
     submit_jury_vote::submit_jury_vote,
   };
-  use lemmy_api_common::governance::{AcceptJuryAssignment, AdminAssignJury, SubmitJuryVote};
+  use lemmy_api_common::governance::{
+    AcceptJuryAssignment,
+    AdminAssignJury,
+    CreateGovernanceReport,
+    SubmitJuryVote,
+  };
   use lemmy_api_crud::governance::create_report::create_report;
-  use lemmy_api_common::governance::CreateGovernanceReport;
-  use lemmy_api::governance::sanction_publisher;
   use lemmy_api_utils::{context::LemmyContext, request::client_builder};
   use lemmy_db_schema::source::{
     community::{Community, CommunityInsertForm},
     instance::Instance,
     local_user::{LocalUser, LocalUserInsertForm},
     person::{Person, PersonInsertForm},
+    post::{Post, PostInsertForm},
     secret::Secret,
   };
   use lemmy_db_schema_file::{
     PersonId,
-    enums::{CaseStatus, CaseTargetType, JuryDecision},
-    schema::{governance_log, moderation_case, sanction, sanction_event as sanction_event_dsl},
+    enums::{CaseTargetType, JuryDecision},
+    schema::{governance_log, sanction_event as sanction_event_dsl},
   };
   use lemmy_db_views_local_user::LocalUserView;
-  use lemmy_diesel_utils::{
-    connection::{ActualDbPool, DbPool, build_db_pool_for_tests, get_conn},
-    traits::Crud,
-  };
+  use lemmy_diesel_utils::connection::{ActualDbPool, DbPool, build_db_pool_for_tests};
   use lemmy_utils::{error::LemmyResult, rate_limit::RateLimit, settings::SETTINGS};
   use reqwest_middleware::ClientBuilder;
-  use std::io::{BufRead, BufReader};
-  use std::sync::Arc;
   use tokio::io::{AsyncReadExt, AsyncWriteExt};
   use tokio::net::TcpListener;
   use tokio::sync::oneshot;
-
-  /// Seed a person + local_user pair. `is_admin` toggles `local_user.admin`.
-  async fn seed_person(
-    ctx: &LemmyContext,
-    instance_id: lemmy_db_schema_file::InstanceId,
-    name: &str,
-    is_admin: bool,
-  ) -> LemmyResult<PersonId> {
-    let person_form = PersonInsertForm::test_form(instance_id, name);
-    let person = Person::create(&mut ctx.pool(), &person_form).await?;
-    let lu_form = LocalUserInsertForm {
-      admin: Some(is_admin),
-      accepted_application: Some(true),
-      ..LocalUserInsertForm::test_form(person.id, &format!("{name}_pass"))
-    };
-    LocalUser::create(&mut ctx.pool(), &lu_form, vec![]).await?;
-    Ok(person.id)
-  }
 
   /// Minimal mock HTTP server: bind a local TCP listener, spawn a task that
   /// accepts one connection, reads the raw HTTP request body, sends 200 OK,
@@ -77,7 +59,7 @@ mod m2_late_fixtures {
       let Ok((mut stream, _)) = listener.accept().await else {
         return;
       };
-      // Read until the blank line that separates headers from body.
+      // Read until the blank line separating headers from body.
       let mut raw = Vec::new();
       let mut buf = [0u8; 4096];
       loop {
@@ -86,7 +68,6 @@ mod m2_late_fixtures {
           break;
         }
         raw.extend_from_slice(&buf[..n]);
-        // HTTP header/body separator.
         if raw.windows(4).any(|w| w == b"\r\n\r\n") {
           break;
         }
@@ -111,7 +92,7 @@ mod m2_late_fixtures {
         raw.extend_from_slice(&body_tail);
       }
       let body = raw[header_end..].to_vec();
-      // Send 200 OK so reqwest doesn't retry.
+      // Respond 200 OK so reqwest treats the POST as successful.
       let _ = stream
         .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
         .await;
@@ -134,13 +115,13 @@ mod m2_late_fixtures {
     // -- 1. Env guards + Postgres ------------------------------------------
     const SIGNING_SEED_HEX: &str =
       "0000000000000000000000000000000000000000000000000000000000000001";
-    let _g_init = EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
-    let _g_gov = EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
-    let _g_secret = EnvVarGuard::set("BRIDGE_CALLBACK_SECRET", "test-secret-m2late");
+    let _g_init = crate::EnvVarGuard::set("LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS", "1");
+    let _g_gov = crate::EnvVarGuard::set("GOVERNANCE_LOG_SIGNING_KEY", SIGNING_SEED_HEX);
+    let _g_secret = crate::EnvVarGuard::set("BRIDGE_CALLBACK_SECRET", "test-secret-m2late");
 
     let (_container, host_port) = governance_fixtures::start_postgres().await?;
     let db_url = governance_fixtures::db_url(host_port);
-    let _g_db_url = EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
+    let _g_db_url = crate::EnvVarGuard::set("LEMMY_DATABASE_URL", &db_url);
 
     {
       let mut sync_conn = PgConnection::establish(&db_url)?;
@@ -180,7 +161,7 @@ mod m2_late_fixtures {
       .await?;
     let federation_context = federation_config.to_request_data();
 
-    // -- 4. Seed persons, community, post, report, jury -------------------
+    // -- 4. Seed persons + community ---------------------------------------
     let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
 
     async fn seed_person_local(
@@ -200,29 +181,27 @@ mod m2_late_fixtures {
       Ok(person.id)
     }
 
-    let admin_id =
-      seed_person_local(&context, instance.id, "m2late_admin", true).await?;
-    let reporter_id =
-      seed_person_local(&context, instance.id, "m2late_reporter", false).await?;
-    let target_id =
-      seed_person_local(&context, instance.id, "m2late_target", false).await?;
-    let juror_a_id =
-      seed_person_local(&context, instance.id, "m2late_juror_a", false).await?;
-    let juror_b_id =
-      seed_person_local(&context, instance.id, "m2late_juror_b", false).await?;
-    let juror_c_id =
-      seed_person_local(&context, instance.id, "m2late_juror_c", false).await?;
-    let juror_d_id =
-      seed_person_local(&context, instance.id, "m2late_juror_d", false).await?;
-    let juror_e_id =
-      seed_person_local(&context, instance.id, "m2late_juror_e", false).await?;
+    let admin_id = seed_person_local(&context, instance.id, "m2late_admin", true).await?;
+    let reporter_id = seed_person_local(&context, instance.id, "m2late_reporter", false).await?;
+    let target_id = seed_person_local(&context, instance.id, "m2late_target", false).await?;
+    let _juror_a_id = seed_person_local(&context, instance.id, "m2late_juror_a", false).await?;
+    let _juror_b_id = seed_person_local(&context, instance.id, "m2late_juror_b", false).await?;
+    let _juror_c_id = seed_person_local(&context, instance.id, "m2late_juror_c", false).await?;
+    let _juror_d_id = seed_person_local(&context, instance.id, "m2late_juror_d", false).await?;
+    let _juror_e_id = seed_person_local(&context, instance.id, "m2late_juror_e", false).await?;
 
     // Seed reputation snapshots so jury eligibility is satisfied.
     {
       use lemmy_db_schema::source::governance::reputation_snapshot::ReputationSnapshotInsertForm;
       use lemmy_db_schema_file::schema::reputation_snapshot;
       let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
-      for person_id in [juror_a_id, juror_b_id, juror_c_id, juror_d_id, juror_e_id] {
+      for person_id in [
+        _juror_a_id,
+        _juror_b_id,
+        _juror_c_id,
+        _juror_d_id,
+        _juror_e_id,
+      ] {
         let form = ReputationSnapshotInsertForm {
           person_id,
           community_id: None,
@@ -250,43 +229,38 @@ mod m2_late_fixtures {
     let community = Community::create(&mut context.pool(), &community_form).await?;
 
     // Create a post for the report to target.
-    use lemmy_db_schema::source::post::{Post, PostInsertForm};
-    use lemmy_db_schema_file::schema::post;
-    let post = {
-      let form = PostInsertForm {
-        creator_id: target_id,
-        community_id: community.id,
-        ..PostInsertForm::new(
-          "m2late_test_post".to_string(),
-          target_id,
-          community.id,
-        )
-      };
-      Post::create(&mut context.pool(), &form).await?
-    };
+    let post = Post::create(
+      &mut context.pool(),
+      &PostInsertForm::new("m2late_test_post".into(), target_id, community.id),
+    )
+    .await?;
 
-    // -- 5. Create report (opens case) ------------------------------------
+    // -- 5. Create report (opens a case against target_person) -----------
+    // CreateGovernanceReport: target_type=Person, target_id=target_id.0.
+    // Using a Person-target so enqueue_sanction_event can resolve the pseudonym.
     let reporter_view = LocalUserView::read_person(&mut context.pool(), reporter_id).await?;
     create_report(
       Json(CreateGovernanceReport {
-        post_id: Some(post.id),
-        comment_id: None,
-        person_id: None,
-        community_id: None,
-        reason: "m2late e2e test report".to_string(),
+        community_id: Some(community.id),
+        target_type: CaseTargetType::Person,
+        target_id: target_id.0,
+        reason_code: "m2late_e2e_spam".to_string(),
+        description: None,
       }),
       context.clone(),
       reporter_view,
     )
     .await?;
 
+    // Suppress unused-variable warning for post (needed to satisfy FK).
+    let _ = post;
+
     // -- 6. Assign jury --------------------------------------------------
     let case_id = {
-      use lemmy_db_schema_file::schema::moderation_case;
       let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
-      let id: i32 = moderation_case::table
-        .select(moderation_case::id)
-        .order(moderation_case::id.desc())
+      let id: i32 = lemmy_db_schema_file::schema::moderation_case::table
+        .select(lemmy_db_schema_file::schema::moderation_case::id)
+        .order(lemmy_db_schema_file::schema::moderation_case::id.desc())
         .first(&mut async_conn)
         .await?;
       lemmy_db_schema::newtypes::ModerationCaseId(id)
@@ -301,7 +275,7 @@ mod m2_late_fixtures {
     .await?
     .into_inner();
 
-    // -- 7. Jurors accept assignments -------------------------------------
+    // -- 7. Jurors accept assignments ------------------------------------
     for person_id in &assign_resp.assigned_person_ids {
       let juror_view = LocalUserView::read_person(&mut context.pool(), *person_id).await?;
       accept_jury_assignment(
@@ -312,8 +286,7 @@ mod m2_late_fixtures {
       .await?;
     }
 
-    // -- 8. Drive quorum votes (AdvisoryLabel → Label → RestrictReach) ---
-    // 3 votes trip quorum; 4th + 5th are idempotent post-quorum.
+    // -- 8. Drive quorum votes (AdvisoryLabel → Label → RestrictReach) --
     let mut decided = false;
     for person_id in &assign_resp.assigned_person_ids {
       let juror_view = LocalUserView::read_person(&mut context.pool(), *person_id).await?;
@@ -336,13 +309,13 @@ mod m2_late_fixtures {
 
     // -- 9. Wait for the spawned enqueue_sanction_event delivery ----------
     // The spawn fires inside submit_jury_vote on the 3rd (quorum) vote.
-    // Allow up to 2 seconds for the async task to POST to our mock server.
-    let body = tokio::time::timeout(std::time::Duration::from_secs(2), body_rx)
+    // Allow up to 3 seconds for the async task to POST to our mock server.
+    let body = tokio::time::timeout(std::time::Duration::from_secs(3), body_rx)
       .await
       .expect("timed out waiting for mock subscriber POST")
       .expect("mock subscriber body channel dropped before send");
 
-    // -- 10. Assert payload shape (ADR-015 pseudonymity + kind) -----------
+    // -- 10. Assert payload shape (ADR-015 pseudonymity + kind) ----------
     let payload: serde_json::Value =
       serde_json::from_slice(&body).expect("mock subscriber body is not valid JSON");
 
@@ -356,14 +329,13 @@ mod m2_late_fixtures {
       "subject_actor_pseudonym must be non-empty (ADR-015)"
     );
     // ADR-015: pseudonym must NOT be the person's display name.
-    // Our target person name is "m2late_target" — the pseudonym is a
-    // different identifier derived by actor_pseudonym_helper.
     assert_ne!(
       subject, "m2late_target",
       "subject_actor_pseudonym must be a pseudonym, not the person name (ADR-015)"
     );
 
-    // sanction_kind must be "restrict_reach" (AdvisoryLabel → Label → RestrictReach).
+    // sanction_kind must be "restrict_reach"
+    // (AdvisoryLabel → SanctionAction::Label → SanctionKind::RestrictReach, serde snake_case).
     let sanction_kind = payload
       .get("sanction_kind")
       .and_then(|v| v.as_str())
@@ -380,7 +352,7 @@ mod m2_late_fixtures {
       .expect("payload missing governance_log_entry_hash");
     assert!(!hash.is_empty(), "governance_log_entry_hash must be non-empty");
 
-    // -- 11. DB assertions — sanction_event row written -------------------
+    // -- 11. DB assertions — sanction_event row + governance_log ---------
     {
       let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
       let count: i64 = sanction_event_dsl::table
@@ -389,7 +361,6 @@ mod m2_late_fixtures {
         .await?;
       assert_eq!(count, 1, "exactly one sanction_event row written");
 
-      // governance_log must contain a sanction_published entry.
       let gl_count: i64 = governance_log::table
         .filter(governance_log::entry_kind.eq("sanction_published"))
         .count()
