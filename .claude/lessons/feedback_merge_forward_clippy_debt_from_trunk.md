@@ -1,3 +1,9 @@
+---
+name: Merge-forward from governance-v0 can surface clippy debt
+description: After any merge-forward that pulls quality-r*/lint-fix commits from governance-v0, run brehon-verify (or cargo clippy --workspace --features full --no-deps -- -D warnings) before queueing the next Junior task — incoming commits to other crates may trip -D warnings in the now-updated workspace even when the phase branch's own code is clean.
+type: feedback
+---
+
 # Merge-forward from governance-v0 can surface clippy debt
 
 After every merge-forward that pulls quality-r* or lint-fix commits from

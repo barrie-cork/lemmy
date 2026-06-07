@@ -1,3 +1,9 @@
+---
+name: Mode B — trunk→phase sync for impl-task brief visibility
+description: In Mode B the advisor drives a lane from canonical brehon-fork and commits impl-task briefs on governance-v0, but Junior workers fork from phase-v1-<lane> and cannot read them. Sync the brief to the phase branch (surgical git checkout origin/governance-v0 -- <file>, not a full merge) before create_task.
+type: feedback
+---
+
 # Mode B: trunk→phase sync for impl-task brief visibility
 
 ## Problem

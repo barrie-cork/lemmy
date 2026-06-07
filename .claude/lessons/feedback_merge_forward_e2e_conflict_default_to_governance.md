@@ -1,3 +1,9 @@
+---
+name: Merge-forward e2e.rs conflict — default to governance-v0 side
+description: When a merge-forward conflicts on crates/server/tests/e2e.rs and the phase branch's only changes are appended comments, #[ignore] attributes, or DISABLE_* markers (no test-logic changes), take the governance-v0 side — it reflects the latest correctly-integrated test configuration.
+type: feedback
+---
+
 # Merge-forward e2e.rs conflict: default to governance-v0 side
 
 When a merge-forward produces a conflict on

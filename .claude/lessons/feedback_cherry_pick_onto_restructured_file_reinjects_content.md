@@ -1,3 +1,9 @@
+---
+name: Cherry-picking onto a since-restructured file silently re-injects stale content
+description: A commit authored against a monolithic file, cherry-picked or 3-way-merged after that file has been decomposed/extracted, can silently paste pre-decomposition content back into the host file — causing compile-fail duplicates or drifting state.
+type: feedback
+---
+
 # Cherry-picking a fix onto a since-restructured file silently re-injects stale content
 
 When a commit authored against a **monolithic** file is cherry-picked (or

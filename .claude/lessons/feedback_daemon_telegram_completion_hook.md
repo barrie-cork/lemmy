@@ -1,3 +1,9 @@
+---
+name: Daemon Telegram completion hook — check + recreate at session start
+description: The Junior daemon's Telegram completion-ping hook is daemon state, not repo state; a restart can wipe it or leave it broken (active but last-triggered never, with a last_error). Check via list_hooks at every session start and recreate if missing or carrying a last_error.
+type: feedback
+---
+
 # Daemon Telegram completion hook — check + recreate at session start
 
 **Why:** The Junior daemon fires a Telegram ping (✅ on `done`, ❌ on

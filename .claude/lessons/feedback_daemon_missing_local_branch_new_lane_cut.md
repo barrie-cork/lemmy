@@ -1,3 +1,9 @@
+---
+name: Daemon has no local branch for a newly-cut Mode-A lane
+description: A phase branch cut in a Mode-A lane worktree leaves the Junior daemon clone with no local branch; the first task with base_branch=phase-v1-<lane> fails with "fatal: invalid reference". Create the daemon-local branch from the fetched origin ref before dispatching the first task.
+type: feedback
+---
+
 # Daemon has NO local branch for a newly-cut Mode-A lane → first Junior task fails `invalid reference`
 
 **Rule:** When a phase branch is cut in a **Mode-A lane worktree** (`git checkout -b phase-v1-<lane>` + `git push origin` from `C:/Users/barri/Developer/brehon-fork-<lane>`), the Junior daemon's separate clone at `/srv/brehon-fork` gets **no local branch** for it. The first `[role:*]` task dispatched with `base_branch=phase-v1-<lane>` fails instantly at `git worktree add ... phase-v1-<lane>` with `fatal: invalid reference: phase-v1-<lane>`. Before dispatching the first Junior task on any freshly-cut lane, create the daemon-local branch from the fetched origin ref.
