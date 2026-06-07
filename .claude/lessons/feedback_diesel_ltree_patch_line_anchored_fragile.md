@@ -17,9 +17,11 @@ Both hunks are **anchored to line numbers**. When a new migration adds tables, t
 
 ## Why this is in play right now (m2-late-1 T1, 2026-06-07)
 
-T1 adds `sanction_event` + `sanction_subscriber` tables. `sanction_*` sorts alphabetically before `surety`/`site`, so the regenerated `schema.rs` inserts those table blocks AND their macro entries **above** hunk #2's anchor region — shifting hunk #2's line offset. This is precisely the "hunk #2 staleness" risk: re-applying the committed patch verbatim against a freshly-regenerated schema.rs may fail or misapply.
+T1 adds `sanction_event` + `sanction_subscriber` tables. `sanction_*` sorts alphabetically before `surety`/`site`, so a `print-schema` regen would insert those table blocks AND their macro entries **above** hunk #2's anchor region — shifting hunk #2's line offset. This is the "hunk #2 staleness" risk.
 
-Mitigation used this task: regenerate the patch from the correct post-regen baseline if hunk #2 offsets are stale, rather than force-applying the stale patch.
+**Mechanism (verified 2026-06-07 — corrects the earlier "git apply" framing in this lesson):** the patch is applied by **diesel_cli (2.3.7) via the `diffy` 0.4.2 crate**, NOT `git apply`, and ONLY during `diesel print-schema` (it is a `diesel.toml` `patch_file` input; never consumed at build time). `diffy` IS offset-tolerant — it locates a shifted hunk by outward search from the declared line — so a **pure offset shift still applies**. It has **zero fuzz**, though: context lines must match byte-for-byte, so if a new table lands *inside* hunk #2's contiguous context block, the hunk fails. On failure `diffy::apply` → `?`-propagates → diesel exits 1 with NOTHING written; and because the regen scripts use `diesel print-schema > schema.rs`, the `>` redirect has already **truncated schema.rs to empty** — the nonzero exit is the only safe signal. (Evidence: diesel_cli-2.3.7 `src/print_schema.rs:289-308`, `src/main.rs:45-50`; diffy-0.4.2 `src/apply.rs` `find_position`/`match_fragment`.)
+
+**Mitigation when print-schema IS used:** regenerate the patch from the correct post-regen baseline if hunk #2 fails, rather than force-applying. **When hand-editing schema.rs (the brehon-fork convention — prior phases fed-in-a `0c9329da9`, v1-AD-a `dbaf58e4b`, v1-SL-a `c7a977078` all hand-extended the `@generated` file; see `.claude/PRPs/handovers/m2-late-1-t1-validate-resume.md` Task A for the turnkey edit spec), print-schema never runs, so the patch and its staleness never engage** — the patch's effect is already baked into the committed schema.rs.
 
 ## The structural weakness
 

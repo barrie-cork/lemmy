@@ -41,31 +41,67 @@ Validating DQ `001f1c47c5dc-001` (`validate-pending-laptop`): T1 `sanction_event
 
 ## REMAINING TASKS (in order)
 
-### Task A — Regenerate schema.rs (THE gating step)
+### Task A — Hand-edit schema.rs (THE gating step) — VERIFIED TURNKEY 2026-06-07
 
-`diesel print-schema` AUTO-APPLIES the ltree patch — `diesel.toml` declares `patch_file = "crates/db_schema_file/diesel_ltree.patch"`. So patch application is NOT a separate `git apply`; diesel does it. If hunk #2 is stale (line offsets shifted by the new sanction_* tables), `diesel print-schema` emits a patch-apply WARNING — watch stderr for it.
+**DO NOT run `diesel print-schema`.** Research (2026-06-07, two subagents, evidence below) established:
+1. **The fork convention is HAND-EDIT, not regen.** Every prior migration phase (fed-in-a `0c9329da9`, v1-AD-a `dbaf58e4b` "schema.rs hand-edit", v1-SL-a `c7a977078`) hand-extended the `@generated` schema.rs. The `// v1-federation-inbound-a additions:` markers in the live file are the signature.
+2. **`update_schema_file.sh` is Linux-only** (`start_dev_db.sh` = `pg_ctl`/`initdb`; no Windows pg install exists; `.env` has no DATABASE_URL). It has NEVER run on this laptop.
+3. **The plan's prose is WRONG** — `m2-late.plan.md:224,443` says "the migration runner regenerates schema.rs". FALSE: `cargo run -p lemmy_diesel_utils` only applies migrations to a DB; it never writes schema.rs. (Plan-correction noted for retro; do not act on the false instruction.)
+4. **`diesel_ltree.patch` is MOOT for this task.** It is referenced ONLY by `diesel.toml` (a print-schema input) — never at build time (`grep` of build.rs/src clean). Its effect is already baked into the committed schema.rs (the `diesel_ltree::sql_types::Ltree` import at schema.rs:199 + the person_actions/image_details allow_tables entries). Since we hand-edit and never run print-schema, **the patch and its "hunk #2 staleness" never engage.** (For the record, had print-schema run: diesel_cli 2.3.7 uses `diffy` 0.4.2 → a stale-context hunk HARD-ABORTS exit 1 and the `>` redirect truncates schema.rs to empty first. Another reason to hand-edit. Full detail: `feedback_diesel_ltree_patch_line_anchored_fragile.md` — note its "git apply" framing is slightly off; the real mechanism is diffy.)
 
-The canonical regen script is `scripts/update_schema_file.sh`:
+**The edit — FOUR insertions into `crates/db_schema_file/src/schema.rs`** (line numbers are pre-edit; do each insertion top-down so earlier inserts shift later anchors — OR insert bottom-up to keep anchors stable; recommended bottom-up = allow_tables, then joinable, then table blocks, then sql_types). Verify each anchor with a `grep` before editing (lines drift if any prior commit touched the file).
+
+**A1. sql_types struct** — insert between `SanctionAction` (currently schema.rs:132-134) and `SanctionScope` (136-138), preserving alphabetical order (`sanction_kind` < `sanction_scope`). 2-space indent (inside `pub mod sql_types`):
+```rust
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "sanction_kind"))]
+  pub struct SanctionKind;
 ```
-source scripts/start_dev_db.sh          # ← Linux/local-pg path (pg_ctl/initdb/$PGDATA)
-cargo run --package lemmy_diesel_utils --features full   # apply migrations
-diesel print-schema >crates/db_schema_file/src/schema.rs # regen + auto-apply ltree patch
-cargo +nightly fmt --package lemmy_db_schema_file
+
+**A2. Two `table!` blocks** — insert AFTER the `sanction` block's closing (currently schema.rs:1385, the `}` that closes `diesel::table! { ... sanction (id) {...} }`) and BEFORE `secret` (1387). Mirror the `sanction` block's `use super::sql_types::...;` style. Column→Diesel-type mapping derived from `migrations/2026-06-07-000000-0000_add_sanction_event/up.sql` (verified against the `sanction` block at 1372-1384):
+```rust
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::SanctionKind;
+
+    sanction_event (id) {
+        id -> Int4,
+        sanction_id -> Int4,
+        sanction_kind -> SanctionKind,
+        subject_actor_pseudonym -> Text,
+        effective_from -> Timestamptz,
+        effective_until -> Nullable<Timestamptz>,
+        governance_log_entry_hash -> Text,
+    }
+}
+
+diesel::table! {
+    sanction_subscriber (id) {
+        id -> Int4,
+        callback_url -> Text,
+        active -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+```
+(`sanction_subscriber` has no enum/FK columns so no `use` block — mirror the `secret` table at 1387-1392 which is also bare.)
+
+**A3. `joinable!`** — `sanction_event.sanction_id` FKs to `sanction(id)` (up.sql: `REFERENCES sanction(id)`). Insert after the `sanction ->` joinable group (currently schema.rs:1587-1591), keeping rough alpha order:
+```rust
+diesel::joinable!(sanction_event -> sanction (sanction_id));
+```
+(`sanction_subscriber` has no FK → no joinable.)
+
+**A4. `allow_tables_to_appear_in_same_query!`** — add both tables to the FIRST macro (the big one at schema.rs:1599). Per fork convention (fed-in-a marker style), append a marker block before the closing `);` (currently ~schema.rs:1670, right after the `// v1-federation-inbound-a additions:` group):
+```rust
+  // m2-late-1 additions:
+  sanction_event,
+  sanction_subscriber,
 ```
 
-**WINDOWS DIVERGENCE (decision point):** `start_dev_db.sh` uses `pg_ctl`/`initdb`/`$PGDATA` — a LOCAL Postgres install, which the Windows laptop may not have. The rest of the harness uses Docker containers. Options:
+**Then:** `cargo +nightly fmt --package lemmy_db_schema_file` (the fork's fmt step — note prior phases fmt'd; if `+nightly` toolchain absent, skip and let the workspace check confirm format-neutral compile). Then `git diff --stat crates/db_schema_file/src/schema.rs` should show ~+25 lines across the 4 regions. COMMIT on `phase-m2-late-1`: `feat(db_schema): hand-extend schema.rs for sanction_event + sanction_subscriber (task 1)`.
 
-- **Option A1 (recommended):** stand up a migrated Postgres in Docker, point `diesel print-schema` at it manually:
-  1. `docker run -d --rm -e POSTGRES_PASSWORD=password -e POSTGRES_DB=lemmy -p 5433:5432 pgautoupgrade/pgautoupgrade:18-alpine` (the user's step-1 `localhost:5433` DB).
-  2. `export LEMMY_DATABASE_URL=postgres://postgres:password@localhost:5433/lemmy` (verify user/pwd/db match the container).
-  3. Apply migrations: invoke the runner WITH Windows vcpkg PATH — reuse `scripts/brehon/migrate-roundtrip-cargo.bat` mechanism OR `cmd //c` wrapping `cargo run -p lemmy_diesel_utils --features full` after setting vcpkg PATH (libpq.dll). DO NOT run bare `cargo run` in git-bash (STATUS_DLL_NOT_FOUND — see `feedback_windows_e2e_requires_bat_wrapper.md`).
-  4. `diesel print-schema > crates/db_schema_file/src/schema.rs` (also needs UCRT/vcvars PATH — diesel.exe built in vcvars shell; run from cmd+vcvars, NOT bare git-bash, per `feedback_lemmy_migration_runner.md` Windows gotcha).
-  5. `cargo +nightly fmt --package lemmy_db_schema_file`.
-- **Option A2:** check if the user's pre-existing `localhost:5433` DB (step 1 of their instructions) is already running + migrated; if so skip the docker-run + migrate, just print-schema against it. NOTE the user's step-1 URL was `postgres://lemmy:password@localhost:5433/lemmy` (user `lemmy`, not `postgres`) — reconcile credentials with whatever is actually running.
-
-**Patch-staleness handling (the user's explicit concern):** if `diesel print-schema` warns the patch doesn't apply (hunk #2 offset stale due to sanction_* tables inserting above line ~1366), regenerate the patch from the new baseline rather than force-applying. Procedure: produce the print-schema output WITHOUT the patch, hand-apply the two semantic fixups (Ltree import on `comment` table → `diesel_ltree::sql_types::Ltree`; add `person_actions` + `image_details` + the federation-inbound-a tables + the new sanction tables as appropriate to `allow_tables_to_appear_in_same_query!`), then `git diff` to regenerate `diesel_ltree.patch`. See `.claude/lessons/feedback_diesel_ltree_patch_line_anchored_fragile.md` for the full reasoning. **If this gets ambiguous → raise a `kind: blocker` DQ and surface to user.**
-
-After regen: `git diff --stat crates/db_schema_file/src/schema.rs` should show the new `sql_types::SanctionKind` block + `sanction_event` + `sanction_subscriber` table DSL. If schema.rs changed, COMMIT it on `phase-m2-late-1`: `feat(db_schema): regen schema.rs for sanction_event (task 1 validation)`.
+**If ANYTHING diverges from this spec** (anchor grep returns unexpected context, fmt errors, an extra column in up.sql you don't see mapped) → STOP, raise a `kind: blocker` DQ, surface to user. Do not improvise the schema edit.
 
 ### Task B — Migration round-trip proof
 
