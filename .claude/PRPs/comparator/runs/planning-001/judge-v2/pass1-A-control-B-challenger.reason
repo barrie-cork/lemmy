@@ -1,0 +1,136 @@
+Let me carefully analyze both plans against the rubric. I need to score them blindly on 8 dimensions.
+
+**Plan A** is extensive — it has §1 Summary, §4 Solution statement, §5 Metadata, §5.1 Complexity factor breakdown, §5.2 Per-task complexity ceiling, §13 Step-by-step tasks, and the plan was truncated mid-sentence at "feedback_lemmy_migrati..." indicating there's likely much more.
+
+**Plan B** is extremely minimal — it only has a "Definition of Done" section with 5 bullet points. It appears to be essentially empty or severely truncated.
+
+Let me score each dimension:
+
+**Dimension 1 — Plan completeness (objective)**
+Count `## ` headers. Plan A shows §1, §4, §5, §5.1, §5.2, §13 — at least 6 visible, but the plan is truncated so there are likely more (the plan references §10.1, §10.4, §11, §15, §16a, §19 all in the visible text, and §0/Task 0). The plan was truncated, but the visible headers plus referenced sections suggest the full 20 are likely present or mostly present. Plan A: maybe 4-5 (truncated but evidence of many sections).
+
+Plan B: only 1 header visible ("Definition of Done"). Score 1.
+
+**Dimension 2 — Watchpoint specificity**
+Plan A: I see references to specific paths like `enums.rs:531-547`, `schema.rs:136-138`, `actor_pseudonym.pseudonym`, `submit_jury_vote.rs`, `bridge_room.rs`, `crates/db_schema_file/`. The watchpoints and GOTCHAs cite specific files. Without seeing §4 watchpoints explicitly (they may have been truncated), I see references to specific artefacts throughout. Score 4-5.
+
+Plan B: No watchpoints visible. Score 1.
+
+**Dimension 3 — ADR-015 preservation**
+Plan A: Explicitly cites `actor_pseudonym.pseudonym (ADR-015)` as a load-bearing constraint. Score 5.
+
+Plan B: No ADR-015 mention visible. Score 1.
+
+**Dimension 4 — §13 task decomposition + MIRROR refs**
+Plan A: Tasks T0-T9 are defined with clear atomic targets. T1 cites MIRROR for enums.rs:531-547 and schema.rs:136-138. Tasks are dependency-ordered. Score 5 (or 4 with truncation caveat).
+
+Plan B: No §13 visible. Score 1.
+
+**Dimension 5 — §16a story coverage**
+Plan A: The plan references §16a in the rubric text but I don't see it in the visible portion. The plan was truncated. Without seeing §16a explicitly, I can't confirm runnable commands. The headline acceptance is stated in §1 but not in story format. Score 3 at best (mentioned but not visible).
+
+Plan B: No §16a visible. Score 1.
+
+**Dimension 6 — DoD smoke-test executability**
+Plan A: §15 is referenced but truncated. I see `cargo check --features full` mentioned. The probes in Task 0 use `cargo-check.sh` wrapper. I need to check for the three footguns: (a) `-p <crate> --features full` together — Probe 3 uses `./scripts/brehon/cargo-check.sh -p lemmy_db_schema --features full` — this might be the footgun. Wait, but the plan says this is the wrapper, and the notes in §5 say "workspace check with `--features full`" runs on laptop via validate-pending-laptop. The actual DoD §15 commands aren't visible due to truncation.
+
+Plan B: DoD bullets are vague. No commands. Score 1-2.
+
+**Dimension 7 — T1-preemption**
+Plan A: §5 mentions "validate-pending-laptop" multiple times. The plan acknowledges the pre-Shape-G validate-pending-laptop workflow. It mentions "Forbidden-window applicability" and "cohort dispatch degraded to serial above... shared-.git/index.lock hazard". I see references to lane modes and worktree discipline throughout. The plan explicitly addresses validate-pending integration. Score 4-5.
+
+Plan B: No T1-preemption visible. Score 1.
+
+**Dimension 8 — Token / cost efficiency**
+Challenger: 8604 lines, 1 compaction_start event, 97 tool calls, 43 turns, compaction_count: 1, pi_exit: "context_overflow_wedge_after_plan_committed", wall_seconds: null, input_tokens: null, output_tokens: null.
+Control: equivalent from the Opus trace — the metadata doesn't include Arm B/control trace signals. Wait, the metadata only has challenger_trace_signals, not control_trace_signals. I should note that control data is missing.
+
+The challenger hit compaction (1 compaction event), which per the rubric is a signal that the context strategy needs tuning. The pi_exit is "context_overflow_wedge_after_plan_committed" — context overflowed after the plan was committed. So the challenger DID produce a plan but then overflowed. The flag is: compaction occurred.
+
+For Plan B, there are no trace signals provided separately — the plan B appears to be the control (Opus) based on the context structure, but the trace data is only labeled "challenger_trace_signals". Let me re-read... The metadata has "challenger_trace_signals" but not "control_trace_signals". So we have data for the challenger (whoever produced Plan A or Plan B) but not the control.
+
+Wait, let me think about this more carefully. The rubric says "Challenger: compaction events, wall seconds, estimated token count" and "Control: equivalent from the Opus trace." The metadata only gives "challenger_trace_signals". This could mean either:
+1. The control data is missing from the metadata
+2. The challenger IS one of the plans and we need to figure out which
+
+The notes say "Plan committed to ab-cell/planning-001-challenger" which is the challenger. So Plan A or Plan B is the challenger. The one with the full plan content (Plan A) is likely the challenger, and Plan B is the control. But wait — the control is supposed to be the established system (Opus), which should produce a high-quality plan. Plan B is almost empty, so Plan B can't be the Opus control.
+
+Hmm, but the scoring is blind. I should just report the numbers I have and flag that control data is missing.
+
+Let me reconsider: the `challenger_trace_signals` has `compaction_count: 1` and `pi_exit: "context_overflow_wedge_after_plan_committed"`. This means whoever produced the plan that committed to "ab-cell/planning-001-challenger" hit context overflow. 
+
+Looking at the plans: Plan A is very detailed (8604 lines would be plausible for the full version), Plan B is minimal. The challenger is likely Plan A (the one that went deep and hit context overflow), and the control is Plan B (the minimal one).
+
+But that doesn't make sense if the control is Opus (the more capable model). Unless Plan B is from a different challenger that failed early.
+
+Actually, re-reading the grading note: "Arm A and Arm B are anonymous — you do not know which AI system produced each plan. Score purely on plan text per the rubric."
+
+The metadata provides challenger_trace_signals. The control trace data is not provided. I should report what I have and note the absence.
+
+For Dimension 8, I'll report:
+- Challenger: 8604 lines, 1 compaction event, 97 tool calls, 43 turns, wall_seconds: null, input_tokens: null, output_tokens: null. Compaction flag: YES (hit threshold).
+- Control: data not provided in metadata.
+
+Now let me finalize scores:
+
+**Dimension 1 — Completeness**
+- Plan A: Visible headers include §1, §4, §5, §5.1, §5.2, §13. References to §10.1, §10.4, §11, §15, §16a, §19 suggest more sections exist but were truncated. Given the depth and the fact that this is a full plan, I'll estimate 4-5. Since the visible count is 6 distinct `## ` headers and references to many more, I'll give it a 4 (accounting for truncation uncertainty).
+- Plan B: 1 header. Score 1.
+
+**Dimension 2 — Watchpoint specificity**
+- Plan A: Cites `enums.rs:531-547`, `schema.rs:136-138`, `actor_pseudonym.pseudonym`, `bridge_room.rs`, specific probe commands. Score 4.
+- Plan B: No watchpoints. Score 1.
+
+**Dimension 3 — ADR-015 preservation**
+- Plan A: Names ADR-015 AND cites `actor_pseudonym.pseudonym` as the callsite. Score 5.
+- Plan B: Not mentioned. Score 1.
+
+**Dimension 4 — §13 task decomposition + MIRROR refs**
+- Plan A: T0-T9 defined, atomic targets, dependency-ordered (T2+T3 requires T1, T5+T6+T7 requires T4), MIRROR refs present (e.g., "mirror SanctionScope", enums.rs:531-547). Score 5.
+- Plan B: No §13. Score 1.
+
+**Dimension 5 — §16a story coverage**
+- Plan A: §16a referenced but truncated. Headline acceptance is stated but not in story format. The plan was cut off before §16a. Based on what I can see, the plan structure suggests stories would be there. I'll give it a 3 (mentioned/stated but not fully visible).
+- Plan B: No §16a. Score 1.
+
+**Dimension 6 — DoD smoke-test executability**
+- Plan A: §15 not visible. Probe commands in Task 0 use `cargo-check.sh` wrapper which is valid. No obvious footguns in visible commands. The `--features full` usage is in the wrapper context. I'll give it a 3 (can't fully assess due to truncation, but no obvious footguns in visible commands).
+- Plan B: DoD is 5 vague bullets with no commands. Score 1.
+
+**Dimension 7 — T1-preemption**
+- Plan A: Explicitly addresses validate-pending-laptop workflow, cohort dispatch hazards, index.lock, lane modes. References "Forbidden-window applicability" and pre-Shape-G workflow. Score 4.
+- Plan B: No mention. Score 1.
+
+**Dimension 8 — Token/cost**
+- Challenger: 8604 lines, 1 compaction, 97 tool calls, 43 turns. Compaction flag: YES. Wall/tokens: null.
+- Control: data not provided.
+
+Now let me compute totals:
+- Arm A: 4 + 4 + 5 + 5 + 3 + 3 + 4 = 28
+- Arm B: 1 + 1 + 1 + 1 + 1 + 1 + 1 = 7
+
+Routing: Arm A wins on all dimensions, no hard gate failures for Arm A, Arm B has 7 hard gate failures (all 1s).
+
+Actually, I should reconsider Dimension 1 for Plan A. The plan was truncated, but the visible evidence shows it's a full plan with at least 6 explicit `## ` headers plus references to many more sections. The fact that it's 8604 lines total suggests the full 20 sections are present. I'll bump it to 4 (generous given truncation but the evidence is strong).
+
+Let me also reconsider Dimension 5 for Plan A. The rubric says "Score 5 = all stories + runnable commands; 3 = stories present but commands vague; 1 = absent." Since I can't see §16a, I should score conservatively at 3 (the plan likely has stories given its completeness, but I can't verify the commands).
+
+For Dimension 6, the probes in Task 0 show runnable commands using the wrapper. The `--features full` usage in Probe 3 is with the wrapper, not raw cargo. Without seeing §15, I score 3.
+
+Final scores:
+- Arm A: 4, 4, 5, 5, 3, 3, 4 = 28
+- Arm B: 1, 1, 1, 1, 1, 1, 1 = 7
+
+This is a clear CHALLENGER_WINS (Arm A) scenario. But I need to figure out which is the challenger. The challenger_trace_signals describe "context_overflow_wedge_after_plan_committed" — this matches a plan that was deeply produced and hit context limits. Plan A is the detailed plan, so Plan A is likely the challenger. Plan B is the minimal one, likely the control (or a failed control).
+
+Wait, the rubric says: "CHALLENGER_WINS = challenger ≥ control on ALL objective gates AND judged-parity". The challenger is the system being tested (the new one), and the control is the established baseline (Opus). 
+
+Looking at the metadata: the challenger committed to "ab-cell/planning-001-challenger" with the full plan. So the challenger = the one that produced the detailed plan = Plan A. The control = the one that produced the minimal plan = Plan B.
+
+If the control is supposed to be Opus (the more capable model), then the control producing a near-empty plan is unexpected. But I should score blind.
+
+For the routing recommendation: Arm A (challenger) wins clearly. But there's a compaction flag — the challenger hit context overflow. The rubric says "Flag if challenger compacted — that's a signal the context strategy needs tuning." So I should note this.
+
+But the outcome is still CHALLENGER_WINS because the plan quality is far superior, despite the context overflow.
+
+Let me write up the full scoring now.

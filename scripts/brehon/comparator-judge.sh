@@ -361,7 +361,8 @@ def extract_scores(text):
     return [int(m) for m in re.findall(r'<score>(\d)</score>', text)]
 
 def extract_routing(text):
-    m = re.search(r'OUTCOME:\s*([A-Z_]+)', text)
+    # Match OUTCOME: CONTROL_WINS or OUTCOME: **CONTROL_WINS** (markdown bold)
+    m = re.search(r'OUTCOME:\s*\*{0,2}([A-Z_]+)\*{0,2}', text)
     return m.group(1) if m else "UNKNOWN"
 
 # Pass 1: A=control B=challenger
