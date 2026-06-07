@@ -31,13 +31,20 @@
 # are not synced and not flagged.
 #
 # VALIDATION CONTRACT: mirrors sync-lessons-to-pmd.sh exactly — a file passes
-# this lint IFF it would import cleanly:
+# this lint (helper returns OK) IFF it would import cleanly:
 #   1. starts with a `---\n … \n---\n` block (script regex
 #      `^---\s*\n(.*?)\n---\s*\n(.*)$`), AND
 #   2. that block contains a non-empty `name:` field (the script's separate
 #      "missing 'name'" error path).
+# Additionally, the helper returns WARN-NESTED for the drift class where `type:`
+# is nested under `metadata:` only (no top-level `type:`). That class STILL
+# imports (the sync's flat parser strips the indent + a metadata.type fallback),
+# so it is advisory-not-fatal — but this hook surfaces a heads-up so it gets
+# flattened to the top-level convention. (The detection lives in the shared
+# helper lesson-frontmatter-lint.sh::check_one — this hook just routes its
+# output.)
 # Keep this in lockstep with the script. If the script's parser changes, update
-# the awk check below + lesson-frontmatter-lint.sh (the shared sweep helper).
+# the helper lesson-frontmatter-lint.sh::check_one (the shared validation).
 
 set -o pipefail
 
@@ -81,10 +88,34 @@ REASON=$(bash "$HELPER" --one "$NORM" 2>/dev/null) || REASON=""
 case "$REASON" in
   OK|"") exit 0 ;;
 esac
-# Strip the "MISSING: " prefix so the sentence reads naturally.
-REASON_TEXT="${REASON#MISSING: }"
 
 BASENAME=$(basename "$NORM")
+
+# The helper returns one of three classes:
+#   MISSING: …      — no frontmatter / no name → the SILENT-SKIP class.
+#   WARN-NESTED: …  — name present but `type:` is nested under `metadata:` only,
+#                     not at the top level → the drift class copied from the
+#                     System-1 memory-write block. The sync STILL imports it
+#                     (flat-parser indent-strip + metadata.type fallback), so it
+#                     is NOT stranded — but it diverges from the convention and
+#                     is fragile. Surface a heads-up naming the nested-form
+#                     problem and citing the top-level fix.
+case "$REASON" in
+  WARN-NESTED:*)
+    echo "Heads-up: lesson ${BASENAME} — its 'type:' is nested under a 'metadata:' key in the frontmatter, not at the top level. This is the shape taught by the CLAUDE.md memory-write block (correct for System-1 auto-memory, WRONG when copied to a .claude/lessons/ file). It still imports today (the sync's flat parser strips the indent and a metadata.type fallback catches it), so it's not stranded — but it diverges from the top-level-'type:' convention the rest of the lesson corpus uses, and the import is only working by accident. Flatten the frontmatter to the top-level shape:
+---
+name: <short title>
+description: <one-line summary for recall>
+type: feedback
+---
+i.e. delete the 'metadata:' line and de-indent 'type:' to column 0. If this is a WIP, ignore. Backstop: weekly-review Step 1c + scripts/brehon/lesson-frontmatter-lint.sh (NESTED lines)."
+    exit 0
+    ;;
+esac
+
+# Default: MISSING class (the hard silent-skip). Strip the "MISSING: " prefix so
+# the sentence reads naturally.
+REASON_TEXT="${REASON#MISSING: }"
 echo "Heads-up: lesson ${BASENAME} — ${REASON_TEXT}. scripts/sync-lessons-to-pmd.sh will SILENTLY SKIP it (counts as 'errors: N'), so memory_search_hybrid can never recall it — this is the class that stranded 8 lessons for weeks (2026-05-29). Add a YAML frontmatter block at the very top (the sync reads flat top-level keys — name + description + type, matching the existing lesson corpus):
 ---
 name: <short title — becomes the PMD memory title>

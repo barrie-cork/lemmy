@@ -155,7 +155,18 @@ command -v sqlite3 >/dev/null 2>&1 || {
 
 # Parse frontmatter + body from a markdown file.
 # Frontmatter is YAML between leading '---' delimiters.
-# Echoes three null-separated fields: name|description|type|body
+# Echoes a JSON object with name|description|type|body (or {"error": ...}).
+#
+# `type` resolution (top-level preferred, nested fallback): the canonical shape
+# is a top-level `type:` (the convention the whole lesson corpus uses). Some
+# lessons authored by copying the CLAUDE.md memory-write block instead nest it
+# as `metadata:\n  type: …`. To keep that drift NON-fatal to PMD recall while
+# the files get normalised, we read the top-level `type:` first and fall back to
+# a nested `metadata.type:` when the top level is absent. (The flat partition
+# read below already picked up indented keys by accident of `.strip()`; this
+# makes the fallback EXPLICIT and robust to indent width / `metadata:` carrying
+# other keys.) The reminder hook + lesson-frontmatter-lint.sh flag the nested
+# shape so it still gets flattened.
 parse_lesson() {
   local file="$1"
   python3 - "$file" <<'PY'
@@ -173,10 +184,41 @@ for line in fm_raw.splitlines():
     if ':' in line:
         k, _, v = line.partition(':')
         fm[k.strip()] = v.strip().strip('"').strip("'")
+
+lines = fm_raw.splitlines()
+
+def top_level(key):
+    """Value of a column-0 (un-indented) `key:` line, or '' if none."""
+    for ln in lines:
+        mm = re.match(r'^' + re.escape(key) + r':\s*(.*)$', ln)
+        if mm:
+            return mm.group(1).strip().strip('"').strip("'")
+    return ""
+
+def nested_type():
+    """Value of `type:` indented under a top-level `metadata:` block, or ''."""
+    in_meta = False
+    for ln in lines:
+        if re.match(r'^metadata:\s*$', ln):
+            in_meta = True
+            continue
+        if in_meta:
+            mm = re.match(r'^\s+type:\s*(.*)$', ln)
+            if mm:
+                return mm.group(1).strip().strip('"').strip("'")
+            # a new column-0 key ends the metadata block
+            if re.match(r'^\S', ln):
+                in_meta = False
+    return ""
+
+# Top-level type wins; fall back to nested metadata.type; then the flat-dict
+# value (back-compat for any odd shape the strict scans miss).
+ltype = top_level("type") or nested_type() or fm.get("type", "")
+
 out = {
-    "name": fm.get("name", ""),
-    "description": fm.get("description", ""),
-    "type": fm.get("type", ""),
+    "name": top_level("name") or fm.get("name", ""),
+    "description": top_level("description") or fm.get("description", ""),
+    "type": ltype,
     "body": body,
 }
 print(json.dumps(out, ensure_ascii=False))

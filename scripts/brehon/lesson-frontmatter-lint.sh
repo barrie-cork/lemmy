@@ -17,25 +17,40 @@
 # VALIDATION CONTRACT — mirrors sync-lessons-to-pmd.sh::parse_lesson EXACTLY:
 #   1. file matches the sync regex `^---\s*\n(.*?)\n---\s*\n(.*)$` (DOTALL), AND
 #   2. the frontmatter block contains a non-empty `name:` field.
-# A file passes this lint IFF it would import cleanly. If the sync script's
-# parser changes, update the Python block below in lockstep (it is a deliberate
-# copy of the script's regex + name-extraction so "passes lint" ≡ "imports").
+# A file passes this lint (`OK`) IFF it would import cleanly. If the sync
+# script's parser changes, update the Python block below in lockstep (it is a
+# deliberate copy of the script's regex + name-extraction so "passes" ≡ "imports").
+#
+# Additionally flags (advisory, NON-fatal) the nested-`metadata.type` drift
+# class: a lesson whose `type:` lives only under a nested `metadata:` key and not
+# at the top level. The sync STILL imports these (its flat partition-parser
+# strips leading indent, and the metadata.type fallback reads them explicitly),
+# so they are NOT stranded — but they diverge from the top-level convention the
+# rest of the corpus uses. This class is taught by the System-1 memory-write
+# instruction block and is wrong when copied to a .claude/lessons/ file.
 #
 # Modes:
 #   lesson-frontmatter-lint.sh                 # sweep: scan all lesson files.
-#                                              # Prints one line per BROKEN file.
-#                                              # Exit 0 = all clean; exit 2 = >=1 broken.
-#   lesson-frontmatter-lint.sh --one <file>    # single-file: print `OK` or
-#                                              # `MISSING: <reason>` to stdout.
+#                                              # Prints one BROKEN line per
+#                                              # would-be-skipped file + one
+#                                              # NESTED line per nested-metadata
+#                                              # file (advisory).
+#                                              # Exit 0 = no BROKEN; exit 2 = >=1
+#                                              # BROKEN (NESTED alone never exits 2).
+#   lesson-frontmatter-lint.sh --one <file>    # single-file: print `OK`,
+#                                              # `MISSING: <reason>`, or
+#                                              # `WARN-NESTED: <reason>` to stdout.
 #                                              # Exit 0 always (advisory; the
 #                                              # caller — the hook — decides).
 #   lesson-frontmatter-lint.sh --verbose       # sweep + also print OK lines.
 #   lesson-frontmatter-lint.sh -h|--help
 #
 # Exit codes (sweep mode):
-#   0  — every synced lesson file has valid frontmatter
+#   0  — every synced lesson file imports (no BROKEN; NESTED advisories allowed)
 #   1  — lessons dir missing, or python3 not on PATH
-#   2  — at least one lesson file would be skipped by the sync (broken frontmatter)
+#   2  — at least one lesson file would be SILENTLY SKIPPED by the sync (BROKEN
+#         frontmatter). Nested-metadata.type files alone do NOT trigger exit 2 —
+#         they import and are advisory-only.
 
 set -o pipefail
 
@@ -65,7 +80,19 @@ command -v python3 >/dev/null 2>&1 || {
   exit 1
 }
 
-# check_one <file> — echoes "OK" or "MISSING: <reason>". Always rc 0.
+# check_one <file> — echoes "OK", "MISSING: <reason>", or "WARN-NESTED: <reason>".
+# Always rc 0.
+#   OK          — top-level frontmatter present (imports cleanly, canonical shape).
+#   MISSING:    — no frontmatter block or empty/absent name (the sync SILENTLY
+#                 SKIPS this — the hard-broken class; sweep counts it + exits 2).
+#   WARN-NESTED — name present but `type` lives ONLY under a nested `metadata:`
+#                 key, not at the top level. The sync DOES still import this
+#                 (its flat partition-parser strips leading indent, and the
+#                 §1.4 fallback reads metadata.type explicitly), so it is NOT
+#                 invisible to recall — but it diverges from the top-level
+#                 convention used by the rest of the corpus and is fragile.
+#                 Advisory only: sweep prints it but does NOT count it as broken
+#                 / does NOT exit 2; the reminder hook surfaces it as a heads-up.
 # The regex + name extraction is a verbatim copy of sync-lessons-to-pmd.sh.
 check_one() {
   local file="$1"
@@ -92,6 +119,20 @@ name = fm.get("name", "")
 if not name:
     print("MISSING: frontmatter present but 'name:' field is empty or absent")
     sys.exit(0)
+# Indent-aware type-shape check. The flat parser above CANNOT distinguish a
+# top-level `type:` from a nested `  type:` (k.strip() drops the indent), so we
+# re-scan the raw frontmatter by column:
+#   top_type    — a `type:` at column 0 (the canonical, top-level shape).
+#   nested_type — a `type:` indented under a `metadata:` block (the drift class
+#                 taught by the System-1 memory-write instruction block, wrong
+#                 when copied to a .claude/lessons/ file).
+lines = fm_raw.splitlines()
+top_type = any(re.match(r'^type:\s*\S', ln) for ln in lines)
+has_metadata = any(re.match(r'^metadata:\s*$', ln) for ln in lines)
+nested_type = has_metadata and any(re.match(r'^\s+type:\s*\S', ln) for ln in lines)
+if not top_type and nested_type:
+    print("WARN-NESTED: 'type:' is nested under 'metadata:' but absent at the top level; flatten to a top-level 'type:' (the convention the rest of the lesson corpus uses)")
+    sys.exit(0)
 print("OK")
 PY
 }
@@ -108,6 +149,7 @@ fi
 }
 
 broken=0
+nested=0
 checked=0
 for lesson in "$LESSONS_DIR"/feedback_*.md "$LESSONS_DIR"/reference_*.md; do
   [ -e "$lesson" ] || continue
@@ -117,6 +159,14 @@ for lesson in "$LESSONS_DIR"/feedback_*.md "$LESSONS_DIR"/reference_*.md; do
   case "$result" in
     OK)
       [ "$VERBOSE" -eq 1 ] && echo "OK: $base"
+      ;;
+    WARN-NESTED:*)
+      # Advisory only — the file STILL imports (flat-parser indent-strip +
+      # the §1.4 metadata.type fallback), so it is NOT counted as broken and
+      # does NOT trigger exit 2. Surface it so it gets flattened to the
+      # top-level convention.
+      echo "NESTED: $base — ${result#WARN-NESTED: }"
+      nested=$((nested + 1))
       ;;
     *)
       echo "BROKEN: $base — ${result#MISSING: }"
@@ -128,8 +178,14 @@ done
 echo "---"
 if [ "$broken" -gt 0 ]; then
   echo "$broken of $checked lesson file(s) would be SILENTLY SKIPPED by sync-lessons-to-pmd.sh (invisible to memory_search_hybrid)."
-  echo "Fix: add a frontmatter block (name/description/metadata.type) to the top of each, then re-run scripts/sync-lessons-to-pmd.sh."
+  echo "Fix: add a top-level frontmatter block (name/description/type) to the top of each, then re-run scripts/sync-lessons-to-pmd.sh."
+  [ "$nested" -gt 0 ] && echo "Plus $nested file(s) with nested 'metadata.type' (NESTED lines above) — these import but diverge from the top-level convention; flatten them too."
   exit 2
 fi
-echo "all $checked lesson file(s) have valid frontmatter — sync would import cleanly"
+if [ "$nested" -gt 0 ]; then
+  echo "all $checked lesson file(s) import cleanly, but $nested use nested 'metadata.type' (NESTED lines above)."
+  echo "These are not stranded (the sync reads them via the flat parser + metadata.type fallback) but diverge from the top-level 'type:' convention — flatten when convenient. Non-fatal."
+  exit 0
+fi
+echo "all $checked lesson file(s) have valid top-level frontmatter — sync would import cleanly"
 exit 0
