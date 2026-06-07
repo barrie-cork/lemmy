@@ -1,4 +1,5 @@
-CREATE TYPE sanction_kind AS ENUM ('prevent_post', 'mute_voice', 'hide_content', 'restrict_reach');
+-- DbValueStyle = "verbatim" on the Rust SanctionKind enum → DB values are PascalCase.
+CREATE TYPE sanction_kind AS ENUM ('PreventPost', 'MuteVoice', 'HideContent', 'RestrictReach');
 
 CREATE TABLE sanction_event (
   id SERIAL PRIMARY KEY,
