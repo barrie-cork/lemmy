@@ -2,6 +2,9 @@
 ansible/inventory
 ansible/passwords/
 
+# PMD pheromone monitor runtime data (hourly snapshots — regenerated, not tracked)
+.claude/runlog/pmd-pheromone-monitor.jsonl
+
 # docker build files
 docker/lemmy_mine.hjson
 docker/dev/env_deploy.sh
