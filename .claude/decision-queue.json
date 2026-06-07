@@ -1,6 +1,35 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "001f1c47c5dc-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T00:00:00Z",
+      "question": "Does the sanction_event migration round-trip and the workspace compile after adding SanctionKind?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "m2-late-1 T1 complete: ROOT migration 2026-06-07-000000-0000_add_sanction_event (sanction_kind enum + sanction_event + sanction_subscriber tables), SanctionKind enum added to enums.rs. schema.rs regen + workspace check delegated to laptop. Runner regenerates schema.rs; if it changes, advisor commits the regen.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cargo run -p lemmy_diesel_utils --features full -- migration run",
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": "1",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
