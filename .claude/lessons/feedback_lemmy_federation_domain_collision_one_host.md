@@ -1,8 +1,7 @@
 ---
 name: lemmy-federation-domain-collision-one-host
 description: Lemmy keys federated instances by PORT-STRIPPED domain, so two instances on one host via host.docker.internal:PORT (different ports) collapse to the same domain and each treats the other as itself. Bidirectional federation testing needs distinct container hostnames (upstream docker/federation pattern), not same-host-different-port. Confirmed 2026-06-02 Phase 8.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 Running two Lemmy instances on one host and pointing them at each other via

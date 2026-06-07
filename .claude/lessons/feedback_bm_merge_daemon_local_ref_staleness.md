@@ -1,8 +1,7 @@
 ---
 name: feedback_bm_merge_daemon_local_ref_staleness
 description: Before dispatching bm-merge, verify the daemon's local governance-v0 tip matches origin. A stale daemon-local ref causes "fatal: path does not exist in governance-v0" when BM tries to read the brief.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 bm-merge dispatches a Junior bm-task worker on the daemon. The worker reads the brief from `governance-v0` as seen by the daemon-local `.git`. If the advisor committed and pushed the brief to `origin/governance-v0` but the daemon's local `governance-v0` ref is still behind, the worker gets a "fatal: path does not exist in 'governance-v0'" error and either silently fails or raises a DQ.

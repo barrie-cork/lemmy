@@ -1,8 +1,7 @@
 ---
 name: Bootstrap handover VERIFIED_AT annotation
 description: Bootstrap handover RESUME blocks must carry a VERIFIED_AT line citing the git SHA that confirms the "next action" is still outstanding; sessions that complete work must update it before exiting.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 Bootstrap handover RESUME blocks must carry a `VERIFIED_AT: <SHA>` annotation on every "next action" or "current stage" claim. Without it, the handover is undated relative to the git log and may describe completed work as pending.

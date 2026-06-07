@@ -1,8 +1,7 @@
 ---
 name: feedback_daemon_reset_hard_blocked_use_update_ref
 description: git reset --hard is blocked by a hook on the daemon's shared /srv/brehon-fork checkout. Use git update-ref to fast-forward a daemon-local branch to origin without triggering the hook.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 `git reset --hard` on the daemon's shared `/srv/brehon-fork` checkout is blocked by a Stop hook (retro-check.sh or similar). Do NOT use it to sync a branch tip.

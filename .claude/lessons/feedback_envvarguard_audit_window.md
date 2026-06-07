@@ -1,8 +1,7 @@
 ---
 name: EnvVarGuard audit window must accommodate multi-line comment blocks
 description: Brief audit scripts that verify SAFETY comments above unsafe blocks need a look-back window sized to the full multi-line comment, not a fixed short count.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 When a brief's task-1 validation script checks for a SAFETY comment above an `unsafe` block, a fixed-character or fixed-line look-back window may miss the full block if the SAFETY comment is multi-line.

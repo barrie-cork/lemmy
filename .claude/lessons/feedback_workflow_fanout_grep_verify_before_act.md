@@ -1,8 +1,7 @@
 ---
 name: workflow-fanout-grep-verify-before-act
 description: For any workflow fan-out agent verdict classifying a code path as stale/delete/unused, grep-verify the claim against the live codebase before acting. Workflow agents reason about a snapshot that may not match HEAD.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 For any workflow fan-out verdict that classifies a specific code path as **stale**, **can-delete**, **unused**, or **superseded**, run a targeted `grep` against the live codebase BEFORE making the edit. Workflow agents batch-classify against a snapshot of context; the codebase may have changed since they loaded it.

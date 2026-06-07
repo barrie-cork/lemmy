@@ -1,8 +1,7 @@
 ---
 name: rolling-cumulative-trial-counter
 description: Optional experiments needing N data points should use a cumulative counter across phases, not a named-phase gate. Named gates expire silently when the target phase doesn't materialise; cumulative counters don't.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 Use a **rolling cumulative counter** for any optional trial or experiment that needs N qualifying events but cannot guarantee N events in a single sub-phase.

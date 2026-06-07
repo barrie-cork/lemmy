@@ -1,8 +1,7 @@
 ---
 name: nextest-positional-filter-over-dash-e-on-windows
 description: On Windows, an interactively-typed nextest filter must be a bare positional substring, not -E "test(...)" — the filterset double-quotes mangle through the bash → cmd //c → batch %* → nextest chain.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 # nextest positional filter over `-E` on Windows

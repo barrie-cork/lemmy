@@ -1,8 +1,7 @@
 ---
 name: outcome-not-cause-check-retro-bypass
 description: When an orchestration anomaly appears, check retro-bypass.jsonl first before diagnosing code or DQ causes — hook fail-open is often the proximate cause.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 # Outcome ≠ cause: check retro-bypass.jsonl first

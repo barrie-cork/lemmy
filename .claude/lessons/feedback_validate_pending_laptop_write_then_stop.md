@@ -1,8 +1,7 @@
 ---
 name: feedback_validate_pending_laptop_write_then_stop
 description: impl-task workers must write validate-pending-laptop DQ entry and stop — never run cargo-check.sh themselves; laptop advisor runs validation
-metadata:
-  type: feedback
+type: feedback
 ---
 
 Cargo validation belongs on the laptop, not the daemon. When a brief names `validate-pending-laptop`, the worker's job is to **write the DQ entry and push — then stop**. The laptop advisor pulls the entry and runs `cargo-check.sh --workspace --features full` locally.

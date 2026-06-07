@@ -1,8 +1,7 @@
 ---
 name: e2e-nextest-filter-groups
 description: Canonical nextest -E filter expressions for each e2e test group, enabling scoped validate-pending-laptop runs instead of always running all 41 tests.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 # E2E nextest filter groups

@@ -1,8 +1,7 @@
 ---
 name: governance-not-found-opaque-error
 description: Three distinct Brehon governance handlers return not_found for configuration pre-condition failures rather than 400/403. Pattern confirmed 3x in smoke test session 2026-06-01. Read handler source + check DB config before assuming a code bug.
-metadata:
-  type: feedback
+type: feedback
 ---
 
 Three distinct governance handlers return `{"error":"not_found"}` for situations that are really configuration pre-condition failures — not missing resources:
