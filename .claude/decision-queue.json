@@ -1,57 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "c3deadfbe610-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-07T13:40:00Z",
-      "question": "Validate m2-late-1 Task 2 (Diesel models + newtype) on laptop",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 created sanction_event.rs + sanction_subscriber.rs Diesel models, SanctionEventId newtype in newtypes.rs, and pub mod entries in governance/mod.rs. schema.rs hand-extended in T1. Laptop must run cargo-check --workspace --features full to validate.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-late-1",
-      "phase_task": 2,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    },
-    {
-      "id": "c3deadfbe610-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-07T13:45:00Z",
-      "question": "Validate m2-late-1 Task 3 (governance-log consts + shim + sanction_kind_map) on laptop",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 added ENTRY_KIND_SANCTION_PUBLISHED + ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED consts to governance_log.rs (db_schema), re-exported both in api shim, created sanction_kind_map.rs with exhaustive SanctionAction->Option<SanctionKind> map (no wildcard), and wired pub mod sanction_kind_map in api governance/mod.rs. Combined with T2 models. Laptop must run --workspace --features full.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-late-1",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "001f1c47c5dc-001",
@@ -6725,6 +6674,56 @@
       "approved_at": "2026-06-07T00:38:00Z",
       "resolved_at": "2026-06-07T00:38:00Z",
       "id": "f58698282815-001"
+    },
+    {
+      "id": "c3deadfbe610-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T13:40:00Z",
+      "question": "Validate m2-late-1 Task 2 (Diesel models + newtype) on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 created sanction_event.rs + sanction_subscriber.rs Diesel models, SanctionEventId newtype in newtypes.rs, and pub mod entries in governance/mod.rs. schema.rs hand-extended in T1. Laptop must run cargo-check --workspace --features full to validate.",
+      "answer": "cargo check --workspace --features full: Finished dev profile in 6m 56s, exit 0. No errors.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T13:43:27.861243Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 2,
+      "result": "pass",
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 6m 56s",
+      "failed_commands": null
+    },
+    {
+      "id": "c3deadfbe610-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T13:45:00Z",
+      "question": "Validate m2-late-1 Task 3 (governance-log consts + shim + sanction_kind_map) on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added ENTRY_KIND_SANCTION_PUBLISHED + ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED consts to governance_log.rs (db_schema), re-exported both in api shim, created sanction_kind_map.rs with exhaustive SanctionAction->Option<SanctionKind> map (no wildcard), and wired pub mod sanction_kind_map in api governance/mod.rs. Combined with T2 models. Laptop must run --workspace --features full.",
+      "answer": "cargo check --workspace --features full: Finished dev profile in 6m 56s, exit 0. No errors.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T13:43:27.861243Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 6m 56s",
+      "failed_commands": null
     }
   ]
 }
