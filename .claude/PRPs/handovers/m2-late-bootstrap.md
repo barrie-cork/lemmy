@@ -3,6 +3,7 @@ phase: m2-late
 plan: .claude/PRPs/plans/m2-late.plan.md   # (not yet authored — gated on OQ resolution)
 phase_branch: phase-m2-late                  # not yet created; cut at bm-cut after plan approval
 worktree: C:/Users/barri/Developer/brehon-fork-m2late   # created at bm-cut; until then canonical brehon-fork
+lane_mode: A                                 # A = dedicated lane worktree (default); B = mobile remote-control. Read by session-start-multi-lane-check.sh to detect declared-vs-actual drift.
 authored: 2026-06-06
 authored_by: advisor (canonical brehon-fork / governance-v0 session)
 purpose: Bootstrap the m2-late advisor session. Read the RESUME block first; it is the entry point.

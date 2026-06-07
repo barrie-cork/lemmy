@@ -113,24 +113,89 @@ is identical; only the runner identity differs —
 
 ### Sequence
 
-1. `git fetch origin <entry.branch>` then `git checkout
-   origin/<entry.branch>` (detached-HEAD; no edits, just cargo source).
-2. Run each command in `entry.commands[]` sequentially. `Bash`
+1. **Resolve a validation worktree on `entry.branch` — NEVER a bare
+   checkout in the canonical tree** (the 2026-06-07 m2-late-1 T1
+   incident; see §"Why a worktree, not a checkout" below). `git fetch
+   origin <entry.branch>` first, then:
+   - **Mode A (a lane worktree exists at `brehon-fork-<lane>` on
+     `entry.branch`):** `cd` there. The lane worktree IS the validation
+     surface. Confirm its HEAD: `git -C <lane-path> rev-parse HEAD` ==
+     `git rev-parse origin/<entry.branch>`; if behind,
+     `git -C <lane-path> merge --ff-only origin/<entry.branch>`.
+   - **Mode B (no lane worktree):** create a throwaway validation
+     worktree off the up-to-date remote ref:
+     `git worktree add ../brehon-fork-validate-<entry.id>
+     origin/<entry.branch>`. **Then run the lane bootstrap** (else
+     cargo fails on `lemmy_email` with `Os code 3 NotFound` — per
+     CLAUDE.md "Lane worktree bootstrap"): `git -C
+     <validate-path> submodule update --init --recursive` and copy
+     `.mcp.json` / `.env` / `.claude/settings.local.json` from
+     canonical. Remove the throwaway in step 6.
+   The bare `git checkout origin/<branch>` (detached-HEAD in the
+   canonical tree) is **abolished** — it violates
+   `multi-lane-worktree.md` hard refusal #1 and silently reverts to
+   `governance-v0` across a `/compact` boundary, which is exactly how
+   the T1 run produced 8 failed steps against the wrong tree.
+2. **Per-command branch assertion (mandatory, before EACH command).**
+   Immediately before running each command in `entry.commands[]`,
+   assert the validation worktree is still on the right tip — a
+   `/compact` mid-chain can revert working-tree state without touching
+   conversation state:
+   ```bash
+   ACTUAL=$(git -C <wt-path> rev-parse HEAD)
+   EXPECTED=$(git rev-parse origin/<entry.branch>)
+   [ "$ACTUAL" = "$EXPECTED" ] || { echo "BRANCH MISMATCH: $ACTUAL != $EXPECTED — STOP"; exit 1; }
+   ```
+   On mismatch, do NOT run the command; surface to user. This is the
+   belt-and-suspenders check that would have caught the T1 failure at
+   step 4 instead of step 11.
+3. **Windows wrapper substitution (mandatory on Windows).** The DQ
+   `commands[]` are authored Linux-shaped (bare `cargo …`) by the
+   Linux-daemon impl-task worker. Before running on Windows, substitute
+   the wrapper — bash `$PATH` does NOT reach the Windows PE DLL loader,
+   so bare cargo dies `STATUS_DLL_NOT_FOUND` (0xc0000135). Mapping:
+   | DQ command shape | Run instead (Windows) |
+   |---|---|
+   | `cargo run -p lemmy_diesel_utils … migration run` (or any diesel migration runner) | `bash scripts/brehon/migrate-roundtrip.sh` — it self-provisions a throwaway Postgres, OS-switches to `migrate-roundtrip-cargo.bat`, and does forward+idempotency. Run from the **phase-branch worktree** (it diffs vs `origin/governance-v0` to find the new migration — from the wrong branch it correctly reports "no new migrations; exit 0", which is a **wrong-branch signal, not a no-op to route around**). |
+   | `./scripts/brehon/cargo-check.sh --workspace --features full` | `cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > <log> 2>&1"` |
+   | `cargo test … --test e2e …` | `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1"` (see §"Windows invocation") |
+4. Run each command (post-substitution) sequentially. `Bash`
    `run_in_background: true` for runs >5 min (`cargo-check.sh` ~8 min
    cold / 3-5 min warm; e2e ~26 min). Capture to
    `C:\Users\barri\.claude\logs\validate-laptop-<entry.id>-cmd-<n>.log`.
-   Non-zero exit → stop chain.
-3. Mutate the DQ entry in place per the canonical mutation shape
+   Non-zero exit → stop chain. **Migration tasks: snapshot
+   `SELECT MAX(version) FROM __diesel_schema_migrations` before+after
+   and confirm it advanced** — a silent `exit 0` on "nothing to apply"
+   is ambiguous (it can mean wrong branch OR already-applied); the
+   before/after delta disambiguates.
+5. Mutate the DQ entry in place per the canonical mutation shape
    (see decision-queue.md ref above). Failure stays in `pending[]`
    for §G4 triage; pass moves to `resolved[]`.
-4. Commit + push to `governance-v0`. Subject: `chore(decision-queue):
+6. Commit + push to `governance-v0`. Subject: `chore(decision-queue):
    advisor-laptop mutated DQ #<id> — <pass|fail>
-   validate-pending-laptop`.
-5. On fail, run §G4 classifier (advisor-orchestrator.md §5.3):
+   validate-pending-laptop`. **Mode B teardown:** `git worktree remove
+   ../brehon-fork-validate-<entry.id>` (use `--force` only if the
+   submodule worktree blocks plain remove — per
+   `feedback_worktree_remove_force_for_submodules.md`). Mode A: leave
+   the lane worktree in place.
+7. On fail, run §G4 classifier (advisor-orchestrator.md §5.3):
    allowlist → narrow fix-impl-task; non-allowlist → catch-fire.
-6. `git checkout governance-v0 && git pull --ff-only origin
-   governance-v0` (skip only if user wants laptop kept on worker
-   branch for hand-debug).
+
+### Why a worktree, not a checkout (2026-06-07 m2-late-1 T1 RCA)
+
+The T1 `validate-pending-laptop` run failed 8 consecutive steps
+because the advisor ran `git checkout phase-m2-late-1` in the
+**canonical** `brehon-fork` tree (Mode B), a `/compact` boundary
+silently reverted the working tree to `governance-v0`, and every
+subsequent cargo/migration command then ran against the wrong tree.
+The "no new migrations vs governance-v0; exit 0", the missing
+`sanction_*` tables in the regenerated schema, the DLL-not-found — all
+downstream of the one wrong-branch error. A **worktree HEAD is
+independent of the canonical tree's HEAD**, so it is immune to
+compact-boundary reversion; combined with the per-command assertion
+(step 2) this makes the failure class structurally impossible rather
+than merely detectable. Full trace:
+`.claude/PRPs/debug/m2-late-1-t1-validate-pending-advisor-session-trace.md`.
 
 ### Phase 2 e2e (advisor-driven, off-Actions default — 2026-04-28 minutes-budget audit)
 

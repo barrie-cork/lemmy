@@ -65,10 +65,14 @@ while IFS= read -r line; do
   fi
 
   # Only consider phase branches (the multi-lane discipline applies to
-  # phase-v1-*, phase-*, phase-brehon-*; not chore branches or feature
-  # branches that don't get a dedicated lane).
+  # phase-v1-*, phase-v2-*, phase-m1-*, phase-m2-*, phase-m3-*,
+  # phase-brehon-*; not chore branches or feature branches that don't
+  # get a dedicated lane). The m1/m2/m3 patterns were added 2026-06-07
+  # — the ADR-016 V2→M1/M2/M3 rename produced phase-m2-* branch names
+  # (e.g. phase-m2-late-1) that the original v1/v2-only match skipped,
+  # so the hook silently ignored every M-track lane.
   case "$WT_BRANCH" in
-    phase-v1-*|phase-v2-*|phase-brehon-*) ;;
+    phase-v1-*|phase-v2-*|phase-m1-*|phase-m2-*|phase-m3-*|phase-brehon-*) ;;
     *) continue ;;
   esac
 
@@ -94,5 +98,55 @@ if [ "$WARNED" -eq 1 ]; then
   echo "  Action: before any state-changing call, confirm this CWD is the intended lane." >&2
   echo "  Per .claude/rules/multi-lane-worktree.md: lane-dedicated worktrees own phase-branch DQ writes; canonical brehon-fork is reserved for governance-v0 meta-edits." >&2
 fi
+
+# --- Lane-mode drift check (added 2026-06-07, m2-late-1 T1 RCA) -----------
+# A lane declared Mode A (dedicated worktree) but operated Mode B (no
+# worktree, bare checkout in canonical) was the originating drift behind
+# the T1 validate-pending-laptop failure. This block compares the DECLARED
+# mode (lane_mode: field in the lane's bootstrap handover) against REALITY
+# (does a brehon-fork-<lane> worktree exist?). WARN-not-FAIL on mismatch.
+#
+# Only meaningful when this session is on a phase branch (the lane is the
+# point of comparison). On governance-v0 (canonical), skip — canonical is
+# allowed to drive any lane in Mode B.
+case "$CURRENT_BRANCH" in
+  phase-v1-*|phase-v2-*|phase-m1-*|phase-m2-*|phase-m3-*|phase-brehon-*)
+    # Derive the lane slug: strip the phase-<track>- prefix.
+    #   phase-m2-late-1 -> m2-late-1 ; phase-v1-RT-r3 -> v1-RT-r3
+    LANE_SLUG="${CURRENT_BRANCH#phase-}"
+    # Bootstrap handover candidates: <lane>-bootstrap.md, or a prefix match
+    # (phase-m2-late-1's handover is m2-late-bootstrap.md — drop trailing -N).
+    REPO_ROOT="$CURRENT_WORKTREE"
+    # The canonical checkout holds the handovers; if this is a lane worktree
+    # the handovers are shared via the same .claude/ tree, so REPO_ROOT works
+    # for both. Try exact then de-suffixed slug.
+    HANDOVER=""
+    for cand in "$LANE_SLUG" "${LANE_SLUG%-*}"; do
+      f="$REPO_ROOT/.claude/PRPs/handovers/${cand}-bootstrap.md"
+      if [ -f "$f" ]; then HANDOVER="$f"; break; fi
+    done
+    if [ -n "$HANDOVER" ]; then
+      DECLARED_MODE=$(grep -m1 '^lane_mode:' "$HANDOVER" 2>/dev/null | sed -E 's/^lane_mode:[[:space:]]*([AB]).*/\1/' || true)
+      if [ -n "$DECLARED_MODE" ]; then
+        # Reality: does a lane worktree exist on this branch?
+        if git worktree list 2>/dev/null | grep -qE "brehon-fork-[^ ]+[[:space:]].*\[${CURRENT_BRANCH}\]"; then
+          ACTUAL_MODE="A"
+        else
+          ACTUAL_MODE="B"
+        fi
+        if [ "$DECLARED_MODE" != "$ACTUAL_MODE" ]; then
+          echo "session-start-multi-lane-check WARN: lane-mode DRIFT for [$CURRENT_BRANCH]" >&2
+          echo "  Declared (handover lane_mode:): Mode $DECLARED_MODE" >&2
+          echo "  Actual (worktree reality):      Mode $ACTUAL_MODE" >&2
+          echo "  Handover: $HANDOVER" >&2
+          if [ "$DECLARED_MODE" = "A" ]; then
+            echo "  Mode A declared but no lane worktree — create it (git worktree add ../brehon-fork-<lane> $CURRENT_BRANCH) or flip the handover to lane_mode: B." >&2
+            echo "  In Mode B do NOT bare-checkout this branch in canonical; validate-pending-laptop uses a throwaway worktree (advisor-validation.md Sequence step 1)." >&2
+          fi
+        fi
+      fi
+    fi
+    ;;
+esac
 
 exit 0

@@ -30,6 +30,30 @@ drawn by `.claude/rules/branch-manager.md` and
 A command run from the wrong worktree STOPS and asks (see §"Attribution
 guards").
 
+## Required frontmatter fields (lane bootstrap handovers)
+
+A bootstrap handover (`<lane>-bootstrap.md`) MUST carry a machine-readable
+`lane_mode:` field in its YAML frontmatter:
+
+```yaml
+lane_mode: A    # A = dedicated lane worktree (default); B = mobile remote-control
+```
+
+This is not cosmetic — `.claude/hooks/session-start-multi-lane-check.sh`
+parses `lane_mode:` and compares the DECLARED mode against reality (does a
+`brehon-fork-<lane>` worktree exist on the phase branch?). A handover that
+declares Mode A behaviours in prose but omits the field, or whose field
+drifts from reality, defeats the drift check. The check is WARN-not-FAIL,
+so an absent field silently no-ops — author it.
+
+Rationale: the 2026-06-07 m2-late-1 T1 `validate-pending-laptop` failure
+traced to a lane that declared Mode A in prose ("impl-task briefs … Mode A:
+author on phase branch directly") but operated Mode B (no worktree). The
+bare phase-branch checkout that filled the Mode-B gap reverted across a
+`/compact` and produced 8 failed validation steps against `governance-v0`.
+See `advisor-validation.md §"Why a worktree, not a checkout"` +
+`.claude/PRPs/debug/m2-late-1-t1-validate-pending-advisor-session-trace.md`.
+
 ## Attribution guards
 
 - The handover file's `**Author:**` field must match the session

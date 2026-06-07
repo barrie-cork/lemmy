@@ -66,7 +66,7 @@ git worktree list           # see ALL active worktrees
 
 ## Hard refusals
 
-1. **Never `git checkout phase-v1-*` inside `brehon-fork`** — destructive cross-lane operation. Use the dedicated worktree.
+1. **Never `git checkout phase-v1-* / phase-m2-* / phase-*` inside `brehon-fork`** — destructive cross-lane operation, AND not durable across a `/compact` boundary (the working-tree checkout reverts to `governance-v0`; conversation state does not record it). Use the dedicated lane worktree. When validation needs a phase-branch tree in Mode B, the `validate-pending-laptop` handler creates a **throwaway worktree** (`git worktree add ../brehon-fork-validate-<id> origin/<branch>`), never a bare checkout — see `advisor-validation.md §"validate-pending-laptop handler"` Sequence step 1 + §"Why a worktree, not a checkout". 2026-06-07 m2-late-1 T1: bare checkout + compact = 8 failed steps against the wrong tree.
 2. **Never write `.claude/decision-queue.json` from `brehon-fork`** for an entry belonging on a phase branch. The DQ on `governance-v0` holds only plan/brief-time entries (advisor planning DQs, clarify entries), not validate-pending or ci-watcher mutations.
 3. **Never `git push --force` against another lane's branch** from any worktree. Per `no-destructive-defaults.md`.
 4. **Never delete a worktree directory with `rm -rf`** — use `git worktree remove <path>` so `.git/worktrees/<name>/` admin state gets cleaned.
