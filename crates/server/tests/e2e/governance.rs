@@ -200,6 +200,8 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
+  // m2-late-1 sanction_event + sanction_subscriber (1 migration, bump 21 → 22)
+  "2026-06-07-000000-0000_add_sanction_event",
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
   // BUG-1 author-defendant backfill (1 migration, bump 20 → 21)
@@ -229,8 +231,8 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   "2026-04-22-000200-0000_add_case_applied_config_snapshot",
   "2026-04-22-000100-0000_add_sponsor_allowlist",
   "2026-04-22-000000-0000_add_rule_set_versions",
-  // Phase 1 (1 migration at this boundary)
-  "2026-04-21-000000-0000_add_federation_attestations",
+  // Phase 1 — add_federation_attestations rolled out of the 21-entry window
+  // when m2-late-1 added add_sanction_event (bump 21 → 22, window stays 21).
 ];
 
 /// Pre-flight for the Phase-1 round-trip tests: assert that
