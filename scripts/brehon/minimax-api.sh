@@ -14,7 +14,8 @@
 #   --max-tokens <n>       default: 8192 (reasoning eats budget first — give enough)
 #   --temperature <f>      default: 0.0 (deterministic, good for judges)
 #   --system <text>        optional system prompt
-#   --message <text>       inline user message (mutually exclusive with stdin)
+#   --message <text>       inline user message (mutually exclusive with --message-file / stdin)
+#   --message-file <path>  read user message from file (preferred for large prompts)
 #   --output <file>        write full response JSON here (default: stdout)
 #   --reason-file <file>   if set, write reasoning_content to this file separately
 #   --quiet                suppress progress to stderr
@@ -36,6 +37,7 @@ MAX_TOKENS=8192
 TEMPERATURE="0.0"
 SYSTEM_PROMPT=""
 MESSAGE=""
+MESSAGE_FILE=""
 OUTPUT_FILE=""
 REASON_FILE=""
 QUIET=false
@@ -47,7 +49,8 @@ while [[ $# -gt 0 ]]; do
     --max-tokens)  MAX_TOKENS="$2";    shift 2;;
     --temperature) TEMPERATURE="$2";   shift 2;;
     --system)      SYSTEM_PROMPT="$2"; shift 2;;
-    --message)     MESSAGE="$2";       shift 2;;
+    --message)      MESSAGE="$2";      shift 2;;
+    --message-file) MESSAGE_FILE="$2"; shift 2;;
     --output)      OUTPUT_FILE="$2";   shift 2;;
     --reason-file) REASON_FILE="$2";   shift 2;;
     --quiet)       QUIET=true;         shift;;
@@ -73,35 +76,61 @@ if [[ -z "${MINIMAX_API_KEY:-}" ]]; then
   exit 3
 fi
 
-# Read message from stdin if --message not given.
-if [[ -z "${MESSAGE}" ]]; then
-  if [[ -t 0 ]]; then
-    echo "ERROR: no --message and no stdin" >&2; exit 2
+# Resolve message source: --message-file > --message > stdin.
+TMP_REQ="$(mktemp)"
+TMP_RESP="$(mktemp)"
+TMP_MSG_OWN=""  # only set if WE created the temp file (so we delete it)
+trap 'rm -f "${TMP_REQ}" "${TMP_RESP}" "${TMP_MSG_OWN}"' EXIT
+
+MSG_SOURCE_FILE=""
+if [[ -n "${MESSAGE_FILE}" ]]; then
+  if [[ ! -f "${MESSAGE_FILE}" ]]; then
+    echo "ERROR: --message-file not found: ${MESSAGE_FILE}" >&2; exit 2
   fi
-  MESSAGE="$(cat)"
+  MSG_SOURCE_FILE="${MESSAGE_FILE}"  # caller's file; we do NOT delete it
+elif [[ -n "${MESSAGE}" ]]; then
+  TMP_MSG_OWN="$(mktemp)"
+  printf '%s' "${MESSAGE}" > "${TMP_MSG_OWN}"
+  MSG_SOURCE_FILE="${TMP_MSG_OWN}"
+elif [[ ! -t 0 ]]; then
+  TMP_MSG_OWN="$(mktemp)"
+  cat > "${TMP_MSG_OWN}"
+  MSG_SOURCE_FILE="${TMP_MSG_OWN}"
+else
+  echo "ERROR: no --message, --message-file, and no stdin" >&2; exit 2
 fi
 
-if [[ -z "${MESSAGE}" ]]; then
+MSG_SIZE="$(wc -c < "${MSG_SOURCE_FILE}")"
+if [[ "${MSG_SIZE}" -eq 0 ]]; then
   echo "ERROR: empty message" >&2; exit 2
 fi
 
-[[ "${QUIET}" == false ]] && echo "  minimax-api: model=${MODEL} max_tokens=${MAX_TOKENS}" >&2
+[[ "${QUIET}" == false ]] && echo "  minimax-api: model=${MODEL} max_tokens=${MAX_TOKENS} msg_bytes=${MSG_SIZE}" >&2
 
-# Build the messages array. Include system message if given.
-if [[ -n "${SYSTEM_PROMPT}" ]]; then
-  MESSAGES_JSON="[{\"role\":\"system\",\"content\":$(printf '%s' "${SYSTEM_PROMPT}" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')},{\"role\":\"user\",\"content\":$(printf '%s' "${MESSAGE}" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}]"
-else
-  MESSAGES_JSON="[{\"role\":\"user\",\"content\":$(printf '%s' "${MESSAGE}" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')}]"
-fi
+# Build the request JSON entirely in Python (no shell interpolation of large strings).
+python3 - "${MSG_SOURCE_FILE}" "${TMP_REQ}" "${MODEL}" "${MAX_TOKENS}" "${TEMPERATURE}" "${SYSTEM_PROMPT:-}" <<'PYEOF'
+import json, sys
 
-REQUEST_JSON="{\"model\":\"${MODEL}\",\"messages\":${MESSAGES_JSON},\"max_tokens\":${MAX_TOKENS},\"temperature\":${TEMPERATURE}}"
+msg_file, req_file, model, max_tokens, temperature, system_prompt = \
+    sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), float(sys.argv[5]), sys.argv[6]
 
-# Write request to a temp file to avoid argument-length limits and key exposure.
-TMP_REQ="$(mktemp)"
-TMP_RESP="$(mktemp)"
-trap 'rm -f "${TMP_REQ}" "${TMP_RESP}"' EXIT
+with open(msg_file, encoding='utf-8', errors='replace') as f:
+    user_msg = f.read()
 
-printf '%s' "${REQUEST_JSON}" > "${TMP_REQ}"
+messages = []
+if system_prompt:
+    messages.append({"role": "system", "content": system_prompt})
+messages.append({"role": "user", "content": user_msg})
+
+request = {
+    "model": model,
+    "messages": messages,
+    "max_tokens": max_tokens,
+    "temperature": temperature,
+}
+with open(req_file, 'w', encoding='utf-8') as f:
+    json.dump(request, f)
+PYEOF
 
 # Call the native endpoint (handover §TL;DR: use chatcompletion_v2, not /anthropic).
 HTTP_STATUS="$(curl -s -w "%{http_code}" \
@@ -117,15 +146,35 @@ if [[ "${HTTP_STATUS}" != "200" ]]; then
   exit 1
 fi
 
-# Check for API-level error in the response.
-FINISH_REASON="$(python3 -c "
-import sys, json
+# Check for API-level error + extract reasoning_content in one Python pass.
+# Use positional args (not shell expansion inside -c string) to avoid subshell trap.
+TMP_EXTRACT="$(mktemp)"
+python3 - "${TMP_RESP}" "${REASON_FILE:-}" "${TMP_EXTRACT}" <<'PYEOF'
+import json, sys
+
+resp_path, reason_file, extract_path = sys.argv[1], sys.argv[2], sys.argv[3]
+
 try:
-    d = json.load(open('${TMP_RESP}'))
-    print(d.get('choices', [{}])[0].get('finish_reason', 'unknown'))
+    with open(resp_path, encoding='utf-8') as f:
+        d = json.load(f)
+    choices = d.get('choices', [{}])
+    finish_reason = choices[0].get('finish_reason', 'unknown') if choices else 'no_choices'
+    msg = choices[0].get('message', {}) if choices else {}
+    reasoning = msg.get('reasoning_content', '')
 except Exception as e:
-    print('parse_error: ' + str(e))
-" 2>/dev/null || echo "parse_error")"
+    finish_reason = f'parse_error: {e}'
+    reasoning = ''
+
+with open(extract_path, 'w') as f:
+    f.write(finish_reason)
+
+if reason_file:
+    with open(reason_file, 'w', encoding='utf-8') as f:
+        f.write(reasoning)
+PYEOF
+
+FINISH_REASON="$(cat "${TMP_EXTRACT}")"
+rm -f "${TMP_EXTRACT}"
 
 if [[ "${FINISH_REASON}" == "error" || "${FINISH_REASON}" == parse_error* ]]; then
   echo "ERROR: API finish_reason=${FINISH_REASON}" >&2
@@ -134,17 +183,6 @@ if [[ "${FINISH_REASON}" == "error" || "${FINISH_REASON}" == parse_error* ]]; th
 fi
 
 [[ "${QUIET}" == false ]] && echo "  minimax-api: finish_reason=${FINISH_REASON}" >&2
-
-# Extract reasoning_content to a separate file if requested.
-if [[ -n "${REASON_FILE}" ]]; then
-  python3 -c "
-import json, sys
-d = json.load(open('${TMP_RESP}'))
-rc = d.get('choices', [{}])[0].get('message', {}).get('reasoning_content', '')
-with open('${REASON_FILE}', 'w') as f:
-    f.write(rc)
-" 2>/dev/null || true
-fi
 
 # Output the full response JSON.
 if [[ -n "${OUTPUT_FILE}" ]]; then

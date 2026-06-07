@@ -85,8 +85,9 @@ if [[ -d "${CHALLENGER_DIR}/output" ]]; then
   CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}/output" -name '*.plan.md' | head -1)"
 fi
 if [[ -z "${CHALLENGER_PLAN}" ]]; then
-  # Fallback: check for plan directly in challenger dir (recovered/interrupted runs)
-  CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}" -maxdepth 1 -name '*.plan.md' | head -1)"
+  # Fallback: check for any markdown plan in challenger dir root (recovered/interrupted runs).
+  # Matches both *.plan.md and *-output-plan.md naming conventions.
+  CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}" -maxdepth 1 -name '*.plan.md' -o -maxdepth 1 -name '*-output-plan.md' 2>/dev/null | head -1)"
 fi
 
 # Locate this script's directory to call siblings.
@@ -131,18 +132,21 @@ else
   echo "  using pre-computed token-signals.json (no local trace)"
 fi
 
-# If no challenger plan was produced (run incomplete or failed), we grade the
-# challenger as a partial run. The judge still scores what exists — if there's
-# no plan file, we use a sentinel note so the judge can score it.
+# Write plan content to temp files (avoid ARG_MAX on large plans passed to python/shell).
+TMP_CONTROL_PLAN="$(mktemp)"
+TMP_CHALLENGER_PLAN="$(mktemp)"
+
+cat "${CONTROL_PLAN}" > "${TMP_CONTROL_PLAN}"
+
 if [[ -z "${CHALLENGER_PLAN}" ]]; then
   echo "  WARN: no challenger plan file found; using partial-run sentinel for grading"
-  CHALLENGER_PLAN_CONTENT="[NO PLAN PRODUCED — challenger run was interrupted before writing any plan output. Score dimension 1 (completeness) as 1 (absent). For all other dimensions, infer from the exploration trace summary if available, otherwise score 1.]"
+  printf '%s' "[NO PLAN PRODUCED — challenger run was interrupted before writing any plan output. Score dimension 1 (completeness) as 1 (absent). For all other dimensions, infer from the exploration trace summary if available, otherwise score 1.]" > "${TMP_CHALLENGER_PLAN}"
 else
-  CHALLENGER_PLAN_CONTENT="$(cat "${CHALLENGER_PLAN}")"
+  cat "${CHALLENGER_PLAN}" > "${TMP_CHALLENGER_PLAN}"
 fi
 
-CONTROL_PLAN_CONTENT="$(cat "${CONTROL_PLAN}")"
-TOKEN_SIGNALS="$(cat "${RESULTS_DIR}/token-signals.json")"
+# Register cleanup.
+trap 'rm -f "${TMP_CONTROL_PLAN}" "${TMP_CHALLENGER_PLAN}"' EXIT
 
 # Build the judge input (two passes for position-swapping).
 build_judge_input() {
@@ -200,88 +204,116 @@ PYEOF
 
 run_judge_pass() {
   local pass_name="$1"
-  local plan_A_content="$2"
-  local plan_B_content="$3"
+  local plan_A_file="$2"   # path to file containing plan A text
+  local plan_B_file="$3"   # path to file containing plan B text
   local output_json="${RESULTS_DIR}/${pass_name}.json"
   local output_reason="${RESULTS_DIR}/${pass_name}.reason"
 
   echo "  running judge pass: ${pass_name}..."
 
-  # Write plan files to temp for python composition
-  local tmp_a tmp_b
-  tmp_a="$(mktemp)"
-  tmp_b="$(mktemp)"
-  printf '%s' "${plan_A_content}" > "${tmp_a}"
-  printf '%s' "${plan_B_content}" > "${tmp_b}"
+  # Build the full judge message using Python (all I/O via files, no ARG_MAX risk).
+  # Reads: plan_A_file, plan_B_file, token_signals file, judge prompt template.
+  # Writes: tmp_msg file containing the full judge prompt text.
+  local tmp_msg tmp_signals
+  tmp_msg="$(mktemp)"
+  tmp_signals="${RESULTS_DIR}/token-signals.json"
 
-  # Read the judge prompt template (up to the <plans> tag, then inject, then task).
-  # The template uses $ARGUMENTS. We replace it with the judge input JSON path.
-  local judge_input
-  judge_input="$(python3 - "${tmp_a}" "${tmp_b}" "${TOKEN_SIGNALS}" <<'PYEOF'
-import json, sys
-with open(sys.argv[1]) as f: plan_a = f.read()
-with open(sys.argv[2]) as f: plan_b = f.read()
-token_signals_raw = sys.argv[3]
+  python3 - "${plan_A_file}" "${plan_B_file}" "${tmp_signals}" "${JUDGE_PROMPT_TEMPLATE}" "${tmp_msg}" <<'PYEOF'
+import json, sys, re
+
+plan_A_path, plan_B_path, signals_path, template_path, out_path = sys.argv[1:]
+
+def digest_plan(text, max_chars=10000):
+    """Extract the high-signal sections of a plan.
+    Keeps: §1 goal/sub-phase, §4 watchpoints, §13 tasks (headings+DoD only),
+    §15 DoD commands, §16a stories. Strips filler prose to fit in ~10k chars.
+    This reduces the per-plan budget from ~50KB to ~10KB without losing scoreable signal.
+    """
+    # Split on ## headers
+    parts = re.split(r'(?=^## )', text, flags=re.M)
+    keep_patterns = [
+        r'^## (1\.|Sub-phase|Goal|Overview)',
+        r'^## 4\.',   # watchpoints
+        r'^## 5\.',   # complexity
+        r'^## (13\.|Tasks?)',
+        r'^## (15\.|DoD|Definition)',
+        r'^## (16a?\.|\[Story)',
+    ]
+    kept = []
+    for part in parts:
+        header = part.split('\n')[0]
+        if any(re.search(p, header, re.I) for p in keep_patterns):
+            kept.append(part)
+        elif not kept:  # always keep the intro (before first ##)
+            kept.append(part)
+    digest = '\n'.join(kept)
+    if len(digest) > max_chars:
+        digest = digest[:max_chars] + '\n[... truncated for judge token budget ...]'
+    return digest
+
+with open(plan_A_path, encoding='utf-8', errors='replace') as f:
+    plan_a_raw = f.read()
+with open(plan_B_path, encoding='utf-8', errors='replace') as f:
+    plan_b_raw = f.read()
+
+plan_a = digest_plan(plan_a_raw)
+plan_b = digest_plan(plan_b_raw)
+
 try:
-    token_signals = json.loads(token_signals_raw)
-except:
+    with open(signals_path) as f:
+        token_signals = json.load(f)
+except Exception:
     token_signals = {}
-block = {
+with open(template_path, encoding='utf-8', errors='replace') as f:
+    template = f.read()
+
+# Strip YAML frontmatter
+if template.startswith('---'):
+    end = template.find('\n---', 3)
+    if end != -1:
+        template = template[end+4:].lstrip()
+
+# Build the arguments block (embedded in the template via $ARGUMENTS)
+args_block = {
     "plan_A": plan_a,
     "plan_B": plan_b,
     "challenger_trace_signals": token_signals,
     "grading_note": (
         "Arm A and Arm B are anonymous — you do not know which AI system "
-        "produced each plan. Score purely on plan text per the rubric."
+        "produced each plan. Score purely on plan text per the rubric. "
+        "Plans are digested to key sections (goal, watchpoints, tasks, DoD, stories)."
     )
 }
-# Compact JSON (large plans) — the judge sees the full text
-print(json.dumps(block))
+args_json = json.dumps(args_block)
+
+# Replace $ARGUMENTS placeholder in the template
+message = template.replace('$ARGUMENTS', args_json)
+
+with open(out_path, 'w', encoding='utf-8') as f:
+    f.write(message)
 PYEOF
-)"
 
-  rm -f "${tmp_a}" "${tmp_b}"
-
-  # Build the full judge message: template body with $ARGUMENTS replaced.
-  local template_body
-  template_body="$(cat "${JUDGE_PROMPT_TEMPLATE}")"
-  # Strip YAML frontmatter (lines between first and second ---)
-  local message
-  message="$(printf '%s' "${template_body}" | python3 -c "
-import sys
-content = sys.stdin.read()
-# Strip YAML frontmatter
-if content.startswith('---'):
-    end = content.find('\n---', 3)
-    if end != -1:
-        content = content[end+4:].lstrip()
-# Replace \$ARGUMENTS with the judge input
-import json
-args_json = json.loads($(printf '%s' "${judge_input}" | python3 -c "import sys,json; print(repr(sys.stdin.read()))"))
-content = content.replace('\$ARGUMENTS', json.dumps(args_json))
-print(content)
-")"
+  local msg_size
+  msg_size="$(wc -c < "${tmp_msg}")"
+  echo "  message size: ${msg_size} bytes"
 
   if [[ "${DRY_RUN}" == true ]]; then
-    echo "  [dry-run] would send judge message (${#message} chars) to ${MODEL}"
+    echo "  [dry-run] would send judge message (${msg_size} bytes) to ${MODEL}"
     echo '{"dry_run": true}' > "${output_json}"
     echo "[dry-run]" > "${output_reason}"
+    rm -f "${tmp_msg}"
     return 0
   fi
-
-  # Write message to temp file.
-  local tmp_msg
-  tmp_msg="$(mktemp)"
-  printf '%s' "${message}" > "${tmp_msg}"
 
   local ENV_FLAG=""
   [[ -n "${ENV_FILE}" ]] && ENV_FLAG="--env-file ${ENV_FILE}"
 
+  # minimax-api.sh --message-file reads the message from a file (no ARG_MAX)
   "${MINIMAX_API}" \
     --model "${MODEL}" \
     --max-tokens "${MAX_TOKENS}" \
     --temperature "0.0" \
-    --message "$(cat "${tmp_msg}")" \
+    --message-file "${tmp_msg}" \
     --output "${output_json}" \
     --reason-file "${output_reason}" \
     ${ENV_FLAG}
@@ -291,10 +323,10 @@ print(content)
 }
 
 # Pass 1: control=A, challenger=B
-run_judge_pass "pass1-A-control-B-challenger" "${CONTROL_PLAN_CONTENT}" "${CHALLENGER_PLAN_CONTENT}"
+run_judge_pass "pass1-A-control-B-challenger" "${TMP_CONTROL_PLAN}" "${TMP_CHALLENGER_PLAN}"
 
 # Pass 2: challenger=A, control=B (position-swapped)
-run_judge_pass "pass2-A-challenger-B-control" "${CHALLENGER_PLAN_CONTENT}" "${CONTROL_PLAN_CONTENT}"
+run_judge_pass "pass2-A-challenger-B-control" "${TMP_CHALLENGER_PLAN}" "${TMP_CONTROL_PLAN}"
 
 # Synthesise averaged scores + routing recommendation.
 echo "  synthesising judge summary..."
