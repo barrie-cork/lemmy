@@ -64,7 +64,7 @@ P2 (fork-local):
 - `crates/server/` — composition root: wiring, startup, background jobs (NO business logic)
 - `migrations/{timestamp}_name/{up,down}.sql` — Diesel CLI conventions
 - `api_tests/` — existing Lemmy integration tests
-- `tests/` (to be added for governance e2e) — `tests/e2e.rs` per [IMPLEMENTATION-PLAN-v0.md §5.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md)
+- `crates/server/tests/e2e.rs` — governance integration test harness (live; use `scripts/brehon/cargo-test.bat --workspace --test e2e` on Windows)
 
 **Expected governance paths** (from [03 §7](docs/brehon-law-inspired-network/03-architecture.md)):
 - `crates/db_schema/src/source/governance/*.rs`
@@ -79,7 +79,7 @@ P2 (fork-local):
 - `crates/server/src/governance.rs`
 
 **Toolchain:**
-- `rust-toolchain.toml` pins the Rust channel (currently `1.94` per upstream)
+- `rust-toolchain.toml` pins the Rust channel (currently `1.95`)
 - `Cargo.toml` is the workspace root — do NOT look for `package.json`
 - `diesel.toml` configures `diesel migration run / redo / revert`
 - Test databases run in Docker — **use `--user $(id -u):$(id -g)` to avoid root-owned files blocking worktree cleanup**
@@ -425,7 +425,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 
 **TEST_PATTERN:**
 ```rust
-// SOURCE: api_tests/... or tests/e2e.rs:NN-MM
+// SOURCE: crates/server/tests/e2e.rs:NN-MM
 // COPY THIS PATTERN:
 {actual snippet}
 ```
@@ -444,7 +444,7 @@ Create the directory if needed: `mkdir -p .claude/PRPs/plans`
 | `crates/api/api_common/src/governance.rs` | UPDATE | Add DTOs |
 | `crates/api/api/src/governance/xx.rs` | CREATE | Handler |
 | `crates/api/routes/src/governance.rs` | UPDATE | Wire route |
-| `tests/e2e.rs` | UPDATE | Add integration test |
+| `crates/server/tests/e2e.rs` | UPDATE | Add integration test |
 
 ---
 
@@ -508,17 +508,17 @@ Execute in order. One commit per task. Each task has a MIRROR reference, an exac
 - **MIRROR**: existing route registrations in `crates/api/routes/src/lib.rs`
 - **VALIDATE**: `cargo check -p lemmy_routes`
 
-### Task 7: ADD integration test in `tests/e2e.rs`
+### Task 7: ADD integration test in `crates/server/tests/e2e.rs`
 - **ACTION**: Extend the e2e harness with a test that seeds the DB, calls the endpoint, and asserts the row/effect
-- **MIRROR**: existing tests in `tests/e2e.rs` (once Phase 1 creates it) or `api_tests/` for reference
+- **MIRROR**: existing tests in `crates/server/tests/e2e.rs` — read 1-2 sibling fixtures modules before authoring
 - **GOTCHA**: Use `docker run --user $(id -u):$(id -g) postgres:16` — otherwise root-owned files block worktree cleanup
-- **VALIDATE**: `cargo test --test e2e {test_name}`
+- **VALIDATE**: `scripts/brehon/cargo-test.bat --workspace --test e2e {test_name}` (Windows: use .bat wrapper for vcpkg PATH)
 
 ---
 
 ## Testing Strategy
 
-Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md): **integration-only** for v0, no unit tests until something breaks twice. All tests live in `tests/e2e.rs`.
+Per [IMPLEMENTATION-PLAN-v0.md §5](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md): **integration-only** for v0, no unit tests until something breaks twice. All tests live in `crates/server/tests/e2e.rs`.
 
 ### Tests to Add
 
@@ -556,7 +556,7 @@ cargo clippy --workspace -- -D warnings
 ### Level 2: INTEGRATION_TESTS
 
 ```bash
-cargo test --test e2e {test_pattern}
+scripts/brehon/cargo-test.bat --workspace --test e2e {test_pattern}
 ```
 
 **EXPECT**: All tests pass. First run will pull `postgres:16` — allow time

@@ -118,6 +118,7 @@ migrations/.diesel_lock
 .pi/tmp/
 .pi/logs/
 .pi/*.log
+.pi/*.jsonl
 .pi/settings.local.json
 .pi/extensions/*.js
 .pi/extensions/*.js.map

@@ -276,6 +276,9 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   });
 
   pi.on("tool_call", async (event, ctx) => {
+    // Capture cwd synchronously before any await — ctx becomes stale if a
+    // compaction reload fires during an awaited confirmDangerousBash call.
+    const cwd = ctx.cwd;
     try {
       if (event.toolName === "bash") {
         const command = (event.input as any)?.command;
@@ -286,7 +289,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       }
 
       if (event.toolName === "bash" || event.toolName === "edit" || event.toolName === "write") {
-        const guard = runHookScript("worktree-guard.sh", claudeCompatibleInput(event, ctx.cwd));
+        const guard = runHookScript("worktree-guard.sh", claudeCompatibleInput(event, cwd));
         const decision = worktreeGuardDecision(guard.stdout);
         if (decision) return decision;
       }
@@ -317,10 +320,12 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
+    // Capture cwd synchronously before any await — reload safety (same rationale as tool_call).
+    const cwd = ctx.cwd;
     try {
       const tool = event.toolName;
 
-      runHookScript("observation-capture.sh", claudeCompatibleInput({ toolName: tool, input: event.input }, ctx.cwd));
+      runHookScript("observation-capture.sh", claudeCompatibleInput({ toolName: tool, input: event.input }, cwd));
 
       if (tool === "read") {
         editsSinceRead = 0;

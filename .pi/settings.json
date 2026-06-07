@@ -3,13 +3,14 @@
   "defaultModel": "gpt-5.5",
   "defaultThinkingLevel": "medium",
   "skills": [
-    "../.claude/skills"
+    "../.claude/skills",
+    "./skills"
   ],
   "prompts": ["./prompts"],
   "extensions": [
     "./extensions/lemmy-hooks.ts"
   ],
   "enableSkillCommands": true,
-  "compaction": { "enabled": true, "keepRecentTokens": 30000 },
+  "compaction": { "enabled": true, "keepRecentTokens": 40000, "reserveTokens": 32000 },
   "shellCommandPrefix": "set -o pipefail"
 }
