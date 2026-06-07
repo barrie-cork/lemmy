@@ -113,7 +113,7 @@ mod m2_late_fixtures {
   /// 5. Assert: subscriber received a POST with a valid `SanctionEventPayload`
   ///    whose `subject_actor_pseudonym` is a pseudonym (ADR-015), and whose
   ///    `sanction_kind` matches the mapped RestrictReach kind.
-  #[tokio::test(flavor = "multi_thread")]
+  #[tokio::test(flavor = "current_thread")]
   pub async fn sanction_event_delivered_to_subscriber() -> LemmyResult<()> {
     // -- 1. Env guards + Postgres ------------------------------------------
     const SIGNING_SEED_HEX: &str =

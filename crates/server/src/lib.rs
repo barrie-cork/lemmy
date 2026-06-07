@@ -250,11 +250,14 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
   // Brehon B-publish: seed the sanction subscriber from env at startup.
   // Absent env var ⇒ no-op; idempotent ON CONFLICT DO NOTHING (T4).
   if let Ok(url) = std::env::var("BRIDGE_SANCTION_CALLBACK_URL") {
-    lemmy_api::governance::sanction_publisher::seed_sanction_subscriber(
-      &url,
-      &mut (&pool).into(),
-    )
-    .await?;
+    let url = url.trim().to_string();
+    if !url.is_empty() {
+      lemmy_api::governance::sanction_publisher::seed_sanction_subscriber(
+        &url,
+        &mut (&pool).into(),
+      )
+      .await?;
+    }
   }
 
   let server = if !args.disable_http_server {

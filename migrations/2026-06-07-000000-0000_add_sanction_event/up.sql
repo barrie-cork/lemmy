@@ -8,6 +8,7 @@ CREATE TABLE sanction_event (
   subject_actor_pseudonym TEXT NOT NULL,          -- actor_pseudonym.pseudonym ONLY (ADR-015)
   effective_from TIMESTAMPTZ NOT NULL,
   effective_until TIMESTAMPTZ NULL,
+  CONSTRAINT sanction_event_valid_window_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
   governance_log_entry_hash TEXT NOT NULL          -- hex-encoded governance_log.entry_hash
 );
 

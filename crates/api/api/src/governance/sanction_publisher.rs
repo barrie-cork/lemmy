@@ -20,7 +20,7 @@ use {
     schema::{sanction_event as sanction_event_dsl, sanction_subscriber as sanction_subscriber_dsl},
   },
   lemmy_diesel_utils::connection::{DbPool, get_conn},
-  lemmy_utils::error::LemmyResult,
+  lemmy_utils::error::{LemmyError, LemmyResult},
   serde::{Deserialize, Serialize},
 };
 
@@ -115,7 +115,15 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     .get_result::<EntryHashRow>(conn)
     .await
     .optional()?;
-    row.map(|r| hex::encode(&r.entry_hash)).unwrap_or_default()
+    match row {
+      Some(r) => hex::encode(&r.entry_hash),
+      None => {
+        return Err(LemmyError::from(anyhow::anyhow!(
+          "sanction-created governance_log entry not found for case_id {}",
+          sanction.case_id.0
+        )))
+      }
+    }
   };
 
   // 5. Build payload and POST to each subscriber.
@@ -212,7 +220,8 @@ pub async fn seed_sanction_subscriber(url: &str, pool: &mut DbPool<'_>) -> Lemmy
   insert_into(sanction_subscriber_dsl::table)
     .values(&form)
     .on_conflict(sanction_subscriber_dsl::callback_url)
-    .do_nothing()
+    .do_update()
+    .set(sanction_subscriber_dsl::active.eq(true))
     .execute(conn)
     .await?;
   Ok(())

@@ -133,7 +133,7 @@ pub async fn handle_sanction_event(
     (
         StatusCode::OK,
         Json(SanctionEventResponse {
-            applied: true,
+            applied: false,
             reason: format!(
                 "acknowledged sanction_kind={} for subject={}",
                 payload.sanction_kind, payload.subject_actor_pseudonym
@@ -149,7 +149,8 @@ pub async fn handle_sanction_event(
 /// Full enforcement via `send_state_event` deferred to m2-late-2.
 fn sanction_kind_to_power_level(sanction_kind: &str) -> i32 {
     match sanction_kind {
-        "ban" | "mute" => 0,
+        "ban" | "mute" | "prevent_post" | "mute_voice" => 0,
+        "hide_content" | "restrict_reach" => 25,
         _ => 50,
     }
 }

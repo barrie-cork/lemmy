@@ -190,14 +190,16 @@ pub async fn submit_jury_vote(
     .await
     .optional()?;
 
-  if let Some(sanction) = published {
-    if sanction.target_person_id.is_some() {
-      let ctx = context.clone();
-      tokio::spawn(async move {
-        if let Err(e) = enqueue_sanction_event(sanction, ctx).await {
-          tracing::warn!("sanction publish failed: {e}");
-        }
-      });
+  if outcome.case_decided {
+    if let Some(sanction) = published {
+      if sanction.target_person_id.is_some() {
+        let ctx = context.clone();
+        tokio::spawn(async move {
+          if let Err(e) = enqueue_sanction_event(sanction, ctx).await {
+            tracing::warn!("sanction publish failed: {e}");
+          }
+        });
+      }
     }
   }
 
