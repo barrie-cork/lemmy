@@ -165,8 +165,16 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m2-rooms-a | Task 4b | bridge_read.rs+mod.rs+lib.rs (3 files) | `messaging_config.rs:160-183` | ❌ | criterion 4: 3 files > 2 |
 | m2-rooms-a | Task 5 | room_provisioner.rs+soft_pause.rs (2 files) | `soft_pause.rs:34-41`; `bridge_notify.rs:38-45` | ✅ | 2-file, MIRROR-heavy, bearer-add |
 | m2-rooms-a | Task 6 | room_provisioning.rs+dm_round_trip.rs (2 files) | `dm_round_trip.rs` `#[ignore]` pattern | ✅ | test-compile gated; `cargo test --no-run` |
+| m2-late | Task 1 | 4 files (migration up/down + enums.rs + schema.rs) | `enums.rs:531-547`; `schema.rs:136-138` | ❌ | criterion 4: 4 files > 2 |
+| m2-late | Task 2 | 4 files (sanction_event.rs + sanction_subscriber.rs + mod.rs + newtypes.rs) | `sanction.rs:1-48` | ❌ | criterion 4: 4 files > 2 |
+| m2-late | Task 3 | 4 files (governance_log.rs + api shim + sanction_kind_map.rs + api mod.rs) | `governance_log.rs:117` | ❌ | criterion 4: 4 files > 2 |
+| m2-late | Task 4 | 3 files (sanction_publisher.rs + api mod.rs + 1 create) | `bridge_auth.rs:6-18`; `governance_log.rs` append sig | ❌ | criterion 4: 3 files > 2 |
+| m2-late | Task 5 | `submit_jury_vote.rs` (1 file) | `submit_jury_vote.rs:163-178`; `:452-480` | ✅ | 1-file, MIRROR-heavy, cargo-gated |
+| m2-late | Task 6 | `crates/server/src/lib.rs` (1 file) | `lib.rs:340-410` | ✅ | 1-file, MIRROR-heavy, cargo-gated |
+| m2-late | Task 7 | 3 files (sanction_handler.rs + appservice.rs + main.rs) | `room_provisioner.rs`; `appservice.rs::router()` | ❌ | criterion 4: 3 files; criterion 5: bridge in-task cargo only |
+| m2-late | Task 8 | e2e/m2_late.rs + e2e.rs (2 files) | `e2e.rs:124-148` | ❌ | criterion 2: e2e |
 
-**Running total: 11 ✅ qualifying** (m1-b Tasks 3,4,5 = 3; m2-core-hook Tasks 1,2,3,5,7 = 5). **Crosses the ≥5 threshold** — trial fires this phase per §0.1 (the rolling trigger is now met without needing the prior user override).
+**Running total: 13 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2). Trial SUSPENDED — see MEMORY.md "MiniMax trial SUSPENDED (memory 827)"; do NOT dispatch arms until infra investigated and user resumes.
 
 **TRIAL FIRES THIS PHASE — user override 2026-06-04** (`feedback_minimax_trial_run_below_threshold_on_user_override.md`): user waived the ≥5 cumulative gate (*"Run trial for eligble tasks, even if below 5/5… We need to get AB tests result"*). The 3 eligible tasks (m1-b 3,4,5) run BOTH arms per §2.3 on throwaway `ab-test/m1-b-t{3,4,5}-{sonnet,minimax}` branches off `phase-m1-b` AFTER real Tasks 1+2 land (Task 3 `requires:2`, 4 `requires:2,3`, 5 `requires:4`). Real pipeline stays Sonnet on `phase-m1-b`; trial never gates shipping. Results → `minimax-m27-trial-results.md`.
 

@@ -1,24 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "m2-late complexity score is 13/10 (Sonnet split threshold is >8). Split into m2-late-1 (T0-T4, additive machinery, sub-score ~5) + m2-late-2 (T5-T9, wire-live + e2e + retro, sub-score ~6), or proceed as one 10-task plan?",
-      "options": [
-        "split",
-        "proceed-as-one"
-      ],
-      "context": "Plan .claude/PRPs/plans/m2-late.plan.md scores 13 (impl-above-5 +3, migrations +2, crates +5, e2e +3). Clean seam at T4/T5: T0-T4 produce additive publisher machinery that compiles but is never called (behaviour unchanged); T5-T9 wire the spawn site live, add startup seed, bridge endpoint, e2e, retro. Both sub-scores under 8. Per feedback_complexity_score_pre_split.md the planner files this for advisor/user decision.",
-      "answer": null,
-      "answered_by": null,
-      "approved_by": null,
-      "approved_at": null,
-      "resolved_at": null,
-      "id": "f58698282815-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "a3d0e9941441-049",
@@ -6647,6 +6629,23 @@
       "approved_at": null,
       "resolved_at": "2026-06-06T00:00:01Z",
       "id": "f58698282815-002"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-06T00:00:00Z",
+      "question": "m2-late complexity score is 13/10 (Sonnet split threshold is >8). Split into m2-late-1 (T0-T4, additive machinery, sub-score ~5) + m2-late-2 (T5-T9, wire-live + e2e + retro, sub-score ~6), or proceed as one 10-task plan?",
+      "options": [
+        "split",
+        "proceed-as-one"
+      ],
+      "context": "Plan .claude/PRPs/plans/m2-late.plan.md scores 13 (impl-above-5 +3, migrations +2, crates +5, e2e +3). Clean seam at T4/T5: T0-T4 produce additive publisher machinery that compiles but is never called (behaviour unchanged); T5-T9 wire the spawn site live, add startup seed, bridge endpoint, e2e, retro. Both sub-scores under 8. Per feedback_complexity_score_pre_split.md the planner files this for advisor/user decision.",
+      "answer": "split — user confirmed 2026-06-07 via AskUserQuestion. m2-late-1 = T0-T4 (additive machinery: SanctionKind enum + migration + models + governance-log consts + exhaustive map + publisher module; compiles but never called; behaviour unchanged; sub-score ~5). m2-late-2 = T5-T9 (wire the spawn site live in submit_jury_vote.rs + startup seed + bridge ingest endpoint + e2e + retro; sub-score ~6). bm-cut creates phase-m2-late-1 first; phase-m2-late-2 cut after m2-late-1 ships.",
+      "answered_by": "user",
+      "approved_by": "user",
+      "approved_at": "2026-06-07T00:38:00Z",
+      "resolved_at": "2026-06-07T00:38:00Z",
+      "id": "f58698282815-001"
     }
   ]
 }
