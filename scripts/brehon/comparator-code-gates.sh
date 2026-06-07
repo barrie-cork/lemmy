@@ -30,7 +30,7 @@ SECTIONS=$(grep -c '^## ' "${PLAN}" 2>/dev/null || echo 0)
 
 # Gate 2: watchpoint specificity — §4 watchpoints must cite a file/table/line.
 # Heuristic: lines in the watchpoints area referencing a path (crates/, .rs, a table name) or schema.rs:NN.
-WATCHPOINT_CITES=$(grep -iE 'watch' "${PLAN}" | grep -cE 'crates/|\.rs|schema\.rs|migrations/|[a-z_]+\.[a-z_]+' 2>/dev/null || echo 0)
+WATCHPOINT_CITES=$(grep -iE 'watch' "${PLAN}" 2>/dev/null | grep -cE 'crates/|\.rs|schema\.rs|migrations/|[a-z_]+\.[a-z_]+' 2>/dev/null; true)
 
 # Gate 3: ADR-015 preservation — the plan must name the pseudonym gate + a callsite, not just "respects ADR-015".
 ADR015_NAMED=$(grep -cE 'actor_pseudonym|ADR-015|pseudonym' "${PLAN}" 2>/dev/null || echo 0)

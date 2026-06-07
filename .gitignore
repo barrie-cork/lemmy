@@ -128,3 +128,10 @@ migrations/.diesel_lock
 .claude/memory/memory.db.pre-migration-*
 # pre-commit-session-guard session intent file (per-CC-session, gitignored)
 .claude/.staged-intent
+
+# Comparator run forensics: keep gradeable artifacts (meta.json, *-plan.md, eval/*.json),
+# exclude the multi-hundred-MB Pi event traces + session blobs from git.
+.claude/PRPs/comparator/runs/**/trace.jsonl
+.claude/PRPs/comparator/runs/**/pi-run.log
+.claude/PRPs/comparator/runs/**/session/
+.claude/PRPs/comparator/runs/**/replay-bundle/
