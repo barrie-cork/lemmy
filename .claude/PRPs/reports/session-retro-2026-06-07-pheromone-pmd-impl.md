@@ -82,6 +82,22 @@ to kill the recurring Windows-OpenSSH quote-stripping trap that bit the monitor.
   over-claim before it shipped: "fully tested" (it wasn't — re-ran against the live
   server) and "the monitor can optimize weights" (it can't — only health; built the
   per-event layer + speced the relevance-labeling gap rather than overselling).
+- **Atomic stage+commit+verify burst to beat a concurrent-writer race on a shared
+  `.git/`** *(added 2026-06-07, promotion-execution follow-on)*. While committing this
+  retro's 3 promotion items, the canonical `brehon-fork` `.git/` was being driven by a
+  second live session (m2-late-1): between my `git add` and `git commit`, the other
+  session committed twice and silently reset the index, so my first commit landed as a
+  no-op ("no changes added to commit"). The fix that worked: stage ONLY my own files +
+  `git commit -F` + `git log -1`/`git show --stat` verify, chained with `&&` in ONE
+  uninterrupted shell invocation — no separate add/commit round-trips for the race to
+  slip between. The burst won where the split sequence lost. Use this when the multi-lane
+  hard-refusal #6 protocol (wait-for-quiescence) isn't an option and you must land a
+  small, file-scoped commit on a checkout another session is actively touching: the whole
+  read-stage-commit-verify is a single `&&`-chained command, and the post-commit
+  `git show --stat HEAD` confirms only your files landed (catches a foreign WIP being
+  swept in). NOT a substitute for the wait-for-quiescence default — it's the
+  "commit-now-anyway" fallback, and you still verify isolation after. Pairs with
+  `feedback_cross_session_commit_attribution_collision.md`.
 
 ---
 
