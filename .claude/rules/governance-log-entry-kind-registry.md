@@ -248,9 +248,28 @@ _Authored by the advisor session on `governance-v0` (not the Task 4 Junior): `.c
 | `ENTRY_KIND_ROOM_BRIDGE_ERROR` | `room_bridge_error` | m2-core-hook const; Task 5 `append_room_event` call site (pending) | `append_room_event` (pending bridge-side) | Transient bridge error logged on-chain |
 | `ENTRY_KIND_ROOM_LIFECYCLE_EVENT` | `room_lifecycle_event` | m2-core-hook const; Task 5 `append_room_event` call site (pending) | `append_room_event` (pending bridge-side) | Generic room lifecycle event |
 
+## m2-late-1 entry kinds (2, this sub-phase)
+
+Landed alongside task 3's four-file edit (governance_log.rs consts + api shim +
+sanction_kind_map.rs + api mod.rs). Call sites land in Task 4's
+`enqueue_sanction_event` (sanction_publisher.rs) per the pre-landed-const
+exemption. `SANCTION_PUBLISHED` fires when ≥1 subscriber received the event;
+`SANCTION_EVENT_DELIVERY_FAILED` fires when all subscriber POSTs fail.
+
+_Authored by the advisor session on `phase-m2-late-1` (WP-7 meta-work, not the
+Task 3 Junior): `.claude/rules/**` is advisor-owned meta-work per
+`branch-manager.md` file-ownership. Task 3's Junior wrote ONLY the 4 `crates/`
+files; this registry section is the advisor-reconciled counterpart per the
+brief §3 WP-7 NOTE._
+
+| Rust const | `&str` value | Source | Emitting handler | Semantic |
+|---|---|---|---|---|
+| `ENTRY_KIND_SANCTION_PUBLISHED` | `sanction_published` | m2-late-1 const; Task 4 `enqueue_sanction_event` call site (pending) | Task 4 `crates/api/api/src/governance/sanction_publisher.rs::enqueue_sanction_event` (pending) | ≥1 registered B-publish subscriber received the sanction event via HTTP POST |
+| `ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED` | `sanction_event_delivery_failed` | m2-late-1 const; Task 4 `enqueue_sanction_event` call site (pending) | Task 4 `crates/api/api/src/governance/sanction_publisher.rs::enqueue_sanction_event` (pending) | All subscriber POSTs for this sanction event failed; delivery failed entirely |
+
 ## Acceptance invariants (checked at every plan-review)
 
-- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**65** at m2-core-hook task 4: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a + 1 v1-federation-inbound-b + 10 m2-core-hook).
+- [ ] `rg '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs | wc -l` returns the total count of all populated rows above (**67** at m2-late-1 task 3: 19 v0 + 4 Phase 6 + 2 v1-AD-a + 1 v1-AD-c + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a + 1 v1-federation-inbound-b + 10 m2-core-hook + 2 m2-late-1).
 - [ ] `rg -n '"[a-z_]+"' crates/db_schema/src/source/governance/governance_log.rs | awk -F: '/ENTRY_KIND_/ {print}' | grep -oE '"[a-z_]+"' | sort | uniq -d` returns no duplicate string literal values.
 - [ ] `rg '^\s+ENTRY_KIND_' crates/api/api/src/governance/governance_log.rs | wc -l` equals the `db_schema` define count — shim re-export parity is load-bearing for callers that import from the api path.
 - [ ] Every populated row in this file has a Rust const (in `db_schema`) AND a `pub use` re-export (in the api shim) AND a call site. **Pre-landed-const exemption**: const-introducing sub-phase plans may pre-land consts whose call sites don't arrive until a downstream sub-phase. Such rows MUST name the pending sub-phase + handler file in the table's "Emitting handler" column with a `(pending)` marker, and MUST be linked to a specific downstream plan. Confirmed exempt (land without a live call site at their ship time): v1-AD-a's two consts (`_CHANGED` has the v0 shell wrapper at `scripts/brehon/admin-config-write.sh`; `_CHANGE_DENIED` awaits v1-AD-b), and v1-JM-a's six consts (downstream call sites: `_JURY_CONSTRAINT_RELAXED` + `_SEVERITY_TIER_FROZEN` → v1-JM-b `admin_assign_jury.rs`; `_APPEAL_PANEL_ASSEMBLED` + `_APPEAL_REJECTED` → v1-JM-d; `_APPEAL_WINDOW_EXPIRED` → v1-JM-d background job at `crates/server/src/governance.rs`; `_APPEAL_DECIDED` → v1-JM-e `submit_jury_vote.rs::process_appeal_vote`, **flipped active 2026-05-02**), and v1-SL-a's five consts (downstream call sites: `_SPONSOR_LIABILITY_PENDING` → v1-SL-d `submit_jury_vote.rs`; `_SPONSOR_LIABILITY_FIRED` → v1-SL-c `sponsor_liability_grace.rs`; `_SPONSOR_LIABILITY_ESCAPED` → v1-SL-b `revoke_endorsement.rs` + v1-SL-c `sponsor_liability_grace.rs`; `_ENDORSEMENT_REVOKED` → v1-SL-b `revoke_endorsement.rs`; `_RESTORATION_COMPLETED` → restorative-mechanics-v1 `restoration_complete.rs`), and v1-RT-r1's seven consts (downstream call sites: `_PARTICIPATION_CRON_TICK` → v1-RT-r3 `scheduled_tasks.rs`; `_VOTE_OUTCOME_RECORDED` → v1-RT-r3 `submit_jury_vote.rs`; `_EVIDENCE_QUALITY_RECORDED` → v1-RT-r3 `submit_jury_vote.rs` + `admin_emergency_remove.rs`; `_ROLLUP_RECOMPUTED` → v1-RT-r5 `scheduled_tasks.rs` (**active**); `_DECAY_KNOB_CHANGED` → v1-RT-r2 `admin_config.rs`; `_SPONSOR_ALLOWLIST_ADDED` → v1-RT-r4 `admin_sponsor_allowlist.rs::add` (**active**); `_SPONSOR_ALLOWLIST_REMOVED` → v1-RT-r4 `admin_sponsor_allowlist.rs::remove` (**active**)). A pre-landed const that is NOT linked to a specific downstream plan is a registry-pollution bug; the invariant MUST fire.
