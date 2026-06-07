@@ -259,6 +259,10 @@ with open(plan_B_path, encoding='utf-8', errors='replace') as f:
 plan_a = digest_plan(plan_a_raw)
 plan_b = digest_plan(plan_b_raw)
 
+# Emit digest sizes to stdout so --dry-run can report them before the API call.
+sys.stderr.write(f"  digest: control {len(plan_a_raw)}->{len(plan_a)} chars, challenger {len(plan_b_raw)}->{len(plan_b)} chars\n")
+sys.stderr.flush()
+
 try:
     with open(signals_path) as f:
         token_signals = json.load(f)

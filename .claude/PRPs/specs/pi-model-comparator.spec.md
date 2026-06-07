@@ -148,7 +148,75 @@ at the closest analogue:
 
 Recorded per arm so the comparison report states the budget each arm got.
 
-## 5. Isolation + sandboxing (mandatory — Pi has NO permission system)
+## 5. Eval protocol — judge input preparation (mandatory)
+
+Before passing any plan to the LLM judge, the comparator MUST apply `digest_plan()` to each arm's plan file. This is not an optimisation — it is a protocol requirement.
+
+### Why digesting is mandatory
+
+A raw plan file is typically 40–100KB (the m2-late ground-truth is ~55KB). Passed directly to MiniMax M3 at 16384 max tokens, both judge passes hit `finish_reason=length` — the model exhausts its token budget on reasoning before scoring all 7 dimensions. The result is an incomplete eval, not a failed one: no error is raised, but half the dimension scores are missing.
+
+The judge only needs the scoreable signal, not the full plan prose. The five high-signal sections that map to all 7 rubric dimensions are:
+
+| Section | Rubric dimensions covered |
+|---|---|
+| §1 Summary / Goal | Completeness (D1) |
+| §4 Watchpoints | Watchpoint specificity (D2) |
+| §13 Tasks | Task decomposition (D4), ADR preservation (D3) |
+| §15 DoD | DoD smoke-test (D6) |
+| §16a Stories | Story coverage (D5), T1-preemption (D7) |
+
+**`digest_plan()` specification** (implemented in `comparator-judge.sh`):
+
+```python
+def digest_plan(text, max_chars=10000):
+    """Keep §1/§4/§5/§13/§15/§16a sections; cap at 10000 chars per plan."""
+    parts = re.split(r'(?=^## )', text, flags=re.M)
+    keep_patterns = [
+        r'^## (1\.|Sub-phase|Goal|Overview)',
+        r'^## 4\.',   # watchpoints
+        r'^## 5\.',   # complexity
+        r'^## (13\.|Tasks?)',
+        r'^## (15\.|DoD|Definition)',
+        r'^## (16a?\.|\[Story)',
+    ]
+    kept = [p for p in parts if any(re.search(pat, p.split('\n')[0], re.I)
+            for pat in keep_patterns) or not kept]
+    digest = '\n'.join(kept)
+    return digest[:max_chars] + '\n[... truncated ...]' if len(digest) > max_chars else digest
+```
+
+The digest line (`  digest: control N->M chars, challenger N->M chars`) appears in every judge run. Verify it before a billed run using `--dry-run`.
+
+**`--dry-run` flag**: `comparator-judge.sh --dry-run` prints the digest sizes and the message byte count for both passes without calling the MiniMax API. Run it first to confirm the message will fit in the judge's token budget.
+
+Typical target: ≤25000 bytes per message (both digested plans + template + signals). If either digest exceeds 12000 chars, reduce `max_chars` in the `digest_plan()` call or narrow the keep-patterns.
+
+**Resist removing the digest step.** A future experiment may have shorter plans where digesting is unnecessary. Keep the step anyway — the overhead is ~5ms and the safety margin is load-bearing. If a specific plan section that's excluded turns out to matter for scoring, add it to `keep_patterns` rather than disabling the digest.
+
+---
+
+## 5a. Token signal extraction (cross-machine experiments)
+
+The challenger trace (`trace.jsonl`) is written on the EliteDesk daemon and is typically 200–300MB. It is not practical to copy to the laptop for judge runs. The token signals (a ~1KB JSON summary) must be pre-extracted on the daemon before the judge runs.
+
+**Use `scripts/brehon/comparator-teardown-extract-signals.sh`:**
+
+```bash
+scripts/brehon/comparator-teardown-extract-signals.sh \
+  --experiment planning-001          # or whatever experiment id
+  [--daemon-host homeserver]         # default
+  [--daemon-repo /srv/brehon-fork]   # default
+  [--dry-run]                        # preview without SSH
+```
+
+Call immediately after the challenger arm finishes (or crashes). Output: `.claude/PRPs/comparator/runs/<exp>/judge/token-signals.json`. The judge script reads this file via `TRACE_OPTIONAL=true` fallback and skips the 276MB trace.
+
+**Timing:** run this as part of the experiment teardown, before invoking `comparator-judge.sh`. The judge will warn and fail if neither `trace.jsonl` nor `token-signals.json` is present.
+
+---
+
+## 6. Isolation + sandboxing (mandatory — Pi has NO permission system)
 
 Sandboxing applies asymmetrically — the two runners isolate differently:
 
@@ -189,7 +257,7 @@ Sandboxing applies asymmetrically — the two runners isolate differently:
    survives in git). Crashed runs never reach teardown → the worktree stays under
    `~/comparator-worktrees/` with whatever the model wrote. Belt + braces.
 
-## 6. Trace + output capture — FULL forensic (per user 2026-06-07)
+## 7. Trace + output capture — FULL forensic (per user 2026-06-07)
 
 Capture must serve BOTH goals: (a) good comparison, (b) data to improve the
 challenger model's future performance. So we capture the complete forensic
@@ -209,7 +277,7 @@ these event types — reasoning is in `message_update`, tokens in the
 AssistantMessage, context pressure in `compaction_start/end`. `observation-capture.sh`
 is Claude-Code-event-shaped and does NOT apply; the json stream IS the capture.
 
-## 7. Eval methodology — follows Anthropic eval best-practices (per user 2026-06-07)
+## 8. Eval methodology — follows Anthropic eval best-practices (per user 2026-06-07)
 
 Per `platform.claude.com/docs/.../develop-tests`. Three principles bind the eval:
 
@@ -245,7 +313,7 @@ ground-truth anchors. T1-preemption is graded against what actually happened
 
 **n=1 honesty:** this first experiment is ONE planning task = a data point, not a
 verdict. The report states this explicitly; a routing decision needs n≥5 paired
-tasks (spec §8). Sample-size discipline per the best-practice "prioritize volume."
+tasks (spec §9). Sample-size discipline per the best-practice "prioritize volume."
 
 ### Eval artifacts produced (the 4 deliverables, per user)
 
@@ -257,7 +325,7 @@ tasks (spec §8). Sample-size discipline per the best-practice "prioritize volum
 3. **Token/cost phase breakdown** — exploration vs generation token split, peak
    context (272K concern + any compaction events), $-comparable cost vs Opus
    (noting the subscription-vs-API asymmetry).
-4. **Replay-ready prompt+context bundle** — §6's `replay-bundle/`, so a tuned
+4. **Replay-ready prompt+context bundle** — §7's `replay-bundle/`, so a tuned
    re-run measures improvement deltas against identical inputs.
 
 ### Per-role scoring rubrics
@@ -289,7 +357,7 @@ repro reproduced · fix resolves repro · no regression (test suite) · scope
 true-positive findings · false-positive rate · severity calibration · actionable
 fixes · cost.
 
-## 8. Decision rule → routing recommendation
+## 9. Decision rule → routing recommendation
 
 The output is NOT just a score — it is a **routing decision** per the user story.
 
@@ -302,7 +370,7 @@ The output is NOT just a score — it is a **routing decision** per the user sto
 Statistical discipline (from the existing trial): paired data, n=5 default before
 a binary call, conservative default = stay. Per-role, not global.
 
-## 9. Cutover mechanics (the production flip — separate gated step)
+## 10. Cutover mechanics (the production flip — separate gated step)
 
 If the recommendation is "cut over," adopting (Pi, challenger-model) as the
 production runner for a role is a **separate, gated, reversible** change — never
