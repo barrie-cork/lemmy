@@ -290,6 +290,8 @@ mod m2_late_fixtures {
     }
 
     // -- 8. Drive quorum votes (AdvisoryLabel → Label → RestrictReach) --
+    // Stop at quorum (3 of 5): votes after quorum re-query the active sanction
+    // and each fires another enqueue_sanction_event, inflating sanction_event count.
     let mut decided = false;
     for person_id in &assign_resp.assigned_person_ids {
       let juror_view = LocalUserView::read_person(&mut context.pool(), *person_id).await?;
@@ -306,6 +308,7 @@ mod m2_late_fixtures {
       .into_inner();
       if resp.case_decided {
         decided = true;
+        break; // stop at quorum — further votes would fire additional enqueue_sanction_event spawns
       }
     }
     assert!(decided, "quorum should have been reached after 3 votes");
