@@ -1116,8 +1116,9 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // not fire. Limit must rise with each new phase that adds migrations
   // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
   // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a;
-  // 13→14 here for M1-b governance-messaging; 14→15 here for m2-late-1 add_sanction_event).
-  schema_setup::run(Options::default().revert().limit(15), &db_url)?;
+  // 13→14 here for M1-b governance-messaging; 14→16 here for BUG-1 backfill +
+  // m2-late-1 add_sanction_event — two migrations added since last bump).
+  schema_setup::run(Options::default().revert().limit(16), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
