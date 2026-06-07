@@ -1,6 +1,35 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "966d30acaaea-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T21:14:46Z",
+      "question": "cargo check + clippy pass after fix-impl-1 CR fixes?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1: 6 CR fix-in-pr items across 5 files. No migration schema changes (up.sql CHECK constraint addition is additive). Changes: submit_jury_vote.rs (case_decided guard), sanction_publisher.rs (Err on missing gl row + do_update seed), lib.rs (trim+empty-check env var), m2_late.rs (current_thread), sanction_handler.rs (applied:false + kind map).",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_server --features full 2>&1 | grep -c 'error' | grep -q '^0$'"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "001f1c47c5dc-001",
