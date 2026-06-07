@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "c3deadfbe610-005",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-07T17:45:00Z",
+      "question": "Run e2e gate for Task 8 (sanction_event_delivered_to_subscriber). Local or dispatch?",
+      "options": [
+        "local",
+        "dispatch"
+      ],
+      "context": "T8 committed adfb4556a — new test sanction_event_delivered_to_subscriber in crates/server/tests/e2e/m2_late.rs. Workspace cargo check: EXIT_0. DoD: cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log 2>&1 && echo E2E_EXIT_0 >> %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log || echo E2E_EXIT_NONZERO >> %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log\"",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > %LOCALAPPDATA%\\Temp\\m2-late-e2e.log 2>&1 && echo E2E_EXIT_0 >> %LOCALAPPDATA%\\Temp\\m2-late-e2e.log || echo E2E_EXIT_NONZERO >> %LOCALAPPDATA%\\Temp\\m2-late-e2e.log\""
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 8,
+      "e2e_filter": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "001f1c47c5dc-001",
