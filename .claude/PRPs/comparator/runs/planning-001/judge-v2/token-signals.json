@@ -1,0 +1,30 @@
+{
+  "total_lines": 8604,
+  "event_counts": {
+    "session": 1,
+    "agent_start": 1,
+    "turn_start": 43,
+    "message_start": 141,
+    "message_end": 141,
+    "message_update": 7988,
+    "tool_execution_start": 97,
+    "tool_execution_update": 50,
+    "tool_execution_end": 97,
+    "turn_end": 43,
+    "agent_end": 1,
+    "compaction_start": 1
+  },
+  "tool_calls": 97,
+  "compaction_count": 1,
+  "run_complete": true,
+  "last_event_type": "compaction_start",
+  "pi_exit": "context_overflow_wedge_after_plan_committed",
+  "plans_produced": 1,
+  "turns": 43,
+  "reads": 587,
+  "bash_calls": 1039,
+  "wall_seconds": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "notes": "Plan committed to ab-cell/planning-001-challenger (commits da7b41dde, 54ff74fd4) BEFORE context overflow. Run did complete agent_end but compaction_start is last seen event. 97 tool calls in trace (meta documents 587 reads, 1039 bash from Pi session log)."
+}

@@ -12,6 +12,8 @@ Transform "$ARGUMENTS" into a battle-tested Rust implementation plan for the Bre
 
 **Execution Order**: DESIGN DOCS FIRST, THEN CODEBASE, THEN EXTERNAL RESEARCH. Solutions must fit the 15 committed ADRs and the existing Lemmy crate layout before anything new is introduced.
 
+**Write-First Gate (MANDATORY — context-budget discipline)**: After reading the brief and the P0 design docs, IMMEDIATELY write and commit a skeleton plan containing at minimum §1 Summary, §5 Metadata, and §13 task list stubs. Commit this skeleton BEFORE continuing any further codebase exploration. Then refine each section in subsequent passes. This prevents context exhaustion before any plan output exists.
+
 **Agent Strategy**: Use the built-in `Explore` subagent (via the `Agent` tool with `subagent_type="Explore"`) for codebase exploration. Launch up to 3 Explore agents in parallel when scope spans multiple areas.
 </objective>
 
@@ -322,6 +324,39 @@ NOT_BUILDING (explicit v0 scope limits):
 **OUTPUT_PATH**: `.claude/PRPs/plans/{kebab-case-phase-or-feature-name}.plan.md`
 
 Create the directory if needed: `mkdir -p .claude/PRPs/plans`
+
+### PRE-WRITE GATE — 20-section checklist (MANDATORY — do NOT skip)
+
+Before writing a single line of the plan file, confirm you have material for every section below. If a section is missing, fill it now from Phases 1–5 before proceeding.
+
+```
+SECTION CHECKLIST (mark ✓ when content is ready, ✗ if blocked):
+
+  §1   Summary                     — one paragraph: what this delivers
+  §2   Source                      — IMPLEMENTATION-PLAN-v0.md §N + ADRs
+  §3   Problem Statement           — specific, testable problem
+  §4   Solution Statement          — crates touched, Lemmy patterns mirrored
+  §5   Metadata table              — type, complexity, crates, v0 step, deps
+  §6   Flow Design (Before/After)  — ASCII diagrams + endpoint change table
+  §7   Mandatory Reading           — P0/P1 file:line table
+  §8   Patterns to Mirror          — ≥3 real Rust snippets with SOURCE: file:line
+  §9   Files to Change             — per-file action+justification table
+  §10  NOT Building                — explicit v0 scope limits
+  §11  Step-by-Step Tasks          — all tasks with MIRROR/VALIDATE per task
+  §12  Complexity Score            — LOW/MEDIUM/HIGH + dominant factor
+  §13  Task List summary           — §13 label used by advisor orchestration
+  §14  Watchpoints                 — ≥1 specific table/file/line cited per watchpoint
+  §15  Definition of Done          — exact cargo/diesel commands (executable)
+  §16a Story Coverage              — one §16a story per user-visible outcome
+  §17  Testing Strategy            — tests table + edge cases
+  §18  Validation Commands         — Levels 1–6
+  §19  Acceptance Criteria         — checklist
+  §20  Risks and Mitigations       — table with L/M/H ratings
+```
+
+**HARD STOP**: If you cannot fill ≥18 of the 20 sections with specific, actionable content from your Phase 1–5 work, STOP and surface which sections are empty rather than writing a partial plan. A partial plan (e.g. only §15 DoD) is worse than no plan — it passes the write gate but fails every downstream implementation gate.
+
+**SECTION COUNT CHECK**: After writing the plan, count `## ` top-level headers. The plan MUST have ≥ 18. If the count is < 18, go back and add the missing sections before committing.
 
 ### PLAN_STRUCTURE
 

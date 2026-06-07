@@ -1,0 +1,33 @@
+{
+  "experiment": "planning-001",
+  "judge_model": "MiniMax-M3",
+  "passes": 2,
+  "control_scores": [
+    4.0,
+    3.0,
+    5.0,
+    5.0,
+    2.0,
+    3.0,
+    4.0
+  ],
+  "challenger_scores": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "control_total": 26.0,
+  "challenger_total": 7.0,
+  "routing_pass1": "CHALLENGER_WINS",
+  "routing_pass2": "CONTROL_WINS",
+  "routing_consensus": "CONTROL_WINS",
+  "challenger_run_complete": true,
+  "challenger_compactions": 1,
+  "challenger_turns": 43,
+  "challenger_tool_calls": 97,
+  "note": "n=1 \u2014 one planning task. Per spec \u00a78, n\u22655 required for a binary routing decision. This is a data point, not a verdict."
+}

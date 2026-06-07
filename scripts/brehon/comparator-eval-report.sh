@@ -78,7 +78,15 @@ else
 fi
 
 echo "  running code gates on challenger plan..."
-CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}/output" -name '*.plan.md' 2>/dev/null | head -1)"
+# Look in output/ first (standard), then in challenger dir root (recovered runs).
+# Use process substitution to avoid pipefail on missing directories.
+CHALLENGER_PLAN=""
+if [[ -d "${CHALLENGER_DIR}/output" ]]; then
+  CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}/output" -name '*.plan.md' 2>/dev/null | head -1)"
+fi
+if [[ -z "${CHALLENGER_PLAN}" ]]; then
+  CHALLENGER_PLAN="$(find "${CHALLENGER_DIR}" -maxdepth 1 \( -name '*.plan.md' -o -name '*-output-plan.md' \) 2>/dev/null | head -1 || true)"
+fi
 if [[ -n "${CHALLENGER_PLAN}" ]]; then
   "${CODE_GATES}" "${CHALLENGER_PLAN}" "${REPO_ROOT}" > "${CHALLENGER_GATES_FILE}" 2>/dev/null || \
     echo '{"error":"code gates failed on challenger"}' > "${CHALLENGER_GATES_FILE}"
@@ -252,7 +260,9 @@ lines.append(f"|---|---|---|")
 lines.append(f"| Run complete | ✅ (ground truth) | {'✅' if token_signals.get('run_complete') else '❌ INTERRUPTED'} |")
 lines.append(f"| Wall seconds | n/a (used existing plan) | {token_signals.get('wall_seconds', 'n/a')} |")
 lines.append(f"| Turns | n/a | {token_signals.get('turns', 'n/a')} |")
-lines.append(f"| Tool calls | n/a | {sum(token_signals.get('tool_calls', {}).values())} |")
+tc = token_signals.get('tool_calls', 'n/a')
+tc_str = str(sum(tc.values()) if isinstance(tc, dict) else tc)
+lines.append(f"| Tool calls | n/a | {tc_str} |")
 lines.append(f"| Input tokens | n/a | {token_signals.get('input_tokens', 'n/a')} |")
 lines.append(f"| Output tokens | n/a | {token_signals.get('output_tokens', 'n/a')} |")
 lines.append(f"| Compaction events | 0 | {token_signals.get('compaction_count', 0)} |")
