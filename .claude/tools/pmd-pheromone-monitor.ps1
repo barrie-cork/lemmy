@@ -29,15 +29,28 @@ if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force $OutDir | Ou
 #    so a pre-existing row that's read-today must keep its old updated_at. We
 #    exclude created_at>=today to avoid false positives from rows simply WRITTEN
 #    today (their created_at==updated_at==today legitimately). >0 here = real bug.
+# Core memory metrics. Deliberately does NOT reference read_events — that table
+# may not exist yet (pre-restart), and a missing-table error in ONE subquery
+# fails the WHOLE query (that bug zeroed a whole snapshot once). read_events is
+# queried separately + guarded below.
 $MetricsSql = "SELECT (SELECT COUNT(*) FROM memories) AS rows_total, (SELECT COUNT(*) FROM memory_vectors WHERE model='nomic-embed-text') AS vectors, (SELECT COUNT(*) FROM memories WHERE read_count>0) AS warm_rows, (SELECT COALESCE(SUM(read_count),0) FROM memories) AS read_sum, (SELECT COALESCE(MAX(read_count),0) FROM memories) AS read_max, (SELECT COUNT(*) FROM memories WHERE last_read_at >= date('now')) AS read_today, (SELECT COUNT(*) FROM memories WHERE read_count IS NULL OR read_count<0) AS bad_rc, (SELECT COUNT(*) FROM memories WHERE last_read_at >= date('now') AND updated_at >= date('now') AND created_at < date('now')) AS fts_storm"
+
+# read_events metrics. SQLite validates ALL table refs at prepare time (even in an
+# unreached CASE branch), so a single query referencing read_events errors loudly
+# when the table is absent (pre-restart). We therefore probe existence FIRST, and
+# only run the count query if the table exists. Both queries are guarded per-machine
+# below; absence yields '0|0'.
+$EventsExistsSql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='read_events';"
+$EventsCountSql  = "SELECT COUNT(*) || '|' || COALESCE(SUM(CASE WHEN rank_with != rank_without AND rank_without IS NOT NULL THEN 1 ELSE 0 END),0) FROM read_events;"
 
 # Top-5 most-read memories (id:count) — compact, for trend-spotting which
 # memories the pheromone is actually elevating.
 $TopSql = "SELECT id || ':' || read_count FROM memories WHERE read_count>0 ORDER BY read_count DESC, last_read_at DESC LIMIT 5;"
 
 function Get-Snapshot {
-    param([string]$Machine, [string]$MetricsRaw, [string]$TopRaw)
+    param([string]$Machine, [string]$MetricsRaw, [string]$TopRaw, [string]$EventsRaw)
     $f = $MetricsRaw.Trim() -split '\|'
+    $e = ($EventsRaw.Trim() -split '\|')
     $top = if ($TopRaw.Trim()) { ($TopRaw.Trim() -split "`n") | ForEach-Object { $_.Trim() } } else { @() }
     [pscustomobject]@{
         ts                 = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -50,6 +63,8 @@ function Get-Snapshot {
         read_today         = [int]$f[5]
         bad_rc             = [int]$f[6]
         fts_storm          = [int]$f[7]
+        events_total       = if ($e.Count -ge 1 -and $e[0]) { [int]$e[0] } else { 0 }
+        events_reordered   = if ($e.Count -ge 2 -and $e[1]) { [int]$e[1] } else { 0 }
         top5               = $top
     }
 }
@@ -60,7 +75,9 @@ $lines = @()
 try {
     $m = & sqlite3 $LaptopDb $MetricsSql
     $t = & sqlite3 $LaptopDb $TopSql
-    $snap = Get-Snapshot -Machine "laptop" -MetricsRaw $m -TopRaw ($t -join "`n")
+    $hasEv = (& sqlite3 $LaptopDb $EventsExistsSql).Trim()
+    $ev = if ($hasEv -eq "1") { & sqlite3 $LaptopDb $EventsCountSql } else { "0|0" }
+    $snap = Get-Snapshot -Machine "laptop" -MetricsRaw $m -TopRaw ($t -join "`n") -EventsRaw ($ev -join "")
     $lines += ($snap | ConvertTo-Json -Compress -Depth 4)
 } catch {
     $lines += (@{ ts=(Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"); machine="laptop"; error="$($_.Exception.Message)" } | ConvertTo-Json -Compress)
@@ -80,7 +97,9 @@ function Invoke-RemoteSql {
 try {
     $m = Invoke-RemoteSql -Sql $MetricsSql
     $t = Invoke-RemoteSql -Sql $TopSql
-    $snap = Get-Snapshot -Machine "elitedesk" -MetricsRaw $m -TopRaw ($t -join "`n")
+    $hasEv = (Invoke-RemoteSql -Sql $EventsExistsSql | Out-String).Trim()
+    $ev = if ($hasEv -eq "1") { Invoke-RemoteSql -Sql $EventsCountSql } else { "0|0" }
+    $snap = Get-Snapshot -Machine "elitedesk" -MetricsRaw $m -TopRaw ($t -join "`n") -EventsRaw ($ev -join "")
     $lines += ($snap | ConvertTo-Json -Compress -Depth 4)
 } catch {
     $lines += (@{ ts=(Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"); machine="elitedesk"; error="$($_.Exception.Message)" } | ConvertTo-Json -Compress)
