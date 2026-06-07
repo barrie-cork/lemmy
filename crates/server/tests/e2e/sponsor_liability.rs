@@ -217,7 +217,9 @@ mod v1_sl_b_fixtures {
       "pre-call: surety.revoked_at IS NULL",
     );
 
-    let test_start = Utc::now();
+    // Subtract 200ms to absorb Docker container clock skew: the container's
+    // Postgres `now()` may run up to ~100ms behind the host's `Utc::now()`.
+    let test_start = Utc::now() - chrono::Duration::milliseconds(200);
     let resp = revoke_endorsement(
       Json(RevokeEndorsement {
         endorsement_id,
