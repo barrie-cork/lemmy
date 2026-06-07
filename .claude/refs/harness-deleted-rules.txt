@@ -1,0 +1,19 @@
+# harness-deleted-rules — tombstone ledger
+#
+# One rule BASENAME per line (e.g. `circuit-breaker.md`). These are rule files
+# intentionally removed by a harness-audit P1 trim because their content was
+# consolidated elsewhere (e.g. into universal-guards.md). If any of these
+# reappears in .claude/rules/ it is a REGRESSION — it double-loads content at
+# session start. The SessionStart hook .claude/hooks/harness-regression-guard.sh
+# reads this file and WARNs (not fails) on reappearance.
+#
+# Append a basename here whenever you ship a P1 deletion in a harness audit.
+# Lines starting with `#` and blank lines are ignored.
+#
+# Seeded 2026-06-07 from harness-audit-2026-06-07 P1 (sync re-duplication
+# regression). Root cause fixed in homeserver RULE_EXCLUDE[brehon-fork].
+
+circuit-breaker.md
+escalation.md
+integrator.md
+post-task-retro.md
