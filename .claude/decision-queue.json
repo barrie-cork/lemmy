@@ -6825,6 +6825,31 @@
       "resolved_at": "2026-06-07T19:50:45Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "c3deadfbe610-006",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-07T19:55:00Z",
+      "question": "Does the phase-m2-late-1 diff compile cleanly on Linux (rust:1.95 Docker)?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Diff adds migrations/2026-06-07-000000-0000_add_sanction_event which triggers the Linux-compile gate. cargo-linux.sh check --workspace --features full passed in 16m08s.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 8,
+      "result": "pass",
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 16m 08s\nLINUX_EXIT_0",
+      "failed_jobs": null,
+      "answer": "pass — cargo-linux.sh check --workspace --features full exited 0 on Linux rust:1.95 Docker (16m08s)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T20:12:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
