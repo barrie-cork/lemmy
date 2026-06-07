@@ -1,6 +1,7 @@
 {
   "schema_version": 3,
-  "pending": [
+  "pending": [],
+  "resolved": [
     {
       "id": "001f1c47c5dc-001",
       "from": "impl",
@@ -12,9 +13,9 @@
         "fail"
       ],
       "context": "m2-late-1 T1 complete: ROOT migration 2026-06-07-000000-0000_add_sanction_event (sanction_kind enum + sanction_event + sanction_subscriber tables), SanctionKind enum added to enums.rs. schema.rs regen + workspace check delegated to laptop. Runner regenerates schema.rs; if it changes, advisor commits the regen. RESUME: see .claude/PRPs/handovers/m2-late-1-t1-validate-resume.md for the VERIFIED turnkey plan (hand-edit schema.rs per fork convention — do NOT run print-schema; do NOT run the literal `-- migration run` command, it bails; 4 verbatim insertions + migrate-roundtrip + workspace check).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "pass — migrate-roundtrip.sh exit 0 (forward + re-forward, 1 new migration); cargo-check.bat --workspace --features full exit 0 (schema.rs hand-extended, SHA 298f7ed77); audit probes 1-4 all pass (Probe 4 exit 101, no exit-code masking).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T10:30:00Z",
       "approved_by": null,
       "approved_at": null,
       "commands": [
@@ -24,13 +25,11 @@
       "branch": "phase-m2-late-1",
       "phase_task": "1",
       "workflow_run_id": null,
-      "result": null,
+      "result": "pass",
       "log_slice": null,
       "failed_jobs": null,
       "failed_commands": null
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": "a3d0e9941441-049",
       "from": "advisor",
