@@ -25,5 +25,7 @@ pub mod reputation_event;
 pub mod reputation_snapshot;
 pub mod rule_set_version;
 pub mod sanction;
+pub mod sanction_event;
+pub mod sanction_subscriber;
 pub mod sponsor_allowlist;
 pub mod surety;
