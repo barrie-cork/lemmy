@@ -12,6 +12,8 @@ Transform "$ARGUMENTS" into a battle-tested Rust implementation plan for the Bre
 
 **Execution Order**: DESIGN DOCS FIRST, THEN CODEBASE, THEN EXTERNAL RESEARCH. Solutions must fit the 15 committed ADRs and the existing Lemmy crate layout before anything new is introduced.
 
+**Write-First Gate (MANDATORY — context-budget discipline)**: After reading the brief and the P0 design docs, IMMEDIATELY write and commit a skeleton plan containing at minimum §1 Summary, §5 Metadata, and §13 task list stubs. Commit this skeleton BEFORE continuing any further codebase exploration. Then refine each section in subsequent passes. This prevents context exhaustion before any plan output exists.
+
 **Agent Strategy**: Use the built-in `Explore` subagent (via the `Agent` tool with `subagent_type="Explore"`) for codebase exploration. Launch up to 3 Explore agents in parallel when scope spans multiple areas.
 </objective>
 
