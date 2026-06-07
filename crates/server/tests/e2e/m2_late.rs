@@ -355,6 +355,12 @@ mod m2_late_fixtures {
       .expect("payload missing governance_log_entry_hash");
     assert!(!hash.is_empty(), "governance_log_entry_hash must be non-empty");
 
+    // Allow the spawned enqueue_sanction_event task to complete its DB writes
+    // (sanction_event insert + governance_log append) after the HTTP POST.
+    // body_rx fires when the mock sends 200 OK, but those DB writes happen
+    // after the POST returns — a brief yield is sufficient.
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
     // -- 11. DB assertions — sanction_event row + governance_log ---------
     {
       let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
