@@ -51,6 +51,7 @@ use crate::governance::{
     ENTRY_KIND_VOTE_OUTCOME_RECORDED,
   },
   redaction,
+  sanction_publisher::enqueue_sanction_event,
   sponsor_liability,
   state::{Active, ActiveVoteResult, GovernanceCase},
 };
@@ -58,8 +59,8 @@ use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use chrono::{DateTime, Duration, Utc};
 use diesel::{
-  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, SelectableHelper, dsl::count_star,
-  insert_into, update,
+  BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, SelectableHelper,
+  dsl::count_star, insert_into, update,
 };
 use diesel_async::RunQueryDsl;
 use lemmy_api_common::governance::{SubmitJuryVote, SubmitJuryVoteResponse};
@@ -76,7 +77,7 @@ use lemmy_db_schema::{
     moderation_case::ModerationCase,
     public_case_log::PublicCaseLogInsertForm,
     reputation_event::ReputationEventInsertForm,
-    sanction::SanctionInsertForm,
+    sanction::{Sanction, SanctionInsertForm},
   },
 };
 use lemmy_db_schema_file::{
@@ -174,6 +175,28 @@ pub async fn submit_jury_vote(
       governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
         .await
         .ok();
+    }
+  }
+
+  // T5 (m2-late): post-transaction B-publish spawn. Re-query the sanction written
+  // by the transaction (None for appeal-only, NoAction, or non-person-target cases).
+  // NOT inside the tx — spawn is fire-and-forget outside the vote transaction (R8/WP-2).
+  let published: Option<Sanction> = sanction::table
+    .filter(sanction::case_id.eq(data.case_id))
+    .filter(sanction::active.eq(true))
+    .select(Sanction::as_select())
+    .first(conn)
+    .await
+    .optional()?;
+
+  if let Some(s) = published {
+    if s.target_person_id.is_some() {
+      let ctx = context.clone();
+      tokio::spawn(async move {
+        if let Err(e) = enqueue_sanction_event(s, ctx).await {
+          tracing::warn!("sanction publish failed: {e}");
+        }
+      });
     }
   }
 

@@ -5,7 +5,7 @@
 
 #[cfg(feature = "full")]
 use {
-  actix_web::web::Data,
+  activitypub_federation::config::Data,
   chrono::{DateTime, Utc},
   diesel::{ExpressionMethods, QueryDsl, insert_into},
   diesel_async::RunQueryDsl,
