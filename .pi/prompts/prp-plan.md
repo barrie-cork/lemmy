@@ -54,6 +54,28 @@ P2 (fork-local):
 **If the plan appears to contradict any of these ADRs, STOP. Do not silently fix in the plan body. Move the contradiction to §8 "open questions to escalate" and surface it to the user. ADRs are append-only — changes come through new ADRs, not quiet edits.**
 </brehon-context>
 
+<harness-constraints>
+## Operational harness — MANDATORY
+
+**Before writing a single line of plan content**, read the harness constraints file:
+
+```
+Read: .claude/rules/pi-harness-constraints.md
+```
+
+This file contains the six non-negotiable rules that govern every plan on this project:
+1. No cargo on the daemon (validate-pending-laptop pattern)
+2. Cargo wrapper invocations and the `--features full` / `-p` footgun
+3. Migration runner (never bare `diesel migration run`)
+4. e2e test harness return-type discipline
+5. ADR-015 callsite requirement
+6. Canonical plan section numbering (§1–§20)
+
+The constraints are in a separate file to keep this prompt lean. They are **not optional** — plans that omit them produce impl failures that cost hours to diagnose. Reading the file takes ~10 seconds.
+
+After reading, confirm: `HARNESS_CONSTRAINTS: loaded` before Phase 0.
+</harness-constraints>
+
 <context>
 **Project layout** (Lemmy 1.0-beta Rust workspace, forked as `brehon-fork`, working branch `governance-v0`):
 - `crates/db_schema/` — Diesel table definitions, Rust types, enums
