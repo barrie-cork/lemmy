@@ -232,12 +232,12 @@ def digest_plan(text, max_chars=10000):
     # Split on ## headers
     parts = re.split(r'(?=^## )', text, flags=re.M)
     keep_patterns = [
-        r'^## (1\.|Sub-phase|Goal|Overview)',
-        r'^## 4\.',   # watchpoints
-        r'^## 5\.',   # complexity
-        r'^## (13\.|Tasks?)',
-        r'^## (15\.|DoD|Definition)',
-        r'^## (16a?\.|\[Story)',
+        r'^## (1\.|Summary|Sub-phase|Goal|Overview)',
+        r'^## (4\.|Solution|Watchpoint)',   # watchpoints / solution statement
+        r'^## (5\.|Metadata)',              # complexity
+        r'^## (13\.|Step-by-Step|Steps?|Tasks?)',
+        r'^## (15\.|Validation|DoD|Definition)',
+        r'^## (16a?\.|\[Story|Story|Acceptance)',
     ]
     kept = []
     for part in parts:
