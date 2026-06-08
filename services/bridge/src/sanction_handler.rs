@@ -145,7 +145,9 @@ pub async fn handle_sanction_event(
 }
 
 /// Translate a sanction_kind string to a Matrix power level integer.
-/// "ban" → 0 (cannot post); "mute" → 0; others → 50 (default member level).
+/// "ban"/"mute"/"prevent_post"/"mute_voice" → 0 (cannot post);
+/// "hide_content"/"restrict_reach" → 25 (reduced reach);
+/// unknown → 50 (default member level).
 /// Full enforcement via `send_state_event` deferred to m2-late-2.
 fn sanction_kind_to_power_level(sanction_kind: &str) -> i32 {
     match sanction_kind {

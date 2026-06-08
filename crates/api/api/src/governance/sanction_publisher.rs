@@ -135,7 +135,11 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     governance_log_entry_hash,
   };
   let secret = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
-  let client = reqwest::Client::new();
+  let client = reqwest::Client::builder()
+    .connect_timeout(std::time::Duration::from_secs(10))
+    .timeout(std::time::Duration::from_secs(30))
+    .build()
+    .map_err(|e| LemmyError::from(anyhow::anyhow!("failed to build HTTP client: {e}")))?;
   let mut any_ok = false;
 
   for sub in &subscribers {
