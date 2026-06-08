@@ -109,6 +109,45 @@ if meta_path and os.path.isfile(meta_path):
     except Exception:
         pass
 
+# Derive plans_produced from git commits on the ab-cell branch — the meta.json
+# counter never increments (run-comparator.sh counts git diff --cached at teardown
+# time, which races with Pi's own commit; the worktree is gone by then). Authoritative
+# check: commits touching .claude/PRPs/plans/ on ab-cell/<exp>-<arm>.
+# Requires the trace path to be inside RESULTS_DIR (…/runs/<exp>/<arm>/trace.jsonl).
+import re as _re, subprocess as _sub
+plans_produced_git = None
+try:
+    # Infer experiment+arm from trace path: …/runs/<exp>/<arm>/trace.jsonl
+    parts = trace_path.replace('\\', '/').split('/')
+    # Find 'runs' segment; exp is next, arm after that
+    if 'runs' in parts:
+        runs_idx = len(parts) - 1 - parts[::-1].index('runs')
+        if runs_idx + 2 < len(parts):
+            exp = parts[runs_idx + 1]
+            arm = parts[runs_idx + 2].rstrip('/')
+            cell_branch = f'ab-cell/{exp}-{arm}'
+            # Try to resolve the repo root (two levels up from scripts/brehon or via git)
+            import os as _os
+            repo_guess = _os.path.abspath(_os.path.join(_os.path.dirname(trace_path), '..', '..', '..', '..'))
+            for candidate in [repo_guess]:
+                try:
+                    out = _sub.check_output(
+                        ['git', '-C', candidate, 'log', cell_branch,
+                         '--oneline', '--', '.claude/PRPs/plans/'],
+                        stderr=_sub.DEVNULL, text=True
+                    ).strip()
+                    plans_produced_git = len([l for l in out.splitlines() if l])
+                    break
+                except Exception:
+                    pass
+except Exception:
+    pass
+
+# Use git-derived count when available; fall back to meta.json (may be 0 due to the
+# timing race — treat as unreliable if git count disagrees).
+plans_produced_meta = meta.get('plans_produced')
+plans_produced = plans_produced_git if plans_produced_git is not None else plans_produced_meta
+
 result = {
     "trace": trace_path,
     "total_lines": total_lines,
@@ -119,7 +158,9 @@ result = {
     "input_tokens": input_tokens,
     "output_tokens": output_tokens,
     "wall_seconds": meta.get('wall_seconds'),
-    "plans_produced": meta.get('plans_produced'),
+    "plans_produced": plans_produced,
+    "plans_produced_meta": plans_produced_meta,  # raw meta.json value for comparison
+    "plans_produced_git": plans_produced_git,     # git-derived count (authoritative)
     "pi_exit": meta.get('pi_exit'),
     "run_complete": run_complete,
     "last_event_type": last_event_type,

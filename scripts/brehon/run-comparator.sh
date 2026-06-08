@@ -109,6 +109,32 @@ if [[ -z "${BASE_COMMIT}" ]]; then
   BASE_COMMIT="$(git -C "${REPO}" rev-parse HEAD)"
 fi
 
+# ---- daemon branch awareness ----
+# When propagating governance-v0 fixes to the daemon BEFORE running a comparator
+# arm (e.g. updating the Pi harness constraints file), the correct method depends
+# on which branch the daemon's main worktree is checked out on.
+#
+# DO NOT use `git update-ref refs/heads/governance-v0 origin/governance-v0` when
+# the daemon's worktree is checked out on a DIFFERENT branch (e.g. phase-m2-late-1).
+# That command updates the ref but NOT the working tree — the file in the CWD stays
+# stale, and the Pi cell sees the old version. (Session retro 2026-06-08: two wasted
+# judge runs because the working tree never got the harness constraints fix.)
+#
+# Use this helper to check before any governance-v0 file propagation:
+#
+#   daemon_branch="$(ssh homeserver "cd ${REPO} && git branch --show-current")"
+#   if [[ "${daemon_branch}" == "governance-v0" ]]; then
+#     ssh homeserver "cd ${REPO} && git fetch origin governance-v0:governance-v0"
+#   else
+#     # Working tree is on a DIFFERENT branch — update-ref won't help; copy directly.
+#     scp <local-file> homeserver:${REPO}/<relative-path>
+#     # OR: ssh homeserver "cat > ${REPO}/<path>" < <local-file>
+#   fi
+#
+# This script itself does NOT propagate governance-v0 changes (the caller does that
+# before invoking this script). The note lives here because run-comparator.sh is the
+# entry point for experiment orchestration and is the right place to surface it.
+
 # ---- sandbox worktree (spec §5) ----
 CELL_BRANCH="ab-cell/${EXPERIMENT}-${ARM}"
 # Place worktrees under a USER-WRITABLE dir, NOT a sibling of /srv/brehon-fork:

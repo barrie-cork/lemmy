@@ -259,9 +259,31 @@ with open(plan_B_path, encoding='utf-8', errors='replace') as f:
 plan_a = digest_plan(plan_a_raw)
 plan_b = digest_plan(plan_b_raw)
 
-# Emit digest sizes to stdout so --dry-run can report them before the API call.
+# Emit digest sizes to stderr so --dry-run can report them before the API call.
 sys.stderr.write(f"  digest: control {len(plan_a_raw)}->{len(plan_a)} chars, challenger {len(plan_b_raw)}->{len(plan_b)} chars\n")
 sys.stderr.flush()
+
+# Guard: fail fast if either digest is suspiciously small — a stripped digest
+# produces ghost scores (24/7 on an empty challenger plan, 2× wasted API calls;
+# session retro 2026-06-08). Threshold: 1000 chars is the minimum for any
+# plan with even a single section heading + DoD line.
+MIN_DIGEST = 1000
+if len(plan_a) < MIN_DIGEST:
+    sys.stderr.write(
+        f"ERROR: control plan digest too small ({len(plan_a)} chars < {MIN_DIGEST}).\n"
+        f"  Raw plan: {len(plan_a_raw)} chars, digest: {len(plan_a)} chars.\n"
+        f"  Likely cause: digest_plan() regex does not match this plan's heading style.\n"
+        f"  Fix: extend keep_patterns in digest_plan() to cover the actual headings.\n"
+    )
+    sys.exit(1)
+if len(plan_b) < MIN_DIGEST:
+    sys.stderr.write(
+        f"ERROR: challenger plan digest too small ({len(plan_b)} chars < {MIN_DIGEST}).\n"
+        f"  Raw plan: {len(plan_b_raw)} chars, digest: {len(plan_b)} chars.\n"
+        f"  If the challenger produced no plan, use the NO PLAN sentinel path (CHALLENGER_PLAN empty).\n"
+        f"  If the challenger produced a plan, extend keep_patterns in digest_plan().\n"
+    )
+    sys.exit(1)
 
 try:
     with open(signals_path) as f:
