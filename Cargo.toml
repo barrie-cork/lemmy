@@ -248,7 +248,7 @@ html2text = "0.17.1"
 async-stream = "0.3"
 async-trait = "0.1.89"
 either = { version = "1.16.0", features = ["serde"] }
-extism = { version = "1.21.0", default-features = false, features = [
+extism = { version = "1.30.0", default-features = false, features = [
   "http",
   "register-filesystem",
   "register-http",
