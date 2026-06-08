@@ -247,6 +247,19 @@ pub async fn start_lemmy_server(args: CmdArgs) -> LemmyResult<()> {
     let _scheduled_tasks = tokio::task::spawn(scheduled_tasks::setup(request_data.clone()));
   }
 
+  // Brehon B-publish: seed the sanction subscriber from env at startup.
+  // Absent env var ⇒ no-op; idempotent ON CONFLICT DO NOTHING (T4).
+  if let Ok(url) = std::env::var("BRIDGE_SANCTION_CALLBACK_URL") {
+    let url = url.trim().to_string();
+    if !url.is_empty() {
+      lemmy_api::governance::sanction_publisher::seed_sanction_subscriber(
+        &url,
+        &mut (&pool).into(),
+      )
+      .await?;
+    }
+  }
+
   let server = if !args.disable_http_server {
     if let Some(startup_server_handle) = startup_server_handle {
       startup_server_handle.stop(true).await;

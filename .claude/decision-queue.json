@@ -3,6 +3,63 @@
   "pending": [],
   "resolved": [
     {
+      "id": "966d30acaaea-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T21:14:46Z",
+      "question": "cargo check + clippy pass after fix-impl-1 CR fixes?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1: 6 CR fix-in-pr items across 5 files. No migration schema changes (up.sql CHECK constraint addition is additive). Changes: submit_jury_vote.rs (case_decided guard), sanction_publisher.rs (Err on missing gl row + do_update seed), lib.rs (trim+empty-check env var), m2_late.rs (current_thread), sanction_handler.rs (applied:false + kind map).",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full",
+        "./scripts/brehon/cargo-check.sh -p lemmy_server --features full 2>&1 | grep -c 'error' | grep -q '^0$'"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "failed_jobs": null,
+      "answer": "cargo check --workspace --features full: CARGO_EXIT_0. All 6 CR fix-in-pr edits compile clean on Windows.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T22:57:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+
+    {
+      "id": "001f1c47c5dc-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T00:00:00Z",
+      "question": "Does the sanction_event migration round-trip and the workspace compile after adding SanctionKind?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "m2-late-1 T1 complete: ROOT migration 2026-06-07-000000-0000_add_sanction_event (sanction_kind enum + sanction_event + sanction_subscriber tables), SanctionKind enum added to enums.rs. schema.rs regen + workspace check delegated to laptop. Runner regenerates schema.rs; if it changes, advisor commits the regen. RESUME: see .claude/PRPs/handovers/m2-late-1-t1-validate-resume.md for the VERIFIED turnkey plan (hand-edit schema.rs per fork convention — do NOT run print-schema; do NOT run the literal `-- migration run` command, it bails; 4 verbatim insertions + migrate-roundtrip + workspace check).",
+      "answer": "pass — migrate-roundtrip.sh exit 0 (forward + re-forward, 1 new migration); cargo-check.bat --workspace --features full exit 0 (schema.rs hand-extended, SHA 298f7ed77); audit probes 1-4 all pass (Probe 4 exit 101, no exit-code masking).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T10:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cargo run -p lemmy_diesel_utils --features full -- migration run",
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": "1",
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "failed_commands": null
+    },
+    {
       "id": "a3d0e9941441-049",
       "from": "advisor",
       "kind": "validate-pending-laptop-linux",
@@ -6648,370 +6705,197 @@
       "id": "f58698282815-001"
     },
     {
-      "id": "025c517a5e70-001",
+      "id": "c3deadfbe610-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T07:24:53Z",
-      "question": "Does workspace cargo check pass after adding Deserialize to RoomEventPayload?",
+      "timestamp": "2026-06-07T13:40:00Z",
+      "question": "Validate m2-late-1 Task 2 (Diesel models + newtype) on laptop",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "T4a-fix: added serde::Deserialize to RoomEventPayload derive in governance_log.rs. Fixes E0277 in room_event_handler.rs.",
-      "answer": "Workspace cargo check passed (EXIT:0, 2m04s). RoomEventPayload Deserialize fix confirmed.",
+      "context": "Task 2 created sanction_event.rs + sanction_subscriber.rs Diesel models, SanctionEventId newtype in newtypes.rs, and pub mod entries in governance/mod.rs. schema.rs hand-extended in T1. Laptop must run cargo-check --workspace --features full to validate.",
+      "answer": "cargo check --workspace --features full: Finished dev profile in 6m 56s, exit 0. No errors.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T07:32:30Z",
+      "resolved_at": "2026-06-07T13:43:27.861243Z",
       "approved_by": null,
       "approved_at": null,
       "commands": [
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "4a-fix",
-      "workflow_run_id": null,
+      "branch": "phase-m2-late-1",
+      "phase_task": 2,
       "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "_canonical_source": "phase-branch"
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 6m 56s",
+      "failed_commands": null
     },
     {
+      "id": "c3deadfbe610-002",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "m2-rooms-a Task 1w validate-pending-laptop: cargo check --workspace --features full",
+      "timestamp": "2026-06-07T13:45:00Z",
+      "question": "Validate m2-late-1 Task 3 (governance-log consts + shim + sanction_kind_map) on laptop",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "Task 1w complete: CaseTransitionEvent gains juror_pseudonyms (serde default), bridge_notify.rs adds fetch_juror_pseudonyms free fn (jury_assignment INNER JOIN actor_pseudonym) + populates for JurySelection. Workspace toolchain. Waiting for laptop --workspace --features full check.",
-      "answer": "cargo check failed: diesel + diesel_async not declared in api_utils/Cargo.toml (E0432 x2); E0599 cascade (missing trait imports). Fix: add workspace deps to Cargo.toml. use block is correct.",
+      "context": "Task 3 added ENTRY_KIND_SANCTION_PUBLISHED + ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED consts to governance_log.rs (db_schema), re-exported both in api shim, created sanction_kind_map.rs with exhaustive SanctionAction->Option<SanctionKind> map (no wildcard), and wired pub mod sanction_kind_map in api governance/mod.rs. Combined with T2 models. Laptop must run --workspace --features full.",
+      "answer": "cargo check --workspace --features full: Finished dev profile in 6m 56s, exit 0. No errors.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T06:08:41Z",
+      "resolved_at": "2026-06-07T13:43:27.861243Z",
       "approved_by": null,
       "approved_at": null,
       "commands": [
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w",
-      "result": "fail",
-      "log_slice": "error[E0432]: unresolved import `diesel`\n --> crates/api/api_utils/src/bridge_notify.rs:2:5\nerror[E0432]: unresolved import `diesel_async`\n --> crates/api/api_utils/src/bridge_notify.rs:3:5\nerror[E0599]: no method named `inner_join` (QueryDsl not in scope)\nerror[E0599]: no method named `on` (JoinOnDsl not in scope)\nerror[E0599]: ExpressionMethods not in scope (2x)\nerror: could not compile `lemmy_api_utils` (lib) due to 6 previous errors\nROOT: diesel + diesel_async missing from crates/api/api_utils/Cargo.toml",
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "id": "6ad0b18d9dac-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "id": "718fc6683a8e-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T19:00:00Z",
-      "question": "Does `cd services/bridge && cargo check` pass after cr-5/6/7 fixes?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "CR fix-1: config.rs .expect()->context, room_provisioner oq009 provision-always-false + remove dead oq009_threshold/query_room_event_count fns. Bridge toolchain only. Worker (#635) cancelled due to OOM; advisor applied fixes directly and ran cargo check on laptop.",
-      "answer": "pass — cd services/bridge && cargo check exit 0 on laptop (521e949e3)",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T19:00:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "cr-fix-1",
-      "workflow_run_id": null,
+      "branch": "phase-m2-late-1",
+      "phase_task": 3,
       "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "_canonical_source": "phase-branch"
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 6m 56s",
+      "failed_commands": null
     },
     {
+      "id": "282a5cbdfaa8-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T06:46:38Z",
-      "question": "Does bridge cargo check pass after C2.2-C2.6 + OQ-009 + always_pseudonym?",
+      "timestamp": "2026-06-07T14:03:01Z",
+      "question": "Does task 4 (sanction_publisher.rs) compile workspace-wide with --features full?",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "T3 complete: extended room_provisioner.rs with 5 room scenarios, OQ-009 reveal, always_pseudonym enforcement.",
-      "answer": "Bridge cargo check passed: 0 errors, 7 warnings (dead_code only). T3 C2.2-C2.6 + OQ-009 + always_pseudonym compiles clean.",
+      "context": "Task 4 created crates/api/api/src/governance/sanction_publisher.rs (enqueue_sanction_event, seed_sanction_subscriber, SanctionEventPayload, SanctionContext) and added pub mod sanction_publisher to mod.rs. Two advisor-side fixes applied: OptionalExtension import added to diesel use block; ctx.pool() bound to named let mut pool variables (3 sites, E0716). reqwest in api Cargo.toml.",
+      "answer": "pass — cargo-check.bat --workspace --features full exit 0 after advisor-laptop fixes (OptionalExtension + pool binding). Finished 1m 16s.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T06:55:35Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "3",
-      "workflow_run_id": null,
-      "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "797f00a77338-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "m2-rooms-a Task 1 validate-pending-laptop: cd services/bridge && cargo check",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 complete: rusqlite dep added to bridge/Cargo.toml, BridgeConfig extended with 3 fields (brehon_room_event_url, bridge_callback_secret, legal_contact_mxid), bridge_room.rs store created with open/lookup/upsert/set_watermark, mod bridge_room added to main.rs. Waiting for laptop cargo check.",
-      "answer": "cargo check exit 0 after rusqlite 0.32->0.37 bump. libsqlite3-sys conflict with matrix-sdk-sqlite resolved by unifying version. WP-6 zero-Matrix-deps=0. advisor-laptop 2026-06-06.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T03:01:11Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": 1,
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "id": "7d593d3bc09f-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does workspace cargo check pass after adding bridge_read.rs messaging-status route?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T4b complete: bridge_read.rs bearer-authed GET /governance/bridge/messaging-status, BridgeStatus{messaging_enabled,oq009_reveal_threshold}. Workspace toolchain.",
-      "answer": "Workspace cargo check passed (EXIT:0, 1m43s). bridge_read.rs messaging-status route compiles clean.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T07:51:16Z",
+      "resolved_at": "2026-06-07T14:25:06Z",
       "approved_by": null,
       "approved_at": null,
       "commands": [
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "4b",
-      "workflow_run_id": null,
+      "branch": "phase-m2-late-1",
+      "phase_task": 4,
       "result": "pass",
       "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "9d80b96935d9-001",
-      "_canonical_source": "phase-branch"
+      "failed_commands": null
     },
     {
+      "id": "c3deadfbe610-003",
       "from": "impl",
       "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does `cd services/bridge && cargo test --no-run` pass after adding room_provisioning.rs tests?",
+      "timestamp": "2026-06-07T16:10:00Z",
+      "question": "T5 laptop cargo check: does `--workspace --features full` pass after wiring enqueue_sanction_event spawn site in submit_jury_vote.rs and fixing SanctionContext to use activitypub_federation::config::Data?",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "T6 complete: room_provisioning.rs (5 #[ignore] tests) + dm_round_trip.rs soft_pause_enable_disable_cycle un-stubbed. Bridge test compile.",
-      "answer": "Bridge cargo test --no-run passed (EXIT:0, 4m56s). room_provisioning.rs + dm_round_trip.rs both compiled. 3 test executables.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T08:15:21Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo test --no-run"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "6",
-      "workflow_run_id": null,
-      "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "d07588989c3c-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does bridge cargo check pass after T5 callback wiring + bearer auth + OQ-009 threshold?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T5 complete: soft_pause bearer header + oq009_reveal_threshold Arc<AtomicI64> wired into AppState + run_poller; room_provisioner reads from state. Bridge toolchain only.",
-      "answer": "Bridge cargo check passed (EXIT:0, 3.02s, 8 dead_code warnings). Bearer auth + AtomicI64 threshold wiring compiles clean.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T08:00:30Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "5",
-      "workflow_run_id": null,
-      "result": "pass",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "ecc4ade814f2-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "id": "ee6325ec1c71-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T05:58:20Z",
-      "question": "Does workspace cargo check pass after adding JoinOnDsl to bridge_notify.rs?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Fix-impl-2: added JoinOnDsl to use diesel block in bridge_notify.rs. This was the last remaining E0599 after fix-impl-1 added the Cargo.toml deps.",
-      "answer": "cargo check --workspace --features full: PASS. All 3 fixes applied: diesel dep (Cargo.toml), diesel-async dep (Cargo.toml), JoinOnDsl in use block.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T06:08:41Z",
-      "approved_by": null,
-      "approved_at": null,
+      "context": "T5 applied advisor-side (worker #647 cancelled — stuck in reasoning loop, 40+ min zero tool calls). Two fixes: E0599 pool.get() → get_conn pattern; E0308 SanctionContext actix_web::Data → activitypub_federation::config::Data. Build-t5-check3.log: Finished dev profile EXIT_0.",
       "commands": [
         "./scripts/brehon/cargo-check.sh --workspace --features full"
       ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w-fix-2",
-      "workflow_run_id": null,
+      "branch": "phase-m2-late-1",
+      "phase_task": 5,
+      "result": "pass",
+      "log_slice": "Checking lemmy_api v1.0.0-test-arm-qemu.0\nChecking lemmy_server v1.0.0-test-arm-qemu.0\nFinished `dev` profile [unoptimized] target(s) in 22.59s\nEXIT_0",
+      "failed_commands": null,
+      "answer": "pass — workspace cargo check clean after advisor-side pool binding fix + SanctionContext type fix",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T16:10:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c3deadfbe610-004",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-07T16:30:00Z",
+      "question": "T6 laptop cargo check: does `--workspace --features full` pass after adding seed_sanction_subscriber invocation in start_lemmy_server?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "T6 applied advisor-side. Single insertion in crates/server/src/lib.rs: if let Ok(url) = std::env::var(BRIDGE_SANCTION_CALLBACK_URL) { seed_sanction_subscriber(&url, pool).await? } after scheduled_tasks spawn block. Build-t6-check1.log: Finished dev profile EXIT_0.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 6,
+      "result": "pass",
+      "log_slice": "Checking lemmy_server v1.0.0-test-arm-qemu.0\nFinished `dev` profile [unoptimized] target(s) in 1m 57s\nEXIT_0",
+      "failed_commands": null,
+      "answer": "pass — workspace cargo check clean after advisor-side T6 insertion",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T16:30:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c3deadfbe610-005",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-07T17:45:00Z",
+      "question": "Run e2e gate for Task 8 (sanction_event_delivered_to_subscriber). Local or dispatch?",
+      "options": [
+        "local",
+        "dispatch"
+      ],
+      "context": "T8 committed adfb4556a — new test sanction_event_delivered_to_subscriber in crates/server/tests/e2e/m2_late.rs. Workspace cargo check: EXIT_0. DoD: cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log 2>&1 && echo E2E_EXIT_0 >> %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log || echo E2E_EXIT_NONZERO >> %LOCALAPPDATA%\\\\Temp\\\\m2-late-e2e.log\"",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > %LOCALAPPDATA%\\Temp\\m2-late-e2e.log 2>&1 && echo E2E_EXIT_0 >> %LOCALAPPDATA%\\Temp\\m2-late-e2e.log || echo E2E_EXIT_NONZERO >> %LOCALAPPDATA%\\Temp\\m2-late-e2e.log\""
+      ],
+      "branch": "phase-m2-late-1",
+      "phase_task": 8,
+      "e2e_filter": null,
       "result": "pass",
       "log_slice": null,
-      "failed_jobs": null,
       "failed_commands": null,
-      "_canonical_source": "phase-branch"
+      "answer": "e2e suite 135/135 passed on run 11 (commit 9d9cbb1d2); all T8 assertions green",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T19:50:45Z",
+      "approved_by": null,
+      "approved_at": null
     },
     {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T06:18:35Z",
-      "question": "Does bridge cargo check pass after adding room_provisioner.rs?",
+      "id": "c3deadfbe610-006",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-07T19:55:00Z",
+      "question": "Does the phase-m2-late-1 diff compile cleanly on Linux (rust:1.95 Docker)?",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "T2 complete: room_provisioner.rs created (handle_transition, jury path), POST /brehon/room-event route added to appservice.rs, mod room_provisioner in main.rs. Bridge toolchain only.",
-      "answer": "cd services/bridge && cargo check: PASS. 6 dead_code warnings (pre-existing + PrivateMessage variant), no errors. Finished 3m14s.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T06:32:43Z",
-      "approved_by": null,
-      "approved_at": null,
+      "context": "Diff adds migrations/2026-06-07-000000-0000_add_sanction_event which triggers the Linux-compile gate. cargo-linux.sh check --workspace --features full passed in 16m08s.",
       "commands": [
-        "cd services/bridge && cargo check"
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
       ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "2",
-      "workflow_run_id": null,
+      "branch": "phase-m2-late-1",
+      "phase_task": 8,
       "result": "pass",
-      "log_slice": null,
+      "log_slice": "Finished `dev` profile [unoptimized] target(s) in 16m 08s\nLINUX_EXIT_0",
       "failed_jobs": null,
-      "failed_commands": null,
-      "id": "f0d76f99a08f-001",
-      "_canonical_source": "phase-branch"
+      "answer": "pass — cargo-linux.sh check --workspace --features full exited 0 on Linux rust:1.95 Docker (16m08s)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-07T20:12:00Z",
+      "approved_by": null,
+      "approved_at": null
     },
     {
+      "id": "966d30acaaea-002",
       "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does workspace cargo check pass after adding diesel deps to api_utils?",
+      "kind": "log",
+      "timestamp": "2026-06-07T21:47:54Z",
+      "question": "retro-check.sh v4 SQLite fallback bypassed by PROJECT_MEMORY_DB Windows path",
       "options": [
-        "pass",
-        "fail"
+        "unset PROJECT_MEMORY_DB in Junior daemon systemd environment",
+        "set PROJECT_MEMORY_DB to /srv/brehon-fork/.project-memory/memory.db in daemon env"
       ],
-      "context": "Fix-impl for DQ 6ad0b18d9dac-001: added diesel + diesel-async workspace deps to crates/api/api_utils/Cargo.toml. Commit on phase-m2-rooms-a.",
-      "answer": "cargo check failed: JoinOnDsl missing from use diesel block in bridge_notify.rs. Fix: add JoinOnDsl to use diesel::{ExpressionMethods, QueryDsl}",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T06:08:41Z",
+      "context": "Stop hook retro-check.sh checks PROJECT_MEMORY_DB env var first. When set to C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db (Windows path inherited from Claude Code on laptop via ssh/systemd env), Linux [ -f ] fails -> _HAVE_SQLITE=0, skipping the git-common-dir fallback that would resolve to /srv/brehon-fork/.project-memory/memory.db. The HTTP check also fails because FTS5 pheromone-locked top-20 (IDs 857-904, read_count 65-80+) are all from prior sessions, outside the 30-min window. New entries (923-928, all with correct source_ref) cannot break into top-20. Fix: remove PROJECT_MEMORY_DB from daemon env or point it to the Linux SQLite path.",
+      "answer": "File as lesson; advisor should unset or correct PROJECT_MEMORY_DB in Junior daemon environment (systemd unit or /etc/environment)",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-07T21:47:54Z",
       "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "1w-fix",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "error[E0599]: no method named `on` found for struct actor_pseudonym::table\n  help: trait JoinOnDsl not in scope\n  help: use diesel::JoinOnDsl;\nerror: could not compile lemmy_api_utils due to 1 previous error",
-      "failed_jobs": null,
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "id": "f99a71bc9ed4-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does workspace cargo check pass after adding bridge_auth.rs + room_event_handler.rs?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "T4a complete: bridge_auth.rs bearer guard + handle_room_event handler + mod.rs + routes wired. Workspace toolchain.",
-      "answer": " [mirrored to trunk at m2-rooms-a close-out 2026-06-07; superseded by 718fc6683a8e-001 (cr-fix-1 bridge check clean) + PR #191 merge 9a878d10e; archived for audit durability per feedback_lane_dq_resolution_append_to_trunk.md]",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-06T07:21:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "4a",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "error[E0277]: the trait bound `RoomEventPayload: serde::Deserialize<'de>` is not satisfied\n  --> crates/api/api/src/governance/room_event_handler.rs:18:17\n  --> crates/api/api/src/governance/governance_log.rs:88:1\n   = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `RoomEventPayload` type\nerror: could not compile `lemmy_api` (lib) due to 3 previous errors",
-      "failed_jobs": null,
-      "failed_commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "id": "0566bc2d61f0-001",
-      "_canonical_source": "phase-branch"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-06T00:00:00Z",
-      "question": "Does `cd services/bridge && cargo check` pass after cr-5/6/7 fixes?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "CR fix-1: config.rs .expect()->context, room_provisioner oq009 provision-always-false + remove dead oq009_threshold/query_room_event_count fns. Bridge toolchain only.",
-      "answer": " [mirrored to trunk at m2-rooms-a close-out 2026-06-07; superseded by 718fc6683a8e-001 (cr-fix-1 bridge check clean) + PR #191 merge 9a878d10e; archived for audit durability per feedback_lane_dq_resolution_append_to_trunk.md]",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-07T13:30:00Z",
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cd services/bridge && cargo check"
-      ],
-      "branch": "phase-m2-rooms-a",
-      "phase_task": "cr-fix-1",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": null,
-      "failed_jobs": null,
-      "failed_commands": null,
-      "id": "b56efa17ab05-001",
-      "_canonical_source": "phase-branch"
+      "approved_at": null
     }
   ]
 }

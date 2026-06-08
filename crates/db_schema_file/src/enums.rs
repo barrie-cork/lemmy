@@ -581,6 +581,25 @@ pub enum SanctionAction {
 #[cfg_attr(feature = "full", derive(DbEnum))]
 #[cfg_attr(
   feature = "full",
+  ExistingTypePath = "crate::schema::sql_types::SanctionKind"
+)]
+#[cfg_attr(feature = "full", DbValueStyle = "verbatim")]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(export))]
+/// The platform-neutral kind of a published sanction (B-publish, ADR-016).
+pub enum SanctionKind {
+  #[default]
+  PreventPost,
+  MuteVoice,
+  HideContent,
+  RestrictReach,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "full", derive(DbEnum))]
+#[cfg_attr(
+  feature = "full",
   ExistingTypePath = "crate::schema::sql_types::AppealStatus"
 )]
 #[cfg_attr(feature = "full", DbValueStyle = "verbatim")]

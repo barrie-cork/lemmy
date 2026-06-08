@@ -28,7 +28,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{config::BridgeConfig, provision, relay, room_provisioner};
+use crate::{config::BridgeConfig, provision, relay, room_provisioner, sanction_handler};
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
@@ -225,5 +225,11 @@ pub fn router(state: Arc<AppState>) -> Router {
             state.clone(),
             hs_token_auth,
         ))
+        // /brehon/sanction-event uses BRIDGE_CALLBACK_SECRET (not hs_token).
+        // Added AFTER route_layer so it does NOT inherit hs_token_auth.
+        .route(
+            "/brehon/sanction-event",
+            post(sanction_handler::handle_sanction_event),
+        )
         .with_state(state)
 }

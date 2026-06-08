@@ -134,6 +134,10 @@ pub mod sql_types {
   pub struct SanctionAction;
 
   #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "sanction_kind"))]
+  pub struct SanctionKind;
+
+  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "sanction_scope"))]
   pub struct SanctionScope;
 
@@ -1385,6 +1389,30 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::SanctionKind;
+
+    sanction_event (id) {
+        id -> Int4,
+        sanction_id -> Int4,
+        sanction_kind -> SanctionKind,
+        subject_actor_pseudonym -> Text,
+        effective_from -> Timestamptz,
+        effective_until -> Nullable<Timestamptz>,
+        governance_log_entry_hash -> Text,
+    }
+}
+
+diesel::table! {
+    sanction_subscriber (id) {
+        id -> Int4,
+        callback_url -> Text,
+        active -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     secret (id) {
         id -> Int4,
         jwt_secret -> Varchar,
@@ -1589,6 +1617,7 @@ diesel::joinable!(sanction -> community (target_community_id));
 diesel::joinable!(sanction -> moderation_case (case_id));
 diesel::joinable!(sanction -> person (target_person_id));
 diesel::joinable!(sanction -> post (target_post_id));
+diesel::joinable!(sanction_event -> sanction (sanction_id));
 diesel::joinable!(site -> instance (instance_id));
 diesel::joinable!(site_language -> language (language_id));
 diesel::joinable!(site_language -> site (site_id));
@@ -1656,6 +1685,8 @@ diesel::allow_tables_to_appear_in_same_query!(
   reputation_snapshot,
   rule_set_version,
   sanction,
+  sanction_event,
+  sanction_subscriber,
   site,
   site_language,
   sponsor_allowlist,
