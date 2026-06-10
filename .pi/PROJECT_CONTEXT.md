@@ -41,6 +41,21 @@ For pi sessions:
 - Do not invoke or emulate Junior subagents unless explicitly requested.
 - Do NOT read root `CLAUDE.md` unless explicitly asked. `AGENTS.md` is the pi entry point; pi prefers it over `CLAUDE.md` (verified 2026-05-04).
 
+## Recursive Learning System parity for pi
+
+Pi participates in the same RLS artifact loop as Claude Code where the surfaces overlap:
+
+- Session retros and command retros write under `.claude/PRPs/reports/`.
+- Durable lessons write under `.claude/lessons/feedback_*.md` or `.claude/lessons/reference_*.md` with YAML frontmatter.
+- `.pi/extensions/lemmy-hooks.ts` runs a PMD HTTP reachability guard at session start.
+- After pi `edit`/`write` calls to lesson files, the extension runs:
+  - `.pi/hook-scripts/lesson-frontmatter-reminder.sh`
+  - `.pi/hook-scripts/lesson-pmd-sync.sh`
+- Use `scripts/brehon/pmd-query.sh` and `scripts/brehon/pmd-write.sh` for explicit PMD access from pi/headless contexts.
+- Use `/brehon-mode harness-maintenance` for explicit skill/lesson/retro/harness metadata work; it permits `.claude/skills/`, `.claude/lessons/`, `.claude/PRPs/reports/`, and focused `.pi/` harness paths while still blocking app code.
+
+PMD topology differs by repo/machine. For this Brehon repo, the EliteDesk checkout uses HTTP PMD at the P50/Windows laptop Tailscale endpoint (`http://100.104.171.26:11435/mcp`) with a bearer token from `/srv/brehon-fork/.env`; loopback `http://localhost:11435/mcp` is used when running on the PMD host. Do not assume a per-worktree SQLite file is live unless the relevant PMD invariant/doc says so.
+
 ## Pi session Rust quick-reference
 
 Pi sessions optimise for short context windows and mechanical loops. The four-role
