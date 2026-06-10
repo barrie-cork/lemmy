@@ -78,6 +78,8 @@ migrations/.diesel_lock
 # RLS runtime journals — see .claude/PRPs/plans/v1-rls-r1.plan.md §11
 .claude/harvest/
 .claude/governance-log/
+.claude/memory/*.db-shm
+.claude/memory/*.db-wal
 
 # skill-creator eval iteration journals (runtime artifacts, not deliverables)
 .claude/skills/*-workspace/
