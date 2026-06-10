@@ -118,6 +118,8 @@ migrations/.diesel_lock
 .pi/tmp/
 .pi/logs/
 .pi/*.log
+.pi/npm/
+.pi/harness-factory/active.json
 .pi/*.jsonl
 .pi/settings.local.json
 .pi/extensions/*.js
