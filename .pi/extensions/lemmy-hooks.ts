@@ -452,6 +452,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       ruleFiles = findMarkdownFiles(path.join(REPO_ROOT, ".claude", "rules"));
       prePhaseReminder = extractAdditionalContext(runHookScript("pre-phase-audit.sh", undefined, 10_000).stdout);
 
+      syncFactoryActiveMode(ctx, true);
       setModeStatus(ctx);
       const loaded: string[] = [];
       if (ruleFiles.length > 0) loaded.push(`${ruleFiles.length} rule index entries`);
@@ -465,6 +466,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event: any) => {
     try {
+      syncFactoryActiveMode(undefined);
       const additions: string[] = [];
 
       if (projectContext) additions.push(`## Pi Project Context\n\n${projectContext}`);
@@ -495,6 +497,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     // compaction reload fires during an awaited confirmDangerousBash call.
     const cwd = ctx.cwd;
     try {
+      syncFactoryActiveMode(ctx);
       if (event.toolName === "bash") {
         const command = (event.input as any)?.command;
         if (typeof command === "string") {
@@ -534,6 +537,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("user_bash", async (event: any, ctx: any) => {
     try {
+      syncFactoryActiveMode(ctx);
       const rawCargo = rawCargoPattern(event.command);
       if (rawCargo) {
         return {
