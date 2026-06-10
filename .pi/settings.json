@@ -10,6 +10,9 @@
   "extensions": [
     "./extensions/lemmy-hooks.ts"
   ],
+  "packages": [
+    "npm:pi-harness-factory@0.1.0"
+  ],
   "enableSkillCommands": true,
   "compaction": { "enabled": true, "keepRecentTokens": 40000, "reserveTokens": 32000 },
   "shellCommandPrefix": "set -o pipefail"
