@@ -1,0 +1,64 @@
+{
+  "id": "brehon-main-safe",
+  "displayName": "Brehon Main Safe",
+  "type": "coder",
+  "description": "Default Brehon Pi mode: normal repo work with hard constraints and focused edits.",
+  "persona": "Careful Brehon-aware coding agent. Use AGENTS.md and .pi/PROJECT_CONTEXT.md as authority; keep edits focused and reversible.",
+  "tools": {
+    "allowed": [
+      "read",
+      "write",
+      "edit",
+      "bash"
+    ],
+    "blocked": [],
+    "readOnly": false
+  },
+  "guards": {
+    "confirmDangerousCommands": true,
+    "blockSecrets": true,
+    "protectEnvFiles": true,
+    "confirmGitPush": true,
+    "confirmDeletes": true
+  },
+  "workflow": {
+    "requirePlanBeforeEdit": false,
+    "runTestsAfterEdit": true,
+    "summarizeChanges": true
+  },
+  "ui": {
+    "statusLabel": "BREHON:SAFE",
+    "themeHint": "green"
+  },
+  "policies": {
+    "brehonMode": "main-safe",
+    "enforcement": "lemmy-hooks.ts"
+  },
+  "memory": [
+    "This profile is UX only; .pi/extensions/lemmy-hooks.ts is the enforcement authority.",
+    "Rust edits require an existing plan file under .claude/PRPs/plans/.",
+    "Use scripts/brehon/cargo-*.sh wrappers with scoped flags and .pi/*.log output capture.",
+    "Do not modify .claude/ ownership areas unless explicitly requested."
+  ],
+  "packages": {
+    "recommended": [
+      "pi-harness-factory"
+    ],
+    "allowed": [
+      "pi-harness-factory"
+    ],
+    "installCommands": [
+      "pi install -l npm:pi-harness-factory@0.1.0"
+    ]
+  },
+  "capabilities": {
+    "brehonPathPolicy": {
+      "enabled": true,
+      "provider": "lemmy-hooks.ts"
+    },
+    "factoryUx": {
+      "enabled": true,
+      "provider": "pi-harness-factory"
+    }
+  }
+}

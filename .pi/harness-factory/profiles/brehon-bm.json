@@ -1,0 +1,62 @@
+{
+  "id": "brehon-bm",
+  "displayName": "Brehon Branch Manager",
+  "type": "devops",
+  "description": "Branch Manager profile: PR/git lifecycle only; no code or plan authoring.",
+  "persona": "Mechanical Branch Manager operator. Prefer the bm-pi project agent and ask before outbound-visible actions.",
+  "tools": {
+    "allowed": [
+      "read",
+      "bash"
+    ],
+    "blocked": [],
+    "readOnly": false
+  },
+  "guards": {
+    "confirmDangerousCommands": true,
+    "blockSecrets": true,
+    "protectEnvFiles": true,
+    "confirmGitPush": true,
+    "confirmDeletes": true
+  },
+  "workflow": {
+    "requirePlanBeforeEdit": false,
+    "runTestsAfterEdit": false,
+    "summarizeChanges": true
+  },
+  "ui": {
+    "statusLabel": "BREHON:BM",
+    "themeHint": "cyan"
+  },
+  "policies": {
+    "brehonMode": "bm",
+    "enforcement": "lemmy-hooks.ts"
+  },
+  "memory": [
+    "This profile is UX only; .pi/extensions/lemmy-hooks.ts blocks code and plan authoring in BM mode.",
+    "Prefer delegating BM verbs to .pi/agents/bm-pi.md when available.",
+    "Ask before PR comments, pushes, merges, pings, or other outbound-visible actions.",
+    "Never author implementation code."
+  ],
+  "packages": {
+    "recommended": [
+      "pi-harness-factory"
+    ],
+    "allowed": [
+      "pi-harness-factory"
+    ],
+    "installCommands": [
+      "pi install -l npm:pi-harness-factory@0.1.0"
+    ]
+  },
+  "capabilities": {
+    "brehonPathPolicy": {
+      "enabled": true,
+      "provider": "lemmy-hooks.ts"
+    },
+    "factoryUx": {
+      "enabled": true,
+      "provider": "pi-harness-factory"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "id": "brehon-impl-task",
+  "displayName": "Brehon Impl Task",
+  "type": "coder",
+  "description": "Implementation profile: execute one scoped task from an existing Brehon plan.",
+  "persona": "Scoped implementation agent. Follow the named plan task and MIRROR references; prefer pattern-following over invention.",
+  "tools": {
+    "allowed": [
+      "read",
+      "write",
+      "edit",
+      "bash"
+    ],
+    "blocked": [],
+    "readOnly": false
+  },
+  "guards": {
+    "confirmDangerousCommands": true,
+    "blockSecrets": true,
+    "protectEnvFiles": true,
+    "confirmGitPush": true,
+    "confirmDeletes": true
+  },
+  "workflow": {
+    "requirePlanBeforeEdit": true,
+    "runTestsAfterEdit": true,
+    "summarizeChanges": true
+  },
+  "ui": {
+    "statusLabel": "BREHON:IMPL",
+    "themeHint": "green"
+  },
+  "policies": {
+    "brehonMode": "impl-task",
+    "enforcement": "lemmy-hooks.ts"
+  },
+  "memory": [
+    "This profile is UX only; .pi/extensions/lemmy-hooks.ts enforces Rust plan-file and path policies.",
+    "Before Rust edits, verify a relevant plan exists under .claude/PRPs/plans/.",
+    "Use scripts/brehon/cargo-*.sh wrappers; never raw cargo.",
+    "Redirect cargo output to .pi/*.log and summarize only exit code plus relevant tail/findings."
+  ],
+  "packages": {
+    "recommended": [
+      "pi-harness-factory"
+    ],
+    "allowed": [
+      "pi-harness-factory"
+    ],
+    "installCommands": [
+      "pi install -l npm:pi-harness-factory@0.1.0"
+    ]
+  },
+  "capabilities": {
+    "brehonPathPolicy": {
+      "enabled": true,
+      "provider": "lemmy-hooks.ts"
+    },
+    "factoryUx": {
+      "enabled": true,
+      "provider": "pi-harness-factory"
+    }
+  }
+}
