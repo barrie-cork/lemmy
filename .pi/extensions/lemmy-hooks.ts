@@ -422,9 +422,11 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       ruleFiles = findMarkdownFiles(path.join(REPO_ROOT, ".claude", "rules"));
       prePhaseReminder = extractAdditionalContext(runHookScript("pre-phase-audit.sh", undefined, 10_000).stdout);
 
+      setModeStatus(ctx);
       const loaded: string[] = [];
       if (ruleFiles.length > 0) loaded.push(`${ruleFiles.length} rule index entries`);
       if (prePhaseReminder) loaded.push("pre-phase audit reminder");
+      loaded.push(`Brehon mode ${brehonMode}`);
       if (loaded.length > 0) safeNotify(ctx, `lemmy-hooks loaded: ${loaded.join(", ")}`, "info");
     } catch (err) {
       console.error("[lemmy-hooks] session_start failed:", err);
@@ -436,6 +438,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       const additions: string[] = [];
 
       if (projectContext) additions.push(`## Pi Project Context\n\n${projectContext}`);
+      additions.push(`## Active Brehon Pi Mode\n\nMode: ${brehonMode}\n${BREHON_MODES[brehonMode].description}\n\nMandatory mode instructions:\n${BREHON_MODES[brehonMode].instructions.map((line) => `- ${line}`).join("\n")}\n\nPath-policy enforcement is active in .pi/extensions/lemmy-hooks.ts; use /brehon-mode list to inspect or switch modes.`);
       if (prePhaseReminder) additions.push(`## Pre-Phase Audit Reminder\n\n${prePhaseReminder}`);
 
       const coord = coordinationStateSummary();
