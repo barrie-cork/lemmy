@@ -1,6 +1,8 @@
 ---
 name: session-retro
-description: Session-level retrospective after a meaningful pi/Claude Code session — sections (What surprised us / What to change / What to carry forward), three-signal scoring of skills/agents/commands, automation proposals, optional promotion to .claude/lessons/. Use whenever the user says /reflect, "write a retro", "post-mortem", "what did we learn", "how did that go", or wraps up a non-trivial session — even without the word "retro." Cross-harness (Claude Code + pi). Distinct from `post-task-retro` (per-Junior-task eval + hook) and sub-phase retros at .claude/PRPs/reports/v1-*-retro.md (four-role, heavier). The in-between case: an ad-hoc session that touched several files, dispatched subagents, or surfaced a friction pattern.
+description: >
+  Session-level retrospective after a meaningful pi/Claude Code session. Use for /reflect,
+  "write a retro", "post-mortem", "what did we learn", or non-trivial session wrap-up.
 ---
 
 # Session Retrospective
