@@ -28,10 +28,6 @@ endpoint_candidates() {
   printf '%s\n' "http://localhost:11435/mcp" "http://100.104.171.26:11435/mcp"
 }
 
-auth_args() {
-  [[ -n "${PMD_HTTP_TOKEN:-}" ]] && printf '%s\0%s\0' -H "Authorization: Bearer ${PMD_HTTP_TOKEN}"
-}
-
 curl_mcp() {
   local url="$1" session_id="${2:-}" payload="$3" body="$4" headers="$5" code
   local -a args
