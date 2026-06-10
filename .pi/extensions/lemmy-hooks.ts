@@ -377,14 +377,14 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   const setBrehonMode = (mode: BrehonMode, ctx: any) => {
     brehonMode = mode;
-    ciDebugMode = mode === "ci-debug" ? true : ciDebugMode && mode === "ci-debug";
+    ciDebugMode = mode === "ci-debug";
     setModeStatus(ctx);
   };
 
   pi.registerCommand("brehon-mode", {
     description: "Show or switch first-class Brehon Pi modes: main-safe, planning, impl-task, review-readonly, bm, ci-debug.",
-    handler: async (args, ctx) => {
-      const requested = args.trim() as BrehonMode | "";
+    handler: async (args: string, ctx: any) => {
+      const requested = args.trim();
       if (!requested || requested === "list") {
         const lines = Object.entries(BREHON_MODES).map(([mode, def]) => `${mode}${mode === brehonMode ? " *" : ""}: ${def.description}`);
         safeNotify(ctx, `Current Brehon mode: ${brehonMode}\n\n${lines.join("\n")}`, "info");
@@ -395,15 +395,16 @@ export default function lemmyHooks(pi: ExtensionAPI) {
         safeNotify(ctx, `Unknown Brehon mode: ${requested}. Run /brehon-mode list.`, "error");
         return;
       }
-      setBrehonMode(requested, ctx);
-      safeNotify(ctx, `Brehon mode set to ${requested}: ${BREHON_MODES[requested].description}`, "info");
+      const mode = requested as BrehonMode;
+      setBrehonMode(mode, ctx);
+      safeNotify(ctx, `Brehon mode set to ${mode}: ${BREHON_MODES[mode].description}`, "info");
     },
   });
 
   pi.registerCommand("ci-debug-mode", {
     description:
       "Toggle CI-debug mode. When ON, the auto-commit-per-edit hook is suppressed so iterating on .github/workflows/*.yml or .github/scripts/*.sh doesn't spam commits + retrigger CI on each save. Run again to turn back OFF when the fix is real.",
-    handler: async (_args, ctx) => {
+    handler: async (_args: string, ctx: any) => {
       ciDebugMode = !ciDebugMode;
       if (ciDebugMode) brehonMode = "ci-debug";
       else if (brehonMode === "ci-debug") brehonMode = "main-safe";
@@ -416,7 +417,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     },
   });
 
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on("session_start", async (_event: any, ctx: any) => {
     try {
       projectContext = readIfExists(path.join(REPO_ROOT, ".pi", "PROJECT_CONTEXT.md"));
       ruleFiles = findMarkdownFiles(path.join(REPO_ROOT, ".claude", "rules"));
@@ -433,7 +434,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event: any) => {
     try {
       const additions: string[] = [];
 
@@ -460,7 +461,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
-  pi.on("tool_call", async (event, ctx) => {
+  pi.on("tool_call", async (event: any, ctx: any) => {
     // Capture cwd synchronously before any await — ctx becomes stale if a
     // compaction reload fires during an awaited confirmDangerousBash call.
     const cwd = ctx.cwd;
@@ -502,7 +503,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
-  pi.on("user_bash", async (event, ctx) => {
+  pi.on("user_bash", async (event: any, ctx: any) => {
     try {
       const decision = await confirmDangerousBash(event.command, ctx);
       if (!decision) return undefined;
@@ -520,7 +521,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
-  pi.on("tool_result", async (event, ctx) => {
+  pi.on("tool_result", async (event: any, ctx: any) => {
     // Capture cwd synchronously before any await — reload safety (same rationale as tool_call).
     const cwd = ctx.cwd;
     try {
@@ -584,7 +585,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
-  pi.on("session_shutdown", async (_event, ctx) => {
+  pi.on("session_shutdown", async (_event: any, ctx: any) => {
     try {
       const retro = runHookScript("retro-check.sh", undefined, 10_000);
       if (retro.status === 2 && retro.stderr.trim()) {
