@@ -468,8 +468,24 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       if (event.toolName === "bash") {
         const command = (event.input as any)?.command;
         if (typeof command === "string") {
+          const rawCargo = rawCargoPattern(command);
+          if (rawCargo) return { block: true, reason: `Brehon cargo policy: ${rawCargo}` };
+          const secretShell = sensitiveShellPattern(command);
+          if (secretShell) return { block: true, reason: `Brehon secret policy blocks ${secretShell}` };
           const firewall = await confirmDangerousBash(command, ctx);
           if (firewall) return firewall;
+        }
+      }
+
+      if (event.toolName === "edit" || event.toolName === "write") {
+        const policy = pathPolicyDecision(brehonMode, event.toolName, (event.input as any)?.path ?? (event.input as any)?.filePath);
+        if (policy) return policy;
+      }
+
+      if (event.toolName === "read") {
+        const relPath = typeof (event.input as any)?.path === "string" ? repoRelativePath((event.input as any).path) : "";
+        if (/\.env|id_rsa|id_ed25519|credentials|secret|\.pem$|\.key$/i.test(relPath)) {
+          return { block: true, reason: `Brehon secret policy blocks direct read of secret-like path: ${relPath}` };
         }
       }
 
