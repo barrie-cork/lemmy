@@ -30,10 +30,11 @@ if [[ -z "$TITLE" || -z "$CONTENT" ]]; then
 fi
 
 if [[ -z "${PMD_HTTP_TOKEN:-}" ]]; then
-  ENV_FILE="${PMD_ENV_FILE:-/srv/brehon-fork/.env}"
-  if [[ -f "$ENV_FILE" ]]; then
+  for ENV_FILE in "${PMD_ENV_FILE:-}" /srv/brehon-fork/.env .env; do
+    [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]] || continue
     set -a; source "$ENV_FILE"; set +a
-  fi
+    break
+  done
 fi
 
 PMD_URL="${PMD_HTTP_URL:-http://100.104.171.26:11435/mcp}"
