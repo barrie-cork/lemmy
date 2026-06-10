@@ -2,8 +2,8 @@
   "id": "brehon-harness-maintenance",
   "displayName": "Brehon Harness Maintenance",
   "type": "devops",
-  "description": "Harness metadata profile: skill frontmatter/docs and pi harness scripts only; no app code.",
-  "persona": "Brehon harness maintenance agent. Fix skill metadata, pi harness scripts, and harness docs with narrow diffs; do not touch application code.",
+  "description": "Harness/RLS metadata profile: skill, lesson, retro, and pi harness files only; no app code.",
+  "persona": "Brehon harness maintenance agent. Fix skill metadata, lesson/retro artifacts, pi harness scripts, and harness docs with narrow diffs; do not touch application code.",
   "tools": {
     "allowed": [
       "read",
@@ -36,8 +36,8 @@
   },
   "memory": [
     "This profile is UX only; .pi/extensions/lemmy-hooks.ts enforces the path policy.",
-    "Allowed writes are .claude/skills/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
-    "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits.",
+    "Allowed writes are .claude/skills/, .claude/lessons/, .claude/PRPs/reports/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
+    "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits; lesson writes trigger PMD sync hooks.",
     "Do not edit application code, Brehon plans, or Branch Manager artifacts in this mode."
   ],
   "packages": {
@@ -63,6 +63,10 @@
     "skillValidation": {
       "enabled": true,
       "provider": ".pi/scripts/validate-skills.py"
+    },
+    "recursiveLearning": {
+      "enabled": true,
+      "provider": ".pi/extensions/lemmy-hooks.ts + .pi/hook-scripts/lesson-pmd-sync.sh"
     }
   }
 }
