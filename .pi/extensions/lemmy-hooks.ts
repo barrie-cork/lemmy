@@ -156,6 +156,28 @@ function readIfExists(filePath: string): string {
   }
 }
 
+function repoRelativePath(filePath: string): string {
+  const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(REPO_ROOT, filePath);
+  return path.relative(REPO_ROOT, absolute).replaceAll(path.sep, "/");
+}
+
+function hasPrefix(relPath: string, prefixes: string[]): boolean {
+  return prefixes.some((prefix) => relPath === prefix.slice(0, -1) || relPath.startsWith(prefix));
+}
+
+function isSourceLikePath(relPath: string): boolean {
+  return hasPrefix(relPath, CODE_PREFIXES) || SOURCE_EXTENSIONS.has(path.extname(relPath));
+}
+
+function planFileExists(): boolean {
+  const planDir = path.join(REPO_ROOT, ".claude", "PRPs", "plans");
+  try {
+    return fs.existsSync(planDir) && fs.readdirSync(planDir).some((file) => file.endsWith(".md"));
+  } catch {
+    return false;
+  }
+}
+
 function shouldSkipAutoCommit(filePath: string): boolean {
   const normalized = path.resolve(REPO_ROOT, filePath);
   const withSlashes = normalized.replaceAll(path.sep, "/");
@@ -165,6 +187,54 @@ function shouldSkipAutoCommit(filePath: string): boolean {
 function matchedBlockedPattern(command: string): string | undefined {
   const normalized = command.replace(/\s+/g, " ").trim();
   return BASH_BLOCKLIST.find((pattern) => normalized.includes(pattern));
+}
+
+function sensitiveShellPattern(command: string): string | undefined {
+  const normalized = command.replace(/\s+/g, " ").trim();
+  const sensitivePath = String.raw`(?:^|[\s'\"])(?:\.env(?:\.[^\s'\"]*)?|[^\s'\"]*(?:id_rsa|id_ed25519|credentials|secret|\.pem|\.key))`;
+  const readers = String.raw`\b(?:cat|less|more|head|tail|sed|awk|grep|rg|find)\b`;
+  return new RegExp(`${readers}[^;&|]*${sensitivePath}`, "i").test(normalized) ? "shell reads secret-like path" : undefined;
+}
+
+function rawCargoPattern(command: string): string | undefined {
+  const normalized = command.replace(/\s+/g, " ").trim();
+  if (/scripts\/brehon\/cargo-(check|clippy|test|nextest)\.sh\b/.test(normalized)) return undefined;
+  if (/\bcargo\s+(check|clippy|test|nextest|build)\b/.test(normalized)) return "raw cargo invocation; use scripts/brehon/cargo-*.sh wrappers and redirect output to .pi/*.log";
+  return undefined;
+}
+
+function pathPolicyDecision(mode: BrehonMode, toolName: string, filePath: unknown): PathPolicyDecision {
+  if (toolName !== "edit" && toolName !== "write") return undefined;
+  if (typeof filePath !== "string" || filePath.length === 0) return undefined;
+
+  const relPath = repoRelativePath(filePath);
+  if (relPath.startsWith("..")) return { block: true, reason: `Brehon path policy blocks writes outside repo: ${filePath}` };
+
+  if (mode === "review-readonly") return { block: true, reason: "Brehon review-readonly mode blocks write/edit" };
+
+  if (mode === "planning") {
+    if (!hasPrefix(relPath, PLANNING_WRITE_PREFIXES)) return { block: true, reason: `Brehon planning mode writes only planning/doc artifacts, not ${relPath}` };
+    if (isSourceLikePath(relPath)) return { block: true, reason: `Brehon planning mode blocks source/code writes: ${relPath}` };
+  }
+
+  if (mode === "ci-debug" && !hasPrefix(relPath, CI_DEBUG_WRITE_PREFIXES)) {
+    return { block: true, reason: `Brehon ci-debug mode writes only CI/debug artifacts, not ${relPath}` };
+  }
+
+  if (mode === "bm") {
+    if (isSourceLikePath(relPath)) return { block: true, reason: `Brehon BM mode blocks source/code writes: ${relPath}` };
+    if (relPath.startsWith(".claude/PRPs/plans/")) return { block: true, reason: `Brehon BM mode must not write plans: ${relPath}` };
+  }
+
+  if (relPath.endsWith(".rs") && !planFileExists()) {
+    return { block: true, reason: "Brehon hard rule: Rust edits require a plan file under .claude/PRPs/plans/" };
+  }
+
+  if (relPath.startsWith(".claude/") && mode !== "planning") {
+    return { block: true, reason: `Brehon dual-harness boundary blocks .claude writes in ${mode} mode unless user switches to planning or gives an explicit manual override: ${relPath}` };
+  }
+
+  return undefined;
 }
 
 async function confirmDangerousBash(command: string, ctx: any): Promise<{ block: true; reason: string } | undefined> {
