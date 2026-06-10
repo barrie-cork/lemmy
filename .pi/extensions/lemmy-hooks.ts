@@ -52,6 +52,80 @@ const AUTO_COMMIT_SKIP_FRAGMENTS = [
 
 const EDIT_READBACK_THRESHOLD = 5;
 
+type BrehonMode = "main-safe" | "planning" | "impl-task" | "review-readonly" | "bm" | "ci-debug";
+type PathPolicyDecision = { block: true; reason: string } | undefined;
+
+const BREHON_MODES: Record<BrehonMode, { label: string; description: string; instructions: string[] }> = {
+  "main-safe": {
+    label: "BREHON:SAFE",
+    description: "Default Pi mode: normal repo work with Brehon hard constraints and focused edits.",
+    instructions: [
+      "Use this as the default mixed implementation/review mode.",
+      "Rust edits still require a plan file under .claude/PRPs/plans/.",
+      "Do not modify .claude/ ownership areas unless the user explicitly asks.",
+    ],
+  },
+  planning: {
+    label: "BREHON:PLAN",
+    description: "Planning/docs mode: write plan/spec/doc artifacts only; never implementation code.",
+    instructions: [
+      "Read Brehon design docs, ADRs, PRDs, and prior reports before changing plans/specs.",
+      "Allowed writes are docs/.pi planning artifacts and .claude/PRPs plan/report/review/brief artifacts.",
+      "Do not edit Rust, migrations, source crates, or implementation code in this mode.",
+    ],
+  },
+  "impl-task": {
+    label: "BREHON:IMPL",
+    description: "Implementation mode: execute a scoped task from an existing Brehon plan.",
+    instructions: [
+      "Before Rust edits, verify a relevant plan exists under .claude/PRPs/plans/.",
+      "Use scripts/brehon/cargo-*.sh wrappers with scope flags; redirect cargo output to .pi/*.log.",
+      "Keep edits scoped to the named task; do not write plans or Branch Manager artifacts.",
+    ],
+  },
+  "review-readonly": {
+    label: "BREHON:REVIEW",
+    description: "Read-only review/audit mode: inspect and report findings, do not mutate files.",
+    instructions: [
+      "Do not use write/edit or mutate the worktree.",
+      "Report high-confidence findings with exact file paths and actionable recommendations.",
+      "Prefer read and narrowly-scoped bash inspection commands.",
+    ],
+  },
+  bm: {
+    label: "BREHON:BM",
+    description: "Branch Manager mode: git/PR lifecycle only; no code or plan authoring.",
+    instructions: [
+      "Prefer delegating BM verbs to the .pi/agents/bm-pi.md project agent when available.",
+      "Do not author implementation code or write Brehon plans.",
+      "Ask before outbound-visible actions such as PR comments, pushes, merges, or pings.",
+    ],
+  },
+  "ci-debug": {
+    label: "BREHON:CI",
+    description: "CI debug mode: workflow/script diagnostics with auto-commit suppressed.",
+    instructions: [
+      "Prefer delegating GitHub Actions work to the .pi/agents/ci-debug.md project agent when available.",
+      "Keep edits focused on .github/workflows/, .github/scripts/, or explicit CI docs/artifacts.",
+      "Auto-commit is suppressed; manually commit only after the fix is real.",
+    ],
+  },
+};
+
+const PLANNING_WRITE_PREFIXES = [
+  "docs/",
+  ".pi/",
+  ".claude/PRPs/plans/",
+  ".claude/PRPs/briefs/",
+  ".claude/PRPs/reports/",
+  ".claude/PRPs/reviews/",
+  ".claude/PRPs/PRDs/",
+];
+
+const CI_DEBUG_WRITE_PREFIXES = [".github/workflows/", ".github/scripts/", ".pi/", "docs/"];
+const CODE_PREFIXES = ["crates/", "src/", "migrations/", "diesel_migrations/"];
+const SOURCE_EXTENSIONS = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".sql", ".toml", ".yml", ".yaml"]);
+
 type NotifyLevel = "info" | "warning" | "error";
 
 function safeNotify(ctx: any, msg: string, level: NotifyLevel = "info") {
