@@ -28,7 +28,7 @@ except ImportError:  # pragma: no cover - environment guard
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_GLOBS = (".claude/skills/*/SKILL.md", ".pi/skills/*/SKILL.md")
 MAX_DESCRIPTION_CHARS = 1024
-PUNCTUATION_HEAVY_RE = re.compile(r"[:`\"()\[\]{}]")
+YAML_PLAIN_SCALAR_RISK_RE = re.compile(r":\s")
 
 
 @dataclass
@@ -62,8 +62,8 @@ def raw_description_style_warning(raw_fm: str) -> str | None:
             return None
         if not after:
             return None
-        if len(after) > 120 or PUNCTUATION_HEAVY_RE.search(after):
-            return "prefer folded block style (`description: >`) for punctuation-heavy or long descriptions"
+        if len(after) > 120 or YAML_PLAIN_SCALAR_RISK_RE.search(after):
+            return "prefer folded block style (`description: >`) for long descriptions or YAML-sensitive punctuation such as `: `"
         return None
     return None
 
