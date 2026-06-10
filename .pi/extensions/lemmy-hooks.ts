@@ -505,6 +505,28 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("user_bash", async (event: any, ctx: any) => {
     try {
+      const rawCargo = rawCargoPattern(event.command);
+      if (rawCargo) {
+        return {
+          result: {
+            output: `Brehon cargo policy: ${rawCargo}`,
+            exitCode: 1,
+            cancelled: false,
+            truncated: false,
+          },
+        };
+      }
+      const secretShell = sensitiveShellPattern(event.command);
+      if (secretShell) {
+        return {
+          result: {
+            output: `Brehon secret policy blocks ${secretShell}`,
+            exitCode: 1,
+            cancelled: false,
+            truncated: false,
+          },
+        };
+      }
       const decision = await confirmDangerousBash(event.command, ctx);
       if (!decision) return undefined;
       return {
