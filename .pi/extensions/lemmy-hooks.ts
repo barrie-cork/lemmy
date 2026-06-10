@@ -374,6 +374,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   // converges. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
   let ciDebugMode = false;
   let brehonMode: BrehonMode = "main-safe";
+  let lastFactoryActiveMtime = 0;
 
   const setModeStatus = (ctx: any) => {
     try {
@@ -388,6 +389,25 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     brehonMode = mode;
     ciDebugMode = mode === "ci-debug";
     setModeStatus(ctx);
+  };
+
+  const syncFactoryActiveMode = (ctx: any, notify = false) => {
+    try {
+      if (!fs.existsSync(FACTORY_ACTIVE_PATH)) return;
+      const stat = fs.statSync(FACTORY_ACTIVE_PATH);
+      if (stat.mtimeMs === lastFactoryActiveMtime) return;
+      lastFactoryActiveMtime = stat.mtimeMs;
+
+      const activeProfile = JSON.parse(fs.readFileSync(FACTORY_ACTIVE_PATH, "utf8"));
+      const profileId = typeof activeProfile?.id === "string" ? activeProfile.id : "";
+      const mappedMode = FACTORY_PROFILE_TO_MODE[profileId];
+      if (!mappedMode) return;
+
+      setBrehonMode(mappedMode, ctx);
+      if (notify) safeNotify(ctx, `pi-harness-factory active profile ${profileId} mapped to /brehon-mode ${mappedMode}`, "info");
+    } catch (err) {
+      console.error("[lemmy-hooks] factory active sync failed:", err);
+    }
   };
 
   pi.registerCommand("brehon-mode", {
