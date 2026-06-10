@@ -125,6 +125,15 @@ const PLANNING_WRITE_PREFIXES = [
 const CI_DEBUG_WRITE_PREFIXES = [".github/workflows/", ".github/scripts/", ".pi/", "docs/"];
 const CODE_PREFIXES = ["crates/", "src/", "migrations/", "diesel_migrations/"];
 const SOURCE_EXTENSIONS = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".sql", ".toml", ".yml", ".yaml"]);
+const FACTORY_ACTIVE_PATH = path.join(REPO_ROOT, ".pi", "harness-factory", "active.json");
+const FACTORY_PROFILE_TO_MODE: Record<string, BrehonMode> = {
+  "brehon-main-safe": "main-safe",
+  "brehon-planning": "planning",
+  "brehon-impl-task": "impl-task",
+  "brehon-review-readonly": "review-readonly",
+  "brehon-bm": "bm",
+  "brehon-ci-debug": "ci-debug",
+};
 
 type NotifyLevel = "info" | "warning" | "error";
 
