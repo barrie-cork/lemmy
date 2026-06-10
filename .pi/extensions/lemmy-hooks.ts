@@ -52,7 +52,7 @@ const AUTO_COMMIT_SKIP_FRAGMENTS = [
 
 const EDIT_READBACK_THRESHOLD = 5;
 
-type BrehonMode = "main-safe" | "planning" | "impl-task" | "review-readonly" | "bm" | "ci-debug";
+type BrehonMode = "main-safe" | "planning" | "impl-task" | "review-readonly" | "bm" | "ci-debug" | "harness-maintenance";
 type PathPolicyDecision = { block: true; reason: string } | undefined;
 
 const BREHON_MODES: Record<BrehonMode, { label: string; description: string; instructions: string[] }> = {
@@ -110,6 +110,15 @@ const BREHON_MODES: Record<BrehonMode, { label: string; description: string; ins
       "Auto-commit is suppressed; manually commit only after the fix is real.",
     ],
   },
+  "harness-maintenance": {
+    label: "BREHON:HARNESS",
+    description: "Harness metadata mode: skill frontmatter/docs and pi harness scripts only; no app code.",
+    instructions: [
+      "Use only for explicit harness-maintenance requests such as skill frontmatter fixes.",
+      "Allowed writes are .claude/skills/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
+      "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits.",
+    ],
+  },
 };
 
 const PLANNING_WRITE_PREFIXES = [
@@ -123,6 +132,7 @@ const PLANNING_WRITE_PREFIXES = [
 ];
 
 const CI_DEBUG_WRITE_PREFIXES = [".github/workflows/", ".github/scripts/", ".pi/", "docs/"];
+const HARNESS_MAINTENANCE_WRITE_PREFIXES = [".claude/skills/", ".pi/skills/", ".pi/scripts/", ".pi/extensions/", ".pi/harness-factory/"];
 const CODE_PREFIXES = ["crates/", "src/", "migrations/", "diesel_migrations/"];
 const SOURCE_EXTENSIONS = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".sql", ".toml", ".yml", ".yaml"]);
 const FACTORY_ACTIVE_PATH = path.join(REPO_ROOT, ".pi", "harness-factory", "active.json");
@@ -133,6 +143,7 @@ const FACTORY_PROFILE_TO_MODE: Record<string, BrehonMode> = {
   "brehon-review-readonly": "review-readonly",
   "brehon-bm": "bm",
   "brehon-ci-debug": "ci-debug",
+  "brehon-harness-maintenance": "harness-maintenance",
 };
 
 type NotifyLevel = "info" | "warning" | "error";
@@ -230,6 +241,10 @@ function pathPolicyDecision(mode: BrehonMode, toolName: string, filePath: unknow
     return { block: true, reason: `Brehon ci-debug mode writes only CI/debug artifacts, not ${relPath}` };
   }
 
+  if (mode === "harness-maintenance" && !hasPrefix(relPath, HARNESS_MAINTENANCE_WRITE_PREFIXES)) {
+    return { block: true, reason: `Brehon harness-maintenance mode writes only harness metadata/tooling, not ${relPath}` };
+  }
+
   if (mode === "bm") {
     if (isSourceLikePath(relPath)) return { block: true, reason: `Brehon BM mode blocks source/code writes: ${relPath}` };
     if (relPath.startsWith(".claude/PRPs/plans/")) return { block: true, reason: `Brehon BM mode must not write plans: ${relPath}` };
@@ -239,7 +254,7 @@ function pathPolicyDecision(mode: BrehonMode, toolName: string, filePath: unknow
     return { block: true, reason: "Brehon hard rule: Rust edits require a plan file under .claude/PRPs/plans/" };
   }
 
-  if (relPath.startsWith(".claude/") && mode !== "planning") {
+  if (relPath.startsWith(".claude/") && mode !== "planning" && mode !== "harness-maintenance") {
     return { block: true, reason: `Brehon dual-harness boundary blocks .claude writes in ${mode} mode unless user switches to planning or gives an explicit manual override: ${relPath}` };
   }
 
@@ -411,7 +426,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   };
 
   pi.registerCommand("brehon-mode", {
-    description: "Show or switch first-class Brehon Pi modes: main-safe, planning, impl-task, review-readonly, bm, ci-debug.",
+    description: "Show or switch first-class Brehon Pi modes: main-safe, planning, impl-task, review-readonly, bm, ci-debug, harness-maintenance.",
     handler: async (args: string, ctx: any) => {
       const requested = args.trim();
       if (!requested || requested === "list") {
