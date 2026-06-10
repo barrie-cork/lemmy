@@ -10,3 +10,16 @@ Hard enforcement stays in `.pi/extensions/lemmy-hooks.ts`:
 - Path policies, Rust plan-file checks, raw-cargo blocking, secret-path blocking, and CI auto-commit suppression are enforced by `lemmy-hooks.ts`.
 
 Use `/factory use brehon-impl-task` for the profile UI; the next prompt/tool call will sync it to `/brehon-mode impl-task`.
+
+Use `/brehon-mode harness-maintenance` (or `/factory use brehon-harness-maintenance`) only for explicit harness metadata work such as skill frontmatter cleanup. This mode permits `.claude/skills/`, `.pi/skills/`, `.pi/scripts/`, `.pi/extensions/`, and `.pi/harness-factory/` while still blocking app code and broader `.claude/` ownership areas. After skill edits, run:
+
+```bash
+python3 .pi/scripts/validate-skills.py
+```
+
+For punctuation-heavy skill descriptions, prefer folded YAML:
+
+```yaml
+description: >
+  Short routing-oriented description with punctuation: safe in folded block style.
+```
