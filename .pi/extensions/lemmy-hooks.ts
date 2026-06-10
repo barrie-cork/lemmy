@@ -14,7 +14,6 @@
  * - Junior worktree guard via copied .pi/hook-scripts/worktree-guard.sh
  * - observation shadow telemetry via copied .pi/hook-scripts/observation-capture.sh
  * - lesson frontmatter + PMD sync hooks for Recursive Learning System parity
- * - auto-commit on successful edit/write
  * - warn-only retro nudge on shutdown
  */
 
@@ -38,18 +37,6 @@ const BASH_BLOCKLIST = [
   "mkfs",
   "dd if=",
   "> /dev/sd",
-];
-
-const AUTO_COMMIT_SKIP_FRAGMENTS = [
-  "/.git/",
-  "/node_modules/",
-  "/target/",
-  "/dist/",
-  "/build/",
-  "/.DS_Store",
-  "/.pi/sessions/",
-  "/.pi/tmp/",
-  "/.pi/logs/",
 ];
 
 const EDIT_READBACK_THRESHOLD = 5;
@@ -105,11 +92,11 @@ const BREHON_MODES: Record<BrehonMode, { label: string; description: string; ins
   },
   "ci-debug": {
     label: "BREHON:CI",
-    description: "CI debug mode: workflow/script diagnostics with auto-commit suppressed.",
+    description: "CI debug mode: workflow/script diagnostics without changing the repo-wide manual commit workflow.",
     instructions: [
       "Prefer delegating GitHub Actions work to the .pi/agents/ci-debug.md project agent when available.",
       "Keep edits focused on .github/workflows/, .github/scripts/, or explicit CI docs/artifacts.",
-      "Auto-commit is suppressed; manually commit only after the fix is real.",
+      "Follow the repo-wide manual git add/commit workflow when the fix is real.",
     ],
   },
   "harness-maintenance": {
@@ -134,19 +121,9 @@ const PLANNING_WRITE_PREFIXES = [
 ];
 
 const CI_DEBUG_WRITE_PREFIXES = [".github/workflows/", ".github/scripts/", ".pi/", "docs/"];
-const HARNESS_MAINTENANCE_WRITE_PREFIXES = [".claude/skills/", ".claude/lessons/", ".claude/PRPs/reports/", ".pi/skills/", ".pi/scripts/", ".pi/extensions/", ".pi/harness-factory/"];
+const HARNESS_MAINTENANCE_WRITE_PREFIXES = [".claude/skills/", ".claude/lessons/", ".claude/PRPs/reports/", ".pi/skills/", ".pi/scripts/", ".pi/extensions/", ".pi/PROJECT_CONTEXT.md", "AGENTS.md"];
 const CODE_PREFIXES = ["crates/", "src/", "migrations/", "diesel_migrations/"];
 const SOURCE_EXTENSIONS = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".sql", ".toml", ".yml", ".yaml"]);
-const FACTORY_ACTIVE_PATH = path.join(REPO_ROOT, ".pi", "harness-factory", "active.json");
-const FACTORY_PROFILE_TO_MODE: Record<string, BrehonMode> = {
-  "brehon-main-safe": "main-safe",
-  "brehon-planning": "planning",
-  "brehon-impl-task": "impl-task",
-  "brehon-review-readonly": "review-readonly",
-  "brehon-bm": "bm",
-  "brehon-ci-debug": "ci-debug",
-  "brehon-harness-maintenance": "harness-maintenance",
-};
 
 type NotifyLevel = "info" | "warning" | "error";
 
@@ -198,12 +175,6 @@ function planFileExists(): boolean {
   } catch {
     return false;
   }
-}
-
-function shouldSkipAutoCommit(filePath: string): boolean {
-  const normalized = path.resolve(REPO_ROOT, filePath);
-  const withSlashes = normalized.replaceAll(path.sep, "/");
-  return AUTO_COMMIT_SKIP_FRAGMENTS.some((fragment) => withSlashes.includes(fragment));
 }
 
 function matchedBlockedPattern(command: string): string | undefined {
@@ -383,20 +354,17 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   let ruleFiles: string[] = [];
   let prePhaseReminder = "";
   let editsSinceRead = 0;
-  // When true, the tool_result handler skips its auto-commit-per-edit
-  // step. Toggled by `/ci-debug-mode`. Reason: speculative edits during
-  // CI debugging push commits that re-fire push-trigger workflows; if
-  // the agent is operating on a wrong premise, each iteration creates
-  // a fresh failure to react to and the loop accelerates rather than
-  // converges. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
+  // Tracks whether the user has toggled focused CI-debug mode. Auto-commit
+  // is repo-wide disabled; `/ci-debug-mode` now only changes mode/status so
+  // CI work follows the same manual Brehon commit workflow as other work.
   let ciDebugMode = false;
   let brehonMode: BrehonMode = "main-safe";
-  let lastFactoryActiveMtime = 0;
+
 
   const setModeStatus = (ctx: any) => {
     try {
       ctx?.ui?.setStatus?.("brehon-mode", BREHON_MODES[brehonMode].label);
-      ctx?.ui?.setStatus?.("ci-debug", ciDebugMode ? "CI-AUTOCOMMIT-OFF" : undefined);
+      ctx?.ui?.setStatus?.("ci-debug", ciDebugMode ? "CI-MODE" : undefined);
     } catch {
       // status is best-effort
     }
@@ -408,24 +376,12 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     setModeStatus(ctx);
   };
 
-  const syncFactoryActiveMode = (ctx: any, notify = false) => {
-    try {
-      if (!fs.existsSync(FACTORY_ACTIVE_PATH)) return;
-      const stat = fs.statSync(FACTORY_ACTIVE_PATH);
-      if (stat.mtimeMs === lastFactoryActiveMtime) return;
-      lastFactoryActiveMtime = stat.mtimeMs;
-
-      const activeProfile = JSON.parse(fs.readFileSync(FACTORY_ACTIVE_PATH, "utf8"));
-      const profileId = typeof activeProfile?.id === "string" ? activeProfile.id : "";
-      const mappedMode = FACTORY_PROFILE_TO_MODE[profileId];
-      if (!mappedMode) return;
-
-      setBrehonMode(mappedMode, ctx);
-      if (notify) safeNotify(ctx, `pi-harness-factory active profile ${profileId} mapped to /brehon-mode ${mappedMode}`, "info");
-    } catch (err) {
-      console.error("[lemmy-hooks] factory active sync failed:", err);
-    }
-  };
+  // pi-harness-factory removed 2026-06-10 — the active-profile mechanism
+  // duplicated Claude Code's advisor-orchestrator role discipline and was
+  // too restrictive (locked pi advisor out of advisor-authored paths like
+  // .claude/lessons/ in main-safe). The four-role model now lives in
+  // AGENTS.md + .pi/PROJECT_CONTEXT.md + .claude/rules/advisor-orchestrator.md;
+  // the /brehon-mode slash command sets the mode directly.
 
   pi.registerCommand("brehon-mode", {
     description: "Show or switch first-class Brehon Pi modes: main-safe, planning, impl-task, review-readonly, bm, ci-debug, harness-maintenance.",
@@ -449,7 +405,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.registerCommand("ci-debug-mode", {
     description:
-      "Toggle CI-debug mode. When ON, the auto-commit-per-edit hook is suppressed so iterating on .github/workflows/*.yml or .github/scripts/*.sh doesn't spam commits + retrigger CI on each save. Run again to turn back OFF when the fix is real.",
+      "Toggle CI-debug mode for focused workflow/script diagnostics. Auto-commit is disabled repo-wide; use the normal Brehon manual commit workflow when the fix is real.",
     handler: async (_args: string, ctx: any) => {
       ciDebugMode = !ciDebugMode;
       if (ciDebugMode) brehonMode = "ci-debug";
@@ -457,8 +413,8 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       setModeStatus(ctx);
       const state = ciDebugMode ? "ON" : "OFF";
       const detail = ciDebugMode
-        ? "Auto-commit suppressed. Manual git add/commit when ready."
-        : "Auto-commit re-enabled (per-edit auto(pi): commits resume).";
+        ? "Manual git add/commit when ready."
+        : "Back to main-safe mode. Manual git add/commit remains in effect.";
       safeNotify(ctx, `ci-debug-mode: ${state}. ${detail}`, "info");
     },
   });
@@ -471,7 +427,6 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       const pmdGuard = runHookScript("pmd-http-guard.sh", undefined, 5_000);
       const pmdNotice = [pmdGuard.stdout.trim(), pmdGuard.stderr.trim()].filter(Boolean).join("\n");
 
-      syncFactoryActiveMode(ctx, true);
       setModeStatus(ctx);
       const loaded: string[] = [];
       if (ruleFiles.length > 0) loaded.push(`${ruleFiles.length} rule index entries`);
@@ -489,7 +444,6 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event: any) => {
     try {
-      syncFactoryActiveMode(undefined);
       const additions: string[] = [];
 
       if (projectContext) additions.push(`## Pi Project Context\n\n${projectContext}`);
@@ -520,7 +474,6 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     // compaction reload fires during an awaited confirmDangerousBash call.
     const cwd = ctx.cwd;
     try {
-      syncFactoryActiveMode(ctx);
       if (event.toolName === "bash") {
         const command = (event.input as any)?.command;
         if (typeof command === "string") {
@@ -560,7 +513,6 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
   pi.on("user_bash", async (event: any, ctx: any) => {
     try {
-      syncFactoryActiveMode(ctx);
       const rawCargo = rawCargoPattern(event.command);
       if (rawCargo) {
         return {
@@ -625,42 +577,9 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       const lessonReminderNotice = [lessonReminder.stdout.trim(), lessonReminder.stderr.trim()].filter(Boolean).join("\n");
       if (lessonReminderNotice) safeNotify(ctx, lessonReminderNotice.slice(0, 700), "warning");
 
-      // ci-debug-mode suppresses auto-commit so iteration on workflow
-      // files / CI scripts doesn't spam commits + retrigger workflows
-      // on each save. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
-      if (ciDebugMode) return undefined;
-
-      const filePath = (event.input as any)?.path;
-      if (typeof filePath !== "string" || shouldSkipAutoCommit(filePath)) return undefined;
-
-      const basename = path.basename(filePath);
-      // Invoke git directly via argument arrays so filePath/basename are never
-      // shell-interpolated. Avoids command injection through model-controlled
-      // tool inputs (cr-24 on PR #111). Both the diff probe and the commit are
-      // scoped to filePath so unrelated pre-staged changes are never swept into
-      // the auto-commit (cr-67 on PR #111).
-      const gitOpts = { cwd: REPO_ROOT, encoding: "utf8" as const, timeout: 30_000 };
-      const addRes = spawnSync("git", ["add", "--", filePath], gitOpts);
-      if (addRes.status !== 0) return undefined;
-      const diffRes = spawnSync(
-        "git",
-        ["diff", "--cached", "--quiet", "--", filePath],
-        gitOpts,
-      );
-      if (diffRes.status === 1) {
-        spawnSync(
-          "git",
-          [
-            "commit",
-            "-m",
-            `auto(pi): update ${basename}`,
-            "--no-gpg-sign",
-            "--",
-            filePath,
-          ],
-          gitOpts,
-        );
-      }
+      // Auto-commit is intentionally disabled. Pi edits now remain as normal
+      // working-tree changes so the existing Brehon commit/push workflow stays
+      // in control of staging, commit grouping, and branch publication.
 
       const lessonSync = runHookScript("lesson-pmd-sync.sh", hookPayload, 15_000);
       const lessonSyncNotice = [lessonSync.stdout.trim(), lessonSync.stderr.trim()].filter(Boolean).join("\n");

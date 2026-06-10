@@ -134,11 +134,58 @@ For test fixtures, follow the pool/conn/`LemmyResult` pattern in the
   file under `.claude/PRPs/plans/`. The "no Rust without a plan" rule applies
   to pi sessions too — that's a Brehon hard constraint, not a Claude-only one.
 
-### What pi sessions do NOT do
+### Four-role advisor pattern (default working pattern)
 
-- Do not invoke or emulate Junior subagents, BM verbs, or advisor polling.
+Pi sessions on the Brehon fork are the **advisor** role in the four-role
+model (`advisor / planning / impl / bm`). The full model lives in
+`CLAUDE.md` "Four-role model" + `.claude/rules/advisor-orchestrator.md`.
+The pi harness mirrors the model here so it does not need to load CLAUDE.md
+on every session.
+
+| Role | Runs on | Model | Authors |
+|---|---|---|---|
+| **advisor** (this session) | laptop | opus-4-7 | briefs, lessons, retros, ADRs, harness config — NEVER plan/code/PR content |
+| **planning** | EliteDesk Junior daemon | opus-4-8 | plan files at `.claude/PRPs/plans/<phase>.plan.md` |
+| **impl** | EliteDesk Junior daemon (lane worktree) | sonnet-4-6 | Rust code, migrations, schema regen |
+| **bm** | EliteDesk Junior daemon | haiku-4-5 | git/PR/CR lifecycle, branch cuts, merges |
+
+**What the advisor does (the rules):**
+
+- When the user says "begin planning X" / "plan X" / "draft a plan for X":
+  1. Author the brief at `.claude/PRPs/briefs/<phase>-planning-1.md` (advisor's own work).
+  2. Run `/brehon-clarify <brief-path>` if scope is non-trivial.
+  3. Queue `[role:planning] <slug> — see .claude/PRPs/briefs/<file>.md` on Junior.
+  4. Poll. When planning lands: §3.4 DoD smoke test + §3.5 watchpoint gate, surface to user (gate 1: plan approval).
+  5. After approval: queue `bm-cut` to create the phase branch. **NEVER write the plan yourself.**
+- When the user says "implement Y" / "make change Y": verify a plan exists at `.claude/PRPs/plans/<phase>.plan.md`; if not, route back to planning. Author the impl-task brief (4 sections, §2.4 lesson injection, §2.4a ADR load-bearing clause). Queue `[role:impl-task]`. Poll. Run §3.9 verify gate. Surface.
+- Briefs commit on `governance-v0` (planning/bm briefs) or on the phase branch (impl-task briefs, Mode A). Always reachable at the ref the worker forks from.
+
+**What the advisor does NOT do (the rule that was violated in m2-late-2 planning, 2026-06-10):**
+
+- ❌ Author plan files at `.claude/PRPs/plans/<phase>.plan.md` directly.
+- ❌ Author Rust code at `crates/**/src/**/*.rs`, migrations, `crates/db_schema_file/src/schema.rs`.
+- ❌ Open PRs / cut branches / merge directly (use `[role:bm-task]`).
+- ❌ Commit source-code changes authored in the advisor CWD.
+
+**What the advisor MAY author (the exceptions):**
+
+- ✓ Briefs at `.claude/PRPs/briefs/<phase>-<role>-<n>.md`.
+- ✓ Lessons at `.claude/lessons/{feedback,reference}_*.md` (cross-harness corpus).
+- ✓ Retros at `.claude/PRPs/reports/<phase>-retro.md`.
+- ✓ Verify reports at `.claude/PRPs/reports/<phase>-verify.md`.
+- ✓ ADRs at `docs/brehon-law-inspired-network/99-decisions-and-open-questions.md` (gate 2 / judgment-heavy DQ applies).
+- ✓ Handover files at `.claude/PRPs/handovers/<phase>-<scope>-<date>.md` (pre-compact discipline).
+- ✓ Harness config: `AGENTS.md`, `.pi/PROJECT_CONTEXT.md`, `.pi/extensions/*.ts` (this file is itself such a write).
+
+**The full rule + failure-case writeup:** `.claude/lessons/feedback_pi_advisor_role_dispatches_to_junior.md`.
+
+### What pi sessions do NOT do (other than four-role violations)
+
 - Do not write to `.claude/decision-queue.json`, `.claude/runlog/`, briefs,
-  retros, or Junior daemon state.
+  retros, or Junior daemon state directly — these are owned by the four-role
+  model. The advisor's writes to these files go via the Junior dispatch
+  surface, not direct file edits (the only exception is the lesson corpus,
+  which is harness metadata).
 - Do not auto-promote anything to user-scope (`~/.claude/` or `~/.pi/`).
 - Do not enable `context-workflow`, `pi-goal`, or `pi-ralph-wiggum`-style
   autonomous loops without explicit user approval per turn.
@@ -204,6 +251,6 @@ given; surface a new ADR-style note if you genuinely need to revisit them.
 | :--- | :--- | :--- |
 | `AGENTS.md` is the pi entry point at repo root; `CLAUDE.md` is Claude Code's | Empirical probe confirmed pi loads `AGENTS.md` and ignores `CLAUDE.md` when both exist at the same root. Clean dual-harness isolation, no `--no-context-files` workaround needed. | Commit `db413f87c`; phd-vault `PI_QUIRKS.md §17` |
 | `.pi/hook-scripts/` (not `.pi/hooks/`) | Pi renamed hooks to extensions; a literal `.pi/hooks/` dir triggers a startup warning regardless of contents. | Commit `db413f87c` |
-| Auto-commit per edit (`auto(pi): update <basename>`) is intentional | `lemmy-hooks.ts` `tool_result` handler stages and commits each successful pi `edit`/`write` to a single file. Skip-fragments at lines 41–51; cr-24/cr-67 hardening on PR #111. To bypass for batch or CI-debug work, run `/ci-debug-mode` (toggles a flag the handler reads — preferred over commenting the block out, since it survives session reload). | `.pi/extensions/lemmy-hooks.ts` (registerCommand + tool_result handler) |
+| Pi auto-commit per edit is disabled | Pi edits remain in the working tree. Follow the existing Brehon workflow for explicit review, `git add`, commit grouping, and push/PR actions. Historical `auto(pi): update <basename>` commits may exist before 2026-06-10; they are no longer produced after the extension reloads. | `.pi/extensions/lemmy-hooks.ts` `tool_result` handler |
 | `raw-paste` extension enabled user-scope | Lets `/paste` arm a one-shot raw paste so multi-line Rust compiler errors stay editable. Not in repo — lives in `~/.pi/agent/settings.json`. | User-scope only |
 | Cargo work goes through `scripts/brehon/cargo-*.sh` wrappers | Uniform toolchain pinning + output capture across both harnesses; matches `.claude/rules/no-cargo-output-paste.md` discipline. | See cargo table above |
