@@ -1,3 +1,8 @@
+---
+name: pmd
+description: Query and write the Project Memory Database from pi via CLI wrappers.
+---
+
 # PMD — Project Memory Database access
 
 The Project Memory DB (PMD) stores lessons, patterns, and retro findings from this codebase.
