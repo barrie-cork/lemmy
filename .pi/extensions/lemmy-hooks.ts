@@ -8,10 +8,12 @@
  * - system-prompt context from .pi/PROJECT_CONTEXT.md
  * - .claude/rules index injection
  * - pre-phase audit reminder from the existing Claude hook
+ * - PMD HTTP reachability guard for Recursive Learning System writes
  * - DQ/task-hopper coordination-state injection
  * - destructive bash firewall
  * - Junior worktree guard via copied .pi/hook-scripts/worktree-guard.sh
  * - observation shadow telemetry via copied .pi/hook-scripts/observation-capture.sh
+ * - lesson frontmatter + PMD sync hooks for Recursive Learning System parity
  * - auto-commit on successful edit/write
  * - warn-only retro nudge on shutdown
  */
@@ -112,11 +114,11 @@ const BREHON_MODES: Record<BrehonMode, { label: string; description: string; ins
   },
   "harness-maintenance": {
     label: "BREHON:HARNESS",
-    description: "Harness metadata mode: skill frontmatter/docs and pi harness scripts only; no app code.",
+    description: "Harness/RLS metadata mode: skill, lesson, retro, and pi harness files only; no app code.",
     instructions: [
-      "Use only for explicit harness-maintenance requests such as skill frontmatter fixes.",
-      "Allowed writes are .claude/skills/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
-      "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits.",
+      "Use only for explicit harness-maintenance or Recursive Learning System artifact work.",
+      "Allowed writes are .claude/skills/, .claude/lessons/, .claude/PRPs/reports/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
+      "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits; lesson writes trigger PMD sync hooks.",
     ],
   },
 };
@@ -132,7 +134,7 @@ const PLANNING_WRITE_PREFIXES = [
 ];
 
 const CI_DEBUG_WRITE_PREFIXES = [".github/workflows/", ".github/scripts/", ".pi/", "docs/"];
-const HARNESS_MAINTENANCE_WRITE_PREFIXES = [".claude/skills/", ".pi/skills/", ".pi/scripts/", ".pi/extensions/", ".pi/harness-factory/"];
+const HARNESS_MAINTENANCE_WRITE_PREFIXES = [".claude/skills/", ".claude/lessons/", ".claude/PRPs/reports/", ".pi/skills/", ".pi/scripts/", ".pi/extensions/", ".pi/harness-factory/"];
 const CODE_PREFIXES = ["crates/", "src/", "migrations/", "diesel_migrations/"];
 const SOURCE_EXTENSIONS = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".sql", ".toml", ".yml", ".yaml"]);
 const FACTORY_ACTIVE_PATH = path.join(REPO_ROOT, ".pi", "harness-factory", "active.json");
@@ -466,12 +468,18 @@ export default function lemmyHooks(pi: ExtensionAPI) {
       projectContext = readIfExists(path.join(REPO_ROOT, ".pi", "PROJECT_CONTEXT.md"));
       ruleFiles = findMarkdownFiles(path.join(REPO_ROOT, ".claude", "rules"));
       prePhaseReminder = extractAdditionalContext(runHookScript("pre-phase-audit.sh", undefined, 10_000).stdout);
+      const pmdGuard = runHookScript("pmd-http-guard.sh", undefined, 5_000);
+      const pmdNotice = [pmdGuard.stdout.trim(), pmdGuard.stderr.trim()].filter(Boolean).join("\n");
 
       syncFactoryActiveMode(ctx, true);
       setModeStatus(ctx);
       const loaded: string[] = [];
       if (ruleFiles.length > 0) loaded.push(`${ruleFiles.length} rule index entries`);
       if (prePhaseReminder) loaded.push("pre-phase audit reminder");
+      if (pmdNotice) {
+        loaded.push("PMD HTTP guard");
+        safeNotify(ctx, pmdNotice.slice(0, 700), pmdGuard.stderr.trim() ? "warning" : "info");
+      }
       loaded.push(`Brehon mode ${brehonMode}`);
       if (loaded.length > 0) safeNotify(ctx, `lemmy-hooks loaded: ${loaded.join(", ")}`, "info");
     } catch (err) {
@@ -596,8 +604,9 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     const cwd = ctx.cwd;
     try {
       const tool = event.toolName;
+      const hookPayload = claudeCompatibleInput({ toolName: tool, input: event.input }, cwd);
 
-      runHookScript("observation-capture.sh", claudeCompatibleInput({ toolName: tool, input: event.input }, cwd));
+      runHookScript("observation-capture.sh", hookPayload);
 
       if (tool === "read") {
         editsSinceRead = 0;
@@ -611,6 +620,11 @@ export default function lemmyHooks(pi: ExtensionAPI) {
 
       if (tool !== "edit" && tool !== "write") return undefined;
       if (event.isError) return undefined;
+
+      const lessonReminder = runHookScript("lesson-frontmatter-reminder.sh", hookPayload, 5_000);
+      const lessonReminderNotice = [lessonReminder.stdout.trim(), lessonReminder.stderr.trim()].filter(Boolean).join("\n");
+      if (lessonReminderNotice) safeNotify(ctx, lessonReminderNotice.slice(0, 700), "warning");
+
       // ci-debug-mode suppresses auto-commit so iteration on workflow
       // files / CI scripts doesn't spam commits + retrigger workflows
       // on each save. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
@@ -647,6 +661,10 @@ export default function lemmyHooks(pi: ExtensionAPI) {
           gitOpts,
         );
       }
+
+      const lessonSync = runHookScript("lesson-pmd-sync.sh", hookPayload, 15_000);
+      const lessonSyncNotice = [lessonSync.stdout.trim(), lessonSync.stderr.trim()].filter(Boolean).join("\n");
+      if (lessonSyncNotice) safeNotify(ctx, lessonSyncNotice.slice(0, 700), lessonSyncNotice.includes("unreachable") || lessonSyncNotice.includes("not auto-synced") ? "warning" : "info");
 
       return undefined;
     } catch (err) {
