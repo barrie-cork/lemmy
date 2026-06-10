@@ -198,6 +198,18 @@ Output path: `.claude/PRPs/reports/session-retro-<YYYY-MM-DD>-<slug>.md`
 main thread). Matches the existing `session-retro-2026-04-25-advisor-jm-c-plan.md`
 precedent so retros aggregate naturally.
 
+**Pi path-policy note (2026-06-10):** In Lemmy pi `main-safe` mode, `.claude/`
+writes may be blocked by the dual-harness boundary even though this skill's
+canonical output path is under `.claude/PRPs/reports/`. If the write is blocked,
+ask the user for one of two explicit authorisations and then retry:
+1. switch to planning mode (for example `/brehon-mode planning`), or
+2. give a manual override naming the exact retro path.
+
+A user message such as `manual override approved to write
+.claude/PRPs/reports/session-retro-<date>-<slug>.md` is sufficient approval for
+this skill to write that one retro file. Do not treat that as general permission
+to modify unrelated `.claude/` ownership areas.
+
 Use the template at `.claude/skills/session-retro/template.md`
 verbatim. The CRITICAL requirement is that all three canonical
 headers (What surprised us / What to change / What to carry
