@@ -364,12 +364,50 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   // a fresh failure to react to and the loop accelerates rather than
   // converges. See .claude/lessons/feedback_gha_pi_loop_postmortem.md §6.
   let ciDebugMode = false;
+  let brehonMode: BrehonMode = "main-safe";
+
+  const setModeStatus = (ctx: any) => {
+    try {
+      ctx?.ui?.setStatus?.("brehon-mode", BREHON_MODES[brehonMode].label);
+      ctx?.ui?.setStatus?.("ci-debug", ciDebugMode ? "CI-AUTOCOMMIT-OFF" : undefined);
+    } catch {
+      // status is best-effort
+    }
+  };
+
+  const setBrehonMode = (mode: BrehonMode, ctx: any) => {
+    brehonMode = mode;
+    ciDebugMode = mode === "ci-debug" ? true : ciDebugMode && mode === "ci-debug";
+    setModeStatus(ctx);
+  };
+
+  pi.registerCommand("brehon-mode", {
+    description: "Show or switch first-class Brehon Pi modes: main-safe, planning, impl-task, review-readonly, bm, ci-debug.",
+    handler: async (args, ctx) => {
+      const requested = args.trim() as BrehonMode | "";
+      if (!requested || requested === "list") {
+        const lines = Object.entries(BREHON_MODES).map(([mode, def]) => `${mode}${mode === brehonMode ? " *" : ""}: ${def.description}`);
+        safeNotify(ctx, `Current Brehon mode: ${brehonMode}\n\n${lines.join("\n")}`, "info");
+        setModeStatus(ctx);
+        return;
+      }
+      if (!(requested in BREHON_MODES)) {
+        safeNotify(ctx, `Unknown Brehon mode: ${requested}. Run /brehon-mode list.`, "error");
+        return;
+      }
+      setBrehonMode(requested, ctx);
+      safeNotify(ctx, `Brehon mode set to ${requested}: ${BREHON_MODES[requested].description}`, "info");
+    },
+  });
 
   pi.registerCommand("ci-debug-mode", {
     description:
       "Toggle CI-debug mode. When ON, the auto-commit-per-edit hook is suppressed so iterating on .github/workflows/*.yml or .github/scripts/*.sh doesn't spam commits + retrigger CI on each save. Run again to turn back OFF when the fix is real.",
     handler: async (_args, ctx) => {
       ciDebugMode = !ciDebugMode;
+      if (ciDebugMode) brehonMode = "ci-debug";
+      else if (brehonMode === "ci-debug") brehonMode = "main-safe";
+      setModeStatus(ctx);
       const state = ciDebugMode ? "ON" : "OFF";
       const detail = ciDebugMode
         ? "Auto-commit suppressed. Manual git add/commit when ready."
