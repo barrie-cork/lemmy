@@ -47,6 +47,4 @@ bash /srv/brehon-fork/scripts/brehon/pmd-write.sh \
 
 ## Auth
 
-`PMD_HTTP_TOKEN` is read from `/srv/brehon-fork/.env`. The token is the same Bearer token
-configured in the laptop's `pmd-http-mcp` Windows service (NSSM `AppEnvironmentExtra`).
-The PMD server lives on the laptop at `http://100.104.171.26:11435/mcp` (Tailscale).
+`PMD_HTTP_TOKEN` is read from `PMD_ENV_FILE` when set, then `/srv/brehon-fork/.env`, then repo-local `.env` (Mac/P50 pi sessions). The token is the same Bearer token configured in the laptop's `pmd-http-mcp` Windows service (NSSM `AppEnvironmentExtra`). The PMD server lives on the laptop at `http://100.104.171.26:11435/mcp` from EliteDesk/Mac over Tailscale, or `http://localhost:11435/mcp` on the PMD host.
