@@ -29,13 +29,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Source .env if token not already in environment
+# Source .env if token not already in environment. EliteDesk uses
+# /srv/brehon-fork/.env; pi sessions on Mac/P50 use repo-local .env.
 if [[ -z "${PMD_HTTP_TOKEN:-}" ]]; then
-  ENV_FILE="${PMD_ENV_FILE:-/srv/brehon-fork/.env}"
-  if [[ -f "$ENV_FILE" ]]; then
+  for ENV_FILE in "${PMD_ENV_FILE:-}" /srv/brehon-fork/.env .env; do
+    [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]] || continue
     # shellcheck disable=SC1090
     set -a; source "$ENV_FILE"; set +a
-  fi
+    break
+  done
 fi
 
 PMD_URL="${PMD_HTTP_URL:-http://100.104.171.26:11435/mcp}"
