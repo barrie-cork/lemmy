@@ -45,6 +45,19 @@ bash /srv/brehon-fork/scripts/brehon/pmd-write.sh \
 
 **Types:** `pattern`, `decision`, `lesson`, `reference`, `user`, `feedback`, `project`
 
-## Auth
+## Health check
 
-`PMD_HTTP_TOKEN` is read from `PMD_ENV_FILE` when set, then `/srv/brehon-fork/.env`, then repo-local `.env` (Mac/P50 pi sessions). The token is the same Bearer token configured in the laptop's `pmd-http-mcp` Windows service (NSSM `AppEnvironmentExtra`). The PMD server lives on the laptop at `http://100.104.171.26:11435/mcp` from EliteDesk/Mac over Tailscale, or `http://localhost:11435/mcp` on the PMD host.
+```bash
+bash /srv/brehon-fork/scripts/brehon/pmd-doctor.sh
+```
+
+Use `pmd-doctor.sh` when Pi reports PMD startup warnings, query/write wrappers fail, or a lesson sync says it could not obtain an MCP session ID. It verifies endpoint discovery, token presence, authenticated MCP `initialize`, and `tools/list` without printing secrets.
+
+## Auth and topology
+
+`PMD_HTTP_TOKEN` is read from `PMD_ENV_FILE` when set, then `/srv/brehon-fork/.env`, then repo-local `.env` (Mac/P50 pi sessions). The token is the same Bearer token configured in the laptop's `pmd-http-mcp` Windows service (NSSM `AppEnvironmentExtra`).
+
+Topology is repo-specific:
+
+- **Lemmy/Brehon:** PMD is an HTTP MCP service on the P50/Windows laptop. From EliteDesk/Mac use `http://100.104.171.26:11435/mcp` over Tailscale; on the PMD host use `http://localhost:11435/mcp`. Do not assume a per-worktree SQLite PMD is live.
+- **phd-vault:** PMD topology differs and may be local to that repo/machine. Do not copy Lemmy's `/srv/brehon-fork/.env`, Tailscale URL, or service-host assumptions into phd-vault; inspect that repo's PMD docs/config first.
