@@ -15,8 +15,11 @@ if [[ -z "${PMD_HTTP_TOKEN:-}" ]]; then
 fi
 
 TOKEN="${PMD_HTTP_TOKEN:-}"
-AUTH=()
-[[ -n "$TOKEN" ]] && AUTH=(-H "Authorization: Bearer $TOKEN")
+if [[ -z "$TOKEN" ]]; then
+  echo "pmd-http-guard WARN: PMD_HTTP_TOKEN missing; authenticated MCP initialize could not be verified. Run scripts/brehon/pmd-doctor.sh for details." >&2
+  exit 0
+fi
+AUTH=(-H "Authorization: Bearer $TOKEN")
 
 candidates=()
 [[ -n "${PMD_HTTP_URL:-}" ]] && candidates+=("$PMD_HTTP_URL")
@@ -57,9 +60,5 @@ for url in "${candidates[@]}"; do
   rm -f "$headers" "$body"
 done
 
-if [[ -z "$TOKEN" ]]; then
-  echo "pmd-http-guard WARN: PMD_HTTP_TOKEN missing; authenticated MCP initialize could not be verified. Tried:${seen:- <none>}. Run scripts/brehon/pmd-doctor.sh for details." >&2
-else
-  echo "pmd-http-guard WARN: PMD authenticated MCP initialize failed. Tried:${seen:- <none>}. Last failure: ${last_failure:-none}. Run scripts/brehon/pmd-doctor.sh for details." >&2
-fi
+echo "pmd-http-guard WARN: PMD authenticated MCP initialize failed. Tried:${seen:- <none>}. Last failure: ${last_failure:-none}. Run scripts/brehon/pmd-doctor.sh for details." >&2
 exit 0
