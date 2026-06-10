@@ -33,16 +33,18 @@ auth_args() {
 }
 
 curl_mcp() {
-  local url="$1" session_id="${2:-}" payload="$3" body="$4" headers="$5" code auth=()
+  local url="$1" session_id="${2:-}" payload="$3" body="$4" headers="$5" code
+  local -a args
+  args=(-s -m 8 -X POST "$url"
+    -H "Content-Type: application/json"
+    -H "Accept: application/json, text/event-stream")
   if [[ -n "${PMD_HTTP_TOKEN:-}" ]]; then
-    auth=(-H "Authorization: Bearer ${PMD_HTTP_TOKEN}")
+    args+=(-H "Authorization: Bearer ${PMD_HTTP_TOKEN}")
   fi
-  local session=()
-  [[ -n "$session_id" ]] && session=(-H "Mcp-Session-Id: $session_id")
-  code=$(curl -s -m 8 -X POST "$url" \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json, text/event-stream" \
-    "${auth[@]}" "${session[@]}" \
+  if [[ -n "$session_id" ]]; then
+    args+=(-H "Mcp-Session-Id: $session_id")
+  fi
+  code=$(curl "${args[@]}" \
     --dump-header "$headers" -o "$body" -w '%{http_code}' \
     -d "$payload" 2>/dev/null || true)
   printf '%s' "$code"
