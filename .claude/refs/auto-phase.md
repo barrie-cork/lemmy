@@ -86,6 +86,19 @@ are auto-recoverable; user input is required.
     `.claude/rules/branch-manager.md` "File ownership boundaries"). The
     skill catch-fires and halts; user must surface the rule citation
     to the breached subagent's task output.
+11. **`--unattended` allowlist violation.** Under `--unattended`, the
+    skill MUST refuse to auto-clear any of the four judgment gates
+    (1 plan-approval, 2 ADR/scope-DQ, 3 CR-triage, 5 merge-confirm) and
+    MUST refuse to write `decision: "user"` for a policy auto-clear.
+    The allowlist is exhaustive (only gates 4 e2e→local + 6 retro
+    sign-off auto-clear) and is NOT runtime-extensible — no flag widens
+    it. The full hard contract (park-and-ping mechanics, the gate-6
+    3-check sanity gate, audit-honesty rule) lives in
+    `~/.claude/commands/auto-phase.md` "Phase 7 — `--unattended` gate
+    allowlist". A merge fired while unattended, or a `"user"` decision
+    label on an auto-clear, is a catch-fire in the same class as a
+    forged `answered_by: "advisor"`. Per
+    `feedback_auto_phase_unattended_gate_allowlist.md`.
 
 ## Skill ownership boundaries
 

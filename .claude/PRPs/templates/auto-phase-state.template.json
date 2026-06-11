@@ -51,6 +51,11 @@
     "started_at": "2026-05-07T14:30:00Z"
   },
   "_error_class_history_note": "Per advisor-orchestrator.md §5.3 cycle-count meta-rule. Each entry: {workflow_run_id, error_class, file, ts}. Appended on every result: fail; count ≥3 same (error_class, file) → catch-fire (no fix-impl). File = basename only (line numbers drift). Phase 0.5 Step A backfills [] on resume against older state files.",
+  "unattended": false,
+  "_unattended_note": "Set true when /auto-phase was invoked with --unattended (opt-in partial-autonomy). When true, the skill auto-clears the two allowlisted gates (4 e2e→local; 6 retro sign-off after a 3-check sanity gate) and parks-and-pings the four judgment gates (1 plan, 2 ADR/scope-DQ, 3 CR-triage, 5 merge). Default false = all six gates interactive. The full hard contract is in ~/.claude/commands/auto-phase.md 'Phase 7 — --unattended gate allowlist'. NOT a model-driven decision: a fixed policy table executed by the Opus advisor; no cheap-model agent is spun up.",
+  "unattended_e2e_override": null,
+  "_unattended_e2e_override_enum": ["dispatch", null],
+  "_unattended_e2e_override_note": "Set to 'dispatch' iff --unattended --e2e dispatch was passed (force the billed, public-log CI path at gate 4 instead of the auto-local default). null = use the local default. Ignored when unattended is false.",
   "phase_2_e2e_mode": null,
   "_phase_2_e2e_mode_enum": ["local", "dispatch", null],
   "phase_2_e2e_mode_chosen_at": null,
@@ -77,6 +82,8 @@
       "notes": null
     }
   ],
+  "_user_gate_history_decision_enum": ["approve", "reject", "user", "parked-pending-user", "auto-approve-unattended"],
+  "_user_gate_history_decision_note": "decision values: 'approve'/'reject'/'user' = a HUMAN cleared the gate (decided_at non-null). 'parked-pending-user' = an --unattended gate reached but not yet answered (decided_at null; overwritten with the real decision when the user returns). 'auto-approve-unattended' = the --unattended policy auto-cleared an ALLOWLISTED gate (4 e2e-local, 6 retro sign-off) — NEVER write 'user' for a policy auto-clear (attribution breach per decision-queue.md 'Attribution integrity'). A retro reading this array distinguishes human-touched gates from policy-cleared ones.",
   "push_grants_used": 0,
   "catch_fire": null,
   "_catch_fire_shape": {
