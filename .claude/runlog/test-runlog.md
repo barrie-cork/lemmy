@@ -14,3 +14,11 @@
 - **Base ← Head:** governance-v0 ← phase-test
 - **Body source:** commits-only
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 195`
+
+## bm: triage — 2026-06-11T23:30:00Z
+- **PR:** #195
+- **Buckets:** fix-in-pr 2 | rebut 0 | carry-forward 0 | done 0 | wont-fix 0
+- **Comment posted?** pending (awaiting user confirmation)
+- **Carry-forward issues filed:** 0
+- **Recommendation:** request-changes
+
