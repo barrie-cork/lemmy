@@ -1,61 +1,72 @@
-# Handover — PMD homeserver cutover (finish) + m2-late-2 dogfood (start)
+# Handover — PMD cutover + Junior hook bug + m2-late-2/test dogfood (REV 2, 2026-06-11 evening)
 
-**Date:** 2026-06-11. **Author session:** advisor on P50 (laptop), CWD `C:/Users/barri/Developer/brehon-fork`, branch `governance-v0`.
-**Read this with zero conversation context.** Two independent remaining threads below.
-
----
-
-## Thread A — Finish the PMD homeserver cutover (1 step left)
-
-### Background
-The canonical Brehon PMD is being migrated from the **laptop** to **homeserver**. The IP `100.104.171.26` is the **LAPTOP** (`desktop-jtgr71s`); homeserver is `100.81.145.58`. A stale `pmd-invariants.md` value (now fixed, commit `6deae5665`) caused `.mcp.json` to point at the laptop daemon last session, splitting 4 rows.
-
-### Done this session (all verified)
-1. **Migrated 4 divergent rows (ids 938–941)** laptop → homeserver via guarded idempotent INSERTs. homeserver store is now the **superset: 820 memories, max_id 941, 0 unembedded** (backfill timer embedded them).
-2. **Laptop `.mcp.json`** project-memory → `http://100.81.145.58:11435/mcp` (homeserver), Bearer auth preserved. End-to-end MCP handshake verified. Takes effect on NEXT session restart.
-3. **EliteDesk `/srv/brehon-fork/.mcp.json`** (Junior workers) project-memory → `http://100.81.145.58:11435/mcp`. Backup at `/srv/brehon-fork/.mcp.json.bak-cutover-20260611`. Verified homeserver reachable from homeserver via both Tailscale IP and localhost.
-4. **Docs fixed:** `pmd-invariants.md` #1 (committed `6deae5665`), `project_pmd_homeserver_http_topology.md` memory, MEMORY.md index line — all now show `100.81.145.58` + the IP-trap warning.
-
-### THE ONE REMAINING STEP — retire the laptop daemon
-The laptop runs an NSSM service **`pmd-http-mcp`** (StartType Automatic, node PID 5532 / nssm PID 4744) serving the now-stale laptop DB `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db`. It must be **stopped + disabled** so no stray write splits the store again. **Deferred to a fresh session** because (a) stopping an auto-start service is the riskiest step, (b) it should be gated on a real Junior round-trip proving workers reach homeserver.
-
-**Safe order to finish (fresh session):**
-1. Confirm no client is mid-write: `Get-NetTCPConnection -LocalPort 11435 -State Established` (expect only loopback/self).
-2. Dispatch ONE trivial Junior task (or wait for the m2-late-2 bm-cut below) and confirm its `memory_write_eval` retro lands on **homeserver** (`ssh homeserver 'sqlite3 /srv/brehon-fork/.project-memory/memory.db "SELECT MAX(id), MAX(created_at) FROM memories"'` advances). This proves the EliteDesk repoint works before retiring the laptop daemon.
-3. Then retire: `Stop-Service pmd-http-mcp; Set-Service pmd-http-mcp -StartupType Disabled` (PowerShell, may need elevation). Verify: `Get-Service pmd-http-mcp` → Stopped/Disabled.
-4. The laptop DB is now a frozen backup — do NOT delete (rollback safety). The laptop `.mcp.json.bak-homeserver-20260611` and EliteDesk `.mcp.json.bak-cutover-20260611` are rollback copies.
-
-**Verification the cutover is fully complete:** both `.mcp.json` files → `100.81.145.58`; laptop `pmd-http-mcp` Stopped+Disabled; a fresh `memory_write` round-trips to homeserver only.
-
-### Watch
-- `pmd-invariants.md` still has older sub-sections + many handover/brief files citing `100.104.171.26` as historical record — NOT swept this session (they're point-in-time). Only the live rule #1 was corrected. Don't mass-rewrite history; fix on-touch.
+**Date:** 2026-06-11 (rev 2, ~20:30 local). **Author session:** advisor on laptop, CWD `C:/Users/barri/Developer/brehon-fork`, branch `governance-v0`.
+**Read this with zero conversation context.** Supersedes the morning rev of this file. Three threads below; one is newly-discovered (Thread C, a Junior daemon bug now filed as a GH issue).
 
 ---
 
-## Thread B — m2-late-2 dogfood (NOT yet started)
+## ⚠️ Session-start gotcha that WILL recur
 
-### Why
-User wants to **dogfood the /auto-phase context-management wiring** (schema-v3 ledger, digest ring, spill guard, auto-handover, digest-first resume — applied to `~/.claude/commands/{auto-phase,compact-phase}.md` last session, commit `cd7f9dff0`, Phase D + Phase E validated). User chose to dogfood by running **m2-late-2 for real** (the genuine next sub-phase) rather than a sandbox.
+This canonical checkout is **shared by 2-3 concurrent CC sessions** (seen 2026-06-11: transcripts `df821efb`, `6db85786` writing live). The foreign-WIP guard (`feedback_canonical_checkout_foreign_wip_means_stop.md`) fires every time. At this rev's wrap, the tree carried **3 foreign deletions** (`.claude/PRPs/v1-AD-c-runlog/*`) from a concurrent session — NOT mine, left untouched. Before ANY meta-work: `git status --short` + check `ls -t ~/.claude/projects/C--Users-barri-Developer-brehon-fork/*.jsonl | head` for live transcripts. Commit ONLY your own files via atomic burst (stage-specific → commit -F → show --stat verify).
 
-### Pre-flight done this session
-- Trunk pushed: origin `governance-v0` = `bd5270225` (was 4 behind). **NOTE: HEAD has since advanced** — concurrent session committed `f2092a06d` then this session committed `6deae5665`. Re-fetch + re-verify trunk before bm-cut.
-- Daemon-local trunk synced once (`be8134d0b` → `bd5270225`); **re-sync before bm-cut** since HEAD moved again: `ssh homeserver 'cd /srv/brehon-fork && git fetch origin governance-v0 && git update-ref refs/heads/governance-v0 origin/governance-v0'`.
-- No `phase-m2-late-2` branch exists yet (clean to cut).
-- **m2-late-2 has NO plan authored yet.** Scope (per workflow_state_m2_late_2 + bootstrap): bridge power-level enforcement + CR-A atomicity fix + pilot verification.
+---
+
+## Thread C — Junior `create_hook` is BROKEN (NEW; GH issue filed) — DO NOT retry blindly
+
+**Status:** root-caused, filed, parked. The Telegram completion hook (✅/❌ on task done/failed) **cannot be created** right now. It is **non-gating** — poll `list_tasks` for completion; never stall on it (`feedback_daemon_telegram_completion_hook.md`).
+
+**GH issue:** https://github.com/barrie-cork/junior-mcp/issues/1
+**PMD:** issue-note id 941 (`memory_search_hybrid "junior hook add claude -p MCP init hang"`).
+
+**Root cause (isolated, falsified 4 wrong hypotheses first):** `create_hook` → daemon `junior hook add` → `extractHook()` spawns bare `claude -p ... --model haiku` (NO explicit `--mcp-config`). That bare launch **hangs intermittently (exit 124)** inside any project dir because `claude`'s default MCP auto-init stalls. Proof: `claude -p` in `/tmp` (no `.mcp.json`) → exit 0; in any `/srv/<project>` → exit 124; in `/srv/brehon-fork --strict-mcp-config --mcp-config "{}"` → exit 0. Workers are unaffected (daemon gives them explicit `--mcp-config`). The `"Junior MCP not configured"` warning is **cosmetic** (it's a `detectMcp` check for an `mcpServers.junior` key) — NOT the cause; a hook WAS created via this same path on 2026-05-30.
+**Fix is in the junior-mcp binary** (issue suggests `--strict-mcp-config --mcp-config "{}"` for extraction, or a timeout). Nothing to fix on our side. Do NOT re-edit `.mcp.json` or trust state chasing this.
+
+**Config residue left in place (harmless):** daemon `~/.claude.json` `/srv/brehon-fork` set `hasTrustDialogAccepted: true` (was false; six siblings were true). Backup `~/.claude.json.bak-trust-20260611-191824`. Did NOT fix the hang; kept as hygiene only.
+
+---
+
+## Thread A — Finish PMD homeserver cutover (round-trip INCONCLUSIVE; daemon NOT yet retired)
+
+### Verified this session
+- homeserver PMD live store baseline: **max_id 941, max_created 2026-06-11 18:48:55, total 820**.
+- EliteDesk `/srv/brehon-fork/.mcp.json` project-memory → `http://100.81.145.58:11435/mcp` (type http, Bearer). ✅ repoint confirmed; `PMD_HTTP_TOKEN` in `.env`.
+- homeserver `project-memory-http.service` active (PID 1166528).
+- Workers DO get `project-memory` + `Ref` MCP (daemon passes `--mcp-config <repo>/.mcp.json`; job-649 worktree confirmed both servers).
+
+### ⚠️ Round-trip NOT cleanly proven
+Dispatched job-649 (`[role:smoke]` PMD round-trip). Worker **ran successfully** (result success, "✅ PASS", model opus-4-8, 17 min). BUT:
+- It branched off **`phase-m2-late-1`**, NOT my `smoke/pmd-roundtrip-20260611` throwaway — **the daemon ignored the `base_branch` override** (daemon checkout was on phase-m2-late-1). Watch this for any future base_branch override.
+- **homeserver PMD max_id stayed at 941** — no new INSERT. The worker's PMD activity ("boost 200 on 649 round-trip") was a read/pheromone UPDATE, not a `memory_write_eval` INSERT that incremented max_id. So we did NOT prove a worker write lands on homeserver.
+
+### THE REMAINING STEP — retire laptop daemon (still gated, now on a CLEAN round-trip)
+Laptop NSSM service **`pmd-http-mcp`** (was: node PID 5532 / nssm 4744) still serves the stale laptop DB. **Do NOT retire until a worker write is confirmed on homeserver.** Next session:
+1. Dispatch ONE trivial Junior task whose ONLY job is `memory_write_eval` (or a plain `memory_write`), then verify `ssh homeserver 'sqlite3 /srv/brehon-fork/.project-memory/memory.db "SELECT MAX(id),MAX(created_at) FROM memories"'` advances **past 941**. (job-649's success without an INSERT means a read-only smoke is insufficient — make the next one write-and-verify.)
+2. Only then: `Get-NetTCPConnection -LocalPort 11435 -State Established` (expect loopback only), `Stop-Service pmd-http-mcp; Set-Service pmd-http-mcp -StartupType Disabled`, verify Stopped/Disabled.
+3. Do NOT delete laptop DB (rollback backup). Rollback copies: laptop `.mcp.json.bak-homeserver-20260611`, EliteDesk `.mcp.json.bak-cutover-20260611`.
+
+---
+
+## Thread B — Dogfood `/auto-phase` (user wants `/auto-phase test` next session)
+
+**User's latest direction (2026-06-11 evening):** "begin `/auto-phase test` in the next new session." This supersedes "run m2-late-2 for real" as the dogfood vehicle — `test` is a sandbox sub-phase to exercise the new context-management wiring without committing real m2-late-2 scope. (If `test` is not a real roadmap sub-phase and `/auto-phase test` errors, fall back to m2-late-2 per the original plan — confirm with user.)
+
+### What the dogfood is exercising
+The `/auto-phase` + `/compact-phase` context-management wiring applied 2026-06-11 (commit `cd7f9dff0`, Phase D+E validated): schema-v3 auto-state ledger, digest ring, spill guard (>16000-char tool results spill to `.claude/auto-state/<phase>.spill/`), auto-handover refresh, digest-first resume.
 
 ### Resume path (fresh session)
-1. `git -C C:/Users/barri/Developer/brehon-fork worktree list` + `git status` (canonical-checkout foreign-WIP guard — there WAS a concurrent session this session, 2 lesson files left dirty: `feedback_canonical_checkout_foreign_wip_means_stop.md`, `feedback_falsifiable_hypothesis_before_structural_fix.md` — confirm they're committed/clean or still foreign before meta-work).
-2. Read `.claude/PRPs/handovers/m2-late-2-bootstrap.md` (full handoff letter) + `workflow_state_m2_late_2.md`.
-3. `/auto-phase m2-late-2` → Phase 0 prereqs → bm-cut → planning brief → `/brehon-clarify` → queue planning Junior → … This exercises the new wiring live (Phase 1 standing rules fire on each stage transition; the auto-state ledger at `.claude/auto-state/m2-late-2.json` gets created fresh with schema_version 3).
-4. **Dogfood observation checklist** (Phase F of the auto-phase validation plan — record in a report): on first stage transition, `stage_digests` gets an entry; on any >16000-char tool result, a spill file appears under `.claude/auto-state/m2-late-2.spill/`; auto-handover refreshes `.claude/PRPs/handovers/m2-late-2-auto-<date>.md` + ledger pointers; on any compact/resume, `/compact` uses `stage_digests[-1]` and Phase 0.5 Step E uses `stage_digests[-3:]`.
+1. Foreign-WIP guard (above) — `git status`, check live transcripts.
+2. `git fetch origin governance-v0` — verify trunk. Local was `23798109e` (pushed to origin this session). **NOTE: a concurrent session left 3 `.claude/PRPs/v1-AD-c-runlog/*` deletions uncommitted — confirm committed/clean or still foreign before meta-work.**
+3. Re-sync daemon-local trunk before any bm-cut: `ssh homeserver 'cd /srv/brehon-fork && git fetch origin governance-v0 && git update-ref refs/heads/governance-v0 origin/governance-v0'` (use `update-ref`, NOT `reset --hard` — `feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md`). **Daemon checkout was on `phase-m2-late-1` this session — check `git -C /srv/brehon-fork branch --show-current` and that no stray task is mid-flight.**
+4. `/auto-phase test` → Phase 0 prereqs → bm-cut → planning → `/brehon-clarify` → planning Junior → …
+5. Dogfood observation checklist (record in a report): first stage transition creates `stage_digests` entry; >16000-char tool result → spill file; auto-handover refreshes `.claude/PRPs/handovers/test-auto-<date>.md`; compact/resume uses `stage_digests[-1]` / `[-3:]`.
 
-### Gates that WILL fire (don't skip — user-gated)
-Plan approval, CR triage, Phase-2 e2e local-vs-dispatch, merge confirm, retro sign-off (per advisor-orchestrator §3.2). NO-CARGO-ON-ELITEDESK hard rule applies (workers write `validate-pending-laptop` + stop; laptop runs cargo/e2e).
+### Gates that WILL fire (user-gated, don't skip)
+Plan approval, CR triage, Phase-2 e2e local-vs-dispatch, merge confirm, retro sign-off (advisor-orchestrator §3.2). NO-CARGO-ON-ELITEDESK applies. (For a `test` sandbox sub-phase, several gates may be vacuous — but the wiring should still fire them.)
 
 ---
 
-## Repo state at handover
-- Branch `governance-v0`, HEAD `6deae5665` (my PMD-topology doc fix).
-- Working tree: 2 foreign lesson files modified (concurrent session's WIP — NOT mine, left untouched).
-- My committed work this session: `cd7f9dff0` (auto-phase wiring, prior session) + `6deae5665` (PMD topology doc fix). PMD-migration was DB-side (homeserver), no repo commit needed.
-- `.mcp.json` (laptop, gitignored) repointed to homeserver — effective next restart.
+## Repo state at this handover
+- Branch `governance-v0`, HEAD `23798109e` (concurrent session's lesson commit; pushed to origin this session).
+- Working tree: 3 foreign deletions under `.claude/PRPs/v1-AD-c-runlog/` (concurrent session WIP — NOT mine) + this handover file edit (mine).
+- My committed work this session: this handover rev only. The `.mcp.json` repoint + daemon trust change + GH issue + PMD id 941 are out-of-repo (no commit).
+- Outstanding: Telegram hook BROKEN (Thread C, filed); PMD cutover round-trip unproven (Thread A); `/auto-phase test` not yet started (Thread B).
