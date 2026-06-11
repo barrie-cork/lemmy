@@ -108,6 +108,15 @@ The skill **WRITES**:
 - `.claude/auto-state/<phase>.digests.jsonl` — append-only overflow
   for the `stage_digests` ring once it exceeds the cap (schema-v2,
   gitignored sibling under `.claude/auto-state/`).
+- `.claude/auto-state/<phase>.spill/<stage>-<tool>-<ts>.txt` —
+  uniform tool-output spill guard target (schema-v3, gitignored
+  sibling; head+tail+path kept in context, full output spilled here).
+- `.claude/PRPs/handovers/<phase>-auto-<date>.md` — auto-emitted,
+  refreshed on each stage transition from the latest digest +
+  durable ledger fields; satisfies the `advisor-orchestrator.md` §1
+  pre-compact handover discipline automatically. Tracked,
+  advisor-owned; committed with a `chore(advisor):` subject per the
+  attribution-integrity pattern.
 - The advisor's own commit subjects MUST follow attribution-integrity
   patterns (e.g. `chore(advisor): ` for state-machine transitions,
   `docs(advisor): ` for L14 retro re-applies).
