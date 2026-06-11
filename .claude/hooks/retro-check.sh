@@ -122,8 +122,17 @@ fi
 
 # --- HTTP PMD check (Option A -- preferred when MCP type=http) ---
 # Two-step MCP session: POST initialize to get mcp-session-id header, then POST
-# tools/call to search for recent retros. Python3 parses SSE JSON response and
+# tools/call to fetch recent retros. Python3 parses SSE JSON response and
 # applies the same branch-scope + time-window filter as the sqlite path.
+#
+# v5 -- switched the tools/call from memory_search to memory_get_recent.
+#       memory_search ranks by FTS5/BM25 relevance, so a freshly-written retro
+#       routinely fell outside the limit:20 candidate set (the top 20 "Task retro"
+#       matches were older, higher-scoring entries) -- producing false "not found"
+#       blocks even when the current task's retro existed. memory_get_recent
+#       returns newest-first, guaranteeing a just-written retro is in the set.
+#       Identical response schema, so the Python window/branch filter is unchanged.
+#       (Documented failure: PMD #893 "BM25 limit:20 ranking excludes new entries".)
 HTTP_RECENT=0
 if [ "$_HAVE_HTTP" -eq 1 ] && command -v python3 &>/dev/null; then
   _HDR=$(mktemp /tmp/.pmd-rc-XXXXXX 2>/dev/null || echo "/tmp/.pmd-rc-$$")
@@ -147,7 +156,7 @@ if [ "$_HAVE_HTTP" -eq 1 ] && command -v python3 &>/dev/null; then
       -H "Content-Type: application/json" \
       -H "Mcp-Session-Id: $_SID" \
       -X POST "$PMD_HTTP_URL" \
-      -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"memory_search","arguments":{"query":"Task retro","memory_type":"qa-result","limit":20}},"id":2}' \
+      -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"memory_get_recent","arguments":{"memory_type":"qa-result","limit":20}},"id":2}' \
       2>/dev/null | grep '^data:' | head -1 | sed 's/^data: //' || true)
 
     if [ -n "$_SR" ]; then
