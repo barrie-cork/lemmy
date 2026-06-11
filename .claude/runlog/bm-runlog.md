@@ -2278,3 +2278,19 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Base ← Head:** governance-v0 ← phase-m2-rooms-a
 - **Body source:** plan + commit log
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 191`
+
+## 2026-06-11T23:31Z — bm-poll-cr (test-bm-poll-cr-1 task #657)
+
+- **Action:** Initial poll on PR #195 (phase-test → governance-v0)
+- **PR:** #195 — Phase test — dogfood sandbox: pure helper through the full /auto-phase pipeline
+- **URL:** https://github.com/barrie-cork/lemmy/pull/195
+- **Head SHA at poll:** 9b0c10f3
+- **CodeRabbit review:** complete (posted 2026-06-11T23:29:02Z)
+- **Copilot review:** skipped (quota limit reached)
+- **Findings ingested:** 2
+  - cr-1: major — validate-pending DQ kind field should be validate-pending-laptop
+  - cr-2: low — markdown formatting (MD022 missing blank line)
+- **Counters:** major 1 | low 1 | total 2
+- **Recommendation:** pending
+- **YAML:** .claude/PRPs/reviews/pr-195-findings.yaml
+- **Notes:** Test phase to dogfood the /auto-phase pipeline. Two minor findings from CodeRabbit review. This is a test run of the bm-poll-cr verb.
