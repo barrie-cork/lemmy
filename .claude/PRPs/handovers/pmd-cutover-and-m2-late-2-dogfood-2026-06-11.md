@@ -74,10 +74,12 @@ The EliteDesk daemon checkout `/srv/brehon-fork` was found in a messy-but-recove
 - **`git checkout governance-v0` ABORTED** — the daemon worktree has **stale Pi-comparator WIP**: 5 modified `scripts/brehon/comparator-*.sh` + untracked `.claude/PRPs/comparator/runs/planning-00{2..8}/`, mtimes **June 7-8** (NOT live — abandoned artifacts from the planning-001..008 comparator runs). Did NOT force checkout/stash (it's the comparator owner's uncommitted work). HEAD stays on phase-m2-late-1 until that WIP is committed/cleaned.
 - **`governance-v0-local` (`39e48ac65`)** — harmless 3rd trunk ref, ancestor of origin (old SL-c-1 bm-pr brief commit). Leave it. Daemon has **59 local branches** (ab-cell/ab-test/planning-* cruft) — cleanup candidate, non-urgent.
 
-**Next-session bm-cut prerequisite (do BEFORE `/auto-phase test`):**
-1. `ssh homeserver 'cd /srv/brehon-fork && git fetch origin governance-v0 && git update-ref refs/heads/governance-v0 origin/governance-v0'` (re-sync to `137fc1aad`+).
-2. Decide what to do with the stale comparator WIP (ask user — commit it under a comparator-artifacts commit, or `git stash` it on the daemon). Only then can the daemon HEAD return to `governance-v0`.
-3. If `/auto-phase test` bm-cut branches from `refs/heads/governance-v0` (the ref, not HEAD), the parked HEAD is tolerable — but a clean daemon-on-governance-v0 is safer. Verify `git -C /srv/brehon-fork branch --show-current` = governance-v0 before dispatch.
+**RESOLVED this session (2026-06-11 evening):** Daemon checkout fully cleaned + ready for bm-cut:
+- Stale Pi-comparator WIP **preserved** at `/home/barrie/comparator-preserved/` on the daemon: `runs/` = the full 4.8 GB raw run tree (planning-001..008); `script-edits-20260611/daemon-local-script-edits.patch` = the 5 local script edits (which **reverted the shipped MIN_DIGEST guard** `7ba8a20c7` — discarded from tree but saved in patch in case any edit was intentional). The **canonical** comparator results (20 files) remain committed in trunk `.claude/PRPs/comparator/runs/`.
+- Daemon reset/cleaned, checked out `governance-v0`, ff'd to `835b8039a` (= origin), **`phase-m2-late-1` branch deleted** (was `e53592bb0`, pure merge, content in trunk via PR #192). Tree 100% clean, 0 modified/untracked.
+- `governance-v0-local` (`39e48ac65`) left as-is (harmless ancestor ref). 59→58 local branches; ab-cell/ab-test cruft cleanup still non-urgent.
+
+**Next-session bm-cut: daemon is READY.** Just re-fetch/ff trunk if origin advanced since `835b8039a`, confirm `git -C /srv/brehon-fork branch --show-current` = governance-v0 (it is), then `/auto-phase test`.
 
 ---
 
