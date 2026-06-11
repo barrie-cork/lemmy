@@ -30,7 +30,6 @@
       "approved_by": null,
       "approved_at": null
     },
-
     {
       "id": "001f1c47c5dc-001",
       "from": "impl",
@@ -6896,6 +6895,23 @@
       "resolved_at": "2026-06-07T21:47:54Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "question": "Planning dispatch named .claude/PRPs/briefs/test-planning-1.md but that brief does not exist on phase-test — author plan anyway, or hard-block?",
+      "options": [
+        "reconstruct-intent-from-committed-sibling",
+        "hard-block-missing-brief"
+      ],
+      "context": "test-planning-1.md absent on this branch. Committed sibling .claude/PRPs/briefs/test-bm-cut-1.md @3a3a9fa5f §2 declares this a 'test dogfood sandbox' whose plan is authored by the planning Junior post-cut. Because the phase is an explicitly-declared sandbox (not a real feature), reconstructing scope from the sibling and authoring a minimal CI-validatable plan is the right call; a hard-block would defeat the dogfood's purpose of exercising the full /auto-phase pipeline.",
+      "answer": "Reconstructed intent from the committed sibling test-bm-cut-1.md and authored .claude/PRPs/plans/test.plan.md — a 3-task (pre-flight + 1 impl + retro) Shape-G plan delivering a single pure helper (sandbox_clamp) in a new crates/utils/src/sandbox.rs module + unit test. Zero governance/ADR/migration/e2e surface; complexity score 1/10. For a non-sandbox phase a missing brief would have been kind:blocker; the sandbox designation in the sibling is what made reconstruction the right call. Advisor may author test-planning-1.md retroactively for the audit trail.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-11T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "79242a47c9c5-001"
     }
   ]
 }
