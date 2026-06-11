@@ -1,0 +1,100 @@
+{
+  "schema_version": 3,
+  "phase": "test",
+  "started_at": "2026-06-11T20:27:00Z",
+  "session_id": "b7e3f2a9c041",
+  "last_session_ended_at": null,
+  "resume_count": 1,
+  "stage": "bm-poll-cr-running",
+  "last_known_phase_tip": "50195e511",
+  "current_cohort": {
+    "n": 1,
+    "members": [
+      {
+        "task_number": 0,
+        "junior_id": 654,
+        "brief": ".claude/PRPs/briefs/test-impl-task-0.md",
+        "status": "complete",
+        "validate_pending_dq_id": null,
+        "error_class_history": []
+      },
+      {
+        "task_number": 1,
+        "junior_id": 655,
+        "brief": ".claude/PRPs/briefs/test-impl-task-1.md",
+        "status": "complete",
+        "validate_pending_dq_id": "6b7c4b329002-001",
+        "error_class_history": []
+      }
+    ],
+    "cohort_type": "serial-impl",
+    "barrier_reached": true
+  },
+  "phase_2_e2e_mode": null,
+  "phase_2_e2e_mode_chosen_at": null,
+  "junior_tasks": {
+    "bm-cut": 652,
+    "planning": 653,
+    "task-0-preflight": 654,
+    "task-1-impl": 655,
+    "bm-pr": 656,
+    "bm-poll-cr": 657,
+    "bm-triage": null
+  },
+  "last_action": "bm-pr #656 done; PR #195 open (phase-test → governance-v0); bm-poll-cr Junior #657 queued",
+  "last_action_at": "2026-06-12T09:00:00Z",
+  "last_poll_at": "2026-06-12T09:00:00Z",
+  "last_fetch_at": "2026-06-12T09:00:00Z",
+  "last_dq_pending_count": 0,
+  "last_dq_pending_ids": [],
+  "user_gate_history": [
+    {
+      "gate": "plan-file-prereq-override",
+      "decided_at": "2026-06-11T20:27:00Z",
+      "decision": "waived — test dogfood sandbox; plan will be authored by planning Junior",
+      "notes": "user chose 'Proceed from init anyway' at AskUserQuestion gate"
+    },
+    {
+      "gate": "plan-approval",
+      "decided_at": "2026-06-11T21:18:00Z",
+      "decision": "approved — Rust + Shape G path (planner diverged from brief: sandbox_clamp in crates/utils/ instead of non-cargo meta tasks)",
+      "notes": "user chose 'Approve — Rust + Shape G (Recommended)'"
+    }
+  ],
+  "push_grants_used": 0,
+  "catch_fire": null,
+  "stage_digests": [
+    {
+      "stage": "bm-cut-running",
+      "entered_at": "2026-06-11T20:27:00Z",
+      "outcome": "Fresh init; plan-file prereq waived (test dogfood); bm-cut brief committed on governance-v0; Junior [role:bm-task] queued",
+      "key_ids": {"cohort": null, "junior": 652, "dq": null, "pr": null},
+      "next_action_hypothesis": "Wait ~2 min for bm-cut Junior to complete; verify phase-test branch exists on origin; then author planning brief"
+    },
+    {
+      "stage": "planning-running",
+      "entered_at": "2026-06-11T20:34:00Z",
+      "outcome": "bm-cut #652 done in 89s; phase-test @ 75e38ded1; no finalize-merge hazard; planning brief committed on governance-v0; planning Junior queued",
+      "key_ids": {"cohort": null, "junior": 653, "dq": null, "pr": null},
+      "next_action_hypothesis": "Wait ~30-90 min for planning Junior #653 to author test.plan.md; run DoD smoke + watchpoint gate; surface plan-approval AskUserQuestion (gate 1)"
+    },
+    {
+      "stage": "impl-cohort-1-running",
+      "entered_at": "2026-06-11T21:20:00Z",
+      "outcome": "planning #653 done in ~7 min; plan approved (gate 1, Rust+Shape G); governance-v0 synced to phase-test; task-0 brief + task-1 brief committed; Junior #654 (task-0 preflight) queued",
+      "key_ids": {"cohort": 1, "junior": 654, "dq": null, "pr": null},
+      "next_action_hypothesis": "Wait ~2-5 min for task-0 preflight #654 to complete (probe-only, no commit); on PROBES:ALL PASS, queue task-1 impl Junior; on PROBE FAIL, surface blocker DQ"
+    },
+    {
+      "stage": "impl-cohort-1-task1-running",
+      "entered_at": "2026-06-12T00:05:00Z",
+      "outcome": "task-0 #654 PROBES:ALL PASS (submodule inited, sandbox.rs absent, anchor unique, workflow present, no conflicting PRs); task-1 impl #655 queued on phase-test",
+      "key_ids": {"cohort": 1, "junior": 655, "dq": null, "pr": null},
+      "next_action_hypothesis": "Wait ~5-15 min for task-1 #655 to push sandbox_clamp + write validate-pending DQ; then read DQ for workflow_run_id; dispatch ci-watcher"
+    }
+  ],
+  "digest_overflow_path": ".claude/auto-state/test.digests.jsonl",
+  "spill_dir": ".claude/auto-state/test.spill/",
+  "last_handover_path": ".claude/PRPs/handovers/test-auto-2026-06-12.md",
+  "last_handover_at": "2026-06-12T00:05:00Z"
+}
