@@ -14,12 +14,79 @@
 
 set -euo pipefail
 
+# --- Read hook-input JSON from stdin (Claude Code pipes it to the command) ---
+# Stop hooks receive {session_id, transcript_path, cwd, permission_mode, ...}
+# via STDIN, NOT environment variables. There is NO CLAUDE_SESSION_ID env var
+# (verified against code.claude.com/docs/en/hooks 2026-06-11); the prior
+# ${CLAUDE_SESSION_ID:-${PPID}} reference always fell through to the UNSTABLE
+# PPID. We read stdin ONCE here so the real, stable session_id is available to
+# the session-age gate below.
+HOOK_STDIN=""
+if [ ! -t 0 ]; then
+  HOOK_STDIN="$(cat || true)"
+fi
+SESSION_ID=""
+if [ -n "$HOOK_STDIN" ] && command -v jq >/dev/null 2>&1; then
+  SESSION_ID="$(printf '%s' "$HOOK_STDIN" | jq -r '.session_id // ""' 2>/dev/null || true)"
+fi
+# Fallback key only if stdin parse failed (keeps the gate functional but
+# coarser). Sanitize to a filesystem-safe token.
+[ -z "$SESSION_ID" ] && SESSION_ID="ppid-${PPID:-unknown}"
+SESSION_ID="$(printf '%s' "$SESSION_ID" | tr -c 'a-zA-Z0-9._-' '_')"
+
 # --- Skip conditions ---
 
 # Skip for weekly-review and audit tasks (they have their own reporting)
 PROMPT="${CLAUDE_PROMPT:-}"
 if echo "$PROMPT" | grep -qiE "weekly-review|SKILL\.md.*weekly|security.*audit|security.*scan"; then
   exit 0
+fi
+
+# --- Session-age gate (fixes false nag on fresh/idle sessions) ---
+#
+# The retro enforcement below has NO notion of how old this session is -- it
+# only asks "was a retro written in the last WINDOW_MINUTES?". A brand-new
+# session that did nothing yet would be blocked on its very first turn-end,
+# because no retro exists yet. That is the bug this gate fixes.
+#
+# Design: record the first-seen epoch per session_id. On every later Stop,
+# if the session is younger than ENFORCE_AFTER_MINUTES, fail open (exit 0)
+# without nagging. Only once a session has been alive long enough do we start
+# requiring a retro. The marker is created once and never reset, so age
+# accumulates monotonically across the session's Stop invocations.
+#
+# Keyed on the STABLE session_id from stdin (not PPID) so age survives the
+# fresh-bash-per-Stop lifecycle. Junior worktree tasks (junior/* branch) are
+# short-lived single-task runs whose retro is mandatory on completion -- they
+# are EXEMPT from the age gate so a fast task still gets its retro enforced.
+ENFORCE_AFTER_MINUTES=60
+_AGE_DIR="/tmp/cc-retro-sessions"
+mkdir -p "$_AGE_DIR" 2>/dev/null || true
+_START_FILE="${_AGE_DIR}/${SESSION_ID}.start"
+_NOW_EPOCH="$(date -u +%s 2>/dev/null || echo 0)"
+
+# Opportunistic prune: session-start markers are never deleted on their own
+# (a session has no "end" Stop), so they would accumulate forever. Drop any
+# *.start marker older than 24h on each run -- cheap, self-cleaning, no cron.
+find "$_AGE_DIR" -maxdepth 1 -name '*.start' -mmin +1440 -delete 2>/dev/null || true
+
+_BRANCH_FOR_GATE="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+if [[ "$_BRANCH_FOR_GATE" != junior/* ]]; then
+  if [ ! -f "$_START_FILE" ]; then
+    # First Stop of this session: stamp start time, do not nag yet.
+    echo "$_NOW_EPOCH" > "$_START_FILE" 2>/dev/null || true
+    exit 0
+  fi
+  _START_EPOCH="$(head -1 "$_START_FILE" 2>/dev/null || echo "$_NOW_EPOCH")"
+  # Guard against a non-numeric/empty marker.
+  case "$_START_EPOCH" in
+    ''|*[!0-9]*) _START_EPOCH="$_NOW_EPOCH" ;;
+  esac
+  _AGE_SECONDS=$(( _NOW_EPOCH - _START_EPOCH ))
+  if [ "$_AGE_SECONDS" -lt $(( ENFORCE_AFTER_MINUTES * 60 )) ]; then
+    # Session too young -- never nag.
+    exit 0
+  fi
 fi
 
 # --- Find PMD database (sqlite fallback path) ---
