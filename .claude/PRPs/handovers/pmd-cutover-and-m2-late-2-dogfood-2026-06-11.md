@@ -65,8 +65,24 @@ Plan approval, CR triage, Phase-2 e2e local-vs-dispatch, merge confirm, retro si
 
 ---
 
+## Thread D — Daemon git-state cleanup BEFORE `/auto-phase test` bm-cut (investigated; partly fixed)
+
+The EliteDesk daemon checkout `/srv/brehon-fork` was found in a messy-but-recoverable state. **Investigated, no work lost, partly reconciled:**
+
+- **HEAD parked on `phase-m2-late-1`** (tip `e53592bb0`), NOT `governance-v0`. This is why job-649 branched off `phase-m2-late-1` instead of the `base_branch` override I passed (daemon honors override inconsistently when checkout is on a non-default branch). **`e53592bb0` is a pure merge commit — both parents (`003a57f4d`, `6044bc78b`) are already in `origin/governance-v0`; PR #192 merged the real content at `be8134d0b`. Zero unique work; safe to abandon.**
+- **Daemon trunk ref FIXED this session:** `git update-ref refs/heads/governance-v0 origin/governance-v0` → daemon `governance-v0` now `23798109e` (was stale `bd5270225`). (Used `update-ref`, not `reset --hard`, per `feedback_daemon_finalize_resets_trunk_to_wrong_phase_branch.md`.) **NOTE: origin advanced again after this to `137fc1aad`** (runlog cleanup) — re-run the update-ref next session.
+- **`git checkout governance-v0` ABORTED** — the daemon worktree has **stale Pi-comparator WIP**: 5 modified `scripts/brehon/comparator-*.sh` + untracked `.claude/PRPs/comparator/runs/planning-00{2..8}/`, mtimes **June 7-8** (NOT live — abandoned artifacts from the planning-001..008 comparator runs). Did NOT force checkout/stash (it's the comparator owner's uncommitted work). HEAD stays on phase-m2-late-1 until that WIP is committed/cleaned.
+- **`governance-v0-local` (`39e48ac65`)** — harmless 3rd trunk ref, ancestor of origin (old SL-c-1 bm-pr brief commit). Leave it. Daemon has **59 local branches** (ab-cell/ab-test/planning-* cruft) — cleanup candidate, non-urgent.
+
+**Next-session bm-cut prerequisite (do BEFORE `/auto-phase test`):**
+1. `ssh homeserver 'cd /srv/brehon-fork && git fetch origin governance-v0 && git update-ref refs/heads/governance-v0 origin/governance-v0'` (re-sync to `137fc1aad`+).
+2. Decide what to do with the stale comparator WIP (ask user — commit it under a comparator-artifacts commit, or `git stash` it on the daemon). Only then can the daemon HEAD return to `governance-v0`.
+3. If `/auto-phase test` bm-cut branches from `refs/heads/governance-v0` (the ref, not HEAD), the parked HEAD is tolerable — but a clean daemon-on-governance-v0 is safer. Verify `git -C /srv/brehon-fork branch --show-current` = governance-v0 before dispatch.
+
+---
+
 ## Repo state at this handover
-- Branch `governance-v0`, HEAD `23798109e` (concurrent session's lesson commit; pushed to origin this session).
-- Working tree: 3 foreign deletions under `.claude/PRPs/v1-AD-c-runlog/` (concurrent session WIP — NOT mine) + this handover file edit (mine).
-- My committed work this session: this handover rev only. The `.mcp.json` repoint + daemon trust change + GH issue + PMD id 941 are out-of-repo (no commit).
-- Outstanding: Telegram hook BROKEN (Thread C, filed); PMD cutover round-trip unproven (Thread A); `/auto-phase test` not yet started (Thread B).
+- Laptop branch `governance-v0`, HEAD **`137fc1aad`** (pushed to origin; laptop=origin in sync). Commits this session: lesson `23798109e` (pushed for concurrent session), handover rev 2 `2bd989568`, runlog cleanup `137fc1aad`.
+- The 3 `.claude/PRPs/v1-AD-c-runlog/` deletions were **user-made cleanup** (v1-AD-c shipped PR #81, runlog archived) — committed `137fc1aad`. (Earlier rev of this handover wrongly called them foreign — corrected.)
+- Out-of-repo work this session (no commit): `.mcp.json` repoint (done prior session), daemon `~/.claude.json` trust toggle (Thread C residue), GH issue barrie-cork/junior-mcp#1, PMD issue-note id 941, daemon `update-ref` trunk sync (Thread D).
+- **Outstanding:** Telegram hook BROKEN (Thread C, filed #1, non-gating); PMD cutover round-trip UNPROVEN — laptop `pmd-http-mcp` NOT retired (Thread A); daemon stale comparator WIP + parked HEAD (Thread D); `/auto-phase test` not started (Thread B — user's next-session goal).
