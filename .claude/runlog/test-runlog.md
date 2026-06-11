@@ -7,3 +7,10 @@
 - **pushed:** yes — origin/phase-test (upstream tracking set via -u)
 - **verified:** gh api branch endpoint confirmed
 - **next:** advisor authors planning brief; planning Junior cuts plan or authors impl-task briefs; worker forks from phase-test
+## bm: PR opened — 2026-06-11T23:26:52Z
+
+- **PR:** #195 — Phase test — dogfood sandbox: pure helper through the full /auto-phase pipeline
+- **URL:** https://github.com/barrie-cork/lemmy/pull/195
+- **Base ← Head:** governance-v0 ← phase-test
+- **Body source:** commits-only
+- **Next:** wait ~5–10 min for CR; then `/bm-poll-cr 195`
