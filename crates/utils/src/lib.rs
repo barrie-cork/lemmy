@@ -13,6 +13,7 @@ cfg_select! {
 }
 
 pub mod error;
+pub mod sandbox;
 use std::time::Duration;
 
 pub type ConnectionId = usize;
