@@ -3,6 +3,14 @@
 Plan: `.claude/PRPs/plans/complete-auto-phase-context-management-validation-cleanup.plan.md`
 Executed on: `darwin` host `/Users/barrie/Developer/lemmy` (branch `work/governance-v0`).
 
+> **CLOSED OUT 2026-06-11 on P50 (Windows).** The Phases B/D/E/F deferral below was
+> resolved on the Windows advisor laptop, where the user-scope command files exist.
+> All five insertion blocks are applied and validated (Phase D grep PASS, Phase E
+> runtime sim PASS E.1–E.6). See
+> `.claude/PRPs/reports/auto-phase-user-scope-command-application-2026-06-11.md`
+> for the application + validation record. Phase F (real dogfood) remains deferred
+> to the next live sub-phase.
+
 ## Executive summary
 
 The repo-tracked half of the `/auto-phase` context-management chain (schema-v3
