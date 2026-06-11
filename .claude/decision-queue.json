@@ -1,30 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending",
-      "timestamp": "2026-06-11T23:06:55Z",
-      "question": "Did cargo-validate-workspace.yml pass on Task 1 worker branch?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 sandbox_clamp impl pushed to junior/role-impl-task-test-task-1-sandbox-clamp-impl-see-claude-prps-briefs-test-impl-task-1-md-655. workflow_run_id: 0 — no GH Actions run triggered within 60s (possible credits issue)",
-      "workflow_run_id": 0,
-      "branch": "junior/role-impl-task-test-task-1-sandbox-clamp-impl-see-claude-prps-briefs-test-impl-task-1-md-655",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "6b7c4b329002-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -6936,6 +6912,29 @@
       "approved_by": null,
       "approved_at": null,
       "id": "79242a47c9c5-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending",
+      "timestamp": "2026-06-11T23:06:55Z",
+      "question": "Did cargo-validate-workspace.yml pass on Task 1 worker branch?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 sandbox_clamp impl pushed to junior/role-impl-task-test-task-1-sandbox-clamp-impl-see-claude-prps-briefs-test-impl-task-1-md-655. workflow_run_id: 0 — no GH Actions run triggered within 60s (possible credits issue)",
+      "workflow_run_id": 0,
+      "branch": "junior/role-impl-task-test-task-1-sandbox-clamp-impl-see-claude-prps-briefs-test-impl-task-1-md-655",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "advisor-laptop: cargo check --workspace exit 0 on phase-test tip 70b2cc506. Shape G workflow disabled_manually (residual-only posture); local check substitutes per validate-pending-laptop handler. All crates compile clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T09:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "6b7c4b329002-001"
     }
   ]
 }
