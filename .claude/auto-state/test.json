@@ -5,7 +5,7 @@
   "session_id": "b7e3f2a9c041",
   "last_session_ended_at": null,
   "resume_count": 1,
-  "stage": "bm-poll-cr-running",
+  "stage": "bm-triage-running",
   "last_known_phase_tip": "50195e511",
   "current_cohort": {
     "n": 1,
@@ -39,12 +39,12 @@
     "task-1-impl": 655,
     "bm-pr": 656,
     "bm-poll-cr": 657,
-    "bm-triage": null
+    "bm-triage": 658
   },
-  "last_action": "bm-pr #656 done; PR #195 open (phase-test → governance-v0); bm-poll-cr Junior #657 queued",
-  "last_action_at": "2026-06-12T09:00:00Z",
-  "last_poll_at": "2026-06-12T09:00:00Z",
-  "last_fetch_at": "2026-06-12T09:00:00Z",
+  "last_action": "bm-poll-cr #657 done; 2 findings (cr-1 major rebut, cr-2 low wont-fix); bm-triage brief authored; Junior #658 queued",
+  "last_action_at": "2026-06-12T10:30:00Z",
+  "last_poll_at": "2026-06-12T10:30:00Z",
+  "last_fetch_at": "2026-06-12T10:30:00Z",
   "last_dq_pending_count": 0,
   "last_dq_pending_ids": [],
   "user_gate_history": [
