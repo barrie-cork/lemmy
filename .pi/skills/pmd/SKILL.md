@@ -59,5 +59,5 @@ Use `pmd-doctor.sh` when Pi reports PMD startup warnings, query/write wrappers f
 
 Topology is repo-specific:
 
-- **Lemmy/Brehon:** PMD is an HTTP MCP service on the P50/Windows laptop. From EliteDesk/Mac use `http://100.104.171.26:11435/mcp` over Tailscale; on the PMD host use `http://localhost:11435/mcp`. Do not assume a per-worktree SQLite PMD is live.
+- **Lemmy/Brehon:** PMD is an HTTP API service on the P50/Windows laptop. From remote machines use `http://100.104.171.26:11435/mcp` over Tailscale; on the PMD host use `http://localhost:11435/mcp`. Do not assume a per-worktree SQLite PMD is live.
 - **phd-vault:** PMD topology differs and may be local to that repo/machine. Do not copy Lemmy's `/srv/brehon-fork/.env`, Tailscale URL, or service-host assumptions into phd-vault; inspect that repo's PMD docs/config first.

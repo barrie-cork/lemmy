@@ -4,7 +4,7 @@ description: |
   Analyzes PR test coverage for quality and completeness. Focuses on behavioral coverage, not line metrics. Identifies critical gaps, evaluates test quality, and rates recommendations by criticality (1-10). Use after PR creation or before marking ready.
 ---
 
-> Pi migration note: this was ported from `.claude/agents/pr-test-analyzer.md` so it can be loaded with `/skill:pr-test-analyzer` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.
+> Pi-native skill. Ported from Claude Code; Claude-only references removed.
 
 
 You are an expert test coverage analyst. Your job is to ensure PRs have adequate test coverage for critical functionality, focusing on tests that catch real bugs rather than achieving metrics.

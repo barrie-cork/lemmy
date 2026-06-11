@@ -25,6 +25,168 @@ import { spawnSync } from "node:child_process";
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const PI_HOOKS_DIR = path.join(REPO_ROOT, ".pi", "hook-scripts");
 
+const CONTEXT_HEADINGS = {
+  constraints: "Non-negotiable Brehon constraints",
+  workflow: "Coding workflow constraints",
+  harness: "Dual-harness boundary",
+  rls: "Recursive Learning System parity for pi",
+  rust: "Pi session Rust quick-reference",
+  subagents: "Project subagents \u2014 delegate, don\u2019t load",
+  setup: "Setup decisions log (do not re-litigate)",
+} as const;
+
+interface ModeContext {
+  persona: string;
+  projectContextHeadings: string[];
+  ruleFilter: string[];
+  recommendedSkill: string | null;
+  authorizedReadPaths: string[];
+}
+
+const MODE_CONTEXT: Record<BrehonMode, ModeContext> = {
+  "main-safe": {
+    persona: "",
+    projectContextHeadings: [],
+    ruleFilter: [],
+    recommendedSkill: null,
+    authorizedReadPaths: [],
+  },
+  planning: {
+    persona: "You are the Planning agent for Brehon. Author plan files from briefs; never write Rust code. Use rg/find/read for codebase exploration; use read for crate docs.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+    ],
+    ruleFilter: [
+      "handover.md",
+      "pmd-invariants.md",
+      "pmd-search-strategy.md",
+      "session-awareness.md",
+    ],
+    recommendedSkill: ".pi/skills/planning/SKILL.md",
+    authorizedReadPaths: [
+      ".claude/commands/prp-core/prp-plan.md",
+      ".claude/lessons/",
+      ".claude/PRPs/briefs/",
+      ".claude/PRPs/plans/",
+      ".claude/PRPs/reports/",
+      ".claude/PRPs/templates/",
+    ],
+  },
+  "impl-task": {
+    persona: "You are the Implementation agent for Brehon. Execute one scoped task from an approved plan. Use MIRROR refs as patterns; fall back to a DQ entry instead of guessing.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+      CONTEXT_HEADINGS.rust,
+    ],
+    ruleFilter: [
+      "phase-branch.md",
+      "no-cargo-output-paste.md",
+      "cargo-output-capture.md",
+      "view-crate-selectable-template.md",
+      "pmd-invariants.md",
+    ],
+    recommendedSkill: ".pi/skills/impl-task/SKILL.md",
+    authorizedReadPaths: [
+      ".claude/commands/prp-core/prp-implement.md",
+      ".claude/lessons/",
+      ".claude/PRPs/plans/",
+      ".claude/decision-queue.json",
+    ],
+  },
+  "review-readonly": {
+    persona: "You are in read-only review mode. Report findings with file paths and recommendations; do not mutate files.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+      CONTEXT_HEADINGS.rust,
+    ],
+    ruleFilter: [
+      "pi-harness-constraints.md",
+      "no-destructive-defaults.md",
+      "session-awareness.md",
+      "pmd-invariants.md",
+    ],
+    recommendedSkill: null,
+    authorizedReadPaths: [
+      ".claude/rules/",
+    ],
+  },
+  bm: {
+    persona: "You are the Branch Manager agent for Brehon. Manage git/PR lifecycle; prefer delegating to .pi/agents/bm-pi.md; never write code or plans.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+      CONTEXT_HEADINGS.subagents,
+      CONTEXT_HEADINGS.setup,
+    ],
+    ruleFilter: [
+      "branch-manager.md",
+      "gh-pr-fork-target.md",
+      "decision-queue.md",
+      "phase-branch.md",
+      "pmd-invariants.md",
+      "universal-guards.md",
+    ],
+    recommendedSkill: ".pi/skills/bm-task/SKILL.md",
+    authorizedReadPaths: [
+      ".claude/rules/branch-manager.md",
+      ".claude/rules/decision-queue.md",
+      ".claude/rules/phase-branch.md",
+      ".claude/rules/gh-pr-fork-target.md",
+      ".claude/commands/bm/",
+      ".claude/runlog/",
+      ".claude/PRPs/reviews/",
+    ],
+  },
+  "ci-debug": {
+    persona: "You are the CI Debug agent for Brehon. Diagnose GitHub Actions workflows; prefer delegating to .pi/agents/ci-debug.md.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+      CONTEXT_HEADINGS.subagents,
+      CONTEXT_HEADINGS.setup,
+    ],
+    ruleFilter: [
+      "phase-branch.md",
+      "pmd-invariants.md",
+    ],
+    recommendedSkill: null,
+    authorizedReadPaths: [
+      ".claude/lessons/feedback_gha_pi_loop_postmortem.md",
+      ".claude/rules/",
+    ],
+  },
+  "harness-maintenance": {
+    persona: "You are in harness maintenance mode. Edit harness metadata (.claude/skills/, .claude/lessons/, .pi/) only; no app code.",
+    projectContextHeadings: [
+      CONTEXT_HEADINGS.constraints,
+      CONTEXT_HEADINGS.workflow,
+      CONTEXT_HEADINGS.harness,
+      CONTEXT_HEADINGS.rls,
+      CONTEXT_HEADINGS.subagents,
+      CONTEXT_HEADINGS.setup,
+    ],
+    ruleFilter: [
+      "pi-harness-constraints.md",
+      "pmd-invariants.md",
+      "pre-phase-harness-audit.md",
+    ],
+    recommendedSkill: null,
+    authorizedReadPaths: [
+      ".claude/skills/",
+      ".claude/lessons/",
+      ".claude/PRPs/reports/",
+    ],
+  },
+};
+
 const BASH_BLOCKLIST = [
   "rm -rf",
   "rm -fr",
@@ -104,7 +266,7 @@ const BREHON_MODES: Record<BrehonMode, { label: string; description: string; ins
     description: "Harness/RLS metadata mode: skill, lesson, retro, and pi harness files only; no app code.",
     instructions: [
       "Use only for explicit harness-maintenance or Recursive Learning System artifact work.",
-      "Allowed writes are .claude/skills/, .claude/lessons/, .claude/PRPs/reports/, .pi/skills/, .pi/scripts/, .pi/extensions/, and .pi/harness-factory/.",
+      "Allowed writes are .claude/skills/, .claude/lessons/, .claude/PRPs/reports/, .pi/skills/, .pi/scripts/, .pi/extensions/.",
       "Validate skill metadata with python3 .pi/scripts/validate-skills.py after skill edits; lesson writes trigger PMD sync hooks.",
     ],
   },
@@ -203,6 +365,12 @@ function pathPolicyDecision(mode: BrehonMode, toolName: string, filePath: unknow
   const relPath = repoRelativePath(filePath);
   if (relPath.startsWith("..")) return { block: true, reason: `Brehon path policy blocks writes outside repo: ${filePath}` };
 
+  // Check manual override before mode-specific rules (per session-retro-2026-06-10 Change #3)
+  if (overridePaths.has(relPath)) {
+    overridePaths.delete(relPath); // one-time use
+    return undefined;
+  }
+
   if (mode === "review-readonly") return { block: true, reason: "Brehon review-readonly mode blocks write/edit" };
 
   if (mode === "planning") {
@@ -228,7 +396,7 @@ function pathPolicyDecision(mode: BrehonMode, toolName: string, filePath: unknow
   }
 
   if (relPath.startsWith(".claude/") && mode !== "planning" && mode !== "harness-maintenance") {
-    return { block: true, reason: `Brehon dual-harness boundary blocks .claude writes in ${mode} mode unless user switches to planning or gives an explicit manual override: ${relPath}` };
+    return { block: true, reason: `Brehon dual-harness boundary blocks .claude writes in ${mode} mode. Switch to planning/harness-maintenance or use /brehon-override ${relPath}` };
   }
 
   return undefined;
@@ -359,6 +527,7 @@ export default function lemmyHooks(pi: ExtensionAPI) {
   // CI work follows the same manual Brehon commit workflow as other work.
   let ciDebugMode = false;
   let brehonMode: BrehonMode = "main-safe";
+  let overridePaths: Set<string> = new Set();  // manual path-policy overrides (one-time use)
 
 
   const setModeStatus = (ctx: any) => {
@@ -419,6 +588,37 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     },
   });
 
+  // Convenience aliases for /brehon-mode <role>
+  const roleAliases: [string, BrehonMode, string][] = [
+    ["advisor", "main-safe", "Advisor mode: normal pi repo work with Brehon constraints."],
+    ["planner", "planning", "Planning mode: author plan files from briefs; never write Rust code."],
+    ["impl", "impl-task", "Implementation mode: execute scoped tasks from approved plans."],
+    ["bm", "bm", "Branch Manager mode: git/PR lifecycle; prefer delegating to .pi/agents/bm-pi.md."],
+  ];
+  for (const [alias, mode, desc] of roleAliases) {
+    pi.registerCommand(alias, {
+      description: `Switch to ${mode} Brehon mode. ${desc}`,
+      handler: async (_args: string, ctx: any) => {
+        setBrehonMode(mode, ctx);
+        safeNotify(ctx, `Switched to ${BREHON_MODES[mode].label}: ${desc}`, "info");
+      },
+    });
+  }
+
+  pi.registerCommand("brehon-override", {
+    description:
+      "Approve a one-time write to a path normally blocked by Brehon path policy. Use sparingly — switch mode instead for repeated writes.",
+    handler: async (args: string, ctx: any) => {
+      const targetPath = args.trim();
+      if (!targetPath) {
+        safeNotify(ctx, "Usage: /brehon-override <relative-path> — e.g. /brehon-override .claude/PRPs/reports/my-retro.md", "warning");
+        return;
+      }
+      overridePaths.add(targetPath);
+      safeNotify(ctx, `Override approved for: ${targetPath} (valid for one write, this session only). Write now.`, "info");
+    },
+  });
+
   pi.on("session_start", async (_event: any, ctx: any) => {
     try {
       projectContext = readIfExists(path.join(REPO_ROOT, ".pi", "PROJECT_CONTEXT.md"));
@@ -442,24 +642,90 @@ export default function lemmyHooks(pi: ExtensionAPI) {
     }
   });
 
+  // --- Progressive-disclosure helpers (pi-harness-context-injection plan, Tasks 1-4) ---
+
+  function sliceProjectContext(headings: string[]): string {
+    if (!projectContext || headings.length === 0) return projectContext;
+    const parts = projectContext.split(/\n(?=## )/);
+    const preamble = parts[0];
+    const wanted = new Set(headings);
+    const included: string[] = [preamble];
+    for (let i = 1; i < parts.length; i++) {
+      const headingLine = parts[i].split("\n")[0].replace(/^## /, "");
+      if (wanted.has(headingLine)) included.push(parts[i]);
+    }
+    return included.join("\n");
+  }
+
+  function authorizedPathsNotice(mode: BrehonMode): string {
+    const ctx = MODE_CONTEXT[mode];
+    if (!ctx || ctx.authorizedReadPaths.length === 0) return "";
+    const lines = ctx.authorizedReadPaths.map((p) => `- ${p}`);
+    return `**Authorized .claude/ paths for this session:**\n${lines.join("\n")}\n\n(Override of AGENTS.md's blanket .claude/ read restriction. These paths are authorised because the current Brehon mode requires them.)`;
+  }
+
+  function filteredRuleIndex(mode: BrehonMode): string {
+    const ctx = MODE_CONTEXT[mode];
+    if (ruleFiles.length === 0) return "";
+    const filtered = (!ctx || ctx.ruleFilter.length === 0)
+      ? ruleFiles
+      : ruleFiles.filter((f) => ctx.ruleFilter.some((rf) => f.endsWith(rf)));
+    if (filtered.length === 0) return "";
+    return `## Available Project Rules\n\nThe repo has additional Claude-era rule files. Read relevant files with the read tool when a task touches their topic:\n\n${filtered.map((file) => `- .claude/rules/${file}`).join("\n")}`;
+  }
+
+  function autoInjectSkill(mode: BrehonMode): string | null {
+    const ctx = MODE_CONTEXT[mode];
+    if (!ctx?.recommendedSkill) return null;
+    const skillPath = path.join(REPO_ROOT, ctx.recommendedSkill);
+    if (!fs.existsSync(skillPath)) return null;
+    try {
+      const content = fs.readFileSync(skillPath, "utf8").trim();
+      const skillName = ctx.recommendedSkill.replace(/^\.pi\/skills\//, "").replace(/\/SKILL\.md$/, "");
+      // Strip YAML frontmatter (--- ... ---) to avoid confusing the LLM
+      const body = content.replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+      return `## Active Skill: ${skillName}\n\nAuto-loaded because Brehon mode is ${BREHON_MODES[mode].label}. The full skill content follows:\n\n${body}`;
+    } catch {
+      return null;
+    }
+  }
+
+  // --- before_agent_start (progressive disclosure by mode) ---
+
   pi.on("before_agent_start", async (event: any) => {
     try {
+      const ctx = MODE_CONTEXT[brehonMode];
       const additions: string[] = [];
 
-      if (projectContext) additions.push(`## Pi Project Context\n\n${projectContext}`);
-      additions.push(`## Active Brehon Pi Mode\n\nMode: ${brehonMode}\n${BREHON_MODES[brehonMode].description}\n\nMandatory mode instructions:\n${BREHON_MODES[brehonMode].instructions.map((line) => `- ${line}`).join("\n")}\n\nPath-policy enforcement is active in .pi/extensions/lemmy-hooks.ts; use /brehon-mode list to inspect or switch modes.`);
+      // 1. Project context sliced by mode
+      if (projectContext) {
+        const headings = ctx?.projectContextHeadings ?? [];
+        const sliced = sliceProjectContext(headings);
+        additions.push(`## Pi Project Context\n\n${sliced}`);
+      }
+
+      // 2. Mode instructions + persona
+      const personaLine = ctx?.persona ? `\n\n${ctx.persona}` : "";
+      const authPaths = authorizedPathsNotice(brehonMode);
+      const authSection = authPaths ? `\n\n${authPaths}` : "";
+      additions.push(
+        `## Active Brehon Pi Mode\n\nMode: ${brehonMode}\n${BREHON_MODES[brehonMode].description}${personaLine}\n\nMandatory mode instructions:\n${BREHON_MODES[brehonMode].instructions.map((line) => `- ${line}`).join("\n")}${authSection}\n\nPath-policy enforcement is active in .pi/extensions/lemmy-hooks.ts; use /brehon-mode list to inspect or switch modes.`,
+      );
+
+      // 3. Pre-phase audit reminder (if applicable)
       if (prePhaseReminder) additions.push(`## Pre-Phase Audit Reminder\n\n${prePhaseReminder}`);
 
+      // 4. Coordination state
       const coord = coordinationStateSummary();
       if (coord) additions.push(`## Coordination State\n\n${coord}`);
 
-      if (ruleFiles.length > 0) {
-        additions.push(
-          `## Available Project Rules\n\nThe repo has additional Claude-era rule files. Read relevant files with the read tool when a task touches their topic:\n\n${ruleFiles
-            .map((file) => `- .claude/rules/${file}`)
-            .join("\n")}`,
-        );
-      }
+      // 5. Auto-inject role skill
+      const skillInjection = autoInjectSkill(brehonMode);
+      if (skillInjection) additions.push(skillInjection);
+
+      // 6. Filtered rule index
+      const ruleSection = filteredRuleIndex(brehonMode);
+      if (ruleSection) additions.push(ruleSection);
 
       if (additions.length === 0) return undefined;
       return { systemPrompt: `${event.systemPrompt}\n\n${additions.join("\n\n")}` };

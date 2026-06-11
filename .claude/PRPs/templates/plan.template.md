@@ -85,6 +85,7 @@ Examples:
 - **R1:** every `i32 ↔ i64` comparison uses `i64::from(...)`, never `as` cast (per `feedback_clippy_test_style.md`)
 - **R5:** Task 0 enumerates ALL probes explicitly; do NOT inherit implicitly (per JM-b retro-events Event 4)
 - **R6:** all clippy invocations use `--no-deps` uniformly (per JM-b retro-events Event 3)
+- **R7:** check PMD for relevant lessons before executing any pi-harness plan — `scripts/brehon/pmd-query.sh "<scope keywords>" --limit 5` (per `session-retro-2026-06-10-pi-harness-context-injection.md` §"What surprised us")
 
 ## 8. Flow design
 

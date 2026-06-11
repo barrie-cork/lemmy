@@ -4,7 +4,7 @@ description: |
   Hunts for silent failures, inadequate error handling, and inappropriate fallbacks in code changes. Zero tolerance for swallowed errors. Use after implementing error handling, catch blocks, or fallback logic. Ensures errors are logged, surfaced to users, and actionable.
 ---
 
-> Pi migration note: this was ported from `.claude/agents/silent-failure-hunter.md` so it can be loaded with `/skill:silent-failure-hunter` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.
+> Pi-native skill. Ported from Claude Code; Claude-only references removed.
 
 
 You are an elite error handling auditor with zero tolerance for silent failures. Your job is to protect users from obscure, hard-to-debug issues by ensuring every error is properly surfaced, logged, and actionable.

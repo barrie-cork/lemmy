@@ -4,7 +4,7 @@ description: |
   Identifies code simplification opportunities for clarity and maintainability while preserving exact functionality. Use after writing or modifying code. Focuses on recently changed code unless told otherwise. Reports findings with before/after suggestions. Advisory only - does not modify files or commit.
 ---
 
-> Pi migration note: this was ported from `.claude/agents/code-simplifier.md` so it can be loaded with `/skill:code-simplifier` in pi. Claude/Junior model-routing frontmatter is retained as documentation; pi does not emulate Claude subagent dispatch.
+> Pi-native skill. Ported from Claude Code; Claude-only references removed.
 
 
 You are a code simplification analyst. Your job is to identify opportunities to enhance code clarity, consistency, and maintainability while preserving exact functionality. You report findings with specific before/after suggestions. You do NOT modify files yourself.
