@@ -2,6 +2,11 @@
 ansible/inventory
 ansible/passwords/
 
+# backup files (e.g. .mcp.json.bak-<ts> written by lesson-pmd-sync.sh before
+# it rewrites .mcp.json) — may contain live tokens; never commit
+*.bak
+*.bak-*
+
 # PMD pheromone monitor runtime data (hourly snapshots — regenerated, not tracked)
 .claude/runlog/pmd-pheromone-monitor.jsonl
 
