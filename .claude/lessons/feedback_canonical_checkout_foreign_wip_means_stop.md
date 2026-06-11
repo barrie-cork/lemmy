@@ -69,6 +69,29 @@ session):
 - Untracked debug artifacts under `.claude/PRPs/debug/` you didn't author this session.
 - Any staged change in `git diff --cached` you didn't stage.
 
+**Signals `git status` does NOT show — these also mean a concurrent session is live
+(added 2026-06-11):** the gate above keys on the working tree, but a concurrent
+session announces itself in ways `git status --short` is blind to. Treat any of
+these, occurring without your action, as the same STOP signal:
+
+- **A gitignored config changed under you** — `.mcp.json`, `.env`, `settings.local.json`.
+  These are gitignored, so they NEVER appear in `git status`; a second session
+  rewriting `.mcp.json` (e.g. a "repoint to homeserver" task) leaves no working-tree
+  trace. If a tool that read `.mcp.json` earlier behaves differently later, or a
+  `*.bak-<ts>` of a gitignored file appears, a concurrent session edited it.
+- **`governance-v0` HEAD advanced without your commit** — `git log --oneline -5` shows a
+  commit you didn't author (e.g. a `chore(auto-phase):` between two of your commits).
+  HEAD moving under you is the loudest concurrency signal there is.
+- **A second live transcript** — `ls -t ~/.claude/projects/<proj>/*.jsonl | head` shows
+  two `.jsonl` files with current mtimes; or `/tmp/cc-retro-sessions/` holds >1 fresh
+  `*.start` marker (per `reference_retro_check_marker_dir_machine_shared.md`).
+
+The 2026-06-11 incident: a session absorbed BOTH a silent `.mcp.json` rewrite and a
+silent `governance-v0` HEAD advance as "incidental," then spent ~8 min on a false
+"session_id shifted" investigation — when either signal, recognized as concurrency,
+would have explained everything immediately. The working-tree gate had loaded; the
+non-working-tree signals had not been codified. They are now.
+
 Does NOT fire when:
 
 - The only changes are ones YOU made this session (your own in-progress edits).

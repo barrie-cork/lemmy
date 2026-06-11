@@ -30,11 +30,14 @@ Two sources of a named-defect hypothesis trigger the gate:
 
 **(B) A handover / bootstrap RESUME "next action" line** (`.claude/PRPs/handovers/*.md`) that prescribes a structural or config fix AND names a specific code path or mechanism as the defect site. The gate fires BEFORE executing the prescribed action — a handover's prescription is the *prior session's* hypothesis, written without the resuming session's ability to re-test it, and is exactly as falsifiable as a DQ's RCA. Added 2026-06-02 after the BUG-15 incident: a Phase-8 handover prescribed `hostname: host.docker.internal:8536` + "clear the Brehon DB volume" as the bidirectional-federation fix. ~10 min of reading the actual Lemmy source falsified BOTH the named mechanism (Lemmy keys instances by *port-stripped* domain — `get_hostname_without_port`, `settings/mod.rs:71-81` — so the proposed hostname collides with the remote's domain) AND the destructive precondition (JWT `iss` is never validated — `claims.rs:26-35` — so no DB wipe was needed). Per `feedback_lemmy_federation_domain_collision_one_host` + `feedback_handover_assumptions_need_empirical_verification`.
 
-Triggering signatures (in the DQ entry OR the handover RESUME block):
+**(C) A causal-attribution hypothesis the session forms *itself* from observed timing or correlation** (added 2026-06-11). The gate is not only for hypotheses *handed to you* (DQ, handover) — it applies equally to the causal story *you construct* mid-investigation when you observe "X changed right when Y ran, therefore Y caused X." That story is a hypothesis the instant you form it, and timing-coincidence is the weakest possible evidence for causation. The gate fires BEFORE you act on, commit, or write up the attribution. The 2026-06-11 incident: a session observed a `.mcp.json.bak` appear ~when its own `lesson-pmd-sync.sh` hook ran and concluded "my hook created it" — despite having *already confirmed* the hook has no `cp`/`.bak` logic. The real author was a concurrent CC session executing an explicit "repoint .mcp.json to homeserver" task. A 30-second falsification (grep the hook for the suspect op — already done! — and read the *other* live transcript) would have inverted it. Same session also built a "session_id shifted mid-session" story from two marker files that were actually two concurrent sessions. Per `reference_retro_check_marker_dir_machine_shared` + `feedback_canonical_checkout_foreign_wip_means_stop`.
+
+Triggering signatures (in the DQ entry, the handover RESUME block, OR your own forming conclusion):
 
 - `options[]` / "next action" includes a structural or config fix (TypeScript patch, harness change, daemon code-path edit, prompt rewrite, hook change, hostname/config-value change with a destructive precondition like a DB wipe).
-- The `context` / RESUME text names a specific code path or mechanism (file, function, prompt, script, "the X step", "the Y hostname") as the defect site.
+- The `context` / RESUME text — OR your own reasoning — names a specific code path or mechanism (file, function, prompt, script, "the X step", "the Y hostname", "my hook", "the daemon finalize") as the defect/cause site.
 - The fix would touch code/config outside the current sub-phase scope (harness, daemon, infrastructure, deployment config) OR carries an irreversible precondition (volume wipe, force-push, branch delete).
+- **(trigger C)** The attribution rests on *temporal correlation* ("it happened right when…", "the timestamp matches…") rather than a verified mechanism. Coincident timing is the tell — it's the cheapest evidence to produce and the easiest to falsify, so falsify it before you build on it.
 
 Does NOT fire when:
 
@@ -64,6 +67,8 @@ If steps 1+2+3 confirm the hypothesis: proceed with the originally-picked routin
 
 - **NEVER expand the falsification window past 30 min without surfacing to the user.** The gate exists to bound cost; if 30 min of grep + log inspection produces ambiguous results, that's itself a signal — surface "investigation inconclusive; here's what I found" rather than continuing to dig.
 
+- **NEVER write a causal attribution into a commit body, retro, or DQ answer on the strength of timing coincidence alone (trigger C).** "X appeared when Y ran" is correlation; before stating "Y caused X," do the 30-second falsification — grep the suspect code path for the operation, and check whether a *concurrent actor* (another live session, a cron job, a bot author) is the simpler explanation. If you've *already* confirmed the suspect path lacks the operation, that confirmation REFUTES the attribution — do not then re-assert it anyway (the 2026-06-11 `.mcp.json`-blamed-on-own-hook failure was exactly this: refuting evidence already in hand, conclusion drawn against it).
+
 ## Cross-references
 
 - `.claude/rules/advisor-orchestrator.md` §5.4 "DQ triage decision tree" — the gate is integrated as a sub-bullet of step 1 (read entry → falsify if structural-fix-class → decide routing).
@@ -74,3 +79,5 @@ If steps 1+2+3 confirm the hypothesis: proceed with the originally-picked routin
 - DQ #338 (2026-05-21; resolved option-b 2026-05-22) — incident origin; full RCA + structural-fix recipe in the entry's `answer` field.
 - Sub-agent forensic discipline (`Agent` tool with `general-purpose` subagent_type) — the 5-min investigation that returned the smoking-gun transcript citation; preserved ~60 min of laptop-side Windows-path / jsonl-parsing burden that the parent session would have been bad at.
 - `.claude/rules/multi-lane-worktree.md` — the broader pattern (shared `.git/` across worktrees + concurrent sessions) within which the destructive-reset incident occurred.
+- `.claude/lessons/feedback_canonical_checkout_foreign_wip_means_stop.md` — the 2026-06-11 trigger-(C) incident: a `.mcp.json` rewrite + HEAD advance attributed to own hook/own session instead of the concurrent session that caused them. That lesson's "signals `git status` does NOT show" section is the detection half; this gate is the falsify-before-acting half.
+- `reference_retro_check_marker_dir_machine_shared.md` — why two `*.start` markers read as "id shift" (machine-shared dir, one marker per concurrent session) — the other half of the same 2026-06-11 trigger-(C) misread.
