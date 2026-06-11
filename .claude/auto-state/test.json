@@ -5,7 +5,7 @@
   "session_id": "b7e3f2a9c041",
   "last_session_ended_at": null,
   "resume_count": 1,
-  "stage": "bm-pr-running",
+  "stage": "bm-poll-cr-running",
   "last_known_phase_tip": "50195e511",
   "current_cohort": {
     "n": 1,
@@ -37,11 +37,11 @@
     "planning": 653,
     "task-0-preflight": 654,
     "task-1-impl": 655,
-    "bm-pr": null,
-    "bm-poll-cr": null,
+    "bm-pr": 656,
+    "bm-poll-cr": 657,
     "bm-triage": null
   },
-  "last_action": "task-1 #655 done; validate-pending DQ 6b7c4b329002-001 resolved (advisor-laptop cargo check pass @ 50195e511); cohort-1 barrier reached; bm-pr brief to be queued",
+  "last_action": "bm-pr #656 done; PR #195 open (phase-test → governance-v0); bm-poll-cr Junior #657 queued",
   "last_action_at": "2026-06-12T09:00:00Z",
   "last_poll_at": "2026-06-12T09:00:00Z",
   "last_fetch_at": "2026-06-12T09:00:00Z",
