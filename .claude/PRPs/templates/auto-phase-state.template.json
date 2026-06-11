@@ -1,6 +1,7 @@
 {
   "_schema_note": "Runtime state for /auto-phase skill. File written to .claude/auto-state/<phase>.json (gitignored). Updated every tick. Read at session resume to route to current stage handler.",
-  "schema_version": 1,
+  "schema_version": 2,
+  "_schema_v2_note": "v2 (additive, forward-only) adds the stage-digest ring (stage_digests + digest_overflow_path). Phase 0.5 Step A backfills the v2 fields to their empty defaults ([] / null) on resume against a v1 state file, mirroring the error_class_history backfill. No v1 field semantics change. (Spill-guard + auto-handover fields are deferred to a later additive bump; not present in this v2.)",
   "phase": "v1-SL-c-2",
   "started_at": "2026-05-07T14:00:00Z",
   "session_id": "a3f9c1e2b740",
@@ -82,5 +83,9 @@
     "reason": "non-allowlist §G4 fail",
     "log_slice_path": ".claude/auto-state/v1-SL-c-2-catchfire-20260507-1830.md",
     "fired_at": "2026-05-07T18:30:00Z"
-  }
+  },
+  "stage_digests": [],
+  "_stage_digests_note": "Bounded ring (last DIGEST_RING_MAX=12 entries) of compact per-transition digests. Appended on every stage transition AFTER the ledger's stage field is updated. Each entry: {stage, entered_at, outcome (one line), key_ids (cohort/junior/dq/pr ids touched this stage), next_action_hypothesis}. When the ring exceeds 12, the oldest entries are appended (one JSON object per line) to digest_overflow_path and dropped from this array. Read by Phase 0.5 Step E to build the COMPACT resume report as the authoritative active-thread source. Data-only: does NOT gate, route, or change cadence.",
+  "digest_overflow_path": ".claude/auto-state/v1-SL-c-2.digests.jsonl",
+  "_digest_overflow_note": "Append-only JSONL overflow for stage_digests beyond the ring cap. Gitignored sibling under .claude/auto-state/ (covered by the existing .gitignore line '.claude/auto-state/'). Path is illustrative; the skill sets it to .claude/auto-state/<phase>.digests.jsonl."
 }

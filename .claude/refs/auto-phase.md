@@ -105,6 +105,9 @@ The skill **WRITES**:
   …` entries on stage transitions for the durable audit trail (also
   appends `docs(advisor)` blocks for the L14 belt-and-braces fallback
   if a BM Junior skips the runlog commit).
+- `.claude/auto-state/<phase>.digests.jsonl` — append-only overflow
+  for the `stage_digests` ring once it exceeds the cap (schema-v2,
+  gitignored sibling under `.claude/auto-state/`).
 - The advisor's own commit subjects MUST follow attribution-integrity
   patterns (e.g. `chore(advisor): ` for state-machine transitions,
   `docs(advisor): ` for L14 retro re-applies).
@@ -118,9 +121,11 @@ The skill **NEVER WRITES**:
   it (plan revisions go through a planner re-run via DQ, never
   advisor-side edits).
 - `.claude/PRPs/reviews/pr-*-findings.yaml` (BM-owned).
-- The catch-fire path is the ONLY path that writes a `.md` file under
-  `.claude/auto-state/` — and that file is gitignored runtime state,
-  not a tracked artifact.
+- Under `.claude/auto-state/`, the skill writes only gitignored
+  runtime state: the catch-fire `.md` dump and the
+  `<phase>.digests.jsonl` digest overflow — neither is a tracked
+  artifact. The catch-fire path remains the ONLY path that writes a
+  `.md` file under `.claude/auto-state/`.
 
 ## State-routing invariants
 
@@ -214,6 +219,29 @@ wall-clock evidence (per
    (`bm-cut-running` ~2 min, `bm-merge-executing` ~1 min) use 60-120s.
    The skill MUST NOT override this without recording wall-clock
    evidence in a future retro that justifies the change.
+
+## Context-management invariants
+
+These invariants protect the durable-context substrate (the ledger)
+and the bounded-context discipline. Schema-v2 (see
+`.claude/PRPs/templates/auto-phase-state.template.json`).
+
+1. **Stage-digest ring is data-only.** On each stage transition the
+   skill appends one digest to `stage_digests` AFTER updating `stage`,
+   then trims to the last `DIGEST_RING_MAX` (12), spilling the oldest
+   to `digest_overflow_path`. The ring MUST NOT gate, route, or change
+   cadence — it is a resume/`/compact` read source, nothing more. A
+   change that makes a routing decision depend on a digest is a
+   regression.
+
+2. **Durable context is wide; delegation packets are narrow.** The
+   ledger (advisor-durable) carries phase/stage/cohort/gates/digests/
+   verification/next-action across boundaries. Junior briefs stay
+   narrow and brief-scoped (one task brief, scope, write boundaries,
+   validation expectations, relevant error history) per
+   `advisor-orchestrator.md` §2.2 — the digest ring MUST NOT leak into
+   brief bodies. Symmetry is deliberate: wide where it survives
+   restarts, narrow where it is dispatched.
 
 ## Resume semantics
 
@@ -353,6 +381,10 @@ without conversation context):
   Step C.
 - `user_gate_history` — what the user has decided so far this phase
   (used by retro author).
+- `stage_digests` — bounded ring of per-transition digests (schema-v2);
+  the self-contained "here's what was happening" narrative Phase 0.5
+  Step E reads to build the COMPACT resume report without conversation
+  context. Overflow beyond the cap lives in `digest_overflow_path`.
 
 ### What does NOT survive (deliberately)
 
