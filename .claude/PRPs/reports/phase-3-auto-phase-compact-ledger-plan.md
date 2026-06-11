@@ -1,6 +1,6 @@
 # Phase 3 `/auto-phase` Compact-Ledger Handoff Plan
 
-Status: planning only. Do not apply in this change.
+Status: repo-tracked Phase 3 docs implemented on 2026-06-11. User-scope command files are still not edited directly; the command patch notes below remain the exact insertion blocks to apply outside the repo.
 
 Scope: Claude Code harness only. No Pi Coding changes. Do not edit `.pi/**`. Do not edit user-scope `~/.claude/commands/*` directly; apply the patch notes below manually or via a separate explicit user-scope command update.
 

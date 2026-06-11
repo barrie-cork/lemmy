@@ -38,8 +38,12 @@ what the auto-load CANNOT reconstruct.
 ## What the auto-load CANNOT reconstruct (= what the summary MUST carry)
 
 1. **The most recent active thread** — branch, last commits (SHA + one-liner), stage, in-flight
-   state, and any *session-discovered facts that exist in no rule file*. (Deliberately NOT
-   "lane activity" — see "Lane vocabulary trap" below.)
+   state, and any *session-discovered facts that exist in no rule file*. For `/auto-phase`,
+   priority 1 starts from the durable ledger: cite `.claude/auto-state/<phase>.json`
+   `stage_digests[-1]` (stage, outcome, `next_action_hypothesis`) and `last_handover_path`
+   instead of reconstructing branch/stage/in-flight state from conversation. Treat
+   `next_action_hypothesis` as re-verify-only against live TaskList/DQ/PR/branch state on resume.
+   (Deliberately NOT "lane activity" — see "Lane vocabulary trap" below.)
 2. **The remaining task list, verbatim** — open TaskList items + exact next-action.
 3. **The user's own messages, verbatim** — the highest-signal anti-drift anchor; nothing else
    in context reconstructs intent this faithfully.
@@ -105,6 +109,12 @@ right and still under/over-preserve in practice. Only a real compaction tells yo
   (PMD #502: "Resumed from compacted context; task #430 was already in-flight") → promoted into
   `feedback_thin_wakeup_prompts_verify_live_state.md` (compaction-resume is the same family as
   ScheduleWakeup-resume: a resume-context written before the awaited work resolves).
+- **2026-06-11** — Digest-first `/compact` wiring for `/auto-phase` context-management Phase 3.
+  Priority 1 now treats `.claude/auto-state/<phase>.json` as the authoritative active-thread
+  source for `/auto-phase`: cite `stage_digests[-1]` plus `last_handover_path` rather than
+  reconstructing branch/stage/in-flight state from conversation. The digest's
+  `next_action_hypothesis` remains a hypothesis to re-verify against live TaskList/DQ/PR/branch
+  state on resume; narrative digests are not gates, routers, or cadence inputs.
 
 ## Open questions for future tuning
 

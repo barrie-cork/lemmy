@@ -275,8 +275,11 @@ On `/auto-phase v1-SL-c-2` invocation:
 4. Otherwise → run **Phase 0.5 — Session resume** (skill body). Phase
    0.5 reconciles the persisted state with current world state (Junior
    task statuses, DQ delta, phase tip drift, daemon health) and prints
-   a resume report. **Wait for user 'continue' reply** before any
-   state-changing action.
+   a resume report. Step E builds that COMPACT report primarily from
+   `stage_digests[-3:]` plus `last_handover_path`, then marks the latest
+   `next_action_hypothesis` as a hypothesis to re-verify against live
+   TaskList/DQ/PR/branch state. **Wait for user 'continue' reply**
+   before any state-changing action.
 
 ### Hard invariants
 
@@ -289,9 +292,11 @@ A. **The same `/auto-phase <phase>` invocation handles fresh start AND
    session time, which defeats the skill's purpose.
 
 B. **Phase 0.5 is read-only until user 'continue'.** The reconciliation
-   loop calls `mcp__junior-brehon__list_tasks`, `git fetch`, and reads
-   the canonical DQ resolver — but does NOT queue Junior tasks,
-   write DQ entries, or fire `gh pr merge`. The cost of one extra user
+   loop calls `mcp__junior-brehon__list_tasks`, `git fetch`, reads
+   `stage_digests[-3:]`, reads `last_handover_path`, and reads the
+   canonical DQ resolver — but does NOT queue Junior tasks, write DQ
+   entries, or fire `gh pr merge`. The digest's `next_action_hypothesis`
+   is re-verify-only, never permission to act. The cost of one extra user
    touch on resume is much smaller than the cost of an unwanted resume
    action (e.g. re-queueing a Junior task that's still alive on the
    daemon, double-running cargo bg processes, racing against a peer
@@ -394,6 +399,13 @@ without conversation context):
   the self-contained "here's what was happening" narrative Phase 0.5
   Step E reads to build the COMPACT resume report without conversation
   context. Overflow beyond the cap lives in `digest_overflow_path`.
+- `spill_dir` — gitignored directory for large tool-output spills
+  (schema-v3); full output lives on disk while only head+tail+path stay
+  in live context.
+- `last_handover_path` + `last_handover_at` — pointer to the
+  auto-emitted handover refreshed at the last transition; Phase 0.5
+  Step E and `/compact` priority 1 cite it as the authoritative
+  active-thread handover source.
 
 ### What does NOT survive (deliberately)
 
