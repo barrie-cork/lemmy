@@ -37,6 +37,7 @@ use crate::governance::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SanctionEventPayload {
   pub sanction_kind: SanctionKind,
+  pub case_id: i64,
   /// actor_pseudonym.pseudonym — never person.name or local_user.email (ADR-015).
   pub subject_actor_pseudonym: String,
   pub effective_from: DateTime<Utc>,
@@ -129,6 +130,7 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
   // 5. Build payload and POST to each subscriber.
   let payload = SanctionEventPayload {
     sanction_kind,
+    case_id: i64::from(sanction.case_id.0),
     subject_actor_pseudonym: subject.clone(),
     effective_from: sanction.starts_at,
     effective_until: sanction.ends_at,

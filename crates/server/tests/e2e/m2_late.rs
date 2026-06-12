@@ -358,6 +358,10 @@ mod m2_late_fixtures {
       .expect("payload missing governance_log_entry_hash");
     assert!(!hash.is_empty(), "governance_log_entry_hash must be non-empty");
 
+    let payload_case_id = payload.get("case_id").and_then(|v| v.as_i64())
+      .expect("payload missing case_id");
+    assert_eq!(payload_case_id, i64::from(case_id.0), "payload case_id matches the case");
+
     // Allow the spawned enqueue_sanction_event task to complete its DB writes
     // (sanction_event insert + governance_log append) after the HTTP POST.
     // body_rx fires when the mock sends 200 OK, but those DB writes happen
