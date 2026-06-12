@@ -86,6 +86,19 @@ are auto-recoverable; user input is required.
     `.claude/rules/branch-manager.md` "File ownership boundaries"). The
     skill catch-fires and halts; user must surface the rule citation
     to the breached subagent's task output.
+11. **`--unattended` allowlist violation.** Under `--unattended`, the
+    skill MUST refuse to auto-clear any of the four judgment gates
+    (1 plan-approval, 2 ADR/scope-DQ, 3 CR-triage, 5 merge-confirm) and
+    MUST refuse to write `decision: "user"` for a policy auto-clear.
+    The allowlist is exhaustive (only gates 4 e2e→local + 6 retro
+    sign-off auto-clear) and is NOT runtime-extensible — no flag widens
+    it. The full hard contract (park-and-ping mechanics, the gate-6
+    3-check sanity gate, audit-honesty rule) lives in
+    `~/.claude/commands/auto-phase.md` "Phase 7 — `--unattended` gate
+    allowlist". A merge fired while unattended, or a `"user"` decision
+    label on an auto-clear, is a catch-fire in the same class as a
+    forged `answered_by: "advisor"`. Per
+    `feedback_auto_phase_unattended_gate_allowlist.md`.
 
 ## Skill ownership boundaries
 
@@ -519,6 +532,8 @@ Between last impl complete and bm-merge confirm: run `/brehon-verify`
 → phantom → catch-fire; else advance to bm-pr.
 
 ### bm-pr complete
+
+**Fetch before write (mandatory):** immediately after `bm-pr` task transitions to `done`, run `git fetch origin governance-v0` before authoring the next brief, DQ entry, or auto-state update. The bm-pr Junior's finalize-merge lands on `governance-v0` between the task's `status: complete` and the advisor's next write — a stale local ref causes a non-fast-forward rejection on the subsequent `git push`. Per test-dogfood 2026-06-12 Race-A incident: bm-pr #656 finalize-merged concurrently with advisor DQ write → non-fast-forward; resolved via daemon-side `git merge origin/governance-v0` + push + laptop `git pull`. The fetch step is ≤1s and eliminates the race class.
 
 Wait for CodeRabbit (`bm-task` polls) → on CR posted, queue
 `bm-poll-cr`.

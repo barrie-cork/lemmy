@@ -74,7 +74,7 @@ Add verb-specific reading from this table — fill in only the row(s) that apply
 | `bm-cut` | `.claude/PRPs/plans/<phase>.plan.md` (committed before this task) |
 | `bm-pr` | `.claude/PRPs/reports/<phase>-complete-report.md` (if exists; pulled into PR body) |
 | `bm-poll-cr` | `.claude/PRPs/reviews/SCHEMA.md` (findings YAML schema), `.claude/PRPs/reviews/pr-<N>-findings.yaml` (existing artifact to update in place), `.claude/lessons/feedback_pr_review_triage_pattern.md` (4-bucket), `.claude/lessons/feedback_severity_labels_dont_imply_semantic.md`, `.claude/lessons/feedback_verify_automated_reviewer_claims_against_compiler.md` |
-| `bm-triage` | `.claude/PRPs/reviews/SCHEMA.md`, prior `bm-poll-cr` findings YAML for the same PR |
+| `bm-triage` | `.claude/PRPs/reviews/SCHEMA.md`, prior `bm-poll-cr` findings YAML for the same PR. **YAML recovery (mandatory):** `pr-N-findings.yaml` is gitignored and lost after every worker finalizes. If absent, reconstruct from `gh api repos/barrie-cork/lemmy/pulls/N/comments --jq '.[] \| {id, path, line, body, user: .user.login}'` plus the PR's inline review comments before applying triage decisions. The triage brief §4 must always include reconstruction instructions. |
 | `bm-merge` | `.claude/PRPs/reports/<phase>-verify.md` (advisor verify-gate output), all gates pre-cleared by advisor |
 
 ## 4. Constraints

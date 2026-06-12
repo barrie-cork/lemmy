@@ -5,7 +5,7 @@
   "session_id": "b7e3f2a9c041",
   "last_session_ended_at": null,
   "resume_count": 1,
-  "stage": "bm-pr-running",
+  "stage": "bm-triage-running",
   "last_known_phase_tip": "50195e511",
   "current_cohort": {
     "n": 1,
@@ -37,14 +37,14 @@
     "planning": 653,
     "task-0-preflight": 654,
     "task-1-impl": 655,
-    "bm-pr": null,
-    "bm-poll-cr": null,
-    "bm-triage": null
+    "bm-pr": 656,
+    "bm-poll-cr": 657,
+    "bm-triage": 658
   },
-  "last_action": "task-1 #655 done; validate-pending DQ 6b7c4b329002-001 resolved (advisor-laptop cargo check pass @ 50195e511); cohort-1 barrier reached; bm-pr brief to be queued",
-  "last_action_at": "2026-06-12T09:00:00Z",
-  "last_poll_at": "2026-06-12T09:00:00Z",
-  "last_fetch_at": "2026-06-12T09:00:00Z",
+  "last_action": "bm-poll-cr #657 done; 2 findings (cr-1 major rebut, cr-2 low wont-fix); bm-triage brief authored; Junior #658 queued",
+  "last_action_at": "2026-06-12T10:30:00Z",
+  "last_poll_at": "2026-06-12T10:30:00Z",
+  "last_fetch_at": "2026-06-12T10:30:00Z",
   "last_dq_pending_count": 0,
   "last_dq_pending_ids": [],
   "user_gate_history": [
