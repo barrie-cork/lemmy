@@ -15,7 +15,7 @@ purpose: Bootstrap the m2-late-2 advisor session. Read the RESUME block first; i
 ## Session-start ritual (do these first)
 
 1. `pwd && git -C C:/Users/barri/Developer/brehon-fork branch --show-current && git -C C:/Users/barri/Developer/brehon-fork worktree list` — confirm CWD/lane.
-2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `443c9d8bc` (see §"Git state at handoff"); if drifted, `git -C C:/Users/barri/Developer/brehon-fork log --oneline 443c9d8bc..governance-v0` and update mental model before acting.
+2. `git -C C:/Users/barri/Developer/brehon-fork fetch origin && git -C C:/Users/barri/Developer/brehon-fork rev-parse --short governance-v0` — must equal `e2cca7d19` (see §"Git state at handoff"); if drifted, `git -C C:/Users/barri/Developer/brehon-fork log --oneline e2cca7d19..governance-v0` and update mental model before acting.
 3. Read `workflow_state_m2_late.md` (CLOSED record) once for carry-forward context — especially the three carry-forward items listed there.
 4. Read `.claude/decision-queue.json` for any pending entries since handoff (empty at handoff per snapshot below).
 5. The brehon-fork `MEMORY.md` auto-loads; `workflow_state_m2_late_2.md` is the running-state scratchpad.
@@ -23,6 +23,8 @@ purpose: Bootstrap the m2-late-2 advisor session. Read the RESUME block first; i
 ## Next concrete action
 
 Author `.claude/PRPs/briefs/m2-late-2-planning-1.md` (scope: power-level enforcement in bridge + CR-A atomicity fix; see §1 + carry-forward from `workflow_state_m2_late.md`). Then `/brehon-clarify` → queue planning Junior. **B-actor portable-ID linkage is OUT OF SCOPE** (user-confirmed 2026-06-07; OQ-ADR016-03 deferred).
+
+**Before first bm-triage dispatch:** implement test-dogfood retro Change #4 — update `bm-task-brief.template.md` bm-triage row to specify `model: sonnet-4-6`. 5× recurrence threshold met; one-line template change before the first triage brief is authored.
 
 ---
 
@@ -118,22 +120,24 @@ Run `/brehon-phase-transition m2-late-2 <next-id>`. The skill will: close `workf
 
 ## Git state at handoff (captured literally — do not paraphrase)
 
-- governance-v0 HEAD: `443c9d8bc` (captured 2026-06-08) — `docs(retro): m2-late-1 retro — B-publish sanction propagation`
+- governance-v0 HEAD: `e2cca7d19` (updated 2026-06-12 at test-dogfood phase transition) — `docs(retro): append bm-triage #658 misclassification finding to test-dogfood retro`
 - Phase branch HEAD: `not yet created (branch phase-m2-late-2 cut at bm-cut)`
 - Recent governance-v0 commits:
 
   ```
-  443c9d8bc docs(retro): m2-late-1 retro — B-publish sanction propagation
-  be8134d0b Merge pull request #192 from barrie-cork/phase-m2-late-1
-  991e35de5 fix(governance): CR round-2 fix-in-pr — reqwest timeout + sanction_handler doc (PR #192)
-  35ad84565 fix(comparator): digest_plan regex matches unnumbered section headings
-  5d0c28544 chore(merge): merge-forward governance-v0 into phase-m2-late-1 pre-merge (fix-impl-1 complete)
+  e2cca7d19 docs(retro): append bm-triage #658 misclassification finding to test-dogfood retro
+  0ee51f20a docs(lessons): promote PowerShell ASCII-only code-strings trap to a lesson
+  36e546b07 chore(advisor): execute retro action items 1-3 (narrow-the-ask + user-skills snapshot)
+  da8724bc7 chore(advisor): bm-merge done — PR #195 @ 946293cbd; gate 5 confirmed; auto-state bm-merge-done
+  946293cbd Merge pull request #195 from barrie-cork/phase-test
   ```
+
+_Prior handoff hash `443c9d8bc` (2026-06-08) superseded by test-dogfood phase (`test`) which ran 2026-06-11→12 and landed 20+ commits on governance-v0. Significant additions: `advisor-orchestrator.md` §5.2 Shape-G-disabled fast-path; `refs/auto-phase.md` Race-A fetch-before-write; `bm-task-brief.template.md` YAML recovery; lesson `feedback_powershell_ascii_only_code_strings.md`. See retro `.claude/PRPs/reports/session-retro-2026-06-12-test-dogfood-bm-triage-leg.md` for full change list._
 
 ## Decision-queue snapshot at handoff
 
 ```decision-queue-snapshot
-(empty at handoff)
+(empty at handoff — 2026-06-12)
 ```
 
 ## Stop-and-ask tripwires
