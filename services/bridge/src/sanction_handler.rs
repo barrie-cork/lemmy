@@ -320,3 +320,154 @@ async fn put_power_levels(
         .context("PUT /state/m.room.power_levels returned non-2xx")?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicI64},
+    };
+    use axum::{
+        extract::State,
+        http::{header, HeaderMap, StatusCode},
+        Json,
+    };
+
+    use crate::{appservice::AppState, config::BridgeConfig, puppet::PuppetMap};
+    use super::{SanctionEventPayload, handle_sanction_event};
+
+    fn make_config(secret: &str) -> Arc<BridgeConfig> {
+        Arc::new(BridgeConfig {
+            tuwunel_url: "http://localhost:8448".to_string(),
+            as_token: "test-as-token".to_string(),
+            hs_token: "test-hs-token".to_string(),
+            bridge_port: 9999,
+            brehon_read_url: "http://localhost:9000/read".to_string(),
+            brehon_notify_url: "http://localhost:9000/notify".to_string(),
+            brehon_room_event_url: "http://localhost:9000/room-event".to_string(),
+            bridge_callback_secret: secret.to_string(),
+            legal_contact_mxid: "@legal:localhost".to_string(),
+        })
+    }
+
+    fn make_state(secret: &str, db_path: &str) -> Arc<AppState> {
+        let config = make_config(secret);
+        Arc::new(AppState {
+            puppet_map: PuppetMap::new(config.clone()),
+            config,
+            http_client: reqwest::Client::new(),
+            relay_enabled: Arc::new(AtomicBool::new(false)),
+            oq009_reveal_threshold: Arc::new(AtomicI64::new(0)),
+            bridge_db_path: db_path.to_string(),
+        })
+    }
+
+    fn test_payload(case_id: i64) -> SanctionEventPayload {
+        SanctionEventPayload {
+            sanction_kind: "ban".to_string(),
+            case_id,
+            subject_actor_pseudonym: "test-actor".to_string(),
+            effective_from: "2026-01-01T00:00:00Z".to_string(),
+            effective_until: None,
+            governance_log_entry_hash: "deadbeef".to_string(),
+        }
+    }
+
+    /// Test 1: bad bearer → 401, no Matrix call (auth check returns before any DB/network op).
+    #[tokio::test]
+    async fn test_bad_bearer_returns_401() {
+        let state = make_state("correct-secret", "unused-auth-test.db");
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer wrong-secret".parse().unwrap(),
+        );
+        let resp = handle_sanction_event(State(state), headers, Json(test_payload(1))).await;
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    /// Test 2: no rooms for case → 200 applied:false, no Matrix call.
+    /// Per Pattern 10.4 ordering, ensure_puppet is never reached in this path.
+    #[tokio::test]
+    async fn test_no_rooms_returns_200_applied_false() {
+        let db_path = std::env::temp_dir()
+            .join(format!("bridge-test-norooms-{}.db", std::process::id()))
+            .to_string_lossy()
+            .to_string();
+        // Open (creates schema) then drop — no rows inserted; schema persists on disk.
+        let _ = crate::bridge_room::open(&db_path).expect("create temp db");
+
+        let state = make_state("test-secret", &db_path);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            "Bearer test-secret".parse().unwrap(),
+        );
+        let resp =
+            handle_sanction_event(State(state), headers, Json(test_payload(999))).await;
+
+        let status = resp.status();
+        let bytes = axum::body::to_bytes(resp.into_body(), 4096).await.unwrap();
+        let _ = std::fs::remove_file(&db_path);
+
+        assert_eq!(status, StatusCode::OK);
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(
+            !body["applied"].as_bool().unwrap_or(true),
+            "applied must be false when no rooms found"
+        );
+        assert!(
+            body["reason"].as_str().unwrap_or("").contains("no rooms"),
+            "reason must mention 'no rooms', got: {}",
+            body["reason"]
+        );
+    }
+
+    /// Test 3: compute_power_override pure-function cases — no I/O.
+    #[test]
+    fn test_compute_power_override_cases() {
+        let content = serde_json::json!({
+            "events_default": 0,
+            "events": { "m.room.message": 0 }
+        });
+
+        let (level, reason) = super::compute_power_override("ban", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "power_level_reduced_below_post_threshold");
+
+        let (level, reason) = super::compute_power_override("mute", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "power_level_reduced_below_post_threshold");
+
+        let (level, reason) = super::compute_power_override("prevent_post", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "power_level_reduced_below_post_threshold");
+
+        // mute_voice with no voice threshold → events_default - 1 = -1
+        let (level, reason) = super::compute_power_override("mute_voice", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "voice_power_reduced_fallback_post_threshold");
+
+        let (level, reason) = super::compute_power_override("hide_content", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "redaction_not_available_in_m2_late_2");
+
+        let (level, reason) = super::compute_power_override("restrict_reach", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "restrict_reach_translated_to_power_level_reduction");
+
+        let (level, reason) = super::compute_power_override("unknown_kind", &content);
+        assert_eq!(level, -1);
+        assert_eq!(reason, "unknown_sanction_kind_default_post_reduction");
+    }
+
+    /// Test 4: live integration test (skipped in CI — requires docker-compose stack).
+    #[tokio::test]
+    #[ignore = "requires docker-compose stack"]
+    async fn test_power_levels_applied_live() {
+        // One room provisioned for a case → POST sanction event →
+        // assert GET+PUT fired and applied:true.
+        // Mirror: services/bridge/tests/room_provisioning.rs convention.
+        todo!("implement against live docker-compose stack")
+    }
+}

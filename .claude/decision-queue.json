@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "0365093316ed-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Validate bridge sanction_handler tests (task 5): cargo test + clippy pass?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Committed test module to sanction_handler.rs (4 tests: bad-bearer 401, no-rooms 200-applied-false, compute_power_override unit, ignored live). No new deps; Cargo.toml+Cargo.lock unchanged.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "bash -c 'cd services/bridge && cargo test'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-5-bridge-handler-tests-see-claude-prps-briefs-m2-late-2-impl-task-5-md-667",
+      "phase_task": 5,
+      "e2e_filter": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
