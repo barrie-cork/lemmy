@@ -229,3 +229,13 @@ Structural fix (future scope): gate-1 pre-seed DQ writes should happen on a lane
   composite-id mechanism eliminates.
 - `feedback_mode_b_trunk_phase_sync.md` — Mode B trunk→phase sync lesson.
 - `feedback_single_file_pull_from_trunk.md` — surgical-checkout lesson.
+
+## Hard refusal #7 — canonical-checkout foreign-WIP incident
+
+**Incident (2026-06-07 retro-promotion leg):** the canonical `brehon-fork` checkout was sitting on `phase-m2-late-1` (a prior session had checked out the phase branch) while a second session ran a live Diesel regeneration in the SAME tree. The retro-promotion session staged only its files and ran `git commit`, but the phase-branch context meant `git add` reported "nothing added" (the staged files were already tracked in the phase-branch tree). The atomic burst (`&&`-chain) recovered it, but the race cost ~20 min. Pre-check (`git status --short` before any meta-edit) would have routed to option (a) — spin a dedicated lane worktree — or option (b) — defer — and avoided the race entirely.
+
+**The lesson:** the `git status --short` pre-check is load-bearing, not advisory. Foreign uncommitted WIP in the canonical tree means another session is actively driving it — even if that session appears idle. The status check takes 2 seconds; losing the race costs 20–60 min.
+
+## Hard refusal #1 — incidents
+
+**2026-06-07 m2-late-1 T1:** a validation session needed to inspect the `phase-m2-late-1` tree in Mode B (no dedicated lane worktree). The session ran `git checkout phase-m2-late-1` inside the canonical `brehon-fork` checkout instead of creating a throwaway worktree. When `/compact` ran mid-session, the working-tree checkout was reset to `governance-v0` but conversation state retained the phase-branch context — all subsequent tool calls (8 steps) ran against the wrong tree. Recovery required re-reading the correct branch tip from origin and re-running all 8 steps.
