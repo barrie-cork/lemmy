@@ -154,6 +154,8 @@ Applies to **planning briefs only** (impl/bm briefs derive from a clarified plan
 
 Per `feedback_pre_phase_dod_smoke_test.md` + `feedback_plan_dod_dry_run_at_write.md`. When planning ships, run **every** validation command in §15 literally against current HEAD; capture exit codes; surface as part of plan approval. If a command is unexecutable (missing `--features full`, missing `--no-deps`, wrapper-script flag silence, `-p <crate>` + `--features full` per `feedback_features_full_p_crate_incompatible`), file a DQ pending from advisor (`chore(decision-queue): advisor noted DoD issue — <slug>`) and ask the planner to revise.
 
+**`services/bridge` cargo runs on Linux, not the Windows host (pre-flight, mandatory).** When a plan's §15 includes any `services/bridge` cargo command, run it via `scripts/brehon/cargo-linux.sh <verb> --manifest-path services/bridge/Cargo.toml` (Docker `rust:1.95`), **never** the Windows-local `cd services/bridge && cargo <verb>` form — the bridge does not compile on Windows (`ruma-common v0.19.0` E0119 vs the `time` crate, a host quirk independent of bridge code). A §15 bridge command written in the Windows form is itself a DoD-issue: file the advisor DQ and ask the planner to re-point it. First Docker bridge run is cold (~10–20 min). Per `feedback_bridge_validates_on_linux_not_windows.md`.
+
 ### 3.5 Watchpoint specificity gate (pre-plan-approval)
 
 Per `feedback_advisor_watchpoint_specificity.md`. Every watchpoint in plan §4 must cite a specific table, file, or `schema.rs` line. Concept-only watchpoints ("watch for trait drift" without naming the trait) → file DQ requesting revision before approval.

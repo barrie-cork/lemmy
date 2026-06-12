@@ -212,9 +212,15 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m2-late | Task 7 | 3 files (sanction_handler.rs + appservice.rs + main.rs) | `room_provisioner.rs`; `appservice.rs::router()` | ❌ | criterion 4: 3 files; criterion 5: bridge in-task cargo only |
 | m2-late | Task 8 | e2e/m2_late.rs + e2e.rs (2 files) | `e2e.rs:124-148` | ❌ | criterion 2: e2e |
 
-**Running total: 13 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2). Trial SUSPENDED — see MEMORY.md "MiniMax trial SUSPENDED (memory 827)"; do NOT dispatch arms until infra investigated and user resumes.
+| m2-late-2 | Task 3 | `sanction_handler.rs` + `bridge_room.rs` (2 files, bridge crate) | `bridge_room.rs:19-29`; workspace payload struct | ✅ | 2-file bridge, MIRROR-heavy, cargo-gated (bridge check) |
+| m2-late-2 | Task 4 | `sanction_handler.rs` (1 file, bridge crate) | `room_provisioner.rs:527-581`; `puppet.rs:58` | ✅ | 1-file bridge handler, MIRROR-heavy, cargo-gated |
+| m2-late-2 | Task 5 | `sanction_handler.rs` in-module test (1 file) | bridge test-compile pattern | ✅ | test-compile gated (`cargo check`), MIRROR-heavy |
 
-**TRIAL FIRES THIS PHASE — user override 2026-06-04** (`feedback_minimax_trial_run_below_threshold_on_user_override.md`): user waived the ≥5 cumulative gate (*"Run trial for eligble tasks, even if below 5/5… We need to get AB tests result"*). The 3 eligible tasks (m1-b 3,4,5) run BOTH arms per §2.3 on throwaway `ab-test/m1-b-t{3,4,5}-{sonnet,minimax}` branches off `phase-m1-b` AFTER real Tasks 1+2 land (Task 3 `requires:2`, 4 `requires:2,3`, 5 `requires:4`). Real pipeline stays Sonnet on `phase-m1-b`; trial never gates shipping. Results → `minimax-m27-trial-results.md`.
+**Running total: 16 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2; m2-late-2 T3,T4,T5 = 3).
+
+**TRIAL UN-SUSPENDED — user directive 2026-06-12**: user confirmed *"configure each task to run AB testing Sonnet versus M3"* for m2-late-2 `--unattended --start-from impl-cohort-0`. Prior suspension (memory 827) was infra-only (wrong DB, missing ab-test branch); key is verified live (HTTP 200, 2026-06-12). Each qualifying task (T3, T4, T5) runs BOTH arms per §2.3 on throwaway `ab-test/m2-late-2-t{3,4,5}-{sonnet,minimax}` branches off `phase-m2-late-2` tip AFTER the upstream `requires:` tasks land (T3 requires nothing; T4 requires T3; T5 requires T4). Real pipeline is Sonnet on `phase-m2-late-2`; trial never gates shipping. Results → `minimax-m3-trial-results.md` (create at trial start, append new `## m2-late-2` section).
+
+**T2 is Sonnet-only** (ADR-008 atomicity fix — embedded governance constraint, Sonnet lane per §2.5 two-tier decision rule). **T1 is Sonnet-only** (modifies `m2_late.rs` e2e file — criterion 2 excluded).
 
 When cumulative ✅ count reaches ≥5 (absent an override) → proceed to §2.3 dispatch sequence alongside the real phase.
 
