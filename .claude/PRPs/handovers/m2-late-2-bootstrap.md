@@ -169,3 +169,12 @@ _Prior handoff hash `443c9d8bc` (2026-06-08) superseded by test-dogfood phase (`
 - Stop and ask if: the bridge power-level enforcement task proposes to build a pseudonym→rooms index that requires a new DB table or migration — m2-late-2 should be handler-only; a migration is a scope escalation.
 - Stop and ask if: the pilot has no active `sanction_subscriber` row — verifying the subscriber seed before dispatching enforcement tests prevents a "delivery succeeded but nobody received it" false-green.
 - Stop and ask if: any fix-impl brief targets `crates/server/tests/e2e.rs` with ≥2 edits — this is the historically fragile file; apply `feedback_fix_impl_pre_locate_e2e_anchors.md` discipline and surface the anchor list to the user before dispatch.
+
+---
+
+## STATUS: SHIPPED
+
+- **PR:** #196 merged at 2026-06-12T22:09:32Z
+- **Merge SHA:** e1d615ee33907fa0d9fdeecba00576039c05d448
+- **Tombstoned by:** bm-merge Phase 8.5 post-condition
+- **This handover is stale.** Do NOT use the RESUME block above as a basis for action — the phase is complete. Delete this file or archive it.
