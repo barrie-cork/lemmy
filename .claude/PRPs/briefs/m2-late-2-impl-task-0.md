@@ -60,35 +60,20 @@ rg -n "enqueue_sanction_event" crates/api/api/src/governance/sanction_publisher.
 ```
 EXPECT: both match present
 
-**Probe 3** — workspace cargo-check wrapper (exit-code gated per `feedback_wrapper_script_flag_silence.md`):
-```bash
-mkdir -p .claude/PRPs/debug
-cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/m2-late-2-task0-ws.log 2>&1"
-WS_EXIT=$?
-echo "workspace exit: $WS_EXIT"
-tail -20 .claude/PRPs/debug/m2-late-2-task0-ws.log
-[ $WS_EXIT -eq 0 ] || { echo "PROBE FAIL: 3 workspace cargo-check non-zero"; exit 1; }
-```
-EXPECT: exit 0
-
-**Probe 4** — bridge cargo sanity via Docker Linux (R9 — LINUX-BRIDGE RIDER; never Windows-local):
-```bash
-scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml > /tmp/m2-late-2-task0-bridge.log 2>&1
-BRIDGE_EXIT=$?
-echo "bridge exit: $BRIDGE_EXIT"
-tail -20 /tmp/m2-late-2-task0-bridge.log
-[ $BRIDGE_EXIT -eq 0 ] || { echo "PROBE FAIL: 4 bridge cargo-linux.sh non-zero"; exit 1; }
-```
-EXPECT: exit 0. NOTE: First Docker pull is cold (~10–20 min). `Cargo.lock` committed at `cdc97fda5` with `time = "=0.3.47"` pin — should compile clean.
-
-**Probe 5** — negative exit-code masking guard:
-```bash
-cmd //c "scripts\\brehon\\cargo-check.bat -p lemmy_server --features nonexistent_xyz > .claude/PRPs/debug/m2-late-2-task0-neg.log 2>&1"
-NEG_EXIT=$?
-echo "neg exit: $NEG_EXIT"
-[ $NEG_EXIT -ne 0 ] || { echo "PROBE FAIL: 5 wrapper masked non-zero exit"; exit 1; }
-```
-EXPECT: non-zero (wrapper correctly propagates cargo error)
+**Probes 3, 4, 5 — DO NOT RUN on the worker (cargo is laptop-only).** The EliteDesk
+daemon is **Linux** and has **no `cmd.exe` and no cargo on PATH**; the
+`scripts\brehon\cargo-*.bat` wrappers are Windows-only and would fail to execute
+(`cmd: command not found`), and running cargo on the daemon at all violates the
+project HARD RULE **NO-CARGO-ON-ELITEDESK**. The plan §13 Task 0 lists Windows
+`cmd //c "...cargo-check.bat..."` probes (3, 4, 5) — those are **laptop-advisor
+pre-launch checks**, not worker probes. The advisor runs the workspace +
+bridge-Linux + negative-guard cargo sanity **locally on the laptop before
+dispatching this cohort** (the base is already known-green: workspace compiled at
+the gate-1 DoD smoke test; bridge `Cargo.lock` is committed at `cdc97fda5` with
+`time = "=0.3.47"` and verified `BRIDGE_FIX_EXIT_0`). **The worker SKIPS probes 3,
+4, 5 entirely and proceeds to Probe 6.** Per the canonical `m1-b-impl-0.md` Task-0
+pattern ("DO NOT run cargo / clippy / any `.bat` wrapper ... cargo NEVER runs on
+the EliteDesk daemon"). Mirrors `project_laptop_canonical_cargo_runner.md`.
 
 **Probe 6** — no concurrent PR on target files:
 ```bash
@@ -102,13 +87,11 @@ EXPECT: empty (no active PRs on the phase or AB-test branches yet)
 After all probes:
 ```
 PROBES: ALL PASS
-  probe-1: SUBMODULE OK
+  probe-(-1): SUBMODULE OK
   probe-0: DOCKER OK
   probe-1: branch=phase-m2-late-2
   probe-2: m2-late-1 base intact
-  probe-3: workspace exit=0
-  probe-4: bridge exit=0
-  probe-5: neg exit=<nonzero>
+  probe-3/4/5: SKIPPED (cargo is laptop-only; NO-CARGO-ON-ELITEDESK)
   probe-6: no concurrent PRs
 ```
 
@@ -116,15 +99,14 @@ If any probe fails: raise a `kind: "blocker"` DQ entry (per `decision-queue.md` 
 
 ## 3. Required reading
 
-- `.claude/PRPs/plans/m2-late-2.plan.md` — §13 Task 0 (probe definitions, EXPECT values)
-- `.claude/lessons/feedback_wrapper_script_flag_silence.md` — cargo wrapper exit-code discipline (Probe 5)
-- `.claude/lessons/feedback_bridge_validates_on_linux_not_windows.md` — R9 Linux-only rule (Probe 4)
-- `.claude/lessons/feedback_background_task_notification_lies.md` — if any probe runs in background, the notification exit code is unreliable; read the log file marker
+- `.claude/PRPs/plans/m2-late-2.plan.md` — §13 Task 0 (probe definitions; note probes 3/4/5 are laptop-side, NOT worker probes — see §4)
+- `project_laptop_canonical_cargo_runner.md` (PMD) — NO-CARGO-ON-ELITEDESK; the worker runs no cargo
+- `.claude/lessons/feedback_bridge_validates_on_linux_not_windows.md` — bridge is Linux-only (for the advisor's pre-launch bridge sanity, not a worker probe)
 
 ## 4. Constraints
 
-- **NO cargo on EliteDesk (NO-CARGO-ON-ELITEDESK)** — Probe 3 and Probe 5 use the `.bat` wrapper on the Windows worker host. Probe 4 uses `cargo-linux.sh` (Docker). Neither is `cargo` run directly on the daemon; the wrapper scripts isolate execution.
-- **Bridge cargo LINUX-ONLY** — Probe 4 MUST use `scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml`. Never `cargo check --manifest-path services/bridge/Cargo.toml` directly (ruma-common E0119 on Windows host pre-lockfile-pin; lockfile is now committed but the principle stays — bridge validates on Linux CI mirror).
+- **NO cargo on EliteDesk (NO-CARGO-ON-ELITEDESK)** — the worker runs ONLY the Linux-executable probes (submodule, docker, branch, rg base-intact, gh PR list). Probes 3/4/5 (workspace cargo, bridge cargo, negative-guard) are **laptop-advisor pre-launch checks, NOT worker probes** — the daemon is Linux with no cargo/cmd.exe, and cargo never runs on the daemon regardless. The worker SKIPS them. Per `project_laptop_canonical_cargo_runner.md` + the canonical `m1-b-impl-0.md` pattern.
+- **Bridge cargo LINUX-ONLY (advisor-side)** — when the advisor runs the pre-launch bridge sanity locally, it MUST use `scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml` (Docker). Never `cd services/bridge && cargo check` on Windows (ruma-common E0119). Lockfile committed at `cdc97fda5`; the principle stays — bridge validates on the Linux CI mirror.
 - **No commit at Task 0** — probes are read-only; a DQ blocker is the only valid output on failure.
 - **DQ v3 id** — if raising a blocker DQ: generate id via `bash scripts/brehon/dq-v3-new-entry.sh`, commit + push before stopping.
 
@@ -133,5 +115,5 @@ If any probe fails: raise a `kind: "blocker"` DQ entry (per `decision-queue.md` 
 | File class | Match? | Lesson injected |
 |---|---|---|
 | `crates/server/tests/e2e.rs` edits | ❌ no edits | — |
-| `scripts/brehon/cargo-*.bat\|sh` | ✅ Probes 3/4/5 invoke wrappers | `feedback_wrapper_script_flag_silence.md` (§3 ✓) |
-| bridge `cargo-linux.sh` | ✅ Probe 4 | `feedback_bridge_validates_on_linux_not_windows.md` (§3 ✓) |
+| `scripts/brehon/cargo-*.bat\|sh` (worker-invoked) | ❌ worker runs NO cargo (probes 3/4/5 are laptop-side) | — (NO-CARGO-ON-ELITEDESK) |
+| bridge `cargo-linux.sh` (worker-invoked) | ❌ bridge sanity is advisor-side pre-launch | — |
