@@ -48,6 +48,20 @@ recipe that side-steps all three at once.
 
 ## Canonical recipe (sidesteps all three)
 
+**The helper script is the FIRST move, not the recovery.** When you need to read
+a file out of a slash-containing ref (any `phase-*`, `junior/*`, `origin/<branch>`
+with a `/`), reach for `scripts/brehon/git-show-json.sh <ref> <path>` (it works on
+any file, not just JSON — it resolves the ref to a SHA first, writes to a
+Windows-explicit temp path, leaves it for Python with `encoding='utf-8'`) — or
+`scripts/brehon/resolve-dq-canonical.sh <phase>` for DQ specifically — **before**
+attempting a raw `git show <ref>:<path>`. The raw form silently mangles
+colon→semicolon and `/`→`\` and returns a short `fatal: ambiguous argument` error
+that reads like file content (a 3-line "file" is the tell). Hitting the mangle
+then recovering with the helper wastes ~2 min every time; the helper-first reflex
+makes the recovery unnecessary. (Re-hit 2026-06-12 m2-late-2: attempted raw
+`git show origin/phase-m2-late-2:.claude/...` first, got the mangled 3-line error,
+then reached for the helper. The helper should have been the first call.)
+
 For any "read JSON out of a git ref and process it in Python" pattern:
 
 ```bash

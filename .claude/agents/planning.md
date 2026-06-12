@@ -31,6 +31,8 @@ Per `.claude/lessons/feedback_pre_phase_dod_smoke_test.md` and `feedback_plan_do
 
 Per `.claude/lessons/feedback_features_full_p_crate_incompatible.md`, never combine `-p <crate>` with `--features full` in a DoD — only `--workspace --features full` works.
 
+Per `.claude/lessons/feedback_bridge_validates_on_linux_not_windows.md`, **`services/bridge` does NOT compile on the Windows host** (`ruma-common v0.19.0` E0119 vs the `time` crate — a host quirk, not bridge code). Any plan touching `services/bridge` MUST write its bridge cargo DoD (§15, Task-0 probes, `validate-pending-laptop` `commands`, §16a checkpoints) in the **Docker form** — `scripts/brehon/cargo-linux.sh <verb> --manifest-path services/bridge/Cargo.toml` — NEVER `cd services/bridge && cargo <verb>`, and NEVER write `EXPECT exit 0 locally` for a bridge cargo command. Tag bridge validation as Linux-only in §7 guardrails. Do NOT assume `services/bridge/Cargo.lock` is tracked — it is **not present in any committed tree** (generated on build, then cleaned); verify with `git ls-tree <ref> services/bridge/Cargo.lock` (empty = absent), never `git ls-files` (empty output + exit 0 misreads as "tracked").
+
 Per `.claude/lessons/feedback_wrapper_script_flag_silence.md`, before referencing any `scripts/brehon/cargo-*.bat` or `.sh` wrapper in the plan, verify the wrapper actually accepts the flags you depend on. Wrappers may silently hardcode scope.
 
 ## §13 per-task `creates:` / `modifies:` YAML block (load-bearing)
