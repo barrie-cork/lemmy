@@ -62,7 +62,7 @@ const MODE_CONTEXT: Record<BrehonMode, ModeContext> = {
       "handover.md",
       "pmd-invariants.md",
       "pmd-search-strategy.md",
-      "session-awareness.md",
+      "multi-lane-worktree.md",
     ],
     recommendedSkill: ".pi/skills/planning/SKILL.md",
     authorizedReadPaths: [
@@ -108,7 +108,7 @@ const MODE_CONTEXT: Record<BrehonMode, ModeContext> = {
     ruleFilter: [
       "pi-harness-constraints.md",
       "no-destructive-defaults.md",
-      "session-awareness.md",
+      "multi-lane-worktree.md",
       "pmd-invariants.md",
     ],
     recommendedSkill: null,

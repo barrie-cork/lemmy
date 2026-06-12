@@ -66,7 +66,6 @@ ALWAYS  cross-repo-coordination.md     32
 ALWAYS  integrator.md                  30
 ALWAYS  evaluation-calibration.md      30
 ALWAYS  memory-injection.md            27
-ALWAYS  session-awareness.md           23
 ALWAYS  gh-pr-fork-target.md           16
 ALWAYS  no-destructive-defaults.md      7
 
