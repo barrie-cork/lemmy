@@ -132,8 +132,8 @@ POST /brehon/sanction-event
 - **R4:** Task 0 enumerates ALL probes explicitly.
 - **R7:** workers WRITE the `validate-pending-laptop` DQ entry and STOP; they do NOT run workspace cargo on the daemon.
 - **R8 (CRITICAL):** the spawn in `submit_jury_vote.rs:198` is OUTSIDE the vote transaction. The CR-A fix uses a FRESH `conn.run_transaction(...)` inside `enqueue_sanction_event` — never touches the vote transaction's `conn`.
-- **R9 (CRITICAL):** `services/bridge` stays in the root `Cargo.toml` `exclude` array. The zero-Matrix-deps gate (`cargo tree --workspace | grep -cE 'matrix-sdk|ruma'` ⇒ 0) is in every bridge-touching DoD.
-- **R10 (NEW):** any change to `services/bridge/Cargo.toml` or `services/bridge/Cargo.lock` raises a `validate-pending-laptop-linux` DQ per `feedback_linux_compile_proof_is_a_gate.md` Option-2 trigger.
+- **R9 (CRITICAL):** `services/bridge` stays in the root `Cargo.toml` `exclude` array. The zero-Matrix-deps gate (`cargo tree --workspace | grep -cE 'matrix-sdk|ruma'` ⇒ 0) is in every bridge-touching DoD. **Bridge cargo runs on Linux (Docker), not Windows** — the bridge does not compile on the Windows host (`ruma-common v0.19.0` E0119 vs `time`). Use `scripts/brehon/cargo-linux.sh <verb> --manifest-path services/bridge/Cargo.toml`, never `cd services/bridge && cargo`. Per `feedback_bridge_validates_on_linux_not_windows.md`.
+- **R10 (CORRECTED 2026-06-12):** `services/bridge/Cargo.lock` is **NOT tracked and not present in any committed tree** (generated on build, then cleaned — verify with `git ls-tree <ref> services/bridge/Cargo.lock` → empty, NOT `git ls-files`). So the "lockfile change → Linux gate" trigger can't fire on a diff. But the Linux path is the bridge's **normal** validation route here regardless — because the bridge can't compile on Windows at all (R9). Run bridge cargo on Linux every time. A `Cargo.toml` dep change is still worth a `validate-pending-laptop-linux` note for the audit trail (`feedback_linux_compile_proof_is_a_gate.md` Option-2), but the gate's practical content is "validate the bridge on Linux," which already holds.
 
 ## 8. Flow design
 
