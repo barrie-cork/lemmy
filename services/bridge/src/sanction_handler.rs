@@ -57,6 +57,7 @@ fn now_rfc3339() -> String {
 #[derive(Debug, Deserialize)]
 pub struct SanctionEventPayload {
     pub sanction_kind: String,
+    pub case_id: i64,
     /// actor_pseudonym.pseudonym — never person.name or local_user.email (ADR-015).
     pub subject_actor_pseudonym: String,
     pub effective_from: String,

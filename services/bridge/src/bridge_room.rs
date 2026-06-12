@@ -28,6 +28,16 @@ pub fn lookup(conn: &Connection, case_id: i64, room_type: &str) -> Result<Option
     }
 }
 
+pub fn lookup_by_case(conn: &Connection, case_id: i64) -> Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT room_type, matrix_room_id FROM bridge_room WHERE case_id = ?1 AND matrix_room_id IS NOT NULL"
+    )?;
+    let rows = stmt.query_map(params![case_id], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    })?;
+    rows.collect()
+}
+
 pub fn upsert(
     conn: &Connection,
     case_id: i64,
