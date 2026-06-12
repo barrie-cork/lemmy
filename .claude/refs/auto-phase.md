@@ -533,6 +533,8 @@ Between last impl complete and bm-merge confirm: run `/brehon-verify`
 
 ### bm-pr complete
 
+**Fetch before write (mandatory):** immediately after `bm-pr` task transitions to `done`, run `git fetch origin governance-v0` before authoring the next brief, DQ entry, or auto-state update. The bm-pr Junior's finalize-merge lands on `governance-v0` between the task's `status: complete` and the advisor's next write — a stale local ref causes a non-fast-forward rejection on the subsequent `git push`. Per test-dogfood 2026-06-12 Race-A incident: bm-pr #656 finalize-merged concurrently with advisor DQ write → non-fast-forward; resolved via daemon-side `git merge origin/governance-v0` + push + laptop `git pull`. The fetch step is ≤1s and eliminates the race class.
+
 Wait for CodeRabbit (`bm-task` polls) → on CR posted, queue
 `bm-poll-cr`.
 
