@@ -9,6 +9,7 @@
 
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
@@ -18,6 +19,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::appservice::AppState;
+use crate::bridge_room;
 
 /// RFC 3339 timestamp from std::time::SystemTime (no chrono dep in bridge).
 fn now_rfc3339() -> String {
@@ -79,10 +81,9 @@ pub struct SanctionEventResponse {
 /// Auth: Authorization: Bearer <BRIDGE_CALLBACK_SECRET> (checked inline;
 /// this route is added OUTSIDE the hs_token_auth middleware layer).
 ///
-/// On success: looks up the subject's jury rooms, translates sanction_kind
-/// to a Matrix power-level change, returns 200 with SanctionEventResponse.
-/// Stub: power-level translation is deferred (bridge_room indexes by case_id,
-/// not by pseudonym); logs the event and returns applied=true.
+/// On success: looks up the subject's jury rooms by case_id, computes
+/// room-relative Matrix power-level overrides, applies them best-effort
+/// across all rooms, and returns 200 with SanctionEventResponse.
 pub async fn handle_sanction_event(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -110,7 +111,6 @@ pub async fn handle_sanction_event(
             .into_response();
     }
 
-    // 2. Log the inbound event (governance_log_entry_hash for audit trail).
     tracing::info!(
         subject = %payload.subject_actor_pseudonym,
         sanction_kind = %payload.sanction_kind,
@@ -119,41 +119,204 @@ pub async fn handle_sanction_event(
         "sanction-event received"
     );
 
-    // 3. Stub: power-level translation.
-    // bridge_room is indexed by (case_id, room_type); there is no pseudonym→rooms
-    // index yet. Full Matrix power-level enforcement is deferred to the
-    // m2-late-2 B-actor phase where the puppet-map linkage is established.
-    let _power_level = sanction_kind_to_power_level(&payload.sanction_kind);
-    tracing::debug!(
-        subject = %payload.subject_actor_pseudonym,
-        sanction_kind = %payload.sanction_kind,
-        "power-level translation stub — deferred to m2-late-2"
-    );
+    // 2. Open bridge room DB — infra error → 500 (not 200 applied:false).
+    let conn = match bridge_room::open(&state.bridge_db_path) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(err = %e, case_id = payload.case_id, "bridge_room::open failed");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "bridge_room open failed"})),
+            )
+                .into_response();
+        }
+    };
 
+    // 3. Look up all rooms for this case.
+    let rooms = match bridge_room::lookup_by_case(&conn, payload.case_id) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!(err = %e, case_id = payload.case_id, "lookup_by_case failed");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "lookup_by_case failed"})),
+            )
+                .into_response();
+        }
+    };
+
+    // 4. No rooms → 200 applied:false BEFORE ensure_puppet (load-bearing for Task 5 dep-free tests).
+    if rooms.is_empty() {
+        let now = now_rfc3339();
+        return (
+            StatusCode::OK,
+            Json(SanctionEventResponse {
+                applied: false,
+                reason: format!("no rooms found for case_id={}", payload.case_id),
+                applied_at: now,
+            }),
+        )
+            .into_response();
+    }
+
+    // 5. Resolve puppet mxid for the subject.
+    let mxid = match state.puppet_map.ensure_puppet(&payload.subject_actor_pseudonym).await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(
+                err = %e,
+                subject = %payload.subject_actor_pseudonym,
+                "ensure_puppet failed"
+            );
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "ensure_puppet failed"})),
+            )
+                .into_response();
+        }
+    };
+
+    // 6. Per-room loop — best-effort: one room failure MUST NOT abort others.
+    let rooms_found = rooms.len();
+    let mut rooms_applied = 0usize;
+    let mut rooms_failed = 0usize;
+    let mut last_reason_code = "no_rooms_applied";
+
+    for (_room_type, room_id) in &rooms {
+        // GET current power levels.
+        let mut content = match get_power_levels(&state, room_id).await {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::warn!(err = %e, room_id = %room_id, "get_power_levels failed — skipping room");
+                rooms_failed += 1;
+                continue;
+            }
+        };
+
+        // Compute room-relative override from fetched state.
+        let (level, reason_code) = compute_power_override(&payload.sanction_kind, &content);
+        last_reason_code = reason_code;
+
+        // GET→merge→PUT full content (never fragment PUT — wipes events_default etc).
+        if let Some(obj) = content.as_object_mut() {
+            let users = obj.entry("users").or_insert_with(|| serde_json::json!({}));
+            if let Some(users_map) = users.as_object_mut() {
+                users_map.insert(mxid.to_string(), serde_json::json!(level));
+            }
+        }
+
+        // PUT the merged full content back.
+        match put_power_levels(&state, room_id, &content).await {
+            Ok(()) => {
+                tracing::info!(
+                    room_id = %room_id,
+                    mxid = %mxid,
+                    level = level,
+                    reason_code = reason_code,
+                    "power level applied"
+                );
+                rooms_applied += 1;
+            }
+            Err(e) => {
+                tracing::warn!(err = %e, room_id = %room_id, "put_power_levels failed — skipping room");
+                rooms_failed += 1;
+            }
+        }
+    }
+
+    // 7. Build response.
     let now = now_rfc3339();
+    let applied = rooms_applied > 0;
+    let reason = format!(
+        "rooms_found={rooms_found} rooms_applied={rooms_applied} rooms_failed={rooms_failed}; {last_reason_code}"
+    );
     (
         StatusCode::OK,
         Json(SanctionEventResponse {
-            applied: false,
-            reason: format!(
-                "acknowledged sanction_kind={} for subject={}",
-                payload.sanction_kind, payload.subject_actor_pseudonym
-            ),
+            applied,
+            reason,
             applied_at: now,
         }),
     )
         .into_response()
 }
 
-/// Translate a sanction_kind string to a Matrix power level integer.
-/// "ban"/"mute"/"prevent_post"/"mute_voice" → 0 (cannot post);
-/// "hide_content"/"restrict_reach" → 25 (reduced reach);
-/// unknown → 50 (default member level).
-/// Full enforcement via `send_state_event` deferred to m2-late-2.
-fn sanction_kind_to_power_level(sanction_kind: &str) -> i32 {
+/// Compute the room-relative power override per sanction_kind.
+/// `content` is the fetched m.room.power_levels object.
+/// Returns (target_level, reason_code).
+fn compute_power_override(sanction_kind: &str, content: &serde_json::Value) -> (i64, &'static str) {
+    let events_default = content.get("events_default").and_then(|v| v.as_i64()).unwrap_or(0);
+    let msg_threshold = content
+        .get("events")
+        .and_then(|e| e.get("m.room.message"))
+        .and_then(|v| v.as_i64())
+        .unwrap_or(events_default);
+    let voice_threshold = content
+        .get("events")
+        .and_then(|e| {
+            e.get("m.call.member")
+                .or_else(|| e.get("org.matrix.msc3401.call.member"))
+        })
+        .and_then(|v| v.as_i64());
     match sanction_kind {
-        "ban" | "mute" | "prevent_post" | "mute_voice" => 0,
-        "hide_content" | "restrict_reach" => 25,
-        _ => 50,
+        // Silence on the message channel (one below the send threshold).
+        "ban" | "mute" | "prevent_post" => (msg_threshold - 1, "power_level_reduced_below_post_threshold"),
+        // Voice channel if a voice threshold exists, else conservative fallback.
+        "mute_voice" => (
+            voice_threshold.unwrap_or(events_default) - 1,
+            "voice_power_reduced_fallback_post_threshold",
+        ),
+        // No native primitive: reduce posting, flag that redaction/reach is not enforced.
+        "hide_content" => (msg_threshold - 1, "redaction_not_available_in_m2_late_2"),
+        "restrict_reach" => (msg_threshold - 1, "restrict_reach_translated_to_power_level_reduction"),
+        _ => (msg_threshold - 1, "unknown_sanction_kind_default_post_reduction"),
     }
+}
+
+/// GET /_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels
+/// Mirror: room_provisioner.rs:527-581 bearer_auth + URL-encoded room id + state.http_client.
+async fn get_power_levels(state: &AppState, room_id: &str) -> Result<serde_json::Value> {
+    let encoded_room_id = room_id.replace(':', "%3A");
+    let url = format!(
+        "{}/_matrix/client/v3/rooms/{}/state/m.room.power_levels",
+        state.config.tuwunel_url, encoded_room_id
+    );
+    let json = state
+        .http_client
+        .get(&url)
+        .bearer_auth(&state.config.as_token)
+        .send()
+        .await
+        .context("GET /state/m.room.power_levels failed")?
+        .error_for_status()
+        .context("GET /state/m.room.power_levels returned non-2xx")?
+        .json::<serde_json::Value>()
+        .await
+        .context("GET /state/m.room.power_levels body not valid JSON")?;
+    Ok(json)
+}
+
+/// PUT /_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels
+/// Replaces the entire content — always PUT the full merged object (Pattern 10.3 GOTCHA).
+async fn put_power_levels(
+    state: &AppState,
+    room_id: &str,
+    content: &serde_json::Value,
+) -> Result<()> {
+    let encoded_room_id = room_id.replace(':', "%3A");
+    let url = format!(
+        "{}/_matrix/client/v3/rooms/{}/state/m.room.power_levels",
+        state.config.tuwunel_url, encoded_room_id
+    );
+    state
+        .http_client
+        .put(&url)
+        .bearer_auth(&state.config.as_token)
+        .json(content)
+        .send()
+        .await
+        .context("PUT /state/m.room.power_levels failed")?
+        .error_for_status()
+        .context("PUT /state/m.room.power_levels returned non-2xx")?;
+    Ok(())
 }
