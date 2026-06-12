@@ -23,3 +23,9 @@
 - **Recommendation:** approve
 - **Note:** BM #658 classified both findings as fix-in-pr; advisor corrected per brief §4 decisions (cr-1→rebut, cr-2→wont-fix). Findings YAML rewritten by advisor.
 
+## bm: merge — 2026-06-12T00:08:13Z
+- **PR:** #195 merged → governance-v0
+- **Merge commit:** 946293cbd
+- **Branch deleted:** phase-test (confirmed via git ls-remote)
+- **Final recommendation:** approve (fix-in-pr=0, rebut=1, wont-fix=1)
+

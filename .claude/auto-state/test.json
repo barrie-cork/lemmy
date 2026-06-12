@@ -5,7 +5,7 @@
   "session_id": "b7e3f2a9c041",
   "last_session_ended_at": null,
   "resume_count": 1,
-  "stage": "bm-triage-running",
+  "stage": "bm-merge-done",
   "last_known_phase_tip": "50195e511",
   "current_cohort": {
     "n": 1,
@@ -41,10 +41,10 @@
     "bm-poll-cr": 657,
     "bm-triage": 658
   },
-  "last_action": "bm-poll-cr #657 done; 2 findings (cr-1 major rebut, cr-2 low wont-fix); bm-triage brief authored; Junior #658 queued",
-  "last_action_at": "2026-06-12T10:30:00Z",
-  "last_poll_at": "2026-06-12T10:30:00Z",
-  "last_fetch_at": "2026-06-12T10:30:00Z",
+  "last_action": "PR #195 merged @ 946293cbd; phase-test branch deleted; gate 5 confirmed by user",
+  "last_action_at": "2026-06-12T00:08:13Z",
+  "last_poll_at": "2026-06-12T11:45:00Z",
+  "last_fetch_at": "2026-06-12T11:45:00Z",
   "last_dq_pending_count": 0,
   "last_dq_pending_ids": [],
   "user_gate_history": [
@@ -59,6 +59,18 @@
       "decided_at": "2026-06-11T21:18:00Z",
       "decision": "approved — Rust + Shape G path (planner diverged from brief: sandbox_clamp in crates/utils/ instead of non-cargo meta tasks)",
       "notes": "user chose 'Approve — Rust + Shape G (Recommended)'"
+    },
+    {
+      "gate": "cr-triage-approval",
+      "decided_at": "2026-06-12T11:40:00Z",
+      "decision": "approved — fix-in-pr=0, rebut=1 (cr-1 validate-pending schema), wont-fix=1 (cr-2 MD022 nit); recommendation=approve",
+      "notes": "BM #658 misclassified both as fix-in-pr; advisor corrected inline before gate"
+    },
+    {
+      "gate": "merge-confirm",
+      "decided_at": "2026-06-12T11:45:00Z",
+      "decision": "confirmed — PR #195 merged @ 946293cbd; phase-test deleted",
+      "notes": "user typed 'I confirm'"
     }
   ],
   "push_grants_used": 0,
