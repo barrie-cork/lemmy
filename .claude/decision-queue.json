@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "7d3a1a7f8581-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Run workspace check + clippy + e2e for m2-late-2 task 1 (case_id payload field + e2e assertion). All three commands must exit 0.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 adds case_id: i64 to SanctionEventPayload in sanction_publisher.rs and asserts it in the m2_late e2e test. Commit a13020989 on branch junior/role-impl-task-m2-late-2-task-1-case-id-payload-see-claude-prps-briefs-m2-late-2-impl-task-1-md-662.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --test e2e -p lemmy_server --features full sanction_event_delivered_to_subscriber\""
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-1-case-id-payload-see-claude-prps-briefs-m2-late-2-impl-task-1-md-662",
+      "phase_task": 1,
+      "e2e_filter": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
