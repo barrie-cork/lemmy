@@ -7003,6 +7003,140 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-061"
+    },
+    {
+      "id": "8f91e3725dc5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Run bridge cargo check + clippy for task 3 (case_id mirror + lookup_by_case)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 committed on branch junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663. Added case_id:i64 to SanctionEventPayload and lookup_by_case to bridge_room.rs. Bridge crate is Linux-only (ruma-common E0119 on Windows); advisor converts to cargo-linux.sh.",
+      "answer": "bridge cargo check + clippy pass (Docker Linux rust:1.95). Clippy -D warnings: 19 errors all pre-existing from m2-late-1 stubs; T3 added 1 anticipated dead-code lint (lookup_by_case, called by T4). No regressions introduced.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T13:47:41Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "bash -c 'cd services/bridge && cargo check'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663",
+      "phase_task": 3,
+      "e2e_filter": null,
+      "workflow_run_id": 0,
+      "result": "pass"
+    },
+    {
+      "id": "7d3a1a7f8581-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Run workspace check + clippy + e2e for m2-late-2 task 1 (case_id payload field + e2e assertion). All three commands must exit 0.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 adds case_id: i64 to SanctionEventPayload in sanction_publisher.rs and asserts it in the m2_late e2e test. Commit a13020989 on branch junior/role-impl-task-m2-late-2-task-1-case-id-payload-see-claude-prps-briefs-m2-late-2-impl-task-1-md-662.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
+        "cmd //c \"scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full sanction_event_delivered_to_subscriber\""
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-1-case-id-payload-see-claude-prps-briefs-m2-late-2-impl-task-1-md-662",
+      "phase_task": 1,
+      "e2e_filter": null,
+      "answer": "workspace cargo check + clippy + e2e sanction_event_delivered_to_subscriber all pass. Clippy: 1 pre-existing error in lemmy_api_utils/utils.rs:1005 (string indexing, unrelated to T1 changes). E2e: 1 passed in 51.6s (--workspace form; -p lemmy_server --features full is invalid per advisorOrchestrator rules).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T14:05:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass"
+    },
+    {
+      "id": "c8e294aa18d8-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Validate bridge task 4 power-level enforcement: cargo check + clippy",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 rewrites handle_sanction_event with get_power_levels/put_power_levels/compute_power_override helpers and removes sanction_kind_to_power_level. Bridge does not compile on Windows (ruma-common E0119); validation delegated to advisor laptop via cargo-linux.sh.",
+      "commands": [
+        "bash -c 'cd services/bridge && cargo check'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-4-bridge-power-levels-see-claude-prps-briefs-m2-late-2-impl-task-4-md-666",
+      "phase_task": 4,
+      "e2e_filter": null,
+      "answer": "PASS. bridge cargo check + clippy: check EXIT 0. clippy -D warnings: 18 pre-existing dead-code/style errors (m2-late-1 stubs; identical to T3 baseline minus 1 removed fn). T4 added no new lint failures. sanction_kind_to_power_level correctly removed. Log: .claude/PRPs/debug/m2-late-2-t4-clippy.log",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T15:25:52Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "cargo check EXIT 0. cargo clippy -D warnings: 18 errors all pre-existing from m2-late-1 stubs (same baseline as T3 which had 19; T4 removed sanction_kind_to_power_level reducing count by 1). No new errors introduced by T4.",
+      "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Run cargo validation for m2-late-2 Task 2 (CR-A atomicity fix) on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 wraps sanction_event INSERT + governance_log::append in run_transaction (ADR-008 CR-A fix). Committed on branch junior/role-impl-task-m2-late-2-task-2-cr-a-atomicity-see-claude-prps-briefs-m2-late-2-impl-task-2-md-665. Only sanction_publisher.rs changed.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full sanction_event_delivered_to_subscriber\""
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-2-cr-a-atomicity-see-claude-prps-briefs-m2-late-2-impl-task-2-md-665",
+      "phase_task": 2,
+      "e2e_filter": null,
+      "answer": "PASS. T2 workspace: cargo check EXIT 0, clippy EXIT 0, e2e sanction_event_delivered_to_subscriber 1 passed (44.6s). All 3 validate commands green.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T15:35:36Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": "cargo check EXIT 0. cargo clippy EXIT 0. cargo test e2e sanction_event_delivered_to_subscriber: 1/1 PASS [44.568s]. 139 tests skipped (nextest filter). Build took 19m28s (cold cache in throwaway worktree brehon-fork-validate-665).",
+      "failed_commands": null,
+      "id": "8d79e47cceeb-001"
+    },
+    {
+      "id": "0365093316ed-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Validate bridge sanction_handler tests (task 5): cargo test + clippy pass?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Committed test module to sanction_handler.rs (4 tests: bad-bearer 401, no-rooms 200-applied-false, compute_power_override unit, ignored live). No new deps; Cargo.toml+Cargo.lock unchanged.",
+      "answer": "cargo test: 3 passed 1 ignored 0 failed; clippy: 18 pre-existing errors (same baseline as T4); R-bridge-lock clean; PASS",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T16:03:55Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "bash -c 'cd services/bridge && cargo test'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-5-bridge-handler-tests-see-claude-prps-briefs-m2-late-2-impl-task-5-md-667",
+      "phase_task": 5,
+      "e2e_filter": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }

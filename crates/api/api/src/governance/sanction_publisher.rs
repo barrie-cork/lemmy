@@ -37,6 +37,7 @@ use crate::governance::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SanctionEventPayload {
   pub sanction_kind: SanctionKind,
+  pub case_id: i64,
   /// actor_pseudonym.pseudonym — never person.name or local_user.email (ADR-015).
   pub subject_actor_pseudonym: String,
   pub effective_from: DateTime<Utc>,
@@ -129,6 +130,7 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
   // 5. Build payload and POST to each subscriber.
   let payload = SanctionEventPayload {
     sanction_kind,
+    case_id: i64::from(sanction.case_id.0),
     subject_actor_pseudonym: subject.clone(),
     effective_from: sanction.starts_at,
     effective_until: sanction.ends_at,
@@ -167,44 +169,47 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     }
   }
 
-  // 6. Record the sanction_event row.  Use payload.sanction_kind to avoid
-  //    a second move out of `sanction_kind` (SanctionKind may not be Copy).
+  // 6. Record the sanction_event row and governance log atomically (ADR-008).
   let kind = if any_ok {
     governance_log::ENTRY_KIND_SANCTION_PUBLISHED
   } else {
     governance_log::ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED
   };
 
-  {
-    let mut pool = ctx.pool();
-    let conn = &mut get_conn(&mut pool).await?;
-    let event_form = SanctionEventInsertForm {
-      sanction_id: sanction.id,
-      sanction_kind: payload.sanction_kind,
-      subject_actor_pseudonym: subject.clone(),
-      effective_from: sanction.starts_at,
-      effective_until: sanction.ends_at,
-      governance_log_entry_hash: payload.governance_log_entry_hash.clone(),
-    };
-    insert_into(sanction_event_dsl::table)
-      .values(&event_form)
-      .execute(conn)
-      .await?;
-  }
+  let mut pool = ctx.pool();
+  let conn = &mut get_conn(&mut pool).await?; // FRESH conn — NOT the vote tx (R8)
+  conn
+    .run_transaction(async |conn| {
+      let event_form = SanctionEventInsertForm {
+        sanction_id: sanction.id,
+        sanction_kind: payload.sanction_kind.clone(),
+        subject_actor_pseudonym: subject.clone(),
+        effective_from: sanction.starts_at,
+        effective_until: sanction.ends_at,
+        governance_log_entry_hash: payload.governance_log_entry_hash.clone(),
+      };
+      insert_into(sanction_event_dsl::table)
+        .values(&event_form)
+        .execute(conn)
+        .await?;
 
-  // Append governance log entry — fresh pool conn (R8: no transaction's conn reused).
-  governance_log::append(
-    &mut ctx.pool(),
-    kind,
-    serde_json::json!({
-      "sanction_id": sanction.id.0,
-      "sanction_kind": payload.sanction_kind,
-      "subscriber_count": subscribers.len(),
-      "subject_actor_pseudonym": subject,
-    }),
-    Some(subject),
-  )
-  .await?;
+      // Reborrow: `append`'s own run_transaction becomes a SAVEPOINT of THIS tx.
+      governance_log::append(
+        &mut (&mut *conn).into(),
+        kind,
+        serde_json::json!({
+          "sanction_id": sanction.id.0,
+          "sanction_kind": &payload.sanction_kind,
+          "subscriber_count": subscribers.len(),
+          "subject_actor_pseudonym": &subject,
+        }),
+        Some(subject.clone()),
+      )
+      .await?;
+
+      Ok(())
+    })
+    .await?;
 
   Ok(())
 }
