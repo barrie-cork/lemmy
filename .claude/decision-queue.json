@@ -25,31 +25,6 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
-    },
-    {
-      "id": "8f91e3725dc5-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-12T00:00:00Z",
-      "question": "Run bridge cargo check + clippy for task 3 (case_id mirror + lookup_by_case)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 committed on branch junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663. Added case_id:i64 to SanctionEventPayload and lookup_by_case to bridge_room.rs. Bridge crate is Linux-only (ruma-common E0119 on Windows); advisor converts to cargo-linux.sh.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "bash -c 'cd services/bridge && cargo check'",
-        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
-      ],
-      "branch": "junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663",
-      "phase_task": 3,
-      "e2e_filter": null,
-      "workflow_run_id": 0
     }
   ],
   "resolved": [
@@ -7054,6 +7029,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-061"
+    },
+    {
+      "id": "8f91e3725dc5-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Run bridge cargo check + clippy for task 3 (case_id mirror + lookup_by_case)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 committed on branch junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663. Added case_id:i64 to SanctionEventPayload and lookup_by_case to bridge_room.rs. Bridge crate is Linux-only (ruma-common E0119 on Windows); advisor converts to cargo-linux.sh.",
+      "answer": "bridge cargo check + clippy pass (Docker Linux rust:1.95). Clippy -D warnings: 19 errors all pre-existing from m2-late-1 stubs; T3 added 1 anticipated dead-code lint (lookup_by_case, called by T4). No regressions introduced.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-12T13:47:41Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "bash -c 'cd services/bridge && cargo check'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-3-bridge-case-id-mirror-see-claude-prps-briefs-m2-late-2-impl-task-3-md-663",
+      "phase_task": 3,
+      "e2e_filter": null,
+      "workflow_run_id": 0,
+      "result": "pass"
     }
   ]
 }
