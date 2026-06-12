@@ -83,7 +83,7 @@ Follows `m2-late-1` (B-publish sanction propagation, PR #192, merge `be8134d0b`)
 
 - **R1:** every `i32 ↔ i64` conversion/comparison uses `i64::from(...)`, never `as` cast (per `feedback_clippy_test_style.md`). Applies to `case_id: i64 = i64::from(sanction.case_id.0)` in Task 1.
 - **R8 (CRITICAL):** `enqueue_sanction_event` runs OUTSIDE any vote transaction. The CR-A fix opens a **fresh `get_conn`** for its `run_transaction`, AFTER the subscriber POSTs — it never reuses the vote tx conn. Catch-fire if Task 2's transaction conn comes from anywhere but a fresh `ctx.pool()` / `get_conn`.
-- **R9 (CRITICAL):** `services/bridge` stays in root `Cargo.toml` `exclude`. NEVER `--workspace` for bridge cargo; use `cd services/bridge && cargo <verb>` (no `--features full` — bridge has no such feature). Catch-fire if any bridge validation uses `--workspace`.
+- **R9 (CRITICAL):** `services/bridge` stays in root `Cargo.toml` `exclude`. NEVER `--workspace` for bridge cargo; no `--features full` (bridge has no such feature). **Execution form: `scripts/brehon/cargo-linux.sh <verb> --manifest-path services/bridge/Cargo.toml` (Docker-Linux) — the literal `cd services/bridge && cargo <verb>` form FAILS on the Windows host (ruma-common E0119); see the §15.4 LINUX-BRIDGE RIDER.** Catch-fire if any bridge validation uses `--workspace`.
 - **R-multi-write:** the CR-A atomicity fix IS the `feedback_multi_write_handlers_need_transactions.md` pattern — both writes in one `run_transaction`, the second via the `&mut (&mut *conn).into()` reborrow.
 - **R-timeout:** any outbound HTTP from a governance/bridge path uses connect+read timeouts. `sanction_publisher.rs:138-141` already sets `connect_timeout(10s)`/`timeout(30s)`. Task 4's bridge GET/PUT reuse `state.http_client` — confirm it was built with timeouts at AppState construction; if it is a bare `reqwest::Client::new()`, add timeouts there (per m2-late-1 retro change #3).
 - **R-bridge-lock:** if Task 3/4/5 add ANY dependency to `services/bridge/Cargo.toml`, `services/bridge/Cargo.lock` changes → raise a `validate-pending-laptop-linux` DQ (Option-2 trigger). **The recommended approach adds NO new bridge dependency** (reuses `reqwest`/`serde_json`/`tokio`/`rusqlite`), so no Linux gate fires.
@@ -312,8 +312,8 @@ cmd //c "scripts\\brehon\\cargo-check.bat --workspace --features full > .claude/
 echo "exit: $?"   # EXPECT: 0 (clean base)
 tail -20 .claude/PRPs/debug/m2-late-2-task0-ws.log
 
-# Probe 4 — bridge cargo sanity (R9: from crate dir, NO --workspace)
-( cd services/bridge && cargo check > /tmp/m2-late-2-task0-bridge.log 2>&1 ); echo "exit: $?"   # EXPECT: 0
+# Probe 4 — bridge cargo sanity (R9 + §15.4 LINUX-BRIDGE RIDER: Docker-Linux, NOT Windows-local)
+scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml > /tmp/m2-late-2-task0-bridge.log 2>&1 ; echo "exit: $?"   # EXPECT: 0 (FIRST run cold ~10-20 min)
 tail -20 /tmp/m2-late-2-task0-bridge.log
 
 # Probe 5 — negative: bogus feature propagates non-zero (exit-code masking guard)
@@ -542,7 +542,38 @@ echo "exit: $?"   # EXPECT: 0  (1 passed)
 
 ### 15.4 Bridge static / lint / test (Tasks 3, 4, 5 — R9)
 
+> **LINUX-BRIDGE RIDER (added 2026-06-12, advisor + user-confirmed).** The
+> literal `cd services/bridge && cargo …` form shown below **FAILS on the
+> Windows host** — `ruma-common v0.19.0` hits an `E0119` conflicting-trait-impl
+> against the `time` crate (a host-toolchain quirk, NOT a code defect; reproduced
+> on `phase-m2-late-2` base before any m2-late-2 edit). The bridge's real deploy
+> target is Linux, so **all bridge cargo in this plan (Task 0 Probe 4, §15.4,
+> Tasks 3/4/5 `validate-pending-laptop` DQ `commands`, §16a Story 3/4 checkpoints)
+> runs via Docker** through `scripts/brehon/cargo-linux.sh` with
+> `--manifest-path services/bridge/Cargo.toml` (the bridge is workspace-excluded,
+> so the manifest-path is how cargo reaches it from the repo-root working dir the
+> wrapper uses — never `--workspace`, never `--features full`):
+>
+> ```bash
+> scripts/brehon/cargo-linux.sh check  --manifest-path services/bridge/Cargo.toml
+> scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings
+> scripts/brehon/cargo-linux.sh test   --manifest-path services/bridge/Cargo.toml
+> ```
+>
+> `cargo-linux.sh` is scope-agnostic by design (`feedback_wrapper_script_flag_silence.md`)
+> so `--manifest-path` is a plain passthrough — **no wrapper-script change is
+> needed**. Preconditions: Docker Desktop in Linux-container mode
+> (`docker info --format '{{.OSType}}'` → `linux`; the wrapper preflights this and
+> exits 3 if not). FIRST bridge run is COLD (full `ruma`/`matrix-sdk` download +
+> compile in-container, ~10–20 min); the `brehon-cargo-registry` volume warms it
+> after. The `validate-pending-laptop` bridge DQ entries become
+> `validate-pending-laptop-linux` in spirit — the advisor-laptop handler runs the
+> `cargo-linux.sh` form and mutates the entry (`answered_by: "advisor-laptop"`).
+> The Windows-local form below is kept only as crate-identity reference; do NOT
+> execute it. Per `feedback_linux_compile_proof_is_a_gate.md`.
+
 ```bash
+# REFERENCE ONLY — see LINUX-BRIDGE RIDER above; execute via cargo-linux.sh, NOT this:
 ( cd services/bridge && cargo check )                          ; echo "check exit: $?"   # EXPECT: 0
 ( cd services/bridge && cargo clippy --no-deps -- -D warnings ); echo "clippy exit: $?"  # EXPECT: 0
 ( cd services/bridge && cargo test )                           ; echo "test exit: $?"    # EXPECT: 0 (ignored test skipped)

@@ -22,7 +22,29 @@ purpose: Bootstrap the m2-late-2 advisor session. Read the RESUME block first; i
 
 ## Next concrete action
 
-Author `.claude/PRPs/briefs/m2-late-2-planning-1.md` (scope: power-level enforcement in bridge + CR-A atomicity fix; see §1 + carry-forward from `workflow_state_m2_late.md`). Then `/brehon-clarify` → queue planning Junior. **B-actor portable-ID linkage is OUT OF SCOPE** (user-confirmed 2026-06-07; OQ-ADR016-03 deferred).
+> **STATE UPDATED 2026-06-12 (advisor session).** Planning is DONE — brief authored,
+> `/brehon-clarify` complete (4 resolved DQ `a3d0e9941441-058`…`-061`), planning Junior
+> #660 ran 10:48→11:00 UTC, plan authored + merged to `phase-m2-late-2` @ **`c6a22e072`**
+> (`.claude/PRPs/plans/m2-late-2.plan.md`, 7 tasks, complexity 6/10). DoD smoke + watchpoint
+> gate + MiniMax-designation (SUSPENDED) all run. **Plan-approval gate 1 is HELD pending
+> user read** (user chose "Hold — read the plan first" 2026-06-12). DQ pending = 0.
+
+**Next concrete action for the NEW session:**
+1. **Verify Docker is in Linux-container mode** (`docker info --format '{{.OSType}}'` → `linux`) — required for bridge validation (see the LINUX-BRIDGE decision below).
+2. Confirm the user has finished reading `.claude/PRPs/plans/m2-late-2.plan.md` and gives plan-approval (gate 1).
+3. On approval → `/auto-phase m2-late-2 --unattended --start-from impl-cohort-0`.
+
+### ⚠️ LINUX-BRIDGE validation (user-confirmed 2026-06-12 — load-bearing)
+
+Bridge cargo (Tasks 3/4/5) does **NOT** run via the Windows-local `cd services/bridge && cargo …`
+form — that **FAILS on the Windows host** (`ruma-common v0.19.0` E0119 conflicting-trait-impl
+vs `time`, a host-toolchain quirk reproduced on the phase base). **All bridge cargo runs via
+Docker** through `scripts/brehon/cargo-linux.sh --manifest-path services/bridge/Cargo.toml`
+(no wrapper change needed — it's a scope-agnostic passthrough). The plan's §15.4 carries the
+authoritative **LINUX-BRIDGE RIDER** with the exact commands; R9 + Task 0 Probe 4 point to it.
+FIRST bridge container run is COLD (~10–20 min, full `ruma`/`matrix-sdk` compile); warms after
+via the `brehon-cargo-registry` volume. Workspace Tasks 1/2 still use the Windows bat wrappers
+(they compile fine).
 
 **Before first bm-triage dispatch:** implement test-dogfood retro Change #4 — update `bm-task-brief.template.md` bm-triage row to specify `model: sonnet-4-6`. 5× recurrence threshold met; one-line template change before the first triage brief is authored.
 
@@ -64,7 +86,7 @@ m2-late-2 closes the two deliberate stubs left in m2-late-1: (a) the bridge powe
 
 4. **Pilot `sanction_subscriber` row**: SSH to `http://100.81.145.58:1236` and verify `SELECT * FROM sanction_subscriber WHERE active = true` returns exactly one row with the bridge callback URL. If missing, `BRIDGE_SANCTION_CALLBACK_URL` was not set at startup — the pilot deployment config needs patching before end-to-end testing is possible.
 
-5. **Bridge `Cargo.lock` drift**: if any `Cargo.toml` dependency changes in `services/bridge/`, the `Cargo.lock` will change. The `services/bridge/Cargo.lock` is tracked (R9: bridge is workspace-excluded, has its own lockfile). Any `Cargo.lock` change triggers the `validate-pending-laptop-linux` DQ gate (Option-2 scope per `feedback_linux_compile_proof_is_a_gate.md`).
+5. **Bridge `Cargo.lock` drift** — **CORRECTED 2026-06-12:** `services/bridge/Cargo.lock` is **NOT tracked and does NOT exist in the repo** (it is generated on first `cargo` build, then cleaned). The earlier "tracked lockfile" claim here and in §4.5 was wrong (verified: `ls services/bridge/Cargo.lock` → No such file). Practical consequence: the recommended plan adds **no new bridge dependency** (reuses `reqwest`/`serde_json`/`tokio`/`rusqlite`), so no lockfile change and **no `validate-pending-laptop-linux` gate fires for that reason**. The Linux gate is instead the *normal* bridge-validation path here because the bridge cannot compile on Windows at all (ruma E0119) — see the LINUX-BRIDGE decision in the RESUME block: bridge cargo runs via `cargo-linux.sh --manifest-path services/bridge/Cargo.toml` regardless of whether deps changed.
 
 ## 5. Operational rules
 
@@ -74,7 +96,7 @@ m2-late-2 closes the two deliberate stubs left in m2-late-1: (a) the bridge powe
 
 **Shape G:** SUSPENDED — validate-pending-laptop per `advisor-orchestrator.md` §5.2. All cargo runs on laptop.
 
-**Bridge cargo isolation (R9):** never `--workspace` for bridge checks. Use `cargo check --manifest-path services/bridge/Cargo.toml` or `cd services/bridge && cargo check`.
+**Bridge cargo isolation (R9):** never `--workspace` for bridge checks. Execute via Docker-Linux: `scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml`. The Windows-local `cd services/bridge && cargo check` FAILS (ruma E0119) — do not use it (LINUX-BRIDGE decision, RESUME block).
 
 **Windows e2e:** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1"` + `run_in_background: true`. Read exit marker from log, not task notification. See `feedback_windows_e2e_requires_bat_wrapper.md`.
 
