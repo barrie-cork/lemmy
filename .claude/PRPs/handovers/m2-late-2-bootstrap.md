@@ -74,7 +74,7 @@ m2-late-2 closes the two deliberate stubs left in m2-late-1: (a) the bridge powe
 
 **Shape G:** SUSPENDED — validate-pending-laptop per `advisor-orchestrator.md` §5.2. All cargo runs on laptop.
 
-**Bridge cargo isolation (R9):** never `--workspace` for bridge checks. Use `cargo check --manifest-path services/bridge/Cargo.toml` or `cd services/bridge && cargo check`.
+**Bridge cargo isolation (R9):** never `--workspace` for bridge checks. Always `cargo-linux.sh check --manifest-path services/bridge/Cargo.toml` (Docker, never Windows-local). Windows cannot compile the bridge (ruma/time conflict). `services/bridge/Cargo.lock` is now tracked (committed `cdc97fda5`, governance-v0) — `time = "=0.3.47"` pin; do NOT `cargo update` without re-running Docker check. Pre-condition for any bridge cargo DoD command: `git ls-tree HEAD services/bridge/Cargo.lock` must return non-empty.
 
 **Windows e2e:** `cmd //c "scripts\\brehon\\cargo-test.bat --workspace --test e2e --features full > <log> 2>&1"` + `run_in_background: true`. Read exit marker from log, not task notification. See `feedback_windows_e2e_requires_bat_wrapper.md`.
 
