@@ -14,11 +14,10 @@ Project memory exposes two search tools. Pick by query shape.
 
 ## brehon-fork PMD status (2026-05-16)
 
-- **DB path:** `.project-memory/memory.db` (relative to repo root). The MCP server's env wires `PROJECT_MEMORY_DB` here.
-- **Indexed corpora:** evals/qa-results (auto-written by retros), decisions, bugs, **all `.claude/lessons/feedback_*.md` files** (imported via `scripts/sync-lessons-to-pmd.sh` as `memory_type: "pattern"`, `tags: "lesson,feedback"`).
-- **Embedding mode:** **hybrid (semantic + FTS5).** Fixed 2026-05-16: `.mcp.json`'s `project-memory` env now sets `OLLAMA_URL=http://homeserver:11434` (Tailscale-routed Ollama on the EliteDesk, model `nomic-embed-text`, 768-dim). The MCP server's hardcoded default was the stale LAN IP `192.168.1.157:11434` — unreachable from the laptop, which is why `memory_vectors` sat empty and `memory_search_hybrid` silently FTS5-degraded for ~7 days. All memories backfilled via `dist/scripts/backfill.js`. Query-time embedding works after MCP-server restart (reload Claude Code session to pick up `.mcp.json`).
-- **Re-backfill after bulk lesson import:** `scripts/sync-lessons-to-pmd.sh` adds rows without vectors. Re-run the backfill to embed them: `OLLAMA_URL=http://homeserver:11434 PROJECT_MEMORY_DB=.project-memory/memory.db PROJECT_ROOT=C:/Users/barri/Developer/brehon-fork node C:/Users/barri/Developer/MCPs/project-memory-mcp/dist/scripts/backfill.js --verbose`. Idempotent on `(memory_id, model)`.
-- **If embeddings stop working again:** check `curl -s -m5 http://homeserver:11434/api/tags` (Tailscale up? Ollama up?), then `SELECT COUNT(*) FROM memory_vectors` (0 = backfill needed). The tool degrades silently to FTS5 with one stderr line — absence of vector hits is the symptom.
+Topology, live DB location, embedding/backfill mechanics: `.claude/rules/pmd-invariants.md`
+invariants #1 + #3 are canonical (HTTP daemon on homeserver since 2026-06-11; the laptop
+file-DB is a STALE copy; do NOT run laptop `backfill.js`). This section previously carried
+2026-05-16 laptop-topology instructions — superseded, removed by harness-audit-2026-06-12 P3.
 
 ## Default: `memory_search_hybrid`
 

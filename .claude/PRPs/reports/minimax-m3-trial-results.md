@@ -20,6 +20,17 @@ Summary recorded here for aggregation.
 
 ## m2-late-2 (2026-06-12) — ACTIVE
 
+> **⏱ TIMING: POST-SHIP ONLY (data-collection, user directive 2026-06-12).** The
+> AB arms do **NOT** fire inside `/auto-phase --unattended`. The `/auto-phase`
+> state machine has no MiniMax/ab-test code path, and a MiniMax arm is a *normal
+> impl-task worker* that writes `validate-pending-laptop` + `blocker` DQ entries —
+> which the unattended advisor's cross-branch DQ resolver (`resolve-dq-canonical.sh`)
+> WOULD pick up, plus it consumes a cohort dispatch slot. So: Sonnet ships the
+> phase via `/auto-phase` (default, in-loop); the AB arms run **serially, AFTER the
+> phase merges**, on `ab-test/*` branches that no advisor loop is polling. Results
+> analysed post-ship. Sonnet stays default. The arms NEVER gate shipping and are
+> NEVER merged. Do NOT dispatch an arm while `/auto-phase m2-late-2` is in flight.
+
 Trial un-suspended per user directive 2026-06-12. Three qualifying tasks: T3, T4, T5.
 
 **Arm naming:**

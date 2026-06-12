@@ -27,3 +27,9 @@ Extracted from `.claude/rules/pmd-invariants.md` per `feedback_rule_narrative_to
 ## Invariant 5: SessionStart canonical-PMD guard
 
 **Why non-negotiable:** The `.mcp.json.example` template has carried the correct absolute `PROJECT_MEMORY_DB` since v1-ship-1 but nothing *checks* that a given lane's actual `.mcp.json` matches the canonical path. A lane bootstrapped from an older template, or with a stale relative path, fails with zero feedback until the symptom compounds — v1-ship-1 accumulated ~27+ false Stop-hook blocks before the mismatch was found. A documentary guard that is never checked is equivalent to no guard: the knowledge exists; the enforcement does not; the footgun re-fires silently. The SessionStart hook converts a paper invariant into a loud signal at the cheapest possible moment.
+
+## 2026-06-11 homeserver cutover — IP correction + store split
+
+**IP CORRECTION (2026-06-11):** `100.104.171.26` is **the LAPTOP** (`desktop-jtgr71s`), NOT homeserver — earlier topology notes that cited it as "the Tailscale endpoint" reflected the OLD laptop-hosted daemon. homeserver = `100.81.145.58`. A laptop-local PMD daemon may still be listening on `:11435`; do NOT point `.mcp.json` at the laptop IP — that store split from homeserver on 2026-06-11 (4 rows, reconciled). Verify the node before trusting any `100.*` PMD IP: `tailscale status | grep <ip>`.
+
+**Pre-cutover note (for archive context):** until 2026-06-11 the daemon ran on the laptop and the sqlite3-CLI file sync (`scripts/sync-lessons-to-pmd.sh`) DID reach the live store; that is no longer true after the homeserver HTTP-daemon cutover. The laptop-local `C:/Users/barri/Developer/brehon-fork/.project-memory/memory.db` is now a STALE copy; writes to it do NOT propagate to the live daemon.

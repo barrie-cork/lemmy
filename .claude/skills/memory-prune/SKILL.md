@@ -78,7 +78,7 @@ wc -l "$MEM"   # lines  — secondary ceiling (~200)
 | Bytes | Lines | Verdict |
 |---|---|---|
 | > 24400 | (any) | **OVER — truncating now.** Prune is mandatory; SessionStart already warned. |
-| 22000–24400 | (any) | Near budget — prune proactively. |
+| 22000–23800 | (any) | Near budget — prune proactively. **Target: prune to ≤23,800** (600-byte margin for archive line rounding — 2026-06-12 run landed 4 bytes from limit with a 7-entry archive line consuming ~140 bytes). |
 | < 22000 | > 190 | Line-pressure even though bytes OK (many terse entries) — prune or compress. |
 | < 22000 | < 190 | Healthy — prune only stale/duplicate/superseded entries, no urgency. |
 
@@ -105,6 +105,7 @@ Walk each line in MEMORY.md. For each entry, classify into one of:
 | **Superseded** | A newer entry explicitly replaces this one (e.g. "SUSPENDED" supersedes "SHIPPED") | Remove the older entry |
 | **Redundant with rules** | The entry's signal is fully covered by an auto-loaded `.claude/rules/*.md` file | Remove (the rule IS the enforcement; the memory adds nothing) |
 | **Verbose** | Entry line exceeds ~200 chars (≈200 bytes) and can be shortened without losing the retrieval hook | Shorten in place (when OVER on bytes, this is a PRIMARY lever, not optional polish — target the longest entries first; detail belongs in the linked `.md` file, the index line is just a retrieval hook) |
+| **Verbose absolute path** | Entry link uses `../../Developer/brehon-fork/...` or similar long relative path prefix on a `.claude/lessons/` filename | Shorten to bare filename — saves ~50 bytes per entry; bare filenames resolve correctly in the memory system's CWD context |
 | **Keep** | Still load-bearing — references active work, encodes a decision not in any rule, or is a promoted pattern | No action |
 
 To check whether a memory is redundant with rules, grep the rules directory for the key concept.
@@ -281,6 +282,27 @@ cut surfaces to the user in the §4 plan only after all applicable gates pass. T
 gate cost prevents the proposal-pass-vs-execute-pass gap (recurrence ≥ 2 in
 `session-retro-2026-05-22-context-prune-option-a.md` — G4 example + DQ how-to-write both
 correctly self-rejected on execute-pass; proposal pass should have caught both at audit time).
+
+## Step 3.6: Pre-estimate before first Write
+
+**Run this before any full-file Write** — prevents the two-pass Write loop.
+
+1. Sum the byte lengths of all lines you plan to remove or shorten:
+   ```bash
+   # Rough estimate: wc -c of each line's current text
+   # Shortcut: count chars in the proposal table's "Entry (short)" column
+   ```
+2. Estimate the archive line cost: **150 bytes** per archive line (conservative; a 7-entry archive
+   line was 140 bytes in the 2026-06-12 run).
+3. Check: `current_bytes - remove_bytes + archive_line_cost < 23800`
+   - **Satisfied** → one Write pass will land under target. Proceed to Step 4.
+   - **Not satisfied** → identify additional cuts (more shorten-in-place, more Historical moves)
+     before writing. A second Write pass costs 2× the tokens; it's cheaper to spend 2 extra
+     minutes on the estimate.
+
+The 2026-06-12 run skipped this estimate: two full Write passes (33KB → 28.9KB → 24.7KB) plus
+~12 micro-trim Edits were needed to reach 24,396 bytes. The pre-estimate would have shown after
+the first pass plan that ~200 more bytes were needed, avoiding the second pass.
 
 ## Step 4: Confirm and apply
 

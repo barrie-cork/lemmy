@@ -1,11 +1,6 @@
 # Memory Injection
 
-At the START of every task, before writing any code:
-
-1. If `docs/memory/PATTERNS.md` exists in this repo, read it
-2. If `docs/memory/KNOWN_ISSUES.md` exists in this repo, read it
-
-Apply any relevant patterns or known issues to your current task. These are confirmed failure modes (3+ occurrences) — not suggestions.
+At the START of every task, before writing any code, apply the cross-cutting patterns below.
 
 ## Cross-cutting patterns (always applicable)
 
@@ -22,6 +17,6 @@ Apply any relevant patterns or known issues to your current task. These are conf
 
 ## PMD search before acting
 
-3. Search PMD for the subsystem being modified — prefer `memory_search_hybrid` for multi-word queries (semantic + FTS5 via RRF, +62.7% recall, handles synonyms). Example: `memory_search_hybrid(query: "docker container OOM memory limit", tags: "infrastructure")`. Prior bugs, decisions, and patterns about that subsystem must inform the approach before proposing a plan or fix.
-4. Also fetch recent lessons: `memory_search_hybrid(query: "recent lessons improvement", tags: "lesson", limit: 5)`. Read any results and apply relevant lessons to your current approach. These are improvement points from recent sessions — not yet confirmed as patterns but worth heeding.
-   - Single-keyword FTS5 still works via `memory_search` (e.g. `memory_search(query: "worktree", tags: "junior")`), but the one-keyword-one-tag workaround is no longer required — hybrid handles multi-word queries correctly.
+Search the PMD before modifying a subsystem — modes, query shapes, and the hybrid-first
+rule are canonical in `.claude/rules/pmd-search-strategy.md`. Prior bugs/decisions about
+the subsystem must inform the approach.

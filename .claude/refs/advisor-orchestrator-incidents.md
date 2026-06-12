@@ -28,6 +28,12 @@ was visible but never surfaced; the inherited "plan RT-r2 now" anchored the sess
 action before the lane check ran. Per `project_concurrent_advisor_sessions_2026_05_21.md`
 + `feedback_falsifiable_hypothesis_before_structural_fix.md`.
 
+**Condition (d) grep procedure:** run `grep -h "SUSPENDED\|RE-ARMED" ~/.claude/projects/C--Users-barri-Developer-brehon-fork/memory/workflow_state_*.md 2>/dev/null | head -3` and cross-check against the MEMORY.md index line for the same phase. Mismatch → surface WARN + raise AskUserQuestion for the authoritative state before proceeding.
+
+**2× recurrence after initial incident:**
+- 2026-06-07: `.mcp.json` concurrent rewrite between two sessions on the same checkout.
+- 2026-06-12: AB trial concurrent suspension (workflow_state_*.md flag contradicted MEMORY.md index).
+
 ## SessionStart multi-lane check — false-positive / false-negative taxonomy
 
 The tracked `.claude/hooks/session-start-multi-lane-check.sh` (added post-RT-r2 boundary
@@ -65,3 +71,23 @@ first-pass resume in 3 tool calls. Commit + push the handover file BEFORE invoki
 `/compact`; the handover lives on `governance-v0` even if the work is on a phase branch,
 so the canonical checkout always sees the latest. Introduced post-v1-retro-followups-r1,
 2026-05-22.
+
+## Session-start stash check
+
+**Incident (2026-06-01):** a session found `stash@{0}` holding an unresolved Phase 2 e2e DQ entry for `v1-SL-d` (shipped weeks earlier). The stash looked like noise (old phase, nothing happening) but contained a live DQ entry. Dropping without inspecting would have permanently lost the entry. The session recovered it and re-applied the DQ mutation only because the inspect-before-drop discipline was followed. `git stash drop` is irreversible — once dropped, the stash state is gone from the reflog after the next GC.
+
+## Finalize-merge look-order
+
+Checking origin first shows a stale pre-merge tip and triggers a multi-probe hunt: the daemon's finalize-merge (`mcp__junior-brehon__finalize_task`) lands on daemon-local `governance-v0` before the daemon pushes to origin. `git ls-remote origin governance-v0` therefore returns the pre-merge tip, and any check that reads origin first will see the wrong SHA — a polling loop then burns 2–3 extra probes looking for a commit that only the daemon has locally. Look daemon-local first (`ssh homeserver "cd /srv/brehon-fork && git log governance-v0 -1 --oneline"`), then verify via origin if the daemon tip looks unexpectedly old.
+
+## OQ resolvability check
+
+**Why the check saves time:** a 15-min resolution of a parked OQ prevents the same ambiguity from being re-surfaced at every stage of the planning + impl cycle: the planner adds a note, the impl-task adds another note, the CR reviewer asks a question. Resolving it once costs ~15 min; not resolving it costs ~1 hour of diffuse friction.
+
+**OQ-V2-10 incident (2026-06-01 retro finding):** OQ-V2-10 was tagged `Status: parked` pending an ecosystem-level fix. That fix shipped in a library update ~2 months before the 2026-06-01 planning session. No session had run the resolvability check in the interim, so the OQ sat parked and resolvable for 6+ months — discovered only when the V2a planning session finally hit the blocking condition and checked.
+
+## Shape-G-disabled fast-path
+
+**HTTP-422 background:** `cargo-validate-workspace.yml` can be `disabled_manually` at the GitHub API level (via `gh workflow disable`). When disabled, `gh workflow run cargo-validate-workspace.yml ...` returns HTTP 422 "Workflow is disabled" — the workflow file exists in `.github/workflows/` but the API refuses to queue a run. Workers that succeed in committing + pushing will correctly detect this via `gh workflow run`'s exit code and write `workflow_run_id: 0` as the sentinel.
+
+**Test-dogfood 2026-06-12:** During the Shape-G residual-only test, `gh workflow run` returned 422 on `cargo-validate-workspace.yml`. The advisor detected the sentinel (`workflow_run_id: 0`), skipped `gh workflow run`, created a throwaway worktree on the impl branch, ran `commands[]` locally, and mutated the DQ entry with `answered_by: "advisor-laptop"` + `result: "pass"`. Total elapsed: ~8 min vs the ~12-min GH Actions baseline.

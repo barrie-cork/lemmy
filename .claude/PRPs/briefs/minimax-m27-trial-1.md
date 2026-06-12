@@ -96,6 +96,8 @@ candidate.
 
 ### 2.3 Per-task dispatch sequence
 
+> **⏱ TIMING — arms fire POST-SHIP, never inside `/auto-phase --unattended` (locked 2026-06-12, m2-late-2).** The `/auto-phase` state machine has NO MiniMax/ab-test code path — it dispatches Sonnet-only. A MiniMax arm is a *normal impl-task worker*: it writes `validate-pending-laptop` + `blocker` DQ entries to its `ab-test/*` branch, which the unattended advisor's cross-branch DQ resolver (`resolve-dq-canonical.sh`) WOULD union and try to validate/triage — plus the arm consumes a cohort dispatch slot (violates §2.2 #2 serial-only). So the arms run as a **separate serial flow AFTER the real phase merges**, on `ab-test/*` branches no advisor loop is polling. Sonnet ships the phase in-loop; the trial is post-ship data-collection only. **Do NOT dispatch any arm while `/auto-phase <phase>` is in flight.**
+
 For each of the 5 designated tasks N:
 1. `git checkout -b ab-test/sonnet-impl-<N> <phase-tip>` + push; dispatch
    Sonnet control via `create_task` with `base_branch=ab-test/sonnet-impl-<N>`.
