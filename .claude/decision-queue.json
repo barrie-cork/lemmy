@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "c8e294aa18d8-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "Validate bridge task 4 power-level enforcement: cargo check + clippy",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 rewrites handle_sanction_event with get_power_levels/put_power_levels/compute_power_override helpers and removes sanction_kind_to_power_level. Bridge does not compile on Windows (ruma-common E0119); validation delegated to advisor laptop via cargo-linux.sh.",
+      "commands": [
+        "bash -c 'cd services/bridge && cargo check'",
+        "bash -c 'cd services/bridge && cargo clippy --no-deps -- -D warnings'"
+      ],
+      "branch": "junior/role-impl-task-m2-late-2-task-4-bridge-power-levels-see-claude-prps-briefs-m2-late-2-impl-task-4-md-666",
+      "phase_task": 4,
+      "e2e_filter": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
