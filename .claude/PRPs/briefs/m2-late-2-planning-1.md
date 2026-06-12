@@ -31,7 +31,7 @@ Plan `m2-late-2`, the follow-up to m2-late-1 B-publish sanction propagation. It 
   - Pilot subscriber-row verification.
 - Code exploration 2026-06-10:
   - `crates/api/api/src/governance/sanction_publisher.rs` already has `enqueue_sanction_event`, payload construction, subscriber POST, event insert, and governance-log append.
-  - `governance_log::append` takes `&mut DbPool<'_>`, but existing call sites use `&mut (&mut *conn).into()` to call it within a transaction/savepoint. This suggests CR-A can be fixed without a signature change.
+  - `governance_log::append` takes `&mut DbPool<'_>`, but existing call sites use `&mut (&mut *conn).into()` to call it within a transaction/savepoint. CR-A is fixable WITHOUT a signature change — verified: `append` (db_schema/.../governance_log.rs:278) runs its own inner `run_transaction` (line 309) and its doc comment (lines 294-302) confirms diesel-async promotes that inner tx to a SAVEPOINT when called via the reborrow inside a caller's outer tx. **Canonical live exemplar: `admin_assign_jury.rs:218`** (`append(&mut (&mut *conn).into(), ...)`). NOTE: the bootstrap's `federation_outbox.rs:187` cite is stale — use `admin_assign_jury.rs:218`. Resolved clarify-DQ `a3d0e9941441-061`.
   - `services/bridge/src/sanction_handler.rs` receives the event and maps static sanction-kind values but does not apply Matrix state.
   - `services/bridge/src/bridge_room.rs` indexes rooms by `(case_id, room_type)`, not by pseudonym.
   - `SanctionEventPayload` currently carries `sanction_kind`, `subject_actor_pseudonym`, `effective_from`, `effective_until`, and `governance_log_entry_hash`; it does **not** carry `case_id`.
@@ -178,10 +178,13 @@ Do not read secrets into chat. Record only presence/absence and redacted URL hos
 
 ---
 
-## 6. Recommended next step
+## 6. User-confirmed planning decisions (clarify pass 2026-06-12)
 
-Before writing `.claude/PRPs/plans/m2-late-2.plan.md`, confirm these choices with the user:
+All three §6 questions resolved via `/brehon-clarify --mode user-relay` 2026-06-12. The planner MUST honour these:
 
-1. Is adding `case_id` to `SanctionEventPayload` acceptable for m2-late-2?
-2. Is case-room power-level enforcement, without historical message redaction, sufficient for m2-late-2?
-3. Should pilot verification be included as a task in the plan, or left as a post-merge operator checklist?
+1. **D1 — `case_id` in `SanctionEventPayload`: YES** (clarify-DQ `a3d0e9941441-058`). Add it as a backward-compatible Matrix-bridge extension field; bridge resolves rooms via a new `bridge_room.lookup_by_case(case_id)` returning all `(room_type, matrix_room_id)` rows. No migration, no new HTTP route. Keep `governance_log_entry_hash` + `subject_actor_pseudonym`. Persisting `case_id` in the `sanction_event` table is OPTIONAL — prefer no migration unless audit/e2e queryability needs it (T1).
+2. **D2 — Power-levels only, NO historical redaction** (clarify-DQ `a3d0e9941441-059`). `ban`/`mute`/`prevent_post`/`mute_voice` → below post threshold; `hide_content`/`restrict_reach` → reduced posting level with reason `redaction_not_available_in_m2_late_2`. Full `hide_content` redaction is a separate phase (needs a subject→event index).
+3. **D3 — Pilot verification IS plan task T6** (clarify-DQ `a3d0e9941441-060`). Confirm `BRIDGE_SANCTION_CALLBACK_URL` set, exactly one active `sanction_subscriber` row, bridge callback reachable. Record presence/absence + redacted host/path only — never read `BRIDGE_CALLBACK_SECRET` or `.env` into chat.
+4. **D3-append — CR-A is mechanical, no new helper** (clarify-DQ `a3d0e9941441-061`). Use the `&mut (&mut *conn).into()` reborrow to call `append` inside one fresh `conn.run_transaction()` in `enqueue_sanction_event`, opened AFTER the HTTP POSTs. Canonical exemplar: `admin_assign_jury.rs:218`.
+
+**Planning gate: CLEAR.** All clarify-DQ entries (`a3d0e9941441-058` … `-061`) resolved.

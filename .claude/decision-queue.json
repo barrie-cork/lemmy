@@ -6935,6 +6935,74 @@
       "approved_by": null,
       "approved_at": null,
       "id": "6b7c4b329002-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-12T00:00:00Z",
+      "question": "D1 (bridge room resolution): how should the bridge find which rooms to apply the power-level change to, given SanctionEventPayload lacks case_id and bridge_room is keyed by (case_id, room_type)?",
+      "options": [
+        "add case_id to payload + bridge lookup_by_case",
+        "bridge calls back into Brehon by governance_log_entry_hash"
+      ],
+      "context": "m2-late-2-planning-1.md D1. bridge_room.rs:19 lookup(conn, case_id, room_type) exists but is single-room-type; T3 proposes lookup_by_case returning all room_types for a case. Payload at sanction_publisher.rs:38-46 has no case_id.",
+      "answer": "Add case_id to SanctionEventPayload as a backward-compatible Matrix-bridge extension field; bridge resolves rooms via a new bridge_room.lookup_by_case(case_id) returning all (room_type, matrix_room_id) rows. No migration, no new HTTP route. Keep governance_log_entry_hash + subject_actor_pseudonym. (per user 2026-06-12)",
+      "answered_by": "user",
+      "resolved_at": "2026-06-12T00:00:01Z",
+      "approved_by": "user",
+      "approved_at": "2026-06-12T00:00:01Z",
+      "id": "a3d0e9941441-058"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-12T00:00:02Z",
+      "question": "D2 (Matrix enforcement depth): how far should m2-late-2 go on applying sanctions in Matrix — power-levels only, or also historical-message redaction?",
+      "options": [
+        "power-levels only (no historical redaction)",
+        "power-levels + content redaction for hide_content"
+      ],
+      "context": "m2-late-2-planning-1.md D2. puppet.rs:58 ensure_puppet returns MatrixUserId (exemplar room_provisioner.rs:130). hide_content historical redaction needs a subject->event index / room-history scan that does not exist in the bridge.",
+      "answer": "Power-levels only. Set users[subject_mxid] override per sanction_kind (ban/mute/prevent_post/mute_voice -> below post threshold; hide_content/restrict_reach -> reduced posting level with reason 'redaction_not_available_in_m2_late_2'). NO historical-message redaction in m2-late-2; full hide_content redaction is a separate phase needing a subject->event index. (per user 2026-06-12)",
+      "answered_by": "user",
+      "resolved_at": "2026-06-12T00:00:03Z",
+      "approved_by": "user",
+      "approved_at": "2026-06-12T00:00:03Z",
+      "id": "a3d0e9941441-059"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-12T00:00:04Z",
+      "question": "D3 (pilot verification): should the live-pilot sanction_subscriber + bridge-callback check be a plan TASK or a post-merge operator checklist?",
+      "options": [
+        "plan task T6",
+        "post-merge operator checklist"
+      ],
+      "context": "m2-late-2-planning-1.md section 4 T6 + section 6 Q3. Pilot at http://100.81.145.58:1236. Verifying the subscriber seed before end-to-end testing prevents a 'delivery succeeded but nobody received it' false-green.",
+      "answer": "Include pilot verification as plan task T6: confirm BRIDGE_SANCTION_CALLBACK_URL set, exactly one active sanction_subscriber row, bridge callback reachable. Record presence/absence + redacted host/path only; never read BRIDGE_CALLBACK_SECRET or .env into chat. (per user 2026-06-12)",
+      "answered_by": "user",
+      "resolved_at": "2026-06-12T00:00:05Z",
+      "approved_by": "user",
+      "approved_at": "2026-06-12T00:00:05Z",
+      "id": "a3d0e9941441-060"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-12T00:00:06Z",
+      "question": "D3-append (CR-A atomicity): does governance_log::append support being called inside a caller-supplied transaction without a signature change, so the CR-A fix is mechanical?",
+      "options": [
+        "reborrow pattern works — no new helper",
+        "needs a new conn-accepting append variant"
+      ],
+      "context": "m2-late-2-planning-1.md D3. governance_log::append (db_schema/.../governance_log.rs:278) takes &mut DbPool, calls get_conn itself, and runs its OWN inner run_transaction (line 309).",
+      "answer": "Reborrow pattern works; no new helper. append's doc comment (governance_log.rs:294-302) states that when called from inside a caller's outer tx via '&mut (&mut *conn).into()' reborrow, diesel-async promotes the inner run_transaction to a SAVEPOINT. Verified live exemplar: admin_assign_jury.rs:218 calls append(&mut (&mut *conn).into(), ...). CR-A fix: open one fresh conn.run_transaction in enqueue_sanction_event AFTER the HTTP POSTs (never hold a tx across network I/O); inside it, sanction_event INSERT uses conn directly and append is called with the reborrow. NOTE: the bootstrap's federation_outbox.rs:187 cite is stale — use admin_assign_jury.rs:218 as the canonical exemplar.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-12T00:00:07Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-061"
     }
   ]
 }
