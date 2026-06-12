@@ -132,10 +132,10 @@ No task exceeded the >8-files / >55-min / >40-min-silence flags. Comfortable zon
 
 Boxes UNCHECKED by default; user checks to authorise.
 
-- [ ] What-to-change #1: promote to `.claude/lessons/feedback_narrow_the_ask_before_building_mechanism.md` (cross-harness lesson). Meets threshold via family-recurrence with `feedback_falsifiable_hypothesis_before_structural_fix.md` (premise-is-a-hypothesis, not a contract — 2nd in family).
-- [ ] What-to-change #2: new `scripts/sync-user-skills.sh` snapshot OR tracked mirror for `~/.claude/commands/*.md` edits — restores git audit trail for user-scope skill bodies. (Structural; single-instance but high blast-radius.)
-- [ ] What-to-change #3: live `--dry-run --unattended` exercise at the next shipping phase (execution item, not a lesson — flip when done).
-- [x] PMD eval write — DONE this session (ID 948, the feature lesson itself, not a retro eval). A *retro* eval is optional below.
+- [x] What-to-change #1: promoted to `.claude/lessons/feedback_narrow_the_ask_before_building_mechanism.md` (cross-harness lesson). DONE this session. Meets threshold via family-recurrence with `feedback_falsifiable_hypothesis_before_structural_fix.md` (premise-is-a-hypothesis, not a contract — 2nd in family).
+- [x] What-to-change #2: shipped `scripts/brehon/sync-user-skills.ps1` (robocopy /MIR snapshot of `~/.claude/commands/*.md` + `~/.claude/skills/*/` into tracked `.claude/user-skills-snapshot/`; `-Check` drift mode). DONE this session — restores git audit trail for user-scope skill bodies. Initial snapshot = 12 files incl. auto-phase.md with the --unattended feature.
+- [ ] What-to-change #3: live `--dry-run --unattended` exercise at the next shipping phase (**`m2-late-2`** — bridge power-level enforcement + CR-A atomicity + pilot verification; needs its plan authored first per Hard refusal #3). Execution item, not a lesson — flip when done.
+- [x] PMD eval write — DONE this session (feature lesson ID 948; narrow-the-ask lesson + retro eval ID 949 added on action-execution).
 
 ---
 
