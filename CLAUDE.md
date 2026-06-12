@@ -87,7 +87,8 @@ Full checklist: `feedback_phase_lane_worktree_bootstrap_checklist.md`.
 
 ## Resume / state-recovery
 
-`/start-brehon [phase]` — synthesises live state from git/gh/DQ/Junior into one-screen report. `--fast <N>` for mid-task polling. DQ pending > 0 → `/check-dq`.
+- **`brehon-state-status` agent** (`.claude/agents/brehon-state-status.md`) — dispatch at session start (and any mid-session state check) to get a "where are we?" synthesis **without** burning main-conversation context: it runs the probe battery (CWD/branch/worktrees/stash, origin+daemon-local SHAs + drift, DQ pending, in-flight Junior tasks, open PRs) and returns one screen — raw output stays in the subagent. Read-only, Haiku-pinned. Prefer this over inline probing.
+- **`/start-brehon [phase]`** — when you need state loaded **into** this session to act on it. `--fast <N>` for mid-task polling. DQ pending > 0 → `/check-dq`.
 
 ## Canonical paths
 
