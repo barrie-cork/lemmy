@@ -4,12 +4,32 @@ description: services/bridge does not compile on the Windows laptop — ruma-com
 type: feedback
 ---
 
+> **⚠️ PREMISE CORRECTION (2026-06-12, same day as authoring).** The original
+> framing below — "bridge compiles on Linux, just not Windows; route bridge cargo
+> to Docker" — is **WRONG**. A `cargo-linux.sh` warm-up (Docker `rust:1.95`, the
+> CI mirror) hit the **SAME `ruma-common v0.19.0` E0119 vs `time`** (25 errors;
+> log `.claude/PRPs/debug/m2-late-2-bridge-warmup.log` → `BRIDGE_WARMUP_EXIT_NONZERO`).
+> So `services/bridge` does **not** compile on **either** target — this is a
+> **dependency-resolution / version-pin bug** in the bridge's own untracked,
+> unpinned dep tree (likely a transitive `time` 0.3.x bump incompatible with
+> `ruma-common 0.19.0`), NOT a Windows-host quirk. The `--manifest-path` Docker
+> invocation form below is still correct *mechanically*, but it does NOT make the
+> bridge green — the ruma/time conflict must be fixed first (pin `time`/`ruma` in
+> `services/bridge/Cargo.toml`, which will create the absent `Cargo.lock`).
+> Investigate before relying on any bridge validation. This lesson is being kept
+> (not deleted) as the record of the wrong premise + the correction. Per
+> `feedback_background_task_notification_lies` — the warm-up's "exit 0"
+> notification was the shell wrapper's status, not cargo's; the in-log marker was
+> authoritative.
+
 ## TL;DR
 
 `services/bridge` (the Brehon Matrix bridge, workspace-excluded per R9) **does
-not compile on the Windows laptop host.** `cargo check` from `services/bridge/`
-exits 101 with `error[E0119]`: conflicting implementations of
-`From<...format_item::HourBase>` in `ruma-common v0.19.0` vs the `time` crate.
+not compile on the Windows laptop host** (and, per the correction above, **not on
+Linux either** — the root cause is a ruma/time version conflict, not the host).
+`cargo check` from `services/bridge/` exits 101 with `error[E0119]`: conflicting
+implementations of `From<...format_item::HourBase>` in `ruma-common v0.19.0` vs
+the `time` crate.
 This is a **host-toolchain / registry-state quirk**, reproducible on a clean
 phase base before any bridge edit — NOT a code defect, NOT introduced by any
 sub-phase. The bridge's real deploy target is Linux, so the correct validation
