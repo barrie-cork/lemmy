@@ -57,6 +57,10 @@ services:
       BREHON_ROOM_EVENT_URL: "http://host.docker.internal:8536/api/v4/governance/room-event"
       BRIDGE_CALLBACK_SECRET: "brehon-bridge-callback-secret-pilot-01"
       LEGAL_CONTACT_MXID: "@legal:localhost"
+      # The Matrix server_name (MXID domain) — matches tuwunel-pilot.toml's
+      # server_name. NOT the host:port of TUWUNEL_URL. Puppet MXIDs + room IDs
+      # use this domain.
+      MATRIX_SERVER_NAME: "localhost"
       BRIDGE_DB_PATH: "/data/bridge.db"
       RUST_LOG: "info,brehon_bridge=debug"
     extra_hosts:

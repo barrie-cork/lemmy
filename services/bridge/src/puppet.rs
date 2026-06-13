@@ -15,7 +15,6 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use matrix_sdk::Client;
 
 use crate::config::BridgeConfig;
 
@@ -64,51 +63,52 @@ impl PuppetMap {
             }
         }
 
-        // Derive puppet localpart and mxid.
+        // Derive puppet localpart and mxid. The MXID domain is the Matrix
+        // server_name (e.g. "localhost"), NOT the host:port of tuwunel_url —
+        // those differ in containerised deploys (tuwunel_url is
+        // http://brehon-tuwunel:8008 but server_name is localhost).
         let localpart = format!("_brehon_{}", localpart_escape(brehon_user));
-        // The homeserver domain is extracted from tuwunel_url.
-        // e.g. "http://localhost:8448" → "localhost:8448"
-        let server_name = self
-            .config
-            .tuwunel_url
-            .trim_start_matches("https://")
-            .trim_start_matches("http://")
-            .to_owned();
+        let server_name = &self.config.matrix_server_name;
         let mxid = format!("@{localpart}:{server_name}");
 
-        // Register/login the puppet via the AS admin token.
-        // matrix-sdk Client with the AS token (not the puppet's own token —
-        // for M1 we use the AS master token to register the puppet via the
-        // /_matrix/client/v3/register?kind=guest endpoint or equivalent;
-        // the exact API depends on Tuwunel version. For M1 the puppet
-        // register call is best-effort: log and continue on error.
-        let client = Client::builder()
-            .homeserver_url(&self.config.tuwunel_url)
+        // Register the puppet via the application-service flow. An AS must
+        // register users in its namespace with auth type
+        // `m.login.application_service` + the AS Bearer token; a bare register
+        // triggers User-Interactive Auth (UIAA 401). matrix-sdk's register
+        // helper does not expose the AS login type cleanly across versions, so
+        // POST the AS register directly (mirrors provision.rs's raw reqwest).
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
             .build()
+            .context("build puppet HTTP client")?;
+        let url = format!(
+            "{}/_matrix/client/v3/register",
+            self.config.tuwunel_url
+        );
+        let body = serde_json::json!({
+            "type": "m.login.application_service",
+            "username": localpart,
+        });
+        let resp = client
+            .post(&url)
+            .bearer_auth(&self.config.as_token)
+            .json(&body)
+            .send()
             .await
-            .context("build puppet matrix-sdk Client")?;
+            .context("POST /_matrix/client/v3/register (AS puppet) failed")?;
 
-        // Attempt puppet registration. Tuwunel may reject duplicate usernames
-        // with M_USER_IN_USE (puppet already exists) — treat as success.
-        let register_result = client
-            .matrix_auth()
-            .register(
-                matrix_sdk::ruma::api::client::account::register::v3::Request::new(),
-            )
-            .await;
-
-        match register_result {
-            Ok(_) => {
-                tracing::info!(mxid = %mxid, "puppet registered");
-            }
-            Err(e) => {
-                let err_str = e.to_string();
-                if err_str.contains("M_USER_IN_USE") {
-                    // M_USER_IN_USE → puppet already exists, not an error.
-                    tracing::debug!(mxid = %mxid, "puppet already exists, reusing");
-                } else {
-                    return Err(anyhow::anyhow!("puppet registration failed: {}", e));
-                }
+        if resp.status().is_success() {
+            tracing::info!(mxid = %mxid, "puppet registered");
+        } else {
+            let status = resp.status();
+            let body_text = resp.text().await.unwrap_or_default();
+            // M_USER_IN_USE → puppet already exists, idempotent reuse.
+            if body_text.contains("M_USER_IN_USE") {
+                tracing::debug!(mxid = %mxid, "puppet already exists, reusing");
+            } else {
+                return Err(anyhow::anyhow!(
+                    "puppet registration failed: HTTP {status} {body_text}"
+                ));
             }
         }
 

@@ -26,6 +26,10 @@ pub struct BridgeConfig {
     pub bridge_callback_secret: String,
     /// MXID for legal contact in emergency rooms.
     pub legal_contact_mxid: String,
+    /// The Matrix homeserver's `server_name` (the MXID domain), e.g. "localhost".
+    /// This is NOT the same as the host:port in `tuwunel_url` — puppet MXIDs and
+    /// room IDs use this domain. Defaults to "localhost".
+    pub matrix_server_name: String,
 }
 
 impl BridgeConfig {
@@ -51,6 +55,8 @@ impl BridgeConfig {
                 .expect("BRIDGE_CALLBACK_SECRET must be set"),
             legal_contact_mxid: std::env::var("LEGAL_CONTACT_MXID")
                 .unwrap_or_else(|_| "@legal:localhost".to_string()),
+            matrix_server_name: std::env::var("MATRIX_SERVER_NAME")
+                .unwrap_or_else(|_| "localhost".to_string()),
         })
     }
 }
