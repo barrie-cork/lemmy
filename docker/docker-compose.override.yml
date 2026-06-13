@@ -1,0 +1,19 @@
+# Pilot-internal override — Brehon home-network testing (2026-06-13).
+# Layers bridge wiring onto the vendored docker-compose.yml lemmy service.
+# docker compose auto-loads this file; the base compose stays upstream-clean.
+#
+# Wires Lemmy -> Brehon bridge B-publish sanction delivery:
+#  - BRIDGE_SANCTION_CALLBACK_URL: Lemmy seeds 1 sanction_subscriber row from
+#    this at startup (crates/server/src/lib.rs) AND POSTs sanction events here.
+#  - BRIDGE_CALLBACK_SECRET: MUST match the bridge's value (Bearer auth both
+#    directions). Bridge side is in services/bridge/docker-compose.pilot.yml.
+#  - extra_hosts: makes host.docker.internal resolve to the host gateway so
+#    the URL is stable across network recreation (the bridge is in a separate
+#    compose project, published on host port 8082).
+services:
+  lemmy:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - BRIDGE_SANCTION_CALLBACK_URL=http://host.docker.internal:8082/brehon/sanction-event
+      - BRIDGE_CALLBACK_SECRET=brehon-bridge-callback-secret-pilot-01
