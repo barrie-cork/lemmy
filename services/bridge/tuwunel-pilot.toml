@@ -10,3 +10,9 @@ allow_registration = true
 yes_i_am_very_very_sure_i_want_an_open_registration_server_prone_to_abuse = true
 allow_federation = false
 max_request_size = 20971520
+
+# Application-service registration directory. Every readable YAML file here is
+# loaded at startup (Tuwunel v1.7.1 docs/appservices.md "Registration file
+# directory" method). The Brehon bridge's registration.yaml is mounted into it
+# by docker-compose.pilot.yml. Changes need a Tuwunel restart to reload.
+appservice_dir = "/etc/tuwunel/appservices"

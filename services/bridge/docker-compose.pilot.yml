@@ -17,7 +17,8 @@ services:
     volumes:
       - tuwunel_pilot_data:/var/lib/tuwunel
       - ./tuwunel-pilot.toml:/etc/tuwunel/tuwunel.toml:ro
-      - ./registration.yaml:/etc/tuwunel/registration.yaml:ro
+      # registration.yaml mounted INTO the appservice_dir (see tuwunel-pilot.toml).
+      - ./registration.yaml:/etc/tuwunel/appservices/registration.yaml:ro
     ports:
       - "8448:8008"
     restart: unless-stopped
@@ -43,9 +44,17 @@ services:
       # Brehon (Lemmy) callbacks. Lemmy is reachable on the host network at
       # 8536; from inside this compose network we reach the host via the
       # gateway alias host.docker.internal (added below via extra_hosts).
-      BREHON_READ_URL: "http://host.docker.internal:8536/api/v4/governance/messaging-config"
-      BREHON_NOTIFY_URL: "http://host.docker.internal:8536/bridge/notify"
-      BREHON_ROOM_EVENT_URL: "http://host.docker.internal:8536/governance/room-event"
+      # BREHON_READ_URL = the bridge-facing soft-pause poller endpoint
+      # (get_bridge_messaging_status, Bearer-secret auth) — NOT the admin-JWT
+      # messaging-config route. Verified against crates/api/routes/src/lib.rs.
+      BREHON_READ_URL: "http://host.docker.internal:8536/api/v4/governance/bridge/messaging-status"
+      # BREHON_NOTIFY_URL is only used by relay.rs for INBOUND Matrix DM relay
+      # (an M1 1:1-DM feature). No inbound-DM route is wired in the current
+      # Lemmy route table; for M2 governance-flow testing no DMs flow, so this
+      # just needs to be present (required env var), not reachable. Revisit if
+      # 1:1 DM relay is exercised in the pilot.
+      BREHON_NOTIFY_URL: "http://host.docker.internal:8536/api/v4/governance/bridge/notify"
+      BREHON_ROOM_EVENT_URL: "http://host.docker.internal:8536/api/v4/governance/room-event"
       BRIDGE_CALLBACK_SECRET: "brehon-bridge-callback-secret-pilot-01"
       LEGAL_CONTACT_MXID: "@legal:localhost"
       BRIDGE_DB_PATH: "/data/bridge.db"
