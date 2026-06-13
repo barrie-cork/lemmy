@@ -28,7 +28,17 @@ All knobs are env-overridable (see `lib.sh` header): `API`, `PG_CONTAINER`,
 - **Machine-readable output** — `CASE_ID=..`, `POST_ID=..`, `STATUS=..`,
   `APPEAL_ROOM_ID=..`, `PANEL=..`, `RESULT=..`. Grep these, don't parse prose.
 - **Fails loud** on a failed precondition (no token, case didn't open, panel
-  empty). Never silently proceeds.
+  empty, case not Decided). Never silently proceeds. `RESULT=PASS` is emitted
+  ONLY when the scenario actually completed — never optimistically.
+- **Config-aware — never hardcodes quorum/panel.** Governance config varies per
+  community × severity_tier × status_tier (127 keys); a Severe case is panel 7 /
+  quorum 5 / threshold 6, not the default 5/3/3. The win condition is
+  `threshold_count`, NOT quorum. Scripts read the frozen `panel_size_snapshot` /
+  `quorum_snapshot` / `threshold_count_snapshot` columns (set at assign-jury) via
+  `lib.sh` helpers `read_panel_size` / `read_quorum` / `read_threshold_count`, and
+  drive voting with `vote_to_threshold <case> <decision> [role]` over the ACTUAL
+  `seated_panel`. Status assertions use `assert_status` (loud, not a bare WARN).
+  Do NOT reintroduce a fixed `-lt 3` vote loop or a hardcoded `juror1..N` list.
 - **Verifies three surfaces** where it asserts success: DB (`moderation_case` /
   `jury_assignment` / `governance_log` chain), bridge (`bridge_room`), Matrix
   (room exists). `lib.sh` has `bridge_rooms` + `verify_hash_chain` helpers.

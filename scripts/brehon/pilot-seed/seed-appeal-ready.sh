@@ -26,11 +26,16 @@ DO_APPEAL=0; [ "${1:-}" = "--appeal" ] && DO_APPEAL=1
 
 POSTER="${POSTER:-testuser}"     # defendant (post author + appeal requester)
 REPORTER="${REPORTER:-testmod}"
-# original-panel jurors: the existing pool. Fresh eligibles for the appeal:
-APPEAL_POOL_PREFIX="${APPEAL_POOL_PREFIX:-juror}"   # juror1..juror10 exist
-APPEAL_POOL_COUNT="${APPEAL_POOL_COUNT:-10}"
+APPEAL_POOL_PREFIX="${APPEAL_POOL_PREFIX:-juror}"
+# Headroom math: the appeal panel EXCLUDES the original panel and is sized
+# max(ceil(orig*1.5), orig+2) clamped [3,11] (admin_assign_jury.rs:1065). At the
+# largest legal original panel (9, founder+severe) the appeal panel can need 11,
+# AND those 11 must be disjoint from the original 9 -> a worst-case pool of 20.
+# A flat 10 under-seats the appeal even at DEFAULT config (orig 5 -> appeal
+# max(8,7)=8 needed, pool 10 - 5 excluded = 5 free < 8). Default to 20.
+APPEAL_POOL_COUNT="${APPEAL_POOL_COUNT:-20}"
 
-echo "# ensuring eligible juror pool (appeal panel excludes originals -- need headroom)"
+echo "# ensuring eligible juror pool (appeal panel excludes originals -- need disjoint headroom; default 20)"
 seed_eligible_jurors "$APPEAL_POOL_PREFIX" "$APPEAL_POOL_COUNT" >/dev/null
 
 AJWT=$(admin_jwt)
@@ -56,23 +61,21 @@ echo "CASE_ID=$CASE_ID"
 echo "# 3. admin assign-jury -> JurySelection"
 api_post /governance/admin/assign-jury "{\"case_id\":$CASE_ID}" "$AJWT" >/dev/null
 
-echo "# 4. seated jurors accept + 3 vote remove_content -> quorum -> Decided"
-# read the seated ORIGINAL panel's person_ids, map to usernames, accept+vote.
-mapfile -t PANEL_PIDS < <(psql "SELECT person_id FROM jury_assignment WHERE case_id=$CASE_ID AND role='Original' ORDER BY id;")
-voted=0
-for pid in "${PANEL_PIDS[@]}"; do
-  uname=$(psql "SELECT name FROM person WHERE id=$pid;")
-  jjwt=$(login "$uname" "$TEST_PASS") || continue
-  api_post /governance/jury/accept "{\"case_id\":$CASE_ID}" "$jjwt" >/dev/null
-  if [ "$voted" -lt 3 ]; then
-    api_post /governance/jury/vote "{\"case_id\":$CASE_ID,\"decision\":\"remove_content\"}" "$jjwt" >/dev/null
-    voted=$((voted+1))
-  fi
-done
+echo "# 4. seated jurors accept + vote remove_content until threshold_count -> Decided"
+# Config-aware: vote_to_threshold reads threshold_count_snapshot + the actual
+# seated Original panel, so it adapts to any severity/panel size (Severe = 7/5/6,
+# not 5/3/3). Hardcoding 3 votes would never decide a Severe case.
+echo "# panel=$(read_panel_size "$CASE_ID") quorum=$(read_quorum "$CASE_ID") threshold=$(read_threshold_count "$CASE_ID")"
+vote_to_threshold "$CASE_ID" "remove_content" "Original" || true
 
 STATUS=$(case_status "$CASE_ID")
 echo "STATUS=$STATUS"
-[ "$STATUS" = "Decided" ] || { echo "WARN: expected Decided, got $STATUS (panel/quorum issue)" >&2; }
+# Fail LOUD if not Decided — proceeding to appeal against a non-Decided case is
+# the false-green that violates the suite's "fail loud on precondition" contract.
+if [ "$STATUS" != "Decided" ]; then
+  echo "RESULT=CASE_NOT_DECIDED (need $(read_threshold_count "$CASE_ID") concurring votes on a panel of $(read_panel_size "$CASE_ID"); check eligible-pool size + severity_tier)" >&2
+  exit 1
+fi
 
 if [ "$DO_APPEAL" -eq 1 ]; then
   echo "# 5. fire appeal as defendant ($POSTER) -- auto-seats appeal panel + fires Appealed hook"
@@ -83,9 +86,15 @@ if [ "$DO_APPEAL" -eq 1 ]; then
   echo "STATUS=$(case_status "$CASE_ID")"
   PANEL=$(psql "SELECT string_agg(person_id::text,',') FROM jury_assignment WHERE case_id=$CASE_ID AND role='Appeal';")
   echo "PANEL=$PANEL"
-  # give the fire-and-forget bridge POST a beat, then read the appeal room
-  sleep 3
-  APPEAL_ROOM_ID=$(bridge_rooms | awk -F'|' -v c="$CASE_ID" '$1==c && $2=="appeal" {print $3}')
+  echo "APPEAL_PANEL_SIZE=$(read_appeal_panel_size "$CASE_ID") APPEAL_THRESHOLD=$(read_appeal_threshold_count "$CASE_ID")"
+  # bounded retry for the fire-and-forget bridge POST (replaces a flat sleep 3 that
+  # flaked under load) — read the appeal room up to ~6s, break as soon as it lands.
+  APPEAL_ROOM_ID=""
+  for _ in $(seq 1 12); do
+    sleep 0.5
+    APPEAL_ROOM_ID=$(bridge_rooms | awk -F'|' -v c="$CASE_ID" '$1==c && $2=="appeal" {print $3}')
+    [ -n "$APPEAL_ROOM_ID" ] && break
+  done
   echo "APPEAL_ROOM_ID=${APPEAL_ROOM_ID:-NONE}"
   echo "HASH_CHAIN=$(verify_hash_chain)"
   if [ -n "$APPEAL_ROOM_ID" ]; then

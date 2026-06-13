@@ -76,26 +76,11 @@ run_case() {
   echo "  assign: $(printf '%s' "$ASSIGN_RESP" | json_field status)"
   echo "  case→$(case_status $CASE_ID)"
 
-  # Accept + vote with all jurors until Decided (quorum=3)
-  local i j_jwt j_name
-  # Vote with up to 5 jurors (need quorum=3) — try all, stop when Decided
-  local voted=0
-  for i in 6 7 8 9 10 1 2 3 4 5; do
-    local current_status
-    current_status=$(case_status "$CASE_ID")
-    [ "$current_status" = "Decided" ] && break
-    j_name="juror${i}"
-    j_jwt=$(login "$j_name" "${TEST_PASS}" 2>/dev/null || true)
-    [ -z "$j_jwt" ] && continue
-    local vote_resp
-    # Accept first (idempotent)
-    api_post /governance/jury/accept "{\"case_id\":$CASE_ID}" "$j_jwt" >/dev/null 2>&1 || true
-    vote_resp=$(api_post /governance/jury/vote \
-      "{\"case_id\":$CASE_ID,\"decision\":\"$decision\",\"rationale\":\"phase5 ${label} test\"}" \
-      "$j_jwt" 2>/dev/null || true)
-    voted=$((voted+1))
-    echo "  vote $voted from $j_name ($(case_status $CASE_ID))"
-  done
+  # Config-aware voting: vote_to_threshold reads threshold_count_snapshot + the
+  # ACTUAL seated panel (not a fixed juror1..10 list), so it decides Severe panels
+  # (7/5/6) too. The old "quorum=3" loop only worked on the default Minor path.
+  echo "  panel=$(read_panel_size "$CASE_ID") quorum=$(read_quorum "$CASE_ID") threshold=$(read_threshold_count "$CASE_ID")"
+  vote_to_threshold "$CASE_ID" "$decision" "Original" || true
 
   local final_status
   final_status=$(case_status "$CASE_ID")
@@ -124,19 +109,24 @@ run_case() {
   BRIDGE_ROW=$(bridge_rooms | grep "^${CASE_ID}|" || true)
   echo "  BRIDGE_ROOM=${BRIDGE_ROW:-NOT_FOUND}"
 
-  # Verify expected kind
+  # Verify expected kind + Decided status. Both must hold for the case to PASS;
+  # a mismatch returns non-zero so the final RESULT line cannot false-green.
+  local ok=1
+  [ "$final_status" = "Decided" ] || ok=0
   if [ "$SANCTION_KIND" = "$expected_kind" ]; then
     echo "  KIND_MATCH=✅ ($SANCTION_KIND)"
   else
-    echo "  KIND_MATCH=❌ expected=$expected_kind got=$SANCTION_KIND"
+    echo "  KIND_MATCH=❌ expected=$expected_kind got=$SANCTION_KIND"; ok=0
   fi
 
-  echo "CASE_${label}=$CASE_ID KIND=$SANCTION_KIND EXPECTED=$expected_kind STATUS=$final_status"
+  echo "CASE_${label}=$CASE_ID KIND=$SANCTION_KIND EXPECTED=$expected_kind STATUS=$final_status PASS=$ok"
+  [ "$ok" -eq 1 ]
 }
 
-# --- Run the two cases ---
-run_case "A_restrict_reach" "advisory_label" "restrict_reach"
-run_case "B_prevent_post"   "cooldown"       "prevent_post"
+# --- Run the two cases (record each verdict; final RESULT reflects reality) ---
+PASS_ALL=1
+run_case "A_restrict_reach" "advisory_label" "restrict_reach" || PASS_ALL=0
+run_case "B_prevent_post"   "cooldown"       "prevent_post"   || PASS_ALL=0
 
 # --- Hash chain ---
 echo ""
@@ -145,4 +135,12 @@ echo "CHAIN=$CHAIN"
 [ "$CHAIN" = "CHAIN_INTACT" ] || { echo "CHAIN_BROKEN" >&2; exit 1; }
 
 echo ""
-echo "RESULT=PASS (or review KIND_MATCH lines above)"
+# Honest result marker: PASS only when BOTH cases decided AND both kinds matched.
+# (The old unconditional "RESULT=PASS (or review…)" false-greened whenever a case
+#  never reached threshold under non-default config — the skill greps this line.)
+if [ "$PASS_ALL" -eq 1 ]; then
+  echo "RESULT=PASS"
+else
+  echo "RESULT=FAIL (a case did not reach Decided or KIND_MATCH=❌ — see CASE_* lines; likely non-default panel/threshold or short eligible pool)"
+  exit 1
+fi
