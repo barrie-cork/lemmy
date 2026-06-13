@@ -6,7 +6,7 @@ mod actor_app_link_fixtures {
   //! undefined behaviour and is forbidden — see the `EnvVarGuard` RAII guard.
   use crate::common::governance_fixtures;
   use actix_web::web::{Data, Json, Query};
-  use diesel::{ExpressionMethods, QueryDsl};
+  use diesel::{Connection as _, ExpressionMethods, PgConnection, QueryDsl};
   use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
   use ed25519_dalek::{Signer, SigningKey};
   use lemmy_api::governance::actor_app_link::{link_actor, link_confirm, revoke_link};
