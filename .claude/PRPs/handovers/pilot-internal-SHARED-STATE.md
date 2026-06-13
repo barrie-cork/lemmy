@@ -261,6 +261,8 @@ Every puppet was invited with `display_name=Juror-pending` (not their pseudonym)
 
 **Suggested check for testing lane:** in a Matrix client (or via `curl http://100.81.145.58:8448/_matrix/client/v3/profile/@_brehon_<uuid>:localhost`), verify whether the `displayname` field has been updated from `Juror-pending` after a few seconds, or whether it stays stuck. If stuck → `room_provisioner.rs` `ensure_puppet` path isn't setting display name after registration.
 
+**✅ SELF-RESOLVED (2026-06-13T18:17):** The testing lane's 13:xx entry for case 4 already documents `display_name Juror-pending — OQ-009 graduated reveal, correct`. This is intentional design, not a bug. Hot tip was a false alarm — closing.
+
 ### 2026-06-13T15:57 (infra/monitoring session) — ✅ PHASE 4 FIRST LIVE RUN: emergency room provisioned
 
 **`provision_emergency_room` ran live for the first time** — case 9, room `!kN3IxRp8EEoDw9FG8C:localhost`.
