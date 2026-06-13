@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task-10 route wiring compiles cleanly",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 10 wired 3 new routes under scope('/governance') and added actor_app_link imports. Laptop advisor should run cargo check -p lemmy_routes.",
+      "commands": [
+        "cargo check -p lemmy_routes"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 10,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b5f3cf727d16-001"
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
