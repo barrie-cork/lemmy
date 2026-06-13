@@ -21,7 +21,60 @@
       "answered_by": null,
       "resolved_at": null,
       "approved_by": null,
-      "approved_at": null
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "96609a95876b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema for task-3 model file",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 created actor_app_link.rs model; ActorAppLinkId not yet defined (Task 4); laptop advisor to run scoped cargo check.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 3,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "693bb711d0f2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task 4 ActorAppLinkId newtype: run cargo check -p lemmy_db_schema",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added ActorAppLinkId newtype to crates/db_schema/src/newtypes.rs. Pre-Shape-G: validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 4,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
     }
   ],
   "resolved": [
