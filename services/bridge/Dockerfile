@@ -40,8 +40,13 @@ LABEL org.opencontainers.image.title="brehon-bridge"
 LABEL org.opencontainers.image.description="Brehon Matrix application-service bridge"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
-# Non-root runtime user.
-RUN useradd -m -u 1000 -s /bin/bash bridge
+# Non-root runtime user + a writable data dir for the bridge_room SQLite DB
+# (BRIDGE_DB_PATH defaults under /data). The dir must be owned by the runtime
+# user BEFORE a named volume is mounted there, else SQLite "unable to open
+# database file" — a fresh named volume inherits the mountpoint's ownership.
+RUN useradd -m -u 1000 -s /bin/bash bridge \
+    && mkdir -p /data \
+    && chown bridge:bridge /data
 USER bridge
 
 ENTRYPOINT ["brehon-bridge"]
