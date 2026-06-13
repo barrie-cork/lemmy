@@ -272,3 +272,36 @@ Bridge log: `emergency room provisioned (chain-emission deferred to T5) case_id=
 - **No errors observed** in surrounding bridge log window.
 
 **Ledger update:** case 9 spent (EmergencyRemove, emergency room `!kN3IxRp8EEoDw9FG8C:localhost`). Next fresh case: 10+.
+
+### 2026-06-13T16:5x (infra/code session) — ✅✅ PHASE 4 FULLY COMPLETE via `seed-emergency.sh` — all four ADR-013 surfaces VERIFIED
+
+**`seed-emergency.sh` implemented + verified PASS on case 10.** Commits: `b81fdd64d` (HTTP route), `6c11b0811` (shared-state + seed script v1).
+
+**Route implementation (commits `b81fdd64d`):**
+- `POST /api/v4/governance/admin/emergency-remove` now exists — the previously admin-only internal function `emergency_remove_open_case()` is now HTTP-reachable.
+- DTOs: `AdminEmergencyRemove {post_id?, comment_id?, community_id?, reason}` + `AdminEmergencyRemoveResponse {case_id}` added to `api_common/src/governance.rs`.
+- Handler: `admin_emergency_remove()` in `admin_emergency_remove.rs` — calls `is_admin`, validates reason non-empty, dispatches `EmergencyRemoveTarget`, calls `emergency_remove_open_case()`, then fires `governance_case_after_transition(..., CaseStatus::EmergencyRemove).await.ok()` (fire-and-forget, matches other hook callers).
+- Route registered in `routes/src/lib.rs` under `/emergency-remove ""` (flag-bad-faith stays at `/emergency-remove/flag-bad-faith`).
+- **Linux compile proof: `CARGO_LINUX_EXIT=0`** (3m13s, no `error[E*]` lines). Docker build: `DOCKER_BUILD_EXIT=0`.
+
+**Case 10 verified (4 surfaces):**
+| Surface | Result |
+|---|---|
+| `moderation_case.status` | `EmergencyRemove` ✅ |
+| `post.removed` | `t` ✅ |
+| Bridge room `room_type='emergency'` | `!08xm0Vbk5usRoKoWrn:localhost` ✅ |
+| ADR-013 latency | **702ms** (< 2000ms target) ✅ |
+| `governance_log entry_kind='emergency_removed'` | 1 row, `payload→case_id=10` ✅ |
+| Hash chain | `CHAIN_INTACT` ✅ |
+
+- `LEGAL_INVITE_NOT_FOUND` in bridge logs — expected; `@legal:localhost` is not a registered user; the invite fires but the non-existent user won't appear. Non-blocking for pilot.
+
+**governance_log column note:** columns are `(entry_kind, payload, ...)` — NOT `(kind, metadata)`. Fixed in seed script query (`metadata::jsonb` → `payload`, `kind=` → `entry_kind=`).
+
+**`seed-emergency.sh` is ✅ VERIFIED AS SCRIPT.** Route probe (no JWT) → 401 (not 404). Full RESULT=PASS run → case 10.
+
+**Redeployed Lemmy binary:** `governance-v0 @ <latest>`, `docker-lemmy-1` recreated 2026-06-13T15:56Z. API 200. `messaging_enabled=t`. Rate-limit DB raises intact.
+
+**Ledger update:** cases 9 + 10 spent (both EmergencyRemove). Emergency rooms: `!kN3IxRp8EEoDw9FG8C` (case 9), `!08xm0Vbk5usRoKoWrn` (case 10). Next fresh case: **11+**.
+
+**Phase 5 (sanction-kind coverage — all 4 `SanctionKind`s: `HideContent`, `SuspendAccount`, `RemoveFromCommunity`, `BanFromInstance`) is next** per `pilot-internal-testing-plan.md`. `HideContent` is the only kind verified so far (cases 1/3/4/5/6/8). The other 3 kinds map to specific power-level overrides in the bridge's `compute_power_override`; they've never run live. Entry gate: a fresh case with quorum on a decision that maps to each kind — check which `winning_decision` values produce each `SanctionKind` in `sanction_publisher.rs`.
