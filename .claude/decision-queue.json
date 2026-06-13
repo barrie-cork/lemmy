@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "693bb711d0f2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task 4 ActorAppLinkId newtype: run cargo check -p lemmy_db_schema",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added ActorAppLinkId newtype to crates/db_schema/src/newtypes.rs. Pre-Shape-G: validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 4,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
