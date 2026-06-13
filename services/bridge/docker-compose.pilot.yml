@@ -1,0 +1,70 @@
+# Tuwunel + Brehon bridge pilot stack for home-network testing.
+# Authored 2026-06-13 (pilot-internal). Separate from docker-compose.yml
+# (which pins Conduit v0.6.0 for M1-a integration tests, with a sled backend
+# that the published image rejects). This file runs the real Tuwunel v1.7.1
+# Matrix homeserver and the Brehon bridge for the live pilot.
+#
+# Usage:  cd /srv/brehon-fork/services/bridge
+#         docker compose -f docker-compose.pilot.yml up -d
+#
+# server_name=localhost, federation OFF. Host port 8448 -> container 8008 (client API).
+# Bridge host port 8081 (host 8080 is taken by web-archive-frontend on the homeserver).
+services:
+  tuwunel:
+    image: ghcr.io/matrix-construct/tuwunel@sha256:1319f9fd40a92a46251e86bd7865facf24d1c974b30731f1bd3059eb446e318f
+    container_name: brehon-tuwunel
+    command: ["-c", "/etc/tuwunel/tuwunel.toml"]
+    volumes:
+      - tuwunel_pilot_data:/var/lib/tuwunel
+      - ./tuwunel-pilot.toml:/etc/tuwunel/tuwunel.toml:ro
+      - ./registration.yaml:/etc/tuwunel/registration.yaml:ro
+    ports:
+      - "8448:8008"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "4"
+
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: brehon-bridge:pilot
+    container_name: brehon-bridge
+    environment:
+      # Matrix homeserver (same compose network; client API on container port 8008).
+      TUWUNEL_URL: "http://brehon-tuwunel:8008"
+      # AS tokens — must match registration.yaml. Dev tokens for home-network only.
+      AS_TOKEN: "brehon-as-dev-token-01"
+      HS_TOKEN: "brehon-hs-dev-token-01"
+      BRIDGE_PORT: "8080"
+      # Brehon (Lemmy) callbacks. Lemmy is reachable on the host network at
+      # 8536; from inside this compose network we reach the host via the
+      # gateway alias host.docker.internal (added below via extra_hosts).
+      BREHON_READ_URL: "http://host.docker.internal:8536/api/v4/governance/messaging-config"
+      BREHON_NOTIFY_URL: "http://host.docker.internal:8536/bridge/notify"
+      BREHON_ROOM_EVENT_URL: "http://host.docker.internal:8536/governance/room-event"
+      BRIDGE_CALLBACK_SECRET: "brehon-bridge-callback-secret-pilot-01"
+      LEGAL_CONTACT_MXID: "@legal:localhost"
+      BRIDGE_DB_PATH: "/data/bridge.db"
+      RUST_LOG: "info,brehon_bridge=debug"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - bridge_pilot_data:/data
+    ports:
+      - "8081:8080"
+    depends_on:
+      - tuwunel
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "4"
+
+volumes:
+  tuwunel_pilot_data:
+  bridge_pilot_data:

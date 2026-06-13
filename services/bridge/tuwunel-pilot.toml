@@ -1,0 +1,12 @@
+# Tuwunel pilot config — Brehon home-network testing (localhost, federation OFF).
+# Authored 2026-06-13 for pilot-internal. NOT for external/production use.
+# AS registration for the Brehon bridge is wired separately at bridge-setup time.
+[global]
+server_name = "localhost"
+database_path = "/var/lib/tuwunel"
+port = 8008
+address = "0.0.0.0"
+allow_registration = true
+yes_i_am_very_very_sure_i_want_an_open_registration_server_prone_to_abuse = true
+allow_federation = false
+max_request_size = 20971520
