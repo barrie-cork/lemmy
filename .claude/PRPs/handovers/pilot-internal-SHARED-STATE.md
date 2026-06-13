@@ -423,5 +423,34 @@ Also: `messaging_enabled` was stuck `false` from the aborted first attempt → `
 
 **Phase 8 (human go-live — home-network reachability + tester guide) is a USER DECISION.** See `pilot-internal-testing-plan.md` phase 8 entry gate.
 
+### 2026-06-13T~now (testing session) — ⏳ PHASE 8: pre-go-live checklist
+
+**Tester guide authored:** `.claude/PRPs/handovers/pilot-phase8-tester-guide.md` (committed `c03d0c8ca`). Covers: registration (require_application mode), posting/reporting, admin workflow (approve registration, open case, assign jury, drive votes), rate limits, and API quick-start.
+
+**Server-side checks PASSED:**
+- All 7 containers UP (`docker-lemmy-1` 4h, `brehon-bridge` 10min, `brehon-tuwunel` 9h, postgres/pictrs/proxy/ui all healthy)
+- LAN `http://192.168.1.157:1236` → HTTP 200 ✅
+- Tailscale `http://100.81.145.58:1236` → HTTP 200 ✅
+- API `http://192.168.1.157:8536/api/v4/site` → HTTP 200 ✅
+- Registration queue: 0 pending applications ✅
+- `messaging_enabled=t` ✅
+- `CHAIN_INTACT` (through case 20) ✅
+
+**Rate limits (current — testing-generous):**
+- post/governance/register: 500 req / 600s
+- messages: 2000 req / 60s
+- Pilot-realistic values: your call. To tighten: `PUT /api/v4/site` with `rate_limit_post`, `rate_limit_register`, etc.
+
+**Pre-go-live checklist:**
+- [x] Tester guide authored (`pilot-phase8-tester-guide.md`)
+- [x] All containers up + API reachable from homeserver
+- [x] Registration queue clear
+- [x] Rate limits appropriate for pilot (currently generous — may want to lower for realism)
+- [ ] **USER ACTION REQUIRED:** verify tester device(s) can reach `http://192.168.1.157:1236` from your home network. This depends on your router/switch config — only you can confirm.
+- [ ] **USER DECISION:** Matrix/Element side for testers? Tuwunel is localhost-only on homeserver — testers can't reach it without additional network exposure. Recommend: skip for initial human pilot.
+- [ ] **USER DECISION:** invite specific testers + approve their registrations as they come in.
+
+**To open pilot:** share `pilot-phase8-tester-guide.md` (or its key facts) with testers and tell them the URL. When they register, approve via UI admin panel or API.
+
 ### 2026-06-13T21:3x (infra/monitoring session) — 🔁 DELIBERATE BRIDGE RESTART for sub-case 1 (user-authorized)
 **INTENTIONAL — my own bridge-health monitor will see `brehon-bridge` restart; this is NOT an incident.** Running `docker compose -f docker-compose.pilot.yml restart bridge` now (infra-lane action) so the testing lane can run sub-case 1 (restart idempotency). Will confirm health, then hand back. Testing lane: once I post "bridge healthy, run sub-case 1" below, run `bash /srv/brehon-fork/scripts/brehon/pilot-seed/seed-resilience.sh 1` (defaults to spent case 5; the check is `bridge_room` count for (case_id, jury) stays == 1, no duplicate after restart).
