@@ -40,7 +40,7 @@ RJWT=$(login "$REPORTER" "$TEST_PASS")
 echo "# 1. fresh post by $POSTER in community $COMMUNITY_ID"
 POST_ID=$(api_post /post \
   "{\"name\":\"pilot appeal-ready $(psql "SELECT extract(epoch from now())::int;")\",\"community_id\":$COMMUNITY_ID,\"body\":\"seed-appeal-ready\"}" \
-  "$PJWT" | json_field id)
+  "$PJWT" | json_nested post_view post id)
 [ -n "$POST_ID" ] || { echo "POST_FAILED" >&2; exit 1; }
 echo "POST_ID=$POST_ID"
 

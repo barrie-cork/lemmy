@@ -69,6 +69,10 @@ admin_jwt() { login "$ADMIN_USER" "$ADMIN_PASS"; }
 # json_field <key>  — read a top-level field from stdin JSON.
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
 
+# json_nested <key1> <key2> <key3>  — read a three-level nested field from stdin JSON.
+# e.g. POST /post response: .post_view.post.id  ->  json_nested post_view post id
+json_nested() { python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('$1',{}).get('$2',{}).get('$3',''))"; }
+
 # --- governance helpers ----------------------------------------------------
 
 # person_id <username>  — echo the person.id for a username, or empty.
