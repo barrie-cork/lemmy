@@ -298,15 +298,18 @@ run_D() {
   STATUS=$(case_status "$CASE_ID")
   echo "  STATUS_AFTER_QUORUM=$STATUS"
 
-  # If SponsorLiabilityPending, cron fires within ~5 min. Print wait advisory.
+  # If SponsorLiabilityPending, cron (job.grace_check_interval_minutes=5) fires AFTER
+  # grace_expires_at (Medium case = 72h, Minor = 24h, Severe = 168h). Print wait advisory.
   if [ "$STATUS" = "SponsorLiabilityPending" ]; then
-    local SLP_LOG
+    local SLP_LOG GRACE_EXP
     SLP_LOG=$(psql "SELECT COUNT(*) FROM governance_log WHERE payload->>'case_id'='$CASE_ID' AND entry_kind='sponsor_liability_pending';")
+    GRACE_EXP=$(psql "SELECT grace_expires_at FROM moderation_case WHERE id=$CASE_ID;")
     echo "  SPONSOR_LIABILITY_PENDING_LOG=$SLP_LOG ✅"
+    echo "  grace_expires_at=$GRACE_EXP (cron fires within 5 min after that)"
     echo ""
-    echo "  ⏳ SponsorLiabilityPending confirmed. Cron fires every ~5 min."
-    echo "     To check Fired:  bash $0 --check-sponsor-fired $CASE_ID"
-    echo "     or after 5 min:  docker exec docker-postgres-1 psql -U lemmy lemmy -t -A -c \"SELECT status FROM moderation_case WHERE id=$CASE_ID;\""
+    echo "  ⏳ SponsorLiabilityPending confirmed. Check after grace_expires_at passes:"
+    echo "     bash $0 --check-sponsor-fired $CASE_ID"
+    echo "     or:  docker exec docker-postgres-1 psql -U lemmy lemmy -t -A -c \"SELECT status FROM moderation_case WHERE id=$CASE_ID;\""
   else
     echo "  ⚠️  Expected SponsorLiabilityPending, got $STATUS"
     echo "     (Possible: testuser not in endorsement scope, or decision maps to None)"
