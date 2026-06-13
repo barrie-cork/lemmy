@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check --workspace --features full against phase-m2-late-b-actor after task-1 migration commit",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task-1 migration add_actor_app_link committed. Pre-Shape-G: delegating cargo check to laptop advisor.",
-      "commands": [
-        "cargo check --workspace --features full"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 1,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "5e2ffe2ac496-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7163,6 +7137,31 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full against phase-m2-late-b-actor after task-1 migration commit",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task-1 migration add_actor_app_link committed. Pre-Shape-G: delegating cargo check to laptop advisor.",
+      "commands": [
+        "cargo check --workspace --features full"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: PASS (6m 45s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T15:58:40Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "5e2ffe2ac496-001"
     }
   ]
 }
