@@ -26,6 +26,31 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "0adb31ca1442-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check on lemmy_db_schema for task-6 changes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added ENTRY_KIND_ACTOR_APP_LINK_* consts and sign_link_claim wrapper to governance_log.rs. Delegate validation to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 6,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
