@@ -116,8 +116,8 @@ init + boot verification). Well within envelope; no watchdog relevance (no Junio
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
 - [ ] Change #1: promote to `.claude/lessons/feedback_matrix_server_name_volume_binding.md` (cross-harness lesson)
-- [ ] Change #2: update existing `.claude/lessons/feedback_verify_before_trusting_shell_output.md` (add JSON-response-shape clause)
-- [ ] Change #3: cross-link `.claude/lessons/feedback_powershell_ascii_only_code_strings.md` → curl JSON-body applicability
+- [x] Change #2: **DONE** — written as new lesson `.claude/lessons/feedback_inspect_raw_api_response_shape_before_trusting_count.md` (the `feedback_verify_before_trusting_shell_output` target turned out to be PMD-only, no disk file; authored a standalone lesson cross-linked to that PMD pattern). PMD copy = entry 999 (hook-synced); manual dup 1001 demoted.
+- [x] Change #3: **DONE** — added "non-ASCII in API request bodies" section + See-also to `.claude/lessons/feedback_powershell_ascii_only_code_strings.md` (em-dash in curl `-d` JSON broke Tuwunel's deserializer).
 - [ ] Change #4: process note in `pilot-internal-SHARED-STATE.md` discipline (cross-lane infra-state changes leave a one-liner)
 - [ ] PMD eval write: already done this session (eval ID 996 + this retro)
 
