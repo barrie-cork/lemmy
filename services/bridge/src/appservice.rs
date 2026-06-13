@@ -210,13 +210,15 @@ async fn handle_room_event(
 /// all five endpoints.
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
+        // axum 0.8 capture-group syntax is `{param}` (the 0.7 `:param` form
+        // panics at router-build time: "Path segments must not start with `:`").
         .route(
-            "/_matrix/app/v1/transactions/:txn_id",
+            "/_matrix/app/v1/transactions/{txn_id}",
             put(handle_transactions),
         )
-        .route("/_matrix/app/v1/users/:user_id", get(handle_query_user))
+        .route("/_matrix/app/v1/users/{user_id}", get(handle_query_user))
         .route(
-            "/_matrix/app/v1/rooms/:room_alias",
+            "/_matrix/app/v1/rooms/{room_alias}",
             get(handle_query_room),
         )
         .route("/admin/provision-room", post(handle_provision_room))
