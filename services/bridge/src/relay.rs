@@ -14,6 +14,13 @@
 // M1 scope: text messages (m.text), image upload + m.image, voice
 //   upload + m.audio. The <3s round-trip target is asserted in Task
 //   13's integration test; this task is cargo-gated only.
+//
+// This whole module is the 1:1 DM-relay feature. It is intentionally not yet
+// routed into (the pilot exercises governance room provisioning + sanctions,
+// not 1:1 DM), so its items are unused at the crate level. Allow dead_code
+// module-wide rather than per-item — these are a coherent pending feature, not
+// stragglers. Remove the allow when DM relay is wired (the dm_round_trip test).
+#![allow(dead_code)]
 
 use std::sync::Arc;
 

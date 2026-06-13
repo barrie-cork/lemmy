@@ -38,13 +38,13 @@ fn now_rfc3339() -> String {
     let mut y = 1970u64;
     let mut d = days;
     loop {
-        let leap = if y % 400 == 0 { 1 } else if y % 100 == 0 { 0 } else if y % 4 == 0 { 1 } else { 0 };
+        let leap = if y.is_multiple_of(400) { 1 } else if y.is_multiple_of(100) { 0 } else if y.is_multiple_of(4) { 1 } else { 0 };
         let dy = 365 + leap;
         if d < dy { break; }
         d -= dy;
         y += 1;
     }
-    let leap = if y % 400 == 0 { 1u64 } else if y % 100 == 0 { 0 } else if y % 4 == 0 { 1 } else { 0 };
+    let leap = if y.is_multiple_of(400) { 1u64 } else if y.is_multiple_of(100) { 0 } else if y.is_multiple_of(4) { 1 } else { 0 };
     let months = [31u64, 28 + leap, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     let mut m = 0usize;
     while m < 12 && d >= months[m] {

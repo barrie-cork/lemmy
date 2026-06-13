@@ -58,6 +58,11 @@ pub fn upsert(
     Ok(())
 }
 
+/// Idempotency watermark for restart-safe provisioning (last-seen
+/// governance_log row per case). Not yet called — the log-tail consumer that
+/// advances it lands with the m2 "resume without duplicate Room::Created"
+/// work. Retained as the schema-aligned writer until then.
+#[allow(dead_code)]
 pub fn set_watermark(conn: &Connection, case_id: i64, row_id: i64) -> Result<()> {
     conn.execute(
         "UPDATE bridge_room SET last_seen_governance_log_row_id = ?1 WHERE case_id = ?2",

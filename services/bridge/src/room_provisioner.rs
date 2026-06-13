@@ -23,7 +23,10 @@ pub struct CaseTransitionEvent {
     pub juror_pseudonyms: Vec<String>,
     #[serde(default)]
     pub new_status: Option<String>,
+    // Part of the wire-contract mirror; not consumed by the provisioner yet
+    // (the room dispatch keys on new_status). Kept for payload completeness.
     #[serde(default)]
+    #[allow(dead_code)]
     pub old_status: Option<String>,
     #[serde(default)]
     pub community_id: Option<i32>,
@@ -34,6 +37,10 @@ pub struct CaseTransitionEvent {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type_", rename_all = "snake_case")]
 pub enum RoomEventPayload {
+    // The room-event handler only acts on CaseTransition; PrivateMessage is
+    // part of the BridgeNotifyPayload mirror (the DM-relay variant) and its
+    // inner value is intentionally not read here.
+    #[allow(dead_code)]
     PrivateMessage(serde_json::Value),
     CaseTransition(CaseTransitionEvent),
 }
@@ -145,7 +152,7 @@ async fn provision_jury_room(state: Arc<AppState>, event: CaseTransitionEvent) {
             "Juror-pending".to_string()
         };
         tracing::info!(mxid = %mxid, display_name = %display_name, "inviting juror to jury room");
-        if let Err(e) = invite_to_room(&*state, &room_id, &mxid).await {
+        if let Err(e) = invite_to_room(&state, &room_id, &mxid).await {
             tracing::warn!(err = %e, mxid = %mxid, "invite failed — swallowing (ADR-012)");
         }
     }
@@ -348,7 +355,7 @@ async fn provision_appeal_room(state: Arc<AppState>, event: CaseTransitionEvent)
             "Juror-pending".to_string()
         };
         tracing::info!(mxid = %mxid, display_name = %display_name, "inviting appeal juror");
-        if let Err(e) = invite_to_room(&*state, &room_id, &mxid).await {
+        if let Err(e) = invite_to_room(&state, &room_id, &mxid).await {
             tracing::warn!(
                 err = %e,
                 mxid = %mxid,
@@ -421,7 +428,7 @@ async fn provision_emergency_room(state: Arc<AppState>, event: CaseTransitionEve
 
     // Invite legal_contact_mxid; reported party ABSENT per ADR-013
     let legal_mxid = state.config.legal_contact_mxid.clone();
-    if let Err(e) = invite_to_room(&*state, &room_id, &legal_mxid).await {
+    if let Err(e) = invite_to_room(&state, &room_id, &legal_mxid).await {
         tracing::warn!(
             err = %e,
             mxid = %legal_mxid,
@@ -520,6 +527,9 @@ async fn provision_membership_mirror(state: Arc<AppState>, event: CaseTransition
 }
 
 /// OQ-009: reveal threshold (default 1; T4b wires the real config value from bridge-read route).
+/// Superseded at runtime by the `state.oq009_reveal_threshold` atomic (fed by the
+/// soft-pause poller); retained as the documented default until T4b lands.
+#[allow(dead_code)]
 fn oq009_threshold() -> usize {
     1
 }

@@ -20,7 +20,11 @@ pub struct BridgeConfig {
     /// HTTP endpoint for Brehon Matrix-to-Brehon relay callbacks
     /// (the URL the bridge POSTs inbound Matrix DMs to).
     pub brehon_notify_url: String,
-    /// URL for POST /governance/room-event (binary callback).
+    /// URL for POST /governance/room-event (binary callback). Read from
+    /// BREHON_ROOM_EVENT_URL but not yet consumed — the bridge currently
+    /// receives room-events rather than POSTing them. Retained as config
+    /// surface for a future bridge→binary room-event callback.
+    #[allow(dead_code)]
     pub brehon_room_event_url: String,
     /// Bearer secret for bridge<->binary auth (BRIDGE_CALLBACK_SECRET).
     pub bridge_callback_secret: String,
