@@ -116,21 +116,21 @@ pub async fn link_confirm(
 
   // Verify app countersignature over (nonce\napp_local_id)
   let app_pubkey_hex = std::env::var("BRIDGE_LINK_APP_PUBKEY")
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_pubkey_bytes = hex::decode(app_pubkey_hex.trim())
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_pubkey_arr: [u8; 32] = app_pubkey_bytes
     .try_into()
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let verifying_key =
-    VerifyingKey::from_bytes(&app_pubkey_arr).map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    VerifyingKey::from_bytes(&app_pubkey_arr).map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
 
   let signed_bytes = format!("{}\n{}", data.nonce, data.app_local_id);
   let sig_arr: [u8; 64] = data
     .app_signature
     .as_slice()
     .try_into()
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_sig = Signature::from_bytes(&sig_arr);
 
   // Dual-signature: hard reject if app countersig fails
@@ -147,7 +147,7 @@ pub async fn link_confirm(
     .select(actor_pseudonym::id)
     .first::<ActorPseudonymId>(conn)
     .await
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidQuery))?;
+    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
 
   let app_id = data.app_id.clone();
   let app_local_id = data.app_local_id.clone();
