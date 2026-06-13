@@ -2,6 +2,31 @@
   "schema_version": 3,
   "pending": [
     {
+      "id": "c976bfaf1e84-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_api against task-7 shim re-export commit",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 added ENTRY_KIND_ACTOR_APP_LINK_CREATED and ENTRY_KIND_ACTOR_APP_LINK_REVOKED to the pub use block in crates/api/api/src/governance/governance_log.rs. These consts were defined in db_schema by task 6.",
+      "commands": [
+        "cargo check -p lemmy_api"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 7,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": "a12c6ca80e07-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -26,6 +51,7 @@
       "approved_by": null,
       "approved_at": null
     }
+  
   ],
   "resolved": [
     {
