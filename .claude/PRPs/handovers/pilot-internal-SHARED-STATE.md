@@ -142,6 +142,50 @@
   - **Phase 8** — human pilot go-live (UI + real testers + reachability — a user decision, not a scripted test).
 - Each phase has entry gate / steps / CRITICAL VERIFY / likely-gap notes. **Heads-up:** the appeal/emergency/sanction-kind provisioner paths (`provision_appeal_room`, `provision_emergency_room`, the non-`hide_content` kinds) have NEVER run live — same "never deployed" exposure that produced 7 bridge bugs in phases 1–2. They share the now-fixed `create_community_room`/`ensure_puppet`/alias-namespace, so they MAY work first try, but expect surprises. Raise wiring gaps in §5; I'll fix.
 
+### 2026-06-13T13:xx (infra/code session) — ⚠️ PHASE 3 (appeals) run via subagent — PARTIAL: request path GREEN + hash-chain-clean; room-provision BLOCKED (wiring gap, my lane) + panel-seat BLOCKED (test-data)
+**Drove phase 3 myself (appeal flow) on case 5, which was still in its appeal window (`appeal_window_expires_at=2026-06-20`).** Result is PARTIAL — the appeal *request/audit* path works cleanly, but two distinct blocks stop the room+panel from materializing. Both are mine/test-env, NOT testing-session blockers.
+
+**What PASSED:**
+- `POST /governance/appeal {case_id:5, reason:"..."}` as testuser (defendant, person 5) → HTTP 200 `{appeal_id:1, case_id:5}`. **Case 5 → `Appealed`** confirmed. `appeal` row id=1 (`status=Requested role=Defendant`); `governance_log` gained `appeal_requested` (id 76).
+- **Original-juror exclusion CORRECT:** original panel = persons {6–10}; appeal panel `role='Appeal'` rows = ∅, payload `excluded_juror_count:5`. Appeal threshold bumped quorum 3→**5** (`threshold_tier_bump=1`).
+- **Hash chain INTACT** across governance_log 74→80 (incl. both `appeal_panel_assembled` writes). No break.
+- **Discovered request shapes (recorded):** `/governance/appeal` = `{case_id:int, reason:string}` — **both required** (`reason` non-optional, empty→400). `/admin/trigger-appeal-rejury` = `{case_id:int}` (+ optional read-but-ignored `step_up_token`). Defendant always eligible in-window; OriginalReporter only if winning_decision ∈ {NoAction, AdvisoryLabel} (case 5's RemoveContent closes the reporter path).
+
+**FINDING 1 — WIRING GAP (appeal room never provisions; phase-2-class, recurring on appeal path). MY LANE.**
+- **Site:** `crates/api/api_utils/src/bridge_notify.rs:112` — `juror_pseudonyms` is fetched ONLY when `new_status == JurySelection`; on `Decided→Appealed` (`new_status=Appealed`) it sends an **empty vec**.
+- **Effect:** bridge `room_provisioner.rs:296` ADR-015 guard (`if juror_pseudonyms.is_empty() { skip }`) fires → appeal room never created. Confirmed live: bridge WARN `juror_pseudonyms is empty on appealed transition — skipping appeal room provision`; no `bridge_room` row; Tuwunel `#appeal-case-5:localhost` → 404.
+- **Bridge side is correct & fully wired** (`room_provisioner.rs:67 Some("appealed")→provision_appeal_room`, room_type `"appeal"`, alias `appeal-case-{id}`). Gap is purely Lemmy-side: extend the `matches!` to also fetch the `role='Appeal'` pseudonyms when `new_status==Appealed`. Chicken-and-egg with Finding 2 (panel is empty, so nothing to send even if fetched).
+
+**FINDING 2 — TEST-DATA / POOL EXHAUSTION (appeal panel can't seat). TEST-ENV, not code.**
+- Appeal selector found **0 eligible jurors**: only 8 local accounts; the 5 jury-eligible (juror1–5) all served on case-5's original panel and are correctly excluded. Need **≥5 fresh jury-eligible accounts** (appeal threshold=5) to seat a real appeal panel.
+- **Behavioral note for impl:** both auto-seat (`request_appeal`) and `admin_trigger_appeal_rejury` return **HTTP 200 while seating an empty panel** rather than erroring on insufficient appeal jurors. The admin idempotency guard (`existing_appeal_assignments>0`) can't fire (0 rows inserted), so the admin path is re-runnable and keeps appending empty `appeal_panel_assembled` entries (78, 80). Empty-panel-as-silent-no-op vs error is a design question.
+
+**Ledger:** case 5 consumed for appeals (now `Appealed`, `appeal_id=1`); no appeal room created; no fresh case used. **Zero code/infra changes, zero commits** (subagent was scoped read-only on source + read-only on containers).
+
+**Net:** appeal request→Appealed→audit-log is GREEN. To make phase 3 fully GREEN: (1) fix `bridge_notify.rs:112` appeal-juror-pseudonym fetch (my lane), (2) seed ≥5 extra jury-eligible accounts (test-env). Both deferred to user decision below.
+
+### 2026-06-13T14:xx (infra/code session) — ✅ BOTH phase-3 blocks RESOLVED: appeal-pseudonym fix applied (Linux-green) + 5 fresh jury-eligible accounts seeded. ⚠️ awaiting Lemmy rebuild+redeploy to exercise.
+**Acted on both Finding-1 (code) and Finding-2 (test-data) from the 13:xx entry. Neither is deployed/exercised yet — the fix is committed to `governance-v0` but the running Lemmy binary is unchanged.**
+
+**FIX 1 (code) — `crates/api/api_utils/src/bridge_notify.rs` — appeal-juror-pseudonym fetch.** Committed to `governance-v0` (see §"Committed changes"). The gap was real (verified against source, not just the subagent's claim): `juror_pseudonyms` was fetched only on `JurySelection`; the `Appealed` transition sent an empty vec → bridge ADR-015 guard skipped the appeal room. Three edits:
+  1. `fetch_juror_pseudonyms` now takes a `role: JuryAssignmentRole` arg and filters `jury_assignment::role.eq(role)` (mirrors the canonical filter at `admin_trigger_appeal_rejury.rs:75` + `submit_jury_vote.rs:996`).
+  2. The transition match now fetches `Original` panel on `JurySelection`, `Appeal` panel on `Appealed`, empty otherwise.
+  3. Added `JuryAssignmentRole` import.
+  - **Role filter is load-bearing, not cosmetic:** original + appeal panels coexist as separate `jury_assignment` rows on the same case (appeal selector excludes originals). An unfiltered fetch would seed the appeal room with the ORIGINAL jurors' puppets. Filtering by `role='Appeal'` sends only the appeal round.
+  - **Ordering verified safe:** in `request_appeal.rs` the appeal panel is seated INSIDE the txn (lines 201–211), txn commits (line 82), THEN the hook fires (line 85) — so the `role='Appeal'` rows are committed + visible when the fetch runs.
+  - **Linux compile proof:** `scripts/brehon/cargo-linux.sh check --workspace --features full` → `CARGO_LINUX_EXIT=0`, 0 `error[` lines, `lemmy_api_utils` + `lemmy_server` + all callers compiled, 13m17s. Log: `.claude/build-appeal-fix-linux.log`.
+
+**FIX 2 (test-data) — 5 fresh jury-eligible accounts juror6–juror10 (person_ids 11–15) seeded.** Registered → admin-approved → `reputation_snapshot` row with `jury_eligible=true` inserted for each. **Two discoveries worth recording:**
+  1. **juror1–5 were NEVER strictly jury-eligible** — they seated on case-5's original panel via the small-pool relaxed fallback (juror1–3 have `jury_eligible=false` rows; juror4/5 have NO snapshot at all). juror6–10 are the FIRST strictly-eligible jurors in the pilot.
+  2. **`community_id` had to be `2`, NOT NULL** — the appeal eligibility query (`admin_assign_jury.rs:831–862`) joins `rs.community_id IS NOT DISTINCT FROM <case.community_id>` and case 5 is community-scoped to community 2. An instance-scoped (NULL) snapshot would silently fail the match → appeal panel would STILL find zero jurors. Verified by running the exact eligibility query: it returns precisely juror6–10 and excludes juror1–5.
+  - Exact INSERT (reproducible): `INSERT INTO reputation_snapshot (person_id, community_id, reporting_accuracy, jury_reliability, participation_consistency, endorsement_strength, jury_eligible, trusted_reporter, can_sponsor) VALUES (<pid>, 2, 100,100,100,100, true, false, false);` (`id` + `calculated_at` defaulted). All 5 logins confirmed working (password `testpass123`).
+
+**⚠️ ASK / next step (decision below in §5):** the running `docker-lemmy-1` is on the OLD binary — the fix is NOT live until Lemmy is rebuilt+redeployed (infra's lane per §6). Once redeployed, re-triggering the appeal on case 5 (`POST /admin/trigger-appeal-rejury {case_id:5}`) should: seat a 5-juror appeal panel from juror6–10 → fire the `Appealed` hook with non-empty `role='Appeal'` pseudonyms → bridge provisions the `appeal-case-5` room (`bridge_room` row, room_type='appeal'). NOTE: case 5 is already `Appealed` with an empty `appeal_panel_assembled` (×2) logged — the re-trigger appends a fresh panel; confirm the idempotency guard behaves (it couldn't fire before because 0 rows existed; now ≥1 will).
+
+### 2026-06-13T~now (infra/code session) — ⚙️ REDEPLOYING Lemmy to land the appeal-pseudonym fix (`c84aaf27c`), then exercising appeal-room provisioning
+- Verified: homeserver source @ `c84aaf27c` (has the fix); running `docker-lemmy-1` started 10:37 (pre-fix, phase-2 redeploy) → confirmed the running binary is stale. Case 5 = `Appealed`.
+- **⚠️ ABOUT TO `docker compose build lemmy && up -d lemmy`** — ~3–5 min build + a brief API blip on recreate. Rate-limit raises persist in DB (survived the last recreate). Testing session: expect a short blip; I'll report when green + whether the appeal room provisions on the case-5 re-trigger.
+
 ## §5. Cross-session asks
 
 - **Testing session:** the bridge is now LIVE. To exercise the *Matrix* side end-to-end (not just DB-layer): run a real governance flow (post → report → case → assign jury → vote → quorum). When the case transitions, the `governance_case_after_transition` hook should provision a jury room in Tuwunel (`bridge_room` table populates). Then a sanction on THAT case will apply real `m.room.power_levels`. **Worth confirming:** does a real case-status transition actually populate `bridge_room`? (The hook → bridge `/brehon/room-event` path is m2-rooms-a + m2-core-hook; I verified the sanction path but not the room-provisioning path with a live case.)
