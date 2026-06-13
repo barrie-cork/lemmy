@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "f18f91cc4dae-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "run cargo-linux.sh check + clippy on services/bridge after task-12 link_handler",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 12 added link_handler.rs (ed25519-dalek + hex new deps), config.rs 3 new fields, appservice.rs new route, main.rs mod. Needs Linux cargo check + clippy to validate.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml -- -D warnings"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 12,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7415,6 +7388,32 @@
       "resolved_at": "2026-06-13T20:58:11Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "f18f91cc4dae-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "run cargo-linux.sh check + clippy on services/bridge after task-12 link_handler",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 12 added link_handler.rs (ed25519-dalek + hex new deps), config.rs 3 new fields, appservice.rs new route, main.rs mod. Needs Linux cargo check + clippy to validate.",
+      "answer": "cargo-linux.sh check exit 0. clippy initially failed 4 errors (unused Verifier import, dead_code lookup/revoke, unwrap_or_default in puppet.rs pre-existing). Fixed in style commit d0a8f5650. Re-run clippy exit 0, clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T22:23:35Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml -- -D warnings"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 12,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
