@@ -2,6 +2,31 @@
   "schema_version": 3,
   "pending": [
     {
+      "id": "f37d60659b2c-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema_file after schema.rs regen (task 2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "schema.rs regenerated via diesel print-schema (raw) + Python transforms to add actor_app_link table, fix ltree import, add manually-managed allow_tables entries. Commit: feat(db_schema_file): regen schema.rs — add actor_app_link table (task 2)",
+      "commands": [
+        "cargo check -p lemmy_db_schema_file"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 2,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
       "id": "96609a95876b-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
