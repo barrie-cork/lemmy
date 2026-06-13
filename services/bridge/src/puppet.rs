@@ -101,7 +101,7 @@ impl PuppetMap {
             tracing::info!(mxid = %mxid, "puppet registered");
         } else {
             let status = resp.status();
-            let body_text = resp.text().await.unwrap_or_default();
+            let body_text = resp.text().await.unwrap_or_else(|_| String::new());
             // M_USER_IN_USE → puppet already exists, idempotent reuse.
             if body_text.contains("M_USER_IN_USE") {
                 tracing::debug!(mxid = %mxid, "puppet already exists, reusing");

@@ -15,7 +15,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
 use crate::app_actor_link;
