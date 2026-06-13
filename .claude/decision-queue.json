@@ -1,82 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "f37d60659b2c-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check -p lemmy_db_schema_file after schema.rs regen (task 2)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "schema.rs regenerated via diesel print-schema (raw) + Python transforms to add actor_app_link table, fix ltree import, add manually-managed allow_tables entries. Commit: feat(db_schema_file): regen schema.rs — add actor_app_link table (task 2)",
-      "commands": [
-        "cargo check -p lemmy_db_schema_file"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 2,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    },
-    {
-      "id": "96609a95876b-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check -p lemmy_db_schema for task-3 model file",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 created actor_app_link.rs model; ActorAppLinkId not yet defined (Task 4); laptop advisor to run scoped cargo check.",
-      "commands": [
-        "cargo check -p lemmy_db_schema"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 3,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    },
-    {
-      "id": "693bb711d0f2-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Validate task 4 ActorAppLinkId newtype: run cargo check -p lemmy_db_schema",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 added ActorAppLinkId newtype to crates/db_schema/src/newtypes.rs. Pre-Shape-G: validation delegated to laptop advisor.",
-      "commands": [
-        "cargo check -p lemmy_db_schema"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 4,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7238,6 +7162,81 @@
       "approved_by": null,
       "approved_at": null,
       "id": "5e2ffe2ac496-001"
+    },
+    {
+      "id": "f37d60659b2c-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema_file after schema.rs regen (task 2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "schema.rs regenerated via diesel print-schema (raw) + Python transforms to add actor_app_link table, fix ltree import, add manually-managed allow_tables entries. Commit: feat(db_schema_file): regen schema.rs — add actor_app_link table (task 2)",
+      "commands": [
+        "cargo check -p lemmy_db_schema_file"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 2,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "96609a95876b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema for task-3 model file",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 created actor_app_link.rs model; ActorAppLinkId not yet defined (Task 4); laptop advisor to run scoped cargo check.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 3,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "693bb711d0f2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task 4 ActorAppLinkId newtype: run cargo check -p lemmy_db_schema",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added ActorAppLinkId newtype to crates/db_schema/src/newtypes.rs. Pre-Shape-G: validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 4,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
