@@ -198,12 +198,32 @@ async fn handle_provision_room(
 /// fire-and-forget for CaseTransition variants. Returns 200 immediately (R3).
 async fn handle_room_event(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<room_provisioner::RoomEventPayload>,
-) -> impl IntoResponse {
+) -> Response {
+    // Bearer auth — BRIDGE_CALLBACK_SECRET (Brehon→bridge), NOT hs_token.
+    // Mirrors sanction_handler::handle_sanction_event. This route is added
+    // OUTSIDE the hs_token_auth layer in router().
+    let expected = &state.config.bridge_callback_secret;
+    let provided = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .map(str::to_owned);
+    if provided.as_deref() != Some(expected.as_str()) {
+        tracing::warn!("room-event: unauthorized (bad or missing Bearer)");
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "unauthorized" })),
+        )
+            .into_response();
+    }
+
     if let room_provisioner::RoomEventPayload::CaseTransition(event) = payload {
+        tracing::info!(case_id = event.case_id, "room-event received");
         tokio::spawn(room_provisioner::handle_transition(state, event));
     }
-    Json(serde_json::json!({}))
+    Json(serde_json::json!({})).into_response()
 }
 
 /// Build the AS transaction router with hs_token auth middleware applied to
@@ -222,13 +242,15 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(handle_query_room),
         )
         .route("/admin/provision-room", post(handle_provision_room))
-        .route("/brehon/room-event", post(handle_room_event))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             hs_token_auth,
         ))
-        // /brehon/sanction-event uses BRIDGE_CALLBACK_SECRET (not hs_token).
-        // Added AFTER route_layer so it does NOT inherit hs_token_auth.
+        // /brehon/room-event + /brehon/sanction-event are Brehon→bridge calls
+        // (NOT Tuwunel→bridge), so they authenticate with BRIDGE_CALLBACK_SECRET
+        // inline, NOT the Matrix hs_token. Added AFTER route_layer so they do
+        // NOT inherit hs_token_auth.
+        .route("/brehon/room-event", post(handle_room_event))
         .route(
             "/brehon/sanction-event",
             post(sanction_handler::handle_sanction_event),
