@@ -1,32 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Validate task-10 route wiring compiles cleanly",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 10 wired 3 new routes under scope('/governance') and added actor_app_link imports. Laptop advisor should run cargo check -p lemmy_routes.",
-      "commands": [
-        "cargo check -p lemmy_routes"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 10,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "b5f3cf727d16-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7364,6 +7338,31 @@
       "resolved_at": "2026-06-13T19:43:26Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task-10 route wiring compiles cleanly",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 10 wired 3 new routes under scope('/governance') and added actor_app_link imports. Laptop advisor should run cargo check -p lemmy_routes.",
+      "commands": [
+        "cargo check -p lemmy_routes"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 10,
+      "answer": "cargo check --workspace --features full exit 0. Note: DQ listed -p lemmy_routes but the governance code requires --workspace --features full (feature-gate scope); workspace check confirms Task 10 route wiring is clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T20:07:29Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b5f3cf727d16-001"
     }
   ]
 }
