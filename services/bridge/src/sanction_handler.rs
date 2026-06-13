@@ -63,6 +63,9 @@ pub struct SanctionEventPayload {
     /// actor_pseudonym.pseudonym — never person.name or local_user.email (ADR-015).
     pub subject_actor_pseudonym: String,
     pub effective_from: String,
+    /// Part of the wire payload (Lemmy sends it); the handler applies a
+    /// power-level change without an expiry timer yet, so it is not read here.
+    #[allow(dead_code)]
     pub effective_until: Option<String>,
     /// Hex-encoded governance_log.entry_hash for the sanction_created entry.
     pub governance_log_entry_hash: String,
