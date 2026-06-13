@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "03d78707f86f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task-11 bridge/app_actor_link.rs on Linux via cargo-linux.sh",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "services/bridge does not compile on Windows (ruma-common E0119). Must validate via Docker rust:1.95.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 11,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
