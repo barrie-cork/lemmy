@@ -98,7 +98,8 @@ open_and_decide() {
 # bridge_room_count <case_id> <room_type>  — echo count of matching rows
 bridge_room_count() {
   local cid="$1" rtype="$2"
-  bridge_rooms | grep -c "^${cid}|${rtype}|" || echo "0"
+  # grep -c exits 1 on zero matches (in set -e context); || true preserves the "0" stdout
+  bridge_rooms | grep -c "^${cid}|${rtype}|" || true
 }
 
 # wait_for_bridge_room <case_id> <room_type> [max_attempts=6] [sleep_s=0.5]
