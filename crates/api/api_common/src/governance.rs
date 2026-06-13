@@ -17,6 +17,9 @@
 //
 // New non-Admin DTOs added here that don't correspond to one of the 11
 // require a new carve-out entry above. Closes #40.
+//
+//   - `LinkActorRequest`, `LinkConfirmRequest`, `LinkClaimPayload` — B-actor portable-ID
+//     link endpoints (ADR-016). `LinkClaimPayload` is bridge-wire (Convention B, no ts-rs).
 
 use chrono::{DateTime, Utc};
 use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId, SponsorAllowlistId};
@@ -880,4 +883,39 @@ pub struct CaseTransitionEvent {
 pub enum BridgeNotifyPayload {
   PrivateMessage(PrivateMessagePayload),
   CaseTransition(CaseTransitionEvent),
+}
+
+// ── Group I: B-actor portable-ID link (m2-late-b-actor, ADR-016) ─────────
+
+/// GET query params for `/link` — initiates a portable-ID claim (JWT-authed).
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct LinkActorRequest {
+  pub app_id: String,
+  pub app_local_id: String,
+}
+
+/// Bridge-wire DTO: Brehon→app claim (Convention B — NOT ts-rs exported).
+/// `brehon_actor_id` is the actor_pseudonym UUID string (ADR-015: never person_id).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LinkClaimPayload {
+  pub brehon_actor_id: String,
+  pub app_id: String,
+  pub app_local_id: String,
+  pub nonce: String,
+  pub expires_at: DateTime<Utc>,
+  pub brehon_signature: Vec<u8>,
+}
+
+/// POST body for `/link/confirm` from bridge (bearer-authed).
+/// Bridge echoes `brehon_actor_id` + `app_id` from the original claim (v0 nonce-store shortcut).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LinkConfirmRequest {
+  pub nonce: String,
+  pub app_signature: Vec<u8>,
+  pub app_local_id: String,
+  pub brehon_actor_id: String,
+  pub app_id: String,
 }

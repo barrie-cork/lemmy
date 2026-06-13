@@ -12,6 +12,7 @@
 #![deny(clippy::disallowed_methods)]
 
 pub mod accept_jury_assignment;
+pub mod actor_app_link;
 pub mod actor_pseudonym_helper;
 pub mod admin_assign_jury;
 pub mod admin_audit_stream;
@@ -51,3 +52,5 @@ pub mod sanction_publisher;
 pub mod sponsor_liability;
 pub mod sponsor_liability_grace;
 pub mod submit_jury_vote;
+
+pub use actor_app_link::{link_actor, link_confirm, revoke_link};
