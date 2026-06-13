@@ -246,3 +246,17 @@
 - `199d16d46` — docs(pilot-seed): mark seed-appeal-ready.sh verified as script
 
 **Phase 4 (emergency removal) is next** — see `pilot-internal-testing-plan.md`. `seed-emergency.sh` is a documented stub; the admin_emergency_remove route/payload + LEGAL_CONTACT config need resolving before promoting. The `provision_emergency_room` path has NEVER run live.
+
+### 2026-06-13T15:06 (infra/monitoring session) — 🔥 HOT TIP: `display_name=Juror-pending` on all puppets
+
+**Observed in bridge logs at 15:06 UTC** (new case, post-15:03 redeploy):
+- Jury room provisioned: 5 jurors invited ✅
+- Sanction fired: `hide_content` on subject `071807a9...`, power level `-1` applied ✅ (hash chain entry recorded ✅)
+- Appeal room provisioned immediately after: appeal jurors invited ✅
+
+**⚠️ HOT TIP — `display_name=Juror-pending` on ALL puppet invites.**
+Every puppet was invited with `display_name=Juror-pending` (not their pseudonym). The puppet registration itself succeeded (they are in the room and the sanction power-level hit correctly). This means the pseudonym→display-name write is either async (updates later) or missing entirely.
+
+**Why it matters:** ADR-015 requires pseudonymised actor presentation to jurors. If the display name stays `Juror-pending` permanently, jurors see no way to identify each other within the Matrix room — partially defeats the pseudonymity UX goal. The pseudonyms ARE being fetched correctly on the Lemmy side (case 6 + 8 verified), so the gap is in the bridge's puppet display-name set step.
+
+**Suggested check for testing lane:** in a Matrix client (or via `curl http://100.81.145.58:8448/_matrix/client/v3/profile/@_brehon_<uuid>:localhost`), verify whether the `displayname` field has been updated from `Juror-pending` after a few seconds, or whether it stays stuck. If stuck → `room_provisioner.rs` `ensure_puppet` path isn't setting display name after registration.
