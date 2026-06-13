@@ -218,6 +218,21 @@
 
 - **➡️ infra/code → testing session (2026-06-13T12:2x) — NEXT PHASES ARE PLANNED: see `.claude/PRPs/handovers/pilot-internal-testing-plan.md`** (committed `33ac605f8`). Phases 1+2 done; the plan lays out **phase 3 (appeals)**, **phase 4 (emergency removal, ADR-013 <2s)**, **phase 5 (all 4 sanction kinds)**, **phase 6 (adversarial: deadlock/declined/non-quorum/bad-faith/sponsor-liability)**, **phase 7 (restart idempotency + resilience)**, **phase 8 (human go-live — user decision)**. Each has entry gate / steps / CRITICAL VERIFY / likely-gap notes. **Suggested next:** phase 3 (appeals) — case 5 is already `Decided` and may still be in its appeal window. Pick the phase order that suits you; raise any provisioner wiring gap in §5.
 
+- **🔧 infra/code → testing session (2026-06-13T20:4x) — SEED SCRIPTS HARDENED + NEW `/pilot-seed` SKILL. ACTION: `git pull` on homeserver before your next seed run.** A two-agent review found the `scripts/brehon/pilot-seed/` scripts were **config-blind** — they hardcoded `quorum=3` and only passed because the *default Minor-severity* path makes quorum==threshold==3 at panel 5. **The win condition is `threshold_count_snapshot`, NOT quorum.** A Severe case is panel **7 / quorum 5 / threshold 6** (confirmed live: cases 9/10 are 7/5/6, cases 11/12 are 5/3/3). The old scripts would **silently false-green** on any non-default case — and `seed-sanction-kinds.sh` printed `RESULT=PASS` even when `KIND_MATCH=❌`.
+
+  **What changed (committed `20d308c9c` on `governance-v0`, pushed):**
+  - `lib.sh` — new helpers: `read_panel_size`/`read_quorum`/`read_threshold_count <case>` (read the frozen `moderation_case.*_snapshot` columns), `read_appeal_panel_size`/`read_appeal_threshold_count`, `seated_panel <case> <role>`, `assert_status` (loud), and **`vote_to_threshold <case> <decision> [role]`** — casts over the ACTUAL seated panel until `threshold_count_snapshot` is met. **Use these instead of any hardcoded vote count or `juror1..N` list.**
+  - `seed-appeal-ready.sh` — uses `vote_to_threshold`; **fails loud (exit 1)** if the case isn't `Decided` (was a bare WARN that then fired an appeal against a non-Decided case); appeal pool default **10→20** (appeal panel = `max(ceil(orig×1.5), orig+2)` clamped [3,11] and *excludes the original panel* — 10 under-seats even at default config; **confirmed: case 6's appeal panel needed 8 but only got 5 seated** — a real latent bug, now fixed).
+  - `seed-sanction-kinds.sh` — `vote_to_threshold` + honest `RESULT=PASS` only when both cases truly decided AND both kinds matched.
+
+  **NEW: `/pilot-seed [scenario]` skill** (`~/.claude/skills/pilot-seed/`) wraps all scripts via SSH with a pre-flight container check, per-case snapshot read, three-surface verify, and a `RESULT=PASS` cross-check (won't trust a PASS line if `KIND_MATCH=❌`/`STATUS_MISMATCH`/`CASE_NOT_DECIDED` is present). Scenarios: `status` / `jurors [N]` / `appeal [--appeal]` / `sanction-kinds` / `emergency` / `deadlock` / `all`.
+
+  **Two asks for you:**
+  1. **Before your next seed run, `ssh homeserver 'cd /srv/brehon-fork && git pull origin governance-v0'`** so you get the hardened `lib.sh`. (I already scp'd the 3 scripts to the homeserver for my live helper-verification, but a pull makes the checkout consistent.)
+  2. **If you drive phase 5 (sanction kinds) or phase 3 (appeals) with the scripts, the all-same-decision + `vote_to_threshold` pattern now handles Severe panels** — but you must seed enough eligible jurors first (`/pilot-seed jurors 20`, or `seed-jurors.sh 20`) so the panel + appeal-exclusion can seat. Raise here if any case sticks in `JurySelection` — that's the config-mismatch signature (threshold > votes castable from the seated pool).
+
+  Note: I did NOT run a full mutating end-to-end test (didn't want to collide with your case ledger) — the config-aware logic is verified at the helper level against live cases 6/9/10/11/12. A full script run is your call.
+
 ## §6. Hazards / do-not-touch
 
 - **Infra session owns:** `/srv/brehon-fork/services/bridge/`, the Tuwunel container, the lemmy container ENV (will restart lemmy when wiring BRIDGE_SANCTION_CALLBACK_URL — this drops connections for ~10s; testing session expect a brief blip).
