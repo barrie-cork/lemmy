@@ -261,11 +261,6 @@ run_3() {
   echo ""
   echo "--- Sub-case 3: Bridge-down resilience ---"
 
-  # Capture bridge_room count baseline
-  local BASELINE_COUNT
-  BASELINE_COUNT=$(bridge_rooms | wc -l || echo "0")
-  echo "  bridge_room baseline count=$BASELINE_COUNT"
-
   # Stop the bridge
   echo "  Stopping brehon-bridge..."
   docker stop brehon-bridge >/dev/null 2>&1 || {
@@ -307,7 +302,18 @@ run_3() {
   # Restart the bridge
   echo "  Restarting brehon-bridge..."
   docker start brehon-bridge >/dev/null 2>&1
-  sleep 2  # brief settle for bridge startup
+  # Wait for the bridge to actually be ready (reopen SQLite + re-register the AS),
+  # not a flat sleep that may read a not-yet-ready bridge. Poll docker health if
+  # the container declares a healthcheck; else fall back to a generous fixed wait.
+  local _settled=0 _i
+  for _i in $(seq 1 20); do
+    local _h
+    _h=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' brehon-bridge 2>/dev/null || echo "none")
+    if [ "$_h" = "healthy" ]; then _settled=1; break; fi
+    if [ "$_h" = "none" ]; then sleep 4; _settled=1; break; fi  # no healthcheck → generous settle
+    sleep 0.5
+  done
+  [ "$_settled" -eq 1 ] || echo "  (warning: bridge health not confirmed after ~10s; continuing — recovery check has its own retry)"
   echo "  Bridge restarted."
 
   # Confirm the down-period case has NO bridge_room row (transition was lost — expected)
