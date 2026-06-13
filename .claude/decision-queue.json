@@ -2,6 +2,32 @@
   "schema_version": 3,
   "pending": [
     {
+      "id": "286d80e78e8e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema to validate task-5 mod-export",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 added pub mod actor_app_link to governance mod.rs. Validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 5,
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
       "id": "0adb31ca1442-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
