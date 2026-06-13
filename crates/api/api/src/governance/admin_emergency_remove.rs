@@ -1,10 +1,8 @@
 //! `EmergencyRemove` wiring per [99 ADR-013] and [06 §2.2.1].
 //!
-//! This helper is callable from a future emergency-remove HTTP route or
-//! from a direct admin tool. v0 does NOT expose an HTTP surface for it —
-//! the function exists so the cross-cutting `EmergencyRemove` requirement
-//! ([IMPLEMENTATION-PLAN-v0.md §4.3]) is wired through the codebase and
-//! so integration tests can exercise the code path.
+//! `POST /api/v4/governance/admin/emergency-remove` exposes
+//! `emergency_remove_open_case` as an HTTP handler (added pilot-phase).
+//! The internal helper is also callable from integration tests.
 //!
 //! ## Per [99 ADR-013]: the jury CANNOT un-remove the content.
 //!
@@ -23,8 +21,13 @@ use activitypub_federation::config::Data;
 use actix_web::web::Json;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper, insert_into, update};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use lemmy_api_common::governance::{FlagBadFaithEmergencyReport, FlagBadFaithEmergencyReportResponse};
-use lemmy_api_utils::{context::LemmyContext, utils::is_admin};
+use lemmy_api_common::governance::{
+  AdminEmergencyRemove,
+  AdminEmergencyRemoveResponse,
+  FlagBadFaithEmergencyReport,
+  FlagBadFaithEmergencyReportResponse,
+};
+use lemmy_api_utils::{bridge_notify::governance_case_after_transition, context::LemmyContext, utils::is_admin};
 use lemmy_db_schema::{
   newtypes::{CommentId, CommunityId, ModerationCaseId, PostId},
   source::governance::{
@@ -356,6 +359,65 @@ async fn process_emergency_remove(
   .await?;
 
   Ok(case_id)
+}
+
+/// `POST /api/v4/governance/admin/emergency-remove` — admin-triggered
+/// immediate content removal per ADR-013.
+///
+/// Exactly one of `post_id`, `comment_id`, or `community_id` must be set.
+/// Calls `emergency_remove_open_case`, then fires
+/// `governance_case_after_transition` so the bridge provisions the
+/// `emergency-case-{N}` Matrix room and invites `LEGAL_CONTACT_MXID`.
+pub async fn admin_emergency_remove(
+  Json(data): Json<AdminEmergencyRemove>,
+  context: Data<LemmyContext>,
+  local_user_view: LocalUserView,
+) -> LemmyResult<Json<AdminEmergencyRemoveResponse>> {
+  is_admin(&local_user_view)?;
+
+  if data.reason.trim().is_empty() {
+    return Err(LemmyErrorType::Unknown("emergency-remove reason required".to_string()).into());
+  }
+
+  let reason = data.reason;
+  let community_id = data.community_id;
+
+  let target = match (data.post_id, data.comment_id, community_id) {
+    (Some(id), None, None) => EmergencyRemoveTarget::Post(id),
+    (None, Some(id), None) => EmergencyRemoveTarget::Comment(id),
+    (None, None, Some(id)) => EmergencyRemoveTarget::Community(id),
+    _ => {
+      return Err(
+        LemmyErrorType::Unknown(
+          "exactly one of post_id, comment_id, community_id must be set".to_string(),
+        )
+        .into(),
+      );
+    }
+  };
+
+  let admin_id = local_user_view.person.id;
+  let case_id =
+    emergency_remove_open_case(&mut context.pool(), admin_id, target, community_id, reason).await?;
+
+  // Load the case for the bridge hook (community_id + target_type needed).
+  let pool = &mut context.pool();
+  let conn = &mut get_conn(pool).await?;
+  let case: ModerationCase = moderation_case::table
+    .filter(moderation_case::id.eq(case_id))
+    .select(ModerationCase::as_select())
+    .first(conn)
+    .await?;
+
+  // Fire hook AFTER txn committed so bridge receives non-empty juror pseudonyms
+  // (the post-facto jury is seated inside emergency_remove_open_case's txn).
+  // EmergencyRemove carries no juror pseudonyms in the hook — bridge provisions
+  // the emergency room without juror invites (legal contact only, ADR-013).
+  governance_case_after_transition(&context, &case, None, CaseStatus::EmergencyRemove)
+    .await
+    .ok();
+
+  Ok(Json(AdminEmergencyRemoveResponse { case_id }))
 }
 
 /// Admin-flagged bad-faith report against an EmergencyRemove-status

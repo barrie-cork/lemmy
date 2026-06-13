@@ -19,7 +19,7 @@
 // require a new carve-out entry above. Closes #40.
 
 use chrono::{DateTime, Utc};
-use lemmy_db_schema::newtypes::{AppealId, CommunityId, EndorsementId, ModerationCaseId, SponsorAllowlistId};
+use lemmy_db_schema::newtypes::{AppealId, CommentId, CommunityId, EndorsementId, ModerationCaseId, PostId, SponsorAllowlistId};
 use lemmy_db_schema_file::{
   PersonId,
   enums::{CaseStatus, CaseTargetType, JuryDecision},
@@ -205,6 +205,31 @@ pub struct AdminCloseCase {
 pub struct AdminCloseCaseResponse {
   pub case_id: ModerationCaseId,
   pub closed: bool,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Request payload for `POST /api/v4/governance/admin/emergency-remove`.
+/// Admin-only per ADR-013. Triggers an immediate content removal + opens an
+/// `EmergencyRemove`-status case with a post-facto jury. Exactly one of
+/// `post_id`, `comment_id`, or `community_id` must be set. `reason` is
+/// required (flows into the "emergency_removed" governance_log entry).
+pub struct AdminEmergencyRemove {
+  pub post_id: Option<PostId>,
+  pub comment_id: Option<CommentId>,
+  pub community_id: Option<CommunityId>,
+  pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+/// Response from `admin_emergency_remove`. `case_id` is the opened
+/// `EmergencyRemove`-status moderation_case.
+pub struct AdminEmergencyRemoveResponse {
+  pub case_id: ModerationCaseId,
 }
 
 #[skip_serializing_none]
