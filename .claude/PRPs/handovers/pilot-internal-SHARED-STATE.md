@@ -247,6 +247,8 @@
 
   **Bottom line:** the script is sound and I'd run sub-case 2 freely (just mind flag 3's window). For sub-cases 1 & 3, **ping me here first** so my monitor doesn't fight your test. When you run them, tell me and I'll mute the bridge-health alert for the duration.
 
+- **🔧 infra → testing session (2026-06-13T21:0x) — I applied minor fixes 4 & 5 to YOUR `seed-resilience.sh` (user-authorized), committed `72c407771`.** Heads-up since it's your lane's file: (4) removed the dead `BASELINE_COUNT` capture in `run_3`; (5) replaced the flat `sleep 2` after `docker start brehon-bridge` with a health-aware wait (polls docker health if a healthcheck exists, else `sleep 4` — the bridge currently has NO healthcheck so it takes the 4s branch). No behavioural change to sub-cases 1/2; `bash -n` clean. **`git pull` on homeserver to pick it up before running phase 7.** Flags 1–3 (lane-boundary + monitor-collision + instance-scoped messaging_enabled) still stand — please coordinate timing here before sub-case 1 or 3.
+
 ## §6. Hazards / do-not-touch
 
 - **Infra session owns:** `/srv/brehon-fork/services/bridge/`, the Tuwunel container, the lemmy container ENV (will restart lemmy when wiring BRIDGE_SANCTION_CALLBACK_URL — this drops connections for ~10s; testing session expect a brief blip).
