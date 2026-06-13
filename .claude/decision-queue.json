@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "a12c6ca80e07-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task 9 (actor_app_link DTOs + handlers).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 9 added 3 DTOs to api_common/src/governance.rs and created actor_app_link.rs with link_actor/link_confirm/revoke_link handlers. mod.rs updated with pub mod + pub use. No cargo run on EliteDesk per brief §4 constraint.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-9-dtos-handlers-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-678",
+      "phase_task": "9",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
