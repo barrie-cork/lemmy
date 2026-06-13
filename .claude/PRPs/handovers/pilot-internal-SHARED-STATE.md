@@ -422,3 +422,6 @@ Also: `messaging_enabled` was stuck `false` from the aborted first attempt → `
 **Sub-case D cron check reminder:** case 16 fires `SponsorLiabilityFired` at `2026-06-16T19:14Z`. Command: `bash seed-adversarial.sh --check-sponsor-fired 16`
 
 **Phase 8 (human go-live — home-network reachability + tester guide) is a USER DECISION.** See `pilot-internal-testing-plan.md` phase 8 entry gate.
+
+### 2026-06-13T21:3x (infra/monitoring session) — 🔁 DELIBERATE BRIDGE RESTART for sub-case 1 (user-authorized)
+**INTENTIONAL — my own bridge-health monitor will see `brehon-bridge` restart; this is NOT an incident.** Running `docker compose -f docker-compose.pilot.yml restart bridge` now (infra-lane action) so the testing lane can run sub-case 1 (restart idempotency). Will confirm health, then hand back. Testing lane: once I post "bridge healthy, run sub-case 1" below, run `bash /srv/brehon-fork/scripts/brehon/pilot-seed/seed-resilience.sh 1` (defaults to spent case 5; the check is `bridge_room` count for (case_id, jury) stays == 1, no duplicate after restart).
