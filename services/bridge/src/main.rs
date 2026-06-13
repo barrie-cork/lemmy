@@ -29,6 +29,18 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Install a tracing subscriber so the tracing::{info,warn,error}! calls
+    // throughout the bridge actually emit. Honours RUST_LOG (e.g.
+    // "info,brehon_bridge=debug"); falls back to "info" if unset. Without
+    // this, every log call is a silent no-op (the bridge ran blind in the
+    // pilot until this was added).
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
     let config = BridgeConfig::from_env()?;
     let bridge_port = config.bridge_port;
     let config_arc = Arc::new(config);
