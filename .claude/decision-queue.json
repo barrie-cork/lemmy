@@ -1,58 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "c976bfaf1e84-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check -p lemmy_api against task-7 shim re-export commit",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 7 added ENTRY_KIND_ACTOR_APP_LINK_CREATED and ENTRY_KIND_ACTOR_APP_LINK_REVOKED to the pub use block in crates/api/api/src/governance/governance_log.rs. These consts were defined in db_schema by task 6.",
-      "commands": [
-        "cargo check -p lemmy_api"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": 7,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "a12c6ca80e07-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check --workspace --features full to validate task 9 (actor_app_link DTOs + handlers).",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 9 added 3 DTOs to api_common/src/governance.rs and created actor_app_link.rs with link_actor/link_confirm/revoke_link handlers. mod.rs updated with pub mod + pub use. No cargo run on EliteDesk per brief §4 constraint.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "junior/role-impl-task-m2-late-b-actor-task-9-dtos-handlers-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-678",
-      "phase_task": "9",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7338,6 +7286,56 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c976bfaf1e84-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_api against task-7 shim re-export commit",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 added ENTRY_KIND_ACTOR_APP_LINK_CREATED and ENTRY_KIND_ACTOR_APP_LINK_REVOKED to the pub use block in crates/api/api/src/governance/governance_log.rs. These consts were defined in db_schema by task 6.",
+      "commands": [
+        "cargo check -p lemmy_api"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 7,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort3 at e3ac594be",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:43:26Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a12c6ca80e07-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task 9 (actor_app_link DTOs + handlers).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 9 added 3 DTOs to api_common/src/governance.rs and created actor_app_link.rs with link_actor/link_confirm/revoke_link handlers. mod.rs updated with pub mod + pub use. No cargo run on EliteDesk per brief §4 constraint.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-9-dtos-handlers-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-678",
+      "phase_task": "9",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort3 at e3ac594be",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:43:26Z",
       "approved_by": null,
       "approved_at": null
     }
