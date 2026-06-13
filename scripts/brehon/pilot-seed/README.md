@@ -38,7 +38,7 @@ All knobs are env-overridable (see `lib.sh` header): `API`, `PG_CONTAINER`,
 | Script | State produced | Status |
 |---|---|---|
 | `seed-jurors.sh [N] [prefix]` | N community-scoped, strictly jury-eligible accounts | ✅ VERIFIED (the eligible-juror INSERT used on juror6–10) |
-| `seed-appeal-ready.sh [--appeal]` | fresh case → `Decided`; `--appeal` → `Appealed` + appeal room provisioned | ✅ VERIFIED end-to-end (case 6, fix `c84aaf27c`) |
+| `seed-appeal-ready.sh [--appeal]` | fresh case → `Decided`; `--appeal` → `Appealed` + appeal room provisioned | ✅ VERIFIED as script (case 8, fix `52c0eb382`; case 6 first live verify) |
 | `seed-deadlock.sh` | panel votes, no decision meets quorum → `AdminReview`, `jury_deadlock` | 🚧 STUB — flow not yet run live |
 | `seed-emergency.sh` | post → `admin_emergency_remove` → `EmergencyRemove` + emergency room | 🚧 STUB — `admin_emergency_remove` route + payload TBD; <2s latency target |
 | `seed-sanction-kind.sh KIND` | a provisioned-room case → sanction of `KIND` → power-level applied | 🚧 STUB — only `hide_content` exercised so far |
@@ -53,7 +53,7 @@ bug — "looks wired, never ran" — is exactly what this harness exists to avoi
 ## `lib.sh` building blocks (compose new scenarios from these)
 
 - `login <user> <pass>` / `admin_jwt` — JWT (bare).
-- `api_post <path> <json> [jwt]` — POST, echo body. `json_field <key>` reads a response field.
+- `api_post <path> <json> [jwt]` — POST, echo body. `json_field <key>` reads a top-level field; `json_nested <k1> <k2> <k3>` reads 3 levels deep (e.g. `.post_view.post.id` on POST /post).
 - `person_id <username>` — person.id.
 - `register_and_approve <username>` — register (require_application) + admin-approve; idempotent; echoes person_id.
 - `make_jury_eligible <person_id>` — the **community-scoped** `reputation_snapshot` INSERT (the scope trap, encoded once).
