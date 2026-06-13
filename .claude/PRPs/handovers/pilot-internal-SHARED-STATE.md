@@ -307,3 +307,30 @@ Bridge log: `emergency room provisioned (chain-emission deferred to T5) case_id=
 **Ledger update:** cases 9 + 10 spent (both EmergencyRemove). Emergency rooms: `!kN3IxRp8EEoDw9FG8C` (case 9), `!08xm0Vbk5usRoKoWrn` (case 10). Next fresh case: **11+**.
 
 **Phase 5 (sanction-kind coverage — all 4 `SanctionKind`s: `HideContent`, `SuspendAccount`, `RemoveFromCommunity`, `BanFromInstance`) is next** per `pilot-internal-testing-plan.md`. `HideContent` is the only kind verified so far (cases 1/3/4/5/6/8). The other 3 kinds map to specific power-level overrides in the bridge's `compute_power_override`; they've never run live. Entry gate: a fresh case with quorum on a decision that maps to each kind — check which `winning_decision` values produce each `SanctionKind` in `sanction_publisher.rs`.
+
+### 2026-06-13T18:4x (infra/code session) — ✅✅ PHASE 5 COMPLETE: all 3 reachable SanctionKind values verified live
+
+**All reachable `SanctionKind` variants now have live bridge-applied confirmation.** (`mute_voice` is unreachable in v0 — no `JuryDecision` maps to it.)
+
+**SanctionKind clarification (enum has 4 variants, 3 reachable):**
+The testing plan named `SuspendAccount`/`RemoveFromCommunity`/`BanFromInstance` — those do NOT exist in the v0 enum. Actual variants: `PreventPost`, `MuteVoice`, `HideContent`, `RestrictReach`.
+
+| SanctionKind | JuryDecision that triggers it | Bridge reason_code | Verified |
+|---|---|---|---|
+| `hide_content` | `RemoveContent` | `redaction_not_available_in_m2_late_2` | ✅ cases 1/3/4/5 (earlier) |
+| `restrict_reach` | `AdvisoryLabel` or `Warning` | `restrict_reach_translated_to_power_level_reduction` | ✅ **case 11 (2026-06-13T18:41:50)** |
+| `prevent_post` | `Cooldown`, `SuspendCommunityMember`, `SuspendLocalUser` | `power_level_reduced_below_post_threshold` | ✅ **case 12 (2026-06-13T18:41:52)** |
+| `mute_voice` | (none — unreachable in v0) | `voice_power_reduced_fallback_post_threshold` | N/A |
+
+**Chain (cases 11+12):** `CHAIN_INTACT` through all 12 cases (governance_log entries 1–N).
+
+**Script diagnosis (for `seed-sanction-kinds.sh` + general future seeding):**
+- Jury routes are `/governance/jury/accept` and `/governance/jury/vote` (NOT `/jury/*`)
+- `/governance/report` requires `target_type` ("post") + `target_id` (post_id as int) — NOT `post_id` directly
+- `sanction_event.sanction_id` → `sanction.id` → `sanction.case_id` (3-table join needed to query by case_id)
+
+**Committed:** `57f6b0276` — `seed-sanction-kinds.sh` with all fixes.
+
+**Ledger:** cases 11+12 spent (Decided). `bridge_room` now: 3/4/5 (jury) + 6/8 (appeal) + 9/10 (emergency). Next fresh case: **13+**.
+
+**Phase 6 (adversarial paths) is next** — deadlock→`AdminReview`, declined-juror+replacement, non-quorum, bad-faith report flag, sponsor-liability grace/fired/escaped. Per `pilot-internal-testing-plan.md` phase 6 entry gate.
