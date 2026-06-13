@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --workspace --features full to verify Linux compile on phase-m2-late-b-actor (diff-scoped gate: migrations + bridge Cargo.toml + bridge .rs files touched).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Phase diff vs governance-v0 touches migrations/2026-06-13-*_add_actor_app_link/{up,down}.sql, services/bridge/Cargo.toml, and 6 bridge .rs files. Linux-compile gate triggered per feedback_linux_compile_proof_is_a_gate.md.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": "13",
+      "workflow_run_id": 0,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-062"
+    }
+  ],
   "resolved": [
     {
       "id": "966d30acaaea-001",
