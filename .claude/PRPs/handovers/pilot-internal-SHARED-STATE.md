@@ -187,6 +187,17 @@
 - **⚠️ ABOUT TO `docker compose build lemmy && up -d lemmy`** — ~3–5 min build + a brief API blip on recreate. Rate-limit raises persist in DB (survived the last recreate). Testing session: expect a short blip; I'll report when green + whether the appeal room provisions on the case-5 re-trigger.
 - **CORRECTION (user reassigned):** the rebuild was handed to the OTHER lane — I did NOT run it. I switched to monitoring. (Entry above is superseded by the 14:4x observation below.)
 
+### 2026-06-13T15:xx (infra/code session) — ✅✅ APPEAL-ROOM PROVISIONING FIX VERIFIED WORKING END-TO-END (case 6)
+**Rebuilt + redeployed `docker-lemmy-1` from `governance-v0 @ c84aaf27c` (the appeal-pseudonym fix), then exercised it on a fresh case. The fix works — appeal rooms now provision.**
+- **Deploy:** daemon `/srv/brehon-fork` FF'd `67d0646a8`→`c84aaf27c` (fix verified in working tree, lines 88/131/132). `docker compose build lemmy` → `LEMMY_BUILD_EXIT=0`; `up -d lemmy` recreated only the lemmy container (bridge/tuwunel/postgres untouched). API 200 on first poll; `messaging_enabled=t` survived the recreate.
+- **⚠️ KEY APPROACH CORRECTION (re the 185 entry's plan):** `admin_trigger_appeal_rejury` does NOT fire the bridge hook — it only seats the panel. The bridge room-event POST fires on the `Decided→Appealed` transition, which lives in `request_appeal` (`POST /governance/appeal`), NOT in trigger-appeal-rejury. With `appeal.auto_select_on_appeal_acceptance=true` (verified live), `/governance/appeal` BOTH auto-seats the appeal panel AND fires the hook. So re-triggering rejury on case 5 would NOT have provisioned a room. **Used a FRESH case 6 via the `/governance/appeal` auto-seat path** — the actual code path the fix lives on.
+- **VERIFIED (case 6, full chain):** testuser post 6 → testmod report → assign-jury → 5 originals accept+vote → quorum → `Decided` → testuser `POST /governance/appeal {case_id:6,reason:...}` → `appeal_id:2`, case → `Appealed`, **5 non-empty `role='Appeal'` jurors seated** (person_ids 6,8,9,14,15 — **excludes all 5 originals** 7,10,11,12,13).
+- **✅ APPEAL ROOM PROVISIONED:** `bridge_room` NEW row `case_id=6, room_type='appeal', matrix_room_id=!s5FfIwftLGnDNmZYmt:localhost`. Tuwunel `GET #appeal-case-6:localhost` → **200** (room_id matches exactly). Bridge logs: `room-event received case_id=6` + **5× `inviting appeal juror … Juror-pending`** — and crucially **NO empty-skip ADR-015 WARN** for case 6 (the negative check distinguishing "fix worked" from "panel was empty"). The 5 invited puppet mxids exactly match the `appeal_panel_assembled` pseudonyms — proving the non-empty list flowed Lemmy hook → bridge → puppet invites.
+- **✅ Hash chain INTACT:** 111 entries, 0 broken `prev_hash` links; `appeal_panel_assembled` (id 111) carries 5 non-empty `new_panel_pseudonyms`.
+- **Field note:** `/governance/report` body field is `reason_code` (String), not `reason`.
+- **Ledger:** case 6 spent (`Appealed`); new appeal room `!s5FfIwftLGnDNmZYmt:localhost` (`appeal`, case 6). `bridge_room` now: cases 3/4/5 (jury) + 6 (appeal). Running binary now = `c84aaf27c`.
+- **Net: Phase 3 (appeals) is now GREEN end-to-end** — appeal request, panel seating (excludes originals, higher tier), appeal-room provisioning, puppet invites, and hash chain all verified live. The `bridge_notify.rs` appeal-pseudonym gap is closed + deployed + proven.
+
 ### 2026-06-13T14:4x (monitor — infra/code session, watch-only) — ✅✅ PHASE 3 APPEAL-ROOM PROVISIONING VERIFIED LIVE (other lane drove the redeploy)
 **Monitoring confirmation (I did NOT drive this — the other lane redeployed Lemmy + ran the appeal flow; I observed via a homeserver monitor):**
 - Lemmy recreated 14:33 with the post-fix binary (`c84aaf27c` appeal-pseudonym fix). Appeal flow run on a **fresh case 6** (case 5 stayed on its stuck pre-fix `Original`-only panel; case 6 driven clean through the fixed path).
@@ -214,3 +225,24 @@
 - Bridge is on host port **8082** (8080 = web-archive-frontend, 8081 = a host process). `BRIDGE_CALLBACK_SECRET` = `brehon-bridge-callback-secret-pilot-01` must match on both bridge + Lemmy.
 - **Do NOT** `docker volume rm bridge_bridge_pilot_data` without recreating from the bridge image (it must be uid-1000-owned or SQLite fails).
 - extism stays at 1.21.0 (do NOT bump to 1.30.0).
+
+### 2026-06-13T15:3x (infra/code session) — ✅✅ PHASE 3 FULLY COMPLETE; seed-appeal-ready.sh VERIFIED AS SCRIPT
+**All phase-3 goals met. Phase 3 is closed.**
+
+**Script validation result (case 8):**
+- `seed-appeal-ready.sh --appeal` ran end-to-end via script: POST_ID=11, CASE_ID=8, APPEAL_ID=3, STATUS=Appealed, PANEL=6,9,11,12,14, APPEAL_ROOM_ID=`!wCBeJ4SvKOsjo2n2Xs:localhost`, RESULT=APPEAL_ROOM_PROVISIONED.
+- 5 independent checks passed (case 8 status=Appealed ✅; appeal bridge_room row exists ✅; panel non-empty + disjoint from originals {8,7,13,10,15}∩{11,9,6,12,14}=∅ ✅; CHAIN_INTACT ✅).
+- **One transcription bug found + fixed along the way:** `POST /post` response nests post id at `.post_view.post.id` not top-level `.id`. Added `json_nested post_view post id` helper to `lib.sh`; fixed the one call site in `seed-appeal-ready.sh`. Committed `52c0eb382` (fix) + `199d16d46` (README update); both pushed.
+- **`seed-appeal-ready.sh [--appeal]` is now ✅ VERIFIED AS SCRIPT** (case 6 = first live verify; case 8 = verified-as-script via script run). Table row updated in `scripts/brehon/pilot-seed/README.md`.
+
+**Lemmy redeployed** from `governance-v0 @ c84aaf27c` — running binary has the appeal-pseudonym fix. API healthy. `messaging_enabled=t`. Rate-limit raises in DB (survived redeploy). `bridge_room` now: cases 3/4/5 (jury) + 6/8 (appeal).
+
+**Ledger:** case 8 spent (`Appealed`, appeal room `!wCBeJ4SvKOsjo2n2Xs:localhost`). Cases 3–6 + 8 are all spent. Next fresh case: 9+.
+
+**Sessions artifacts committed to `governance-v0` this session:**
+- `c84aaf27c` — fix(bridge_notify): parameterize juror-pseudonym fetch by role; extend Appealed transition
+- `9805c8cca` — scripts/brehon/pilot-seed harness + lesson feedback_pilot_governance_workflow_seeding_order.md
+- `52c0eb382` — fix(pilot-seed): json_nested for .post_view.post.id
+- `199d16d46` — docs(pilot-seed): mark seed-appeal-ready.sh verified as script
+
+**Phase 4 (emergency removal) is next** — see `pilot-internal-testing-plan.md`. `seed-emergency.sh` is a documented stub; the admin_emergency_remove route/payload + LEGAL_CONTACT config need resolving before promoting. The `provision_emergency_room` path has NEVER run live.
