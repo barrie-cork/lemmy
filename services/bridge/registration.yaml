@@ -14,6 +14,12 @@ namespaces:
     - exclusive: true
       regex: "@_brehon_.*"
   aliases:
+    # The room provisioner creates aliases of the form `<type>-case-<id>`
+    # (jury-case-N, appeal-case-N, emergency-case-N, community-case-N,
+    # spinout-case-N, membership-case-N — see room_provisioner.rs). The AS may
+    # only create aliases inside its registered namespace, else Tuwunel rejects
+    # createRoom with M_EXCLUSIVE. This regex must cover every alias format the
+    # provisioner emits. (The old `#brehon_.*` matched none of them.)
     - exclusive: false
-      regex: "#brehon_.*"
+      regex: "#.*-case-.*"
   rooms: []
