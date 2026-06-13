@@ -260,3 +260,15 @@ Every puppet was invited with `display_name=Juror-pending` (not their pseudonym)
 **Why it matters:** ADR-015 requires pseudonymised actor presentation to jurors. If the display name stays `Juror-pending` permanently, jurors see no way to identify each other within the Matrix room — partially defeats the pseudonymity UX goal. The pseudonyms ARE being fetched correctly on the Lemmy side (case 6 + 8 verified), so the gap is in the bridge's puppet display-name set step.
 
 **Suggested check for testing lane:** in a Matrix client (or via `curl http://100.81.145.58:8448/_matrix/client/v3/profile/@_brehon_<uuid>:localhost`), verify whether the `displayname` field has been updated from `Juror-pending` after a few seconds, or whether it stays stuck. If stuck → `room_provisioner.rs` `ensure_puppet` path isn't setting display name after registration.
+
+### 2026-06-13T15:57 (infra/monitoring session) — ✅ PHASE 4 FIRST LIVE RUN: emergency room provisioned
+
+**`provision_emergency_room` ran live for the first time** — case 9, room `!kN3IxRp8EEoDw9FG8C:localhost`.
+
+Bridge log: `emergency room provisioned (chain-emission deferred to T5) case_id=9 room_id=!kN3IxRp8EEoDw9FG8C:localhost`
+
+- Path that had never run before: ✅ now confirmed reachable and returning a room_id.
+- `chain-emission deferred to T5`: expected — governance log hash-chain entry for emergency rooms was a known stub in m2-late-2 scope. Not a bug.
+- **No errors observed** in surrounding bridge log window.
+
+**Ledger update:** case 9 spent (EmergencyRemove, emergency room `!kN3IxRp8EEoDw9FG8C:localhost`). Next fresh case: 10+.
