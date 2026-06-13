@@ -51,6 +51,21 @@
 - Bridge wiring task list created (5 tasks). Starting Task 1 (compile-check + Dockerfile).
 - **T6 still FAIL:** `sanction_subscriber=0`, no `BRIDGE_*` env on Lemmy, bridge not running. Closing via Tasks 3+4.
 
+### 2026-06-13T08:3x (testing session) — checklist Steps 1–7 swept; accounts+community seeded; standing by for DB-layer smoke test
+- Ran pilot readiness checklist (Steps 1–7). Containers ✅, binary current ✅ (`8ac81ea90`), `.wasm` plugins empty (expected) ✅.
+- Seeded + verified: `testmod` (person 4) and `testuser` (person 5) — applications approved by admin, logins return JWT. Community `test_governance` (id=2) created (public, open posting). Creds saved to `reference_pilot_test_accounts.md`.
+- Confirmed registration mode = `require_application` (answer field required at register; admin approves via `PUT /api/v4/admin/registration_application/approve`).
+- Governance schema present in DB: `moderation_case`, `jury_pool`, `jury_assignment`, `jury_vote`, `sanction_event`, `governance_log`, `actor_pseudonym`, `reputation_snapshot`.
+- **Acknowledged §6 hazards:** will NOT restart `docker-lemmy-1`; will tolerate the ~10s lemmy blip when infra wires `BRIDGE_SANCTION_CALLBACK_URL`.
+- **Status:** ready to run the §3 DB-layer governance smoke test (post → report → case → jury assign → vote → quorum → sanction row) on user's go. Not started yet — awaiting user direction.
+
+### 2026-06-13T08:4x (infra session) — Tuwunel + bridge UP; about to recreate lemmy (Task 4)
+- **Tuwunel v1.7.1** up (`brehon-tuwunel`, host `:8448`), AS registration wired via `appservice_dir` (registration.yaml loaded). ✅
+- **Brehon bridge** built + UP (`brehon-bridge`, host `:8082`). Two code bugs found + fixed in-repo during deploy: (1) `fix(bridge)` axum 0.8 route syntax `:param`→`{param}` (`da862ab98` — bridge crashed on startup); (2) `fix(bridge)` install tracing-subscriber (`74d59d0fd` — bridge ran blind, no logs). Cargo.lock regenerated on Linux builder (`44fc4450d`).
+- Bridge AS auth verified: `/_matrix/app/v1/...` → 401 w/o hs_token; `/brehon/sanction-event` → 401 on wrong Bearer (correct-shape body). ✅
+- Bridge soft-pause poller reaches Lemmy but gets **HTTP 429** (Lemmy rate-limit on `/governance` scope). Non-blocking: `relay_enabled` fails safe to `true`. Noted for later tuning.
+- **⚠️ RECREATING `docker-lemmy-1` NOW** via new `docker/docker-compose.override.yml` (adds `BRIDGE_SANCTION_CALLBACK_URL` + `BRIDGE_CALLBACK_SECRET` + host.docker.internal). ~10s blip. This SEEDS the `sanction_subscriber` row (closes T6). Testing session: brief API blip expected, then `sanction_subscriber` count flips 0→1.
+
 ## §5. Cross-session asks
 
 _(none yet — testing session: nothing blocking you; proceed with §3 DB-layer testing)_
