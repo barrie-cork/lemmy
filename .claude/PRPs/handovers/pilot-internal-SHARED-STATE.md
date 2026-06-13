@@ -334,3 +334,25 @@ The testing plan named `SuspendAccount`/`RemoveFromCommunity`/`BanFromInstance` 
 **Ledger:** cases 11+12 spent (Decided). `bridge_room` now: 3/4/5 (jury) + 6/8 (appeal) + 9/10 (emergency). Next fresh case: **13+**.
 
 **Phase 6 (adversarial paths) is next** — deadlock→`AdminReview`, declined-juror+replacement, non-quorum, bad-faith report flag, sponsor-liability grace/fired/escaped. Per `pilot-internal-testing-plan.md` phase 6 entry gate.
+
+### 2026-06-13T19:xx (infra/code session) — ✅✅ PHASE 6 COMPLETE: all 4 adversarial sub-cases VERIFIED via `seed-adversarial.sh`
+
+**All 4 adversarial sub-cases verified live. `seed-adversarial.sh` committed (`79afdde63`, `2dfb1aa8d`).**
+
+| Sub-case | Scenario | Result |
+|---|---|---|
+| A | Jury deadlock (2×remove_content, 2×no_action, 1×advisory_label; no quorum) | ✅ case 13 → `AdminReview`, `DEADLOCK_LOG=1`, `SANCTION_COUNT=0` |
+| B | Declined juror + replacement: `POST /governance/jury/decline {case_id}` as first panel member | ✅ case 14, `jury_declined` log ×1, `jury_replacement_selected` log ×1, replacement juror 11 seated |
+| C | Bad-faith flag: `POST /governance/admin/emergency-remove/flag-bad-faith {case_id:9}` on existing EmergencyRemove case (reporter_id=2 present) | ✅ `evidence_quality_recorded` log ×1, `reputation_event` delta −1 `ReportingAccuracy` |
+| D | Sponsor liability: seeded surety (testmod→testuser) via SQL + advisory_label quorum | ✅ case 16 → `SponsorLiabilityPending`, `sponsor_liability_pending` log ×1 |
+
+**Schema discoveries (required for future seeding):**
+- Sponsor liability computed from **`surety` table** (`sponsor_id`, `sponsored_id`, `revoked_at`) — NOT `endorsement` directly. `endorsement` table uses `from_person_id`/`to_person_id`; `surety` uses `sponsor_id`/`sponsored_id`.
+- Grace window is case-severity-driven: Medium → 72h (`grace_window_moderate_hours`). Case 16 `grace_expires_at=2026-06-16T19:14Z`.
+- Sub-case D PENDING: `SponsorLiabilityFired` transition fires when cron (every 5 min) detects `grace_expires_at` passed. Case 16 fires 2026-06-16T19:14Z. To confirm: `bash seed-adversarial.sh --check-sponsor-fired 16`
+
+**CHAIN=CHAIN_INTACT** throughout (cases 13–16, all log entries).
+
+**Ledger:** cases 13–16 spent. case 16 = `SponsorLiabilityPending` (pending cron). Next fresh case: **17+**.
+
+**Phase 7 (restart idempotency + soft-pause + bridge-down resilience) is next.**
