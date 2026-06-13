@@ -9,7 +9,7 @@ use lemmy_db_schema::{
     moderation_case::ModerationCase,
   },
 };
-use lemmy_db_schema_file::enums::CaseStatus;
+use lemmy_db_schema_file::enums::{CaseStatus, JuryAssignmentRole};
 use lemmy_db_views_private_message::PrivateMessageView;
 use lemmy_diesel_utils::connection::{DbPool, get_conn};
 use lemmy_utils::error::LemmyResult;
@@ -72,18 +72,27 @@ pub async fn notify_if_enabled(
   Ok(())
 }
 
-/// Fetch pseudonyms for all jurors assigned to a case, via
+/// Fetch pseudonyms for jurors assigned to a case, via
 /// `jury_assignment INNER JOIN actor_pseudonym ON person_id`. Returns only
 /// `actor_pseudonym.pseudonym` values (ADR-015 — no real identities).
+///
+/// `role` scopes the fetch to one assignment round: `Original` for the
+/// jury-selection room, `Appeal` for the appeal room. The original-jury and
+/// appeal panels coexist as separate `jury_assignment` rows on the same case
+/// (the appeal selector excludes the original jurors), so the bridge's
+/// per-room provisioner must receive only the round it is about to provision —
+/// otherwise an appeal room would be seeded with the original jurors' puppets.
 async fn fetch_juror_pseudonyms(
   pool: &mut DbPool<'_>,
   case_id: ModerationCaseId,
+  role: JuryAssignmentRole,
 ) -> LemmyResult<Vec<String>> {
   use lemmy_db_schema_file::schema::{actor_pseudonym, jury_assignment};
   let conn = &mut get_conn(pool).await?;
   let rows = jury_assignment::table
     .inner_join(actor_pseudonym::table.on(actor_pseudonym::person_id.eq(jury_assignment::person_id)))
     .filter(jury_assignment::case_id.eq(case_id))
+    .filter(jury_assignment::role.eq(role))
     .select(actor_pseudonym::pseudonym)
     .load::<String>(conn)
     .await?;
@@ -109,10 +118,20 @@ pub async fn governance_case_after_transition(
   if !enabled {
     return Ok(());
   }
-  let juror_pseudonyms = if matches!(new_status, CaseStatus::JurySelection) {
-    fetch_juror_pseudonyms(pool, case.id).await?
-  } else {
-    Vec::new()
+  // The bridge's room provisioner enforces ADR-015 always_pseudonym by skipping
+  // any room whose `juror_pseudonyms` is empty. Each room-provisioning transition
+  // must therefore carry the pseudonyms for its OWN assignment round: the
+  // jury-selection room gets the `Original` panel; the appeal room gets the
+  // `Appeal` panel (seated inside the request_appeal txn, committed before this
+  // hook fires). Non-room transitions carry no jurors.
+  let juror_pseudonyms = match new_status {
+    CaseStatus::JurySelection => {
+      fetch_juror_pseudonyms(pool, case.id, JuryAssignmentRole::Original).await?
+    }
+    CaseStatus::Appealed => {
+      fetch_juror_pseudonyms(pool, case.id, JuryAssignmentRole::Appeal).await?
+    }
+    _ => Vec::new(),
   };
   let payload = BridgeNotifyPayload::CaseTransition(CaseTransitionEvent {
     case_id: case.id.0,
