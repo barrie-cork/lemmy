@@ -13,6 +13,7 @@ mod app_actor_link;
 mod appservice;
 mod bridge_room;
 mod config;
+mod link_handler;
 mod provision;
 mod puppet;
 mod relay;
