@@ -310,6 +310,13 @@ pub struct GovernanceConfigId(pub i32);
 #[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
 pub struct MessagingConfigId(pub i32);
 
+// --- M2 / ADR-016 B-actor ---
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "full", derive(DieselNewType))]
+#[cfg_attr(feature = "ts-rs", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts-rs", ts(optional_fields, export))]
+pub struct ActorAppLinkId(pub i32);
+
 // ========================================================================
 // Federation governance typed IDs (Phase 6)
 // ========================================================================
