@@ -28,7 +28,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{config::BridgeConfig, provision, relay, room_provisioner, sanction_handler};
+use crate::{config::BridgeConfig, link_handler, provision, relay, room_provisioner, sanction_handler};
 
 pub struct AppState {
     pub config: Arc<BridgeConfig>,
@@ -255,5 +255,6 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/brehon/sanction-event",
             post(sanction_handler::handle_sanction_event),
         )
+        .route("/brehon/link-claim", post(link_handler::handle_link_claim))
         .with_state(state)
 }

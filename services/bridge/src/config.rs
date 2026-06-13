@@ -34,6 +34,12 @@ pub struct BridgeConfig {
     /// This is NOT the same as the host:port in `tuwunel_url` — puppet MXIDs and
     /// room IDs use this domain. Defaults to "localhost".
     pub matrix_server_name: String,
+    /// Ed25519 public key (32-byte hex) for verifying Brehon's link-claim signatures.
+    pub brehon_signing_pubkey: String,
+    /// Ed25519 private key seed (32-byte hex) for the bridge's countersignature.
+    pub bridge_signing_key: String,
+    /// URL to POST LinkConfirmRequest to (e.g. "http://localhost:8536/api/v4/governance/link/confirm").
+    pub brehon_link_confirm_url: String,
 }
 
 impl BridgeConfig {
@@ -61,6 +67,12 @@ impl BridgeConfig {
                 .unwrap_or_else(|_| "@legal:localhost".to_string()),
             matrix_server_name: std::env::var("MATRIX_SERVER_NAME")
                 .unwrap_or_else(|_| "localhost".to_string()),
+            brehon_signing_pubkey: env::var("BREHON_SIGNING_PUBKEY")
+                .context("BREHON_SIGNING_PUBKEY env var required")?,
+            bridge_signing_key: env::var("BRIDGE_SIGNING_KEY")
+                .context("BRIDGE_SIGNING_KEY env var required")?,
+            brehon_link_confirm_url: env::var("BREHON_LINK_CONFIRM_URL")
+                .context("BREHON_LINK_CONFIRM_URL env var required")?,
         })
     }
 }
