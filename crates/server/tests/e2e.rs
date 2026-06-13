@@ -152,6 +152,8 @@ include!("e2e/sponsor_liability.rs");
 // Extracted to tests/e2e/m2_late.rs; include! expands inline at crate scope.
 include!("e2e/m2_late.rs");
 
+include!("e2e/actor_app_link.rs");
+
 #[path = "e2e/reputation_rt_r3.rs"]
 mod v1_rt_r3_fixtures;
 
