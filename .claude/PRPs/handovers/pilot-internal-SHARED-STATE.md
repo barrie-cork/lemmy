@@ -19,10 +19,11 @@
 | Postgres (Lemmy) | `docker-postgres-1` | `5433` | ✅ UP | user/pw/db = lemmy/password/lemmy |
 | pict-rs | `docker-pictrs-1` | (internal) | ✅ UP | media uploads work |
 | nginx proxy | `docker-proxy-1` | `1236`,`8536` | ✅ UP | |
-| **Matrix (Tuwunel)** | `brehon-tuwunel` | `8448`→8008 | ✅ UP | v1.7.1, `server_name=localhost`, federation OFF |
-| **Brehon bridge** | `brehon-bridge` | TBD (8081?) | ⏳ NOT YET | being wired this session |
+| **Matrix (Tuwunel)** | `brehon-tuwunel` | `8448`→8008 | ✅ UP | v1.7.1, `server_name=localhost`, federation OFF, AS registration loaded |
+| **Brehon bridge** | `brehon-bridge` | `8082`→8080 | ✅ UP | AS auth ✓, sanction-event chain ✓, puppet namespace ✓ |
 
-**Tuwunel compose:** `/srv/brehon-fork/services/bridge/docker-compose.pilot.yml` + `tuwunel-pilot.toml` (homeserver-only, not committed).
+**Pilot stack files (now committed to `governance-v0`):** `services/bridge/docker-compose.pilot.yml` (Tuwunel+bridge), `services/bridge/tuwunel-pilot.toml`, `services/bridge/Dockerfile`, `docker/docker-compose.override.yml` (Lemmy bridge env).
+**Bring up:** Tuwunel+bridge → `cd /srv/brehon-fork/services/bridge && docker compose -f docker-compose.pilot.yml up -d`; Lemmy (auto-loads override) → `cd /srv/brehon-fork/docker && docker compose up -d`.
 
 ## §2. Test accounts + community (per `reference_pilot_test_accounts.md`)
 
@@ -41,7 +42,7 @@
 - Juror assignment (admin_assign_jury)
 - Jury voting + quorum → sanction row + governance_log entries written to DB
 
-⚠️ These do NOT yet propagate to Matrix (bridge not wired): jury-room provisioning, sanction power-level enforcement. The DB-side governance logic fires regardless; only the Matrix side is pending.
+✅ **AS OF 2026-06-13T08:5x the bridge IS wired** — Matrix propagation is now LIVE. A governance sanction reaching quorum will: (1) write the sanction row + governance_log entry (DB), (2) Lemmy POSTs the sanction event to the bridge (subscriber row seeded, count=1), (3) the bridge looks up the case's provisioned Matrix rooms and applies `m.room.power_levels` overrides per `SanctionKind`. NOTE: jury-room *provisioning* (m2-rooms-a, on case transitions) requires the `governance_case_after_transition` hook to fire — verify a real case actually provisions a room (the `bridge_room` table populates) before expecting sanction power-levels to apply (a sanction on a case with no provisioned room returns `applied:false, reason:"no rooms found"` — correct, not an error).
 
 ## §4. Live status (most-recent entry authoritative — APPEND, don't rewrite)
 
@@ -66,13 +67,23 @@
 - Bridge soft-pause poller reaches Lemmy but gets **HTTP 429** (Lemmy rate-limit on `/governance` scope). Non-blocking: `relay_enabled` fails safe to `true`. Noted for later tuning.
 - **⚠️ RECREATING `docker-lemmy-1` NOW** via new `docker/docker-compose.override.yml` (adds `BRIDGE_SANCTION_CALLBACK_URL` + `BRIDGE_CALLBACK_SECRET` + host.docker.internal). ~10s blip. This SEEDS the `sanction_subscriber` row (closes T6). Testing session: brief API blip expected, then `sanction_subscriber` count flips 0→1.
 
+### 2026-06-13T08:5x (infra session) — ✅ BRIDGE WIRING COMPLETE; T6 CLOSED; full chain verified
+- **Lemmy recreated** with override; `sanction_subscriber` count = **1** (`http://host.docker.internal:8082/brehon/sanction-event`, active). **T6 STOP condition CLOSED.** ✅
+- **Third bug found + fixed:** `fix(bridge)` create `/data` owned by uid 1000 (`c08884894`) — bridge's SQLite `bridge_room` DB couldn't open (`/data` was root-owned); first real sanction POST 500'd on `bridge_room::open`. Stale root-owned volume removed + recreated.
+- **Full Lemmy→bridge chain verified:** POST sanction (correct secret) → HTTP 200, body `{"applied":false,"reason":"no rooms found for case_id=999"}` — authenticated, opened SQLite, looked up rooms, clean response (case 999 is fabricated/roomless → correct `applied:false`).
+- **Tuwunel AS registration verified loaded:** `whoami` with bridge `as_token` → `@brehon:localhost` (wrong token → `M_UNKNOWN_TOKEN`). Puppet namespace enforced: AS registers `@_brehon_*` ✓, rejects out-of-namespace `notbrehon` → 400. ✅
+- **All 7 containers UP.** 4 commits of bridge code/config fixes this session (the bridge had NEVER been deployed before — `dm_round_trip` test was `#[ignore]`, so 3 runtime bugs surfaced only on first real deploy).
+- **Known non-blocker:** bridge soft-pause poller still gets HTTP 429 from Lemmy's `/governance` rate-limit. Fails safe (`relay_enabled=true`). Tune Lemmy rate-limit config if soft-pause state needs to be live.
+- **Test artifacts on Tuwunel (inert, localhost-only):** `@pilottest:localhost`, `@_brehon_testpuppet:localhost`.
+
 ## §5. Cross-session asks
 
-_(none yet — testing session: nothing blocking you; proceed with §3 DB-layer testing)_
+- **Testing session:** the bridge is now LIVE. To exercise the *Matrix* side end-to-end (not just DB-layer): run a real governance flow (post → report → case → assign jury → vote → quorum). When the case transitions, the `governance_case_after_transition` hook should provision a jury room in Tuwunel (`bridge_room` table populates). Then a sanction on THAT case will apply real `m.room.power_levels`. **Worth confirming:** does a real case-status transition actually populate `bridge_room`? (The hook → bridge `/brehon/room-event` path is m2-rooms-a + m2-core-hook; I verified the sanction path but not the room-provisioning path with a live case.)
 
 ## §6. Hazards / do-not-touch
 
 - **Infra session owns:** `/srv/brehon-fork/services/bridge/`, the Tuwunel container, the lemmy container ENV (will restart lemmy when wiring BRIDGE_SANCTION_CALLBACK_URL — this drops connections for ~10s; testing session expect a brief blip).
-- **Do NOT** restart `docker-lemmy-1` from the testing session without coordinating here (it re-seeds sanction_subscriber at startup).
-- Port `8080` on homeserver is taken by `web-archive-frontend` — bridge will use a different host port.
+- **Do NOT** restart `docker-lemmy-1` from the testing session without coordinating here (it re-seeds sanction_subscriber at startup — idempotent, but coordinate anyway). Lemmy now loads `docker/docker-compose.override.yml` automatically.
+- Bridge is on host port **8082** (8080 = web-archive-frontend, 8081 = a host process). `BRIDGE_CALLBACK_SECRET` = `brehon-bridge-callback-secret-pilot-01` must match on both bridge + Lemmy.
+- **Do NOT** `docker volume rm bridge_bridge_pilot_data` without recreating from the bridge image (it must be uid-1000-owned or SQLite fails).
 - extism stays at 1.21.0 (do NOT bump to 1.30.0).
