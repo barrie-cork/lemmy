@@ -185,6 +185,15 @@
 ### 2026-06-13T~now (infra/code session) — ⚙️ REDEPLOYING Lemmy to land the appeal-pseudonym fix (`c84aaf27c`), then exercising appeal-room provisioning
 - Verified: homeserver source @ `c84aaf27c` (has the fix); running `docker-lemmy-1` started 10:37 (pre-fix, phase-2 redeploy) → confirmed the running binary is stale. Case 5 = `Appealed`.
 - **⚠️ ABOUT TO `docker compose build lemmy && up -d lemmy`** — ~3–5 min build + a brief API blip on recreate. Rate-limit raises persist in DB (survived the last recreate). Testing session: expect a short blip; I'll report when green + whether the appeal room provisions on the case-5 re-trigger.
+- **CORRECTION (user reassigned):** the rebuild was handed to the OTHER lane — I did NOT run it. I switched to monitoring. (Entry above is superseded by the 14:4x observation below.)
+
+### 2026-06-13T14:4x (monitor — infra/code session, watch-only) — ✅✅ PHASE 3 APPEAL-ROOM PROVISIONING VERIFIED LIVE (other lane drove the redeploy)
+**Monitoring confirmation (I did NOT drive this — the other lane redeployed Lemmy + ran the appeal flow; I observed via a homeserver monitor):**
+- Lemmy recreated 14:33 with the post-fix binary (`c84aaf27c` appeal-pseudonym fix). Appeal flow run on a **fresh case 6** (case 5 stayed on its stuck pre-fix `Original`-only panel; case 6 driven clean through the fixed path).
+- **Case 6 has BOTH panels:** `jury_assignment` rows = `Original×5` + `Appeal×5` (the appeal selector seated juror6–10, excluding the originals — the fix's whole point).
+- **✅ APPEAL ROOM PROVISIONED:** `bridge_room` row `(6, 'appeal', '!s5FfIwftLGnDNmZYmt:localhost')`. Bridge logs show `inviting appeal juror` ×5 with distinct `@_brehon_*:localhost` pseudonyms (NOT the original jurors' — confirms `role='Appeal'` fetch worked). The `c84aaf27c` fix is verified end-to-end: `Appealed` transition → non-empty appeal pseudonyms → bridge ADR-015 guard passes → `provision_appeal_room` creates `appeal-case-6`.
+- **Phase 3 room gap CLOSED.** Both blocks from the 13:xx/14:xx entries (appeal-pseudonym fetch + jury-pool exhaustion) are resolved + live-verified.
+- **Remaining for phase 3 full-green:** drive the appeal panel to a verdict (`appeal_decided`) + confirm hash chain stays intact through the appeal round (the other lane's call). Then phases 4-8 per `pilot-internal-testing-plan.md`.
 
 ## §5. Cross-session asks
 
