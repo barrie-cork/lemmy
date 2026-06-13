@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "8533df2ad37d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
-      "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
-      ],
-      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
-      "phase_task": "13",
-      "workflow_run_id": 0,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "966d30acaaea-001",
@@ -7441,6 +7414,32 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "id": "8533df2ad37d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
+      "phase_task": "13",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full EXIT 0 on phase-m2-late-b-actor @ 58a7e8658. Two fixes applied before pass: (1) added ed25519-dalek dep to lemmy_api Cargo.toml (E0432); (2) replaced LemmyErrorType::InvalidQuery->InvalidUrl in actor_app_link.rs x6 (E0599). Committed fix as 58a7e8658.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T23:17:01Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
