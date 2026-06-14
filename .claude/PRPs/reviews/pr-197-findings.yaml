@@ -1,0 +1,158 @@
+schema_version: 1
+pr: 197
+title: 'feat(b-actor): portable actor-ID linkage — dual-signed link-claim + actor_app_link
+  table (ADR-016 C3)'
+head: phase-m2-late-b-actor
+base: governance-v0
+opened_at: '2026-06-13T23:58:21Z'
+poll_count: 1
+last_polled_head_sha: b0895db4b9353d13277b44b1d3633bbe74732604
+last_polled_fingerprint: e15e9db907176603d0b6194423c3a4afe62f957208719f080c01ba956116221a
+last_poll_at: '2026-06-14T08:27:14.505794Z'
+recommendation: pending
+findings:
+- id: cr-1
+  source: inline
+  severity: major
+  summary: Align recorded `commands` with the command actually executed.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786983
+  file: .claude/decision-queue.json
+  line: 7210
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-2
+  source: inline
+  severity: low
+  summary: Use `null` for missing workflow runs, not `0`.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786986
+  file: .claude/decision-queue.json
+  line: 7461
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-3
+  source: inline
+  severity: major
+  summary: '`/link` can return success even when delivery to bridge fails.'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786988
+  file: crates/api/api/src/governance/actor_app_link.rs
+  line: 95
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-4
+  source: inline
+  severity: critical
+  summary: Strengthen signature binding to include all claim fields, and verify expiry
+    and Brehon signature before database writes.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786989
+  file: crates/api/api/src/governance/actor_app_link.rs
+  line: 139
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-5
+  source: inline
+  severity: nit
+  summary: Add explicit governance_log non-write assertions in rejection tests.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786990
+  file: crates/server/tests/e2e/actor_app_link.rs
+  line: 377
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-6
+  source: inline
+  severity: major
+  summary: Key the cache by `(app_id, app_local_id)`, not `app_local_id` alone.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786992
+  file: services/bridge/src/app_actor_link.rs
+  line: 17
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-7
+  source: inline
+  severity: major
+  summary: Fail fast on malformed key/URL config values.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786994
+  file: services/bridge/src/config.rs
+  line: 75
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-8
+  source: inline
+  severity: major
+  summary: Avoid logging raw external actor identifiers.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786996
+  file: services/bridge/src/link_handler.rs
+  line: 77
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-9
+  source: inline
+  severity: major
+  summary: Treat non-2xx confirm responses as failures.
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786997
+  file: services/bridge/src/link_handler.rs
+  line: 189
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:31Z'
+  addressed_in: null
+  rationale: null
+- id: cr-10
+  source: review
+  severity: nit
+  summary: 'Actionable comments posted: 9'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/197#pullrequestreview-4492193517
+  bucket: fix-in-pr
+  posted_at: '2026-06-14T00:07:33Z'
+  addressed_in: null
+  rationale: null
+counters:
+  critical:
+    open: 0
+    fix-in-pr: 1
+    done: 0
+    carry-forward: 0
+    rebut: 0
+    wont-fix: 0
+  major:
+    open: 0
+    fix-in-pr: 6
+    done: 0
+    carry-forward: 0
+    rebut: 0
+    wont-fix: 0
+  medium:
+    open: 0
+    fix-in-pr: 0
+    done: 0
+    carry-forward: 0
+    rebut: 0
+    wont-fix: 0
+  low:
+    open: 0
+    fix-in-pr: 1
+    done: 0
+    carry-forward: 0
+    rebut: 0
+    wont-fix: 0
+  nit:
+    open: 0
+    fix-in-pr: 2
+    done: 0
+    carry-forward: 0
+    rebut: 0
+    wont-fix: 0
