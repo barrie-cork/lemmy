@@ -24,3 +24,7 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 # ruma-common 0.19.0's StringEnum derive conflicts with time 0.3.48+ (E0119).
 # Pin to last known-good version until ruma-common releases a fix.
 time = "=0.3.47"
+# ed25519 signing/verification for link-claim handler (task 12).
+# ed25519-dalek 2.2.0 is already in the lock as a transitive dep; pin to 2.x.
+ed25519-dalek = "2"
+hex = "0.4"

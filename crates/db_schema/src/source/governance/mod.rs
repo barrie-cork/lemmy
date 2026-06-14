@@ -1,5 +1,6 @@
 #![deny(clippy::disallowed_methods)]
 
+pub mod actor_app_link;
 pub mod actor_pseudonym;
 pub mod appeal;
 pub mod case_evidence;

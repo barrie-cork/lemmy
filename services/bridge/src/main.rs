@@ -9,9 +9,11 @@
 // feedback_read_canonical_before_writing_spec.md (Ref MCP unavailable,
 // relied on training knowledge of axum 0.8 minimal server pattern).
 
+mod app_actor_link;
 mod appservice;
 mod bridge_room;
 mod config;
+mod link_handler;
 mod provision;
 mod puppet;
 mod relay;

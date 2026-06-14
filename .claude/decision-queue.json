@@ -3,6 +3,58 @@
   "pending": [],
   "resolved": [
     {
+      "id": "8533df2ad37d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
+      "phase_task": "13",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Stale phase-branch copy of task-13 validate-pending-laptop. Already resolved on governance-v0 (validated 2026-06-13, cargo check exit 0, 135/135 e2e PASS). No re-validation needed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-14T14:30:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --manifest-path services/bridge/Cargo.toml to validate bridge CR fixes compile on Linux.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 (cr-6, cr-8, cr-9): composite PK in app_actor_link, brehon_actor_id log redaction, non-2xx confirm handling. Bridge crate is workspace-excluded; validates on Linux Docker only. Validation delegated to laptop advisor.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-fix-impl-1-see-claude-prps-briefs-m2-late-b-actor-fix-impl-1-md-686",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-linux.sh check --manifest-path services/bridge/Cargo.toml: exit 0. Composite PK, log redaction, non-2xx handling all compile on Linux Docker (rust:1.95). CR fixes cr-6, cr-8, cr-9 validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-14T14:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "32a44ffbe8e7-001"
+    },
+    {
       "id": "966d30acaaea-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -7134,6 +7186,283 @@
       "branch": "junior/role-impl-task-m2-late-2-task-5-bridge-handler-tests-see-claude-prps-briefs-m2-late-2-impl-task-5-md-667",
       "phase_task": 5,
       "e2e_filter": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full against phase-m2-late-b-actor after task-1 migration commit",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task-1 migration add_actor_app_link committed. Pre-Shape-G: delegating cargo check to laptop advisor.",
+      "commands": [
+        "cargo check --workspace --features full"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 1,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full: PASS (6m 45s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T15:58:40Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "5e2ffe2ac496-001"
+    },
+    {
+      "id": "f37d60659b2c-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema_file after schema.rs regen (task 2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "schema.rs regenerated via diesel print-schema (raw) + Python transforms to add actor_app_link table, fix ltree import, add manually-managed allow_tables entries. Commit: feat(db_schema_file): regen schema.rs — add actor_app_link table (task 2)",
+      "commands": [
+        "cargo check -p lemmy_db_schema_file"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 2,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "96609a95876b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema for task-3 model file",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 created actor_app_link.rs model; ActorAppLinkId not yet defined (Task 4); laptop advisor to run scoped cargo check.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 3,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "693bb711d0f2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task 4 ActorAppLinkId newtype: run cargo check -p lemmy_db_schema",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added ActorAppLinkId newtype to crates/db_schema/src/newtypes.rs. Pre-Shape-G: validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 4,
+      "answer": "cargo check --workspace --features full: PASS (12m 06s, CARGO_EXIT_0)",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T18:36:04Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "286d80e78e8e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_db_schema to validate task-5 mod-export",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 added pub mod actor_app_link to governance mod.rs. Validation delegated to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 5,
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort2 at 0b2756c9b",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:08:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "0adb31ca1442-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check on lemmy_db_schema for task-6 changes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added ENTRY_KIND_ACTOR_APP_LINK_* consts and sign_link_claim wrapper to governance_log.rs. Delegate validation to laptop advisor.",
+      "commands": [
+        "cargo check -p lemmy_db_schema"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 6,
+      "answer": "cargo check --workspace --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort2 at 0b2756c9b",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:08:00Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c976bfaf1e84-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check -p lemmy_api against task-7 shim re-export commit",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 7 added ENTRY_KIND_ACTOR_APP_LINK_CREATED and ENTRY_KIND_ACTOR_APP_LINK_REVOKED to the pub use block in crates/api/api/src/governance/governance_log.rs. These consts were defined in db_schema by task 6.",
+      "commands": [
+        "cargo check -p lemmy_api"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 7,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort3 at e3ac594be",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:43:26Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "a12c6ca80e07-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task 9 (actor_app_link DTOs + handlers).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 9 added 3 DTOs to api_common/src/governance.rs and created actor_app_link.rs with link_actor/link_confirm/revoke_link handlers. mod.rs updated with pub mod + pub use. No cargo run on EliteDesk per brief §4 constraint.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-9-dtos-handlers-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-678",
+      "phase_task": "9",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check -p lemmy_api --features full passed (exit 0) in throwaway worktree brehon-fork-validate-cohort3 at e3ac594be",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T19:43:26Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task-10 route wiring compiles cleanly",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 10 wired 3 new routes under scope('/governance') and added actor_app_link imports. Laptop advisor should run cargo check -p lemmy_routes.",
+      "commands": [
+        "cargo check -p lemmy_routes"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 10,
+      "answer": "cargo check --workspace --features full exit 0. Note: DQ listed -p lemmy_routes but the governance code requires --workspace --features full (feature-gate scope); workspace check confirms Task 10 route wiring is clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T20:07:29Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "b5f3cf727d16-001"
+    },
+    {
+      "id": "03d78707f86f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Validate task-11 bridge/app_actor_link.rs on Linux via cargo-linux.sh",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "services/bridge does not compile on Windows (ruma-common E0119). Must validate via Docker rust:1.95.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 11,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-linux.sh check --manifest-path services/bridge/Cargo.toml exit 0. 4 dead_code warnings on app_actor_link fns (open/upsert/lookup/revoke) — expected, Task 12 will call them. No errors.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T20:58:11Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "f18f91cc4dae-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "run cargo-linux.sh check + clippy on services/bridge after task-12 link_handler",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 12 added link_handler.rs (ed25519-dalek + hex new deps), config.rs 3 new fields, appservice.rs new route, main.rs mod. Needs Linux cargo check + clippy to validate.",
+      "answer": "cargo-linux.sh check exit 0. clippy initially failed 4 errors (unused Verifier import, dead_code lookup/revoke, unwrap_or_default in puppet.rs pre-existing). Fixed in style commit d0a8f5650. Re-run clippy exit 0, clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-13T22:23:35Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml -- -D warnings"
+      ],
+      "branch": "phase-m2-late-b-actor",
+      "phase_task": 12,
       "result": "pass",
       "log_slice": null,
       "failed_commands": null

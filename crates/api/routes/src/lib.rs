@@ -30,6 +30,7 @@ use lemmy_api::{
   },
   governance::{
     accept_jury_assignment::accept_jury_assignment,
+    actor_app_link::{link_actor, link_confirm, revoke_link},
     admin_assign_jury::admin_assign_jury,
     admin_audit_stream::admin_audit_stream,
     admin_close_case::admin_close_case,
@@ -482,6 +483,9 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .wrap(rate_limit.post())
           .route("/room-event", post().to(handle_room_event))
           .route("/bridge/messaging-status", get().to(get_bridge_messaging_status))
+          .route("/link", get().to(link_actor))
+          .route("/link/confirm", post().to(link_confirm))
+          .route("/link/revoke", post().to(revoke_link))
           .route("/report", post().to(create_report))
           .route("/endorsement", post().to(create_endorsement))
           .route("/endorsement/revoke", post().to(revoke_endorsement))

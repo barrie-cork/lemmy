@@ -255,6 +255,10 @@ pub const ENTRY_KIND_ROOM_LIFECYCLE_EVENT: &str = "room_lifecycle_event";
 pub const ENTRY_KIND_SANCTION_PUBLISHED: &str = "sanction_published";
 pub const ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED: &str = "sanction_event_delivery_failed";
 
+// --- m2-late-b-actor entry kinds (2) ---
+pub const ENTRY_KIND_ACTOR_APP_LINK_CREATED: &str = "actor_app_link_created";
+pub const ENTRY_KIND_ACTOR_APP_LINK_REVOKED: &str = "actor_app_link_revoked";
+
 #[cfg(feature = "full")]
 const SIGNING_KEY_ENV: &str = "GOVERNANCE_LOG_SIGNING_KEY";
 
@@ -354,4 +358,10 @@ fn load_signing_key() -> LemmyResult<SigningKey> {
     ))
   })?;
   Ok(SigningKey::from_bytes(&seed))
+}
+
+#[cfg(feature = "full")]
+pub fn sign_link_claim(claim_bytes: &[u8]) -> LemmyResult<Vec<u8>> {
+  let signing_key = load_signing_key()?;
+  Ok(signing_key.sign(claim_bytes).to_bytes().to_vec())
 }

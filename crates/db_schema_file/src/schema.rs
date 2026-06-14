@@ -1,157 +1,168 @@
 // @generated automatically by Diesel CLI.
 
 pub mod sql_types {
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "actor_type_enum"))]
-  pub struct ActorTypeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "actor_type_enum"))]
+    pub struct ActorTypeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "appeal_requester_role"))]
-  pub struct AppealRequesterRole;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "appeal_requester_role"))]
+    pub struct AppealRequesterRole;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "appeal_status"))]
-  pub struct AppealStatus;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "appeal_status"))]
+    pub struct AppealStatus;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "attestation_type"))]
-  pub struct AttestationType;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "attestation_type"))]
+    pub struct AttestationType;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "case_severity"))]
-  pub struct CaseSeverity;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "case_severity"))]
+    pub struct CaseSeverity;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "case_status"))]
-  pub struct CaseStatus;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "case_status"))]
+    pub struct CaseStatus;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "case_status_tier"))]
-  pub struct CaseStatusTier;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "case_status_tier"))]
+    pub struct CaseStatusTier;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "case_target_type"))]
-  pub struct CaseTargetType;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "case_target_type"))]
+    pub struct CaseTargetType;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "comment_sort_type_enum"))]
-  pub struct CommentSortTypeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "comment_sort_type_enum"))]
+    pub struct CommentSortTypeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "community_follower_state"))]
-  pub struct CommunityFollowerState;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "community_follower_state"))]
+    pub struct CommunityFollowerState;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "community_notifications_mode_enum"))]
-  pub struct CommunityNotificationsModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "community_notifications_mode_enum"))]
+    pub struct CommunityNotificationsModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "community_visibility"))]
-  pub struct CommunityVisibility;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "community_visibility"))]
+    pub struct CommunityVisibility;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "evidence_visibility"))]
-  pub struct EvidenceVisibility;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "evidence_visibility"))]
+    pub struct EvidenceVisibility;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "federation_inbox_admin_action_enum"))]
-  pub struct FederationInboxAdminActionEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "federation_inbox_admin_action_enum"))]
+    pub struct FederationInboxAdminActionEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "federation_mode_enum"))]
-  pub struct FederationModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "federation_mode_enum"))]
+    pub struct FederationModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "federation_peer_trust_enum"))]
-  pub struct FederationPeerTrustEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "federation_peer_trust_enum"))]
+    pub struct FederationPeerTrustEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "image_mode_enum"))]
-  pub struct ImageModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "image_mode_enum"))]
+    pub struct ImageModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "jury_assignment_role"))]
-  pub struct JuryAssignmentRole;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "jury_assignment_role"))]
+    pub struct JuryAssignmentRole;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "jury_assignment_status"))]
-  pub struct JuryAssignmentStatus;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "jury_assignment_status"))]
+    pub struct JuryAssignmentStatus;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "jury_constraint_relaxation_reason"))]
-  pub struct JuryConstraintRelaxationReason;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "jury_constraint_relaxation_reason"))]
+    pub struct JuryConstraintRelaxationReason;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "jury_decision"))]
-  pub struct JuryDecision;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "jury_decision"))]
+    pub struct JuryDecision;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "listing_type_enum"))]
-  pub struct ListingTypeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "listing_type_enum"))]
+    pub struct ListingTypeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "ltree"))]
-  pub struct Ltree;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "ltree"))]
+    pub struct Ltree;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "membership_state"))]
-  pub struct MembershipState;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "membership_state"))]
+    pub struct MembershipState;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "modlog_kind"))]
-  pub struct ModlogKind;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "modlog_kind"))]
+    pub struct ModlogKind;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "notification_type_enum"))]
-  pub struct NotificationTypeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "notification_type_enum"))]
+    pub struct NotificationTypeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "post_listing_mode_enum"))]
-  pub struct PostListingModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "post_listing_mode_enum"))]
+    pub struct PostListingModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "post_notifications_mode_enum"))]
-  pub struct PostNotificationsModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "post_notifications_mode_enum"))]
+    pub struct PostNotificationsModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "post_sort_type_enum"))]
-  pub struct PostSortTypeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "post_sort_type_enum"))]
+    pub struct PostSortTypeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "registration_mode_enum"))]
-  pub struct RegistrationModeEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "registration_mode_enum"))]
+    pub struct RegistrationModeEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "reputation_dimension"))]
-  pub struct ReputationDimension;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "reputation_dimension"))]
+    pub struct ReputationDimension;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "reputation_event_source_type"))]
-  pub struct ReputationEventSourceType;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "reputation_event_source_type"))]
+    pub struct ReputationEventSourceType;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "sanction_action"))]
-  pub struct SanctionAction;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "sanction_action"))]
+    pub struct SanctionAction;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "sanction_kind"))]
-  pub struct SanctionKind;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "sanction_kind"))]
+    pub struct SanctionKind;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "sanction_scope"))]
-  pub struct SanctionScope;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "sanction_scope"))]
+    pub struct SanctionScope;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "severity_tier"))]
-  pub struct SeverityTier;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "severity_tier"))]
+    pub struct SeverityTier;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "tag_color_enum"))]
-  pub struct TagColorEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "tag_color_enum"))]
+    pub struct TagColorEnum;
 
-  #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "vote_show_enum"))]
-  pub struct VoteShowEnum;
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "vote_show_enum"))]
+    pub struct VoteShowEnum;
+}
+
+diesel::table! {
+    actor_app_link (id) {
+        id -> Int4,
+        brehon_actor_id -> Int4,
+        app_id -> Text,
+        app_local_id -> Text,
+        created_at -> Timestamptz,
+        revoked_at -> Nullable<Timestamptz>,
+    }
 }
 
 diesel::table! {
@@ -437,8 +448,8 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::AttestationType;
-    use super::sql_types::FederationInboxAdminActionEnum;
     use super::sql_types::FederationPeerTrustEnum;
+    use super::sql_types::FederationInboxAdminActionEnum;
 
     federation_attestation (id) {
         id -> Int4,
@@ -448,7 +459,6 @@ diesel::table! {
         valid_until -> Nullable<Timestamptz>,
         created_at -> Timestamptz,
         signature -> Text,
-        // v1-federation-inbound-a additions:
         source_instance -> Nullable<Text>,
         received_at -> Nullable<Timestamptz>,
         peer_trust_level_at_receipt -> Nullable<FederationPeerTrustEnum>,
@@ -467,7 +477,6 @@ diesel::table! {
     }
 }
 
-// v1-federation-inbound-a additions:
 diesel::table! {
     federation_inbox_dropped_log (id) {
         id -> Int8,
@@ -479,7 +488,6 @@ diesel::table! {
     }
 }
 
-// v1-federation-inbound-a additions:
 diesel::table! {
     federation_inbox_nonce (peer_instance, activity_id) {
         peer_instance -> Text,
@@ -488,7 +496,6 @@ diesel::table! {
     }
 }
 
-// v1-federation-inbound-a additions:
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::FederationPeerTrustEnum;
@@ -529,6 +536,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    governance_log (id) {
+        id -> Int8,
+        prev_hash -> Bytea,
+        entry_hash -> Bytea,
+        entry_kind -> Text,
+        payload -> Jsonb,
+        actor_pseudonym -> Nullable<Text>,
+        created_at -> Timestamptz,
+        signature -> Nullable<Bytea>,
+    }
+}
+
+diesel::table! {
     governance_messaging_config (id) {
         id -> Int4,
         scope -> Text,
@@ -539,19 +559,6 @@ diesel::table! {
         value_text -> Nullable<Text>,
         valid_from -> Timestamptz,
         updated_by -> Nullable<Int4>,
-    }
-}
-
-diesel::table! {
-    governance_log (id) {
-        id -> Int8,
-        prev_hash -> Bytea,
-        entry_hash -> Bytea,
-        entry_kind -> Text,
-        payload -> Jsonb,
-        actor_pseudonym -> Nullable<Text>,
-        created_at -> Timestamptz,
-        signature -> Nullable<Bytea>,
     }
 }
 
@@ -870,7 +877,6 @@ diesel::table! {
         threshold_count_snapshot -> Nullable<Int4>,
         appeal_window_expires_at -> Nullable<Timestamptz>,
         winning_decision -> Nullable<JuryDecision>,
-        // v1-SL-a additions:
         grace_expires_at -> Nullable<Timestamptz>,
         liability_escape_reason -> Nullable<Jsonb>,
     }
@@ -1248,11 +1254,10 @@ diesel::table! {
     }
 }
 
-// v1-federation-inbound-a additions:
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::FederationInboxAdminActionEnum;
     use super::sql_types::FederationPeerTrustEnum;
+    use super::sql_types::FederationInboxAdminActionEnum;
 
     remote_moderation_label (id) {
         id -> Int4,
@@ -1274,10 +1279,10 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::FederationInboxAdminActionEnum;
-    use super::sql_types::FederationPeerTrustEnum;
     use super::sql_types::SanctionAction;
     use super::sql_types::SanctionScope;
+    use super::sql_types::FederationPeerTrustEnum;
+    use super::sql_types::FederationInboxAdminActionEnum;
 
     remote_sanction_notice (id) {
         id -> Int4,
@@ -1290,7 +1295,6 @@ diesel::table! {
         signature -> Text,
         local_case_id -> Nullable<Int4>,
         received_at -> Timestamptz,
-        // v1-federation-inbound-a additions:
         peer_trust_level_at_receipt -> FederationPeerTrustEnum,
         admin_reviewed_at -> Nullable<Timestamptz>,
         admin_action -> FederationInboxAdminActionEnum,
@@ -1333,7 +1337,6 @@ diesel::table! {
         reason -> Text,
         created_at -> Timestamptz,
         expires_at -> Nullable<Timestamptz>,
-        // v1-RT-r1 additions:
         dedupe_key -> Nullable<Text>,
         source_event_type -> ReputationEventSourceType,
     }
@@ -1471,10 +1474,9 @@ diesel::table! {
 diesel::table! {
     sponsor_allowlist (id) {
         id -> Int4,
-        community_id -> Nullable<Int4>,            // v1-RT-r1: was Int4 (NOT NULL); now nullable
+        community_id -> Nullable<Int4>,
         person_id -> Int4,
         created_at -> Timestamptz,
-        // v1-RT-r1 additions:
         added_by_admin_id -> Int4,
         note -> Nullable<Text>,
     }
@@ -1500,6 +1502,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(actor_app_link -> actor_pseudonym (brehon_actor_id));
 diesel::joinable!(actor_pseudonym -> person (person_id));
 diesel::joinable!(appeal -> moderation_case (case_id));
 diesel::joinable!(appeal -> person (requester_id));
@@ -1523,7 +1526,6 @@ diesel::joinable!(email_verification -> local_user (local_user_id));
 diesel::joinable!(endorsement -> community (community_id));
 diesel::joinable!(federation_allowlist -> instance (instance_id));
 diesel::joinable!(federation_blocklist -> instance (instance_id));
-// v1-federation-inbound-a additions:
 diesel::joinable!(federation_peer -> instance (instance_id));
 diesel::joinable!(federation_queue_state -> instance (instance_id));
 diesel::joinable!(governance_config -> person (updated_by));
@@ -1594,7 +1596,6 @@ diesel::joinable!(public_case_log -> community (community_id));
 diesel::joinable!(public_case_log -> moderation_case (case_id));
 diesel::joinable!(registration_application -> local_user (local_user_id));
 diesel::joinable!(registration_application -> person (admin_id));
-// v1-federation-inbound-a additions:
 diesel::joinable!(remote_moderation_label -> moderation_case (local_case_id));
 diesel::joinable!(remote_sanction_notice -> moderation_case (local_case_id));
 diesel::joinable!(report_combined -> comment (comment_id));
@@ -1622,10 +1623,10 @@ diesel::joinable!(site -> instance (instance_id));
 diesel::joinable!(site_language -> language (language_id));
 diesel::joinable!(site_language -> site (site_id));
 diesel::joinable!(sponsor_allowlist -> community (community_id));
-diesel::joinable!(sponsor_allowlist -> person (person_id));
 diesel::joinable!(surety -> community (community_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+  actor_app_link,
   actor_pseudonym,
   appeal,
   case_evidence,
@@ -1641,9 +1642,13 @@ diesel::allow_tables_to_appear_in_same_query!(
   endorsement,
   federation_allowlist,
   federation_blocklist,
+  federation_inbox_dropped_log,
+  federation_inbox_nonce,
+  federation_peer,
   federation_queue_state,
   governance_config,
   governance_messaging_config,
+  image_details,
   instance,
   instance_actions,
   jury_assignment,
@@ -1668,6 +1673,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   oauth_provider,
   password_reset_request,
   person,
+  person_actions,
   person_content_combined,
   person_liked_combined,
   person_saved_combined,
@@ -1679,6 +1685,7 @@ diesel::allow_tables_to_appear_in_same_query!(
   private_message_report,
   public_case_log,
   registration_application,
+  remote_moderation_label,
   remote_sanction_notice,
   report_combined,
   reputation_event,
@@ -1691,12 +1698,8 @@ diesel::allow_tables_to_appear_in_same_query!(
   site_language,
   sponsor_allowlist,
   surety,
-  person_actions,
-  image_details,
-  // v1-federation-inbound-a additions:
-  federation_inbox_dropped_log,
-  federation_inbox_nonce,
-  federation_peer,
-  remote_moderation_label,
 );
-diesel::allow_tables_to_appear_in_same_query!(custom_emoji, custom_emoji_keyword,);
+diesel::allow_tables_to_appear_in_same_query!(
+  custom_emoji,
+  custom_emoji_keyword,
+);
