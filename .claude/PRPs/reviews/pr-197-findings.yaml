@@ -18,10 +18,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786983
   file: .claude/decision-queue.json
   line: 7210
-  bucket: fix-in-pr
+  bucket: rebut
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: DQ is .claude/ meta-work, not shipped code; commands field is advisory
 - id: cr-2
   source: inline
   severity: low
@@ -29,10 +29,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786986
   file: .claude/decision-queue.json
   line: 7461
-  bucket: fix-in-pr
+  bucket: rebut
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: 0 is the documented sentinel for Shape-G-disabled fast-path per decision-queue.md
 - id: cr-3
   source: inline
   severity: major
@@ -40,10 +40,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786988
   file: crates/api/api/src/governance/actor_app_link.rs
   line: 95
-  bucket: fix-in-pr
+  bucket: rebut
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: By design per ADR-012 fire-and-forget; doc comment says log-and-swallow on error
 - id: cr-4
   source: inline
   severity: critical
@@ -52,10 +52,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786989
   file: crates/api/api/src/governance/actor_app_link.rs
   line: 139
-  bucket: fix-in-pr
+  bucket: carry-forward
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: Valid hardening — app countersig covers nonce+app_local_id; Brehon sig covers full claim at link_actor time; link_confirm trusts bridge relay. v1 hardening item
 - id: cr-5
   source: inline
   severity: nit
@@ -63,10 +63,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786990
   file: crates/server/tests/e2e/actor_app_link.rs
   line: 377
-  bucket: fix-in-pr
+  bucket: carry-forward
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: Nice-to-have test hardening; not blocking for v0
 - id: cr-6
   source: inline
   severity: major
@@ -85,10 +85,10 @@ findings:
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#discussion_r3408786994
   file: services/bridge/src/config.rs
   line: 75
-  bucket: fix-in-pr
+  bucket: carry-forward
   posted_at: '2026-06-14T00:07:31Z'
   addressed_in: null
-  rationale: null
+  rationale: Bridge is v0-stub; proper config validation deferred to v1
 - id: cr-8
   source: inline
   severity: major
@@ -116,24 +116,24 @@ findings:
   severity: nit
   summary: 'Actionable comments posted: 9'
   cr_url: https://github.com/barrie-cork/lemmy/pull/197#pullrequestreview-4492193517
-  bucket: fix-in-pr
+  bucket: done
   posted_at: '2026-06-14T00:07:33Z'
   addressed_in: null
-  rationale: null
+  rationale: Meta-comment, not actionable
 counters:
   critical:
     open: 0
-    fix-in-pr: 1
+    fix-in-pr: 0
     done: 0
-    carry-forward: 0
+    carry-forward: 1
     rebut: 0
     wont-fix: 0
   major:
     open: 0
-    fix-in-pr: 6
+    fix-in-pr: 3
     done: 0
-    carry-forward: 0
-    rebut: 0
+    carry-forward: 1
+    rebut: 2
     wont-fix: 0
   medium:
     open: 0
@@ -144,15 +144,15 @@ counters:
     wont-fix: 0
   low:
     open: 0
-    fix-in-pr: 1
+    fix-in-pr: 0
     done: 0
     carry-forward: 0
-    rebut: 0
+    rebut: 1
     wont-fix: 0
   nit:
     open: 0
-    fix-in-pr: 2
-    done: 0
-    carry-forward: 0
+    fix-in-pr: 0
+    done: 1
+    carry-forward: 1
     rebut: 0
     wont-fix: 0
