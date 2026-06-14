@@ -75,9 +75,12 @@
 
 **Pre-go-live checklist:**
 - [x] Tester guide authored · [x] containers up + API reachable · [x] registration queue clear · [x] rate limits set (generous)
-- [ ] **USER ACTION:** verify tester device(s) can reach `http://192.168.1.157:1236` from your home network (router/switch config — only you can confirm).
-- [ ] **USER DECISION:** Matrix/Element for testers? Tuwunel is localhost-only on homeserver — testers can't reach it without extra network exposure. Recommend: skip for initial human pilot.
+- [x] **LAN reachable** — user confirmed 2026-06-14: `http://192.168.1.157:1236` reachable from home network devices.
+- [x] **Matrix/Element: EXPOSE** — user decision 2026-06-14: expose Tuwunel to LAN/testers; user will configure network routing. (Port 8448 / 8008 to be opened by user.)
+- [ ] **USER ACTION REMAINING:** configure network to expose Tuwunel (port 8448 or 8008) for tester Element clients.
 - [ ] **USER DECISION:** invite specific testers + approve their registrations as they arrive.
+
+**UI smoke test PASSED (2026-06-14):** homepage, modlog, reports, registration queue all load; testuser API login → 200 + JWT (`/api/v4/account/auth/login`, pw: `testpass123`); post created (id=25) in `test_governance`; post page renders; "Create report" modal opens correctly. GIF: `pilot-phase8-ui-smoke-test.gif` (downloaded to browser).
 
 **To open pilot:** share `pilot-phase8-tester-guide.md` with testers + the URL; approve registrations via UI admin panel or API.
 
