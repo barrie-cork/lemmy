@@ -3,6 +3,58 @@
   "pending": [],
   "resolved": [
     {
+      "id": "8533df2ad37d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
+      "phase_task": "13",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Stale phase-branch copy of task-13 validate-pending-laptop. Already resolved on governance-v0 (validated 2026-06-13, cargo check exit 0, 135/135 e2e PASS). No re-validation needed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-14T14:30:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --manifest-path services/bridge/Cargo.toml to validate bridge CR fixes compile on Linux.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 (cr-6, cr-8, cr-9): composite PK in app_actor_link, brehon_actor_id log redaction, non-2xx confirm handling. Bridge crate is workspace-excluded; validates on Linux Docker only. Validation delegated to laptop advisor.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-fix-impl-1-see-claude-prps-briefs-m2-late-b-actor-fix-impl-1-md-686",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo-linux.sh check --manifest-path services/bridge/Cargo.toml: exit 0. Composite PK, log redaction, non-2xx handling all compile on Linux Docker (rust:1.95). CR fixes cr-6, cr-8, cr-9 validated.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-14T14:30:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "32a44ffbe8e7-001"
+    },
+    {
       "id": "966d30acaaea-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
@@ -7139,32 +7191,6 @@
       "failed_commands": null
     },
     {
-      "from": "advisor",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-14T00:00:00Z",
-      "question": "Run cargo-linux.sh check --workspace --features full to verify Linux compile on phase-m2-late-b-actor (diff-scoped gate: migrations + bridge Cargo.toml + bridge .rs files touched).",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Phase diff vs governance-v0 touches migrations/2026-06-13-*_add_actor_app_link/{up,down}.sql, services/bridge/Cargo.toml, and 6 bridge .rs files. Linux-compile gate triggered per feedback_linux_compile_proof_is_a_gate.md.",
-      "commands": [
-        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
-      ],
-      "branch": "phase-m2-late-b-actor",
-      "phase_task": "13",
-      "workflow_run_id": 0,
-      "result": "pass",
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": "cargo-linux.sh check --workspace --features full EXIT 0 on phase-m2-late-b-actor @ a9315f37d. Linux compile gate PASS.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-13T23:31:30Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "a3d0e9941441-062"
-    },
-    {
       "from": "impl",
       "kind": "validate-pending-laptop",
       "timestamp": "2026-06-13T00:00:00Z",
@@ -7442,30 +7468,30 @@
       "failed_commands": null
     },
     {
-      "id": "8533df2ad37d-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-13T00:00:00Z",
-      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
+      "from": "advisor",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --workspace --features full to verify Linux compile on phase-m2-late-b-actor (diff-scoped gate: migrations + bridge Cargo.toml + bridge .rs files touched).",
       "options": [
         "pass",
         "fail"
       ],
-      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
+      "context": "Phase diff vs governance-v0 touches migrations/2026-06-13-*_add_actor_app_link/{up,down}.sql, services/bridge/Cargo.toml, and 6 bridge .rs files. Linux-compile gate triggered per feedback_linux_compile_proof_is_a_gate.md.",
       "commands": [
-        "./scripts/brehon/cargo-check.sh --workspace --features full"
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
       ],
-      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
+      "branch": "phase-m2-late-b-actor",
       "phase_task": "13",
       "workflow_run_id": 0,
       "result": "pass",
       "log_slice": null,
       "failed_commands": null,
-      "answer": "cargo check --workspace --features full EXIT 0 on phase-m2-late-b-actor @ 58a7e8658. Two fixes applied before pass: (1) added ed25519-dalek dep to lemmy_api Cargo.toml (E0432); (2) replaced LemmyErrorType::InvalidQuery->InvalidUrl in actor_app_link.rs x6 (E0599). Committed fix as 58a7e8658.",
+      "answer": "cargo-linux.sh check --workspace --features full EXIT 0 on phase-m2-late-b-actor @ a9315f37d. Linux compile gate PASS.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-13T23:17:01Z",
+      "resolved_at": "2026-06-13T23:31:30Z",
       "approved_by": null,
-      "approved_at": null
+      "approved_at": null,
+      "id": "a3d0e9941441-062"
     }
   ]
 }

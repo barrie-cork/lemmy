@@ -3524,6 +3524,7 @@ dependencies = [
  "chrono",
  "diesel",
  "diesel-async",
+ "ed25519-dalek",
  "either",
  "elementtree",
  "futures",
