@@ -1,7 +1,8 @@
 # Brehon Governance Pilot — Tester Guide
 
-**Pilot server:** `http://192.168.1.157:1236` (home network) or `http://100.81.145.58:1236` (Tailscale)
-**Status:** internal household pilot only — no public access, no real data obligations
+**Pilot server:** `https://lemmy.agentgrey.app` (public, HTTPS — works from any device including Voyager)
+**LAN fallback:** `http://192.168.1.157:1236` (home network) or `http://100.81.145.58:1236` (Tailscale)
+**Status:** closed pilot — registration requires admin approval
 
 ---
 
@@ -9,8 +10,10 @@
 
 The site requires admin approval to register.
 
-1. Go to the UI URL above in your browser
-2. Click **Sign Up**
+**Browser:** go to `https://lemmy.agentgrey.app`
+**Voyager app (iOS/Android):** open Voyager → tap the instance field → type `lemmy.agentgrey.app` → Sign Up
+
+1. Click / tap **Sign Up**
 3. Fill in: username (pick something), password, and the **application answer** field — type anything (e.g. "household pilot tester")
 4. Submit — you'll be in a pending state
 5. **Tell the admin** (Barry) you've registered — they'll approve you via the admin panel
@@ -76,7 +79,7 @@ Decisions available: `remove_content`, `no_action`, `advisory_label`, `warning`,
 
 ## 5. What NOT to test (pilot scope limits)
 
-- **Matrix/Element client** — Tuwunel is localhost-only on the server. Testers can't reach it. Matrix room provisioning is an internal verification surface only.
+- **Matrix/Element client** — `matrix.agentgrey.app` is exposed but juror rooms require an invite from the admin. Ask Barry if you want Element access to a juror room.
 - **Federation** — federation is enabled at the DB level but no other instance is federated. Posts stay local.
 - **Real sanctions on real content** — the pilot is for exercising the governance flow, not for actually sanctioning anyone. Use throwaway test posts.
 - **Password reset / email** — email is not wired. Forget your password → tell the admin to reset it via the API.
@@ -107,18 +110,18 @@ Drop a message to Barry. Note:
 
 ```bash
 # Login
-curl -s -X POST http://192.168.1.157:8536/api/v4/account/auth/login \
+curl -s -X POST https://lemmy.agentgrey.app/api/v4/account/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username_or_email":"lemmy","password":"lemmylemmy"}'
 # → {"jwt": "eyJ..."}
 
 # Approve a registration application (replace JWT and app ID)
-curl -s -X PUT http://192.168.1.157:8536/api/v4/admin/registration_application/approve \
+curl -s -X PUT https://lemmy.agentgrey.app/api/v4/admin/registration_application/approve \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <JWT>' \
   -d '{"id": <app_id>, "approve": true}'
 
 # List pending applications
-curl -s 'http://192.168.1.157:8536/api/v4/admin/registration_application/list?unread_only=true' \
+curl -s 'https://lemmy.agentgrey.app/api/v4/admin/registration_application/list?unread_only=true' \
   -H 'Authorization: Bearer <JWT>'
 ```
