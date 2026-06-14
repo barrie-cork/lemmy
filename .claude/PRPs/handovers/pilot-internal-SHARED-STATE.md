@@ -65,9 +65,17 @@
 
 **Documented m2 limitation (not a bug):** bridge transitions during bridge-down are LOST (push-only, no log-tail replay). Case 19 confirmed `Decided`-path DB writes complete with 0 bridge rooms after restart. Also: `chain-emission deferred to T5` for emergency rooms is a known m2-late-2 stub. `display_name=Juror-pending` on puppets is intentional (OQ-009 graduated reveal), not a defect.
 
-### 2026-06-13 — ⏳ PHASE 8: pre-go-live checklist (USER DECISIONS OPEN)
+### 2026-06-14 — ✅ PHASE 8: PUBLIC DOMAIN LIVE (`https://lemmy.agentgrey.app`)
 
-**Tester guide:** `.claude/PRPs/handovers/pilot-phase8-tester-guide.md` (committed `c03d0c8ca`) — registration (require_application mode), posting/reporting, admin workflow, rate limits, API quick-start.
+**Tester guide:** `.claude/PRPs/handovers/pilot-phase8-tester-guide.md` (committed `c03d0c8ca`) — registration (require_application mode), posting/reporting, admin workflow, rate limits, API quick-start. **UPDATE NEEDED:** tester guide still references LAN URL; update to `https://lemmy.agentgrey.app` before sharing with external testers.
+
+**Domain migration complete (2026-06-14):**
+- `lemmy.hjson` hostname → `lemmy.agentgrey.app`; DB ap_id bulk-updated (site/person/community/instance rows)
+- `LEMMY_UI_BACKEND=lemmy.agentgrey.app`, `LEMMY_UI_HTTPS=true`, `LEMMY_UI_FRONTEND=https://lemmy.agentgrey.app`
+- **Root cause of 500 fixed:** `LEMMY_UI_BACKEND_INTERNAL` must have explicit `http://` prefix when `LEMMY_UI_HTTPS=true`; R() function in lemmy-ui SSR was prepending https: to the internal Docker hostname → unreachable. Fixed as `http://lemmy:8536`.
+- nginx `server_name` now includes `lemmy.agentgrey.app`; `X-Forwarded-Proto` headers added for CF Tunnel.
+- Committed: `01ccbed0d` (domain), `9620f5017` (BACKEND_INTERNAL fix + nginx), `a77b477a9` (Tuwunel matrix.agentgrey.app).
+- **Verified:** `localhost:1236` → 200, `Host: lemmy.agentgrey.app` → 200, API `ap_id: https://lemmy.agentgrey.app/`.
 
 **Server-side checks PASSED:** all 7 containers UP; LAN `http://192.168.1.157:1236` → 200; Tailscale `http://100.81.145.58:1236` → 200; API → 200; registration queue clear; `messaging_enabled=t`; `CHAIN_INTACT` (through case 20).
 
@@ -76,13 +84,15 @@
 **Pre-go-live checklist:**
 - [x] Tester guide authored · [x] containers up + API reachable · [x] registration queue clear · [x] rate limits set (generous)
 - [x] **LAN reachable** — user confirmed 2026-06-14: `http://192.168.1.157:1236` reachable from home network devices.
-- [x] **Matrix/Element: EXPOSE** — user decision 2026-06-14: expose Tuwunel to LAN/testers; user will configure network routing. (Port 8448 / 8008 to be opened by user.)
-- [ ] **USER ACTION REMAINING:** configure network to expose Tuwunel (port 8448 or 8008) for tester Element clients.
+- [x] **Matrix/Element: EXPOSE** — user decision 2026-06-14: Tuwunel now `matrix.agentgrey.app` via CF Tunnel; token-gated registration (`registration_token` set).
+- [x] **Public HTTPS URL** — `https://lemmy.agentgrey.app` serving 200 (via CF Tunnel → nginx → lemmy-ui). Voyager-compatible.
+- [ ] **USER ACTION:** Add CF Tunnel ingress rule: `lemmy.agentgrey.app → http://localhost:1236`. Verify `matrix.agentgrey.app → http://localhost:8448` also exists.
 - [ ] **USER DECISION:** invite specific testers + approve their registrations as they arrive.
+- [ ] **TESTER GUIDE UPDATE:** replace LAN URL with `https://lemmy.agentgrey.app` before sharing.
 
-**UI smoke test PASSED (2026-06-14):** homepage, modlog, reports, registration queue all load; testuser API login → 200 + JWT (`/api/v4/account/auth/login`, pw: `testpass123`); post created (id=25) in `test_governance`; post page renders; "Create report" modal opens correctly. GIF: `pilot-phase8-ui-smoke-test.gif` (downloaded to browser).
+**UI smoke test PASSED (2026-06-14):** homepage, modlog, reports, registration queue all load; testuser API login → 200 + JWT; post created (id=25) in `test_governance`; post page renders; "Create report" modal opens correctly.
 
-**To open pilot:** share `pilot-phase8-tester-guide.md` with testers + the URL; approve registrations via UI admin panel or API.
+**To open pilot:** (1) add CF Tunnel ingress rule in dashboard, (2) update tester guide URL, (3) share guide + `https://lemmy.agentgrey.app` with testers, (4) approve registrations via UI admin panel or API.
 
 ## §5. Cross-session asks
 
