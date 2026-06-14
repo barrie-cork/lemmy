@@ -59,15 +59,34 @@
 | 6 | Adversarial — A deadlock→`AdminReview`; B declined-juror+replacement; D sponsor-liability→`SponsorLiabilityPending` | ✅✅ via `seed-adversarial.sh` | 13, 14, 16 |
 | 7 | Resilience — soft-pause (`messaging_enabled=false`), bridge-down (DB writes complete, rooms lost-expected), restart idempotency (`bridge_room` UNIQUE survives restart, count stays 1) | ✅✅ via `seed-resilience.sh` + direct verify | 17–20 |
 
-**Ledger: cases 1–20 spent. Next fresh case: 21+.**
+**Ledger: cases 1–20 spent. Case 21 seeded 2026-06-14 (see §4 phase 8 entry). Next fresh case: 22+.**
 
 **⏰ LIVE CRON REMINDER (sub-case D):** case 16 fires `SponsorLiabilityFired` at **2026-06-16T19:14Z** (Medium severity → 72h grace, `grace_expires_at=2026-06-16T19:14Z`, cron every 5 min). To confirm after that time: `bash seed-adversarial.sh --check-sponsor-fired 16`. Sponsor liability is computed from the **`surety` table** (`sponsor_id`/`sponsored_id`/`revoked_at`), NOT `endorsement`.
 
 **Documented m2 limitation (not a bug):** bridge transitions during bridge-down are LOST (push-only, no log-tail replay). Case 19 confirmed `Decided`-path DB writes complete with 0 bridge rooms after restart. Also: `chain-emission deferred to T5` for emergency rooms is a known m2-late-2 stub. `display_name=Juror-pending` on puppets is intentional (OQ-009 graduated reveal), not a defect.
 
+### 2026-06-14 (later) — ✅ PHASE 8 COMPLETE: seed + Matrix room + tester invited
+
+**Seed run (case 21):** `seed-appeal-ready.sh` seeded case 21 (post 26, reported by testmod → `SponsorLiabilityPending`). Panel=5/quorum=3/threshold=3 (Minor tier) — all 5 votes cast, threshold met. Status is `SponsorLiabilityPending` (expected: sponsor liability review fires after threshold; this is correct Minor-tier behaviour, not a bug). **Jury room provisioned:** `!ZIxTLhMGAt9OLaR4OQ:matrix.agentgrey.app` (`bridge_room` table row: `case_id=21, room_type=jury`). `CHAIN_INTACT` throughout.
+
+**Tester invited to jury room:** `@barrie:matrix.agentgrey.app` invited and auto-joined `jury-case-21`. Method: AS token (`brehon-as-dev-token-01`) acting as `@brehon:matrix.agentgrey.app` to PUT `m.room.member` state event (`membership: invite`) — Tuwunel auto-accepted for local user. Real testers need the same manual-invite step after each jury room is provisioned (bridge only invites puppets automatically).
+
+**Screenshot confirmed:** jury-case-21 open in Element, `@barrie` joined, 5 juror puppets invited. Voice message posted at 19:11.
+
+**Phase 8 checklist — ALL DONE:**
+- [x] CF Tunnel rule for `lemmy.agentgrey.app` added (config v18)
+- [x] Tester guide updated (`https://lemmy.agentgrey.app`, Voyager instructions)
+- [x] `@barrie:matrix.agentgrey.app` registered on `matrix.agentgrey.app` (token-gated)
+- [x] Seed scenario run; jury room provisioned on `matrix.agentgrey.app`
+- [x] Tester (`@barrie`) invited to and joined the jury room
+
+**Stale `:localhost` bridge_room rows:** 27 rows from pre-expose era remain in bridge SQLite (harmless — `matrix_room_id` contains `:localhost` which no longer resolves; new cases mint `:matrix.agentgrey.app`). Safe to leave; clean up at next DB wipe if desired.
+
+**Remaining open item:** `[ ] invite specific testers + approve their registrations` — user decides timing.
+
 ### 2026-06-14 — ✅ PHASE 8: PUBLIC DOMAIN LIVE (`https://lemmy.agentgrey.app`)
 
-**Tester guide:** `.claude/PRPs/handovers/pilot-phase8-tester-guide.md` (committed `c03d0c8ca`) — registration (require_application mode), posting/reporting, admin workflow, rate limits, API quick-start. **UPDATE NEEDED:** tester guide still references LAN URL; update to `https://lemmy.agentgrey.app` before sharing with external testers.
+**Tester guide:** `.claude/PRPs/handovers/pilot-phase8-tester-guide.md` (committed `afb62cbad`) — registration (require_application mode), Voyager instructions, posting/reporting, admin workflow, rate limits, API quick-start. ✅ URL updated to `https://lemmy.agentgrey.app`.
 
 **Domain migration complete (2026-06-14):**
 - `lemmy.hjson` hostname → `lemmy.agentgrey.app`; DB ap_id bulk-updated (site/person/community/instance rows)
@@ -88,7 +107,7 @@
 - [x] **Public HTTPS URL** — `https://lemmy.agentgrey.app` serving 200 (via CF Tunnel → nginx → lemmy-ui). Voyager-compatible.
 - [x] **CF Tunnel rule added (2026-06-14):** `lemmy.agentgrey.app → http://localhost:1236` + CNAME created via API (config v18). `https://lemmy.agentgrey.app/` → 200 verified. `matrix.agentgrey.app → http://localhost:8448` was already present (v17).
 - [ ] **USER DECISION:** invite specific testers + approve their registrations as they arrive.
-- [ ] **TESTER GUIDE UPDATE:** replace LAN URL with `https://lemmy.agentgrey.app` before sharing.
+- [x] **TESTER GUIDE UPDATE:** done — `https://lemmy.agentgrey.app` + Voyager instructions (`afb62cbad`).
 
 **UI smoke test PASSED (2026-06-14):** homepage, modlog, reports, registration queue all load; testuser API login → 200 + JWT; post created (id=25) in `test_governance`; post page renders; "Create report" modal opens correctly.
 
