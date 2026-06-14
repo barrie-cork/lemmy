@@ -83,6 +83,7 @@ serde_json = { workspace = true }
 diesel = { workspace = true }
 lemmy_diesel_utils = { workspace = true }
 uuid = { workspace = true }
+ed25519-dalek = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 reqwest = { workspace = true }
