@@ -2294,3 +2294,27 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Recommendation:** pending
 - **YAML:** .claude/PRPs/reviews/pr-195-findings.yaml
 - **Notes:** Test phase to dogfood the /auto-phase pipeline. Two minor findings from CodeRabbit review. This is a test run of the bm-poll-cr verb.
+
+## bm: merge PR #197 — 2026-06-14T10:19:37Z
+
+- **PR:** #197 (feat(b-actor): portable actor-ID linkage — dual-signed link-claim + actor_app_link table (ADR-016 C3))
+- **base ← head:** governance-v0 ← phase-m2-late-b-actor
+- **merge sha:** 28f7955ab (Merge pull request #197 from barrie-cork/phase-m2-late-b-actor)
+- **remote branch deleted?** yes
+- **trunk position:** 28f7955ab (Merge pull request #197 from barrie-cork/phase-m2-late-b-actor)
+- **pre-merge gates all green:**
+  - mergeStateStatus: UNSTABLE (ADR advisory check only, non-blocking)
+  - mergeable: MERGEABLE ✓
+  - state: OPEN (pre-merge confirmed open) ✓
+  - findings YAML: no critical fix-in-pr open (cr-6, cr-8, cr-9 addressed_in dcb5d3723) ✓
+  - DQ pending: 0 (cleaned up in 1deadd948) ✓
+  - Bridge Linux compile: PASS (DQ 32a44ffbe8e7-001 resolved pass) ✓
+- **merge method:** `--merge` (not squash — task-per-commit history load-bearing for retros)
+- **commit history:** 25+ commits on phase branch including:
+  - dcb5d3723: fix(bridge): composite PK, redact actor logs, handle non-2xx confirm (cr-6, cr-8, cr-9)
+  - 210ff1397: chore(merge): integrate m2-late-b-actor-fix-impl-1 — bridge CR fixes
+  - 6b7cc3dfa: chore(decision-queue): advisor-laptop pass DQ 32a44ffbe8e7-001 — bridge-linux-compile
+  - Integration of b-actor portable linkage (services/bridge/) + ADR-016 C3 governance schema changes
+- **user gate 5:** APPROVED (pre-merge confirm verified)
+- **findings summary:** CR-6, CR-8, CR-9 (major bridge findings) addressed in dcb5d3723 + verified by CR recheck
+- **Telegram ping:** skipped (notification-only scope; pings are notifications not gating signals)
