@@ -53,8 +53,8 @@ services:
       # BACKEND_INTERNAL: Docker-internal hostname for SSR (server-side API calls)
       - LEMMY_UI_BACKEND_INTERNAL=lemmy:8536
       # BACKEND: external URL embedded in HTML for browser-side API calls
-      - LEMMY_UI_BACKEND=192.168.1.157:8536
-      - LEMMY_UI_HTTPS=false
+      - LEMMY_UI_BACKEND=lemmy.agentgrey.app
+      - LEMMY_UI_HTTPS=true
       # Eruda mobile-debug console: OFF for the pilot. When true it injects a
       # full-screen overlay on every page load and reserves ~678px at the top,
       # pushing the real UI down for testers. Verified during phase-8 UI testing
