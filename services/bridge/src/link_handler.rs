@@ -73,7 +73,7 @@ pub async fn handle_link_claim(
 
     if provided.as_deref() != Some(expected.as_str()) {
         tracing::warn!(
-            brehon_actor_id = %payload.brehon_actor_id,
+            brehon_actor_id = %&payload.brehon_actor_id[..payload.brehon_actor_id.len().min(8)],
             "link-claim: unauthorized (bad or missing Bearer)"
         );
         return (
@@ -145,7 +145,7 @@ pub async fn handle_link_claim(
     let upsert_result: anyhow::Result<()> = (|| {
         let conn = app_actor_link::open(&state.bridge_db_path)
             .map_err(|e| anyhow::anyhow!("app_actor_link::open failed: {e}"))?;
-        app_actor_link::upsert(&conn, &payload.app_local_id, &payload.brehon_actor_id)
+        app_actor_link::upsert(&conn, &payload.app_id, &payload.app_local_id, &payload.brehon_actor_id)
             .map_err(|e| anyhow::anyhow!("app_actor_link::upsert failed: {e}"))?;
         Ok(())
     })();
@@ -178,17 +178,20 @@ pub async fn handle_link_claim(
         .send()
         .await;
 
-    if let Err(e) = post_result {
-        tracing::error!(err = %e, "link-claim: POST to brehon_link_confirm_url failed");
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": "confirm POST to Brehon failed" })),
-        )
-            .into_response();
+    match post_result {
+        Ok(r) if !r.status().is_success() => {
+            tracing::error!(status = %r.status(), "link-claim: Brehon confirm returned non-2xx");
+            return (StatusCode::BAD_GATEWAY, Json(serde_json::json!({ "error": "confirm returned non-2xx" }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!(err = %e, "link-claim: POST to brehon_link_confirm_url failed");
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "confirm POST to Brehon failed" }))).into_response();
+        }
+        Ok(_) => {}
     }
 
     tracing::info!(
-        brehon_actor_id = %payload.brehon_actor_id,
+        brehon_actor_id = %&payload.brehon_actor_id[..payload.brehon_actor_id.len().min(8)],
         app_id = %payload.app_id,
         app_local_id = %payload.app_local_id,
         "link-claim: linked successfully"
