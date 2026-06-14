@@ -1,6 +1,59 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "8533df2ad37d-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-13T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task-13 e2e test file compiles.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 13 wrote crates/server/tests/e2e/actor_app_link.rs (5 integration tests) and added include!(\"e2e/actor_app_link.rs\") to crates/server/tests/e2e.rs after line 153. Validation delegated to laptop per validate-pending-laptop contract.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-task-13-e2e-tests-actor-app-link-see-claude-prps-briefs-m2-late-b-actor-impl-task-13-682",
+      "phase_task": "13",
+      "workflow_run_id": 0,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --manifest-path services/bridge/Cargo.toml to validate bridge CR fixes compile on Linux.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 (cr-6, cr-8, cr-9): composite PK in app_actor_link, brehon_actor_id log redaction, non-2xx confirm handling. Bridge crate is workspace-excluded; validates on Linux Docker only. Validation delegated to laptop advisor.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-fix-impl-1-see-claude-prps-briefs-m2-late-b-actor-fix-impl-1-md-686",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": 0,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "32a44ffbe8e7-001"
+    }
+  ],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
