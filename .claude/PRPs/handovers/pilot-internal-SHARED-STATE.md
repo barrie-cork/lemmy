@@ -86,7 +86,7 @@
 - [x] **LAN reachable** — user confirmed 2026-06-14: `http://192.168.1.157:1236` reachable from home network devices.
 - [x] **Matrix/Element: EXPOSE** — user decision 2026-06-14: Tuwunel now `matrix.agentgrey.app` via CF Tunnel; token-gated registration (`registration_token` set).
 - [x] **Public HTTPS URL** — `https://lemmy.agentgrey.app` serving 200 (via CF Tunnel → nginx → lemmy-ui). Voyager-compatible.
-- [ ] **USER ACTION:** Add CF Tunnel ingress rule: `lemmy.agentgrey.app → http://localhost:1236`. Verify `matrix.agentgrey.app → http://localhost:8448` also exists.
+- [x] **CF Tunnel rule added (2026-06-14):** `lemmy.agentgrey.app → http://localhost:1236` + CNAME created via API (config v18). `https://lemmy.agentgrey.app/` → 200 verified. `matrix.agentgrey.app → http://localhost:8448` was already present (v17).
 - [ ] **USER DECISION:** invite specific testers + approve their registrations as they arrive.
 - [ ] **TESTER GUIDE UPDATE:** replace LAN URL with `https://lemmy.agentgrey.app` before sharing.
 
