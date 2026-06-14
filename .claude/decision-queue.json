@@ -26,6 +26,32 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-14T00:00:00Z",
+      "question": "Run cargo-linux.sh check --manifest-path services/bridge/Cargo.toml to validate bridge CR fixes compile on Linux.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 (cr-6, cr-8, cr-9): composite PK in app_actor_link, brehon_actor_id log redaction, non-2xx confirm handling. Bridge crate is workspace-excluded; validates on Linux Docker only. Validation delegated to laptop advisor.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "junior/role-impl-task-m2-late-b-actor-fix-impl-1-see-claude-prps-briefs-m2-late-b-actor-fix-impl-1-md-686",
+      "phase_task": "fix-impl-1",
+      "workflow_run_id": 0,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "32a44ffbe8e7-001"
     }
   ],
   "resolved": [
