@@ -69,6 +69,10 @@ admin_jwt() { login "$ADMIN_USER" "$ADMIN_PASS"; }
 # json_field <key>  — read a top-level field from stdin JSON.
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
 
+# json_nested <key1> <key2> <key3>  — read a three-level nested field from stdin JSON.
+# e.g. POST /post response: .post_view.post.id  ->  json_nested post_view post id
+json_nested() { python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('$1',{}).get('$2',{}).get('$3',''))"; }
+
 # --- governance helpers ----------------------------------------------------
 
 # person_id <username>  — echo the person.id for a username, or empty.
@@ -132,6 +136,69 @@ seed_eligible_jurors() {
 
 # case_status <case_id>  — echo moderation_case.status.
 case_status() { psql "SELECT status FROM moderation_case WHERE id=$1;"; }
+
+# --- config-aware helpers (read the FROZEN snapshots, never hardcode 5/3) ----
+#
+# The governance system is config-table-driven (panel_size / quorum / threshold
+# vary per community x severity_tier x status_tier — 127 keys). But by the time a
+# case is in JurySelection, admin_assign_jury has COLLAPSED all of that into three
+# integer columns on moderation_case. Read those, and a seeder is config-agnostic
+# by construction. THE WIN CONDITION IS threshold_count, NOT quorum: a case decides
+# when the first decision (enum order) reaches threshold_count_snapshot votes;
+# quorum is only a floor gate ("don't tally until this many are in"); deadlock
+# fires when vote_count == panel_size with no decision at threshold. Hardcoding 3
+# only worked because the default Minor-severity path makes quorum==threshold==3 at
+# panel 5 — Severe cases are 7/5/6 and 3 votes can NEVER decide them.
+# Refs: submit_jury_vote.rs:343-466, admin_assign_jury.rs:152-213.
+
+# read_panel_size / read_quorum / read_threshold_count <case_id>
+# Echo the frozen snapshot (blank if NULL — case not yet jury-assigned).
+read_panel_size()      { psql "SELECT panel_size_snapshot      FROM moderation_case WHERE id=$1;"; }
+read_quorum()          { psql "SELECT quorum_snapshot          FROM moderation_case WHERE id=$1;"; }
+read_threshold_count() { psql "SELECT threshold_count_snapshot FROM moderation_case WHERE id=$1;"; }
+
+# read_appeal_panel_size / read_appeal_threshold_count <case_id>
+# Appeal-round snapshots (populated when the appeal panel is seated).
+read_appeal_panel_size()      { psql "SELECT panel_size_snapshot      FROM appeal WHERE case_id=$1 ORDER BY id DESC LIMIT 1;"; }
+read_appeal_threshold_count() { psql "SELECT threshold_count_snapshot FROM appeal WHERE case_id=$1 ORDER BY id DESC LIMIT 1;"; }
+
+# seated_panel <case_id> <role>  — echo seated jurors' person_ids for a role
+# ('Original'|'Appeal'), ordered. Replaces hardcoded juror-id lists: reads who the
+# selector ACTUALLY seated (the relaxation cascade can change identities).
+seated_panel() { psql "SELECT person_id FROM jury_assignment WHERE case_id=$1 AND role='$2' ORDER BY id;"; }
+
+# assert_status <case_id> <expected>  — fail LOUD (return 1) when status differs.
+# Replaces bare WARN-then-proceed (the false-green class). Under `set -e` a caller
+# that does NOT swallow this with `||` will abort, honouring the suite's
+# "fails loud on a failed precondition" contract.
+assert_status() {
+  local got; got=$(case_status "$1")
+  [ "$got" = "$2" ] || { echo "STATUS_MISMATCH case=$1 expected=$2 got=$got threshold=$(read_threshold_count "$1") panel=$(read_panel_size "$1")" >&2; return 1; }
+}
+
+# vote_to_threshold <case_id> <decision> [role=Original]
+# Cast <decision> from the ACTUAL seated panel until vote_count >= the case's
+# threshold_count_snapshot. Reads the threshold + the seated jurors at runtime, so
+# it adapts to any panel size / severity. Returns 0 iff the case reaches Decided
+# (Original) — i.e. the exit reflects REALITY, not a vote tally. Each juror accepts
+# (idempotent) then votes once. Stops early once Decided.
+vote_to_threshold() {
+  local cid="$1" decision="$2" role="${3:-Original}" pid uname jjwt cast=0 need
+  need=$(read_threshold_count "$cid")
+  [ -n "$need" ] || { echo "VOTE_TO_THRESHOLD_NO_SNAPSHOT case=$cid (not jury-assigned?)" >&2; return 1; }
+  local pids; mapfile -t pids < <(seated_panel "$cid" "$role")
+  [ "${#pids[@]}" -gt 0 ] || { echo "VOTE_TO_THRESHOLD_EMPTY_PANEL case=$cid role=$role" >&2; return 1; }
+  for pid in "${pids[@]}"; do
+    [ "$(case_status "$cid")" = "Decided" ] && break
+    uname=$(psql "SELECT name FROM person WHERE id=$pid;")
+    jjwt=$(login "$uname" "$TEST_PASS") || continue
+    api_post /governance/jury/accept "{\"case_id\":$cid}" "$jjwt" >/dev/null 2>&1 || true
+    api_post /governance/jury/vote "{\"case_id\":$cid,\"decision\":\"$decision\",\"rationale\":\"pilot-seed vote_to_threshold\"}" "$jjwt" >/dev/null
+    cast=$((cast+1))
+  done
+  echo "VOTES_CAST=$cast NEEDED=$need SEATED=${#pids[@]} role=$role" >&2
+  [ "$(case_status "$cid")" = "Decided" ]
+}
 
 # bridge_rooms  — echo the bridge_room rows (case_id|room_type|matrix_room_id per line).
 # Reads the bridge's SQLite by copying it out (no sqlite3 CLI in container).
