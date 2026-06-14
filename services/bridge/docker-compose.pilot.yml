@@ -60,7 +60,7 @@ services:
       # The Matrix server_name (MXID domain) — matches tuwunel-pilot.toml's
       # server_name. NOT the host:port of TUWUNEL_URL. Puppet MXIDs + room IDs
       # use this domain.
-      MATRIX_SERVER_NAME: "localhost"
+      MATRIX_SERVER_NAME: "matrix.agentgrey.app"
       BRIDGE_DB_PATH: "/data/bridge.db"
       RUST_LOG: "info,brehon_bridge=debug"
     extra_hosts:
