@@ -55,7 +55,11 @@ services:
       # BACKEND: external URL embedded in HTML for browser-side API calls
       - LEMMY_UI_BACKEND=192.168.1.157:8536
       - LEMMY_UI_HTTPS=false
-      - LEMMY_UI_ERUDA=true
+      # Eruda mobile-debug console: OFF for the pilot. When true it injects a
+      # full-screen overlay on every page load and reserves ~678px at the top,
+      # pushing the real UI down for testers. Verified during phase-8 UI testing
+      # 2026-06-13 — re-enable only for active debugging, never for tester-facing.
+      - LEMMY_UI_ERUDA=false
     depends_on:
       - lemmy
     restart: unless-stopped

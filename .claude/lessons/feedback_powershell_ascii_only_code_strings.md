@@ -37,9 +37,16 @@ Missing closing '}' in statement block or type definition.
 
 This incident is also a `pattern_verify_before_trusting_shell_output` case: the broken script printed a success message while doing nothing. The em-dash was found only by verifying the actual file count (`Get-ChildItem -Recurse -File | Measure`) against the claimed success — not by trusting the script's own "updated" output. When a PowerShell script reports success, verify the side effect landed; a cp1252 parse break is one of the ways "success" can be a lie.
 
+## Generalises beyond PowerShell: non-ASCII in API request bodies
+
+The same ASCII-discipline applies to **any prose field you put in a JSON body sent over the wire** — not just `.ps1` literals. On 2026-06-13 a `curl -d '{"deny_reason":"... — denied ..."}'` against the Tuwunel Matrix API failed with `{"error":"unknown","message":"Json deserialize error: invalid unicode code point at line 1 column 101"}` — the em-dash (`—`) in the prose `deny_reason` broke the server's JSON deserializer. Retrying with an ASCII hyphen (`-`) fixed it immediately. This is platform-independent (it was a Linux server rejecting the body), but it bites hardest when authoring via the Write/Bash tools, which emit UTF-8 prose by reflex (Claude inserts em-dashes habitually in explanatory text — the same author-time reflex that causes the `.ps1` parse break).
+
+**How to apply:** when an API request body carries a free-text/prose field (`reason`, `answer`, `description`, commit-message-shaped strings), keep it ASCII — `-` not `—`, straight quotes not curly, no `→`/`§`/emoji — OR build the JSON with a tool that escapes Unicode correctly (`python -c "json.dumps(..., ensure_ascii=True)"`, `jq -n`) rather than hand-writing the literal in a shell `-d` argument. The `grep -nP '[^\x00-\x7F]'` gate works on the request body too. See the `json_dump_ensure_ascii_false` PMD pattern (the inverse: when you DO want to preserve non-ASCII, use a JSON serializer, never a raw shell literal).
+
 ## See also
 
 - `feedback_python_utf8_encoding_windows.md` — the data-side sibling (cp1252 corrupts content on write-back; this lesson is the code-side analogue where cp1252 breaks the parse).
+- `json_dump_ensure_ascii_false` (PMD pattern) — JSON serialisation handling of non-ASCII; the right tool when prose fields must carry Unicode (use a serializer, never a hand-written shell literal).
 - `pattern_cross_platform_divergences` (PMD) — Windows ≠ Mac ≠ Linux; cp1252 default codepage is one of the canonical divergences.
 - `pattern_verify_before_trusting_shell_output` (PMD) — the script's success message was false; only file-count verification exposed the no-op.
 - `feedback_batch_goto_eof_clobbers_errorlevel.md` — sibling Windows-shell trap (the `.bat` equivalent of a script lying about success).
