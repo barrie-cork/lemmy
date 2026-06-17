@@ -58,8 +58,10 @@ pub use lemmy_db_schema::source::governance::governance_log::{
   ENTRY_KIND_PANEL_ASSEMBLED, ENTRY_KIND_PARTICIPATION_CRON_TICK, ENTRY_KIND_PUBLIC_LOG_PUBLISHED,
   ENTRY_KIND_REPORT_CREATED, ENTRY_KIND_REPUTATION_DELTA, ENTRY_KIND_RESTORATION_COMPLETED,
   ENTRY_KIND_ROLLUP_RECOMPUTED, ENTRY_KIND_ROOM_ARCHIVED, ENTRY_KIND_ROOM_BRIDGE_ERROR,
+  ENTRY_KIND_ROOM_CHAIR_OVERRIDE, ENTRY_KIND_ROOM_CHAIR_TRANSFERRED,
   ENTRY_KIND_ROOM_CREATED, ENTRY_KIND_ROOM_DECISION_RELAYED, ENTRY_KIND_ROOM_IDENTITY_REVEALED,
   ENTRY_KIND_ROOM_LIFECYCLE_EVENT, ENTRY_KIND_ROOM_MEMBER_ADDED, ENTRY_KIND_ROOM_MEMBER_REMOVED,
+  ENTRY_KIND_ROOM_MUTE_ALL,
   ENTRY_KIND_ROOM_RECORDING_UPLOADED, ENTRY_KIND_ROOM_TRANSCRIPT_READY,
   ENTRY_KIND_RULE_SET_VERSION_CREATED, ENTRY_KIND_SANCTION_CREATED,
   ENTRY_KIND_SANCTION_EVENT_DELIVERY_FAILED, ENTRY_KIND_SANCTION_PUBLISHED,
@@ -94,25 +96,28 @@ pub struct RoomEventPayload {
   pub member_count: Option<i32>,
 }
 
-/// The 10 allowed `entry_kind` values for [`append_room_event`].
+/// The 13 allowed `entry_kind` values for [`append_room_event`].
 /// Any kind not in this set is rejected (ADR-008 integrity gate).
 #[cfg(feature = "full")]
 const ROOM_KINDS: &[&str] = &[
   ENTRY_KIND_ROOM_ARCHIVED,
   ENTRY_KIND_ROOM_BRIDGE_ERROR,
+  ENTRY_KIND_ROOM_CHAIR_OVERRIDE,
+  ENTRY_KIND_ROOM_CHAIR_TRANSFERRED,
   ENTRY_KIND_ROOM_CREATED,
   ENTRY_KIND_ROOM_DECISION_RELAYED,
   ENTRY_KIND_ROOM_IDENTITY_REVEALED,
   ENTRY_KIND_ROOM_LIFECYCLE_EVENT,
   ENTRY_KIND_ROOM_MEMBER_ADDED,
   ENTRY_KIND_ROOM_MEMBER_REMOVED,
+  ENTRY_KIND_ROOM_MUTE_ALL,
   ENTRY_KIND_ROOM_RECORDING_UPLOADED,
   ENTRY_KIND_ROOM_TRANSCRIPT_READY,
 ];
 
 /// Typed, kind-validated path to the governance log for Room lifecycle events.
 ///
-/// Accepts only the 10 `ENTRY_KIND_ROOM_*` kinds (ADR-008 integrity gate —
+/// Accepts only the 13 `ENTRY_KIND_ROOM_*` kinds (ADR-008 integrity gate —
 /// the bridge can only write Room::* kinds through this wrapper, never
 /// arbitrary entry kinds). Serialises `payload` to JSON and delegates to
 /// [`append`], which runs `scrub_json` and the hash-chain + signing steps.

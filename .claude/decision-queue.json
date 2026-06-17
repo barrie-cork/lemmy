@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-17T00:00:00Z",
+      "question": "Validate workspace compiles with --features full after M3 chair/mute consts + shim (task 1+2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "3 M3 chair/mute entry-kind consts added to crates/db_schema governance_log.rs + api shim re-exports + ROOM_KINDS extended 10→13. Laptop advisor runs cargo-check.sh --workspace --features full to confirm compile-accept.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m3-core-entry-kinds",
+      "phase_task": 1,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "47341df311f4-001"
+    }
+  ],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
