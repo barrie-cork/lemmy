@@ -128,7 +128,7 @@ All governance enums live in `crates/db_schema_file/src/enums.rs` as Rust `enum`
 
 > **`SeverityTier` ≠ `CaseSeverity`.** `severity` (`CaseSeverity`: Low/Medium/High/Critical) is the report's classification; `severity_tier` (`SeverityTier`: Minor/Moderate/Severe) is the *procedural* tier that, together with `status_tier` (`CaseStatusTier`: Founder/Regular/Probation), keys the `jury.panel_size.<status>.<severity>` config cascade. Both tiers are frozen at `admin_assign_jury` time (ADR-010 — no retroactive invalidation of in-flight juries).
 
-> **`entry_kind` is NOT an enum.** `governance_log.entry_kind` is plain `TEXT`. The 55 valid kinds are `pub const ENTRY_KIND_*: &str` constants in `crates/db_schema/src/source/governance/governance_log.rs` and the authoritative registry is `.claude/rules/governance-log-entry-kind-registry.md` (§13).
+> **`entry_kind` is NOT an enum.** `governance_log.entry_kind` is plain `TEXT`. The 72 valid kinds are `pub const ENTRY_KIND_*: &str` constants in `crates/db_schema/src/source/governance/governance_log.rs` and the authoritative registry is `.claude/rules/governance-log-entry-kind-registry.md` (§13).
 
 ---
 
@@ -469,9 +469,9 @@ Supporting infra (all in `inbox.rs`): `log_inbox_drop` (writes `federation_inbox
 
 ## 11. Entry-kind registry
 
-`governance_log.entry_kind` is plain `TEXT`; the **55 valid kinds** are `pub const ENTRY_KIND_*` in `crates/db_schema/src/source/governance/governance_log.rs`. The authoritative human-readable registry (kind → payload schema → which sub-phase emits it) is **`.claude/rules/governance-log-entry-kind-registry.md`** — do not duplicate it here; that file owns the list. (The separate `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` is the **harness-observability** JSONL sidecar — the advisor/retro-bypass trail — NOT a product governance-log surface; don't conflate the two.)
+`governance_log.entry_kind` is plain `TEXT`; the **72 valid kinds** are `pub const ENTRY_KIND_*` in `crates/db_schema/src/source/governance/governance_log.rs`. The authoritative human-readable registry (kind → payload schema → which sub-phase emits it) is **`.claude/rules/governance-log-entry-kind-registry.md`** — do not duplicate it here; that file owns the list. (The separate `docs/brehon-law-inspired-network/governance-log-kinds-jsonl.md` is the **harness-observability** JSONL sidecar — the advisor/retro-bypass trail — NOT a product governance-log surface; don't conflate the two.)
 
-Count by era (for traceability): 19 v0 + 4 Phase-6 federation outbound + 2 v1-AD-a config + 1 v1-AD-c rule-set + 7 v1-JM (incl. `JURY_DEADLOCK`) + 5 v1-SL-a + 7 v1-RT-r1 + 10 v1-federation-inbound (9 a + 1 b) = 55.
+Count by era (for traceability): 19 v0 + 4 Phase-6 federation outbound + 2 v1-AD-a config + 1 v1-AD-c rule-set + 6 v1-JM-a + 1 v1-JM-c + 5 v1-SL-a + 7 v1-RT-r1 + 9 v1-federation-inbound-a + 1 v1-federation-inbound-b + 10 m2-core-hook + 2 m2-late-1 + 2 m2-late-b-actor = 69 (M3 adds 3 chair/mute kinds at `m3-core-entry-kinds` → 72).
 
 ---
 
