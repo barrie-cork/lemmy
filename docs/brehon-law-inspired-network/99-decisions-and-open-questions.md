@@ -652,6 +652,20 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 - **Research basis:** `docs/research/matrix-homeserver-selection-2026.md` (Perplexity deep research, 2026-06-01, 42 sources).
 - **Blocks resolved:** V2a implementation start (was the primary gate).
 
+### OQ-V2-04 — Town-hall recording storage — ✅ RESOLVED 2026-06-17
+
+- **Opened:** 2026-04-17 (V2/messaging.md §3.7); parked for the V2c/M3 sub-PRD until recording volumes + operational constraints were known.
+- **Owner:** solo dev
+- **Question:** Where do town-hall recordings live (separate MinIO/S3 store, pict-rs extension, or Matrix media repo with hash-chained URL), and what is a recording — an evidentiary governance record or a convenience replay? The answer cascades to storage backend, access-control bar, and the recording success criteria.
+- **Resolution:** **Dedicated S3-compatible object store; MinIO self-host as the reference backend** (AGPL-3.0, same licence — no drift), with the bridge speaking a generic S3 API so an operator can swap real S3/R2. The recording is an **evidentiary store with replay-grade access** (M3 PRD D5 = Option C):
+  - The recording's `content_sha256` lands on the governance hash chain via `Room::RecordingUploaded` **regardless of framing** — it is inherent to the M2-registered entry shape — so the recording is **tamper-evidenced by design**.
+  - **Access control floor:** participant-floor authorization on fetch (cannot be zero under `always_pseudonym`, or a pseudonymous town hall's recording would leak). The **strict presigned-URL ACL + retention + tombstone + GDPR-erasure machinery is DEFERRED** as an additive upgrade to a later sub-phase if the pilot shows it's needed — additive (presigned URLs in front of an existing bucket), not a migration.
+  - **Plane separation (ADR-004):** MinIO is plane-separated from the content-plane pict-rs. Rejected: pict-rs (image-optimized; MP4 off-label; blurs the ADR-004 boundary M2 kept clean) and Matrix media repo (no plane separation, no operator-swap story).
+  - **Recording is optional (M3 PRD D6):** gated by `record_town_halls` (default false), independent of `rtc_enabled`. MinIO deploys only when recording is enabled; a town hall can run with recording off.
+- **Cross-instance note (OQ-V2-07):** recordings stay **instance-local** — no cross-instance recording-store federation.
+- **Resolution basis:** `.claude/PRPs/reports/m3-recording-storage-considerations-2026-06-15.md` (option trade-offs A/B/C) + user decision 2026-06-17.
+- **Blocks resolved:** M3 (town halls + RTC) PRD authorship — was the only OQ gating it. M3-core (Phases 1–6) now has no blocking dependency. See `.claude/PRPs/prds/m3-town-halls-rtc.prd.md`.
+
 ### OQ-ADR016-01 — B-fetch protocol shape and per-app adapter SPI
 
 - **Opened:** 2026-05-23 (ADR-016)
@@ -709,6 +723,9 @@ Numbered, dated, with owner + target resolution date. Resolve or escalate — op
 ## Changelog
 
 Append-only record of spec changes. When any of the numbered docs gets a non-trivial revision, add an entry here.
+
+**2026-06-17** — *99, v2-messaging-rtc.prd.md, m3-town-halls-rtc.prd.md* (OQ-V2-04 resolution + M3 PRD authored)
+**OQ-V2-04 (town-hall recording storage) RESOLVED — dedicated S3-compatible store (MinIO reference backend, AGPL-3.0); recording is an evidentiary store with replay-grade access (M3 PRD D5 = Option C); recording is optional behind `record_town_halls` (D6).** `content_sha256` lands on the chain regardless (tamper-evidenced by design); participant-floor fetch authorization now, strict presigned-URL ACL deferred as an additive upgrade. Plane-separated from content-plane pict-rs (ADR-004). Added a dedicated `### OQ-V2-04` resolution block above (the OQ previously had no heading — lived only in the umbrella PRD table + research §3.7). M3 town-halls/RTC sub-PRD authored at `.claude/PRPs/prds/m3-town-halls-rtc.prd.md` (full town-hall RTC, pilot-driven; 3 new chair/mute entry kinds + first emission of the M2-registered `room_recording_uploaded`; count 69→72). Was the only OQ gating M3 PRD authorship.
 
 **2026-06-13** — *99, v2-messaging-rtc.prd.md* (Phase 7 re-scope-in + OQ-ADR016-03 resolution)
 **OQ-ADR016-03 (B-actor link-flow) RESOLVED — lean adopted as-written; Phase 7 (B-actor) brought back into scope.** User reversed the 2026-06-07 Phase-7-out-of-scope decision this session and resolved OQ-ADR016-03 at the `m2-late-b-actor` pre-planning gate, the same way OQ-ADR016-02/-04 were resolved at the m2-late gate (adopt the documented standing lean). Four sub-answers ratified: (a) OAuth-style app→Brehon redirect with a one-time dual-signed link-claim (bridge-callback reference flow reuses `BRIDGE_CALLBACK_SECRET`); (b) both sides store their half — Brehon canonical `actor_app_link` table keyed `(brehon_actor_id, app_id, app_local_id)`, app stores inverse; (c) dual-signed claim (Brehon ed25519 + app countersign), no unilateral re-pointing; (d) unilateral prospective unlink with `revoked_at`, historical attributions retained per ADR-008. OQ now first-blocks only the first non-Matrix app integration ADR (the M2 Matrix/bridge reference scope is covered). Plan authored at `.claude/PRPs/plans/m2-late-b-actor.plan.md`.
