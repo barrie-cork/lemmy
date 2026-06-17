@@ -262,7 +262,7 @@
     }
   },
   "implementation_steering": {
-    "next_logical_sub_phase": "Run /prp-plan on the M2-core sub-PRD (.claude/PRPs/prds/m2-governance-triggered-rooms.prd.md) — Phase 1 (governance_case_after_transition hook). M2-core is unblocked (no OQ gates); it adds the case-transition hook + room provisioning + 10 Room::* hash-chain entries. M2-late (B-publish sanction propagation) is gated on OQ-ADR016-02 + OQ-ADR016-04. M3 (town halls/RTC) follows M2.",
+    "next_logical_sub_phase": "Run /prp-plan on the M3 sub-PRD (.claude/PRPs/prds/m3-town-halls-rtc.prd.md) — the final V2 messaging cluster (town halls + RTC). M3-core (Phases 1-6) is unblocked: OQ-V2-04 resolved 2026-06-17 (recording = MinIO evidentiary store, replay-grade access, optional behind record_town_halls). Full town-hall RTC: stage mode, dual-sourced chair, FIFO raised-hand queue, mic-passing, federation-wide emergency mute <500ms, anonymous town halls, optional recording-as-artefact. Adds 3 chair/mute entry kinds + first emission of the M2-registered room_recording_uploaded (count 69->72). Pilot-driven: success = a real pilot town hall runs end-to-end. M2 fully shipped (PR #191 core; #196/#197 late).",
     "state_as_of_2026_06_05": {
       "milestone_status": "M1 done (PRs #177 m1-b, #179 m1-a). M2 needs_prd. M3 needs_prd (after M2).",
       "v1": "CLOSED — all lanes + meta-lanes shipped; close-out Phases 0-8 done (PR #182 deps-r2 webmention inline merged 2026-06-05 @ 772684e1f). See v1_shipped block.",

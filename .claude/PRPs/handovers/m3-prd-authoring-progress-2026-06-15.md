@@ -1,3 +1,9 @@
+> **✅ TOMBSTONE 2026-06-17 — RESOLVED, DO NOT RESUME.** D5 answered: **Option C**
+> (evidentiary store, replay-grade access). D6 added: recording **optional** behind
+> `record_town_halls`. PRD authored at `.claude/PRPs/prds/m3-town-halls-rtc.prd.md`;
+> OQ-V2-04 resolved in `99-...md` + umbrella PRD; roadmap pointer → M3 `/prp-plan`.
+> Commit `085a51b9d`. Next action is `/prp-plan` on the M3 PRD, not this file.
+
 # M3 PRD Authoring — Session Progress (PAUSED on recording-purpose decision)
 
 **Author:** advisor session on `governance-v0`
