@@ -15,6 +15,14 @@
 #  - extra_hosts: makes host.docker.internal resolve to the host gateway so
 #    the URL is stable across network recreation (the bridge is in a separate
 #    compose project, published on host port 8082).
+# Pin the Compose project name so it never derives from the deploy dir
+# basename. /srv/brehon-fork/docker and /srv/docker both default to project
+# "docker" otherwise, colliding on container names (e.g. docker-postgres-1).
+# On 2026-06-13 this stack seized docker-postgres-1 and took the homeserver
+# infra PG16 (agent_grey/n8n/django_prod) offline for 4 days. See homeserver
+# PMD #305. Infra side pins name: homeserver in its docker-compose.yml.
+name: brehon
+
 services:
   lemmy:
     extra_hosts:
