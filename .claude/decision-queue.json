@@ -7492,6 +7492,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-062"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-17T00:00:00Z",
+      "question": "Validate workspace compiles with --features full after M3 chair/mute consts + shim (task 1+2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "3 M3 chair/mute entry-kind consts added to crates/db_schema governance_log.rs + api shim re-exports + ROOM_KINDS extended 10→13. Laptop advisor runs cargo-check.sh --workspace --features full to confirm compile-accept.",
+      "commands": [
+        "./scripts/brehon/cargo-check.sh --workspace --features full"
+      ],
+      "branch": "phase-m3-core-entry-kinds",
+      "phase_task": 1,
+      "answer": "cargo-check.sh --workspace --features full passed (Finished, no errors); lemmy_server + lemmy_api shim + ROOM_KINDS(13) gate compile-accept. Level-5 invariants pass: db_schema=72, shim=72, no dup literals, ROOM_KINDS len=13.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T00:35:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "47341df311f4-001"
     }
   ]
 }

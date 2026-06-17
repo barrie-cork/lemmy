@@ -247,6 +247,13 @@ pub const ENTRY_KIND_ROOM_DECISION_RELAYED: &str = "room_decision_relayed";
 pub const ENTRY_KIND_ROOM_BRIDGE_ERROR: &str = "room_bridge_error";
 pub const ENTRY_KIND_ROOM_LIFECYCLE_EVENT: &str = "room_lifecycle_event";
 
+// M3 town-hall chair/mute kinds (3) — zero-migration; entry_kind is TEXT.
+// Call sites land bridge-side in M3 phase 3 (_CHAIR_TRANSFERRED / _CHAIR_OVERRIDE)
+// and phase 4 (_MUTE_ALL) via append_room_event. Pre-landed-const exemption.
+pub const ENTRY_KIND_ROOM_CHAIR_TRANSFERRED: &str = "room_chair_transferred";
+pub const ENTRY_KIND_ROOM_CHAIR_OVERRIDE: &str = "room_chair_override";
+pub const ENTRY_KIND_ROOM_MUTE_ALL: &str = "room_mute_all";
+
 // m2-late-1 additions: B-publish sanction propagation (Task 3). Call sites
 // land in Task 4 enqueue_sanction_event (sanction_publisher.rs) per the
 // pre-landed-const exemption. SANCTION_PUBLISHED fires when ≥1 subscriber
