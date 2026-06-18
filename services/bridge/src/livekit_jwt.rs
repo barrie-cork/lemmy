@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Context, Result};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -29,14 +29,16 @@ pub fn mint_access_token(
     identity: &str,
     ttl_secs: u64,
 ) -> Result<String> {
+    ensure!(ttl_secs > 0, "ttl_secs must be > 0");
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs();
+    let exp = now.checked_add(ttl_secs).context("exp overflow")?;
     let claims = Claims {
         iss: api_key.to_string(),
         sub: identity.to_string(),
         nbf: now,
-        exp: now + ttl_secs,
+        exp,
         video: VideoGrant {
             room: room.to_string(),
             room_join: true,
