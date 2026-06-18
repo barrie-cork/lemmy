@@ -12,8 +12,8 @@
       ],
       "context": "Task 1 adds rtc_enabled row-seed migration + BridgeStatus.rtc_enabled read. Worker cannot run cargo on the daemon. Laptop advisor must run the commands and mutate this entry.",
       "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
       ],
       "branch": "junior/role-impl-task-m3-core-infra-task1-rtc-enabled-seed-see-claude-prps-briefs-m3-core-infra-impl-1-md-693",
       "phase_task": 1,
@@ -26,6 +26,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "1f4dd3f1a082-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Run Linux cargo validate for bridge_room RTC-state columns (task 2).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (bridge_room RTC-state cols + idempotent ALTER guards) committed. Bridge compiles on Linux only. Laptop advisor must run cargo-linux.sh check + clippy + test.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "./scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "./scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml bridge_room"
+      ],
+      "branch": "junior/role-impl-task-m3-core-infra-task2-bridge-room-rtc-cols-see-claude-prps-briefs-m3-core-infra-impl-2-md-694",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "0f839bf58094-001"
     }
   ],
   "resolved": [
