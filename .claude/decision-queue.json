@@ -7739,6 +7739,40 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-18T20:22:09Z",
       "id": "a3d0e9941441-067"
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Bridge->binary chain-emission for stage-mode chair entries: build the bridge-side outbound client, or does one already exist?",
+      "options": [
+        "build-bridge-client: build services/bridge/src/room_event_client.rs POSTing RoomEventRequest to /api/v4/governance/room-event with the bridge_callback_secret Bearer (mirror bridge_notify.rs)",
+        "reuse-existing: an existing bridge client covers it"
+      ],
+      "context": "Recon (m3-core-stage-mode.plan.md Task 5, §19 note 1): the binary half EXISTS + is mounted (room_event_handler.rs::handle_room_event -> append_room_event, route routes/src/lib.rs:484, Bearer). The gap is purely the bridge-side outbound HTTP client: config.rs:35-40 brehon_room_event_url is #[allow(dead_code)] config-only; room_provisioner.rs:391,439,463 defer emission. No bridge code POSTs to the binary today.",
+      "answer": "build-bridge-client. Per clarify a3d0e9941441-066 (advisor 2026-06-18, option (a)). Task 5 builds services/bridge/src/room_event_client.rs mirroring bridge_notify.rs:62-72; no binary handler change beyond the Task-1 DTO. The brehon_room_event_url default is fixed to include /api/v4 (currently missing).",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-18T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "da838b8fc109-001"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-18T00:00:01Z",
+      "question": "The binary RoomEventPayload cannot carry chair-action metadata ({action,target_pseudonym} / {from_pseudonym,to_pseudonym,at}); extend it (trivial DTO in crates/**), or find another carrier?",
+      "options": [
+        "extend-dto: add 5 optional #[serde(default, skip_serializing_if=Option::is_none)] fields to RoomEventPayload + chair_pseudonym to CaseTransitionEvent (Task 1, Windows-validated)",
+        "alternative-carrier: encode chair metadata into existing fields (e.g. lifecycle_stage JSON)"
+      ],
+      "context": "RoomEventPayload {case_id, matrix_room_id, lifecycle_stage, member_count} (governance_log.rs:91-97) has no field for the chair payloads Success Criteria lines 139-140 mandate. The binary constructs ZERO RoomEventPayload literals (rg empty) so optional serde-default fields are non-breaking. This is the one in-scope crates/** touch (bootstrap tripwire 'trivial DTO' carve-out). ADVISOR GATE-1: ratify the trivial-DTO crates touch + the 3-crate Task-1 ceiling exception (api/api_common/api_utils, single mechanical field propagation).",
+      "answer": "extend-dto (recommended). Add the 5 optional chair-action fields + CaseTransitionEvent.chair_pseudonym (Task 1). skip_serializing_if keeps existing m2-core-hook room emissions' hashed JSON byte-identical; serde(default) keeps deserialise back-compat. Do NOT split Task 1 (splitting leaves lemmy_api_utils non-compiling — bridge_notify.rs:136 needs chair_pseudonym: None in the same commit). Pre-seeded planner recommendation; advisor ratifies at gate-1 plan approval.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-18T00:00:01Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "da838b8fc109-002"
     }
   ]
 }
