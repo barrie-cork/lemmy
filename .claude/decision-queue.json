@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "3a93f5eebf23-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-18T00:00:00Z",
-      "question": "Validate Task 1 cargo check + clippy on laptop",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 (RoomEventPayload chair fields + CaseTransitionEvent.chair_pseudonym) committed. 3 files changed: governance_log.rs (5 optional fields + serde roundtrip test), api_common/governance.rs (chair_pseudonym on CaseTransitionEvent), bridge_notify.rs (chair_pseudonym: None in constructor). No cargo run on daemon per brief §4.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
-      ],
-      "branch": "junior/role-impl-task-m3-core-stage-mode-task1-roomeventpayload-chair-fields-see-claude-prps-briefs-m3-core-stage-mode-imp-708",
-      "phase_task": "m3-core-stage-mode task 1",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "e2e_filter": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
@@ -7816,6 +7788,33 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-18T20:48:21Z",
       "id": "a3d0e9941441-068"
+    },
+    {
+      "id": "3a93f5eebf23-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Validate Task 1 cargo check + clippy on laptop",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (RoomEventPayload chair fields + CaseTransitionEvent.chair_pseudonym) committed. 3 files changed: governance_log.rs (5 optional fields + serde roundtrip test), api_common/governance.rs (chair_pseudonym on CaseTransitionEvent), bridge_notify.rs (chair_pseudonym: None in constructor). No cargo run on daemon per brief §4.",
+      "answer": "PASS. cargo check --workspace --features full exit 0. clippy -D warnings surfaced 19 errors but ALL in files Task 1 NEVER touched (actor_app_link.rs x10, sanction_publisher.rs x3, submit_jury_vote.rs x3, state/mod/messaging_config/bridge_auth) — pre-existing m2-late-b-actor baseline debt (shipped 2026-06-14, never caught under Shape-G-residual-only diff-scoped review). Task 1 diff (governance_log/governance/bridge_notify) has ZERO overlap with the 19-error files and is itself clippy-clean. Per user 2026-06-19: pass Task 1 on check; baseline debt tracked as separate chore/governance-clippy-debt on governance-v0.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T23:00:59.632235Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task1-roomeventpayload-chair-fields-see-claude-prps-briefs-m3-core-stage-mode-imp-708",
+      "phase_task": "m3-core-stage-mode task 1",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "e2e_filter": null
     }
   ]
 }
