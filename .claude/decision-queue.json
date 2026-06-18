@@ -3,6 +3,32 @@
   "pending": [
     {
       "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Run cargo-check + cargo-clippy on the laptop to validate Task 1 (rtc_enabled seed + BridgeStatus field).",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 adds rtc_enabled row-seed migration + BridgeStatus.rtc_enabled read. Worker cannot run cargo on the daemon. Laptop advisor must run the commands and mutate this entry.",
+      "commands": [
+        "cmd //c \"scripts\\brehon\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\brehon\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+      ],
+      "branch": "junior/role-impl-task-m3-core-infra-task1-rtc-enabled-seed-see-claude-prps-briefs-m3-core-infra-impl-1-md-693",
+      "phase_task": 1,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1f4dd3f1a082-001"
+    },
+    {
+      "from": "impl",
       "kind": "validate-pending-laptop-linux",
       "timestamp": "2026-06-18T00:00:00Z",
       "question": "Run Linux cargo validate for bridge_room RTC-state columns (task 2).",
