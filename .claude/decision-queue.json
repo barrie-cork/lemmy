@@ -2,6 +2,33 @@
   "schema_version": 3,
   "pending": [
     {
+      "id": "8f77bcfc296e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T21:36:55Z",
+      "question": "Run bridge cargo-linux check+clippy+test for task 2 can_publish change",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (m3-core-stage-mode) modifies services/bridge/src/livekit_jwt.rs. Bridge compiles on Linux only (ruma-common E0119 on Windows). Laptop advisor must run cargo-linux.sh to validate.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task2-livekit-can-publish-see-claude-prps-briefs-m3-core-stage-mode-impl-2-md-709",
+      "phase_task": "2",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
       "id": "3a93f5eebf23-001",
       "from": "impl",
       "kind": "validate-pending-laptop",
