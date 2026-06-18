@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-18T00:00:00Z",
-      "question": "cr-4b E0308 SessionMiddleware Data double-deref fix: run e2e validation for the m3_actor_pseudonym route test.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Fixed E0308 in crates/server/tests/e2e/governance.rs:5476 — SessionMiddleware::new((*context).clone()) -> (**context).clone() (Data<LemmyContext> derefs to Arc<LemmyContext>, one * short). Awaiting laptop e2e validation.",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/m3-cr4b-e2e.log 2>&1\""
-      ],
-      "branch": "phase-m3-core-infra",
-      "phase_task": "cr-4b",
-      "e2e_filter": "test(m3_actor_pseudonym)",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "4f481a50a459-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
@@ -7710,6 +7683,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "9d1c395b50fa-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "cr-4b E0308 SessionMiddleware Data double-deref fix: run e2e validation for the m3_actor_pseudonym route test.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Fixed E0308 in crates/server/tests/e2e/governance.rs:5476 — SessionMiddleware::new((*context).clone()) -> (**context).clone() (Data<LemmyContext> derefs to Arc<LemmyContext>, one * short). Awaiting laptop e2e validation.",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/m3-cr4b-e2e.log 2>&1\""
+      ],
+      "branch": "phase-m3-core-infra",
+      "phase_task": "cr-4b",
+      "e2e_filter": "test(m3_actor_pseudonym)",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cr-4b e2e validated directly by advisor-laptop from throwaway worktree: m3_actor_pseudonym route + idempotent tests PASS (2 passed). SessionMiddleware **context double-deref compiles. Recorded in .claude/PRPs/reports/m3-core-infra-verify.md. PR #201 merged c3a13570b.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T20:09:47.108692+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "4f481a50a459-001"
     }
   ]
 }
