@@ -2318,3 +2318,17 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **user gate 5:** APPROVED (pre-merge confirm verified)
 - **findings summary:** CR-6, CR-8, CR-9 (major bridge findings) addressed in dcb5d3723 + verified by CR recheck
 - **Telegram ping:** skipped (notification-only scope; pings are notifications not gating signals)
+
+## bm: poll-cr — 2026-06-18T17:34:02Z
+- **PR:** #201 (feat(rtc,bridge): M3 RTC stack deployable+optional)
+- **head SHA:** 9202664da (first poll — no prior to compare)
+- **CR comments seen:** 10 (1 review / 8 inline / 1 issue-walkthrough)
+- **Copilot:** review request returned "unable to review — quota limit reached"; 0 findings ingested
+- **Actionable findings ingested:** 8 (0 from walkthrough/pre-merge — pre-merge checks 5/5 passed)
+- **New findings this poll:** 8 (cr-1 … cr-8)
+- **Findings addressed since last poll:** 0 (first poll)
+- **Counters:** critical 0/0/0 | major 6/0/0 | medium 0/0/0 | low 2/0/0 | nit 0/0/0
+- **Recommendation:** pending (bm-poll-cr does not finalize buckets/recommendation; bm-triage owns)
+- **YAML:** .claude/PRPs/reviews/pr-201-findings.yaml (6547 bytes)
+- **walkthrough_summary:** "M3 RTC stack — LiveKit HS256 JWT minting, 3 RTC bridge_room cols w/ idempotent backfill, rtc_enabled=false seed migration, GET /bridge/actor-pseudonym endpoint, profile-gated docker-compose RTC stack, e2e+unit coverage." Pre-merge checks ✅ 5/5. Review profile: ASSERTIVE.
+- **Notes:** All 8 finding files present in PR diff (no outside-diff findings). ADR flags for gate-3 triage: cr-2 (ADR-011 source-trace wording on AGPL-NOTICE 'pinned' images), cr-3 (ADR-015 scrub/redaction on returned pseudonym — verify CR claim vs whether pseudonym is already the redacted value, per falsifiable-hypothesis discipline). Two infra-correctness major findings worth advisor attention: cr-6 (per-open ALTER TABLE lock risk), cr-7 (blank LiveKit secret accepted as Some("")).
