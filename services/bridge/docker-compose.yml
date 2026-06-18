@@ -53,7 +53,7 @@ services:
   livekit:
     image: livekit/livekit-server:v1.8   # Apache-2.0; pin exact tag at impl
     profiles: ["rtc"]
-    command: ["--config", "/etc/livekit.yaml"]
+    command: ["--dev"]   # standalone dev mode; uses devkey/devsecret (matches lk-jwt env). No mounted config in v0.
     ports: ["7880:7880", "7881:7881"]
     networks: [bridge-net]
   lk-jwt-service:
@@ -66,7 +66,7 @@ services:
     ports: ["8085:8080"]           # host 8085 — avoids the bridge's 8080
     networks: [bridge-net]
   element-call:
-    image: ghcr.io/element-hq/element-call:0.6.0     # AGPL-3.0; pin at impl
+    image: ghcr.io/element-hq/element-call:v0.6.0    # AGPL-3.0; pinned (v-prefix) — verified via docker manifest inspect 2026-06-18
     profiles: ["rtc"]
     ports: ["8086:8080"]
     networks: [bridge-net]
