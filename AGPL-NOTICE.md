@@ -44,25 +44,25 @@ The M1 release introduces two additional components deployed alongside the Lemmy
 
 ## Additional components — M3 RTC stack
 
-The M3 release adds three profile-gated RTC (real-time-communication) sidecars to the bridge docker-compose stack (`services/bridge/docker-compose.yml`, under `profiles: ["rtc"]`). They start only when an operator explicitly enables the `rtc` profile; a governance-only instance never boots them. Brehon does not modify any of these images — each is used as a pinned upstream Docker image.
+The M3 release adds three profile-gated RTC (real-time-communication) sidecars to the bridge docker-compose stack (`services/bridge/docker-compose.yml`, under `profiles: ["rtc"]`). They start only when an operator explicitly enables the `rtc` profile; a governance-only instance never boots them. Brehon does not modify any of these images — each is used as a version-tagged upstream Docker image.
 
 ### LiveKit Server
 
 - **What it is:** a WebRTC SFU (Selective Forwarding Unit) media server (`livekit/livekit-server`) that routes audio/video streams for group calls.
-- **License:** LiveKit Server is licensed under the Apache License 2.0. Brehon does not modify the LiveKit source; it is used as a pinned Docker image (`livekit/livekit-server:v1.8`). Source: `https://github.com/livekit/livekit`.
+- **License:** LiveKit Server is licensed under the Apache License 2.0. Brehon does not modify the LiveKit source; it is used as a version-tagged Docker image (`livekit/livekit-server:v1.8`). Source: `https://github.com/livekit/livekit`.
 - **AGPL §13 applicability:** N/A — LiveKit is Apache-2.0 (a permissive licence), not AGPL. The §13 network-use source-disclosure clause does not apply to permissively-licensed components. Operators should be aware that LiveKit's own Apache-2.0 terms govern this component.
 
 ### lk-jwt-service
 
 - **What it is:** a LiveKit JWT authentication helper (`ghcr.io/element-hq/lk-jwt-service`) that mints LiveKit access tokens for authenticated callers.
-- **License:** lk-jwt-service is licensed under the Apache License 2.0. Brehon does not modify its source; it is used as a pinned Docker image (`ghcr.io/element-hq/lk-jwt-service:0.3.0`). Source: `https://github.com/element-hq/lk-jwt-service`.
+- **License:** lk-jwt-service is licensed under the Apache License 2.0. Brehon does not modify its source; it is used as a version-tagged Docker image (`ghcr.io/element-hq/lk-jwt-service:0.3.0`). Source: `https://github.com/element-hq/lk-jwt-service`.
 - **AGPL §13 applicability:** N/A — Apache-2.0 (permissive), not AGPL. The §13 source-disclosure clause does not apply. Operators should be aware that lk-jwt-service's own Apache-2.0 terms govern this component.
 
 ### Element Call
 
 - **What it is:** a WebRTC group-call user interface (`ghcr.io/element-hq/element-call`) served as a web app for in-call participants.
-- **License:** Element Call is licensed under the GNU Affero General Public License version 3 (AGPL-3.0) — the **same licence as this repository**. Brehon does not modify the Element Call source; it is used as a pinned Docker image (`ghcr.io/element-hq/element-call:0.6.0`). Source: `https://github.com/element-hq/element-call`.
-- **AGPL §13 applicability:** applies. Element Call is AGPL-3.0, so operators deploying it as part of the Brehon RTC stack are subject to the §13 network-use source-disclosure obligation for it. That obligation is honoured via this notice plus the publicly-available upstream Element Call repository at the pinned image tag; Brehon ships no modifications to it.
+- **License:** Element Call is licensed under the GNU Affero General Public License version 3 (AGPL-3.0) — the **same licence as this repository**. Brehon does not modify the Element Call source; it is used as a version-tagged Docker image (`ghcr.io/element-hq/element-call:v0.6.0`). Source: `https://github.com/element-hq/element-call`.
+- **AGPL §13 applicability:** applies. Element Call is AGPL-3.0, so operators deploying it as part of the Brehon RTC stack are subject to the §13 network-use source-disclosure obligation for it. That obligation is honoured via this notice plus the publicly-available upstream Element Call repository at the version-tagged image; Brehon ships no modifications to it.
 
 ## Weekly upstream rebase log
 
