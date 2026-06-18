@@ -7570,6 +7570,41 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-065"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-18T00:51:39Z",
+      "question": "M3-core-infra: where does the ADR-015 pseudonym->JWT seam live, given the bridge has no DbPool and the LiveKit signing secret is bridge-side?",
+      "options": [
+        "split-seam: allocator call binary-side (Brehon /brid/actor-pseudonym endpoint, Task 4) + JWT sub-assignment bridge-side (mint_access_token, Task 3); bridge->endpoint fetch deferred to Phase 3",
+        "mint fn entirely binary-side (would require the LIVEKIT_API_SECRET to move binary-side, contradicting brief task 3 + clarify a3d0e9941441-063)"
+      ],
+      "context": "Brief 4.1 says 'the JWT mint fn MUST call get_or_create(pool, person_id)'. Mechanically impossible in one bridge-side fn: get_or_create takes a DbPool and lives in crates/api/api; brehon-bridge is a separate process with no DbPool and no lemmy_* deps (services/bridge/Cargo.toml). The JWT is signed with LIVEKIT_API_SECRET, which the brief + clarify a3d0e9941441-063 put bridge-side. Planner resolved to the split-seam (option 1): both halves present + grep-able in Phase 1 per handover 4.3 DoD; mirrors the project pre-landed-const exemption. Surfaced for advisor gate-1 review since this is the load-bearing ADR-015 architecture for the whole M3 cluster.",
+      "options_note": "planner recommendation = option 1 (split-seam)",
+      "answer": "Option 1 (split-seam). Plan m3-core-infra.plan.md 4 + 19 + Tasks 3/4 implement it: Task 4 lands the get_or_create allocator callsite in the Brehon get_bridge_actor_pseudonym endpoint; Task 3 lands the sub=pseudonym assignment in the bridge mint_access_token; the bridge->endpoint fetch + RTC-provisioning gate are Phase 3. 15.7 grep DoD enforces both halves. Advisor to confirm at gate 1.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-18T00:51:39Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "8a837df707b1-001"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-18T00:51:39Z",
+      "question": "M3-core-infra complexity score 13 exceeds the Sonnet split threshold (8) — split into m3-core-infra-1 + -2, or proceed as one plan?",
+      "options": [
+        "proceed-as-one (user pre-decided 2026-06-18, brief 2: M3 Phase 1 is the natural deploy-unit)",
+        "split into two sub-phases"
+      ],
+      "context": "Plan 5.1 computes 13: tasks-above-5 (+1) + 1 row-seed migration (+2) + 4 crates (+4) + 2 e2e edits (+6). The e2e +3 weight is applied to two SMALL additive tests (clean-posture + pseudonym-endpoint), not the >8000-line-file edit-hang risk that factor targets. Sonnet target permits a planner proceed answer (not the forbidden non-Sonnet precedent override). User explicitly chose one-plan on 2026-06-18.",
+      "answer": "Option 1 (proceed-as-one). User decision 2026-06-18 (brief 2) governs; phase is the natural deploy-unit; cohort [P] markers keep individual Junior dispatches small; score inflation is the e2e-weight artefact, not real hang risk.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-18T00:51:39Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "8a837df707b1-002"
     }
   ]
 }
