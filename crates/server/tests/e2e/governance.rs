@@ -5398,13 +5398,11 @@ async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::Lem
 #[tokio::test(flavor = "multi_thread")]
 async fn m3_actor_pseudonym_endpoint_idempotent_opaque() -> lemmy_utils::error::LemmyResult<()> {
   use lemmy_api::governance::actor_pseudonym_helper;
-  use lemmy_db_schema::{
-    source::{
-      instance::Instance,
-      person::{Person, PersonInsertForm},
-    },
-    traits::Crud,
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    person::{Person, PersonInsertForm},
   };
+  use lemmy_diesel_utils::traits::Crud;
 
   let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
   let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
