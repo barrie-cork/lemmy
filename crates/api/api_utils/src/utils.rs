@@ -1002,7 +1002,8 @@ pub fn send_webmention(post: Post, community: &Community, context: Data<LemmyCon
           for seg in part.split(';') {
             let seg = seg.trim();
             if seg.starts_with('<') && seg.ends_with('>') {
-              href = Some(seg[1..seg.len() - 1].to_owned());
+              // seg is ASCII-guarded by the starts/ends check; get() is always Some here
+              href = seg.get(1..seg.len() - 1).map(str::to_owned);
             } else if seg.eq_ignore_ascii_case("rel=\"webmention\"")
               || seg.eq_ignore_ascii_case("rel=webmention")
             {
