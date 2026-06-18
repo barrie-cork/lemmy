@@ -200,7 +200,11 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
-  // m2-late-1 sanction_event + sanction_subscriber (1 migration, bump 21 → 22)
+  // m3-core-infra task1 rtc_enabled config (1 migration, bump 21 → 22)
+  "2026-06-18-000000-0000_seed_rtc_enabled_config",
+  // m2-late-b-actor actor_app_link (1 migration, bump 22 → 23; window stays 21)
+  "2026-06-13-000000-0000_add_actor_app_link",
+  // m2-late-1 sanction_event + sanction_subscriber (1 migration)
   "2026-06-07-000000-0000_add_sanction_event",
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
@@ -229,10 +233,9 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   "2026-04-22-005541-0000_update_modlog_check_constraint",
   "2026-04-22-000300-0000_seed_v1_config_keys",
   "2026-04-22-000200-0000_add_case_applied_config_snapshot",
-  "2026-04-22-000100-0000_add_sponsor_allowlist",
-  "2026-04-22-000000-0000_add_rule_set_versions",
-  // Phase 1 — add_federation_attestations rolled out of the 21-entry window
-  // when m2-late-1 added add_sanction_event (bump 21 → 22, window stays 21).
+  // add_sponsor_allowlist + add_rule_set_versions rolled out when m3-core-infra
+  // added seed_rtc_enabled_config + m2-late-b-actor added add_actor_app_link
+  // (window stays 21, two entries dropped).
 ];
 
 /// Pre-flight for the Phase-1 round-trip tests: assert that
@@ -1100,25 +1103,24 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 15 m2-late-1 + M1-b + BUG-1 + JM-a + JM-d Task 1 + SL-b + RT-r1 +
-  //         federation-inbound-a migrations LIFO:
-  //   - 1 m2-late-1 migration: 2026-06-07-000000_add_sanction_event (newest; slot 1)
-  //   - 1 M1-b migration: 2026-06-03-000000_add_governance_messaging_config (slot 2)
-  //   - 1 BUG-1 migration: 2026-06-01-000000_backfill_author_defendant (slot 3)
-  //   - 1 federation-inbound-a migration: 2026-05-17-000000 (slot 4)
-  //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
-  //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
-  //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
-  //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
+  // Step 2: revert LIFO through all migrations post-dating JM-a:
+  //   - 1 m3-core-infra task1: 2026-06-18-000000_seed_rtc_enabled_config (newest; slot 1)
+  //   - 1 m2-late-b-actor:     2026-06-13-000000_add_actor_app_link (slot 2)
+  //   - 1 m2-late-1:           2026-06-07-000000_add_sanction_event (slot 3)
+  //   - 1 M1-b migration:      2026-06-03-000000_add_governance_messaging_config (slot 4)
+  //   - 1 BUG-1 migration:     2026-06-01-000000_backfill_author_defendant (slot 5)
+  //   - 1 federation-inbound-a: 2026-05-17-000000 (slot 6)
+  //   - 4 RT-r1 migrations:    2026-05-10-000000 through 2026-05-10-000300
+  //   - 2 SL-b migrations:     2026-05-03-000000 and 2026-05-03-000100
+  //   - 2 JM-d Task 1:         2026-04-27-000000 and 2026-04-27-000100
+  //   - 4 JM-a migrations:     2026-04-23-000000 through 2026-04-23-000200
   // The window must reach back through 2026-04-23-000000 (jury_mechanics_enums,
   // which creates the severity_tier enum the step-3 assertions probe).
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
-  // not fire. Limit must rise with each new phase that adds migrations
-  // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a;
-  // 13→14 here for M1-b governance-messaging; 14→16 here for BUG-1 backfill +
-  // m2-late-1 add_sanction_event — two migrations added since last bump).
-  schema_setup::run(Options::default().revert().limit(16), &db_url)?;
+  // not fire. Limit bumps: 4→6 (JM-d Task 3); 6→8 (SL-b); 8→12 (RT-r1);
+  // 12→13 (federation-inbound-a); 13→14 (M1-b); 14→16 (BUG-1 + m2-late-1);
+  // 16→18 (m2-late-b-actor add_actor_app_link + m3-core-infra seed_rtc_enabled_config).
+  schema_setup::run(Options::default().revert().limit(18), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
