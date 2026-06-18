@@ -1,61 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "8f77bcfc296e-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-18T21:36:55Z",
-      "question": "Run bridge cargo-linux check+clippy+test for task 2 can_publish change",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 (m3-core-stage-mode) modifies services/bridge/src/livekit_jwt.rs. Bridge compiles on Linux only (ruma-common E0119 on Windows). Laptop advisor must run cargo-linux.sh to validate.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
-      ],
-      "branch": "junior/role-impl-task-m3-core-stage-mode-task2-livekit-can-publish-see-claude-prps-briefs-m3-core-stage-mode-impl-2-md-709",
-      "phase_task": "2",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    },
-    {
-      "id": "b7dc83c781f7-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-18T23:04:08Z",
-      "question": "Run cargo-linux.sh check+clippy+test on services/bridge after fix-impl-1 dead_code allows",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-1 added #[allow(dead_code)] to VideoGrant, Claims, mint_access_token in livekit_jwt.rs and livekit_url/api_key/api_secret fields in config.rs. Bridge compiles on Linux only. Validate that clippy -D warnings is now clean.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
-      ],
-      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl1-livekit-dead-code-see-claude-prps-briefs-m3-core-stage-mode-fix-impl-1-710",
-      "phase_task": "fix-impl-1",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
@@ -7843,6 +7788,61 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-18T20:48:21Z",
       "id": "a3d0e9941441-068"
+    },
+    {
+      "id": "8f77bcfc296e-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T21:36:55Z",
+      "question": "Run bridge cargo-linux check+clippy+test for task 2 can_publish change",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (m3-core-stage-mode) modifies services/bridge/src/livekit_jwt.rs. Bridge compiles on Linux only (ruma-common E0119 on Windows). Laptop advisor must run cargo-linux.sh to validate.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task2-livekit-can-publish-see-claude-prps-briefs-m3-core-stage-mode-impl-2-md-709",
+      "phase_task": "2",
+      "answer": "PASS. cargo-linux.sh check + clippy -D warnings + test livekit_jwt all exit 0 on services/bridge (Docker rust:1.95). 4x dead_code suppressed via #[allow(dead_code)] on VideoGrant/Claims/mint_access_token + 3 livekit_* config fields (fix-impl #710, mirrors config.rs:39 idiom). 2 livekit_jwt tests pass (presenter can_publish=true + watcher can_publish=false). Symbols go live at Task 3 stage.rs.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T23:21:35.751626+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "b7dc83c781f7-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T23:04:08Z",
+      "question": "Run cargo-linux.sh check+clippy+test on services/bridge after fix-impl-1 dead_code allows",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 added #[allow(dead_code)] to VideoGrant, Claims, mint_access_token in livekit_jwt.rs and livekit_url/api_key/api_secret fields in config.rs. Bridge compiles on Linux only. Validate that clippy -D warnings is now clean.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl1-livekit-dead-code-see-claude-prps-briefs-m3-core-stage-mode-fix-impl-1-710",
+      "phase_task": "fix-impl-1",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS. cargo-linux.sh check + clippy -D warnings + test livekit_jwt all exit 0 on services/bridge (Docker rust:1.95). 4x dead_code suppressed via #[allow(dead_code)] on VideoGrant/Claims/mint_access_token + 3 livekit_* config fields (fix-impl #710, mirrors config.rs:39 idiom). 2 livekit_jwt tests pass (presenter can_publish=true + watcher can_publish=false). Symbols go live at Task 3 stage.rs.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T23:21:35.751626+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": null
     }
   ]
 }
