@@ -94,6 +94,67 @@ pub struct RoomEventPayload {
   pub matrix_room_id: Option<String>,
   pub lifecycle_stage: String,
   pub member_count: Option<i32>,
+  // M3 stage-mode chair-action metadata (opt; only chair entries set them).
+  // ADR-015: pseudonyms only — never person_id/username/MXID.
+  // ADR-016: metadata only — never room content.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub action: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub target_pseudonym: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub from_pseudonym: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub to_pseudonym: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub at: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::RoomEventPayload;
+
+  #[test]
+  fn room_event_payload_chair_fields_skip_serializing_if_none() -> Result<(), serde_json::Error> {
+    // room_chair_override: action + target_pseudonym present; transfer fields omitted
+    let override_payload = RoomEventPayload {
+      case_id: 1,
+      matrix_room_id: None,
+      lifecycle_stage: "room_chair_override".to_string(),
+      member_count: None,
+      action: Some("force_demote".to_string()),
+      target_pseudonym: Some("pseu_x".to_string()),
+      from_pseudonym: None,
+      to_pseudonym: None,
+      at: None,
+    };
+    let v = serde_json::to_value(&override_payload)?;
+    assert!(v.get("action").is_some());
+    assert!(v.get("target_pseudonym").is_some());
+    assert!(v.get("from_pseudonym").is_none());
+    assert!(v.get("to_pseudonym").is_none());
+    assert!(v.get("at").is_none());
+
+    // room_chair_transferred: transfer fields present; action + target_pseudonym omitted
+    let transfer_payload = RoomEventPayload {
+      case_id: 2,
+      matrix_room_id: None,
+      lifecycle_stage: "room_chair_transferred".to_string(),
+      member_count: None,
+      action: None,
+      target_pseudonym: None,
+      from_pseudonym: Some("pseu_a".to_string()),
+      to_pseudonym: Some("pseu_b".to_string()),
+      at: Some("2026-06-18T00:00:00Z".to_string()),
+    };
+    let v = serde_json::to_value(&transfer_payload)?;
+    assert!(v.get("from_pseudonym").is_some());
+    assert!(v.get("to_pseudonym").is_some());
+    assert!(v.get("at").is_some());
+    assert!(v.get("action").is_none());
+    assert!(v.get("target_pseudonym").is_none());
+
+    Ok(())
+  }
 }
 
 /// The 13 allowed `entry_kind` values for [`append_room_event`].
