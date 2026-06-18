@@ -1,0 +1,158 @@
+schema_version: 1
+pr: 201
+title: 'feat(rtc,bridge): M3 RTC stack deployable+optional — rtc_enabled flag, LiveKit pseudonym-JWT, bridge_room cols, actor-pseudonym endpoint, profile-gated sidecars'
+head: phase-m3-core-infra
+base: governance-v0
+opened_at: '2026-06-18T17:11:40Z'
+last_poll_at: '2026-06-18T17:34:37.001994Z'
+poll_count: 1
+last_polled_head_sha: 9202664da
+last_polled_fingerprint: 82b8f8025df09a8bea29ca6b0d405c04373dc2cabde768918fa52a1b2e69571d
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:23Z'
+  file: .claude/decision-queue.json
+  line: 7686
+  summary: Duplicate DQ id 'd7dcae059936-001' creates ambiguous canonical state (two resolved records, conflicting payloads)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742428
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Major/Quick-win. Keep one record per id: mutate original in place or assign a new id. NOTE: file is .claude/decision-queue.json (DQ artifact, not crates/) — impl/advisor disposition, not BM.'
+- id: cr-2
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:23Z'
+  file: AGPL-NOTICE.md
+  line: 47
+  summary: Images called 'pinned' use mutable tags (lines 47/52/58/64) — overstates reproducibility for AGPL source-trace; use digest refs or reword to 'version-tagged'
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742436
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Major/Quick-win. Also applies to lines 52,58,64. ADR-011-flag: source-disclosure accuracy for the 3 RTC sidecars — advisor weigh at gate-3.'
+- id: cr-3
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:23Z'
+  file: crates/api/api/src/governance/bridge_read.rs
+  line: 67
+  summary: BridgeActorPseudonym returns user-visible pseudonym (line 79) without scrub()/redaction before serialising — coding-guideline (ADR-015) violation
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742442
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Major. Also applies to line 79. ADR-015-flag: every user-visible string must pass through scrub()/redaction before leaving handler. Advisor weigh at gate-3 (pseudonym IS the redacted value — verify whether double-scrub is correct or a CR false-positive).'
+- id: cr-4
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:23Z'
+  file: crates/server/tests/e2e/governance.rs
+  line: 5424
+  summary: m3_actor_pseudonym_endpoint_idempotent_opaque validates actor_pseudonym_helper::get_or_create only; does not exercise the /bridge/actor-pseudonym route, bridge-secret auth, query extraction, or handler contract
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742443
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: CR Major/Heavy-lift. Refactor to make HTTP requests to /bridge/actor-pseudonym with bridge-secret auth and assert on response body.
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-18T17:26:24Z'
+  file: migrations/2026-06-18-000000-0000_seed_rtc_enabled_config/down.sql
+  line: 1
+  summary: WHERE on same line as DELETE FROM violates SQLFluff LT14 — can fail lint gate
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742446
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Minor/Quick-win (SQLFluff LT14). Committable suggestion: put WHERE + each AND predicate on its own line.'
+- id: cr-6
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:24Z'
+  file: services/bridge/src/bridge_room.rs
+  line: 30
+  summary: ALTER TABLE backfill (chair_id/queue_state/recording_config) runs on every bridge_room::open() — repeated schema-write locks risk 'database is locked' under concurrency (open() used in sanction_handler.rs L126/L408)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742464
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Major/Quick-win. Suggested: gate ALTER via PRAGMA table_info check (ensure_rtc_columns) or move to one-time init, not per-open.'
+- id: cr-7
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-18T17:26:24Z'
+  file: services/bridge/src/config.rs
+  line: 84
+  summary: from_env() converts empty LiveKit env vars to Some('') — RTC looks configured while LIVEKIT_API_SECRET is blank, weakening token-signing guarantees
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742469
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Major/Quick-win. Suggested: optional_non_empty() helper trims + rejects empty -> None for livekit_url/api_key/api_secret.'
+- id: cr-8
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-18T17:26:24Z'
+  file: services/bridge/src/livekit_jwt.rs
+  line: 40
+  summary: mint_access_token uses unchecked now+ttl_secs — large TTL overflows; ttl_secs==0 mints immediately-invalid tokens
+  cr_url: https://github.com/barrie-cork/lemmy/pull/201#discussion_r3437742482
+  adr: null
+  bucket: fix-in-pr
+  addressed_in: null
+  rationale: null
+  notes: 'CR Minor/Quick-win. Suggested: ensure!(ttl_secs > 0) + checked_add for exp.'
+counters:
+  critical:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 6
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 2
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 8
+    claude: 0
+    user: 0
+  total: 8
+merged_at: null
+merge_commit: null
+final_recommendation: null
+notes: 'First poll. CodeRabbit: review complete (ASSERTIVE profile), 8 actionable inline findings (6 major / 2 minor), pre-merge checks 5/5 passed (no walkthrough/pre-merge findings). Copilot: review request returned ''unable to review — quota limit reached''; zero Copilot findings ingested (re-poll later if quota resets). All 8 finding files are present in the PR diff (no outside-diff findings). Buckets left at default fix-in-pr; bm-triage + advisor own bucketing. ADR flags for gate-3: cr-2 (ADR-011 source-trace wording), cr-3 (ADR-015 scrub/redaction).'
