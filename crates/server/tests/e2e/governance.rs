@@ -5473,7 +5473,7 @@ async fn m3_actor_pseudonym_endpoint_route_authed() -> lemmy_utils::error::Lemmy
   let app = test::init_service(
     App::new()
       .app_data(context.clone())
-      .wrap(SessionMiddleware::new((*context).clone()))
+      .wrap(SessionMiddleware::new((**context).clone()))
       .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
   )
   .await;
