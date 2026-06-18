@@ -42,6 +42,28 @@ The M1 release introduces two additional components deployed alongside the Lemmy
 - **AGPL §13 applicability:** Tuwunel is Apache-2.0 licensed, not AGPL. However, operators deploying the Brehon bridge stack (which includes Tuwunel via docker-compose) should be aware that Tuwunel's own license terms govern the homeserver component. The Tuwunel/Conduit source is available at `https://github.com/girlbossceo/conduit` (Tuwunel fork) or `https://github.com/matrix-org/conduit` (upstream Conduit).
 - **No Tuwunel source modifications:** Brehon does not patch the Tuwunel image. The `registration.yaml` and docker-compose configuration files in `services/bridge/` are original Brehon configuration, not Tuwunel source modifications.
 
+## Additional components — M3 RTC stack
+
+The M3 release adds three profile-gated RTC (real-time-communication) sidecars to the bridge docker-compose stack (`services/bridge/docker-compose.yml`, under `profiles: ["rtc"]`). They start only when an operator explicitly enables the `rtc` profile; a governance-only instance never boots them. Brehon does not modify any of these images — each is used as a pinned upstream Docker image.
+
+### LiveKit Server
+
+- **What it is:** a WebRTC SFU (Selective Forwarding Unit) media server (`livekit/livekit-server`) that routes audio/video streams for group calls.
+- **License:** LiveKit Server is licensed under the Apache License 2.0. Brehon does not modify the LiveKit source; it is used as a pinned Docker image (`livekit/livekit-server:v1.8`). Source: `https://github.com/livekit/livekit`.
+- **AGPL §13 applicability:** N/A — LiveKit is Apache-2.0 (a permissive licence), not AGPL. The §13 network-use source-disclosure clause does not apply to permissively-licensed components. Operators should be aware that LiveKit's own Apache-2.0 terms govern this component.
+
+### lk-jwt-service
+
+- **What it is:** a LiveKit JWT authentication helper (`ghcr.io/element-hq/lk-jwt-service`) that mints LiveKit access tokens for authenticated callers.
+- **License:** lk-jwt-service is licensed under the Apache License 2.0. Brehon does not modify its source; it is used as a pinned Docker image (`ghcr.io/element-hq/lk-jwt-service:0.3.0`). Source: `https://github.com/element-hq/lk-jwt-service`.
+- **AGPL §13 applicability:** N/A — Apache-2.0 (permissive), not AGPL. The §13 source-disclosure clause does not apply. Operators should be aware that lk-jwt-service's own Apache-2.0 terms govern this component.
+
+### Element Call
+
+- **What it is:** a WebRTC group-call user interface (`ghcr.io/element-hq/element-call`) served as a web app for in-call participants.
+- **License:** Element Call is licensed under the GNU Affero General Public License version 3 (AGPL-3.0) — the **same licence as this repository**. Brehon does not modify the Element Call source; it is used as a pinned Docker image (`ghcr.io/element-hq/element-call:0.6.0`). Source: `https://github.com/element-hq/element-call`.
+- **AGPL §13 applicability:** applies. Element Call is AGPL-3.0, so operators deploying it as part of the Brehon RTC stack are subject to the §13 network-use source-disclosure obligation for it. That obligation is honoured via this notice plus the publicly-available upstream Element Call repository at the pinned image tag; Brehon ships no modifications to it.
+
 ## Weekly upstream rebase log
 
 Per [IMPLEMENTATION-PLAN-v0.md §7.1](docs/brehon-law-inspired-network/IMPLEMENTATION-PLAN-v0.md) top-risk mitigations, we rebase `governance-v0` onto `upstream/main` weekly to pick up Lemmy 1.0-beta fixes. Each rebase records the new upstream SHA here so we can diff governance-touching changes across syncs.
