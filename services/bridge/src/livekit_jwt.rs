@@ -2,6 +2,8 @@ use anyhow::{ensure, Context, Result};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// wired by stage.rs (Task 3)
+#[allow(dead_code)]
 #[derive(serde::Serialize, serde::Deserialize)]
 struct VideoGrant {
     room: String,
@@ -11,6 +13,7 @@ struct VideoGrant {
     can_publish: bool,
 }
 
+#[allow(dead_code)]
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Claims {
     iss: String,
@@ -24,6 +27,7 @@ struct Claims {
 ///
 /// `identity` is the opaque pseudonym string (ADR-015); the caller must supply
 /// a pre-derived pseudonym. This function assigns it verbatim to the JWT `sub`.
+#[allow(dead_code)]
 pub fn mint_access_token(
     api_key: &str,
     api_secret: &str,

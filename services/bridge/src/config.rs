@@ -53,10 +53,13 @@ pub struct BridgeConfig {
     /// URL to POST LinkConfirmRequest to (e.g. "http://localhost:8536/api/v4/governance/link/confirm").
     pub brehon_link_confirm_url: String,
     /// Optional LiveKit server URL (e.g. "wss://livekit.example.com"). Required only when RTC is enabled.
+    #[allow(dead_code)]
     pub livekit_url: Option<String>,
     /// Optional LiveKit API key. Required only when RTC is enabled.
+    #[allow(dead_code)]
     pub livekit_api_key: Option<String>,
     /// Optional LiveKit API secret. Required only when RTC is enabled.
+    #[allow(dead_code)]
     pub livekit_api_secret: Option<String>,
 }
 

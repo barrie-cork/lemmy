@@ -27,6 +27,33 @@
       "result": null,
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "id": "b7dc83c781f7-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T23:04:08Z",
+      "question": "Run cargo-linux.sh check+clippy+test on services/bridge after fix-impl-1 dead_code allows",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-1 added #[allow(dead_code)] to VideoGrant, Claims, mint_access_token in livekit_jwt.rs and livekit_url/api_key/api_secret fields in config.rs. Bridge compiles on Linux only. Validate that clippy -D warnings is now clean.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml livekit_jwt"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl1-livekit-dead-code-see-claude-prps-briefs-m3-core-stage-mode-fix-impl-1-710",
+      "phase_task": "fix-impl-1",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
