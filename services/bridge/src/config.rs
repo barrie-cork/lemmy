@@ -2,6 +2,18 @@ use std::env;
 
 use anyhow::{Context, Result};
 
+/// Read an optional env var, treating an empty-or-whitespace value as unset.
+///
+/// `env::var(..).ok()` returns `Some("")` for an empty-but-set var, which would
+/// make RTC look configured while e.g. `LIVEKIT_API_SECRET` is blank (weakening
+/// token-signing). Trim and map empty -> `None` so blank vars behave as absent.
+fn optional_non_empty(var: &str) -> Option<String> {
+    env::var(var)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
 /// Bridge daemon configuration loaded from environment variables.
 ///
 /// All fields are required at startup. The laptop validate step (task 8
@@ -40,6 +52,12 @@ pub struct BridgeConfig {
     pub bridge_signing_key: String,
     /// URL to POST LinkConfirmRequest to (e.g. "http://localhost:8536/api/v4/governance/link/confirm").
     pub brehon_link_confirm_url: String,
+    /// Optional LiveKit server URL (e.g. "wss://livekit.example.com"). Required only when RTC is enabled.
+    pub livekit_url: Option<String>,
+    /// Optional LiveKit API key. Required only when RTC is enabled.
+    pub livekit_api_key: Option<String>,
+    /// Optional LiveKit API secret. Required only when RTC is enabled.
+    pub livekit_api_secret: Option<String>,
 }
 
 impl BridgeConfig {
@@ -73,6 +91,9 @@ impl BridgeConfig {
                 .context("BRIDGE_SIGNING_KEY env var required")?,
             brehon_link_confirm_url: env::var("BREHON_LINK_CONFIRM_URL")
                 .context("BREHON_LINK_CONFIRM_URL env var required")?,
+            livekit_url: optional_non_empty("LIVEKIT_URL"),
+            livekit_api_key: optional_non_empty("LIVEKIT_API_KEY"),
+            livekit_api_secret: optional_non_empty("LIVEKIT_API_SECRET"),
         })
     }
 }

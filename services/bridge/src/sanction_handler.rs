@@ -350,6 +350,13 @@ mod tests {
             brehon_room_event_url: "http://localhost:9000/room-event".to_string(),
             bridge_callback_secret: secret.to_string(),
             legal_contact_mxid: "@legal:localhost".to_string(),
+            matrix_server_name: "localhost".to_string(),
+            brehon_signing_pubkey: "test-pubkey".to_string(),
+            bridge_signing_key: "test-signing-key".to_string(),
+            brehon_link_confirm_url: "http://localhost:9000/link".to_string(),
+            livekit_url: None,
+            livekit_api_key: None,
+            livekit_api_secret: None,
         })
     }
 

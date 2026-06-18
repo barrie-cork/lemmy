@@ -46,6 +46,31 @@ services:
     networks:
       - bridge-net
 
+  # M3 RTC stack (profile-gated). `docker compose up` with no profile starts
+  # NONE of these — a governance-only instance never boots the RTC sidecars.
+  # Enable with `--profile rtc`. Image tags are pinned; exact tags confirmed
+  # against the pulled images by the deploy-smoke gate.
+  livekit:
+    image: livekit/livekit-server:v1.8   # Apache-2.0; pin exact tag at impl
+    profiles: ["rtc"]
+    command: ["--dev"]   # standalone dev mode; uses devkey/devsecret (matches lk-jwt env). No mounted config in v0.
+    ports: ["7880:7880", "7881:7881"]
+    networks: [bridge-net]
+  lk-jwt-service:
+    image: ghcr.io/element-hq/lk-jwt-service:0.3.0   # Apache-2.0; pin at impl
+    profiles: ["rtc"]
+    environment:
+      LIVEKIT_URL: "ws://livekit:7880"
+      LIVEKIT_KEY: "devkey"        # dev-only; real key via .env at deploy
+      LIVEKIT_SECRET: "devsecret"
+    ports: ["8085:8080"]           # host 8085 — avoids the bridge's 8080
+    networks: [bridge-net]
+  element-call:
+    image: ghcr.io/element-hq/element-call:v0.6.0    # AGPL-3.0; pinned (v-prefix) — verified via docker manifest inspect 2026-06-18
+    profiles: ["rtc"]
+    ports: ["8086:8080"]
+    networks: [bridge-net]
+
   # Bridge service: Task 15 adds the Dockerfile. Uncomment once available.
   # bridge:
   #   build: .

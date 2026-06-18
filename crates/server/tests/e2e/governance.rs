@@ -200,7 +200,11 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
-  // m2-late-1 sanction_event + sanction_subscriber (1 migration, bump 21 → 22)
+  // m3-core-infra task1 rtc_enabled config (1 migration, bump 21 → 22)
+  "2026-06-18-000000-0000_seed_rtc_enabled_config",
+  // m2-late-b-actor actor_app_link (1 migration, bump 22 → 23; window stays 21)
+  "2026-06-13-000000-0000_add_actor_app_link",
+  // m2-late-1 sanction_event + sanction_subscriber (1 migration)
   "2026-06-07-000000-0000_add_sanction_event",
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
@@ -229,10 +233,9 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   "2026-04-22-005541-0000_update_modlog_check_constraint",
   "2026-04-22-000300-0000_seed_v1_config_keys",
   "2026-04-22-000200-0000_add_case_applied_config_snapshot",
-  "2026-04-22-000100-0000_add_sponsor_allowlist",
-  "2026-04-22-000000-0000_add_rule_set_versions",
-  // Phase 1 — add_federation_attestations rolled out of the 21-entry window
-  // when m2-late-1 added add_sanction_event (bump 21 → 22, window stays 21).
+  // add_sponsor_allowlist + add_rule_set_versions rolled out when m3-core-infra
+  // added seed_rtc_enabled_config + m2-late-b-actor added add_actor_app_link
+  // (window stays 21, two entries dropped).
 ];
 
 /// Pre-flight for the Phase-1 round-trip tests: assert that
@@ -1100,25 +1103,24 @@ async fn v1_jm_a_backfill_populates_v0_snapshot() -> lemmy_utils::error::LemmyRe
   // Step 1: full forward apply.
   schema_setup::run(Options::default().run(), &db_url)?;
 
-  // Step 2: revert the 15 m2-late-1 + M1-b + BUG-1 + JM-a + JM-d Task 1 + SL-b + RT-r1 +
-  //         federation-inbound-a migrations LIFO:
-  //   - 1 m2-late-1 migration: 2026-06-07-000000_add_sanction_event (newest; slot 1)
-  //   - 1 M1-b migration: 2026-06-03-000000_add_governance_messaging_config (slot 2)
-  //   - 1 BUG-1 migration: 2026-06-01-000000_backfill_author_defendant (slot 3)
-  //   - 1 federation-inbound-a migration: 2026-05-17-000000 (slot 4)
-  //   - 4 RT-r1 migrations: 2026-05-10-000000 through 2026-05-10-000300
-  //   - 2 SL-b migrations: 2026-05-03-000000 and 2026-05-03-000100
-  //   - 2 JM-d Task 1 migrations: 2026-04-27-000000 and 2026-04-27-000100
-  //   - 4 JM-a migrations: 2026-04-23-000000 through 2026-04-23-000200
+  // Step 2: revert LIFO through all migrations post-dating JM-a:
+  //   - 1 m3-core-infra task1: 2026-06-18-000000_seed_rtc_enabled_config (newest; slot 1)
+  //   - 1 m2-late-b-actor:     2026-06-13-000000_add_actor_app_link (slot 2)
+  //   - 1 m2-late-1:           2026-06-07-000000_add_sanction_event (slot 3)
+  //   - 1 M1-b migration:      2026-06-03-000000_add_governance_messaging_config (slot 4)
+  //   - 1 BUG-1 migration:     2026-06-01-000000_backfill_author_defendant (slot 5)
+  //   - 1 federation-inbound-a: 2026-05-17-000000 (slot 6)
+  //   - 4 RT-r1 migrations:    2026-05-10-000000 through 2026-05-10-000300
+  //   - 2 SL-b migrations:     2026-05-03-000000 and 2026-05-03-000100
+  //   - 2 JM-d Task 1:         2026-04-27-000000 and 2026-04-27-000100
+  //   - 4 JM-a migrations:     2026-04-23-000000 through 2026-04-23-000200
   // The window must reach back through 2026-04-23-000000 (jury_mechanics_enums,
   // which creates the severity_tier enum the step-3 assertions probe).
   // Runner takes pg_advisory_lock(0) so the forbid_diesel_cli trigger does
-  // not fire. Limit must rise with each new phase that adds migrations
-  // post-dating JM-a (prior bumps: 4→6 in 4875a20a7 for JM-d Task 3; 6→8
-  // for SL-b; 8→12 here for RT-r1; 12→13 here for federation-inbound-a;
-  // 13→14 here for M1-b governance-messaging; 14→16 here for BUG-1 backfill +
-  // m2-late-1 add_sanction_event — two migrations added since last bump).
-  schema_setup::run(Options::default().revert().limit(16), &db_url)?;
+  // not fire. Limit bumps: 4→6 (JM-d Task 3); 6→8 (SL-b); 8→12 (RT-r1);
+  // 12→13 (federation-inbound-a); 13→14 (M1-b); 14→16 (BUG-1 + m2-late-1);
+  // 16→18 (m2-late-b-actor add_actor_app_link + m3-core-infra seed_rtc_enabled_config).
+  schema_setup::run(Options::default().revert().limit(18), &db_url)?;
 
   // Sanity: the 3 JM-a columns really are gone — otherwise the step-3
   // INSERTs below would still see DEFAULT 'Minor' / DEFAULT 'Regular'
@@ -5378,6 +5380,214 @@ async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::Lem
     .await?;
 
   // messaging_enabled is absent (no row in governance_messaging_config) → false → no-op
+  governance_case_after_transition(
+    &context,
+    &case,
+    Some(CaseStatus::Open),
+    CaseStatus::ThresholdMet,
+  )
+  .await?;
+
+  Ok(())
+}
+
+// ============================================================================
+// M3-core-infra — Task 4: actor-pseudonym endpoint idempotency + opacity
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_actor_pseudonym_endpoint_idempotent_opaque() -> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::actor_pseudonym_helper;
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    person::{Person, PersonInsertForm},
+  };
+  use lemmy_diesel_utils::traits::Crud;
+
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let person_form = PersonInsertForm::test_form(instance.id, "alice");
+  let person = Person::create(&mut context.pool(), &person_form).await?;
+
+  // First call allocates a pseudonym
+  let p1 = actor_pseudonym_helper::get_or_create(&mut context.pool(), person.id).await?;
+  assert!(!p1.is_empty(), "pseudonym must be non-empty");
+
+  // Second call returns same pseudonym (idempotent)
+  let p2 = actor_pseudonym_helper::get_or_create(&mut context.pool(), person.id).await?;
+  assert_eq!(p1, p2, "pseudonym must be stable across calls");
+
+  // Pseudonym does not equal person name (opacity check — ADR-015)
+  assert_ne!(p1, person.name, "pseudonym must not equal person name");
+
+  Ok(())
+}
+
+/// M3-core-infra cr-4 (PR #201): exercise the WIRED `/bridge/actor-pseudonym`
+/// HTTP route end-to-end — bridge-secret auth (`verify_bridge_secret`) + Query
+/// extraction + JSON response body — not just the
+/// `actor_pseudonym_helper::get_or_create` helper that the sibling
+/// `m3_actor_pseudonym_endpoint_idempotent_opaque` test covers. Mirrors the
+/// `all_mvp_endpoints_return_non_404` actix `test::init_service` harness so the
+/// route registration (`crates/api/routes/src/lib.rs`), the bridge-secret gate,
+/// and the `{ "pseudonym": "..." }` contract are all proven, not assumed.
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_actor_pseudonym_endpoint_route_authed() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{App, test};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    person::{Person, PersonInsertForm},
+  };
+  use lemmy_diesel_utils::traits::Crud;
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_utils::rate_limit::RateLimit;
+
+  // The handler reads `BRIDGE_CALLBACK_SECRET` via `bridge_auth::verify_bridge_secret`.
+  // EnvVarGuard restores on drop; bind to a named var so it lives for the whole body.
+  const BRIDGE_SECRET: &str = "cr4-test-bridge-secret";
+  let _g_secret = EnvVarGuard::set("BRIDGE_CALLBACK_SECRET", BRIDGE_SECRET);
+
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let person_form = PersonInsertForm::test_form(instance.id, "alice");
+  let person = Person::create(&mut context.pool(), &person_form).await?;
+
+  // Fresh rate-limit for the route wiring; bump the buckets so the repeated calls
+  // in this test don't trip the `/governance` scope's `rate_limit.post()` ceiling
+  // (mirrors the bump in `all_mvp_endpoints_return_non_404`).
+  let rate_limit = RateLimit::with_debug_config();
+  {
+    use enum_map::enum_map;
+    use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+    rate_limit.set_config(enum_map! {
+      ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+    });
+  }
+
+  let app = test::init_service(
+    App::new()
+      .app_data(context.clone())
+      .wrap(SessionMiddleware::new((**context).clone()))
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+  )
+  .await;
+
+  let path = format!(
+    "/api/v4/governance/bridge/actor-pseudonym?person_id={}",
+    person.id.0
+  );
+
+  // ---- Authed request hits the real route → 200 + JSON body ----
+  let req = test::TestRequest::get()
+    .uri(&path)
+    .insert_header(("authorization", format!("Bearer {BRIDGE_SECRET}")))
+    .to_request();
+  let resp = test::call_service(&app, req).await;
+  assert_eq!(
+    resp.status().as_u16(),
+    200,
+    "authed GET /bridge/actor-pseudonym must return 200"
+  );
+  let body: serde_json::Value = test::read_body_json(resp).await;
+  let pseudonym = body["pseudonym"]
+    .as_str()
+    .expect("response body must carry a string `pseudonym` field");
+  assert!(!pseudonym.is_empty(), "pseudonym must be non-empty");
+  assert_ne!(
+    pseudonym,
+    person.name.as_str(),
+    "pseudonym must not equal person name (ADR-015 opacity)"
+  );
+
+  // ---- Idempotency THROUGH the route: a second authed call → same pseudonym ----
+  let req2 = test::TestRequest::get()
+    .uri(&path)
+    .insert_header(("authorization", format!("Bearer {BRIDGE_SECRET}")))
+    .to_request();
+  let resp2 = test::call_service(&app, req2).await;
+  assert_eq!(resp2.status().as_u16(), 200);
+  let body2: serde_json::Value = test::read_body_json(resp2).await;
+  assert_eq!(
+    body2["pseudonym"].as_str(),
+    Some(pseudonym),
+    "pseudonym must be stable across route calls (idempotent)"
+  );
+
+  // ---- Missing bridge secret → 400 (proves the auth gate is wired) ----
+  // `verify_bridge_secret` returns `LemmyErrorType::NotLoggedIn`, which this
+  // fork's `ResponseError::status_code` maps via the `_ => BAD_REQUEST` arm
+  // (only `IncorrectLogin` maps to 401), so the wired rejection surfaces as 400.
+  let req_noauth = test::TestRequest::get().uri(&path).to_request();
+  let resp_noauth = test::call_service(&app, req_noauth).await;
+  assert_eq!(
+    resp_noauth.status().as_u16(),
+    400,
+    "missing bridge secret must be rejected (NotLoggedIn → 400)"
+  );
+
+  Ok(())
+}
+
+/// M3-core-infra Task 6 (plan §10.11, §16a Story 1): clean-posture proof that a
+/// governance transition runs unchanged when `rtc_enabled` is off, with zero RTC
+/// side-effects. The `rtc_enabled` off-path is a TESTED signal (plan GOTCHA R7),
+/// not an assumption. Mirrors `m2_hook_suppressed_when_messaging_disabled` (the
+/// transition driver) + `messaging_disabled_preserves_governance_posture` (the
+/// config read).
+///
+/// The `seed_rtc_enabled_config` migration lands an `rtc_enabled=false` row, so
+/// `read_current(.., "rtc_enabled")` returns `Some(false)` — the exact value
+/// `get_bridge_messaging_status` computes via `.and_then(|r| r.value_bool).unwrap_or(false)`.
+/// No LiveKit client exists in the server binary; the RTC stack is absent by
+/// construction, so a passing governance transition proves zero RTC side-effects.
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_rtc_disabled_clean_posture_governance_unaffected()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::bridge_notify::governance_case_after_transition;
+  use lemmy_db_schema::source::governance::governance_messaging_config::GovernanceMessagingConfig;
+  use lemmy_db_schema::source::governance::moderation_case::{
+    ModerationCase, ModerationCaseInsertForm,
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+
+  // Clean-posture read: `rtc_enabled` is seeded false → the value
+  // `get_bridge_messaging_status` reports (default-off read).
+  let rtc_row =
+    GovernanceMessagingConfig::read_current(&mut context.pool(), "instance", "rtc_enabled").await?;
+  assert_eq!(
+    rtc_row.and_then(|r| r.value_bool),
+    Some(false),
+    "m3: clean posture — rtc_enabled reads false (no RTC stack provisioned)",
+  );
+
+  // Drive a governance case transition with RTC off. It must complete unchanged —
+  // the governance path is unaffected by the absent RTC stack.
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let case_form = ModerationCaseInsertForm {
+    target_type: CaseTargetType::Person,
+    reason_code: "test_rtc_clean_posture".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Open,
+    threshold_score: 1,
+    ..Default::default()
+  };
+  let case: ModerationCase = diesel::insert_into(moderation_case::table)
+    .values(&case_form)
+    .get_result(&mut async_conn)
+    .await?;
+
   governance_case_after_transition(
     &context,
     &case,
