@@ -290,6 +290,21 @@ On completion (success):
    - Pre-Shape-G: the impl-task ALSO pushes manually before exiting (feature commit + validate-pending-laptop DQ commit). Do not rely on Junior's finalize step — the advisor needs the commit on origin to pick up the DQ entry promptly. Mirrors the Shape-G push discipline above.
 4. Return a 5-line summary: task number, files changed (count), validation mode (`shape-g pending` with workflow_run_id, or `pre-shape-g laptop-pending` with command list), commits made (short SHAs), any DQ entries written (validate-pending or validate-pending-laptop).
 
+### Finalize-gate: the validate-DQ write is mandatory, NOT trailing ceremony (post-m3-core-infra, 2026-06-18)
+
+**This applies to EVERY task that delegates validation to the laptop — `impl-task` AND `fix-impl` (a fix-in-PR task is an impl-task with a smaller scope; the gate is identical).** Before you return your completion summary, run this check on yourself:
+
+```bash
+# You MUST have committed a validate DQ entry. Confirm it landed in your last commit chain.
+git log -3 --stat | grep -q decision-queue.json || echo "REFUSAL: validate DQ not written"
+```
+
+If your code commit did NOT also touch `decision-queue.json` with a `validate-pending[-laptop][-e2e|-linux]` entry, **you have not finished** — go back and write it, commit it, push it, THEN write your retro. The DQ-write is a finalize-blocker, exactly like the post-task retro: a task that skipped it is incomplete regardless of how correct the code edit is.
+
+**Why this gate exists (m3-core-infra cr-fix cohort, 2026-06-18 — confirmed 2×):** small fix-impl workers (#703 bridge, #704 lemmy) made the code edit, committed, pushed, wrote their retro, and reported done — but never wrote the `validate-pending-laptop` DQ their brief required (`git show --stat` on both fix commits touched zero `decision-queue.json` lines). The smaller the fix, the more a worker treats `commit + push` as "done" and drops the trailing DQ-write. The advisor's polling loop then waits for a DQ that never comes. The DQ-write is the validation handoff — without it, the work the advisor needs to gate the PR is invisible. Per `.claude/lessons/feedback_fix_impl_workers_skip_validate_pending_dq.md`.
+
+**Ordering rule:** push the validate DQ BEFORE you write your retro. The daemon finalize-merge runs after you exit; an un-pushed DQ is invisible to the advisor.
+
 On clean stop (DQ blocked or external constraint):
 1. No partial state in the working tree (`git status` clean)
 2. Surface the DQ id and the question
@@ -307,6 +322,7 @@ On clean stop (DQ blocked or external constraint):
 - Never invoke cargo for build/lint/test on Shape-G plans — validation runs out-of-band on GH Actions per the validation gate above
 - Never invoke cargo for build/lint/test on Pre-Shape-G plans either — emit a `validate-pending-laptop` DQ entry; the advisor laptop session runs cargo. The EliteDesk worker is memory-constrained (15 GB RAM, 4 GB swap, contended cron workloads) and `cargo check --workspace --features full` thrashes the box for >1 hour — see `project_elitedesk_hung_2026_04_27` and the 2026-04-28 task #47 incident.
 - Never invoke `cargo test ... e2e` on the worker — testcontainers + postgres + 8945-line e2e.rs OOMs more aggressively than cargo check. Delegate to laptop via `validate-pending-laptop` (or `validate-pending-laptop-e2e`) DQ entry.
+- Never return your completion summary without having written + committed + pushed the `validate-pending[-laptop][-e2e|-linux]` DQ entry your task delegates validation to. This is a finalize-gate, not optional ceremony — see §"Output discipline → Finalize-gate" + `feedback_fix_impl_workers_skip_validate_pending_dq.md`. Applies to `fix-impl` tasks too (the small-scope variant that historically skips it).
 
 ## DQ schema-v3 (post-v1-dq-schema-r1)
 

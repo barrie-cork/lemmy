@@ -61,8 +61,16 @@ lessons). Falsify before concluding which — the recovery differs.
 ## Recurrence / promotion
 
 1st confirmed 2026-06-18 (m3-core-infra, 2 workers same cohort — so really 2 instances in one
-event). If a 3rd fix-impl task in a later phase skips the validate DQ, promote to a
-`pattern_*` (cross-cutting fix-impl-worker behaviour) and consider a structural nudge: the
-impl-task subagent contract (`.claude/agents/impl-task.md`) could make the validate-DQ write a
-hard finalize-gate the way the retro is. Until then: advisor verify-and-run-directly is the
-durable mitigation.
+event). **Structural gate shipped at the m3-core-infra retro (2026-06-18, user-directed — did
+NOT wait for a 3rd):** `.claude/agents/impl-task.md` now carries a finalize-gate in §"Output
+discipline → Finalize-gate" + a matching hard refusal — the validate-DQ write is a
+finalize-blocker the way the post-task retro is, with a self-check `git log -3 --stat | grep -q
+decision-queue.json` and the explicit "push the DQ BEFORE the retro" ordering rule. The gate
+applies to `fix-impl` tasks explicitly (the small-scope variant that skips).
+
+The gate is a contract nudge, not a hard daemon enforcement — a worker can still ignore its own
+subagent contract. So advisor verify-and-run-directly stays the durable mitigation: after a
+fix-impl reports done, verify the fix landed via DoD grep on the phase tip and run the validation
+directly; do not block on the DQ surfacing. If a fix-impl skips the validate DQ AGAIN despite the
+gate, promote to a `pattern_*` and escalate to a real daemon-side finalize enforcement (the
+`executor.ts` finalize-skip family).
