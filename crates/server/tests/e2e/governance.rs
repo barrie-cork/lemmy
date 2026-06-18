@@ -5423,3 +5423,68 @@ async fn m3_actor_pseudonym_endpoint_idempotent_opaque() -> lemmy_utils::error::
   Ok(())
 }
 
+/// M3-core-infra Task 6 (plan §10.11, §16a Story 1): clean-posture proof that a
+/// governance transition runs unchanged when `rtc_enabled` is off, with zero RTC
+/// side-effects. The `rtc_enabled` off-path is a TESTED signal (plan GOTCHA R7),
+/// not an assumption. Mirrors `m2_hook_suppressed_when_messaging_disabled` (the
+/// transition driver) + `messaging_disabled_preserves_governance_posture` (the
+/// config read).
+///
+/// The `seed_rtc_enabled_config` migration lands an `rtc_enabled=false` row, so
+/// `read_current(.., "rtc_enabled")` returns `Some(false)` — the exact value
+/// `get_bridge_messaging_status` computes via `.and_then(|r| r.value_bool).unwrap_or(false)`.
+/// No LiveKit client exists in the server binary; the RTC stack is absent by
+/// construction, so a passing governance transition proves zero RTC side-effects.
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_rtc_disabled_clean_posture_governance_unaffected()
+-> lemmy_utils::error::LemmyResult<()> {
+  use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+  use lemmy_api_utils::bridge_notify::governance_case_after_transition;
+  use lemmy_db_schema::source::governance::governance_messaging_config::GovernanceMessagingConfig;
+  use lemmy_db_schema::source::governance::moderation_case::{
+    ModerationCase, ModerationCaseInsertForm,
+  };
+  use lemmy_db_schema_file::{
+    enums::{CaseSeverity, CaseStatus, CaseTargetType},
+    schema::moderation_case,
+  };
+
+  let (_container, context, db_url) = governance_fixtures::bootstrap().await?;
+
+  // Clean-posture read: `rtc_enabled` is seeded false → the value
+  // `get_bridge_messaging_status` reports (default-off read).
+  let rtc_row =
+    GovernanceMessagingConfig::read_current(&mut context.pool(), "instance", "rtc_enabled").await?;
+  assert_eq!(
+    rtc_row.and_then(|r| r.value_bool),
+    Some(false),
+    "m3: clean posture — rtc_enabled reads false (no RTC stack provisioned)",
+  );
+
+  // Drive a governance case transition with RTC off. It must complete unchanged —
+  // the governance path is unaffected by the absent RTC stack.
+  let mut async_conn = AsyncPgConnection::establish(&db_url).await?;
+  let case_form = ModerationCaseInsertForm {
+    target_type: CaseTargetType::Person,
+    reason_code: "test_rtc_clean_posture".to_string(),
+    severity: CaseSeverity::Low,
+    status: CaseStatus::Open,
+    threshold_score: 1,
+    ..Default::default()
+  };
+  let case: ModerationCase = diesel::insert_into(moderation_case::table)
+    .values(&case_form)
+    .get_result(&mut async_conn)
+    .await?;
+
+  governance_case_after_transition(
+    &context,
+    &case,
+    Some(CaseStatus::Open),
+    CaseStatus::ThresholdMet,
+  )
+  .await?;
+
+  Ok(())
+}
+
