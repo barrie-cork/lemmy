@@ -418,6 +418,7 @@ After the commit, **surface to the user (no pasted prompt — the bootstrap file
 - [ ] Brehon-fork MEMORY.md "Active workflow state" updated; no stale pointer to the deleted two-ago record; section within its ~15-line budget.
 - [ ] Commit contains ONLY `.claude/PRPs/handovers/<next-id>-bootstrap.md` (workflow-state + MEMORY.md are PMD memory, not git); subject `chore(brehon): close <completing-id>, bootstrap <next-id>`; pushed to governance-v0.
 - [ ] No homeserver path was read or written (per the Migration note — homeserver artifacts are frozen).
+- [ ] **Entry-kind count cross-check (ONLY if the completing phase registered new `ENTRY_KIND_*` consts):** re-derive `rg -c '^pub const ENTRY_KIND_' crates/db_schema/src/source/governance/governance_log.rs` and confirm BOTH the headline count AND the era-breakdown sum in `docs/brehon-law-inspired-network/04-data-model-and-api.md` §11 match it (fixing only the headline leaves the breakdown drifting — the two-layer drift). The authoritative source is `.claude/rules/governance-log-entry-kind-registry.md`; `04` §11 is the derived mirror. If `04` §11 is stale, fix it in this transition's commit (it's `.claude/`-adjacent meta-work, direct-to-trunk). Per `feedback_entry_kind_runtime_allowlist_check.md` + the 2026-06-18 m3-entry-kinds retro Change #2. Skip this line entirely for non-entry-kind phases.
 - [ ] Closing surface given to user: open-in-brehon-fork + read-bootstrap + ritual; lane-worktree cleanup line if applicable.
 
 ## Pre-commit dogfood (per `.claude/rules/advisor-orchestrator.md` §3.7)
