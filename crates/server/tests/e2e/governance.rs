@@ -200,7 +200,11 @@ async fn governance_log_hash_chain_holds() -> lemmy_utils::error::LemmyResult<()
 /// round-trip tests are `#[ignore]`d pending GH issue #43; the pre-flight
 /// assertion will enforce list⇄disk parity once they are un-ignored.
 const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
-  // m2-late-1 sanction_event + sanction_subscriber (1 migration, bump 21 → 22)
+  // m3-core-infra task1 rtc_enabled config (1 migration, bump 21 → 22)
+  "2026-06-18-000000-0000_seed_rtc_enabled_config",
+  // m2-late-b-actor actor_app_link (1 migration, bump 22 → 23; window stays 21)
+  "2026-06-13-000000-0000_add_actor_app_link",
+  // m2-late-1 sanction_event + sanction_subscriber (1 migration)
   "2026-06-07-000000-0000_add_sanction_event",
   // M1-b governance-messaging (1 migration, bump 19 → 20)
   "2026-06-03-000000-0000_add_governance_messaging_config",
@@ -229,10 +233,9 @@ const MIGRATIONS_TO_REVERT_PHASE_1: &[&str] = &[
   "2026-04-22-005541-0000_update_modlog_check_constraint",
   "2026-04-22-000300-0000_seed_v1_config_keys",
   "2026-04-22-000200-0000_add_case_applied_config_snapshot",
-  "2026-04-22-000100-0000_add_sponsor_allowlist",
-  "2026-04-22-000000-0000_add_rule_set_versions",
-  // Phase 1 — add_federation_attestations rolled out of the 21-entry window
-  // when m2-late-1 added add_sanction_event (bump 21 → 22, window stays 21).
+  // add_sponsor_allowlist + add_rule_set_versions rolled out when m3-core-infra
+  // added seed_rtc_enabled_config + m2-late-b-actor added add_actor_app_link
+  // (window stays 21, two entries dropped).
 ];
 
 /// Pre-flight for the Phase-1 round-trip tests: assert that
