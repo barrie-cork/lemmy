@@ -5391,3 +5391,37 @@ async fn m2_hook_suppressed_when_messaging_disabled() -> lemmy_utils::error::Lem
   Ok(())
 }
 
+// ============================================================================
+// M3-core-infra — Task 4: actor-pseudonym endpoint idempotency + opacity
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_actor_pseudonym_endpoint_idempotent_opaque() -> lemmy_utils::error::LemmyResult<()> {
+  use lemmy_api::governance::actor_pseudonym_helper;
+  use lemmy_db_schema::{
+    source::{
+      instance::Instance,
+      person::{Person, PersonInsertForm},
+    },
+    traits::Crud,
+  };
+
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let person_form = PersonInsertForm::test_form(instance.id, "alice");
+  let person = Person::create(&mut context.pool(), &person_form).await?;
+
+  // First call allocates a pseudonym
+  let p1 = actor_pseudonym_helper::get_or_create(&mut context.pool(), person.id).await?;
+  assert!(!p1.is_empty(), "pseudonym must be non-empty");
+
+  // Second call returns same pseudonym (idempotent)
+  let p2 = actor_pseudonym_helper::get_or_create(&mut context.pool(), person.id).await?;
+  assert_eq!(p1, p2, "pseudonym must be stable across calls");
+
+  // Pseudonym does not equal person name (opacity check — ADR-015)
+  assert_ne!(p1, person.name, "pseudonym must not equal person name");
+
+  Ok(())
+}
+

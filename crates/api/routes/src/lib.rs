@@ -43,7 +43,7 @@ use lemmy_api::{
     admin_rule_sets::{admin_create_rule_set, admin_list_rule_sets},
     admin_sponsor_allowlist,
     admin_trigger_appeal_rejury::admin_trigger_appeal_rejury,
-    bridge_read::get_bridge_messaging_status,
+    bridge_read::{get_bridge_actor_pseudonym, get_bridge_messaging_status},
     decline_jury_assignment::decline_jury_assignment,
     get_case::get_case,
     get_my_reputation::get_my_reputation,
@@ -483,6 +483,10 @@ pub fn config(cfg: &mut ServiceConfig, rate_limit: &RateLimit) {
           .wrap(rate_limit.post())
           .route("/room-event", post().to(handle_room_event))
           .route("/bridge/messaging-status", get().to(get_bridge_messaging_status))
+          .route(
+            "/bridge/actor-pseudonym",
+            get().to(get_bridge_actor_pseudonym),
+          )
           .route("/link", get().to(link_actor))
           .route("/link/confirm", post().to(link_confirm))
           .route("/link/revoke", post().to(revoke_link))
