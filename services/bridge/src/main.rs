@@ -20,6 +20,7 @@ mod puppet;
 mod relay;
 mod room_provisioner;
 mod sanction_handler;
+mod stage;
 mod soft_pause;
 
 use anyhow::Result;
