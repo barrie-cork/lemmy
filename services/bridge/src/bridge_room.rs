@@ -18,9 +18,22 @@ pub fn open(path: &str) -> Result<Connection> {
     )?;
     // Idempotent guards for DBs created before M3 (CREATE TABLE IF NOT EXISTS
     // does NOT add columns to an existing table). SQLite has no ADD COLUMN IF
-    // NOT EXISTS — swallow the "duplicate column name" error per column.
+    // NOT EXISTS, so gate each ALTER behind a PRAGMA table_info existence check:
+    // on the common path (columns already present) this is read-only, avoiding
+    // a per-open schema-write lock that can cause "database is locked" under
+    // concurrency (open() is called per request in sanction_handler.rs).
+    let existing: std::collections::HashSet<String> = {
+        let mut stmt = conn.prepare("PRAGMA table_info(bridge_room)")?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+        rows.collect::<Result<_>>()?
+    };
     for col in ["chair_id", "queue_state", "recording_config"] {
+        if existing.contains(col) {
+            continue;
+        }
         let stmt = format!("ALTER TABLE bridge_room ADD COLUMN {col} TEXT");
+        // Belt-and-braces: a concurrent open() may have added the column
+        // between our PRAGMA read and this ALTER — swallow the race.
         match conn.execute(&stmt, []) {
             Ok(_) => {}
             Err(rusqlite::Error::SqliteFailure(_, Some(msg)))
