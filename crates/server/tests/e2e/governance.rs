@@ -5423,6 +5423,117 @@ async fn m3_actor_pseudonym_endpoint_idempotent_opaque() -> lemmy_utils::error::
   Ok(())
 }
 
+/// M3-core-infra cr-4 (PR #201): exercise the WIRED `/bridge/actor-pseudonym`
+/// HTTP route end-to-end — bridge-secret auth (`verify_bridge_secret`) + Query
+/// extraction + JSON response body — not just the
+/// `actor_pseudonym_helper::get_or_create` helper that the sibling
+/// `m3_actor_pseudonym_endpoint_idempotent_opaque` test covers. Mirrors the
+/// `all_mvp_endpoints_return_non_404` actix `test::init_service` harness so the
+/// route registration (`crates/api/routes/src/lib.rs`), the bridge-secret gate,
+/// and the `{ "pseudonym": "..." }` contract are all proven, not assumed.
+#[tokio::test(flavor = "multi_thread")]
+async fn m3_actor_pseudonym_endpoint_route_authed() -> lemmy_utils::error::LemmyResult<()> {
+  use actix_web::{App, test};
+  use lemmy_db_schema::source::{
+    instance::Instance,
+    person::{Person, PersonInsertForm},
+  };
+  use lemmy_diesel_utils::traits::Crud;
+  use lemmy_routes::middleware::session::SessionMiddleware;
+  use lemmy_utils::rate_limit::RateLimit;
+
+  // The handler reads `BRIDGE_CALLBACK_SECRET` via `bridge_auth::verify_bridge_secret`.
+  // EnvVarGuard restores on drop; bind to a named var so it lives for the whole body.
+  const BRIDGE_SECRET: &str = "cr4-test-bridge-secret";
+  let _g_secret = EnvVarGuard::set("BRIDGE_CALLBACK_SECRET", BRIDGE_SECRET);
+
+  let (_container, context, _db_url) = governance_fixtures::bootstrap().await?;
+  let instance = Instance::read_or_create(&mut context.pool(), "test.invalid").await?;
+  let person_form = PersonInsertForm::test_form(instance.id, "alice");
+  let person = Person::create(&mut context.pool(), &person_form).await?;
+
+  // Fresh rate-limit for the route wiring; bump the buckets so the repeated calls
+  // in this test don't trip the `/governance` scope's `rate_limit.post()` ceiling
+  // (mirrors the bump in `all_mvp_endpoints_return_non_404`).
+  let rate_limit = RateLimit::with_debug_config();
+  {
+    use enum_map::enum_map;
+    use lemmy_utils::rate_limit::{ActionType, BucketConfig};
+    rate_limit.set_config(enum_map! {
+      ActionType::Message => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Post => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Register => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Image => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Comment => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::Search => BucketConfig { max_requests: 10_000, interval: 60 },
+      ActionType::ImportUserSettings => BucketConfig { max_requests: 10_000, interval: 60 },
+    });
+  }
+
+  let app = test::init_service(
+    App::new()
+      .app_data(context.clone())
+      .wrap(SessionMiddleware::new((*context).clone()))
+      .configure(|cfg| lemmy_api_routes::config(cfg, &rate_limit)),
+  )
+  .await;
+
+  let path = format!(
+    "/api/v4/governance/bridge/actor-pseudonym?person_id={}",
+    person.id.0
+  );
+
+  // ---- Authed request hits the real route → 200 + JSON body ----
+  let req = test::TestRequest::get()
+    .uri(&path)
+    .insert_header(("authorization", format!("Bearer {BRIDGE_SECRET}")))
+    .to_request();
+  let resp = test::call_service(&app, req).await;
+  assert_eq!(
+    resp.status().as_u16(),
+    200,
+    "authed GET /bridge/actor-pseudonym must return 200"
+  );
+  let body: serde_json::Value = test::read_body_json(resp).await;
+  let pseudonym = body["pseudonym"]
+    .as_str()
+    .expect("response body must carry a string `pseudonym` field");
+  assert!(!pseudonym.is_empty(), "pseudonym must be non-empty");
+  assert_ne!(
+    pseudonym,
+    person.name.as_str(),
+    "pseudonym must not equal person name (ADR-015 opacity)"
+  );
+
+  // ---- Idempotency THROUGH the route: a second authed call → same pseudonym ----
+  let req2 = test::TestRequest::get()
+    .uri(&path)
+    .insert_header(("authorization", format!("Bearer {BRIDGE_SECRET}")))
+    .to_request();
+  let resp2 = test::call_service(&app, req2).await;
+  assert_eq!(resp2.status().as_u16(), 200);
+  let body2: serde_json::Value = test::read_body_json(resp2).await;
+  assert_eq!(
+    body2["pseudonym"].as_str(),
+    Some(pseudonym),
+    "pseudonym must be stable across route calls (idempotent)"
+  );
+
+  // ---- Missing bridge secret → 400 (proves the auth gate is wired) ----
+  // `verify_bridge_secret` returns `LemmyErrorType::NotLoggedIn`, which this
+  // fork's `ResponseError::status_code` maps via the `_ => BAD_REQUEST` arm
+  // (only `IncorrectLogin` maps to 401), so the wired rejection surfaces as 400.
+  let req_noauth = test::TestRequest::get().uri(&path).to_request();
+  let resp_noauth = test::call_service(&app, req_noauth).await;
+  assert_eq!(
+    resp_noauth.status().as_u16(),
+    400,
+    "missing bridge secret must be rejected (NotLoggedIn → 400)"
+  );
+
+  Ok(())
+}
+
 /// M3-core-infra Task 6 (plan §10.11, §16a Story 1): clean-posture proof that a
 /// governance transition runs unchanged when `rtc_enabled` is off, with zero RTC
 /// side-effects. The `rtc_enabled` off-path is a TESTED signal (plan GOTCHA R7),
