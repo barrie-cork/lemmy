@@ -95,11 +95,12 @@ discipline noted as N/A.
 
 ## Promotion candidates (recurrence ≥ 2 in this session, or ≥ 1 here + ≥ 1 in prior memory)
 
-- [ ] Change #1 (Explore brief must ask about runtime allowlist arrays for entry-kind phases): structural,
-      recurs every room/chair/kind sub-phase — promote to `.claude/lessons/feedback_entry_kind_runtime_allowlist_check.md`
-      OR fold into the prp-plan entry-kind pattern note. User approves.
-- [ ] Change #2 (`04` §11 count cross-check at entry-kind phase ship): drifted across 3 sub-phases —
-      add the cross-check to `/brehon-phase-transition` or an `04` §11 invariant pointer. User approves.
+- [x] Change #1 (Explore brief must ask about runtime allowlist arrays for entry-kind phases): SHIPPED in
+      `4b6f96f0a` → `.claude/lessons/feedback_entry_kind_runtime_allowlist_check.md` (92 lines; generalises to
+      config-seed/AP-registry shapes). Landed by the post-plan `/auto-phase` continuation, not this session.
+- [x] Change #2 (`04` §11 count cross-check at entry-kind phase ship): SHIPPED in `4b6f96f0a` →
+      `~/.claude/skills/brehon-phase-transition/SKILL.md:421` — two-layer cross-check (headline + era-breakdown),
+      citing the lesson + this retro. Landed by the same continuation.
 
 ---
 
