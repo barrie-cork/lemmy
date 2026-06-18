@@ -7517,6 +7517,59 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "47341df311f4-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "m3-core-infra: where does the bridge read the LiveKit API key/secret/URL for HS256 JWT minting?",
+      "options": [
+        "env-vars-dotenv",
+        "governance_messaging_config-rows",
+        "planner-raises-OQ"
+      ],
+      "context": "JWT mint fn shape + config story depend on credential source. Bridge already reads ed25519 signing key + Matrix creds from env.",
+      "answer": "Env vars (.env), mirroring existing bridge secret handling (ed25519 key, Matrix creds). Add LIVEKIT_API_KEY / LIVEKIT_API_SECRET / LIVEKIT_URL; the mint fn reads them from the bridge config struct loaded at startup. Secrets never go on the governance chain or in the Postgres config table. (per user 2026-06-18)",
+      "answered_by": "user",
+      "resolved_at": "2026-06-18T00:00:01Z",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-06-18T00:00:01Z",
+      "id": "a3d0e9941441-063"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "m3-core-infra: what deploy-validation form should the plan's DoD use for the LiveKit/lk-jwt/Element Call docker sidecars (a cargo gate can't prove a compose stack)?",
+      "options": [
+        "docker-compose-config-lint",
+        "docker-compose-up-smoke",
+        "defer-boot-to-phase6"
+      ],
+      "context": "Phase 1 stands up RTC sidecars. §15 DoD must name an honest deploy check, not pretend cargo proves a compose stack.",
+      "answer": "docker compose up smoke: bring livekit + lk-jwt + element-call up, assert LiveKit (:7880) + lk-jwt (:8080 /healthz) health endpoints respond, then tear down. Proves the stack boots, not just that the YAML parses. §15 gets a dedicated deploy-smoke level (not a cargo level) for the sidecars; runs locally (needs Docker + image pulls, ~min; not in a forbidden window). (per user 2026-06-18)",
+      "answered_by": "user",
+      "resolved_at": "2026-06-18T00:00:01Z",
+      "approved_by": "solo-dev",
+      "approved_at": "2026-06-18T00:00:01Z",
+      "id": "a3d0e9941441-064"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "m3-core-infra: does Phase 1 touch crates/**/governance_log.rs (the chair/mute entry-kind consts)?",
+      "options": [
+        "yes-touches-governance_log",
+        "no-phase2-already-shipped"
+      ],
+      "context": "PRD lists the 3 chair/mute consts as Phase 2; need to confirm Phase 1 ownership boundary so the planner does not re-touch.",
+      "answer": "No. The 3 chair/mute consts (ENTRY_KIND_ROOM_CHAIR_TRANSFERRED/CHAIR_OVERRIDE/MUTE_ALL) already shipped in m3-core-entry-kinds (Phase 2), verified present at crates/db_schema/src/source/governance/governance_log.rs:253-255 @ HEAD 488e1d075. Phase 1 emits ZERO chain entries (chair-action emission is Phase 3/4); it does NOT touch governance_log.rs. Phase 1's only crates/** change is the rtc_enabled Postgres config-row consumer (if any) — NOT the entry-kind registry.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-18T00:00:01Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-065"
     }
   ]
 }
