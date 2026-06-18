@@ -7773,6 +7773,21 @@
       "approved_by": null,
       "approved_at": null,
       "id": "da838b8fc109-002"
+    },
+    {
+      "from": "advisor",
+      "kind": "log",
+      "timestamp": "2026-06-18T20:48:21Z",
+      "question": "DoD smoke (§3.4, gate-1): plan §15.5 cross-cutting verification commands use `rg` (ripgrep), which is absent from the advisor laptop's Bash PATH — the verify-gate greps (R9 ADR-015 person_id scan, api/v4 URL check, can_publish presence, power-level absence, FIRST-emitter check) would all fail with `rg: command not found`. The §15 header claims 'No rg-absent greps' but §15.5 contradicts it.",
+      "options": [
+        "(a) Advisor substitutes `git grep` for `rg` when running §15.5 at the verify gate (git grep proven working: `git grep -l 'governance/room-event' -- services/bridge/src/config.rs` returns the file). No plan edit; advisor handles at run time.",
+        "(b) Planner revises §15.5 to use `git grep` / the Grep tool before approval"
+      ],
+      "context": "DoD smoke run 2026-06-18 @ governance-v0 8278f465b: `which rg` returns nothing on the laptop Bash PATH; the bundled ripgrep behind the Grep tool is not exposed as a shell `rg`. §15.1-15.4 cargo commands are clean (cargo-check.bat finds MSVC linker, Docker 29.4.0 present for cargo-linux.sh). Only §15.5's verification greps are affected — these are advisor/brehon-verify end-of-phase checks, NOT impl-task DoD gates, so they do not block impl. Per feedback_plan_dod_dry_run_at_write.md (same rg-absent class flagged at m3-core-entry-kinds).",
+      "answer": "(a) — advisor substitutes `git grep` (or the Grep tool) for `rg` when running §15.5 at the verify gate. The defect is real but cosmetic-for-impl: §15.5 is the end-of-phase cross-cutting verification, run by the advisor / brehon-verify, not an impl-task DoD gate, so it does not block any Junior task. git grep is a proven drop-in (verified at smoke time). No plan re-spin needed for a 6-line tool-name swap the advisor executes; recording here so the verify gate doesn't trip on rg-absence. NOT promoting to a plan edit — the cost (planner re-run) exceeds the benefit (advisor already knows to swap).",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-18T20:48:21Z",
+      "id": "a3d0e9941441-068"
     }
   ]
 }
