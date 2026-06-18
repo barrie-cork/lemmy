@@ -28,3 +28,4 @@ time = "=0.3.47"
 # ed25519-dalek 2.2.0 is already in the lock as a transitive dep; pin to 2.x.
 ed25519-dalek = "2"
 hex = "0.4"
+jsonwebtoken = "9"
