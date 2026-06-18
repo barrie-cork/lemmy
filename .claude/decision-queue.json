@@ -1,56 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "d7dcae059936-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-18T00:00:00Z",
-      "question": "Run cargo check --workspace --features full to validate task 4 (actor-pseudonym endpoint) compiles.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 adds get_bridge_actor_pseudonym handler to bridge_read.rs, wires the route in lib.rs, and appends an e2e test to governance.rs. Validation is delegated to the laptop advisor.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/m3-core-infra-task4-check.log 2>&1\""
-      ],
-      "branch": "phase-m3-core-infra",
-      "phase_task": 4,
-      "e2e_filter": "test(m3_actor_pseudonym)"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-18T15:35:03Z",
-      "question": "Run the scoped m3-core-infra Task 6 clean-posture e2e (rtc_enabled=false) on the laptop and report pass/fail.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 6 added e2e test m3_rtc_disabled_clean_posture_governance_unaffected to crates/server/tests/e2e/governance.rs (mirrors m2_hook_suppressed_when_messaging_disabled + messaging_disabled_preserves_governance_posture). Worker committed + pushed; e2e is laptop-validated (Windows, testcontainers/Docker).",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/m3-core-infra-task6-e2e.log 2>&1\""
-      ],
-      "branch": "phase-m3-core-infra",
-      "phase_task": "6",
-      "e2e_filter": "test(m3_rtc_disabled_clean_posture)",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "9d1c395b50fa-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "8533df2ad37d-001",
@@ -7707,6 +7657,58 @@
       "log_slice": "Finished `dev` profile [unoptimized] target(s) in 18m 06s",
       "failed_commands": null,
       "id": "d7dcae059936-001"
+    },
+    {
+      "id": "d7dcae059936-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Run cargo check --workspace --features full to validate task 4 (actor-pseudonym endpoint) compiles.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 adds get_bridge_actor_pseudonym handler to bridge_read.rs, wires the route in lib.rs, and appends an e2e test to governance.rs. Validation is delegated to the laptop advisor.",
+      "answer": "cargo check --workspace --features full exit 0 (18m06s); scoped e2e m3_actor_pseudonym PASS 1/1 (exit 0) after fix-impl-4a Crud import correction.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T16:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full > .claude/PRPs/debug/m3-core-infra-task4-check.log 2>&1\""
+      ],
+      "branch": "phase-m3-core-infra",
+      "phase_task": 4,
+      "e2e_filter": "test(m3_actor_pseudonym)",
+      "result": "pass",
+      "log_slice": "PASS [35.5s] (1/1) m3_actor_pseudonym_endpoint_idempotent_opaque",
+      "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-18T15:35:03Z",
+      "question": "Run the scoped m3-core-infra Task 6 clean-posture e2e (rtc_enabled=false) on the laptop and report pass/fail.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added e2e test m3_rtc_disabled_clean_posture_governance_unaffected to crates/server/tests/e2e/governance.rs (mirrors m2_hook_suppressed_when_messaging_disabled + messaging_disabled_preserves_governance_posture). Worker committed + pushed; e2e is laptop-validated (Windows, testcontainers/Docker).",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-test.bat --workspace --test e2e --features full > .claude/PRPs/debug/m3-core-infra-task6-e2e.log 2>&1\""
+      ],
+      "branch": "phase-m3-core-infra",
+      "phase_task": "6",
+      "e2e_filter": "test(m3_rtc_disabled_clean_posture)",
+      "result": "pass",
+      "log_slice": "PASS [31.4s] (1/1) m3_rtc_disabled_clean_posture_governance_unaffected",
+      "failed_commands": null,
+      "answer": "scoped e2e m3_rtc_disabled_clean_posture_governance_unaffected PASS 1/1 (exit 0, 31.4s); 146 skipped. Build 29m03s. rtc_enabled=false clean posture verified.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-18T16:55:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9d1c395b50fa-001"
     }
   ]
 }
