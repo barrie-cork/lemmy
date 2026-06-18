@@ -217,8 +217,14 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m2-late-2 | Task 3 | `sanction_handler.rs` + `bridge_room.rs` (2 files, bridge crate) | `bridge_room.rs:19-29`; workspace payload struct | ✅ | 2-file bridge, MIRROR-heavy, cargo-gated (bridge check) |
 | m2-late-2 | Task 4 | `sanction_handler.rs` (1 file, bridge crate) | `room_provisioner.rs:527-581`; `puppet.rs:58` | ✅ | 1-file bridge handler, MIRROR-heavy, cargo-gated |
 | m2-late-2 | Task 5 | `sanction_handler.rs` in-module test (1 file) | bridge test-compile pattern | ✅ | test-compile gated (`cargo check`), MIRROR-heavy |
+| m3-core-infra | Task 1 | up.sql+down.sql+bridge_read.rs (3 files) | `§10.1` seed; `§10.2` read | ❌ | criterion 5: DoD is `migrate-roundtrip.sh`, not cargo-check/clippy (same as m1-b T1); criterion 4: 3 files |
+| m3-core-infra | Task 2 | `bridge_room.rs` (1 file, bridge crate) | `bridge_room.rs:3-17`; `§10.5` ALTER-guard | ✅ | 1-file bridge schema, MIRROR-heavy, cargo-gated (`cargo-linux.sh check`) |
+| m3-core-infra | Task 3 | livekit_jwt.rs+config.rs+main.rs+Cargo.toml (4 files) | `§10.6` config; `§10.10` claims | ❌ | criterion 4: 4 files > 2 |
+| m3-core-infra | Task 4 | bridge_read.rs+routes/lib.rs+e2e (multi-file) | `§10.4` allocator | ❌ | criterion 4: multi-file; criterion 2: e2e component |
+| m3-core-infra | Task 5 | docker-compose.yml+AGPL-NOTICE.md (deploy/meta) | `§10.8`/`§10.9` | ❌ | criterion 1: not impl-code (deploy + licence meta); no cargo MIRROR gate |
+| m3-core-infra | Task 6 | clean-posture e2e (`governance.rs`) | `§10.11` | ❌ | criterion 2: e2e |
 
-**Running total: 16 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2; m2-late-2 T3,T4,T5 = 3).
+**Running total: 17 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2; m2-late-2 T3,T4,T5 = 3; m3-core-infra T2 = 1).
 
 **TRIAL UN-SUSPENDED — user directive 2026-06-12**: user confirmed *"configure each task to run AB testing Sonnet versus M3"* for m2-late-2 `--unattended --start-from impl-cohort-0`. Prior suspension (memory 827) was infra-only (wrong DB, missing ab-test branch); key is verified live (HTTP 200, 2026-06-12). Each qualifying task (T3, T4, T5) runs BOTH arms per §2.3 on throwaway `ab-test/m2-late-2-t{3,4,5}-{sonnet,minimax}` branches off `phase-m2-late-2` tip AFTER the upstream `requires:` tasks land (T3 requires nothing; T4 requires T3; T5 requires T4). Real pipeline is Sonnet on `phase-m2-late-2`; trial never gates shipping. Results → `minimax-m3-trial-results.md` (create at trial start, append new `## m2-late-2` section).
 
