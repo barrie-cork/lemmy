@@ -17,6 +17,7 @@ use super::bridge_auth;
 pub struct BridgeStatus {
   pub messaging_enabled: bool,
   pub oq009_reveal_threshold: i64,
+  pub rtc_enabled: bool,
 }
 
 #[cfg(feature = "full")]
@@ -39,8 +40,15 @@ pub async fn get_bridge_messaging_status(
       .and_then(|r| r.value_int)
       .unwrap_or(1);
 
+  let rtc_enabled =
+    GovernanceMessagingConfig::read_current(pool, "instance", "rtc_enabled")
+      .await?
+      .and_then(|r| r.value_bool)
+      .unwrap_or(false); // absent → false (clean-posture default)
+
   Ok(Json(BridgeStatus {
     messaging_enabled,
     oq009_reveal_threshold,
+    rtc_enabled,
   }))
 }
