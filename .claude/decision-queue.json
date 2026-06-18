@@ -7709,6 +7709,36 @@
       "approved_by": null,
       "approved_at": null,
       "id": "4f481a50a459-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-18T20:22:09Z",
+      "question": "Stage-mode emits room_chair_transferred / room_chair_override chain entries (first emitter). The bridge->binary chain-emission callback client does not exist yet. Should the plan build the outbound POST client, or does an existing client cover it?",
+      "options": [
+        "(a) Build the bridge->binary callback client as its own §13 task: mirror crates/api/api_utils/src/bridge_notify.rs:64 (.post() + bridge_callback_secret Bearer auth), POST RoomEventPayload to config.brehon_room_event_url -> binary route /api/v4/governance/room-event (mounted at crates/api/routes/src/lib.rs:484, gates on ROOM_KINDS via append_room_event)",
+        "(b) An existing bridge client already POSTs room events — cite the file:line"
+      ],
+      "context": "Recon 2026-06-18 @ governance-v0 307747138: services/bridge/src/config.rs:35-40 documents brehon_room_event_url as a config surface only — comment: 'the bridge currently receives room-events rather than POSTing them. Retained as config surface for a future bridge->binary room-event callback.' room_provisioner.rs:391/439/463 explicitly defer chain-emission ('deferred to T5'). No bridge code POSTs to /governance/room-event today. The binary side (append_room_event, route mount) is complete.",
+      "answer": "(a) — Build the bridge->binary callback client as a §13 task. Evidence: services/bridge/src/config.rs:35-40 is config-only (no .post callsite); room_provisioner.rs defers chain-emission. The binary's append_room_event (crates/api/api/src/governance/governance_log.rs:125) + route (crates/api/routes/src/lib.rs:484) exist and gate on ROOM_KINDS, but are reachable from the bridge only over HTTP. Mirror the reverse-direction client at crates/api/api_utils/src/bridge_notify.rs:64,146 for the .post()+bearer_auth(bridge_callback_secret) shape. This is watchlist #4 (first emitter) made concrete. DoD: grep -rn 'brehon_room_event_url' services/bridge/src/ must return an actual .post(...) callsite after impl, not just the config field.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-18T20:22:09Z",
+      "id": "a3d0e9941441-066"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-18T20:22:09Z",
+      "question": "What mechanism does stage-mode use to promote/demote speakers (mic-passing) — LiveKit publish-grant (token re-mint) or Matrix power-levels?",
+      "options": [
+        "(a) LiveKit publish-grant: grant/revoke canPublish via the LiveKit access token (re-mint via services/bridge/src/livekit_jwt.rs::mint_access_token); assert LiveKit room state",
+        "(b) Matrix power-levels: drive promote/demote via Matrix room power-level changes"
+      ],
+      "context": "PRD m3-town-halls-rtc.prd.md line 87 + Success Criteria 136-137 describe mic-passing as 'grant publish for 30s' and verify via 'assert LiveKit room state + chair publish-grant + watcher mute' / 'assert publish-grant transitions'. Lines 70/87/198 reserve Matrix power-levels specifically for the Phase-4 federation-wide emergency-mute (the <500ms cross-instance problem). Risk: a planner conflating the two mechanisms.",
+      "answer": "(a) LiveKit publish-grant. Stage-mode mic-passing grants/revokes canPublish on the LiveKit access token (re-mint via services/bridge/src/livekit_jwt.rs::mint_access_token, the fn m3-core-infra shipped; identity stays the room pseudonym per ADR-015). PRD line 87 ('grant publish for 30s, auto-revoke on no-activate, promote next') + Success Criteria lines 136-137 ('assert LiveKit room state + chair publish-grant', 'assert publish-grant transitions') settle this. Matrix power-levels are the Phase-4 emergency-mute mechanism ONLY (PRD lines 70/87/198 — the cross-instance <500ms problem) and are explicitly out of scope for stage-mode. Brief §3 updated to cite livekit_jwt.rs:25 as the mic-grant mechanism.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-18T20:22:09Z",
+      "id": "a3d0e9941441-067"
     }
   ]
 }
