@@ -14,6 +14,7 @@ mod appservice;
 mod bridge_room;
 mod config;
 mod link_handler;
+mod livekit_jwt;
 mod provision;
 mod puppet;
 mod relay;

@@ -40,6 +40,12 @@ pub struct BridgeConfig {
     pub bridge_signing_key: String,
     /// URL to POST LinkConfirmRequest to (e.g. "http://localhost:8536/api/v4/governance/link/confirm").
     pub brehon_link_confirm_url: String,
+    /// Optional LiveKit server URL (e.g. "wss://livekit.example.com"). Required only when RTC is enabled.
+    pub livekit_url: Option<String>,
+    /// Optional LiveKit API key. Required only when RTC is enabled.
+    pub livekit_api_key: Option<String>,
+    /// Optional LiveKit API secret. Required only when RTC is enabled.
+    pub livekit_api_secret: Option<String>,
 }
 
 impl BridgeConfig {
@@ -73,6 +79,9 @@ impl BridgeConfig {
                 .context("BRIDGE_SIGNING_KEY env var required")?,
             brehon_link_confirm_url: env::var("BREHON_LINK_CONFIRM_URL")
                 .context("BREHON_LINK_CONFIRM_URL env var required")?,
+            livekit_url: env::var("LIVEKIT_URL").ok(),
+            livekit_api_key: env::var("LIVEKIT_API_KEY").ok(),
+            livekit_api_secret: env::var("LIVEKIT_API_SECRET").ok(),
         })
     }
 }
