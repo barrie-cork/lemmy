@@ -24,6 +24,8 @@ pub struct RoomEventPayload {
 
 /// Wire shape sent to the binary's room-event handler. Mirrors room_event_handler.rs:19-23.
 #[derive(serde::Serialize)]
+// ponytail: scaffold-ahead-of-caller — Task 6 wires the async controller drain that constructs this.
+#[allow(dead_code)]
 struct RoomEventRequest<'a> {
     entry_kind: &'a str,
     payload: RoomEventPayload,
@@ -33,6 +35,7 @@ struct RoomEventRequest<'a> {
 /// POST to the binary's /api/v4/governance/room-event with Bearer auth.
 /// Propagates transport/status errors via `?`; the CALLER swallows them
 /// (fire-and-forget per bridge_notify.rs:62-72). ADR-016: payload is metadata only.
+#[allow(dead_code)] // Task 6: the async bridge controller drains Stage::pending_emits and calls this.
 pub async fn post_room_event(
     client: &reqwest::Client,
     url: &str,
