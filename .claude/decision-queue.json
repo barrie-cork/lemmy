@@ -2,6 +2,35 @@
   "schema_version": 3,
   "pending": [
     {
+      "id": "91c7d92933b0-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Validate task1 RoomEventPayload recording fields: cargo check + clippy.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (m3-core-recording) added 5 optional recording-metadata fields to RoomEventPayload in crates/api/api/src/governance/governance_log.rs (media_url/content_sha256/duration_s/speakers/attendance_count, all #[serde(default, skip_serializing_if)] after federated). Updated 4 existing test literals to include new None fields. Added room_event_payload_recording_fields_skip_serializing_if_none test. No cargo run on daemon per brief §4.",
+      "branch": "junior/role-impl-task-m3-core-recording-task1-roomeventpayload-recording-fields-see-claude-prps-briefs-m3-core-recording-i-736",
+      "phase_task": "m3-core-recording-task1",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+      ],
+      "e2e_filter": null,
+      "workflow_run_id": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "4ee45cbb6d67-001",
       "from": "impl",
       "kind": "validate-pending-laptop-linux",
       "timestamp": "2026-06-19T00:00:00Z",
@@ -25,8 +54,7 @@
       "approved_at": null,
       "result": null,
       "log_slice": null,
-      "failed_commands": null,
-      "id": "4ee45cbb6d67-001"
+      "failed_commands": null
     }
   ],
   "resolved": [
