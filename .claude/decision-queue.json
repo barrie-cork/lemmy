@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run bridge Linux compile + clippy + mute_handler tests for Task 2.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (mute_handler.rs) committed. Bridge compiles on Linux only (ruma-common E0119 on Windows). Validate via Docker rust:1.95.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml mute_handler"
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-task2-mute-handler-power-levels-see-claude-prps-briefs-m3-core-emergency-mute-727",
+      "phase_task": "m3-core-emergency-mute task 2",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "872d193380d5-001"
+    }
+  ],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
