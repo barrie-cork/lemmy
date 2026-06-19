@@ -58,6 +58,18 @@ pub struct BridgeConfig {
     /// Optional LiveKit API secret. Required only when RTC is enabled.
     #[allow(dead_code)]
     pub livekit_api_secret: Option<String>,
+    /// Optional S3 endpoint URL (e.g. "http://minio:9000"). Required only when recording is enabled.
+    #[allow(dead_code)]
+    pub s3_endpoint: Option<String>,
+    /// Optional S3 bucket name for recording uploads. Required only when recording is enabled.
+    #[allow(dead_code)]
+    pub s3_bucket: Option<String>,
+    /// Optional S3 access key for recording uploads. Required only when recording is enabled.
+    #[allow(dead_code)]
+    pub s3_access_key: Option<String>,
+    /// Optional S3 secret key for recording uploads. Required only when recording is enabled.
+    #[allow(dead_code)]
+    pub s3_secret_key: Option<String>,
 }
 
 impl BridgeConfig {
@@ -94,6 +106,10 @@ impl BridgeConfig {
             livekit_url: optional_non_empty("LIVEKIT_URL"),
             livekit_api_key: optional_non_empty("LIVEKIT_API_KEY"),
             livekit_api_secret: optional_non_empty("LIVEKIT_API_SECRET"),
+            s3_endpoint: optional_non_empty("S3_ENDPOINT"),
+            s3_bucket: optional_non_empty("S3_BUCKET"),
+            s3_access_key: optional_non_empty("S3_ACCESS_KEY"),
+            s3_secret_key: optional_non_empty("S3_SECRET_KEY"),
         })
     }
 }
