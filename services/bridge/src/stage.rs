@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use std::collections::VecDeque;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use rusqlite::Connection;
 use crate::bridge_room;
 
@@ -58,7 +58,7 @@ impl Stage {
         let fifo = match bridge_room::read_queue_state(conn, case_id, room_type)? {
             Some(json) => serde_json::from_str::<Vec<String>>(&json)
                 .map(|v| v.into_iter().collect())
-                .unwrap_or_default(),
+                .context("corrupt bridge_room.queue_state")?,
             None => VecDeque::new(),
         };
         Ok(Stage {
