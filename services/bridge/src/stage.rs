@@ -6,12 +6,16 @@ use anyhow::{anyhow, Context, Result};
 use rusqlite::Connection;
 use crate::bridge_room;
 
+/// Grace period before a promoted-but-not-activated participant is auto-revoked.
+/// Timer is tokio::time (virtual-time-controllable) so tests drive it deterministically.
+const GRACE_SECS: u64 = 30;
+
 /// Seat state for the participant currently at the mic position.
 /// Participants in the FIFO queue are implicitly in Watcher status.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SeatState {
     Watcher,
-    /// Granted publish; awaiting activation (Task 4 adds the 30s grace boundary).
+    /// Granted publish; awaiting activation (30s grace — run_grace drives the boundary).
     Promoted,
     Speaking,
 }
@@ -82,8 +86,7 @@ impl Stage {
 
     /// Pop the FIFO head, emit GrantPublish, and move that participant to Promoted.
     /// Returns Err if the FIFO is empty (invalid transition — type-state guard).
-    /// Note: the 30s grace timer is Task 4; this leaves the Promoted participant awaiting
-    /// on_activate with no timeout boundary.
+    /// Call `run_grace` after this to start the 30s activation window (Task 4).
     pub fn promote_next(&mut self, sink: &mut dyn GrantSink, conn: &Connection) -> Result<()> {
         let head = self
             .fifo
@@ -121,14 +124,55 @@ impl Stage {
         }
     }
 
-    /// Stub signature — Task 4 adds the tokio::select! grace-timer wiring.
+    /// Auto-revoke the grace-expired Promoted participant and promote the next FIFO head.
+    ///
+    /// Idempotent: returns Ok without side-effects if `p` is no longer in Promoted state
+    /// (activation or chair-demote already happened before the timer fired).
+    /// ADR-015: `p` is a pseudonym string — never person_id or username.
     pub fn on_grace_expired(
         &mut self,
-        _p: &str,
-        _sink: &mut dyn GrantSink,
-        _conn: &Connection,
+        p: &str,
+        sink: &mut dyn GrantSink,
+        conn: &Connection,
     ) -> Result<()> {
-        // Task 4: RevokePublish(_p) + promote_next(_sink, _conn)
+        match &self.current {
+            Some((name, SeatState::Promoted)) if name.as_str() == p => {}
+            _ => return Ok(()), // already activated or demoted; idempotent guard
+        }
+        sink.apply(GrantCmd::RevokePublish(p.to_string()));
+        self.current = None;
+        if !self.fifo.is_empty() {
+            self.promote_next(sink, conn)?;
+        }
+        Ok(())
+    }
+
+    /// Drive the 30s grace window for the Promoted participant `p` using virtual time.
+    ///
+    /// Races `tokio::time::sleep(GRACE_SECS)` against `cancel` (the activation signal).
+    /// On sleep expiry without activation: fires `on_grace_expired` (RevokePublish + next-promote).
+    /// On `cancel` resolving first: exits cleanly — no revoke.
+    ///
+    /// The timer is `tokio::time` (never wall-clock) so tests control it with
+    /// `tokio::time::advance` and `#[tokio::test(start_paused = true)]` (R7).
+    ///
+    /// Callers supply the cancel Future:
+    /// - Tests: `std::future::pending::<()>()` for the boundary case;
+    ///   `std::future::ready(())` when activation already happened.
+    /// - Production (Task 5+): a `oneshot::Receiver<()>` that `on_activate` fires.
+    pub async fn run_grace<F: std::future::Future + Unpin>(
+        &mut self,
+        p: &str,
+        sink: &mut dyn GrantSink,
+        conn: &Connection,
+        cancel: F,
+    ) -> Result<()> {
+        tokio::select! {
+            _ = tokio::time::sleep(std::time::Duration::from_secs(GRACE_SECS)) => {
+                self.on_grace_expired(p, sink, conn)?;
+            }
+            _ = cancel => {}
+        }
         Ok(())
     }
 
@@ -337,6 +381,77 @@ mod tests {
             stage2.fifo.iter().collect::<Vec<_>>(),
             &["B"],
             "FIFO must survive a reload (queue_state round-trip)"
+        );
+        Ok(())
+    }
+
+    /// §16a Story 2 DoD — the load-bearing 30s boundary (R7):
+    /// promote W1 (W2 queued), advance virtual clock 30s WITHOUT activating W1,
+    /// assert RevokePublish(W1) THEN GrantPublish(W2).
+    ///
+    /// Requires tokio features: `time` (sleep) + `test-util` (start_paused / advance).
+    #[tokio::test(start_paused = true)]
+    async fn grace_no_activate_auto_revokes_and_promotes_next() -> Result<()> {
+        let (mut stage, conn) = open_stage(7);
+        let mut sink = Recorder::new();
+        stage.raise_hand("W1", &conn)?;
+        stage.raise_hand("W2", &conn)?;
+        stage.promote_next(&mut sink, &conn)?;
+
+        // Spawn the advance task BEFORE awaiting run_grace; otherwise the single-threaded
+        // runtime would have nothing to fire the sleep (time is paused).
+        let advance_task = tokio::spawn(async {
+            tokio::time::advance(std::time::Duration::from_secs(30)).await;
+        });
+        // cancel = pending (never resolves): only the sleep branch can fire.
+        stage
+            .run_grace("W1", &mut sink, &conn, std::future::pending::<()>())
+            .await?;
+        advance_task.await?;
+
+        // cmds[0] = GrantPublish(W1) from promote_next
+        // cmds[1] = RevokePublish(W1) from on_grace_expired
+        // cmds[2] = GrantPublish(W2) from next promote_next
+        assert_eq!(sink.cmds.len(), 3, "promote + grace-revoke + next-promote expected");
+        assert_eq!(
+            sink.cmds[1],
+            GrantCmd::RevokePublish("W1".to_string()),
+            "grace expiry must emit RevokePublish(W1)"
+        );
+        assert_eq!(
+            sink.cmds[2],
+            GrantCmd::GrantPublish("W2".to_string()),
+            "grace expiry must promote next queued watcher"
+        );
+        Ok(())
+    }
+
+    /// Contrast: activate W1 before grace fires, advance 30s — no revoke fires.
+    /// cancel = ready() resolves immediately, selecting the cancel branch over the sleep.
+    #[tokio::test(start_paused = true)]
+    async fn grace_activate_before_expiry_no_revoke() -> Result<()> {
+        let (mut stage, conn) = open_stage(8);
+        let mut sink = Recorder::new();
+        stage.raise_hand("W1", &conn)?;
+        stage.raise_hand("W2", &conn)?;
+        stage.promote_next(&mut sink, &conn)?;
+        stage.on_activate("W1")?;
+
+        // cancel = ready (resolves immediately): activation already happened, no revoke.
+        stage
+            .run_grace("W1", &mut sink, &conn, std::future::ready(()))
+            .await?;
+        tokio::time::advance(std::time::Duration::from_secs(30)).await;
+
+        let revoke_count = sink
+            .cmds
+            .iter()
+            .filter(|c| matches!(c, GrantCmd::RevokePublish(_)))
+            .count();
+        assert_eq!(
+            revoke_count,
+            0,
+            "activation before grace must not fire RevokePublish"
         );
         Ok(())
     }
