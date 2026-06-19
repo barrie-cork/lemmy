@@ -99,6 +99,74 @@ pub fn set_watermark(conn: &Connection, case_id: i64, row_id: i64) -> Result<()>
     Ok(())
 }
 
+/// Persist the FIFO raised-hand queue (serialised as JSON text) to bridge_room.queue_state.
+/// Uses UPSERT so the caller need not pre-insert a row.
+pub fn write_queue_state(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+    queue_json: &str,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO bridge_room (case_id, room_type, queue_state)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(case_id, room_type) DO UPDATE SET queue_state = excluded.queue_state",
+        params![case_id, room_type, queue_json],
+    )?;
+    Ok(())
+}
+
+/// Read back the persisted FIFO queue JSON. Returns None when no row or queue_state is NULL.
+pub fn read_queue_state(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+) -> Result<Option<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT queue_state FROM bridge_room WHERE case_id = ?1 AND room_type = ?2",
+    )?;
+    let mut rows = stmt.query(params![case_id, room_type])?;
+    if let Some(row) = rows.next()? {
+        Ok(row.get(0)?)
+    } else {
+        Ok(None)
+    }
+}
+
+/// Persist the current chair pseudonym to bridge_room.chair_id.
+/// Uses UPSERT so the caller need not pre-insert a row.
+pub fn write_chair_id(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+    chair_pseudonym: &str,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO bridge_room (case_id, room_type, chair_id)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(case_id, room_type) DO UPDATE SET chair_id = excluded.chair_id",
+        params![case_id, room_type, chair_pseudonym],
+    )?;
+    Ok(())
+}
+
+/// Read back the persisted chair pseudonym. Returns None when no row or chair_id is NULL.
+pub fn read_chair_id(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+) -> Result<Option<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT chair_id FROM bridge_room WHERE case_id = ?1 AND room_type = ?2",
+    )?;
+    let mut rows = stmt.query(params![case_id, room_type])?;
+    if let Some(row) = rows.next()? {
+        Ok(row.get(0)?)
+    } else {
+        Ok(None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +188,23 @@ mod tests {
         assert!(cols.contains(&"chair_id".to_string()), "missing chair_id");
         assert!(cols.contains(&"queue_state".to_string()), "missing queue_state");
         assert!(cols.contains(&"recording_config".to_string()), "missing recording_config");
+    }
+
+    #[test]
+    fn queue_state_roundtrip() {
+        let conn = open(":memory:").expect("open db");
+        let json = r#"["alice-pseudo","bob-pseudo"]"#;
+        write_queue_state(&conn, 99, "governance", json).expect("write queue");
+        let back = read_queue_state(&conn, 99, "governance").expect("read queue");
+        assert_eq!(back.as_deref(), Some(json), "queue_state must round-trip");
+    }
+
+    #[test]
+    fn chair_id_roundtrip() {
+        let conn = open(":memory:").expect("open db");
+        write_chair_id(&conn, 99, "governance", "chair-pseudo-xyz").expect("write chair");
+        let back = read_chair_id(&conn, 99, "governance").expect("read chair");
+        assert_eq!(back.as_deref(), Some("chair-pseudo-xyz"), "chair_id must round-trip");
     }
 
     #[test]

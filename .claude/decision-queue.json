@@ -54,6 +54,35 @@
       "log_slice": null,
       "failed_commands": null,
       "e2e_filter": null
+    },
+    {
+      "id": "e1256574bda6-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-18T00:00:00Z",
+      "question": "Run cargo-linux.sh (check + clippy + test stage) for Task 3 stage.rs; report pass or fail.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 adds services/bridge/src/stage.rs + bridge_room.rs accessors + mod stage in main.rs. Bridge compiles Linux-only (ruma-common E0119 on Windows). Commands: check + clippy --no-deps -D warnings + test stage. Commit 77731ea73 on branch junior/role-impl-task-m3-core-stage-mode-task3-stage-fifo-mic-pass-see-claude-prps-briefs-m3-core-stage-mode-impl-3-md-711.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task3-stage-fifo-mic-pass-see-claude-prps-briefs-m3-core-stage-mode-impl-3-md-711",
+      "phase_task": "task3",
+      "answer": "FAIL on clippy: 1 error, unwrap_or_default disallowed at stage.rs:61 (Stage::load malformed-queue_state silent swallow). check PASS, test pending. NON-allowlist (unwrap_or_default not in §G4 allowlist) — advisor catch-fire to user. Cycle 1 for (unwrap_or_default, stage.rs).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T00:06:00.611787+00:00",
+      "result": "fail",
+      "log_slice": "error: use of a disallowed method core::result::Result::unwrap_or_default --> src/stage.rs:61:18 (Stage::load: serde_json::from_str::<Vec<String>>(&json).map(...).unwrap_or_default() silently swallows a malformed persisted queue_state). error: could not compile brehon-bridge due to 1 previous error.",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
+      ]
     }
   ],
   "resolved": [
@@ -7843,6 +7872,35 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-18T20:48:21Z",
       "id": "a3d0e9941441-068"
+    },
+    {
+      "id": "d6dcd385fffa-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run Linux clippy+check+test for fix-impl-2 stage.rs context() change — pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2: replaced .unwrap_or_default() with .context(...)? in Stage::load (stage.rs:61); bridge compiles Linux-only; cargo-linux.sh is the gate.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl2-stage-load-error-propagate-see-claude-prps-briefs-m3-core-stage-mode-fi-712",
+      "phase_task": "fix-impl-2",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS. cargo-linux.sh check + clippy -D warnings + test stage all exit 0 (Docker rust:1.95). unwrap_or_default fix took (Stage::load now .context(corrupt bridge_room.queue_state)? propagates parse error). 6 stage tests pass incl marquee fifo_mic_pass_in_sequence (4-mic-pass) + chair_override_reorder + 2 guarded-error + no-dup + load-roundtrip.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T00:34:27.667290+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": null
     }
   ]
 }
