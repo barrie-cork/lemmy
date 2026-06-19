@@ -106,3 +106,11 @@ The orphan cr-4b `validate-pending-laptop-e2e` (`4f481a50a459-001`) was resolved
 - Stop and ask if: the integration-test success signal does NOT assert on the 30s grace/auto-revoke boundary — the DoD requires the timing boundary, not just a successful mic-pass.
 - Stop and ask if: a `services/bridge/**` change is queued for bm-pr without a `validate-pending-laptop-linux` at result:pass — the Linux-compile gate is mandatory for all bridge code.
 - Stop and ask if: any new chair-control logic emits a chain entry via a stub/no-op rather than the real binary `append()` — the chain emission is load-bearing (ADR-016), not a placeholder.
+
+---
+## STATUS: SHIPPED
+
+- **PR:** #202 merged at 2026-06-19T09:49:55Z
+- **Merge SHA:** a8713dd7504e693a45771dd3823986c20c6b811b
+- **Tombstoned by:** bm-merge Phase 8.5 post-condition
+- **This handover is stale.** Do NOT use the RESUME block above as a basis for action — the phase is complete. Delete this file or archive it.
