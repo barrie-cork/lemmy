@@ -223,8 +223,14 @@ The advisor runs §3.5a of `.claude/rules/advisor-orchestrator.md` at every plan
 | m3-core-infra | Task 4 | bridge_read.rs+routes/lib.rs+e2e (multi-file) | `§10.4` allocator | ❌ | criterion 4: multi-file; criterion 2: e2e component |
 | m3-core-infra | Task 5 | docker-compose.yml+AGPL-NOTICE.md (deploy/meta) | `§10.8`/`§10.9` | ❌ | criterion 1: not impl-code (deploy + licence meta); no cargo MIRROR gate |
 | m3-core-infra | Task 6 | clean-posture e2e (`governance.rs`) | `§10.11` | ❌ | criterion 2: e2e |
+| m3-core-emergency-mute | Task 1 | binary `governance_log.rs` (1 file) | `§10.1`; `governance_log.rs:91-158` | ✅ | DTO `federated` field add; single-file, MIRROR-heavy, cargo-gated |
+| m3-core-emergency-mute | Task 2 | `mute_handler.rs`(new)+`sanction_handler.rs`+`main.rs` (3 files) | `§10.2`/`§10.3`; `sanction_handler.rs:281-325` | ❌ | criterion 4: 3 files > 2 |
+| m3-core-emergency-mute | Task 3 | `stage.rs`+`room_event_client.rs` (2 files, bridge) | `§10.4`/`§10.5`; `stage.rs:202-311` | ✅ | 2-file bridge, MIRROR-heavy, cargo-gated (`cargo-linux.sh check`+`test`) |
+| m3-core-emergency-mute | Task 4 | docker-gated `tests/emergency_mute.rs` | `§10` / `stage_mode.rs` `#[ignore]` | ❌ | criterion 2: e2e-class (docker-gated `#[ignore]` integration) |
 
-**Running total: 17 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2; m2-late-2 T3,T4,T5 = 3; m3-core-infra T2 = 1).
+**Running total: 19 ✅ qualifying** (m1-b 3,4,5 = 3; m2-core-hook 1,2,3,5,7 = 5; m2-rooms-a 3,5,6 = 3; m2-late T5,T6 = 2; m2-late-2 T3,T4,T5 = 3; m3-core-infra T2 = 1; m3-core-emergency-mute T1,T3 = 2).
+
+**Per-phase rolling gate (the actual trigger):** the trial fires when a SINGLE phase has ≥5 qualifying tasks (§"rolling" 2026-05-31). m3-core-emergency-mute has **2** qualifying (T1, T3) — below 5 → trial does NOT fire this phase; the 2 accrue to the rolling cumulative. (Note: m3-core-entry-kinds + m3-core-stage-mode rows were not back-filled into this table at their ship; their qualifying tasks are not in the cumulative above — back-fill is a separate audit, not gate-blocking, since neither hit 5-in-one-phase either.)
 
 **TRIAL UN-SUSPENDED — user directive 2026-06-12**: user confirmed *"configure each task to run AB testing Sonnet versus M3"* for m2-late-2 `--unattended --start-from impl-cohort-0`. Prior suspension (memory 827) was infra-only (wrong DB, missing ab-test branch); key is verified live (HTTP 200, 2026-06-12). Each qualifying task (T3, T4, T5) runs BOTH arms per §2.3 on throwaway `ab-test/m2-late-2-t{3,4,5}-{sonnet,minimax}` branches off `phase-m2-late-2` tip AFTER the upstream `requires:` tasks land (T3 requires nothing; T4 requires T3; T5 requires T4). Real pipeline is Sonnet on `phase-m2-late-2`; trial never gates shipping. Results → `minimax-m3-trial-results.md` (create at trial start, append new `## m2-late-2` section).
 
