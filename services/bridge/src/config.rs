@@ -34,7 +34,6 @@ pub struct BridgeConfig {
     pub brehon_notify_url: String,
     /// URL for POST /api/v4/governance/room-event (binary callback). Read from
     /// BREHON_ROOM_EVENT_URL; consumed by the room-event emitters (Task 6 controller drain).
-    #[allow(dead_code)] // Task 6: removed when the controller reads this to call post_room_event.
     pub brehon_room_event_url: String,
     /// Bearer secret for bridge<->binary auth (BRIDGE_CALLBACK_SECRET).
     pub bridge_callback_secret: String,
