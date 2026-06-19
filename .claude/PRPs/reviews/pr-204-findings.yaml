@@ -32,9 +32,9 @@ findings:
   line: 91
   summary: Stop discarding bridge callback failures in link_actor
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; BRIDGE_CALLBACK_SECRET now hard-errors; POST error propagated via ?
   notes: 'outside-diff: true — Silent failure on POST; violates governance guidelines'
 - id: cr-3
   source: coderabbit
@@ -44,9 +44,9 @@ findings:
   line: 165
   summary: Avoid silent failure on post-transaction governance hook
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; .ok() replaced with ?
   notes: 'outside-diff: true — .ok() discards hook errors; violates governance guidelines'
 - id: cr-4
   source: coderabbit
@@ -92,9 +92,9 @@ findings:
   line: 141
   summary: Fail closed when BRIDGE_CALLBACK_SECRET missing
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170173
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; unwrap_or_default() replaced with map_err()?; mirrors bridge_auth.rs pattern
   notes: unwrap_or_default() weakens auth guarantees; violates guidelines
 - id: cr-8
   source: coderabbit
@@ -104,9 +104,9 @@ findings:
   line: 178
   summary: Do not silently discard governance transition hook failures
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170180
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; .ok() replaced with tracing::warn! matching sibling enqueue_sanction_event pattern
   notes: .ok() on post-txn hook call; violates governance guidelines
 - id: cr-9
   source: coderabbit
@@ -116,9 +116,9 @@ findings:
   line: 33
   summary: Do not lower pre-existing publish thresholds during mute-all
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170191
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; max() guard on both m.call.member and MSC3401 alias keys
   notes: Unconditional insert weakens room mute posture
 - id: cr-10
   source: coderabbit
@@ -128,9 +128,9 @@ findings:
   line: 34
   summary: Handle non-object events values explicitly
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170199
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; ok_or_else()? propagates absent/non-object events as error
   notes: as_object_mut() silent no-op if events exists as non-object
 - id: cr-11
   source: coderabbit
@@ -140,9 +140,9 @@ findings:
   line: 341
   summary: Exclude the chair from mute_all revocations
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170204
-  bucket: fix-in-pr
-  addressed_in: null
-  rationale: null
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; chair excluded from revoke loop; marquee test updated with chair-skip sub-assertion
   notes: Preserves non-chair mute-all contract
 - id: cr-12
   source: coderabbit
@@ -158,14 +158,14 @@ findings:
   notes: todo!() panic prevents using test as pilot gate
 counters:
   critical:
-    open: 5
-    done: 0
+    open: 0
+    done: 5
     rebutted: 0
     carry_forward: 0
     wont_fix: 0
   major:
-    open: 2
-    done: 0
+    open: 0
+    done: 2
     rebutted: 0
     carry_forward: 0
     wont_fix: 0
