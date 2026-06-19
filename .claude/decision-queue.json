@@ -83,6 +83,33 @@
       "failed_commands": [
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
       ]
+    },
+    {
+      "id": "8c61e18ffcea-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Does services/bridge compile + clippy-clean + stage tests pass on Linux after the cr-4 single-presenter revoke fix?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix(rtc) commit 0258fef07 adds revoke-before-grant in promote_next and chair_override(ForcePromote) in services/bridge/src/stage.rs. Bridge only compiles on Linux (ruma-common E0119 on Windows). Laptop advisor runs cargo-linux.sh to validate.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl-cr4-single-presenter-revoke-see-claude-prps-briefs-m3-core-stage-mode-fi-722",
+      "phase_task": "fix-impl-cr4",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
