@@ -3,6 +3,7 @@ phase: m3-core-emergency-mute
 plan: .claude/PRPs/plans/m3-core-emergency-mute.plan.md   # (not yet authored)
 phase_branch: phase-m3-core-emergency-mute                 # not yet created until bm-cut
 worktree: C:/Users/barri/Developer/brehon-fork             # canonical until bm-cut; lane worktree optional (Mode A/B)
+lane_mode: B    # B = mobile remote-control (drive from canonical via Junior dispatch); m3-core-stage-mode ran B (no lane worktree). Flip to A + author brief on phase branch if a dedicated brehon-fork-m3-core-emergency-mute worktree is created at bm-cut.
 authored: 2026-06-19
 authored_by: advisor (canonical brehon-fork / governance-v0 session)
 purpose: Bootstrap the m3-core-emergency-mute advisor session. Read the RESUME block first; it is the entry point.
@@ -51,6 +52,7 @@ Reference by filename, never duplicated:
 4. **ADR-015 pseudonyms-only on the `room_mute_all` payload:** the actor (who triggered the mute) is a pseudonym; no person_id/username/MXID into the chain entry. Brief §4 must make this load-bearing (`feedback_cheap_model_arm_drops_adr_constraints.md`).
 5. **ADR-016 metadata-only:** the chain entry carries mute metadata (actor pseudonym, room, timestamp) — never speech/video content. `post_room_event` is metadata-only.
 6. **<500ms latency is a measurable DoD, not a vibe:** the §16a marquee story must assert the cross-instance publisher-client measurement. Decide at plan time: deterministic unit test of the mute-emission path + a docker-gated `#[ignore]` integration test for the real <500ms cross-instance measurement (mirroring stage-mode's `stage_mode.rs` pattern). The unit DoD is the gate; the integration test is Phase-6-pilot-grade.
+7. **`room_mute_all` is single-action-over-all-holders — the test must assert the NEGATIVE invariant:** per `feedback_authz_state_machine_test_asserts_negative.md` (cr-4 from stage-mode, PR #202). `room_mute_all` drops ALL publishers; the marquee test must assert that AFTER mute, NO publisher retains publish rights — not merely that a mute command was issued. The cr-4 trap (a single-presenter test that asserted grant order but not the revoke) ships green while the invariant breaks. The mechanical check: does the test fail if you delete the mute/revoke operation? If it stays green, it asserts the happy path, not the invariant.
 
 ## 5. Operational rules
 
