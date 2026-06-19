@@ -85,6 +85,35 @@
       ]
     },
     {
+      "id": "13fd7f8da89b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T01:10:58Z",
+      "question": "Does the bridge crate compile cleanly on Linux (Docker rust:1.95) after adding tokio `time` to [dependencies] and `test-util` to [dev-dependencies]?",
+      "options": [
+        "pass: cargo check + clippy + test all succeed on Linux",
+        "fail: at least one command exits non-zero on Linux"
+      ],
+      "context": "fix-impl-3 toggled tokio features in services/bridge/Cargo.toml (time in [dependencies], test-util in [dev-dependencies]). Bridge compiles on Linux ONLY per feedback_bridge_validates_on_linux_not_windows.md. Laptop advisor must run cargo-linux.sh to confirm no Linux-only errors.",
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl3-tokio-time-feature-gate-see-claude-prps-briefs-m3-core-stage-mode-fix-i-715",
+      "phase_task": "m3-core-stage-mode fix-impl-3 (task 4 lineage)",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
+    }
+  ],
+  "resolved": [
+    {
       "id": "6302ef3b3382-001",
       "from": "impl",
       "kind": "blocker",
@@ -95,14 +124,12 @@
         "option-b: add `time` and `test-util` to the single [dependencies] tokio entry (simpler; test-util in prod is harmless — only activates when tokio::time::pause() is called)"
       ],
       "context": "Task 4 stage.rs implementation is committed (53b8c5612). It uses tokio::time::sleep (requires `time` feature) in run_grace and #[tokio::test(start_paused = true)] (requires `test-util` feature) in the two new grace tests. Current bridge Cargo.toml has tokio = { version = \"1\", features = [\"rt-multi-thread\", \"macros\"] } — both `time` and `test-util` are missing. The brief prohibits touching Cargo.toml without advisor scope approval; it explicitly says to raise a kind:blocker DQ when these features are absent.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "option-a per advisor 2026-06-19: `time` added to [dependencies], `test-util` added to a new [dev-dependencies] section; test-only, prod binary unaffected.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T01:10:58Z",
       "approved_by": null,
       "approved_at": null
-    }
-  ],
-  "resolved": [
+    },
     {
       "id": "8533df2ad37d-001",
       "from": "impl",
