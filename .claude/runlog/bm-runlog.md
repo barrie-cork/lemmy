@@ -2332,3 +2332,22 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **YAML:** .claude/PRPs/reviews/pr-201-findings.yaml (6547 bytes)
 - **walkthrough_summary:** "M3 RTC stack — LiveKit HS256 JWT minting, 3 RTC bridge_room cols w/ idempotent backfill, rtc_enabled=false seed migration, GET /bridge/actor-pseudonym endpoint, profile-gated docker-compose RTC stack, e2e+unit coverage." Pre-merge checks ✅ 5/5. Review profile: ASSERTIVE.
 - **Notes:** All 8 finding files present in PR diff (no outside-diff findings). ADR flags for gate-3 triage: cr-2 (ADR-011 source-trace wording on AGPL-NOTICE 'pinned' images), cr-3 (ADR-015 scrub/redaction on returned pseudonym — verify CR claim vs whether pseudonym is already the redacted value, per falsifiable-hypothesis discipline). Two infra-correctness major findings worth advisor attention: cr-6 (per-open ALTER TABLE lock risk), cr-7 (blank LiveKit secret accepted as Some("")).
+
+## bm: poll-cr — poll #1 — 2026-06-19T04:32:27Z
+
+- **PR:** #202 — feat(rtc,bridge): M3 town-hall stage mode
+- **head SHA:** 4cf1dd0b (first poll on this PR)
+- **CR comments seen:** 2 reviews (1 main walkthrough + 1 summary with 4 inline actionable comments) + 0 standalone inline comments
+- **Copilot status:** posted but quota-limited; no findings to ingest
+- **Actionable findings ingested:** 4 from CodeRabbit
+- **New findings this poll:** 4
+  - cr-1 (nit) .claude/runlog/m3-core-stage-mode-runlog.md:12 — Missing blank line after heading before list item (Markdown linting)
+  - cr-2 (medium) .claude/runlog/m3-core-stage-mode-runlog.md:6-9 — Inconsistent commit hash references (c588c9882 vs c588c988) in audit trail
+  - cr-3 (major) services/bridge/src/room_provisioner.rs:188 — Chair presenter token minted but discarded; unclear Phase-6 integration
+  - cr-4 (critical) services/bridge/src/stage.rs:105 — promote_next violates single-presenter guarantee; must revoke previous before granting new
+- **Counters:** critical 1/0/0 | major 1/0/0 | medium 1/0/0 | low 0/0/0 | nit 1/0/0 (open/done/rebutted)
+- **Recommendation:** block (1 critical open in fix-in-pr)
+- **YAML:** .claude/PRPs/reviews/pr-202-findings.yaml (created, 4 findings)
+- **Pre-merge-check walkthrough:** CR effort estimate 4 (Complex). 4 pre-merge checks passed (title, docstring coverage, linked issues, out-of-scope). Description check has 1 warning (template structure).
+- **Notes:** Bridge-only code scope (services/bridge/** + additive DTO fields). No e2e fragility expected from CR findings — all findings are doc/style/correctness/contract issues. cr-4 is the only blocking issue (correctness violation on single-presenter guarantee). cr-3 needs clarification on Phase-6 readiness. cr-2 affects audit-trail clarity. cr-1 is cosmetic formatting.
+
