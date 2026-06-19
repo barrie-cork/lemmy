@@ -2,13 +2,18 @@ use anyhow::{ensure, Context, Result};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// wired by stage.rs (Task 3)
+#[allow(dead_code)]
 #[derive(serde::Serialize, serde::Deserialize)]
 struct VideoGrant {
     room: String,
     #[serde(rename = "roomJoin")]
     room_join: bool,
+    #[serde(rename = "canPublish")]
+    can_publish: bool,
 }
 
+#[allow(dead_code)]
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Claims {
     iss: String,
@@ -22,12 +27,14 @@ struct Claims {
 ///
 /// `identity` is the opaque pseudonym string (ADR-015); the caller must supply
 /// a pre-derived pseudonym. This function assigns it verbatim to the JWT `sub`.
+#[allow(dead_code)]
 pub fn mint_access_token(
     api_key: &str,
     api_secret: &str,
     room: &str,
     identity: &str,
     ttl_secs: u64,
+    can_publish: bool,
 ) -> Result<String> {
     ensure!(ttl_secs > 0, "ttl_secs must be > 0");
     let now = SystemTime::now()
@@ -42,6 +49,7 @@ pub fn mint_access_token(
         video: VideoGrant {
             room: room.to_string(),
             room_join: true,
+            can_publish,
         },
     };
     let token = encode(
@@ -58,20 +66,35 @@ mod tests {
     use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 
     #[test]
-    fn mint_pseudonym_claims() {
+    fn mint_pseudonym_claims() -> Result<()> {
         let token =
-            mint_access_token("api-key", "secret", "room-1", "pseu_abc123", 3600).unwrap();
+            mint_access_token("api-key", "secret", "room-1", "pseu_abc123", 3600, true)?;
         let td = decode::<Claims>(
             &token,
             &DecodingKey::from_secret(b"secret"),
             &Validation::new(Algorithm::HS256),
-        )
-        .unwrap();
+        )?;
         let claims = td.claims;
         assert_eq!(claims.sub, "pseu_abc123");
         assert_eq!(claims.iss, "api-key");
         assert_eq!(claims.video.room, "room-1");
         assert!(claims.video.room_join);
+        assert!(claims.video.can_publish);
         assert!(claims.exp > claims.nbf);
+        Ok(())
+    }
+
+    #[test]
+    fn mint_watcher_token_no_publish() -> Result<()> {
+        let token =
+            mint_access_token("api-key", "secret", "room-1", "pseu_watcher456", 3600, false)?;
+        let td = decode::<Claims>(
+            &token,
+            &DecodingKey::from_secret(b"secret"),
+            &Validation::new(Algorithm::HS256),
+        )?;
+        let claims = td.claims;
+        assert!(!claims.video.can_publish);
+        Ok(())
     }
 }

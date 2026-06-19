@@ -899,6 +899,12 @@ pub struct CaseTransitionEvent {
   /// real identity. The bridge renders each as `Juror-<suffix>`.
   #[serde(default)]
   pub juror_pseudonyms: Vec<String>,
+  /// Pre-resolved pseudonymous initial chair for a town-hall event (OQ-V2-05).
+  /// `None` for non-town-hall transitions. Populated binary-side by the Phase-6
+  /// governance trigger; Phase-3 bridge falls back to juror_pseudonyms[0]
+  /// (foreperson) for jury-adjacent town halls. ADR-015: pseudonym ONLY.
+  #[serde(default)]
+  pub chair_pseudonym: Option<String>,
 }
 
 /// Discriminated union of bridge-notify events. `type_` tag distinguishes

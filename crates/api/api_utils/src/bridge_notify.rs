@@ -140,6 +140,7 @@ pub async fn governance_case_after_transition(
     community_id: case.community_id.map(|c| c.0),
     target_type: case.target_type,
     juror_pseudonyms,
+    chair_pseudonym: None,
   });
   if let Err(e) = context
     .client()
