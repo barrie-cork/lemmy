@@ -157,9 +157,9 @@ impl Stage {
     /// `tokio::time::advance` and `#[tokio::test(start_paused = true)]` (R7).
     ///
     /// Callers supply the cancel Future:
-    ///   - Tests: `std::future::pending::<()>()` for the boundary case;
-    ///            `std::future::ready(())` when activation already happened.
-    ///   - Production (Task 5+): a `oneshot::Receiver<()>` that `on_activate` fires.
+    /// - Tests: `std::future::pending::<()>()` for the boundary case;
+    ///   `std::future::ready(())` when activation already happened.
+    /// - Production (Task 5+): a `oneshot::Receiver<()>` that `on_activate` fires.
     pub async fn run_grace<F: std::future::Future + Unpin>(
         &mut self,
         p: &str,

@@ -85,31 +85,31 @@
       ]
     },
     {
-      "id": "13fd7f8da89b-001",
       "from": "impl",
       "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T01:10:58Z",
-      "question": "Does the bridge crate compile cleanly on Linux (Docker rust:1.95) after adding tokio `time` to [dependencies] and `test-util` to [dev-dependencies]?",
+      "timestamp": "2026-06-19T01:40:35Z",
+      "question": "Does the bridge crate compile + pass clippy cleanly on Linux (Docker rust:1.95) after fixing the doc_overindented_list_items lint in stage.rs run_grace doc block?",
       "options": [
         "pass: cargo check + clippy + test all succeed on Linux",
         "fail: at least one command exits non-zero on Linux"
       ],
-      "context": "fix-impl-3 toggled tokio features in services/bridge/Cargo.toml (time in [dependencies], test-util in [dev-dependencies]). Bridge compiles on Linux ONLY per feedback_bridge_validates_on_linux_not_windows.md. Laptop advisor must run cargo-linux.sh to confirm no Linux-only errors.",
-      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl3-tokio-time-feature-gate-see-claude-prps-briefs-m3-core-stage-mode-fix-i-715",
-      "phase_task": "m3-core-stage-mode fix-impl-3 (task 4 lineage)",
+      "context": "fix-impl-4 re-indented the run_grace doc list (stage.rs ~159-162) to satisfy clippy::doc-overindented-list-items. This is the only remaining blocker from the fix-impl-3 validate-pending-laptop-linux (DQ 13fd7f8da89b-001). No code changes. Laptop advisor must run cargo-linux.sh to confirm clippy now passes.",
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl4-stage-doc-overindent-see-claude-prps-briefs-m3-core-stage-mode-fix-impl-716",
+      "phase_task": "m3-core-stage-mode fix-impl-4 (task 4 lineage)",
       "commands": [
         "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
       ],
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
       "result": null,
       "log_slice": null,
       "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
       "approved_by": null,
-      "approved_at": null
+      "approved_at": null,
+      "id": "e5510f969130-001"
     }
   ],
   "resolved": [
@@ -7945,6 +7945,33 @@
       "approved_by": null,
       "approved_at": null,
       "failed_commands": null
+    },
+    {
+      "id": "13fd7f8da89b-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T01:10:58Z",
+      "question": "Does the bridge crate compile cleanly on Linux (Docker rust:1.95) after adding tokio `time` to [dependencies] and `test-util` to [dev-dependencies]?",
+      "options": [
+        "pass: cargo check + clippy + test all succeed on Linux",
+        "fail: at least one command exits non-zero on Linux"
+      ],
+      "context": "fix-impl-3 toggled tokio features in services/bridge/Cargo.toml (time in [dependencies], test-util in [dev-dependencies]). Bridge compiles on Linux ONLY per feedback_bridge_validates_on_linux_not_windows.md. Laptop advisor must run cargo-linux.sh to confirm no Linux-only errors.",
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl3-tokio-time-feature-gate-see-claude-prps-briefs-m3-core-stage-mode-fix-i-715",
+      "phase_task": "m3-core-stage-mode fix-impl-3 (task 4 lineage)",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "answer": "doc-overindent fixed per advisor §G4 allowlist 2026-06-19",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-19T01:40:35Z",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
