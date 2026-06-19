@@ -28,6 +28,33 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "4ee45cbb6d67-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run Linux cargo validate for bridge S3 config + recording_config helpers (Task 2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 modifies services/bridge/src/config.rs (4 S3 optional fields) and services/bridge/src/bridge_room.rs (write_recording_config/read_recording_config/record_town_halls_enabled + tests). Bridge compiles on Linux only (R1). Validate with cargo-linux.sh check + clippy + test record_town_halls_flag_parse.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task2-s3-config-record-flag-helpers-see-claude-prps-briefs-m3-core-recording-impl-737",
+      "phase_task": "task-2",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
     }
   ],
   "resolved": [
