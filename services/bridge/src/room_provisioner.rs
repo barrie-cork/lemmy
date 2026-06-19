@@ -12,7 +12,7 @@ use std::sync::{Arc, atomic::Ordering};
 use anyhow::Context;
 use serde::Deserialize;
 
-use crate::{appservice::AppState, bridge_room, provision};
+use crate::{appservice::AppState, bridge_room, livekit_jwt, provision, room_event_client, stage};
 
 /// Bridge-local mirror of the governance.rs CaseTransitionEvent wire shape.
 /// Unknown fields are silently ignored (serde default).
@@ -30,6 +30,10 @@ pub struct CaseTransitionEvent {
     pub old_status: Option<String>,
     #[serde(default)]
     pub community_id: Option<i32>,
+    /// Chair pseudonym for stage-mode town-hall rooms (Phase-3 bridge read; binary populates Phase-6).
+    /// Falls back to juror_pseudonyms[0] (foreperson) when absent (OQ-V2-05).
+    #[serde(default)]
+    pub chair_pseudonym: Option<String>,
 }
 
 /// Bridge-local discriminated union for POST /brehon/room-event.
@@ -67,6 +71,7 @@ pub async fn handle_transition(state: Arc<AppState>, event: CaseTransitionEvent)
         Some("appealed") => provision_appeal_room(state, event).await,
         Some("in_review") if community_id.is_some() => provision_spinout_room(state, event).await,
         Some("decided") | Some("closed") => provision_membership_mirror(state, event).await,
+        Some("town_hall") => provision_townhall_stage_room(state, event).await,
         _ if community_id.is_some() => provision_community_event_room(state, event).await,
         _ => {
             tracing::debug!(
@@ -178,6 +183,184 @@ async fn provision_jury_room(state: Arc<AppState>, event: CaseTransitionEvent) {
             tracing::error!(err = %e, case_id = event.case_id, "bridge_room::upsert failed");
         }
     }
+}
+
+/// C2.X — Town-hall stage-mode room provisioning.
+///
+/// Triggered on `new_status == "town_hall"`. Provisions the Matrix room — the Q&A
+/// sidebar IS the Matrix room's native text timeline; no new room type, no content
+/// field, no hashing (ADR-016). When RTC is configured (livekit_api_key + secret),
+/// additionally enters stage mode: seats the chair, initialises the raised-hand queue
+/// to `[]`, and mints the chair a presenter token (`can_publish=true`). Watcher tokens
+/// are minted at join-time (no participant list at provisioning time).
+///
+/// After stage setup the provisioner drains `Stage::pending_emits` into the binary's
+/// room-event endpoint. At provisioning time the drain loops zero times (no live
+/// stage-action HTTP caller yet — Phase-6 wires that); the drain makes `post_room_event`
+/// reachable from a non-test production caller, closing the emit-intent seam (§2.1).
+async fn provision_townhall_stage_room(state: Arc<AppState>, event: CaseTransitionEvent) {
+    // (b) idempotency check — skip if townhall room already exists for this case.
+    {
+        let conn = match bridge_room::open(&state.bridge_db_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(err = %e, case_id = event.case_id, "bridge_room::open failed");
+                return;
+            }
+        };
+        match bridge_room::lookup(&conn, event.case_id as i64, "townhall") {
+            Ok(Some(_)) => {
+                tracing::debug!(case_id = event.case_id, "townhall room already exists — idempotent skip");
+                return;
+            }
+            Ok(None) => {}
+            Err(e) => {
+                tracing::error!(err = %e, case_id = event.case_id, "bridge_room::lookup failed");
+                return;
+            }
+        }
+    }
+
+    // (c) provision the Matrix room. The Q&A sidebar IS the Matrix room's native text
+    // timeline — no new room type, no content field, no hashing (ADR-016).
+    let room_alias = format!("townhall-case-{}", event.case_id);
+    let room_id = match provision::create_community_room(&state.config, &room_alias).await {
+        Ok(id) => id,
+        Err(e) => {
+            tracing::error!(err = %e, case_id = event.case_id, "create_community_room failed for townhall");
+            return;
+        }
+    };
+
+    // (d) persist the room record.
+    {
+        let conn = match bridge_room::open(&state.bridge_db_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(err = %e, case_id = event.case_id, "bridge_room::open for upsert failed");
+                return;
+            }
+        };
+        if let Err(e) =
+            bridge_room::upsert(&conn, event.case_id as i64, "townhall", &room_id, "active", None)
+        {
+            tracing::error!(err = %e, case_id = event.case_id, "bridge_room::upsert failed");
+            return;
+        }
+    }
+
+    // (e) stage mode — gated on RTC config (livekit_api_key + livekit_api_secret required).
+    let (api_key, api_secret) = match (
+        state.config.livekit_api_key.as_deref(),
+        state.config.livekit_api_secret.as_deref(),
+    ) {
+        (Some(k), Some(s)) => (k, s),
+        _ => {
+            tracing::debug!(
+                case_id = event.case_id,
+                "RTC not configured — skipping stage-mode setup"
+            );
+            return;
+        }
+    };
+
+    // Seat the chair: event.chair_pseudonym ?? juror_pseudonyms[0] (foreperson fallback, OQ-V2-05).
+    // ADR-015: both sources are opaque pseudonym strings — never a numeric DB identity or Matrix user ID.
+    let chair = match event
+        .chair_pseudonym
+        .as_deref()
+        .or_else(|| event.juror_pseudonyms.first().map(|s| s.as_str()))
+    {
+        Some(c) => c.to_string(),
+        None => {
+            tracing::warn!(
+                case_id = event.case_id,
+                "no chair_pseudonym or foreperson pseudonym — skipping stage-mode seat"
+            );
+            return;
+        }
+    };
+
+    // Persist chair_id and initialise raised-hand FIFO queue to empty.
+    {
+        let conn = match bridge_room::open(&state.bridge_db_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(err = %e, case_id = event.case_id, "bridge_room::open for chair_id failed");
+                return;
+            }
+        };
+        if let Err(e) = bridge_room::write_chair_id(&conn, event.case_id as i64, "townhall", &chair)
+        {
+            tracing::error!(err = %e, case_id = event.case_id, "write_chair_id failed");
+            return;
+        }
+        if let Err(e) =
+            bridge_room::write_queue_state(&conn, event.case_id as i64, "townhall", "[]")
+        {
+            tracing::error!(err = %e, case_id = event.case_id, "write_queue_state failed");
+            return;
+        }
+    }
+
+    // Mint chair presenter token (can_publish=true). Watcher tokens are deferred to join-time
+    // (no participant list at provisioning time). Phase-6 distributes the chair token.
+    match livekit_jwt::mint_access_token(api_key, api_secret, &room_alias, &chair, 86400, true) {
+        Ok(_token) => {
+            tracing::debug!(
+                case_id = event.case_id,
+                chair = %chair,
+                "chair presenter token minted; watcher tokens minted at join-time"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                err = %e,
+                case_id = event.case_id,
+                "chair presenter token mint failed — non-fatal"
+            );
+        }
+    }
+
+    // Drain pending room-event emits. At provisioning time Stage::pending_emits is empty
+    // (transfer_chair/chair_override have no live HTTP caller yet — Phase-6 wires that).
+    // The drain here makes post_room_event reachable from a non-test caller, closing the
+    // emit-intent seam and allowing the 3 dead_code scaffolding allows to be removed (§2.1).
+    let mut stage = {
+        let conn = match bridge_room::open(&state.bridge_db_path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(
+                    err = %e,
+                    case_id = event.case_id,
+                    "bridge_room::open for stage drain failed"
+                );
+                return;
+            }
+        };
+        match stage::Stage::load(&conn, event.case_id as i64, "townhall") {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!(err = %e, case_id = event.case_id, "Stage::load failed");
+                return;
+            }
+        }
+        // conn dropped here — Stage owns its in-memory state
+    };
+    room_event_client::drain_emits(
+        &mut stage,
+        &state.http_client,
+        &state.config.brehon_room_event_url,
+        &state.config.bridge_callback_secret,
+    )
+    .await;
+
+    tracing::info!(
+        case_id = event.case_id,
+        room_id = %room_id,
+        chair = %chair,
+        "townhall stage-mode room provisioned"
+    );
 }
 
 /// C2.2 — Community-event room provisioning.

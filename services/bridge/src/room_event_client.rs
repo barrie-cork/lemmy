@@ -24,8 +24,6 @@ pub struct RoomEventPayload {
 
 /// Wire shape sent to the binary's room-event handler. Mirrors room_event_handler.rs:19-23.
 #[derive(serde::Serialize)]
-// ponytail: scaffold-ahead-of-caller — Task 6 wires the async controller drain that constructs this.
-#[allow(dead_code)]
 struct RoomEventRequest<'a> {
     entry_kind: &'a str,
     payload: RoomEventPayload,
@@ -35,7 +33,6 @@ struct RoomEventRequest<'a> {
 /// POST to the binary's /api/v4/governance/room-event with Bearer auth.
 /// Propagates transport/status errors via `?`; the CALLER swallows them
 /// (fire-and-forget per bridge_notify.rs:62-72). ADR-016: payload is metadata only.
-#[allow(dead_code)] // Task 6: the async bridge controller drains Stage::pending_emits and calls this.
 pub async fn post_room_event(
     client: &reqwest::Client,
     url: &str,
@@ -53,6 +50,29 @@ pub async fn post_room_event(
         .await?
         .error_for_status()?;
     Ok(())
+}
+
+/// Drain all pending room-event POST intents from `stage.pending_emits`.
+///
+/// Called by the async provisioning controller after any stage-mutating operation.
+/// Fire-and-forget: transport errors are warned and swallowed per bridge_notify.rs:62-72.
+/// At provisioning time `pending_emits` is empty (no live stage-action HTTP endpoint yet —
+/// Phase-6 wires that); the drain loops zero times but makes `post_room_event` reachable
+/// from a non-test production caller, removing the dead_code scaffolding (§2.1).
+pub async fn drain_emits(
+    stage: &mut crate::stage::Stage,
+    client: &reqwest::Client,
+    url: &str,
+    secret: &str,
+) {
+    for intent in stage.pending_emits.drain(..) {
+        if let Err(e) =
+            post_room_event(client, url, secret, intent.entry_kind, intent.payload, intent.actor_pseudonym)
+                .await
+        {
+            tracing::warn!("room-event POST failed (non-fatal — best-effort chain entry): {e}");
+        }
+    }
 }
 
 #[cfg(test)]
