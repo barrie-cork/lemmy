@@ -8344,6 +8344,23 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-19T21:20:00Z",
+      "question": "Where does the record_town_halls flag-gate live: the existing bridge_room.recording_config column, or a new config seam?",
+      "options": [
+        "bridge_room.recording_config column (mirror chair_id/queue_state helpers)",
+        "new config seam (justify)"
+      ],
+      "context": "Task 1 of the m3-core-recording planning brief leaves the gate location with an OR. m3-core-infra already shipped the recording_config TEXT column on bridge_room (services/bridge/src/bridge_room.rs:15) with the mirror-able read/write helper pattern (write_queue_state :104, read_queue_state :120, write_chair_id :138, read_chair_id :154, INSERT...ON CONFLICT keyed by (case_id, room_type)).",
+      "answer": "Use the existing bridge_room.recording_config TEXT column (services/bridge/src/bridge_room.rs:15) as the record_town_halls gate seam; mirror the chair_id/queue_state read/write helpers (bridge_room.rs:104/120/138/154). No new config column or migration — the column was shipped by m3-core-infra and is the canonical RTC-state KV seam on bridge_room. This keeps the recording knobs co-located with chair_id and queue_state, all keyed by (case_id, room_type). The planner pre-seeds this in task 1; a new config seam is a SCOPE ERROR requiring a kind:blocker DQ (per brief boundary 'No new migration').",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T21:20:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-073"
     }
   ]
 }
