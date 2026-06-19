@@ -80,22 +80,21 @@ pub async fn link_actor(
     brehon_signature,
   };
 
-  // POST claim to bridge callback — fire-and-forget, log-and-swallow on error (ADR-012).
-  // unwrap_or_default is intentional: an unset BRIDGE_LINK_CLAIM_URL → empty string →
-  // the `if !is_empty()` guard skips the POST (bridge not configured = no-op, not error).
+  // BRIDGE_LINK_CLAIM_URL unset → empty string → if !is_empty() guard skips the POST
+  // (bridge not configured = no-op, not error; unwrap_or_default intentional for URL only).
   #[expect(clippy::disallowed_methods)]
   let bridge_url = std::env::var("BRIDGE_LINK_CLAIM_URL").unwrap_or_default();
   if !bridge_url.is_empty() {
-    #[expect(clippy::disallowed_methods)]
-    let bridge_secret = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
-    let _ = context
+    let bridge_secret = std::env::var("BRIDGE_CALLBACK_SECRET")
+      .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    context
       .client()
       .post(&bridge_url)
       .header("Authorization", format!("Bearer {bridge_secret}"))
       .json(&payload)
       .send()
       .await
-      .map_err(|e| tracing::warn!("link_actor bridge POST failed: {e}"));
+      .map_err(|e| LemmyError::from(LemmyErrorType::Unknown(format!("link_actor bridge POST failed: {e}"))))?;
   }
 
   Ok(HttpResponse::Ok().json(json!({ "ok": true })))

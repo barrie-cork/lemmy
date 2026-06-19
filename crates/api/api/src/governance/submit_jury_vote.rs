@@ -173,9 +173,12 @@ pub async fn submit_jury_vote(
   if let Some(new_status) = post_txn_status
     && new_status != pre_txn_status
   {
-    governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
-      .await
-      .ok();
+    if let Err(e) =
+      governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
+        .await
+    {
+      tracing::warn!("governance hook failed: {e:#}");
+    }
   }
 
   // Post-tx re-query: find the active sanction written in this transaction.

@@ -161,8 +161,7 @@ pub async fn revoke_endorsement(
       Some(CaseStatus::SponsorLiabilityPending),
       CaseStatus::SponsorLiabilityEscaped,
     )
-    .await
-    .ok();
+    .await?;
   }
 
   Ok(Json(outcome))
