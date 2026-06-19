@@ -322,8 +322,13 @@ impl Stage {
     /// it from LiveKit room state). ADR-015: every string is a pseudonym.
     /// Zero-holder invariant: after this returns, NO listed publisher retains a grant.
     pub fn mute_all(&mut self, publishers: &[String], federated: bool, sink: &mut dyn GrantSink) {
+        // cr-11: chair retains publish authority after mute-all; only non-chair publishers
+        // are silenced. The chair's Matrix power-level keeps them above the raised bar.
+        let chair = self.chair.as_deref();
         for p in publishers {
-            sink.apply(GrantCmd::RevokePublish(p.clone()));   // the load-bearing sweep
+            if Some(p.as_str()) != chair {
+                sink.apply(GrantCmd::RevokePublish(p.clone()));
+            }
         }
         self.current = None;
         self.pending_emits.push(EmitIntent {
@@ -706,6 +711,23 @@ mod tests {
             Some("chair-pseudonym".to_string()),
             "actor_pseudonym must be the chair pseudonym (ADR-015 pin)"
         );
+
+        // cr-11: chair-exclusion invariant — chair must NOT receive RevokePublish when
+        // listed among publishers. Non-chair publishers still receive RevokePublish.
+        let mut sink2 = Recorder::new();
+        let publishers_with_chair: Vec<String> =
+            ["P1", "P2", "chair-pseudonym"].iter().map(|s| s.to_string()).collect();
+        stage.mute_all(&publishers_with_chair, false, &mut sink2);
+        let revoked2: std::collections::HashSet<String> = sink2.cmds.iter().filter_map(|c| {
+            if let GrantCmd::RevokePublish(p) = c { Some(p.clone()) } else { None }
+        }).collect();
+        let expected2: std::collections::HashSet<String> =
+            ["P1", "P2"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(
+            revoked2, expected2,
+            "mute_all must NOT revoke the chair (cr-11 chair-skip invariant)"
+        );
+
         Ok(())
     }
 }
