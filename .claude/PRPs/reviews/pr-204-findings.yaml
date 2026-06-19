@@ -20,9 +20,9 @@ findings:
   line: 229
   summary: Label eval template fence (MD040)
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: outside-diff advisor meta file; CR reviewing noise outside PR scope
   notes: 'outside-diff: true — Add language label `text` to code fence'
 - id: cr-2
   source: coderabbit
@@ -56,9 +56,9 @@ findings:
   line: 18
   summary: Update manifest hash for rule:session-awareness.md
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170148
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: outside-diff advisor meta file; sync-manifest hash drift is not code
   notes: Digest mismatch detected by CR analysis chain
 - id: cr-5
   source: coderabbit
@@ -68,9 +68,9 @@ findings:
   line: 8260
   summary: Record command that actually proved Task 3
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170156
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: DQ is append-only; adding notes to resolved entries mid-PR is wrong process; audit trail sufficient in commit history
   notes: Audit trail incomplete; add successful rerun command
 - id: cr-6
   source: coderabbit
@@ -80,9 +80,9 @@ findings:
   line: 9
   summary: Add blank line after heading (MD022)
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170159
-  bucket: fix-in-pr
+  bucket: wont-fix
   addressed_in: null
-  rationale: null
+  rationale: outside-diff auto-generated runlog; cosmetic markdown lint not worth a fix commit
   notes: Heading missing blank line before list
 - id: cr-7
   source: coderabbit
@@ -152,9 +152,9 @@ findings:
   line: 48
   summary: Replace todo!() with minimal executable scaffold
   cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170207
-  bucket: fix-in-pr
+  bucket: rebut
   addressed_in: null
-  rationale: null
+  rationale: intentional todo!() stub per Phase-6 plan (GOTCHA section); test is #[ignore]-gated; the DoD is compile-only (--no-run); implementing the body now would require a live two-instance docker-compose stack that is Phase-6 pilot work
   notes: todo!() panic prevents using test as pilot gate
 counters:
   critical:
@@ -176,11 +176,11 @@ counters:
     carry_forward: 0
     wont_fix: 0
   low:
-    open: 5
+    open: 0
     done: 0
-    rebutted: 0
+    rebutted: 1
     carry_forward: 0
-    wont_fix: 0
+    wont_fix: 4
   nit:
     open: 0
     done: 0
@@ -192,6 +192,8 @@ counters:
     claude: 0
     user: 0
   total: 12
+  triage_approved_by: user
+  triage_approved_at: '2026-06-19T19:20:00Z'
 merged_at: null
 merge_commit: null
 final_recommendation: null
