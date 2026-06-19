@@ -8083,6 +8083,70 @@
       "failed_commands": [
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
       ]
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "m3-core-emergency-mute mechanism: does cross-instance mute-all enact via Matrix power-levels or LiveKit publish-grant revocation? PRD §242 says power-levels; docs/V2/messaging.md:188 mentions re-granting LiveKit publish permissions.",
+      "options": [
+        "matrix-power-levels-cross-instance-authority",
+        "livekit-grants-only",
+        "power-levels-plus-local-livekit-revoke-sweep"
+      ],
+      "context": "Reconciling the brief §2 task-1 / §4 mechanism-decision constraint.",
+      "answer": "Cross-instance authority is Matrix power-levels (option a as the authority, option c permitted as a latency optimization). DECIDED by project precedent: (1) m3-core-stage-mode.plan.md §6:76 states 'Phase 4 emits room_mute_all via Matrix power-levels (the cross-instance <500ms problem) — Phase 3 deliberately does NOT touch power-levels'; (2) DQ a3d0e9941441-059 (m2-late-2) resolved Matrix-side enforcement incl. mute = 'Power-levels only. Set users[subject_mxid] override per sanction_kind (ban/mute/prevent_post/mute_voice -> below post threshold)' — working impl at services/bridge/src/sanction_handler.rs:266-321; (3) OQ-V2-06 (messaging.md:233, RESOLVED 2026-04-17) = room-global, federation-wide, Matrix power-level semantics. messaging.md:188's 're-granting publish permissions' describes the UNMUTE path (individual re-grant), NOT the cross-instance mute mechanism. The planner MAY add a local LiveKit RevokePublish sweep (option c) for instant in-instance effect as a latency optimization, but power-levels remain the cross-instance authority. MIRROR sanction_handler.rs get_power_levels/put_power_levels/compute_power_override.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T00:00:01Z",
+      "id": "a3d0e9941441-069"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-19T00:00:02Z",
+      "question": "How does the bridge derive the `federated: true|false` boolean for the room_mute_all chain payload (Success Criteria line 141)?",
+      "options": [
+        "any-publisher-home-instance-differs-from-local",
+        "always-true",
+        "planner-resolves-derivation-source"
+      ],
+      "context": "Brief §4 ADR-015 constraint requires the federated boolean asserted in the chain entry; the derivation source is undefined in the brief.",
+      "answer": "federated = true iff at least one muted publisher's home instance differs from the local bridge instance (i.e. the mute crossed an instance boundary). The DERIVATION SOURCE is a plan-time detail the planner resolves: the natural source is the muted participants' MXID server-name portions (@user:domain) compared against the local homeserver name — the bridge already parses MXIDs in sanction_handler.rs (the users[subject_mxid] override path). The planner names the exact field/fn in §13; this is NOT a blocker. Cite the §16a story asserting federated:true in the cross-instance test and federated:false in a single-instance unit test.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T00:00:03Z",
+      "id": "a3d0e9941441-070"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-19T00:00:04Z",
+      "question": "Which test type is the phase GATE for the <500ms publisher-client cross-instance measurement: a deterministic unit test or a docker-gated #[ignore] integration test?",
+      "options": [
+        "deterministic-unit-gate-plus-docker-ignore-integration",
+        "docker-integration-only",
+        "unit-only"
+      ],
+      "context": "Brief §2 task-3 / §4 <500ms DoD constraint; resolving the gate-vs-pilot-grade split.",
+      "answer": "Deterministic unit test is the GATE; docker-gated #[ignore] cross-instance integration test is pilot-grade (option a). PRECEDENT: m3-core-stage-mode.plan.md §10.9 + the line-324 note: 'the deterministic DoD (Stories 1-4) runs as unit tests under cargo-linux.sh test without docker; the end-to-end LiveKit + real-append() flow is a docker-compose-gated #[ignore] integration test mirroring room_provisioning.rs/stage_mode.rs'. For emergency-mute: the unit gate asserts the mute-emission path (power-level PUT issued against each federated room + room_mute_all EmitIntent queued with federated:true + chair_pseudonym). The docker #[ignore] integration test carries the real <500ms cross-instance publisher-client measurement across two federated bridge instances. PRD fallback (line 198): if cross-instance <500ms proves infeasible, document a best-effort SLA + in-instance <500ms guarantee and surface a DQ before declaring the criterion failed — never silently drop the bar.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T00:00:05Z",
+      "id": "a3d0e9941441-071"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-19T00:00:06Z",
+      "question": "Does m3-core-emergency-mute overlap m3-core-stage-mode's services/bridge/src/stage.rs file ownership (cross-phase invariant)?",
+      "options": [
+        "no-conflict-stage-mode-shipped-extend-stage-rs",
+        "conflict-file-dq-needed",
+        "separate-module"
+      ],
+      "context": "Brief §2 reuse-the-emit-seam constraint extends stage.rs (adds a mute_all method pushing a room_mute_all EmitIntent).",
+      "answer": "No conflict (option a). m3-core-stage-mode SHIPPED (PR #202 @ a8713dd75, gov-v0 5a58686d7) — there is no concurrent lane on stage.rs. emergency-mute EXTENDS the shipped stage.rs: adds a mute_all(...) method that pushes a room_mute_all EmitIntent to Stage::pending_emits exactly as chair_override (stage.rs:217,253) and transfer_chair (stage.rs:295) already do, and drains via the EXISTING room_event_client::drain_emits (room_provisioner.rs:350). It does NOT rebuild the emitter and does NOT re-declare ENTRY_KIND_ROOM_MUTE_ALL (governance_log.rs:255, already in ROOM_KINDS:174). The planner MAY add a sibling module if mute_all + power-level enactment is cleaner separated, but stage.rs is the canonical home for the EmitIntent push (matches the chair-action precedent). No file-ownership DQ needed.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-19T00:00:07Z",
+      "id": "a3d0e9941441-072"
     }
   ]
 }
