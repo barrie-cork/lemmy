@@ -8361,6 +8361,42 @@
       "approved_by": null,
       "approved_at": null,
       "id": "a3d0e9941441-073"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "room_recording_uploaded payload shape: (a) 5 new optional fields on the OUTBOUND room_event_client::RoomEventPayload struct (binary + bridge mirror, mirroring the federated add), (b) a new variant on the INBOUND room_provisioner::RoomEventPayload enum, or (c) planner alternative?",
+      "options": [
+        "option-a-outbound-struct-5-optional-fields",
+        "option-b-inbound-enum-variant",
+        "option-c-planner-alternative"
+      ],
+      "context": "The brief s2/s3 hypothesised 'a NEW RoomEventPayload variant (today only PrivateMessage + CaseTransition - room_provisioner.rs:43)'. That conflates two types: room_provisioner::RoomEventPayload is the INBOUND appservice-handler dispatch enum (binary->bridge handle_room_event payload); the recording emission rides the OUTBOUND room_event_client::RoomEventPayload struct (bridge->binary emit, the same struct mute_all/chair_override use, mirrored on the binary at governance_log.rs:92). Verified at room_event_client.rs:6 (struct) vs room_provisioner.rs:43 (enum). Recommend (a): add media_url/content_sha256/duration_s/speakers/attendance_count as 5 optional #[serde(default, skip_serializing_if=Option::is_none)] fields on the OUTBOUND struct (binary + bridge mirror), EXACTLY mirroring emergency-mute's federated add (canonical-schema-first precedent). The binary constructs zero non-test RoomEventPayload literals, so non-breaking; skip_serializing_if keeps existing room emissions' hashed JSON byte-identical. The uploader/chair actor rides the existing top-level actor_pseudonym, not a payload field. This is the one in-scope crates/** touch (trivial-DTO carve-out, NOT a const/migration/registry change). See plan s4(a) + s10.1 + s19 (1). Advisor: ratify at gate-1.",
+      "answer": "Option (a): 5 new optional fields on the OUTBOUND room_event_client::RoomEventPayload struct + the binary governance_log.rs RoomEventPayload mirror, each #[serde(default, skip_serializing_if=Option::is_none)], mirroring the emergency-mute federated add. NOT a new room_provisioner inbound-enum variant (that enum is the inbound handler dispatch type, not the emit payload). The uploader/chair actor rides the existing top-level actor_pseudonym. Advisor ratifies the trivial-DTO crates touch at gate-1.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-19T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1ed255d85572-001"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-19T00:00:01Z",
+      "question": "Recording S3-client + Egress-trigger dependency choice: (a) rust-s3 (generic-S3, custom-endpoint-first) + Egress via existing reqwest+livekit_jwt, (b) aws-sdk-s3 (endpoint_url) + a LiveKit Rust SDK, or (c) planner alternative?",
+      "options": [
+        "option-a-rust-s3-plus-reqwest-egress",
+        "option-b-aws-sdk-s3-plus-livekit-sdk",
+        "option-c-planner-alternative"
+      ],
+      "context": "OQ-V2-04 (D5) mandates a GENERIC S3 API so an operator can swap real S3/R2 (not MinIO-specific). Verified zero S3/Egress/MinIO surface in services/bridge/src today (grep empty). rust-s3 is purpose-built for generic S3-compatible stores (MinIO/R2/Backblaze), custom-endpoint-first (the D5 swap story), lighter dep tree -> lower Linux Cargo.lock resolution risk (bootstrap s2 flagged 'verify at Cargo.lock resolution time'). aws-sdk-s3 supports endpoint_url but pulls aws-config/aws-smithy/hyper (heavier resolution + cold-build risk). For the Egress trigger, reuse the existing reqwest::Client + a livekit_jwt-minted token (the Egress start request is JSON-over-HTTP reachable with the existing stack) to AVOID a second heavy new dep (a LiveKit SDK pulls tonic/protobuf). sha2 is promoted transitive->direct (already in the lock, zero new resolution); hex is already direct. So rust-s3 is the ONLY newly-fetched dep (R14). The Egress real-impl is #[allow(dead_code)] scaffold this phase (live wiring is Phase-6). If rust-s3 fails Linux resolution (s18 row-1 risk), surface a DQ and fall back to aws-sdk-s3 (endpoint_url) - do NOT silently swap. See plan s4(b) + s19 (2) + s18 row-1. Advisor: ratify at gate-1.",
+      "answer": "Option (a): one newly-fetched dep = rust-s3 (generic-S3, custom-endpoint, lighter dep tree = lower Linux resolution risk, matches the D5 operator-swap intent); Egress trigger reuses the existing reqwest + livekit_jwt (no new LiveKit SDK); sha2 promoted transitive->direct (zero new resolution); hex already direct. Isolate the dep-add to Task 3, gated by validate-pending-laptop-linux (the headline gate). Fallback if rust-s3 fails Linux Cargo.lock resolution: surface a DQ + fall back to aws-sdk-s3 (endpoint_url), never a silent swap. Advisor ratifies rust-s3 + Egress-via-reqwest at gate-1.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-19T00:00:01Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "1ed255d85572-002"
     }
   ]
 }
