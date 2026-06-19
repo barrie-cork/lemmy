@@ -83,6 +83,23 @@
       "failed_commands": [
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
       ]
+    },
+    {
+      "id": "6302ef3b3382-001",
+      "from": "impl",
+      "kind": "blocker",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Should we add tokio `time` + `test-util` features to services/bridge/Cargo.toml to unblock Task 4 compilation?",
+      "options": [
+        "option-a: add `time` to [dependencies].tokio.features AND add `tokio = { version = \"1\", features = [\"test-util\"] }` under [dev-dependencies]",
+        "option-b: add `time` and `test-util` to the single [dependencies] tokio entry (simpler; test-util in prod is harmless — only activates when tokio::time::pause() is called)"
+      ],
+      "context": "Task 4 stage.rs implementation is committed (53b8c5612). It uses tokio::time::sleep (requires `time` feature) in run_grace and #[tokio::test(start_paused = true)] (requires `test-util` feature) in the two new grace tests. Current bridge Cargo.toml has tokio = { version = \"1\", features = [\"rt-multi-thread\", \"macros\"] } — both `time` and `test-util` are missing. The brief prohibits touching Cargo.toml without advisor scope approval; it explicitly says to raise a kind:blocker DQ when these features are absent.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
