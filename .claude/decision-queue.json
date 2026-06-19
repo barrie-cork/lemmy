@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "ed978d25433f-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Laptop advisor: run Linux compile proof for services/bridge after cr-9/cr-10/cr-11 fixes. Option-A (Cargo.toml unchanged) but diff touches services/bridge/src — verify bridge still compiles and tests pass on Linux.",
+      "options": [
+        "pass-resolve",
+        "fail-stay-pending-for-G4"
+      ],
+      "context": "fix-impl-1 commit 8bbcb4ec8 changed compute_mute_all_override return type (serde_json::Value -> Result<serde_json::Value>) and mute_all signature body. Bridge only compiles on Linux (ruma-common E0119 on Windows). Three commands to run.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --bins mute_all_revokes_all_publishers"
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-fix-impl-1-bridge-cr-fixes-see-claude-prps-briefs-m3-core-emergency-mute-fix-732",
+      "phase_task": "fix-impl-1",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
