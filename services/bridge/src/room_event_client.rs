@@ -20,6 +20,8 @@ pub struct RoomEventPayload {
     pub to_pseudonym: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub federated: Option<bool>,
 }
 
 /// Wire shape sent to the binary's room-event handler. Mirrors room_event_handler.rs:19-23.
@@ -96,6 +98,7 @@ mod tests {
                 from_pseudonym: None,
                 to_pseudonym: None,
                 at: None,
+                federated: None,
             },
             actor_pseudonym: Some("chair-pseudonym".to_string()),
         };
@@ -130,6 +133,7 @@ mod tests {
                 from_pseudonym: Some("pseudonym-from".to_string()),
                 to_pseudonym: Some("pseudonym-to".to_string()),
                 at: Some("2026-01-01T00:00:00Z".to_string()),
+                federated: None,
             },
             actor_pseudonym: Some("pseudonym-from".to_string()),
         };
@@ -138,6 +142,46 @@ mod tests {
         assert_eq!(v["payload"]["from_pseudonym"], "pseudonym-from", "from_pseudonym must be present");
         assert_eq!(v["payload"]["to_pseudonym"], "pseudonym-to", "to_pseudonym must be present");
         assert_eq!(v["payload"]["at"], "2026-01-01T00:00:00Z", "at must be present");
+        Ok(())
+    }
+
+    /// room_mute_all JSON shape: entry_kind and payload.federated present;
+    /// chair-action fields (action, from_pseudonym, to_pseudonym) ABSENT via skip_serializing_if.
+    #[test]
+    fn mute_all_request_json_shape() -> Result<()> {
+        let req = RoomEventRequest {
+            entry_kind: "room_mute_all",
+            payload: RoomEventPayload {
+                case_id: 3,
+                matrix_room_id: None,
+                lifecycle_stage: "governance".to_string(),
+                member_count: None,
+                action: None,
+                target_pseudonym: None,
+                from_pseudonym: None,
+                to_pseudonym: None,
+                at: None,
+                federated: Some(true),
+            },
+            actor_pseudonym: Some("chair-pseudonym".to_string()),
+        };
+        let v = serde_json::to_value(&req)?;
+        assert_eq!(v["entry_kind"], "room_mute_all", "entry_kind must be room_mute_all");
+        assert_eq!(v["payload"]["federated"], true, "payload.federated must be true");
+        assert_eq!(v["actor_pseudonym"], "chair-pseudonym", "actor_pseudonym must be the chair pseudonym");
+        // skip_serializing_if = "Option::is_none" must omit absent-None fields entirely.
+        assert!(
+            v["payload"].get("action").is_none(),
+            "action must be absent (skip_serializing_if) in mute_all request"
+        );
+        assert!(
+            v["payload"].get("from_pseudonym").is_none(),
+            "from_pseudonym must be absent (skip_serializing_if) in mute_all request"
+        );
+        assert!(
+            v["payload"].get("to_pseudonym").is_none(),
+            "to_pseudonym must be absent (skip_serializing_if) in mute_all request"
+        );
         Ok(())
     }
 }

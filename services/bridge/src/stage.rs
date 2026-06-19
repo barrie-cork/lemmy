@@ -226,6 +226,7 @@ impl Stage {
                             from_pseudonym: None,
                             to_pseudonym: None,
                             at: None,
+                            federated: None,
                         },
                         actor_pseudonym: actor,
                     });
@@ -262,6 +263,7 @@ impl Stage {
                         from_pseudonym: None,
                         to_pseudonym: None,
                         at: None,
+                        federated: None,
                     },
                     actor_pseudonym: actor,
                 });
@@ -304,10 +306,39 @@ impl Stage {
                 from_pseudonym: Some(from.clone()),
                 to_pseudonym: Some(to.to_string()),
                 at: Some(at),
+                federated: None,
             },
             actor_pseudonym: Some(from.clone()),
         });
         Ok((from, to.to_string()))
+    }
+
+    /// Emergency mute-all: revoke publish for EVERY locally-known publisher
+    /// (instant in-instance effect — option (b)) and push the room_mute_all
+    /// EmitIntent. The cross-instance authority is mute_handler::mute_all_power_levels
+    /// (Matrix power-levels); this is the LOCAL belt-and-suspenders.
+    ///
+    /// `publishers` is the explicit locally-known publisher set (the caller enumerates
+    /// it from LiveKit room state). ADR-015: every string is a pseudonym.
+    /// Zero-holder invariant: after this returns, NO listed publisher retains a grant.
+    pub fn mute_all(&mut self, publishers: &[String], federated: bool, sink: &mut dyn GrantSink) {
+        for p in publishers {
+            sink.apply(GrantCmd::RevokePublish(p.clone()));   // the load-bearing sweep
+        }
+        self.current = None;
+        self.pending_emits.push(EmitIntent {
+            entry_kind: "room_mute_all",
+            payload: RoomEventPayload {
+                case_id: self.case_id as i32,
+                matrix_room_id: None,
+                lifecycle_stage: self.room_type.clone(),
+                member_count: None,
+                action: None, target_pseudonym: None,
+                from_pseudonym: None, to_pseudonym: None, at: None,
+                federated: Some(federated),
+            },
+            actor_pseudonym: self.chair.clone(),   // chair_pseudonym (ADR-015 pin)
+        });
     }
 
     fn flush_queue(&self, conn: &Connection) -> Result<()> {
@@ -626,6 +657,54 @@ mod tests {
             revoke_count,
             0,
             "activation before grace must not fire RevokePublish"
+        );
+        Ok(())
+    }
+
+    /// §16a Story 1 — mute_all zero-holder negative invariant (cr-4):
+    /// call mute_all with an EXPLICIT 4-publisher slice and assert EVERY publisher
+    /// receives a RevokePublish command (set-equality, NOT "≥1 revoke fired").
+    ///
+    /// cr-4 failure mode: a single-presenter path leaves N-1 holders behind in a
+    /// multi-publisher scenario. Taking the EXPLICIT `publishers` slice (NOT from
+    /// `self.current`, which is single-presenter) exercises N>1 — the exact cr-4 gap.
+    ///
+    /// Mechanical delete-the-revoke check: deleting the `for p in publishers { sink.apply(RevokePublish) }` loop
+    /// makes the set-equality assert fail — this proves the test asserts the zero-holder
+    /// invariant, not the happy path.
+    #[test]
+    fn mute_all_revokes_all_publishers() -> Result<()> {
+        let (mut stage, _conn) = open_stage(11);
+        let mut sink = Recorder::new();
+        // Seat a chair (ADR-015: pseudonym string, not person_id or username).
+        stage.chair = Some("chair-pseudonym".to_string());
+
+        // EXPLICIT 4-publisher slice — NOT derived from self.current (single-presenter).
+        // N>1 is what makes this the cr-4 failure-mode exercise.
+        let publishers: Vec<String> = ["P1", "P2", "P3", "P4"].iter().map(|s| s.to_string()).collect();
+        stage.mute_all(&publishers, true, &mut sink);
+
+        // Collect ALL RevokePublish pseudonyms from the recorder.
+        let revoked: std::collections::HashSet<String> = sink.cmds.iter().filter_map(|c| {
+            if let GrantCmd::RevokePublish(p) = c { Some(p.clone()) } else { None }
+        }).collect();
+        let expected: std::collections::HashSet<String> =
+            ["P1", "P2", "P3", "P4"].iter().map(|s| s.to_string()).collect();
+        // Set-equality: EVERY listed publisher must be revoked — no surviving holder.
+        assert_eq!(
+            revoked, expected,
+            "mute_all must revoke EVERY listed publisher (zero-holder invariant, cr-4)"
+        );
+
+        // Assert exactly ONE room_mute_all EmitIntent with federated == Some(true) and actor == chair.
+        assert_eq!(stage.pending_emits.len(), 1, "exactly one EmitIntent must be queued for mute_all");
+        let emit = &stage.pending_emits[0];
+        assert_eq!(emit.entry_kind, "room_mute_all", "entry_kind must be room_mute_all");
+        assert_eq!(emit.payload.federated, Some(true), "payload.federated must be Some(true)");
+        assert_eq!(
+            emit.actor_pseudonym,
+            Some("chair-pseudonym".to_string()),
+            "actor_pseudonym must be the chair pseudonym (ADR-015 pin)"
         );
         Ok(())
     }
