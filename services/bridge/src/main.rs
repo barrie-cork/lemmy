@@ -15,6 +15,7 @@ mod bridge_room;
 mod config;
 mod link_handler;
 mod livekit_jwt;
+mod mute_handler;
 mod provision;
 mod puppet;
 mod relay;

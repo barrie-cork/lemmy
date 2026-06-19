@@ -170,11 +170,14 @@ pub async fn submit_jury_vote(
     .first::<CaseStatus>(conn)
     .await
     .ok();
-  if let Some(new_status) = post_txn_status {
-    if new_status != pre_txn_status {
+  if let Some(new_status) = post_txn_status
+    && new_status != pre_txn_status
+  {
+    if let Err(e) =
       governance_case_after_transition(&context, &pre_txn_case, Some(pre_txn_status), new_status)
         .await
-        .ok();
+    {
+      tracing::warn!("governance hook failed: {e:#}");
     }
   }
 
@@ -190,17 +193,16 @@ pub async fn submit_jury_vote(
     .await
     .optional()?;
 
-  if outcome.case_decided {
-    if let Some(sanction) = published {
-      if sanction.target_person_id.is_some() {
-        let ctx = context.clone();
-        tokio::spawn(async move {
-          if let Err(e) = enqueue_sanction_event(sanction, ctx).await {
-            tracing::warn!("sanction publish failed: {e}");
-          }
-        });
+  if outcome.case_decided
+    && let Some(sanction) = published
+    && sanction.target_person_id.is_some()
+  {
+    let ctx = context.clone();
+    tokio::spawn(async move {
+      if let Err(e) = enqueue_sanction_event(sanction, ctx).await {
+        tracing::warn!("sanction publish failed: {e}");
       }
-    }
+    });
   }
 
   Ok(Json(outcome))

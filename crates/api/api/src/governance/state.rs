@@ -198,6 +198,11 @@ mod inner {
 
   /// Result of `GovernanceCase::<Active>::try_active_vote` — preserves the
   /// success-early-return semantics of `submit_jury_vote`'s terminal-state guard.
+  // ponytail: allow the size gap, don't Box. This enum is built once per vote and
+  // consumed immediately (try_active_vote → match → drop); the 352-byte variant is
+  // never stored in a collection. Boxing would add a deref-move footgun at the 2
+  // consume sites for zero real-world gain. Upgrade to Box if it ever lands in a Vec.
+  #[expect(clippy::large_enum_variant)]
   pub enum ActiveVoteResult {
     /// Case is in a vote-accepting state; proceed with tally logic.
     Active(GovernanceCase<Active>),

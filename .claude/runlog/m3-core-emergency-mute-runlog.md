@@ -1,5 +1,13 @@
 # m3-core-emergency-mute runlog
 
+## bm: cut phase-m3-core-emergency-mute off governance-v0 @ 4407d23cb — 2026-06-19T00:00:00Z
+- **branch:** phase-m3-core-emergency-mute
+- **off:** governance-v0 @ 4407d23cb
+- **plan:** .claude/PRPs/plans/m3-core-emergency-mute.plan.md
+- **pushed:** yes — origin/phase-m3-core-emergency-mute (upstream tracking set via -u)
+- **verified:** gh api branch endpoint confirmed
+- **next:** advisor authors impl-task briefs; worker forks from phase-m3-core-emergency-mute
+
 ## bm: PR opened — 2026-06-19T19:45:00Z
 
 - **PR:** #204 — feat(rtc,bridge): M3 town-hall emergency mute-all — cross-instance Matrix power-levels + local LiveKit revoke sweep, FIRST room_mute_all chain emission
@@ -21,4 +29,3 @@
 - **Recommendation:** pending
 - **YAML:** .claude/PRPs/reviews/pr-204-findings.yaml (197 bytes)
 - **Notes:** All CR findings ingested; 3 outside-diff (governance auth + error-handling critical); 5 critical governance violations (silent failures on env-var, hooks, power-level changes); bridge tests stub with todo!() flagged (minor)
-

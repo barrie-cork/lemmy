@@ -156,13 +156,12 @@ pub async fn revoke_endorsement(
   // Site 12: fire hooks after the transaction — outside txn boundary (ADR-012).
   for case in &escaped_cases {
     governance_case_after_transition(
-      &*context,
+      &context,
       case,
       Some(CaseStatus::SponsorLiabilityPending),
       CaseStatus::SponsorLiabilityEscaped,
     )
-    .await
-    .ok();
+    .await?;
   }
 
   Ok(Json(outcome))

@@ -278,7 +278,7 @@ fn compute_power_override(sanction_kind: &str, content: &serde_json::Value) -> (
 
 /// GET /_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels
 /// Mirror: room_provisioner.rs:527-581 bearer_auth + URL-encoded room id + state.http_client.
-async fn get_power_levels(state: &AppState, room_id: &str) -> Result<serde_json::Value> {
+pub(crate) async fn get_power_levels(state: &AppState, room_id: &str) -> Result<serde_json::Value> {
     let encoded_room_id = room_id.replace(':', "%3A");
     let url = format!(
         "{}/_matrix/client/v3/rooms/{}/state/m.room.power_levels",
@@ -301,7 +301,7 @@ async fn get_power_levels(state: &AppState, room_id: &str) -> Result<serde_json:
 
 /// PUT /_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels
 /// Replaces the entire content — always PUT the full merged object (Pattern 10.3 GOTCHA).
-async fn put_power_levels(
+pub(crate) async fn put_power_levels(
     state: &AppState,
     room_id: &str,
     content: &serde_json::Value,

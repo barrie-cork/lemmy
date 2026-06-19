@@ -3,7 +3,7 @@
 //! Three endpoints:
 //!  - `GET  /link`         — `link_actor`   — JWT-authed; mints a dual-signed claim
 //!  - `POST /link/confirm` — `link_confirm` — bearer-authed (bridge→Brehon); creates
-//!                           the `actor_app_link` row after verifying dual signatures
+//!    the `actor_app_link` row after verifying dual signatures
 //!  - `POST /link/revoke`  — `revoke_link`  — JWT-authed; prospectively unlinks
 //!
 //! ADR-015: `person.id` is used ONLY as input to `actor_pseudonym_helper::get_or_create`.
@@ -80,18 +80,21 @@ pub async fn link_actor(
     brehon_signature,
   };
 
-  // POST claim to bridge callback — fire-and-forget, log-and-swallow on error (ADR-012)
+  // BRIDGE_LINK_CLAIM_URL unset → empty string → if !is_empty() guard skips the POST
+  // (bridge not configured = no-op, not error; unwrap_or_default intentional for URL only).
+  #[expect(clippy::disallowed_methods)]
   let bridge_url = std::env::var("BRIDGE_LINK_CLAIM_URL").unwrap_or_default();
   if !bridge_url.is_empty() {
-    let bridge_secret = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
-    let _ = context
+    let bridge_secret = std::env::var("BRIDGE_CALLBACK_SECRET")
+      .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    context
       .client()
       .post(&bridge_url)
       .header("Authorization", format!("Bearer {bridge_secret}"))
       .json(&payload)
       .send()
       .await
-      .map_err(|e| tracing::warn!("link_actor bridge POST failed: {e}"));
+      .map_err(|e| LemmyError::from(LemmyErrorType::Unknown(format!("link_actor bridge POST failed: {e}"))))?;
   }
 
   Ok(HttpResponse::Ok().json(json!({ "ok": true })))
@@ -116,27 +119,27 @@ pub async fn link_confirm(
 
   // Verify app countersignature over (nonce\napp_local_id)
   let app_pubkey_hex = std::env::var("BRIDGE_LINK_APP_PUBKEY")
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_pubkey_bytes = hex::decode(app_pubkey_hex.trim())
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_pubkey_arr: [u8; 32] = app_pubkey_bytes
     .try_into()
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let verifying_key =
-    VerifyingKey::from_bytes(&app_pubkey_arr).map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    VerifyingKey::from_bytes(&app_pubkey_arr).map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
 
   let signed_bytes = format!("{}\n{}", data.nonce, data.app_local_id);
   let sig_arr: [u8; 64] = data
     .app_signature
     .as_slice()
     .try_into()
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
   let app_sig = Signature::from_bytes(&sig_arr);
 
   // Dual-signature: hard reject if app countersig fails
   verifying_key
     .verify_strict(signed_bytes.as_bytes(), &app_sig)
-    .map_err(|_| LemmyError::from(LemmyErrorType::NotLoggedIn))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::NotLoggedIn))?;
 
   // Look up actor_pseudonym integer id from the UUID pseudonym string
   let pool = &mut context.pool();
@@ -147,7 +150,7 @@ pub async fn link_confirm(
     .select(actor_pseudonym::id)
     .first::<ActorPseudonymId>(conn)
     .await
-    .map_err(|_| LemmyError::from(LemmyErrorType::InvalidUrl))?;
+    .map_err(|_e| LemmyError::from(LemmyErrorType::InvalidUrl))?;
 
   let app_id = data.app_id.clone();
   let app_local_id = data.app_local_id.clone();
