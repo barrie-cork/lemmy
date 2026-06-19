@@ -135,10 +135,8 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     effective_until: sanction.ends_at,
     governance_log_entry_hash,
   };
-  // Best-effort outbound: unset secret → empty bearer → subscribers reject (non-gating,
-  // mirrors the publisher's log-and-continue delivery contract). Not a hard fault here.
-  #[expect(clippy::disallowed_methods)]
-  let secret = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
+  let secret = std::env::var("BRIDGE_CALLBACK_SECRET")
+    .map_err(|_e| LemmyError::from(anyhow::anyhow!("BRIDGE_CALLBACK_SECRET not set")))?;
   let client = reqwest::Client::builder()
     .connect_timeout(std::time::Duration::from_secs(10))
     .timeout(std::time::Duration::from_secs(30))
