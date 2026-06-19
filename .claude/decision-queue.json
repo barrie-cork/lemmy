@@ -1,35 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run Linux cargo validation for m3-core-emergency-mute Task 3 (Stage::mute_all + federated mirror)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 complete: Stage::mute_all added to stage.rs (revoke sweep + room_mute_all EmitIntent), federated: Option<bool> mirror field added to bridge RoomEventPayload, all 5 existing literals updated with federated: None, mute_all_revokes_all_publishers negative-invariant test added, mute_all_request_json_shape test added. Bridge compiles on Linux only (ruma-common E0119 on Windows). Two files modified: services/bridge/src/stage.rs, services/bridge/src/room_event_client.rs.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --bins stage::mute_all",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --bins room_event_client"
-      ],
-      "branch": "junior/role-impl-task-m3-core-emergency-mute-task3-stage-mute-all-negative-invariant-see-claude-prps-briefs-m3-core-emerge-728",
-      "phase_task": "task3",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "id": "4c8592a9c25f-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8265,6 +8236,34 @@
       "approved_by": null,
       "approved_at": null,
       "id": "872d193380d5-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run Linux cargo validation for m3-core-emergency-mute Task 3 (Stage::mute_all + federated mirror)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 complete: Stage::mute_all added to stage.rs (revoke sweep + room_mute_all EmitIntent), federated: Option<bool> mirror field added to bridge RoomEventPayload, all 5 existing literals updated with federated: None, mute_all_revokes_all_publishers negative-invariant test added, mute_all_request_json_shape test added. Bridge compiles on Linux only (ruma-common E0119 on Windows). Two files modified: services/bridge/src/stage.rs, services/bridge/src/room_event_client.rs.",
+      "answer": "All 4 Linux cargo commands pass on bridge (Docker rust:1.95 @ phase tip 42d5ce9f8). check exit 0; clippy -D warnings clean (0 lints); mute_all_revokes_all_publishers 1 passed (cr-4 zero-holder set-equality, N=4 explicit slice); room_event_client::tests 3 passed incl. mute_all_request_json_shape. Note: brief filter `stage::mute_all` ran 0 tests (mod tests wrapper breaks substring match); re-ran with bare fn name mute_all_revokes_all_publishers -> 1 passed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T17:10:36.034689Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --bins stage::mute_all",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --bins room_event_client"
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-task3-stage-mute-all-negative-invariant-see-claude-prps-briefs-m3-core-emerge-728",
+      "phase_task": "task3",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "id": "4c8592a9c25f-001"
     }
   ]
 }
