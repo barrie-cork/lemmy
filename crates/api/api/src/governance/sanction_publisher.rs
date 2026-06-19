@@ -1,8 +1,7 @@
-/// B-publish sanction propagation publisher (ADR-016).
-///
-/// Additive in m2-late-1: compiles but has no caller yet.
-/// T5 (submit_jury_vote.rs) wires the spawn site in m2-late-2.
-
+//! B-publish sanction propagation publisher (ADR-016).
+//!
+//! Additive in m2-late-1: compiles but has no caller yet.
+//! T5 (submit_jury_vote.rs) wires the spawn site in m2-late-2.
 #[cfg(feature = "full")]
 use {
   activitypub_federation::config::Data,
@@ -136,6 +135,9 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     effective_until: sanction.ends_at,
     governance_log_entry_hash,
   };
+  // Best-effort outbound: unset secret → empty bearer → subscribers reject (non-gating,
+  // mirrors the publisher's log-and-continue delivery contract). Not a hard fault here.
+  #[expect(clippy::disallowed_methods)]
   let secret = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
   let client = reqwest::Client::builder()
     .connect_timeout(std::time::Duration::from_secs(10))
@@ -182,7 +184,7 @@ pub async fn enqueue_sanction_event(sanction: Sanction, ctx: SanctionContext) ->
     .run_transaction(async |conn| {
       let event_form = SanctionEventInsertForm {
         sanction_id: sanction.id,
-        sanction_kind: payload.sanction_kind.clone(),
+        sanction_kind: payload.sanction_kind,
         subject_actor_pseudonym: subject.clone(),
         effective_from: sanction.starts_at,
         effective_until: sanction.ends_at,

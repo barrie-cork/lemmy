@@ -4,7 +4,9 @@ use lemmy_utils::error::{LemmyErrorType, LemmyResult};
 /// Verifies the `Authorization: Bearer <secret>` header for bridge-to-binary callbacks.
 /// Service-principal auth — NOT is_admin, NOT JWT. Called as first line of T4a and T4b handlers.
 pub fn verify_bridge_secret(req: &HttpRequest) -> LemmyResult<()> {
-  let expected = std::env::var("BRIDGE_CALLBACK_SECRET").unwrap_or_default();
+  // Hard error on unset secret: a missing BRIDGE_CALLBACK_SECRET is a config fault,
+  // not a silently-everything-rejected state (this is a service-principal auth gate).
+  let expected = std::env::var("BRIDGE_CALLBACK_SECRET").map_err(|_e| LemmyErrorType::NotLoggedIn)?;
   let provided = req
     .headers()
     .get("Authorization")

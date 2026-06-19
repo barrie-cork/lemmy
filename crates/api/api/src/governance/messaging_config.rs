@@ -25,6 +25,8 @@ use serde_json::Value;
 /// Unpack a JSON value into (value_type, value_int, value_bool, value_text).
 /// Mirrors `admin_config.rs:682` minus the Float arm (M1 has no value_float column).
 /// Rejects float / array / object / null per plan §4.1.
+// ponytail: a one-use private 4-tuple return; a named type alias would be churn, not clarity.
+#[expect(clippy::type_complexity)]
 fn split_typed_value(
   value: &Value,
   key: &str,
