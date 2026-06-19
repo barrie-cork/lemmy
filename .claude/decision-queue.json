@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T17:15:29Z",
+      "question": "Run Linux compile/clippy/test-no-run for bridge after Task 4 emergency_mute.rs stub?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 added services/bridge/tests/emergency_mute.rs (one #[ignore] integration test stub). Needs Linux Docker rust:1.95 compile proof (bridge compiles on Linux only).",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-task4-emergency-mute-e2e-see-claude-prps-briefs-m3-core-emergency-mute-impl-4-729",
+      "phase_task": "task-4",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "fc785e35b108-001"
+    }
+  ],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
