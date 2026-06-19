@@ -83,34 +83,6 @@
       "failed_commands": [
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
       ]
-    },
-    {
-      "id": "d6dcd385fffa-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run Linux clippy+check+test for fix-impl-2 stage.rs context() change — pass or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "fix-impl-2: replaced .unwrap_or_default() with .context(...)? in Stage::load (stage.rs:61); bridge compiles Linux-only; cargo-linux.sh is the gate.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
-      ],
-      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl2-stage-load-error-propagate-see-claude-prps-briefs-m3-core-stage-mode-fi-712",
-      "phase_task": "fix-impl-2",
-      "workflow_run_id": 0,
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
     }
   ],
   "resolved": [
@@ -7900,6 +7872,35 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-18T20:48:21Z",
       "id": "a3d0e9941441-068"
+    },
+    {
+      "id": "d6dcd385fffa-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run Linux clippy+check+test for fix-impl-2 stage.rs context() change — pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-2: replaced .unwrap_or_default() with .context(...)? in Stage::load (stage.rs:61); bridge compiles Linux-only; cargo-linux.sh is the gate.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl2-stage-load-error-propagate-see-claude-prps-briefs-m3-core-stage-mode-fi-712",
+      "phase_task": "fix-impl-2",
+      "workflow_run_id": 0,
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "answer": "PASS. cargo-linux.sh check + clippy -D warnings + test stage all exit 0 (Docker rust:1.95). unwrap_or_default fix took (Stage::load now .context(corrupt bridge_room.queue_state)? propagates parse error). 6 stage tests pass incl marquee fifo_mic_pass_in_sequence (4-mic-pass) + chair_override_reorder + 2 guarded-error + no-dup + load-roundtrip.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T00:34:27.667290+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": null
     }
   ]
 }
