@@ -32,11 +32,9 @@ pub struct BridgeConfig {
     /// HTTP endpoint for Brehon Matrix-to-Brehon relay callbacks
     /// (the URL the bridge POSTs inbound Matrix DMs to).
     pub brehon_notify_url: String,
-    /// URL for POST /governance/room-event (binary callback). Read from
-    /// BREHON_ROOM_EVENT_URL but not yet consumed — the bridge currently
-    /// receives room-events rather than POSTing them. Retained as config
-    /// surface for a future bridge→binary room-event callback.
-    #[allow(dead_code)]
+    /// URL for POST /api/v4/governance/room-event (binary callback). Read from
+    /// BREHON_ROOM_EVENT_URL; consumed by the room-event emitters (Task 6 controller drain).
+    #[allow(dead_code)] // Task 6: removed when the controller reads this to call post_room_event.
     pub brehon_room_event_url: String,
     /// Bearer secret for bridge<->binary auth (BRIDGE_CALLBACK_SECRET).
     pub bridge_callback_secret: String,
@@ -81,7 +79,7 @@ impl BridgeConfig {
             brehon_notify_url: env::var("BREHON_NOTIFY_URL")
                 .context("BREHON_NOTIFY_URL env var required")?,
             brehon_room_event_url: std::env::var("BREHON_ROOM_EVENT_URL")
-                .unwrap_or_else(|_| "http://localhost:8536/governance/room-event".to_string()),
+                .unwrap_or_else(|_| "http://localhost:8536/api/v4/governance/room-event".to_string()),
             bridge_callback_secret: std::env::var("BRIDGE_CALLBACK_SECRET")
                 .expect("BRIDGE_CALLBACK_SECRET must be set"),
             legal_contact_mxid: std::env::var("LEGAL_CONTACT_MXID")

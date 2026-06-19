@@ -7972,6 +7972,62 @@
       "approved_by": null,
       "approved_at": null,
       "id": "e5510f969130-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run bridge cargo-linux check+clippy+test for task 5 room_event_client + stage emitters",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 (m3-core-stage-mode) adds services/bridge/src/room_event_client.rs (NEW) and modifies config.rs, main.rs, stage.rs. Bridge compiles on Linux only (ruma-common E0119 on Windows). Laptop advisor must run cargo-linux.sh to validate. DoD: rg -i 'person_id|username|@.*:' room_event_client.rs = 0 hits (PASS); rg 'api/v4/governance/room-event' config.rs = match (PASS).",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml room_event_client"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task5-room-event-client-emitters-see-claude-prps-briefs-m3-core-stage-mode-impl-5-717",
+      "phase_task": "5",
+      "answer": "dead_code allowed per user decision 2026-06-19 — scaffold-ahead-of-caller; Task 6 controller drain removes the allows",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-19T10:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "fail",
+      "log_slice": "error: field brehon_room_event_url is never read\nerror: struct RoomEventRequest is never constructed\nerror: function post_room_event is never used\n[FIXED by fix-impl-5 task5-deadcode-allow]",
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
+      ],
+      "id": "7677417db9fb-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T10:00:00Z",
+      "question": "Run bridge cargo-linux check+clippy+test for fix-impl-5 task5-deadcode-allow (#[allow(dead_code)] on 3 scaffold items)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "fix-impl-5 adds #[allow(dead_code)] to RoomEventRequest, post_room_event (room_event_client.rs) and brehon_room_event_url (config.rs). Resolves the 3 clippy dead_code errors that blocked Task 5 validate-pending 7677417db9fb-001. Bridge compiles Linux only. Laptop advisor must validate via cargo-linux.sh.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml room_event_client"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-fix-impl5-task5-deadcode-allow-see-claude-prps-briefs-m3-core-stage-mode-fix-impl-718",
+      "phase_task": "5-fix",
+      "answer": "cargo-linux PASS: check rc=0, clippy -D warnings rc=0 (3 dead_code allows present), test room_event_client 2 passed, test stage 10 passed (incl fifo_mic_pass_in_sequence + grace_no_activate boundary + 2 emit-intent tests). validate-718 worktree @ f8df98092.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T03:17:26.692592Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "33017c985c6a-001"
     }
   ]
 }
