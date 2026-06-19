@@ -107,6 +107,10 @@ pub struct RoomEventPayload {
   pub to_pseudonym: Option<String>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub at: Option<String>,
+  // M3 emergency-mute metadata (opt; only room_mute_all entries set it).
+  // ADR-016: metadata only — was the mute federation-wide?
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub federated: Option<bool>,
 }
 
 #[cfg(test)]
@@ -126,6 +130,7 @@ mod tests {
       from_pseudonym: None,
       to_pseudonym: None,
       at: None,
+      federated: None,
     };
     let v = serde_json::to_value(&override_payload)?;
     assert!(v.get("action").is_some());
@@ -133,6 +138,7 @@ mod tests {
     assert!(v.get("from_pseudonym").is_none());
     assert!(v.get("to_pseudonym").is_none());
     assert!(v.get("at").is_none());
+    assert!(v.get("federated").is_none());
 
     // room_chair_transferred: transfer fields present; action + target_pseudonym omitted
     let transfer_payload = RoomEventPayload {
@@ -145,6 +151,7 @@ mod tests {
       from_pseudonym: Some("pseu_a".to_string()),
       to_pseudonym: Some("pseu_b".to_string()),
       at: Some("2026-06-18T00:00:00Z".to_string()),
+      federated: None,
     };
     let v = serde_json::to_value(&transfer_payload)?;
     assert!(v.get("from_pseudonym").is_some());
@@ -152,6 +159,51 @@ mod tests {
     assert!(v.get("at").is_some());
     assert!(v.get("action").is_none());
     assert!(v.get("target_pseudonym").is_none());
+    assert!(v.get("federated").is_none());
+
+    Ok(())
+  }
+
+  #[test]
+  fn room_event_payload_federated_skip_serializing_if_none() -> Result<(), serde_json::Error> {
+    // room_mute_all with federated: Some(true) — federated key must be emitted
+    let mute_payload = RoomEventPayload {
+      case_id: 3,
+      matrix_room_id: None,
+      lifecycle_stage: "room_mute_all".to_string(),
+      member_count: None,
+      action: None,
+      target_pseudonym: None,
+      from_pseudonym: None,
+      to_pseudonym: None,
+      at: None,
+      federated: Some(true),
+    };
+    let v = serde_json::to_value(&mute_payload)?;
+    assert!(v.get("federated").is_some());
+    assert_eq!(v["federated"], true);
+    // chair-action fields must be absent (skip_serializing_if = "Option::is_none")
+    assert!(v.get("action").is_none());
+    assert!(v.get("target_pseudonym").is_none());
+    assert!(v.get("from_pseudonym").is_none());
+    assert!(v.get("to_pseudonym").is_none());
+    assert!(v.get("at").is_none());
+
+    // room_mute_all with federated: None — federated key must be absent (byte-identical to existing room kinds)
+    let mute_payload_none = RoomEventPayload {
+      case_id: 4,
+      matrix_room_id: None,
+      lifecycle_stage: "room_mute_all".to_string(),
+      member_count: None,
+      action: None,
+      target_pseudonym: None,
+      from_pseudonym: None,
+      to_pseudonym: None,
+      at: None,
+      federated: None,
+    };
+    let v2 = serde_json::to_value(&mute_payload_none)?;
+    assert!(v2.get("federated").is_none());
 
     Ok(())
   }
