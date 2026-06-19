@@ -44,7 +44,7 @@ Do not attempt any of these — they are tracked and will show up in the weekly 
 
 ## Ordering rationale
 
-The workflow below is ordered so all the *preparation* (commit, stale checks, scoring, root cause, lesson extraction, pattern promotion, doc drift, blast radius) happens FIRST, and the `memory_write_eval` call is the very last step. Follow the order. If you must do extra work after step 7, write the retro a second time at the true end.
+The workflow below is ordered so all the *preparation* (commit, stale checks, scoring, root cause, lesson extraction, pattern promotion, doc drift, blast radius, memory routing) happens FIRST, and the `memory_write_eval` call is the very last step. Follow the order. If you must do extra work after step 7, write the retro a second time at the true end.
 
 ## Steps
 
@@ -90,7 +90,9 @@ Skip if: task only added new code, or modified existing code without removing an
 
 Typical scores: 0.45-0.70 (partial + no tests + clean). A score above 0.85 should be rare.
 
-### 3. Root cause (on partial/failure only)
+### 3. Root cause (on partial/failure, or any score below 0.75)
+
+Required when outcome is partial or failure, **or** when the score is below 0.75 (regardless of outcome classification). Tasks that succeed at a low ceiling score 0.55-0.70 carry just as much diagnostic value as failures — without this requirement, failure-mode aggregation in weekly-review cannot work (it had ROOT_CAUSE on only ~10% of retros, so the "Top Failure" signal was empty).
 
 Pick ONE — the deepest cause:
 
@@ -102,8 +104,9 @@ Pick ONE — the deepest cause:
 | `code-error` | Logic bug, syntax error, test failure |
 | `missing-verification` | Skipped testing or validation |
 | `environment-issue` | Infra, tooling, or external service problem |
+| `no-op` | Task was trivially small or no-op; low score ceiling, not a defect |
 
-Write a 1-2 sentence explanation of what specifically went wrong.
+Write a 1-2 sentence explanation of what specifically went wrong (or, for `no-op`, why the score ceiling was low).
 
 ### 4. Extract lesson (partial/failure only)
 
@@ -182,6 +185,27 @@ If the task changed shared interfaces (API contracts, DB schema, env vars, Docke
 - Remember to add `DOWNSTREAM: <list>` when you write the eval memory in step 7.
 
 Skip for internal-only changes.
+
+### 6c. Memory routing check (30 seconds — laptop interactive sessions)
+
+Cross-cutting infra knowledge written ONLY to a laptop's auto-memory
+(`~/.claude/projects/.../memory/` — `MEMORY.md` + topic files) is invisible to
+Junior workers (they run on the EliteDesk, a different machine, non-git, not
+synced) AND to the other laptop. The shared, Junior-reachable store is the
+centralized homeserver PMD on the EliteDesk (`/srv/project-memory/homeserver.db`).
+
+Ask: did this session produce a cross-cutting infra fact (Junior patterns, MCP
+config, n8n, networking, CI/workflow config, skills architecture, deploy topology)
+that landed only in laptop auto-memory or only in CLAUDE.md prose?
+
+- **Yes** → also `memory_write` it to the homeserver PMD as a `decision` or
+  `pattern` (tags first = repo, then `infrastructure`/`configuration`/etc).
+  Per CLAUDE.md: "Only write directly to the homeserver PMD for cross-cutting
+  infra." Per-repo insight → queue a Junior task on that repo's daemon instead.
+- **No**, or the insight is genuinely session-local (this-conversation context) → skip.
+
+Skip entirely on `junior/*` branches — Junior workers have no laptop auto-memory,
+so there is nothing to route. This check exists for the interactive laptop seat.
 
 ### 7. Write the eval memory (LAST — do this immediately before exit)
 
