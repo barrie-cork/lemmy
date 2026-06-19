@@ -2351,3 +2351,16 @@ Three of four (cr-3, cr-4, cr-8) form a single thematic cluster: "ConstraintReco
 - **Pre-merge-check walkthrough:** CR effort estimate 4 (Complex). 4 pre-merge checks passed (title, docstring coverage, linked issues, out-of-scope). Description check has 1 warning (template structure).
 - **Notes:** Bridge-only code scope (services/bridge/** + additive DTO fields). No e2e fragility expected from CR findings — all findings are doc/style/correctness/contract issues. cr-4 is the only blocking issue (correctness violation on single-presenter guarantee). cr-3 needs clarification on Phase-6 readiness. cr-2 affects audit-trail clarity. cr-1 is cosmetic formatting.
 
+
+## bm: merge PR #202 COMPLETE — 2026-06-19T09:49:55Z
+
+- **PR:** #202 (feat(rtc,bridge): M3 town-hall stage mode — chair-controlled mic-passing, FIFO raised-hand queue, 30s grace auto-revoke, chair transfer/override, FIRST room_chair_* chain emission)
+- **base ← head:** governance-v0 ← phase-m3-core-stage-mode
+- **merge sha:** a8713dd7504e693a45771dd3823986c20c6b811b
+- **remote branch deleted?** yes
+- **trunk position:** a8713dd75 (Merge pull request #202 from barrie-cork/phase-m3-core-stage-mode)
+- **findings YAML archived:** .claude/PRPs/reviews/pr-202-findings.yaml (merged_at=2026-06-19T09:49:55Z; merge_commit=a8713dd7504e693a45771dd3823986c20c6b811b; final_recommendation=approve)
+- **Merged commits:** 14 commits on phase branch including stage.rs (new, 632 lines), room_provisioner.rs (bridge room provisioning), livekit_jwt.rs (presenter/watcher grants), bridge_room.rs (state transitions)
+- **CR findings disposition:** cr-1/cr-2 (doc-lint) addressed via runlog fix; cr-3 (token scaffold) rebutted (Phase-6 integration); cr-4 (single-presenter) fixed + validated (8b8c877a7)
+- **All pre-merge gates verified:** mergeStateStatus CLEAN ✓ | mergeable MERGEABLE ✓ | CI all green ✓ | DQ pending 0 ✓ | CR findings all addressed ✓
+
