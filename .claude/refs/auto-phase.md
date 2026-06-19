@@ -675,6 +675,7 @@ For an allowlist match: author a narrow fix-impl-task brief at `.claude/PRPs/bri
 | Failure signature | Auto-fix | Source lesson |
 |---|---|---|
 | `clippy::doc_lazy_continuation` warning | reword + mid-paragraph "and" | `feedback_clippy_doc_lazy_continuation_in_doc_comments.md` |
+| `clippy::doc_overindented_list_items` warning | re-indent the doc-list continuation to clippy's suggested column (4 spaces under `///`) per the `help: try using` hint | n/a (mechanical; added 2026-06-19 m3-core-stage-mode Task 4 — sibling of `doc_lazy_continuation`) |
 | `error[E0432]: unresolved import` | add the missing `use` per the suggestion | n/a (mechanical) |
 | `warning: use of deprecated <api>` | replace with the suggested replacement | n/a (mechanical) |
 | **4a** `error[E0277]: ?` couldn't convert `LemmyError`/`LemmyResult<T>` to `Box<dyn Error>` AND test fn returns `Result<(), Box<dyn Error>>` AND helpers all return `Result<T, Box<dyn Error>>` (Case B per lesson) | wrap each Lemmy-native call with **annotated** closure: `.map_err(\|e\| -> Box<dyn std::error::Error + Send + Sync> { format!("{e}").into() })?`. Bare `.map_err(\|e\| format!("{e}").into())?` will fail E0283 because `_` in `Into<_>` cannot resolve through abstract trait objects. | `feedback_lemmy_error_no_std_error.md` Case B |
