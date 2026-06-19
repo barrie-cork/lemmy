@@ -107,6 +107,10 @@ impl Stage {
             .fifo
             .pop_front()
             .ok_or_else(|| anyhow!("promote_next: FIFO is empty"))?;
+        // ponytail: single-presenter invariant — revoke the seated holder before granting the next.
+        if let Some((prev, _)) = self.current.take() {
+            sink.apply(GrantCmd::RevokePublish(prev));
+        }
         sink.apply(GrantCmd::GrantPublish(head.clone()));
         self.current = Some((head, SeatState::Promoted));
         self.flush_queue(conn)?;
@@ -239,6 +243,10 @@ impl Stage {
                 let lifecycle_stage = self.room_type.clone();
                 let actor = self.chair.clone();
                 self.fifo.retain(|p| p.as_str() != target);
+                // ponytail: single-presenter invariant — revoke the seated holder before force-promoting.
+                if let Some((prev, _)) = self.current.take() {
+                    sink.apply(GrantCmd::RevokePublish(prev));
+                }
                 sink.apply(GrantCmd::GrantPublish(target.to_string()));
                 self.current = Some((target.to_string(), SeatState::Promoted));
                 self.flush_queue(conn)?;
@@ -362,13 +370,29 @@ mod tests {
         stage.promote_next(&mut sink, &conn)?;
         stage.on_activate("W4")?;
 
+        // Grants still fire in FIFO order.
         let grants: Vec<&str> = sink.cmds.iter().filter_map(|c| {
             if let GrantCmd::GrantPublish(p) = c { Some(p.as_str()) } else { None }
         }).collect();
-        assert_eq!(
-            grants,
-            &["W1", "W2", "W3", "W4"],
-            "GrantPublish must fire in FIFO order"
+        assert_eq!(grants, &["W1", "W2", "W3", "W4"], "GrantPublish must fire in FIFO order");
+        // Single-presenter: each handoff revokes the prior holder before granting the next.
+        assert!(
+            sink.cmds.windows(2).any(|w|
+                w[0] == GrantCmd::RevokePublish("W1".to_string())
+                && w[1] == GrantCmd::GrantPublish("W2".to_string())),
+            "handoff must RevokePublish(W1) before GrantPublish(W2)"
+        );
+        assert!(
+            sink.cmds.windows(2).any(|w|
+                w[0] == GrantCmd::RevokePublish("W2".to_string())
+                && w[1] == GrantCmd::GrantPublish("W3".to_string())),
+            "handoff must RevokePublish(W2) before GrantPublish(W3)"
+        );
+        assert!(
+            sink.cmds.windows(2).any(|w|
+                w[0] == GrantCmd::RevokePublish("W3".to_string())
+                && w[1] == GrantCmd::GrantPublish("W4".to_string())),
+            "handoff must RevokePublish(W3) before GrantPublish(W4)"
         );
         Ok(())
     }
