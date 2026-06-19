@@ -8147,6 +8147,41 @@
       "answered_by": "advisor",
       "resolved_at": "2026-06-19T00:00:07Z",
       "id": "a3d0e9941441-072"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Emergency mute-all enactment mechanism: (a) Matrix power-level PUT only, (b) power-level PUT (cross-instance authority) + local LiveKit RevokePublish sweep, or (c) planner alternative?",
+      "options": [
+        "option-a-power-levels-only",
+        "option-b-power-levels-plus-livekit-sweep",
+        "option-c-planner-alternative"
+      ],
+      "context": "PRD m3-town-halls-rtc.prd.md:242 says 'Matrix power-levels across instances'; V2/messaging.md:188 says 'all non-chair LiveKit publishers are muted ... matching Matrix power-level semantics ... unmute is by re-granting publish permissions individually'. These are the two halves of option (b), not competing mechanisms. OQ-V2-06 (99-...md:233) pins the cross-instance authority to Matrix power-levels (room-global). Recommend (b): power-levels = cross-instance authority (mute_handler.rs put_power_levels, mirror sanction_handler.rs:304, one PUT federates), LiveKit RevokePublish sweep (Stage::mute_all, mirror stage.rs GrantSink) = local instant effect guaranteeing in-instance <500ms (PRD line-198 fallback). Option (a) relies on federation propagation even locally (the <500ms risk bites in-instance). A GrantSink-only cross-instance path would be a mechanism error (bootstrap §7 catch-fire). See plan §4 + §19 (1).",
+      "answer": "Option (b): power-levels are the cross-instance authority (mute_handler.rs mirrors sanction_handler.rs:281-325 GET/PUT); the local LiveKit RevokePublish sweep (Stage::mute_all) is the option-(b) belt-and-suspenders for instant in-instance effect. Cites: prds/m3-town-halls-rtc.prd.md:242 + V2/messaging.md:188 + 99-...md:233. Advisor to ratify at plan-approval gate-1.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-19T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "78c6ad4bfb41-001"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-19T00:00:01Z",
+      "question": "room_mute_all payload shape: is chair_pseudonym a new RoomEventPayload field, or the existing top-level actor_pseudonym? And does RoomEventPayload need a new federated field?",
+      "options": [
+        "federated-only-chair-pseudonym-is-actor_pseudonym",
+        "add-both-federated-and-chair_pseudonym-payload-fields"
+      ],
+      "context": "Success Criteria line 141 writes the entry as {chair_pseudonym, federated: true|false}. room_chair_override/_transferred (lines 139-140) likewise name only payload-specific fields, with the acting chair carried on the top-level actor_pseudonym (EmitIntent.actor_pseudonym -> RoomEventRequest.actor_pseudonym -> append_room_event(..., actor_pseudonym)). RoomEventPayload (governance_log.rs:91-110 + room_event_client.rs:6-23) has no federated field. Recommend: chair_pseudonym rides the existing actor_pseudonym (no duplicate field = single source of truth, mirrors stage-mode override/transfer); add ONLY federated: Option<bool> (#[serde(default, skip_serializing_if=Option::is_none)]) to both the binary struct and the bridge mirror. This is the one in-scope crates/** touch (trivial DTO, same class as stage-mode's 5 chair fields). See plan §10.1 + §19 (2).",
+      "answer": "Add ONLY federated: Option<bool> to RoomEventPayload (binary governance_log.rs:91-110 + bridge mirror room_event_client.rs:6-23), serde default + skip_serializing_if. chair_pseudonym rides the existing top-level actor_pseudonym (= self.chair in Stage::mute_all) — no duplicate payload field. Trivial-DTO crates touch within the bootstrap tripwire carve-out; no const/migration/registry change. Advisor to ratify the crates touch + the chair_pseudonym=actor_pseudonym mapping at gate-1.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-19T00:00:01Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "78c6ad4bfb41-002"
     }
   ]
 }
