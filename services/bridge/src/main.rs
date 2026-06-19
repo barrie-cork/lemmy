@@ -18,6 +18,7 @@ mod livekit_jwt;
 mod provision;
 mod puppet;
 mod relay;
+mod room_event_client;
 mod room_provisioner;
 mod sanction_handler;
 mod stage;
