@@ -83,31 +83,6 @@
       "failed_commands": [
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings"
       ]
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run cargo-linux.sh to validate bridge Task 6 (stage-mode provisioning + drain-emits + e2e stub) on Linux target.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 6 commit 425eb6a25 on branch junior/role-impl-task-m3-core-stage-mode-task6-stage-mode-provisioning-drain-emits-e2e-see-claude-prps-briefs-m3-core-stag-719. Adds provision_townhall_stage_room + drain_emits + removes 3 dead_code allows + new tests/stage_mode.rs. Bridge compiles on Linux only (cargo-linux.sh). Check: cargo check, clippy -D warnings, stage_mode --no-run, stage unit tests.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode --no-run",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
-      ],
-      "branch": "junior/role-impl-task-m3-core-stage-mode-task6-stage-mode-provisioning-drain-emits-e2e-see-claude-prps-briefs-m3-core-stag-719",
-      "phase_task": "6",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "bc10e175f0da-001"
     }
   ],
   "resolved": [
@@ -8053,6 +8028,34 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "33017c985c6a-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run cargo-linux.sh to validate bridge Task 6 (stage-mode provisioning + drain-emits + e2e stub) on Linux target.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 commit 425eb6a25 on branch junior/role-impl-task-m3-core-stage-mode-task6-stage-mode-provisioning-drain-emits-e2e-see-claude-prps-briefs-m3-core-stag-719. Adds provision_townhall_stage_room + drain_emits + removes 3 dead_code allows + new tests/stage_mode.rs. Bridge compiles on Linux only (cargo-linux.sh). Check: cargo check, clippy -D warnings, stage_mode --no-run, stage unit tests.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode --no-run",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml stage"
+      ],
+      "branch": "junior/role-impl-task-m3-core-stage-mode-task6-stage-mode-provisioning-drain-emits-e2e-see-claude-prps-briefs-m3-core-stag-719",
+      "phase_task": "6",
+      "answer": "cargo-linux PASS: check rc=0, clippy -D warnings rc=0 (3 dead_code allows removed; drain_emits makes post_room_event/RoomEventRequest/brehon_room_event_url live), test --test stage_mode --no-run rc=0 (docker-gated #[ignore] compiles, not run), test stage 10 passed (incl fifo_mic_pass + grace boundary + 2 emit tests). validate-719 @ b3fdfa9ab.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T04:00:32.027473+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "bc10e175f0da-001",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
     }
   ]
 }
