@@ -194,6 +194,6 @@ counters:
   total: 12
   triage_approved_by: user
   triage_approved_at: '2026-06-19T19:20:00Z'
-merged_at: null
+merged_at: "2026-06-19T19:57:36Z"
 merge_commit: null
 final_recommendation: null
