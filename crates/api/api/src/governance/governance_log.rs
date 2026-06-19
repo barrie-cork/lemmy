@@ -111,6 +111,19 @@ pub struct RoomEventPayload {
   // ADR-016: metadata only — was the mute federation-wide?
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub federated: Option<bool>,
+  // M3 recording metadata (opt; only room_recording_uploaded entries set them).
+  // ADR-015: speakers carries pseudonyms only — never person_id/username/MXID.
+  // ADR-016: metadata only — MP4 bytes live in S3, only content_sha256 + metadata here.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub media_url: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub content_sha256: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub duration_s: Option<i64>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub speakers: Option<Vec<String>>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub attendance_count: Option<i32>,
 }
 
 #[cfg(test)]
@@ -131,6 +144,11 @@ mod tests {
       to_pseudonym: None,
       at: None,
       federated: None,
+      media_url: None,
+      content_sha256: None,
+      duration_s: None,
+      speakers: None,
+      attendance_count: None,
     };
     let v = serde_json::to_value(&override_payload)?;
     assert!(v.get("action").is_some());
@@ -152,6 +170,11 @@ mod tests {
       to_pseudonym: Some("pseu_b".to_string()),
       at: Some("2026-06-18T00:00:00Z".to_string()),
       federated: None,
+      media_url: None,
+      content_sha256: None,
+      duration_s: None,
+      speakers: None,
+      attendance_count: None,
     };
     let v = serde_json::to_value(&transfer_payload)?;
     assert!(v.get("from_pseudonym").is_some());
@@ -178,6 +201,11 @@ mod tests {
       to_pseudonym: None,
       at: None,
       federated: Some(true),
+      media_url: None,
+      content_sha256: None,
+      duration_s: None,
+      speakers: None,
+      attendance_count: None,
     };
     let v = serde_json::to_value(&mute_payload)?;
     assert!(v.get("federated").is_some());
@@ -201,9 +229,84 @@ mod tests {
       to_pseudonym: None,
       at: None,
       federated: None,
+      media_url: None,
+      content_sha256: None,
+      duration_s: None,
+      speakers: None,
+      attendance_count: None,
     };
     let v2 = serde_json::to_value(&mute_payload_none)?;
     assert!(v2.get("federated").is_none());
+
+    Ok(())
+  }
+
+  #[test]
+  fn room_event_payload_recording_fields_skip_serializing_if_none() -> Result<(), serde_json::Error> {
+    // room_recording_uploaded: all 5 recording fields populated; chair-action + federated absent
+    let recording_payload = RoomEventPayload {
+      case_id: 5,
+      matrix_room_id: None,
+      lifecycle_stage: "room_recording_uploaded".to_string(),
+      member_count: None,
+      action: None,
+      target_pseudonym: None,
+      from_pseudonym: None,
+      to_pseudonym: None,
+      at: None,
+      federated: None,
+      media_url: Some("https://s3.example.com/rec/case5.mp4".to_string()),
+      content_sha256: Some("abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234".to_string()),
+      duration_s: Some(3600),
+      speakers: Some(vec!["pseu_alpha".to_string(), "pseu_beta".to_string()]),
+      attendance_count: Some(7),
+    };
+    let v = serde_json::to_value(&recording_payload)?;
+    assert!(v.get("media_url").is_some());
+    assert_eq!(v["media_url"], "https://s3.example.com/rec/case5.mp4");
+    assert!(v.get("content_sha256").is_some());
+    assert_eq!(
+      v["content_sha256"],
+      "abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234"
+    );
+    assert!(v.get("duration_s").is_some());
+    assert_eq!(v["duration_s"], 3600);
+    assert!(v.get("speakers").is_some());
+    assert_eq!(v["speakers"], serde_json::json!(["pseu_alpha", "pseu_beta"]));
+    assert!(v.get("attendance_count").is_some());
+    assert_eq!(v["attendance_count"], 7);
+    // chair-action + federated fields must be absent (skip_serializing_if = "Option::is_none")
+    assert!(v.get("action").is_none());
+    assert!(v.get("target_pseudonym").is_none());
+    assert!(v.get("from_pseudonym").is_none());
+    assert!(v.get("to_pseudonym").is_none());
+    assert!(v.get("at").is_none());
+    assert!(v.get("federated").is_none());
+
+    // all-None recording fields: keys must be absent (proves skip_serializing_if keeps existing room kinds byte-identical)
+    let non_recording_payload = RoomEventPayload {
+      case_id: 6,
+      matrix_room_id: None,
+      lifecycle_stage: "room_created".to_string(),
+      member_count: None,
+      action: None,
+      target_pseudonym: None,
+      from_pseudonym: None,
+      to_pseudonym: None,
+      at: None,
+      federated: None,
+      media_url: None,
+      content_sha256: None,
+      duration_s: None,
+      speakers: None,
+      attendance_count: None,
+    };
+    let v2 = serde_json::to_value(&non_recording_payload)?;
+    assert!(v2.get("media_url").is_none());
+    assert!(v2.get("content_sha256").is_none());
+    assert!(v2.get("duration_s").is_none());
+    assert!(v2.get("speakers").is_none());
+    assert!(v2.get("attendance_count").is_none());
 
     Ok(())
   }
