@@ -1,61 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run bridge Linux compile + clippy + mute_handler tests for Task 2.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 (mute_handler.rs) committed. Bridge compiles on Linux only (ruma-common E0119 on Windows). Validate via Docker rust:1.95.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml mute_handler"
-      ],
-      "branch": "junior/role-impl-task-m3-core-emergency-mute-task2-mute-handler-power-levels-see-claude-prps-briefs-m3-core-emergency-mute-727",
-      "phase_task": "m3-core-emergency-mute task 2",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "872d193380d5-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run cargo-check + cargo-clippy on the workspace after RoomEventPayload.federated field addition (task 1). Pass or fail?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 added federated: Option<bool> to RoomEventPayload in crates/api/api/src/governance/governance_log.rs. No cargo run on daemon per validate-pending-laptop discipline.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
-      ],
-      "branch": "junior/role-impl-task-m3-core-emergency-mute-task1-roomeventpayload-federated-see-claude-prps-briefs-m3-core-emergency-mut-726",
-      "phase_task": "m3-core-emergency-mute task 1",
-      "e2e_filter": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "id": "4bf732d7aa6e-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8237,6 +8182,60 @@
       "approved_by": null,
       "approved_at": null,
       "id": "78c6ad4bfb41-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run cargo-check + cargo-clippy on the workspace after RoomEventPayload.federated field addition (task 1). Pass or fail?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 added federated: Option<bool> to RoomEventPayload in crates/api/api/src/governance/governance_log.rs. No cargo run on daemon per validate-pending-laptop discipline.",
+      "answer": "Task 1 crates: cargo-check --workspace --features full exit 0; cargo-clippy --workspace --features full -D warnings green after clearing 20 pre-existing governance baseline lints (chore cfa8ed90b). governance_log.rs (Task1 diff) clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T16:14:07.948848Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-task1-roomeventpayload-federated-see-claude-prps-briefs-m3-core-emergency-mut-726",
+      "phase_task": "m3-core-emergency-mute task 1",
+      "e2e_filter": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "4bf732d7aa6e-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run bridge Linux compile + clippy + mute_handler tests for Task 2.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 (mute_handler.rs) committed. Bridge compiles on Linux only (ruma-common E0119 on Windows). Validate via Docker rust:1.95.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml mute_handler"
+      ],
+      "branch": "junior/role-impl-task-m3-core-emergency-mute-task2-mute-handler-power-levels-see-claude-prps-briefs-m3-core-emergency-mute-727",
+      "phase_task": "m3-core-emergency-mute task 2",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Task 2 bridge: cargo-linux.sh check exit 0; clippy -D warnings exit 0; --bins mute_handler unit test compute_mute_all_override_cases 1 passed. Linux compile proof green.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-19T16:14:07.948848Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "872d193380d5-001"
     }
   ]
 }
