@@ -1,0 +1,199 @@
+schema_version: 1
+pr: 204
+title: 'feat(rtc,bridge): M3 town-hall emergency mute-all — cross-instance Matrix
+  power-levels + local LiveKit revoke sweep, FIRST room_mute_all chain emission'
+head: phase-m3-core-emergency-mute
+base: governance-v0
+opened_at: '2026-06-19T18:50:40Z'
+last_poll_at: '2026-06-19T19:13:56.716184Z'
+poll_count: 1
+last_polled_head_sha: 78a7b26
+last_claude_run_at: null
+claude_run_count: 0
+recommendation: pending
+findings:
+- id: cr-1
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-19T18:58:51Z'
+  file: .claude/skills/post-task-retro/SKILL.md
+  line: 229
+  summary: Label eval template fence (MD040)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
+  bucket: wont-fix
+  addressed_in: null
+  rationale: outside-diff advisor meta file; CR reviewing noise outside PR scope
+  notes: 'outside-diff: true — Add language label `text` to code fence'
+- id: cr-2
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-19T18:58:51Z'
+  file: crates/api/api/src/governance/actor_app_link.rs
+  line: 91
+  summary: Stop discarding bridge callback failures in link_actor
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; BRIDGE_CALLBACK_SECRET now hard-errors; POST error propagated via ?
+  notes: 'outside-diff: true — Silent failure on POST; violates governance guidelines'
+- id: cr-3
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-19T18:58:51Z'
+  file: crates/api/api_crud/src/governance/revoke_endorsement.rs
+  line: 165
+  summary: Avoid silent failure on post-transaction governance hook
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#pullrequestreview-4534810916#issuecomment-4754019704
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; .ok() replaced with ?
+  notes: 'outside-diff: true — .ok() discards hook errors; violates governance guidelines'
+- id: cr-4
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-19T18:58:49Z'
+  file: .claude/.sync-manifest
+  line: 18
+  summary: Update manifest hash for rule:session-awareness.md
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170148
+  bucket: wont-fix
+  addressed_in: null
+  rationale: outside-diff advisor meta file; sync-manifest hash drift is not code
+  notes: Digest mismatch detected by CR analysis chain
+- id: cr-5
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-19T18:58:49Z'
+  file: .claude/decision-queue.json
+  line: 8260
+  summary: Record command that actually proved Task 3
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170156
+  bucket: wont-fix
+  addressed_in: null
+  rationale: DQ is append-only; adding notes to resolved entries mid-PR is wrong process; audit trail sufficient in commit history
+  notes: Audit trail incomplete; add successful rerun command
+- id: cr-6
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-19T18:58:49Z'
+  file: .claude/runlog/m3-core-emergency-mute-runlog.md
+  line: 9
+  summary: Add blank line after heading (MD022)
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170159
+  bucket: wont-fix
+  addressed_in: null
+  rationale: outside-diff auto-generated runlog; cosmetic markdown lint not worth a fix commit
+  notes: Heading missing blank line before list
+- id: cr-7
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-19T18:58:49Z'
+  file: crates/api/api/src/governance/sanction_publisher.rs
+  line: 141
+  summary: Fail closed when BRIDGE_CALLBACK_SECRET missing
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170173
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; unwrap_or_default() replaced with map_err()?; mirrors bridge_auth.rs pattern
+  notes: unwrap_or_default() weakens auth guarantees; violates guidelines
+- id: cr-8
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-19T18:58:49Z'
+  file: crates/api/api/src/governance/submit_jury_vote.rs
+  line: 178
+  summary: Do not silently discard governance transition hook failures
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170180
+  bucket: done
+  addressed_in: be251582e
+  rationale: fixed in fix-impl-2; .ok() replaced with tracing::warn! matching sibling enqueue_sanction_event pattern
+  notes: .ok() on post-txn hook call; violates governance guidelines
+- id: cr-9
+  source: coderabbit
+  severity: critical
+  posted_at: '2026-06-19T18:58:49Z'
+  file: services/bridge/src/mute_handler.rs
+  line: 33
+  summary: Do not lower pre-existing publish thresholds during mute-all
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170191
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; max() guard on both m.call.member and MSC3401 alias keys
+  notes: Unconditional insert weakens room mute posture
+- id: cr-10
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-19T18:58:49Z'
+  file: services/bridge/src/mute_handler.rs
+  line: 34
+  summary: Handle non-object events values explicitly
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170199
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; ok_or_else()? propagates absent/non-object events as error
+  notes: as_object_mut() silent no-op if events exists as non-object
+- id: cr-11
+  source: coderabbit
+  severity: major
+  posted_at: '2026-06-19T18:58:50Z'
+  file: services/bridge/src/stage.rs
+  line: 341
+  summary: Exclude the chair from mute_all revocations
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170204
+  bucket: done
+  addressed_in: 8bbcb4ec8
+  rationale: fixed in fix-impl-1; chair excluded from revoke loop; marquee test updated with chair-skip sub-assertion
+  notes: Preserves non-chair mute-all contract
+- id: cr-12
+  source: coderabbit
+  severity: low
+  posted_at: '2026-06-19T18:58:50Z'
+  file: services/bridge/tests/emergency_mute.rs
+  line: 48
+  summary: Replace todo!() with minimal executable scaffold
+  cr_url: https://github.com/barrie-cork/lemmy/pull/204#discussion_r3444170207
+  bucket: rebut
+  addressed_in: null
+  rationale: intentional todo!() stub per Phase-6 plan (GOTCHA section); test is #[ignore]-gated; the DoD is compile-only (--no-run); implementing the body now would require a live two-instance docker-compose stack that is Phase-6 pilot work
+  notes: todo!() panic prevents using test as pilot gate
+counters:
+  critical:
+    open: 0
+    done: 5
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  major:
+    open: 0
+    done: 2
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  medium:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  low:
+    open: 0
+    done: 0
+    rebutted: 1
+    carry_forward: 0
+    wont_fix: 4
+  nit:
+    open: 0
+    done: 0
+    rebutted: 0
+    carry_forward: 0
+    wont_fix: 0
+  by_source:
+    coderabbit: 12
+    claude: 0
+    user: 0
+  total: 12
+  triage_approved_by: user
+  triage_approved_at: '2026-06-19T19:20:00Z'
+merged_at: null
+merge_commit: null
+final_recommendation: null
