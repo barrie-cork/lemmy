@@ -55,6 +55,33 @@
       "result": null,
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run Linux clippy gate for bridge after fix-impl-1 #[allow(dead_code)] additions: option-a pass, option-b fail",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 clippy gate failed with 3 dead-code errors on write_recording_config / read_recording_config / record_town_halls_enabled. fix-impl-1 adds #[allow(dead_code)] above each; validates via cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings. Branch: junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
+      "phase_task": "m3-core-recording-fix-impl-1",
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "id": "2ab0b0beca2e-001"
     }
   ],
   "resolved": [
