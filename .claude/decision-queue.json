@@ -58,34 +58,6 @@
       "approved_at": null
     },
     {
-
-      "id": "c2e678abdbb2-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T18:38:13Z",
-      "question": "Linux compile + clippy + recording test (no-run) green on cargo-linux.sh for services/bridge?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 5 impl commit 282b0ec14 — recording.rs live e2e bodies. Bridge standalone workspace; uses rust-s3 + rusqlite in integration test. Validate on Docker rust:1.95.",
-      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
-      "phase_task": "m3-core-e2e-pilot-task5",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording --no-run"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
       "id": "c2e678abdbb2-002",
       "from": "impl",
       "kind": "validate-pending-laptop-e2e",
@@ -102,33 +74,6 @@
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
       ],
       "e2e_filter": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "79d716d1f587-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T12:00:00Z",
-      "question": "Linux compile gate for Task 3 stage_mode.rs live e2e: does check + clippy + --no-run pass?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 3 stage_mode.rs live e2e body implemented via #[path] includes; bridge validates on Linux not Windows.",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 3,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode --no-run"
-      ],
       "result": null,
       "log_slice": null,
       "failed_commands": null,
@@ -163,7 +108,6 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
-
     }
   ],
   "resolved": [
@@ -6665,6 +6609,60 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "20110030b2fd-001"
+    },
+    {
+      "id": "c2e678abdbb2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T18:38:13Z",
+      "question": "Linux compile + clippy + recording test (no-run) green on cargo-linux.sh for services/bridge?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 impl commit 282b0ec14 — recording.rs live e2e bodies. Bridge standalone workspace; uses rust-s3 + rusqlite in integration test. Validate on Docker rust:1.95.",
+      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
+      "phase_task": "m3-core-e2e-pilot-task5",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording --no-run"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Linux compile gate PASS: cargo-linux.sh check + clippy --no-deps -D warnings + test --no-run (stage_mode + recording). All 4 exit 0. Log: .claude/runlog/cohortA-linux-gate-20260620T192705Z.log",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T19:46:33Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "79d716d1f587-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T12:00:00Z",
+      "question": "Linux compile gate for Task 3 stage_mode.rs live e2e: does check + clippy + --no-run pass?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 stage_mode.rs live e2e body implemented via #[path] includes; bridge validates on Linux not Windows.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 3,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode --no-run"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "Linux compile gate PASS: cargo-linux.sh check + clippy --no-deps -D warnings + test --no-run (stage_mode + recording). All 4 exit 0. Log: .claude/runlog/cohortA-linux-gate-20260620T192705Z.log",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T19:46:33Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
