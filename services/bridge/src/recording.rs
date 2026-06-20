@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 /// Hex SHA-256 of the MP4 bytes.  This hash RIDES the governance chain via
 /// append_room_event (R11) — computing it here with sha2 is correct; writing
 /// it anywhere that BYPASSES append_room_event is an ADR-008/016 violation.
+#[allow(dead_code)]
 pub fn compute_content_sha256(bytes: &[u8]) -> String {
     let mut h = Sha256::new();
     h.update(bytes);
@@ -14,6 +15,7 @@ pub fn compute_content_sha256(bytes: &[u8]) -> String {
 /// (reqwest + livekit_jwt token) and PUTs the MP4 to the generic-S3 store
 /// (endpoint from config — R12, NEVER a hardcoded minio:9000).  Tests use the
 /// `Recorder` spy.  Mirror of stage::GrantSink.
+#[allow(dead_code)]
 pub trait RecordingSink {
     /// Trigger LiveKit Egress for `room_id`.  Pseudonymous overlay only (ADR-015).
     fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()>;
