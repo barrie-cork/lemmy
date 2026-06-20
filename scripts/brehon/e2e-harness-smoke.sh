@@ -38,8 +38,25 @@ docker compose \
   --profile rtc \
   up -d --build
 
-echo "[up] Stack started. Waiting 45s for services to initialise..."
-sleep 45
+echo "[up] Stack started. Polling MinIO readiness (5s interval, 2min cap)..."
+
+# ─── MinIO readiness poll ─────────────────────────────────────────────────
+# MinIO can take >45s on a cold Docker pull/start; a fixed sleep races the
+# timing. Poll instead: break on first success, fail clearly at cap.
+MINIO_READY=0
+for i in $(seq 1 24); do
+  if curl -fsS http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+    MINIO_READY=1
+    echo "[up] MinIO ready after ~$((i * 5))s"
+    break
+  fi
+  echo "[up] MinIO not ready yet (attempt ${i}/24, waiting 5s)..."
+  sleep 5
+done
+if [ "${MINIO_READY}" -eq 0 ]; then
+  echo "  FAIL: MinIO did not become ready within 2 minutes"
+  exit 1
+fi
 
 echo ""
 echo "=== Probes ==="
