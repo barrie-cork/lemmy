@@ -108,6 +108,59 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T12:00:00Z",
+      "question": "Does services/bridge compile clean on Linux (Rust 1.95) — check, clippy, test --no-run for room_provisioning?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added rtc_disabled_townhall_clean_posture + anonymous_townhall_identity_never_reaches_livekit to services/bridge/tests/room_provisioning.rs. No Cargo.toml/lock change — test-only additions. cargo-linux.sh Linux compile proof required (bridge validates on Linux not Windows per feedback_bridge_validates_on_linux_not_windows.md).",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 6,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test room_provisioning --no-run"
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "44243654b24d-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T12:00:01Z",
+      "question": "Do new room_provisioning bridge e2e tests pass against live docker-compose stack (rtc-disabled + anonymous-identity criteria)?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added rtc_disabled_townhall_clean_posture (criterion 146 negative invariant — ZERO RTC when gate off) + anonymous_townhall_identity_never_reaches_livekit (criterion 142 — LiveKit-received identity == pseudonym). Both are #[ignore]. rtc-disabled runs against governance-only stack (no LIVEKIT vars); anonymous-identity runs against --profile rtc stack. Requires BRIDGE_DB_PATH bind-mount for DB assertions.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 6,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
+      ],
+      "e2e_filter": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "44243654b24d-002"
     }
   ],
   "resolved": [
