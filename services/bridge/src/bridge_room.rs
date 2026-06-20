@@ -169,6 +169,7 @@ pub fn read_chair_id(
 
 /// Persist the per-room recording configuration JSON knob to bridge_room.recording_config.
 /// Uses UPSERT so the caller need not pre-insert a row.
+#[allow(dead_code)]
 pub fn write_recording_config(
     conn: &Connection,
     case_id: i64,
@@ -185,6 +186,7 @@ pub fn write_recording_config(
 }
 
 /// Read back the persisted recording configuration JSON knob. Returns None when no row or recording_config is NULL.
+#[allow(dead_code)]
 pub fn read_recording_config(
     conn: &Connection,
     case_id: i64,
@@ -205,6 +207,7 @@ pub fn read_recording_config(
 /// defaults FALSE (absent / unparseable / false → false). Clarify DQ
 /// a3d0e9941441-073: the flag lives in the EXISTING recording_config column,
 /// NOT a new column.
+#[allow(dead_code)]
 pub fn record_town_halls_enabled(recording_config: &str) -> bool {
     serde_json::from_str::<serde_json::Value>(recording_config)
         .ok()
