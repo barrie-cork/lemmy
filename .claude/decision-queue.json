@@ -1,6 +1,33 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "e2e_filter": null,
+      "question": "Does the e2e acceptance harness reach all containers? Run: bash scripts/brehon/e2e-harness-smoke.sh",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 created docker-compose.e2e.yml (MinIO + tuwunel-b + bridge-b override) and e2e-harness-smoke.sh. The smoke brings up the stack and asserts MinIO health + LiveKit + bridge-a liveness + tuwunel-b key endpoint with matrix-b.localhost. Laptop advisor runs this (no daemon Docker for the heavy two-instance stack).",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "ec2aa316b69b-001"
+    }
+  ],
   "resolved": [
     {
       "id": 14,
