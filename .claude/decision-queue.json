@@ -1,25 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "planner",
-      "kind": "blocker",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "How is the <500ms emergency-mute measured at the PUBLISHER CLIENT (not server) for the marquee mute_all_drops_all_publishers_cross_instance_under_500ms test — which client API captures the publisher-side timestamp, given no LiveKit client SDK is a bridge dep today?",
-      "options": [
-        "option-A: add the livekit Rust client SDK as a [dev-dependencies] of services/bridge; the e2e test connects N publisher clients (some homed on the 2nd instance) and timestamps each client's own can_publish->false flip on its ParticipantPermissionsChanged event — fullest automated cross-instance publisher-client measurement, heaviest new dep + Linux-resolution risk",
-        "option-B (recommended): use the livekit Rust client dev-dep for an IN-INSTANCE publisher-client <500ms measurement (the PRD line-198 in-instance guarantee, measured at the client not the server) AND route the TRUE cross-instance <500ms to the D2 pilot (Element Call browser clients) — documented via this DQ per the scaffold's pre-specified PRD fallback, never silently dropped",
-        "option-C: no automated publisher-client test; rely on the shipped deterministic Stage::mute_all zero-holder + mute_handler power-level-PUT tests for the automated DoD and observe the publisher-client <500ms ONLY at the D2 pilot"
-      ],
-      "context": "emergency_mute.rs scaffold pre-specifies publisher-client measurement + the PRD fallback (best-effort cross-instance SLA + in-instance <500ms guarantee). services/bridge/Cargo.toml has NO livekit client SDK (confirmed 2026-06-20 @ 2fae33bc1); adding one is a heavy new dep with Linux Cargo.lock resolution risk (rust-s3 precedent). A server-side measurement is a FALSE GREEN (watchpoint #2, catch-fire). Planner recommends option-B: an automated in-instance publisher-client <500ms (faithful to 'measured at the publisher client') + the cross-instance <500ms as the D2 pilot signal, matching the scaffold's documented PRD fallback exactly. Surfaces to user at gate-1/gate-4 — it sets the acceptance bar of the headline criterion (judgment-heavy).",
-      "id": "3004b6625b83-001",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -6447,6 +6428,24 @@
       "answered_by": "advisor",
       "resolved_at": "2026-05-23T12:30:00Z",
       "source": "config.rs:831 DEFAULT_DELTAS_SPONSOR_LIABILITY_MODERATE=-50; config.rs:835 DEFAULT_LIABILITY_SPONSOR_LIABILITY_FLOOR=0; sponsor_liability.rs:348 clamped-delta math; e2e.rs:3773 existing tests use seed 100"
+    },
+    {
+      "from": "planner",
+      "kind": "blocker",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "How is the <500ms emergency-mute measured at the PUBLISHER CLIENT (not server) for the marquee mute_all_drops_all_publishers_cross_instance_under_500ms test — which client API captures the publisher-side timestamp, given no LiveKit client SDK is a bridge dep today?",
+      "options": [
+        "option-A: add the livekit Rust client SDK as a [dev-dependencies] of services/bridge; the e2e test connects N publisher clients (some homed on the 2nd instance) and timestamps each client's own can_publish->false flip on its ParticipantPermissionsChanged event — fullest automated cross-instance publisher-client measurement, heaviest new dep + Linux-resolution risk",
+        "option-B (recommended): use the livekit Rust client dev-dep for an IN-INSTANCE publisher-client <500ms measurement (the PRD line-198 in-instance guarantee, measured at the client not the server) AND route the TRUE cross-instance <500ms to the D2 pilot (Element Call browser clients) — documented via this DQ per the scaffold's pre-specified PRD fallback, never silently dropped",
+        "option-C: no automated publisher-client test; rely on the shipped deterministic Stage::mute_all zero-holder + mute_handler power-level-PUT tests for the automated DoD and observe the publisher-client <500ms ONLY at the D2 pilot"
+      ],
+      "context": "emergency_mute.rs scaffold pre-specifies publisher-client measurement + the PRD fallback (best-effort cross-instance SLA + in-instance <500ms guarantee). services/bridge/Cargo.toml has NO livekit client SDK (confirmed 2026-06-20 @ 2fae33bc1); adding one is a heavy new dep with Linux Cargo.lock resolution risk (rust-s3 precedent). A server-side measurement is a FALSE GREEN (watchpoint #2, catch-fire). Planner recommends option-B: an automated in-instance publisher-client <500ms (faithful to 'measured at the publisher client') + the cross-instance <500ms as the D2 pilot signal, matching the scaffold's documented PRD fallback exactly. Surfaces to user at gate-1/gate-4 — it sets the acceptance bar of the headline criterion (judgment-heavy).",
+      "id": "3004b6625b83-001",
+      "answer": "option-B (per user 2026-06-20, gate-1 ratify): use the livekit Rust client dev-dep for an automated IN-INSTANCE publisher-client <500ms measurement (the PRD line-198 guarantee, measured at the client not the server) AND route the TRUE cross-instance <500ms to the D2 pilot (Element Call browser clients), documented via this DQ per the scaffold's pre-specified PRD fallback. Faithful publisher-client signal without over-claiming an automated cross-instance bar Matrix federation latency may not deliver. Gates Task 4 dispatch.",
+      "answered_by": "user",
+      "resolved_at": "2026-06-20T15:00:00Z",
+      "approved_by": "user",
+      "approved_at": "2026-06-20T15:00:00Z"
     }
   ]
 }
