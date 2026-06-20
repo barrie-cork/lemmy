@@ -1,0 +1,210 @@
+name: governance-ai-review
+
+on:
+  pull_request:
+    branches:
+      - governance-v0
+    paths:
+      - 'crates/db_schema/src/source/governance/**'
+      - 'crates/db_views/governance_case/**'
+      - 'crates/db_views/jury_queue/**'
+      - 'crates/db_views/governance_modlog/**'
+      - 'crates/db_views/reputation/**'
+      - 'crates/api/api_common/src/governance.rs'
+      - 'crates/api/api/src/governance/**'
+      - 'crates/api/api_crud/src/governance/**'
+      - 'crates/apub/objects/src/governance/**'
+      - 'crates/apub/activities/src/governance/**'
+      - 'crates/apub/apub/src/governance/**'
+      - 'crates/server/src/governance.rs'
+      - 'migrations/**'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to review
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: gov-ai-review-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  ai-review:
+    name: MiniMax M3 governance review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head with base history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || format('refs/pull/{0}/head', inputs.pr_number) }}
+
+      - name: Resolve base ref + diff
+        id: base
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.ref || 'governance-v0' }}"
+          git fetch origin "$BASE_REF" --depth=50
+          BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+          cat /tmp/changed.txt
+
+      - name: Detect phase from changed paths
+        id: phase
+        run: |
+          phase="unknown"
+          # Detection order matters — first match wins. Phase 4 (api handlers)
+          # beats Phase 3 (api_common DTOs) beats Phase 2 (db_views) beats
+          # Phase 1 (schema/migrations). Phase 6 (apub) is independent.
+          if grep -qE '^crates/apub/(objects|activities|apub)/src/governance/' /tmp/changed.txt; then
+            phase="6"
+          elif grep -qE '^crates/api/(api|api_crud)/src/governance/|^crates/server/src/governance\.rs' /tmp/changed.txt; then
+            phase="4"
+          elif grep -qE '^crates/api/api_common/src/governance\.rs' /tmp/changed.txt; then
+            phase="3"
+          elif grep -qE '^crates/db_views/(governance_case|jury_queue|governance_modlog|reputation)/' /tmp/changed.txt; then
+            phase="2"
+          elif grep -qE '^crates/db_schema/src/source/governance/|^migrations/' /tmp/changed.txt; then
+            phase="1"
+          fi
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+          echo "Detected phase: $phase"
+
+      - name: Assemble diff and gate on size
+        id: diff
+        run: |
+          git diff --unified=3 "${{ steps.base.outputs.base }}"...HEAD > /tmp/full.diff
+          full_bytes=$(wc -c < /tmp/full.diff)
+          # 28KB cap keeps the "AI review for small PRs only" semantic: phase-size
+          # PRs are skipped cleanly so review adds signal on focused diffs rather
+          # than noisy partial reads. See feedback_ai_review_413_oversize.md.
+          if [ "$full_bytes" -gt 28000 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "full_bytes=$full_bytes" >> "$GITHUB_OUTPUT"
+            echo "Diff size $full_bytes bytes exceeds 28KB AI-review cap — skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "full_bytes=$full_bytes" >> "$GITHUB_OUTPUT"
+            cp /tmp/full.diff /tmp/pr.diff
+            wc -c /tmp/pr.diff
+          fi
+
+      - name: Assemble rubric
+        id: rubric
+        if: steps.diff.outputs.skip == 'false'
+        run: |
+          cat .github/ai-review-prompts/adr-rubric.md > /tmp/rubric.md
+          phase="${{ steps.phase.outputs.phase }}"
+          if [ -f ".github/ai-review-prompts/phase-${phase}-rubric.md" ]; then
+            printf '\n\n---\n\n' >> /tmp/rubric.md
+            cat ".github/ai-review-prompts/phase-${phase}-rubric.md" >> /tmp/rubric.md
+          else
+            printf '\n\n_No phase-specific rubric for phase %s; applying ADR rubric only._\n' "$phase" >> /tmp/rubric.md
+          fi
+          wc -c /tmp/rubric.md
+
+      - name: Review with MiniMax M3
+        id: ai_review
+        if: steps.diff.outputs.skip == 'false'
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          RUBRIC=$(cat /tmp/rubric.md)
+          DIFF=$(cat /tmp/pr.diff)
+          PHASE="${{ steps.phase.outputs.phase }}"
+          MODEL="MiniMax-M3"
+
+          SYSTEM="You are the Brehon governance ADR reviewer for phase ${PHASE}. \
+          Produce a short, actionable review comment under 400 words, valid Markdown. \
+          Rules: \
+          - Cite ADR IDs exactly (ADR-001 through ADR-015 only) when flagging. \
+          - Cite file:line when quoting code. \
+          - Silence is fine: if nothing is wrong, say 'No ADR violations detected in this diff.' and stop. \
+          - Do NOT critique upstream Lemmy conventions outside governance namespaces. \
+          - Do NOT duplicate cargo CI checks (build, clippy, rustfmt, tests). \
+          - Never hallucinate ADR IDs. Only reference ADR-001 through ADR-015 as listed in the rubric below. \
+          \
+          ## ADR rubric + phase rubric \
+          ${RUBRIC}"
+
+          USER_MSG="Review this PR diff:\n\n\`\`\`diff\n${DIFF}\n\`\`\`"
+
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${MINIMAX_API_KEY}" \
+            -H "Content-Type: application/json" \
+            "https://api.minimax.io/v1/chat/completions" \
+            -d "$(jq -n \
+              --arg sys "$SYSTEM" \
+              --arg usr "$USER_MSG" \
+              --arg model "$MODEL" \
+              '{model: $model, thinking: {type: "disabled"}, temperature: 0.2, max_tokens: 800,
+                messages: [{role:"system",content:$sys},{role:"user",content:$usr}]}')")
+
+          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Review unavailable — API did not return content."')
+          echo "$REVIEW" > /tmp/review_output.txt
+          echo "done=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post review comment
+        if: steps.ai_review.outputs.done == 'true'
+        uses: actions/github-script@v7
+        env:
+          PHASE: ${{ steps.phase.outputs.phase }}
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('/tmp/review_output.txt', 'utf8');
+            const phase = process.env.PHASE || 'unknown';
+            const body = [
+              `## 🤖 Governance ADR review — phase ${phase}`,
+              '',
+              review,
+              '',
+              '---',
+              '*Powered by MiniMax M3 — ADR-001..015 rubric*'
+            ].join('\n');
+            const prNumber = context.payload.pull_request?.number
+              || Number('${{ inputs.pr_number || 0 }}');
+            if (prNumber > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body
+              });
+            }
+
+      - name: Post skip notice for phase-size PR
+        if: steps.diff.outputs.skip == 'true'
+        uses: actions/github-script@v7
+        env:
+          PHASE: ${{ steps.phase.outputs.phase }}
+          DIFF_BYTES: ${{ steps.diff.outputs.full_bytes }}
+        with:
+          script: |
+            const phase = process.env.PHASE || 'unknown';
+            const bytes = process.env.DIFF_BYTES;
+            const body = [
+              `## Governance ADR review — phase ${phase} — skipped`,
+              '',
+              `Diff is ${bytes} bytes, which exceeds the 28KB scope cap for automatic governance review. Phase-size PRs are skipped so the auto-review stays focused on small (single-task) PRs where it adds signal.`,
+              '',
+              'Coverage on this PR comes from CodeRabbit (auto-review) and the deterministic ADR-compliance scanner.',
+              '',
+              '_See `feedback_ai_review_413_oversize.md` for the rationale._'
+            ].join('\n');
+            const prNumber = context.payload.pull_request?.number
+              || Number('${{ inputs.pr_number || 0 }}');
+            if (prNumber > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body
+              });
+            }
