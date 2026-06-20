@@ -154,6 +154,11 @@ jobs:
 
           USER_MSG="Review this PR diff:\n\n\`\`\`diff\n${DIFF}\n\`\`\`"
 
+          # WATCH (2026-06-20): max_tokens 2000 caps REVIEW DEPTH (output), and is
+          # now the binding limit on big PRs — the 400KB input gate lets a large
+          # diff through, but the review can only be ~1500 words. If big-PR
+          # reviews read thin / get truncated, bump this (M3 allows up to 128K
+          # recommended output). Watch the posted comments for cut-off endings.
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${MINIMAX_API_KEY}" \
             -H "Content-Type: application/json" \
