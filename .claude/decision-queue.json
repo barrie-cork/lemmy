@@ -207,12 +207,14 @@
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
       ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "result": "fail",
+      "log_slice": "Pin =0.7.7 WORKED (0.7.8 -> 0.7.7 downgrade confirmed; the 4x E0063-in-livekit-api errors are GONE). check=0 clippy=0. But test --no-run (exit 101) now exposes 2 NEW errors IN OUR test code (tests/emergency_mute.rs), revealed once the dep compiled: (1) E0432 emergency_mute.rs:25 -- use livekit_api::proto::ParticipantPermission -- proto is not a module in livekit_api 0.4.24 (wrong import path; worker guessed the API). (2) E0599 emergency_mute.rs:141 -- RoomClient::with_api_key(...).map_err(...) -- with_api_key returns RoomClient directly, not a Result, so .map_err does not apply. Root cause: test written against an ASSUMED livekit-api API surface that differs from 0.4.24's actual one. Fix = correct the import path + drop the erroneous .map_err?, after READING the real 0.4.24 API in the worker's build env.",
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "answer": "FAIL (post-pin) -- 2 test-code API-usage bugs (E0432 import path + E0599 with_api_key not fallible) in emergency_mute.rs. The pin fix itself succeeded; these are NEW errors the pin uncovered. E0599 is non-allowlist -> catch-fire; fix-impl ready.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T22:25:18Z",
       "approved_by": null,
       "approved_at": null,
       "id": "6d1cb2511b90-001"
