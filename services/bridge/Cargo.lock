@@ -408,6 +408,7 @@ dependencies = [
  "hex",
  "jsonwebtoken 9.3.1",
  "livekit-api",
+ "livekit-protocol",
  "matrix-sdk",
  "reqwest 0.12.28",
  "ruma-appservice-api",
@@ -2174,9 +2175,9 @@ dependencies = [
 
 [[package]]
 name = "livekit-protocol"
-version = "0.7.8"
+version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "565d83442aa99684dba5d0841fa342eb572fbd916ba2aa5e92801ecf76620026"
+checksum = "dd59f3759f1a14e60b6bc6d4d415414e1aed686c8e4d2c7862542d95301cdc70"
 dependencies = [
  "pbjson",
  "pbjson-types",
