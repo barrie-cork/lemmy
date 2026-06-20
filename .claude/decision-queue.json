@@ -153,14 +153,16 @@
         "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
       ],
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answer": "FAIL — upstream dep incompatibility (livekit-api 0.4.24 vs livekit-protocol 0.7.8); catch-fire to user (not §G4 allowlist; dependency-selection judgment).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T21:32:56Z",
       "approved_by": null,
       "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
+      "result": "fail",
+      "log_slice": "STEP3 test --no-run FAIL (exit 101). check=0 clippy=0. 4x error[E0063] missing field INSIDE livekit-api-0.4.24 crate source (NOT our test file): ListEgressRequest.page_token (egress.rs:343), RoomParticipantIdentity.revoke_token_ts (room.rs:206,224), SipInboundTrunkInfo.auth_realm (sip.rs:185). Root cause: livekit-api 0.4.24 incompatible with resolver-selected livekit-protocol 0.7.8 (protocol structs gained required fields livekit-api 0.4.24 source does not initialize). Dependency-version conflict from the new livekit-api dev-dep, NOT a worker test-code defect.",
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ]
     },
     {
       "id": "1c37b605fd1a-002",
