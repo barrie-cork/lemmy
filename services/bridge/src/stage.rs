@@ -377,7 +377,10 @@ impl Stage {
         duration_s: i64,
         speakers: Vec<String>,
         attendance_count: i32,
-    ) {
+    ) -> Result<()> {
+        let chair = self.chair.clone().ok_or_else(|| anyhow!(
+            "record_uploaded requires a chair pseudonym; refusing to emit room_recording_uploaded with actor_pseudonym=None"
+        ))?;
         self.pending_emits.push(EmitIntent {
             entry_kind: "room_recording_uploaded",
             payload: RoomEventPayload {
@@ -394,8 +397,9 @@ impl Stage {
                 speakers: Some(speakers),
                 attendance_count: Some(attendance_count),
             },
-            actor_pseudonym: self.chair.clone(), // uploader/chair pseudonym (ADR-015 pin)
+            actor_pseudonym: Some(chair), // uploader/chair pseudonym (ADR-015 pin)
         });
+        Ok(())
     }
 
     fn flush_queue(&self, conn: &Connection) -> Result<()> {
@@ -796,7 +800,7 @@ mod tests {
             600,
             vec!["speaker-pseudonym-a".to_string(), "speaker-pseudonym-b".to_string()],
             42,
-        );
+        )?;
 
         assert_eq!(stage.pending_emits.len(), 1, "exactly one EmitIntent must be queued for record_uploaded");
         let emit = &stage.pending_emits[0];
