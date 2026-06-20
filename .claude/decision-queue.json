@@ -189,6 +189,33 @@
       "result": null,
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run cargo-linux.sh check/clippy/test on services/bridge after pinning livekit-protocol =0.7.7",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Pinned livekit-protocol =0.7.7 in [dev-dependencies] to fix E0063 conflict (livekit-api 0.4.24 does not init fields added in 0.7.8). Cargo.lock regen happens on laptop via cargo-linux.sh.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "6d1cb2511b90-001"
     }
   ],
   "resolved": [
