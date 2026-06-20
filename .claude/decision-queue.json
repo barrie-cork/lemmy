@@ -56,32 +56,6 @@
       "resolved_at": "2026-06-20T17:10:00Z",
       "approved_by": null,
       "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run e2e smoke harness against updated Conduit port config (task 1c); laptop advisor to execute.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1c: added CONDUIT_PORT=8448 to base tuwunel (docker-compose.yml) and override tuwunel-b (docker-compose.e2e.yml). Conduit previously defaulted to 6167; port mappings + TUWUNEL_URL expected 8448. This entry delegates the smoke re-run to the laptop advisor.",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 1,
-      "commands": [
-        "bash scripts/brehon/e2e-harness-smoke.sh"
-      ],
-      "e2e_filter": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "id": "2c511098c5cc-001"
     }
   ],
   "resolved": [
@@ -6529,6 +6503,32 @@
       "resolved_at": "2026-06-20T15:00:00Z",
       "approved_by": "user",
       "approved_at": "2026-06-20T15:00:00Z"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run e2e smoke harness against updated Conduit port config (task 1c); laptop advisor to execute.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1c: added CONDUIT_PORT=8448 to base tuwunel (docker-compose.yml) and override tuwunel-b (docker-compose.e2e.yml). Conduit previously defaulted to 6167; port mappings + TUWUNEL_URL expected 8448. This entry delegates the smoke re-run to the laptop advisor.",
+      "answer": "E2E_HARNESS_REACH_OK — all 4 reach probes PASS (MinIO health, LiveKit, bridge-a 401-liveness, tuwunel-b key endpoint returns server_name=matrix-b.localhost). Conduit now listens on 8448 (CONDUIT_PORT fix, Task-1c); rocksdb backend (Task-1b). Residual nit (non-blocking): probe 4 can race tuwunel-b cold-start (passes on warm stack); fold a tuwunel readiness poll into a later smoke tweak. Harness reach-the-containers gate GREEN.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T17:20:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "e2e_filter": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "2c511098c5cc-001"
     }
   ]
 }
