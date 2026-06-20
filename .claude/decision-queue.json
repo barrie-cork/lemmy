@@ -46,12 +46,14 @@
         "bash scripts/brehon/e2e-harness-smoke.sh"
       ],
       "e2e_filter": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
+      "result": "fail",
+      "log_slice": "rocksdb fix WORKED — both tuwunel containers now Up(healthy), no crash. But reach-smoke probe 4 still fails: curl(52) Empty reply on localhost:8449. SECOND DISTINCT DEFECT: Conduit listens on container port 6167 (its default; CONDUIT_PORT unset in both composes), but the port mappings target container 8448 (8448:8448 instance-A, 8449:8448 instance-B) — nothing on 8448. Verified: tuwunel-b:6167/_matrix/key/v2/server returns server_name=matrix-b.localhost correctly (BUG-15 distinct-domain WORKS); :8448 dead. Also TUWUNEL_URL points bridges at :8448 (bridges cant reach homeservers either). Same never-booted-base-placeholder family as the sled defect; base compose affected too. FIX: add CONDUIT_PORT: \"8448\" to base tuwunel env + override tuwunel-b env (2 services; override tuwunel-a inherits base). Then all existing 8448 mappings + TUWUNEL_URL become valid.",
+      "failed_commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
       "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T17:10:00Z",
       "approved_by": null,
       "approved_at": null
     }
