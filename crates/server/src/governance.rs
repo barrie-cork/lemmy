@@ -1,5 +1,7 @@
 //! Governance composition root.
 //!
+//! (smoke-test marker: MiniMax M3 governance review path verification — remove.)
+//!
 //! Ties governance routes into the server binary and schedules the
 //! governance-relevant background jobs. Stays strictly declarative per
 //! [03 §11]. No business logic lives here; every ounce of decision-making
