@@ -1,0 +1,20 @@
+{
+  "from": "impl",
+  "kind": "validate-pending-laptop-e2e",
+  "timestamp": "2026-06-20T00:00:00Z",
+  "question": "Run e2e smoke harness against updated Conduit port config (task 1c); laptop advisor to execute.",
+  "options": ["pass", "fail"],
+  "context": "Task 1c: added CONDUIT_PORT=8448 to base tuwunel (docker-compose.yml) and override tuwunel-b (docker-compose.e2e.yml). Conduit previously defaulted to 6167; port mappings + TUWUNEL_URL expected 8448. This entry delegates the smoke re-run to the laptop advisor.",
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null,
+  "approved_by": null,
+  "approved_at": null,
+  "branch": "phase-m3-core-e2e-pilot",
+  "phase_task": 1,
+  "commands": ["bash scripts/brehon/e2e-harness-smoke.sh"],
+  "e2e_filter": null,
+  "result": null,
+  "log_slice": null,
+  "failed_commands": null
+}
