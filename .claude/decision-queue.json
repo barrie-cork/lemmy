@@ -1,33 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "question": "Run cargo-linux.sh check + clippy + recording.rs test-compile for bridge task 6",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "m3-core-recording Task 6 — docker-gated #[ignore] recording integration test (compile-only). Bridge Linux check + clippy -D warnings + test --test recording --no-run (the #[ignore] tests must COMPILE, not run).",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording --no-run"
-      ],
-      "branch": "junior/role-impl-task-m3-core-recording-task6-recording-itc-see-claude-prps-briefs-m3-core-recording-impl-6-md-742",
-      "phase_task": "m3-core-recording Task 6",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "0aa481cce3a6-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8590,6 +8563,32 @@
       "resolved_at": "2026-06-20T04:25:35.035119Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "question": "Run cargo-linux.sh check + clippy + recording.rs test-compile for bridge task 6",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "m3-core-recording Task 6 — docker-gated #[ignore] recording integration test (compile-only). Bridge Linux check + clippy -D warnings + test --test recording --no-run (the #[ignore] tests must COMPILE, not run).",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording --no-run"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task6-recording-itc-see-claude-prps-briefs-m3-core-recording-impl-6-md-742",
+      "phase_task": "m3-core-recording Task 6",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "GREEN: cargo-linux.sh check=0, clippy -D warnings=0, test --test recording --no-run=0 (recording.rs #[ignore] test binary compiled: recording-2cb64ee9). Bridge Task 6 docker-gated integration test validated on Linux (rust:1.95) — compile-only as designed.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T05:00:43.169084+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "0aa481cce3a6-001"
     }
   ]
 }
