@@ -1,6 +1,34 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "id": "031b1fbf8eb1-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T01:05:50Z",
+      "question": "Does bridge recording.rs + rust-s3 dep compile clean on Linux (cargo check + clippy + test)?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 added services/bridge/src/recording.rs (compute_content_sha256 + RecordingSink trait + #[allow(dead_code)] LiveSink + Recorder spy + 2 tests), promoted sha2 transitive->direct, added rust-s3 0.34.0 to services/bridge/Cargo.toml, regenerated Cargo.lock. Also added [workspace] to bridge Cargo.toml (required for cargo to treat bridge as standalone in worktree environments). validate-pending-laptop-linux commands delegated to laptop advisor per R3.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task3-recording-rs-sha256-sink-rust-s3-dep-see-claude-prps-briefs-m3-core-recordin-739",
+      "phase_task": "Task 3",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    }
+  ],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
