@@ -357,6 +357,10 @@ mod tests {
             livekit_url: None,
             livekit_api_key: None,
             livekit_api_secret: None,
+            s3_endpoint: None,
+            s3_bucket: None,
+            s3_access_key: None,
+            s3_secret_key: None,
         })
     }
 
