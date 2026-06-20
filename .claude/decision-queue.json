@@ -56,6 +56,59 @@
       "resolved_at": "2026-06-20T17:10:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T12:00:00Z",
+      "question": "Linux compile gate for Task 3 stage_mode.rs live e2e: does check + clippy + --no-run pass?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 stage_mode.rs live e2e body implemented via #[path] includes; bridge validates on Linux not Windows.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 3,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode --no-run"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "79d716d1f587-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T12:01:00Z",
+      "question": "Does four_mic_pass_then_grace_boundary_emits_chair_entries pass live against the docker-compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 3 stage_mode.rs live e2e body implemented; gate-4=LOCAL, advisor runs after stack is up.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 3,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test stage_mode -- --ignored"
+      ],
+      "e2e_filter": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "id": "79d716d1f587-002"
     }
   ],
   "resolved": [
