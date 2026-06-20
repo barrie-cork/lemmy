@@ -58,6 +58,61 @@
       "approved_at": null
     },
     {
+
+      "id": "c2e678abdbb2-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T18:38:13Z",
+      "question": "Linux compile + clippy + recording test (no-run) green on cargo-linux.sh for services/bridge?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 impl commit 282b0ec14 — recording.rs live e2e bodies. Bridge standalone workspace; uses rust-s3 + rusqlite in integration test. Validate on Docker rust:1.95.",
+      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
+      "phase_task": "m3-core-e2e-pilot-task5",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording --no-run"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c2e678abdbb2-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T18:38:23Z",
+      "question": "Live e2e recording tests green against docker-compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 impl — 3 #[ignore] integration tests in tests/recording.rs. Requires MinIO + Brehon + bridge running. Run after linux compile gate passes.",
+      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
+      "phase_task": "m3-core-e2e-pilot-task5",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
+      ],
+      "e2e_filter": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "79d716d1f587-001",
       "from": "impl",
       "kind": "validate-pending-laptop-linux",
       "timestamp": "2026-06-20T12:00:00Z",
@@ -81,10 +136,10 @@
       "answered_by": null,
       "resolved_at": null,
       "approved_by": null,
-      "approved_at": null,
-      "id": "79d716d1f587-001"
+      "approved_at": null
     },
     {
+      "id": "79d716d1f587-002",
       "from": "impl",
       "kind": "validate-pending-laptop-e2e",
       "timestamp": "2026-06-20T12:01:00Z",
@@ -107,8 +162,8 @@
       "answered_by": null,
       "resolved_at": null,
       "approved_by": null,
-      "approved_at": null,
-      "id": "79d716d1f587-002"
+      "approved_at": null
+
     }
   ],
   "resolved": [
