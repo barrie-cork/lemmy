@@ -93,6 +93,59 @@ injection per `feedback_junior_worker_e2e_edit_hang.md` (parent class).
 
 Delete this §2.0 block from a non-fix-impl brief.
 
+### 2.5 Forward-declared-item + struct-field-propagation gate (mandatory)
+
+Per the m3-core-recording 3× fix-impl recurrence (2026-06-20): bridge_room.rs
+dead_code (fix-impl-1), sanction_handler.rs E0063 (fix-impl-1b), recording.rs
+dead_code (fix-impl-3) — every one traced to the SAME class of brief gap. The
+brief named *some* propagation obligations but not *all*, so the worker shipped
+a commit that passed `cargo test` but failed `clippy -D warnings` (or failed
+`cargo check` on a missed literal), forcing a fix-impl cycle each time.
+
+**This gate fires when EITHER trigger holds** (no judgment call — pattern matches → the brief MUST satisfy the corresponding obligation):
+
+**Trigger A — the task ADDS or RENAMES fields on a struct.** The brief §2 Scope MUST:
+1. Require the worker to **enumerate ALL existing literal constructors FIRST**:
+   `rg "<StructName>\s*\{" <crate-or-service-path>/` across every file that
+   constructs the struct (production AND `#[cfg(test)]` literals). State the
+   expected count if the plan gives it.
+2. Require the new field(s) added to **EVERY** enumerated literal (`None` /
+   `Default::default()` / the real value) **in the SAME commit** — a missed
+   literal is an `E0063 missing-field` compile failure.
+3. Add a §4 DoD line: "the count of literals edited == the `rg` count".
+
+**Trigger B — the task CREATES forward-declared items** (a `pub fn`, a `pub trait` with methods, OR a `pub struct`/impl) whose only non-test consumer lands in a LATER task. The brief §2 Scope MUST:
+1. **Enumerate EVERY forward-declared item by kind** — free functions, trait
+   declarations (each unused method counts), and structs — NOT just the struct.
+   (The recording.rs fix-impl-3 miss: the brief put `#[allow(dead_code)]` on the
+   `LiveSink` *struct* but not on the `compute_content_sha256` *free fn* or the
+   `RecordingSink` *trait* — those are separate dead-code sites.)
+2. Require `#[allow(dead_code)]` (or `#[expect(dead_code)]`) on EACH, mirroring
+   an existing in-file `#[allow(dead_code)]` verbatim (column 0, no reason string
+   unless the file's existing style uses one). Name the consumer-task in a
+   one-line comment so a future reader knows when the `#[allow]` clears.
+3. Add a §4 DoD line: "every forward-declared `pub fn` / `pub trait` method /
+   `pub struct` introduced this task that is unused in the NON-TEST build carries
+   `#[allow(dead_code)]`".
+
+**The masking trap (state it in §4 of any brief that hits either trigger):**
+`cargo test` passing does NOT prove `clippy -D warnings` clean. `#[cfg(test)]`
+code counts a forward-declared item as *used*, so the test build is green while
+the non-test clippy bin-target build flags it dead-code. The
+`validate-pending-laptop-linux` clippy `-D warnings` gate is what catches this —
+the brief author must front-run it, not discover it via a fix-impl cycle.
+
+**Removing a stale `#[allow]`:** when THIS task is the consumer that wires a
+previously-forward-declared item into the non-test build, remove its
+`#[allow(dead_code)]` — but ONLY for items genuinely now-used in the non-test
+build. Leave `#[allow]` on items still unused. When unsure, LEAVE it: a stale
+`#[allow]` on a now-used item is harmless (not a clippy error); a still-unused
+item missing `#[allow]` IS an error. Err toward leaving; the gate catches
+over-removal harmlessly.
+
+Delete this §2.5 block only if the task neither adds/renames struct fields NOR
+creates forward-declared items (e.g. a pure logic edit inside existing fns).
+
 ## 3. Required reading
 
 In this order:
@@ -157,6 +210,14 @@ The plan was written before this task. If it cites exact line numbers (e.g. `foo
 ### Lesson trailer (encouraged)
 
 If during the task you discover something a future impl-task on a related area would have wanted to know — a non-obvious constraint, a footgun, a pattern that bit you — end the commit-message body with a `LESSON:` line per `feedback_junior_pmd_write_convention.md`. One discrete lesson per `LESSON:` line. Cite specific files/lines.
+
+### Forward-declared / struct-field-propagation DoD (if §2.5 fired)
+
+If §2.5 Trigger A or B fired, the DoD lines it specifies are mandatory here:
+the `rg`-literal-count match (Trigger A) and/or the `#[allow(dead_code)]`-on-
+every-forward-declared-item check (Trigger B), plus the masking-trap note
+(`cargo test` green ≠ `clippy -D warnings` green). Per the m3-core-recording
+3× fix-impl recurrence. Delete this sub-block if §2.5 was deleted.
 
 ### <Task-specific overrides>
 

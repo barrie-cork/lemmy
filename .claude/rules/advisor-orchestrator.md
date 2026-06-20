@@ -79,6 +79,7 @@ When authoring an `impl-task` OR `fix-impl-task` brief, walk the file list again
 | Any `pg_advisory_xact_lock` or void PG function call | `feedback_pg_advisory_xact_lock_void_decode.md` |
 | Any newtype under `crates/db_schema/src/newtypes/` | `feedback_newtype_locations_lemmy_db_schema_vs_file.md` |
 | Any clippy fix involving `-D warnings` + new code | `feedback_clippy_test_style.md`, `feedback_clippy_rerun_after_fix.md` |
+| Task ADDS/RENAMES struct fields, OR CREATES forward-declared `pub fn`/`pub trait`/`pub struct` whose consumer lands in a LATER task (fires template §2.5 Trigger A/B) | `feedback_forward_declared_items_need_allow_until_consumer.md` (+ `feedback_insertform_default_propagation.md` if the struct is an `*InsertForm`). Brief MUST: enumerate ALL literal constructors via `rg "<Struct>\s*\{"` (Trigger A) AND/OR enumerate every forward-declared item by kind (fn + trait method + struct) for `#[allow(dead_code)]` (Trigger B); add the `cargo test`-green ≠ `clippy -D warnings`-green masking-trap note to §4. Per m3-core-recording 3× fix-impl recurrence 2026-06-20. |
 | Any `scripts/brehon/cargo-*.bat\|sh` edit | `feedback_wrapper_script_flag_silence.md`, `feedback_pq_sys_wrapper_env_propagation.md` |
 | Any `.gitignore` / `.git/info/exclude` / hook addition | `feedback_settings_local_json_worktree_bootstrap.md` |
 
