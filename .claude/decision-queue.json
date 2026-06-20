@@ -28,6 +28,32 @@
       "approved_by": null,
       "approved_at": null,
       "id": "ec2aa316b69b-001"
+    },
+    {
+      "id": "53441afbc986-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run e2e-harness-smoke.sh on the laptop to verify rocksdb backend fix boots both homeservers and MinIO readiness poll works. Options: (a) smoke passes — advance; (b) smoke fails — triage.",
+      "options": [
+        "(a) pass — advance to bm-pr",
+        "(b) fail — triage and fix-impl-1c"
+      ],
+      "context": "Task 1b: fixed CONDUIT_DATABASE_BACKEND sled->rocksdb in base (line 26) + override tuwunel-b (line 116); replaced sleep 45 with MinIO readiness poll (5s * 24 cap). Advisor verified rocksdb boots clean in matrix-conduit:v0.6.0. Laptop runs the smoke (Docker required).",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "e2e_filter": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [

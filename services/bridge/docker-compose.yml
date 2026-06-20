@@ -23,7 +23,7 @@ services:
     image: matrixconduit/matrix-conduit:v0.6.0
     environment:
       CONDUIT_SERVER_NAME: "localhost"
-      CONDUIT_DATABASE_BACKEND: "sled"
+      CONDUIT_DATABASE_BACKEND: "rocksdb"
       # Federation-disabled posture.
       # Tuwunel issue: some versions require allow_federation=true +
       # forbidden_remote_server_names=[".*"] instead of allow_federation=false.
