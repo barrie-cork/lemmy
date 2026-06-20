@@ -18,11 +18,13 @@
       ],
       "context": "Task 1 created docker-compose.e2e.yml (MinIO + tuwunel-b + bridge-b override) and e2e-harness-smoke.sh. The smoke brings up the stack and asserts MinIO health + LiveKit + bridge-a liveness + tuwunel-b key endpoint with matrix-b.localhost. Laptop advisor runs this (no daemon Docker for the heavy two-instance stack).",
       "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T15:35:00Z",
+      "result": "fail",
+      "log_slice": "reach-smoke probe 4 FAIL: tuwunel-b unreachable on localhost:8449. ROOT CAUSE: BOTH tuwunel (instance-A) AND tuwunel-b Exited(1) on init with BadConfig(\"Database backend not found.\") — CONDUIT_DATABASE_BACKEND: \"sled\" is unsupported in the matrixconduit/matrix-conduit:v0.6.0 image being pulled. This is a BASE-harness defect (docker-compose.yml line 26 sets sled too), not Task-1-specific; the worker correctly MIRRORED the base. MinIO+LiveKit+bridge-a reach OK; only the homeservers crash. Secondary nit: the fixed 45s init wait is slightly short for cold MinIO start (MinIO was 200 at 5min). FIX needs a user decision: correct Conduit DB backend (likely rocksdb) + possibly image-tag, touching the BASE compose Task-1 brief said not to modify.",
+      "failed_commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
       "approved_by": null,
       "approved_at": null,
       "id": "ec2aa316b69b-001"
