@@ -23,6 +23,7 @@ services:
     image: matrixconduit/matrix-conduit:v0.6.0
     environment:
       CONDUIT_SERVER_NAME: "localhost"
+      CONDUIT_PORT: "8448"
       CONDUIT_DATABASE_BACKEND: "rocksdb"
       # Federation-disabled posture.
       # Tuwunel issue: some versions require allow_federation=true +

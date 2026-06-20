@@ -113,6 +113,7 @@ services:
     image: matrixconduit/matrix-conduit:v0.6.0    # same pin as base tuwunel
     environment:
       CONDUIT_SERVER_NAME: "matrix-b.localhost"     # DISTINCT domain — NOT a port change (BUG-15)
+      CONDUIT_PORT: "8448"
       CONDUIT_DATABASE_BACKEND: "rocksdb"
       CONDUIT_ALLOW_FEDERATION: "true"               # required for cross-instance federation
       CONDUIT_ALLOW_REGISTRATION: "true"
