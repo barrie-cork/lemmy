@@ -218,6 +218,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "6d1cb2511b90-001"
+    },
+    {
+      "id": "f6803ca6e036-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T22:45:00Z",
+      "question": "validate fix-impl-4b: check+clippy+test --no-run for services/bridge after E0432+E0599 fixes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Fixed 2 API-usage bugs in emergency_mute.rs: (1) livekit_api::proto::ParticipantPermission → livekit_protocol::ParticipantPermission (ParticipantPermission lives in livekit-protocol-0.7.7/src/livekit.rs:294); (2) RoomClient::with_api_key returns Self infallibly (room.rs:58) → dropped .map_err(...)? from lk_client construction",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [

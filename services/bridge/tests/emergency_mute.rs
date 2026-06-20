@@ -22,7 +22,7 @@
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use livekit_api::access_token::{AccessToken, VideoGrants};
-use livekit_api::proto::ParticipantPermission;
+use livekit_protocol::ParticipantPermission;
 use livekit_api::services::room::{CreateRoomOptions, RoomClient, UpdateParticipantOptions};
 
 #[tokio::test]
@@ -137,8 +137,7 @@ async fn mute_all_drops_all_publishers_cross_instance_under_500ms() -> anyhow::R
         &livekit_admin_url,
         &livekit_api_key,
         &livekit_api_secret,
-    )
-    .map_err(|e| anyhow::anyhow!("RoomClient::with_api_key: {e}"))?;
+    );
 
     // Create the LiveKit room (idempotent; safe even if bridge provisioning already created it).
     lk_client
