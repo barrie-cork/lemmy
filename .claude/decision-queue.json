@@ -56,34 +56,6 @@
       "resolved_at": "2026-06-20T17:10:00Z",
       "approved_by": null,
       "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Linux compile + clippy + 2 deterministic tests for Task 2 recording async changes",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2: RecordingSink async (native, no async-trait), maybe_record generic+async, LiveSink live Egress POST + S3 PUT, cr-2/cr-3 in handle_recording_fetch. Compile gate only (no e2e harness needed).",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 2,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml clean_posture_no_side_effects_when_disabled",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml maybe_record_enabled_records_sink_and_emits_intent"
-      ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "id": "20110030b2fd-001"
     }
   ],
   "resolved": [
@@ -6557,6 +6529,34 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "2c511098c5cc-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Linux compile + clippy + 2 deterministic tests for Task 2 recording async changes",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2: RecordingSink async (native, no async-trait), maybe_record generic+async, LiveSink live Egress POST + S3 PUT, cr-2/cr-3 in handle_recording_fetch. Compile gate only (no e2e harness needed).",
+      "answer": "Linux compile gate PASS (advisor-laptop, cargo-linux.sh rust:1.95): check exit 0; clippy --no-deps -D warnings exit 0; recording::tests::clean_posture_no_side_effects_when_disabled 1 passed (R7 negative invariant); maybe_record_enabled_records_sink_and_emits_intent 1 passed (positive companion). 0 failures. Async LiveSink (native async-fn-in-trait, generic S, no async-trait) + cr-2/cr-3 compile clean.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T18:05:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 2,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml clean_posture_no_side_effects_when_disabled",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml maybe_record_enabled_records_sink_and_emits_intent"
+      ],
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "20110030b2fd-001"
     }
   ]
 }
