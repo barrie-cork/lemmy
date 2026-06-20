@@ -1,89 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "91c7d92933b0-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Validate task1 RoomEventPayload recording fields: cargo check + clippy.",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 (m3-core-recording) added 5 optional recording-metadata fields to RoomEventPayload in crates/api/api/src/governance/governance_log.rs (media_url/content_sha256/duration_s/speakers/attendance_count, all #[serde(default, skip_serializing_if)] after federated). Updated 4 existing test literals to include new None fields. Added room_event_payload_recording_fields_skip_serializing_if_none test. No cargo run on daemon per brief §4.",
-      "branch": "junior/role-impl-task-m3-core-recording-task1-roomeventpayload-recording-fields-see-claude-prps-briefs-m3-core-recording-i-736",
-      "phase_task": "m3-core-recording-task1",
-      "commands": [
-        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
-        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
-      ],
-      "e2e_filter": null,
-      "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "4ee45cbb6d67-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-19T00:00:00Z",
-      "question": "Run Linux cargo validate for bridge S3 config + recording_config helpers (Task 2)",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 modifies services/bridge/src/config.rs (4 S3 optional fields) and services/bridge/src/bridge_room.rs (write_recording_config/read_recording_config/record_town_halls_enabled + tests). Bridge compiles on Linux only (R1). Validate with cargo-linux.sh check + clippy + test record_town_halls_flag_parse.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
-      ],
-      "branch": "junior/role-impl-task-m3-core-recording-task2-s3-config-record-flag-helpers-see-claude-prps-briefs-m3-core-recording-impl-737",
-      "phase_task": "task-2",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run Linux clippy gate for bridge after fix-impl-1 #[allow(dead_code)] additions: option-a pass, option-b fail",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 2 clippy gate failed with 3 dead-code errors on write_recording_config / read_recording_config / record_town_halls_enabled. fix-impl-1 adds #[allow(dead_code)] above each; validates via cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings. Branch: junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
-      ],
-      "branch": "junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
-      "phase_task": "m3-core-recording-fix-impl-1",
-      "result": null,
-      "log_slice": null,
-      "failed_jobs": null,
-      "id": "2ab0b0beca2e-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8480,6 +8397,89 @@
       "approved_by": null,
       "approved_at": null,
       "id": "1ed255d85572-002"
+    },
+    {
+      "id": "91c7d92933b0-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Validate task1 RoomEventPayload recording fields: cargo check + clippy.",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 (m3-core-recording) added 5 optional recording-metadata fields to RoomEventPayload in crates/api/api/src/governance/governance_log.rs (media_url/content_sha256/duration_s/speakers/attendance_count, all #[serde(default, skip_serializing_if)] after federated). Updated 4 existing test literals to include new None fields. Added room_event_payload_recording_fields_skip_serializing_if_none test. No cargo run on daemon per brief §4.",
+      "branch": "junior/role-impl-task-m3-core-recording-task1-roomeventpayload-recording-fields-see-claude-prps-briefs-m3-core-recording-i-736",
+      "phase_task": "m3-core-recording-task1",
+      "commands": [
+        "cmd //c \"scripts\\\\brehon\\\\cargo-check.bat --workspace --features full\"",
+        "cmd //c \"scripts\\\\brehon\\\\cargo-clippy.bat --workspace --features full --no-deps -- -D warnings\""
+      ],
+      "e2e_filter": null,
+      "workflow_run_id": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "T1 crates check GREEN (cargo-check.bat --workspace --features full). Validated advisor-laptop. RoomEventPayload 5 recording fields compile.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T02:00:00Z",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "4ee45cbb6d67-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-19T00:00:00Z",
+      "question": "Run Linux cargo validate for bridge S3 config + recording_config helpers (Task 2)",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 modifies services/bridge/src/config.rs (4 S3 optional fields) and services/bridge/src/bridge_room.rs (write_recording_config/read_recording_config/record_town_halls_enabled + tests). Bridge compiles on Linux only (R1). Validate with cargo-linux.sh check + clippy + test record_town_halls_flag_parse.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task2-s3-config-record-flag-helpers-see-claude-prps-briefs-m3-core-recording-impl-737",
+      "phase_task": "task-2",
+      "answer": "SUPERSEDED. Original T2 bridge validate: check GREEN but clippy -D warnings FAILED on 3 dead-code errors (forward-declared write/read_recording_config + record_town_halls_enabled). Resolved by fix-impl-1 (#738 #[allow(dead_code)]) + fix-impl-1b (d4bfd5968 test fixture). Authoritative pass = DQ 2ab0b0beca2e-001. Reconciled advisor-laptop.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T02:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run Linux clippy gate for bridge after fix-impl-1 #[allow(dead_code)] additions: option-a pass, option-b fail",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 2 clippy gate failed with 3 dead-code errors on write_recording_config / read_recording_config / record_town_halls_enabled. fix-impl-1 adds #[allow(dead_code)] above each; validates via cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings. Branch: junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
+      "answer": "fix-impl-1 (#738) + fix-impl-1b (d4bfd5968) GREEN: CHECK_EXIT=0, CLIPPY_EXIT=0 (HEADLINE -D warnings clean), TEST_EXIT=0 (full bridge test suite, 26 passed/0 failed/12 ignored). #[allow(dead_code)] cleared the 3 bridge_room.rs forward-declared-helper errors; 4 s3_* None lines fixed the sanction_handler make_config E0063. Validated advisor-laptop in throwaway worktree at d4bfd5968.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T02:00:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_town_halls_flag_parse"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-fix-impl-1-bridge-room-allow-dead-code-see-claude-prps-briefs-m3-core-recording-fi-738",
+      "phase_task": "m3-core-recording-fix-impl-1",
+      "result": "pass",
+      "log_slice": null,
+      "failed_jobs": null,
+      "id": "2ab0b0beca2e-001",
+      "failed_commands": null
     }
   ]
 }
