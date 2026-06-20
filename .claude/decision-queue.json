@@ -1,36 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run cargo-linux.sh check + clippy + 3 named tests for bridge task 4",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 commit c7fd1439b: maybe_record + Stage::record_uploaded + 5 bridge DTO fields. Branch: junior/role-impl-task-m3-core-recording-task4-maybe-record-record-uploaded-dto-mirror-see-claude-prps-briefs-m3-core-recor-740",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_uploaded_emits_recording_intent",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml clean_posture_no_side_effects_when_disabled",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml room_recording_uploaded_request_json_shape"
-      ],
-      "branch": "junior/role-impl-task-m3-core-recording-task4-maybe-record-record-uploaded-dto-mirror-see-claude-prps-briefs-m3-core-recor-740",
-      "phase_task": "m3-core-recording Task 4",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "96dd2bccbd79-001"
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8537,6 +8507,35 @@
       "result": "pass",
       "log_slice": null,
       "failed_commands": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run cargo-linux.sh check + clippy + 3 named tests for bridge task 4",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 commit c7fd1439b: maybe_record + Stage::record_uploaded + 5 bridge DTO fields. Branch: junior/role-impl-task-m3-core-recording-task4-maybe-record-record-uploaded-dto-mirror-see-claude-prps-briefs-m3-core-recor-740",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_uploaded_emits_recording_intent",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml clean_posture_no_side_effects_when_disabled",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml room_recording_uploaded_request_json_shape"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task4-maybe-record-record-uploaded-dto-mirror-see-claude-prps-briefs-m3-core-recor-740",
+      "phase_task": "m3-core-recording Task 4",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "All 5 commands GREEN on phase tip 1a99bf6f7: check ok, 3 named tests ok (record_uploaded_emits_recording_intent, clean_posture_no_side_effects_when_disabled, room_recording_uploaded_request_json_shape), clippy -D warnings ok after adding #[allow(clippy::too_many_arguments)] on maybe_record (fix 1a99bf6f7). Validated locally via cargo-linux.sh (advisor-laptop, Mode B).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T03:00:59.943861+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "96dd2bccbd79-001"
     }
   ]
 }
