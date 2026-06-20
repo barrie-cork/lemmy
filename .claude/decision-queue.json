@@ -134,6 +134,59 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "44243654b24d-002"
+    },
+    {
+      "id": "1c37b605fd1a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T15:30:00Z",
+      "question": "Does the bridge compile cleanly with the livekit-api dev-dep on Linux?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 adds livekit-api=0.4 as a dev-dep in services/bridge/Cargo.toml. The validate-pending-laptop-linux gate checks compilation + clippy + test --no-run on Linux (Docker rust:1.95) to confirm the dependency resolves and the emergency_mute.rs test file type-checks. R14: Cargo.lock regenerated in same commit.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
+    },
+    {
+      "id": "1c37b605fd1a-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T15:30:01Z",
+      "question": "Does the emergency_mute live e2e test pass against the docker-compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 MARQUEE: mute_all_drops_all_publishers_cross_instance_under_500ms is now a live test using livekit-api RoomClient for publisher-client <500ms measurement (criterion 141, DQ 3004b6625b83-001 option-B). Requires docker-compose stack with LiveKit + two bridge instances. Test is #[ignore] and only runs with -- --ignored.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "e2e_filter": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
+      ],
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null
     }
   ],
   "resolved": [
