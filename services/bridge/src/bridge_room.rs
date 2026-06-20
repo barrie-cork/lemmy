@@ -203,6 +203,33 @@ pub fn read_recording_config(
     }
 }
 
+/// Return the pseudonym participant set for a recording identified by its
+/// `recording_id` (the Matrix room ID used as the S3 object key).
+/// Queries bridge_room for the matching room and returns the chair pseudonym
+/// plus any pseudonyms in the raised-hand queue_state (both PSEUDONYMS — ADR-015).
+/// Returns an empty Vec when the room is not found (safe default → FORBIDDEN).
+pub fn participants_for_recording(
+    conn: &Connection,
+    recording_id: &str,
+) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT chair_id, queue_state FROM bridge_room WHERE matrix_room_id = ?1",
+    )?;
+    let mut rows = stmt.query(params![recording_id])?;
+    let mut participants: Vec<String> = Vec::new();
+    if let Some(row) = rows.next()? {
+        if let Some(chair) = row.get::<_, Option<String>>(0)? {
+            participants.push(chair);
+        }
+        if let Some(queue_json) = row.get::<_, Option<String>>(1)? {
+            if let Ok(pseudonyms) = serde_json::from_str::<Vec<String>>(&queue_json) {
+                participants.extend(pseudonyms);
+            }
+        }
+    }
+    Ok(participants)
+}
+
 /// Pure parse of the per-room recording_config knob. `record_town_halls`
 /// defaults FALSE (absent / unparseable / false → false). Clarify DQ
 /// a3d0e9941441-073: the flag lives in the EXISTING recording_config column,

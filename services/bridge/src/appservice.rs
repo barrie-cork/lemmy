@@ -256,17 +256,44 @@ async fn handle_recording_fetch(
             .into_response();
     }
 
-    // Scaffold-grade (Phase 5): Phase-6 replaces with live session-auth token.
+    // cr-2: requester pseudonym from the authenticated forward (already Bearer-gated above).
+    // The Bearer gate IS the trust boundary — the bridge trusts the forwarded pseudonym only
+    // because the caller proved BRIDGE_CALLBACK_SECRET.  Reject an empty pseudonym: 403.
     // The X-Requester-Pseudonym header carries the requester's pseudonym (ADR-015 — never person_id/MXID).
     let requester_pseudonym = headers
         .get("x-requester-pseudonym")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("")
         .to_owned();
+    if requester_pseudonym.is_empty() {
+        tracing::warn!(recording_id = %recording_id, "recording-fetch: missing requester pseudonym (cr-2 — 403)");
+        return (StatusCode::FORBIDDEN, "missing requester pseudonym").into_response();
+    }
 
-    // Scaffold-grade (Phase 5): Phase-6 wires live bridge_room participant-set lookup.
-    // Safe default is empty → FORBIDDEN (participant floor cannot be zero — ADR-015).
-    let participants: Vec<String> = Vec::new();
+    // cr-3: real participant set for the recording's room from bridge_room.
+    // Pseudonyms only (ADR-015); empty → FORBIDDEN (participant floor cannot be zero).
+    let conn = match crate::bridge_room::open(&state.bridge_db_path) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(err = %e, recording_id = %recording_id, "recording-fetch: bridge_room::open failed");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "db error"})),
+            )
+                .into_response();
+        }
+    };
+    let participants = match crate::bridge_room::participants_for_recording(&conn, &recording_id) {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!(err = %e, recording_id = %recording_id, "recording-fetch: participants_for_recording failed");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "db error"})),
+            )
+                .into_response();
+        }
+    };
 
     // ADR-015 participant-floor (R9): MUST check BEFORE serving.
     // A non-participant under always_pseudonym would leak the pseudonymous event's audio/video.
@@ -278,8 +305,21 @@ async fn handle_recording_fetch(
         return (StatusCode::FORBIDDEN, "not a participant").into_response();
     }
 
-    // Scaffold-grade: Phase-6 resolves the real media_url from bridge_room / S3.
-    let media_url = format!("{recording_id}.mp4");
+    // Real media_url: config-sourced from S3 endpoint + bucket (R-S3ENDPOINT — no hardcoded literal).
+    let media_url = match (
+        state.config.s3_endpoint.as_deref(),
+        state.config.s3_bucket.as_deref(),
+    ) {
+        (Some(ep), Some(bucket)) => format!("{ep}/{bucket}/{recording_id}.mp4"),
+        _ => {
+            tracing::error!(recording_id = %recording_id, "recording-fetch: S3 not configured");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "S3 not configured"})),
+            )
+                .into_response();
+        }
+    };
     (StatusCode::OK, Json(serde_json::json!({ "media_url": media_url }))).into_response()
 }
 
