@@ -1,6 +1,32 @@
 {
   "schema_version": 3,
-  "pending": [],
+  "pending": [
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "question": "Run cargo-linux.sh check + clippy + bridge unit tests for fix-in-pr cr-4+cr-5",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "m3-core-recording fix-in-pr 1 — CR cr-4 (LiveSink fail-closed bail!) + cr-5 (record_uploaded non-empty actor_pseudonym guard, ()->Result<()> + 2 callsite ? propagations). Bridge Linux check + clippy -D warnings (unused_must_use class) + unit tests (record_uploaded_emits_recording_intent + clean_posture_no_side_effects_when_disabled must still pass).",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml record_uploaded_emits_recording_intent",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml clean_posture_no_side_effects_when_disabled"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-fix-in-pr-1-cr4-cr5-see-claude-prps-briefs-m3-core-recording-fix-in-pr-1-md-745",
+      "phase_task": "m3-core-recording fix-in-pr 1 (cr-4 + cr-5)",
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "id": "7019c9444712-001"
+    }
+  ],
   "resolved": [
     {
       "id": "6302ef3b3382-001",

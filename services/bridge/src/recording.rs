@@ -44,7 +44,7 @@ pub fn maybe_record(
     sink.trigger_egress(room_id)?;
     let content_sha256 = compute_content_sha256(mp4_bytes);
     let media_url = sink.upload(&format!("{room_id}.mp4"), mp4_bytes)?;
-    stage.record_uploaded(media_url, content_sha256, duration_s, speakers, attendance_count);
+    stage.record_uploaded(media_url, content_sha256, duration_s, speakers, attendance_count)?;
     Ok(())
 }
 
@@ -73,7 +73,7 @@ impl RecordingSink for LiveSink<'_> {
         //     .post(format!("{livekit_url}/twirp/livekit.proto.Egress/StartRoomCompositeEgress"))
         //     .bearer_auth(&token).json(&egress_request).send().await?
         let _ = (livekit_url, token, self.client);
-        Ok(())
+        anyhow::bail!("LiveSink::trigger_egress is scaffold-only; refuse success until implemented")
     }
 
     fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String> {
@@ -101,12 +101,7 @@ impl RecordingSink for LiveSink<'_> {
             .map_err(|e| anyhow::anyhow!("S3 bucket error: {e}"))?;
         // Phase 6: live async PUT → _bucket.put_object(key, bytes).await?
         let _ = (key, bytes);
-        Ok(format!(
-            "{}/{}/{}",
-            endpoint.trim_end_matches('/'),
-            bucket_name,
-            key
-        ))
+        anyhow::bail!("LiveSink::upload is scaffold-only; refuse success until PUT is implemented")
     }
 }
 
