@@ -49,8 +49,17 @@ jobs:
         id: base
         run: |
           BASE_REF="${{ github.event.pull_request.base.ref || 'governance-v0' }}"
-          git fetch origin "$BASE_REF" --depth=50
-          BASE=$(git merge-base "origin/$BASE_REF" HEAD)
+          # Full fetch of the base — a shallow (--depth) fetch can miss the
+          # merge-base with the fetch-depth:0 PR head, which fails under
+          # workflow_dispatch (manual re-runs) even when the pull_request
+          # event path works. Unshallow keeps merge-base reliable in both modes.
+          git fetch origin "$BASE_REF" --unshallow 2>/dev/null \
+            || git fetch origin "$BASE_REF"
+          BASE=$(git merge-base "origin/$BASE_REF" HEAD || true)
+          if [ -z "$BASE" ]; then
+            echo "::warning::no merge-base between origin/$BASE_REF and HEAD; falling back to origin/$BASE_REF as base"
+            BASE=$(git rev-parse "origin/$BASE_REF")
+          fi
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
           git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
           cat /tmp/changed.txt
