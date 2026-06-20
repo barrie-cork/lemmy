@@ -1,3 +1,7 @@
+[workspace]
+# Standalone workspace — not part of the Lemmy monorepo workspace (excluded
+# via `exclude = ["services/bridge"]` in the root Cargo.toml).
+
 [package]
 name = "brehon-bridge"
 version = "0.1.0"
@@ -29,6 +33,11 @@ time = "=0.3.47"
 ed25519-dalek = "2"
 hex = "0.4"
 jsonwebtoken = "9"
+# sha2: promote transitive→direct (already in Cargo.lock; zero new resolution risk).
+sha2 = "0.10"
+# rust-s3: generic-S3 client for recording uploads (R12: endpoint from config,
+# never hardcoded; R14: Cargo.lock regenerated in this commit).
+rust-s3 = "0.34"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }

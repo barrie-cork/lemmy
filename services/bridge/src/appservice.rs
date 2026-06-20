@@ -226,6 +226,63 @@ async fn handle_room_event(
     Json(serde_json::json!({})).into_response()
 }
 
+/// GET /brehon/recording/{id}
+/// Serves a recording URL only after an ADR-015 participant-floor check:
+/// the requester MUST be a participant of the room at recording time.
+/// Non-participant → 403 FORBIDDEN (the D5 Option C access bar).
+/// Auth: BRIDGE_CALLBACK_SECRET Bearer (Brehon→bridge inline, same as handle_room_event).
+///
+/// Scaffold-grade (Phase 5): requester-pseudonym extracted from X-Requester-Pseudonym header;
+/// participant-set stubbed as empty (safe default → FORBIDDEN) until Phase-6 wires live
+/// session-auth + bridge_room participant lookup.  Strict presigned ACL DEFERRED (D5 Option C).
+async fn handle_recording_fetch(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Path(recording_id): Path<String>,
+) -> Response {
+    // Bearer auth — BRIDGE_CALLBACK_SECRET (Brehon→bridge), mirrors handle_room_event.
+    let expected = &state.config.bridge_callback_secret;
+    let provided = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .map(str::to_owned);
+    if provided.as_deref() != Some(expected.as_str()) {
+        tracing::warn!("recording-fetch: unauthorized (bad or missing Bearer)");
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "unauthorized" })),
+        )
+            .into_response();
+    }
+
+    // Scaffold-grade (Phase 5): Phase-6 replaces with live session-auth token.
+    // The X-Requester-Pseudonym header carries the requester's pseudonym (ADR-015 — never person_id/MXID).
+    let requester_pseudonym = headers
+        .get("x-requester-pseudonym")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_owned();
+
+    // Scaffold-grade (Phase 5): Phase-6 wires live bridge_room participant-set lookup.
+    // Safe default is empty → FORBIDDEN (participant floor cannot be zero — ADR-015).
+    let participants: Vec<String> = Vec::new();
+
+    // ADR-015 participant-floor (R9): MUST check BEFORE serving.
+    // A non-participant under always_pseudonym would leak the pseudonymous event's audio/video.
+    if !crate::recording::is_participant(&requester_pseudonym, &participants) {
+        tracing::warn!(
+            recording_id = %recording_id,
+            "recording-fetch: not a participant (ADR-015 floor — 403)"
+        );
+        return (StatusCode::FORBIDDEN, "not a participant").into_response();
+    }
+
+    // Scaffold-grade: Phase-6 resolves the real media_url from bridge_room / S3.
+    let media_url = format!("{recording_id}.mp4");
+    (StatusCode::OK, Json(serde_json::json!({ "media_url": media_url }))).into_response()
+}
+
 /// Build the AS transaction router with hs_token auth middleware applied to
 /// all five endpoints.
 pub fn router(state: Arc<AppState>) -> Router {
@@ -256,5 +313,11 @@ pub fn router(state: Arc<AppState>) -> Router {
             post(sanction_handler::handle_sanction_event),
         )
         .route("/brehon/link-claim", post(link_handler::handle_link_claim))
+        // /brehon/recording/{id} — participant-floor fetch (ADR-015 D5 Option C).
+        // Added AFTER route_layer; authenticates with BRIDGE_CALLBACK_SECRET inline.
+        .route(
+            "/brehon/recording/{id}",
+            get(handle_recording_fetch),
+        )
         .with_state(state)
 }

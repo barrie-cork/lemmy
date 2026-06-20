@@ -167,6 +167,54 @@ pub fn read_chair_id(
     }
 }
 
+/// Persist the per-room recording configuration JSON knob to bridge_room.recording_config.
+/// Uses UPSERT so the caller need not pre-insert a row.
+#[allow(dead_code)]
+pub fn write_recording_config(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+    config: &str,
+) -> Result<()> {
+    conn.execute(
+        "INSERT INTO bridge_room (case_id, room_type, recording_config)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(case_id, room_type) DO UPDATE SET recording_config = excluded.recording_config",
+        params![case_id, room_type, config],
+    )?;
+    Ok(())
+}
+
+/// Read back the persisted recording configuration JSON knob. Returns None when no row or recording_config is NULL.
+#[allow(dead_code)]
+pub fn read_recording_config(
+    conn: &Connection,
+    case_id: i64,
+    room_type: &str,
+) -> Result<Option<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT recording_config FROM bridge_room WHERE case_id = ?1 AND room_type = ?2",
+    )?;
+    let mut rows = stmt.query(params![case_id, room_type])?;
+    if let Some(row) = rows.next()? {
+        Ok(row.get(0)?)
+    } else {
+        Ok(None)
+    }
+}
+
+/// Pure parse of the per-room recording_config knob. `record_town_halls`
+/// defaults FALSE (absent / unparseable / false → false). Clarify DQ
+/// a3d0e9941441-073: the flag lives in the EXISTING recording_config column,
+/// NOT a new column.
+#[allow(dead_code)]
+pub fn record_town_halls_enabled(recording_config: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(recording_config)
+        .ok()
+        .and_then(|v| v.get("record_town_halls").and_then(|b| b.as_bool()))
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,6 +253,24 @@ mod tests {
         write_chair_id(&conn, 99, "governance", "chair-pseudo-xyz").expect("write chair");
         let back = read_chair_id(&conn, 99, "governance").expect("read chair");
         assert_eq!(back.as_deref(), Some("chair-pseudo-xyz"), "chair_id must round-trip");
+    }
+
+    #[test]
+    fn recording_config_roundtrip() {
+        let conn = open(":memory:").expect("open db");
+        let cfg = r#"{"record_town_halls": true}"#;
+        write_recording_config(&conn, 42, "town_hall", cfg).expect("write recording_config");
+        let back = read_recording_config(&conn, 42, "town_hall").expect("read recording_config");
+        assert_eq!(back.as_deref(), Some(cfg), "recording_config must round-trip");
+    }
+
+    #[test]
+    fn record_town_halls_flag_parse() {
+        assert!(record_town_halls_enabled(r#"{"record_town_halls": true}"#));
+        assert!(!record_town_halls_enabled(r#"{"record_town_halls": false}"#));
+        assert!(!record_town_halls_enabled("{}"));
+        assert!(!record_town_halls_enabled("garbage"));
+        assert!(!record_town_halls_enabled(""));
     }
 
     #[test]
