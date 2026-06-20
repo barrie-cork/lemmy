@@ -110,6 +110,13 @@ impl RecordingSink for LiveSink<'_> {
     }
 }
 
+/// ADR-015 participant-floor: a recording-fetch requester MUST be a participant
+/// of the room at recording time.  Cannot be zero under always_pseudonym (else a
+/// pseudonymous town hall's recording leaks).  Both args are PSEUDONYMS.
+pub fn is_participant(requester_pseudonym: &str, participants: &[String]) -> bool {
+    participants.iter().any(|p| p == requester_pseudonym)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,6 +248,21 @@ mod tests {
             stage.pending_emits[0].entry_kind,
             "room_recording_uploaded",
             "EmitIntent entry_kind must be room_recording_uploaded"
+        );
+    }
+
+    /// ADR-015 participant-floor (R9): MUST be a participant to fetch a recording.
+    /// - participant pseudonym in the set → true
+    /// - non-participant pseudonym → false
+    /// - empty participant set → false (floor cannot be zero under always_pseudonym)
+    #[test]
+    fn is_participant_floor() {
+        let set = vec!["alice-pseudo".to_string(), "bob-pseudo".to_string()];
+        assert!(is_participant("alice-pseudo", &set), "member of the set → true");
+        assert!(!is_participant("carol-pseudo", &set), "non-member → false");
+        assert!(
+            !is_participant("alice-pseudo", &[]),
+            "empty set → false (floor cannot be zero — ADR-015)"
         );
     }
 }
