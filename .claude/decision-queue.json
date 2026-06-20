@@ -8614,6 +8614,40 @@
       "answered_by": "advisor-laptop",
       "resolved_at": "2026-06-20T08:02:48Z",
       "id": "7019c9444712-001"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-20T14:04:56Z",
+      "question": "Task 1's second federated instance + MinIO: extend the in-place services/bridge/docker-compose.yml, or add a Phase-6 e2e override compose layered on top of it?",
+      "options": [
+        "override-compose (docker-compose.e2e.yml layered)",
+        "extend docker-compose.yml in place"
+      ],
+      "context": "Brief Task 1 flags this as a planner DQ. The repo already has the override-compose precedent: docker/docker-compose-fed-enable.yml re-creates only the changed service on top of the primary stack, leaving the base unchanged.",
+      "answer": "Use an override compose layered on the existing services/bridge/docker-compose.yml (e.g. services/bridge/docker-compose.e2e.yml), MIRRORING the docker/docker-compose-fed-enable.yml precedent (docker compose -f docker-compose.yml -f docker-compose.e2e.yml up). Rationale: the base single-instance stack (tuwunel+livekit+lk-jwt+element-call) is shipped and used by other dev flows; an override keeps the base unmutated and isolates the Phase-6-only MinIO + second-instance topology to a file applied only for the acceptance run. The second instance MUST carry a distinct hostname/domain (not just port) per feedback_lemmy_federation_domain_collision_one_host.md (BUG-15). Planner finalizes the override file's exact service names + the federation link wiring.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-20T14:04:56Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-074"
+    },
+    {
+      "from": "advisor",
+      "kind": "clarify",
+      "timestamp": "2026-06-20T14:04:56Z",
+      "question": "Task 4 (D2 pilot, Half B): does the plan fix the pilot scenario (community-deliberation broadcast vs appeal hearing with audience), or scope a runbook that supports either with the operator choosing at run time?",
+      "options": [
+        "runbook supports either; operator picks at run",
+        "plan fixes one scenario"
+      ],
+      "context": "PRD D2 (line 269) / Success Criteria line 149 name 'community deliberation broadcast OR appeal hearing with audience' as example scenarios. The pilot is operational (Half B), coordinated by the advisor; workflow_state_pilot_internal.md shows the gov->Matrix path already verified (phases 1+2 DONE 2026-06-13).",
+      "answer": "Scope the runbook to support EITHER scenario; the operator picks at run time. Rationale: D2 is a human-run operational acceptance step (Half B, NON-impl) — the plan owns the runbook + the go/no-go criteria, not the scenario selection. Both scenarios exercise the same Phase-6 acceptance signal (chair holds the floor, passes the mic to >=1 user, optional recording lands with its hash entry); the choice is the operator's at run time based on what a real pilot town hall is available to run. The plan's Task 4 DoD is a retro-recorded outcome (did a real town hall run? did the chair pass the mic? did recording land?), NOT a fixed scenario. Coordinate with the pilot-internal track (pilot server http://100.81.145.58:1236, accounts in reference_pilot_test_accounts.md) which has already verified the gov->Matrix path.",
+      "answered_by": "advisor",
+      "resolved_at": "2026-06-20T14:04:56Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "a3d0e9941441-075"
     }
   ]
 }
