@@ -27,6 +27,7 @@ pub trait RecordingSink {
 /// pushes the room_recording_uploaded EmitIntent (drained by drain_emits →
 /// append_room_event).  `speakers` are PSEUDONYMS (ADR-015).
 #[allow(dead_code)] // live town-hall-start trigger lands Phase 6; reachable from the #[ignore] test now.
+#[allow(clippy::too_many_arguments)] // 8 params intrinsic to the recording-emit contract (sink/stage/room/bytes/duration/speakers/attendance + flag)
 pub fn maybe_record(
     enabled: bool,
     sink: &mut dyn RecordingSink,
