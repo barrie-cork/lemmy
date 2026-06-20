@@ -56,12 +56,19 @@ jobs:
           git fetch origin "$BASE_REF" --unshallow 2>/dev/null \
             || git fetch origin "$BASE_REF"
           BASE=$(git merge-base "origin/$BASE_REF" HEAD || true)
+          # `A...HEAD` recomputes the merge-base internally, so it re-fails in
+          # the no-common-ancestor path even after we pick a fallback BASE. Use
+          # `...` only when a real merge-base exists; `..` (plain range) in the
+          # fallback so the chosen BASE is honoured literally.
+          DIFF_OP="..."
           if [ -z "$BASE" ]; then
             echo "::warning::no merge-base between origin/$BASE_REF and HEAD; falling back to origin/$BASE_REF as base"
             BASE=$(git rev-parse "origin/$BASE_REF")
+            DIFF_OP=".."
           fi
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
-          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+          echo "diff_op=$DIFF_OP" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE$DIFF_OP"HEAD > /tmp/changed.txt
           cat /tmp/changed.txt
 
       - name: Detect phase from changed paths
@@ -88,7 +95,7 @@ jobs:
       - name: Assemble diff and gate on size
         id: diff
         run: |
-          git diff --unified=3 "${{ steps.base.outputs.base }}"...HEAD > /tmp/full.diff
+          git diff --unified=3 "${{ steps.base.outputs.base }}${{ steps.base.outputs.diff_op }}HEAD" > /tmp/full.diff
           full_bytes=$(wc -c < /tmp/full.diff)
           # 28KB cap keeps the "AI review for small PRs only" semantic: phase-size
           # PRs are skipped cleanly so review adds signal on focused diffs rather
