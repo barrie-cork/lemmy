@@ -18,6 +18,7 @@ mod livekit_jwt;
 mod mute_handler;
 mod provision;
 mod puppet;
+mod recording;
 mod relay;
 mod room_event_client;
 mod room_provisioner;
