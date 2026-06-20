@@ -1,34 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "id": "cdbea3487eca-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run cargo-linux.sh check + clippy + is_participant_floor test for bridge task 5",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "m3-core-recording Task 5 — participant-floor recording-fetch endpoint (ADR-015). Bridge Linux compile + clippy -D warnings + named test.",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml is_participant_floor"
-      ],
-      "branch": "junior/role-impl-task-m3-core-recording-task5-participant-floor-fetch-see-claude-prps-briefs-m3-core-recording-impl-5-md-741",
-      "phase_task": "m3-core-recording Task 5",
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": "6302ef3b3382-001",
@@ -8564,6 +8536,33 @@
       "approved_by": null,
       "approved_at": null,
       "id": "96dd2bccbd79-001"
+    },
+    {
+      "id": "cdbea3487eca-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run cargo-linux.sh check + clippy + is_participant_floor test for bridge task 5",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "m3-core-recording Task 5 — participant-floor recording-fetch endpoint (ADR-015). Bridge Linux compile + clippy -D warnings + named test.",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml is_participant_floor"
+      ],
+      "branch": "junior/role-impl-task-m3-core-recording-task5-participant-floor-fetch-see-claude-prps-briefs-m3-core-recording-impl-5-md-741",
+      "phase_task": "m3-core-recording Task 5",
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "GREEN: cargo-linux.sh check=0, clippy -D warnings=0, test is_participant_floor=0 (1 passed). Bridge Task 5 participant-floor fetch validated on Linux (rust:1.95). rust-s3 0.34 resolved; no too_many_arguments lint.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-20T04:25:35.035119Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
