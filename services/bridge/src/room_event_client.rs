@@ -22,6 +22,16 @@ pub struct RoomEventPayload {
     pub at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub federated: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_s: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speakers: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attendance_count: Option<i32>,
 }
 
 /// Wire shape sent to the binary's room-event handler. Mirrors room_event_handler.rs:19-23.
@@ -99,6 +109,11 @@ mod tests {
                 to_pseudonym: None,
                 at: None,
                 federated: None,
+                media_url: None,
+                content_sha256: None,
+                duration_s: None,
+                speakers: None,
+                attendance_count: None,
             },
             actor_pseudonym: Some("chair-pseudonym".to_string()),
         };
@@ -134,6 +149,11 @@ mod tests {
                 to_pseudonym: Some("pseudonym-to".to_string()),
                 at: Some("2026-01-01T00:00:00Z".to_string()),
                 federated: None,
+                media_url: None,
+                content_sha256: None,
+                duration_s: None,
+                speakers: None,
+                attendance_count: None,
             },
             actor_pseudonym: Some("pseudonym-from".to_string()),
         };
@@ -162,6 +182,11 @@ mod tests {
                 to_pseudonym: None,
                 at: None,
                 federated: Some(true),
+                media_url: None,
+                content_sha256: None,
+                duration_s: None,
+                speakers: None,
+                attendance_count: None,
             },
             actor_pseudonym: Some("chair-pseudonym".to_string()),
         };
@@ -181,6 +206,68 @@ mod tests {
         assert!(
             v["payload"].get("to_pseudonym").is_none(),
             "to_pseudonym must be absent (skip_serializing_if) in mute_all request"
+        );
+        Ok(())
+    }
+
+    /// room_recording_uploaded JSON shape: entry_kind, all 5 recording fields, actor_pseudonym present;
+    /// chair-action fields (action, from_pseudonym, to_pseudonym, federated) ABSENT via skip_serializing_if.
+    /// ADR-015: actor_pseudonym and speakers are pseudonyms (opaque strings, not real identities).
+    #[test]
+    fn room_recording_uploaded_request_json_shape() -> Result<()> {
+        let req = RoomEventRequest {
+            entry_kind: "room_recording_uploaded",
+            payload: RoomEventPayload {
+                case_id: 4,
+                matrix_room_id: None,
+                lifecycle_stage: "governance".to_string(),
+                member_count: None,
+                action: None,
+                target_pseudonym: None,
+                from_pseudonym: None,
+                to_pseudonym: None,
+                at: None,
+                federated: None,
+                media_url: Some("https://s3.example.com/room-1.mp4".to_string()),
+                content_sha256: Some("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_string()),
+                duration_s: Some(600),
+                speakers: Some(vec!["speaker-pseudonym-a".to_string(), "speaker-pseudonym-b".to_string()]),
+                attendance_count: Some(42),
+            },
+            actor_pseudonym: Some("chair-pseudonym".to_string()),
+        };
+        let v = serde_json::to_value(&req)?;
+        assert_eq!(v["entry_kind"], "room_recording_uploaded", "entry_kind must be room_recording_uploaded");
+        assert_eq!(v["payload"]["media_url"], "https://s3.example.com/room-1.mp4", "media_url must be present");
+        assert_eq!(
+            v["payload"]["content_sha256"],
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "content_sha256 must be present"
+        );
+        assert_eq!(v["payload"]["duration_s"], 600, "duration_s must be present");
+        assert_eq!(
+            v["payload"]["speakers"],
+            serde_json::json!(["speaker-pseudonym-a", "speaker-pseudonym-b"]),
+            "speakers must be present and contain pseudonyms (ADR-015)"
+        );
+        assert_eq!(v["payload"]["attendance_count"], 42, "attendance_count must be present");
+        assert_eq!(v["actor_pseudonym"], "chair-pseudonym", "actor_pseudonym must be the chair pseudonym (ADR-015)");
+        // skip_serializing_if = "Option::is_none" must omit chair-action and federated fields.
+        assert!(
+            v["payload"].get("action").is_none(),
+            "action must be absent (skip_serializing_if) in recording_uploaded request"
+        );
+        assert!(
+            v["payload"].get("from_pseudonym").is_none(),
+            "from_pseudonym must be absent (skip_serializing_if) in recording_uploaded request"
+        );
+        assert!(
+            v["payload"].get("to_pseudonym").is_none(),
+            "to_pseudonym must be absent (skip_serializing_if) in recording_uploaded request"
+        );
+        assert!(
+            v["payload"].get("federated").is_none(),
+            "federated must be absent (skip_serializing_if) in recording_uploaded request"
         );
         Ok(())
     }
