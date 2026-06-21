@@ -107,6 +107,22 @@ services:
     networks:
       - bridge-net
 
+  # ─── Brehon governance :3000 stub for recording on-chain POST (defect 1) ────
+  # recording_lands_with_hash_on_chain (and the bridge's drain_emits) POST
+  # room_recording_uploaded to BREHON_ROOM_EVENT_URL (host :3000). The base e2e
+  # stack runs no Brehon binary; this stub returns HTTP 200 to ANY request so the
+  # test's R-CHAIN status-success assertion (recording.rs:118-123) is satisfied.
+  # It does NOT persist a governance_log row — chain persistence is the governance
+  # suite's job (crates/server/tests/e2e/governance.rs), NOT this bridge integration
+  # test (which only asserts the bridge POSTs a well-formed 2xx room-event).
+  room-event-stub:
+    image: caddy:2.8-alpine            # Apache-2.0; pinned. `caddy respond` = fixed-status responder.
+    command: ["caddy", "respond", "--listen", ":3000", "--status", "200", "--body", "room-event-stub-ok"]
+    ports:
+      - "3000:3000"
+    networks:
+      - bridge-net
+
   # ─── One-shot: create the recordings bucket MinIO does not auto-create ────
   minio-init:
     image: minio/mc:RELEASE.2024-11-05T11-29-45Z   # AGPL-3.0; pinned, mc CLI for bucket setup
