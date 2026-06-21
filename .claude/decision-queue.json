@@ -6446,6 +6446,23 @@
       "resolved_at": "2026-06-20T15:00:00Z",
       "approved_by": "user",
       "approved_at": "2026-06-20T15:00:00Z"
+    },
+    {
+      "from": "planner",
+      "kind": "log",
+      "timestamp": "2026-06-21T19:15:00Z",
+      "question": "Brief m3-core-e2e-pilot-planning-as-register lists 6 createRoom-failing room_provisioning tests, but on phase-m3-core-e2e-pilot tip only rtc_disabled_townhall_clean_posture is an implemented createRoom test — the other 5 (jury_room_provisions_in_time_with_jurors, emergency_remove_provisions_quickly, full_lifecycle_emits_10_chain_entries, restart_idempotency_no_duplicate_room_created, messaging_disabled_prevents_provisioning) are still todo!() stubs.",
+      "options": [
+        "scope the plan to the AS-registration harness fix + D2-defer the 5 todo!() stubs (CHOSEN)",
+        "expand the plan to also author the 5 stub test bodies (REJECTED — out of the brief's harness/compose-only scope)"
+      ],
+      "context": "Verified on the daemon main checkout (clean, on phase-m3-core-e2e-pilot) and via git show: room_provisioning.rs has 7 fns — 2 implemented (rtc_disabled_townhall_clean_posture, anonymous_townhall_identity_never_reaches_livekit), 5 todo!(). The brief's '6 failing tests + 5 D2-deferred todo!() stubs' (12 fns) reflects the parent plan's Task-6 INTENT (all room tests live), not the committed reality (only 2 implemented). Live probes confirmed the real defect: createRoom Bearer AS_TOKEN returns 401 M_UNKNOWN_TOKEN vs Conduit v0.6.0, 200 vs real Tuwunel with TUWUNEL_APPSERVICE_DIR.",
+      "answer": "Plan m3-core-e2e-pilot-as-register.plan.md is scoped to Option B (switch e2e homeservers Conduit->Tuwunel, appservice_dir auto-load) as a harness/compose-only fix. It makes the ONE implemented createRoom-gated test (rtc_disabled_townhall_clean_posture) pass and lays the AS-registration foundation for the deferred tests. The 5 todo!() stubs stay D2-deferred (plan §12); implementing them is separate test-authoring, out of this plan's scope. anonymous_townhall_identity_never_reaches_livekit has no Matrix dependency and is unaffected. Advisor: at plan approval, confirm the scope-to-AS-fix framing (not all-6-tests-green) so the DoD smoke + verify gate check the right acceptance signal.",
+      "answered_by": "planner",
+      "resolved_at": "2026-06-21T19:15:00Z",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "9f5ed3e1ebf4-001"
     }
   ]
 }
