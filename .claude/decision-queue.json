@@ -75,13 +75,13 @@
       ],
       "e2e_filter": null,
       "result": "fail",
-      "log_slice": "test recording_lands_with_hash_on_chain ... FAILED\nError: S3 put_object — MP4 must land in MinIO: Got HTTP 404 NoSuchBucket 'recordings'\ntest result: FAILED. 2 passed; 1 failed",
+      "log_slice": "test recording_lands_with_hash_on_chain ... FAILED\nError: POST room-event to Brehon: error sending request for url (http://localhost:3000/api/v4/governance/room-event)\ntest result: FAILED. 2 passed; 1 failed",
       "failed_commands": [
         "cargo test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
       ],
-      "answer": "recording e2e: 2/3 PASS (clean_posture_no_recording_when_disabled, participant_floor_fetch). recording_lands_with_hash_on_chain FAILED: S3 put_object NoSuchBucket 'recordings' (MinIO bucket not created by harness). ENV/FIXTURE gap, not code.",
+      "answer": "recording e2e (post fix-impl #3): 2/3 PASS. recording_lands_with_hash_on_chain FAILED at NEW earlier step: 'POST room-event to Brehon: error sending request http://localhost:3000/...' — Brehon server on :3000 NOT running. MinIO bucket fix VERIFIED (recordings bucket created by minio-init). New root cause = :3000 down, propagated via ?.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T17:49:20.091288Z",
+      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
       "approved_by": null,
       "approved_at": null
     },
@@ -101,13 +101,13 @@
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
       ],
       "e2e_filter": null,
-      "answer": "room_provisioning e2e: 5 todo!() D2-deferred stubs (expected-fail). rtc_disabled_townhall_clean_posture FAILED: bridge createRoom non-2xx (LiveKit JWT 401 — devsecret != --dev secret 'secret'). anonymous_townhall filtered out. ROOT CAUSE = LiveKit dev-secret mismatch, not code.",
+      "answer": "room_provisioning e2e (post fix-impl #3): anonymous_townhall_identity_never_reaches_livekit now PASSES (--keys fix). rtc_disabled_townhall_clean_posture STILL FAILED: no townhall bridge_room row — bridge create_community_room depends on :3000 room-event flow (Brehon server down). 5 todo!() D2-deferred (expected-fail). New root cause = :3000 down.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T17:49:20.091288Z",
+      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
       "approved_by": null,
       "approved_at": null,
       "result": "fail",
-      "log_slice": "rtc_disabled_townhall_clean_posture FAILED: criterion 146 no townhall bridge_room row (createRoom non-2xx)\nLiveKit log: 401 invalid token go-jose error in cryptographic primitive\ntest result: FAILED. 1 passed; 6 failed; 2 filtered out",
+      "log_slice": "rtc_disabled_townhall_clean_posture FAILED: criterion 146 no townhall bridge_room row (case 77001)\nanonymous_townhall_identity_never_reaches_livekit ... ok (was failing pre-fix)\ntest result: FAILED. 1 passed; 6 failed; 2 filtered out",
       "failed_commands": [
         "cargo test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
       ],
@@ -159,13 +159,13 @@
       "commands": [
         "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
       ],
-      "answer": "emergency_mute e2e: mute_all_drops_all_publishers_cross_instance_under_500ms FAILED: RoomClient::create_room twirp 'error decoding response body' = LiveKit 401 (devsecret != --dev secret 'secret'). ROOT CAUSE = LiveKit dev-secret mismatch, not code.",
+      "answer": "emergency_mute e2e (post fix-impl #3): LiveKit 401 GONE (--keys fix worked — create_room succeeded, tokens minted, ran 3.56s). Now FAILS at emergency_mute.rs:204: update_participant 'twirp error: unavailable: no response from servers' (expected 'participant not found' for disconnected pub). New root cause = LiveKit update_participant unavailable, NOT auth.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T17:49:20.091288Z",
+      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
       "approved_by": null,
       "approved_at": null,
       "result": "fail",
-      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms ... FAILED\nError: RoomClient::create_room: twirp error: error decoding response body (LiveKit 401 go-jose crypto primitive)\ntest result: FAILED. 0 passed; 1 failed",
+      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms ... FAILED\npanicked at tests/emergency_mute.rs:204:17: unexpected error revoking pub-a-mute-e2e-m3: twirp error: unavailable: no response from servers\ntest result: FAILED. 0 passed; 1 failed; finished in 3.56s",
       "failed_commands": [
         "cargo test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
       ]
