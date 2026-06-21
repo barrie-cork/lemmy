@@ -6901,6 +6901,23 @@
       "resolved_at": "2026-06-21T17:49:20.091288Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "8aca794fb044-008",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-21T18:01:30Z",
+      "question": "fix-impl #3 complete: LiveKit --keys + MinIO minio-init sidecar",
+      "options": [
+        "file as lesson",
+        "no further action needed"
+      ],
+      "context": "Fix-impl #3: LiveKit explicit --keys devkey:devsecret (docker-compose.yml) + MinIO recordings-bucket minio-init sidecar (docker-compose.e2e.yml). Advisor re-runs e2e #763: bring up stack (now incl minio-init), re-run recording/room_provisioning/emergency_mute.",
+      "answer": "Fix-impl #3 ships two compose-only fixes for e2e env gaps discovered in run #762-rerun. LiveKit v1.7 --dev does NOT provision API keys; added --keys devkey:devsecret to livekit command so JWTs signed with devsecret are accepted. MinIO never creates buckets; added minio-init (minio/mc) sidecar that runs mc mb --ignore-existing local/recordings at startup. Commit cb3e67e90 on phase-m3-core-e2e-pilot. LESSON: LiveKit placeholder secret is literal \"secret\", not \"devsecret\"; explicit --keys is required.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-21T18:01:30Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
