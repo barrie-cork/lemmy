@@ -225,6 +225,34 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T20:47:29Z",
+      "question": "Does the updated base docker-compose.yml (Conduit→Tuwunel) allow createRoom with AS bearer token to return HTTP 200?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "services/bridge/docker-compose.yml tuwunel: service converted from matrixconduit/matrix-conduit:v0.6.0 to Tuwunel @sha256:1319... with TUWUNEL_* env + appservice_dir auto-load. Advisor runs §15.1 harness check: docker up tuwunel, curl createRoom Bearer brehon-as-dev-token-01, expect HTTP 200.",
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": "as-register-task1",
+      "e2e_filter": null,
+      "commands": [
+        "docker compose -f services/bridge/docker-compose.yml up -d tuwunel",
+        "curl -s -o /tmp/t1.json -w 'HTTP_STATUS=%{http_code}\\n' -X POST http://localhost:8448/_matrix/client/v3/createRoom -H 'Authorization: Bearer brehon-as-dev-token-01' -H 'Content-Type: application/json' -d '{\"room_alias_name\":\"jury-case-99999\",\"preset\":\"public_chat\",\"name\":\"x\"}'",
+        "docker compose -f services/bridge/docker-compose.yml down"
+      ],
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "id": "be3e6842603f-001"
     }
   ],
   "resolved": [
