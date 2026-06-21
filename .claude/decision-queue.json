@@ -6827,6 +6827,23 @@
       "resolved_at": "2026-06-20T22:58:09Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "2d158e815519-001",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-21T11:12:19Z",
+      "question": "m3-core-e2e-pilot Linux e2e live run — per-target results",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Ran 4 cargo test targets natively on EliteDesk (Linux host, --network host = real host networking). smoke=0 stage_mode=0 recording=101 room_provisioning=101 emergency_mute=101. Port conflicts resolved by temporarily stopping portainer (freed port 9000), web-archive-frontend (freed port 8080); pilot brehon-tuwunel reconciled via same project-name compose. bridge-b blocked by unknown process on 127.0.0.1:8081. Key findings: (1) stage_mode PASS (1/1, pure in-process SQLite state machine, no networking needed). (2) emergency_mute FAIL — LiveKit v1.8.4 requires HTTP/2 (h2c); livekit-api 0.4.24 uses reqwest with HTTP/1.1 only — connection reset on all Twirp API calls to localhost:7880. (3) room_provisioning: 5/7 are todo!() stubs (expected-fail); rtc_disabled FAIL (BRIDGE_DB_PATH=/data/bridge-a.db not host-accessible); anonymous_townhall FAIL (same LiveKit HTTP/2 issue). (4) recording: 3/3 FAIL — 2 tests need BRIDGE_DB_PATH set to host-accessible Docker volume path; 1 test (recording_lands_with_hash_on_chain) fails with rust-s3 DNS error on localhost:9000 MinIO endpoint. All services restored post-teardown (portainer, web-archive-frontend, pilot brehon-tuwunel/brehon-bridge from docker-compose.pilot.yml). Teardown ran, no source edits made.",
+      "answer": "Results documented. Advisor actions needed: (1) LiveKit version pin — downgrade livekit/livekit-server to v1.7.x (last version with HTTP/1.1 Twirp support) or upgrade livekit-api Rust crate to version that uses h2c. (2) BRIDGE_DB_PATH — for recording/room_provisioning tests set BRIDGE_DB_PATH to /srv/media-local/docker/volumes/bridge_bridge_a_data/_data/bridge-a.db on re-run. (3) rust-s3 DNS issue on localhost:9000 — investigate. (4) bridge-b port 8081 conflict — identify and resolve the process holding 127.0.0.1:8081.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-21T11:12:19Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
