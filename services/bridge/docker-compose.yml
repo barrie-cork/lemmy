@@ -54,7 +54,7 @@ services:
   livekit:
     image: livekit/livekit-server:v1.7   # Apache-2.0; pinned to v1.7 (HTTP/1.1 Twirp compat with livekit-api 0.4.x)
     profiles: ["rtc"]
-    command: ["--dev"]   # standalone dev mode; uses devkey/devsecret (matches lk-jwt env). No mounted config in v0.
+    command: ["--dev", "--bind", "0.0.0.0"]   # --dev = devkey/devsecret; --bind 0.0.0.0 so host-native tests reach Twirp via Docker port-map (v1.7 --dev alone binds container-loopback only)
     ports: ["7880:7880", "7881:7881"]
     networks: [bridge-net]
   lk-jwt-service:

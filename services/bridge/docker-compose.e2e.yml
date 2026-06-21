@@ -78,7 +78,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - bridge_a_data:/data
+      - ./.e2e-data/bridge-a:/data
     ports:
       - "8080:8080"
     depends_on:
@@ -163,7 +163,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - bridge_b_data:/data
+      - ./.e2e-data/bridge-b:/data
     ports:
       - "8081:8080"   # host 8081 → container 8080; avoids clash with bridge-a
     depends_on:
@@ -178,5 +178,3 @@ networks:
 volumes:
   minio_data:
   tuwunel_b_data:
-  bridge_a_data:
-  bridge_b_data:
