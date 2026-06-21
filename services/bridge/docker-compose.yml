@@ -54,7 +54,7 @@ services:
   livekit:
     image: livekit/livekit-server:v1.7   # Apache-2.0; pinned to v1.7 (HTTP/1.1 Twirp compat with livekit-api 0.4.x)
     profiles: ["rtc"]
-    command: ["--dev", "--bind", "0.0.0.0"]   # --dev = devkey/devsecret; --bind 0.0.0.0 so host-native tests reach Twirp via Docker port-map (v1.7 --dev alone binds container-loopback only)
+    command: ["--dev", "--bind", "0.0.0.0", "--keys", "devkey: devsecret"]   # explicit --keys "key: secret" so LiveKit verifies the devsecret-signed JWTs the bridge + tests mint (v1.7 --dev does NOT set keys; its placeholder secret is "secret", not "devsecret"). --bind 0.0.0.0 for host port-map reachability.
     ports: ["7880:7880", "7881:7881"]
     networks: [bridge-net]
   lk-jwt-service:
