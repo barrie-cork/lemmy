@@ -85,16 +85,7 @@ async fn rtc_disabled_townhall_clean_posture() -> anyhow::Result<()> {
     // Bridge test owns: "zero RTC provisioning / no LiveKit/MinIO calls" half.
     // crates/server/tests/e2e.rs governance suite owns: "governance flow passes unchanged" half.
 
-    // R7: reject if rtc is forced on — gate must be load-bearing.
-    let livekit_key = std::env::var("LIVEKIT_API_KEY").unwrap_or_default();
-    let livekit_secret = std::env::var("LIVEKIT_API_SECRET").unwrap_or_default();
-    assert!(
-        livekit_key.trim().is_empty() && livekit_secret.trim().is_empty(),
-        "R7 (criterion 146) violated: LIVEKIT_API_KEY or LIVEKIT_API_SECRET is set — \
-         rtc_disabled_townhall_clean_posture must run against a governance-only stack \
-         (rtc_enabled=false; no --profile rtc, no docker-compose.e2e.yml with LIVEKIT vars). \
-         This test FAILS if the rtc_enabled gate is forced on."
-    );
+    // R7 gate is now per-event (event.rtc_enabled=Some(false)) — not process env-based.
 
     let bridge_url = std::env::var("BRIDGE_URL")
         .unwrap_or_else(|_| "http://localhost:8080".to_string());
@@ -125,7 +116,8 @@ async fn rtc_disabled_townhall_clean_posture() -> anyhow::Result<()> {
             "type_": "case_transition",
             "case_id": case_id,
             "new_status": "town_hall",
-            "chair_pseudonym": chair_pseudonym
+            "chair_pseudonym": chair_pseudonym,
+            "rtc_enabled": false
         }))
         .send()
         .await
