@@ -76,7 +76,8 @@ async fn recording_lands_with_hash_on_chain() -> anyhow::Result<()> {
         region: "us-east-1".to_string(),
         endpoint: s3_endpoint.clone(),
     };
-    let bucket = s3::Bucket::new_with_path_style(&s3_bucket, region, creds)
+    let bucket = s3::Bucket::new(&s3_bucket, region, creds)
+        .map(|b| b.with_path_style())
         .map_err(|e| anyhow::anyhow!("S3 bucket init: {e}"))?;
     bucket
         .put_object(&mp4_key, mp4_bytes)
@@ -206,7 +207,8 @@ async fn clean_posture_no_recording_when_disabled() -> anyhow::Result<()> {
         region: "us-east-1".to_string(),
         endpoint: s3_endpoint.clone(),
     };
-    let bucket = s3::Bucket::new_with_path_style(&s3_bucket, region, creds)
+    let bucket = s3::Bucket::new(&s3_bucket, region, creds)
+        .map(|b| b.with_path_style())
         .map_err(|e| anyhow::anyhow!("S3 bucket init: {e}"))?;
 
     // 3. Assert NO MinIO object exists for this recording (R7 integration-level invariant).
