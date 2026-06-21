@@ -6860,6 +6860,24 @@
       "resolved_at": "2026-06-21T00:00:00Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "8aca794fb044-006",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-21T12:39:03Z",
+      "question": "m3-core-e2e-pilot e2e re-run (v1.7 + path-style fixes) — recording/room_provisioning/emergency_mute results",
+      "options": [
+        "all-pass",
+        "partial-pass",
+        "all-fail"
+      ],
+      "context": "Re-ran 3 targets after LiveKit v1.7 pin + rust-s3 path-style fix (commit 31895b60e). BRIDGE_DB_PATH computed as /srv/media-local/docker/volumes/bridge_bridge_a_data/_data/bridge-a.db but root-owned (Permission denied); docker-cp stale snapshot used. smoke=FAIL (bridge-b port 8081 conflict: Caddy; manual probes: MinIO PASS, LiveKit port OPEN, bridge-a 401 PASS, tuwunel-b PASS). recording=COMPILE_FAIL (rust-s3 0.34 has no Bucket::new_with_path_style; correct API: Bucket::new(...).with_path_style(); wrong method in commit 31895b60e). room_provisioning=FAIL (5 expected todo! stubs; rtc_disabled_townhall_clean_posture FAIL: stale DB snapshot + bridge-a has LiveKit configured; anonymous_townhall_identity_never_reaches_livekit FAIL: LiveKit v1.7 --dev binds 127.0.0.1 only inside container; Docker NAT to 172.28.0.2:7880 refused — Connection refused). emergency_mute=FAIL (RoomClient::create_room: twirp error: failed to execute the request — same LiveKit loopback binding; bridge-a POST step-1 SUCCEEDED). Key finding: LiveKit v1.7 --dev binds container-internal loopback only; Docker port-mapping to host:7880 forwards to bridge IP 172.28.0.2:7880 where nothing listens. v1.8 binds 0.0.0.0 (reachable) but requires h2c. Two new blockers: (1) recording.rs wrong rust-s3 method; (2) LiveKit v1.7 loopback binding incompatible with host-native tests.",
+      "answer": "results documented; TWO new blockers: (1) rust-s3 wrong method name in recording.rs (Bucket::new_with_path_style DNE — fix: Bucket::new(...).with_path_style()); (2) LiveKit v1.7 loopback-only binding prevents host-native Twirp API calls. Advisor to update -e2e DQ entries (1c37b605fd1a-002, c2e678abdbb2-002, 44243654b24d-002) and triage new blockers.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-21T12:39:03Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
