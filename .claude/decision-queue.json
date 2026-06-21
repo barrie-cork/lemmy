@@ -75,13 +75,13 @@
       ],
       "e2e_filter": null,
       "result": "fail",
-      "log_slice": "test recording_lands_with_hash_on_chain ... FAILED\nError: POST room-event to Brehon: error sending request for url (http://localhost:3000/api/v4/governance/room-event)\ntest result: FAILED. 2 passed; 1 failed",
+      "log_slice": "recording: 2/3 pass (clean_posture_no_recording_when_disabled, participant_floor_fetch). recording_lands_with_hash_on_chain FAILED: POST room-event to Brehon http://localhost:3000/api/v4/governance/room-event connection refused. :3000 governance API NOT running in e2e — the deferred open question, NOT a cycle-4 regression. Needs BREHON_ROOM_EVENT_URL pointed at a live governance endpoint OR a :3000 standup.",
       "failed_commands": [
-        "cargo test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
+        "cargo test --test recording -- --ignored"
       ],
       "answer": "recording e2e (post fix-impl #3): 2/3 PASS. recording_lands_with_hash_on_chain FAILED at NEW earlier step: 'POST room-event to Brehon: error sending request http://localhost:3000/...' — Brehon server on :3000 NOT running. MinIO bucket fix VERIFIED (recordings bucket created by minio-init). New root cause = :3000 down, propagated via ?.",
       "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
+      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
       "approved_by": null,
       "approved_at": null
     },
@@ -217,14 +217,17 @@
       "branch": "phase-m3-core-e2e-pilot",
       "phase_task": "emergency_mute-fix",
       "workflow_run_id": null,
-      "result": null,
-      "log_slice": null,
+      "result": "fail",
+      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms FAILED: R-PUBCLIENT criterion 141 — mute-all took 6007ms (threshold 500ms). #764 accepts psrpc unavailable as a VALUE, but reaching it costs a 6s timeout (update_participant on never-connected publisher) which blows the 500ms perf gate. Accepting the error is insufficient; the call must fail FAST or the perf assert must account for absent-publisher timeout.",
       "failed_jobs": null,
       "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
       "approved_by": null,
-      "approved_at": null
+      "approved_at": null,
+      "failed_commands": [
+        "cargo test --test emergency_mute -- --ignored"
+      ]
     },
     {
       "from": "impl",
@@ -237,8 +240,8 @@
       ],
       "context": "services/bridge/docker-compose.yml tuwunel: service converted from matrixconduit/matrix-conduit:v0.6.0 to Tuwunel @sha256:1319... with TUWUNEL_* env + appservice_dir auto-load. Advisor runs §15.1 harness check: docker up tuwunel, curl createRoom Bearer brehon-as-dev-token-01, expect HTTP 200.",
       "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
       "approved_by": null,
       "approved_at": null,
       "branch": "phase-m3-core-e2e-pilot",
@@ -249,9 +252,11 @@
         "curl -s -o /tmp/t1.json -w 'HTTP_STATUS=%{http_code}\\n' -X POST http://localhost:8448/_matrix/client/v3/createRoom -H 'Authorization: Bearer brehon-as-dev-token-01' -H 'Content-Type: application/json' -d '{\"room_alias_name\":\"jury-case-99999\",\"preset\":\"public_chat\",\"name\":\"x\"}'",
         "docker compose -f services/bridge/docker-compose.yml down"
       ],
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
+      "result": "fail",
+      "log_slice": "Tuwunel swap (base docker-compose.yml) WORKS: createRoom no longer 401s — rtc_disabled_townhall_clean_posture passes matrix_room_id.is_some() (the AS token is now accepted). BUT the acceptance test then FAILS on a deeper logic bug: R7 violated — chair_id=Some(...) for case_id=77007, an RTC stage seat provisioned while rtc_enabled=false (RTC gate bypassed in provision_townhall_stage_room). The as-register HTTP-200 goal is MET; a real provisioning-logic defect is now exposed behind it. First live bridge->Tuwunel->createRoom->bridge_room run.",
+      "failed_commands": [
+        "cargo test --test room_provisioning -- --ignored (rtc_disabled_townhall_clean_posture)"
+      ],
       "id": "be3e6842603f-001"
     },
     {
@@ -273,14 +278,17 @@
       "phase_task": "as-register-task2",
       "e2e_filter": null,
       "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
       "approved_by": null,
       "approved_at": null,
-      "result": null,
-      "log_slice": null,
+      "result": "fail",
+      "log_slice": "tuwunel-a (:8448) + tuwunel-b (:8449) both boot on RocksDB and listen (in-stack live run, first time). createRoom accepts the AS token (no 401 — Tuwunel auto-loads registration.yaml). Same downstream R7 acceptance failure as be3e6842603f-001. NOTE: bridge-b container could not bind host :8081 (caddy holds 127.0.0.1:8081) — D2-deferred cross-instance, does not block in-instance tests. HTTP-200/AS-load goal MET; downstream provisioning logic bug + :8081 host-port conflict are the open items.",
       "failed_jobs": null,
-      "id": "f433ffd8a4a2-001"
+      "id": "f433ffd8a4a2-001",
+      "failed_commands": [
+        "§15.2 harness createRoom check"
+      ]
     }
   ],
   "resolved": [
