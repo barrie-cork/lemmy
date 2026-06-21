@@ -26,15 +26,17 @@ version: "3.9"
 
 services:
   # ─── Instance-A: override the base tuwunel to adopt the e2e domain ───────
-  # Same image as base (matrixconduit/matrix-conduit:v0.6.0). The overlay adds
-  # the distinct e2e domain + federation enable + network alias for cross-instance
-  # DNS resolution (tuwunel-b resolves matrix-a.localhost → this container via alias).
+  # Inherits image + registration mount + volume from the Task-1 base (Tuwunel).
+  # The overlay adds the distinct e2e domain + federation enable + network alias for
+  # cross-instance DNS resolution (tuwunel-b resolves matrix-a.localhost → this container).
+  # CONDUIT_* overrides are dropped — a CONDUIT_* env on a Tuwunel base is inert.
   tuwunel:
     environment:
-      CONDUIT_SERVER_NAME: "matrix-a.localhost"     # distinct e2e domain (R-DOMAIN/BUG-15)
-      CONDUIT_ALLOW_FEDERATION: "true"               # required for the marquee cross-instance mute test
-      CONDUIT_AS_TOKEN: "brehon-as-dev-token-01"    # dev-only; matches registration.yaml
-      CONDUIT_HS_TOKEN: "brehon-hs-dev-token-01"    # dev-only; matches registration.yaml
+      TUWUNEL_SERVER_NAME: "matrix-a.localhost"          # distinct e2e domain (R-DOMAIN/BUG-15)
+      TUWUNEL_ALLOW_FEDERATION: "true"                    # required for the marquee cross-instance mute test
+      TUWUNEL_PORT: "8448"                               # R-PORT: keep bridge http://tuwunel:8448 valid
+      TUWUNEL_REGISTRATION_TOKEN: "brehon-e2e-reg-token" # R-REGTOKEN (dev-only — NOT for production)
+      TUWUNEL_APPSERVICE_DIR: "/etc/tuwunel/appservices"  # auto-loads registration.yaml at startup
     networks:
       bridge-net:
         aliases:
@@ -121,23 +123,23 @@ services:
       - bridge-net
 
   # ─── Instance-B homeserver: DISTINCT domain (BUG-15) ─────────────────────
-  # Same Conduit image as the base tuwunel — confirmed same image at Task 0.
-  # CONDUIT_SERVER_NAME = "matrix-b.localhost" — distinct from matrix-a.localhost.
+  # Converted from Conduit v0.6.0 to Tuwunel (same image as base, Task 1).
+  # TUWUNEL_SERVER_NAME = "matrix-b.localhost" — distinct from matrix-a.localhost (R-DOMAIN).
+  # CONDUIT_DATABASE_BACKEND / CONDUIT_AS_TOKEN / CONDUIT_HS_TOKEN dropped — inert on Tuwunel.
   # Network alias: bridge-a/tuwunel resolve matrix-b.localhost → this container.
   tuwunel-b:
-    image: matrixconduit/matrix-conduit:v0.6.0    # same pin as base tuwunel
+    image: ghcr.io/matrix-construct/tuwunel@sha256:1319f9fd40a92a46251e86bd7865facf24d1c974b30731f1bd3059eb446e318f
     environment:
-      CONDUIT_SERVER_NAME: "matrix-b.localhost"     # DISTINCT domain — NOT a port change (BUG-15)
-      CONDUIT_PORT: "8448"
-      CONDUIT_DATABASE_BACKEND: "rocksdb"
-      CONDUIT_ALLOW_FEDERATION: "true"               # required for cross-instance federation
-      CONDUIT_ALLOW_REGISTRATION: "true"
-      CONDUIT_MAX_REQUEST_SIZE: "20971520"
-      CONDUIT_AS_TOKEN: "brehon-as-dev-token-01"    # dev-only; matches registration-b.yaml
-      CONDUIT_HS_TOKEN: "brehon-hs-dev-token-01"    # dev-only; matches registration-b.yaml
+      TUWUNEL_SERVER_NAME: "matrix-b.localhost"          # DISTINCT domain — NOT a port change (BUG-15)
+      TUWUNEL_PORT: "8448"                               # R-PORT: keep bridge http://tuwunel-b:8448 valid
+      TUWUNEL_ALLOW_FEDERATION: "true"                    # required for cross-instance federation
+      TUWUNEL_ALLOW_REGISTRATION: "true"
+      TUWUNEL_MAX_REQUEST_SIZE: "20971520"
+      TUWUNEL_REGISTRATION_TOKEN: "brehon-e2e-reg-token" # R-REGTOKEN (dev-only — NOT for production)
+      TUWUNEL_APPSERVICE_DIR: "/etc/tuwunel/appservices"  # auto-loads registration-b.yaml at startup
     volumes:
-      - tuwunel_b_data:/var/lib/matrix-conduit
-      - ./registration-b.yaml:/etc/conduit/registration.yaml:ro   # bridge-b AS registration
+      - tuwunel_b_data:/var/lib/tuwunel
+      - ./registration-b.yaml:/etc/tuwunel/appservices/registration.yaml:ro   # bridge-b AS registration
     ports:
       - "8449:8448"   # host 8449 → container 8448; avoids clash with tuwunel-a
     networks:
