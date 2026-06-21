@@ -289,6 +289,31 @@
       "failed_commands": [
         "§15.2 harness createRoom check"
       ]
+    },
+    {
+      "id": "f3a2fc0456ae-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "Run e2e for defect3 fast-fail fix: does mute_all_drops_all_publishers_cross_instance_under_500ms pass with 200ms timeout wrap?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Wrapped update_participant in tokio::time::timeout(200ms) in services/bridge/tests/emergency_mute.rs revoke loop. R-TIMEOUT-MATH: 2×200ms=400ms<500ms. Advisor runs against FULL e2e stack (--profile rtc) per handover re-run procedure.",
+      "commands": [
+        "cargo test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
+      ],
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 2,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
