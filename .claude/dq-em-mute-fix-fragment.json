@@ -1,0 +1,22 @@
+{
+  "id": "13951b0fc56a-001",
+  "from": "impl",
+  "kind": "validate-pending-laptop-e2e",
+  "timestamp": "2026-06-21T00:00:00Z",
+  "question": "Run e2e gate for emergency_mute LiveKit v1.7 psrpc-unavailable fix on phase-m3-core-e2e-pilot",
+  "options": ["pass", "fail"],
+  "context": "Single-file edit to services/bridge/tests/emergency_mute.rs — added 'unavailable' and 'no response from servers' to the is_not_found accepted-error set. LiveKit v1.7 returns 503 psrpc-timeout for UpdateParticipant on never-connected publishers (base e2e stack, no WebRTC clients). Advisor runs e2e gate locally (gate-4 LOCAL; 2-instance stack too heavy for hosted runners).",
+  "commands": ["./scripts/brehon/cargo-test.bat --workspace --test e2e --features full"],
+  "e2e_filter": null,
+  "branch": "phase-m3-core-e2e-pilot",
+  "phase_task": "emergency_mute-fix",
+  "workflow_run_id": null,
+  "result": null,
+  "log_slice": null,
+  "failed_jobs": null,
+  "answer": null,
+  "answered_by": null,
+  "resolved_at": null,
+  "approved_by": null,
+  "approved_at": null
+}
