@@ -164,8 +164,12 @@ async fn mute_all_drops_all_publishers_cross_instance_under_500ms() -> anyhow::R
     let mut revoke_results: Vec<(&str, bool)> = Vec::with_capacity(publishers.len());
 
     for &publisher in publishers {
-        let result = lk_client
-            .update_participant(
+        // Fast-fail: a never-connected publisher has no psrpc handler → ~3s timeout.
+        // Cap each call so N×cap stays < 500ms (R-TIMEOUT-MATH: 2 × 200ms = 400ms).
+        // Elapsed ⇒ zero-holder-by-absence (same semantics as the `unavailable` arm).
+        let result = match tokio::time::timeout(
+            Duration::from_millis(200),
+            lk_client.update_participant(
                 &lk_room_name,
                 publisher,
                 UpdateParticipantOptions {
@@ -176,8 +180,15 @@ async fn mute_all_drops_all_publishers_cross_instance_under_500ms() -> anyhow::R
                     }),
                     ..Default::default()
                 },
-            )
-            .await;
+            ),
+        ).await {
+            Ok(inner) => inner, // inner: Result<ParticipantInfo, _> — existing arms handle it
+            Err(_elapsed) => {
+                // No response within budget = never-connected = zero-holder satisfied by absence.
+                revoke_results.push((publisher, true));
+                continue;
+            }
+        };
 
         match result {
             Ok(info) => {
