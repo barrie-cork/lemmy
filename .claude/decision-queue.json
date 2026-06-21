@@ -253,6 +253,34 @@
       "log_slice": null,
       "failed_commands": null,
       "id": "be3e6842603f-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "run §15.2 harness check: docker up tuwunel + tuwunel-b via both compose files + curl createRoom on :8448 AND :8449 — both expect HTTP 200",
+      "options": [
+        "pass — both ports return HTTP 200",
+        "fail — one or both ports return non-200"
+      ],
+      "context": "Task 2 converted docker-compose.e2e.yml tuwunel: override and tuwunel-b: from Conduit v0.6.0 to Tuwunel (same @sha256:1319f9fd... digest as base). CONDUIT_* env dropped; TUWUNEL_* env added with R-PORT/R-REGTOKEN/R-DOMAIN. BUG-15 distinct domains preserved (matrix-a.localhost / matrix-b.localhost). Validation requires docker + curl; per feedback_validate_pending_laptop_write_then_stop.md the advisor runs the gate.",
+      "commands": [
+        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml up -d tuwunel tuwunel-b",
+        "for p in 8448 8449; do curl -s -o /dev/null -w \"port ${p}: HTTP_STATUS=%{http_code}\\n\" -X POST http://localhost:${p}/_matrix/client/v3/createRoom -H \"Authorization: Bearer brehon-as-dev-token-01\" -H \"Content-Type: application/json\" -d '{\"room_alias_name\":\"jury-case-99998\",\"preset\":\"public_chat\",\"name\":\"x\"}'; done",
+        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml down"
+      ],
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": "as-register-task2",
+      "e2e_filter": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null,
+      "result": null,
+      "log_slice": null,
+      "failed_jobs": null,
+      "id": "f433ffd8a4a2-001"
     }
   ],
   "resolved": [
