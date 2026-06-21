@@ -6844,6 +6844,22 @@
       "resolved_at": "2026-06-21T11:12:19Z",
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "8aca794fb044-005",
+      "from": "impl",
+      "kind": "log",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "Confirm e2e harness fixes applied and no validate-pending needed.",
+      "options": [
+        "log-only"
+      ],
+      "context": "Fix A: livekit v1.8→v1.7 (HTTP/1.1 Twirp compat). Fix B: Bucket::new_with_path_style×2 in recording.rs (path-style for localhost MinIO). No validate-pending needed (bridge-only, not crates/). Advisor re-runs e2e.",
+      "answer": "Fix A: livekit-server v1.8→v1.7 pinned in docker-compose.yml. Fix B: 2× Bucket::new_with_path_style in services/bridge/tests/recording.rs. No Cargo.toml/lock changes. No validate-pending DQ raised — bridge workspace is separate from crates/.",
+      "answered_by": "impl-self-resolved",
+      "resolved_at": "2026-06-21T00:00:00Z",
+      "approved_by": null,
+      "approved_at": null
     }
   ]
 }
