@@ -62,4 +62,37 @@ Task 7 (D2 pilot runbook — NON-impl, no cargo, DoD = retro-recorded) → retro
 
 ## Resume command
 
-`/auto-phase M3 — resume m3-core-e2e-pilot e2e run. #762 fix-impl #2 SHIPPED (f5cbd2ca9 on origin/phase-m3-core-e2e-pilot @ e4f649812). Read .claude/PRPs/handovers/m3-core-e2e-pilot-e2e-run-2026-06-21.md FIRST. Resolve the OPEN :8080 conflict (web-archive-frontend owns it; mirror the Portainer decision), then run e2e advisor-side per the handover procedure. RESTART docker-portainer-1 (stopped) + teardown e2e stack when done.`
+`/auto-phase M3 — resume m3-core-e2e-pilot e2e run. #762 fix-impl #2 SHIPPED (f5cbd2ca9 on origin/phase-m3-core-e2e-pilot @ e4f649812). Read .claude/PRPs/handovers/m3-core-e2e-pilot-e2e-run-2026-06-21.md FIRST. STEP 0 (do BEFORE anything else): (a) check if the e2e compose stack is still up — ssh homeserver "docker ps --format '{{.Names}}' | grep -c '^bridge-'" — and TEAR IT DOWN if so: ssh homeserver "cd /srv/brehon-fork/services/bridge && docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile rtc down"; (b) restart Portainer — ssh homeserver "docker start docker-portainer-1" — it was stopped this session to free :9000 and must come back up. Do (a) before (b) (Portainer re-binds :9000, which collides with e2e MinIO). Then: resolve the OPEN :8080 conflict (web-archive-frontend owns it; mirror the Portainer decision) and run e2e advisor-side per the handover procedure (which itself ends by tearing the stack down + restarting Portainer again).`
+
+### ⚠️ STEP 0 of resume — CLEANUP (do first, before any e2e work)
+
+Two obligations from the last session. Do them in THIS order (Portainer re-binds
+:9000, which collides with the e2e MinIO — so teardown the stack first).
+
+**(a) Teardown the e2e stack IF it is still up.** It was left up at session end.
+Check + teardown if necessary:
+
+```bash
+ssh homeserver "docker ps --format '{{.Names}}' | grep -c '^bridge-'"   # >0 = stack still up
+# if up:
+ssh homeserver "cd /srv/brehon-fork/services/bridge && docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile rtc down"
+```
+
+(If you are about to re-run e2e this session, you may instead leave the stack up
+and reuse it — but it must come DOWN before Portainer goes back up, and before
+the session ends regardless.)
+
+**(b) Restart Portainer — unconditional.** `docker-portainer-1` was stopped this
+session (to free host :9000 for MinIO, user-approved; `restart=unless-stopped`
+so it stays down until explicitly started):
+
+```bash
+ssh homeserver "docker start docker-portainer-1 && docker inspect docker-portainer-1 --format 'portainer running={{.State.Running}}'"
+# expect: portainer running=true
+```
+
+Restart Portainer even if you then decide NOT to re-run the e2e (user picks
+"remap ports" or "pause") — leaving it stopped means the homeserver Docker
+management UI stays dark. On a full e2e RE-RUN the order is: keep Portainer DOWN
+while the e2e stack is up → run → teardown stack → restart Portainer. Either way
+the session ends with: e2e stack DOWN and Portainer `running=true`.
