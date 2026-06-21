@@ -97,13 +97,16 @@ jobs:
         run: |
           git diff --unified=3 "${{ steps.base.outputs.base }}${{ steps.base.outputs.diff_op }}HEAD" > /tmp/full.diff
           full_bytes=$(wc -c < /tmp/full.diff)
-          # 28KB cap keeps the "AI review for small PRs only" semantic: phase-size
-          # PRs are skipped cleanly so review adds signal on focused diffs rather
-          # than noisy partial reads. See feedback_ai_review_413_oversize.md.
-          if [ "$full_bytes" -gt 28000 ]; then
+          # M3 has a 1M-token context window (~4MB text) and a 64MB request-body
+          # cap, so the old 28KB GitHub-Models-era gate threw away review on
+          # exactly the phase-size PRs that need it most. Gate at 400KB (~100K
+          # tokens): comfortably reviews any real phase diff, still skips
+          # pathological multi-MB generated-file / Cargo.lock-blowup PRs where a
+          # review adds no signal. See feedback_ai_review_413_oversize.md.
+          if [ "$full_bytes" -gt 400000 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "full_bytes=$full_bytes" >> "$GITHUB_OUTPUT"
-            echo "Diff size $full_bytes bytes exceeds 28KB AI-review cap — skipping."
+            echo "Diff size $full_bytes bytes exceeds 400KB AI-review cap — skipping."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "full_bytes=$full_bytes" >> "$GITHUB_OUTPUT"
@@ -151,6 +154,11 @@ jobs:
 
           USER_MSG="Review this PR diff:\n\n\`\`\`diff\n${DIFF}\n\`\`\`"
 
+          # WATCH (2026-06-20): max_tokens 2000 caps REVIEW DEPTH (output), and is
+          # now the binding limit on big PRs — the 400KB input gate lets a large
+          # diff through, but the review can only be ~1500 words. If big-PR
+          # reviews read thin / get truncated, bump this (M3 allows up to 128K
+          # recommended output). Watch the posted comments for cut-off endings.
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${MINIMAX_API_KEY}" \
             -H "Content-Type: application/json" \
@@ -159,7 +167,8 @@ jobs:
               --arg sys "$SYSTEM" \
               --arg usr "$USER_MSG" \
               --arg model "$MODEL" \
-              '{model: $model, thinking: {type: "disabled"}, temperature: 0.2, max_tokens: 800,
+              '{model: $model, thinking: {type: "disabled"}, temperature: 0.2, top_p: 0.95,
+                max_tokens: 2000,
                 messages: [{role:"system",content:$sys},{role:"user",content:$usr}]}')")
 
           REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Review unavailable — API did not return content."')
@@ -208,7 +217,7 @@ jobs:
             const body = [
               `## Governance ADR review — phase ${phase} — skipped`,
               '',
-              `Diff is ${bytes} bytes, which exceeds the 28KB scope cap for automatic governance review. Phase-size PRs are skipped so the auto-review stays focused on small (single-task) PRs where it adds signal.`,
+              `Diff is ${bytes} bytes, which exceeds the 400KB scope cap for automatic governance review. Such large diffs are typically generated-file or lockfile blowups where an ADR review adds no signal.`,
               '',
               'Coverage on this PR comes from CodeRabbit (auto-review) and the deterministic ADR-compliance scanner.',
               '',
