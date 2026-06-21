@@ -52,7 +52,7 @@ services:
   # Enable with `--profile rtc`. Image tags are pinned; exact tags confirmed
   # against the pulled images by the deploy-smoke gate.
   livekit:
-    image: livekit/livekit-server:v1.8   # Apache-2.0; pin exact tag at impl
+    image: livekit/livekit-server:v1.7   # Apache-2.0; pinned to v1.7 (HTTP/1.1 Twirp compat with livekit-api 0.4.x)
     profiles: ["rtc"]
     command: ["--dev"]   # standalone dev mode; uses devkey/devsecret (matches lk-jwt env). No mounted config in v0.
     ports: ["7880:7880", "7881:7881"]
