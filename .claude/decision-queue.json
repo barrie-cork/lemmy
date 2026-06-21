@@ -314,6 +314,31 @@
       "resolved_at": null,
       "approved_by": null,
       "approved_at": null
+    },
+    {
+      "id": "8aca794fb044-009",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T22:33:00Z",
+      "question": "Does recording_lands_with_hash_on_chain pass now that room-event-stub is in the compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "advisor brings up the FULL e2e stack first (cd services/bridge && docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile rtc up -d) which now includes room-event-stub on :3000; export PATH + BRIDGE_DB_PATH per the handover re-run procedure.",
+      "commands": [
+        "cargo test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
+      ],
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "result": null,
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": null,
+      "answered_by": null,
+      "resolved_at": null,
+      "approved_by": null,
+      "approved_at": null
     }
   ],
   "resolved": [
