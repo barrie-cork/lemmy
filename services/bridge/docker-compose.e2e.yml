@@ -105,6 +105,21 @@ services:
     networks:
       - bridge-net
 
+  # ─── One-shot: create the recordings bucket MinIO does not auto-create ────
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-05T11-29-45Z   # AGPL-3.0; pinned, mc CLI for bucket setup
+    profiles: ["rtc"]
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER:-minioadmin}\" \"$${MINIO_ROOT_PASSWORD:-miniopassword}\"; do echo 'waiting for minio'; sleep 1; done &&
+      mc mb --ignore-existing local/${S3_BUCKET:-recordings} &&
+      echo 'minio-init: bucket ${S3_BUCKET:-recordings} ready'
+      "
+    networks:
+      - bridge-net
+
   # ─── Instance-B homeserver: DISTINCT domain (BUG-15) ─────────────────────
   # Same Conduit image as the base tuwunel — confirmed same image at Task 0.
   # CONDUIT_SERVER_NAME = "matrix-b.localhost" — distinct from matrix-a.localhost.
