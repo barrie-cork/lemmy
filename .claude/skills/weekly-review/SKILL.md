@@ -1,7 +1,7 @@
 ---
 name: weekly-review
 description: >
-  Weekly health check — prune expired memories, aggregate metrics, clean branches, backup promotion sweep.
+  Weekly health check — prune expired memories, aggregate metrics, clean branches, backup promotion sweep, role-signal drain + health report.
   DO use when: scheduled weekly run (Sunday 02:00 UTC), manual "review memories" request.
   Do NOT use for: end-of-task retro (use post-task-retro), daily cleanup, one-off memory writes.
 ---
@@ -14,12 +14,13 @@ Primary pattern detection now happens in post-task-retro (auto-promotion on 3+ c
 
 > **Execution context (HTTP-topology split, 2026-05-31).** Most steps
 > (prune, metrics, branch cleanup, lesson-frontmatter lint) can run as a
-> Junior task on the daemon. **Step 1b (PMD embedding backfill) is the
-> exception — it MUST run on the laptop** because the live PMD store is
-> the laptop's canonical `.project-memory/memory.db` (what the HTTP
-> server starts with), and SQLite is not network-accessible. Run Step 1b
-> laptop-side (interactive or laptop cron); the rest may stay daemon-side.
-> Details in Step 1b's callout.
+> Junior task on the daemon. **Two steps MUST run on the laptop:** Step 1b
+> (PMD embedding backfill) and Step 2e (role-signal drain + health report)
+> — both touch the laptop's canonical `.project-memory/memory.db` (what the
+> HTTP server starts with, not network-accessible) and Step 2e also needs
+> `ssh homeserver` to scp the queue files. Run both laptop-side
+> (interactive or laptop cron); the rest may stay daemon-side. Details in
+> each step's callout.
 
 ## Steps
 
@@ -216,6 +217,43 @@ If the script exits 2, list the stale entries in the weekly report and
 manually remove them from MEMORY.md. **Do NOT auto-remove** — check that
 there is no concurrent lane work for that entry first. This step is
 advisory; do not fail the weekly-review run on exit 2.
+
+### 2e. Role-signal drain + role-health report
+
+**Why:** role-signal utilisation rows (written by the
+`role-signal-utilisation.sh` Stop hook on EliteDesk Junior workers) land
+in a JSONL queue that survives only until the worker worktree is reaped.
+`/check-role-health` drains + reports, but it ran ad-hoc — so strip-candidate
+signals only accumulated when someone remembered to run it. Folding the drain
++ health report into the weekly cadence guarantees the corpus grows on a
+rhythm. Per role-customization-T4b (`workflow_state_role_customization.md`).
+
+**MUST run laptop-side** — the drain (`drain-role-signal-queue.sh`) scp's queue
+files from `homeserver` and ingests via the `write-role-signal.js` CLI into the
+canonical laptop PMD `.project-memory/memory.db` (the store the HTTP daemon
+serves). It needs `ssh homeserver` reachability + the laptop DB file; it cannot
+run inside the daemon Junior task. Non-fatal (log + continue; safety-net sweep):
+
+```bash
+# Drain EliteDesk's role-signal queue into the canonical PMD (scp-based; idempotent).
+bash scripts/brehon/drain-role-signal-queue.sh 2>&1 | tail -3 || \
+  echo "WARN: role-signal drain failed (ssh homeserver unreachable?) — surface in weekly report; non-fatal"
+```
+
+Then run the role-health report by invoking `/check-role-health` (no arg = all
+four roles) per `~/.claude/commands/check-role-health.md` — it re-drains
+(idempotent), queries the PMD for `role-signal` rows, and emits the per-role
+strip-candidate report + the Step-5b dispatch-vs-signal-rate WARN. Surface in
+the weekly summary:
+
+- Per-role `n_tasks` + signal volume (SUFFICIENT ≥5 / LOW <5).
+- Any strip candidates (rules in allowlist never Read; MCPs loaded never invoked).
+- The dispatch-vs-signal WARN if N_DISPATCHES > 0 and N_SIGNALS == 0 over 24h
+  (instrumentation-defect signal — run the smoke harness if it fires).
+
+**Do NOT auto-strip or auto-edit any `rules.allowlist` / `mcp.json`** — strip
+proposals are a user-gated decision, not a weekly-review action. This step only
+drains + reports.
 
 ### 3. Aggregate eval metrics
 
