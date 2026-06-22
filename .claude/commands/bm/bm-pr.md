@@ -399,6 +399,25 @@ Store `pr_number` for downstream BM commands.
 
 ## Phase 6 — Append to runlog
 
+**HARD GUARD (per `feedback_bm_pr_daemon_finalize_merges_phase_into_trunk.md`, PR #208 incident 2026-06-22):** the runlog commit is the CARRIER that the daemon's finalize-merge sweeps into `base_branch` (governance-v0). If this worktree's HEAD has the **phase branch** as an ancestor, the finalize will merge the ENTIRE phase delivery into governance-v0 — auto-marking the PR MERGED and bypassing CR review + gate-3 + gate-5. BEFORE committing the runlog, assert the worktree HEAD is NOT carrying phase content:
+
+```bash
+# The bm-pr worktree forks from governance-v0 (base_branch). Confirm the phase
+# branch tip is NOT an ancestor of HEAD — if it is, the worktree was contaminated
+# with phase content (e.g. a checkout of the phase branch to read it) and the
+# daemon finalize will leak it into trunk.
+PHASE_TIP=$(git rev-parse "origin/phase-${PHASE}" 2>/dev/null)
+if [ -n "$PHASE_TIP" ] && git merge-base --is-ancestor "$PHASE_TIP" HEAD 2>/dev/null; then
+  echo "REFUSE: bm-pr worktree HEAD has phase-${PHASE} as an ancestor — the daemon"
+  echo "finalize would merge phase content into governance-v0, bypassing CR + gates."
+  echo "Do NOT commit the runlog here. Surface to advisor: re-run bm-pr on a CLEAN"
+  echo "governance-v0 worktree (the runlog must land on gov-v0, never on phase HEAD)."
+  exit 1
+fi
+```
+
+If the guard passes, append:
+
 ```markdown
 ## bm: PR opened — {ISO timestamp}
 - **PR:** #{N} — {title}
@@ -407,6 +426,8 @@ Store `pr_number` for downstream BM commands.
 - **Body source:** {completion-report | plan | commits-only}
 - **Next:** wait ~5–10 min for CR; then `/bm-poll-cr {N}`
 ```
+
+**Advisor post-condition (mandatory, after bm-pr reports done):** verify `gh pr view {N} --repo barrie-cork/lemmy --json state` returns `OPEN`. A `MERGED` state immediately after bm-pr is the daemon-finalize gate-bypass — catch-fire per `feedback_bm_false_success_advisor_post_condition_catch.md` + the lesson above.
 
 ---
 
