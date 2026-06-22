@@ -1,296 +1,6 @@
 {
   "schema_version": 3,
-  "pending": [
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 1,
-      "commands": [
-        "bash scripts/brehon/e2e-harness-smoke.sh"
-      ],
-      "e2e_filter": null,
-      "question": "Does the e2e acceptance harness reach all containers? Run: bash scripts/brehon/e2e-harness-smoke.sh",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 1 created docker-compose.e2e.yml (MinIO + tuwunel-b + bridge-b override) and e2e-harness-smoke.sh. The smoke brings up the stack and asserts MinIO health + LiveKit + bridge-a liveness + tuwunel-b key endpoint with matrix-b.localhost. Laptop advisor runs this (no daemon Docker for the heavy two-instance stack).",
-      "answer": null,
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-20T15:35:00Z",
-      "result": "fail",
-      "log_slice": "reach-smoke probe 4 FAIL: tuwunel-b unreachable on localhost:8449. ROOT CAUSE: BOTH tuwunel (instance-A) AND tuwunel-b Exited(1) on init with BadConfig(\"Database backend not found.\") — CONDUIT_DATABASE_BACKEND: \"sled\" is unsupported in the matrixconduit/matrix-conduit:v0.6.0 image being pulled. This is a BASE-harness defect (docker-compose.yml line 26 sets sled too), not Task-1-specific; the worker correctly MIRRORED the base. MinIO+LiveKit+bridge-a reach OK; only the homeservers crash. Secondary nit: the fixed 45s init wait is slightly short for cold MinIO start (MinIO was 200 at 5min). FIX needs a user decision: correct Conduit DB backend (likely rocksdb) + possibly image-tag, touching the BASE compose Task-1 brief said not to modify.",
-      "failed_commands": [
-        "bash scripts/brehon/e2e-harness-smoke.sh"
-      ],
-      "approved_by": null,
-      "approved_at": null,
-      "id": "ec2aa316b69b-001"
-    },
-    {
-      "id": "53441afbc986-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run e2e-harness-smoke.sh on the laptop to verify rocksdb backend fix boots both homeservers and MinIO readiness poll works. Options: (a) smoke passes — advance; (b) smoke fails — triage.",
-      "options": [
-        "(a) pass — advance to bm-pr",
-        "(b) fail — triage and fix-impl-1c"
-      ],
-      "context": "Task 1b: fixed CONDUIT_DATABASE_BACKEND sled->rocksdb in base (line 26) + override tuwunel-b (line 116); replaced sleep 45 with MinIO readiness poll (5s * 24 cap). Advisor verified rocksdb boots clean in matrix-conduit:v0.6.0. Laptop runs the smoke (Docker required).",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 1,
-      "commands": [
-        "bash scripts/brehon/e2e-harness-smoke.sh"
-      ],
-      "e2e_filter": null,
-      "result": "fail",
-      "log_slice": "rocksdb fix WORKED — both tuwunel containers now Up(healthy), no crash. But reach-smoke probe 4 still fails: curl(52) Empty reply on localhost:8449. SECOND DISTINCT DEFECT: Conduit listens on container port 6167 (its default; CONDUIT_PORT unset in both composes), but the port mappings target container 8448 (8448:8448 instance-A, 8449:8448 instance-B) — nothing on 8448. Verified: tuwunel-b:6167/_matrix/key/v2/server returns server_name=matrix-b.localhost correctly (BUG-15 distinct-domain WORKS); :8448 dead. Also TUWUNEL_URL points bridges at :8448 (bridges cant reach homeservers either). Same never-booted-base-placeholder family as the sled defect; base compose affected too. FIX: add CONDUIT_PORT: \"8448\" to base tuwunel env + override tuwunel-b env (2 services; override tuwunel-a inherits base). Then all existing 8448 mappings + TUWUNEL_URL become valid.",
-      "failed_commands": [
-        "bash scripts/brehon/e2e-harness-smoke.sh"
-      ],
-      "answer": null,
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-20T17:10:00Z",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "id": "c2e678abdbb2-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T18:38:23Z",
-      "question": "Live e2e recording tests green against docker-compose stack?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 5 impl — 3 #[ignore] integration tests in tests/recording.rs. Requires MinIO + Brehon + bridge running. Run after linux compile gate passes.",
-      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
-      "phase_task": "m3-core-e2e-pilot-task5",
-      "commands": [
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
-      ],
-      "e2e_filter": null,
-      "result": "fail",
-      "log_slice": "recording: 2/3 pass (clean_posture_no_recording_when_disabled, participant_floor_fetch). recording_lands_with_hash_on_chain FAILED: POST room-event to Brehon http://localhost:3000/api/v4/governance/room-event connection refused. :3000 governance API NOT running in e2e — the deferred open question, NOT a cycle-4 regression. Needs BREHON_ROOM_EVENT_URL pointed at a live governance endpoint OR a :3000 standup.",
-      "failed_commands": [
-        "cargo test --test recording -- --ignored"
-      ],
-      "answer": "recording e2e (post fix-impl #3): 2/3 PASS. recording_lands_with_hash_on_chain FAILED at NEW earlier step: 'POST room-event to Brehon: error sending request http://localhost:3000/...' — Brehon server on :3000 NOT running. MinIO bucket fix VERIFIED (recordings bucket created by minio-init). New root cause = :3000 down, propagated via ?.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
-      "approved_by": null,
-      "approved_at": null
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T12:00:01Z",
-      "question": "Do new room_provisioning bridge e2e tests pass against live docker-compose stack (rtc-disabled + anonymous-identity criteria)?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 6 added rtc_disabled_townhall_clean_posture (criterion 146 negative invariant — ZERO RTC when gate off) + anonymous_townhall_identity_never_reaches_livekit (criterion 142 — LiveKit-received identity == pseudonym). Both are #[ignore]. rtc-disabled runs against governance-only stack (no LIVEKIT vars); anonymous-identity runs against --profile rtc stack. Requires BRIDGE_DB_PATH bind-mount for DB assertions.",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 6,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
-      ],
-      "e2e_filter": null,
-      "answer": "room_provisioning e2e (post fix-impl #3): anonymous_townhall_identity_never_reaches_livekit now PASSES (--keys fix). rtc_disabled_townhall_clean_posture STILL FAILED: no townhall bridge_room row — bridge create_community_room depends on :3000 room-event flow (Brehon server down). 5 todo!() D2-deferred (expected-fail). New root cause = :3000 down.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
-      "approved_by": null,
-      "approved_at": null,
-      "result": "fail",
-      "log_slice": "rtc_disabled_townhall_clean_posture FAILED: criterion 146 no townhall bridge_room row (case 77001)\nanonymous_townhall_identity_never_reaches_livekit ... ok (was failing pre-fix)\ntest result: FAILED. 1 passed; 6 failed; 2 filtered out",
-      "failed_commands": [
-        "cargo test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
-      ],
-      "id": "44243654b24d-002"
-    },
-    {
-      "id": "1c37b605fd1a-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T15:30:00Z",
-      "question": "Does the bridge compile cleanly with the livekit-api dev-dep on Linux?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 adds livekit-api=0.4 as a dev-dep in services/bridge/Cargo.toml. The validate-pending-laptop-linux gate checks compilation + clippy + test --no-run on Linux (Docker rust:1.95) to confirm the dependency resolves and the emergency_mute.rs test file type-checks. R14: Cargo.lock regenerated in same commit.",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 4,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
-      ],
-      "answer": "FAIL — upstream dep incompatibility (livekit-api 0.4.24 vs livekit-protocol 0.7.8); catch-fire to user (not §G4 allowlist; dependency-selection judgment).",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-20T21:32:56Z",
-      "approved_by": null,
-      "approved_at": null,
-      "result": "fail",
-      "log_slice": "STEP3 test --no-run FAIL (exit 101). check=0 clippy=0. 4x error[E0063] missing field INSIDE livekit-api-0.4.24 crate source (NOT our test file): ListEgressRequest.page_token (egress.rs:343), RoomParticipantIdentity.revoke_token_ts (room.rs:206,224), SipInboundTrunkInfo.auth_realm (sip.rs:185). Root cause: livekit-api 0.4.24 incompatible with resolver-selected livekit-protocol 0.7.8 (protocol structs gained required fields livekit-api 0.4.24 source does not initialize). Dependency-version conflict from the new livekit-api dev-dep, NOT a worker test-code defect.",
-      "failed_commands": [
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
-      ]
-    },
-    {
-      "id": "1c37b605fd1a-002",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-20T15:30:01Z",
-      "question": "Does the emergency_mute live e2e test pass against the docker-compose stack?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Task 4 MARQUEE: mute_all_drops_all_publishers_cross_instance_under_500ms is now a live test using livekit-api RoomClient for publisher-client <500ms measurement (criterion 141, DQ 3004b6625b83-001 option-B). Requires docker-compose stack with LiveKit + two bridge instances. Test is #[ignore] and only runs with -- --ignored.",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 4,
-      "e2e_filter": null,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
-      ],
-      "answer": "emergency_mute e2e (post fix-impl #3): LiveKit 401 GONE (--keys fix worked — create_room succeeded, tokens minted, ran 3.56s). Now FAILS at emergency_mute.rs:204: update_participant 'twirp error: unavailable: no response from servers' (expected 'participant not found' for disconnected pub). New root cause = LiveKit update_participant unavailable, NOT auth.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T18:13:59.995591+00:00",
-      "approved_by": null,
-      "approved_at": null,
-      "result": "fail",
-      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms ... FAILED\npanicked at tests/emergency_mute.rs:204:17: unexpected error revoking pub-a-mute-e2e-m3: twirp error: unavailable: no response from servers\ntest result: FAILED. 0 passed; 1 failed; finished in 3.56s",
-      "failed_commands": [
-        "cargo test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
-      ]
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-20T00:00:00Z",
-      "question": "Run cargo-linux.sh check/clippy/test on services/bridge after pinning livekit-protocol =0.7.7",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Pinned livekit-protocol =0.7.7 in [dev-dependencies] to fix E0063 conflict (livekit-api 0.4.24 does not init fields added in 0.7.8). Cargo.lock regen happens on laptop via cargo-linux.sh.",
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 4,
-      "commands": [
-        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
-        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
-      ],
-      "result": "fail",
-      "log_slice": "Pin =0.7.7 WORKED (0.7.8 -> 0.7.7 downgrade confirmed; the 4x E0063-in-livekit-api errors are GONE). check=0 clippy=0. But test --no-run (exit 101) now exposes 2 NEW errors IN OUR test code (tests/emergency_mute.rs), revealed once the dep compiled: (1) E0432 emergency_mute.rs:25 -- use livekit_api::proto::ParticipantPermission -- proto is not a module in livekit_api 0.4.24 (wrong import path; worker guessed the API). (2) E0599 emergency_mute.rs:141 -- RoomClient::with_api_key(...).map_err(...) -- with_api_key returns RoomClient directly, not a Result, so .map_err does not apply. Root cause: test written against an ASSUMED livekit-api API surface that differs from 0.4.24's actual one. Fix = correct the import path + drop the erroneous .map_err?, after READING the real 0.4.24 API in the worker's build env.",
-      "failed_commands": [
-        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
-      ],
-      "answer": "FAIL (post-pin) -- 2 test-code API-usage bugs (E0432 import path + E0599 with_api_key not fallible) in emergency_mute.rs. The pin fix itself succeeded; these are NEW errors the pin uncovered. E0599 is non-allowlist -> catch-fire; fix-impl ready.",
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-20T22:25:18Z",
-      "approved_by": null,
-      "approved_at": null,
-      "id": "6d1cb2511b90-001"
-    },
-    {
-      "id": "13951b0fc56a-001",
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-21T00:00:00Z",
-      "question": "Run e2e gate for emergency_mute LiveKit v1.7 psrpc-unavailable fix on phase-m3-core-e2e-pilot",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "Single-file edit to services/bridge/tests/emergency_mute.rs — added 'unavailable' and 'no response from servers' to the is_not_found accepted-error set. LiveKit v1.7 returns 503 psrpc-timeout for UpdateParticipant on never-connected publishers (base e2e stack, no WebRTC clients). Advisor runs e2e gate locally (gate-4 LOCAL; 2-instance stack too heavy for hosted runners).",
-      "commands": [
-        "./scripts/brehon/cargo-test.bat --workspace --test e2e --features full"
-      ],
-      "e2e_filter": null,
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": "emergency_mute-fix",
-      "workflow_run_id": null,
-      "result": "fail",
-      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms FAILED: R-PUBCLIENT criterion 141 — mute-all took 6007ms (threshold 500ms). #764 accepts psrpc unavailable as a VALUE, but reaching it costs a 6s timeout (update_participant on never-connected publisher) which blows the 500ms perf gate. Accepting the error is insufficient; the call must fail FAST or the perf assert must account for absent-publisher timeout.",
-      "failed_jobs": null,
-      "answer": null,
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
-      "approved_by": null,
-      "approved_at": null,
-      "failed_commands": [
-        "cargo test --test emergency_mute -- --ignored"
-      ]
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-21T20:47:29Z",
-      "question": "Does the updated base docker-compose.yml (Conduit→Tuwunel) allow createRoom with AS bearer token to return HTTP 200?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "services/bridge/docker-compose.yml tuwunel: service converted from matrixconduit/matrix-conduit:v0.6.0 to Tuwunel @sha256:1319... with TUWUNEL_* env + appservice_dir auto-load. Advisor runs §15.1 harness check: docker up tuwunel, curl createRoom Bearer brehon-as-dev-token-01, expect HTTP 200.",
-      "answer": null,
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
-      "approved_by": null,
-      "approved_at": null,
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": "as-register-task1",
-      "e2e_filter": null,
-      "commands": [
-        "docker compose -f services/bridge/docker-compose.yml up -d tuwunel",
-        "curl -s -o /tmp/t1.json -w 'HTTP_STATUS=%{http_code}\\n' -X POST http://localhost:8448/_matrix/client/v3/createRoom -H 'Authorization: Bearer brehon-as-dev-token-01' -H 'Content-Type: application/json' -d '{\"room_alias_name\":\"jury-case-99999\",\"preset\":\"public_chat\",\"name\":\"x\"}'",
-        "docker compose -f services/bridge/docker-compose.yml down"
-      ],
-      "result": "fail",
-      "log_slice": "Tuwunel swap (base docker-compose.yml) WORKS: createRoom no longer 401s — rtc_disabled_townhall_clean_posture passes matrix_room_id.is_some() (the AS token is now accepted). BUT the acceptance test then FAILS on a deeper logic bug: R7 violated — chair_id=Some(...) for case_id=77007, an RTC stage seat provisioned while rtc_enabled=false (RTC gate bypassed in provision_townhall_stage_room). The as-register HTTP-200 goal is MET; a real provisioning-logic defect is now exposed behind it. First live bridge->Tuwunel->createRoom->bridge_room run.",
-      "failed_commands": [
-        "cargo test --test room_provisioning -- --ignored (rtc_disabled_townhall_clean_posture)"
-      ],
-      "id": "be3e6842603f-001"
-    },
-    {
-      "from": "impl",
-      "kind": "validate-pending-laptop-e2e",
-      "timestamp": "2026-06-21T00:00:00Z",
-      "question": "run §15.2 harness check: docker up tuwunel + tuwunel-b via both compose files + curl createRoom on :8448 AND :8449 — both expect HTTP 200",
-      "options": [
-        "pass — both ports return HTTP 200",
-        "fail — one or both ports return non-200"
-      ],
-      "context": "Task 2 converted docker-compose.e2e.yml tuwunel: override and tuwunel-b: from Conduit v0.6.0 to Tuwunel (same @sha256:1319f9fd... digest as base). CONDUIT_* env dropped; TUWUNEL_* env added with R-PORT/R-REGTOKEN/R-DOMAIN. BUG-15 distinct domains preserved (matrix-a.localhost / matrix-b.localhost). Validation requires docker + curl; per feedback_validate_pending_laptop_write_then_stop.md the advisor runs the gate.",
-      "commands": [
-        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml up -d tuwunel tuwunel-b",
-        "for p in 8448 8449; do curl -s -o /dev/null -w \"port ${p}: HTTP_STATUS=%{http_code}\\n\" -X POST http://localhost:${p}/_matrix/client/v3/createRoom -H \"Authorization: Bearer brehon-as-dev-token-01\" -H \"Content-Type: application/json\" -d '{\"room_alias_name\":\"jury-case-99998\",\"preset\":\"public_chat\",\"name\":\"x\"}'; done",
-        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml down"
-      ],
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": "as-register-task2",
-      "e2e_filter": null,
-      "answer": null,
-      "answered_by": "advisor-laptop",
-      "resolved_at": "2026-06-21T21:19:46.780894+00:00",
-      "approved_by": null,
-      "approved_at": null,
-      "result": "fail",
-      "log_slice": "tuwunel-a (:8448) + tuwunel-b (:8449) both boot on RocksDB and listen (in-stack live run, first time). createRoom accepts the AS token (no 401 — Tuwunel auto-loads registration.yaml). Same downstream R7 acceptance failure as be3e6842603f-001. NOTE: bridge-b container could not bind host :8081 (caddy holds 127.0.0.1:8081) — D2-deferred cross-instance, does not block in-instance tests. HTTP-200/AS-load goal MET; downstream provisioning logic bug + :8081 host-port conflict are the open items.",
-      "failed_jobs": null,
-      "id": "f433ffd8a4a2-001",
-      "failed_commands": [
-        "§15.2 harness createRoom check"
-      ]
-    }
-  ],
+  "pending": [],
   "resolved": [
     {
       "id": 14,
@@ -7126,6 +6836,295 @@
       "approved_by": null,
       "approved_at": null,
       "id": "6ccfa504068b-002"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "e2e_filter": null,
+      "question": "Does the e2e acceptance harness reach all containers? Run: bash scripts/brehon/e2e-harness-smoke.sh",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 1 created docker-compose.e2e.yml (MinIO + tuwunel-b + bridge-b override) and e2e-harness-smoke.sh. The smoke brings up the stack and asserts MinIO health + LiveKit + bridge-a liveness + tuwunel-b key endpoint with matrix-b.localhost. Laptop advisor runs this (no daemon Docker for the heavy two-instance stack).",
+      "answer": "Superseded by 8aca794fb044-009 (task1 harness — green stack bring-up cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "result": "superseded",
+      "log_slice": "reach-smoke probe 4 FAIL: tuwunel-b unreachable on localhost:8449. ROOT CAUSE: BOTH tuwunel (instance-A) AND tuwunel-b Exited(1) on init with BadConfig(\"Database backend not found.\") — CONDUIT_DATABASE_BACKEND: \"sled\" is unsupported in the matrixconduit/matrix-conduit:v0.6.0 image being pulled. This is a BASE-harness defect (docker-compose.yml line 26 sets sled too), not Task-1-specific; the worker correctly MIRRORED the base. MinIO+LiveKit+bridge-a reach OK; only the homeservers crash. Secondary nit: the fixed 45s init wait is slightly short for cold MinIO start (MinIO was 200 at 5min). FIX needs a user decision: correct Conduit DB backend (likely rocksdb) + possibly image-tag, touching the BASE compose Task-1 brief said not to modify.",
+      "failed_commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "approved_by": null,
+      "approved_at": null,
+      "id": "ec2aa316b69b-001"
+    },
+    {
+      "id": "53441afbc986-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run e2e-harness-smoke.sh on the laptop to verify rocksdb backend fix boots both homeservers and MinIO readiness poll works. Options: (a) smoke passes — advance; (b) smoke fails — triage.",
+      "options": [
+        "(a) pass — advance to bm-pr",
+        "(b) fail — triage and fix-impl-1c"
+      ],
+      "context": "Task 1b: fixed CONDUIT_DATABASE_BACKEND sled->rocksdb in base (line 26) + override tuwunel-b (line 116); replaced sleep 45 with MinIO readiness poll (5s * 24 cap). Advisor verified rocksdb boots clean in matrix-conduit:v0.6.0. Laptop runs the smoke (Docker required).",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 1,
+      "commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "e2e_filter": null,
+      "result": "superseded",
+      "log_slice": "rocksdb fix WORKED — both tuwunel containers now Up(healthy), no crash. But reach-smoke probe 4 still fails: curl(52) Empty reply on localhost:8449. SECOND DISTINCT DEFECT: Conduit listens on container port 6167 (its default; CONDUIT_PORT unset in both composes), but the port mappings target container 8448 (8448:8448 instance-A, 8449:8448 instance-B) — nothing on 8448. Verified: tuwunel-b:6167/_matrix/key/v2/server returns server_name=matrix-b.localhost correctly (BUG-15 distinct-domain WORKS); :8448 dead. Also TUWUNEL_URL points bridges at :8448 (bridges cant reach homeservers either). Same never-booted-base-placeholder family as the sled defect; base compose affected too. FIX: add CONDUIT_PORT: \"8448\" to base tuwunel env + override tuwunel-b env (2 services; override tuwunel-a inherits base). Then all existing 8448 mappings + TUWUNEL_URL become valid.",
+      "failed_commands": [
+        "bash scripts/brehon/e2e-harness-smoke.sh"
+      ],
+      "answer": "Superseded by 8aca794fb044-009 (task1 rocksdb/homeserver boot — Tuwunel stack green cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "id": "c2e678abdbb2-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T18:38:23Z",
+      "question": "Live e2e recording tests green against docker-compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 5 impl — 3 #[ignore] integration tests in tests/recording.rs. Requires MinIO + Brehon + bridge running. Run after linux compile gate passes.",
+      "branch": "junior/role-impl-task-m3-core-e2e-pilot-task5-recording-live-e2e-see-claude-prps-briefs-m3-core-e2e-pilot-impl-5-md-753",
+      "phase_task": "m3-core-e2e-pilot-task5",
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test recording -- --ignored"
+      ],
+      "e2e_filter": null,
+      "result": "superseded",
+      "log_slice": "recording: 2/3 pass (clean_posture_no_recording_when_disabled, participant_floor_fetch). recording_lands_with_hash_on_chain FAILED: POST room-event to Brehon http://localhost:3000/api/v4/governance/room-event connection refused. :3000 governance API NOT running in e2e — the deferred open question, NOT a cycle-4 regression. Needs BREHON_ROOM_EVENT_URL pointed at a live governance endpoint OR a :3000 standup.",
+      "failed_commands": [
+        "cargo test --test recording -- --ignored"
+      ],
+      "answer": "Superseded by 8aca794fb044-009 (recording 3/3 pass cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T12:00:01Z",
+      "question": "Do new room_provisioning bridge e2e tests pass against live docker-compose stack (rtc-disabled + anonymous-identity criteria)?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 6 added rtc_disabled_townhall_clean_posture (criterion 146 negative invariant — ZERO RTC when gate off) + anonymous_townhall_identity_never_reaches_livekit (criterion 142 — LiveKit-received identity == pseudonym). Both are #[ignore]. rtc-disabled runs against governance-only stack (no LIVEKIT vars); anonymous-identity runs against --profile rtc stack. Requires BRIDGE_DB_PATH bind-mount for DB assertions.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 6,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
+      ],
+      "e2e_filter": null,
+      "answer": "Superseded by 6ccfa504068b-002 (room_provisioning rtc_disabled R7 pass cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "superseded",
+      "log_slice": "rtc_disabled_townhall_clean_posture FAILED: criterion 146 no townhall bridge_room row (case 77001)\nanonymous_townhall_identity_never_reaches_livekit ... ok (was failing pre-fix)\ntest result: FAILED. 1 passed; 6 failed; 2 filtered out",
+      "failed_commands": [
+        "cargo test --manifest-path services/bridge/Cargo.toml --test room_provisioning -- --ignored"
+      ],
+      "id": "44243654b24d-002"
+    },
+    {
+      "id": "1c37b605fd1a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T15:30:00Z",
+      "question": "Does the bridge compile cleanly with the livekit-api dev-dep on Linux?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 adds livekit-api=0.4 as a dev-dep in services/bridge/Cargo.toml. The validate-pending-laptop-linux gate checks compilation + clippy + test --no-run on Linux (Docker rust:1.95) to confirm the dependency resolves and the emergency_mute.rs test file type-checks. R14: Cargo.lock regenerated in same commit.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "answer": "Superseded by 6ccfa504068b-001 (bridge Linux compile — lemmy workspace check exit 0 cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "superseded",
+      "log_slice": "STEP3 test --no-run FAIL (exit 101). check=0 clippy=0. 4x error[E0063] missing field INSIDE livekit-api-0.4.24 crate source (NOT our test file): ListEgressRequest.page_token (egress.rs:343), RoomParticipantIdentity.revoke_token_ts (room.rs:206,224), SipInboundTrunkInfo.auth_realm (sip.rs:185). Root cause: livekit-api 0.4.24 incompatible with resolver-selected livekit-protocol 0.7.8 (protocol structs gained required fields livekit-api 0.4.24 source does not initialize). Dependency-version conflict from the new livekit-api dev-dep, NOT a worker test-code defect.",
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ]
+    },
+    {
+      "id": "1c37b605fd1a-002",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-20T15:30:01Z",
+      "question": "Does the emergency_mute live e2e test pass against the docker-compose stack?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Task 4 MARQUEE: mute_all_drops_all_publishers_cross_instance_under_500ms is now a live test using livekit-api RoomClient for publisher-client <500ms measurement (criterion 141, DQ 3004b6625b83-001 option-B). Requires docker-compose stack with LiveKit + two bridge instances. Test is #[ignore] and only runs with -- --ignored.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "e2e_filter": null,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
+      ],
+      "answer": "Superseded by f3a2fc0456ae-001 (emergency_mute <500ms pass cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "superseded",
+      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms ... FAILED\npanicked at tests/emergency_mute.rs:204:17: unexpected error revoking pub-a-mute-e2e-m3: twirp error: unavailable: no response from servers\ntest result: FAILED. 0 passed; 1 failed; finished in 3.56s",
+      "failed_commands": [
+        "cargo test --manifest-path services/bridge/Cargo.toml --test emergency_mute -- --ignored"
+      ]
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-20T00:00:00Z",
+      "question": "Run cargo-linux.sh check/clippy/test on services/bridge after pinning livekit-protocol =0.7.7",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Pinned livekit-protocol =0.7.7 in [dev-dependencies] to fix E0063 conflict (livekit-api 0.4.24 does not init fields added in 0.7.8). Cargo.lock regen happens on laptop via cargo-linux.sh.",
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 4,
+      "commands": [
+        "scripts/brehon/cargo-linux.sh check --manifest-path services/bridge/Cargo.toml",
+        "scripts/brehon/cargo-linux.sh clippy --manifest-path services/bridge/Cargo.toml --no-deps -- -D warnings",
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "result": "superseded",
+      "log_slice": "Pin =0.7.7 WORKED (0.7.8 -> 0.7.7 downgrade confirmed; the 4x E0063-in-livekit-api errors are GONE). check=0 clippy=0. But test --no-run (exit 101) now exposes 2 NEW errors IN OUR test code (tests/emergency_mute.rs), revealed once the dep compiled: (1) E0432 emergency_mute.rs:25 -- use livekit_api::proto::ParticipantPermission -- proto is not a module in livekit_api 0.4.24 (wrong import path; worker guessed the API). (2) E0599 emergency_mute.rs:141 -- RoomClient::with_api_key(...).map_err(...) -- with_api_key returns RoomClient directly, not a Result, so .map_err does not apply. Root cause: test written against an ASSUMED livekit-api API surface that differs from 0.4.24's actual one. Fix = correct the import path + drop the erroneous .map_err?, after READING the real 0.4.24 API in the worker's build env.",
+      "failed_commands": [
+        "scripts/brehon/cargo-linux.sh test --manifest-path services/bridge/Cargo.toml --test emergency_mute --no-run"
+      ],
+      "answer": "Superseded by 6ccfa504068b-001 (cargo-linux check/clippy/test — compile proof pass cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "6d1cb2511b90-001"
+    },
+    {
+      "id": "13951b0fc56a-001",
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "Run e2e gate for emergency_mute LiveKit v1.7 psrpc-unavailable fix on phase-m3-core-e2e-pilot",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "Single-file edit to services/bridge/tests/emergency_mute.rs — added 'unavailable' and 'no response from servers' to the is_not_found accepted-error set. LiveKit v1.7 returns 503 psrpc-timeout for UpdateParticipant on never-connected publishers (base e2e stack, no WebRTC clients). Advisor runs e2e gate locally (gate-4 LOCAL; 2-instance stack too heavy for hosted runners).",
+      "commands": [
+        "./scripts/brehon/cargo-test.bat --workspace --test e2e --features full"
+      ],
+      "e2e_filter": null,
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": "emergency_mute-fix",
+      "workflow_run_id": null,
+      "result": "superseded",
+      "log_slice": "mute_all_drops_all_publishers_cross_instance_under_500ms FAILED: R-PUBCLIENT criterion 141 — mute-all took 6007ms (threshold 500ms). #764 accepts psrpc unavailable as a VALUE, but reaching it costs a 6s timeout (update_participant on never-connected publisher) which blows the 500ms perf gate. Accepting the error is insufficient; the call must fail FAST or the perf assert must account for absent-publisher timeout.",
+      "failed_jobs": null,
+      "answer": "Superseded by f3a2fc0456ae-001 (emergency_mute psrpc-unavailable + fast-fail pass cycle-5). Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "failed_commands": [
+        "cargo test --test emergency_mute -- --ignored"
+      ]
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T20:47:29Z",
+      "question": "Does the updated base docker-compose.yml (Conduit→Tuwunel) allow createRoom with AS bearer token to return HTTP 200?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "services/bridge/docker-compose.yml tuwunel: service converted from matrixconduit/matrix-conduit:v0.6.0 to Tuwunel @sha256:1319... with TUWUNEL_* env + appservice_dir auto-load. Advisor runs §15.1 harness check: docker up tuwunel, curl createRoom Bearer brehon-as-dev-token-01, expect HTTP 200.",
+      "answer": "Superseded by cycle-5 green room_provisioning run — Tuwunel createRoom 2xx confirmed in-stack. Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": "as-register-task1",
+      "e2e_filter": null,
+      "commands": [
+        "docker compose -f services/bridge/docker-compose.yml up -d tuwunel",
+        "curl -s -o /tmp/t1.json -w 'HTTP_STATUS=%{http_code}\\n' -X POST http://localhost:8448/_matrix/client/v3/createRoom -H 'Authorization: Bearer brehon-as-dev-token-01' -H 'Content-Type: application/json' -d '{\"room_alias_name\":\"jury-case-99999\",\"preset\":\"public_chat\",\"name\":\"x\"}'",
+        "docker compose -f services/bridge/docker-compose.yml down"
+      ],
+      "result": "superseded",
+      "log_slice": "Tuwunel swap (base docker-compose.yml) WORKS: createRoom no longer 401s — rtc_disabled_townhall_clean_posture passes matrix_room_id.is_some() (the AS token is now accepted). BUT the acceptance test then FAILS on a deeper logic bug: R7 violated — chair_id=Some(...) for case_id=77007, an RTC stage seat provisioned while rtc_enabled=false (RTC gate bypassed in provision_townhall_stage_room). The as-register HTTP-200 goal is MET; a real provisioning-logic defect is now exposed behind it. First live bridge->Tuwunel->createRoom->bridge_room run.",
+      "failed_commands": [
+        "cargo test --test room_provisioning -- --ignored (rtc_disabled_townhall_clean_posture)"
+      ],
+      "id": "be3e6842603f-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-e2e",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "run §15.2 harness check: docker up tuwunel + tuwunel-b via both compose files + curl createRoom on :8448 AND :8449 — both expect HTTP 200",
+      "options": [
+        "pass — both ports return HTTP 200",
+        "fail — one or both ports return non-200"
+      ],
+      "context": "Task 2 converted docker-compose.e2e.yml tuwunel: override and tuwunel-b: from Conduit v0.6.0 to Tuwunel (same @sha256:1319f9fd... digest as base). CONDUIT_* env dropped; TUWUNEL_* env added with R-PORT/R-REGTOKEN/R-DOMAIN. BUG-15 distinct domains preserved (matrix-a.localhost / matrix-b.localhost). Validation requires docker + curl; per feedback_validate_pending_laptop_write_then_stop.md the advisor runs the gate.",
+      "commands": [
+        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml up -d tuwunel tuwunel-b",
+        "for p in 8448 8449; do curl -s -o /dev/null -w \"port ${p}: HTTP_STATUS=%{http_code}\\n\" -X POST http://localhost:${p}/_matrix/client/v3/createRoom -H \"Authorization: Bearer brehon-as-dev-token-01\" -H \"Content-Type: application/json\" -d '{\"room_alias_name\":\"jury-case-99998\",\"preset\":\"public_chat\",\"name\":\"x\"}'; done",
+        "docker compose -f services/bridge/docker-compose.yml -f services/bridge/docker-compose.e2e.yml down"
+      ],
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": "as-register-task2",
+      "e2e_filter": null,
+      "answer": "Superseded by cycle-5 green run — tuwunel-a :8448 + tuwunel-b :8449 createRoom AS-token accepted. Earlier-cycle fail; the live result lives in the cited cycle-5 resolved/pass entry. Resolved at phase close (bm-pr DQ historical-fail sweep).",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T04:52:39.056320+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "result": "superseded",
+      "log_slice": "tuwunel-a (:8448) + tuwunel-b (:8449) both boot on RocksDB and listen (in-stack live run, first time). createRoom accepts the AS token (no 401 — Tuwunel auto-loads registration.yaml). Same downstream R7 acceptance failure as be3e6842603f-001. NOTE: bridge-b container could not bind host :8081 (caddy holds 127.0.0.1:8081) — D2-deferred cross-instance, does not block in-instance tests. HTTP-200/AS-load goal MET; downstream provisioning logic bug + :8081 host-port conflict are the open items.",
+      "failed_jobs": null,
+      "id": "f433ffd8a4a2-001",
+      "failed_commands": [
+        "§15.2 harness createRoom check"
+      ]
     }
   ]
 }
