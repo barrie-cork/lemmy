@@ -342,31 +342,6 @@
     },
     {
       "from": "impl",
-      "kind": "validate-pending-laptop-linux",
-      "timestamp": "2026-06-21T00:00:00Z",
-      "question": "Compile-proof: does governance.rs + bridge_notify.rs compile in the lemmy workspace after the rtc_enabled wire addition?",
-      "options": [
-        "pass",
-        "fail"
-      ],
-      "context": "proves governance.rs + bridge_notify.rs compile in the lemmy workspace (the bridge e2e run does NOT build the lemmy workspace). Task 3 (defect 2) of m3-core-e2e-pilot.",
-      "commands": [
-        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
-      ],
-      "branch": "phase-m3-core-e2e-pilot",
-      "phase_task": 3,
-      "result": null,
-      "log_slice": null,
-      "failed_commands": null,
-      "answer": null,
-      "answered_by": null,
-      "resolved_at": null,
-      "approved_by": null,
-      "approved_at": null,
-      "id": "6ccfa504068b-001"
-    },
-    {
-      "from": "impl",
       "kind": "validate-pending-laptop-e2e",
       "timestamp": "2026-06-21T00:00:01Z",
       "question": "E2E-proof: does room_provisioner.rs + rtc_disabled_townhall_clean_posture pass with rtc_enabled=false per-event gate?",
@@ -7126,6 +7101,31 @@
       "approved_by": null,
       "approved_at": null,
       "id": "9f5ed3e1ebf4-001"
+    },
+    {
+      "from": "impl",
+      "kind": "validate-pending-laptop-linux",
+      "timestamp": "2026-06-21T00:00:00Z",
+      "question": "Compile-proof: does governance.rs + bridge_notify.rs compile in the lemmy workspace after the rtc_enabled wire addition?",
+      "options": [
+        "pass",
+        "fail"
+      ],
+      "context": "proves governance.rs + bridge_notify.rs compile in the lemmy workspace (the bridge e2e run does NOT build the lemmy workspace). Task 3 (defect 2) of m3-core-e2e-pilot.",
+      "commands": [
+        "./scripts/brehon/cargo-linux.sh check --workspace --features full"
+      ],
+      "branch": "phase-m3-core-e2e-pilot",
+      "phase_task": 3,
+      "result": "pass",
+      "log_slice": null,
+      "failed_commands": null,
+      "answer": "cargo check --workspace --features full exit 0 (2m15s); lemmy_api_common + lemmy_api_utils + full workspace compile with rtc_enabled wire-contract field.",
+      "answered_by": "advisor-laptop",
+      "resolved_at": "2026-06-22T00:24:15.706224+00:00",
+      "approved_by": null,
+      "approved_at": null,
+      "id": "6ccfa504068b-001"
     }
   ]
 }
