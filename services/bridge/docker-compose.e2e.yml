@@ -1,0 +1,213 @@
+# Phase-6 acceptance harness OVERRIDE for Brehon bridge e2e tests.
+#
+# Apply (from repo root):
+#   docker compose -f services/bridge/docker-compose.yml \
+#                  -f services/bridge/docker-compose.e2e.yml \
+#                  --profile rtc up -d
+#
+# Layered on the base docker-compose.yml (mirrors docker/docker-compose-fed-enable.yml
+# override discipline — re-creates only changed/added services; base unchanged).
+#
+# Adds two things the base lacks (confirmed absent at Task 0 pre-flight):
+#   1. minio: — AGPL-3.0 generic-S3 recording store (D4/D5)
+#   2. tuwunel-b: + bridge-b: — 2nd federated instance with a DISTINCT DOMAIN
+#
+# R-DOMAIN (BUG-15): instance-A = matrix-a.localhost, instance-B = matrix-b.localhost.
+# Lemmy/Matrix key federation by port-stripped domain; two instances sharing a host
+# MUST differ by domain, not only port. Network aliases provide in-compose DNS for
+# cross-instance federation lookup.
+#
+# R-S3ENDPOINT: S3_ENDPOINT is config wiring, NOT bridge source. The literal
+# "minio:9000" appears here as deployment config — it is forbidden in services/bridge/src/.
+#
+# Credentials: MinIO root user/password come from .env; never hardcoded here.
+
+version: "3.9"
+
+services:
+  # ─── Instance-A: override the base tuwunel to adopt the e2e domain ───────
+  # Inherits image + registration mount + volume from the Task-1 base (Tuwunel).
+  # The overlay adds the distinct e2e domain + federation enable + network alias for
+  # cross-instance DNS resolution (tuwunel-b resolves matrix-a.localhost → this container).
+  # CONDUIT_* overrides are dropped — a CONDUIT_* env on a Tuwunel base is inert.
+  tuwunel:
+    environment:
+      TUWUNEL_SERVER_NAME: "matrix-a.localhost"          # distinct e2e domain (R-DOMAIN/BUG-15)
+      TUWUNEL_ALLOW_FEDERATION: "true"                    # required for the marquee cross-instance mute test
+      TUWUNEL_PORT: "8448"                               # R-PORT: keep bridge http://tuwunel:8448 valid
+      TUWUNEL_REGISTRATION_TOKEN: "brehon-e2e-reg-token" # R-REGTOKEN (dev-only — NOT for production)
+      TUWUNEL_APPSERVICE_DIR: "/etc/tuwunel/appservices"  # auto-loads registration.yaml at startup
+    networks:
+      bridge-net:
+        aliases:
+          - matrix-a.localhost   # tuwunel-b resolves matrix-a.localhost to this container
+
+  # ─── Instance-A bridge ────────────────────────────────────────────────────
+  # The base compose has this service commented out ("Task 15 adds the Dockerfile").
+  # Dockerfile is now present; this override activates bridge-a for the e2e harness.
+  # Routes to the A-instance tuwunel; S3 + LiveKit wired for recording/RTC tests.
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TUWUNEL_URL: "http://tuwunel:8448"
+      AS_TOKEN: "brehon-as-dev-token-01"
+      HS_TOKEN: "brehon-hs-dev-token-01"
+      BRIDGE_PORT: "8080"
+      # Brehon binary callbacks — host:3000 is the Lemmy/Brehon API.
+      BREHON_READ_URL: "http://host.docker.internal:3000/api/v4/governance/bridge/messaging-status"
+      BREHON_NOTIFY_URL: "http://host.docker.internal:3000/api/v4/governance/bridge/notify"
+      BREHON_ROOM_EVENT_URL: "http://host.docker.internal:3000/api/v4/governance/room-event"
+      BRIDGE_CALLBACK_SECRET: "${BRIDGE_CALLBACK_SECRET:-brehon-bridge-callback-secret-e2e-01}"
+      LEGAL_CONTACT_MXID: "@legal:matrix-a.localhost"
+      MATRIX_SERVER_NAME: "matrix-a.localhost"       # instance-A domain (R-DOMAIN)
+      BRIDGE_DB_PATH: "/data/bridge-a.db"
+      # LiveKit (dev credentials matching the base compose lk-jwt-service).
+      LIVEKIT_URL: "ws://livekit:7880"
+      LIVEKIT_API_KEY: "${LIVEKIT_API_KEY:-devkey}"
+      LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET:-devsecret}"
+      # S3 endpoint wired to minio (R-S3ENDPOINT: literal allowed in config wiring).
+      S3_ENDPOINT: "http://minio:9000"
+      S3_BUCKET: "${S3_BUCKET:-recordings}"
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-miniopassword}"
+      # Signing keys (dev placeholders; override via .env for non-trivial test signing).
+      BREHON_SIGNING_PUBKEY: "${BREHON_SIGNING_PUBKEY:-0000000000000000000000000000000000000000000000000000000000000000}"
+      BRIDGE_SIGNING_KEY: "${BRIDGE_SIGNING_KEY:-0000000000000000000000000000000000000000000000000000000000000000}"
+      BREHON_LINK_CONFIRM_URL: "${BREHON_LINK_CONFIRM_URL:-http://host.docker.internal:3000/api/v4/governance/link/confirm}"
+      RUST_LOG: "info,brehon_bridge=debug"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./.e2e-data/bridge-a:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - tuwunel
+      - minio
+    networks:
+      - bridge-net
+
+  # ─── MinIO: AGPL-3.0 generic-S3 recording store (D4/D5) ─────────────────
+  # Creds from .env (MINIO_ROOT_USER / MINIO_ROOT_PASSWORD); dev defaults apply
+  # when .env does not set them. S3_ENDPOINT = "http://minio:9000" in bridge env.
+  # Tag: verify against https://github.com/minio/minio/releases before deploying.
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z   # AGPL-3.0; pinned
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"         # creds from .env (never hardcoded)
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-miniopassword}"
+    ports:
+      - "9000:9000"
+      - "9001:9001"   # MinIO console (optional; useful for manual inspection)
+    volumes:
+      - minio_data:/data
+    networks:
+      - bridge-net
+
+  # ─── Brehon governance :3000 stub for recording on-chain POST (defect 1) ────
+  # recording_lands_with_hash_on_chain (and the bridge's drain_emits) POST
+  # room_recording_uploaded to BREHON_ROOM_EVENT_URL (host :3000). The base e2e
+  # stack runs no Brehon binary; this stub returns HTTP 200 to ANY request so the
+  # test's R-CHAIN status-success assertion (recording.rs:118-123) is satisfied.
+  # It does NOT persist a governance_log row — chain persistence is the governance
+  # suite's job (crates/server/tests/e2e/governance.rs), NOT this bridge integration
+  # test (which only asserts the bridge POSTs a well-formed 2xx room-event).
+  room-event-stub:
+    image: caddy:2.8-alpine            # Apache-2.0; pinned. `caddy respond` = fixed-status responder.
+    command: ["caddy", "respond", "--listen", ":3000", "--status", "200", "--body", "room-event-stub-ok"]
+    ports:
+      - "3000:3000"
+    networks:
+      - bridge-net
+
+  # ─── One-shot: create the recordings bucket MinIO does not auto-create ────
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-05T11-29-45Z   # AGPL-3.0; pinned, mc CLI for bucket setup
+    profiles: ["rtc"]
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER:-minioadmin}\" \"$${MINIO_ROOT_PASSWORD:-miniopassword}\"; do echo 'waiting for minio'; sleep 1; done &&
+      mc mb --ignore-existing local/${S3_BUCKET:-recordings} &&
+      echo 'minio-init: bucket ${S3_BUCKET:-recordings} ready'
+      "
+    networks:
+      - bridge-net
+
+  # ─── Instance-B homeserver: DISTINCT domain (BUG-15) ─────────────────────
+  # Converted from Conduit v0.6.0 to Tuwunel (same image as base, Task 1).
+  # TUWUNEL_SERVER_NAME = "matrix-b.localhost" — distinct from matrix-a.localhost (R-DOMAIN).
+  # CONDUIT_DATABASE_BACKEND / CONDUIT_AS_TOKEN / CONDUIT_HS_TOKEN dropped — inert on Tuwunel.
+  # Network alias: bridge-a/tuwunel resolve matrix-b.localhost → this container.
+  tuwunel-b:
+    image: ghcr.io/matrix-construct/tuwunel@sha256:1319f9fd40a92a46251e86bd7865facf24d1c974b30731f1bd3059eb446e318f
+    environment:
+      TUWUNEL_SERVER_NAME: "matrix-b.localhost"          # DISTINCT domain — NOT a port change (BUG-15)
+      TUWUNEL_PORT: "8448"                               # R-PORT: keep bridge http://tuwunel-b:8448 valid
+      TUWUNEL_ALLOW_FEDERATION: "true"                    # required for cross-instance federation
+      TUWUNEL_ALLOW_REGISTRATION: "true"
+      TUWUNEL_MAX_REQUEST_SIZE: "20971520"
+      TUWUNEL_REGISTRATION_TOKEN: "brehon-e2e-reg-token" # R-REGTOKEN (dev-only — NOT for production)
+      TUWUNEL_APPSERVICE_DIR: "/etc/tuwunel/appservices"  # auto-loads registration-b.yaml at startup
+    volumes:
+      - tuwunel_b_data:/var/lib/tuwunel
+      - ./registration-b.yaml:/etc/tuwunel/appservices/registration.yaml:ro   # bridge-b AS registration
+    ports:
+      - "8449:8448"   # host 8449 → container 8448; avoids clash with tuwunel-a
+    networks:
+      bridge-net:
+        aliases:
+          - matrix-b.localhost   # tuwunel-a resolves matrix-b.localhost to this container
+
+  # ─── Instance-B bridge: bound to tuwunel-b (distinct domain) ─────────────
+  # Same Dockerfile build as bridge-a; separate DB path + distinct MATRIX_SERVER_NAME.
+  # R-DOMAIN: MATRIX_SERVER_NAME = "matrix-b.localhost" (NOT matrix-a.localhost).
+  bridge-b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TUWUNEL_URL: "http://tuwunel-b:8448"
+      AS_TOKEN: "brehon-as-dev-token-01"
+      HS_TOKEN: "brehon-hs-dev-token-01"
+      BRIDGE_PORT: "8080"
+      BREHON_READ_URL: "http://host.docker.internal:3000/api/v4/governance/bridge/messaging-status"
+      BREHON_NOTIFY_URL: "http://host.docker.internal:3000/api/v4/governance/bridge/notify"
+      BREHON_ROOM_EVENT_URL: "http://host.docker.internal:3000/api/v4/governance/room-event"
+      BRIDGE_CALLBACK_SECRET: "${BRIDGE_CALLBACK_SECRET:-brehon-bridge-callback-secret-e2e-01}"
+      LEGAL_CONTACT_MXID: "@legal:matrix-b.localhost"
+      MATRIX_SERVER_NAME: "matrix-b.localhost"       # DISTINCT domain (R-DOMAIN/BUG-15)
+      BRIDGE_DB_PATH: "/data/bridge-b.db"
+      LIVEKIT_URL: "ws://livekit:7880"               # shared LiveKit instance
+      LIVEKIT_API_KEY: "${LIVEKIT_API_KEY:-devkey}"
+      LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET:-devsecret}"
+      S3_ENDPOINT: "http://minio:9000"               # config wiring (R-S3ENDPOINT: not in source)
+      S3_BUCKET: "${S3_BUCKET:-recordings}"
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-miniopassword}"
+      BREHON_SIGNING_PUBKEY: "${BREHON_SIGNING_PUBKEY:-0000000000000000000000000000000000000000000000000000000000000000}"
+      BRIDGE_SIGNING_KEY: "${BRIDGE_SIGNING_KEY:-0000000000000000000000000000000000000000000000000000000000000000}"
+      BREHON_LINK_CONFIRM_URL: "${BREHON_LINK_CONFIRM_URL:-http://host.docker.internal:3000/api/v4/governance/link/confirm}"
+      RUST_LOG: "info,brehon_bridge=debug"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./.e2e-data/bridge-b:/data
+    ports:
+      - "8081:8080"   # host 8081 → container 8080; avoids clash with bridge-a
+    depends_on:
+      - tuwunel-b
+      - minio
+    networks:
+      - bridge-net
+
+networks:
+  bridge-net:   # declared to satisfy compose override parser; driver defined in base
+
+volumes:
+  minio_data:
+  tuwunel_b_data:

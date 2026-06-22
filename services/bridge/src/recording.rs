@@ -16,9 +16,9 @@ pub fn compute_content_sha256(bytes: &[u8]) -> String {
 /// `Recorder` spy.  Mirror of stage::GrantSink.
 pub trait RecordingSink {
     /// Trigger LiveKit Egress for `room_id`.  Pseudonymous overlay only (ADR-015).
-    fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()>;
+    async fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()>;
     /// Upload the MP4 bytes to the generic-S3 store; return the object URL.
-    fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String>;
+    async fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String>;
 }
 
 /// Flag-gated recording controller.  When `enabled` is false, returns with
@@ -28,9 +28,9 @@ pub trait RecordingSink {
 /// append_room_event).  `speakers` are PSEUDONYMS (ADR-015).
 #[allow(dead_code)] // live town-hall-start trigger lands Phase 6; reachable from the #[ignore] test now.
 #[allow(clippy::too_many_arguments)] // 8 params intrinsic to the recording-emit contract (sink/stage/room/bytes/duration/speakers/attendance + flag)
-pub fn maybe_record(
+pub async fn maybe_record<S: RecordingSink>(
     enabled: bool,
-    sink: &mut dyn RecordingSink,
+    sink: &mut S,
     stage: &mut crate::stage::Stage,
     room_id: &str,
     mp4_bytes: &[u8],
@@ -41,9 +41,9 @@ pub fn maybe_record(
     if !enabled {
         return Ok(()); // <-- the load-bearing flag-gate (delete this → clean-posture test FAILS)
     }
-    sink.trigger_egress(room_id)?;
+    sink.trigger_egress(room_id).await?;
     let content_sha256 = compute_content_sha256(mp4_bytes);
-    let media_url = sink.upload(&format!("{room_id}.mp4"), mp4_bytes)?;
+    let media_url = sink.upload(&format!("{room_id}.mp4"), mp4_bytes).await?;
     stage.record_uploaded(media_url, content_sha256, duration_s, speakers, attendance_count)?;
     Ok(())
 }
@@ -58,7 +58,7 @@ pub struct LiveSink<'a> {
 
 #[allow(dead_code)]
 impl RecordingSink for LiveSink<'_> {
-    fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()> {
+    async fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()> {
         let api_key = self.config.livekit_api_key.as_deref()
             .context("LIVEKIT_API_KEY not configured")?;
         let api_secret = self.config.livekit_api_secret.as_deref()
@@ -68,15 +68,17 @@ impl RecordingSink for LiveSink<'_> {
         let token = crate::livekit_jwt::mint_access_token(
             api_key, api_secret, room_id, "bridge-egress", 3600, false,
         )?;
-        // Phase 6: live async POST →
-        //   self.client
-        //     .post(format!("{livekit_url}/twirp/livekit.proto.Egress/StartRoomCompositeEgress"))
-        //     .bearer_auth(&token).json(&egress_request).send().await?
-        let _ = (livekit_url, token, self.client);
-        anyhow::bail!("LiveSink::trigger_egress is scaffold-only; refuse success until implemented")
+        self.client
+            .post(format!("{livekit_url}/twirp/livekit.proto.Egress/StartRoomCompositeEgress"))
+            .bearer_auth(&token)
+            .json(&serde_json::json!({ "room_name": room_id }))
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(())
     }
 
-    fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String> {
+    async fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String> {
         let endpoint = self.config.s3_endpoint.as_deref()
             .context("S3_ENDPOINT not configured")?;
         let bucket_name = self.config.s3_bucket.as_deref()
@@ -97,11 +99,13 @@ impl RecordingSink for LiveSink<'_> {
             region: "us-east-1".to_string(),
             endpoint: endpoint.to_string(),
         };
-        let _bucket = s3::Bucket::new(bucket_name, region, creds)
+        let bucket = s3::Bucket::new(bucket_name, region, creds)
             .map_err(|e| anyhow::anyhow!("S3 bucket error: {e}"))?;
-        // Phase 6: live async PUT → _bucket.put_object(key, bytes).await?
-        let _ = (key, bytes);
-        anyhow::bail!("LiveSink::upload is scaffold-only; refuse success until PUT is implemented")
+        bucket
+            .put_object(key, bytes)
+            .await
+            .map_err(|e| anyhow::anyhow!("S3 put_object failed: {e}"))?;
+        Ok(format!("{endpoint}/{bucket_name}/{key}"))
     }
 }
 
@@ -133,12 +137,12 @@ mod tests {
     }
 
     impl RecordingSink for Recorder {
-        fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()> {
+        async fn trigger_egress(&mut self, room_id: &str) -> anyhow::Result<()> {
             self.egress_calls.push(room_id.to_string());
             Ok(())
         }
 
-        fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String> {
+        async fn upload(&mut self, key: &str, bytes: &[u8]) -> anyhow::Result<String> {
             self.upload_calls.push((key.to_string(), bytes.to_vec()));
             Ok(format!("https://s3.example.com/{key}"))
         }
@@ -154,12 +158,12 @@ mod tests {
     }
 
     /// Recorder spy compiles and records trigger_egress / upload calls.
-    #[test]
-    fn recorder_spy_records_calls() {
+    #[tokio::test]
+    async fn recorder_spy_records_calls() {
         let mut r = Recorder::new();
-        r.trigger_egress("room-1").unwrap();
-        r.trigger_egress("room-2").unwrap();
-        let url = r.upload("key.mp4", b"bytes").unwrap();
+        r.trigger_egress("room-1").await.unwrap();
+        r.trigger_egress("room-2").await.unwrap();
+        let url = r.upload("key.mp4", b"bytes").await.unwrap();
         assert_eq!(r.egress_calls, vec!["room-1", "room-2"]);
         assert_eq!(r.upload_calls.len(), 1);
         assert_eq!(r.upload_calls[0].0, "key.mp4");
@@ -174,8 +178,8 @@ mod tests {
     /// `maybe_record` makes the false-case fire trigger_egress + upload + one EmitIntent,
     /// causing all three asserts below to FAIL.  This proves the test asserts the GATE,
     /// not a trivial always-skip.  See also: `maybe_record_enabled_records_sink_and_emits`.
-    #[test]
-    fn clean_posture_no_side_effects_when_disabled() {
+    #[tokio::test]
+    async fn clean_posture_no_side_effects_when_disabled() {
         let mut recorder = Recorder::new();
         let conn = crate::bridge_room::open(":memory:").expect("open in-memory DB");
         let mut stage = crate::stage::Stage::load(&conn, 1, "governance").expect("load stage");
@@ -189,7 +193,9 @@ mod tests {
             60,
             vec!["speaker-pseudonym".to_string()],
             10,
-        ).unwrap();
+        )
+        .await
+        .unwrap();
 
         assert!(
             recorder.egress_calls.is_empty(),
@@ -208,8 +214,8 @@ mod tests {
     /// Positive companion to `clean_posture_no_side_effects_when_disabled`:
     /// `enabled = true` → sink called ≥1 time + exactly one room_recording_uploaded EmitIntent.
     /// Without this, the negative test could pass trivially if maybe_record were a no-op.
-    #[test]
-    fn maybe_record_enabled_records_sink_and_emits_intent() {
+    #[tokio::test]
+    async fn maybe_record_enabled_records_sink_and_emits_intent() {
         let mut recorder = Recorder::new();
         let conn = crate::bridge_room::open(":memory:").expect("open in-memory DB");
         let mut stage = crate::stage::Stage::load(&conn, 2, "governance").expect("load stage");
@@ -224,7 +230,9 @@ mod tests {
             60,
             vec!["speaker-pseudonym".to_string()],
             10,
-        ).unwrap();
+        )
+        .await
+        .unwrap();
 
         assert!(
             !recorder.egress_calls.is_empty(),

@@ -905,6 +905,12 @@ pub struct CaseTransitionEvent {
   /// (foreperson) for jury-adjacent town halls. ADR-015: pseudonym ONLY.
   #[serde(default)]
   pub chair_pseudonym: Option<String>,
+  /// Per-event RTC toggle, mirrored on the wire from the governance `rtc_enabled`
+  /// config. `None` (absent) defaults RTC ON for back-compat — events without the
+  /// field keep the pre-existing creds-gated behaviour. `Some(false)` disables the
+  /// RTC stage seat even when LiveKit creds are configured (criterion 146 / R7).
+  #[serde(default)]
+  pub rtc_enabled: Option<bool>,
 }
 
 /// Discriminated union of bridge-notify events. `type_` tag distinguishes

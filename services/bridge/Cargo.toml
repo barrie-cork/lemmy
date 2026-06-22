@@ -41,3 +41,16 @@ rust-s3 = "0.34"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }
+# livekit-api: publisher-client handle for the emergency-mute <500ms measurement (task 4 marquee,
+# criterion 141). Provides AccessToken (publisher-client grant state) + RoomClient (admin API to
+# revoke publish and verify zero-holder invariant at the CLIENT perspective, not the server handler
+# return value). Dev-dep only — not in the production bridge binary. R14: Cargo.lock regenerated
+# in the same commit as emergency_mute.rs (DQ 3004b6625b83-001 option-B, gate-1 ratify).
+livekit-api = "0.4"
+# Pin: livekit-api 0.4.24 declares livekit-protocol ^0.7.7 but the resolver
+# over-selects 0.7.8, whose new required struct fields (page_token /
+# revoke_token_ts / auth_realm) livekit-api 0.4.24's source does not
+# initialize → E0063 inside livekit-api. Pin to 0.7.7 (the version
+# livekit-api 0.4.24 was built against). Remove if livekit-api is bumped
+# to a release that supports livekit-protocol 0.7.8.
+livekit-protocol = "=0.7.7"

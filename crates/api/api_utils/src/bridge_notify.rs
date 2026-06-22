@@ -118,6 +118,9 @@ pub async fn governance_case_after_transition(
   if !enabled {
     return Ok(());
   }
+  let rtc_enabled = GovernanceMessagingConfig::read_current(pool, "instance", "rtc_enabled")
+    .await?
+    .and_then(|r| r.value_bool);            // Option<bool>: None when the config row is absent
   // The bridge's room provisioner enforces ADR-015 always_pseudonym by skipping
   // any room whose `juror_pseudonyms` is empty. Each room-provisioning transition
   // must therefore carry the pseudonyms for its OWN assignment round: the
@@ -141,6 +144,7 @@ pub async fn governance_case_after_transition(
     target_type: case.target_type,
     juror_pseudonyms,
     chair_pseudonym: None,
+    rtc_enabled,                            // ← new (defect 2; populated from config)
   });
   if let Err(e) = context
     .client()

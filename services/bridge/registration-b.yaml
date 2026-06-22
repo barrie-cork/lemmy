@@ -1,0 +1,22 @@
+# Matrix Application Service registration for the Brehon bridge — Instance B.
+# Loaded by tuwunel-b at startup to authorise the bridge-b AS.
+#
+# Cloned from registration.yaml with url changed to bridge-b:8080.
+# tuwunel-b uses this to push Matrix events to bridge-b (instance-B bridge).
+#
+# Dev-only token pair — NOT for production.
+# Replace as_token and hs_token with randomly generated secrets before
+# deploying to any environment beyond the local docker-compose e2e stack.
+id: brehon-bridge-b
+url: http://bridge-b:8080         # bridge-b service in bridge-net (distinct from bridge-a)
+as_token: "brehon-as-dev-token-01"  # dev-only — NOT for production
+hs_token: "brehon-hs-dev-token-01"  # dev-only — NOT for production
+sender_localpart: brehon
+namespaces:
+  users:
+    - exclusive: true
+      regex: "@_brehon_.*"
+  aliases:
+    - exclusive: false
+      regex: "#.*-case-.*"
+  rooms: []

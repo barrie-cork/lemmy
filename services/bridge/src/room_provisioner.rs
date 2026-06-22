@@ -34,6 +34,12 @@ pub struct CaseTransitionEvent {
     /// Falls back to juror_pseudonyms[0] (foreperson) when absent (OQ-V2-05).
     #[serde(default)]
     pub chair_pseudonym: Option<String>,
+    /// Per-event RTC toggle, mirrored on the wire from the governance `rtc_enabled`
+    /// config. `None` (absent) defaults RTC ON for back-compat — events without the
+    /// field keep the pre-existing creds-gated behaviour. `Some(false)` disables the
+    /// RTC stage seat even when LiveKit creds are configured (criterion 146 / R7).
+    #[serde(default)]
+    pub rtc_enabled: Option<bool>,
 }
 
 /// Bridge-local discriminated union for POST /brehon/room-event.
@@ -249,6 +255,13 @@ async fn provision_townhall_stage_room(state: Arc<AppState>, event: CaseTransiti
         }
     }
 
+    if event.rtc_enabled == Some(false) {
+        tracing::debug!(
+            case_id = event.case_id,
+            "rtc_enabled=false — skipping stage-mode setup (R7 negative invariant)"
+        );
+        return;
+    }
     // (e) stage mode — gated on RTC config (livekit_api_key + livekit_api_secret required).
     let (api_key, api_secret) = match (
         state.config.livekit_api_key.as_deref(),
