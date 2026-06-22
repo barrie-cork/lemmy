@@ -284,6 +284,20 @@ Stop the loop and surface to user immediately. Include catch-fire reason + cited
 | Workflow run exceeds 60-min ci-watcher cap → `result: "timed_out"` | `.claude/agents/ci-watcher.md` | Surface run id + elapsed; do NOT auto-rerun |
 | ci-watcher's `gh run watch <id> --exit-status` returns exit code not in `.claude/agents/ci-watcher.md` "Empirical exit-code table" | classifier-miss | Surface exit code + run id + `gh run view` snapshot; record new pair, update table at retro |
 | Cancelling a Junior task whose worker log shows uncommitted code (i.e. worker wrote files but did not `git commit`) | `feedback_cohort_shared_git_index_contention.md` | **Before issuing `cancel_task`:** SSH to `/srv/brehon-fork/.junior/worktrees/job-<id>` and `tar czf /tmp/job-<id>-recovery-$(date +%s).tar.gz .` to preserve uncommitted code. Then cancel. The daemon's cancel handler reaps both the worktree FS state and `.git/worktrees/<name>/` admin metadata **immediately and completely** — the cancel is irreversible and forfeits all uncommitted code. The tar step is lossless and takes <30s per worker. SSH template: `ssh homeserver "tar czf /tmp/job-<id>-recovery-\$(date +%s).tar.gz -C /srv/brehon-fork/.junior/worktrees job-<id>" && echo preserved`. If the worktree path is absent (already reaped or task never started), skip silently — no harm. |
+| A non-merge bm verb (`bm-pr`/`bm-poll-cr`/`bm-triage`/`bm-status`/`bm-ping`) reports done but `origin/governance-v0` advanced — see §5.7 post-bm-task trunk-state guard | `feedback_bm_pr_daemon_finalize_merges_phase_into_trunk.md` | Surface: old vs new gov-v0 HEAD + the leaked commits (`git log <old>..origin/governance-v0`). The daemon finalize agent improvised an unauthorized merge+push. Do NOT trust the bm task's "done". |
+
+### 5.7 Post-bm-task trunk-state guard (mandatory, load-bearing)
+
+Per `feedback_bm_pr_daemon_finalize_merges_phase_into_trunk.md` (PR #208 incident 2026-06-22). The Junior daemon's **finalize step is a non-deterministic LLM (Haiku) agent** following a prose merge recipe — it can **improvise `git merge` + `git push` off-script**, and its post-finalize gate checks the wrong invariant. A `bm-pr` task that should only `gh pr create` improvised a `git merge <phase-branch> + git push origin governance-v0`, auto-MERGING the PR and bypassing CR + gates 3/5. **"Task done + 0 running" does NOT mean the daemon did only what the task asked.**
+
+Therefore, after ANY bm-task completes, the advisor MUST verify trunk state — BEFORE proceeding:
+
+1. **Capture `origin/governance-v0` HEAD BEFORE dispatching the bm-task** (cheap: `git rev-parse origin/governance-v0`).
+2. **After the task reports done:** `git fetch origin governance-v0` then compare.
+   - **Non-merge verbs** (`bm-pr`, `bm-poll-cr`, `bm-triage`, `bm-status`, `bm-ping`, `bm-prp-review`): gov-v0 HEAD MUST be **unchanged**. If it advanced → catch-fire (table row above). Surface the leaked commits.
+   - **`bm-pr` specifically:** ALSO `gh pr view <N> --repo barrie-cork/lemmy --json state` MUST be `OPEN`. `MERGED` immediately after bm-pr = the finalize-improvise bypass.
+   - **`bm-merge`:** gov-v0 SHOULD advance by exactly the expected PR merge — verify it's the right merge, not extra commits.
+3. This is the interim mitigation; the durable daemon-side fix is spec'd at `.claude/PRPs/specs/junior-daemon-finalize-role-aware.md` (role-aware finalize + hardened gate + daemon-owned push). The `bm-pr.md` Phase-6 ancestor guard (`e3a051b84`) is defense-in-depth at the wrong layer — keep it, but it does NOT substitute for this advisor post-condition.
 
 ## 6. Subagent delegation (advisor-side `Agent` tool dispatch)
 
