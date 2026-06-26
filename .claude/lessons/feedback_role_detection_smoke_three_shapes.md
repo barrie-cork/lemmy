@@ -1,6 +1,6 @@
 ---
 name: Role-detection gate changes — smoke against ≥3 transcript shapes before commit
-description: Every change to a Junior-vs-advisor role-detection gate (in role-signal-utilisation.sh or any future hook that classifies sessions by role) must run a smoke harness against three real transcript shapes — real Junior worker, finalize agent, advisor session — BEFORE commit. Four sequential prior fixes on the same hook shipped because each was test-cased against an incomplete shape set.
+description: Every change to a Junior-vs-advisor role-detection gate (in role-signal-utilisation.sh or any future hook that classifies sessions by role) must run a smoke harness against three real transcript shapes — real Junior worker, finalize agent, advisor session — BEFORE commit. AND the harness must assert every field the hook emits, not just the role string. Five sequential fixes on the same hook shipped: four from incomplete transcript-shape coverage, one (fix #5, 2026-06-26) from the harness asserting role detection but never the array-population jq.
 type: feedback
 ---
 
@@ -99,6 +99,41 @@ shapes — e.g. for a "finalize-vs-impl gate" you'd want a finalize
 agent (positive), an impl-task that mentions finalize in prose
 (must-reject), and an advisor session discussing finalize-agent
 behaviour (must-reject).
+
+**Fix #5 (`53e03a93a` → `67d22f227`, 2026-06-26) — the field-coverage
+extension.** The first four fixes all concerned *role detection* (does the
+gate fire for the right session?). Fix #5 was a different defect entirely:
+detection worked perfectly, but the hook's OTHER output — the
+`rules_read` + `mcp_tools_invoked` arrays — was extracted with a flat
+`jq 'select(.type? == "tool_use")'`. In Claude Code JSONL, `tool_use`
+blocks are NESTED inside `assistant.message.content[]`; top-level `.type`
+is `"assistant"`, never `"tool_use"`. So both arrays were `[]` for all 197
+rows across a full month (2026-05-24..06-26), masking real MCP usage on
+Opus planning tasks. Proven on job-768: flat path → `[]`; nested path →
+`["Bash","Read","ToolSearch","Write","mcp__project-memory__memory_write_eval"]`.
+
+**Why the harness missed it:** the harness asserted ONLY `detect_role`.
+It had no assertion for the array-population jq — the very field that broke.
+detect_role kept passing; the rows kept shipping empty. The three-shape
+rule was satisfied and the bug was still invisible.
+
+**The generalisation (now mechanical):** a smoke harness for a hook that
+emits a STRUCTURED record must assert EACH independently-computed field,
+not just the headline one (the role string). A field with its own
+extraction block is its own regression surface. Fix #5 added
+`assert_mcp_nonempty()` (mirrors the production array jq) which FAILs on a
+flat-select regression. Going forward, for every distinct jq/grep/parse
+block in `role-signal-utilisation.sh`, there must be a harness assertion
+that fails when that block returns wrong/empty.
+
+**Fixture selection must match the asserted property.** Fix #5 also hit two
+false-reds from naive auto-discovery: `ls -t | head -1` grabbed a role-less
+weekly-review task and asserted `role=planning`; and the MCP case grabbed a
+Haiku bm-task (which uses zero MCP by design — pure Bash/Edit/Read) and
+asserted non-empty. The harness now scans newest-first for a transcript that
+*exhibits the property being asserted* (role-prefixed for detection;
+≥1 `mcp__` call for the MCP case), not merely the newest file. PMD #350 (bug),
+#351 (pattern).
 
 **Related lessons:**
 
