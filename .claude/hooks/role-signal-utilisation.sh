@@ -203,10 +203,15 @@ fi
 RULES_READ_JSON="[]"
 MCP_TOOLS_JSON="[]"
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ] && command -v jq &>/dev/null; then
-  # Transcript is JSONL; each line is one event. tool_use events carry the
-  # tool name and (for Read) the file_path input.
+  # Transcript is JSONL; each line is one event. tool_use blocks are NESTED
+  # inside an assistant message's content[] array — top-level .type is
+  # "assistant", never "tool_use". A flat `select(.type=="tool_use")` matches
+  # nothing and always yields []. Descend through .message.content[] first.
+  # (Root cause of the 197 all-empty rows, 2026-05-24..06-26.)
   RULES_READ_JSON=$(jq -rcs '
     [.[]
+      | select(.type? == "assistant")
+      | .message?.content?[]?
       | select(.type? == "tool_use" and .name? == "Read")
       | .input?.file_path? // empty
       | select(test("\\.claude/rules/.*\\.md$"))
@@ -218,6 +223,8 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ] && command -v jq &>/de
   fi
   MCP_TOOLS_JSON=$(jq -rcs '
     [.[]
+      | select(.type? == "assistant")
+      | .message?.content?[]?
       | select(.type? == "tool_use")
       | .name? // empty
       | select(startswith("mcp__"))

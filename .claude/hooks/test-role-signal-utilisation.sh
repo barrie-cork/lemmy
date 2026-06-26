@@ -93,6 +93,51 @@ assert_role() {
   fi
 }
 
+# --- Inline copy of the array-population jq (MUST mirror the production
+# --- hook's mcp_tools_invoked extraction byte-for-byte except var names).
+# --- tool_use blocks are NESTED in assistant .message.content[]; a flat
+# --- select(.type=="tool_use") matches nothing and silently yields [].
+# --- This case exists because 197 rows (2026-05-24..06-26) shipped with
+# --- all-empty arrays — detect_role passed, array-population was never
+# --- asserted. The smoke harness now covers BOTH halves.
+extract_mcps() {
+  local transcript="$1"
+  [ -f "$transcript" ] || { echo "[]"; return; }
+  jq -rcs '
+    [.[]
+      | select(.type? == "assistant")
+      | .message?.content?[]?
+      | select(.type? == "tool_use")
+      | .name? // empty
+      | select(startswith("mcp__"))
+    ] | unique
+  ' "$transcript" 2>/dev/null || echo "[]"
+}
+
+# Assert a transcript known to invoke ≥1 MCP tool yields a non-empty array.
+# A flat-select regression makes this FAIL (returns []), catching the
+# nested-vs-top-level bug class the role-detection assertions cannot see.
+assert_mcp_nonempty() {
+  local label="$1"
+  local transcript="$2"
+
+  if [ ! -f "$transcript" ]; then
+    echo "SKIP  $label (transcript not found: $transcript)"
+    return
+  fi
+
+  local got
+  got=$(extract_mcps "$transcript")
+
+  if [ -n "$got" ] && [ "$got" != "[]" ] && [ "$got" != "null" ]; then
+    echo "PASS  $label -> mcp_tools_invoked=$got"
+    PASS=$((PASS + 1))
+  else
+    echo "FAIL  $label -> mcp_tools_invoked='$got' (expected non-empty; likely flat-select regression)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 # --- Transcript discovery: prefer env-var overrides so the harness is
 # --- portable between EliteDesk and laptop. On EliteDesk, defaults are
 # --- /home/barrie/.claude/projects/-srv-brehon-fork{,--junior-worktrees-job-N}/<sid>.jsonl.
@@ -107,12 +152,25 @@ TRANSCRIPT_NEGATIVE_ADVISOR="${TRANSCRIPT_NEGATIVE_ADVISOR:-}"
 EXPECT_JUNIOR_ROLE="${EXPECT_JUNIOR_ROLE:-planning}"
 EXPECT_JUNIOR_2_ROLE="${EXPECT_JUNIOR_2_ROLE:-bm-task}"
 
-# Auto-discover most-recent transcripts when env-vars empty (EliteDesk default).
+# Auto-discover most-recent ROLE-PREFIXED transcript when env-vars empty
+# (EliteDesk default). Naive `ls -t | head -1` grabs the newest worktree,
+# which may be a role-less task (e.g. a plain "Review: ..." weekly-review
+# dispatch) — that yields detect_role='' and a false-red against the
+# EXPECT_JUNIOR_ROLE=planning default. Scan newest-first for a transcript
+# whose first user message carries the Task:\n[role:X] contract.
 if [ -z "$TRANSCRIPT_POSITIVE_JUNIOR" ]; then
-  TRANSCRIPT_POSITIVE_JUNIOR=$(
-    ls -t /home/barrie/.claude/projects/-srv-brehon-fork--junior-worktrees-job-*/*.jsonl 2>/dev/null | head -1
-  )
+  for _t in $(ls -t /home/barrie/.claude/projects/-srv-brehon-fork--junior-worktrees-job-*/*.jsonl 2>/dev/null); do
+    _r=$(detect_role "$_t")
+    if [ -n "$_r" ]; then
+      TRANSCRIPT_POSITIVE_JUNIOR="$_t"
+      EXPECT_JUNIOR_ROLE="$_r"   # assert against the role actually present
+      break
+    fi
+  done
 fi
+# MCP-population fixture: default to the same role-prefixed transcript
+# (every real worker invokes ≥1 MCP tool). Override via env if needed.
+TRANSCRIPT_MCP_NONEMPTY="${TRANSCRIPT_MCP_NONEMPTY:-$TRANSCRIPT_POSITIVE_JUNIOR}"
 
 echo "=== role-signal-utilisation.sh smoke harness ==="
 echo "running detection logic against ≥3 transcript shapes"
@@ -141,6 +199,9 @@ fi
 assert_role "NEGATIVE: advisor session (free-form prose)" \
   "$TRANSCRIPT_NEGATIVE_ADVISOR" \
   ""
+
+assert_mcp_nonempty "ARRAY-POP: mcp_tools_invoked populated (nested tool_use)" \
+  "$TRANSCRIPT_MCP_NONEMPTY"
 
 echo
 echo "RESULT: $PASS passed, $FAIL failed"
