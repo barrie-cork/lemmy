@@ -168,9 +168,19 @@ if [ -z "$TRANSCRIPT_POSITIVE_JUNIOR" ]; then
     fi
   done
 fi
-# MCP-population fixture: default to the same role-prefixed transcript
-# (every real worker invokes ≥1 MCP tool). Override via env if needed.
-TRANSCRIPT_MCP_NONEMPTY="${TRANSCRIPT_MCP_NONEMPTY:-$TRANSCRIPT_POSITIVE_JUNIOR}"
+# MCP-population fixture: NOT every role uses MCP — Haiku bm-task workers
+# routinely run pure Bash/Edit/Read with zero MCP calls, so the newest
+# role-prefixed transcript is the wrong fixture (false-red). Scan
+# newest-first for a transcript that actually invokes ≥1 mcp__ tool
+# (planning tasks reliably call mcp__project-memory__*). Override via env.
+if [ -z "${TRANSCRIPT_MCP_NONEMPTY:-}" ]; then
+  for _t in $(ls -t /home/barrie/.claude/projects/-srv-brehon-fork--junior-worktrees-job-*/*.jsonl 2>/dev/null); do
+    if [ "$(extract_mcps "$_t")" != "[]" ]; then
+      TRANSCRIPT_MCP_NONEMPTY="$_t"
+      break
+    fi
+  done
+fi
 
 echo "=== role-signal-utilisation.sh smoke harness ==="
 echo "running detection logic against ≥3 transcript shapes"
